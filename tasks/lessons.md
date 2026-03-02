@@ -484,3 +484,15 @@
 **Rule**: When identifying month-end data, always scan raw-csv/ metadata.json entries grouped by dataMonth. Never attempt to infer month-end status from snapshot folder names alone.
 **Warning**: If a month has no closing-period entries at all in raw-csv/ (rare edge case), find-month-end-dates.ts will report it as "missing" — do not silently use the last daily snapshot; instead surface it as a gap requiring investigation.
 **rules.md**: none
+
+## 🗓️ 2026-03-02 — extract-pure-functions-from-io-scripts (#147, #148, #149)
+
+**Discovery**: All 3 snapshot pruning scripts (`find-month-end-dates.ts`, `generate-month-end-snapshots.ts`, `prune-daily-snapshots.ts`) had identical GCS helper functions copy-pasted verbatim, and their core business logic (date classification, date selection) was embedded in `async function main()` — making it untestable without mocking GCS.
+
+**Proof**: The acceptance criteria for #149 required testing the `process.exit(1)` hard guard, but the guard was inlined in `main()`. There was no way to test it without running a full async GCS integration. Extracting `classifySnapshotDates()` into `pruneClassifier.ts` allowed 8 pure unit tests in 329ms with zero GCS calls.
+
+**Rule**: When writing a script that mixes I/O (GCS, shell exec) with business logic, always extract the business logic into a separate pure-function module in `lib/`. The script becomes a thin orchestrator; the lib becomes the testable unit. The test imports the lib, not the script.
+
+**Warning**: If a new GCS-based script is added, check `scripts/lib/gcsHelpers.ts` first — `listRawCSVDates`, `listSnapshotDates`, `readMetadataForDate`, and `readMetadataForDates` are already there. Never re-implement them inline.
+
+**rules.md**: none
