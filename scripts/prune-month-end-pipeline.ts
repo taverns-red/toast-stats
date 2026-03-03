@@ -31,9 +31,6 @@ import {
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-/** How many days into month X+1 to scan for closing-period entries of month X */
-const FORWARD_SCAN_WINDOW_DAYS = 14
-
 interface Args {
   bucket: string
   projectId: string | undefined
@@ -67,20 +64,16 @@ function parseArgs(): Args {
 
 // ── Date Utilities ────────────────────────────────────────────────────────────
 
-/** Add N days to a YYYY-MM-DD date string */
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T00:00:00Z')
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().split('T')[0]!
-}
-
-/** Return the first day of the next calendar month for a YYYY-MM string */
-function firstDayOfNextMonth(month: string): string {
+/**
+ * Return the YYYY-MM prefix for the calendar month that follows the given YYYY-MM.
+ * e.g. '2024-08' → '2024-09', '2024-12' → '2025-01'
+ */
+function nextMonthPrefix(month: string): string {
   const [yearStr, monthStr] = month.split('-')
   const year = parseInt(yearStr!, 10)
   const m = parseInt(monthStr!, 10)
-  if (m === 12) return `${year + 1}-01-01`
-  return `${year}-${String(m + 1).padStart(2, '0')}-01`
+  if (m === 12) return `${year + 1}-01`
+  return `${year}-${String(m + 1).padStart(2, '0')}`
 }
 
 /** Derive all program year strings to consider (completed PYs, optionally filtered) */
@@ -121,7 +114,6 @@ async function runStep1(
   // List all raw-csv dates once (O(1) GCS LIST call)
   console.log('  Listing raw-csv/ dates from GCS...')
   const allDates = await listRawCSVDates(storage, bucket)
-  const dateSet = new Set(allDates)
   console.log(`  Found ${allDates.length} raw-csv dates total.`)
 
   const pys = getProgramYearsToProcess(allDates, today, programYear)
@@ -139,20 +131,16 @@ async function runStep1(
     console.log(`\n  Program Year ${py}:`)
 
     for (const month of months) {
-      const windowStart = firstDayOfNextMonth(month)
+      const prefix = nextMonthPrefix(month)
 
-      // Build the window: first N days of the next month that exist in GCS
-      const windowDates: string[] = []
-      for (let d = 0; d < FORWARD_SCAN_WINDOW_DAYS; d++) {
-        const candidate = addDays(windowStart, d)
-        if (dateSet.has(candidate)) windowDates.push(candidate)
-      }
+      // All raw-csv dates that fall anywhere in the next calendar month.
+      // No fixed window — handles closing periods that extend 15, 20, or more
+      // days into the next month without any arbitrary cutoff.
+      const windowDates = allDates.filter(d => d.startsWith(prefix + '-'))
 
       if (windowDates.length === 0) {
         missingMonths.push(month)
-        console.log(
-          `    ${month}: ⚠ no data in window (${windowStart} + ${FORWARD_SCAN_WINDOW_DAYS}d)`
-        )
+        console.log(`    ${month}: ⚠ no data found in next month (${prefix})`)
         continue
       }
 

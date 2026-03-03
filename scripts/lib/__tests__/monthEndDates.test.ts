@@ -481,4 +481,33 @@ describe('findMonthEndKeeperForward', () => {
     const result = findMonthEndKeeperForward('2024-08', single)
     expect(result).toBe('2024-09-01')
   })
+
+  it('correctly finds a keeper on day 17 of the next month (past the old 14-day window)', () => {
+    // Validates the bug-fix: a fixed 14-day window would have returned null here.
+    // The prefix-filter approach finds this regardless of how late it falls.
+    const lateClosing: RawCSVEntry[] = [
+      {
+        collectionDate: '2024-09-15',
+        isClosingPeriod: true,
+        dataMonth: '2024-08',
+      },
+      {
+        collectionDate: '2024-09-16',
+        isClosingPeriod: true,
+        dataMonth: '2024-08',
+      },
+      {
+        collectionDate: '2024-09-17',
+        isClosingPeriod: true,
+        dataMonth: '2024-08',
+      }, // would be missed by 14-day cap
+      {
+        collectionDate: '2024-09-18',
+        isClosingPeriod: false,
+        dataMonth: '2024-09',
+      },
+    ]
+    const result = findMonthEndKeeperForward('2024-08', lateClosing)
+    expect(result).toBe('2024-09-17')
+  })
 })
