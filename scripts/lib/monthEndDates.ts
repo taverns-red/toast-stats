@@ -223,3 +223,32 @@ export function buildMonthEndSummary(
   summaries.sort((a, b) => b.year.localeCompare(a.year))
   return summaries
 }
+
+/**
+ * Forward-scan algorithm: find the month-end keeper date for a given month
+ * by reading entries from the *first N days of the following calendar month*.
+ *
+ * Background: Closing-period CSVs for dataMonth X are collected a few days
+ * into month X+1. The last collection date with isClosingPeriod=true and
+ * dataMonth=X is the authoritative month-end. Scanning only the opening days
+ * of X+1 gives the same answer with far fewer metadata reads (~14 vs ~30).
+ *
+ * @param targetMonth   - The month we want the keeper for, e.g. "2024-08"
+ * @param windowEntries - RawCSVEntry objects from the first N days of the
+ *   following calendar month (caller fetches the right window via gcsHelpers)
+ * @returns The last collection date with isClosingPeriod=true for targetMonth,
+ *   or null if no such date exists in the window
+ */
+export function findMonthEndKeeperForward(
+  targetMonth: string,
+  windowEntries: RawCSVEntry[]
+): string | null {
+  const candidates = windowEntries
+    .filter(e => e.isClosingPeriod && e.dataMonth === targetMonth)
+    .map(e => e.collectionDate)
+
+  if (candidates.length === 0) return null
+
+  // Return the lexically greatest (latest) closing-period date for the month
+  return candidates.sort((a, b) => b.localeCompare(a))[0] ?? null
+}

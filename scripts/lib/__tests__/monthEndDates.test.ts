@@ -8,6 +8,7 @@ import {
   isProgramYearComplete,
   groupByDataMonth,
   findLastClosingDate,
+  findMonthEndKeeperForward,
   getMonthsInProgramYear,
   buildMonthEndSummary,
   type RawCSVEntry,
@@ -345,5 +346,139 @@ describe('buildMonthEndSummary', () => {
     const current = summaries.find(s => s.year === '2025-2026')
     expect(current?.monthResults).toHaveLength(0)
     expect(current?.missingMonths).toHaveLength(0)
+  })
+})
+
+// ── findMonthEndKeeperForward ───────────────────────────────────────────────
+//
+// New algorithm: given entries from the *first N days of month X+1*, find the
+// last collection date where isClosingPeriod=true and dataMonth=X.
+// Reads far fewer metadata files than the exhaustive scan (only ~14 per month).
+
+describe('findMonthEndKeeperForward', () => {
+  // Simulates raw-csv entries for the first 10 days of September 2024
+  // when we're looking for the month-end keeper for August 2024.
+  const AUGUST_WINDOW: RawCSVEntry[] = [
+    {
+      collectionDate: '2024-09-01',
+      isClosingPeriod: true,
+      dataMonth: '2024-08',
+    },
+    {
+      collectionDate: '2024-09-02',
+      isClosingPeriod: true,
+      dataMonth: '2024-08',
+    },
+    {
+      collectionDate: '2024-09-03',
+      isClosingPeriod: true,
+      dataMonth: '2024-08',
+    },
+    {
+      collectionDate: '2024-09-04',
+      isClosingPeriod: false,
+      dataMonth: '2024-09',
+    }, // first non-closing
+    {
+      collectionDate: '2024-09-05',
+      isClosingPeriod: false,
+      dataMonth: '2024-09',
+    },
+  ]
+
+  it('returns the last isClosingPeriod=true date for the target month', () => {
+    const result = findMonthEndKeeperForward('2024-08', AUGUST_WINDOW)
+    expect(result).toBe('2024-09-03')
+  })
+
+  it('ignores entries where isClosingPeriod=false', () => {
+    const result = findMonthEndKeeperForward('2024-08', AUGUST_WINDOW)
+    expect(result).not.toBe('2024-09-04')
+    expect(result).not.toBe('2024-09-05')
+  })
+
+  it('ignores closing-period entries for a different dataMonth', () => {
+    // Mix in entries for a different month
+    const mixed: RawCSVEntry[] = [
+      {
+        collectionDate: '2024-09-01',
+        isClosingPeriod: true,
+        dataMonth: '2024-07',
+      }, // wrong month
+      {
+        collectionDate: '2024-09-02',
+        isClosingPeriod: true,
+        dataMonth: '2024-08',
+      }, // correct
+    ]
+    const result = findMonthEndKeeperForward('2024-08', mixed)
+    expect(result).toBe('2024-09-02')
+  })
+
+  it('returns null when no closing-period entries exist for the target month', () => {
+    const noClosing: RawCSVEntry[] = [
+      {
+        collectionDate: '2024-09-01',
+        isClosingPeriod: false,
+        dataMonth: '2024-09',
+      },
+      {
+        collectionDate: '2024-09-02',
+        isClosingPeriod: false,
+        dataMonth: '2024-09',
+      },
+    ]
+    const result = findMonthEndKeeperForward('2024-08', noClosing)
+    expect(result).toBeNull()
+  })
+
+  it('returns null for an empty window', () => {
+    const result = findMonthEndKeeperForward('2024-08', [])
+    expect(result).toBeNull()
+  })
+
+  it('handles a window where closing-period dates span many days (June data in July)', () => {
+    // June data may have closing-period dates collected all the way to July 14
+    const juneWindow: RawCSVEntry[] = [
+      {
+        collectionDate: '2024-07-01',
+        isClosingPeriod: true,
+        dataMonth: '2024-06',
+      },
+      {
+        collectionDate: '2024-07-02',
+        isClosingPeriod: true,
+        dataMonth: '2024-06',
+      },
+      {
+        collectionDate: '2024-07-10',
+        isClosingPeriod: true,
+        dataMonth: '2024-06',
+      },
+      {
+        collectionDate: '2024-07-14',
+        isClosingPeriod: true,
+        dataMonth: '2024-06',
+      },
+      {
+        collectionDate: '2024-07-15',
+        isClosingPeriod: false,
+        dataMonth: '2024-07',
+      },
+    ]
+    const result = findMonthEndKeeperForward('2024-06', juneWindow)
+    expect(result).toBe('2024-07-14')
+  })
+
+  it('returns the single closing-period date when only one exists', () => {
+    const single: RawCSVEntry[] = [
+      {
+        collectionDate: '2024-09-01',
+        isClosingPeriod: true,
+        dataMonth: '2024-08',
+      },
+    ]
+    const result = findMonthEndKeeperForward('2024-08', single)
+    expect(result).toBe('2024-09-01')
   })
 })
