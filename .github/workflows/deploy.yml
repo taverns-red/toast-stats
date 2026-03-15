@@ -20,7 +20,7 @@ concurrency:
 
 env:
   NODE_VERSION: '20'
-  REGION: 'us-east1'
+  REGION: 'northamerica-northeast1'
   CLOUD_RUN_SERVICE: 'toast-stats-api'
   GCS_BUCKET: 'toast-stats-data'
 
