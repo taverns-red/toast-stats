@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest'
 
-const API_BASE = 'https://api.taverns.red/api'
+const API_BASE = 'https://api.taverns.red'
 const SITE_URL = 'https://ts.taverns.red'
 
 // Performance budget thresholds (in milliseconds)
