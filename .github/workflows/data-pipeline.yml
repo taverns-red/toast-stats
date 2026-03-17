@@ -279,9 +279,10 @@ jobs:
           echo "- **Districts computed**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Step 5: Sync cache to GCS ───────────────────────────
-      # Single rsync replaces collector-cli upload + separate syncs.
-      # gsutil rsync compares against remote state — truly incremental
-      # with no local manifest needed (which was useless on ephemeral runners).
+      # Snapshots/analytics use cp with CDN-optimized metadata:
+      #   -Z: auto-gzip + Content-Encoding: gzip (~80% smaller transfers)
+      #   -h: Content-Type and Cache-Control for CDN caching
+      # Internal state (raw-csv, time-series, club-trends) uses rsync.
       - name: Sync cache to GCS
         env:
           GCS_BUCKET: 'toast-stats-data-ca'
@@ -289,15 +290,12 @@ jobs:
           DATE="${{ steps.scrape.outputs.date }}"
           echo "Syncing cache to GCS..."
 
+          # ── Internal state: rsync (no CDN metadata needed) ──
+
           # Sync raw-csv (only today's date)
           gsutil -m rsync -r \
             "./cache/raw-csv/${DATE}/" \
             "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
-
-          # Sync snapshots + analytics (only today's date)
-          gsutil -m rsync -r \
-            "./cache/snapshots/${DATE}/" \
-            "gs://${GCS_BUCKET}/snapshots/${DATE}/"
 
           # Sync time-series (all — small, ~344 KB)
           gsutil -m rsync -r \
@@ -309,13 +307,25 @@ jobs:
             "./cache/club-trends/" \
             "gs://${GCS_BUCKET}/club-trends/"
 
+          # ── CDN-served files: cp with metadata ──
+
+          # Snapshots + analytics (immutable — data never changes for a given date)
+          # -Z: auto-gzip transport encoding (~80% smaller)
+          # Cache-Control: immutable, 1 year max-age (CDN + browser never revalidate)
+          gsutil -m \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=31536000, immutable" \
+            cp -Z -r \
+            "./cache/snapshots/${DATE}/" \
+            "gs://${GCS_BUCKET}/snapshots/${DATE}/"
+
           echo "## ☁️ GCS Sync Results" >> "$GITHUB_STEP_SUMMARY"
           CSV_COUNT=$(find "./cache/raw-csv/${DATE}" -name '*.csv' 2>/dev/null | wc -l | tr -d ' ')
           SNAPSHOT_COUNT=$(find "./cache/snapshots/${DATE}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Raw CSVs synced**: ${CSV_COUNT}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Snapshot/analytics files synced**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Snapshot/analytics files synced**: ${SNAPSHOT_COUNT} (gzip + immutable cache)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Time-series index files synced**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Step 6: Update district-snapshot-index (#138) ──────
@@ -355,8 +365,11 @@ jobs:
             console.log('Updated index for ' + districts.length + ' districts with date ' + date);
           "
 
-          # Upload updated index
-          gsutil cp /tmp/district-snapshot-index.json "${INDEX_PATH}"
+          # Upload updated index with CDN-aware metadata (changes daily, short TTL)
+          gsutil \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=300" \
+            cp /tmp/district-snapshot-index.json "${INDEX_PATH}"
 
           echo "## 📋 District Snapshot Index" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Updated for date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
