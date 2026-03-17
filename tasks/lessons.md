@@ -508,3 +508,9 @@
 **Warning**: When adding a `--target` flag to an existing script, always test the default path still works — the existing integration tests rely on `--target snapshots` (the default). The `deleteFolderByPrefix(prefix, date)` generalisation was backward-compatible because the default `target = 'snapshots'` preserves the original behavior exactly.
 
 **rules.md**: none
+
+## 2026-03-16: Club Detail Card Enhancement (#163)
+
+- **Insight**: The `ClubTrend` interface already had `octoberRenewals`, `aprilRenewals`, and `newMembers` fields — they just weren't displayed in the modal. Always check the data model before assuming backend changes are needed.
+- **Pattern**: The `useClubTrends` hook provides dense daily trend data from the club-trends-index. When switching from sparse to dense data, reduce visual element sizes (e.g., chart dots r=5 → r=3) to avoid visual clutter.
+- **Pre-existing issue**: 15 ClubDetailModal tests fail with `document is not defined` — jsdom environment not configured for these specific test files. Not caused by #163 changes.

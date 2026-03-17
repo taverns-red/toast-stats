@@ -73,11 +73,13 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
     }
   }
 
-  // Get base membership (beginning of program year)
+  // Get base membership from snapshot data (Toastmasters 'Mem. Base' column)
+  // Falls back to first trend point for backward compatibility with older data
   const baseMembership =
-    filteredMembershipTrend.length > 0
+    club.membershipBase ??
+    (filteredMembershipTrend.length > 0
       ? (filteredMembershipTrend[0]?.count ?? 0)
-      : 0
+      : 0)
 
   // Get latest membership (from filtered data)
   const latestMembership =

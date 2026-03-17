@@ -209,6 +209,7 @@ export class ClubHealthAnalyticsModule {
         currentStatus: 'thriving',
         healthScore: 0, // Will be calculated in assessClubHealth
         membershipCount: club.membershipCount,
+        membershipBase: club.membershipBase,
         paymentsCount: club.paymentsCount,
         riskFactors: [],
         distinguishedLevel: 'NotDistinguished', // Default value, will be updated later

@@ -124,6 +124,7 @@ export interface ClubTrend {
 
   // Membership and payments
   membershipCount: number
+  membershipBase: number
   paymentsCount: number
 
   // Trend arrays (Requirements 1.3, 1.4)

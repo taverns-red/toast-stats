@@ -48,6 +48,7 @@ export interface ClubTrendsStoreData {
       divisionName: string
       areaId: string
       areaName: string
+      membershipBase?: number
       membershipTrend: MembershipTrendPoint[]
       dcpGoalsTrend: DcpGoalsTrendPoint[]
     }
@@ -131,6 +132,7 @@ export class ClubTrendsStore {
           divisionName: club.divisionName || 'Unknown Division',
           areaId: club.areaId || 'Unknown',
           areaName: club.areaName || 'Unknown Area',
+          membershipBase: club.membershipBase,
           membershipTrend: [{ date, count: club.membershipCount }],
           dcpGoalsTrend: [{ date, goalsAchieved: club.dcpGoals }],
         }
@@ -141,6 +143,7 @@ export class ClubTrendsStore {
         existing.divisionName = club.divisionName || existing.divisionName
         existing.areaId = club.areaId || existing.areaId
         existing.areaName = club.areaName || existing.areaName
+        existing.membershipBase = club.membershipBase
 
         // Upsert the membership trend point
         const mIdx = existing.membershipTrend.findIndex(p => p.date === date)
@@ -245,6 +248,7 @@ export function storeTrendToClubTrend(
     divisionName: entry.divisionName,
     areaId: entry.areaId,
     areaName: entry.areaName,
+    membershipBase: entry.membershipBase ?? 0,
     membershipTrend: entry.membershipTrend,
     dcpGoalsTrend: entry.dcpGoalsTrend,
   }

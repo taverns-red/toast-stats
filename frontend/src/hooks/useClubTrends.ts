@@ -17,6 +17,7 @@ export interface ClubTrend {
   areaName: string
   membershipTrend: Array<{ date: string; count: number }>
   dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
+  membershipBase?: number
   currentStatus: ClubHealthStatus
   riskFactors: string[]
   distinguishedLevel?: 'President' | 'Select' | 'Distinguished'
