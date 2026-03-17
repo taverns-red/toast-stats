@@ -1,11 +1,29 @@
+import React, { Suspense } from 'react'
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './config/queryClient'
 import { ProgramYearProvider } from './contexts/ProgramYearContext'
 import { DarkModeProvider } from './contexts/DarkModeContext'
 import LandingPage from './pages/LandingPage'
-import DistrictDetailPage from './pages/DistrictDetailPage'
 import SiteFooter from './components/SiteFooter'
+
+// Code-split: DistrictDetailPage (816 lines + recharts) loads on navigation (#169)
+const DistrictDetailPage = React.lazy(
+  () => import('./pages/DistrictDetailPage')
+)
+
+/** Loading fallback for lazy-loaded pages */
+function PageLoadingFallback(): React.JSX.Element {
+  return (
+    <main
+      id="main-content"
+      className="tm-container"
+      style={{ padding: '2rem', textAlign: 'center' }}
+    >
+      <div className="tm-loading-spinner" aria-label="Loading page…" />
+    </main>
+  )
+}
 
 function Layout(): React.JSX.Element {
   return (
@@ -32,7 +50,11 @@ const router = createBrowserRouter(
         },
         {
           path: 'district/:districtId',
-          element: <DistrictDetailPage />,
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <DistrictDetailPage />
+            </Suspense>
+          ),
         },
       ],
     },
