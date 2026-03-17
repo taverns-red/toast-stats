@@ -73,6 +73,12 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
     }
   }
 
+  // Get base membership (beginning of program year)
+  const baseMembership =
+    filteredMembershipTrend.length > 0
+      ? (filteredMembershipTrend[0]?.count ?? 0)
+      : 0
+
   // Get latest membership (from filtered data)
   const latestMembership =
     filteredMembershipTrend.length > 0
@@ -236,6 +242,69 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
             </button>
           </div>
 
+          {/* Club Stats Grid */}
+          <div className="mb-6 grid grid-cols-4 gap-3">
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+              <div className="text-xs text-gray-500 font-tm-body mb-1">
+                Base
+              </div>
+              <div className="text-lg font-semibold text-gray-900 font-tm-body tabular-nums">
+                {baseMembership}
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+              <div className="text-xs text-gray-500 font-tm-body mb-1">
+                Current
+              </div>
+              <div className="text-lg font-semibold text-gray-900 font-tm-body tabular-nums">
+                {latestMembership}
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+              <div className="text-xs text-gray-500 font-tm-body mb-1">
+                Net Change
+              </div>
+              <div
+                className={`text-lg font-semibold font-tm-body tabular-nums ${membershipChange > 0 ? 'text-green-600' : membershipChange < 0 ? 'text-red-600' : 'text-gray-900'}`}
+              >
+                {membershipChange > 0 ? '+' : ''}
+                {membershipChange}
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+              <div className="text-xs text-gray-500 font-tm-body mb-1">
+                DCP Goals
+              </div>
+              <div className="text-lg font-semibold text-gray-900 font-tm-body tabular-nums">
+                {latestDcpGoals}/10
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+              <div className="text-xs text-gray-500 font-tm-body mb-1">
+                Oct Renewals
+              </div>
+              <div className="text-lg font-semibold text-gray-900 font-tm-body tabular-nums">
+                {club.octoberRenewals ?? '—'}
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+              <div className="text-xs text-gray-500 font-tm-body mb-1">
+                Apr Renewals
+              </div>
+              <div className="text-lg font-semibold text-gray-900 font-tm-body tabular-nums">
+                {club.aprilRenewals ?? '—'}
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+              <div className="text-xs text-gray-500 font-tm-body mb-1">
+                New Members
+              </div>
+              <div className="text-lg font-semibold text-gray-900 font-tm-body tabular-nums">
+                {club.newMembers ?? '—'}
+              </div>
+            </div>
+          </div>
+
           {/* Risk Factors */}
           {club.riskFactors.length > 0 && (
             <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
@@ -325,6 +394,12 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 {/* Stats */}
                 <div className="flex items-center justify-between mb-4 text-sm">
+                  <div>
+                    <span className="text-gray-600 font-tm-body">Base: </span>
+                    <span className="font-semibold text-gray-900 font-tm-body">
+                      {baseMembership} members
+                    </span>
+                  </div>
                   <div>
                     <span className="text-gray-600 font-tm-body">
                       Current:{' '}
@@ -436,7 +511,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                           <circle
                             cx={x}
                             cy={y}
-                            r="5"
+                            r="3"
                             fill="var(--tm-loyal-blue)"
                           />
                           {/* Tooltip on hover — count label */}
@@ -511,66 +586,116 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* Goal achievement timeline — show when each new goal was achieved */}
+                {/* Goal milestone timeline — black bars for each goal increment */}
                 <h5 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 font-tm-body">
                   Goal Achievement Timeline
                 </h5>
-                <div className="space-y-2">
-                  {(() => {
-                    // Data already filtered by program year (#119), no need to re-filter (#79b)
-                    const inProgramYear = filteredDcpGoalsTrend
+                <div className="relative h-32 bg-white rounded border border-gray-200 p-4">
+                  <svg
+                    className="w-full h-full"
+                    viewBox="0 0 800 100"
+                    preserveAspectRatio="none"
+                    aria-label={`DCP goal milestones for ${programYear.label} program year`}
+                  >
+                    {/* Horizontal baseline */}
+                    <line
+                      x1="0"
+                      y1="90"
+                      x2="800"
+                      y2="90"
+                      stroke="#e5e7eb"
+                      strokeWidth="1"
+                    />
 
-                    // Show only dates where goals changed
-                    const changed = inProgramYear.filter(
-                      (point, index, arr) => {
-                        if (index === 0) return true
-                        return (
-                          point.goalsAchieved !== arr[index - 1]?.goalsAchieved
-                        )
-                      }
-                    )
-
-                    return changed.map((point, index) => {
-                      const prevGoals =
-                        index > 0
-                          ? (changed[index - 1]?.goalsAchieved ?? 0)
-                          : // Use the last pre-program-year value as baseline
-                            (inProgramYear[0]?.goalsAchieved ?? 0)
-                      const gained = point.goalsAchieved - prevGoals
-                      const isIncrease = gained > 0
+                    {/* Key date reference lines */}
+                    {keyDates.map(kd => {
+                      const x = dayToX(kd.day)
                       return (
-                        <div
-                          key={index}
-                          className="flex items-center gap-3 text-sm"
-                        >
-                          <span className="text-gray-600 w-24 flex-shrink-0 font-tm-body">
-                            {formatDate(point.date)}
-                          </span>
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-tm-loyal-blue h-2 rounded-full"
-                              style={{
-                                width: `${(point.goalsAchieved / 10) * 100}%`,
-                              }}
-                            ></div>
-                          </div>
-                          <span className="text-gray-900 w-12 text-right font-tm-body">
-                            {point.goalsAchieved}/10
-                          </span>
-                          {index > 0 && (
-                            <span
-                              className={`text-xs w-8 text-right font-medium font-tm-body ${
-                                isIncrease ? 'text-green-600' : 'text-red-600'
-                              }`}
-                            >
-                              {isIncrease ? '+' : ''}
-                              {gained}
-                            </span>
-                          )}
-                        </div>
+                        <g key={`dcp-${kd.label}`}>
+                          <line
+                            x1={x}
+                            y1="0"
+                            x2={x}
+                            y2="90"
+                            stroke="var(--tm-cool-gray)"
+                            strokeWidth="1"
+                            strokeDasharray="4 3"
+                          />
+                          <text
+                            x={x}
+                            y="100"
+                            textAnchor="middle"
+                            fontSize="10"
+                            fill="#6b7280"
+                            fontFamily="inherit"
+                          >
+                            {kd.label}
+                          </text>
+                        </g>
                       )
-                    })
-                  })()}
+                    })}
+
+                    {/* Y-axis labels for goal counts */}
+                    {[0, 5, 10].map(goals => {
+                      const y = 90 - (goals / 10) * 80
+                      return (
+                        <text
+                          key={`y-${goals}`}
+                          x="-2"
+                          y={y + 3}
+                          textAnchor="end"
+                          fontSize="9"
+                          fill="#9ca3af"
+                          fontFamily="inherit"
+                        >
+                          {goals}
+                        </text>
+                      )
+                    })}
+
+                    {/* Milestone bars — black bar for each date where goals increased */}
+                    {(() => {
+                      const milestones = filteredDcpGoalsTrend.filter(
+                        (point, index, arr) => {
+                          if (index === 0) return point.goalsAchieved > 0
+                          return (
+                            point.goalsAchieved >
+                            (arr[index - 1]?.goalsAchieved ?? 0)
+                          )
+                        }
+                      )
+
+                      return milestones.map((point, index) => {
+                        const day = calculateProgramYearDay(point.date)
+                        const x = dayToX(day)
+                        const barHeight = (point.goalsAchieved / 10) * 80
+                        const y = 90 - barHeight
+                        return (
+                          <g key={index}>
+                            <rect
+                              x={x - 3}
+                              y={y}
+                              width="6"
+                              height={barHeight}
+                              fill="#111827"
+                              rx="1"
+                            />
+                            <title>
+                              {formatDate(point.date)}: {point.goalsAchieved}{' '}
+                              goals
+                            </title>
+                          </g>
+                        )
+                      })
+                    })()}
+                  </svg>
+                </div>
+                <div className="flex items-center justify-between mt-2 text-xs text-gray-500 font-tm-body">
+                  <span>{programYear.label} Program Year</span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-2 h-3 bg-gray-900 rounded-sm"></span>
+                    Goal achieved
+                  </span>
                 </div>
               </div>
             </div>
