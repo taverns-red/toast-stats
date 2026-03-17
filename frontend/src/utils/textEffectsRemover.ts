@@ -252,20 +252,9 @@ export function optimizeFontLoading(): void {
  * Preload critical font files for better performance
  */
 export function preloadCriticalFonts(): void {
-  const fontUrls = [
-    'https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459WlhyyTh89Y.woff2',
-    'https://fonts.gstatic.com/s/sourcesans3/v15/nwpBtKy2OAdR1K-IwhWudF-R9QMylBJAV3Bo8Ky462E.woff2',
-  ]
-
-  fontUrls.forEach(url => {
-    const link = document.createElement('link')
-    link.rel = 'preload'
-    link.as = 'font'
-    link.type = 'font/woff2'
-    link.crossOrigin = 'anonymous'
-    link.href = url
-    document.head.appendChild(link)
-  })
+  // Font preloading is handled by <link rel="preload"> in index.html.
+  // Hardcoded woff2 subset URLs are not used here because Google Fonts
+  // updates them when font versions change, causing stale 404s.
 }
 
 /**
