@@ -509,15 +509,27 @@
 
 **rules.md**: none
 
-## 2026-03-16: Club Detail Card Enhancement (#163)
+## 🗓️ 2026-03-16 — club-detail-card-data-model-check (#163)
 
-- **Insight**: The `ClubTrend` interface already had `octoberRenewals`, `aprilRenewals`, and `newMembers` fields — they just weren't displayed in the modal. Always check the data model before assuming backend changes are needed.
-- **Pattern**: The `useClubTrends` hook provides dense daily trend data from the club-trends-index. When switching from sparse to dense data, reduce visual element sizes (e.g., chart dots r=5 → r=3) to avoid visual clutter.
-- **Pre-existing issue**: 15 ClubDetailModal tests fail with `document is not defined` — jsdom environment not configured for these specific test files. Not caused by #163 changes.
+**Discovery**: The `ClubTrend` interface already had `octoberRenewals`, `aprilRenewals`, and `newMembers` fields — they just weren't displayed in the modal. No backend changes were needed.
+**Proof**: Grepped `ClubTrend` type — all fields present. The enhancement was entirely frontend wiring.
+**Rule**: Always check the existing data model before assuming backend changes are needed. When switching from sparse to dense trend data, reduce visual element sizes (e.g., chart dots r=5 → r=3) to avoid clutter.
+**Warning**: 15 ClubDetailModal tests fail with `document is not defined` — jsdom environment not configured for these specific test files. Pre-existing, not caused by #163.
 
-### 2026-03-17 — Sprint 2: Frontend CDN Migration
+---
 
-- **CDN-first with Express fallback is the right pattern**. Try `fetchFromCdn()` first inside `queryFn`, catch all errors, fall through to `apiClient.get()`. The CDN only serves the latest snapshot (no date filtering), so add a `!startDate && !endDate` guard before CDN path.
-- **Manifest caching with memoized promise** prevents thundering herd on page load. Cache the manifest promise (not just the result) so concurrent hook calls share the same in-flight request. Reset on error to allow retry.
-- **Tests that depend on network behavior need CDN mocks**. When adding CDN-first fetch to existing code, existing test suites will fail because `fetch()` is not mocked in vitest by default. Add `vi.mock("../../services/cdn")` to test files that exercise express fallback paths.
-- **React.lazy code splitting** for 800+ line pages with heavy dependencies (recharts) is a quick win for initial load performance. Only needs: `React.lazy(() => import(...))` + `<Suspense fallback={...}>` wrapper.
+## 🗓️ 2026-03-17 — cdn-first-with-express-fallback (#168, #169)
+
+**Discovery**: CDN-first fetching with Express fallback requires: (1) a `!startDate && !endDate` guard (CDN only serves latest), (2) manifest caching via memoized promise to prevent thundering herd, and (3) CDN module mocks in existing test files.
+**Proof**: 6 `useAggregatedAnalytics` tests failed after adding CDN fetch to `fetchIndividualAnalytics` — `fetch()` isn't mocked in vitest. Adding `vi.mock("../../services/cdn")` fixed all 6 tests.
+**Rule**: When retrofitting CDN-first fetch into existing hooks, mock the CDN module in all test files that exercise the Express fallback path. Cache the manifest promise (not the result) so concurrent hook calls share one in-flight request.
+**Warning**: `React.lazy` code splitting for heavy pages (800+ lines, recharts) is a quick win — `React.lazy(() => import(...))` + `<Suspense fallback={...}>`. But test files that render these components must handle the async import.
+
+---
+
+## 🗓️ 2026-03-17 — backend-deprecation-before-deletion (#168)
+
+**Discovery**: Cannot delete Express analytics routes while they serve as CDN fallback. Frontend hooks try CDN first but fall through to `apiClient.get()` on failure. Deleting routes would break the fallback path entirely.
+**Proof**: Grepped `apiClient.get(` across frontend — 4 hooks still call Express as fallback. District gating (`useDistricts`) is still needed because CDN only covers tracked districts; removing it would show error states for 230+ untracked districts.
+**Rule**: Use HTTP deprecation headers (`Deprecation: true`, `Sunset: YYYY-MM-DD`, `Link: <successor>`) as the interim step before route deletion. This signals intent without breaking consumers.
+**Warning**: Route deletion becomes safe only after (1) CDN reliability is proven via monitoring, (2) the sunset date passes, and (3) frontend fallback code is removed.
