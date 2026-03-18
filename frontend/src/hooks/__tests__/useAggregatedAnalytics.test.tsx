@@ -29,6 +29,14 @@ vi.mock('../../services/api', () => ({
   },
 }))
 
+// Mock the CDN client — CDN fetch always fails in these tests,
+// ensuring the Express fallback path is exercised cleanly.
+vi.mock('../../services/cdn', () => ({
+  fetchCdnManifest: vi.fn().mockRejectedValue(new Error('CDN unavailable')),
+  cdnAnalyticsUrl: vi.fn(),
+  fetchFromCdn: vi.fn().mockRejectedValue(new Error('CDN unavailable')),
+}))
+
 // Type the mocked apiClient
 const mockedApiClient = vi.mocked(apiClient)
 
