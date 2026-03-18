@@ -35,6 +35,7 @@ import { DCPProjectionsTable } from '../components/DCPProjectionsTable'
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
+import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { DistrictExportButton } from '../components/DistrictExportButton'
 import { LazyChart } from '../components/LazyChart'
 import GlobalRankingsTab from '../components/GlobalRankingsTab'
@@ -673,38 +674,48 @@ const DistrictDetailPage: React.FC = () => {
             {activeTab === 'divisions' && (
               <>
                 {/* Division Performance Cards */}
-                {districtStatistics && (
+                {districtStatistics ? (
                   <DivisionPerformanceCards
                     districtSnapshot={districtStatistics}
                     isLoading={isLoadingStatistics}
                     snapshotTimestamp={districtStatistics.asOfDate}
                   />
+                ) : (
+                  isLoadingStatistics && <LoadingSkeleton variant="card" />
                 )}
 
-                {/* Division and Area Recognition Panel - DDP and DAP criteria and progress */}
-                {districtStatistics && (
+                {/* Division and Area Recognition Panel */}
+                {districtStatistics ? (
                   <DivisionAreaRecognitionPanel
                     divisions={extractDivisionPerformance(districtStatistics)}
                     isLoading={isLoadingStatistics}
                   />
+                ) : (
+                  isLoadingStatistics && (
+                    <LoadingSkeleton variant="table" count={3} />
+                  )
                 )}
               </>
             )}
 
             {activeTab === 'trends' && (
               <>
-                {/* Membership Trend Chart - Lazy Loaded */}
-                {aggregatedAnalytics && (
+                {/* Membership Trend Chart */}
+                {aggregatedAnalytics ? (
                   <LazyChart height="400px">
                     <MembershipTrendChart
                       membershipTrend={aggregatedAnalytics.trends.membership}
                       isLoading={isLoadingAggregated}
                     />
                   </LazyChart>
+                ) : (
+                  isLoadingAggregated && (
+                    <LoadingSkeleton variant="chart" height="400px" />
+                  )
                 )}
 
-                {/* Membership Payments Chart - Lazy Loaded */}
-                {paymentsTrendData && (
+                {/* Membership Payments Chart */}
+                {paymentsTrendData ? (
                   <LazyChart height="450px">
                     <MembershipPaymentsChart
                       paymentsTrend={paymentsTrendData.currentYearTrend}
@@ -713,10 +724,14 @@ const DistrictDetailPage: React.FC = () => {
                       isLoading={isLoadingPaymentsTrend}
                     />
                   </LazyChart>
+                ) : (
+                  isLoadingPaymentsTrend && (
+                    <LoadingSkeleton variant="chart" height="450px" />
+                  )
                 )}
 
-                {/* Year-Over-Year Comparison - Lazy Loaded */}
-                {aggregatedAnalytics && (
+                {/* Year-Over-Year Comparison */}
+                {aggregatedAnalytics ? (
                   <LazyChart height="300px">
                     <YearOverYearComparison
                       {...(aggregatedAnalytics.yearOverYear && {
@@ -735,6 +750,10 @@ const DistrictDetailPage: React.FC = () => {
                       isLoading={isLoadingAggregated}
                     />
                   </LazyChart>
+                ) : (
+                  isLoadingAggregated && (
+                    <LoadingSkeleton variant="chart" height="300px" />
+                  )
                 )}
               </>
             )}
@@ -748,7 +767,7 @@ const DistrictDetailPage: React.FC = () => {
                 />
 
                 {/* Top Growth Clubs */}
-                {analytics && (
+                {analytics ? (
                   <TopGrowthClubs
                     topGrowthClubs={analytics.topGrowthClubs}
                     topDCPClubs={analytics.allClubs
@@ -777,24 +796,34 @@ const DistrictDetailPage: React.FC = () => {
                       .slice(0, 10)}
                     isLoading={isLoadingAnalytics}
                   />
+                ) : (
+                  isLoadingAnalytics && <LoadingSkeleton variant="card" />
                 )}
 
-                {/* DCP Goal Analysis - Lazy Loaded */}
-                {distinguishedAnalytics && (
+                {/* DCP Goal Analysis */}
+                {distinguishedAnalytics ? (
                   <LazyChart height="400px">
                     <DCPGoalAnalysis
                       dcpGoalAnalysis={distinguishedAnalytics.dcpGoalAnalysis}
                       isLoading={isLoadingDistinguished}
                     />
                   </LazyChart>
+                ) : (
+                  isLoadingDistinguished && (
+                    <LoadingSkeleton variant="chart" height="400px" />
+                  )
                 )}
 
                 {/* DCP Projections Table */}
-                {analytics && (
+                {analytics ? (
                   <DCPProjectionsTable
                     clubs={analytics.allClubs}
                     isLoading={isLoadingAnalytics}
                   />
+                ) : (
+                  isLoadingAnalytics && (
+                    <LoadingSkeleton variant="table" count={5} />
+                  )
                 )}
               </>
             )}

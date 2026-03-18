@@ -514,3 +514,10 @@
 - **Insight**: The `ClubTrend` interface already had `octoberRenewals`, `aprilRenewals`, and `newMembers` fields — they just weren't displayed in the modal. Always check the data model before assuming backend changes are needed.
 - **Pattern**: The `useClubTrends` hook provides dense daily trend data from the club-trends-index. When switching from sparse to dense data, reduce visual element sizes (e.g., chart dots r=5 → r=3) to avoid visual clutter.
 - **Pre-existing issue**: 15 ClubDetailModal tests fail with `document is not defined` — jsdom environment not configured for these specific test files. Not caused by #163 changes.
+
+### 2026-03-17 — Sprint 2: Frontend CDN Migration
+
+- **CDN-first with Express fallback is the right pattern**. Try `fetchFromCdn()` first inside `queryFn`, catch all errors, fall through to `apiClient.get()`. The CDN only serves the latest snapshot (no date filtering), so add a `!startDate && !endDate` guard before CDN path.
+- **Manifest caching with memoized promise** prevents thundering herd on page load. Cache the manifest promise (not just the result) so concurrent hook calls share the same in-flight request. Reset on error to allow retry.
+- **Tests that depend on network behavior need CDN mocks**. When adding CDN-first fetch to existing code, existing test suites will fail because `fetch()` is not mocked in vitest by default. Add `vi.mock("../../services/cdn")` to test files that exercise express fallback paths.
+- **React.lazy code splitting** for 800+ line pages with heavy dependencies (recharts) is a quick win for initial load performance. Only needs: `React.lazy(() => import(...))` + `<Suspense fallback={...}>` wrapper.
