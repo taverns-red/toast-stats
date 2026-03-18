@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '../services/api'
 import {
   fetchCdnManifest,
   cdnAnalyticsUrl,
@@ -90,33 +89,17 @@ export const useLeadershipInsights = (
         throw new Error('District ID is required')
       }
 
-      // CDN-first: try pre-computed JSON when no date range is specified
-      if (!startDate && !endDate) {
-        try {
-          const manifest = await fetchCdnManifest()
-          const url = cdnAnalyticsUrl(
-            manifest.latestSnapshotDate,
-            districtId,
-            'leadership-insights'
-          )
-          const file = await fetchFromCdn<{
-            data: LeadershipInsightsApiResponse
-          }>(url)
-          return file.data.insights
-        } catch {
-          // CDN failed — fall through to Express
-        }
-      }
-
-      const params = new URLSearchParams()
-      if (startDate) params.append('startDate', startDate)
-      if (endDate) params.append('endDate', endDate)
-
-      const response = await apiClient.get<LeadershipInsightsApiResponse>(
-        `/districts/${districtId}/leadership-insights${params.toString() ? `?${params.toString()}` : ''}`
+      // Fetch from CDN — pre-computed JSON
+      const manifest = await fetchCdnManifest()
+      const url = cdnAnalyticsUrl(
+        manifest.latestSnapshotDate,
+        districtId,
+        'leadership-insights'
       )
-      // Extract the nested insights object from the API response
-      return response.data.insights
+      const file = await fetchFromCdn<{
+        data: LeadershipInsightsApiResponse
+      }>(url)
+      return file.data.insights
     },
     enabled: !!districtId,
     staleTime: 5 * 60 * 1000, // 5 minutes

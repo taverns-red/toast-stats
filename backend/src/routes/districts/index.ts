@@ -6,8 +6,6 @@
 
 import { Router } from 'express'
 import { coreRouter } from './core.js'
-import { analyticsRouter } from './analytics.js'
-import { analyticsSummaryRouter } from './analyticsSummary.js'
 import { snapshotsRouter } from './snapshots.js'
 import { rankingsRouter } from './rankings.js'
 
@@ -24,15 +22,6 @@ router.use('/', coreRouter)
 
 // Rankings routes (/:districtId/available-ranking-years)
 router.use('/', rankingsRouter)
-
-// Analytics summary routes (/:districtId/analytics-summary - aggregated endpoint)
-// ⚠️ DEPRECATED: Being superseded by Cloud CDN at cdn.taverns.red (Sunset: 2026-07-01)
-// Must come before general analytics routes to ensure specific route matches first
-router.use('/', analyticsSummaryRouter)
-
-// Analytics routes (all are /:districtId/* routes)
-// ⚠️ DEPRECATED: Being superseded by Cloud CDN at cdn.taverns.red (Sunset: 2026-07-01)
-router.use('/', analyticsRouter)
 
 export default router
 

@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '../services/api'
 import {
   fetchCdnManifest,
   cdnAnalyticsUrl,
@@ -238,30 +237,15 @@ export const useDistrictAnalytics = (
         throw new Error('District ID is required')
       }
 
-      // CDN-first: try pre-computed JSON when no date range is specified
-      if (!startDate && !endDate) {
-        try {
-          const manifest = await fetchCdnManifest()
-          const url = cdnAnalyticsUrl(
-            manifest.latestSnapshotDate,
-            districtId,
-            'analytics'
-          )
-          const file = await fetchFromCdn<{ data: DistrictAnalytics }>(url)
-          return file.data
-        } catch {
-          // CDN failed — fall through to Express
-        }
-      }
-
-      const params = new URLSearchParams()
-      if (startDate) params.append('startDate', startDate)
-      if (endDate) params.append('endDate', endDate)
-
-      const response = await apiClient.get<DistrictAnalytics>(
-        `/districts/${districtId}/analytics${params.toString() ? `?${params.toString()}` : ''}`
+      // Fetch from CDN — pre-computed JSON
+      const manifest = await fetchCdnManifest()
+      const url = cdnAnalyticsUrl(
+        manifest.latestSnapshotDate,
+        districtId,
+        'analytics'
       )
-      return response.data
+      const file = await fetchFromCdn<{ data: DistrictAnalytics }>(url)
+      return file.data
     },
     enabled: !!districtId && hasValidDateRange,
     staleTime: 10 * 60 * 1000, // 10 minutes - cache analytics calculations longer

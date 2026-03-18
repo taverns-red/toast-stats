@@ -90,12 +90,8 @@ export function useAggregatedAnalytics(
         )
         return { data, usedFallback: false }
       } catch {
-        // Fall back to individual endpoint
-        const analytics = await fetchIndividualAnalytics(
-          districtId,
-          startDate,
-          endDate
-        )
+        // Fall back to CDN individual analytics endpoint
+        const analytics = await fetchIndividualAnalytics(districtId)
         const data = convertToAggregatedFormat(analytics)
         return { data, usedFallback: true }
       }
