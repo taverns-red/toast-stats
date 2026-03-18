@@ -36,6 +36,16 @@ import { transformPerformanceTargets } from '../../utils/performanceTargetsTrans
 
 export const analyticsRouter = Router()
 
+// ──── CDN deprecation notice ────
+// These endpoints are being superseded by Cloud CDN at cdn.taverns.red.
+// They remain active as fallback but will be sunset in a future release.
+analyticsRouter.use((_req, res, next) => {
+  res.set('Deprecation', 'true')
+  res.set('Sunset', '2026-07-01')
+  res.set('Link', '<https://cdn.taverns.red>; rel="successor-version"')
+  next()
+})
+
 // Create PreComputedAnalyticsReader instance for serving pre-computed analytics
 // Requirement 4.1: THE Backend SHALL read pre-computed analytics from the file system
 const preComputedAnalyticsReader = new PreComputedAnalyticsReader({

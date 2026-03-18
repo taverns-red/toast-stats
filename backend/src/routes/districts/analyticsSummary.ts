@@ -32,6 +32,16 @@ import { PreComputedAnalyticsReader } from '../../services/PreComputedAnalyticsR
 
 export const analyticsSummaryRouter = Router()
 
+// ──── CDN deprecation notice ────
+// This endpoint is being superseded by Cloud CDN at cdn.taverns.red.
+// It remains active as fallback but will be sunset in a future release.
+analyticsSummaryRouter.use((_req, res, next) => {
+  res.set('Deprecation', 'true')
+  res.set('Sunset', '2026-07-01')
+  res.set('Link', '<https://cdn.taverns.red>; rel="successor-version"')
+  next()
+})
+
 // Create PreComputedAnalyticsReader instance for reading year-over-year data
 const preComputedAnalyticsReader = new PreComputedAnalyticsReader({
   cacheDir: cacheDirectory,
