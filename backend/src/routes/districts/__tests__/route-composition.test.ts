@@ -37,7 +37,7 @@ describe('Route Module Composition', () => {
     expect(routerStack.length).toBeGreaterThan(0)
     expect(districtRoutes).toBeDefined()
     expect(typeof districtRoutes).toBe('function')
-    expect(routerStack.length).toBeGreaterThanOrEqual(4)
+    expect(routerStack.length).toBeGreaterThanOrEqual(3)
   })
 
   it.each([

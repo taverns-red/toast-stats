@@ -20,6 +20,7 @@ import {
   AggregatedAnalyticsResponse,
 } from '../useAggregatedAnalytics'
 import { apiClient } from '../../services/api'
+import { fetchCdnManifest, fetchFromCdn } from '../../services/cdn'
 import type { DistrictAnalytics } from '../useDistrictAnalytics'
 
 // Mock the API client
@@ -29,12 +30,43 @@ vi.mock('../../services/api', () => ({
   },
 }))
 
-// Mock the CDN client — CDN fetch always fails in these tests,
-// ensuring the Express fallback path is exercised cleanly.
+// Mock the CDN client — CDN fetch resolves with test data.
+// fetchIndividualAnalytics now uses CDN-only (no Express fallback).
 vi.mock('../../services/cdn', () => ({
-  fetchCdnManifest: vi.fn().mockRejectedValue(new Error('CDN unavailable')),
-  cdnAnalyticsUrl: vi.fn(),
-  fetchFromCdn: vi.fn().mockRejectedValue(new Error('CDN unavailable')),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2024-12-15',
+    version: 'v1',
+  }),
+  cdnAnalyticsUrl: vi.fn().mockReturnValue('https://cdn.taverns.red/test'),
+  fetchFromCdn: vi.fn().mockResolvedValue({
+    data: {
+      districtId: '42',
+      dateRange: { start: '2024-07-01', end: '2024-12-31' },
+      totalMembership: 5000,
+      membershipChange: 150,
+      membershipTrend: [
+        { date: '2024-07-01', count: 4850 },
+        { date: '2024-08-01', count: 4900 },
+      ],
+      paymentsTrend: [
+        { date: '2024-07-01', payments: 100 },
+        { date: '2024-08-01', payments: 120 },
+      ],
+      topGrowthClubs: [],
+      allClubs: [],
+      vulnerableClubs: [],
+      interventionRequiredClubs: [],
+      thrivingClubs: [],
+      distinguishedClubs: {
+        smedley: 1,
+        presidents: 2,
+        select: 3,
+        distinguished: 4,
+        total: 10,
+      },
+      distinguishedProjection: 0,
+    },
+  }),
 }))
 
 // Type the mocked apiClient
@@ -320,24 +352,57 @@ describe('useAggregatedAnalytics', () => {
     })
   })
 
-  describe('Fallback to individual endpoints', () => {
+  describe('Fallback to CDN individual analytics', () => {
+    // Re-apply CDN mocks — afterEach(vi.resetAllMocks) clears module-level mock implementations
+    beforeEach(() => {
+      vi.mocked(fetchCdnManifest).mockResolvedValue({
+        latestSnapshotDate: '2024-12-15',
+        version: 'v1',
+      })
+      vi.mocked(fetchFromCdn).mockResolvedValue({
+        data: {
+          districtId: '42',
+          dateRange: { start: '2024-07-01', end: '2024-12-31' },
+          totalMembership: 5000,
+          membershipChange: 150,
+          membershipTrend: [
+            { date: '2024-07-01', count: 4850 },
+            { date: '2024-08-01', count: 4900 },
+          ],
+          paymentsTrend: [
+            { date: '2024-07-01', payments: 100 },
+            { date: '2024-08-01', payments: 120 },
+          ],
+          topGrowthClubs: [],
+          allClubs: [],
+          vulnerableClubs: [],
+          interventionRequiredClubs: [],
+          thrivingClubs: [],
+          distinguishedClubs: {
+            smedley: 1,
+            presidents: 2,
+            select: 3,
+            distinguished: 4,
+            total: 10,
+          },
+          distinguishedProjection: 0,
+        },
+      })
+    })
+
     /**
-     * Test that hook falls back to individual endpoint on aggregated failure
+     * Test that hook falls back to CDN individual analytics when
+     * Express aggregated endpoint fails.
      *
      * **Validates: Requirements 5.1**
      */
-    it('should fall back to individual endpoint when aggregated fails', async () => {
+    it('should fall back to CDN when aggregated Express endpoint fails', async () => {
       const aggregatedError = new Error('Aggregated endpoint failed')
-      const individualResponse = createMockIndividualAnalyticsResponse()
 
-      // First call (aggregated) fails, second call (individual) succeeds
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('analytics-summary')) {
-          return Promise.reject(aggregatedError)
-        }
-        return Promise.resolve({ data: individualResponse })
-      })
+      // Express analytics-summary fails
+      mockedApiClient.get.mockRejectedValue(aggregatedError)
 
+      // CDN mock already resolves via module-level mock
       const { result } = renderHook(() => useAggregatedAnalytics('42'), {
         wrapper: createWrapper(),
       })
@@ -346,15 +411,12 @@ describe('useAggregatedAnalytics', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Should have called both endpoints
+      // Should have tried Express first
       expect(mockedApiClient.get).toHaveBeenCalledWith(
         '/districts/42/analytics-summary'
       )
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        '/districts/42/analytics'
-      )
 
-      // Should have data from fallback
+      // Should have data from CDN fallback
       expect(result.current.data).not.toBeNull()
       expect(result.current.data?.districtId).toBe('42')
       expect(result.current.usedFallback).toBe(true)
@@ -362,18 +424,13 @@ describe('useAggregatedAnalytics', () => {
     })
 
     /**
-     * Test that fallback converts individual response to aggregated format
+     * Test that CDN fallback response is converted to aggregated format
      */
-    it('should convert individual response to aggregated format', async () => {
+    it('should convert CDN individual response to aggregated format', async () => {
       const aggregatedError = new Error('Aggregated endpoint failed')
-      const individualResponse = createMockIndividualAnalyticsResponse()
 
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('analytics-summary')) {
-          return Promise.reject(aggregatedError)
-        }
-        return Promise.resolve({ data: individualResponse })
-      })
+      // Express analytics-summary fails
+      mockedApiClient.get.mockRejectedValue(aggregatedError)
 
       const { result } = renderHook(() => useAggregatedAnalytics('42'), {
         wrapper: createWrapper(),
@@ -386,50 +443,18 @@ describe('useAggregatedAnalytics', () => {
       const data = result.current.data
       expect(data).not.toBeNull()
 
-      // Verify converted data structure
+      // Verify converted data structure from CDN mock data
       expect(data?.summary.totalMembership).toBe(5000)
-      expect(data?.summary.clubCounts.total).toBe(2) // 1 vulnerable + 1 thriving
-      expect(data?.summary.clubCounts.thriving).toBe(1)
-      expect(data?.summary.clubCounts.vulnerable).toBe(1)
-      expect(data?.summary.clubCounts.interventionRequired).toBe(0)
+      expect(data?.summary.distinguishedClubs.total).toBe(10)
       expect(data?.trends.membership).toHaveLength(2)
-      expect(data?.yearOverYear?.membershipChange).toBe(5.2)
-    })
-
-    /**
-     * Test that hook passes date parameters to fallback endpoint
-     */
-    it('should pass date parameters to fallback endpoint', async () => {
-      const aggregatedError = new Error('Aggregated endpoint failed')
-      const individualResponse = createMockIndividualAnalyticsResponse()
-
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('analytics-summary')) {
-          return Promise.reject(aggregatedError)
-        }
-        return Promise.resolve({ data: individualResponse })
-      })
-
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42', '2024-07-01', '2024-12-31'),
-        { wrapper: createWrapper() }
-      )
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        '/districts/42/analytics?startDate=2024-07-01&endDate=2024-12-31'
-      )
     })
   })
 
   describe('Error handling', () => {
     /**
-     * Test that hook reports error when both endpoints fail with 404
+     * Test that hook reports error when Express AND CDN both fail
      */
-    it('should report error when both endpoints fail', async () => {
+    it('should report error when both Express and CDN fail', async () => {
       // Use 404 error to avoid retries
       const error = {
         response: { status: 404 },
@@ -437,6 +462,11 @@ describe('useAggregatedAnalytics', () => {
       }
 
       mockedApiClient.get.mockRejectedValue(error)
+      // CDN must also fail — use 404-like error to prevent retry
+      const cdnError = Object.assign(new Error('CDN unavailable'), {
+        response: { status: 404 },
+      })
+      vi.mocked(fetchCdnManifest).mockRejectedValue(cdnError)
 
       const { result } = renderHook(() => useAggregatedAnalytics('42'), {
         wrapper: createWrapper(),
@@ -461,6 +491,11 @@ describe('useAggregatedAnalytics', () => {
       }
 
       mockedApiClient.get.mockRejectedValue(notFoundError)
+      // CDN must also fail — use 404-like error to prevent retry
+      const cdnError = Object.assign(new Error('CDN unavailable'), {
+        response: { status: 404 },
+      })
+      vi.mocked(fetchCdnManifest).mockRejectedValue(cdnError)
 
       const { result } = renderHook(() => useAggregatedAnalytics('42'), {
         wrapper: createWrapper(),
@@ -470,8 +505,8 @@ describe('useAggregatedAnalytics', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Should have called twice (aggregated + fallback), no retries
-      expect(mockedApiClient.get).toHaveBeenCalledTimes(2)
+      // Should have called Express once (aggregated only), no retries
+      expect(mockedApiClient.get).toHaveBeenCalledTimes(1)
     })
 
     /**
@@ -484,6 +519,11 @@ describe('useAggregatedAnalytics', () => {
       }
 
       mockedApiClient.get.mockRejectedValue(badRequestError)
+      // CDN must also fail — use 404-like error to prevent retry
+      const cdnError = Object.assign(new Error('CDN unavailable'), {
+        response: { status: 404 },
+      })
+      vi.mocked(fetchCdnManifest).mockRejectedValue(cdnError)
 
       const { result } = renderHook(() => useAggregatedAnalytics('42'), {
         wrapper: createWrapper(),
@@ -493,8 +533,8 @@ describe('useAggregatedAnalytics', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Should have called twice (aggregated + fallback), no retries
-      expect(mockedApiClient.get).toHaveBeenCalledTimes(2)
+      // Should have called Express once (aggregated only), no retries
+      expect(mockedApiClient.get).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -582,30 +622,36 @@ describe('useAggregatedAnalytics', () => {
     })
 
     /**
-     * Test handling distinguishedProjection as object from fallback endpoint
+     * Test handling distinguishedProjection as object from CDN fallback
      *
-     * The /analytics endpoint returns distinguishedProjection as an object,
+     * The CDN analytics file returns distinguishedProjection as an object,
      * while /analytics-summary returns it as a number. The hook should
-     * extract the projectedDistinguished value when falling back.
+     * extract the projectedDistinguished value when falling back to CDN.
      */
     it('should convert distinguishedProjection object to number in fallback', async () => {
       const aggregatedError = new Error('Aggregated endpoint failed')
-      const individualResponse = createMockIndividualAnalyticsResponse({
-        // Override with object format (as returned by /analytics endpoint)
-        distinguishedProjection: {
-          projectedDistinguished: 30,
-          currentDistinguished: 25,
-          currentSelect: 18,
-          currentPresident: 12,
-          projectionDate: '2024-06-30',
-        } as unknown as number, // Type assertion needed for test
+
+      // Express analytics-summary fails
+      mockedApiClient.get.mockRejectedValue(aggregatedError)
+
+      // Re-apply CDN manifest mock (cleared by afterEach resetAllMocks)
+      vi.mocked(fetchCdnManifest).mockResolvedValue({
+        latestSnapshotDate: '2024-12-15',
       })
 
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('analytics-summary')) {
-          return Promise.reject(aggregatedError)
-        }
-        return Promise.resolve({ data: individualResponse })
+      // CDN returns analytics with object-format projection
+      vi.mocked(fetchFromCdn).mockResolvedValueOnce({
+        data: {
+          ...createMockIndividualAnalyticsResponse({
+            distinguishedProjection: {
+              projectedDistinguished: 30,
+              currentDistinguished: 25,
+              currentSelect: 18,
+              currentPresident: 12,
+              projectionDate: '2024-06-30',
+            } as unknown as number,
+          }),
+        },
       })
 
       const { result } = renderHook(() => useAggregatedAnalytics('42'), {

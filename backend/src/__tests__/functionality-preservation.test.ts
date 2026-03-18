@@ -46,35 +46,6 @@ describe('Functionality Preservation', () => {
     )
   })
 
-  describe('Analytics endpoints preserve response structure', () => {
-    it.each(['ABC', '42', 'X'])(
-      'should return consistent analytics structure for district ID "%s"',
-      async districtId => {
-        const analyticsResponse = await request(app).get(
-          `/api/districts/${districtId}/analytics`
-        )
-        expect(analyticsResponse.body).toBeDefined()
-        if (analyticsResponse.status === 200) {
-          expect(analyticsResponse.body).toBeDefined()
-        } else {
-          expect(analyticsResponse.body).toHaveProperty('error')
-          expect(analyticsResponse.body.error).toHaveProperty('code')
-        }
-
-        const vulnerableResponse = await request(app).get(
-          `/api/districts/${districtId}/vulnerable-clubs`
-        )
-        expect(vulnerableResponse.body).toBeDefined()
-        if (vulnerableResponse.status === 200) {
-          expect(vulnerableResponse.body).toHaveProperty('clubs')
-          expect(vulnerableResponse.body).toHaveProperty('totalVulnerableClubs')
-        } else {
-          expect(vulnerableResponse.body).toHaveProperty('error')
-        }
-      }
-    )
-  })
-
   describe('Snapshot endpoints preserve response structure', () => {
     it.each(['ABC', '42', 'X'])(
       'should return consistent cached-dates structure for district ID "%s"',
@@ -138,56 +109,6 @@ describe('Functionality Preservation', () => {
           expect(response.body).toHaveProperty('error')
           expect(response.body.error).toHaveProperty('code')
           expect(response.body.error).toHaveProperty('message')
-        }
-      }
-    )
-  })
-
-  describe('Export endpoint preserves response structure', () => {
-    it.each([
-      ['ABC', 'csv'],
-      ['42', 'json'],
-      ['X', 'invalid'],
-    ])(
-      'should return consistent structure for district "%s" with format "%s"',
-      async (districtId, format) => {
-        const response = await request(app).get(
-          `/api/districts/${districtId}/export?format=${format}`
-        )
-        expect(response.body).toBeDefined()
-
-        if (format === 'invalid' || format === 'json') {
-          expect(response.status).toBe(400)
-          expect(response.body).toHaveProperty('error')
-          expect(response.body.error).toHaveProperty('code')
-        } else {
-          if (response.status === 200) {
-            expect(response.body).toBeDefined()
-          } else {
-            expect(response.body).toHaveProperty('error')
-          }
-        }
-      }
-    )
-  })
-
-  describe('Year-over-year endpoint preserves response structure', () => {
-    it.each([
-      ['ABC', '2024-01-15'],
-      ['42', '2023-06-28'],
-      ['X', '2025-02-01'],
-    ])(
-      'should return consistent structure for district "%s" on date "%s"',
-      async (districtId, date) => {
-        const response = await request(app).get(
-          `/api/districts/${districtId}/year-over-year/${date}`
-        )
-        expect(response.body).toBeDefined()
-        if (response.status === 200) {
-          expect(response.body).toBeDefined()
-        } else {
-          expect(response.body).toHaveProperty('error')
-          expect(response.body.error).toHaveProperty('code')
         }
       }
     )
