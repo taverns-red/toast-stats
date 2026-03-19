@@ -1,14 +1,14 @@
 /**
- * Unit tests for useMembershipData hooks
+ * Unit tests for useMembershipData hooks (CDN-only)
  * Feature: date-aware-district-statistics
  *
  * Validates: Requirements 4.1
  *
- * These tests verify that the useDistrictStatistics hook correctly:
+ * Tests verify that useDistrictStatistics correctly:
  * - Includes selectedDate in the query key for proper cache invalidation
- * - Passes the date query parameter to the API when selectedDate is provided
+ * - Fetches from CDN with correct snapshot date
  * - Maintains backward compatibility when selectedDate is undefined
- * - Handles API errors appropriately
+ * - Handles CDN errors appropriately
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -16,18 +16,18 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode } from 'react'
 import { useDistrictStatistics } from '../useMembershipData'
-import { apiClient } from '../../services/api'
+import { fetchCdnManifest, fetchCdnDistrictSnapshot } from '../../services/cdn'
 import type { DistrictStatistics } from '../../types/districts'
 
-// Mock the API client
-vi.mock('../../services/api', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
+// Mock the CDN service
+vi.mock('../../services/cdn', () => ({
+  fetchCdnManifest: vi.fn(),
+  fetchCdnDistrictSnapshot: vi.fn(),
+  fetchCdnDistrictAnalytics: vi.fn(),
 }))
 
-// Type the mocked apiClient
-const mockedApiClient = vi.mocked(apiClient)
+const mockedFetchCdnManifest = vi.mocked(fetchCdnManifest)
+const mockedFetchCdnDistrictSnapshot = vi.mocked(fetchCdnDistrictSnapshot)
 
 // Create a mock DistrictStatistics response
 const createMockDistrictStatistics = (
@@ -82,6 +82,11 @@ const createWrapper = () => {
 describe('useDistrictStatistics', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default manifest mock
+    mockedFetchCdnManifest.mockResolvedValue({
+      latestSnapshotDate: '2022-12-05',
+      generatedAt: '2022-12-05T00:00:00Z',
+    })
   })
 
   afterEach(() => {
@@ -100,7 +105,7 @@ describe('useDistrictStatistics', () => {
       const selectedDate = '2026-01-14'
       const mockData = createMockDistrictStatistics(districtId, selectedDate)
 
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(
         () => useDistrictStatistics(districtId, selectedDate),
@@ -111,12 +116,10 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      // Verify the API was called with the correct parameters
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        `/districts/${districtId}/statistics`,
-        {
-          params: { date: selectedDate },
-        }
+      // Verify CDN was called with the specific date (not manifest)
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalledWith(
+        selectedDate,
+        districtId
       )
     })
 
@@ -130,7 +133,7 @@ describe('useDistrictStatistics', () => {
       const districtId = 'D101'
       const mockData = createMockDistrictStatistics(districtId, '2022-12-05')
 
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(
         () => useDistrictStatistics(districtId, undefined),
@@ -141,31 +144,30 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      // Verify the API was called without date parameter
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        `/districts/${districtId}/statistics`,
-        {
-          params: {},
-        }
+      // Should use manifest date when no selectedDate
+      expect(mockedFetchCdnManifest).toHaveBeenCalled()
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalledWith(
+        '2022-12-05',
+        districtId
       )
     })
 
     /**
      * Test that different dates result in different cache entries
-     * by verifying separate API calls are made for different dates
+     * by verifying separate CDN calls are made for different dates
      *
      * **Validates: Requirements 4.1, Property 2 (query key uniqueness)**
      */
-    it('should make separate API calls for different dates', async () => {
+    it('should make separate CDN calls for different dates', async () => {
       const districtId = 'D101'
       const date1 = '2026-01-14'
       const date2 = '2026-01-15'
       const mockData1 = createMockDistrictStatistics(districtId, date1)
       const mockData2 = createMockDistrictStatistics(districtId, date2)
 
-      mockedApiClient.get
-        .mockResolvedValueOnce({ data: mockData1 })
-        .mockResolvedValueOnce({ data: mockData2 })
+      mockedFetchCdnDistrictSnapshot
+        .mockResolvedValueOnce(mockData1)
+        .mockResolvedValueOnce(mockData2)
 
       const wrapper = createWrapper()
 
@@ -179,7 +181,7 @@ describe('useDistrictStatistics', () => {
         expect(result1.current.isSuccess).toBe(true)
       })
 
-      // Second hook with date2 (different date should trigger new API call)
+      // Second hook with date2 (different date should trigger new CDN call)
       const { result: result2 } = renderHook(
         () => useDistrictStatistics(districtId, date2),
         { wrapper }
@@ -189,33 +191,33 @@ describe('useDistrictStatistics', () => {
         expect(result2.current.isSuccess).toBe(true)
       })
 
-      // Verify both API calls were made with different dates
-      expect(mockedApiClient.get).toHaveBeenCalledTimes(2)
-      expect(mockedApiClient.get).toHaveBeenNthCalledWith(
+      // Verify both CDN calls were made with different dates
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalledTimes(2)
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenNthCalledWith(
         1,
-        `/districts/${districtId}/statistics`,
-        { params: { date: date1 } }
+        date1,
+        districtId
       )
-      expect(mockedApiClient.get).toHaveBeenNthCalledWith(
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenNthCalledWith(
         2,
-        `/districts/${districtId}/statistics`,
-        { params: { date: date2 } }
+        date2,
+        districtId
       )
     })
   })
 
-  describe('API Parameter Passing', () => {
+  describe('CDN Parameter Passing', () => {
     /**
-     * Test that date query parameter is passed to API when selectedDate is provided
+     * Test that specific date is passed to CDN when selectedDate is provided
      *
      * **Validates: Requirements 4.1, Property 1 (date parameter propagation)**
      */
-    it('should pass date query parameter to API when selectedDate is provided', async () => {
+    it('should pass selectedDate directly to CDN snapshot fetch', async () => {
       const districtId = 'D101'
       const selectedDate = '2026-01-14'
       const mockData = createMockDistrictStatistics(districtId, selectedDate)
 
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(
         () => useDistrictStatistics(districtId, selectedDate),
@@ -226,25 +228,22 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      // Verify the API was called with date parameter
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        `/districts/${districtId}/statistics`,
-        expect.objectContaining({
-          params: { date: selectedDate },
-        })
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalledWith(
+        selectedDate,
+        districtId
       )
     })
 
     /**
-     * Test that date parameter is NOT passed when selectedDate is undefined
+     * Test that manifest date is used when selectedDate is undefined
      *
      * **Validates: Requirements 4.1, Property 3 (backward compatibility)**
      */
-    it('should NOT pass date parameter when selectedDate is undefined', async () => {
+    it('should use manifest date when selectedDate is undefined', async () => {
       const districtId = 'D101'
       const mockData = createMockDistrictStatistics(districtId, '2022-12-05')
 
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(() => useDistrictStatistics(districtId), {
         wrapper: createWrapper(),
@@ -254,23 +253,23 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      // Verify the API was called with params: {} (no date parameter)
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        `/districts/${districtId}/statistics`,
-        { params: {} }
+      // Should use manifest's latestSnapshotDate
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalledWith(
+        '2022-12-05',
+        districtId
       )
     })
 
     /**
-     * Test that empty string selectedDate is treated as falsy (no date param)
+     * Test that empty string selectedDate uses manifest date
      *
      * **Validates: Requirements 4.1**
      */
-    it('should NOT pass date parameter when selectedDate is empty string', async () => {
+    it('should use manifest date when selectedDate is empty string', async () => {
       const districtId = 'D101'
       const mockData = createMockDistrictStatistics(districtId, '2022-12-05')
 
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(
         () => useDistrictStatistics(districtId, ''),
@@ -281,11 +280,8 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      // Empty string is falsy, so date should not be in params
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        `/districts/${districtId}/statistics`,
-        { params: {} }
-      )
+      // Empty string is falsy, so manifest date should be used
+      expect(mockedFetchCdnManifest).toHaveBeenCalled()
     })
   })
 
@@ -299,7 +295,7 @@ describe('useDistrictStatistics', () => {
       const districtId = 'D101'
       const mockData = createMockDistrictStatistics(districtId, '2022-12-05')
 
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(() => useDistrictStatistics(districtId), {
         wrapper: createWrapper(),
@@ -322,7 +318,7 @@ describe('useDistrictStatistics', () => {
       const latestDate = '2022-12-05'
       const mockData = createMockDistrictStatistics(districtId, latestDate)
 
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(() => useDistrictStatistics(districtId), {
         wrapper: createWrapper(),
@@ -338,18 +334,17 @@ describe('useDistrictStatistics', () => {
 
   describe('Error Handling', () => {
     /**
-     * Test that API errors are properly propagated
-     * Note: The hook has retry: 2, so we need to reject all retry attempts
+     * Test that CDN errors are properly propagated
      *
      * **Validates: Requirements 4.1**
      */
-    it('should handle API errors correctly', async () => {
+    it('should handle CDN errors correctly', async () => {
       const districtId = 'D101'
       const selectedDate = '2026-01-14'
-      const errorMessage = 'Network error'
+      const errorMessage =
+        'CDN fetch failed: 404 for https://cdn.taverns.red/snapshots/2026-01-14/district_D101.json'
 
-      // Mock rejection for all retry attempts (initial + 2 retries = 3 calls)
-      mockedApiClient.get.mockRejectedValue(new Error(errorMessage))
+      mockedFetchCdnDistrictSnapshot.mockRejectedValue(new Error(errorMessage))
 
       const { result } = renderHook(
         () => useDistrictStatistics(districtId, selectedDate),
@@ -368,7 +363,6 @@ describe('useDistrictStatistics', () => {
 
     /**
      * Test that 404 errors are handled (district not found)
-     * Note: The hook has retry: 2, so we need to reject all retry attempts
      *
      * **Validates: Requirements 5.2**
      */
@@ -376,9 +370,8 @@ describe('useDistrictStatistics', () => {
       const districtId = 'INVALID'
       const selectedDate = '2026-01-14'
 
-      const error = new Error('District not found')
-      // Mock rejection for all retry attempts
-      mockedApiClient.get.mockRejectedValue(error)
+      const error = new Error('CDN fetch failed: 404')
+      mockedFetchCdnDistrictSnapshot.mockRejectedValue(error)
 
       const { result } = renderHook(
         () => useDistrictStatistics(districtId, selectedDate),
@@ -396,23 +389,20 @@ describe('useDistrictStatistics', () => {
     })
 
     /**
-     * Test that invalid date format errors are handled
-     * Note: The hook has retry: 2, so we need to reject all retry attempts
+     * Test that manifest fetch errors are handled
      *
-     * **Validates: Requirements 4.3, Property 4**
+     * **Validates: Requirements 4.3**
      */
-    it('should handle invalid date format errors from API', async () => {
+    it('should handle manifest fetch errors', async () => {
       const districtId = 'D101'
-      const invalidDate = 'invalid-date'
 
-      const error = new Error('Date must be in YYYY-MM-DD format')
-      // Mock rejection for all retry attempts
-      mockedApiClient.get.mockRejectedValue(error)
-
-      const { result } = renderHook(
-        () => useDistrictStatistics(districtId, invalidDate),
-        { wrapper: createWrapper() }
+      mockedFetchCdnManifest.mockRejectedValue(
+        new Error('CDN manifest fetch failed: 500')
       )
+
+      const { result } = renderHook(() => useDistrictStatistics(districtId), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(
         () => {
@@ -421,7 +411,7 @@ describe('useDistrictStatistics', () => {
         { timeout: 5000 }
       )
 
-      expect(result.current.error?.message).toContain('YYYY-MM-DD')
+      expect(result.current.error?.message).toContain('manifest')
     })
   })
 
@@ -439,7 +429,7 @@ describe('useDistrictStatistics', () => {
 
       // Query should not be enabled
       expect(result.current.fetchStatus).toBe('idle')
-      expect(mockedApiClient.get).not.toHaveBeenCalled()
+      expect(mockedFetchCdnDistrictSnapshot).not.toHaveBeenCalled()
     })
 
     /**
@@ -451,7 +441,7 @@ describe('useDistrictStatistics', () => {
       const districtId = 'D101'
       const mockData = createMockDistrictStatistics(districtId, '2026-01-14')
 
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(
         () => useDistrictStatistics(districtId, '2026-01-14'),
@@ -462,7 +452,7 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      expect(mockedApiClient.get).toHaveBeenCalled()
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalled()
     })
   })
 
@@ -477,7 +467,7 @@ describe('useDistrictStatistics', () => {
       const selectedDate = '2026-01-14'
       const mockData = createMockDistrictStatistics(districtId, selectedDate)
 
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(
         () => useDistrictStatistics(districtId, selectedDate),
@@ -496,73 +486,17 @@ describe('useDistrictStatistics', () => {
 
   describe('Fields Parameter', () => {
     /**
-     * Test that fields parameter is passed to API when provided
-     *
-     * **Validates: Response optimization - fields param propagation**
-     */
-    it('should pass fields parameter to API when provided', async () => {
-      const districtId = 'D101'
-      const selectedDate = '2026-01-14'
-      const mockData = createMockDistrictStatistics(districtId, selectedDate)
-
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
-
-      const { result } = renderHook(
-        () => useDistrictStatistics(districtId, selectedDate, 'divisions'),
-        { wrapper: createWrapper() }
-      )
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true)
-      })
-
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        `/districts/${districtId}/statistics`,
-        {
-          params: { date: selectedDate, fields: 'divisions' },
-        }
-      )
-    })
-
-    /**
-     * Test that fields parameter is not passed when undefined
-     */
-    it('should not pass fields parameter when undefined', async () => {
-      const districtId = 'D101'
-      const selectedDate = '2026-01-14'
-      const mockData = createMockDistrictStatistics(districtId, selectedDate)
-
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
-
-      const { result } = renderHook(
-        () => useDistrictStatistics(districtId, selectedDate),
-        { wrapper: createWrapper() }
-      )
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true)
-      })
-
-      // Should not include fields in params
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        `/districts/${districtId}/statistics`,
-        {
-          params: { date: selectedDate },
-        }
-      )
-    })
-
-    /**
-     * Test that fields is included in query key for proper cache differentiation
+     * Test that fields parameter is included in query key
+     * Note: CDN always returns the full snapshot but fields is in query key for caching
      */
     it('should include fields in query key for cache differentiation', async () => {
       const districtId = 'D101'
       const selectedDate = '2026-01-14'
       const mockData = createMockDistrictStatistics(districtId, selectedDate)
 
-      mockedApiClient.get
-        .mockResolvedValueOnce({ data: mockData })
-        .mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDistrictSnapshot
+        .mockResolvedValueOnce(mockData)
+        .mockResolvedValueOnce(mockData)
 
       const wrapper = createWrapper()
 
@@ -576,7 +510,7 @@ describe('useDistrictStatistics', () => {
         expect(result1.current.isSuccess).toBe(true)
       })
 
-      // Second hook with fields — should make a separate API call
+      // Second hook with fields — should make a separate CDN call
       const { result: result2 } = renderHook(
         () => useDistrictStatistics(districtId, selectedDate, 'divisions'),
         { wrapper }
@@ -587,7 +521,7 @@ describe('useDistrictStatistics', () => {
       })
 
       // Both calls should have been made (different query keys)
-      expect(mockedApiClient.get).toHaveBeenCalledTimes(2)
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalledTimes(2)
     })
   })
 })

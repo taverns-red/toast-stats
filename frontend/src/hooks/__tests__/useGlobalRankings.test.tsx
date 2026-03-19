@@ -4,8 +4,8 @@
  *
  * Validates: Requirements 2.1, 2.2, 3.1-3.6, 5.2, 5.3
  *
- * These tests verify that the useGlobalRankings hook correctly:
- * - Aggregates data from useAvailableProgramYears and useRankHistory
+ * Tests verify that the useGlobalRankings hook correctly:
+ * - Aggregates data from useAvailableProgramYears (CDN) and useRankHistory (Express)
  * - Extracts end-of-year rankings from history data
  * - Calculates year-over-year rank changes
  * - Returns proper loading, error, and success states
@@ -26,13 +26,18 @@ import {
   type EndOfYearRankings,
 } from '../useGlobalRankings'
 import { apiClient } from '../../services/api'
+import { fetchCdnDates } from '../../services/cdn'
 import type {
-  AvailableRankingYearsResponse,
   RankHistoryResponse,
   ProgramYearWithData,
 } from '../../types/districts'
 
-// Mock the API client
+// Mock the CDN service (used by useAvailableProgramYears)
+vi.mock('../../services/cdn', () => ({
+  fetchCdnDates: vi.fn(),
+}))
+
+// Mock the API client (still used by useRankHistory)
 vi.mock('../../services/api', () => ({
   apiClient: {
     get: vi.fn(),
@@ -40,52 +45,64 @@ vi.mock('../../services/api', () => ({
   },
 }))
 
-// Type the mocked apiClient
+const mockedFetchCdnDates = vi.mocked(fetchCdnDates)
 const mockedApiClient = vi.mocked(apiClient)
+
+/**
+ * Create simplified CDN dates with unique dates across 3 program years.
+ */
+const createSimpleDatesForRankings = () => ({
+  dates: [
+    // 2022-2023 (13 dates)
+    '2022-07-15',
+    '2022-08-15',
+    '2022-09-15',
+    '2022-10-15',
+    '2022-11-15',
+    '2022-12-15',
+    '2023-01-15',
+    '2023-02-15',
+    '2023-03-15',
+    '2023-04-15',
+    '2023-05-15',
+    '2023-06-15',
+    '2023-06-30',
+    // 2023-2024 (13 dates)
+    '2023-07-15',
+    '2023-08-15',
+    '2023-09-15',
+    '2023-10-15',
+    '2023-11-15',
+    '2023-12-15',
+    '2024-01-15',
+    '2024-02-15',
+    '2024-03-15',
+    '2024-04-15',
+    '2024-05-15',
+    '2024-06-15',
+    '2024-06-30',
+    // 2025-2026 (5 dates, current year)
+    '2025-07-15',
+    '2025-08-15',
+    '2025-09-15',
+    '2025-10-15',
+    '2025-11-15',
+  ],
+  count: 31,
+  generatedAt: '2025-11-15T00:00:00Z',
+})
 
 // ========== Test Data Factories ==========
 
-const createMockAvailableYearsResponse = (
-  districtId: string
-): AvailableRankingYearsResponse => ({
-  districtId,
-  programYears: [
-    {
-      year: '2024-2025',
-      startDate: '2024-07-01',
-      endDate: '2025-06-30',
-      hasCompleteData: false,
-      snapshotCount: 15,
-      latestSnapshotDate: '2024-11-15',
-    },
-    {
-      year: '2023-2024',
-      startDate: '2023-07-01',
-      endDate: '2024-06-30',
-      hasCompleteData: true,
-      snapshotCount: 52,
-      latestSnapshotDate: '2024-06-30',
-    },
-    {
-      year: '2022-2023',
-      startDate: '2022-07-01',
-      endDate: '2023-06-30',
-      hasCompleteData: true,
-      snapshotCount: 48,
-      latestSnapshotDate: '2023-06-30',
-    },
-  ],
-})
-
 const createMockRankHistoryResponse = (
   districtId: string,
-  programYear: string = '2024-2025'
+  programYear: string = '2025-2026'
 ): RankHistoryResponse => ({
   districtId,
   districtName: `District ${districtId}`,
   history: [
     {
-      date: '2024-07-15',
+      date: '2025-07-15',
       aggregateScore: 350,
       clubsRank: 15,
       paymentsRank: 20,
@@ -93,7 +110,7 @@ const createMockRankHistoryResponse = (
       totalDistricts: 126,
     },
     {
-      date: '2024-08-15',
+      date: '2025-08-15',
       aggregateScore: 355,
       clubsRank: 12,
       paymentsRank: 18,
@@ -101,7 +118,7 @@ const createMockRankHistoryResponse = (
       totalDistricts: 126,
     },
     {
-      date: '2024-09-15',
+      date: '2025-09-15',
       aggregateScore: 360,
       clubsRank: 10,
       paymentsRank: 15,
@@ -110,8 +127,8 @@ const createMockRankHistoryResponse = (
     },
   ],
   programYear: {
-    startDate: programYear === '2024-2025' ? '2024-07-01' : '2023-07-01',
-    endDate: programYear === '2024-2025' ? '2025-06-30' : '2024-06-30',
+    startDate: programYear === '2025-2026' ? '2025-07-01' : '2023-07-01',
+    endDate: programYear === '2025-2026' ? '2026-06-30' : '2024-06-30',
     year: programYear,
   },
 })
@@ -159,9 +176,6 @@ describe('useGlobalRankings', () => {
   })
 
   describe('Query Key Factory', () => {
-    /**
-     * Test that query key factory produces correct keys
-     */
     it('should produce correct query keys', () => {
       expect(globalRankingsQueryKeys.all).toEqual(['global-rankings'])
       expect(globalRankingsQueryKeys.byDistrict('57')).toEqual([
@@ -175,23 +189,14 @@ describe('useGlobalRankings', () => {
   })
 
   describe('Successful Data Fetching', () => {
-    /**
-     * Test that hook fetches and aggregates data correctly
-     *
-     * **Validates: Requirements 2.1, 2.2**
-     */
     it('should fetch and aggregate ranking data for a district', async () => {
       const districtId = '57'
-      const mockAvailableYears = createMockAvailableYearsResponse(districtId)
       const mockRankHistory = createMockRankHistoryResponse(districtId)
 
-      // Mock GET for available years, POST for batch rank history
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('available-ranking-years')) {
-          return Promise.resolve({ data: mockAvailableYears })
-        }
-        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
-      })
+      // Mock CDN dates (used by useAvailableProgramYears)
+      mockedFetchCdnDates.mockResolvedValue(createSimpleDatesForRankings())
+
+      // Mock Express POST for rank history batch
       mockedApiClient.post.mockImplementation((url: string) => {
         if (url.includes('rank-history-batch')) {
           return Promise.resolve({ data: [mockRankHistory] })
@@ -203,36 +208,23 @@ describe('useGlobalRankings', () => {
         wrapper: createWrapper(),
       })
 
-      // Initially loading
       expect(result.current.isLoading).toBe(true)
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Verify successful response
       expect(result.current.isError).toBe(false)
       expect(result.current.error).toBeNull()
-      expect(result.current.availableProgramYears).toHaveLength(3)
+      expect(result.current.availableProgramYears.length).toBeGreaterThan(0)
       expect(result.current.currentYearHistory).not.toBeNull()
     })
 
-    /**
-     * Test that available program years are converted correctly
-     *
-     * **Validates: Requirements 2.1**
-     */
     it('should convert available program years to ProgramYear format', async () => {
       const districtId = '57'
-      const mockAvailableYears = createMockAvailableYearsResponse(districtId)
       const mockRankHistory = createMockRankHistoryResponse(districtId)
 
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('available-ranking-years')) {
-          return Promise.resolve({ data: mockAvailableYears })
-        }
-        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
-      })
+      mockedFetchCdnDates.mockResolvedValue(createSimpleDatesForRankings())
       mockedApiClient.post.mockImplementation((url: string) => {
         if (url.includes('rank-history-batch')) {
           return Promise.resolve({ data: [mockRankHistory] })
@@ -250,29 +242,18 @@ describe('useGlobalRankings', () => {
 
       const firstYear = result.current.availableProgramYears[0]
       expect(firstYear).toMatchObject({
-        year: 2024,
-        startDate: '2024-07-01',
-        endDate: '2025-06-30',
-        label: '2024-2025',
+        year: 2025,
+        startDate: '2025-07-01',
+        endDate: '2026-06-30',
+        label: '2025-2026',
       })
     })
 
-    /**
-     * Test that end-of-year rankings are extracted correctly
-     *
-     * **Validates: Requirements 3.1-3.6**
-     */
     it('should extract end-of-year rankings from history data', async () => {
       const districtId = '57'
-      const mockAvailableYears = createMockAvailableYearsResponse(districtId)
       const mockRankHistory = createMockRankHistoryResponse(districtId)
 
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('available-ranking-years')) {
-          return Promise.resolve({ data: mockAvailableYears })
-        }
-        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
-      })
+      mockedFetchCdnDates.mockResolvedValue(createSimpleDatesForRankings())
       mockedApiClient.post.mockImplementation((url: string) => {
         if (url.includes('rank-history-batch')) {
           return Promise.resolve({ data: [mockRankHistory] })
@@ -293,29 +274,22 @@ describe('useGlobalRankings', () => {
       expect(rankings?.paidClubs.rank).toBe(10) // Latest point
       expect(rankings?.membershipPayments.rank).toBe(15)
       expect(rankings?.distinguishedClubs.rank).toBe(5)
-      expect(rankings?.asOfDate).toBe('2024-09-15')
-      expect(rankings?.isPartialYear).toBe(true) // 2024-2025 is not complete
+      expect(rankings?.asOfDate).toBe('2025-09-15')
+      expect(rankings?.isPartialYear).toBe(true) // 2025-2026 is not complete
     })
   })
 
   describe('Loading State', () => {
-    /**
-     * Test that hook returns loading state while fetching
-     */
     it('should return isLoading=true while fetching', async () => {
       const districtId = '57'
-      const mockAvailableYears = createMockAvailableYearsResponse(districtId)
       const mockRankHistory = createMockRankHistoryResponse(districtId)
 
-      // Create delayed responses
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('available-ranking-years')) {
-          return new Promise(resolve =>
-            setTimeout(() => resolve({ data: mockAvailableYears }), 50)
+      mockedFetchCdnDates.mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(() => resolve(createSimpleDatesForRankings()), 50)
           )
-        }
-        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
-      })
+      )
       mockedApiClient.post.mockImplementation((url: string) => {
         if (url.includes('rank-history-batch')) {
           return new Promise(resolve =>
@@ -329,7 +303,6 @@ describe('useGlobalRankings', () => {
         wrapper: createWrapper(),
       })
 
-      // Should be loading initially
       expect(result.current.isLoading).toBe(true)
 
       await waitFor(() => {
@@ -339,14 +312,11 @@ describe('useGlobalRankings', () => {
   })
 
   describe('Error Handling', () => {
-    /**
-     * Test that API errors are properly propagated
-     */
-    it('should handle API errors correctly', async () => {
+    it('should handle CDN errors correctly', async () => {
       const districtId = '57'
-      const errorMessage = 'Network error'
+      const errorMessage = 'CDN dates fetch failed: 500'
 
-      mockedApiClient.get.mockRejectedValue(new Error(errorMessage))
+      mockedFetchCdnDates.mockRejectedValue(new Error(errorMessage))
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
         wrapper: createWrapper(),
@@ -364,20 +334,11 @@ describe('useGlobalRankings', () => {
   })
 
   describe('Refetch Function', () => {
-    /**
-     * Test that refetch function is provided and works
-     */
     it('should provide a working refetch function', async () => {
       const districtId = '57'
-      const mockAvailableYears = createMockAvailableYearsResponse(districtId)
       const mockRankHistory = createMockRankHistoryResponse(districtId)
 
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('available-ranking-years')) {
-          return Promise.resolve({ data: mockAvailableYears })
-        }
-        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
-      })
+      mockedFetchCdnDates.mockResolvedValue(createSimpleDatesForRankings())
       mockedApiClient.post.mockImplementation((url: string) => {
         if (url.includes('rank-history-batch')) {
           return Promise.resolve({ data: [mockRankHistory] })
@@ -393,33 +354,22 @@ describe('useGlobalRankings', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Verify refetch function exists
       expect(typeof result.current.refetch).toBe('function')
     })
   })
 
   describe('Empty Data Handling', () => {
-    /**
-     * Test that hook handles empty program years array
-     */
-    it('should handle empty program years array', async () => {
+    it('should handle empty dates from CDN', async () => {
       const districtId = '57'
-      const mockAvailableYears: AvailableRankingYearsResponse = {
-        districtId,
-        programYears: [],
-      }
 
-      // When there are no program years, the rank history hook will still be called
-      // but with no date range, so we need to handle both endpoints
-      mockedApiClient.get.mockImplementation((url: string) => {
-        if (url.includes('available-ranking-years')) {
-          return Promise.resolve({ data: mockAvailableYears })
-        }
-        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
+      mockedFetchCdnDates.mockResolvedValue({
+        dates: [],
+        count: 0,
+        generatedAt: '2025-11-15T00:00:00Z',
       })
+
       mockedApiClient.post.mockImplementation((url: string) => {
         if (url.includes('rank-history-batch')) {
-          // Return empty history when no program years
           return Promise.resolve({
             data: [
               {
@@ -447,9 +397,7 @@ describe('useGlobalRankings', () => {
       })
 
       expect(result.current.availableProgramYears).toHaveLength(0)
-      // When there are no program years, no selected year exists → null history
       expect(result.current.currentYearHistory).toBeNull()
-      // End of year rankings should be null when history is null
       expect(result.current.endOfYearRankings).toBeNull()
     })
   })
@@ -457,9 +405,6 @@ describe('useGlobalRankings', () => {
 
 describe('Helper Functions', () => {
   describe('convertToProgramYear', () => {
-    /**
-     * Test conversion from ProgramYearWithData to ProgramYear
-     */
     it('should convert ProgramYearWithData to ProgramYear format', () => {
       const input: ProgramYearWithData = {
         year: '2023-2024',
@@ -482,11 +427,6 @@ describe('Helper Functions', () => {
   })
 
   describe('extractEndOfYearRankings', () => {
-    /**
-     * Test extraction of end-of-year rankings from history
-     *
-     * **Validates: Requirements 3.1-3.6**
-     */
     it('should extract rankings from the most recent history point', () => {
       const history: RankHistoryResponse = {
         districtId: '57',
@@ -528,7 +468,6 @@ describe('Helper Functions', () => {
       const result = extractEndOfYearRankings(history, programYearData)
 
       expect(result).not.toBeNull()
-      // Should use the most recent date (2024-09-15)
       expect(result?.paidClubs.rank).toBe(10)
       expect(result?.membershipPayments.rank).toBe(15)
       expect(result?.distinguishedClubs.rank).toBe(5)
@@ -536,12 +475,6 @@ describe('Helper Functions', () => {
       expect(result?.isPartialYear).toBe(true)
     })
 
-    /**
-     * Test that extractEndOfYearRankings uses overallRank from API when present
-     *
-     * **Validates: Requirements 3.1** - WHEN extractEndOfYearRankings processes rank history data,
-     * THE System SHALL use the overallRank field from the API response
-     */
     it('should use overallRank from API when present', () => {
       const history: RankHistoryResponse = {
         districtId: '57',
@@ -554,7 +487,7 @@ describe('Helper Functions', () => {
             paymentsRank: 15,
             distinguishedRank: 5,
             totalDistricts: 126,
-            overallRank: 7, // API-provided overallRank based on aggregateScore position
+            overallRank: 7,
           },
         ],
         programYear: {
@@ -568,17 +501,9 @@ describe('Helper Functions', () => {
       const result = extractEndOfYearRankings(history, programYearData)
 
       expect(result).not.toBeNull()
-      // Should use the API-provided overallRank (7), NOT the average of category ranks
-      // Average would be: Math.round((10 + 15 + 5) / 3) = 10
       expect(result?.overall.rank).toBe(7)
     })
 
-    /**
-     * Test that extractEndOfYearRankings falls back to averaging when overallRank is missing
-     *
-     * **Validates: Requirements 3.4** - IF the overallRank field is not present in legacy data,
-     * THEN THE System SHALL fall back to calculating rank from aggregateScore position
-     */
     it('should fall back to averaging category ranks when overallRank is missing (legacy data)', () => {
       const history: RankHistoryResponse = {
         districtId: '57',
@@ -591,7 +516,6 @@ describe('Helper Functions', () => {
             paymentsRank: 15,
             distinguishedRank: 5,
             totalDistricts: 126,
-            // No overallRank field - simulating legacy data
           },
         ],
         programYear: {
@@ -605,16 +529,9 @@ describe('Helper Functions', () => {
       const result = extractEndOfYearRankings(history, programYearData)
 
       expect(result).not.toBeNull()
-      // Should fall back to averaging: Math.round((10 + 15 + 5) / 3) = 10
       expect(result?.overall.rank).toBe(10)
     })
 
-    /**
-     * Test that overallRank is used even when it differs significantly from category average
-     *
-     * **Validates: Requirements 3.1, 3.3** - THE System SHALL NOT calculate overall rank
-     * by averaging clubsRank, paymentsRank, and distinguishedRank
-     */
     it('should use overallRank even when it differs significantly from category average', () => {
       const history: RankHistoryResponse = {
         districtId: '57',
@@ -622,12 +539,12 @@ describe('Helper Functions', () => {
         history: [
           {
             date: '2024-09-15',
-            aggregateScore: 400, // High aggregate score
-            clubsRank: 50, // Poor clubs rank
-            paymentsRank: 60, // Poor payments rank
-            distinguishedRank: 70, // Poor distinguished rank
+            aggregateScore: 400,
+            clubsRank: 50,
+            paymentsRank: 60,
+            distinguishedRank: 70,
             totalDistricts: 126,
-            overallRank: 3, // But excellent overall rank due to high aggregate score
+            overallRank: 3,
           },
         ],
         programYear: {
@@ -641,20 +558,12 @@ describe('Helper Functions', () => {
       const result = extractEndOfYearRankings(history, programYearData)
 
       expect(result).not.toBeNull()
-      // Should use API-provided overallRank (3), NOT the average
-      // Average would be: Math.round((50 + 60 + 70) / 3) = 60
       expect(result?.overall.rank).toBe(3)
-      // Verify category ranks are still correct
       expect(result?.paidClubs.rank).toBe(50)
       expect(result?.membershipPayments.rank).toBe(60)
       expect(result?.distinguishedClubs.rank).toBe(70)
     })
 
-    /**
-     * Test that percentiles are calculated correctly
-     *
-     * **Validates: Requirements 3.5**
-     */
     it('should calculate percentiles correctly', () => {
       const history: RankHistoryResponse = {
         districtId: '57',
@@ -663,9 +572,9 @@ describe('Helper Functions', () => {
           {
             date: '2024-09-15',
             aggregateScore: 360,
-            clubsRank: 1, // Best rank
-            paymentsRank: 126, // Worst rank
-            distinguishedRank: 63, // Middle rank
+            clubsRank: 1,
+            paymentsRank: 126,
+            distinguishedRank: 63,
             totalDistricts: 126,
           },
         ],
@@ -680,17 +589,11 @@ describe('Helper Functions', () => {
       const result = extractEndOfYearRankings(history, programYearData)
 
       expect(result).not.toBeNull()
-      // Rank 1 of 126 = (126 - 1 + 1) / 126 * 100 = 100%
       expect(result?.paidClubs.percentile).toBe(100)
-      // Rank 126 of 126 = (126 - 126 + 1) / 126 * 100 = 0.79%
       expect(result?.membershipPayments.percentile).toBeCloseTo(0.8, 1)
-      // Rank 63 of 126 = (126 - 63 + 1) / 126 * 100 = 50.79%
       expect(result?.distinguishedClubs.percentile).toBeCloseTo(50.8, 1)
     })
 
-    /**
-     * Test handling of null/empty history
-     */
     it('should return null for empty history', () => {
       const history: RankHistoryResponse = {
         districtId: '57',
@@ -714,11 +617,6 @@ describe('Helper Functions', () => {
   })
 
   describe('calculateYearOverYearChange', () => {
-    /**
-     * Test year-over-year change calculation for improvement
-     *
-     * **Validates: Requirements 5.2**
-     */
     it('should calculate positive change for rank improvement', () => {
       const currentYear: EndOfYearRankings = {
         overall: { rank: 5, totalDistricts: 126, percentile: 96.8 },
@@ -741,18 +639,12 @@ describe('Helper Functions', () => {
       const result = calculateYearOverYearChange(currentYear, previousYear)
 
       expect(result).not.toBeNull()
-      // Rank improved from 10 to 5 = 10 - 5 = 5 (positive = improvement)
       expect(result?.overall).toBe(5)
       expect(result?.clubs).toBe(5)
       expect(result?.payments).toBe(7)
       expect(result?.distinguished).toBe(5)
     })
 
-    /**
-     * Test year-over-year change calculation for decline
-     *
-     * **Validates: Requirements 5.2**
-     */
     it('should calculate negative change for rank decline', () => {
       const currentYear: EndOfYearRankings = {
         overall: { rank: 15, totalDistricts: 126, percentile: 88.9 },
@@ -775,16 +667,12 @@ describe('Helper Functions', () => {
       const result = calculateYearOverYearChange(currentYear, previousYear)
 
       expect(result).not.toBeNull()
-      // Rank declined from 10 to 15 = 10 - 15 = -5 (negative = decline)
       expect(result?.overall).toBe(-5)
       expect(result?.clubs).toBe(-5)
       expect(result?.payments).toBe(-8)
       expect(result?.distinguished).toBe(-4)
     })
 
-    /**
-     * Test handling of null inputs
-     */
     it('should return null when current year is null', () => {
       const previousYear: EndOfYearRankings = {
         overall: { rank: 10, totalDistricts: 126, percentile: 92.9 },
@@ -815,12 +703,6 @@ describe('Helper Functions', () => {
   })
 
   describe('buildYearlyRankingSummaries', () => {
-    /**
-     * Test that buildYearlyRankingSummaries uses overallRank from API when present
-     *
-     * **Validates: Requirements 3.3** - WHEN buildYearlyRankingSummaries creates yearly summaries,
-     * THE System SHALL use the overallRank field from the latest data point
-     */
     it('should use overallRank from API when present in history data', () => {
       const programYears: ProgramYearWithData[] = [
         {
@@ -845,7 +727,7 @@ describe('Helper Functions', () => {
             paymentsRank: 18,
             distinguishedRank: 9,
             totalDistricts: 126,
-            overallRank: 5, // API-provided overallRank based on aggregateScore position
+            overallRank: 5,
           },
         ],
         programYear: {
@@ -858,20 +740,12 @@ describe('Helper Functions', () => {
       const result = buildYearlyRankingSummaries(programYears, historyByYear)
 
       expect(result).toHaveLength(1)
-      // Should use API-provided overallRank (5), NOT the average of category ranks
-      // Average would be: Math.round((12 + 18 + 9) / 3) = 13
       expect(result[0]?.overallRank).toBe(5)
       expect(result[0]?.clubsRank).toBe(12)
       expect(result[0]?.paymentsRank).toBe(18)
       expect(result[0]?.distinguishedRank).toBe(9)
     })
 
-    /**
-     * Test that buildYearlyRankingSummaries falls back to averaging when overallRank is missing
-     *
-     * **Validates: Requirements 3.4** - IF the overallRank field is not present in legacy data,
-     * THEN THE System SHALL fall back to calculating rank
-     */
     it('should fall back to averaging category ranks when overallRank is missing', () => {
       const programYears: ProgramYearWithData[] = [
         {
@@ -896,7 +770,6 @@ describe('Helper Functions', () => {
             paymentsRank: 21,
             distinguishedRank: 12,
             totalDistricts: 126,
-            // No overallRank - simulating legacy data
           },
         ],
         programYear: {
@@ -909,16 +782,9 @@ describe('Helper Functions', () => {
       const result = buildYearlyRankingSummaries(programYears, historyByYear)
 
       expect(result).toHaveLength(1)
-      // Should fall back to averaging: Math.round((15 + 21 + 12) / 3) = 16
       expect(result[0]?.overallRank).toBe(16)
     })
 
-    /**
-     * Test that year-over-year changes use overallRank correctly
-     *
-     * **Validates: Requirements 3.3** - Year-over-year changes should be calculated
-     * using the correct overallRank values from the API
-     */
     it('should calculate year-over-year changes using overallRank from API', () => {
       const programYears: ProgramYearWithData[] = [
         {
@@ -941,7 +807,6 @@ describe('Helper Functions', () => {
 
       const historyByYear = new Map<string, RankHistoryResponse>()
 
-      // 2022-2023: overallRank = 10
       historyByYear.set('2022-2023', {
         districtId: '57',
         districtName: 'District 57',
@@ -963,7 +828,6 @@ describe('Helper Functions', () => {
         },
       })
 
-      // 2023-2024: overallRank = 5 (improved from 10)
       historyByYear.set('2023-2024', {
         districtId: '57',
         districtName: 'District 57',
@@ -989,24 +853,17 @@ describe('Helper Functions', () => {
 
       expect(result).toHaveLength(2)
 
-      // Most recent year (2023-2024) should be first
       const currentYear = result[0]
       expect(currentYear?.programYear).toBe('2023-2024')
       expect(currentYear?.overallRank).toBe(5)
-      // Year-over-year change: previous (10) - current (5) = 5 (positive = improvement)
       expect(currentYear?.yearOverYearChange?.overall).toBe(5)
 
-      // Previous year (2022-2023) should be second
       const previousYear = result[1]
       expect(previousYear?.programYear).toBe('2022-2023')
       expect(previousYear?.overallRank).toBe(10)
-      // No year-over-year change for oldest year
       expect(previousYear?.yearOverYearChange).toBeNull()
     })
 
-    /**
-     * Test that buildYearlyRankingSummaries handles empty history gracefully
-     */
     it('should return empty array when no history data available', () => {
       const programYears: ProgramYearWithData[] = [
         {
@@ -1020,7 +877,6 @@ describe('Helper Functions', () => {
       ]
 
       const historyByYear = new Map<string, RankHistoryResponse>()
-      // No history data for the program year
 
       const result = buildYearlyRankingSummaries(programYears, historyByYear)
 

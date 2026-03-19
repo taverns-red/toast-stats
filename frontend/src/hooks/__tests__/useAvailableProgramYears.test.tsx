@@ -1,15 +1,10 @@
 /**
- * Unit tests for useAvailableProgramYears hook
+ * Unit tests for useAvailableProgramYears hook (CDN-only)
  * Feature: district-global-rankings
  *
  * Validates: Requirements 2.1, 2.3
  *
- * These tests verify that the useAvailableProgramYears hook correctly:
- * - Fetches available program years for a district
- * - Returns loading, error, and success states appropriately
- * - Handles API errors gracefully
- * - Respects the enabled flag
- * - Provides a refetch function
+ * Now derives program years from CDN dates index (#173).
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -20,50 +15,69 @@ import {
   useAvailableProgramYears,
   availableProgramYearsQueryKeys,
 } from '../useAvailableProgramYears'
-import { apiClient } from '../../services/api'
-import type { AvailableRankingYearsResponse } from '../../types/districts'
+import { fetchCdnDates } from '../../services/cdn'
+import type { CdnDatesIndex } from '../../services/cdn'
 
-// Mock the API client
-vi.mock('../../services/api', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
+// Mock the CDN service
+vi.mock('../../services/cdn', () => ({
+  fetchCdnDates: vi.fn(),
 }))
 
-// Type the mocked apiClient
-const mockedApiClient = vi.mocked(apiClient)
+const mockedFetchCdnDates = vi.mocked(fetchCdnDates)
 
-// Create a mock AvailableRankingYearsResponse
-const createMockResponse = (
-  districtId: string
-): AvailableRankingYearsResponse => ({
-  districtId,
-  programYears: [
-    {
-      year: '2024-2025',
-      startDate: '2024-07-01',
-      endDate: '2025-06-30',
-      hasCompleteData: false,
-      snapshotCount: 15,
-      latestSnapshotDate: '2024-11-15',
-    },
-    {
-      year: '2023-2024',
-      startDate: '2023-07-01',
-      endDate: '2024-06-30',
-      hasCompleteData: true,
-      snapshotCount: 52,
-      latestSnapshotDate: '2024-06-30',
-    },
-    {
-      year: '2022-2023',
-      startDate: '2022-07-01',
-      endDate: '2023-06-30',
-      hasCompleteData: true,
-      snapshotCount: 48,
-      latestSnapshotDate: '2023-06-30',
-    },
+/**
+ * Build a mock CDN dates index with dates spanning multiple program years.
+ * This replaces the old Express mock which returned pre-computed program years.
+ * Now the hook derives program years from raw dates.
+ */
+const createMockDatesForProgramYears = (): CdnDatesIndex => ({
+  dates: [
+    // 2022-2023 program year (Jul 2022 – Jun 2023)
+    '2022-07-15',
+    '2022-08-15',
+    '2022-09-15',
+    '2022-10-15',
+    '2022-11-15',
+    '2022-12-15',
+    '2023-01-15',
+    '2023-02-15',
+    '2023-03-15',
+    '2023-04-15',
+    '2023-05-15',
+    '2023-06-15',
+    '2023-06-30',
+    // 48 dates total in this range (simplified to 13 here)
+
+    // 2023-2024 program year (Jul 2023 – Jun 2024)
+    '2023-07-15',
+    '2023-08-15',
+    '2023-09-15',
+    '2023-10-15',
+    '2023-11-15',
+    '2023-12-15',
+    '2024-01-15',
+    '2024-02-15',
+    '2024-03-15',
+    '2024-04-15',
+    '2024-05-15',
+    '2024-06-15',
+    '2024-06-30',
+
+    // 2025-2026 program year (Jul 2025 – Jun 2026) — current/incomplete
+    '2025-07-15',
+    '2025-08-15',
+    '2025-09-15',
+    '2025-10-15',
+    '2025-11-15',
   ],
+  count: 31,
+  generatedAt: '2025-11-15T00:00:00Z',
+})
+
+const createEmptyDates = (): CdnDatesIndex => ({
+  dates: [],
+  count: 0,
+  generatedAt: '2024-11-15T00:00:00Z',
 })
 
 // Create a wrapper with QueryClientProvider for testing hooks
@@ -95,11 +109,6 @@ describe('useAvailableProgramYears', () => {
   })
 
   describe('Query Key Factory', () => {
-    /**
-     * Test that query key factory produces correct keys
-     *
-     * **Validates: Requirements 2.1**
-     */
     it('should produce correct query keys', () => {
       expect(availableProgramYearsQueryKeys.all).toEqual([
         'available-ranking-years',
@@ -112,50 +121,34 @@ describe('useAvailableProgramYears', () => {
   })
 
   describe('Successful Data Fetching', () => {
-    /**
-     * Test that hook fetches and returns program years data
-     *
-     * **Validates: Requirements 2.1 (display program year selector)**
-     */
-    it('should fetch available program years for a district', async () => {
+    it('should derive program years from CDN dates', async () => {
       const districtId = '57'
-      const mockData = createMockResponse(districtId)
-
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDates.mockResolvedValueOnce(
+        createMockDatesForProgramYears()
+      )
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId }),
         { wrapper: createWrapper() }
       )
 
-      // Initially loading
       expect(result.current.isLoading).toBe(true)
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Verify successful response
-      expect(result.current.data).toEqual(mockData)
       expect(result.current.isError).toBe(false)
       expect(result.current.error).toBeNull()
-
-      // Verify API was called correctly
-      expect(mockedApiClient.get).toHaveBeenCalledWith(
-        `/districts/${districtId}/available-ranking-years`
-      )
+      expect(result.current.data?.districtId).toBe(districtId)
+      expect(result.current.data?.programYears).toHaveLength(3)
     })
 
-    /**
-     * Test that hook returns correct data structure
-     *
-     * **Validates: Requirements 2.1**
-     */
-    it('should return program years with all required fields', async () => {
+    it('should return program years sorted newest first with correct fields', async () => {
       const districtId = '57'
-      const mockData = createMockResponse(districtId)
-
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDates.mockResolvedValueOnce(
+        createMockDatesForProgramYears()
+      )
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId }),
@@ -166,37 +159,30 @@ describe('useAvailableProgramYears', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Verify data structure
-      expect(result.current.data?.districtId).toBe(districtId)
-      expect(result.current.data?.programYears).toHaveLength(3)
+      const years = result.current.data?.programYears
+      // Should be sorted newest first
+      expect(years?.[0]?.year).toBe('2025-2026')
+      expect(years?.[1]?.year).toBe('2023-2024')
+      expect(years?.[2]?.year).toBe('2022-2023')
 
-      const firstYear = result.current.data?.programYears[0]
-      expect(firstYear).toMatchObject({
-        year: '2024-2025',
-        startDate: '2024-07-01',
-        endDate: '2025-06-30',
-        hasCompleteData: false,
-        snapshotCount: 15,
-        latestSnapshotDate: '2024-11-15',
-      })
+      // First year should have correct structure
+      const firstYear = years?.[0]
+      expect(firstYear?.startDate).toBe('2025-07-01')
+      expect(firstYear?.endDate).toBe('2026-06-30')
+      expect(firstYear?.hasCompleteData).toBe(false) // Current year
+      expect(firstYear?.snapshotCount).toBe(5)
+      expect(firstYear?.latestSnapshotDate).toBe('2025-11-15')
     })
   })
 
   describe('Loading State', () => {
-    /**
-     * Test that hook returns loading state while fetching
-     *
-     * **Validates: Requirements 2.1**
-     */
     it('should return isLoading=true while fetching', async () => {
       const districtId = '57'
-      const mockData = createMockResponse(districtId)
 
-      // Create a delayed response
-      mockedApiClient.get.mockImplementation(
+      mockedFetchCdnDates.mockImplementation(
         () =>
           new Promise(resolve =>
-            setTimeout(() => resolve({ data: mockData }), 100)
+            setTimeout(() => resolve(createMockDatesForProgramYears()), 100)
           )
       )
 
@@ -205,7 +191,6 @@ describe('useAvailableProgramYears', () => {
         { wrapper: createWrapper() }
       )
 
-      // Should be loading initially
       expect(result.current.isLoading).toBe(true)
       expect(result.current.data).toBeUndefined()
 
@@ -213,21 +198,16 @@ describe('useAvailableProgramYears', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      expect(result.current.data).toEqual(mockData)
+      expect(result.current.data?.programYears).toHaveLength(3)
     })
   })
 
   describe('Error Handling', () => {
-    /**
-     * Test that API errors are properly propagated
-     *
-     * **Validates: Requirements 7.2 (error state with retry)**
-     */
-    it('should handle API errors correctly', async () => {
+    it('should handle CDN errors correctly', async () => {
       const districtId = '57'
-      const errorMessage = 'Network error'
+      const errorMessage = 'CDN dates fetch failed: 500'
 
-      mockedApiClient.get.mockRejectedValue(new Error(errorMessage))
+      mockedFetchCdnDates.mockRejectedValue(new Error(errorMessage))
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId }),
@@ -245,18 +225,11 @@ describe('useAvailableProgramYears', () => {
       expect(result.current.data).toBeUndefined()
     })
 
-    /**
-     * Test that 404 errors are handled (district not found)
-     *
-     * **Validates: Requirements 7.2**
-     */
-    it('should handle 404 errors for non-existent districts', async () => {
+    it('should handle CDN 404 errors', async () => {
       const districtId = 'INVALID'
 
-      const error = Object.assign(new Error('District not found'), {
-        response: { status: 404 },
-      })
-      mockedApiClient.get.mockRejectedValue(error)
+      const error = new Error('CDN dates fetch failed: 404')
+      mockedFetchCdnDates.mockRejectedValue(error)
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId }),
@@ -275,11 +248,6 @@ describe('useAvailableProgramYears', () => {
   })
 
   describe('Enabled Flag', () => {
-    /**
-     * Test that query is disabled when enabled=false
-     *
-     * **Validates: Requirements 2.1**
-     */
     it('should not fetch when enabled is false', async () => {
       const districtId = '57'
 
@@ -288,37 +256,25 @@ describe('useAvailableProgramYears', () => {
         { wrapper: createWrapper() }
       )
 
-      // Query should not be enabled
       expect(result.current.isLoading).toBe(false)
-      expect(mockedApiClient.get).not.toHaveBeenCalled()
+      expect(mockedFetchCdnDates).not.toHaveBeenCalled()
     })
 
-    /**
-     * Test that query is disabled when districtId is empty
-     *
-     * **Validates: Requirements 2.1**
-     */
     it('should not fetch when districtId is empty string', async () => {
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId: '' }),
         { wrapper: createWrapper() }
       )
 
-      // Query should not be enabled
       expect(result.current.isLoading).toBe(false)
-      expect(mockedApiClient.get).not.toHaveBeenCalled()
+      expect(mockedFetchCdnDates).not.toHaveBeenCalled()
     })
 
-    /**
-     * Test that query is enabled when districtId is provided
-     *
-     * **Validates: Requirements 2.1**
-     */
     it('should fetch when districtId is provided and enabled is true', async () => {
       const districtId = '57'
-      const mockData = createMockResponse(districtId)
-
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDates.mockResolvedValueOnce(
+        createMockDatesForProgramYears()
+      )
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId, enabled: true }),
@@ -329,21 +285,14 @@ describe('useAvailableProgramYears', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      expect(mockedApiClient.get).toHaveBeenCalled()
+      expect(mockedFetchCdnDates).toHaveBeenCalled()
     })
   })
 
   describe('Refetch Function', () => {
-    /**
-     * Test that refetch function is provided and works
-     *
-     * **Validates: Requirements 7.2 (retry option)**
-     */
     it('should provide a working refetch function', async () => {
       const districtId = '57'
-      const mockData = createMockResponse(districtId)
-
-      mockedApiClient.get.mockResolvedValue({ data: mockData })
+      mockedFetchCdnDates.mockResolvedValue(createMockDatesForProgramYears())
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId }),
@@ -354,33 +303,21 @@ describe('useAvailableProgramYears', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Clear mock to track refetch call
-      mockedApiClient.get.mockClear()
-      mockedApiClient.get.mockResolvedValue({ data: mockData })
+      mockedFetchCdnDates.mockClear()
+      mockedFetchCdnDates.mockResolvedValue(createMockDatesForProgramYears())
 
-      // Call refetch
       result.current.refetch()
 
       await waitFor(() => {
-        expect(mockedApiClient.get).toHaveBeenCalled()
+        expect(mockedFetchCdnDates).toHaveBeenCalled()
       })
     })
   })
 
   describe('Empty Data Handling', () => {
-    /**
-     * Test that hook handles empty program years array
-     *
-     * **Validates: Requirements 2.4 (empty state)**
-     */
-    it('should handle empty program years array', async () => {
+    it('should handle empty dates array', async () => {
       const districtId = '57'
-      const mockData: AvailableRankingYearsResponse = {
-        districtId,
-        programYears: [],
-      }
-
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDates.mockResolvedValueOnce(createEmptyDates())
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId }),
@@ -395,19 +332,9 @@ describe('useAvailableProgramYears', () => {
       expect(result.current.isError).toBe(false)
     })
 
-    /**
-     * Test that isEmpty flag is true when data is loaded but contains no program years
-     *
-     * **Validates: Requirements 4.2 (display message when no program years available)**
-     */
     it('should set isEmpty=true when data is loaded but contains no program years', async () => {
       const districtId = '57'
-      const mockData: AvailableRankingYearsResponse = {
-        districtId,
-        programYears: [],
-      }
-
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDates.mockResolvedValueOnce(createEmptyDates())
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId }),
@@ -423,16 +350,11 @@ describe('useAvailableProgramYears', () => {
       expect(result.current.data?.programYears).toHaveLength(0)
     })
 
-    /**
-     * Test that isEmpty flag is false when data contains program years
-     *
-     * **Validates: Requirements 4.2**
-     */
     it('should set isEmpty=false when data contains program years', async () => {
       const districtId = '57'
-      const mockData = createMockResponse(districtId)
-
-      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+      mockedFetchCdnDates.mockResolvedValueOnce(
+        createMockDatesForProgramYears()
+      )
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId }),
@@ -447,20 +369,13 @@ describe('useAvailableProgramYears', () => {
       expect(result.current.data?.programYears.length).toBeGreaterThan(0)
     })
 
-    /**
-     * Test that isEmpty flag is false while loading
-     *
-     * **Validates: Requirements 4.2**
-     */
     it('should set isEmpty=false while loading', async () => {
       const districtId = '57'
-      const mockData = createMockResponse(districtId)
 
-      // Create a delayed response
-      mockedApiClient.get.mockImplementation(
+      mockedFetchCdnDates.mockImplementation(
         () =>
           new Promise(resolve =>
-            setTimeout(() => resolve({ data: mockData }), 100)
+            setTimeout(() => resolve(createMockDatesForProgramYears()), 100)
           )
       )
 
@@ -469,7 +384,6 @@ describe('useAvailableProgramYears', () => {
         { wrapper: createWrapper() }
       )
 
-      // While loading, isEmpty should be false
       expect(result.current.isLoading).toBe(true)
       expect(result.current.isEmpty).toBe(false)
 
@@ -478,15 +392,10 @@ describe('useAvailableProgramYears', () => {
       })
     })
 
-    /**
-     * Test that isEmpty flag is false when in error state
-     *
-     * **Validates: Requirements 4.1, 4.2**
-     */
     it('should set isEmpty=false when in error state', async () => {
       const districtId = '57'
 
-      mockedApiClient.get.mockRejectedValue(new Error('Network error'))
+      mockedFetchCdnDates.mockRejectedValue(new Error('Network error'))
 
       const { result } = renderHook(
         () => useAvailableProgramYears({ districtId }),
@@ -500,30 +409,21 @@ describe('useAvailableProgramYears', () => {
         { timeout: 5000 }
       )
 
-      // When in error state, isEmpty should be false
       expect(result.current.isEmpty).toBe(false)
     })
   })
 
   describe('Different Districts', () => {
-    /**
-     * Test that different districts result in different API calls
-     *
-     * **Validates: Requirements 2.1**
-     */
-    it('should make separate API calls for different districts', async () => {
+    it('should make separate CDN calls for different districts', async () => {
       const district1 = '57'
       const district2 = '101'
-      const mockData1 = createMockResponse(district1)
-      const mockData2 = createMockResponse(district2)
 
-      mockedApiClient.get
-        .mockResolvedValueOnce({ data: mockData1 })
-        .mockResolvedValueOnce({ data: mockData2 })
+      mockedFetchCdnDates
+        .mockResolvedValueOnce(createMockDatesForProgramYears())
+        .mockResolvedValueOnce(createMockDatesForProgramYears())
 
       const wrapper = createWrapper()
 
-      // First hook with district1
       const { result: result1 } = renderHook(
         () => useAvailableProgramYears({ districtId: district1 }),
         { wrapper }
@@ -533,7 +433,6 @@ describe('useAvailableProgramYears', () => {
         expect(result1.current.isLoading).toBe(false)
       })
 
-      // Second hook with district2
       const { result: result2 } = renderHook(
         () => useAvailableProgramYears({ districtId: district2 }),
         { wrapper }
@@ -543,16 +442,8 @@ describe('useAvailableProgramYears', () => {
         expect(result2.current.isLoading).toBe(false)
       })
 
-      // Verify both API calls were made with different districts
-      expect(mockedApiClient.get).toHaveBeenCalledTimes(2)
-      expect(mockedApiClient.get).toHaveBeenNthCalledWith(
-        1,
-        `/districts/${district1}/available-ranking-years`
-      )
-      expect(mockedApiClient.get).toHaveBeenNthCalledWith(
-        2,
-        `/districts/${district2}/available-ranking-years`
-      )
+      // Both calls should have been made (different query keys)
+      expect(mockedFetchCdnDates).toHaveBeenCalledTimes(2)
     })
   })
 })

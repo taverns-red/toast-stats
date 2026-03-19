@@ -164,3 +164,43 @@ export function resetCdnManifestCache(): void {
   cachedManifest = null
   manifestPromise = null
 }
+
+/**
+ * Fetch a district snapshot from CDN.
+ * Returns the full snapshot JSON (DistrictStatistics shape).
+ */
+export async function fetchCdnDistrictSnapshot<T>(
+  date: string,
+  districtId: string
+): Promise<T> {
+  return fetchFromCdn<T>(cdnSnapshotUrl(date, districtId))
+}
+
+/**
+ * Fetch a pre-computed analytics file for a district.
+ * @param type - Analytics type: 'analytics', 'membership', 'clubhealth',
+ *   'distinguished-analytics', 'membership-analytics', 'vulnerable-clubs',
+ *   'leadership-insights', 'year-over-year', 'performance-targets', 'club-trends-index'
+ */
+export async function fetchCdnDistrictAnalytics<T>(
+  date: string,
+  districtId: string,
+  type: string
+): Promise<T> {
+  return fetchFromCdn<T>(cdnAnalyticsUrl(date, districtId, type))
+}
+
+/**
+ * CDN snapshot index — maps districtIds to their available snapshot dates.
+ */
+export interface CdnSnapshotIndex {
+  [districtId: string]: string[]
+}
+
+/**
+ * Fetch the district snapshot index from CDN.
+ * Returns a map of districtId → list of available dates.
+ */
+export async function fetchCdnSnapshotIndex(): Promise<CdnSnapshotIndex> {
+  return fetchFromCdn<CdnSnapshotIndex>(cdnSnapshotIndexUrl())
+}

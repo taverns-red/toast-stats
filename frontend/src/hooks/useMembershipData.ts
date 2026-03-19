@@ -1,23 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '../services/api'
+import {
+  fetchCdnManifest,
+  fetchCdnDistrictSnapshot,
+  fetchCdnDistrictAnalytics,
+} from '../services/cdn'
 import type {
   DistrictStatistics,
   MembershipHistoryResponse,
 } from '../types/districts'
 
 /**
- * React Query hook to fetch district statistics including membership data
+ * React Query hook to fetch district statistics from CDN (#173).
+ * Reads the raw district snapshot JSON.
  *
  * @param districtId - The district ID to fetch statistics for
- * @param selectedDate - Optional date in YYYY-MM-DD format to fetch statistics for a specific date.
- *                       When provided, the API will return data from the snapshot matching that date
- *                       (or the nearest available snapshot if exact date not found).
- *                       When undefined, returns the latest snapshot (backward compatible behavior).
- * @param fields - Optional field selector to control response size.
- *                 'divisions': include divisionPerformance + clubPerformance
- *                 'clubs': include clubPerformance only
- *                 'all': include everything (backward compatible full response)
- *                 undefined: summary only (no heavy arrays)
+ * @param selectedDate - Optional date in YYYY-MM-DD format. When provided, fetches
+ *   that specific snapshot. When undefined, fetches the latest snapshot.
+ * @param fields - Optional field selector (kept for API compatibility but CDN
+ *   always returns the full snapshot).
  */
 export const useDistrictStatistics = (
   districtId: string | null,
@@ -30,25 +30,18 @@ export const useDistrictStatistics = (
       if (!districtId) {
         throw new Error('District ID is required')
       }
-      const response = await apiClient.get<DistrictStatistics>(
-        `/districts/${districtId}/statistics`,
-        {
-          params: {
-            ...(selectedDate && { date: selectedDate }),
-            ...(fields && { fields }),
-          },
-        }
-      )
-      return response.data
+      const date = selectedDate || (await fetchCdnManifest()).latestSnapshotDate
+      return fetchCdnDistrictSnapshot<DistrictStatistics>(date, districtId)
     },
     enabled: !!districtId,
-    staleTime: 15 * 60 * 1000, // 15 minutes - matches backend cache
+    staleTime: 15 * 60 * 1000, // 15 minutes
     retry: 2,
   })
 }
 
 /**
- * React Query hook to fetch membership history data
+ * React Query hook to fetch membership history data from CDN (#173).
+ * Reads the pre-computed membership analytics file.
  */
 export const useMembershipHistory = (
   districtId: string | null,
@@ -60,16 +53,15 @@ export const useMembershipHistory = (
       if (!districtId) {
         throw new Error('District ID is required')
       }
-      const response = await apiClient.get<MembershipHistoryResponse>(
-        `/districts/${districtId}/membership-history`,
-        {
-          params: { months },
-        }
+      const { latestSnapshotDate } = await fetchCdnManifest()
+      return fetchCdnDistrictAnalytics<MembershipHistoryResponse>(
+        latestSnapshotDate,
+        districtId,
+        'membership'
       )
-      return response.data
     },
     enabled: !!districtId,
-    staleTime: 15 * 60 * 1000, // 15 minutes - matches backend cache
+    staleTime: 15 * 60 * 1000, // 15 minutes
     retry: 2,
   })
 }

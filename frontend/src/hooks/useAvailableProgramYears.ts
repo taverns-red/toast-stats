@@ -1,5 +1,5 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { apiClient } from '../services/api'
+import { fetchCdnDates } from '../services/cdn'
 import type { AvailableRankingYearsResponse } from '../types/districts'
 
 /**
@@ -34,32 +34,25 @@ interface UseAvailableProgramYearsResult {
 }
 
 /**
- * React Query hook to fetch available program years with ranking data for a district.
+ * Derive program year from a date string (YYYY-MM-DD).
+ * Program years run Jul 1 – Jun 30. A date in Jan-Jun belongs to the
+ * program year that started the previous July.
+ */
+function getProgramYear(dateStr: string): string {
+  const [yearStr, monthStr] = dateStr.split('-')
+  const year = parseInt(yearStr!, 10)
+  const month = parseInt(monthStr!, 10)
+  // Jul-Dec → year–(year+1), Jan-Jun → (year-1)–year
+  const startYear = month >= 7 ? year : year - 1
+  return `${startYear}-${startYear + 1}`
+}
+
+/**
+ * React Query hook to fetch available program years with ranking data from CDN (#173).
  *
- * This hook fetches from the `/api/districts/:districtId/available-ranking-years` endpoint
- * and returns information about which program years have ranking data available,
- * including snapshot counts and data completeness status.
- *
- * @param params - Hook parameters including districtId and optional enabled flag
- * @returns Query result with program years data, loading state, error state, isEmpty flag, and refetch function
- *
- * @example
- * ```tsx
- * const { data, isLoading, isError, error, isEmpty, refetch } = useAvailableProgramYears({
- *   districtId: '57',
- * })
- *
- * if (isLoading) return <LoadingSpinner />
- * if (isError) return <ErrorMessage error={error} onRetry={refetch} />
- * if (isEmpty) return <EmptyState message="No program years available" />
- *
- * return (
- *   <ProgramYearSelector
- *     programYears={data?.programYears ?? []}
- *     onSelect={handleYearSelect}
- *   />
- * )
- * ```
+ * Derives program years from the CDN dates index. Groups all snapshot dates
+ * by program year (Jul 1 – Jun 30) and returns the same shape as the
+ * Express endpoint for backward compatibility.
  */
 export const useAvailableProgramYears = ({
   districtId,
@@ -71,27 +64,44 @@ export const useAvailableProgramYears = ({
   >({
     queryKey: availableProgramYearsQueryKeys.byDistrict(districtId),
     queryFn: async () => {
-      const response = await apiClient.get<AvailableRankingYearsResponse>(
-        `/districts/${districtId}/available-ranking-years`
-      )
-      return response.data
-    },
-    enabled: enabled && !!districtId,
-    staleTime: 15 * 60 * 1000, // 15 minutes - matches other district data hooks
-    retry: (failureCount, error: unknown) => {
-      // Don't retry on 404 (no data) or 400 (bad request)
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { status?: number } }
-        if (
-          axiosError.response?.status === 404 ||
-          axiosError.response?.status === 400
-        ) {
-          return false
+      const { dates } = await fetchCdnDates()
+
+      // Group dates by program year
+      const yearMap = new Map<string, { dates: string[]; latestDate: string }>()
+      for (const d of dates) {
+        const py = getProgramYear(d)
+        const entry = yearMap.get(py)
+        if (entry) {
+          entry.dates.push(d)
+          if (d > entry.latestDate) entry.latestDate = d
+        } else {
+          yearMap.set(py, { dates: [d], latestDate: d })
         }
       }
-      // Retry up to 2 times for network errors
-      return failureCount < 2
+
+      // Build program years array
+      const now = new Date()
+      const programYears = Array.from(yearMap.entries())
+        .sort(([a], [b]) => b.localeCompare(a)) // newest first
+        .map(([year, { dates: yearDates, latestDate }]) => {
+          const [startYearStr] = year.split('-')
+          const startYear = parseInt(startYearStr!, 10)
+          const endDate = new Date(`${startYear + 1}-06-30T23:59:59`)
+          return {
+            year,
+            startDate: `${startYear}-07-01`,
+            endDate: `${startYear + 1}-06-30`,
+            hasCompleteData: endDate < now,
+            snapshotCount: yearDates.length,
+            latestSnapshotDate: latestDate,
+          }
+        })
+
+      return { districtId, programYears }
     },
+    enabled: enabled && !!districtId,
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    retry: failureCount => failureCount < 2,
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 

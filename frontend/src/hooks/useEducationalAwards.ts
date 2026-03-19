@@ -1,30 +1,30 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '../services/api'
+import { fetchCdnManifest, fetchCdnDistrictAnalytics } from '../services/cdn'
 import type { EducationalAwardsResponse } from '../types/districts'
 
 /**
- * React Query hook to fetch educational awards data for a district
+ * React Query hook to fetch educational awards data for a district from CDN (#173).
+ * Reads the distinguished-analytics pre-computed file.
  */
 export const useEducationalAwards = (
   districtId: string | null,
-  months: number = 12
+  _months: number = 12
 ) => {
   return useQuery<EducationalAwardsResponse, Error>({
-    queryKey: ['educationalAwards', districtId, months],
+    queryKey: ['educationalAwards', districtId, _months],
     queryFn: async () => {
       if (!districtId) {
         throw new Error('District ID is required')
       }
-      const response = await apiClient.get<EducationalAwardsResponse>(
-        `/districts/${districtId}/educational-awards`,
-        {
-          params: { months },
-        }
+      const { latestSnapshotDate } = await fetchCdnManifest()
+      return fetchCdnDistrictAnalytics<EducationalAwardsResponse>(
+        latestSnapshotDate,
+        districtId,
+        'distinguished-analytics'
       )
-      return response.data
     },
     enabled: !!districtId,
-    staleTime: 15 * 60 * 1000, // 15 minutes - matches backend cache
+    staleTime: 15 * 60 * 1000, // 15 minutes
     retry: 2,
   })
 }

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '../services/api'
+import { fetchCdnSnapshotIndex } from '../services/cdn'
 
 /**
- * Interface for cached dates response
+ * Interface for cached dates response (CDN-compatible shape)
  */
 export interface CachedDatesResponse {
   districtId: string
@@ -15,14 +15,12 @@ export interface CachedDatesResponse {
 }
 
 /**
- * Hook to fetch all cached dates for a district
- * Returns list of dates that have cached data available
+ * Hook to fetch all cached dates for a district from CDN (#173).
+ * Reads the snapshot index and filters by districtId.
  *
  * @param districtId - The district ID to fetch cached dates for
  * @param enabled - Whether the query should be enabled (default: true)
  * @returns Query result with cached dates and date range
- *
- * Requirements: 1.4
  */
 export const useDistrictCachedDates = (
   districtId: string | null,
@@ -35,27 +33,25 @@ export const useDistrictCachedDates = (
         throw new Error('District ID is required')
       }
 
-      const response = await apiClient.get<CachedDatesResponse>(
-        `/districts/${districtId}/cached-dates`
-      )
-      return response.data
+      const index = await fetchCdnSnapshotIndex()
+      const dates = (index[districtId] ?? []).sort()
+
+      return {
+        districtId,
+        dates,
+        count: dates.length,
+        dateRange:
+          dates.length > 0
+            ? {
+                startDate: dates[0]!,
+                endDate: dates[dates.length - 1]!,
+              }
+            : null,
+      }
     },
     enabled: enabled && !!districtId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: (failureCount, error: unknown) => {
-      // Don't retry on 404 (no data) or 400 (bad request)
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { status?: number } }
-        if (
-          axiosError.response?.status === 404 ||
-          axiosError.response?.status === 400
-        ) {
-          return false
-        }
-      }
-      // Retry up to 2 times for network errors
-      return failureCount < 2
-    },
+    retry: failureCount => failureCount < 2,
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 }
