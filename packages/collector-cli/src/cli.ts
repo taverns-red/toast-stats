@@ -1009,5 +1009,156 @@ export function createCLI(): Command {
       }
     )
 
+  // Add rebuild command for regenerating all derived data (#181)
+  program
+    .command('rebuild')
+    .description(
+      'Rebuild all derived data (snapshots, analytics, time-series, club-trends, CDN manifests) from raw-csv'
+    )
+    .option(
+      '--dates <list>',
+      'Comma-separated dates to rebuild (default: all dates in raw-csv/)',
+      (value: string) =>
+        value
+          .split(',')
+          .map(d => d.trim())
+          .filter(Boolean)
+    )
+    .option(
+      '--clean-snapshots',
+      'Delete snapshot dirs between dates to save disk (keeps time-series/club-trends)',
+      false
+    )
+    .option('-v, --verbose', 'Enable detailed logging output', false)
+    .option('-c, --config <path>', 'Alternative configuration file path')
+    .action(
+      async (options: {
+        dates?: string[]
+        cleanSnapshots: boolean
+        verbose: boolean
+        config?: string
+      }) => {
+        const { RebuildService } = await import('./services/RebuildService.js')
+
+        const resolvedConfig = resolveConfiguration({
+          configPath: options.config,
+        })
+        const { cacheDir } = resolvedConfig
+
+        if (options.verbose) {
+          console.error(`[INFO] Cache directory: ${cacheDir}`)
+          console.error(
+            `[INFO] Clean snapshots between dates: ${options.cleanSnapshots}`
+          )
+          if (options.dates) {
+            console.error(`[INFO] Specific dates: ${options.dates.join(', ')}`)
+          }
+        }
+
+        const service = new RebuildService({
+          cacheDir,
+          logger: createVerboseLogger(options.verbose),
+        })
+
+        const dates = options.dates ?? (await service.discoverDates())
+        console.error(
+          `[INFO] Rebuild starting: ${dates.length} dates to process`
+        )
+
+        const result = await service.rebuild({
+          cacheDir,
+          dates,
+          cleanSnapshots: options.cleanSnapshots,
+        })
+
+        // Output JSON summary
+        console.log(JSON.stringify(result, null, 2))
+
+        if (options.verbose) {
+          console.error(
+            `[INFO] Rebuild complete: ${result.datesSucceeded}/${result.datesProcessed} succeeded in ${result.duration_ms}ms`
+          )
+        }
+
+        process.exit(
+          result.success ? ExitCode.SUCCESS : ExitCode.PARTIAL_FAILURE
+        )
+      }
+    )
+
+  // Add prune command for removing non-month-end data (#181)
+  program
+    .command('prune')
+    .description(
+      'Remove non-month-end raw-csv and derived data, respecting closing period date mapping'
+    )
+    .option(
+      '--dry-run',
+      'Only classify and report; do not actually delete',
+      false
+    )
+    .option('-v, --verbose', 'Enable detailed logging output', false)
+    .option('-c, --config <path>', 'Alternative configuration file path')
+    .action(
+      async (options: {
+        dryRun: boolean
+        verbose: boolean
+        config?: string
+      }) => {
+        const { PruneService } = await import('./services/PruneService.js')
+
+        const resolvedConfig = resolveConfiguration({
+          configPath: options.config,
+        })
+        const { cacheDir } = resolvedConfig
+
+        if (options.verbose) {
+          console.error(`[INFO] Cache directory: ${cacheDir}`)
+          console.error(`[INFO] Dry run: ${options.dryRun}`)
+        }
+
+        const service = new PruneService({
+          cacheDir,
+          logger: createVerboseLogger(options.verbose),
+        })
+
+        const result = await service.prune(options.dryRun)
+
+        // Output JSON summary
+        console.log(
+          JSON.stringify(
+            {
+              dryRun: options.dryRun,
+              totalDates: result.totalDates,
+              keptDates: result.keptDates,
+              prunedDates: result.prunedDates,
+              deletedRawCsv: result.deletedRawCsv,
+              deletedSnapshots: result.deletedSnapshots,
+              errors: result.errors,
+              classifications: result.classifications.map(c => ({
+                rawCsvDate: c.rawCsvDate,
+                snapshotDate: c.snapshotDate,
+                keep: c.keep,
+                reason: c.reason,
+              })),
+              duration_ms: result.duration_ms,
+            },
+            null,
+            2
+          )
+        )
+
+        if (options.verbose) {
+          console.error(
+            `[INFO] Prune complete: kept ${result.keptDates}, pruned ${result.prunedDates}`
+          )
+        }
+
+        process.exit(
+          result.success ? ExitCode.SUCCESS : ExitCode.PARTIAL_FAILURE
+        )
+      }
+    )
+
   return program
 }
