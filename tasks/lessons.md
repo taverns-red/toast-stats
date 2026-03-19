@@ -572,3 +572,11 @@
 **Proof**: All 1844 tests pass (100 files) after converting `useDistricts`, `useClubs`, `useEducationalAwards`, `useDistrictStatistics`, `useMembershipHistory`, `useDistrictCachedDates`, `useAvailableProgramYears`.
 **Rule**: Use `||` not `??` for fallback to manifest date — `??` treats empty string as truthy. Test dates for "incomplete" program years must use dates genuinely in the future when the real clock is involved.
 **rules.md**: none
+
+## 🗓️ 2026-03-19 — express-backend-deletion (#173)
+
+**Discovery**: Deleting the entire Express backend (186 TS files, 75K lines) required only converting 2 remaining hooks: `useRankHistory` (batch POST → parallel CDN fetches) and `useDistrictExport` (server-side CSV → client-side CSV from CDN snapshot data). The pre-push hooks initially couldn't find the `backend` workspace during `npm run typecheck --workspaces`, which was resolved by removing `backend` from the root `package.json` workspaces array first, then running `npm install`.
+**Proof**: All remaining tests pass (frontend 1844 + shared packages 127). No remaining references to `apiClient` or `services/api` anywhere in frontend code.
+**Rule**: When deleting a workspace from a monorepo, update the root `package.json` workspaces array AND run `npm install` BEFORE running any `--workspaces` commands — otherwise npm will fail trying to find the deleted workspace. Re-audit CI/CD pipeline for backend-specific steps (typecheck, test, build, deploy).
+**Warning**: The Cloud Run service, LB backend, Serverless NEG, and `api.taverns.red` DNS must still be cleaned up manually via `gcloud`. The code changes don't delete infrastructure.
+**rules.md**: none

@@ -1,6 +1,4 @@
 npm run test --workspace=@toastmasters/shared-contracts -- --coverage
 npm run test --workspace=@toastmasters/analytics-core -- --coverage
-npm run test --workspace=backend -- --coverage
 npm run test --workspace=frontend -- --coverage
 npm run test --workspace=@toastmasters/collector-cli -- --coverage
-npm run docker:build

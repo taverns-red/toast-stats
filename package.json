@@ -9,22 +9,18 @@
   "private": true,
   "workspaces": [
     "frontend",
-    "backend",
     "packages/collector-cli",
     "packages/analytics-core",
     "packages/shared-contracts"
   ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=frontend",
-    "dev:backend": "npm run dev --workspace=backend",
     "build:frontend": "npm run build --workspace=frontend",
-    "build:backend": "npm run build --workspace=backend",
     "build:collector-cli": "npm run build --workspace=@toastmasters/collector-cli",
     "build:analytics-core": "npm run build --workspace=@toastmasters/analytics-core",
     "build:shared-contracts": "npm run build --workspace=@toastmasters/shared-contracts",
     "collector-cli": "npm run start --workspace=@toastmasters/collector-cli --",
     "test:frontend": "npm run test --workspace=frontend",
-    "test:backend": "npm run test --workspace=backend",
     "test:collector-cli": "npm run test --workspace=@toastmasters/collector-cli",
     "test:analytics-core": "npm run test --workspace=@toastmasters/analytics-core",
     "test:shared-contracts": "npm run test --workspace=@toastmasters/shared-contracts",
@@ -36,9 +32,6 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "typecheck": "npm run typecheck --workspaces",
-    "typecheck:all": "npm run typecheck:all --workspace=backend && npm run typecheck --workspace=frontend",
-    "typecheck:backend": "npm run typecheck --workspace=backend",
-    "typecheck:backend:all": "npm run typecheck:all --workspace=backend",
     "typecheck:frontend": "npm run typecheck --workspace=frontend",
     "typecheck:count": "npm run typecheck:count --workspaces",
     "quality:check": "npm run lint && npm run lint:yaml && npm run typecheck && npm run format:check && npm run test",
@@ -46,9 +39,7 @@
     "pre-commit": "npm run typecheck && npm run lint && npm run lint:yaml",
     "prepare": "husky install",
     "cleanup:test-dirs": "bash scripts/cleanup-all-test-dirs.sh",
-    "cleanup:backend": "bash backend/scripts/cleanup-test-dirs.sh",
-    "cleanup:frontend": "bash frontend/scripts/cleanup-test-dirs.sh",
-    "docker:build": "docker build -f Dockerfile -t toast-stats-backend ."
+    "cleanup:frontend": "bash frontend/scripts/cleanup-test-dirs.sh"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.0",

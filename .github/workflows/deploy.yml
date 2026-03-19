@@ -1,5 +1,5 @@
 # Production Deployment Workflow
-# Deploys backend to Cloud Run and frontend to Firebase Hosting
+# Deploys frontend to Firebase Hosting
 # on every merge to main, after CI passes.
 #
 # Prerequisites:
@@ -21,7 +21,6 @@ concurrency:
 env:
   NODE_VERSION: '20'
   REGION: 'northamerica-northeast1'
-  CLOUD_RUN_SERVICE: 'toast-stats-api'
   GCS_BUCKET: 'toast-stats-data-ca'
 
 permissions:
@@ -119,67 +118,6 @@ jobs:
           fi
 
   # ──────────────────────────────────────────────
-  # Deploy Backend to Cloud Run
-  # ──────────────────────────────────────────────
-  deploy-backend:
-    name: Deploy Backend
-    runs-on: ubuntu-latest
-    needs: ci
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v3
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v3
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
-            --source=. \
-            --region=${{ env.REGION }} \
-            --platform=managed \
-            --set-env-vars="NODE_ENV=production" \
-            --set-env-vars="STORAGE_PROVIDER=gcp" \
-            --set-env-vars="GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}" \
-            --set-env-vars="GCS_BUCKET_NAME=${{ env.GCS_BUCKET }}" \
-            --set-env-vars="CORS_ORIGIN=https://ts.taverns.red" \
-            --set-secrets="JWT_SECRET=jwt-secret:latest" \
-            --ingress=internal-and-cloud-load-balancing \
-            --memory=512Mi \
-            --cpu=1 \
-            --min-instances=0 \
-            --max-instances=10 \
-            --quiet
-
-      # The HTTPS LB's Serverless NEG requires allUsers → run.invoker
-      # to forward traffic to Cloud Run. --ingress above restricts
-      # direct access; only LB-routed traffic reaches the service.
-      - name: Ensure public access via LB
-        run: |
-          gcloud run services add-iam-policy-binding ${{ env.CLOUD_RUN_SERVICE }} \
-            --region=${{ env.REGION }} \
-            --member="allUsers" \
-            --role="roles/run.invoker" \
-            --quiet
-
-      - name: Get deployment URL
-        id: deploy-url
-        run: |
-          URL=$(gcloud run services describe ${{ env.CLOUD_RUN_SERVICE }} \
-            --region=${{ env.REGION }} \
-            --format='value(status.url)')
-          echo "url=${URL}" >> "$GITHUB_OUTPUT"
-          echo "## Backend Deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ Deployed to: ${URL}" >> "$GITHUB_STEP_SUMMARY"
-
-  # ──────────────────────────────────────────────
   # Deploy Frontend to Firebase Hosting
   # ──────────────────────────────────────────────
   deploy-frontend:
@@ -228,7 +166,7 @@ jobs:
   post-deploy-verify:
     name: Post-Deploy Verification
     runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-frontend]
+    needs: [deploy-frontend]
 
     steps:
       - name: Wait for services to stabilize
@@ -238,19 +176,19 @@ jobs:
         run: |
           echo "## Post-Deployment Verification" >> "$GITHUB_STEP_SUMMARY"
 
-          # Check backend health via Cloud HTTPS LB
-          API_URL="https://api.taverns.red"
+          # Check CDN is serving data
+          CDN_URL="https://cdn.taverns.red"
 
-          echo "Checking health at ${API_URL}/health..."
-          RESPONSE=$(curl -sf --max-time 30 "${API_URL}/health" || true)
+          echo "Checking CDN at ${CDN_URL}/v1/latest.json..."
+          RESPONSE=$(curl -sf --max-time 30 "${CDN_URL}/v1/latest.json" || true)
 
-          if echo "${RESPONSE}" | grep -q '"status":"ok"'; then
-            echo "✅ Health check passed" >> "$GITHUB_STEP_SUMMARY"
+          if echo "${RESPONSE}" | grep -q 'latestSnapshotDate'; then
+            echo "✅ CDN health check passed" >> "$GITHUB_STEP_SUMMARY"
             echo "Response: ${RESPONSE}" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "⚠️ Health check returned unexpected response" >> "$GITHUB_STEP_SUMMARY"
+            echo "⚠️ CDN health check returned unexpected response" >> "$GITHUB_STEP_SUMMARY"
             echo "Response: ${RESPONSE:-'(no response)'}" >> "$GITHUB_STEP_SUMMARY"
-            echo "::warning::Health check did not return expected response. Manual verification recommended."
+            echo "::warning::CDN health check did not return expected response. Manual verification recommended."
           fi
 
       - name: Deployment summary

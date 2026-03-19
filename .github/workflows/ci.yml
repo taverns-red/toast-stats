@@ -48,19 +48,8 @@ jobs:
         run: |
           echo "Checking TypeScript compilation..."
           # NOTE: Uses the same tsconfig.json as local development for consistency.
-          # Backend: tsconfig.json (excludes tests, exactOptionalPropertyTypes: false)
           # Frontend: tsconfig.json (excludes tests, exactOptionalPropertyTypes: true)
           # This ensures CI/CD and local development have identical type checking behavior.
-
-          # Run backend typecheck
-          set +e
-          BACKEND_OUTPUT=$(npm run typecheck:backend 2>&1)
-          BACKEND_EXIT=$?
-          set -e
-
-          # Count errors - use wc -l with grep (no -c to avoid issues)
-          BACKEND_ERRORS=$(echo "$BACKEND_OUTPUT" | grep -E "error TS[0-9]+" | wc -l | tr -d ' ')
-          if [ -z "$BACKEND_ERRORS" ]; then BACKEND_ERRORS=0; fi
 
           # Run frontend typecheck
           set +e
@@ -73,16 +62,12 @@ jobs:
           if [ -z "$FRONTEND_ERRORS" ]; then FRONTEND_ERRORS=0; fi
 
           # Use exit codes as fallback if grep found nothing but tsc failed
-          if [ "$BACKEND_EXIT" -ne 0 ] && [ "$BACKEND_ERRORS" -eq 0 ]; then
-            BACKEND_ERRORS=1
-          fi
           if [ "$FRONTEND_EXIT" -ne 0 ] && [ "$FRONTEND_ERRORS" -eq 0 ]; then
             FRONTEND_ERRORS=1
           fi
 
-          TOTAL_ERRORS=$((BACKEND_ERRORS + FRONTEND_ERRORS))
+          TOTAL_ERRORS=$FRONTEND_ERRORS
 
-          echo "backend_errors=$BACKEND_ERRORS" >> "$GITHUB_OUTPUT"
           echo "frontend_errors=$FRONTEND_ERRORS" >> "$GITHUB_OUTPUT"
           echo "total_errors=$TOTAL_ERRORS" >> "$GITHUB_OUTPUT"
 
@@ -90,21 +75,13 @@ jobs:
           echo "| Component | Error Count | Status |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-----------|-------------|--------|" >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$BACKEND_ERRORS" -eq 0 ]; then BACKEND_STATUS='✅ Pass'; else BACKEND_STATUS='❌ Fail'; fi
           if [ "$FRONTEND_ERRORS" -eq 0 ]; then FRONTEND_STATUS='✅ Pass'; else FRONTEND_STATUS='❌ Fail'; fi
           if [ "$TOTAL_ERRORS" -eq 0 ]; then TOTAL_STATUS='✅ **PASS**'; else TOTAL_STATUS='❌ **FAIL**'; fi
 
-          echo "| Backend | $BACKEND_ERRORS | $BACKEND_STATUS |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Frontend | $FRONTEND_ERRORS | $FRONTEND_STATUS |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Total** | **$TOTAL_ERRORS** | $TOTAL_STATUS |" >> "$GITHUB_STEP_SUMMARY"
 
           # Show actual errors if any
-          if [ "$BACKEND_ERRORS" -gt 0 ]; then
-            echo "### Backend Errors" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            echo "$BACKEND_OUTPUT" | grep -E "error TS[0-9]+" | head -20 >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          fi
           if [ "$FRONTEND_ERRORS" -gt 0 ]; then
             echo "### Frontend Errors" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
@@ -197,9 +174,6 @@ jobs:
       - name: Run collector-cli tests
         run: npm run test --workspace=@toastmasters/collector-cli -- --coverage
 
-      - name: Run backend tests
-        run: npm run test --workspace=backend -- --coverage
-
       - name: Run frontend tests
         run: npm run test --workspace=frontend -- --coverage
 
@@ -226,9 +200,6 @@ jobs:
         run: |
           npm run build:shared-contracts
           npm run build:analytics-core
-
-      - name: Build backend
-        run: npm run build:backend
 
       - name: Build frontend
         run: npm run build:frontend

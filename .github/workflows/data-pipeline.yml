@@ -399,6 +399,97 @@ jobs:
             echo "::warning::all-districts-rankings.json not found at ${RANKINGS_SRC}, skipping v1/rankings.json"
           fi
 
+          # v1/rank-history/{districtId}.json — per-district rank history (#173)
+          # Downloads all historical all-districts-rankings.json from GCS,
+          # builds per-district history, writes one JSON per district.
+          # Replaces the runtime RankHistoryIndex from the Express backend.
+          echo "Building per-district rank history..."
+          mkdir -p /tmp/rank-history-src /tmp/rank-history-out
+
+          # Download all rankings files from all snapshot dates
+          gsutil -m cp \
+            "gs://${GCS_BUCKET}/snapshots/*/all-districts-rankings.json" \
+            /tmp/rank-history-src/ 2>/dev/null || true
+
+          # gsutil flattens paths — files are named like
+          # snapshots_2024-01-15_all-districts-rankings.json
+          RANK_FILE_COUNT=$(ls /tmp/rank-history-src/*.json 2>/dev/null | wc -l | tr -d ' ')
+          echo "Downloaded ${RANK_FILE_COUNT} historical rankings files"
+
+          if [ "${RANK_FILE_COUNT}" -gt "0" ]; then
+            node -e "
+              const fs = require('fs');
+              const path = require('path');
+              const srcDir = '/tmp/rank-history-src';
+              const outDir = '/tmp/rank-history-out';
+
+              // Build per-district index from all rankings files
+              const index = new Map();
+              const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.json'));
+
+              for (const file of files) {
+                try {
+                  const data = JSON.parse(fs.readFileSync(path.join(srcDir, file), 'utf-8'));
+                  const date = data.metadata?.sourceCsvDate;
+                  if (!date || !data.rankings) continue;
+
+                  for (const r of data.rankings) {
+                    if (!index.has(r.districtId)) {
+                      index.set(r.districtId, {
+                        districtId: r.districtId,
+                        districtName: r.districtName,
+                        history: []
+                      });
+                    }
+                    const entry = index.get(r.districtId);
+                    if (entry.districtName === 'District ' + r.districtId) {
+                      entry.districtName = r.districtName;
+                    }
+                    entry.history.push({
+                      date,
+                      aggregateScore: r.aggregateScore,
+                      clubsRank: r.clubsRank,
+                      paymentsRank: r.paymentsRank,
+                      distinguishedRank: r.distinguishedRank,
+                      totalDistricts: data.metadata.totalDistricts,
+                      overallRank: r.overallRank ?? 0
+                    });
+                  }
+                } catch (e) {
+                  console.error('Skipping ' + file + ': ' + e.message);
+                }
+              }
+
+              // Sort, deduplicate, and write each district
+              let totalPoints = 0;
+              for (const [id, entry] of index) {
+                entry.history.sort((a, b) => a.date.localeCompare(b.date));
+                const seen = new Set();
+                entry.history = entry.history.filter(p => {
+                  if (seen.has(p.date)) return false;
+                  seen.add(p.date);
+                  return true;
+                });
+                totalPoints += entry.history.length;
+                fs.writeFileSync(
+                  path.join(outDir, id + '.json'),
+                  JSON.stringify(entry)
+                );
+              }
+              console.log('Generated rank history for ' + index.size +
+                ' districts (' + totalPoints + ' total points)');
+            "
+
+            # Upload all rank history files with 5-min TTL
+            gsutil -m \
+              -h "Content-Type:application/json" \
+              -h "Cache-Control:public, max-age=300" \
+              cp -r "/tmp/rank-history-out/*.json" \
+              "gs://${GCS_BUCKET}/v1/rank-history/"
+          else
+            echo "::warning::No historical rankings found, skipping rank history generation"
+          fi
+
           echo "## 📋 CDN Manifests" >> "$GITHUB_STEP_SUMMARY"
           echo "- **v1/latest.json**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
           DATE_COUNT=$(wc -l < /tmp/all-dates.txt | tr -d ' ')
