@@ -1,0 +1,439 @@
+{
+  "generatedAt": "2026-03-19T01:51:46.395Z",
+  "description": "Month-end closing dates derived from raw-csv metadata. Each entry maps a Toastmasters data month (YYYY-MM) to the last closing-period collection date in raw-csv/.",
+  "note": "April 2022 is missing — no closing-period metadata found for that month.",
+  "months": [
+    {
+      "dataMonth": "2017-01",
+      "closingDate": "2017-02-08"
+    },
+    {
+      "dataMonth": "2017-02",
+      "closingDate": "2017-03-08"
+    },
+    {
+      "dataMonth": "2017-03",
+      "closingDate": "2017-04-06"
+    },
+    {
+      "dataMonth": "2017-04",
+      "closingDate": "2017-05-03"
+    },
+    {
+      "dataMonth": "2017-05",
+      "closingDate": "2017-06-07"
+    },
+    {
+      "dataMonth": "2017-06",
+      "closingDate": "2017-07-24"
+    },
+    {
+      "dataMonth": "2017-07",
+      "closingDate": "2017-08-06"
+    },
+    {
+      "dataMonth": "2017-08",
+      "closingDate": "2017-09-06"
+    },
+    {
+      "dataMonth": "2017-09",
+      "closingDate": "2017-10-09"
+    },
+    {
+      "dataMonth": "2017-10",
+      "closingDate": "2017-11-07"
+    },
+    {
+      "dataMonth": "2017-11",
+      "closingDate": "2017-12-06"
+    },
+    {
+      "dataMonth": "2017-12",
+      "closingDate": "2018-01-02"
+    },
+    {
+      "dataMonth": "2018-01",
+      "closingDate": "2018-02-08"
+    },
+    {
+      "dataMonth": "2018-02",
+      "closingDate": "2018-03-07"
+    },
+    {
+      "dataMonth": "2018-03",
+      "closingDate": "2018-04-18"
+    },
+    {
+      "dataMonth": "2018-04",
+      "closingDate": "2018-05-13"
+    },
+    {
+      "dataMonth": "2018-05",
+      "closingDate": "2018-06-07"
+    },
+    {
+      "dataMonth": "2018-06",
+      "closingDate": "2018-07-23"
+    },
+    {
+      "dataMonth": "2018-07",
+      "closingDate": "2018-08-07"
+    },
+    {
+      "dataMonth": "2018-08",
+      "closingDate": "2018-09-05"
+    },
+    {
+      "dataMonth": "2018-09",
+      "closingDate": "2018-10-10"
+    },
+    {
+      "dataMonth": "2018-10",
+      "closingDate": "2018-11-07"
+    },
+    {
+      "dataMonth": "2018-11",
+      "closingDate": "2018-12-05"
+    },
+    {
+      "dataMonth": "2018-12",
+      "closingDate": "2019-01-01"
+    },
+    {
+      "dataMonth": "2019-01",
+      "closingDate": "2019-02-06"
+    },
+    {
+      "dataMonth": "2019-02",
+      "closingDate": "2019-03-05"
+    },
+    {
+      "dataMonth": "2019-03",
+      "closingDate": "2019-04-11"
+    },
+    {
+      "dataMonth": "2019-04",
+      "closingDate": "2019-05-09"
+    },
+    {
+      "dataMonth": "2019-05",
+      "closingDate": "2019-06-05"
+    },
+    {
+      "dataMonth": "2019-06",
+      "closingDate": "2019-07-16"
+    },
+    {
+      "dataMonth": "2019-07",
+      "closingDate": "2019-08-09"
+    },
+    {
+      "dataMonth": "2019-08",
+      "closingDate": "2019-09-12"
+    },
+    {
+      "dataMonth": "2019-09",
+      "closingDate": "2019-10-09"
+    },
+    {
+      "dataMonth": "2019-10",
+      "closingDate": "2019-11-06"
+    },
+    {
+      "dataMonth": "2019-11",
+      "closingDate": "2019-12-06"
+    },
+    {
+      "dataMonth": "2019-12",
+      "closingDate": "2020-01-06"
+    },
+    {
+      "dataMonth": "2020-01",
+      "closingDate": "2020-02-05"
+    },
+    {
+      "dataMonth": "2020-02",
+      "closingDate": "2020-03-06"
+    },
+    {
+      "dataMonth": "2020-03",
+      "closingDate": "2020-04-07"
+    },
+    {
+      "dataMonth": "2020-04",
+      "closingDate": "2020-05-07"
+    },
+    {
+      "dataMonth": "2020-05",
+      "closingDate": "2020-06-04"
+    },
+    {
+      "dataMonth": "2020-06",
+      "closingDate": "2020-07-12"
+    },
+    {
+      "dataMonth": "2020-07",
+      "closingDate": "2020-08-04"
+    },
+    {
+      "dataMonth": "2020-08",
+      "closingDate": "2020-09-09"
+    },
+    {
+      "dataMonth": "2020-09",
+      "closingDate": "2020-10-10"
+    },
+    {
+      "dataMonth": "2020-10",
+      "closingDate": "2020-11-06"
+    },
+    {
+      "dataMonth": "2020-11",
+      "closingDate": "2020-12-09"
+    },
+    {
+      "dataMonth": "2020-12",
+      "closingDate": "2021-01-07"
+    },
+    {
+      "dataMonth": "2021-01",
+      "closingDate": "2021-02-11"
+    },
+    {
+      "dataMonth": "2021-02",
+      "closingDate": "2021-03-09"
+    },
+    {
+      "dataMonth": "2021-03",
+      "closingDate": "2021-04-12"
+    },
+    {
+      "dataMonth": "2021-04",
+      "closingDate": "2021-05-05"
+    },
+    {
+      "dataMonth": "2021-05",
+      "closingDate": "2021-06-09"
+    },
+    {
+      "dataMonth": "2021-06",
+      "closingDate": "2021-07-18"
+    },
+    {
+      "dataMonth": "2021-07",
+      "closingDate": "2021-08-09"
+    },
+    {
+      "dataMonth": "2021-08",
+      "closingDate": "2021-09-09"
+    },
+    {
+      "dataMonth": "2021-09",
+      "closingDate": "2021-10-11"
+    },
+    {
+      "dataMonth": "2021-10",
+      "closingDate": "2021-11-10"
+    },
+    {
+      "dataMonth": "2021-11",
+      "closingDate": "2021-12-09"
+    },
+    {
+      "dataMonth": "2021-12",
+      "closingDate": "2022-01-06"
+    },
+    {
+      "dataMonth": "2022-01",
+      "closingDate": "2022-02-09"
+    },
+    {
+      "dataMonth": "2022-02",
+      "closingDate": "2022-03-08"
+    },
+    {
+      "dataMonth": "2022-03",
+      "closingDate": "2022-04-10"
+    },
+    {
+      "dataMonth": "2022-05",
+      "closingDate": "2022-06-17"
+    },
+    {
+      "dataMonth": "2022-06",
+      "closingDate": "2022-07-25"
+    },
+    {
+      "dataMonth": "2022-07",
+      "closingDate": "2022-08-08"
+    },
+    {
+      "dataMonth": "2022-08",
+      "closingDate": "2022-09-08"
+    },
+    {
+      "dataMonth": "2022-09",
+      "closingDate": "2022-10-17"
+    },
+    {
+      "dataMonth": "2022-10",
+      "closingDate": "2022-11-15"
+    },
+    {
+      "dataMonth": "2022-11",
+      "closingDate": "2022-12-09"
+    },
+    {
+      "dataMonth": "2022-12",
+      "closingDate": "2023-01-10"
+    },
+    {
+      "dataMonth": "2023-01",
+      "closingDate": "2023-02-07"
+    },
+    {
+      "dataMonth": "2023-02",
+      "closingDate": "2023-03-09"
+    },
+    {
+      "dataMonth": "2023-03",
+      "closingDate": "2023-04-14"
+    },
+    {
+      "dataMonth": "2023-04",
+      "closingDate": "2023-05-12"
+    },
+    {
+      "dataMonth": "2023-05",
+      "closingDate": "2023-06-07"
+    },
+    {
+      "dataMonth": "2023-06",
+      "closingDate": "2023-07-19"
+    },
+    {
+      "dataMonth": "2023-07",
+      "closingDate": "2023-08-10"
+    },
+    {
+      "dataMonth": "2023-08",
+      "closingDate": "2023-09-06"
+    },
+    {
+      "dataMonth": "2023-09",
+      "closingDate": "2023-10-12"
+    },
+    {
+      "dataMonth": "2023-10",
+      "closingDate": "2023-11-08"
+    },
+    {
+      "dataMonth": "2023-11",
+      "closingDate": "2023-12-06"
+    },
+    {
+      "dataMonth": "2023-12",
+      "closingDate": "2024-01-09"
+    },
+    {
+      "dataMonth": "2024-01",
+      "closingDate": "2024-02-07"
+    },
+    {
+      "dataMonth": "2024-02",
+      "closingDate": "2024-03-08"
+    },
+    {
+      "dataMonth": "2024-03",
+      "closingDate": "2024-04-10"
+    },
+    {
+      "dataMonth": "2024-04",
+      "closingDate": "2024-05-08"
+    },
+    {
+      "dataMonth": "2024-05",
+      "closingDate": "2024-06-11"
+    },
+    {
+      "dataMonth": "2024-06",
+      "closingDate": "2024-07-19"
+    },
+    {
+      "dataMonth": "2024-07",
+      "closingDate": "2024-08-08"
+    },
+    {
+      "dataMonth": "2024-08",
+      "closingDate": "2024-09-11"
+    },
+    {
+      "dataMonth": "2024-09",
+      "closingDate": "2024-10-11"
+    },
+    {
+      "dataMonth": "2024-10",
+      "closingDate": "2024-11-13"
+    },
+    {
+      "dataMonth": "2024-11",
+      "closingDate": "2024-12-11"
+    },
+    {
+      "dataMonth": "2024-12",
+      "closingDate": "2025-01-08"
+    },
+    {
+      "dataMonth": "2025-01",
+      "closingDate": "2025-02-10"
+    },
+    {
+      "dataMonth": "2025-02",
+      "closingDate": "2025-03-07"
+    },
+    {
+      "dataMonth": "2025-03",
+      "closingDate": "2025-04-11"
+    },
+    {
+      "dataMonth": "2025-04",
+      "closingDate": "2025-05-08"
+    },
+    {
+      "dataMonth": "2025-05",
+      "closingDate": "2025-06-06"
+    },
+    {
+      "dataMonth": "2025-06",
+      "closingDate": "2025-07-20"
+    },
+    {
+      "dataMonth": "2025-07",
+      "closingDate": "2025-08-05"
+    },
+    {
+      "dataMonth": "2025-08",
+      "closingDate": "2025-09-08"
+    },
+    {
+      "dataMonth": "2025-09",
+      "closingDate": "2025-10-10"
+    },
+    {
+      "dataMonth": "2025-10",
+      "closingDate": "2025-11-11"
+    },
+    {
+      "dataMonth": "2025-11",
+      "closingDate": "2025-12-08"
+    },
+    {
+      "dataMonth": "2025-12",
+      "closingDate": "2026-01-08"
+    },
+    {
+      "dataMonth": "2026-01",
+      "closingDate": "2026-02-13"
+    }
+  ]
+}
