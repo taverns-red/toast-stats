@@ -255,7 +255,8 @@ const DistrictDetailPage: React.FC = () => {
       hasValidDates ? districtId || null : null,
       undefined, // Let hook fetch 3 years automatically for comparison
       effectiveEndDate ?? undefined,
-      effectiveProgramYear ?? undefined // Pass selected program year
+      effectiveProgramYear ?? undefined, // Pass selected program year
+      performanceTargets ?? null // Pass CDN performance-targets for currentPayments (#183)
     )
 
   const rawName = selectedDistrict?.name || districtId || ''

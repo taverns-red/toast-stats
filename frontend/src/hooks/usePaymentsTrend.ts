@@ -10,6 +10,7 @@
 
 import { useMemo } from 'react'
 import { useDistrictAnalytics } from './useDistrictAnalytics'
+import type { DistrictPerformanceTargets } from './useDistrictAnalytics'
 import { buildPaymentTrend, PaymentTrendDataPoint } from '../utils/paymentTrend'
 import {
   getCurrentProgramYear,
@@ -235,7 +236,8 @@ export function usePaymentsTrend(
   districtId: string | null,
   programYearStartDate?: string,
   endDate?: string,
-  selectedProgramYear?: ProgramYear
+  selectedProgramYear?: ProgramYear,
+  performanceTargets?: DistrictPerformanceTargets | null
 ): UsePaymentsTrendResult {
   const currentProgramYear = selectedProgramYear ?? getCurrentProgramYear()
 
@@ -258,11 +260,16 @@ export function usePaymentsTrend(
       return null
     }
 
-    // Get current payment values from performanceTargets
+    // Get current payment values — prefer performanceTargets prop (from CDN hook),
+    // fall back to analyticsData.performanceTargets (inline, usually undefined)
     const currentPayments =
-      analyticsData.performanceTargets?.membershipPayments.current ?? 0
+      performanceTargets?.membershipPayments.current ??
+      analyticsData.performanceTargets?.membershipPayments.current ??
+      0
     const paymentBase =
-      analyticsData.performanceTargets?.membershipPayments.base ?? null
+      performanceTargets?.membershipPayments.base ??
+      analyticsData.performanceTargets?.membershipPayments.base ??
+      null
 
     // Build trend data from multi-year analytics data
     // Requirements: 1.1
@@ -317,7 +324,7 @@ export function usePaymentsTrend(
         trendDirection: direction,
       },
     }
-  }, [analyticsData, currentProgramYear])
+  }, [analyticsData, currentProgramYear, performanceTargets])
 
   return {
     data: result,
