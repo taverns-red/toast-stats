@@ -70,7 +70,7 @@ jobs:
     name: '${{ inputs.mode || ''daily'' }} pipeline'
     runs-on: ubuntu-latest
     # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
-    timeout-minutes: ${{ inputs.mode == 'rebuild' && 180 || 30 }}
+    timeout-minutes: ${{ inputs.mode == 'rebuild' && 240 || 30 }}
 
     steps:
       # ── Setup ────────────────────────────────────────────────
