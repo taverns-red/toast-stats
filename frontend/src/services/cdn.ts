@@ -200,9 +200,21 @@ export interface CdnSnapshotIndex {
 /**
  * Fetch the district snapshot index from CDN.
  * Returns a map of districtId → list of available dates.
+ * Normalizes both flat ({ "10": [...] }) and nested ({ districts: { "10": [...] } }) formats.
  */
 export async function fetchCdnSnapshotIndex(): Promise<CdnSnapshotIndex> {
-  return fetchFromCdn<CdnSnapshotIndex>(cdnSnapshotIndexUrl())
+  const raw = await fetchFromCdn<Record<string, unknown>>(cdnSnapshotIndexUrl())
+  // New nested format: { generatedAt, districts: { ... } }
+  const districts = raw['districts']
+  if (
+    districts &&
+    typeof districts === 'object' &&
+    !Array.isArray(districts)
+  ) {
+    return districts as CdnSnapshotIndex
+  }
+  // Legacy flat format: { "10": [...], "11": [...] }
+  return raw as unknown as CdnSnapshotIndex
 }
 
 /**

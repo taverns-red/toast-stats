@@ -645,26 +645,19 @@ jobs:
             node -e "
               const fs = require('fs');
               const raw = JSON.parse(fs.readFileSync('/tmp/district-snapshot-index.json', 'utf-8'));
-              // Support both flat ({ '10': [...] }) and nested ({ districts: { '10': [...] } }) formats
-              const isNested = raw.districts && typeof raw.districts === 'object' && !Array.isArray(raw.districts);
-              const index = isNested ? raw.districts : raw;
+              // Normalize: old flat format → new nested format
+              const districts = (raw.districts && typeof raw.districts === 'object' && !Array.isArray(raw.districts))
+                ? raw.districts : raw;
               const date = '${DATE}';
-              const districts = '${DISTRICT_LIST}'.split(',').map(d => d.trim());
-              for (const id of districts) {
-                const existing = index[id] || [];
-                const dateSet = new Set(existing);
+              for (const id of '${DISTRICT_LIST}'.split(',').map(d => d.trim())) {
+                const dateSet = new Set(districts[id] || []);
                 dateSet.add(date);
-                index[id] = [...dateSet].sort();
+                districts[id] = [...dateSet].sort();
               }
-              // Write back in the same format
-              if (isNested) {
-                raw.districts = index;
-                raw.generatedAt = new Date().toISOString();
-                fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(raw, null, 2));
-              } else {
-                fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(index, null, 2));
-              }
-              console.log('Updated index for ' + districts.length + ' districts with date ' + date);
+              // Always write new nested format
+              const out = { generatedAt: new Date().toISOString(), districts };
+              fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(out, null, 2));
+              console.log('Updated index for ' + Object.keys(districts).length + ' districts with date ' + date);
             "
           fi
 
