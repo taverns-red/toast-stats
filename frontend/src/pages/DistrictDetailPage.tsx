@@ -258,7 +258,8 @@ const DistrictDetailPage: React.FC = () => {
       effectiveProgramYear ?? undefined // Pass selected program year
     )
 
-  const districtName = selectedDistrict?.name || `District ${districtId}`
+  const rawName = selectedDistrict?.name || districtId || ''
+  const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
 
   // Get all clubs from analytics
   const allClubs = analytics?.allClubs || []
