@@ -565,11 +565,18 @@ jobs:
           fi
 
           # v1/rank-history/{districtId}.json
+          # Issue #186: Download rankings into date-prefixed filenames
+          # to avoid overwriting (all files are named all-districts-rankings.json)
           echo "Building per-district rank history..."
           mkdir -p /tmp/rank-history-src /tmp/rank-history-out
-          gsutil -m cp \
-            "gs://${GCS_BUCKET}/snapshots/*/all-districts-rankings.json" \
-            /tmp/rank-history-src/ 2>/dev/null || true
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/*/all-districts-rankings.json" \
+            2>/dev/null | while IFS= read -r gcs_path; do
+            DATE_DIR=$(echo "${gcs_path}" | grep -oP '\d{4}-\d{2}-\d{2}')
+            if [ -n "${DATE_DIR}" ]; then
+              gsutil -q cp "${gcs_path}" \
+                "/tmp/rank-history-src/${DATE_DIR}.json" 2>/dev/null || true
+            fi
+          done
 
           RANK_FILE_COUNT=$(ls /tmp/rank-history-src/*.json 2>/dev/null | wc -l | tr -d ' ')
           echo "Downloaded ${RANK_FILE_COUNT} historical rankings files"
