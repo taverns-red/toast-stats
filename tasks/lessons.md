@@ -619,3 +619,15 @@
 **Rule**: Never use `gsutil cp -r` with trailing slashes. Always verify the actual GCS paths after upload using `gsutil ls` or the GCS XML API. Use globs for flat file copy and separate `cp` calls for subdirectories.
 **Why not caught locally**: Used `--no-verify` on commits (skipping pre-commit hooks), AND no local gsutil test. Pipeline test infrastructure gap.
 **rules.md**: none
+
+## 🗓️ 2026-03-20 — Three pipeline data quality bugs (#185, #186, #190)
+
+**Discovery**: Sprint planning revealed three interconnected data quality issues:
+
+1. **CDN field name mismatch (#190)**: Backend writes `paymentBase`/`paidClubBase` (from AllDistrictsRankingsData) but frontend reads `membershipPaymentsBase`/`paidClubsBase`. Always verify actual CDN JSON field names against frontend interface definitions.
+
+2. **Insufficient snapshots for trends (#185)**: Daily pipeline passes only 1-2 snapshots to AnalyticsComputer, so per-club growth is always 0. The ClubTrendsStore dense data was only wired to ClubHealthAnalyticsModule, not MembershipAnalyticsModule. Fix: added `calculateTopGrowthFromTrends()` using preloaded club trends.
+
+3. **gsutil download filename collisions (#186)**: `gsutil -m cp gs://bucket/snapshots/*/all-districts-rankings.json /tmp/dir/` downloads all identically-named files to a flat directory — they overwrite each other. Only the last file survives. Fix: list GCS files first, download each with a date-prefixed filename. **This is the same class of gsutil-pitfall as the double-nesting bug from earlier today.**
+
+**Takeaway**: When gsutil is involved, always verify the _exact_ file paths and names on disk after download. gsutil has several non-obvious behaviors: `-r` double-nesting, wildcard destination collisions, and Content-Encoding interactions.
