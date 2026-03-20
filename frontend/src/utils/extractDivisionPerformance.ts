@@ -387,7 +387,15 @@ export function extractDivisionPerformance(
     return []
   }
 
-  const snapshot = districtSnapshot as Record<string, unknown>
+  const rawSnapshot = districtSnapshot as Record<string, unknown>
+
+  // CDN snapshots wrap their payload in a `.data` key
+  // (e.g. { districtId, data: { divisionPerformance, clubPerformance, … } })
+  // Support both the wrapped and unwrapped shapes.
+  const snapshot =
+    typeof rawSnapshot['data'] === 'object' && rawSnapshot['data'] !== null
+      ? (rawSnapshot['data'] as Record<string, unknown>)
+      : rawSnapshot
 
   // The divisionPerformance array contains club-level data organized by division/area
   // The clubPerformance array contains club status and distinguished status
