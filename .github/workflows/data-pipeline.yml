@@ -682,7 +682,7 @@ jobs:
         if: steps.mode.outputs.mode == 'rescrape-historical'
         run: |
           echo "Rebuilding all derived data from fresh CSVs..."
-          npx collector-cli rebuild --cache-dir ./cache --clean-snapshots --verbose
+          npx collector-cli rebuild --clean-snapshots --verbose
 
       - name: '[rescrape-historical] Nuke stale GCS data'
         if: steps.mode.outputs.mode == 'rescrape-historical'
