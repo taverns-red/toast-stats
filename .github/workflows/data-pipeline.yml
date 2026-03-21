@@ -272,6 +272,16 @@ jobs:
           gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
 
+          # Time-series: CDN-served overlay (mutable, short cache)
+          # rsync above keeps internal state; cp -Z adds CDN headers + gzip
+          find ./cache/time-series -name '*.json' -print0 | while IFS= read -r -d '' FILE; do
+            REL_PATH="${FILE#./cache/}"
+            gsutil \
+              -h "Content-Type:application/json" \
+              -h "Cache-Control:public, max-age=3600" \
+              cp -Z "${FILE}" "gs://${GCS_BUCKET}/${REL_PATH}"
+          done
+
           # CDN-served: snapshots + analytics (immutable, gzipped)
           # Note: cp -r dir/ dest/ creates double-nested paths. Use globs instead.
           gsutil -m \
@@ -422,6 +432,16 @@ jobs:
           echo "Syncing time-series and club-trends back to GCS..."
           gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+
+          # Time-series: CDN-served overlay (mutable, short cache)
+          echo "Uploading time-series with CDN headers..."
+          find ./cache/time-series -name '*.json' -print0 | while IFS= read -r -d '' FILE; do
+            REL_PATH="${FILE#./cache/}"
+            gsutil \
+              -h "Content-Type:application/json" \
+              -h "Cache-Control:public, max-age=3600" \
+              cp -Z "${FILE}" "gs://${GCS_BUCKET}/${REL_PATH}"
+          done
 
           echo "- **Dates succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
