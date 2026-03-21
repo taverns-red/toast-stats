@@ -682,7 +682,19 @@ jobs:
         if: steps.mode.outputs.mode == 'rescrape-historical'
         run: |
           echo "Rebuilding all derived data from fresh CSVs..."
-          npx collector-cli rebuild --clean-snapshots --verbose
+
+          # Only rebuild freshly downloaded dates (skip stale dirs from old runs)
+          DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' \
+            -exec sh -c 'test -f "$1/metadata.json" && grep -q rescrape-historical "$1/metadata.json" && basename "$1"' _ {} \; \
+            | sort | tr '\n' ',')
+
+          if [ -z "${DATES}" ]; then
+            echo "::error::No rescrape-historical dates found in cache"
+            exit 1
+          fi
+
+          echo "Dates to rebuild: ${DATES}"
+          npx collector-cli rebuild --dates "${DATES}" --clean-snapshots --verbose
 
       - name: '[rescrape-historical] Nuke stale GCS data'
         if: steps.mode.outputs.mode == 'rescrape-historical'
