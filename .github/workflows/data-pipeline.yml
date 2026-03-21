@@ -378,7 +378,10 @@ jobs:
                 "./cache/snapshots/${PREV_YEAR_DATE}/" 2>/dev/null || true
             fi
 
-            # 3. Transform raw-csv → snapshots
+            # 3. Snapshot existing dirs before transform (#193)
+            BEFORE_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
+
+            # 4. Transform raw-csv → snapshots
             echo "Transforming ${DATE}..."
             if ! npx collector-cli transform --date "${DATE}" --force --verbose 2>&1; then
               echo "::warning::Transform failed for ${DATE}"
@@ -387,26 +390,36 @@ jobs:
               continue
             fi
 
-            # 4. Compute analytics
-            echo "Computing analytics for ${DATE}..."
-            if ! npx collector-cli compute-analytics --date "${DATE}" --force-analytics --verbose 2>&1; then
-              echo "::warning::Compute failed for ${DATE}"
+            # 5. Detect actual snapshot date (#193)
+            # The transformer remaps dates via the CSV "As of" header, so the
+            # snapshot directory may differ from the raw-csv date.
+            AFTER_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
+            ACTUAL_DATE=$(comm -13 <(echo "$BEFORE_DIRS") <(echo "$AFTER_DIRS") \
+                          | head -1 | grep -oP '\d{4}-\d{2}-\d{2}' || true)
+            ACTUAL_DATE="${ACTUAL_DATE:-$DATE}"
+            if [ "$ACTUAL_DATE" != "$DATE" ]; then
+              echo "Date remapped: ${DATE} → ${ACTUAL_DATE}"
+            fi
+
+            # 6. Compute analytics (using actual snapshot date)
+            echo "Computing analytics for ${ACTUAL_DATE}..."
+            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose 2>&1; then
+              echo "::warning::Compute failed for ${ACTUAL_DATE}"
               FAILED=$((FAILED + 1))
               # Still upload whatever snapshots were generated
             fi
 
-            # 5. Upload this date's snapshots + analytics to GCS
-            SNAPSHOT_DIR="./cache/snapshots/${DATE}"
+            # 7. Upload this date's snapshots + analytics to GCS
+            SNAPSHOT_DIR="./cache/snapshots/${ACTUAL_DATE}"
             if [ -d "${SNAPSHOT_DIR}" ]; then
               FILE_COUNT=$(find "${SNAPSHOT_DIR}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
-              echo "Uploading snapshots/${DATE}/ (${FILE_COUNT} files)..."
-              # Note: cp -r dir/ dest/ creates double-nested paths. Use globs instead.
+              echo "Uploading snapshots/${ACTUAL_DATE}/ (${FILE_COUNT} files)..."
               gsutil -m \
                 -h "Content-Type:application/json" \
                 -h "Cache-Control:public, max-age=31536000, immutable" \
                 cp -Z \
                 "${SNAPSHOT_DIR}"/*.json \
-                "gs://${GCS_BUCKET}/snapshots/${DATE}/"
+                "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"
 
               if [ -d "${SNAPSHOT_DIR}/analytics" ]; then
                 gsutil -m \
@@ -414,13 +427,15 @@ jobs:
                   -h "Cache-Control:public, max-age=31536000, immutable" \
                   cp -Z \
                   "${SNAPSHOT_DIR}/analytics"/*.json \
-                  "gs://${GCS_BUCKET}/snapshots/${DATE}/analytics/"
+                  "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/analytics/"
               fi
               SUCCEEDED=$((SUCCEEDED + 1))
+            else
+              echo "::warning::No snapshot directory found for ${DATE} (expected ${ACTUAL_DATE})"
             fi
 
-            # 6. Cleanup to free disk (keep time-series + club-trends)
-            rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${DATE}"
+            # 8. Cleanup to free disk (keep time-series + club-trends)
+            rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${ACTUAL_DATE}"
 
             # Report disk usage every 10 dates
             if [ $((INDEX % 10)) -eq 0 ]; then

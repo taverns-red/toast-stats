@@ -655,3 +655,9 @@
 **Rule**: Always run `--help` on CLI commands before adding flags to pipeline YAML.
 **Warning**: The `scrape` and `transform` commands use `-f, --force` but `compute-analytics` uses `--force-analytics` — flag names are not consistent across commands.
 **rules.md**: none
+
+## rebuild-date-mismatch
+
+**Date**: 2026-03-20  
+**Issue**: #193  
+**Lesson**: The rebuild loop used raw-csv dates for snapshot directory paths, but the transformer remaps dates via the CSV "As of" header. Result: 108/110 dates silently produced no output. Always detect the _actual_ output path after a transform step, never assume input == output dates.
