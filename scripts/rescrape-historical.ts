@@ -215,7 +215,9 @@ async function main(): Promise<void> {
   let entries = data.months.slice()
   if (filterYear) {
     entries = entries.filter(e => {
-      const py = calculateProgramYear(e.closingDate)
+      // Derive program year from dataMonth, NOT closingDate.
+      // June's closing date (7/20) falls in July → wrong program year.
+      const py = calculateProgramYear(e.dataMonth + '-01')
       return py === filterYear
     })
   }
@@ -254,7 +256,9 @@ async function main(): Promise<void> {
     const { dataMonth, closingDate } = entry
     const monthEndDate = lastDayOfMonth(dataMonth)
     const closingDateObj = parseDate(closingDate)
-    const programYear = calculateProgramYear(closingDate)
+    // Derive program year from dataMonth, NOT closingDate.
+    // June's closing date (7/20) falls in July → wrong program year.
+    const programYear = calculateProgramYear(dataMonth + '-01')
 
     console.log(
       `\n── ${dataMonth} (closing: ${closingDate}, program year: ${programYear}) ──`
