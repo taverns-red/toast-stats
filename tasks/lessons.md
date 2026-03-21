@@ -661,3 +661,10 @@
 **Date**: 2026-03-20  
 **Issue**: #193  
 **Lesson**: The rebuild loop used raw-csv dates for snapshot directory paths, but the transformer remaps dates via the CSV "As of" header. Result: 108/110 dates silently produced no output. Always detect the _actual_ output path after a transform step, never assume input == output dates.
+
+## 🗓️ 2026-03-21 — manifest-not-updated-after-rebuild (#200)
+
+**Discovery**: The rebuild loop deletes each snapshot directory after uploading it to GCS (`rm -rf ./cache/snapshots/{date}`). The manifest step runs after the loop and searches local `./cache/snapshots/` — which is now empty. Result: `LATEST_DATE` is empty, manifests are skipped, and `v1/latest.json` retains the stale value from the previous daily run.
+**Proof**: CDN shows `latestSnapshotDate: "2025-03-19"` when the actual latest date is `2026-03-19`. The rebuild logs show the warning `No snapshot dates found, skipping manifests`.
+**Rule**: Multi-step pipelines that delete intermediate data must not rely on local filesystem state for downstream steps. Use GCS listing as fallback or pass state via environment variables between steps.
+**Warning**: Any future pipeline step that depends on local snapshot directories will also be affected by the rebuild cleanup. Consider tracking processed dates in a file or env var rather than relying on directory existence.

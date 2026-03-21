@@ -532,10 +532,17 @@ jobs:
       - name: Generate CDN manifests
         if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
         run: |
-          # Determine the latest date from local snapshots
+          # Determine the latest date from local snapshots (falls back to GCS
+          # listing when local cache is empty, e.g. after a rebuild that deletes
+          # each snapshot post-upload to conserve disk).
           LATEST_DATE=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort | tail -1)
           if [ -z "${LATEST_DATE}" ]; then
-            echo "::warning::No snapshot dates found, skipping manifests"
+            echo "Local snapshot cache empty — checking GCS for latest date..."
+            LATEST_DATE=$(gsutil ls "gs://${GCS_BUCKET}/snapshots/" \
+              | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u | tail -1)
+          fi
+          if [ -z "${LATEST_DATE}" ]; then
+            echo "::warning::No snapshot dates found locally or in GCS, skipping manifests"
             exit 0
           fi
           echo "Latest snapshot date: ${LATEST_DATE}"
