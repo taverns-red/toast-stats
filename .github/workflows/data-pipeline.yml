@@ -678,7 +678,7 @@ jobs:
           npx tsx scripts/rescrape-historical.ts \
             --execute \
             --cache-dir ./cache \
-            --rate 2 \
+            --rate 8 \
             ${YEAR_FLAG}
 
           DATE_COUNT=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' | wc -l | tr -d ' ')
