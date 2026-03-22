@@ -290,7 +290,7 @@ jobs:
           # Note: cp -r dir/ dest/ creates double-nested paths. Use globs instead.
           gsutil -m \
             -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=31536000, immutable" \
+            -h "Cache-Control:public, max-age=3600, must-revalidate" \
             cp -Z \
             "./cache/snapshots/${DATE}"/*.json \
             "gs://${GCS_BUCKET}/snapshots/${DATE}/"
@@ -299,7 +299,7 @@ jobs:
           if [ -d "./cache/snapshots/${DATE}/analytics" ]; then
             gsutil -m \
               -h "Content-Type:application/json" \
-              -h "Cache-Control:public, max-age=31536000, immutable" \
+              -h "Cache-Control:public, max-age=3600, must-revalidate" \
               cp -Z \
               "./cache/snapshots/${DATE}/analytics"/*.json \
               "gs://${GCS_BUCKET}/snapshots/${DATE}/analytics/"
@@ -420,7 +420,7 @@ jobs:
               echo "Uploading snapshots/${ACTUAL_DATE}/ (${FILE_COUNT} files)..."
               gsutil -m \
                 -h "Content-Type:application/json" \
-                -h "Cache-Control:public, max-age=31536000, immutable" \
+                -h "Cache-Control:public, max-age=3600, must-revalidate" \
                 cp -Z \
                 "${SNAPSHOT_DIR}"/*.json \
                 "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"
@@ -428,7 +428,7 @@ jobs:
               if [ -d "${SNAPSHOT_DIR}/analytics" ]; then
                 gsutil -m \
                   -h "Content-Type:application/json" \
-                  -h "Cache-Control:public, max-age=31536000, immutable" \
+                  -h "Cache-Control:public, max-age=3600, must-revalidate" \
                   cp -Z \
                   "${SNAPSHOT_DIR}/analytics"/*.json \
                   "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/analytics/"
@@ -599,7 +599,7 @@ jobs:
               echo "Uploading snapshots/${ACTUAL_DATE}/ (${FILE_COUNT} files)..."
               gsutil -m \
                 -h "Content-Type:application/json" \
-                -h "Cache-Control:public, max-age=31536000, immutable" \
+                -h "Cache-Control:public, max-age=3600, must-revalidate" \
                 cp -Z \
                 "${SNAPSHOT_DIR}"/*.json \
                 "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"
@@ -607,7 +607,7 @@ jobs:
               if [ -d "${SNAPSHOT_DIR}/analytics" ]; then
                 gsutil -m \
                   -h "Content-Type:application/json" \
-                  -h "Cache-Control:public, max-age=31536000, immutable" \
+                  -h "Cache-Control:public, max-age=3600, must-revalidate" \
                   cp -Z \
                   "${SNAPSHOT_DIR}/analytics"/*.json \
                   "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/analytics/"
@@ -711,7 +711,7 @@ jobs:
           echo "Uploading snapshots..."
           gsutil -m \
             -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=31536000, immutable" \
+            -h "Cache-Control:public, max-age=3600, must-revalidate" \
             cp -rZ ./cache/snapshots/* "gs://${GCS_BUCKET}/snapshots/"
 
           # Upload time-series with short cache
