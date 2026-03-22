@@ -957,6 +957,46 @@ export class AnalyticsComputeService {
           dcpGoals: dataPoint.dcpGoals,
           distinguishedTotal: dataPoint.distinguishedTotal,
         })
+
+        // ── Patch paymentsTrend in already-written analytics files (#206) ──
+        // The analytics were computed and written above using only 1-2 snapshots,
+        // producing a paymentsTrend with just 1 data point. Now that the time-series
+        // data point has been appended, read back the full accumulated trend and
+        // inject it into the analytics + membership JSON files on disk.
+        try {
+          const accumulatedTrend = await this.timeSeriesWriter.getPaymentsTrend(
+            districtId,
+            date
+          )
+          if (accumulatedTrend.length > 1) {
+            const patchFiles = [analyticsPath, membershipPath].filter(Boolean)
+            for (const filePath of patchFiles) {
+              const raw = await fs.readFile(filePath, 'utf-8')
+              const json = JSON.parse(raw)
+              if (json.data) {
+                json.data.paymentsTrend = accumulatedTrend
+                await fs.writeFile(
+                  filePath,
+                  JSON.stringify(json, null, 2),
+                  'utf-8'
+                )
+              }
+            }
+            this.logger.info('Patched paymentsTrend from time-series', {
+              date,
+              districtId,
+              dataPoints: accumulatedTrend.length,
+            })
+          }
+        } catch (patchError) {
+          // Non-fatal — the analytics files already have a 1-point trend
+          const msg =
+            patchError instanceof Error ? patchError.message : 'Unknown error'
+          this.logger.warn(
+            'Failed to patch paymentsTrend from time-series (continuing)',
+            { date, districtId, error: msg }
+          )
+        }
       } catch (error) {
         // Requirement 9.4: Log error and continue with other districts
         const errorMessage =

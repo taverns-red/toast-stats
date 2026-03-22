@@ -224,6 +224,39 @@ export class TimeSeriesIndexWriter {
   }
 
   /**
+   * Get accumulated payments trend for a district from the time-series index.
+   *
+   * Reads the program year index for the given date and returns all data points
+   * as {date, payments} pairs. Called after writeDataPoint to get the full trend
+   * history, which is then patched into analytics files (#206).
+   *
+   * @param districtId - The district ID
+   * @param date - A date string (YYYY-MM-DD) used to determine the program year
+   * @returns Array of {date, payments} pairs sorted chronologically, or empty array on error
+   */
+  async getPaymentsTrend(
+    districtId: string,
+    date: string
+  ): Promise<Array<{ date: string; payments: number }>> {
+    try {
+      const programYear = this.getProgramYearForDate(date)
+      const indexFile = await this.readProgramYearIndex(districtId, programYear)
+      if (!indexFile) return []
+
+      return indexFile.dataPoints.map(dp => ({
+        date: dp.date,
+        payments: dp.payments,
+      }))
+    } catch {
+      this.logger.warn('Failed to read payments trend from time-series', {
+        districtId,
+        date,
+      })
+      return []
+    }
+  }
+
+  /**
    * Update index metadata for a district.
    *
    * This method scans the district's time-series directory for all program year
