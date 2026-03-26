@@ -757,3 +757,15 @@
 **Discovery**: The `DCPProjectionsTable` on the Analytics tab showed all clubs' DCP projections in a large table. Per-club projections in the club detail subpage are more actionable.
 **Fix**: Added `DCPProjectionCard` to `ClubDetailPage`, removed `DCPProjectionsTable` from the Analytics tab. The component still exists for potential reuse.
 **rules.md**: When promoting information from aggregate tables to detail pages, keep the table component for possible reuse — don't delete it.
+
+## 🗓️ 2026-03-26 — express-backend-dead-code (#173)
+
+**Discovery**: The backend/ directory was already deleted in a previous sprint. Only 3 stale references remained: VITE_API_BASE_URL env type, dead /api/monitoring fetch, and a comment referencing the old Express route.
+**Fix**: Removed all 3 references. No infrastructure changes needed — Cloud Run API was never enabled on the project.
+**rules.md**: When deleting a major subsystem, grep for ALL references (types, comments, env vars) — not just imports.
+
+## 🗓️ 2026-03-26 — release-please (#192)
+
+**Discovery**: No release automation existed. Conventional commits were already in use, so release-please is a natural fit.
+**Fix**: Added release-please-config.json (monorepo: root + 4 workspaces), .release-please-manifest.json (v1.0.0), and release-please.yml (GH Actions on main push).
+**rules.md**: For monorepos, set separate-pull-requests: false to get a single grouped release PR.
