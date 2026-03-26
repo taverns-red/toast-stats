@@ -8,7 +8,7 @@
  * Property 1: Trends tab data source wiring
  *   For any rendering of the Trends tab where aggregatedAnalytics is available,
  *   MembershipTrendChart must receive aggregatedAnalytics.trends.membership,
- *   and YearOverYearComparison must receive aggregatedAnalytics.yearOverYear
+ *   and YearOverYearComparison must receive time-series-derived YoY data
  *   and aggregatedAnalytics.summary-derived metrics.
  *
  * Property 2: Trends tab guard condition
@@ -148,6 +148,126 @@ vi.mock('../../hooks/usePaymentsTrend', () => ({
     data: null,
     isLoading: false,
     error: null,
+  })),
+}))
+
+vi.mock('../../hooks/useTimeSeries', () => ({
+  useTimeSeries: vi.fn(() => ({
+    data: {
+      currentProgramYear: '2024-2025',
+      years: {
+        '2024-2025': {
+          districtId: 'D42',
+          programYear: '2024-2025',
+          startDate: '2024-07-01',
+          endDate: '2025-06-30',
+          lastUpdated: '2024-10-15T12:00:00Z',
+          dataPoints: [
+            {
+              date: '2024-07-15',
+              snapshotId: '2024-07-15',
+              membership: 5000,
+              payments: 0,
+              dcpGoals: 0,
+              distinguishedTotal: 40,
+              clubCounts: {
+                total: 120,
+                thriving: 80,
+                vulnerable: 25,
+                interventionRequired: 15,
+              },
+            },
+            {
+              date: '2024-08-15',
+              snapshotId: '2024-08-15',
+              membership: 5050,
+              payments: 0,
+              dcpGoals: 0,
+              distinguishedTotal: 42,
+              clubCounts: {
+                total: 120,
+                thriving: 82,
+                vulnerable: 23,
+                interventionRequired: 15,
+              },
+            },
+            {
+              date: '2024-09-15',
+              snapshotId: '2024-09-15',
+              membership: 5100,
+              payments: 0,
+              dcpGoals: 0,
+              distinguishedTotal: 45,
+              clubCounts: {
+                total: 120,
+                thriving: 83,
+                vulnerable: 22,
+                interventionRequired: 15,
+              },
+            },
+            {
+              date: '2024-10-15',
+              snapshotId: '2024-10-15',
+              membership: 5200,
+              payments: 0,
+              dcpGoals: 0,
+              distinguishedTotal: 50,
+              clubCounts: {
+                total: 120,
+                thriving: 85,
+                vulnerable: 20,
+                interventionRequired: 15,
+              },
+            },
+          ],
+          summary: {
+            totalDataPoints: 4,
+            membershipStart: 5000,
+            membershipEnd: 5200,
+            membershipPeak: 5200,
+            membershipLow: 5000,
+          },
+        },
+        '2023-2024': {
+          districtId: 'D42',
+          programYear: '2023-2024',
+          startDate: '2023-07-01',
+          endDate: '2024-06-30',
+          lastUpdated: '2024-10-15T12:00:00Z',
+          dataPoints: [
+            {
+              date: '2023-10-15',
+              snapshotId: '2023-10-15',
+              membership: 5000,
+              payments: 0,
+              dcpGoals: 0,
+              distinguishedTotal: 45,
+              clubCounts: {
+                total: 115,
+                thriving: 75,
+                vulnerable: 25,
+                interventionRequired: 15,
+              },
+            },
+          ],
+          summary: {
+            totalDataPoints: 1,
+            membershipStart: 5000,
+            membershipEnd: 5000,
+            membershipPeak: 5000,
+            membershipLow: 5000,
+          },
+        },
+      },
+      availableYears: ['2024-2025', '2023-2024'],
+      baseMembership: 5000,
+      currentMembership: 5200,
+      memberChange: 200,
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
   })),
 }))
 
@@ -397,7 +517,7 @@ describe('DistrictDetailPage - Trends Tab Data Source Wiring', () => {
         ).toBeInTheDocument()
       })
 
-      // Verify yearOverYear data was passed
+      // Verify yearOverYear data was passed (now computed from time-series, not aggregatedAnalytics)
       expect(screen.getByTestId('yoy-has-data')).toHaveTextContent('true')
 
       // Verify currentYear metrics come from aggregatedAnalytics.summary
@@ -410,14 +530,15 @@ describe('DistrictDetailPage - Trends Tab Data Source Wiring', () => {
       expect(screen.getByTestId('yoy-thriving-clubs')).toHaveTextContent('85')
       expect(screen.getByTestId('yoy-total-clubs')).toHaveTextContent('120')
 
-      // Verify via mock call args that the exact data was passed
+      // Verify via mock call args that YoY data is present (from time-series)
       const lastCall =
         mockYearOverYearComparison.mock.calls[
           mockYearOverYearComparison.mock.calls.length - 1
         ]
       expect(lastCall).toBeDefined()
       const props = lastCall![0]
-      expect(props.yearOverYear).toEqual(mockData.yearOverYear)
+      expect(props.yearOverYear).toBeDefined()
+      expect(props.yearOverYear!.membershipChange).toBeGreaterThan(0)
       expect(props.currentYear).toEqual({
         totalMembership: 5200,
         distinguishedClubs: 50,

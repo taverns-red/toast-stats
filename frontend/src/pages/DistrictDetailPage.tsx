@@ -7,6 +7,7 @@ import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
 import { usePaymentsTrend } from '../hooks/usePaymentsTrend'
 import { useTimeSeries } from '../hooks/useTimeSeries'
+import { computeYearOverYear } from '../hooks/useTimeSeriesYoY'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
@@ -711,8 +712,8 @@ const DistrictDetailPage: React.FC = () => {
                 {aggregatedAnalytics ? (
                   <LazyChart height="300px">
                     <YearOverYearComparison
-                      {...(aggregatedAnalytics.yearOverYear && {
-                        yearOverYear: aggregatedAnalytics.yearOverYear,
+                      {...(computeYearOverYear(timeSeries ?? null) && {
+                        yearOverYear: computeYearOverYear(timeSeries ?? null)!,
                       })}
                       currentYear={{
                         totalMembership:
