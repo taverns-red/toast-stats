@@ -876,7 +876,7 @@ export class TransformService {
   private async loadRawCSVData(
     date: string,
     districtId: string
-  ): Promise<RawCSVData | null> {
+  ): Promise<RawCSVData | null | 'corrupt'> {
     const districtDir = path.join(
       this.getRawCsvDir(date),
       `district-${districtId}`
@@ -919,6 +919,19 @@ export class TransformService {
       return null
     }
 
+    // Validate CSV content (#199): detect corrupt files with 0 data rows
+    const validation = this.validateCSVContent(clubContent, clubPerformancePath)
+    if (!validation.valid) {
+      this.logger.warn('Corrupt CSV detected — skipping district', {
+        date,
+        districtId,
+        path: clubPerformancePath,
+        reason: validation.reason,
+        fileSize: clubContent.length,
+      })
+      return 'corrupt'
+    }
+
     const rawData: RawCSVData = {
       clubPerformance: this.parseCSVToArray(clubContent),
     }
@@ -932,6 +945,36 @@ export class TransformService {
     }
 
     return rawData
+  }
+
+  /**
+   * Validate CSV content to detect corrupt files (#199).
+   *
+   * A corrupt CSV has zero data rows after parsing — only header + footer lines.
+   * Example: a 478-byte file with just column headers and a "Month of" footer.
+   *
+   * @returns { valid: true } or { valid: false, reason: string }
+   */
+  private validateCSVContent(
+    content: string,
+    filePath: string
+  ): { valid: true } | { valid: false; reason: string } {
+    try {
+      const records = this.parseCSVToRecords(content)
+      if (records.length === 0) {
+        return {
+          valid: false,
+          reason: `No data rows after parsing (${content.length} bytes, headers/footer only)`,
+        }
+      }
+    } catch {
+      // If parsing fails entirely, let the downstream transform handle it
+      this.logger.debug('CSV parsing check failed, deferring to transform', {
+        path: filePath,
+      })
+    }
+
+    return { valid: true }
   }
 
   /**
@@ -1023,6 +1066,14 @@ export class TransformService {
 
     // Load raw CSV data
     const rawData = await this.loadRawCSVData(date, districtId)
+    if (rawData === 'corrupt') {
+      return {
+        districtId,
+        success: true,
+        skipped: true,
+        error: `Skipped: corrupt club-performance.csv for district ${districtId} on ${date}`,
+      }
+    }
     if (!rawData) {
       return {
         districtId,
@@ -1363,6 +1414,14 @@ export class TransformService {
 
     // Load raw CSV data from source date
     const rawData = await this.loadRawCSVData(sourceDate, districtId)
+    if (rawData === 'corrupt') {
+      return {
+        districtId,
+        success: true,
+        skipped: true,
+        error: `Skipped: corrupt club-performance.csv for district ${districtId} on ${sourceDate}`,
+      }
+    }
     if (!rawData) {
       return {
         districtId,
