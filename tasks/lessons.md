@@ -745,3 +745,15 @@
 **Discovery**: ClubDetailModal computed `membershipChange` as `latest - first trend point`, which yields 0 when only 1 data point exists in the filtered trend array. The correct calculation is `latestMembership - baseMembership`.
 **Fix**: Changed to `latestMembership - baseMembership` which correctly shows the base-to-current difference regardless of trend array length.
 **rules.md**: Check for off-by-one and boundary conditions in array-based calculations. When only 1 element exists, `arr[length-1] - arr[0]` is always 0.
+
+## 🗓️ 2026-03-26 — club-detail-subpage (#208)
+
+**Discovery**: The ClubDetailModal was the only way to view per-club data, but modals can't be bookmarked or shared. The club trends data (#207) was fixed by the historical rescrape, so club-level charts now show real data.
+**Fix**: Created `ClubDetailPage.tsx` as a full-page route at `/district/:districtId/club/:clubId`. Includes breadcrumbs, stats grid, membership chart, DCP projection card, and DCP goals timeline. Club clicks in `ClubsTable` now navigate instead of opening the modal.
+**rules.md**: Verify data bugs are actually fixed (by rescrape, pipeline changes, etc.) before starting UI work that depends on them — can save an entire sprint.
+
+## 🗓️ 2026-03-26 — dcp-projections-to-club-detail (#187)
+
+**Discovery**: The `DCPProjectionsTable` on the Analytics tab showed all clubs' DCP projections in a large table. Per-club projections in the club detail subpage are more actionable.
+**Fix**: Added `DCPProjectionCard` to `ClubDetailPage`, removed `DCPProjectionsTable` from the Analytics tab. The component still exists for potential reuse.
+**rules.md**: When promoting information from aggregate tables to detail pages, keep the table component for possible reuse — don't delete it.
