@@ -29,7 +29,6 @@ import { YearOverYearComparison } from '../components/YearOverYearComparison'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
 import { DivisionAreaRecognitionPanel } from '../components/DivisionAreaRecognitionPanel'
-import { DCPProjectionsTable } from '../components/DCPProjectionsTable'
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
@@ -755,18 +754,6 @@ const DistrictDetailPage: React.FC = () => {
                   />
                 ) : (
                   isLoadingAnalytics && <LoadingSkeleton variant="card" />
-                )}
-
-                {/* DCP Projections Table */}
-                {analytics ? (
-                  <DCPProjectionsTable
-                    clubs={analytics.allClubs}
-                    isLoading={isLoadingAnalytics}
-                  />
-                ) : (
-                  isLoadingAnalytics && (
-                    <LoadingSkeleton variant="table" count={5} />
-                  )
                 )}
               </>
             )}
