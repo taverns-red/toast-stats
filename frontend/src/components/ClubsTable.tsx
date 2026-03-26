@@ -11,6 +11,7 @@ import { useColumnFilters } from '../hooks/useColumnFilters'
 import { ColumnHeader } from './ColumnHeader'
 import { SortField, SortDirection, COLUMN_CONFIGS } from './filters/types'
 import ClubCard from './ClubCard'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 /**
  * Props for the ClubsTable component
@@ -66,6 +67,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
 }) => {
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const isMobile = useIsMobile(768)
 
   // Use column filters hook
   const {
@@ -326,8 +328,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       )}
 
       {/* Mobile Card View (#217) */}
-      {!isLoading && sortedClubs.length > 0 && (
-        <div className="md:hidden p-4">
+      {!isLoading && sortedClubs.length > 0 && isMobile && (
+        <div className="p-4">
           {/* Mobile sort dropdown */}
           <div className="flex items-center gap-2 mb-3">
             <label
@@ -395,8 +397,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       )}
 
       {/* Desktop Table */}
-      {!isLoading && sortedClubs.length > 0 && (
-        <div className="hidden md:block overflow-x-auto">
+      {!isLoading && sortedClubs.length > 0 && !isMobile && (
+        <div className="overflow-x-auto">
           <table className="w-full table-auto">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>

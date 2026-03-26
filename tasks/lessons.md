@@ -775,3 +775,9 @@
 **Discovery**: Three strict ESLint rules blocked common React patterns: (1) `react-refresh/only-export-components` bans mixing helper exports with component exports, (2) `react-hooks/set-state-in-effect` bans setState in useEffect, (3) `react-hooks/refs` bans ref updates during render.
 **Fix**: Extracted helpers to `utils/dataFreshness.ts` (solves react-refresh). Used React `key` prop on the parent to force remount when selectedDate changes (solves the dismissed reset without useEffect or ref mutation).
 **rules.md**: Don't export non-component functions from component files. Use React `key` to reset internal state instead of useEffect or render-time ref mutation.
+
+## 🗓️ 2026-03-26 — accessibility-mobile-responsiveness (#216, #217, #218)
+
+**Discovery**: ClubsTable uses `ProcessedClubTrend` (extends `ClubTrend` with computed `latestMembership`, `latestDcpGoals`, `distinguishedOrder`), not raw `ClubTrend`. Any new components consuming table data must import `ProcessedClubTrend` from `filters/types.ts`.
+**Pattern**: Pagination hook returns `paginatedItems` (not `currentItems`) and requires explicit prop passing to `Pagination` component (not spread). `exactOptionalPropertyTypes` is enabled — optional props of type `T` must be typed as `T | undefined`.
+**CSS**: Tailwind `md:hidden` / `hidden md:block` pattern works perfectly for mobile/desktop view switching. No JS viewport detection needed.

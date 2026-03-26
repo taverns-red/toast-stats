@@ -295,7 +295,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       })
 
       // Navigate to Divisions & Areas tab to see the DivisionPerformanceCards
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /divisions & areas/i,
       })
       await user.click(divisionsTab)
@@ -368,7 +368,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       })
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /divisions & areas/i,
       })
       await user.click(divisionsTab)
@@ -410,7 +410,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       })
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /divisions & areas/i,
       })
       await user.click(divisionsTab)
@@ -455,7 +455,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       })
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /divisions & areas/i,
       })
       await user.click(divisionsTab)
@@ -483,7 +483,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       // an empty content area (districtStatistics guard prevents child rendering).
       // Verify the tab is still active and the previous content is gone.
       await waitFor(() => {
-        const activeTab = screen.getByRole('button', {
+        const activeTab = screen.getByRole('tab', {
           name: /divisions & areas/i,
         })
         expect(activeTab).toHaveClass('border-tm-loyal-blue')
@@ -508,7 +508,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       })
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /divisions & areas/i,
       })
       await user.click(divisionsTab)
@@ -545,7 +545,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       })
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /divisions & areas/i,
       })
       await user.click(divisionsTab)
@@ -584,7 +584,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       })
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /divisions & areas/i,
       })
       await user.click(divisionsTab)
@@ -614,7 +614,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       })
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /divisions & areas/i,
       })
       await user.click(divisionsTab)

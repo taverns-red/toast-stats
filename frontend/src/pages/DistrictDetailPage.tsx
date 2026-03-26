@@ -69,7 +69,7 @@ const DistrictDetailPage: React.FC = () => {
 
   // Tab scroll-fade detection refs (#86)
   const tabScrollRef = React.useRef<HTMLDivElement>(null)
-  const tabNavRef = React.useRef<HTMLElement>(null)
+  const tabNavRef = React.useRef<HTMLDivElement>(null)
   const [isTabScrollableRight, setIsTabScrollableRight] = useState(false)
 
   React.useEffect(() => {
@@ -504,7 +504,7 @@ const DistrictDetailPage: React.FC = () => {
                 ref={tabScrollRef}
                 data-scrollable-right={isTabScrollableRight}
               >
-                <nav
+                <div
                   className="flex -mb-px overflow-x-auto scrollbar-hide"
                   ref={tabNavRef}
                   role="tablist"
@@ -517,8 +517,6 @@ const DistrictDetailPage: React.FC = () => {
                       disabled={tab.disabled}
                       role="tab"
                       aria-selected={activeTab === tab.id}
-                      aria-controls={`tabpanel-${tab.id}`}
-                      id={`tab-${tab.id}`}
                       className={`
                         px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-tm-headline font-medium whitespace-nowrap transition-colors
                         ${
@@ -538,7 +536,7 @@ const DistrictDetailPage: React.FC = () => {
                       )}
                     </button>
                   ))}
-                </nav>
+                </div>
               </div>
             </div>
           </div>

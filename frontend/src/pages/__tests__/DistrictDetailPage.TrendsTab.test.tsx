@@ -461,7 +461,7 @@ describe('DistrictDetailPage - Trends Tab Data Source Wiring', () => {
       renderDistrictDetailPage()
 
       // Navigate to Trends tab
-      const trendsTab = screen.getByRole('button', { name: /Trends/i })
+      const trendsTab = screen.getByRole('tab', { name: /Trends/i })
       await user.click(trendsTab)
 
       // Wait for LazyChart IntersectionObserver to fire
@@ -507,7 +507,7 @@ describe('DistrictDetailPage - Trends Tab Data Source Wiring', () => {
       renderDistrictDetailPage()
 
       // Navigate to Trends tab
-      const trendsTab = screen.getByRole('button', { name: /Trends/i })
+      const trendsTab = screen.getByRole('tab', { name: /Trends/i })
       await user.click(trendsTab)
 
       // Wait for YearOverYearComparison to render
@@ -567,7 +567,7 @@ describe('DistrictDetailPage - Trends Tab Data Source Wiring', () => {
       const user = userEvent.setup()
       renderDistrictDetailPage()
 
-      const trendsTab = screen.getByRole('button', { name: /Trends/i })
+      const trendsTab = screen.getByRole('tab', { name: /Trends/i })
       await user.click(trendsTab)
 
       await waitFor(() => {
@@ -603,12 +603,12 @@ describe('DistrictDetailPage - Trends Tab Data Source Wiring', () => {
       const user = userEvent.setup()
       renderDistrictDetailPage()
 
-      const trendsTab = screen.getByRole('button', { name: /Trends/i })
+      const trendsTab = screen.getByRole('tab', { name: /Trends/i })
       await user.click(trendsTab)
 
       // Verify the Trends tab is active by checking its text styling
       await waitFor(() => {
-        const trendsButton = screen.getByRole('button', { name: /Trends/i })
+        const trendsButton = screen.getByRole('tab', { name: /Trends/i })
         expect(trendsButton.className).toContain('border-tm-loyal-blue')
       })
 
@@ -646,12 +646,12 @@ describe('DistrictDetailPage - Trends Tab Data Source Wiring', () => {
       const user = userEvent.setup()
       renderDistrictDetailPage()
 
-      const trendsTab = screen.getByRole('button', { name: /Trends/i })
+      const trendsTab = screen.getByRole('tab', { name: /Trends/i })
       await user.click(trendsTab)
 
       // Verify the Trends tab is active by checking its text styling
       await waitFor(() => {
-        const trendsButton = screen.getByRole('button', { name: /Trends/i })
+        const trendsButton = screen.getByRole('tab', { name: /Trends/i })
         expect(trendsButton.className).toContain('border-tm-loyal-blue')
       })
 

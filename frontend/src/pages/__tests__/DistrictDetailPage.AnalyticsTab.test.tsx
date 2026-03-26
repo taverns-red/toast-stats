@@ -170,7 +170,7 @@ describe('DistrictDetailPage - Analytics Tab (#78)', () => {
 
   // Helper: get the Analytics tab button from the navigation
   const getAnalyticsTab = () => {
-    const tabNav = screen.getByRole('navigation')
+    const tabNav = screen.getByRole('tablist')
     const tabButtons = tabNav.querySelectorAll('button')
     const analyticsTab = Array.from(tabButtons).find(
       btn => btn.textContent?.trim() === 'Analytics'
@@ -190,7 +190,7 @@ describe('DistrictDetailPage - Analytics Tab (#78)', () => {
     it('should include Analytics tab between Trends and Global Rankings', () => {
       renderWithProviders()
 
-      const tabNav = screen.getByRole('navigation')
+      const tabNav = screen.getByRole('tablist')
       const tabButtons = tabNav.querySelectorAll('button')
 
       // Should now have 6 tabs: Overview, Clubs, Divisions, Trends, Analytics, Global Rankings

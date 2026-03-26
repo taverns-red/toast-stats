@@ -513,7 +513,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -542,7 +542,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -568,7 +568,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -596,7 +596,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -625,7 +625,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -652,7 +652,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -678,7 +678,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -705,7 +705,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -749,7 +749,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -760,7 +760,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       // This is expected behavior — the tab content area is present but empty.
       await waitFor(() => {
         // The tab is active (Divisions & Areas is selected)
-        const activeTab = screen.getByRole('button', {
+        const activeTab = screen.getByRole('tab', {
           name: /Divisions & Areas/i,
         })
         expect(activeTab).toHaveClass('border-tm-loyal-blue')
@@ -776,7 +776,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -817,7 +817,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -850,7 +850,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -882,7 +882,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       const { container } = renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)
@@ -907,7 +907,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
       renderDistrictDetailPage()
 
       // Navigate to Divisions & Areas tab
-      const divisionsTab = screen.getByRole('button', {
+      const divisionsTab = screen.getByRole('tab', {
         name: /Divisions & Areas/i,
       })
       await user.click(divisionsTab)

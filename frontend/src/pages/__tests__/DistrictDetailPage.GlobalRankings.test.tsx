@@ -207,7 +207,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders()
 
       // Find the Global Rankings tab button
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       expect(globalRankingsTab).toBeInTheDocument()
@@ -217,7 +217,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders()
 
       // Get the tab navigation container
-      const tabNav = screen.getByRole('navigation')
+      const tabNav = screen.getByRole('tablist')
 
       // Verify all tabs are present within the navigation
       // Note: Analytics tab is now re-enabled (#78)
@@ -233,7 +233,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders()
 
       // Get all tab buttons in the navigation
-      const tabNav = screen.getByRole('navigation')
+      const tabNav = screen.getByRole('tablist')
       const tabButtons = tabNav.querySelectorAll('button')
 
       // Verify the order (Analytics tab is now re-enabled #78)
@@ -252,7 +252,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders()
 
       // Click on Global Rankings tab
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       fireEvent.click(globalRankingsTab)
@@ -268,7 +268,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders()
 
       // Click on Global Rankings tab
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       fireEvent.click(globalRankingsTab)
@@ -285,7 +285,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders('/district/57')
 
       // Click on Global Rankings tab
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       fireEvent.click(globalRankingsTab)
@@ -300,7 +300,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders('/district/57')
 
       // Click on Global Rankings tab
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       fireEvent.click(globalRankingsTab)
@@ -322,7 +322,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       ).not.toBeInTheDocument()
 
       // Click on Global Rankings tab
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       fireEvent.click(globalRankingsTab)
@@ -339,7 +339,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders()
 
       // Click on Global Rankings tab
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       fireEvent.click(globalRankingsTab)
@@ -352,7 +352,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       })
 
       // Click on Overview tab
-      const overviewTab = screen.getByRole('button', { name: /overview/i })
+      const overviewTab = screen.getByRole('tab', { name: /overview/i })
       fireEvent.click(overviewTab)
 
       // Verify Global Rankings content is hidden
@@ -368,12 +368,12 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should have consistent inactive styling with other tabs', () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
       // Get the tab navigation and find the Trends tab within it (Analytics is now re-enabled)
-      const tabNav = screen.getByRole('navigation')
+      const tabNav = screen.getByRole('tablist')
       const tabButtons = tabNav.querySelectorAll('button')
       const trendsTab = Array.from(tabButtons).find(btn =>
         btn.textContent?.toLowerCase().includes('trends')
@@ -388,7 +388,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders()
 
       // Click on Global Rankings tab
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       fireEvent.click(globalRankingsTab)
@@ -404,7 +404,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should use Toastmasters brand font for tab label', () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
@@ -416,7 +416,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should have proper padding consistent with other tabs', () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
@@ -430,7 +430,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should have hover styling for inactive state', () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
@@ -446,7 +446,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       const { container } = renderWithProviders()
 
       // Run axe on the tab navigation
-      const tabNav = container.querySelector('nav')
+      const tabNav = container.querySelector('[role="tablist"]')
       if (tabNav) {
         const results = await axe(tabNav)
         expect(results).toHaveNoViolations()
@@ -456,7 +456,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should be keyboard navigable', () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
@@ -468,7 +468,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should activate tab on Enter key press', async () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
@@ -486,7 +486,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should have proper button role', () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
@@ -496,7 +496,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should have minimum touch target size', () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
@@ -513,7 +513,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders()
 
       // Click on Global Rankings tab
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       fireEvent.click(globalRankingsTab)
@@ -524,7 +524,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       })
 
       // Click on Clubs tab
-      const clubsTab = screen.getByRole('button', { name: /clubs/i })
+      const clubsTab = screen.getByRole('tab', { name: /clubs/i })
       fireEvent.click(clubsTab)
 
       // Verify Clubs is now active and Global Rankings is inactive
@@ -549,7 +549,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       renderWithProviders('/district/57')
 
       // Click on Global Rankings tab
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
       fireEvent.click(globalRankingsTab)
@@ -575,7 +575,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should have responsive text size classes', () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
@@ -587,7 +587,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
     it('should have whitespace-nowrap to prevent text wrapping', () => {
       renderWithProviders()
 
-      const globalRankingsTab = screen.getByRole('button', {
+      const globalRankingsTab = screen.getByRole('tab', {
         name: /global rankings/i,
       })
 
@@ -598,7 +598,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       const { container } = renderWithProviders()
 
       // The nav should have overflow-x-auto for horizontal scrolling
-      const nav = container.querySelector('nav')
+      const nav = container.querySelector('[role="tablist"]')
       expect(nav).toHaveClass('overflow-x-auto')
     })
   })
