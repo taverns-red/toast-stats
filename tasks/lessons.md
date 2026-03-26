@@ -769,3 +769,9 @@
 **Discovery**: No release automation existed. Conventional commits were already in use, so release-please is a natural fit.
 **Fix**: Added release-please-config.json (monorepo: root + 4 workspaces), .release-please-manifest.json (v1.0.0), and release-please.yml (GH Actions on main push).
 **rules.md**: For monorepos, set separate-pull-requests: false to get a single grouped release PR.
+
+## 🗓️ 2026-03-26 — data-freshness-indicators (#213, #214, #215)
+
+**Discovery**: Three strict ESLint rules blocked common React patterns: (1) `react-refresh/only-export-components` bans mixing helper exports with component exports, (2) `react-hooks/set-state-in-effect` bans setState in useEffect, (3) `react-hooks/refs` bans ref updates during render.
+**Fix**: Extracted helpers to `utils/dataFreshness.ts` (solves react-refresh). Used React `key` prop on the parent to force remount when selectedDate changes (solves the dismissed reset without useEffect or ref mutation).
+**rules.md**: Don't export non-component functions from component files. Use React `key` to reset internal state instead of useEffect or render-time ref mutation.
