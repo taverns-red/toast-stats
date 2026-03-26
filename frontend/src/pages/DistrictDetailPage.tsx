@@ -23,7 +23,6 @@ import { DistrictOverview } from '../components/DistrictOverview'
 
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart'
 import { ClubsTable } from '../components/ClubsTable'
-import { ClubDetailModal } from '../components/ClubDetailModal'
 import { MembershipTrendChart } from '../components/MembershipTrendChart'
 import { MembershipPaymentsChart } from '../components/MembershipPaymentsChart'
 import { YearOverYearComparison } from '../components/YearOverYearComparison'
@@ -67,7 +66,6 @@ const DistrictDetailPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabType>('overview')
-  const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null)
 
   // Tab scroll-fade detection refs (#86)
   const tabScrollRef = React.useRef<HTMLDivElement>(null)
@@ -321,14 +319,9 @@ const DistrictDetailPage: React.FC = () => {
     { id: 'globalRankings', label: 'Global Rankings' },
   ]
 
-  // Handle club click
+  // Handle club click — navigate to subpage (#208)
   const handleClubClick = (club: ClubTrend) => {
-    setSelectedClub(club)
-  }
-
-  // Close modal
-  const handleCloseModal = () => {
-    setSelectedClub(null)
+    navigate(`/district/${districtId}/club/${club.clubId}`)
   }
 
   // Handle date selection
@@ -625,20 +618,12 @@ const DistrictDetailPage: React.FC = () => {
             )}
 
             {activeTab === 'clubs' && districtId && (
-              <>
-                <ClubsTable
-                  clubs={allClubs}
-                  districtId={districtId}
-                  isLoading={isLoadingAnalytics}
-                  onClubClick={handleClubClick}
-                />
-                <ClubDetailModal
-                  club={selectedClub}
-                  districtId={districtId}
-                  programYear={selectedProgramYear}
-                  onClose={handleCloseModal}
-                />
-              </>
+              <ClubsTable
+                clubs={allClubs}
+                districtId={districtId}
+                isLoading={isLoadingAnalytics}
+                onClubClick={handleClubClick}
+              />
             )}
 
             {activeTab === 'divisions' && (
