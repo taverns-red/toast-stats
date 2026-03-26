@@ -650,6 +650,22 @@ export class TransformService {
     valueField: keyof RankingMetrics,
     category: string
   ): CategoryRanking[] {
+    // Tie-neutralization (#198): if all values are identical, award 0 points
+    const uniqueValues = new Set(metrics.map(m => m[valueField] as number))
+    if (uniqueValues.size === 1) {
+      this.logger.debug('All districts tied — neutralizing category', {
+        category,
+        totalDistricts: metrics.length,
+        value: [...uniqueValues][0],
+      })
+      return metrics.map(m => ({
+        districtId: m.districtId,
+        rank: 1,
+        bordaPoints: 0,
+        value: m[valueField] as number,
+      }))
+    }
+
     // Sort districts by value (highest first)
     const sortedMetrics = [...metrics].sort((a, b) => {
       const aValue = a[valueField] as number
