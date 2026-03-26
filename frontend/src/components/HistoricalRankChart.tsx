@@ -143,7 +143,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
         </h2>
         <div className="flex items-center justify-center h-80">
           <p className="text-gray-600">
-            No historical rank data available. Select districts to view their
+            No historical rank data available. Select regions above to view rank
             progression.
           </p>
         </div>

@@ -307,4 +307,114 @@ describe('BordaCountRankingCalculator', () => {
       expect(calculator.getRankingVersion()).toBe('2.0')
     })
   })
+
+  describe('calculateRankings — category tie handling (#198)', () => {
+    /**
+     * Helper to create a minimal RankingDistrictStatistics with districtPerformance
+     * (required by extractRankingMetrics).
+     */
+    function makeDistrict(
+      id: string,
+      region: string,
+      clubGrowth: number,
+      paymentGrowth: number,
+      distinguishedClubs: number,
+      activeClubs: number
+    ): RankingDistrictStatistics {
+      return {
+        districtId: id,
+        asOfDate: '2026-03-01',
+        membership: {
+          total: 100,
+          change: 0,
+          changePercent: 0,
+          byClub: [],
+        },
+        clubs: {
+          total: activeClubs,
+          active: activeClubs,
+          suspended: 0,
+          ineligible: 0,
+          low: 0,
+          distinguished: distinguishedClubs,
+        },
+        education: { totalAwards: 0, byType: [], topClubs: [] },
+        districtPerformance: [
+          {
+            DISTRICT: `District ${id}`,
+            REGION: region,
+            'Paid Clubs': '50',
+            'Paid Club Base': '48',
+            '% Club Growth': `${clubGrowth}%`,
+            'Total YTD Payments': '200',
+            'Payment Base': '180',
+            '% Payment Growth': `${paymentGrowth}%`,
+            'Active Clubs': String(activeClubs),
+            'Total Distinguished Clubs': String(distinguishedClubs),
+            'Select Distinguished Clubs': '0',
+            'Presidents Distinguished Clubs': '0',
+          },
+        ],
+      }
+    }
+
+    it('should award 0 Borda points when all districts tie in a category', async () => {
+      // Pre-April scenario: 3 districts, all with 0 Distinguished clubs
+      const districts = [
+        makeDistrict('D1', '1', 10, 8, 0, 50),
+        makeDistrict('D2', '1', 5, 12, 0, 50),
+        makeDistrict('D3', '1', 8, 6, 0, 50),
+      ]
+
+      const result = await calculator.calculateRankings(districts)
+
+      // All 3 districts should have distinguishedRank = 1 (tied)
+      for (const d of result) {
+        expect(d.ranking).toBeDefined()
+        expect(d.ranking!.distinguishedRank).toBe(1)
+      }
+
+      // The aggregate scores should NOT include 3 points (max Borda) from Distinguished.
+      // D1: clubGrowth=10% (rank 1 → 3pts), paymentGrowth=8% (rank 2 → 2pts), dist=0pts → 5
+      // D2: clubGrowth=5% (rank 3 → 1pt), paymentGrowth=12% (rank 1 → 3pts), dist=0pts → 4
+      // D3: clubGrowth=8% (rank 2 → 2pts), paymentGrowth=6% (rank 3 → 1pt), dist=0pts → 3
+      const scores = result
+        .map(d => ({
+          id: d.districtId,
+          score: d.ranking!.aggregateScore,
+        }))
+        .sort((a, b) => b.score - a.score)
+
+      // Without the fix, all would get +3 from Distinguished (8, 7, 6).
+      // With the fix, Distinguished contributes 0 points (5, 4, 3).
+      // The key invariant: the max score should be 5, not 8.
+      expect(scores[0]!.score).toBe(5)
+      expect(scores[1]!.score).toBe(4)
+      expect(scores[2]!.score).toBe(3)
+    })
+
+    it('should still award normal Borda points when values differ', async () => {
+      // Normal scenario: districts have different Distinguished values
+      const districts = [
+        makeDistrict('D1', '1', 10, 8, 5, 50),
+        makeDistrict('D2', '1', 5, 12, 10, 50),
+        makeDistrict('D3', '1', 8, 6, 15, 50),
+      ]
+
+      const result = await calculator.calculateRankings(districts)
+
+      // Distinguished should contribute normally:
+      // D3=15 (rank 1, 3pts), D2=10 (rank 2, 2pts), D1=5 (rank 3, 1pt)
+      const d1 = result.find(d => d.districtId === 'D1')!
+      const d2 = result.find(d => d.districtId === 'D2')!
+      const d3 = result.find(d => d.districtId === 'D3')!
+
+      // D1: clubs=3 + payments=2 + distinguished=1 = 6
+      expect(d1.ranking!.aggregateScore).toBe(6)
+      // D2: clubs=1 + payments=3 + distinguished=2 = 6
+      expect(d2.ranking!.aggregateScore).toBe(6)
+      // D3: clubs=2 + payments=1 + distinguished=3 = 6
+      expect(d3.ranking!.aggregateScore).toBe(6)
+    })
+  })
 })

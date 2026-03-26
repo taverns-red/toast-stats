@@ -125,6 +125,16 @@ const LandingPage: React.FC = () => {
     [data?.rankings]
   )
   const currentDate: string = data?.date || ''
+  // For the date selector label, use the latest date from the selected program year,
+  // not the global CDN latest (#180)
+  const latestDateInProgramYear: string = React.useMemo(() => {
+    if (cachedDates.length > 0) {
+      return (
+        [...cachedDates].sort((a, b) => b.localeCompare(a))[0] || currentDate
+      )
+    }
+    return currentDate
+  }, [cachedDates, currentDate])
 
   // Get district IDs for selected regions
   const selectedDistricts = React.useMemo(() => {
@@ -448,7 +458,7 @@ const LandingPage: React.FC = () => {
                   style={{ color: 'var(--tm-black)' }}
                 >
                   <option value="" className="text-gray-900 bg-white">
-                    Latest in Program Year ({currentDate})
+                    Latest in Program Year ({latestDateInProgramYear})
                   </option>
                   {cachedDates
                     .sort((a, b) => b.localeCompare(a))
@@ -866,7 +876,7 @@ const LandingPage: React.FC = () => {
           </summary>
           <div className="px-4 pb-4">
             <p className="text-gray-600 text-sm mb-3">
-              Select regions to compare district rank progression over time
+              Select regions to compare rank progression over time
             </p>
 
             {/* Region Multi-Select for Historical Tracking */}
@@ -879,8 +889,8 @@ const LandingPage: React.FC = () => {
                   className="text-sm font-medium text-gray-700 flex items-center gap-2 md:cursor-default"
                   aria-expanded={isHistoryRegionExpanded}
                 >
-                  Select Regions to Compare ({selectedRegionsForHistory.length}{' '}
-                  regions, {selectedDistricts.length} districts)
+                  Select Regions ({selectedRegionsForHistory.length} regions,{' '}
+                  {selectedDistricts.length} districts)
                   <svg
                     className={`w-4 h-4 transition-transform md:hidden ${isHistoryRegionExpanded ? 'rotate-180' : ''}`}
                     fill="none"

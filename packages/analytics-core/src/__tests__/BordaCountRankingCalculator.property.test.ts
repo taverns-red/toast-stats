@@ -228,12 +228,18 @@ function getDistinguishedPercent(district: RankingDistrictStatistics): number {
 }
 
 /**
- * Calculate expected Borda points for a given rank and total districts
+ * Calculate expected Borda points for a given rank, total districts, and
+ * whether the category is a complete tie (#198).
+ *
+ * When all districts have the same value in a category, Borda points = 0
+ * (the category provides no ranking differentiation).
  */
 function calculateExpectedBordaPoints(
   rank: number,
-  totalDistricts: number
+  totalDistricts: number,
+  isCompleteTie: boolean = false
 ): number {
+  if (isCompleteTie) return 0
   return totalDistricts - rank + 1
 }
 
@@ -325,21 +331,39 @@ describe('BordaCountRankingCalculator Property Tests', () => {
       await fc.assert(
         fc.asyncProperty(districtStatisticsArrayArb(2, 20), async districts => {
           const rankedDistricts = await calculator.calculateRankings(districts)
-          const totalDistricts = rankedDistricts.filter(d => d.ranking).length
+          const districtsWithRankings = rankedDistricts.filter(d => d.ranking)
+          const totalDistricts = districtsWithRankings.length
+
+          // Detect complete ties per category (#198)
+          const clubGrowths = new Set(
+            districtsWithRankings.map(d => d.ranking!.clubGrowthPercent)
+          )
+          const paymentGrowths = new Set(
+            districtsWithRankings.map(d => d.ranking!.paymentGrowthPercent)
+          )
+          const distinguishedPcts = new Set(
+            districtsWithRankings.map(d => d.ranking!.distinguishedPercent)
+          )
+          const clubsTied = clubGrowths.size === 1
+          const paymentsTied = paymentGrowths.size === 1
+          const distinguishedTied = distinguishedPcts.size === 1
 
           for (const district of rankedDistricts) {
             if (district.ranking) {
               const clubsBordaPoints = calculateExpectedBordaPoints(
                 district.ranking.clubsRank,
-                totalDistricts
+                totalDistricts,
+                clubsTied
               )
               const paymentsBordaPoints = calculateExpectedBordaPoints(
                 district.ranking.paymentsRank,
-                totalDistricts
+                totalDistricts,
+                paymentsTied
               )
               const distinguishedBordaPoints = calculateExpectedBordaPoints(
                 district.ranking.distinguishedRank,
-                totalDistricts
+                totalDistricts,
+                distinguishedTied
               )
 
               const expectedAggregateScore =
@@ -564,8 +588,8 @@ describe('BordaCountRankingCalculator Property Tests', () => {
             expect(ranked.ranking.clubsRank).toBe(1)
             expect(ranked.ranking.paymentsRank).toBe(1)
             expect(ranked.ranking.distinguishedRank).toBe(1)
-            // Aggregate score = 1 + 1 + 1 = 3 (Borda points for rank 1 with 1 district)
-            expect(ranked.ranking.aggregateScore).toBe(3)
+            // With 1 district, all categories are tied → 0 Borda points each (#198)
+            expect(ranked.ranking.aggregateScore).toBe(0)
           }
 
           return true
@@ -587,9 +611,10 @@ describe('BordaCountRankingCalculator Property Tests', () => {
           const rankedDistricts = await calculator.calculateRankings(districts)
           const totalDistricts = rankedDistricts.filter(d => d.ranking).length
 
-          // Minimum aggregate score: rank N in all 3 categories = 3 * 1 = 3
-          const minScore = 3
-          // Maximum aggregate score: rank 1 in all 3 categories = 3 * N
+          // With tie-neutralization (#198), tied categories contribute 0 points.
+          // Minimum = 0 (all 3 categories tied)
+          // Maximum = 3 * N (rank 1 in all 3 non-tied categories)
+          const minScore = 0
           const maxScore = 3 * totalDistricts
 
           for (const district of rankedDistricts) {

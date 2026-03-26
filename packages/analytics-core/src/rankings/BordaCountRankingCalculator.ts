@@ -533,6 +533,28 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
     valueField: keyof RankingMetrics,
     category: string
   ): CategoryRanking[] {
+    // When all districts have the same value (e.g., 0% Distinguished pre-April),
+    // the category provides no ranking differentiation. Award 0 Borda points
+    // to avoid inflating all scores equally (#198).
+    const uniqueValues = new Set(metrics.map(m => m[valueField] as number))
+    if (uniqueValues.size === 1) {
+      this.logger.debug(
+        'All districts tied in category — awarding 0 Borda points',
+        {
+          category,
+          totalDistricts: metrics.length,
+          tiedValue: [...uniqueValues][0],
+          operation: 'calculateCategoryRanking',
+        }
+      )
+      return metrics.map(m => ({
+        districtId: m.districtId,
+        rank: 1,
+        bordaPoints: 0,
+        value: m[valueField] as number,
+      }))
+    }
+
     // Sort districts by value (highest first)
     const sortedMetrics = [...metrics].sort((a, b) => {
       const aValue = a[valueField] as number
