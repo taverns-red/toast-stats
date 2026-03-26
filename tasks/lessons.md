@@ -713,3 +713,10 @@
 **Rule**: Use `immutable` ONLY for content-addressed assets (where the URL changes when content changes). For mutable data files, use `max-age=3600, must-revalidate`.
 **Warning**: GCS object metadata must also be explicitly updated — changing the pipeline YAML only affects future uploads, not existing objects.
 **rules.md**: none
+
+## 🗓️ 2026-03-25 — borda-count-tie-neutralization (#198)
+
+**Discovery**: When all 128 districts have 0% Distinguished (pre-April), the Borda count awards max points (N=128) to every district for that category, inflating all aggregate scores by 128 equally. This makes the "Distinguished" column meaningless but still contributes to score magnitude.
+**Fix**: When all values in a category are identical (`Set.size === 1`), award 0 Borda points instead of `N - rank + 1`. This neutralizes tied categories from the aggregate score.
+**Warning**: Property tests assumed min aggregate score was 3 (worst rank in 3 categories). With tie-neutralization, min is 0 (all 3 categories tied). A single district also gets 0 points (not 3) since each of its 3 categories has only 1 value.
+**rules.md**: none
