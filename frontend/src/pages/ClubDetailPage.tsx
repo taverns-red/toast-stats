@@ -46,13 +46,42 @@ function TierBadge({ level }: { level: DistinguishedLevel }) {
 
 // ── DCP Projection Card ────────────────────────────────────────────────────
 
-function DCPProjectionCard({ projection }: { projection: ClubDCPProjection }) {
+function DCPProjectionCard({
+  projection,
+  healthStatus,
+}: {
+  projection: ClubDCPProjection
+  healthStatus: string
+}) {
   const gaps = [
     { tier: 'Distinguished', gap: projection.gapToDistinguished },
     { tier: 'Select', gap: projection.gapToSelect },
     { tier: "President's", gap: projection.gapToPresident },
     { tier: 'Smedley', gap: projection.gapToSmedley },
   ]
+
+  // Health-based prediction (#231)
+  const prediction =
+    healthStatus === 'thriving'
+      ? {
+          label: 'On Track',
+          color: 'text-green-700',
+          bg: 'bg-green-50 border-green-200',
+          icon: '✓',
+        }
+      : healthStatus === 'vulnerable'
+        ? {
+            label: 'At Risk',
+            color: 'text-yellow-700',
+            bg: 'bg-yellow-50 border-yellow-200',
+            icon: '⚠',
+          }
+        : {
+            label: 'Unlikely',
+            color: 'text-red-700',
+            bg: 'bg-red-50 border-red-200',
+            icon: '✗',
+          }
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -70,10 +99,10 @@ function DCPProjectionCard({ projection }: { projection: ClubDCPProjection }) {
             d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
           />
         </svg>
-        DCP Projection
+        DCP Status
       </h2>
 
-      {/* Current vs Projected */}
+      {/* Current Level + Prediction */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-gray-50 rounded-lg p-4 text-center">
           <div className="text-xs text-gray-500 mb-1 font-tm-body">
@@ -81,11 +110,13 @@ function DCPProjectionCard({ projection }: { projection: ClubDCPProjection }) {
           </div>
           <TierBadge level={projection.currentLevel} />
         </div>
-        <div className="bg-gray-50 rounded-lg p-4 text-center">
+        <div className={`rounded-lg p-4 text-center border ${prediction.bg}`}>
           <div className="text-xs text-gray-500 mb-1 font-tm-body">
-            Projected Level
+            Distinguished Outlook
           </div>
-          <TierBadge level={projection.projectedLevel} />
+          <span className={`text-sm font-semibold ${prediction.color}`}>
+            {prediction.icon} {prediction.label}
+          </span>
         </div>
       </div>
 
@@ -119,16 +150,6 @@ function DCPProjectionCard({ projection }: { projection: ClubDCPProjection }) {
           )
         })}
       </div>
-
-      {/* Projected members */}
-      {projection.aprilRenewals !== null && (
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
-          <span className="font-medium">Projected year-end:</span>{' '}
-          {projection.projectedMembers} members (current{' '}
-          {projection.currentMembers} + {projection.aprilRenewals} April
-          renewals)
-        </div>
-      )}
     </div>
   )
 }
@@ -577,7 +598,12 @@ const ClubDetailPage: React.FC = () => {
             </div>
 
             {/* DCP Projection (1 col) */}
-            {projection && <DCPProjectionCard projection={projection} />}
+            {projection && (
+              <DCPProjectionCard
+                projection={projection}
+                healthStatus={club.currentStatus}
+              />
+            )}
           </div>
 
           {/* Risk Factors */}
