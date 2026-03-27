@@ -813,3 +813,11 @@
 **Proof**: `extractDcpGoalProgress` utility correctly parses all 10 goals from CSV, including multi-column goals (Goal 9: two training rounds, Goal 10: three admin items).
 **Rule**: When the typed interfaces lack a field, check whether the raw CSV (`ScrapedRecord`) contains it — the loose `Record<string, string | number | null>` type preserves all original columns from the Toastmasters dashboard.
 **rules.md**: none
+
+## 🗓️ 2026-03-27 — multi-year-chart-alignment (#243)
+
+**Discovery**: Recharts `Line` components with their own `data` prop create an independent coordinate system. This adds phantom X-axis entries and misaligns data points from the parent `LineChart`'s axis.
+**Fix**: Merge all years into a single dataset, using per-year `dataKey` columns (e.g., `prior_0`, `prior_1`) instead of separate `data` props.
+**Discovery**: The CDN analytics file (`district_{id}_analytics.json`) only contains current program year's `paymentsTrend`. The `useDistrictAnalytics` hook ignores the `startDate` parameter — it fetches a single pre-computed CDN file keyed only by `endDate`. The `usePaymentsTrend` hook's 3-year date range is therefore ineffective for multi-year comparison.
+**Fix**: Source multi-year payment data from `timeSeries` CDN files (which store `payments` per `TimeSeriesDataPoint` across all program years), matching the same pattern used for the membership trend chart.
+**Rule**: Never use the per-`Line` `data` prop in Recharts for multi-series charts — always merge into the parent dataset. For multi-year data, use `timeSeries` CDN (per-program-year files), not the single-snapshot analytics CDN.
