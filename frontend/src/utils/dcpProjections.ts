@@ -71,16 +71,36 @@ function determineLevel(
 
 /**
  * Compute the gap (goals + members remaining) to reach a tier.
+ *
+ * For tiers with a net growth alternative (Distinguished, Select),
+ * the member gap is min(path-to-20-members, path-to-growth-threshold).
+ * This means if a club already meets the growth alternative, members gap = 0.
  */
 function computeGap(
   currentGoals: number,
   currentMembers: number,
   tierGoals: number,
-  tierMembers: number
+  tierMembers: number,
+  netGrowth?: number,
+  growthThreshold?: number
 ): TierGap {
+  const goalGap = Math.max(0, tierGoals - currentGoals)
+
+  // Path A: absolute membership minimum
+  const memberGapAbsolute = Math.max(0, tierMembers - currentMembers)
+
+  // Path B: net growth alternative (if applicable)
+  if (netGrowth !== undefined && growthThreshold !== undefined) {
+    const growthGap = Math.max(0, growthThreshold - netGrowth)
+    return {
+      goals: goalGap,
+      members: Math.min(memberGapAbsolute, growthGap),
+    }
+  }
+
   return {
-    goals: Math.max(0, tierGoals - currentGoals),
-    members: Math.max(0, tierMembers - currentMembers),
+    goals: goalGap,
+    members: memberGapAbsolute,
   }
 }
 
@@ -135,8 +155,22 @@ export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
     projectedNetGrowth
   )
 
-  const gapToDistinguished = computeGap(currentGoals, currentMembers, 5, 20)
-  const gapToSelect = computeGap(currentGoals, currentMembers, 7, 20)
+  const gapToDistinguished = computeGap(
+    currentGoals,
+    currentMembers,
+    5,
+    20,
+    netGrowth,
+    3
+  )
+  const gapToSelect = computeGap(
+    currentGoals,
+    currentMembers,
+    7,
+    20,
+    netGrowth,
+    5
+  )
   const gapToPresident = computeGap(currentGoals, currentMembers, 9, 20)
   const gapToSmedley = computeGap(currentGoals, currentMembers, 10, 25)
 
