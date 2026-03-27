@@ -797,3 +797,12 @@
 **Rule**: When code-splitting a heavy library, wrap the consuming components with `React.lazy`, not the library's individual exports. Create a barrel file (`LazyCharts.tsx`) so consumers swap imports without changing JSX.
 **Warning**: `React.lazy` only works with default exports. For named exports, use `.then(m => ({ default: m.NamedExport }))`.
 **rules.md**: none
+
+## 🗓️ 2026-03-27 — sprint-11-data-accuracy (#239, #231, #232, #230, #238)
+
+**Discovery**: `computeGap` in `dcpProjections.ts` only compared against absolute membership thresholds (20/25), completely ignoring the net growth alternative path defined in §3.2 of `toastmasters-rules-reference.md`. The `determineLevel()` function in the same file correctly used both paths, creating a disconnect between the level badge (correct) and the gap display (wrong).
+**Proof**: Club with 15 members + net growth +5 showed "5 members needed" for Distinguished, but `determineLevel` correctly classified it as Distinguished.
+**Rule**: When implementing Toastmasters DCP rules, always cross-reference both the level determination AND the gap calculation against `docs/toastmasters-rules-reference.md` §3.2. Both paths (absolute membership and net growth) must be handled consistently.
+**Warning**: When renaming UI component text (e.g., "DCP Projection" → "DCP Status"), always grep for test files that assert on the old text. This caused a pre-push coverage failure.
+**Discovery**: `useSearchParams` + `{ replace: true }` is the correct pattern for syncing UI state to URL without cluttering browser history. Default values should be omitted from the URL to keep it clean.
+**rules.md**: none
