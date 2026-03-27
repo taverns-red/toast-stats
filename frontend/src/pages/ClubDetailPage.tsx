@@ -20,6 +20,8 @@ import {
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { useDistrictStatistics } from '../hooks/useMembershipData'
+import { ClubDCPGoalsCard } from '../components/ClubDCPGoalsCard'
 
 // ── Tier badge ─────────────────────────────────────────────────────────────
 
@@ -212,11 +214,33 @@ const ClubDetailPage: React.FC = () => {
     effectiveEndDate ?? undefined
   )
 
+  // Fetch raw district statistics for per-goal DCP data (#242)
+  const { data: districtStats, isLoading: isLoadingStats } =
+    useDistrictStatistics(
+      hasValidDates ? districtId || null : null,
+      effectiveEndDate ?? undefined
+    )
+
   // Find the club
   const club: ClubTrend | null = useMemo(() => {
     if (!analytics || !clubId) return null
     return analytics.allClubs.find(c => c.clubId === clubId) ?? null
   }, [analytics, clubId])
+
+  // Find matching raw CSV record for per-goal progress (#242)
+  const clubRawRecord = useMemo(() => {
+    if (!districtStats || !clubId) return null
+    const records = districtStats.clubPerformance as
+      | Array<Record<string, string | number | null>>
+      | undefined
+    if (!records) return null
+    return (
+      records.find(r => {
+        const num = String(r['Club Number'] ?? '')
+        return num === clubId || num.padStart(8, '0') === clubId
+      }) ?? null
+    )
+  }, [districtStats, clubId])
 
   // Compute DCP projection
   const projection: ClubDCPProjection | null = useMemo(() => {
@@ -605,6 +629,12 @@ const ClubDetailPage: React.FC = () => {
               />
             )}
           </div>
+
+          {/* DCP Goals Progress — per-goal breakdown (#242) */}
+          <ClubDCPGoalsCard
+            clubRecord={clubRawRecord}
+            isLoading={isLoadingStats}
+          />
 
           {/* Risk Factors */}
           {club.riskFactors.length > 0 && (
