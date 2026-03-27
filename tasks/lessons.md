@@ -781,3 +781,11 @@
 **Discovery**: ClubsTable uses `ProcessedClubTrend` (extends `ClubTrend` with computed `latestMembership`, `latestDcpGoals`, `distinguishedOrder`), not raw `ClubTrend`. Any new components consuming table data must import `ProcessedClubTrend` from `filters/types.ts`.
 **Pattern**: Pagination hook returns `paginatedItems` (not `currentItems`) and requires explicit prop passing to `Pagination` component (not spread). `exactOptionalPropertyTypes` is enabled — optional props of type `T` must be typed as `T | undefined`.
 **CSS**: Tailwind `md:hidden` / `hidden md:block` pattern works perfectly for mobile/desktop view switching. No JS viewport detection needed.
+
+## 🗓️ 2026-03-27 — analytics-core-barrel-rebuild (#219, #220, #221)
+
+**Discovery**: Adding new types to `analytics-core/src/types/*.ts` and re-exporting them from `src/index.ts` is not sufficient for frontend consumption — the `dist/types/index.d.ts` file must be rebuilt since the package resolves from compiled output, not source.
+**Proof**: Frontend TypeScript reported `Module has no exported member 'GrowthVelocity'` after updating source — resolved after `npm run build` in analytics-core.
+**Rule**: When adding new types to analytics-core that will be consumed by frontend, always run `npm run build` in the analytics-core package before committing the frontend code.
+**Warning**: Package.json `"types": "./dist/types/index.d.ts"` means the compiled output, not source, governs what consumers see.
+**rules.md**: none
