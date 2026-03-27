@@ -103,10 +103,50 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
     )
   }
 
-  // Sort data by date
-  const sortedData = [...membershipTrend].sort(
+  // Sort current year data by date
+  const rawSorted = [...membershipTrend].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )
+
+  // --- Merge prior-year data into unified dataset (#243) ---
+  // Use program-year month index (Jul=0, Aug=1, ..., Jun=11) for alignment
+  const toMonthIndex = (dateStr: string): number => {
+    const d = parseLocalDate(dateStr)
+    const m = d.getMonth() // 0=Jan ... 6=Jul ... 11=Dec
+    return m >= 6 ? m - 6 : m + 6 // Jul=0, Aug=1, ..., Jun=11
+  }
+
+  // Build a map from monthIndex → prior year membership for each prior year
+  const priorYearKeys: string[] = []
+  const priorMonthMaps: Map<number, number>[] = []
+  if (priorYearTrends && priorYearTrends.length > 0) {
+    for (const yt of priorYearTrends) {
+      priorYearKeys.push(yt.label)
+      const monthMap = new Map<number, number>()
+      for (const dp of yt.data) {
+        const mi = toMonthIndex(dp.date)
+        // If multiple points in same month, use the latest
+        monthMap.set(mi, dp.count)
+      }
+      priorMonthMaps.push(monthMap)
+    }
+  }
+
+  // Merge: add prior year values to each current-year data point
+  type MergedDataPoint = {
+    date: string
+    count: number
+    [key: string]: string | number | undefined
+  }
+  const sortedData: MergedDataPoint[] = rawSorted.map(point => {
+    const merged: MergedDataPoint = { date: point.date, count: point.count }
+    const mi = toMonthIndex(point.date)
+    for (let i = 0; i < priorYearKeys.length; i++) {
+      const key = `prior_${i}`
+      merged[key] = priorMonthMaps[i]?.get(mi)
+    }
+    return merged
+  })
 
   // Calculate statistics
   const counts = sortedData.map(d => d.count)
@@ -382,50 +422,27 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 name="Total Membership"
               />
 
-              {/* Prior year overlay lines (#238) */}
-              {priorYearTrends &&
-                priorYearTrends.length > 0 &&
-                (() => {
-                  // Build a date → priorYear membership map
-                  // Normalize prior-year dates to current-year month-day for alignment
-                  return priorYearTrends.map((yearData, yearIndex) => {
-                    const color =
-                      PRIOR_YEAR_COLORS[yearIndex % PRIOR_YEAR_COLORS.length] ??
-                      'var(--tm-cool-gray)'
-                    // Overlay: render prior year data as additional lines
-                    // We match by finding the closest date in sortedData to each prior year point
-                    return (
-                      <Line
-                        key={yearData.label}
-                        type="monotone"
-                        data={yearData.data.map(p => {
-                          // Shift year to match current data range for X-axis alignment
-                          const priorDate = parseLocalDate(p.date)
-                          const currentYearStart = sortedData[0]
-                            ? parseLocalDate(sortedData[0].date)
-                            : new Date()
-                          const yearDiff =
-                            currentYearStart.getFullYear() -
-                            priorDate.getFullYear()
-                          const shifted = new Date(priorDate)
-                          shifted.setFullYear(shifted.getFullYear() + yearDiff)
-                          const shiftedStr =
-                            shifted.toISOString().split('T')[0] ?? p.date
-                          return { date: shiftedStr, count: p.count }
-                        })}
-                        dataKey="count"
-                        stroke={color}
-                        strokeWidth={1.5}
-                        strokeDasharray="6 3"
-                        strokeOpacity={0.5}
-                        dot={false}
-                        activeDot={{ r: 2 }}
-                        name={yearData.label}
-                        connectNulls
-                      />
-                    )
-                  })
-                })()}
+              {/* Prior year overlay lines (#238, #243) */}
+              {priorYearKeys.map((label, i) => {
+                const color =
+                  PRIOR_YEAR_COLORS[i % PRIOR_YEAR_COLORS.length] ??
+                  'var(--tm-cool-gray)'
+                return (
+                  <Line
+                    key={label}
+                    type="monotone"
+                    dataKey={`prior_${i}`}
+                    stroke={color}
+                    strokeWidth={1.5}
+                    strokeDasharray="6 3"
+                    strokeOpacity={0.5}
+                    dot={false}
+                    activeDot={{ r: 2 }}
+                    name={label}
+                    connectNulls
+                  />
+                )
+              })}
 
               {/* Highlight growth periods */}
               {periods.map((period, index) => {
