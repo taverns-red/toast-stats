@@ -744,6 +744,22 @@ const DistrictDetailPage: React.FC = () => {
                         })) ?? aggregatedAnalytics.trends.membership
                       }
                       isLoading={isLoadingAggregated}
+                      priorYearTrends={
+                        // #238: overlay prior years for YoY comparison
+                        timeSeries
+                          ? timeSeries.availableYears
+                              .filter(y => y !== timeSeries.currentProgramYear)
+                              .map(y => ({
+                                label: y,
+                                data:
+                                  timeSeries.years[y]?.dataPoints.map(dp => ({
+                                    date: dp.date,
+                                    count: dp.membership,
+                                  })) ?? [],
+                              }))
+                              .filter(yt => yt.data.length > 0)
+                          : undefined
+                      }
                     />
                   </LazyChart>
                 ) : (

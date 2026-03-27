@@ -14,9 +14,17 @@ import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 
+/** A named set of data points for one program year */
+export interface YearTrendData {
+  label: string
+  data: Array<{ date: string; count: number }>
+}
+
 interface MembershipTrendChartProps {
   membershipTrend: Array<{ date: string; count: number }>
   isLoading?: boolean
+  /** Prior-year trend data for YoY comparison overlay (#238) */
+  priorYearTrends?: YearTrendData[] | undefined
 }
 
 interface Period {
@@ -74,9 +82,12 @@ const CustomTooltip = ({
   return null
 }
 
+const PRIOR_YEAR_COLORS = ['var(--tm-cool-gray)', 'var(--tm-true-maroon-80)']
+
 export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   membershipTrend,
-  isLoading = false,
+  isLoading,
+  priorYearTrends,
 }) => {
   if (isLoading) {
     return <LoadingSkeleton variant="chart" />
@@ -370,6 +381,51 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 activeDot={{ r: 0.3 }}
                 name="Total Membership"
               />
+
+              {/* Prior year overlay lines (#238) */}
+              {priorYearTrends &&
+                priorYearTrends.length > 0 &&
+                (() => {
+                  // Build a date → priorYear membership map
+                  // Normalize prior-year dates to current-year month-day for alignment
+                  return priorYearTrends.map((yearData, yearIndex) => {
+                    const color =
+                      PRIOR_YEAR_COLORS[yearIndex % PRIOR_YEAR_COLORS.length] ??
+                      'var(--tm-cool-gray)'
+                    // Overlay: render prior year data as additional lines
+                    // We match by finding the closest date in sortedData to each prior year point
+                    return (
+                      <Line
+                        key={yearData.label}
+                        type="monotone"
+                        data={yearData.data.map(p => {
+                          // Shift year to match current data range for X-axis alignment
+                          const priorDate = parseLocalDate(p.date)
+                          const currentYearStart = sortedData[0]
+                            ? parseLocalDate(sortedData[0].date)
+                            : new Date()
+                          const yearDiff =
+                            currentYearStart.getFullYear() -
+                            priorDate.getFullYear()
+                          const shifted = new Date(priorDate)
+                          shifted.setFullYear(shifted.getFullYear() + yearDiff)
+                          const shiftedStr =
+                            shifted.toISOString().split('T')[0] ?? p.date
+                          return { date: shiftedStr, count: p.count }
+                        })}
+                        dataKey="count"
+                        stroke={color}
+                        strokeWidth={1.5}
+                        strokeDasharray="6 3"
+                        strokeOpacity={0.5}
+                        dot={false}
+                        activeDot={{ r: 2 }}
+                        name={yearData.label}
+                        connectNulls
+                      />
+                    )
+                  })
+                })()}
 
               {/* Highlight growth periods */}
               {periods.map((period, index) => {
