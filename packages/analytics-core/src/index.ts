@@ -77,6 +77,8 @@ export type {
   TrendDirection,
   DivisionAnalytics,
   AreaAnalytics,
+  DivisionHeatmapData,
+  HeatmapCell,
 
   // Distinguished clubs
   DistinguishedProjection,
@@ -104,6 +106,7 @@ export type {
   MembershipYearOverYearComparison,
   MembershipAnalytics,
   MembershipAnalyticsData,
+  GrowthVelocity,
 
   // Leadership Insights types (Requirements 4.2)
   LeadershipEffectivenessScore,
