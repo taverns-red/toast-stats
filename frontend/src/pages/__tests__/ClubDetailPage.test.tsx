@@ -153,12 +153,12 @@ describe('ClubDetailPage (#208)', () => {
     expect(screen.getByText('Club Not Found')).toBeInTheDocument()
   })
 
-  it('renders DCP projection section', () => {
+  it('renders DCP status section', () => {
     renderWithRoute()
 
-    expect(screen.getByText('DCP Projection')).toBeInTheDocument()
+    expect(screen.getByText('DCP Status')).toBeInTheDocument()
     expect(screen.getByText('Current Level')).toBeInTheDocument()
-    expect(screen.getByText('Projected Level')).toBeInTheDocument()
+    expect(screen.getByText('Distinguished Outlook')).toBeInTheDocument()
   })
 
   it('renders DCP Goals Progress section', () => {
