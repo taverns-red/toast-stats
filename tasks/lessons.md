@@ -829,3 +829,13 @@
 **Rule**: When displaying date counts or date selectors across pages, always use the same underlying data source (`fetchCdnSnapshotIndex`). Avoid `v1/dates.json` for date counting — it's a pipeline artifact that can drift.
 **Warning**: `deploy.yml` had a custom semver script duplicating Release Please. When versioning appears to come from two sources, tags will drift apart silently. Always use a single source of truth for versions.
 **rules.md**: none
+
+## 🗓️ 2026-03-28 — sprint-15-ux-polish (#235, #236, #237)
+
+**Discovery**: The project had two separate chart skeleton components (`ChartSkeleton` with animated bars for lazy-load, `LoadingSkeleton variant='chart'` with plain gray pulse for data-loading). These created an inconsistent loading experience.
+**Fix**: Unified them by having `LoadingSkeleton variant='chart'` delegate to `ChartSkeleton`. Also updated `ChartSkeleton.css` from dark theme to light theme colors.
+**Rule**: When adding loading skeletons, always reuse the single canonical skeleton component rather than creating variant-specific implementations. One skeleton style per content type.
+
+**Discovery**: React hooks called after early returns violate `react-hooks/rules-of-hooks`. When adding hooks to chart components, the hook must be called before any `if (isLoading) return` guard.
+**Fix**: Pass a safe default (e.g., `prop?.length ?? 0`) to the hook before early returns, then use the computed value in the render.
+**Rule**: Always call hooks before early returns, using optional chaining/nullish coalescing for safe defaults.

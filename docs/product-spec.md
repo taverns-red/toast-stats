@@ -1,7 +1,7 @@
 # Product Spec — Toast Stats
 
 **Live site:** [ts.taverns.red](https://ts.taverns.red)
-**Last updated:** March 2026
+**Last updated:** March 28, 2026
 
 ---
 
@@ -85,25 +85,13 @@ All Toastmasters-specific rules are documented in [toastmasters-rules-reference.
 
 ## Decided — Not Yet Shipped
 
-| Item                              | Issue | Decision                                                               |
-| --------------------------------- | ----- | ---------------------------------------------------------------------- |
-| Time-series frontend wiring       | #170  | Use `useTimeSeries` hook; prefer CDN time-series over inline analytics |
-| Delete Express backend            | #173  | Frontend goes CDN-only; backend is read-only proxy, no longer needed   |
-| Move DCP projections to club card | #187  | Better UX: show projections inline instead of separate tab             |
-| Automated releases                | #192  | Use release-please for changelog + versioning                          |
+_All items shipped. Backlog is empty._
 
 ---
 
 ## Known Issues
 
-| Issue | Description                                                        | Priority |
-| ----- | ------------------------------------------------------------------ | -------- |
-| #199  | Detect and re-collect corrupt CSV files during rebuild             | Medium   |
-| #200  | Manifest latest.json not updated after rebuild — fixed in pipeline | High     |
-| #193  | Rebuild date mismatch — fixed in `1b09833`                         | High     |
-| #180  | Date selector shows wrong "latest" for historical program years    | Medium   |
-| #167  | DCP goals timeline shows no change dates (backend accumulation)    | Medium   |
-| #170  | Time-series has ~2 data points; rescrape triggered for 2025-2026   | High     |
+_No known issues. All previously tracked issues have been resolved._
 
 ---
 
