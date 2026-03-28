@@ -78,8 +78,8 @@ const GOAL_DEFINITIONS: GoalDef[] = [
     category: 'Education',
     columns: [
       {
-        csvKey: 'Level 4s, Level 5s, or DTM award',
-        label: 'Level 4/5/DTM award',
+        csvKey: 'Level 4s, Path Completions, or DTM Awards',
+        label: 'Level 4/Path Completion/DTM',
         required: 1,
       },
     ],
@@ -91,8 +91,8 @@ const GOAL_DEFINITIONS: GoalDef[] = [
     category: 'Education',
     columns: [
       {
-        csvKey: 'Add. Level 4s, Level 5s, or DTM award',
-        label: 'Additional Level 4/5/DTM',
+        csvKey: 'Add. Level 4s, Path Completions, or DTM award',
+        label: 'Additional Level 4/Path Completion/DTM',
         required: 1,
       },
     ],

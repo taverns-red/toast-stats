@@ -230,7 +230,11 @@ const ClubDetailPage: React.FC = () => {
   // Find matching raw CSV record for per-goal progress (#242)
   const clubRawRecord = useMemo(() => {
     if (!districtStats || !clubId) return null
-    const records = districtStats.clubPerformance as
+    // CDN snapshot wraps actual statistics under 'data' key
+    const raw = districtStats as unknown as Record<string, unknown>
+    const statsData = raw['data'] as Record<string, unknown> | undefined
+    const records = (statsData?.['clubPerformance'] ??
+      raw['clubPerformance']) as
       | Array<Record<string, string | number | null>>
       | undefined
     if (!records) return null
