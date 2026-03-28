@@ -22,6 +22,7 @@ vi.mock('../../services/cdn', () => ({
     count: 0,
     generatedAt: '2025-01-01T00:00:00Z',
   }),
+  fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({}),
   fetchCdnRankings: vi.fn(),
   fetchCdnManifest: vi.fn().mockResolvedValue({
     latestSnapshotDate: '2025-11-22',
