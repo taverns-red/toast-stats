@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.4.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.3.0...toast-stats-v2.4.0) (2026-03-28)
+
+
+### Features
+
+* multi-year trend comparison overlay on membership chart ([#238](https://github.com/taverns-red/toast-stats/issues/238)) ([29aa42f](https://github.com/taverns-red/toast-stats/commit/29aa42f333345c6040d3fdc64fe8bee86f95333e))
+* per-club DCP goal progress card on club detail page ([#242](https://github.com/taverns-red/toast-stats/issues/242)) ([591f733](https://github.com/taverns-red/toast-stats/commit/591f733b47c716c1cae5ad71ded480767d803b00))
+* persist tab & sort state in URL search params ([#230](https://github.com/taverns-red/toast-stats/issues/230)) ([f025c62](https://github.com/taverns-red/toast-stats/commit/f025c629bd14d95ff62adbfb177107b83cf76ba9))
+
+
+### Bug Fixes
+
+* club.membershipBase ?? membershipTrend[0].count ?? currentMembers ([d7109df](https://github.com/taverns-red/toast-stats/commit/d7109df4ec34912d779ec45854a9b14d9b75d7c0))
+* ClubDCPGoalsCard not visible — data path and column names ([#242](https://github.com/taverns-red/toast-stats/issues/242)) ([e23e92d](https://github.com/taverns-red/toast-stats/commit/e23e92db62d8003f7f8cfe15c5eb49dbed2dbbd6))
+* gap-to-tier now accounts for net growth alternative ([#239](https://github.com/taverns-red/toast-stats/issues/239)) ([af6b7a0](https://github.com/taverns-red/toast-stats/commit/af6b7a0f8510e877df2f88c48fd7009d960c018e))
+* gap-to-tier uses membershipBase instead of trend[0] ([#241](https://github.com/taverns-red/toast-stats/issues/241)) ([d7109df](https://github.com/taverns-red/toast-stats/commit/d7109df4ec34912d779ec45854a9b14d9b75d7c0))
+* HistoricalRankChart uses selected program year for label ([#232](https://github.com/taverns-red/toast-stats/issues/232)) ([9c8eb41](https://github.com/taverns-red/toast-stats/commit/9c8eb41268bcea4fe7731488b47b64ed9165abea))
+* multi-year chart uses merged dataset for proper X-axis alignment ([#243](https://github.com/taverns-red/toast-stats/issues/243)) ([ed8fad3](https://github.com/taverns-red/toast-stats/commit/ed8fad32bce5680886447d3bf4722c7093448c09))
+* multi-year payments chart uses timeSeries CDN data ([#243](https://github.com/taverns-red/toast-stats/issues/243)) ([c5909d9](https://github.com/taverns-red/toast-stats/commit/c5909d9da4938e220c2adf6ca45fb51be1ce4eca))
+* replace membership projections with health-based distinguished outlook ([#231](https://github.com/taverns-red/toast-stats/issues/231)) ([8409fbd](https://github.com/taverns-red/toast-stats/commit/8409fbd75409113a895fb221578f8f429ee08015))
+
+
+### Documentation
+
+* add multi-year chart alignment lesson ([#243](https://github.com/taverns-red/toast-stats/issues/243)) ([22170ad](https://github.com/taverns-red/toast-stats/commit/22170ad81f06adbcb84dd98837466cb0e78ef5c1))
+* add Sprint 11 DCP goals lesson ([#242](https://github.com/taverns-red/toast-stats/issues/242)) ([8ab1acf](https://github.com/taverns-red/toast-stats/commit/8ab1acf40e61948510bb55fad71ca16916275be8))
+* add Sprint 11 lessons ([#239](https://github.com/taverns-red/toast-stats/issues/239), [#231](https://github.com/taverns-red/toast-stats/issues/231), [#232](https://github.com/taverns-red/toast-stats/issues/232), [#230](https://github.com/taverns-red/toast-stats/issues/230), [#238](https://github.com/taverns-red/toast-stats/issues/238)) ([f50b7ef](https://github.com/taverns-red/toast-stats/commit/f50b7efa81a76a19ce80f06ec820caf524b97061))
+
+
+### Tests
+
+* update DCP section test for renamed component ([#231](https://github.com/taverns-red/toast-stats/issues/231)) ([3cd715b](https://github.com/taverns-red/toast-stats/commit/3cd715baf362fe99f9c2c06b5ac61139e3032b38))
+
 ## [2.3.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.2.0...toast-stats-v2.3.0) (2026-03-27)
 
 
