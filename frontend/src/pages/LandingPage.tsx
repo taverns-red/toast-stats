@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnDates, fetchCdnRankings } from '../services/cdn'
+import { fetchCdnSnapshotIndex, fetchCdnRankings } from '../services/cdn'
 import { useDistricts } from '../hooks/useDistricts'
 import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
 import { useProgramYear } from '../contexts/ProgramYearContext'
@@ -52,12 +52,18 @@ const LandingPage: React.FC = () => {
   // Mobile-friendly collapsible region filters
   const [isHistoryRegionExpanded, setIsHistoryRegionExpanded] = useState(false)
 
-  // Fetch cached dates from CDN (#173)
+  // Fetch cached dates from CDN snapshot index (#233)
+  // Uses the same data source as DistrictDetailPage for consistency
   const { data: cachedDatesData } = useQuery({
-    queryKey: ['cached-dates'],
+    queryKey: ['cached-dates-from-index'],
     queryFn: async () => {
-      const cdnDates = await fetchCdnDates()
-      return { dates: cdnDates.dates }
+      const index = await fetchCdnSnapshotIndex()
+      // Union of all district dates
+      const dateSet = new Set<string>()
+      for (const dates of Object.values(index)) {
+        for (const d of dates) dateSet.add(d)
+      }
+      return { dates: [...dateSet].sort() }
     },
   })
 
