@@ -7,7 +7,9 @@ import { useState, useEffect } from 'react'
  * @param dataPointCount - Number of data points in the chart
  * @returns The XAxis `interval` prop value
  */
-export function useResponsiveTickInterval(dataPointCount: number): number {
+export function useResponsiveTickInterval(
+  dataPointCount: number
+): number | 'preserveStartEnd' {
   const [width, setWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 1024
   )
@@ -18,7 +20,7 @@ export function useResponsiveTickInterval(dataPointCount: number): number {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  if (dataPointCount <= 4) return 0 // Always show all labels for small datasets
+  if (dataPointCount <= 4) return 'preserveStartEnd' // Always show all labels for small datasets
 
   if (width < 480) {
     // Phone: show every 3rd or 4th label
@@ -28,5 +30,5 @@ export function useResponsiveTickInterval(dataPointCount: number): number {
     // Tablet: show every 2nd or 3rd label
     return Math.max(Math.ceil(dataPointCount / 6) - 1, 1)
   }
-  return 0 // Desktop: Recharts auto-manages
+  return 'preserveStartEnd' // Desktop: Recharts auto-manages
 }

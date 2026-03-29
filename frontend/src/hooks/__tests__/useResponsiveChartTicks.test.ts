@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { renderHook } from '@testing-library/react'
 import { vi, describe, it, expect, afterEach } from 'vitest'
 import { useResponsiveTickInterval } from '../useResponsiveChartTicks'
@@ -29,35 +32,35 @@ describe('useResponsiveTickInterval', () => {
     expect(result.current).toBe('preserveStartEnd')
   })
 
-  it('returns "preserveStartEnd" for small datasets (<10 items) even on mobile', () => {
+  it('returns "preserveStartEnd" for small datasets (<=4 items) even on mobile', () => {
     setViewportWidth(375)
-    // 9 items is below the threshold for thinning
-    const { result } = renderHook(() => useResponsiveTickInterval(9))
+    // 4 items is below the threshold for thinning
+    const { result } = renderHook(() => useResponsiveTickInterval(4))
     expect(result.current).toBe('preserveStartEnd')
   })
 
   it('thins labels to every 2nd or 3rd on tablet viewports (480px-767px) for large datasets', () => {
     setViewportWidth(600)
 
-    // 15 items should thin by Math.ceil(15/8) = Math.ceil(1.875) = 2
+    // 15 items should thin by Math.max(Math.ceil(15/6) - 1, 1) = Math.max(3-1, 1) = 2
     const { result: res1 } = renderHook(() => useResponsiveTickInterval(15))
-    expect(res1.current).toBe(1) // 1-indexed for Recharts (skip 1 = show every 2nd)
+    expect(res1.current).toBe(2)
 
-    // 30 items should thin by Math.ceil(30/8) = 4
+    // 30 items should thin by Math.max(Math.ceil(30/6) - 1, 1) = Math.max(5-1, 1) = 4
     const { result: res2 } = renderHook(() => useResponsiveTickInterval(30))
-    expect(res2.current).toBe(3) // skip 3 = show every 4th
+    expect(res2.current).toBe(4)
   })
 
   it('thins labels to every 3rd or 4th on phone viewports (<480px) for large datasets', () => {
     setViewportWidth(375)
 
-    // 12 items should thin by Math.ceil(12/5) = Math.ceil(2.4) = 3
+    // 12 items should thin by Math.max(Math.ceil(12/4) - 1, 2) = Math.max(3-1, 2) = 2
     const { result: res1 } = renderHook(() => useResponsiveTickInterval(12))
-    expect(res1.current).toBe(2) // skip 2 = show every 3rd
+    expect(res1.current).toBe(2)
 
-    // 24 items should thin by Math.ceil(24/5) = Math.ceil(4.8) = 5
+    // 24 items should thin by Math.max(Math.ceil(24/4) - 1, 2) = Math.max(6-1, 2) = 5
     const { result: res2 } = renderHook(() => useResponsiveTickInterval(24))
-    expect(res2.current).toBe(4) // skip 4 = show every 5th
+    expect(res2.current).toBe(5)
   })
 
   it('handles empty datasets safely', () => {
