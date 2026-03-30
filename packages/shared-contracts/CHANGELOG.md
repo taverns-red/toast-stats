@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.1.0...shared-contracts-v1.1.1) (2026-03-29)
+
+
+### Bug Fixes
+
+* add ignoreDeprecations for TS7 moduleResolution=node10 deprecation ([aab7f32](https://github.com/taverns-red/toast-stats/commit/aab7f322febb51ba4f33396aad2ea7ef1b58e4ee))
+
 ## [1.1.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.0.0...shared-contracts-v1.1.0) (2026-03-26)
 
 ### Features

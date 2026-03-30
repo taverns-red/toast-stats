@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.5.0](https://github.com/taverns-red/toast-stats/compare/frontend-v2.4.0...frontend-v2.5.0) (2026-03-29)
+
+
+### Features
+
+* add responsive X-axis tick density for mobile charts ([#237](https://github.com/taverns-red/toast-stats/issues/237)) ([821dded](https://github.com/taverns-red/toast-stats/commit/821dded09edb74c6e5324a3b04c78fbc67b80f9c))
+* add tie-aware ranking for Top Growth and DCP lists ([#236](https://github.com/taverns-red/toast-stats/issues/236)) ([d5655f0](https://github.com/taverns-red/toast-stats/commit/d5655f0aa0c07f05ba8134868fd674fd40348f14))
+* unify chart loading skeletons with animated bars ([#235](https://github.com/taverns-red/toast-stats/issues/235)) ([30c99c0](https://github.com/taverns-red/toast-stats/commit/30c99c02b66aab2abd78ca4929eaa60af41ac9fe))
+
+
+### Bug Fixes
+
+* add missing fetchCdnSnapshotIndex mock to LandingPage tests ([#233](https://github.com/taverns-red/toast-stats/issues/233)) ([c03f194](https://github.com/taverns-red/toast-stats/commit/c03f194e40e7478b03f2e5fa5d61a226532a9fb1))
+* date count inconsistency between landing and district pages ([#233](https://github.com/taverns-red/toast-stats/issues/233)) ([e8b968d](https://github.com/taverns-red/toast-stats/commit/e8b968dae5ec235d2d5200f4a0f0f59807c02d9f))
+
+
+### Tests
+
+* add unit coverage for Sprint 15 UX utilities ([a5de16e](https://github.com/taverns-red/toast-stats/commit/a5de16e8925382f7288aed1327f8e9ecf09ebd08))
+* fix useResponsiveChartTicks logic and add a11y DOM tests ([#18](https://github.com/taverns-red/toast-stats/issues/18)) ([ba9a668](https://github.com/taverns-red/toast-stats/commit/ba9a6688ac1157496fb849a1add777178548534a))
+
 ## [2.4.0](https://github.com/taverns-red/toast-stats/compare/frontend-v2.3.0...frontend-v2.4.0) (2026-03-28)
 
 
