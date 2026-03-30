@@ -42,7 +42,7 @@
     "cleanup:frontend": "bash frontend/scripts/cleanup-test-dirs.sh"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.0",
+    "@vitest/coverage-v8": "^4.1.2",
     "husky": "^9.1.7",
     "jsdom": "^29.0.1",
     "lint-staged": "^16.4.0",

@@ -38,10 +38,10 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.57.1",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.56.0",
-    "@vitejs/plugin-react": "^5.2.0",
-    "@vitest/coverage-v8": "^4.1.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.2",
     "autoprefixer": "^10.4.27",
     "axe-core": "^4.11.1",
     "eslint": "^10.0.3",
@@ -53,7 +53,7 @@
     "jsdom": "^29.0.1",
     "playwright": "^1.58.2",
     "postcss": "^8.5.8",
-    "typescript": "^5.2.2",
+    "typescript": "^6.0.2",
     "vite": "^7.0.0",
     "vitest": "^4.0.18"
   }
