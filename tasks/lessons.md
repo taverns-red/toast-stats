@@ -849,3 +849,19 @@
 **Discovery**: `useResponsiveChartTicks` returned numeric values (e.g., `0`) to try to bypass label thinning, but Recharts expects the string `'preserveStartEnd'` or a positive integer interval.
 **Fix**: Using `'preserveStartEnd'` for small datasets ensures the start/end bounds are always kept.
 **Rule**: Recharts `interval` prop math must be exactly verified with `Math.max(..., 1)` for dynamic thinning, and returning `'preserveStartEnd'` is better than `0` for small datasets where no overlap occurs.
+
+## 🗓️ 2026-03-30 — cdn-field-name-case-mismatch (#268)
+
+**Discovery**: The CDN snapshot data uses `"May Visit award"` (capital V in Visit) but the extraction code was looking for `"May visit award"` (lowercase v), causing all second-round visit counts to silently return 0 instead of erroring.
+**Proof**: `jq` confirmed the CDN has `"May Visit award"` with values `"0"`/`"1"`, while `"May visit award"` returned `null`.
+**Rule**: When integrating with external data sources, always verify column names by checking the actual JSON keys — never assume case consistency between fields (e.g., `"Nov Visit award"` vs `"May Visit award"` vs `"May visit award"`). Add fallback lookups using `??` for field name variants.
+**Warning**: Silent `null` lookups on missing keys in TypeScript/JS won't throw — the bug only manifests as "0 visits completed" which looks plausible and delays detection.
+**rules.md**: R7 updated — add "verify exact JSON key casing against live CDN data" checkpoint
+
+## 🗓️ 2026-03-30 — payment-yoy-data-source-mismatch (#269)
+
+**Discovery**: The `usePaymentsTrend` hook computed YoY from `analyticsData.paymentsTrend` (analytics CDN), which only contains current-year payment data. This meant `multiYearData.previousYears` was always empty → `previousPayments` was always `null` → YoY displayed "N/A" even though the chart already rendered multi-year data from the time-series CDN.
+**Proof**: Inspected `usePaymentsTrend` line 276: it builds from `analyticsData.paymentsTrend` (current-year-only), not from `timeSeries.years` (multi-year).
+**Rule**: When a component needs both chart data and a YoY/statistical summary from the same metric, ensure BOTH derive from the same multi-year data source. The time-series CDN (`/time-series/`) is the canonical source for multi-year comparisons; the analytics CDN (`/analytics/`) is current-year-only.
+**Warning**: A chart showing 3 years of data but a stat box showing "N/A" is a strong signal of a data source mismatch between the rendering and statistics computation paths.
+**rules.md**: none — reinforces existing R37 (time-series CDN for multi-year data)
