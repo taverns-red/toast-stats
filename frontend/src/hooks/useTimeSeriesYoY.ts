@@ -132,3 +132,71 @@ export function computeYearOverYear(
     clubHealthChange: Math.round(clubHealthChange * 10) / 10,
   }
 }
+
+/**
+ * Payment YoY result shape used by MembershipPaymentsChart.
+ */
+export interface PaymentYoYResult {
+  yearOverYearChange: number
+  trendDirection: 'up' | 'down' | 'stable'
+}
+
+/**
+ * Compute payment Year-over-Year comparison from time-series data (#269).
+ *
+ * Bug #269: The usePaymentsTrend hook computed YoY from analytics CDN data
+ * which only contains current-year payments, so `previousPayments` was always
+ * null → YoY displayed "N/A". This function uses time-series CDN data which
+ * has multi-year history.
+ *
+ * @returns Payment YoY data or null if prior year data is unavailable
+ */
+export function computePaymentYoYFromTimeSeries(
+  timeSeries: TimeSeriesData | null
+): PaymentYoYResult | null {
+  if (!timeSeries) return null
+
+  const currentProgramYear = timeSeries.currentProgramYear
+  const currentYearData = timeSeries.years[currentProgramYear]
+
+  if (!currentYearData || currentYearData.dataPoints.length === 0) return null
+
+  // Find latest data point of current year
+  const currentLatest =
+    currentYearData.dataPoints[currentYearData.dataPoints.length - 1]!
+
+  // Find prior year
+  const priorYears = timeSeries.availableYears.filter(
+    y => y !== currentProgramYear
+  )
+  if (priorYears.length === 0) return null
+
+  // Use the most recent prior year
+  const priorProgramYear = priorYears[0]!
+  const priorYearData = timeSeries.years[priorProgramYear]
+  if (!priorYearData || priorYearData.dataPoints.length === 0) return null
+
+  // Find closest matching data point in prior year
+  const priorPoint = findClosestPriorYearPoint(
+    priorYearData,
+    currentLatest.date
+  )
+  if (!priorPoint) return null
+
+  // Compute absolute change (not percentage — consistent with usePaymentsTrend)
+  const change = currentLatest.payments - priorPoint.payments
+
+  let direction: 'up' | 'down' | 'stable'
+  if (change > 0) {
+    direction = 'up'
+  } else if (change < 0) {
+    direction = 'down'
+  } else {
+    direction = 'stable'
+  }
+
+  return {
+    yearOverYearChange: change,
+    trendDirection: direction,
+  }
+}

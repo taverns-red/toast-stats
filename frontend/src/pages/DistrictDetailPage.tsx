@@ -7,7 +7,10 @@ import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
 import { usePaymentsTrend } from '../hooks/usePaymentsTrend'
 import { useTimeSeries } from '../hooks/useTimeSeries'
-import { computeYearOverYear } from '../hooks/useTimeSeriesYoY'
+import {
+  computeYearOverYear,
+  computePaymentYoYFromTimeSeries,
+} from '../hooks/useTimeSeriesYoY'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
@@ -815,7 +818,23 @@ const DistrictDetailPage: React.FC = () => {
                             })()
                           : paymentsTrendData.multiYearData
                       }
-                      statistics={paymentsTrendData.statistics}
+                      statistics={
+                        // #269: Override YoY when time-series data provides
+                        // multi-year payment history (analytics CDN is current-year-only)
+                        (() => {
+                          const tsYoY = computePaymentYoYFromTimeSeries(
+                            timeSeries ?? null
+                          )
+                          if (tsYoY) {
+                            return {
+                              ...paymentsTrendData.statistics,
+                              yearOverYearChange: tsYoY.yearOverYearChange,
+                              trendDirection: tsYoY.trendDirection,
+                            }
+                          }
+                          return paymentsTrendData.statistics
+                        })()
+                      }
                       isLoading={isLoadingPaymentsTrend}
                     />
                   </LazyChart>

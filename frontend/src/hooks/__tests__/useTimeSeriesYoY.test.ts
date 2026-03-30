@@ -1,9 +1,8 @@
-/**
- * Tests for computeYearOverYear (#170)
- */
-
 import { describe, it, expect } from 'vitest'
-import { computeYearOverYear } from '../useTimeSeriesYoY'
+import {
+  computeYearOverYear,
+  computePaymentYoYFromTimeSeries,
+} from '../useTimeSeriesYoY'
 import type { TimeSeriesData } from '../useTimeSeries'
 import type { ProgramYearIndexFile } from '@toastmasters/shared-contracts'
 
@@ -12,6 +11,7 @@ function makeProgramYear(
   dataPoints: Array<{
     date: string
     membership: number
+    payments?: number
     distinguishedTotal: number
     clubCounts: { total: number; thriving: number }
   }>
@@ -25,7 +25,7 @@ function makeProgramYear(
     dataPoints: dataPoints.map(dp => ({
       ...dp,
       snapshotId: dp.date,
-      payments: 0,
+      payments: dp.payments ?? 0,
       dcpGoals: 0,
       clubCounts: {
         ...dp.clubCounts,
@@ -188,5 +188,179 @@ describe('computeYearOverYear', () => {
     // Should return null since Jul 31 is too far from Mar 24 (>30 days)
     const result = computeYearOverYear(ts)
     expect(result).toBeNull()
+  })
+})
+
+/**
+ * Tests for computePaymentYoYFromTimeSeries (#269)
+ *
+ * Bug #269: The payments trend YoY was "N/A" because the hook used
+ * analytics CDN data (current-year-only) for the comparison.
+ * This function computes payment YoY from time-series data instead.
+ */
+describe('computePaymentYoYFromTimeSeries', () => {
+  it('returns null when timeSeries is null', () => {
+    expect(computePaymentYoYFromTimeSeries(null)).toBeNull()
+  })
+
+  it('returns null when no prior year data exists', () => {
+    const ts: TimeSeriesData = {
+      currentProgramYear: '2025-2026',
+      years: {
+        '2025-2026': makeProgramYear('2025-2026', [
+          {
+            date: '2026-03-24',
+            membership: 2815,
+            payments: 4500,
+            distinguishedTotal: 45,
+            clubCounts: { total: 167, thriving: 68 },
+          },
+        ]),
+      },
+      availableYears: ['2025-2026'],
+      baseMembership: 2794,
+      currentMembership: 2815,
+      memberChange: 21,
+    }
+    expect(computePaymentYoYFromTimeSeries(ts)).toBeNull()
+  })
+
+  it('computes positive payment YoY change', () => {
+    const ts: TimeSeriesData = {
+      currentProgramYear: '2025-2026',
+      years: {
+        '2025-2026': makeProgramYear('2025-2026', [
+          {
+            date: '2026-03-24',
+            membership: 2815,
+            payments: 4500,
+            distinguishedTotal: 45,
+            clubCounts: { total: 167, thriving: 68 },
+          },
+        ]),
+        '2024-2025': makeProgramYear('2024-2025', [
+          {
+            date: '2025-03-22',
+            membership: 2700,
+            payments: 4200,
+            distinguishedTotal: 40,
+            clubCounts: { total: 170, thriving: 60 },
+          },
+        ]),
+      },
+      availableYears: ['2025-2026', '2024-2025'],
+      baseMembership: 2700,
+      currentMembership: 2815,
+      memberChange: 115,
+    }
+
+    const result = computePaymentYoYFromTimeSeries(ts)
+    expect(result).not.toBeNull()
+    // 4500 - 4200 = 300
+    expect(result!.yearOverYearChange).toBe(300)
+    expect(result!.trendDirection).toBe('up')
+  })
+
+  it('computes negative payment YoY change', () => {
+    const ts: TimeSeriesData = {
+      currentProgramYear: '2025-2026',
+      years: {
+        '2025-2026': makeProgramYear('2025-2026', [
+          {
+            date: '2026-03-24',
+            membership: 2815,
+            payments: 3800,
+            distinguishedTotal: 45,
+            clubCounts: { total: 167, thriving: 68 },
+          },
+        ]),
+        '2024-2025': makeProgramYear('2024-2025', [
+          {
+            date: '2025-03-22',
+            membership: 2700,
+            payments: 4200,
+            distinguishedTotal: 40,
+            clubCounts: { total: 170, thriving: 60 },
+          },
+        ]),
+      },
+      availableYears: ['2025-2026', '2024-2025'],
+      baseMembership: 2700,
+      currentMembership: 2815,
+      memberChange: 115,
+    }
+
+    const result = computePaymentYoYFromTimeSeries(ts)
+    expect(result).not.toBeNull()
+    expect(result!.yearOverYearChange).toBe(-400)
+    expect(result!.trendDirection).toBe('down')
+  })
+
+  it('returns stable when payments are equal', () => {
+    const ts: TimeSeriesData = {
+      currentProgramYear: '2025-2026',
+      years: {
+        '2025-2026': makeProgramYear('2025-2026', [
+          {
+            date: '2026-03-24',
+            membership: 2815,
+            payments: 4200,
+            distinguishedTotal: 45,
+            clubCounts: { total: 167, thriving: 68 },
+          },
+        ]),
+        '2024-2025': makeProgramYear('2024-2025', [
+          {
+            date: '2025-03-22',
+            membership: 2700,
+            payments: 4200,
+            distinguishedTotal: 40,
+            clubCounts: { total: 170, thriving: 60 },
+          },
+        ]),
+      },
+      availableYears: ['2025-2026', '2024-2025'],
+      baseMembership: 2700,
+      currentMembership: 2815,
+      memberChange: 115,
+    }
+
+    const result = computePaymentYoYFromTimeSeries(ts)
+    expect(result).not.toBeNull()
+    expect(result!.yearOverYearChange).toBe(0)
+    expect(result!.trendDirection).toBe('stable')
+  })
+
+  it('returns null when prior year has no close date match', () => {
+    const ts: TimeSeriesData = {
+      currentProgramYear: '2025-2026',
+      years: {
+        '2025-2026': makeProgramYear('2025-2026', [
+          {
+            date: '2026-03-24',
+            membership: 2815,
+            payments: 4500,
+            distinguishedTotal: 45,
+            clubCounts: { total: 167, thriving: 68 },
+          },
+        ]),
+        '2024-2025': makeProgramYear('2024-2025', [
+          {
+            // Only July data — 8+ months away from March
+            date: '2024-07-31',
+            membership: 2700,
+            payments: 3500,
+            distinguishedTotal: 40,
+            clubCounts: { total: 170, thriving: 60 },
+          },
+        ]),
+      },
+      availableYears: ['2025-2026', '2024-2025'],
+      baseMembership: 2700,
+      currentMembership: 2815,
+      memberChange: 115,
+    }
+
+    expect(computePaymentYoYFromTimeSeries(ts)).toBeNull()
   })
 })
