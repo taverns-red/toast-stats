@@ -27,6 +27,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+*.log
 
 # Editor directories and files
 .vscode/*
@@ -57,6 +58,7 @@ typescript-report.json
 
 # Debug files
 debug_*.js
+debug_*.txt
 *-screenshot.png
 
 # Temporary files
@@ -65,6 +67,7 @@ debug_*.js
 .tmp/
 .tmp-test/
 logs
+log.txt
 logs.json
 logs.txt
 .firebase/
