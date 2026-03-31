@@ -6,213 +6,11 @@
  */
 
 import React from 'react'
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-type ScrapedRecord = Record<string, string | number | null>
-
-export interface DcpGoalProgress {
-  goalNumber: number
-  name: string
-  category: 'Education' | 'Membership' | 'Training' | 'Administration'
-  /** Sub-items for goals with multiple requirements (Goal 9, 10) */
-  subItems: Array<{
-    label: string
-    required: number | 'Y'
-    achieved: number
-  }>
-  achieved: boolean
-  /** Status text when not achieved */
-  statusText: string
-}
-
-// ── Goal Definitions ───────────────────────────────────────────────────────
-
-interface GoalDef {
-  goal: number
-  name: string
-  category: DcpGoalProgress['category']
-  columns: Array<{
-    csvKey: string
-    label: string
-    required: number | 'Y'
-  }>
-  /** How to determine achievement: 'each' = each column meets its required */
-  mode: 'each'
-}
-
-const GOAL_DEFINITIONS: GoalDef[] = [
-  {
-    goal: 1,
-    name: 'Level 1 awards',
-    category: 'Education',
-    columns: [{ csvKey: 'Level 1s', label: 'Level 1 awards', required: 4 }],
-    mode: 'each',
-  },
-  {
-    goal: 2,
-    name: 'Level 2 awards',
-    category: 'Education',
-    columns: [{ csvKey: 'Level 2s', label: 'Level 2 awards', required: 2 }],
-    mode: 'each',
-  },
-  {
-    goal: 3,
-    name: 'More Level 2 awards',
-    category: 'Education',
-    columns: [
-      { csvKey: 'Add. Level 2s', label: 'More Level 2 awards', required: 2 },
-    ],
-    mode: 'each',
-  },
-  {
-    goal: 4,
-    name: 'Level 3 awards',
-    category: 'Education',
-    columns: [{ csvKey: 'Level 3s', label: 'Level 3 awards', required: 2 }],
-    mode: 'each',
-  },
-  {
-    goal: 5,
-    name: 'Level 4, Path Completion, or DTM',
-    category: 'Education',
-    columns: [
-      {
-        csvKey: 'Level 4s, Path Completions, or DTM Awards',
-        label: 'Level 4/Path Completion/DTM',
-        required: 1,
-      },
-    ],
-    mode: 'each',
-  },
-  {
-    goal: 6,
-    name: 'Additional Level 4, Path Completion, or DTM',
-    category: 'Education',
-    columns: [
-      {
-        csvKey: 'Add. Level 4s, Path Completions, or DTM award',
-        label: 'Additional Level 4/Path Completion/DTM',
-        required: 1,
-      },
-    ],
-    mode: 'each',
-  },
-  {
-    goal: 7,
-    name: 'New members',
-    category: 'Membership',
-    columns: [{ csvKey: 'New Members', label: 'New members', required: 4 }],
-    mode: 'each',
-  },
-  {
-    goal: 8,
-    name: 'More new members',
-    category: 'Membership',
-    columns: [
-      { csvKey: 'Add. New Members', label: 'More new members', required: 4 },
-    ],
-    mode: 'each',
-  },
-  {
-    goal: 9,
-    name: 'Officer training',
-    category: 'Training',
-    columns: [
-      {
-        csvKey: 'Off. Trained Round 1',
-        label: 'Officers trained Jun–Aug',
-        required: 4,
-      },
-      {
-        csvKey: 'Off. Trained Round 2',
-        label: 'Officers trained Nov–Feb',
-        required: 4,
-      },
-    ],
-    mode: 'each',
-  },
-  {
-    goal: 10,
-    name: 'Admin requirements',
-    category: 'Administration',
-    columns: [
-      {
-        csvKey: 'Mem. dues on time Oct',
-        label: 'Membership dues on time (Oct)',
-        required: 'Y' as const,
-      },
-      {
-        csvKey: 'Mem. dues on time Apr',
-        label: 'Membership dues on time (Apr)',
-        required: 'Y' as const,
-      },
-      {
-        csvKey: 'Off. List On Time',
-        label: 'Officer list on time',
-        required: 'Y' as const,
-      },
-    ],
-    mode: 'each',
-  },
-]
-
-// ── Extraction ─────────────────────────────────────────────────────────────
-
-/**
- * Extract per-goal DCP progress from a raw CSV record.
- */
-export function extractDcpGoalProgress(
-  record: ScrapedRecord
-): DcpGoalProgress[] {
-  return GOAL_DEFINITIONS.map(def => {
-    const subItems = def.columns.map(col => {
-      const raw = record[col.csvKey]
-      const achieved =
-        raw === null || raw === undefined || raw === ''
-          ? 0
-          : typeof raw === 'number'
-            ? raw
-            : parseInt(String(raw), 10) || 0
-      return { label: col.label, required: col.required, achieved }
-    })
-
-    // Check if goal is achieved
-    const allMet = subItems.every(item =>
-      item.required === 'Y'
-        ? item.achieved >= 1
-        : item.achieved >= item.required
-    )
-
-    // Build status text
-    let statusText = ''
-    if (!allMet) {
-      const gaps = subItems
-        .filter(item =>
-          item.required === 'Y'
-            ? item.achieved < 1
-            : item.achieved < item.required
-        )
-        .map(item => {
-          if (item.required === 'Y') {
-            return `${item.label} needed`
-          }
-          const gap = item.required - item.achieved
-          return `${gap} ${item.label} needed`
-        })
-      statusText = gaps.join(', ')
-    }
-
-    return {
-      goalNumber: def.goal,
-      name: def.name,
-      category: def.category,
-      subItems,
-      achieved: allMet,
-      statusText,
-    }
-  })
-}
+import {
+  type DcpGoalProgress,
+  type ScrapedRecord,
+  extractDcpGoalProgress,
+} from '../utils/dcpGoals'
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -221,24 +19,24 @@ const CATEGORY_COLORS: Record<
   { bg: string; text: string; border: string }
 > = {
   Education: {
-    bg: 'bg-blue-900',
+    bg: 'bg-tm-loyal-blue',
     text: 'text-white',
-    border: 'border-blue-200',
+    border: 'border-tm-loyal-blue-30',
   },
   Membership: {
-    bg: 'bg-amber-800',
-    text: 'text-white',
-    border: 'border-amber-200',
+    bg: 'bg-tm-happy-yellow-80',
+    text: 'text-tm-black',
+    border: 'border-tm-happy-yellow',
   },
   Training: {
-    bg: 'bg-teal-800',
+    bg: 'bg-tm-true-maroon-80',
     text: 'text-white',
-    border: 'border-teal-200',
+    border: 'border-tm-true-maroon-30',
   },
   Administration: {
-    bg: 'bg-purple-800',
+    bg: 'bg-tm-cool-gray-80',
     text: 'text-white',
-    border: 'border-purple-200',
+    border: 'border-tm-cool-gray-30',
   },
 }
 
@@ -326,7 +124,7 @@ export const ClubDCPGoalsCard: React.FC<ClubDCPGoalsCardProps> = ({
                     /* Simple single-row goal */
                     <div
                       className={`flex items-center gap-3 px-3 py-2.5 border-x border-b ${colors.border} ${
-                        goal.achieved ? 'bg-green-50' : 'bg-white'
+                        goal.achieved ? 'bg-tm-loyal-blue-10' : 'bg-white'
                       }`}
                     >
                       <span className="flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-700 font-semibold text-xs shrink-0">
@@ -342,14 +140,14 @@ export const ClubDCPGoalsCard: React.FC<ClubDCPGoalsCardProps> = ({
                       </span>
                       <span
                         className={`text-sm tabular-nums font-tm-body w-12 text-center font-semibold ${
-                          goal.achieved ? 'text-green-700' : 'text-gray-900'
+                          goal.achieved ? 'text-tm-loyal-blue' : 'text-gray-900'
                         }`}
                       >
                         {goal.subItems[0]?.achieved}
                       </span>
                       <span className="w-36 text-right">
                         {goal.achieved ? (
-                          <span className="text-green-600 font-semibold text-sm">
+                          <span className="text-tm-loyal-blue font-semibold text-sm">
                             ✓
                           </span>
                         ) : (
@@ -366,7 +164,7 @@ export const ClubDCPGoalsCard: React.FC<ClubDCPGoalsCardProps> = ({
                         <div
                           key={idx}
                           className={`flex items-center gap-3 px-3 py-2 border-x border-b ${colors.border} ${
-                            goal.achieved ? 'bg-green-50' : 'bg-white'
+                            goal.achieved ? 'bg-tm-loyal-blue-10' : 'bg-white'
                           }`}
                         >
                           {idx === 0 ? (
@@ -389,7 +187,7 @@ export const ClubDCPGoalsCard: React.FC<ClubDCPGoalsCardProps> = ({
                                   ? item.achieved >= 1
                                   : item.achieved >= item.required
                               )
-                                ? 'text-green-700'
+                                ? 'text-tm-loyal-blue'
                                 : 'text-gray-900'
                             }`}
                           >
@@ -398,7 +196,7 @@ export const ClubDCPGoalsCard: React.FC<ClubDCPGoalsCardProps> = ({
                           <span className="w-36 text-right">
                             {idx === 0 &&
                               (goal.achieved ? (
-                                <span className="text-green-600 font-semibold text-sm">
+                                <span className="text-tm-loyal-blue font-semibold text-sm">
                                   ✓
                                 </span>
                               ) : (

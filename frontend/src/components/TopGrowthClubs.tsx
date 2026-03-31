@@ -26,7 +26,10 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
   isLoading,
 }) => {
   // Defensive null check - treat undefined/null as empty array
-  const safeTopGrowthClubs = topGrowthClubs ?? []
+  const safeTopGrowthClubs = useMemo(
+    () => topGrowthClubs ?? [],
+    [topGrowthClubs]
+  )
 
   // Compute tie-aware ranks (#236)
   const growthRanks = useMemo(

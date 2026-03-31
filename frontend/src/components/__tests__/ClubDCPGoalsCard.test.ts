@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { extractDcpGoalProgress } from '../ClubDCPGoalsCard'
+import { extractDcpGoalProgress } from '../../utils/dcpGoals'
 
 describe('extractDcpGoalProgress (#242)', () => {
   it('should extract all 10 goals from a raw CSV record', () => {

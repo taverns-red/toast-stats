@@ -378,13 +378,13 @@ const ClubDetailPage: React.FC = () => {
           </nav>
 
           {/* Header */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-tm-loyal-blue rounded-lg shadow-md p-6 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-tm-headline font-bold text-tm-black">
+                <h1 className="text-2xl sm:text-3xl font-tm-headline font-bold text-white">
                   {club.clubName}
                 </h1>
-                <p className="text-gray-600 mt-1 font-tm-body">
+                <p className="text-tm-loyal-blue-20 mt-1 font-tm-body">
                   {club.areaName} • {club.divisionName}
                 </p>
               </div>
@@ -634,12 +634,6 @@ const ClubDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* DCP Goals Progress — per-goal breakdown (#242) */}
-          <ClubDCPGoalsCard
-            clubRecord={clubRawRecord}
-            isLoading={isLoadingStats}
-          />
-
           {/* Risk Factors */}
           {club.riskFactors.length > 0 && (
             <div className="mb-6 bg-red-50 border border-red-200 rounded-lg shadow-sm p-6">
@@ -689,7 +683,7 @@ const ClubDetailPage: React.FC = () => {
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
-                    className="bg-green-600 h-3 rounded-full transition-all duration-300"
+                    className="bg-tm-loyal-blue h-3 rounded-full transition-all duration-300"
                     style={{
                       width: `${(latestDcpGoals / 10) * 100}%`,
                     }}
@@ -753,6 +747,12 @@ const ClubDetailPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* DCP Goals Progress — per-goal breakdown (#242, reordered #265) */}
+          <ClubDCPGoalsCard
+            clubRecord={clubRawRecord}
+            isLoading={isLoadingStats}
+          />
 
           {/* Back to District button */}
           <div className="flex justify-center py-4">
