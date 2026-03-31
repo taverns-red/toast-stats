@@ -197,6 +197,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           aValue = a.newMembers
           bValue = b.newMembers
           break
+        case 'membersNeeded':
+          aValue = a.membersNeeded
+          bValue = b.membersNeeded
+          break
         case 'clubStatus':
           aValue = a.clubStatus?.toLowerCase()
           bValue = b.clubStatus?.toLowerCase()
@@ -261,9 +265,19 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   )
 
   // Reset pagination to page 1 when filtered results change
+  const isInitialLoad = React.useRef(true)
   useEffect(() => {
-    pagination.goToPage(1)
-    onPageChange?.(1)
+    // If going from 0 -> N clubs on initial load, don't reset pagination
+    // This allows URL sync (e.g. from Back button) to restore page correctly
+    if (isInitialLoad.current && filteredClubs.length > 0) {
+      isInitialLoad.current = false
+      return
+    }
+
+    if (!isInitialLoad.current) {
+      pagination.goToPage(1)
+      onPageChange?.(1)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredClubs.length, pagination.goToPage]) // Intentionally excluding 'pagination' to avoid infinite loop
 
@@ -316,23 +330,56 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           />
         </div>
 
-        {/* Results Count */}
-        <div className="text-sm text-gray-600">
-          {sortedClubs.length === clubs.length ? (
-            <>Total: {clubs.length} clubs</>
-          ) : (
-            <>
-              Showing {sortedClubs.length} of {clubs.length} clubs
-            </>
-          )}
-          {hasActiveFilters && (
+        {/* Results Count and Quick Filters */}
+        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+          <div>
+            {sortedClubs.length === clubs.length ? (
+              <>Total: {clubs.length} clubs</>
+            ) : (
+              <>
+                Showing {sortedClubs.length} of {clubs.length} clubs
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
-              onClick={clearAllFilters}
-              className="ml-4 px-3 py-1 text-xs text-tm-loyal-blue hover:text-tm-loyal-blue-80 font-medium border border-tm-loyal-blue-30 rounded-sm hover:bg-tm-loyal-blue-10 font-tm-body"
+              onClick={() => {
+                const current = getFilter('membersNeeded')
+                if (
+                  current &&
+                  Array.isArray(current.value) &&
+                  current.value[0] === 1
+                ) {
+                  setFilter('membersNeeded', null)
+                } else {
+                  setFilter('membersNeeded', {
+                    field: 'membersNeeded',
+                    type: 'numeric',
+                    value: [1, null],
+                  })
+                  setSortField('membersNeeded')
+                  setSortDirection('asc')
+                }
+              }}
+              className={`px-3 py-1 text-xs font-medium border rounded-sm transition-colors font-tm-body ${
+                getFilter('membersNeeded')?.value?.[0] === 1
+                  ? 'bg-tm-loyal-blue text-white border-tm-loyal-blue'
+                  : 'text-tm-loyal-blue hover:text-tm-loyal-blue-80 border-tm-loyal-blue-30 hover:bg-tm-loyal-blue-10'
+              }`}
             >
-              Clear All Filters ({activeFilterCount})
+              Close to Distinguished
             </button>
-          )}
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="px-3 py-1 text-xs text-tm-true-maroon hover:text-tm-true-maroon-80 font-medium border border-tm-true-maroon-30 rounded-sm hover:bg-tm-true-maroon-10 font-tm-body"
+              >
+                Clear All Filters ({activeFilterCount})
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -494,6 +541,15 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   </td>
                   <td className="px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center text-gray-900">
                     {club.latestDcpGoals}
+                  </td>
+                  <td className="px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center text-gray-900 font-medium">
+                    {club.membersNeeded > 0 ? (
+                      <span className="text-tm-true-maroon">
+                        {club.membersNeeded}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-2 py-3 whitespace-nowrap text-center">
                     {club.distinguishedLevel &&

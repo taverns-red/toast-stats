@@ -19,6 +19,7 @@ export type SortField =
   | 'aprilRenewals'
   | 'newMembers'
   | 'clubStatus'
+  | 'membersNeeded'
 
 /**
  * Sort direction types
@@ -121,14 +122,12 @@ export interface CategoricalFilterProps extends BaseFilterProps {
   multiple?: boolean
 }
 
-/**
- * Extended ClubTrend interface with computed properties for filtering
- */
 export interface ProcessedClubTrend extends ClubTrend {
   // Computed values for filtering
   latestMembership: number
   latestDcpGoals: number
   distinguishedOrder: number // For proper Distinguished column sorting
+  membersNeeded: number // For "Members Needed" column filtering/sorting
 }
 
 /**
@@ -166,6 +165,13 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   {
     field: 'dcpGoals',
     label: 'DCP Goals',
+    sortable: true,
+    filterable: true,
+    filterType: 'numeric',
+  },
+  {
+    field: 'membersNeeded',
+    label: 'Members Needed',
     sortable: true,
     filterable: true,
     filterType: 'numeric',
