@@ -33,6 +33,10 @@ interface ClubsTableProps {
   onSortChange?:
     | ((field: SortField, direction: SortDirection) => void)
     | undefined
+  /** Initial page from URL params (#272) */
+  initialPage?: number | undefined
+  /** Callback when page changes — for URL param sync (#272) */
+  onPageChange?: ((page: number) => void) | undefined
 }
 
 /**
@@ -75,6 +79,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   initialSortField,
   initialSortDirection,
   onSortChange,
+  initialPage,
+  onPageChange,
 }) => {
   const [sortField, setSortField] = useState<SortField>(
     initialSortField ?? 'name'
@@ -236,9 +242,28 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     itemsPerPage: 25,
   })
 
+  // Sync initial page from URL params (#272)
+  const initialPageApplied = React.useRef(false)
+  useEffect(() => {
+    if (initialPage && initialPage > 1 && !initialPageApplied.current) {
+      pagination.goToPage(initialPage)
+      initialPageApplied.current = true
+    }
+  }, [initialPage, pagination.goToPage]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Wrap goToPage to notify parent of page changes (#272)
+  const handleGoToPage = React.useCallback(
+    (page: number) => {
+      pagination.goToPage(page)
+      onPageChange?.(page)
+    },
+    [pagination.goToPage, onPageChange] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
   // Reset pagination to page 1 when filtered results change
   useEffect(() => {
     pagination.goToPage(1)
+    onPageChange?.(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredClubs.length, pagination.goToPage]) // Intentionally excluding 'pagination' to avoid infinite loop
 
@@ -406,7 +431,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             <Pagination
               currentPage={pagination.currentPage}
               totalPages={pagination.totalPages}
-              onPageChange={pagination.goToPage}
+              onPageChange={handleGoToPage}
               startIndex={pagination.startIndex}
               endIndex={pagination.endIndex}
               totalItems={pagination.totalItems}
@@ -551,7 +576,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         <Pagination
           currentPage={pagination.currentPage}
           totalPages={pagination.totalPages}
-          onPageChange={pagination.goToPage}
+          onPageChange={handleGoToPage}
           startIndex={pagination.startIndex}
           endIndex={pagination.endIndex}
           totalItems={pagination.totalItems}

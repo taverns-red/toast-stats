@@ -134,6 +134,29 @@ const DistrictDetailPage: React.FC = () => {
     [setSearchParams]
   )
 
+  // Read pagination state from URL params (#272)
+  const initialPageRaw = searchParams.get('page')
+  const initialPage = initialPageRaw ? parseInt(initialPageRaw, 10) : undefined
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          if (page === 1) {
+            // Default page — remove param to keep URL clean
+            next.delete('page')
+          } else {
+            next.set('page', page.toString())
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
+
   // Tab scroll-fade detection refs (#86)
   const tabScrollRef = React.useRef<HTMLDivElement>(null)
   const tabNavRef = React.useRef<HTMLDivElement>(null)
@@ -715,6 +738,8 @@ const DistrictDetailPage: React.FC = () => {
                 initialSortField={initialSortField}
                 initialSortDirection={initialSortDir}
                 onSortChange={handleSortChange}
+                initialPage={initialPage}
+                onPageChange={handlePageChange}
               />
             )}
 
