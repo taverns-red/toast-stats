@@ -28,8 +28,10 @@ export default defineConfig({
         '**/test-dir/**',
       ],
       thresholds: {
-        lines: 50,
-        branches: 40,
+        lines: 55,
+        branches: 55,
+        functions: 55,
+        statements: 55,
       },
     },
   },
