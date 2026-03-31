@@ -865,3 +865,13 @@
 **Rule**: When a component needs both chart data and a YoY/statistical summary from the same metric, ensure BOTH derive from the same multi-year data source. The time-series CDN (`/time-series/`) is the canonical source for multi-year comparisons; the analytics CDN (`/analytics/`) is current-year-only.
 **Warning**: A chart showing 3 years of data but a stat box showing "N/A" is a strong signal of a data source mismatch between the rendering and statistics computation paths.
 **rules.md**: none — reinforces existing R37 (time-series CDN for multi-year data)
+
+## 🗓️ 2026-03-31 — eslint-refactoring-cleanup (#251, #252)
+
+**Discovery**: React Fast Refresh (react-refresh/only-export-components warning) requires that files containing React components only export React components. Standard utility functions or constants must be moved to separate files.
+**Fix**: Extracted pure utility functions to `src/utils/` to resolve the warning.
+**Rule**: Never export non-component constants or functions from a file containing a React component if using Vite/Fast Refresh. Keep components and business logic tightly separated.
+
+**Discovery**: Jest-axe handles accessibility testing correctly without the flakiness of Playwright headless instances against local dev servers.
+**Fix**: Replaced Playwright E2E tests for accessibility with `jest-axe` integration tests over rendered React components.
+**Rule**: For DOM accessibility testing in CI without a deployed endpoint, use `jest-axe` within the Vitest JS-DOM environment.
