@@ -875,3 +875,11 @@
 **Discovery**: Jest-axe handles accessibility testing correctly without the flakiness of Playwright headless instances against local dev servers.
 **Fix**: Replaced Playwright E2E tests for accessibility with `jest-axe` integration tests over rendered React components.
 **Rule**: For DOM accessibility testing in CI without a deployed endpoint, use `jest-axe` within the Vitest JS-DOM environment.
+
+## 🗓️ 2026-03-31 — mock-snapshot-needs-csv-keys (#261)
+
+**Discovery**: `extractDivisionPerformance` consumes CSV-record-format arrays (`divisionPerformance`, `clubPerformance`) with keys like `Division`, `Area`, `Club Number`, `Club Distinguished Status`. The high-level `divisions` array used in the existing mock had a completely different shape and was silently ignored, causing the utility to return `[]`.
+**Proof**: After adding `divisionPerformance` and `clubPerformance` arrays with CSV-style keys to `cdnMocks.districtSnapshot`, Journey 5 passed and "Division A" rendered with full metrics.
+**Rule**: When mocking CDN snapshots for integration tests, the mock data must include `divisionPerformance` and `clubPerformance` arrays in their CSV-record format — the same shape produced by the data pipeline.
+**Warning**: The `divisions` property on the snapshot is a summary view used by other components; `extractDivisionPerformance` ignores it entirely and only reads `divisionPerformance`.
+**rules.md**: none
