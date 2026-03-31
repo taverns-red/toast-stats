@@ -17,8 +17,8 @@ name: Data Pipeline
 
 on:
   schedule:
-    # Run daily at 13:00 UTC (8 AM EST / 9 AM EDT)
-    - cron: '0 13 * * *'
+    # Run daily at 10:00 UTC (5 AM EST / 6 AM EDT)
+    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       mode:
