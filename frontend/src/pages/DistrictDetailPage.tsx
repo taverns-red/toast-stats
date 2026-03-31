@@ -44,6 +44,7 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton'
 
 import { LazyChart } from '../components/LazyChart'
 import GlobalRankingsTab from '../components/GlobalRankingsTab'
+import { ClubsNeedingMembersCard } from '../components/ClubsNeedingMembersCard'
 
 type TabType =
   | 'overview'
@@ -661,6 +662,17 @@ const DistrictDetailPage: React.FC = () => {
                     netMemberChange={
                       // #170: prefer time-series member change (base membership based)
                       timeSeries?.memberChange
+                    }
+                  />
+                )}
+
+                {/* Clubs Needing Only Members (#273) */}
+                {analytics?.allClubs && (
+                  <ClubsNeedingMembersCard
+                    clubs={analytics.allClubs}
+                    isLoading={isLoadingAnalytics}
+                    onClubClick={clubId =>
+                      navigate(`/district/${districtId}/club/${clubId}`)
                     }
                   />
                 )}
