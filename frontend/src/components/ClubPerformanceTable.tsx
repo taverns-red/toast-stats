@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
+import { useUrlState } from '../hooks/useUrlState'
 import type { Club } from '../types/districts'
 import type { ClubWithRecentChanges } from '../utils/dataIntegration'
 import { ExportButton } from './ExportButton'
@@ -20,10 +21,22 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
   districtName,
   isLoading = false,
 }) => {
-  const [sortField, setSortField] = useState<SortField>('name')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [sortField, setSortField] = useUrlState<SortField>('perf_sort', 'name')
+  const [sortDirection, setSortDirection] = useUrlState<SortDirection>(
+    'perf_dir',
+    'asc'
+  )
+  const [statusFilter, setStatusFilter] = useUrlState<string>(
+    'perf_status',
+    'all'
+  )
+  const [currentPage, setCurrentPage] = useUrlState('perf_page', 1, {
+    parse: (v: string) => {
+      const n = Number(v)
+      return isNaN(n) || n < 1 ? undefined : Math.floor(n)
+    },
+    serialize: String,
+  })
   const itemsPerPage = 10
 
   const handleExport = () => {

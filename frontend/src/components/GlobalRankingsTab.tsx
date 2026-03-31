@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
+import { useUrlState } from '../hooks/useUrlState'
 import EndOfYearRankingsPanel from './EndOfYearRankingsPanel'
 import FullYearRankingChart, { type RankMetric } from './FullYearRankingChart'
 import MultiYearComparisonTable from './MultiYearComparisonTable'
@@ -217,8 +218,11 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
   districtName,
   selectedProgramYear,
 }) => {
-  // Local state for selected metric (chart toggle)
-  const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate')
+  // Local state for selected metric (chart toggle) synced to URL (#272)
+  const [selectedMetric, setSelectedMetric] = useUrlState<RankMetric>(
+    'rank_metric',
+    'aggregate'
+  )
 
   // Build hook params - only include selectedProgramYear when it has a value
   // This is required for exactOptionalPropertyTypes compliance
