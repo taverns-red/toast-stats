@@ -149,6 +149,19 @@ export function applyFilter(
       }
       break
 
+    case 'membersNeeded':
+      if (filter.type === 'numeric' && Array.isArray(filter.value)) {
+        const [min, max] = filter.value as [number | null, number | null]
+        if (min === null && max === null) return clubs
+        return clubs.filter(club => {
+          const membersNeeded = club.membersNeeded
+          if (min !== null && membersNeeded < min) return false
+          if (max !== null && membersNeeded > max) return false
+          return true
+        })
+      }
+      break
+
     case 'distinguished':
       if (filter.type === 'categorical' && Array.isArray(filter.value)) {
         const selectedValues = filter.value as string[]
