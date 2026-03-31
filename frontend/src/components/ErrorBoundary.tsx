@@ -28,7 +28,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
   }
 
-  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    if (import.meta.env.MODE === 'test') {
+      console.error('Test ErrorBoundary caught:', error.message)
+    }
     console.error('ErrorBoundary caught an error:', error, errorInfo)
 
     // Persist to localStorage telemetry (#225)
@@ -37,6 +40,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     if (this.props.onError) {
       this.props.onError(error, errorInfo)
     }
+    console.error('ERROR BOUNDARY CAUGHT AN ERROR:', error, errorInfo)
   }
 
   handleReset = (): void => {

@@ -22,7 +22,7 @@ export const LazyChart: React.FC<LazyChartProps> = ({
 
   useEffect(() => {
     const container = containerRef.current
-    const observer = new IntersectionObserver(
+    const observer = new window.IntersectionObserver(
       entries => {
         entries.forEach(entry => {
           if (entry.isIntersecting && !hasLoaded) {
