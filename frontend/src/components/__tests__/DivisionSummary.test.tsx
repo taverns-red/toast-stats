@@ -322,7 +322,7 @@ describe('DivisionSummary', () => {
       const statusBadge = screen.getByRole('status', {
         name: /Division status/i,
       })
-      expect(statusBadge).toHaveClass('tm-bg-loyal-blue')
+      expect(statusBadge).toHaveClass('bg-tm-happy-yellow')
     })
 
     it('should use gray color for not distinguished status', () => {
@@ -341,7 +341,7 @@ describe('DivisionSummary', () => {
       const statusBadge = screen.getByRole('status', {
         name: /Division status/i,
       })
-      expect(statusBadge).toHaveClass('tm-bg-cool-gray-40')
+      expect(statusBadge).toHaveClass('bg-gray-100')
     })
 
     it('should use color indicators for positive net growth', () => {
@@ -751,7 +751,7 @@ describe('DivisionSummary', () => {
       const statusBadge = screen.getByRole('status', {
         name: /Division status: Net Loss/i,
       })
-      expect(statusBadge).toHaveClass('tm-bg-true-maroon')
+      expect(statusBadge).toHaveClass('bg-red-100')
     })
   })
 

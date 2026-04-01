@@ -88,22 +88,22 @@ function getStatusBadgeClasses(
   gapAnalysis?: DivisionGapAnalysis
 ): string {
   const baseClasses =
-    'inline-flex items-center px-3 py-1.5 tm-rounded-lg tm-body-small font-semibold'
+    'inline-flex justify-center items-center px-3 py-1.5 rounded-full border text-xs font-medium'
 
   // If there's a net loss, use maroon color to indicate warning
   if (gapAnalysis && !gapAnalysis.meetsNoNetLossRequirement) {
-    return `${baseClasses} tm-bg-true-maroon tm-text-white`
+    return `${baseClasses} bg-red-100 text-red-800 border-red-300`
   }
 
   switch (status) {
     case 'presidents-distinguished':
-      return `${baseClasses} tm-bg-loyal-blue tm-text-white`
+      return `${baseClasses} bg-tm-happy-yellow text-gray-900 border-yellow-500 font-semibold`
     case 'select-distinguished':
-      return `${baseClasses} tm-bg-loyal-blue-80 tm-text-white`
+      return `${baseClasses} bg-tm-cool-gray text-gray-900 border-gray-400`
     case 'distinguished':
-      return `${baseClasses} tm-bg-loyal-blue-60 tm-text-white`
+      return `${baseClasses} bg-tm-true-maroon text-white border-tm-true-maroon`
     case 'not-distinguished':
-      return `${baseClasses} tm-bg-cool-gray-40 tm-text-black`
+      return `${baseClasses} bg-gray-100 text-gray-600 border-gray-300`
   }
 }
 
