@@ -40,6 +40,7 @@ import {
   buildMetadataPath,
   calculateProgramYear,
 } from './utils/CachePaths.js'
+import { parseClosingPeriodFromCsv } from './utils/csvFooterParser.js'
 
 /**
  * District configuration file structure
@@ -692,16 +693,34 @@ export class CollectorOrchestrator {
         .filter(r => r.success)
         .map(r => r.districtId)
       if (succeededDistricts.length > 0) {
+        let isClosingPeriod = false
+        let dataMonth: string | undefined
+
+        // Detect closing period from standard all-districts output
+        if (allDistrictsResult.success) {
+          try {
+            const csvPath = buildCsvPath(
+              this.config.cacheDir,
+              date,
+              CSVType.ALL_DISTRICTS
+            )
+            const csvContent = await fs.readFile(csvPath, 'utf-8')
+            const parsed = parseClosingPeriodFromCsv(csvContent, date)
+            isClosingPeriod = parsed.isClosingPeriod
+            dataMonth = parsed.dataMonth
+          } catch {
+            logger.warn('Failed to parse closing period from CSV', { date })
+          }
+        }
+
         const metaPath = buildMetadataPath(this.config.cacheDir, date)
         const closingInfo = allDistrictsResult.closingPeriodInfo
         const metadata: Record<string, unknown> = {
           date,
           timestamp: Date.now(),
           programYear: calculateProgramYear(date),
-          isClosingPeriod: closingInfo?.isClosingPeriod ?? false,
-          ...(closingInfo?.dataMonth
-            ? { dataMonth: closingInfo.dataMonth }
-            : {}),
+          isClosingPeriod,
+          ...(dataMonth ? { dataMonth } : {}),
           csvFiles: {
             allDistricts: allDistrictsResult.success,
             districts: Object.fromEntries(

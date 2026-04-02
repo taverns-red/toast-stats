@@ -41,10 +41,10 @@ vi.mock('../services/HttpCsvDownloader.js', () => {
           throw new Error(`Simulated failure for district ${spec.districtId}`)
         }
 
-        // Return minimal CSV content
+        // Return minimal CSV content with a hardcoded closing period footer for testing
         return {
           url: `https://example.com/${spec.reportType}`,
-          content: `Header\nRow1`,
+          content: `Header\nRow1\nMonth of December, As of 01/11/2026`,
           statusCode: 200,
           byteSize: 12,
         }
@@ -223,5 +223,24 @@ describe('CollectorOrchestrator - Partial Failure Resilience (#124)', () => {
     expect(csvFiles['allDistricts']).toBe(true)
     const districts = csvFiles['districts'] as Record<string, unknown>
     expect(districts['09']).toBeDefined()
+  })
+
+  it('should detect closing period and write dataMonth to metadata.json', async () => {
+    // The mock downloader writes "Month of December, As of 01/11/2026"
+    // The requested date in runScrapeTest is 2026-01-11
+    // Month mismatch (12 vs 1) should trigger closing period!
+    await runScrapeTest(['09'], new Set())
+
+    const metadataPath = path.join(
+      testCacheDir,
+      'raw-csv',
+      '2026-01-11',
+      'metadata.json'
+    )
+    const content = await fs.readFile(metadataPath, 'utf-8')
+    const metadata = JSON.parse(content) as Record<string, unknown>
+
+    expect(metadata['isClosingPeriod']).toBe(true)
+    expect(metadata['dataMonth']).toBe('2025-12')
   })
 })

@@ -893,3 +893,11 @@
 **rules.md**: none
 
 - **Testing Accessibility**: When multiple elements match a fuzzy name (e.g. `screen.getByRole('button', { name: /members/i })` matches both 'Members column header' and 'Members Needed column header'), `testing-library` will throw a MultipleElementsFoundError. Always use precise, bounded queries like `/Members column header/i` or precise substring matches.
+
+## 🗓️ 2026-04-02 — Lesson 38: Live Data Metadata Requires Native Footers (#278)
+
+**Discovery**: When migrating to `HttpCsvDownloader` for the pipeline, month-end closing period detection broke because the orchestrator began hardcoding `isClosingPeriod: false`, assuming the Playwright browser logic handled it.
+**Proof**: Found in `CollectorOrchestrator.ts:684` that `isClosingPeriod: false` was hardcoded, causing `TransformService` to blindly use the fetch date instead of mapping to month-end.
+**Rule**: External live-data systems represent their "temporal scope" implicitly. For Toastmasters CSVs, the implicit temporal scope is serialized into the footer rows (e.g. `Month of March, As of 04/01/2026`). Live tools must parse these artifacts instead of relying on external scrapers.
+**Warning**: Never override or default synchronization properties (like `isClosingPeriod` or `dataMonth`) to fallback assumptions. Wait to parse the live artifact (e.g. the CSV footer) instead of eagerly guessing the property.
+**rules.md**: none
