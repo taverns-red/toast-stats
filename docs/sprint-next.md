@@ -11,8 +11,6 @@ Sprint 19 shipped bug fixes (#277, #278), removed ~85K lines of dead code, and c
 
 The main UX gap is **deep linking** (#272). The `useUrlState` hook exists and 7 params are already synced, but program year, date selection, column filters, and DCP projections filters are still lost on navigation.
 
-Additionally, the landing page shows a "Detailed analytics available" badge on every single district row (since all 128 districts now have data), and the detail page has an unreachable "not yet tracked" fallback. Both are vestigial from when only 6 districts were collected.
-
 ---
 
 ## Sprint Goals
@@ -62,18 +60,6 @@ Additionally, the landing page shows a "Detailed analytics available" badge on e
 
 ---
 
-### 5. Remove vestigial tracked/untracked district UX
-
-**Priority: Low** — All 128 districts now have data. Two artifacts remain:
-
-- **LandingPage.tsx** (line ~777): Badge "Detailed analytics available" shows on every row — redundant noise since every district has data now. Remove the badge and the `trackedDistrictIds` set.
-- **DistrictDetailPage.tsx** (line ~425-490): "This district has limited data available" fallback — unreachable code since all districts have per-district snapshots. Remove the entire fallback block.
-- **Comment on line 427**: "Only 6 districts have detailed per-district analytics" — factually wrong.
-
-**Estimated:** < 1 hour
-
----
-
 ## Deferred
 
 | Item                            | Reason                                                             |
@@ -96,5 +82,3 @@ Additionally, the landing page shows a "Detailed analytics available" badge on e
 - [ ] DCP projections filters preserved in URL
 - [ ] Shared URLs reproduce the exact view (tab, sort, page, filters, date)
 - [ ] Browser back/forward preserves all state
-- [ ] No "Detailed analytics available" badge noise on landing page
-- [ ] No unreachable "not yet tracked" fallback on detail page
