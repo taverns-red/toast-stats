@@ -39,7 +39,7 @@
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.56.0",
-    "@vitejs/plugin-react": "^5.2.0",
+    "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.0",
     "autoprefixer": "^10.4.27",
     "eslint": "^10.0.3",
@@ -50,8 +50,8 @@
     "jest-axe": "^10.0.0",
     "jsdom": "^29.0.1",
     "postcss": "^8.5.8",
-    "typescript": "^5.2.2",
-    "vite": "^7.0.0",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.3",
     "vitest": "^4.0.18"
   }
 }
