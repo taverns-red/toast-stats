@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { ClubHealthStatus } from '../hooks/useDistrictAnalytics'
 import { ExportButton } from './ExportButton'
@@ -37,6 +37,12 @@ interface ClubsTableProps {
   initialPage?: number | undefined
   /** Callback when page changes — for URL param sync (#272) */
   onPageChange?: ((page: number) => void) | undefined
+  /** Initial filter state from URL params (#272) */
+  initialFilterState?: import('./filters/types').FilterState | undefined
+  /** Callback when filters change — for URL param sync (#272) */
+  onFilterChange?:
+    | ((state: import('./filters/types').FilterState) => void)
+    | undefined
 }
 
 /**
@@ -81,6 +87,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   onSortChange,
   initialPage,
   onPageChange,
+  initialFilterState,
+  onFilterChange,
 }) => {
   const [sortField, setSortField] = useState<SortField>(
     initialSortField ?? 'name'
@@ -90,15 +98,38 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   )
   const isMobile = useIsMobile(768)
 
-  // Use column filters hook
+  // Use column filters hook with optional URL-initialized state (#272)
   const {
     filteredClubs,
-    setFilter,
-    clearAllFilters,
+    filterState,
+    setFilter: setFilterInternal,
+    clearAllFilters: clearAllFiltersInternal,
     getFilter,
     hasActiveFilters,
     activeFilterCount,
-  } = useColumnFilters(clubs)
+  } = useColumnFilters(clubs, initialFilterState)
+
+  // Wrap setFilter to notify parent of changes for URL sync
+  const setFilter = useCallback(
+    (
+      field: SortField,
+      filter: import('./filters/types').ColumnFilter | null
+    ) => {
+      setFilterInternal(field, filter)
+      // Notify after state update via microtask
+      if (onFilterChange) {
+        const next = { ...filterState, [field]: filter }
+        if (!filter) delete next[field]
+        onFilterChange(next)
+      }
+    },
+    [setFilterInternal, onFilterChange, filterState]
+  )
+
+  const clearAllFilters = useCallback(() => {
+    clearAllFiltersInternal()
+    onFilterChange?.({})
+  }, [clearAllFiltersInternal, onFilterChange])
 
   // Get status badge styling
   const getStatusBadge = (

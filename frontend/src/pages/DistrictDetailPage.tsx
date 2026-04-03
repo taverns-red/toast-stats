@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
@@ -23,6 +23,11 @@ import {
 } from '../utils/programYear'
 import type { MultiYearPaymentData } from '../hooks/usePaymentsTrend'
 import { formatDisplayDate } from '../utils/dateFormatting'
+import {
+  parseFilterState,
+  serializeFilterState,
+  FILTER_URL_PREFIX,
+} from '../utils/filterUrlCodec'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DistrictOverview } from '../components/DistrictOverview'
 import DataAsOfBanner from '../components/DataAsOfBanner'
@@ -148,6 +153,36 @@ const DistrictDetailPage: React.FC = () => {
           } else {
             next.set('page', page.toString())
           }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
+
+  // Read initial filter state from URL params (#272)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const initialFilterState = useMemo(() => parseFilterState(searchParams), [])
+
+  const handleFilterChange = useCallback(
+    (state: import('../components/filters/types').FilterState) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          // Remove all existing filter params
+          const keysToDelete: string[] = []
+          next.forEach((_, key) => {
+            if (key.startsWith(FILTER_URL_PREFIX)) keysToDelete.push(key)
+          })
+          keysToDelete.forEach(key => next.delete(key))
+          // Add new filter params
+          const serialized = serializeFilterState(state)
+          for (const [key, value] of Object.entries(serialized)) {
+            next.set(key, value)
+          }
+          // Reset pagination when filters change
+          next.delete('page')
           return next
         },
         { replace: true }
@@ -729,6 +764,8 @@ const DistrictDetailPage: React.FC = () => {
                 onSortChange={handleSortChange}
                 initialPage={initialPage}
                 onPageChange={handlePageChange}
+                initialFilterState={initialFilterState}
+                onFilterChange={handleFilterChange}
               />
             )}
 

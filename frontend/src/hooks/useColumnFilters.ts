@@ -25,8 +25,13 @@ export {
  * Hook for managing individual column filter states
  * Provides filter combination logic (AND operations) and filter clearing functionality
  */
-export const useColumnFilters = (clubs: ClubTrend[]) => {
-  const [filterState, setFilterState] = useState<FilterState>({})
+export const useColumnFilters = (
+  clubs: ClubTrend[],
+  initialFilterState?: FilterState
+) => {
+  const [filterState, setFilterState] = useState<FilterState>(
+    initialFilterState ?? {}
+  )
 
   /**
    * Process clubs with computed properties for filtering
