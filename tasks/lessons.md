@@ -901,3 +901,27 @@
 **Rule**: External live-data systems represent their "temporal scope" implicitly. For Toastmasters CSVs, the implicit temporal scope is serialized into the footer rows (e.g. `Month of March, As of 04/01/2026`). Live tools must parse these artifacts instead of relying on external scrapers.
 **Warning**: Never override or default synchronization properties (like `isClosingPeriod` or `dataMonth`) to fallback assumptions. Wait to parse the live artifact (e.g. the CSV footer) instead of eagerly guessing the property.
 **rules.md**: none
+
+## 🗓️ 2026-04-03 — Lesson 39: Module-Level Singletons Leak Across Vitest Files (#255)
+
+**Discovery**: A module-level singleton (`cdnCacheTracker.ts` with `let hits = 0; let misses = 0`) retains state across test files in Vitest because modules are cached per worker. Tests that relied on fresh state failed when run as part of the full suite but passed in isolation.
+**Proof**: Running the full frontend suite caused `useCdnCacheMonitor.test.ts` to see stale hit/miss counts from earlier test files. Adding `resetCdnCacheStats()` in `beforeEach` fixed the failures.
+**Rule**: Every module-level singleton must export a `reset()` function, and every test file that touches the singleton must call it in `beforeEach`.
+**Warning**: The CDN manifest cache in `cdn.ts` (`cachedManifest`) is another singleton that leaks — integration tests must call `resetCdnManifestCache()` during setup.
+**rules.md**: none
+
+## 🗓️ 2026-04-03 — Lesson 40: URL State Default Must Match Context, Not Clock (#272)
+
+**Discovery**: `useUrlProgramYear` initially defaulted to `getCurrentProgramYear().year` (2025) when no `?py=` param was present. In tests using mock data for PY 2024, this caused an auto-correction render cycle (2025 → detect mismatch → update to 2024 → re-render), pushing integration tests past the 5-second timeout.
+**Proof**: Changing the fallback from `getCurrentProgramYear().year` to `contextPY.year` eliminated the extra render cycle and tests completed in <1s.
+**Rule**: When a URL-synced hook has a fallback value, fall back to the current context state, not a freshly computed value. The context already holds the authoritative "last known good" value.
+**Warning**: Any `useEffect` that syncs URL → context must guard against no-op writes (`if (newVal !== contextVal)`) or it will trigger infinite render loops.
+**rules.md**: none
+
+## 🗓️ 2026-04-03 — Lesson 41: Filter URL Codec Dash Ambiguity (#272)
+
+**Discovery**: Numeric filter ranges serialized as `min-max` are ambiguous when min is omitted (open lower bound = `-max`, e.g., `-20`). The parser's `indexOf('-', 1)` strategy misidentified `-20` as "negative 20 with no separator" instead of "open min, max=20".
+**Proof**: Round-trip test for `{ min: null, max: 20 }` → `-20` → parse failed, returning `{ min: -20, max: null }` instead.
+**Rule**: When designing URL serialization for ranges, use `indexOf('-')` from index 0, and treat a leading dash with no preceding content as "open min".
+**Warning**: Similarly, a trailing dash (`5-`) means "open max". The parser must handle both edges explicitly.
+**rules.md**: none

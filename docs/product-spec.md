@@ -1,7 +1,7 @@
 # Product Spec — Toast Stats
 
 **Live site:** [ts.taverns.red](https://ts.taverns.red)
-**Last updated:** March 28, 2026
+**Last updated:** April 3, 2026
 
 ---
 
@@ -51,6 +51,13 @@ A data visualization platform for **Toastmasters district leaders** to track clu
 | Division/Area recognition  | DAP/DDP status tracking per rules reference                        | ✅ Shipped |
 | Performance targets        | World rank, percentile, target thresholds from CDN                 | ✅ Shipped |
 | Date selector              | Browse historical snapshots within a program year                  | ✅ Shipped |
+| Deep links (URL state)     | Program year, date, tab, sort, filters, pagination synced to URL   | ✅ Shipped |
+
+### Observability
+
+| Feature              | Description                                                      | Status     |
+| -------------------- | ---------------------------------------------------------------- | ---------- |
+| CDN cache monitoring | HIT/MISS ratio tracking with dev-mode warnings at >50% miss rate | ✅ Shipped |
 
 ### Data Pipeline
 
