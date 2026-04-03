@@ -40,8 +40,6 @@ import {
   buildMetadataPath,
   calculateProgramYear,
 } from './utils/CachePaths.js'
-import { parseClosingPeriodFromCsv } from './utils/csvFooterParser.js'
-
 /**
  * District configuration file structure
  * Matches the backend's DistrictConfigurationService format
@@ -714,7 +712,6 @@ export class CollectorOrchestrator {
         }
 
         const metaPath = buildMetadataPath(this.config.cacheDir, date)
-        const closingInfo = allDistrictsResult.closingPeriodInfo
         const metadata: Record<string, unknown> = {
           date,
           timestamp: Date.now(),
