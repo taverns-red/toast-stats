@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useCdnCacheMonitor, parseCacheStatus } from '../useCdnCacheMonitor'
+import { resetCdnCacheStats } from '../../services/cdnCacheTracker'
 
 function makeHeaders(headers: Record<string, string>): Headers {
   return new Headers(headers)
@@ -49,6 +50,10 @@ describe('CDN Cache Monitor (#224)', () => {
   })
 
   describe('useCdnCacheMonitor', () => {
+    beforeEach(() => {
+      resetCdnCacheStats()
+    })
+
     it('should start with zero stats', () => {
       const { result } = renderHook(() => useCdnCacheMonitor())
       const stats = result.current.getStats()

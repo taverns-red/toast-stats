@@ -361,6 +361,7 @@ export function setupCdnFetchMock() {
           return {
             ok: true,
             status: 200,
+            headers: new Headers(),
             json: async () => data,
           } as Response
         }

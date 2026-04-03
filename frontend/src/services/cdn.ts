@@ -14,6 +14,8 @@
  * Fixes: #168 — Serve analytics via GCS + Cloud CDN
  */
 
+import { recordCdnResponse } from './cdnCacheTracker'
+
 const CDN_BASE_URL =
   import.meta.env['VITE_CDN_BASE_URL'] || 'https://cdn.taverns.red'
 
@@ -51,6 +53,7 @@ export async function fetchCdnManifest(): Promise<CdnManifest> {
   manifestPromise = fetch(`${CDN_BASE_URL}/v1/latest.json`)
     .then(res => {
       if (!res.ok) throw new Error(`CDN manifest fetch failed: ${res.status}`)
+      recordCdnResponse(res)
       return res.json() as Promise<CdnManifest>
     })
     .then(manifest => {
@@ -71,6 +74,7 @@ export async function fetchCdnManifest(): Promise<CdnManifest> {
 export async function fetchCdnDates(): Promise<CdnDatesIndex> {
   const res = await fetch(`${CDN_BASE_URL}/v1/dates.json`)
   if (!res.ok) throw new Error(`CDN dates fetch failed: ${res.status}`)
+  recordCdnResponse(res)
   return res.json() as Promise<CdnDatesIndex>
 }
 
@@ -112,6 +116,7 @@ export interface CdnRankingsData {
 export async function fetchCdnRankings(): Promise<CdnRankingsData> {
   const res = await fetch(`${CDN_BASE_URL}/v1/rankings.json`)
   if (!res.ok) throw new Error(`CDN rankings fetch failed: ${res.status}`)
+  recordCdnResponse(res)
   return res.json() as Promise<CdnRankingsData>
 }
 
@@ -154,6 +159,7 @@ export async function fetchFromCdn<T>(url: string): Promise<T> {
   if (!res.ok) {
     throw new Error(`CDN fetch failed: ${res.status} for ${url}`)
   }
+  recordCdnResponse(res)
   return res.json() as Promise<T>
 }
 
