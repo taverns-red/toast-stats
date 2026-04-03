@@ -34,9 +34,6 @@ run_cleanup_script() {
     fi
 }
 
-# Clean backend test directories
-run_cleanup_script "backend/scripts/cleanup-test-dirs.sh" "backend"
-
 # Clean frontend test directories
 run_cleanup_script "frontend/scripts/cleanup-test-dirs.sh" "frontend"
 

@@ -39,9 +39,7 @@
     "pre-commit": "npm run typecheck && npm run lint && npm run lint:yaml",
     "prepare": "husky install",
     "cleanup:test-dirs": "bash scripts/cleanup-all-test-dirs.sh",
-    "cleanup:backend": "bash backend/scripts/cleanup-test-dirs.sh",
     "cleanup:frontend": "bash frontend/scripts/cleanup-test-dirs.sh",
-    "docker:build": "docker build -f Dockerfile -t toast-stats-backend .",
     "pipeline:dry-run": "npx tsx scripts/prune-month-end-pipeline.ts --dry-run",
     "pipeline:run": "npx tsx scripts/prune-month-end-pipeline.ts --execute",
     "pipeline:step": "npx tsx scripts/prune-month-end-pipeline.ts"

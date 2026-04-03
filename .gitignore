@@ -73,8 +73,9 @@ logs.txt
 .firebase/
 .npm-cache/
 
-# Kiro
+# Agent tooling
 .kiro/
+.agent/
 
 # Data (local-only)
 data/
