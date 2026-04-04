@@ -92,6 +92,9 @@ export interface ClubTrend {
 
   /** Whether health status was softened by seasonal adjustment (#221) */
   isSeasonallyAdjusted?: boolean
+
+  /** Whether Distinguished status is provisional (pre-April, unconfirmed by renewals) (#287) */
+  isProvisionallyDistinguished?: boolean
 }
 
 /**

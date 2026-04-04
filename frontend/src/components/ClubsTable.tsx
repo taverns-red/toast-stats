@@ -585,8 +585,16 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   <td className="px-2 py-3 whitespace-nowrap text-center">
                     {club.distinguishedLevel &&
                     club.distinguishedLevel !== 'NotDistinguished' ? (
-                      <span className="px-1.5 py-0.5 text-xs font-medium bg-tm-happy-yellow-20 text-tm-true-maroon rounded-sm font-tm-body">
+                      <span
+                        className="px-1.5 py-0.5 text-xs font-medium bg-tm-happy-yellow-20 text-tm-true-maroon rounded-sm font-tm-body"
+                        title={
+                          club.isProvisionallyDistinguished
+                            ? 'Provisional — membership not yet confirmed by April renewals'
+                            : 'Confirmed — April renewals recorded'
+                        }
+                      >
                         {club.distinguishedLevel}
+                        {club.isProvisionallyDistinguished ? '*' : ''}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">—</span>

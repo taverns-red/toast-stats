@@ -392,8 +392,16 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                   </svg>
                   Distinguished Status
                 </h4>
-                <span className="inline-block px-4 py-2 bg-tm-happy-yellow-30 text-tm-true-maroon text-sm font-medium rounded-full font-tm-body">
+                <span
+                  className="inline-block px-4 py-2 bg-tm-happy-yellow-30 text-tm-true-maroon text-sm font-medium rounded-full font-tm-body"
+                  title={
+                    club.isProvisionallyDistinguished
+                      ? 'Provisional — membership not yet confirmed by April renewals'
+                      : 'Confirmed — April renewals recorded'
+                  }
+                >
                   {club.distinguishedLevel}
+                  {club.isProvisionallyDistinguished ? '*' : ''}
                 </span>
               </div>
             )}

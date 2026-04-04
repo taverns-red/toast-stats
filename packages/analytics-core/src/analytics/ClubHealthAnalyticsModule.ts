@@ -28,6 +28,7 @@ import {
   calculateNetGrowth,
   determineDistinguishedLevel,
   getCSPStatus,
+  isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
 
 /**
@@ -254,7 +255,7 @@ export class ClubHealthAnalyticsModule {
       // Pass club data and snapshotDate to assessClubHealth for classification logic
       this.assessClubHealth(clubTrend, club, snapshotDate)
 
-      this.identifyDistinguishedLevel(clubTrend, club)
+      this.identifyDistinguishedLevel(clubTrend, club, snapshotDate)
     }
 
     return Array.from(clubMap.values())
@@ -546,13 +547,15 @@ export class ClubHealthAnalyticsModule {
    */
   private identifyDistinguishedLevel(
     clubTrend: ClubTrend,
-    club: ClubStatistics
+    club: ClubStatistics,
+    snapshotDate: string
   ): void {
     // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
     const cspSubmitted = getCSPStatus(club)
 
     if (!cspSubmitted) {
       clubTrend.distinguishedLevel = 'NotDistinguished'
+      clubTrend.isProvisionallyDistinguished = false
       return
     }
 
@@ -572,6 +575,15 @@ export class ClubHealthAnalyticsModule {
       currentDcpGoals,
       currentMembership,
       netGrowth
+    )
+
+    // Determine if Distinguished status is provisional (#287)
+    const dataMonth = new Date(snapshotDate).getUTCMonth() + 1
+    clubTrend.isProvisionallyDistinguished = isDistinguishedProvisional(
+      clubTrend.distinguishedLevel,
+      club.aprilRenewals ?? 0,
+      club.membershipBase ?? 0,
+      dataMonth
     )
   }
 

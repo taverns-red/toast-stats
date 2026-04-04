@@ -12,6 +12,7 @@ import {
   calculateNetGrowth,
   determineDistinguishedLevel,
   getCSPStatus,
+  isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
 import type { ClubStatistics } from '../interfaces.js'
 
@@ -208,5 +209,53 @@ describe('getCSPStatus', () => {
       cspSubmitted: false,
     })
     expect(getCSPStatus(club)).toBe(false)
+  })
+})
+
+describe('isDistinguishedProvisional', () => {
+  it('returns true for pre-April Distinguished club with 0 april renewals', () => {
+    expect(isDistinguishedProvisional('Distinguished', 0, 15, 3)).toBe(true)
+  })
+
+  it('returns false for pre-April club with enough april renewals (>= 20)', () => {
+    expect(isDistinguishedProvisional('Distinguished', 20, 15, 3)).toBe(false)
+  })
+
+  it('returns false for pre-April club qualifying on net growth via april renewals', () => {
+    // membershipBase=15, aprilRenewals=18 → net growth = 3
+    expect(isDistinguishedProvisional('Distinguished', 18, 15, 3)).toBe(false)
+  })
+
+  it('returns true for pre-April club qualifying on memberCount but not aprilRenewals', () => {
+    // Club has 22 members (qualifies) but only 10 april renewals (not enough)
+    // net growth from renewals: 10 - 15 = -5 (not enough)
+    expect(isDistinguishedProvisional('Select', 10, 15, 2)).toBe(true)
+  })
+
+  it('returns false for post-April data (dataMonth >= 4)', () => {
+    // Even with 0 april renewals, post-April data is confirmed
+    expect(isDistinguishedProvisional('Distinguished', 0, 15, 4)).toBe(false)
+  })
+
+  it('returns false for post-April data in later months', () => {
+    expect(isDistinguishedProvisional('Distinguished', 0, 15, 6)).toBe(false)
+  })
+
+  it('returns false for NotDistinguished clubs regardless of data month', () => {
+    expect(isDistinguishedProvisional('NotDistinguished', 0, 15, 2)).toBe(false)
+  })
+
+  it('returns true for Smedley-level club pre-April without confirmed members', () => {
+    expect(isDistinguishedProvisional('Smedley', 5, 15, 1)).toBe(true)
+  })
+
+  it('returns false for pre-April club where april renewals exactly meet threshold', () => {
+    // membershipBase=17, aprilRenewals=20 → meets 20 threshold
+    expect(isDistinguishedProvisional('Distinguished', 20, 17, 3)).toBe(false)
+  })
+
+  it('handles July (dataMonth=7) as pre-April in program year context', () => {
+    // July is the start of the program year — definitely pre-April
+    expect(isDistinguishedProvisional('Distinguished', 0, 15, 7)).toBe(true)
   })
 })

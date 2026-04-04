@@ -97,3 +97,38 @@ export function getCSPStatus(club: ClubStatistics): boolean {
   // If cspSubmitted is undefined, this is pre-2025 data — assume submitted
   return club.cspSubmitted ?? true
 }
+
+/**
+ * Determines if a Distinguished club's status is provisional (unconfirmed
+ * by April renewals) or confirmed.
+ *
+ * Before April data arrives, membership count includes members who may not
+ * renew. Only `aprilRenewals` are confirmed to stay. After April (dataMonth
+ * >= 4), currentMemberCount reflects reality and is authoritative.
+ *
+ * Program year runs July–June, so months 4–6 (Apr–Jun) are "post-April"
+ * and months 7–12, 1–3 (Jul–Mar) are "pre-April".
+ *
+ * @param distinguishedLevel - The club's computed Distinguished level
+ * @param aprilRenewals - Number of members who paid April dues
+ * @param membershipBase - Membership base from start of program year
+ * @param dataMonth - Month of the data (1–12), from CSV footer or snapshot date
+ * @returns true if Distinguished status is provisional (pre-April, unconfirmed)
+ */
+export function isDistinguishedProvisional(
+  distinguishedLevel: DistinguishedLevel,
+  aprilRenewals: number,
+  membershipBase: number,
+  dataMonth: number
+): boolean {
+  if (distinguishedLevel === 'NotDistinguished') return false
+
+  // Post-April data (Apr=4, May=5, Jun=6): membership count is confirmed
+  if (dataMonth >= 4 && dataMonth <= 6) return false
+
+  // Pre-April (Jul=7 through Mar=3): check if aprilRenewals alone qualify
+  const confirmedNetGrowth = aprilRenewals - membershipBase
+  const qualifiesOnConfirmed = aprilRenewals >= 20 || confirmedNetGrowth >= 3
+
+  return !qualifiesOnConfirmed
+}

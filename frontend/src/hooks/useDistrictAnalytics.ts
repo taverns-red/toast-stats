@@ -37,6 +37,8 @@ export interface ClubTrend {
    * Values: "Active", "Suspended", "Ineligible", "Low", or undefined
    */
   clubStatus?: string
+  /** Whether Distinguished status is provisional (pre-April, unconfirmed) */
+  isProvisionallyDistinguished?: boolean
 }
 
 export interface DivisionAnalytics {
