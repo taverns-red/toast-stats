@@ -26,6 +26,21 @@ Month of December, As of 01/05/2026`
     expect(result.dataMonth).toBe('2025-12')
   })
 
+  it('detects closing period with abbreviated month name', () => {
+    const csv = `Club Number
+Month of Mar, As of 04/01/2026`
+    const result = parseClosingPeriodFromCsv(csv, '2026-04-01')
+    expect(result.isClosingPeriod).toBe(true)
+    expect(result.dataMonth).toBe('2026-03')
+  })
+
+  it('detects no closing period with abbreviated month matching request', () => {
+    const csv = `Club Number
+Month of Jan, As of 01/15/2026`
+    const result = parseClosingPeriodFromCsv(csv, '2026-01-15')
+    expect(result.isClosingPeriod).toBe(false)
+  })
+
   it('returns false for corrupted footer', () => {
     const csv = `Club Number
 Month of Nothing, As of 01/08/2026`
