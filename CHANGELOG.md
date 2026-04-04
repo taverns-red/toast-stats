@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.7.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.6.0...toast-stats-v2.7.0) (2026-04-04)
+
+
+### Features
+
+* sync column filters to URL for deep links ([#272](https://github.com/taverns-red/toast-stats/issues/272)) ([9b76f70](https://github.com/taverns-red/toast-stats/commit/9b76f702f14515b33337e44d0afc311a80f8aa21))
+* sync program year and date to URL for deep links ([#272](https://github.com/taverns-red/toast-stats/issues/272)) ([8222d46](https://github.com/taverns-red/toast-stats/commit/8222d46cbf356ca0e12393ac713210eb6b24b2b2))
+* wire CDN cache monitoring into fetch layer ([#255](https://github.com/taverns-red/toast-stats/issues/255)) ([c7136bf](https://github.com/taverns-red/toast-stats/commit/c7136bf3ee26580b29e63bf2d5707369d3aa7fa5))
+
+
+### Bug Fixes
+
+* remove duplicate import and unused var from rebase ([#281](https://github.com/taverns-red/toast-stats/issues/281)) ([438444c](https://github.com/taverns-red/toast-stats/commit/438444c6f36aa6bf34683517c5287c4ded911e9c))
+* Restore CSV closing period detection natively during orchestration ([#278](https://github.com/taverns-red/toast-stats/issues/278)) ([86ebfde](https://github.com/taverns-red/toast-stats/commit/86ebfded001555f5a93afefdcf69b4ed03884892))
+* update closing period mock to parse CSV footer ([#281](https://github.com/taverns-red/toast-stats/issues/281)) ([ce1ec30](https://github.com/taverns-red/toast-stats/commit/ce1ec3049f00b87d06a9cff0a6c94fb9a69e7906))
+
+
+### Documentation
+
+* add CLAUDE.md, sprint lessons, and update product spec ([#255](https://github.com/taverns-red/toast-stats/issues/255), [#272](https://github.com/taverns-red/toast-stats/issues/272)) ([882aaf0](https://github.com/taverns-red/toast-stats/commit/882aaf028011e27902fc65caeaa3381d84caf0c4))
+* append lesson 42 — logger migration breaks test spies ([#283](https://github.com/taverns-red/toast-stats/issues/283)) ([b04e634](https://github.com/taverns-red/toast-stats/commit/b04e6348191457dea0068a9821e54f468a4a4394))
+
+
+### Tests
+
+* add comprehensive CSV export test coverage ([#282](https://github.com/taverns-red/toast-stats/issues/282)) ([f086c95](https://github.com/taverns-red/toast-stats/commit/f086c95f4eaeab2949de5cb42d029f585d7f28ce))
+* update test spies from console.* to logger ([#283](https://github.com/taverns-red/toast-stats/issues/283)) ([9201c50](https://github.com/taverns-red/toast-stats/commit/9201c500365cc72627188f49cbc685dfb5a47e24))
+
 ## [2.6.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.5.0...toast-stats-v2.6.0) (2026-04-03)
 
 

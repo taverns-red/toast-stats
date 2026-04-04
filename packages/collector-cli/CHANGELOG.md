@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.1.1...collector-cli-v1.1.2) (2026-04-04)
+
+
+### Bug Fixes
+
+* remove duplicate import and unused var from rebase ([#281](https://github.com/taverns-red/toast-stats/issues/281)) ([438444c](https://github.com/taverns-red/toast-stats/commit/438444c6f36aa6bf34683517c5287c4ded911e9c))
+* Restore CSV closing period detection natively during orchestration ([#278](https://github.com/taverns-red/toast-stats/issues/278)) ([86ebfde](https://github.com/taverns-red/toast-stats/commit/86ebfded001555f5a93afefdcf69b4ed03884892))
+* update closing period mock to parse CSV footer ([#281](https://github.com/taverns-red/toast-stats/issues/281)) ([ce1ec30](https://github.com/taverns-red/toast-stats/commit/ce1ec3049f00b87d06a9cff0a6c94fb9a69e7906))
+
 ## [1.1.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.1.0...collector-cli-v1.1.1) (2026-04-03)
 
 
