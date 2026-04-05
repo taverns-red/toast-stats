@@ -9,6 +9,7 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
+import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 
 // Mock localStorage
 const localStorageMock = {
@@ -55,7 +56,7 @@ vi.mock('../../hooks/useDistrictData', () => ({
   })),
 }))
 
-const mockClub = {
+const baseMockClub = {
   clubId: '00000606',
   clubName: 'St Lawrence Toastmasters',
   divisionId: 'A',
@@ -85,7 +86,7 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
   useDistrictAnalytics: vi.fn(() => ({
     data: {
       districtId: '61',
-      allClubs: [mockClub],
+      allClubs: [baseMockClub],
     },
     isLoading: false,
     error: null,
@@ -166,5 +167,95 @@ describe('ClubDetailPage (#208)', () => {
 
     expect(screen.getByText('DCP Goals Progress')).toBeInTheDocument()
     expect(screen.getByText('8 / 10 goals')).toBeInTheDocument()
+  })
+
+  it('renders CSP stat card', () => {
+    renderWithRoute()
+
+    expect(screen.getByText('CSP')).toBeInTheDocument()
+  })
+})
+
+// ============================================================
+// Provisional Distinguished Badge — ClubDetailPage (#297, #299)
+// ============================================================
+
+describe('Provisional Distinguished Badge — ClubDetailPage', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
+  function setClubOverrides(overrides: Record<string, unknown>) {
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: {
+        districtId: '61',
+        allClubs: [{ ...baseMockClub, ...overrides }],
+      },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useDistrictAnalytics>)
+  }
+
+  it('shows "Provisional" when Distinguished and pre-April with low renewals', () => {
+    setClubOverrides({
+      distinguishedLevel: 'Distinguished',
+      aprilRenewals: 3,
+      membershipBase: 15,
+      membershipTrend: [{ date: '2026-03-15', count: 22 }],
+      dcpGoalsTrend: [{ date: '2026-03-15', goalsAchieved: 6 }],
+    })
+    renderWithRoute()
+
+    // "Provisional" appears in header badge, DCP card, and gap table
+    expect(screen.getAllByText(/Provisional/).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('does NOT show "Provisional" when Distinguished is confirmed', () => {
+    setClubOverrides({
+      distinguishedLevel: 'Select',
+      aprilRenewals: 22,
+      membershipBase: 15,
+      membershipTrend: [{ date: '2026-03-15', count: 22 }],
+      dcpGoalsTrend: [{ date: '2026-03-15', goalsAchieved: 8 }],
+    })
+    renderWithRoute()
+
+    // Badge shows "Select" in gap table and header
+    expect(screen.getAllByText('Select').length).toBeGreaterThanOrEqual(1)
+    expect(screen.queryAllByText(/Provisional/)).toHaveLength(0)
+  })
+
+  it('does NOT show "Provisional" for post-April data', () => {
+    setClubOverrides({
+      distinguishedLevel: 'Distinguished',
+      aprilRenewals: 0,
+      membershipBase: 15,
+      membershipTrend: [{ date: '2026-05-15', count: 20 }],
+      dcpGoalsTrend: [{ date: '2026-05-15', goalsAchieved: 6 }],
+    })
+    renderWithRoute()
+
+    expect(screen.getAllByText('Distinguished').length).toBeGreaterThanOrEqual(
+      1
+    )
+    expect(screen.queryAllByText(/Provisional/)).toHaveLength(0)
+  })
+
+  it('shows confirmed fallback level when provisional', () => {
+    setClubOverrides({
+      // Aspirational: President's (9 goals + 22 members)
+      // Confirmed: Distinguished (renewals=19, base=15, netGrowth=4 >= 3)
+      distinguishedLevel: 'President',
+      aprilRenewals: 19,
+      membershipBase: 15,
+      membershipTrend: [{ date: '2026-03-15', count: 22 }],
+      dcpGoalsTrend: [{ date: '2026-03-15', goalsAchieved: 9 }],
+    })
+    renderWithRoute()
+
+    expect(screen.getAllByText(/Provisional/).length).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getAllByText(/Confirmed.*Distinguished/).length
+    ).toBeGreaterThanOrEqual(1)
   })
 })
