@@ -79,6 +79,9 @@ export const ClubStatisticsFileSchema = z.object({
 
   /** Club operational status (Active, Suspended, Low, Ineligible) */
   clubStatus: z.string().optional(),
+
+  /** CSP (Club Success Plan) submission status (2025-2026+) */
+  cspSubmitted: z.boolean().optional(),
 })
 
 /**
