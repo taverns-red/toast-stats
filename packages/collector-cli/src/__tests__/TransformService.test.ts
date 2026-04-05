@@ -324,6 +324,94 @@ describe('TransformService', () => {
     })
   })
 
+  describe('readCacheMetadata — CSV footer fallback (#292)', () => {
+    // @ts-expect-error -- Red phase
+    it.fails(
+      'should parse CSV footer when metadata.json is missing',
+      async () => {
+        const date = '2026-04-01'
+        const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+        await fs.mkdir(rawCsvDir, { recursive: true })
+
+        // No metadata.json, but CSV has closing period footer
+        await fs.writeFile(
+          path.join(rawCsvDir, 'all-districts.csv'),
+          'Header\nRow1\nMonth of Mar, As of 04/01/2026'
+        )
+
+        const result = await transformService.readCacheMetadata(date)
+
+        expect(result).not.toBeNull()
+        expect(result?.isClosingPeriod).toBe(true)
+        expect(result?.dataMonth).toBe('2026-03')
+      }
+    )
+
+    // @ts-expect-error -- Red phase
+    it.fails(
+      'should parse CSV footer when metadata has undefined isClosingPeriod',
+      async () => {
+        const date = '2026-04-02'
+        const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+        await fs.mkdir(rawCsvDir, { recursive: true })
+
+        // metadata exists but isClosingPeriod not set
+        await fs.writeFile(
+          path.join(rawCsvDir, 'metadata.json'),
+          JSON.stringify({ date: '2026-04-02' })
+        )
+        await fs.writeFile(
+          path.join(rawCsvDir, 'all-districts.csv'),
+          'Header\nRow1\nMonth of Mar, As of 04/02/2026'
+        )
+
+        const result = await transformService.readCacheMetadata(date)
+
+        expect(result).not.toBeNull()
+        expect(result?.isClosingPeriod).toBe(true)
+        expect(result?.dataMonth).toBe('2026-03')
+      }
+    )
+
+    it('should trust existing metadata when isClosingPeriod is explicitly set', async () => {
+      const date = '2026-03-15'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify({
+          date: '2026-03-15',
+          isClosingPeriod: false,
+        })
+      )
+
+      const result = await transformService.readCacheMetadata(date)
+
+      expect(result).not.toBeNull()
+      expect(result?.isClosingPeriod).toBe(false)
+    })
+
+    // @ts-expect-error -- Red phase
+    it.fails('should return non-closing when CSV has no footer', async () => {
+      const date = '2026-03-15'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      // No metadata, no footer in CSV
+      await fs.writeFile(
+        path.join(rawCsvDir, 'all-districts.csv'),
+        'Header\nRow1\nRow2'
+      )
+
+      const result = await transformService.readCacheMetadata(date)
+
+      // Should return metadata (not null) with isClosingPeriod: false
+      expect(result).not.toBeNull()
+      expect(result?.isClosingPeriod).toBe(false)
+    })
+  })
+
   describe('discoverAvailableDistricts', () => {
     it('should return empty array when raw-csv directory does not exist', async () => {
       const districts =
