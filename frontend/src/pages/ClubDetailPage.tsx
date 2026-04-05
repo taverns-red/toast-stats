@@ -12,6 +12,7 @@ import {
 } from '../utils/programYear'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { getClubStatusBadge } from '../utils/clubStatusBadge'
+import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
 import {
   calculateClubProjection,
   type ClubDCPProjection,
@@ -413,8 +414,16 @@ const ClubDetailPage: React.FC = () => {
                 {/* Distinguished level */}
                 {club.distinguishedLevel &&
                   club.distinguishedLevel !== 'NotDistinguished' && (
-                    <span className="px-4 py-2 bg-tm-happy-yellow-30 text-tm-true-maroon text-sm font-medium rounded-full">
+                    <span
+                      className="px-4 py-2 bg-tm-happy-yellow-30 text-tm-true-maroon text-sm font-medium rounded-full"
+                      title={
+                        isProvisionallyDistinguished(club)
+                          ? 'Provisional — membership not yet confirmed by April renewals'
+                          : 'Confirmed — April renewals recorded'
+                      }
+                    >
                       {club.distinguishedLevel}
+                      {isProvisionallyDistinguished(club) ? '*' : ''}
                     </span>
                   )}
               </div>

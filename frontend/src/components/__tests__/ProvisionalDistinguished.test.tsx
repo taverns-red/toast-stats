@@ -47,8 +47,7 @@ const createMockClub = (overrides: Partial<ClubTrend> = {}): ClubTrend => ({
 describe('Provisional Distinguished Badge — ClubDetailModal', () => {
   afterEach(cleanup)
 
-  // @ts-expect-error -- Red phase: test defines expected behavior before implementation
-  it.fails('shows asterisk on Distinguished badge when provisional', () => {
+  it('shows asterisk on Distinguished badge when provisional', () => {
     const club = createMockClub({
       distinguishedLevel: 'Select',
       aprilRenewals: 5,
@@ -64,8 +63,7 @@ describe('Provisional Distinguished Badge — ClubDetailModal', () => {
     expect(screen.getByText(/Select\*/)).toBeInTheDocument()
   })
 
-  // @ts-expect-error -- Red phase: test defines expected behavior before implementation
-  it.fails('shows provisional explanation text below badge', () => {
+  it('shows provisional explanation text below badge', () => {
     const club = createMockClub({
       distinguishedLevel: 'Distinguished',
       aprilRenewals: 3,

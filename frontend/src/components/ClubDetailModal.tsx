@@ -3,6 +3,7 @@ import { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useClubTrends } from '../hooks/useClubTrends'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { getClubStatusBadge } from '../utils/clubStatusBadge'
+import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
 import {
   getProgramYearForDate,
   calculateProgramYearDay,
@@ -420,14 +421,19 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                 <span
                   className="inline-block px-4 py-2 bg-tm-happy-yellow-30 text-tm-true-maroon text-sm font-medium rounded-full font-tm-body"
                   title={
-                    club.isProvisionallyDistinguished
+                    isProvisionallyDistinguished(club)
                       ? 'Provisional — membership not yet confirmed by April renewals'
                       : 'Confirmed — April renewals recorded'
                   }
                 >
                   {club.distinguishedLevel}
-                  {club.isProvisionallyDistinguished ? '*' : ''}
+                  {isProvisionallyDistinguished(club) ? '*' : ''}
                 </span>
+                {isProvisionallyDistinguished(club) && (
+                  <p className="mt-2 text-xs text-tm-true-maroon opacity-70 font-tm-body">
+                    Provisional — awaiting April renewals
+                  </p>
+                )}
               </div>
             )}
 

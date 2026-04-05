@@ -4,6 +4,7 @@ import type { ClubHealthStatus } from '../hooks/useDistrictAnalytics'
 import { ExportButton } from './ExportButton'
 import { exportClubPerformance } from '../utils/csvExport'
 import { LoadingSkeleton } from './LoadingSkeleton'
+import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
 import { EmptyState } from './ErrorDisplay'
 import { usePagination } from '../hooks/usePagination'
 import { Pagination } from './Pagination'
@@ -588,13 +589,13 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                       <span
                         className="px-1.5 py-0.5 text-xs font-medium bg-tm-happy-yellow-20 text-tm-true-maroon rounded-sm font-tm-body"
                         title={
-                          club.isProvisionallyDistinguished
+                          isProvisionallyDistinguished(club)
                             ? 'Provisional — membership not yet confirmed by April renewals'
                             : 'Confirmed — April renewals recorded'
                         }
                       >
                         {club.distinguishedLevel}
-                        {club.isProvisionallyDistinguished ? '*' : ''}
+                        {isProvisionallyDistinguished(club) ? '*' : ''}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">—</span>
