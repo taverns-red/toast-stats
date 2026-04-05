@@ -24,6 +24,8 @@ const createTestClubs = (): ClubTrend[] => [
     riskFactors: [],
     membershipTrend: [{ date: '2024-01-01', count: 25 }],
     dcpGoalsTrend: [{ date: '2024-01-01', goalsAchieved: 8 }],
+    aprilRenewals: 25,
+    membershipBase: 20,
   },
   {
     clubId: 'club-2',
@@ -33,6 +35,8 @@ const createTestClubs = (): ClubTrend[] => [
     areaId: 'area-2',
     areaName: 'Area 2',
     distinguishedLevel: 'Select',
+    aprilRenewals: 20,
+    membershipBase: 15,
     currentStatus: 'vulnerable',
     riskFactors: ['DCP checkpoint not met'],
     membershipTrend: [{ date: '2024-01-01', count: 15 }],
