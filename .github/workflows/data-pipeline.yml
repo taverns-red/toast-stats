@@ -856,7 +856,13 @@ jobs:
             cp /tmp/dates.json "gs://${GCS_BUCKET}/v1/dates.json"
 
           # v1/rankings.json (short TTL, 5 min)
+          # In rebuild mode, local snapshots are cleaned per-date — fetch from GCS
           RANKINGS_SRC="./cache/snapshots/${LATEST_DATE}/all-districts-rankings.json"
+          if [ ! -f "${RANKINGS_SRC}" ]; then
+            mkdir -p "./cache/snapshots/${LATEST_DATE}"
+            gsutil cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/all-districts-rankings.json" \
+              "${RANKINGS_SRC}" 2>/dev/null || true
+          fi
           if [ -f "${RANKINGS_SRC}" ]; then
             node -e "
               const fs = require('fs');
