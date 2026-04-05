@@ -19,6 +19,7 @@ import * as crypto from 'node:crypto'
 import {
   AnalyticsComputer,
   findPreviousProgramYearDate,
+  getCSPStatus,
   type Logger,
   type DistrictStatistics,
   type AnalyticsManifestEntry,
@@ -348,9 +349,8 @@ export class AnalyticsComputeService {
       // Status fields - map clubStatus to distinguished status if available
       'Club Distinguished Status': club.clubStatus ?? '',
 
-      // CSP field - use actual value from club data
-      // For pre-2025 data where cspSubmitted is undefined, default to 'Yes'
-      CSP: club.cspSubmitted === false ? 'No' : 'Yes',
+      // CSP field - normalized via getCSPStatus (pre-2025 defaults to true)
+      CSP: getCSPStatus(club) ? 'Yes' : 'No',
     }))
 
     // Calculate total membership from totals if available

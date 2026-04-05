@@ -16,6 +16,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { parse } from 'csv-parse/sync'
+import { parseClosingPeriodFromCsv } from '../utils/csvFooterParser.js'
 import {
   DataTransformer,
   ANALYTICS_SCHEMA_VERSION,
@@ -211,6 +212,8 @@ export class TransformService {
   async readCacheMetadata(date: string): Promise<CacheMetadata | null> {
     const metadataPath = path.join(this.getRawCsvDir(date), 'metadata.json')
 
+    let metadataFromFile: CacheMetadata | null = null
+
     try {
       const content = await fs.readFile(metadataPath, 'utf-8')
       const parsed: unknown = JSON.parse(content)
@@ -221,38 +224,96 @@ export class TransformService {
           date,
           path: metadataPath,
         })
-        return null
-      }
+        // Fall through to CSV footer parsing
+      } else {
+        const metadata = parsed as Record<string, unknown>
+        metadataFromFile = {
+          date: typeof metadata['date'] === 'string' ? metadata['date'] : date,
+          isClosingPeriod:
+            typeof metadata['isClosingPeriod'] === 'boolean'
+              ? metadata['isClosingPeriod']
+              : undefined,
+          dataMonth:
+            typeof metadata['dataMonth'] === 'string'
+              ? metadata['dataMonth']
+              : undefined,
+        }
 
-      const metadata = parsed as Record<string, unknown>
-
-      // Extract and return the CacheMetadata fields
-      return {
-        date: typeof metadata['date'] === 'string' ? metadata['date'] : date,
-        isClosingPeriod:
-          typeof metadata['isClosingPeriod'] === 'boolean'
-            ? metadata['isClosingPeriod']
-            : undefined,
-        dataMonth:
-          typeof metadata['dataMonth'] === 'string'
-            ? metadata['dataMonth']
-            : undefined,
+        // If isClosingPeriod is explicitly set, trust the metadata
+        if (metadataFromFile.isClosingPeriod !== undefined) {
+          return metadataFromFile
+        }
       }
     } catch (error) {
       const err = error as { code?: string }
 
-      // File not found is expected - return null without warning
-      if (err.code === 'ENOENT') {
-        return null
+      if (err.code !== 'ENOENT') {
+        this.logger.warn('Failed to read cache metadata', {
+          date,
+          path: metadataPath,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+      // Fall through to CSV footer parsing
+    }
+
+    // Fallback: parse closing period from all-districts.csv footer (#292)
+    return this.deriveMetadataFromCsv(date, metadataFromFile)
+  }
+
+  /**
+   * Derive cache metadata by parsing the all-districts.csv footer.
+   * Used when metadata.json is missing or has undefined isClosingPeriod.
+   * Writes the derived metadata back to disk for future runs.
+   */
+  private async deriveMetadataFromCsv(
+    date: string,
+    existing: CacheMetadata | null
+  ): Promise<CacheMetadata | null> {
+    const csvPath = path.join(this.getRawCsvDir(date), 'all-districts.csv')
+
+    try {
+      const csvContent = await fs.readFile(csvPath, 'utf-8')
+      const parsed = parseClosingPeriodFromCsv(csvContent, date)
+
+      const metadata: CacheMetadata = {
+        date: existing?.date ?? date,
+        isClosingPeriod: parsed.isClosingPeriod,
+        dataMonth: parsed.dataMonth,
       }
 
-      // Log warning for parse errors or other issues
-      this.logger.warn('Failed to read cache metadata', {
+      this.logger.info('Derived closing period from CSV footer', {
         date,
-        path: metadataPath,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        isClosingPeriod: parsed.isClosingPeriod,
+        dataMonth: parsed.dataMonth,
       })
-      return null
+
+      // Write back to metadata.json for future runs
+      try {
+        const metadataPath = path.join(this.getRawCsvDir(date), 'metadata.json')
+        const existingContent = await fs
+          .readFile(metadataPath, 'utf-8')
+          .then(c => JSON.parse(c) as Record<string, unknown>)
+          .catch(() => ({}))
+        const updated = {
+          ...existingContent,
+          date: metadata.date,
+          isClosingPeriod: metadata.isClosingPeriod,
+          ...(metadata.dataMonth ? { dataMonth: metadata.dataMonth } : {}),
+        }
+        await fs.writeFile(metadataPath, JSON.stringify(updated, null, 2))
+      } catch {
+        // Non-fatal: metadata write failure doesn't block transform
+      }
+
+      return metadata
+    } catch {
+      // No CSV file available — return non-closing-period default
+      return {
+        date: existing?.date ?? date,
+        isClosingPeriod: false,
+        dataMonth: undefined,
+      }
     }
   }
 

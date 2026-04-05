@@ -48,6 +48,9 @@ export {
   determineAchievedLevel,
   GROWTH_PERCENTAGES,
   DISTINGUISHED_PERCENTAGES,
+  // Club eligibility utilities
+  getCSPStatus,
+  isDistinguishedProvisional,
 } from './analytics/index.js'
 
 export type { MultiYearTrendDirection } from './analytics/index.js'

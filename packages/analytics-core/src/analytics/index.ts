@@ -26,6 +26,7 @@ export {
   calculateNetGrowth,
   determineDistinguishedLevel,
   getCSPStatus,
+  isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
 
 // Utility functions

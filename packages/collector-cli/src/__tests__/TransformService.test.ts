@@ -168,29 +168,27 @@ describe('TransformService', () => {
       expect(result?.dataMonth).toBeUndefined()
     })
 
-    it('should return null when metadata file does not exist', async () => {
-      // Requirement 1.3: Treat missing metadata as non-closing-period data
+    it('should return non-closing metadata when metadata file does not exist', async () => {
+      // With CSV footer fallback (#292), returns default metadata instead of null
       const date = '2024-01-15'
-      // Don't create the metadata file
 
       const result = await transformService.readCacheMetadata(date)
 
-      expect(result).toBeNull()
+      expect(result).not.toBeNull()
+      expect(result?.isClosingPeriod).toBe(false)
     })
 
-    it('should return null and log warning when metadata contains invalid JSON', async () => {
-      // Requirement 1.4: Log warning and continue with non-closing-period behavior
+    it('should log warning and fall back to CSV parsing when metadata contains invalid JSON', async () => {
+      // With CSV footer fallback (#292), falls through to CSV parsing
       const date = '2024-01-15'
       const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
       await fs.mkdir(rawCsvDir, { recursive: true })
 
-      // Write invalid JSON
       await fs.writeFile(
         path.join(rawCsvDir, 'metadata.json'),
         '{ invalid json content'
       )
 
-      // Create service with mock logger to verify warning
       const mockLogger = createMockLogger()
       const serviceWithLogger = new TransformService({
         cacheDir: testCache.path,
@@ -199,23 +197,19 @@ describe('TransformService', () => {
 
       const result = await serviceWithLogger.readCacheMetadata(date)
 
-      expect(result).toBeNull()
+      // Falls through to CSV parsing, returns default when no CSV
+      expect(result).not.toBeNull()
+      expect(result?.isClosingPeriod).toBe(false)
       expect(mockLogger.warnings.length).toBeGreaterThan(0)
-      expect(mockLogger.warnings[0]?.message).toBe(
-        'Failed to read cache metadata'
-      )
     })
 
-    it('should handle metadata with missing optional fields', async () => {
-      // Requirement 1.2: Extract fields when some are missing
+    it('should fall back to CSV parsing when metadata has missing isClosingPeriod', async () => {
+      // With CSV footer fallback (#292), undefined isClosingPeriod triggers CSV parsing
       const date = '2024-01-15'
       const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
       await fs.mkdir(rawCsvDir, { recursive: true })
 
-      // Metadata with only date field
-      const metadata = {
-        date: '2024-01-15',
-      }
+      const metadata = { date: '2024-01-15' }
       await fs.writeFile(
         path.join(rawCsvDir, 'metadata.json'),
         JSON.stringify(metadata)
@@ -225,8 +219,8 @@ describe('TransformService', () => {
 
       expect(result).not.toBeNull()
       expect(result?.date).toBe('2024-01-15')
-      expect(result?.isClosingPeriod).toBeUndefined()
-      expect(result?.dataMonth).toBeUndefined()
+      // Falls through to CSV parsing, returns false when no CSV
+      expect(result?.isClosingPeriod).toBe(false)
     })
 
     it('should use requested date when metadata date field is missing', async () => {
@@ -253,15 +247,11 @@ describe('TransformService', () => {
       expect(result?.dataMonth).toBe('2024-12')
     })
 
-    it('should handle JSON array by extracting no valid fields', async () => {
-      // Requirement 1.4: Handle non-object JSON values gracefully
-      // Arrays are technically objects in JavaScript, so the implementation
-      // extracts fields (which will be undefined) and returns a result with defaults
+    it('should fall back to CSV parsing for JSON array metadata', async () => {
       const date = '2024-01-15'
       const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
       await fs.mkdir(rawCsvDir, { recursive: true })
 
-      // Write a JSON array instead of object
       await fs.writeFile(
         path.join(rawCsvDir, 'metadata.json'),
         '["not", "an", "object"]'
@@ -269,16 +259,12 @@ describe('TransformService', () => {
 
       const result = await transformService.readCacheMetadata(date)
 
-      // Arrays are objects in JS, so the implementation extracts fields
-      // which results in undefined values for isClosingPeriod and dataMonth
+      // Falls through to CSV parsing, returns false when no CSV
       expect(result).not.toBeNull()
-      expect(result?.date).toBe(date) // Falls back to requested date
-      expect(result?.isClosingPeriod).toBeUndefined()
-      expect(result?.dataMonth).toBeUndefined()
+      expect(result?.isClosingPeriod).toBe(false)
     })
 
-    it('should return null and log warning when metadata is null JSON', async () => {
-      // Requirement 1.4: Handle null JSON value
+    it('should fall back to CSV parsing when metadata is null JSON', async () => {
       const date = '2024-01-15'
       const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
       await fs.mkdir(rawCsvDir, { recursive: true })
@@ -293,21 +279,20 @@ describe('TransformService', () => {
 
       const result = await serviceWithLogger.readCacheMetadata(date)
 
-      expect(result).toBeNull()
-      expect(mockLogger.warnings.length).toBeGreaterThan(0)
+      // Falls through to CSV parsing, returns false when no CSV
+      expect(result).not.toBeNull()
+      expect(result?.isClosingPeriod).toBe(false)
     })
 
-    it('should ignore fields with wrong types', async () => {
-      // Requirement 1.2: Type validation for extracted fields
+    it('should fall back to CSV parsing when fields have wrong types', async () => {
       const date = '2024-01-15'
       const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
       await fs.mkdir(rawCsvDir, { recursive: true })
 
-      // Metadata with wrong types for optional fields
       const metadata = {
         date: '2024-01-15',
-        isClosingPeriod: 'yes', // Should be boolean
-        dataMonth: 12, // Should be string
+        isClosingPeriod: 'yes', // Should be boolean — triggers fallback
+        dataMonth: 12,
       }
       await fs.writeFile(
         path.join(rawCsvDir, 'metadata.json'),
@@ -318,60 +303,51 @@ describe('TransformService', () => {
 
       expect(result).not.toBeNull()
       expect(result?.date).toBe('2024-01-15')
-      // Wrong types should result in undefined
-      expect(result?.isClosingPeriod).toBeUndefined()
-      expect(result?.dataMonth).toBeUndefined()
+      // Wrong type → isClosingPeriod undefined → CSV fallback → false (no CSV)
+      expect(result?.isClosingPeriod).toBe(false)
     })
   })
 
   describe('readCacheMetadata — CSV footer fallback (#292)', () => {
-    // @ts-expect-error -- Red phase
-    it.fails(
-      'should parse CSV footer when metadata.json is missing',
-      async () => {
-        const date = '2026-04-01'
-        const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
-        await fs.mkdir(rawCsvDir, { recursive: true })
+    it('should parse CSV footer when metadata.json is missing', async () => {
+      const date = '2026-04-01'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
 
-        // No metadata.json, but CSV has closing period footer
-        await fs.writeFile(
-          path.join(rawCsvDir, 'all-districts.csv'),
-          'Header\nRow1\nMonth of Mar, As of 04/01/2026'
-        )
+      // No metadata.json, but CSV has closing period footer
+      await fs.writeFile(
+        path.join(rawCsvDir, 'all-districts.csv'),
+        'Header\nRow1\nMonth of Mar, As of 04/01/2026'
+      )
 
-        const result = await transformService.readCacheMetadata(date)
+      const result = await transformService.readCacheMetadata(date)
 
-        expect(result).not.toBeNull()
-        expect(result?.isClosingPeriod).toBe(true)
-        expect(result?.dataMonth).toBe('2026-03')
-      }
-    )
+      expect(result).not.toBeNull()
+      expect(result?.isClosingPeriod).toBe(true)
+      expect(result?.dataMonth).toBe('2026-03')
+    })
 
-    // @ts-expect-error -- Red phase
-    it.fails(
-      'should parse CSV footer when metadata has undefined isClosingPeriod',
-      async () => {
-        const date = '2026-04-02'
-        const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
-        await fs.mkdir(rawCsvDir, { recursive: true })
+    it('should parse CSV footer when metadata has undefined isClosingPeriod', async () => {
+      const date = '2026-04-02'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
 
-        // metadata exists but isClosingPeriod not set
-        await fs.writeFile(
-          path.join(rawCsvDir, 'metadata.json'),
-          JSON.stringify({ date: '2026-04-02' })
-        )
-        await fs.writeFile(
-          path.join(rawCsvDir, 'all-districts.csv'),
-          'Header\nRow1\nMonth of Mar, As of 04/02/2026'
-        )
+      // metadata exists but isClosingPeriod not set
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify({ date: '2026-04-02' })
+      )
+      await fs.writeFile(
+        path.join(rawCsvDir, 'all-districts.csv'),
+        'Header\nRow1\nMonth of Mar, As of 04/02/2026'
+      )
 
-        const result = await transformService.readCacheMetadata(date)
+      const result = await transformService.readCacheMetadata(date)
 
-        expect(result).not.toBeNull()
-        expect(result?.isClosingPeriod).toBe(true)
-        expect(result?.dataMonth).toBe('2026-03')
-      }
-    )
+      expect(result).not.toBeNull()
+      expect(result?.isClosingPeriod).toBe(true)
+      expect(result?.dataMonth).toBe('2026-03')
+    })
 
     it('should trust existing metadata when isClosingPeriod is explicitly set', async () => {
       const date = '2026-03-15'
@@ -392,8 +368,7 @@ describe('TransformService', () => {
       expect(result?.isClosingPeriod).toBe(false)
     })
 
-    // @ts-expect-error -- Red phase
-    it.fails('should return non-closing when CSV has no footer', async () => {
+    it('should return non-closing when CSV has no footer', async () => {
       const date = '2026-03-15'
       const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
       await fs.mkdir(rawCsvDir, { recursive: true })
