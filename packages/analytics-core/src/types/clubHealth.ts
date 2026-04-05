@@ -95,6 +95,9 @@ export interface ClubTrend {
 
   /** Whether Distinguished status is provisional (pre-April, unconfirmed by renewals) (#287) */
   isProvisionallyDistinguished?: boolean
+
+  /** Club Success Plan submission status (2025-2026+). Undefined for pre-2025 data. (#288) */
+  cspSubmitted?: boolean
 }
 
 /**

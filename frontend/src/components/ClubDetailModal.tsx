@@ -305,6 +305,31 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                 {club.newMembers ?? '—'}
               </div>
             </div>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+              <div className="text-xs text-gray-500 font-tm-body mb-1">CSP</div>
+              <div
+                className={`text-lg font-semibold font-tm-body ${
+                  club.cspSubmitted === undefined
+                    ? 'text-gray-400'
+                    : club.cspSubmitted
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                }`}
+                title={
+                  club.cspSubmitted === undefined
+                    ? 'CSP data not available for this program year'
+                    : club.cspSubmitted
+                      ? 'Club Success Plan submitted'
+                      : 'Club Success Plan not submitted — required for Distinguished'
+                }
+              >
+                {club.cspSubmitted === undefined
+                  ? '—'
+                  : club.cspSubmitted
+                    ? '✓'
+                    : '✗'}
+              </div>
+            </div>
           </div>
 
           {/* Risk Factors */}

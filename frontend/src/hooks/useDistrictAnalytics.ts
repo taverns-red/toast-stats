@@ -39,6 +39,8 @@ export interface ClubTrend {
   clubStatus?: string
   /** Whether Distinguished status is provisional (pre-April, unconfirmed) */
   isProvisionallyDistinguished?: boolean
+  /** Club Success Plan submission status (2025-2026+). Undefined for pre-2025 data. */
+  cspSubmitted?: boolean
 }
 
 export interface DivisionAnalytics {
