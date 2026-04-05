@@ -12,6 +12,7 @@ import {
   calculateNetGrowth,
   determineDistinguishedLevel,
   getCSPStatus,
+  getConfirmedDistinguishedLevel,
   isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
 import type { ClubStatistics } from '../interfaces.js'
@@ -257,5 +258,73 @@ describe('isDistinguishedProvisional', () => {
   it('handles July (dataMonth=7) as pre-April in program year context', () => {
     // July is the start of the program year — definitely pre-April
     expect(isDistinguishedProvisional('Distinguished', 0, 15, 7)).toBe(true)
+  })
+
+  // ---- Level-specific thresholds (#296) ----
+
+  it('returns true for Smedley with 23 renewals (needs 25, no growth alternative)', () => {
+    // Smedley requires 25 members — no net growth shortcut
+    expect(isDistinguishedProvisional('Smedley', 23, 15, 2)).toBe(true)
+  })
+
+  it('returns false for Smedley with 25 renewals', () => {
+    expect(isDistinguishedProvisional('Smedley', 25, 15, 2)).toBe(false)
+  })
+
+  it('returns true for President with 19 renewals even with high net growth', () => {
+    // President requires 20 members — no net growth alternative
+    // renewals=19, base=10, netGrowth=9 — growth doesn't help President
+    expect(isDistinguishedProvisional('President', 19, 10, 2)).toBe(true)
+  })
+
+  it('returns false for President with 20 renewals', () => {
+    expect(isDistinguishedProvisional('President', 20, 15, 2)).toBe(false)
+  })
+
+  it('returns false for Select with 18 renewals but net growth >= 5', () => {
+    // Select allows net growth alternative >= 5
+    // renewals=18, base=10 → confirmedNetGrowth=8 >= 5
+    expect(isDistinguishedProvisional('Select', 18, 10, 2)).toBe(false)
+  })
+
+  it('returns true for Select with 18 renewals and net growth 4 (needs 5)', () => {
+    // renewals=18, base=14 → confirmedNetGrowth=4 < 5, and 18 < 20
+    expect(isDistinguishedProvisional('Select', 18, 14, 2)).toBe(true)
+  })
+})
+
+// ============================================================
+// getConfirmedDistinguishedLevel (#296)
+// ============================================================
+
+describe('getConfirmedDistinguishedLevel', () => {
+  it('returns Distinguished when renewals qualify for Distinguished but not higher', () => {
+    // 9 goals, 19 renewals, base=15 → netGrowth=4 → Distinguished (>=3) but not Select (needs 5)
+    expect(getConfirmedDistinguishedLevel(9, 19, 15)).toBe('Distinguished')
+  })
+
+  it('returns Smedley when renewals meet Smedley threshold', () => {
+    // 10 goals, 25 renewals, base=20 → Smedley (10 goals + 25 members)
+    expect(getConfirmedDistinguishedLevel(10, 25, 20)).toBe('Smedley')
+  })
+
+  it('returns President when renewals meet President but not Smedley', () => {
+    // 10 goals, 23 renewals, base=20 → 23 >= 20 (President) but < 25 (Smedley)
+    expect(getConfirmedDistinguishedLevel(10, 23, 20)).toBe('President')
+  })
+
+  it('returns Select when renewals qualify via net growth >= 5', () => {
+    // 7 goals, 18 renewals, base=10 → netGrowth=8 >= 5 → Select
+    expect(getConfirmedDistinguishedLevel(7, 18, 10)).toBe('Select')
+  })
+
+  it('returns NotDistinguished when renewals are too low', () => {
+    // 5 goals, 15 renewals, base=14 → netGrowth=1 < 3, 15 < 20
+    expect(getConfirmedDistinguishedLevel(5, 15, 14)).toBe('NotDistinguished')
+  })
+
+  it('returns NotDistinguished when goals are insufficient', () => {
+    // 4 goals, 25 renewals, base=15 → not enough goals for any level
+    expect(getConfirmedDistinguishedLevel(4, 25, 15)).toBe('NotDistinguished')
   })
 })
