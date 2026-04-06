@@ -703,12 +703,47 @@ export class CollectorOrchestrator {
               CSVType.ALL_DISTRICTS
             )
             const csvContent = await fs.readFile(csvPath, 'utf-8')
+
+            // Debug: log CSV tail for closing period diagnostics (#309)
+            const csvTail = csvContent.split(/\r?\n/).filter(Boolean).slice(-3)
+            logger.info('Closing period detection input', {
+              date,
+              csvPath,
+              csvTail,
+              csvLength: csvContent.length,
+            })
+
             const parsed = parseClosingPeriodFromCsv(csvContent, date)
             isClosingPeriod = parsed.isClosingPeriod
             dataMonth = parsed.dataMonth
-          } catch {
-            logger.warn('Failed to parse closing period from CSV', { date })
+
+            logger.info('Closing period detection result', {
+              date,
+              isClosingPeriod,
+              dataMonth,
+            })
+          } catch (e) {
+            logger.warn('Failed to parse closing period from CSV', {
+              date,
+              error: e instanceof Error ? e.message : String(e),
+            })
           }
+        }
+
+        // Fallback: use closingPeriodInfo from initial parse if disk parse missed it (#309)
+        if (
+          !isClosingPeriod &&
+          allDistrictsResult.closingPeriodInfo?.isClosingPeriod
+        ) {
+          logger.warn(
+            'Disk re-parse missed closing period — using initial parse result',
+            {
+              date,
+              initialResult: allDistrictsResult.closingPeriodInfo,
+            }
+          )
+          isClosingPeriod = true
+          dataMonth = allDistrictsResult.closingPeriodInfo.dataMonth
         }
 
         const metaPath = buildMetadataPath(this.config.cacheDir, date)
