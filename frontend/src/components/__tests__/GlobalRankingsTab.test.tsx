@@ -808,5 +808,72 @@ describe('GlobalRankingsTab', () => {
         )
       ).toBe(true)
     })
+
+    it('overrides Multi-Year Comparison table for the selected year', async () => {
+      // Hook returns overall rank 15 in yearlyRankings for 2024-2025
+      mockUseGlobalRankings.mockReturnValue(
+        createMockHookResult({
+          yearlyRankings: [
+            {
+              programYear: '2024-2025',
+              overallRank: 15,
+              clubsRank: 10,
+              paymentsRank: 15,
+              distinguishedRank: 5,
+              totalDistricts: 126,
+              isPartialYear: false,
+              yearOverYearChange: null,
+            },
+          ],
+        })
+      )
+
+      // Per-date rankings return overall rank 10
+      mockFetchCdnRankingsForDate.mockResolvedValueOnce({
+        rankings: [
+          {
+            districtId: '57',
+            districtName: 'District 57',
+            region: '1',
+            paidClubs: 100,
+            paidClubBase: 90,
+            clubGrowthPercent: 11.1,
+            totalPayments: 5000,
+            paymentBase: 4500,
+            paymentGrowthPercent: 11.1,
+            activeClubs: 100,
+            distinguishedClubs: 50,
+            selectDistinguished: 20,
+            presidentsDistinguished: 10,
+            distinguishedPercent: 50,
+            clubsRank: 8,
+            paymentsRank: 12,
+            distinguishedRank: 3,
+            aggregateScore: 280,
+            overallRank: 10,
+          },
+        ],
+        date: '2025-06-30',
+        generatedAt: '2025-07-01T00:00:00Z',
+      })
+
+      renderWithProviders(
+        <GlobalRankingsTab {...baseProps} selectedDate="2025-06-30" />
+      )
+
+      // Multi-Year table should show per-date ranks, not hook-derived ranks
+      await screen.findByText('Multi-Year Comparison')
+      // The table renders rank as "{rank}" in a cell. With per-date override,
+      // the 2024-2025 row should NOT have the stale rank 15 from rank-history.
+      // Instead it should show rank 10 from the per-date data.
+      // RankCell renders rank/total as separate spans, so look for "15"
+      // NOT appearing alongside "/126" (the hook's totalDistricts)
+      const fifteens = screen.queryAllByText('15')
+      const staleRankInTable = fifteens.filter(el => {
+        const cell = el.closest('td')
+        return cell?.textContent?.includes('/126')
+      })
+      expect(staleRankInTable).toHaveLength(0)
+    })
   })
 })
