@@ -1,14 +1,9 @@
 import React, { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useUrlState } from '../hooks/useUrlState'
 import EndOfYearRankingsPanel from './EndOfYearRankingsPanel'
 import FullYearRankingChart, { type RankMetric } from './FullYearRankingChart'
 import MultiYearComparisonTable from './MultiYearComparisonTable'
-import {
-  useGlobalRankings,
-  type EndOfYearRankings,
-} from '../hooks/useGlobalRankings'
-import { fetchCdnRankingsForDate } from '../services/cdn'
+import { useGlobalRankings } from '../hooks/useGlobalRankings'
 import type { ProgramYear } from '../utils/programYear'
 import { formatLongDate } from '../utils/dateFormatting'
 
@@ -22,8 +17,6 @@ export interface GlobalRankingsTabProps {
   districtName: string
   /** Selected program year from the parent page selector */
   selectedProgramYear?: ProgramYear
-  /** Selected snapshot date for per-date ranking lookup (#302) */
-  selectedDate?: string | undefined
 }
 
 /**
@@ -224,7 +217,6 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
   districtId,
   districtName,
   selectedProgramYear,
-  selectedDate,
 }) => {
   // Local state for selected metric (chart toggle) synced to URL (#272)
   const [selectedMetric, setSelectedMetric] = useUrlState<RankMetric>(
@@ -257,49 +249,6 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
     error,
     refetch,
   } = useGlobalRankings(hookParams)
-
-  // Fetch per-date rankings for accurate end-of-year data (#302)
-  const { data: perDateRankings } = useQuery({
-    queryKey: ['per-date-rankings', selectedDate, districtId],
-    queryFn: async () => {
-      if (!selectedDate) return null
-      const data = await fetchCdnRankingsForDate(selectedDate)
-      const district = data.rankings.find(r => r.districtId === districtId)
-      if (!district) return null
-      const total = data.rankings.length
-      const pct = (rank: number) =>
-        Math.round(((total - rank + 1) / total) * 1000) / 10
-      return {
-        overall: {
-          rank: district.overallRank,
-          totalDistricts: total,
-          percentile: pct(district.overallRank),
-        },
-        paidClubs: {
-          rank: district.clubsRank,
-          totalDistricts: total,
-          percentile: pct(district.clubsRank),
-        },
-        membershipPayments: {
-          rank: district.paymentsRank,
-          totalDistricts: total,
-          percentile: pct(district.paymentsRank),
-        },
-        distinguishedClubs: {
-          rank: district.distinguishedRank,
-          totalDistricts: total,
-          percentile: pct(district.distinguishedRank),
-        },
-        asOfDate: data.date,
-        isPartialYear: false,
-      } satisfies EndOfYearRankings
-    },
-    enabled: !!selectedDate,
-    staleTime: 15 * 60 * 1000,
-  })
-
-  // Use per-date rankings when available, fall back to rank-history derived
-  const effectiveEndOfYearRankings = perDateRankings ?? endOfYearRankings
 
   // Determine the effective selected program year (default to most recent)
   const effectiveSelectedYear = useMemo(() => {
@@ -353,11 +302,11 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
 
   // Get the data freshness timestamp from the most recent ranking data
   const lastUpdatedTimestamp = useMemo(() => {
-    if (effectiveEndOfYearRankings?.asOfDate) {
-      return effectiveEndOfYearRankings.asOfDate
+    if (endOfYearRankings?.asOfDate) {
+      return endOfYearRankings.asOfDate
     }
     return null
-  }, [effectiveEndOfYearRankings])
+  }, [endOfYearRankings])
 
   // Handle metric change for the chart
   const handleMetricChange = (metric: RankMetric) => {
@@ -390,9 +339,9 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
         <DataFreshness lastUpdated={lastUpdatedTimestamp} />
       </div>
 
-      {/* End-of-Year Rankings Panel — uses per-date rankings when available (#302) */}
+      {/* End-of-Year Rankings Panel — available as soon as years data loads */}
       <EndOfYearRankingsPanel
-        rankings={effectiveEndOfYearRankings}
+        rankings={endOfYearRankings}
         isLoading={false}
         programYear={effectiveSelectedYear}
         previousYearRankings={previousYearRankings}

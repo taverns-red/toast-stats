@@ -978,7 +978,6 @@ const DistrictDetailPage: React.FC = () => {
                 districtId={districtId}
                 districtName={districtName}
                 selectedProgramYear={selectedProgramYear}
-                selectedDate={effectiveEndDate ?? undefined}
               />
             )}
           </div>
