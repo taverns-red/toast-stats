@@ -1,5 +1,58 @@
 # Changelog
 
+## [2.8.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.7.0...toast-stats-v2.8.0) (2026-04-06)
+
+
+### Features
+
+* add client-side provisional Distinguished utility ([#291](https://github.com/taverns-red/toast-stats/issues/291)) ([ee83434](https://github.com/taverns-red/toast-stats/commit/ee8343444dd7292dc6822c200031c10fd31d968d))
+* add CSP submission status card to ClubDetailPage ([#298](https://github.com/taverns-red/toast-stats/issues/298)) ([302e080](https://github.com/taverns-red/toast-stats/commit/302e08017117839241a46808db909e9b3402c291))
+* add isDistinguishedProvisional to ClubEligibilityUtils ([#287](https://github.com/taverns-red/toast-stats/issues/287)) ([851571a](https://github.com/taverns-red/toast-stats/commit/851571a7857baed14824a571a49b7393ec038ec3))
+* compute confirmed Distinguished count from club data pre-April ([#304](https://github.com/taverns-red/toast-stats/issues/304)) ([861382b](https://github.com/taverns-red/toast-stats/commit/861382b6532245b42c3ef439a861977261cc1fa0))
+* GlobalRankingsTab uses per-date rankings for accuracy ([#302](https://github.com/taverns-red/toast-stats/issues/302)) ([46c7b28](https://github.com/taverns-red/toast-stats/commit/46c7b28bb6e8f43f0ff58a9150b369c915781fdc))
+* level-aware provisional thresholds + getConfirmedDistinguishedLevel ([#296](https://github.com/taverns-red/toast-stats/issues/296)) ([94c668f](https://github.com/taverns-red/toast-stats/commit/94c668f90dc57d56d8f09911cdce78049db7e937))
+* show 'Provisional' subtitle with confirmed fallback level ([#297](https://github.com/taverns-red/toast-stats/issues/297)) ([36512e9](https://github.com/taverns-red/toast-stats/commit/36512e9d88d7f6930f2fb57a038423a2651e70a9))
+* show CSP status on club detail modal ([#288](https://github.com/taverns-red/toast-stats/issues/288)) ([4478b01](https://github.com/taverns-red/toast-stats/commit/4478b01c6d35a50923faf304d9a3c33a11da82c3))
+* show provisional Distinguished badge with asterisk + tooltip ([#287](https://github.com/taverns-red/toast-stats/issues/287)) ([6096a1e](https://github.com/taverns-red/toast-stats/commit/6096a1ec41b1659aa224b76ac9359f99ecc6d1ab))
+* standard competition ranking for overallRank ties ([#303](https://github.com/taverns-red/toast-stats/issues/303)) ([49f3457](https://github.com/taverns-red/toast-stats/commit/49f3457185450e2c5823f17075c4926b5b57e139))
+* transform derives closing period from CSV footer when metadata missing ([#292](https://github.com/taverns-red/toast-stats/issues/292), [#293](https://github.com/taverns-red/toast-stats/issues/293)) ([04e8161](https://github.com/taverns-red/toast-stats/commit/04e8161af4daaff03d40224791a4c4b590c5b08c))
+* use client-side provisional detection in all badge views ([#291](https://github.com/taverns-red/toast-stats/issues/291)) ([06314f7](https://github.com/taverns-red/toast-stats/commit/06314f748916df2998ea05f43a71f7b36b344b71))
+* wire isProvisionallyDistinguished into analytics pipeline ([#287](https://github.com/taverns-red/toast-stats/issues/287)) ([30dde5b](https://github.com/taverns-red/toast-stats/commit/30dde5b6d6698061d0843ee24eb1c3c8e6806c13))
+
+
+### Bug Fixes
+
+* add abbreviated month names to closing period parser ([#286](https://github.com/taverns-red/toast-stats/issues/286)) ([ee3ee87](https://github.com/taverns-red/toast-stats/commit/ee3ee87ce0ae95e05638412aec7a87df18e67bd9))
+* add cspSubmitted to Zod schema so snapshots preserve it ([#300](https://github.com/taverns-red/toast-stats/issues/300)) ([d1406a9](https://github.com/taverns-red/toast-stats/commit/d1406a9026d8cfa497a28836f5f558c17fc90485))
+* apply tie-handling and confirmed Distinguished to TransformService ([#303](https://github.com/taverns-red/toast-stats/issues/303), [#304](https://github.com/taverns-red/toast-stats/issues/304), [#306](https://github.com/taverns-red/toast-stats/issues/306)) ([f5a936a](https://github.com/taverns-red/toast-stats/commit/f5a936a82f1738b82c3ad2276897d879a6190484))
+* clean orphan prev-year dirs and harden LATEST_DATE resolution ([#295](https://github.com/taverns-red/toast-stats/issues/295)) ([33f633d](https://github.com/taverns-red/toast-stats/commit/33f633d668b6e9d8668c77addeea5adf2e869cba))
+* fetch rankings from GCS when local cache cleaned in rebuild mode ([e9b910b](https://github.com/taverns-red/toast-stats/commit/e9b910b8d28eb72b53f67e55b1921a7b61d0473a))
+* landing page rankings table now loads per-date data ([#301](https://github.com/taverns-red/toast-stats/issues/301)) ([f1d58dc](https://github.com/taverns-red/toast-stats/commit/f1d58dc9eb87dee2123892117ee518d4404424d4))
+* mirror level-aware provisional thresholds in client-side fallback ([#296](https://github.com/taverns-red/toast-stats/issues/296)) ([8959305](https://github.com/taverns-red/toast-stats/commit/8959305bb099a07d92e4c7c0eda6b0b08e61468d))
+* normalize cspSubmitted via getCSPStatus to prevent undefined ([#290](https://github.com/taverns-red/toast-stats/issues/290)) ([1d2ea00](https://github.com/taverns-red/toast-stats/commit/1d2ea0080b9ac60861c97afe860a5b48dd416298))
+* rank-history uses snapshot dates instead of raw-csv dates ([#302](https://github.com/taverns-red/toast-stats/issues/302)) ([c2495e4](https://github.com/taverns-red/toast-stats/commit/c2495e4ee17e34811f8022e1437dbb5ac3762456))
+* replace misleading 'Top X%' with ordinal percentile ([#305](https://github.com/taverns-red/toast-stats/issues/305)) ([4595547](https://github.com/taverns-red/toast-stats/commit/459554726768c004da06a21eabd361376c117f8b))
+
+
+### Documentation
+
+* add data pipeline flow reference document ([5a12b02](https://github.com/taverns-red/toast-stats/commit/5a12b025d8330153c294a23f7e92727998514c47))
+* update product spec and add lesson 44 ([#296](https://github.com/taverns-red/toast-stats/issues/296), [#297](https://github.com/taverns-red/toast-stats/issues/297), [#298](https://github.com/taverns-red/toast-stats/issues/298), [#299](https://github.com/taverns-red/toast-stats/issues/299)) ([24d9a9f](https://github.com/taverns-red/toast-stats/commit/24d9a9fabc74d1dd53cf0fb8b66dc8f37abdbf0f))
+
+
+### Tests
+
+* add aprilRenewals to integration test mocks ([#291](https://github.com/taverns-red/toast-stats/issues/291)) ([bf23a00](https://github.com/taverns-red/toast-stats/commit/bf23a0064d99d27aab6d22760f5c7e77d5b0e875))
+* migrate provisional Distinguished tests to ClubDetailPage ([#299](https://github.com/taverns-red/toast-stats/issues/299)) ([4a39390](https://github.com/taverns-red/toast-stats/commit/4a393908e1cbf349dcd8e68b2606d4bdd77ea2ee))
+* red phase — compute confirmed Distinguished from club data pre-April ([#304](https://github.com/taverns-red/toast-stats/issues/304)) ([1e13097](https://github.com/taverns-red/toast-stats/commit/1e1309770384e6eec472bb4b4b6d9cbb06726820))
+* red phase — CSV footer fallback in readCacheMetadata ([#292](https://github.com/taverns-red/toast-stats/issues/292)) ([4589e57](https://github.com/taverns-red/toast-stats/commit/4589e5796913164219f443c2103589cf400d80bb))
+* red phase — level-specific provisional thresholds and confirmed level ([#296](https://github.com/taverns-red/toast-stats/issues/296)) ([bf273cc](https://github.com/taverns-red/toast-stats/commit/bf273cc46e2186321c692a0d3e3d06a58d5ed0c8))
+* red phase — Multi-Year table should use per-date rankings ([#302](https://github.com/taverns-red/toast-stats/issues/302)) ([d44c6c7](https://github.com/taverns-red/toast-stats/commit/d44c6c7e3b4674af92012eb71a7057592fc62d40))
+* red phase — overallRank should handle ties with standard competition ranking ([#303](https://github.com/taverns-red/toast-stats/issues/303)) ([9e03dfe](https://github.com/taverns-red/toast-stats/commit/9e03dfed90e80d421b739aebee11173938890e65))
+* red phase — per-date rankings override in GlobalRankingsTab ([#302](https://github.com/taverns-red/toast-stats/issues/302)) ([413ed83](https://github.com/taverns-red/toast-stats/commit/413ed83bf36bf84807dc5bc6fa89c29868b021ac))
+* red phase — provisional Distinguished badge tests ([#291](https://github.com/taverns-red/toast-stats/issues/291)) ([0056f67](https://github.com/taverns-red/toast-stats/commit/0056f6731bae8a7b1f3ed9b1ec34f734e53cf764))
+* red phase — replace 'Top X%' with ordinal percentile ([#305](https://github.com/taverns-red/toast-stats/issues/305)) ([8d4e077](https://github.com/taverns-red/toast-stats/commit/8d4e0774de0f8fcb17f0dcc08759d0329f5219f1))
+
 ## [2.7.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.6.0...toast-stats-v2.7.0) (2026-04-04)
 
 

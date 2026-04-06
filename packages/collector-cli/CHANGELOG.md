@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.2.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.1.2...collector-cli-v1.2.0) (2026-04-06)
+
+
+### Features
+
+* transform derives closing period from CSV footer when metadata missing ([#292](https://github.com/taverns-red/toast-stats/issues/292), [#293](https://github.com/taverns-red/toast-stats/issues/293)) ([04e8161](https://github.com/taverns-red/toast-stats/commit/04e8161af4daaff03d40224791a4c4b590c5b08c))
+
+
+### Bug Fixes
+
+* add abbreviated month names to closing period parser ([#286](https://github.com/taverns-red/toast-stats/issues/286)) ([ee3ee87](https://github.com/taverns-red/toast-stats/commit/ee3ee87ce0ae95e05638412aec7a87df18e67bd9))
+* apply tie-handling and confirmed Distinguished to TransformService ([#303](https://github.com/taverns-red/toast-stats/issues/303), [#304](https://github.com/taverns-red/toast-stats/issues/304), [#306](https://github.com/taverns-red/toast-stats/issues/306)) ([f5a936a](https://github.com/taverns-red/toast-stats/commit/f5a936a82f1738b82c3ad2276897d879a6190484))
+
+
+### Tests
+
+* red phase — CSV footer fallback in readCacheMetadata ([#292](https://github.com/taverns-red/toast-stats/issues/292)) ([4589e57](https://github.com/taverns-red/toast-stats/commit/4589e5796913164219f443c2103589cf400d80bb))
+
 ## [1.1.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.1.1...collector-cli-v1.1.2) (2026-04-04)
 
 

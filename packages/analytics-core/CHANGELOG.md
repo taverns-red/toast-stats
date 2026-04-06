@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.4.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.3.0...analytics-core-v1.4.0) (2026-04-06)
+
+
+### Features
+
+* add isDistinguishedProvisional to ClubEligibilityUtils ([#287](https://github.com/taverns-red/toast-stats/issues/287)) ([851571a](https://github.com/taverns-red/toast-stats/commit/851571a7857baed14824a571a49b7393ec038ec3))
+* compute confirmed Distinguished count from club data pre-April ([#304](https://github.com/taverns-red/toast-stats/issues/304)) ([861382b](https://github.com/taverns-red/toast-stats/commit/861382b6532245b42c3ef439a861977261cc1fa0))
+* level-aware provisional thresholds + getConfirmedDistinguishedLevel ([#296](https://github.com/taverns-red/toast-stats/issues/296)) ([94c668f](https://github.com/taverns-red/toast-stats/commit/94c668f90dc57d56d8f09911cdce78049db7e937))
+* show CSP status on club detail modal ([#288](https://github.com/taverns-red/toast-stats/issues/288)) ([4478b01](https://github.com/taverns-red/toast-stats/commit/4478b01c6d35a50923faf304d9a3c33a11da82c3))
+* standard competition ranking for overallRank ties ([#303](https://github.com/taverns-red/toast-stats/issues/303)) ([49f3457](https://github.com/taverns-red/toast-stats/commit/49f3457185450e2c5823f17075c4926b5b57e139))
+* transform derives closing period from CSV footer when metadata missing ([#292](https://github.com/taverns-red/toast-stats/issues/292), [#293](https://github.com/taverns-red/toast-stats/issues/293)) ([04e8161](https://github.com/taverns-red/toast-stats/commit/04e8161af4daaff03d40224791a4c4b590c5b08c))
+* wire isProvisionallyDistinguished into analytics pipeline ([#287](https://github.com/taverns-red/toast-stats/issues/287)) ([30dde5b](https://github.com/taverns-red/toast-stats/commit/30dde5b6d6698061d0843ee24eb1c3c8e6806c13))
+
+
+### Bug Fixes
+
+* normalize cspSubmitted via getCSPStatus to prevent undefined ([#290](https://github.com/taverns-red/toast-stats/issues/290)) ([1d2ea00](https://github.com/taverns-red/toast-stats/commit/1d2ea0080b9ac60861c97afe860a5b48dd416298))
+
+
+### Tests
+
+* red phase — compute confirmed Distinguished from club data pre-April ([#304](https://github.com/taverns-red/toast-stats/issues/304)) ([1e13097](https://github.com/taverns-red/toast-stats/commit/1e1309770384e6eec472bb4b4b6d9cbb06726820))
+* red phase — level-specific provisional thresholds and confirmed level ([#296](https://github.com/taverns-red/toast-stats/issues/296)) ([bf273cc](https://github.com/taverns-red/toast-stats/commit/bf273cc46e2186321c692a0d3e3d06a58d5ed0c8))
+* red phase — overallRank should handle ties with standard competition ranking ([#303](https://github.com/taverns-red/toast-stats/issues/303)) ([9e03dfe](https://github.com/taverns-red/toast-stats/commit/9e03dfed90e80d421b739aebee11173938890e65))
+
 ## [1.3.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.2.1...analytics-core-v1.3.0) (2026-04-03)
 
 
