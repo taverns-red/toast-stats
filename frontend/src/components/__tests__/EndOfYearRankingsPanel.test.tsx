@@ -100,10 +100,10 @@ describe('EndOfYearRankingsPanel', () => {
     it('displays percentile badges for each metric', () => {
       renderWithProviders(<EndOfYearRankingsPanel {...baseProps} />)
 
-      expect(screen.getByText('Top 88%')).toBeInTheDocument() // Overall
-      expect(screen.getByText('Top 94%')).toBeInTheDocument() // Paid Clubs
-      expect(screen.getByText('Top 83%')).toBeInTheDocument() // Payments (82.5 rounds to 83)
-      expect(screen.getByText('Top 64%')).toBeInTheDocument() // Distinguished
+      expect(screen.getByText('88th percentile')).toBeInTheDocument() // Overall
+      expect(screen.getByText('94th percentile')).toBeInTheDocument() // Paid Clubs
+      expect(screen.getByText('83rd percentile')).toBeInTheDocument() // Payments
+      expect(screen.getByText('64th percentile')).toBeInTheDocument() // Distinguished
     })
   })
 

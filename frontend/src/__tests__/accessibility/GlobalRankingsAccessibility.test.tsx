@@ -1150,11 +1150,12 @@ describe('Global Rankings Accessibility Tests', () => {
           />
         )
 
-        // Percentile badge should have text "Top X%"
-        const percentileBadge = screen.getByRole('status', { name: /Top 88%/i })
+        // Percentile badge should have ordinal percentile text (#305)
+        const percentileBadge = screen.getByRole('status', {
+          name: /88th percentile/i,
+        })
         expect(percentileBadge).toBeInTheDocument()
-        expect(percentileBadge.textContent).toContain('Top')
-        expect(percentileBadge.textContent).toContain('%')
+        expect(percentileBadge.textContent).toContain('percentile')
       })
     })
 
@@ -1241,7 +1242,7 @@ describe('Global Rankings Accessibility Tests', () => {
         expect(ariaLabel).toContain('Overall Rank')
         expect(ariaLabel).toContain('Rank 15')
         expect(ariaLabel).toContain('of 126')
-        expect(ariaLabel).toContain('Top 88%')
+        expect(ariaLabel).toContain('88th percentile')
         expect(ariaLabel).toContain('improved')
       })
     })

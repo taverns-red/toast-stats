@@ -204,7 +204,7 @@ describe('RankingCard', () => {
       renderWithProviders(<RankingCard {...baseProps} previousYearRank={20} />)
 
       const card = screen.getByLabelText(
-        'Overall Rank: Rank 15 of 126, Top 12%, improved by 5 positions'
+        'Overall Rank: Rank 15 of 126, 12th percentile, improved by 5 positions'
       )
       expect(card).toBeInTheDocument()
     })
