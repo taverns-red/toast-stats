@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.2.0...shared-contracts-v1.2.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* add cspSubmitted to Zod schema so snapshots preserve it ([#300](https://github.com/taverns-red/toast-stats/issues/300)) ([d1406a9](https://github.com/taverns-red/toast-stats/commit/d1406a9026d8cfa497a28836f5f558c17fc90485))
+
 ## [1.2.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.1.1...shared-contracts-v1.2.0) (2026-04-03)
 
 
