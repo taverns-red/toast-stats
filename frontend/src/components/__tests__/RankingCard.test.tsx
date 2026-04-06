@@ -41,7 +41,7 @@ describe('RankingCard', () => {
         customAssertion: () => {
           expect(screen.getByText('15')).toBeInTheDocument()
           expect(screen.getByText('of 126')).toBeInTheDocument()
-          expect(screen.getByText('Top 12%')).toBeInTheDocument()
+          expect(screen.getByText('12th percentile')).toBeInTheDocument()
         },
       },
       {
@@ -152,7 +152,7 @@ describe('RankingCard', () => {
       const indicators = screen.queryAllByRole('status')
       // Only the percentile badge should be present
       expect(indicators).toHaveLength(1)
-      expect(indicators[0]).toHaveTextContent('Top 12%')
+      expect(indicators[0]).toHaveTextContent('12th percentile')
     })
 
     it('handles single position change correctly', () => {
@@ -170,7 +170,7 @@ describe('RankingCard', () => {
     it('displays percentile rounded to nearest integer', () => {
       renderWithProviders(<RankingCard {...baseProps} percentile={11.7} />)
 
-      expect(screen.getByText('Top 12%')).toBeInTheDocument()
+      expect(screen.getByText('12th percentile')).toBeInTheDocument()
     })
 
     it('displays percentile for top performer', () => {
@@ -178,7 +178,7 @@ describe('RankingCard', () => {
         <RankingCard {...baseProps} rank={1} percentile={0.8} />
       )
 
-      expect(screen.getByText('Top 1%')).toBeInTheDocument()
+      expect(screen.getByText('1st percentile')).toBeInTheDocument()
     })
 
     it('displays percentile for lower ranked district', () => {
@@ -186,7 +186,7 @@ describe('RankingCard', () => {
         <RankingCard {...baseProps} rank={100} percentile={79.4} />
       )
 
-      expect(screen.getByText('Top 79%')).toBeInTheDocument()
+      expect(screen.getByText('79th percentile')).toBeInTheDocument()
     })
   })
 
@@ -195,7 +195,7 @@ describe('RankingCard', () => {
       renderWithProviders(<RankingCard {...baseProps} />)
 
       const card = screen.getByLabelText(
-        'Overall Rank: Rank 15 of 126, Top 12%'
+        'Overall Rank: Rank 15 of 126, 12th percentile'
       )
       expect(card).toBeInTheDocument()
     })
@@ -245,7 +245,7 @@ describe('RankingCard', () => {
 
       expect(screen.getByText('Paid Clubs')).toBeInTheDocument()
       expect(screen.getByText('8')).toBeInTheDocument()
-      expect(screen.getByText('Top 6%')).toBeInTheDocument()
+      expect(screen.getByText('6th percentile')).toBeInTheDocument()
     })
 
     it('renders Membership Payments ranking correctly', () => {
@@ -262,7 +262,7 @@ describe('RankingCard', () => {
 
       expect(screen.getByText('Membership Payments')).toBeInTheDocument()
       expect(screen.getByText('22')).toBeInTheDocument()
-      expect(screen.getByText('Top 18%')).toBeInTheDocument()
+      expect(screen.getByText('18th percentile')).toBeInTheDocument()
     })
 
     it('renders Distinguished Clubs ranking correctly', () => {
@@ -279,7 +279,7 @@ describe('RankingCard', () => {
 
       expect(screen.getByText('Distinguished Clubs')).toBeInTheDocument()
       expect(screen.getByText('45')).toBeInTheDocument()
-      expect(screen.getByText('Top 36%')).toBeInTheDocument()
+      expect(screen.getByText('36th percentile')).toBeInTheDocument()
     })
   })
 })
