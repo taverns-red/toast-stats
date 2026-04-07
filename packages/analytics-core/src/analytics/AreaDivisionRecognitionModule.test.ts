@@ -762,4 +762,29 @@ describe('Distinguished Club Boundary Conditions', () => {
     // Should be distinguished via membership path (20+ members)
     expect(isDistinguished).toBe(true)
   })
+
+  /**
+   * Rule: CSP required for Distinguished (2025-2026+) (#311)
+   *
+   * A club that meets DCP/membership requirements but has not submitted
+   * its Club Success Plan should NOT be counted as Distinguished.
+   * This matches DistinguishedClubAnalyticsModule behavior.
+   */
+  it('CSP required - club without CSP is not distinguished', () => {
+    const club = createMockClubWithNetGrowth('1', 'A', 'A1', 25, 9, 20)
+    club.cspSubmitted = false
+
+    const isDistinguished = isClubDistinguishedViaAreaRecognition(club)
+
+    expect(isDistinguished).toBe(false)
+  })
+
+  it('CSP submitted - club with CSP is distinguished', () => {
+    const club = createMockClubWithNetGrowth('1', 'A', 'A1', 25, 9, 20)
+    club.cspSubmitted = true
+
+    const isDistinguished = isClubDistinguishedViaAreaRecognition(club)
+
+    expect(isDistinguished).toBe(true)
+  })
 })
