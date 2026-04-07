@@ -25,8 +25,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build workspace dependencies
+        run: |
+          npm run build:shared-contracts
+          npm run build:analytics-core
+
       - name: Build frontend
-        run: npm run build --prefix frontend
+        run: npm run build:frontend
 
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12
