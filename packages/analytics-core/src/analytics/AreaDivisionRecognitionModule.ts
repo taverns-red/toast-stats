@@ -25,6 +25,7 @@ import type {
 import {
   calculateNetGrowth,
   determineDistinguishedLevel,
+  getCSPStatus,
 } from './ClubEligibilityUtils.js'
 
 // ========== DAP Thresholds (from steering document) ==========
@@ -356,6 +357,8 @@ export class AreaDivisionRecognitionModule {
   }
 
   private isClubDistinguished(club: ClubStatistics): boolean {
+    // CSP required for Distinguished (2025-2026+) (#311)
+    if (!getCSPStatus(club)) return false
     const netGrowth = calculateNetGrowth(club)
     const level = determineDistinguishedLevel(
       club.dcpGoals,
