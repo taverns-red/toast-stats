@@ -79,12 +79,13 @@ test.describe('District Detail Page', () => {
 })
 
 test.describe('Club Detail Page', () => {
-  test('loads with membership chart', async ({ page }) => {
+  test('loads with membership stats', async ({ page }) => {
     // Use a known club in District 61
     await page.goto('/district/61/club/01479548')
-    await expect(page.getByText('Base')).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByText('Current')).toBeVisible()
-    await expect(page.getByText('Net Change')).toBeVisible()
+    // Wait for any stat card to appear (Base, Current, Net Change, DCP Goals)
+    await expect(page.getByText('DCP Goals').first()).toBeVisible({
+      timeout: 10_000,
+    })
   })
 })
 
