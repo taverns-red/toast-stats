@@ -66,7 +66,9 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
-  GCS_BUCKET: 'toast-stats-data-ca'
+  # Daily pipeline writes to staging first; promotion copies to production (#316)
+  GCS_BUCKET: 'toast-stats-data-staging'
+  GCS_BUCKET_PRODUCTION: 'toast-stats-data-ca'
 
 permissions:
   contents: read
@@ -1040,6 +1042,82 @@ jobs:
           echo "## 📋 District Snapshot Index" >> "$GITHUB_STEP_SUMMARY"
           DISTRICT_COUNT=$(jq '.districts | keys | length' /tmp/district-snapshot-index.json)
           echo "- **Districts in index**: ${DISTRICT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+      # ════════════════════════════════════════════════════════
+      # STAGING → PRODUCTION PROMOTION (#316)
+      # ════════════════════════════════════════════════════════
+
+      - name: Diff staging vs production
+        id: diff
+        if: steps.mode.outputs.mode != 'prune'
+        run: |
+          echo "Comparing staging vs production buckets..."
+
+          # Count files in each bucket's key directories
+          STAGING_SNAPSHOTS=$(gsutil ls "gs://${GCS_BUCKET}/snapshots/" 2>/dev/null | grep -c '/$' || echo 0)
+          PROD_SNAPSHOTS=$(gsutil ls "gs://${GCS_BUCKET_PRODUCTION}/snapshots/" 2>/dev/null | grep -c '/$' || echo 0)
+
+          STAGING_LATEST=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null | jq -r '.latestSnapshotDate' || echo "unknown")
+          PROD_LATEST=$(gsutil cat "gs://${GCS_BUCKET_PRODUCTION}/v1/latest.json" 2>/dev/null | jq -r '.latestSnapshotDate' || echo "unknown")
+
+          STAGING_DATES=$(gsutil cat "gs://${GCS_BUCKET}/v1/dates.json" 2>/dev/null | jq '.count' || echo 0)
+          PROD_DATES=$(gsutil cat "gs://${GCS_BUCKET_PRODUCTION}/v1/dates.json" 2>/dev/null | jq '.count' || echo 0)
+
+          STAGING_RANKINGS=$(gsutil cat "gs://${GCS_BUCKET}/v1/rankings.json" 2>/dev/null | jq '.rankings | length' || echo 0)
+          PROD_RANKINGS=$(gsutil cat "gs://${GCS_BUCKET_PRODUCTION}/v1/rankings.json" 2>/dev/null | jq '.rankings | length' || echo 0)
+
+          echo "## 🔍 Staging vs Production Diff" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Staging | Production | Delta |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|---------|------------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Latest date | ${STAGING_LATEST} | ${PROD_LATEST} | $([ "$STAGING_LATEST" = "$PROD_LATEST" ] && echo '✓ same' || echo '⚠ changed') |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Snapshot dirs | ${STAGING_SNAPSHOTS} | ${PROD_SNAPSHOTS} | $((STAGING_SNAPSHOTS - PROD_SNAPSHOTS)) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dates in index | ${STAGING_DATES} | ${PROD_DATES} | $((STAGING_DATES - PROD_DATES)) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Districts ranked | ${STAGING_RANKINGS} | ${PROD_RANKINGS} | $((STAGING_RANKINGS - PROD_RANKINGS)) |" >> "$GITHUB_STEP_SUMMARY"
+
+          # Determine if promotion is safe (additive-only)
+          PROMOTE="true"
+          if [ "$STAGING_RANKINGS" -lt "$PROD_RANKINGS" ] 2>/dev/null; then
+            echo "::warning::SUBTRACTIVE: staging has fewer ranked districts than production"
+            PROMOTE="false"
+          fi
+          if [ "$STAGING_DATES" -lt "$PROD_DATES" ] 2>/dev/null; then
+            echo "::warning::SUBTRACTIVE: staging has fewer dates than production"
+            PROMOTE="false"
+          fi
+
+          echo "promote=${PROMOTE}" >> "$GITHUB_OUTPUT"
+          echo "- **Promotion**: $([ "$PROMOTE" = "true" ] && echo '✅ Safe (additive)' || echo '❌ Blocked (subtractive change detected)')" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Promote staging to production
+        if: steps.diff.outputs.promote == 'true' && steps.mode.outputs.mode != 'prune'
+        run: |
+          echo "Promoting staging → production..."
+
+          # Sync manifests (v1/)
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"
+
+          # Sync snapshots (only new/changed)
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/snapshots/" "gs://${GCS_BUCKET_PRODUCTION}/snapshots/"
+
+          # Sync time-series
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "gs://${GCS_BUCKET_PRODUCTION}/time-series/"
+
+          # Sync club-trends
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "gs://${GCS_BUCKET_PRODUCTION}/club-trends/"
+
+          # Sync config (snapshot index)
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"
+
+          echo "## ✅ Promotion Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "Staging data synced to production bucket." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Promotion blocked
+        if: steps.diff.outputs.promote == 'false' && steps.mode.outputs.mode != 'prune'
+        run: |
+          echo "::error::Promotion BLOCKED — subtractive changes detected in staging. Production data unchanged."
+          echo "## ❌ Promotion Blocked" >> "$GITHUB_STEP_SUMMARY"
+          echo "Subtractive changes detected. Production data is **unchanged**." >> "$GITHUB_STEP_SUMMARY"
+          echo "Review the diff above and manually promote if safe." >> "$GITHUB_STEP_SUMMARY"
 
       # ── Summary ──
       - name: Pipeline summary

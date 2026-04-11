@@ -16,8 +16,22 @@
 
 import { recordCdnResponse } from './cdnCacheTracker'
 
-const CDN_BASE_URL =
-  import.meta.env['VITE_CDN_BASE_URL'] || 'https://cdn.taverns.red'
+// CDN URL resolved at runtime based on hostname (#316)
+// Staging (staging-toast-stats.web.app) reads from staging GCS bucket
+// Production (ts.taverns.red) reads from production CDN
+const CDN_BASE_URL = (() => {
+  // Explicit override via build-time env var
+  const envUrl = import.meta.env['VITE_CDN_BASE_URL']
+  if (envUrl) return envUrl
+  // Runtime: staging hostname → staging bucket
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname.includes('staging')
+  ) {
+    return 'https://storage.googleapis.com/toast-stats-data-staging'
+  }
+  return 'https://cdn.taverns.red'
+})()
 
 /**
  * CDN manifest — returned by v1/latest.json

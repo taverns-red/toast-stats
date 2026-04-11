@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "toast-stats-prod-6d64a"
+  },
+  "targets": {
+    "toast-stats-prod-6d64a": {
+      "hosting": {
+        "production": [
+          "toast-stats-prod-6d64a"
+        ],
+        "staging": [
+          "staging-toast-stats"
+        ]
+      }
+    }
   }
 }
