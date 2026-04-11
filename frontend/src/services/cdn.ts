@@ -16,29 +16,14 @@
 
 import { recordCdnResponse } from './cdnCacheTracker'
 
-// CDN URL resolved at runtime based on hostname (#316)
-// Staging (staging-toast-stats.web.app) reads from staging GCS bucket
-// Production (ts.taverns.red) reads from production CDN
-// NOTE: Must NOT be an IIFE — Vite evaluates IIFEs at build time
-function getCdnBaseUrl(): string {
-  // Explicit override via build-time env var
-  const envUrl = import.meta.env['VITE_CDN_BASE_URL']
-  if (envUrl) return envUrl as string
-  // Runtime: staging hostname → staging bucket
-  if (
-    typeof window !== 'undefined' &&
-    window.location.hostname.includes('staging')
-  ) {
-    return 'https://storage.googleapis.com/toast-stats-data-staging'
-  }
-  return 'https://cdn.taverns.red'
-}
+// CDN base URL — set via VITE_CDN_BASE_URL at build time (#316)
+// Production build: https://cdn.taverns.red (default)
+// Staging build: https://storage.googleapis.com/toast-stats-data-staging
+const CDN_BASE_URL: string =
+  import.meta.env['VITE_CDN_BASE_URL'] || 'https://cdn.taverns.red'
 
-// Lazy-init: computed on first access, cached after
-let _cdnBaseUrl: string | undefined
 function cdnBaseUrl(): string {
-  if (!_cdnBaseUrl) _cdnBaseUrl = getCdnBaseUrl()
-  return _cdnBaseUrl
+  return CDN_BASE_URL
 }
 
 /**
