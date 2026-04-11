@@ -146,6 +146,18 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             tooltipContent="Paid clubs count with targets for each recognition level. Thriving, Vulnerable, and Intervention Required badges show club health status."
             badges={
               <>
+                <span
+                  className="text-xs text-tm-loyal-blue bg-tm-loyal-blue-10 px-2 py-1 rounded font-tm-body"
+                  title="Average membership count per club"
+                >
+                  Avg{' '}
+                  {analytics.allClubs.length > 0
+                    ? (
+                        analytics.totalMembership / analytics.allClubs.length
+                      ).toFixed(1)
+                    : '—'}{' '}
+                  members/club
+                </span>
                 <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
                   {analytics.thrivingClubs.length} Thriving
                 </span>
