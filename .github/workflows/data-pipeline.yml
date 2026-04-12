@@ -1043,6 +1043,66 @@ jobs:
           DISTRICT_COUNT=$(jq '.districts | keys | length' /tmp/district-snapshot-index.json)
           echo "- **Districts in index**: ${DISTRICT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Shared: Generate club-index.json (#320) ──
+      - name: Generate club-index
+        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        run: |
+          LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
+            | jq -r '.latestSnapshotDate' || echo "")
+          if [ -z "${LATEST_DATE}" ]; then
+            echo "::warning::No latest date found, skipping club-index"
+            exit 0
+          fi
+          echo "Building club-index from snapshots/${LATEST_DATE}/..."
+
+          # Download all district snapshot files for the latest date
+          mkdir -p /tmp/club-index-src
+          gsutil -m cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
+            /tmp/club-index-src/ 2>/dev/null || true
+
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const srcDir = '/tmp/club-index-src';
+            const clubs = {};
+            let total = 0;
+            const files = fs.readdirSync(srcDir).filter(f => f.startsWith('district_') && f.endsWith('.json'));
+            for (const file of files) {
+              try {
+                const raw = JSON.parse(fs.readFileSync(path.join(srcDir, file), 'utf-8'));
+                const data = raw.data || raw;
+                const districtId = data.districtId || file.match(/district_(\w+)\.json/)?.[1];
+                const clubList = data.clubs || [];
+                for (const club of clubList) {
+                  if (club.clubId) {
+                    clubs[club.clubId] = {
+                      districtId: districtId || '',
+                      clubName: club.clubName || '',
+                    };
+                    total++;
+                  }
+                }
+              } catch (e) { /* skip corrupt files */ }
+            }
+            const index = {
+              generatedAt: new Date().toISOString(),
+              snapshotDate: '${LATEST_DATE}',
+              totalClubs: total,
+              clubs,
+            };
+            fs.writeFileSync('/tmp/club-index.json', JSON.stringify(index));
+            console.log('Generated club-index: ' + total + ' clubs from ' + files.length + ' districts');
+          "
+
+          gsutil \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=300" \
+            cp /tmp/club-index.json "gs://${GCS_BUCKET}/config/club-index.json"
+
+          echo "## 📋 Club Index" >> "$GITHUB_STEP_SUMMARY"
+          CLUB_COUNT=$(jq '.totalClubs' /tmp/club-index.json)
+          echo "- **Clubs indexed**: ${CLUB_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
       # ════════════════════════════════════════════════════════
       # STAGING → PRODUCTION PROMOTION (#316)
       # ════════════════════════════════════════════════════════

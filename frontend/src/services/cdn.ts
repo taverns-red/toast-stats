@@ -271,6 +271,19 @@ export interface CdnRankHistoryData {
 /**
  * Fetch pre-computed rank history for a district from CDN.
  */
+/**
+ * Fetch the club-to-district index from CDN (#320).
+ */
+export async function fetchCdnClubIndex(): Promise<{
+  clubs: Record<string, { districtId: string; clubName: string }>
+}> {
+  const url = `${cdnBaseUrl()}/config/club-index.json`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`CDN club index fetch failed: ${res.status}`)
+  recordCdnResponse(res)
+  return res.json()
+}
+
 export async function fetchCdnRankHistory(
   districtId: string
 ): Promise<CdnRankHistoryData> {

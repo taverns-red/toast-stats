@@ -16,6 +16,9 @@ const DistrictDetailPage = React.lazy(
 // Code-split: ClubDetailPage — full club subpage (#208)
 const ClubDetailPage = React.lazy(() => import('./pages/ClubDetailPage'))
 
+// Code-split: ClubRedirectPage — district-free club URL (#320)
+const ClubRedirectPage = React.lazy(() => import('./pages/ClubRedirectPage'))
+
 /** Loading fallback for lazy-loaded pages */
 function PageLoadingFallback(): React.JSX.Element {
   return (
@@ -66,6 +69,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <ClubDetailPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'club/:clubId',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <ClubRedirectPage />
             </Suspense>
           ),
         },
