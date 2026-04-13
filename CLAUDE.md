@@ -63,6 +63,26 @@ npm run pre-commit
 
 **Deployment:** Frontend → Firebase Hosting. Backend → Cloud Run (Docker). Storage → Firestore + GCS. CI via GitHub Actions.
 
+## Debugging & Bug Fixes
+
+When fixing bugs, always trace the issue to its root cause in the backend/pipeline before applying any frontend workaround. Never apply cosmetic fixes without confirming the underlying data flow is correct.
+
+## Testing
+
+Never lower test coverage thresholds to make CI pass. Always write the missing tests instead. Maintain TDD discipline throughout all sprints.
+
+## Refactoring
+
+After any refactor or dead code removal, run the full test suite AND do a manual smoke check of affected services before committing. Never remove code that other modules depend on without verifying imports.
+
+## External APIs & Integrations
+
+Always verify API parameters against official documentation before using them. Do not guess parameter names, voice identifiers, language codes, or formality options for third-party APIs (Deepgram, DeepL, Edge-TTS, Google Cloud STT, etc.).
+
+## Git & Deployment
+
+When using parallel agents or worktrees, always check for merge conflicts before finalizing. Never auto-merge without diffing against the current branch tip.
+
 ## Engineering Rules (from `tasks/rules.md`)
 
 Read `tasks/rules.md` completely before every task. Key rules:
