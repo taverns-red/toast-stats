@@ -435,15 +435,16 @@ describe('AreaDivisionRecognitionModule', () => {
       expect(areas[0]?.eligibilityReason).toContain('not available')
     })
 
-    it('should set division eligibility to unknown', () => {
+    it('should set division eligibility to unknown when areas have no visit data', () => {
       const module = new AreaDivisionRecognitionModule()
       const clubs = [createMockClub('1', 'A', 'A1', 20, 5)]
       const snapshot = createMockSnapshot(clubs)
+      // No divisionPerformance → areas have 'unknown' eligibility → division inherits 'unknown'
 
       const divisions = module.calculateDivisionRecognition(snapshot)
 
       expect(divisions[0]?.eligibility).toBe('unknown')
-      expect(divisions[0]?.eligibilityReason).toContain('not available')
+      expect(divisions[0]?.eligibilityReason).toContain('missing visit data')
     })
   })
 

@@ -307,10 +307,20 @@ export class AreaDivisionRecognitionModule {
     // Check thresholds
     const meetsPaidThreshold = paidAreasPercent >= DDP_PAID_AREAS_THRESHOLD
 
-    // Determine eligibility (club visits not available from dashboard)
-    const eligibility: RecognitionEligibility = 'unknown'
-    const eligibilityReason =
-      'Area club visit data not available from dashboard'
+    // Determine eligibility from area visit data (#325)
+    // Division is eligible when all areas are eligible
+    const allAreasEligible = areas.every(a => a.eligibility === 'eligible')
+    const anyAreaUnknown = areas.some(a => a.eligibility === 'unknown')
+    const eligibility: RecognitionEligibility = allAreasEligible
+      ? 'eligible'
+      : anyAreaUnknown
+        ? 'unknown'
+        : 'ineligible'
+    const eligibilityReason = allAreasEligible
+      ? 'All areas meet visit requirements'
+      : anyAreaUnknown
+        ? 'Some areas missing visit data'
+        : `${areas.filter(a => a.eligibility === 'ineligible').length} area(s) have incomplete visits`
 
     // Determine recognition level based on thresholds
     const recognitionLevel = this.determineDivisionRecognitionLevel(
