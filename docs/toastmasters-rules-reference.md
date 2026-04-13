@@ -184,11 +184,20 @@ A club meets the membership requirement if:
 
 ### 6.1 Eligibility Gate
 
-An Area is eligible for recognition **only if**:
+An Area is eligible for recognition **only if** the Area Director has completed and submitted Club Visit Reports meeting the following thresholds:
 
-- At least **two club visits per club** are completed and submitted using the official Area Director Club Visit Report
+- **Round 1 (by November 30):** ≥ 75% of the Area's club base must have a submitted first-round visit report ("Nov Visit award" = 1 in CSV)
+- **Round 2 (by May 31):** ≥ 75% of the Area's club base must have a submitted second-round visit report ("May Visit award" = 1 in CSV)
 
-**Note**: Club visit data is NOT currently available from dashboard CSV exports. When unavailable, eligibility should be marked as "Unknown".
+As a general rule, Area Directors are required to make **at least two club visits per club per year** (one per round), although they are highly encouraged to visit each club once per quarter.
+
+**Data source:** The club-performance CSV columns "Nov Visit award" and "May Visit award" indicate per-club visit completion for each round. The threshold is 75% of the Area's club base, not 100%.
+
+**Eligibility states:**
+
+- **Eligible**: Both rounds meet the 75% threshold
+- **Partial**: Only one round meets the threshold (or both below)
+- **Pre-deadline**: Before Nov 30 (Round 1) or May 31 (Round 2), the round is pending
 
 ### 6.2 Paid Clubs Requirement
 
@@ -210,9 +219,9 @@ An Area is eligible for recognition **only if**:
 
 A Division is eligible for recognition **only if**:
 
-- Areas in the Division have completed required Area Director club visits (two per club)
+- Areas in the Division have met the Area Director club visit requirements (≥ 75% of club base visited per round — see §6.1)
 
-**Note**: Club visit data is NOT currently available from dashboard CSV exports. When unavailable, eligibility should be marked as "Unknown".
+**Data source:** Derived from per-area eligibility. A Division is eligible when all its Areas are eligible (both visit rounds meet the 75% threshold).
 
 ### 7.2 Paid Areas Requirement
 
