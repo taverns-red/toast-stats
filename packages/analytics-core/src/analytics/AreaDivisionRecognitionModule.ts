@@ -108,13 +108,17 @@ export class AreaDivisionRecognitionModule {
       areaMap.get(areaId)!.clubs.push(club)
     }
 
+    // Extract visit data from divisionPerformance CSV (#325)
+    const areaVisitMap = this.extractAreaVisitData(snapshot.divisionPerformance)
+
     // Calculate recognition for each area
     return Array.from(areaMap.values()).map(area =>
       this.calculateSingleAreaRecognition(
         area.areaId,
         area.areaName,
         area.divisionId,
-        area.clubs
+        area.clubs,
+        areaVisitMap.get(area.areaId)
       )
     )
   }
@@ -126,7 +130,12 @@ export class AreaDivisionRecognitionModule {
     areaId: string,
     areaName: string,
     divisionId: string,
-    clubs: ClubStatistics[]
+    clubs: ClubStatistics[],
+    visitData?: {
+      novVisits: number
+      mayVisits: number
+      clubCount: number
+    }
   ): AreaRecognition {
     const totalClubs = clubs.length
     const paidClubs = clubs.filter(club => this.isClubPaid(club)).length
@@ -147,9 +156,28 @@ export class AreaDivisionRecognitionModule {
     // Check thresholds
     const meetsPaidThreshold = paidClubsPercent >= DAP_PAID_CLUBS_THRESHOLD
 
-    // Determine eligibility (club visits not available from dashboard)
-    const eligibility: RecognitionEligibility = 'unknown'
-    const eligibilityReason = 'Club visit data not available from dashboard'
+    // Determine eligibility from club visit data (#325)
+    // DAP requires ≥75% of club base visited per round
+    let eligibility: RecognitionEligibility = 'unknown'
+    let eligibilityReason = 'Club visit data not available'
+
+    if (visitData && visitData.clubCount > 0) {
+      const novPct = (visitData.novVisits / visitData.clubCount) * 100
+      const mayPct = (visitData.mayVisits / visitData.clubCount) * 100
+      const round1Met = novPct >= 75
+      const round2Met = mayPct >= 75
+
+      if (round1Met && round2Met) {
+        eligibility = 'eligible'
+        eligibilityReason = `Visits complete: Round 1 ${Math.round(novPct)}%, Round 2 ${Math.round(mayPct)}%`
+      } else {
+        eligibility = 'ineligible'
+        const parts: string[] = []
+        if (!round1Met) parts.push(`Round 1: ${Math.round(novPct)}% (need 75%)`)
+        if (!round2Met) parts.push(`Round 2: ${Math.round(mayPct)}% (need 75%)`)
+        eligibilityReason = `Visits incomplete: ${parts.join(', ')}`
+      }
+    }
 
     // Determine recognition level based on thresholds
     const recognitionLevel = this.determineAreaRecognitionLevel(
@@ -366,6 +394,44 @@ export class AreaDivisionRecognitionModule {
       netGrowth
     )
     return level !== 'NotDistinguished'
+  }
+
+  /**
+   * Extract per-area visit completion data from divisionPerformance CSV (#325).
+   *
+   * Reads "Nov Visit award" (Round 1) and "May Visit award" (Round 2)
+   * columns from the raw CSV records, grouped by Area.
+   */
+  private extractAreaVisitData(
+    divisionPerformance?: Array<Record<string, string | number | null>>
+  ): Map<string, { novVisits: number; mayVisits: number; clubCount: number }> {
+    const map = new Map<
+      string,
+      { novVisits: number; mayVisits: number; clubCount: number }
+    >()
+
+    if (!divisionPerformance) return map
+
+    for (const record of divisionPerformance) {
+      const areaId = String(record['Area'] ?? '').trim()
+      if (!areaId) continue
+
+      if (!map.has(areaId)) {
+        map.set(areaId, { novVisits: 0, mayVisits: 0, clubCount: 0 })
+      }
+      const entry = map.get(areaId)!
+      entry.clubCount++
+
+      const nov = String(record['Nov Visit award'] ?? '0').trim()
+      if (nov === '1') entry.novVisits++
+
+      const may = String(
+        record['May Visit award'] ?? record['May visit award'] ?? '0'
+      ).trim()
+      if (may === '1') entry.mayVisits++
+    }
+
+    return map
   }
 
   /**
