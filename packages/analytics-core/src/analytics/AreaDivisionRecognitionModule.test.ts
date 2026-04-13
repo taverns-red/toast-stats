@@ -788,3 +788,103 @@ describe('Distinguished Club Boundary Conditions', () => {
     expect(isDistinguished).toBe(true)
   })
 })
+
+// ============================================================
+// Visit-Gated Area Eligibility (#325)
+// ============================================================
+
+describe('Visit-Gated Area Eligibility (#325)', () => {
+  /**
+   * Helper to create a snapshot with divisionPerformance visit data.
+   * Each entry represents a club row in division-performance CSV.
+   */
+  function createSnapshotWithVisits(
+    clubs: ClubStatistics[],
+    visitRecords: Array<{
+      Area: string
+      'Nov Visit award': string
+      'May Visit award': string
+    }>
+  ): DistrictStatistics {
+    const base = createMockSnapshot(clubs)
+    return {
+      ...base,
+      divisionPerformance: visitRecords.map(r => ({
+        ...r,
+        District: 'D101',
+        Division: 'A',
+        Club: '1',
+        'Club Name': 'Test',
+      })),
+    }
+  }
+
+  it('area with 100% visits in both rounds is eligible', () => {
+    const clubs = [
+      createMockClub('1', 'A', 'A1', 25, 6),
+      createMockClub('2', 'A', 'A1', 22, 7),
+      createMockClub('3', 'A', 'A1', 20, 5),
+      createMockClub('4', 'A', 'A1', 21, 8),
+    ]
+    const visits = clubs.map(c => ({
+      Area: 'A1',
+      'Nov Visit award': '1',
+      'May Visit award': '1',
+    }))
+
+    const module = new AreaDivisionRecognitionModule()
+    const snapshot = createSnapshotWithVisits(clubs, visits)
+    const areas = module.calculateAreaRecognition(snapshot)
+
+    expect(areas[0]!.eligibility).toBe('eligible')
+  })
+
+  it('area with 80% Nov but 60% May visits is ineligible', () => {
+    // 5 clubs: 4 have Nov visit (80%), 3 have May visit (60%)
+    const clubs = Array.from({ length: 5 }, (_, i) =>
+      createMockClub(`${i + 1}`, 'A', 'A1', 25, 6)
+    )
+    const visits = [
+      { Area: 'A1', 'Nov Visit award': '1', 'May Visit award': '1' },
+      { Area: 'A1', 'Nov Visit award': '1', 'May Visit award': '1' },
+      { Area: 'A1', 'Nov Visit award': '1', 'May Visit award': '1' },
+      { Area: 'A1', 'Nov Visit award': '1', 'May Visit award': '0' },
+      { Area: 'A1', 'Nov Visit award': '0', 'May Visit award': '0' },
+    ]
+
+    const module = new AreaDivisionRecognitionModule()
+    const snapshot = createSnapshotWithVisits(clubs, visits)
+    const areas = module.calculateAreaRecognition(snapshot)
+
+    expect(areas[0]!.eligibility).toBe('ineligible')
+    expect(areas[0]!.eligibilityReason).toContain('Round 2')
+  })
+
+  it('area with no visits is ineligible', () => {
+    const clubs = [
+      createMockClub('1', 'A', 'A1', 25, 6),
+      createMockClub('2', 'A', 'A1', 22, 7),
+    ]
+    const visits = [
+      { Area: 'A1', 'Nov Visit award': '0', 'May Visit award': '0' },
+      { Area: 'A1', 'Nov Visit award': '0', 'May Visit award': '0' },
+    ]
+
+    const module = new AreaDivisionRecognitionModule()
+    const snapshot = createSnapshotWithVisits(clubs, visits)
+    const areas = module.calculateAreaRecognition(snapshot)
+
+    expect(areas[0]!.eligibility).toBe('ineligible')
+  })
+
+  it('area with no divisionPerformance falls back to unknown', () => {
+    const clubs = [createMockClub('1', 'A', 'A1', 25, 6)]
+
+    const module = new AreaDivisionRecognitionModule()
+    const snapshot = createMockSnapshot(clubs)
+    // No divisionPerformance field
+    const areas = module.calculateAreaRecognition(snapshot)
+
+    expect(areas[0]!.eligibility).toBe('unknown')
+  })
+})
