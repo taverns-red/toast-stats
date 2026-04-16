@@ -21,6 +21,7 @@ import {
   DataTransformer,
   ANALYTICS_SCHEMA_VERSION,
   getConfirmedDistinguishedLevel,
+  CompetitiveAwardsCalculator,
   type Logger,
   type RawCSVData,
 } from '@toastmasters/analytics-core'
@@ -75,6 +76,8 @@ interface RankingMetrics {
   marketAnalysisSubmitted: boolean
   communicationPlanSubmitted: boolean
   regionAdvisorVisitMet: boolean
+  // Clubs with 20+ paid members for President's 20-Plus Award (#330)
+  clubsWith20PlusMembers: number
 }
 
 /**
@@ -602,6 +605,8 @@ export class TransformService {
           regionAdvisorVisitMet: this.parseYesNo(
             record['Region Advisor Visit']
           ),
+          // Default 0; populated later from per-district club-performance.csv (#330)
+          clubsWith20PlusMembers: 0,
         }
 
         metrics.push(metric)
@@ -883,22 +888,35 @@ export class TransformService {
       return null
     }
 
-    // When all districts report 0 Distinguished (pre-April), compute
-    // confirmed counts from per-district club performance CSVs (#304)
+    // Aggregate per-district club data from club-performance CSVs:
+    // - clubsWith20PlusMembers (#330) — always computed for 20-Plus Award
+    // - confirmed Distinguished count (#304) — only when all districts report 0
     const allZeroDistinguished = metrics.every(m => m.distinguishedClubs === 0)
-    if (allZeroDistinguished) {
-      for (const metric of metrics) {
-        try {
-          const csvPath = path.join(
-            this.cacheDir,
-            'raw-csv',
-            date,
-            `district-${metric.districtId}`,
-            'club-performance.csv'
+    for (const metric of metrics) {
+      try {
+        const csvPath = path.join(
+          this.cacheDir,
+          'raw-csv',
+          date,
+          `district-${metric.districtId}`,
+          'club-performance.csv'
+        )
+        const content = await fs.readFile(csvPath, 'utf-8').catch(() => null)
+        if (!content) continue
+        const clubs = this.parseCSVToRecords(content)
+
+        // Always count clubs with 20+ paid members for President's 20-Plus Award (#330)
+        let twentyPlus = 0
+        for (const club of clubs) {
+          const members = this.parseNumber(
+            club['Active Members'] ?? club['Membership'] ?? club['Paid Members']
           )
-          const content = await fs.readFile(csvPath, 'utf-8').catch(() => null)
-          if (!content) continue
-          const clubs = this.parseCSVToRecords(content)
+          if (members >= 20) twentyPlus++
+        }
+        metric.clubsWith20PlusMembers = twentyPlus
+
+        // Compute confirmed Distinguished only when all districts report 0 (#304)
+        if (allZeroDistinguished) {
           let confirmed = 0
           for (const club of clubs) {
             const goals = this.parseNumber(club['Goals Met'])
@@ -917,9 +935,9 @@ export class TransformService {
                 ? (confirmed / metric.activeClubs) * 100
                 : 0
           }
-        } catch {
-          // Skip districts with missing club data
         }
+      } catch {
+        // Skip districts with missing club data
       }
     }
 
@@ -989,6 +1007,8 @@ export class TransformService {
         marketAnalysisSubmitted: metric.marketAnalysisSubmitted,
         communicationPlanSubmitted: metric.communicationPlanSubmitted,
         regionAdvisorVisitMet: metric.regionAdvisorVisitMet,
+        // Clubs with 20+ paid members for President's 20-Plus Award (#330)
+        clubsWith20PlusMembers: metric.clubsWith20PlusMembers,
       })
     }
 
@@ -1714,6 +1734,52 @@ export class TransformService {
   }
 
   /**
+   * Write competitive awards standings file (#330)
+   *
+   * Computes the three competitive district awards (Extension, 20-Plus,
+   * Retention) from the all-districts rankings and writes them to
+   * snapshots/{date}/competitive-awards.json.
+   *
+   * @param snapshotDate - The date to write the snapshot under
+   * @param rankings - The rankings data already computed for this date
+   * @returns Path to the written competitive awards file
+   */
+  private async writeCompetitiveAwardsToDate(
+    snapshotDate: string,
+    rankings: AllDistrictsRankingsData
+  ): Promise<string> {
+    const calculator = new CompetitiveAwardsCalculator()
+    const standings = calculator.calculate(rankings.rankings)
+
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    const awardsPath = path.join(snapshotDir, 'competitive-awards.json')
+
+    await fs.mkdir(snapshotDir, { recursive: true })
+
+    const payload = {
+      metadata: {
+        snapshotId: snapshotDate,
+        calculatedAt: new Date().toISOString(),
+        totalDistricts: rankings.rankings.length,
+      },
+      ...standings,
+    }
+
+    const content = JSON.stringify(payload, null, 2)
+    const tempPath = `${awardsPath}.tmp.${Date.now()}`
+    await fs.writeFile(tempPath, content, 'utf-8')
+    await fs.rename(tempPath, awardsPath)
+
+    this.logger.info('Competitive awards standings written', {
+      snapshotDate,
+      path: awardsPath,
+      totalDistricts: rankings.rankings.length,
+    })
+
+    return awardsPath
+  }
+
+  /**
    * Transform all available districts for a date
    *
    * Requirements:
@@ -1908,6 +1974,20 @@ export class TransformService {
               rankings
             )
             snapshotLocations.push(rankingsPath)
+
+            // Calculate and write competitive awards standings (#330)
+            try {
+              const competitiveAwardsPath =
+                await this.writeCompetitiveAwardsToDate(snapshotDate, rankings)
+              snapshotLocations.push(competitiveAwardsPath)
+            } catch (awardsError) {
+              const msg =
+                awardsError instanceof Error ? awardsError.message : 'Unknown'
+              this.logger.error(
+                'Failed to calculate/write competitive awards',
+                { date, error: msg }
+              )
+            }
           } else {
             this.logger.warn(
               'Could not calculate all-districts rankings (no CSV data)',

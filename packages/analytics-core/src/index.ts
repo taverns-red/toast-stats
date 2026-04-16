@@ -190,6 +190,7 @@ export {
 export {
   BordaCountRankingCalculator,
   MetricRankingsCalculator,
+  CompetitiveAwardsCalculator,
   type IRankingCalculator,
   type RankingLogger,
   type RankingDistrictStatistics,
@@ -197,4 +198,7 @@ export {
   type BordaCountRankingCalculatorConfig,
   type MetricType,
   type RegionRankResult,
+  type CompetitiveAwardRanking,
+  type CompetitiveAwardsByDistrict,
+  type CompetitiveAwardStandings,
 } from './rankings/index.js'

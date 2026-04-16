@@ -86,6 +86,8 @@ export interface DistrictRanking {
   communicationPlanSubmitted?: boolean
   /** 2+ Region Advisor meetings completed (Y/N from CSV) (#329) */
   regionAdvisorVisitMet?: boolean
+  /** Count of active clubs with 20+ paid members — for President's 20-Plus Award (#330) */
+  clubsWith20PlusMembers?: number
 }
 
 /**

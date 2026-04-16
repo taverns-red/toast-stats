@@ -131,6 +131,9 @@ export interface DistrictRankingData {
   communicationPlanSubmitted: boolean
   regionAdvisorVisitMet: boolean
 
+  // Count of clubs with 20+ paid members — for President's 20-Plus Award (#330)
+  clubsWith20PlusMembers: number
+
   // Regional information
   region: string
   districtName: string
@@ -221,6 +224,8 @@ interface RankingMetrics {
   marketAnalysisSubmitted: boolean
   communicationPlanSubmitted: boolean
   regionAdvisorVisitMet: boolean
+  // Count of clubs with 20+ paid members — for President's 20-Plus Award (#330)
+  clubsWith20PlusMembers: number
 }
 
 /**
@@ -485,6 +490,8 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           marketAnalysisSubmitted: ranking.marketAnalysisSubmitted,
           communicationPlanSubmitted: ranking.communicationPlanSubmitted,
           regionAdvisorVisitMet: ranking.regionAdvisorVisitMet,
+          // Clubs with 20+ paid members for President's 20-Plus Award (#330)
+          clubsWith20PlusMembers: ranking.clubsWith20PlusMembers,
         }
       }
     )
@@ -569,6 +576,10 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           regionAdvisorVisitMet: this.parseYesNo(
             districtPerformance['Region Advisor Visit']
           ),
+          // Aggregate clubs with 20+ paid members for President's 20-Plus Award (#330)
+          clubsWith20PlusMembers: district.clubPerformance
+            ? this.countClubsWith20PlusMembers(district.clubPerformance)
+            : 0,
         }
 
         // When TI reports 0 Distinguished (pre-April), compute confirmed
@@ -630,6 +641,27 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
         membershipBase
       )
       if (level !== 'NotDistinguished') count++
+    }
+    return count
+  }
+
+  /**
+   * Count clubs with 20+ paid members from club-performance data (#330).
+   *
+   * Used for President's 20-Plus Award which recognizes the top 3 districts
+   * by percentage of active clubs with 20 or more paid members.
+   *
+   * Uses "Active Members" column (alternative names: "Membership", "Paid Members").
+   */
+  private countClubsWith20PlusMembers(
+    clubPerformance: Array<Record<string, string | number | null>>
+  ): number {
+    let count = 0
+    for (const club of clubPerformance) {
+      const members = this.parseNumber(
+        club['Active Members'] ?? club['Membership'] ?? club['Paid Members']
+      )
+      if (members >= 20) count++
     }
     return count
   }
@@ -836,6 +868,8 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
         marketAnalysisSubmitted: metric.marketAnalysisSubmitted,
         communicationPlanSubmitted: metric.communicationPlanSubmitted,
         regionAdvisorVisitMet: metric.regionAdvisorVisitMet,
+        // Clubs with 20+ paid members for President's 20-Plus Award (#330)
+        clubsWith20PlusMembers: metric.clubsWith20PlusMembers,
         region: metric.region,
         districtName: metric.districtName,
         rankingVersion: this.RANKING_VERSION,

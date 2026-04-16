@@ -94,6 +94,9 @@ export const DistrictRankingSchema = z.object({
 
   /** 2+ Region Advisor meetings completed (Y/N from CSV) (#329) */
   regionAdvisorVisitMet: z.boolean().optional(),
+
+  /** Count of active clubs with 20+ paid members — for President's 20-Plus Award (#330) */
+  clubsWith20PlusMembers: z.number().optional(),
 })
 
 /**

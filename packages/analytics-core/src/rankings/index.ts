@@ -21,3 +21,10 @@ export {
   type MetricType,
   type RegionRankResult,
 } from './MetricRankingsCalculator.js'
+
+export {
+  CompetitiveAwardsCalculator,
+  type CompetitiveAwardRanking,
+  type CompetitiveAwardsByDistrict,
+  type CompetitiveAwardStandings,
+} from './CompetitiveAwardsCalculator.js'
