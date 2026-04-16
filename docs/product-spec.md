@@ -1,7 +1,7 @@
 # Product Spec — Toast Stats
 
 **Live site:** [ts.taverns.red](https://ts.taverns.red)
-**Last updated:** April 3, 2026
+**Last updated:** April 15, 2026
 
 ---
 
@@ -28,32 +28,36 @@ A data visualization platform for **Toastmasters district leaders** to track clu
 
 ### Landing Page
 
-| Feature                     | Description                                           | Status     |
-| --------------------------- | ----------------------------------------------------- | ---------- |
-| Global district rankings    | Borda-count rankings across membership, payments, DCP | ✅ Shipped |
-| Multi-year comparison table | YoY district metrics comparison                       | ✅ Shipped |
-| Historical rank charts      | Track rank progression over program years             | ✅ Shipped |
-| Program year selector       | Switch between program years (July-June)              | ✅ Shipped |
-| Dark mode                   | Full theme toggle                                     | ✅ Shipped |
+| Feature                     | Description                                                             | Status     |
+| --------------------------- | ----------------------------------------------------------------------- | ---------- |
+| Global district rankings    | Borda-count rankings across membership, payments, DCP                   | ✅ Shipped |
+| Multi-year comparison table | YoY district metrics comparison                                         | ✅ Shipped |
+| Historical rank charts      | Track rank progression over program years                               | ✅ Shipped |
+| Program year selector       | Switch between program years (July-June)                                | ✅ Shipped |
+| Dark mode                   | Full theme toggle                                                       | ✅ Shipped |
+| Region filter pill bar      | Always-visible toggle pills for region filtering                        | ✅ Shipped |
+| Awards Race section         | Top-3 leaderboards for Extension, 20-Plus, Retention awards (collapsed) | ✅ Shipped |
+| Inline award badges         | Trophy pills next to district names for competitive award winners       | ✅ Shipped |
 
 ### District Detail Page
 
-| Feature                    | Description                                                        | Status     |
-| -------------------------- | ------------------------------------------------------------------ | ---------- |
-| **Overview tab**           | Membership count, +/- badge, club counts, world/region rank        | ✅ Shipped |
-| **Clubs tab**              | Sortable table of all clubs with health status, filters            | ✅ Shipped |
-| **Divisions tab**          | Division/Area performance cards, recognition tracking              | ✅ Shipped |
-| **Analytics tab**          | DCP projections, leadership insights, educational awards           | ✅ Shipped |
-| **Trends tab**             | Membership trend chart, payments chart, YoY comparison             | ✅ Shipped |
-| Club detail page           | Per-club membership chart, DCP timeline, base/current/change stats | ✅ Shipped |
-| Provisional Distinguished  | Pre-April indicator with confirmed fallback level per tier         | ✅ Shipped |
-| CSP status on club page    | Club Success Plan submission status (✓/✗/—) on club detail page    | ✅ Shipped |
-| Club health classification | Thriving / Vulnerable / Intervention Required                      | ✅ Shipped |
-| Distinguished projections  | Project year-end Distinguished club count                          | ✅ Shipped |
-| Division/Area recognition  | DAP/DDP status tracking per rules reference                        | ✅ Shipped |
-| Performance targets        | World rank, percentile, target thresholds from CDN                 | ✅ Shipped |
-| Date selector              | Browse historical snapshots within a program year                  | ✅ Shipped |
-| Deep links (URL state)     | Program year, date, tab, sort, filters, pagination synced to URL   | ✅ Shipped |
+| Feature                     | Description                                                                             | Status     |
+| --------------------------- | --------------------------------------------------------------------------------------- | ---------- |
+| **Overview tab**            | Membership count, +/- badge, club counts, world/region rank                             | ✅ Shipped |
+| **Clubs tab**               | Sortable table of all clubs with health status, filters                                 | ✅ Shipped |
+| **Divisions tab**           | Division/Area performance cards, recognition tracking                                   | ✅ Shipped |
+| **Analytics tab**           | DCP projections, leadership insights, educational awards                                | ✅ Shipped |
+| **Trends tab**              | Membership trend chart, payments chart, YoY comparison                                  | ✅ Shipped |
+| Club detail page            | Per-club membership chart, DCP timeline, base/current/change stats                      | ✅ Shipped |
+| Provisional Distinguished   | Pre-April indicator with confirmed fallback level per tier                              | ✅ Shipped |
+| CSP status on club page     | Club Success Plan submission status (✓/✗/—) on club detail page                         | ✅ Shipped |
+| District Recognition trophy | Distinguished District tier badge + 5-prerequisite checklist + gap analysis on Overview | ✅ Shipped |
+| Club health classification  | Thriving / Vulnerable / Intervention Required                                           | ✅ Shipped |
+| Distinguished projections   | Project year-end Distinguished club count                                               | ✅ Shipped |
+| Division/Area recognition   | DAP/DDP status tracking per rules reference                                             | ✅ Shipped |
+| Performance targets         | World rank, percentile, target thresholds from CDN                                      | ✅ Shipped |
+| Date selector               | Browse historical snapshots within a program year                                       | ✅ Shipped |
+| Deep links (URL state)      | Program year, date, tab, sort, filters, pagination synced to URL                        | ✅ Shipped |
 
 ### Observability
 
@@ -90,12 +94,27 @@ All Toastmasters-specific rules are documented in [toastmasters-rules-reference.
 | Base membership = end of prior year         | `useTimeSeries.ts`                                       | Fallback: first point of current year                                                                                                                |
 | CSP required for Distinguished (2025-2026+) | `ClubEligibilityUtils.ts`                                | Historical data assumes CSP submitted                                                                                                                |
 | Provisional Distinguished (pre-April)       | `ClubEligibilityUtils.ts`, `provisionalDistinguished.ts` | Level-specific thresholds: Smedley=25, President=20 (no growth alt), Select=20/5, Distinguished=20/3. Shows aspirational level + confirmed fallback. |
+| District Recognition Program (§13)          | `toastmasters-rules-reference.md` §13                    | 11 award types: 4 Distinguished tiers (with 5 prerequisites), 3 competitive, 2 threshold, 2 officer. Source: Item 1490, Rev. 04/2025.                |
 
 ---
 
 ## Decided — Not Yet Shipped
 
-_All items shipped. Backlog is empty._
+### District Awards Suite (#328)
+
+| Feature                      | Description                                                                | Phase | Issue | Status     |
+| ---------------------------- | -------------------------------------------------------------------------- | ----- | ----- | ---------- |
+| Parse new CSV columns        | Extract prerequisites (Y/N), Smedley counts, totals from All Districts CSV | 1     | #329  | ✅ Shipped |
+| Competitive award standings  | Compute Extension, 20-Plus, Retention award rankings                       | 1     | #330  | ✅ Shipped |
+| Landing page Awards Race     | Inline award badges + collapsed leaderboard section                        | 1     | #331  | ✅ Shipped |
+| Distinguished District tiers | 4 tiers with prerequisite gates + gap analysis (trophy case on Overview)   | 2     | #332  | ✅ Shipped |
+| Threshold + officer awards   | Club Strength, Leadership Excellence, PQD/CGD awards                       | 3     | #333  | Pending    |
+
+### Other
+
+| Feature                   | Description                                           | Issue |
+| ------------------------- | ----------------------------------------------------- | ----- |
+| Payment breakdown columns | Surface New/April/October/Late/Charter payment detail | #327  |
 
 ---
 

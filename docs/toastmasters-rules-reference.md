@@ -320,16 +320,62 @@ When calculating recognition status, apply rules in this order:
 
 ---
 
-## 13. Version History
+## 13. District Recognition Program
 
-| Version | Date          | Changes                                       |
-| ------- | ------------- | --------------------------------------------- |
-| 1.0     | January 2026  | Initial canonical rules reference             |
-| 1.1     | February 2026 | Added membership dues payment schedule (§4.1) |
+**Source:** Item 1490, Rev. 04/2025
+
+### 13.1 Prerequisites (Hard Gates)
+
+All four Distinguished District tiers require these prerequisites:
+
+- **District Success Plan** submitted by September 30
+- **85% of Division/Area Directors trained** (training report submitted)
+- **Market Analysis Plan** submitted by September 30
+- **Communication Plan** submitted by September 30
+- **2+ Region Advisor meetings** by May 31
+
+**Data source:** All Districts Summary CSV columns: `DSP`, `Training`, `Market Analysis`, `Communication Plan`, `Region Advisor Visit` (Y/N values)
+
+### 13.2 Distinguished District Tiers
+
+| Tier                      | No Net Club Loss | Payments Growth | Club Growth | % Distinguished |
+| ------------------------- | :--------------: | :-------------: | :---------: | :-------------: |
+| Distinguished             |     Required     |       ≥1%       |     ≥1%     |      ≥45%       |
+| Select Distinguished      |   Net +1 club    |       ≥3%       |     ≥3%     |      ≥50%       |
+| President's Distinguished |        —         |       ≥5%       |     ≥5%     |      ≥55%       |
+| Smedley Distinguished     |        —         |       ≥8%       |     ≥8%     |      ≥60%       |
+
+Smedley Distinguished is new for the 2025-2026 program year.
+
+### 13.3 Competitive Awards (Top 3 Globally)
+
+- **President's Extension Award:** Top 3 districts by net club growth
+- **President's 20-Plus Award:** Top 3 districts by % of active clubs with 20+ paid members
+- **District Club Retention Award:** Top 3 districts retaining 90%+ paid clubs
+
+### 13.4 Threshold Awards
+
+- **District Club Strength Award:** 10%+ growth in average club size (Total Membership / Active Clubs) year-over-year
+- **District Leadership Excellence Award:** 3+ consecutive years Distinguished (any tier)
+
+### 13.5 Officer Awards
+
+- **Excellence in Education & Training Award:** Awarded to PQD in districts that train 85% of Directors and meet Distinguished goals in Distinguished clubs
+- **Excellence in Club Growth Award:** Awarded to CGD in districts that meet Distinguished goals in club and membership payments growth
 
 ---
 
-## 14. Final Rules
+## 14. Version History
+
+| Version | Date          | Changes                                                     |
+| ------- | ------------- | ----------------------------------------------------------- |
+| 1.0     | January 2026  | Initial canonical rules reference                           |
+| 1.1     | February 2026 | Added membership dues payment schedule (§4.1)               |
+| 1.2     | April 2026    | Added §13 District Recognition Program (all 11 award types) |
+
+---
+
+## 15. Final Rules
 
 > **CSP submission is required for Distinguished status (2025-2026+).**  
 > **Distinguished percentages use paid units as denominator.**  
