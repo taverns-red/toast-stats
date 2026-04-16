@@ -6,6 +6,8 @@ import {
   fetchCdnRankings,
   fetchCdnRankingsForDate,
 } from '../services/cdn'
+import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
+import { AwardsRaceSection } from '../components/AwardsRaceSection'
 import { useDistricts } from '../hooks/useDistricts'
 import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
@@ -143,6 +145,11 @@ const LandingPage: React.FC = () => {
     staleTime: 15 * 60 * 1000, // 15 minutes
     placeholderData: prev => prev,
   })
+
+  // Fetch competitive award standings for the same snapshot (#331)
+  const { data: competitiveAwards } = useCompetitiveAwards(
+    effectiveRankingsDate
+  )
 
   const rankings: DistrictRanking[] = React.useMemo(
     () => data?.rankings || [],
@@ -754,7 +761,7 @@ const LandingPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap sticky left-[72px] z-10 bg-white sticky-column-shadow">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium text-gray-900">
                             {district.districtName}
                           </span>
@@ -777,6 +784,37 @@ const LandingPage: React.FC = () => {
                                 />
                               </svg>
                               Analytics
+                            </span>
+                          )}
+                          {/* Competitive award winner badges (#331) */}
+                          {competitiveAwards?.byDistrict?.[district.districtId]
+                            ?.extensionIsWinner && (
+                            <span
+                              title="President's Extension Award winner"
+                              className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
+                            >
+                              <span aria-hidden="true">🏆</span>
+                              <span className="ml-1">Extension</span>
+                            </span>
+                          )}
+                          {competitiveAwards?.byDistrict?.[district.districtId]
+                            ?.twentyPlusIsWinner && (
+                            <span
+                              title="President's 20-Plus Award winner"
+                              className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
+                            >
+                              <span aria-hidden="true">🏆</span>
+                              <span className="ml-1">20-Plus</span>
+                            </span>
+                          )}
+                          {competitiveAwards?.byDistrict?.[district.districtId]
+                            ?.retentionIsWinner && (
+                            <span
+                              title="District Club Retention Award winner"
+                              className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
+                            >
+                              <span aria-hidden="true">🏆</span>
+                              <span className="ml-1">Retention</span>
                             </span>
                           )}
                         </div>
@@ -861,6 +899,9 @@ const LandingPage: React.FC = () => {
             </table>
           </div>
         </div>
+
+        {/* Awards Race — competitive district awards (#331) */}
+        <AwardsRaceSection standings={competitiveAwards ?? null} />
 
         {/* Historical Rank Progression — collapsed by default (#83) */}
         <details className="bg-white rounded-lg shadow-md mt-4">

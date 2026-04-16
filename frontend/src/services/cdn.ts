@@ -152,6 +152,64 @@ export async function fetchCdnRankingsForDate(
 }
 
 /**
+ * Single ranked entry in a competitive award leaderboard (#330)
+ */
+export interface CompetitiveAwardRanking {
+  districtId: string
+  districtName: string
+  region: string
+  rank: number
+  value: number
+  isWinner: boolean
+}
+
+/**
+ * Per-district summary of competitive award standings (#330)
+ */
+export interface CompetitiveAwardsByDistrict {
+  extensionRank: number
+  extensionValue: number
+  extensionIsWinner: boolean
+  twentyPlusRank: number
+  twentyPlusValue: number
+  twentyPlusIsWinner: boolean
+  retentionRank: number
+  retentionValue: number
+  retentionIsWinner: boolean
+}
+
+/**
+ * Competitive award standings for a snapshot (#330)
+ */
+export interface CompetitiveAwardStandings {
+  metadata: {
+    snapshotId: string
+    calculatedAt: string
+    totalDistricts: number
+  }
+  extensionAward: CompetitiveAwardRanking[]
+  twentyPlusAward: CompetitiveAwardRanking[]
+  retentionAward: CompetitiveAwardRanking[]
+  byDistrict: Record<string, CompetitiveAwardsByDistrict>
+}
+
+/**
+ * Fetch competitive award standings for a specific snapshot date (#330).
+ * Returns null if the file does not exist (legacy snapshots).
+ */
+export async function fetchCdnCompetitiveAwards(
+  date: string
+): Promise<CompetitiveAwardStandings | null> {
+  const url = `${cdnBaseUrl()}/snapshots/${date}/competitive-awards.json`
+  const res = await fetch(url)
+  if (!res.ok) {
+    return null
+  }
+  recordCdnResponse(res)
+  return res.json() as Promise<CompetitiveAwardStandings>
+}
+
+/**
  * Construct a CDN URL for a pre-computed analytics file.
  *
  * @param date - Snapshot date (YYYY-MM-DD)
