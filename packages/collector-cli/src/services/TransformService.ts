@@ -22,6 +22,7 @@ import {
   ANALYTICS_SCHEMA_VERSION,
   getConfirmedDistinguishedLevel,
   CompetitiveAwardsCalculator,
+  DistinguishedDistrictCalculator,
   type Logger,
   type RawCSVData,
 } from '@toastmasters/analytics-core'
@@ -1734,11 +1735,16 @@ export class TransformService {
   }
 
   /**
-   * Write competitive awards standings file (#330)
+   * Write competitive awards + Distinguished District standings file (#330, #332)
    *
-   * Computes the three competitive district awards (Extension, 20-Plus,
-   * Retention) from the all-districts rankings and writes them to
-   * snapshots/{date}/competitive-awards.json.
+   * Computes:
+   * - Three competitive district awards (Extension, 20-Plus, Retention) from
+   *   the all-districts rankings
+   * - Per-district Distinguished District tier status (Distinguished, Select,
+   *   Presidents, Smedley) with prerequisite gating and gap analysis
+   *
+   * Writes everything to snapshots/{date}/competitive-awards.json so the
+   * frontend fetches a single file for all award data.
    *
    * @param snapshotDate - The date to write the snapshot under
    * @param rankings - The rankings data already computed for this date
@@ -1748,8 +1754,14 @@ export class TransformService {
     snapshotDate: string,
     rankings: AllDistrictsRankingsData
   ): Promise<string> {
-    const calculator = new CompetitiveAwardsCalculator()
-    const standings = calculator.calculate(rankings.rankings)
+    const competitiveCalculator = new CompetitiveAwardsCalculator()
+    const standings = competitiveCalculator.calculate(rankings.rankings)
+
+    // Distinguished District tier status (#332)
+    const distinguishedCalculator = new DistinguishedDistrictCalculator()
+    const distinguishedDistrict = distinguishedCalculator.calculateAll(
+      rankings.rankings
+    )
 
     const snapshotDir = this.getSnapshotDir(snapshotDate)
     const awardsPath = path.join(snapshotDir, 'competitive-awards.json')
@@ -1763,6 +1775,7 @@ export class TransformService {
         totalDistricts: rankings.rankings.length,
       },
       ...standings,
+      distinguishedDistrict,
     }
 
     const content = JSON.stringify(payload, null, 2)
@@ -1770,7 +1783,7 @@ export class TransformService {
     await fs.writeFile(tempPath, content, 'utf-8')
     await fs.rename(tempPath, awardsPath)
 
-    this.logger.info('Competitive awards standings written', {
+    this.logger.info('Competitive awards + Distinguished status written', {
       snapshotDate,
       path: awardsPath,
       totalDistricts: rankings.rankings.length,

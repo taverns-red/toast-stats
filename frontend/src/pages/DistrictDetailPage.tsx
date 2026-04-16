@@ -32,6 +32,8 @@ import {
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DistrictOverview } from '../components/DistrictOverview'
 import DataAsOfBanner from '../components/DataAsOfBanner'
+import { DistinguishedDistrictTrophyCase } from '../components/DistinguishedDistrictTrophyCase'
+import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart'
 import { ClubsTable } from '../components/ClubsTable'
@@ -418,6 +420,15 @@ const DistrictDetailPage: React.FC = () => {
     }
   }, [aggregatedAnalytics])
 
+  // Fetch competitive awards / Distinguished District status (#332)
+  const { data: competitiveAwards } = useCompetitiveAwards(
+    effectiveEndDate ?? undefined
+  )
+  const distinguishedDistrictStatus = React.useMemo(() => {
+    if (!districtId || !competitiveAwards?.distinguishedDistrict) return null
+    return competitiveAwards.distinguishedDistrict[districtId] ?? null
+  }, [districtId, competitiveAwards])
+
   // Determine if we have data for the overview tab
   // Use aggregated data if available, otherwise fall back to full analytics
   const hasOverviewData = overviewData !== null || analytics !== null
@@ -724,6 +735,11 @@ const DistrictDetailPage: React.FC = () => {
                     }
                   />
                 )}
+
+                {/* Distinguished District Trophy Case (#332) */}
+                <DistinguishedDistrictTrophyCase
+                  status={distinguishedDistrictStatus}
+                />
 
                 {/* Distinguished Progress Chart - uses aggregated data for faster load */}
                 {/* Falls back to full analytics if aggregated not available */}

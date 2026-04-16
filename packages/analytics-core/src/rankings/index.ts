@@ -28,3 +28,11 @@ export {
   type CompetitiveAwardsByDistrict,
   type CompetitiveAwardStandings,
 } from './CompetitiveAwardsCalculator.js'
+
+export {
+  DistinguishedDistrictCalculator,
+  type DistinguishedDistrictTier,
+  type DistinguishedDistrictPrerequisites,
+  type DistinguishedDistrictGap,
+  type DistinguishedDistrictStatus,
+} from './DistinguishedDistrictCalculator.js'

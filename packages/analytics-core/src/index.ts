@@ -201,4 +201,9 @@ export {
   type CompetitiveAwardRanking,
   type CompetitiveAwardsByDistrict,
   type CompetitiveAwardStandings,
+  DistinguishedDistrictCalculator,
+  type DistinguishedDistrictTier,
+  type DistinguishedDistrictPrerequisites,
+  type DistinguishedDistrictGap,
+  type DistinguishedDistrictStatus,
 } from './rankings/index.js'

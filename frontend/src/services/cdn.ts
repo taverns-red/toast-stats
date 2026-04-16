@@ -179,7 +179,42 @@ export interface CompetitiveAwardsByDistrict {
 }
 
 /**
- * Competitive award standings for a snapshot (#330)
+ * Distinguished District tier (#332)
+ */
+export type DistinguishedDistrictTier =
+  | 'NotDistinguished'
+  | 'Distinguished'
+  | 'Select'
+  | 'Presidents'
+  | 'Smedley'
+
+export interface DistinguishedDistrictPrerequisites {
+  dspSubmitted: boolean
+  trainingMet: boolean
+  marketAnalysisSubmitted: boolean
+  communicationPlanSubmitted: boolean
+  regionAdvisorVisitMet: boolean
+}
+
+export interface DistinguishedDistrictGap {
+  tier: DistinguishedDistrictTier
+  paymentGrowthGap: number
+  clubGrowthGap: number
+  distinguishedPercentGap: number
+  netClubGrowthGap: number
+}
+
+export interface DistinguishedDistrictStatus {
+  districtId: string
+  currentTier: DistinguishedDistrictTier
+  allPrerequisitesMet: boolean
+  prerequisites: DistinguishedDistrictPrerequisites
+  nextTierGap: DistinguishedDistrictGap | null
+}
+
+/**
+ * Competitive award standings + Distinguished District status for a snapshot
+ * (#330, #332)
  */
 export interface CompetitiveAwardStandings {
   metadata: {
@@ -191,6 +226,8 @@ export interface CompetitiveAwardStandings {
   twentyPlusAward: CompetitiveAwardRanking[]
   retentionAward: CompetitiveAwardRanking[]
   byDistrict: Record<string, CompetitiveAwardsByDistrict>
+  /** Per-district Distinguished District tier status (#332) */
+  distinguishedDistrict?: Record<string, DistinguishedDistrictStatus>
 }
 
 /**
