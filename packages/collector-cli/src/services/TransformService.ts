@@ -23,6 +23,9 @@ import {
   getConfirmedDistinguishedLevel,
   CompetitiveAwardsCalculator,
   DistinguishedDistrictCalculator,
+  ClubStrengthAwardCalculator,
+  LeadershipExcellenceCalculator,
+  OfficerAwardsCalculator,
   type Logger,
   type RawCSVData,
 } from '@toastmasters/analytics-core'
@@ -50,6 +53,11 @@ import {
   ClosingPeriodDetector,
   type ClosingPeriodInfo,
 } from '../utils/ClosingPeriodDetector.js'
+import {
+  calculateProgramYear,
+  getPriorProgramYear,
+} from '../utils/CachePaths.js'
+import { DistrictAwardsHistoryStore } from './DistrictAwardsHistoryStore.js'
 
 /**
  * Internal structure for ranking metrics extraction
@@ -1754,18 +1762,109 @@ export class TransformService {
     snapshotDate: string,
     rankings: AllDistrictsRankingsData
   ): Promise<string> {
+    // ── Competitive awards (Extension, 20-Plus, Retention) ──
     const competitiveCalculator = new CompetitiveAwardsCalculator()
     const standings = competitiveCalculator.calculate(rankings.rankings)
 
-    // Distinguished District tier status (#332)
+    // ── Distinguished District tier status (#332) ──
     const distinguishedCalculator = new DistinguishedDistrictCalculator()
     const distinguishedDistrict = distinguishedCalculator.calculateAll(
       rankings.rankings
     )
 
-    const snapshotDir = this.getSnapshotDir(snapshotDate)
-    const awardsPath = path.join(snapshotDir, 'competitive-awards.json')
+    // ── Load/create awards history store (#333) ──
+    let historyStore = await DistrictAwardsHistoryStore.load(this.cacheDir)
+    if (!historyStore) {
+      historyStore = DistrictAwardsHistoryStore.create()
+    }
 
+    const programYear = calculateProgramYear(snapshotDate)
+    const priorProgramYear = getPriorProgramYear(programYear)
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+
+    // ── Read totalMembership + compute avgClubSize per district (#333) ──
+    const districtAvgClubSizes = new Map<string, number>()
+
+    for (const ranking of rankings.rankings) {
+      try {
+        const snapshotPath = path.join(
+          snapshotDir,
+          `district_${ranking.districtId}.json`
+        )
+        const content = await fs
+          .readFile(snapshotPath, 'utf-8')
+          .catch(() => null)
+        if (!content) continue
+        const perDistrictData = JSON.parse(content) as PerDistrictData
+        const totalMembership =
+          perDistrictData.data?.totals?.totalMembership ?? 0
+        const avgClubSize =
+          ranking.activeClubs > 0 ? totalMembership / ranking.activeClubs : 0
+        districtAvgClubSizes.set(ranking.districtId, avgClubSize)
+
+        // Upsert into history store
+        historyStore.upsertYearSummary(ranking.districtId, {
+          programYear,
+          distinguishedTier:
+            distinguishedDistrict[ranking.districtId]?.currentTier ??
+            'NotDistinguished',
+          avgClubSize,
+          totalMembership,
+          activeClubs: ranking.activeClubs,
+          snapshotDate,
+        })
+      } catch {
+        // Skip districts with unreadable snapshots
+      }
+    }
+
+    // ── Save history store (#333) ──
+    await historyStore.save(this.cacheDir)
+
+    // ── Club Strength Award (#333) ──
+    const clubStrengthCalculator = new ClubStrengthAwardCalculator()
+    const clubStrengthInputs = rankings.rankings.map(r => ({
+      districtId: r.districtId,
+      districtName: r.districtName,
+      region: r.region,
+      currentAvgClubSize: districtAvgClubSizes.get(r.districtId) ?? 0,
+      priorYearAvgClubSize:
+        historyStore.getYearSummary(r.districtId, priorProgramYear)
+          ?.avgClubSize ?? null,
+    }))
+    const clubStrengthAward =
+      clubStrengthCalculator.calculate(clubStrengthInputs)
+
+    // ── Leadership Excellence Award (#333) ──
+    const leadershipCalculator = new LeadershipExcellenceCalculator()
+    const leadershipInputs = rankings.rankings.map(r => ({
+      districtId: r.districtId,
+      districtName: r.districtName,
+      region: r.region,
+      yearEndTiers: historyStore
+        .getCompletedYearTiers(r.districtId, programYear)
+        .map(t => ({
+          programYear: t.programYear,
+          tier: t.tier as
+            | 'NotDistinguished'
+            | 'Distinguished'
+            | 'Select'
+            | 'Presidents'
+            | 'Smedley',
+        })),
+    }))
+    const leadershipExcellenceAward =
+      leadershipCalculator.calculate(leadershipInputs)
+
+    // ── Officer Awards (#333) ──
+    const officerCalculator = new OfficerAwardsCalculator()
+    const officerAwards = officerCalculator.calculate(
+      rankings.rankings,
+      distinguishedDistrict
+    )
+
+    // ── Write payload ─��
+    const awardsPath = path.join(snapshotDir, 'competitive-awards.json')
     await fs.mkdir(snapshotDir, { recursive: true })
 
     const payload = {
@@ -1776,6 +1875,9 @@ export class TransformService {
       },
       ...standings,
       distinguishedDistrict,
+      clubStrengthAward,
+      leadershipExcellenceAward,
+      officerAwards,
     }
 
     const content = JSON.stringify(payload, null, 2)
@@ -1783,10 +1885,13 @@ export class TransformService {
     await fs.writeFile(tempPath, content, 'utf-8')
     await fs.rename(tempPath, awardsPath)
 
-    this.logger.info('Competitive awards + Distinguished status written', {
+    this.logger.info('All district awards written', {
       snapshotDate,
       path: awardsPath,
       totalDistricts: rankings.rankings.length,
+      clubStrengthQualifying: clubStrengthAward.qualifyingDistricts.length,
+      leadershipExcellenceQualifying:
+        leadershipExcellenceAward.qualifyingDistricts.length,
     })
 
     return awardsPath

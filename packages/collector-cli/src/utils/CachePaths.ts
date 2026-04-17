@@ -38,6 +38,15 @@ export function calculateProgramYear(date: string | Date): string {
   return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`
 }
 
+/**
+ * Get the program year preceding the given one (#333).
+ * E.g., "2025-2026" → "2024-2025"
+ */
+export function getPriorProgramYear(programYear: string): string {
+  const startYear = parseInt(programYear.split('-')[0]!, 10)
+  return `${startYear - 1}-${startYear}`
+}
+
 // ── Path Building ────────────────────────────────────────────────────
 
 /**
