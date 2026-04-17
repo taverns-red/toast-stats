@@ -949,3 +949,11 @@
 **Rule**: When a component is replaced by a new implementation, delete the old one in the same sprint. Dead code conceals feature gaps (CSP was "implemented" but invisible) and wastes test budget (47 tests ran against unreachable components).
 **Warning**: Product spec listed "Club detail modal" as shipped — it should have been updated to "Club detail page" when the migration happened. Keep product-spec.md in sync with actual shipped features.
 **rules.md**: none
+
+## 🗓️ 2026-04-16 — Lesson 45: Persistent GCS-Backed Stores Need Pipeline Sync Parity (#333)
+
+**Discovery**: When adding `DistrictAwardsHistoryStore` (a persistent JSON file that accumulates year-end summaries), the store needed sync points in **5 places** across the workflow: daily FROM GCS, daily TO GCS, rebuild FROM GCS, rebuild TO GCS (staging), and rebuild TO GCS (production). Missing any one would cause silent data loss — the store loads empty, overwrites history with a single date's data, then pushes that truncated version back.
+**Proof**: The rebuild has two parallel paths (staging + production) that each do a post-loop sync. Initially only one was wired, which would have silently lost history accumulated during the other path's rebuild.
+**Rule**: When adding a new GCS-backed persistent store (R9 pattern), audit ALL workflow paths that touch persistent state. Use `grep -n "club-trends\|time-series" data-pipeline.yml` to find every existing sync point and mirror them for the new store. Every `gsutil rsync` for an existing store needs a corresponding command for the new one.
+**Warning**: The staging and production rebuild paths in data-pipeline.yml are structurally duplicated (not shared). Changes to one must be manually mirrored to the other.
+**rules.md**: R9 (extended — new stores need full sync parity across all workflow paths)

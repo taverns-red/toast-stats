@@ -1,7 +1,7 @@
 # Product Spec — Toast Stats
 
 **Live site:** [ts.taverns.red](https://ts.taverns.red)
-**Last updated:** April 15, 2026
+**Last updated:** April 16, 2026
 
 ---
 
@@ -108,7 +108,7 @@ All Toastmasters-specific rules are documented in [toastmasters-rules-reference.
 | Competitive award standings  | Compute Extension, 20-Plus, Retention award rankings                       | 1     | #330  | ✅ Shipped |
 | Landing page Awards Race     | Inline award badges + collapsed leaderboard section                        | 1     | #331  | ✅ Shipped |
 | Distinguished District tiers | 4 tiers with prerequisite gates + gap analysis (trophy case on Overview)   | 2     | #332  | ✅ Shipped |
-| Threshold + officer awards   | Club Strength, Leadership Excellence, PQD/CGD awards                       | 3     | #333  | Pending    |
+| Threshold + officer awards   | Club Strength, Leadership Excellence, PQD/CGD awards                       | 3     | #333  | ✅ Shipped |
 
 ### Other
 
