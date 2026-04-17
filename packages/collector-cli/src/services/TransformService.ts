@@ -1885,6 +1885,29 @@ export class TransformService {
     const awardsPath = path.join(snapshotDir, 'competitive-awards.json')
     await fs.mkdir(snapshotDir, { recursive: true })
 
+    // Payment breakdown per district (#327)
+    const paymentBreakdown: Record<
+      string,
+      {
+        newPayments: number
+        aprilPayments: number
+        octoberPayments: number
+        latePayments: number
+        charterPayments: number
+        totalPayments: number
+      }
+    > = {}
+    for (const r of rankings.rankings) {
+      paymentBreakdown[r.districtId] = {
+        newPayments: r.newPayments ?? 0,
+        aprilPayments: r.aprilPayments ?? 0,
+        octoberPayments: r.octoberPayments ?? 0,
+        latePayments: r.latePayments ?? 0,
+        charterPayments: r.charterPayments ?? 0,
+        totalPayments: r.totalPayments,
+      }
+    }
+
     const payload = {
       metadata: {
         snapshotId: snapshotDate,
@@ -1896,6 +1919,7 @@ export class TransformService {
       clubStrengthAward,
       leadershipExcellenceAward,
       officerAwards,
+      paymentBreakdown,
     }
 
     const content = JSON.stringify(payload, null, 2)

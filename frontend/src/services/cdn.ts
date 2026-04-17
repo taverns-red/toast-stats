@@ -275,6 +275,18 @@ export interface CompetitiveAwardStandings {
       qualifies: boolean
     }>
   }
+  /** Payment breakdown per district (#327) */
+  paymentBreakdown?: Record<
+    string,
+    {
+      newPayments: number
+      aprilPayments: number
+      octoberPayments: number
+      latePayments: number
+      charterPayments: number
+      totalPayments: number
+    }
+  >
 }
 
 /**

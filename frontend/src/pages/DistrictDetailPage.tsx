@@ -33,6 +33,7 @@ import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DistrictOverview } from '../components/DistrictOverview'
 import DataAsOfBanner from '../components/DataAsOfBanner'
 import { DistinguishedDistrictTrophyCase } from '../components/DistinguishedDistrictTrophyCase'
+import { PaymentCompositionCard } from '../components/PaymentCompositionCard'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart'
@@ -463,6 +464,12 @@ const DistrictDetailPage: React.FC = () => {
     }
   }, [districtId, competitiveAwards])
 
+  // Payment breakdown for this district (#327)
+  const paymentBreakdown = React.useMemo(() => {
+    if (!districtId || !competitiveAwards?.paymentBreakdown) return null
+    return competitiveAwards.paymentBreakdown[districtId] ?? null
+  }, [districtId, competitiveAwards])
+
   // Determine if we have data for the overview tab
   // Use aggregated data if available, otherwise fall back to full analytics
   const hasOverviewData = overviewData !== null || analytics !== null
@@ -788,6 +795,18 @@ const DistrictDetailPage: React.FC = () => {
                     officerAwardsResult?.clubGrowth?.qualifies
                   }
                 />
+
+                {/* Payment Composition (#327) */}
+                {paymentBreakdown && (
+                  <PaymentCompositionCard
+                    newPayments={paymentBreakdown.newPayments}
+                    aprilPayments={paymentBreakdown.aprilPayments}
+                    octoberPayments={paymentBreakdown.octoberPayments}
+                    latePayments={paymentBreakdown.latePayments}
+                    charterPayments={paymentBreakdown.charterPayments}
+                    totalPayments={paymentBreakdown.totalPayments}
+                  />
+                )}
 
                 {/* Distinguished Progress Chart - uses aggregated data for faster load */}
                 {/* Falls back to full analytics if aggregated not available */}
