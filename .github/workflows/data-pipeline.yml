@@ -241,6 +241,11 @@ jobs:
           mkdir -p ./cache/club-trends
           gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
 
+          # District awards history store (~5 KB) (#333)
+          echo "Syncing district-awards-history..."
+          gsutil cp "gs://${GCS_BUCKET}/district-awards-history.json" \
+            "./cache/district-awards-history.json" 2>/dev/null || true
+
           # Previous year snapshots for YoY comparison
           PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
           echo "Syncing previous year snapshots (${PREV_YEAR})..."
@@ -292,6 +297,11 @@ jobs:
           gsutil -m rsync -r "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
           gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+
+          # District awards history (#333)
+          if [ -f "./cache/district-awards-history.json" ]; then
+            gsutil cp "./cache/district-awards-history.json" "gs://${GCS_BUCKET}/district-awards-history.json"
+          fi
 
           # Time-series: CDN-served overlay (mutable, short cache)
           # rsync above keeps internal state; -m cp -rZ adds CDN headers + gzip in parallel
@@ -345,6 +355,11 @@ jobs:
           echo "Syncing club-trends..."
           mkdir -p ./cache/club-trends
           gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
+
+          # District awards history store (#333)
+          echo "Syncing district-awards-history..."
+          gsutil cp "gs://${GCS_BUCKET}/district-awards-history.json" \
+            "./cache/district-awards-history.json" 2>/dev/null || true
 
           echo "## ⏬ Store Sync (rebuild)" >> "$GITHUB_STEP_SUMMARY"
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
@@ -469,6 +484,12 @@ jobs:
           echo "Syncing time-series and club-trends back to GCS..."
           gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+
+          # District awards history (#333)
+          if [ -f "./cache/district-awards-history.json" ]; then
+            echo "Syncing district-awards-history back to GCS..."
+            gsutil cp "./cache/district-awards-history.json" "gs://${GCS_BUCKET}/district-awards-history.json"
+          fi
 
           # Time-series: CDN-served overlay (mutable, short cache)
           echo "Uploading time-series with CDN headers..."
@@ -655,6 +676,12 @@ jobs:
           gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
 
+
+          # District awards history (#333)
+          if [ -f "./cache/district-awards-history.json" ]; then
+            echo "Syncing district-awards-history back to GCS..."
+            gsutil cp "./cache/district-awards-history.json" "gs://${GCS_BUCKET}/district-awards-history.json"
+          fi
           # Time-series: CDN-served overlay (mutable, short cache)
           echo "Uploading time-series with CDN headers..."
           gsutil -m \
