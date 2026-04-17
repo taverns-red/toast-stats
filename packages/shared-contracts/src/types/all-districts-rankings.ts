@@ -88,6 +88,12 @@ export interface DistrictRanking {
   regionAdvisorVisitMet?: boolean
   /** Count of active clubs with 20+ paid members — for President's 20-Plus Award (#330) */
   clubsWith20PlusMembers?: number
+  /** Payment breakdown from All Districts CSV (#327) */
+  newPayments?: number
+  aprilPayments?: number
+  octoberPayments?: number
+  latePayments?: number
+  charterPayments?: number
 }
 
 /**

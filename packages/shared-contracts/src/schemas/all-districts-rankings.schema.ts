@@ -97,6 +97,13 @@ export const DistrictRankingSchema = z.object({
 
   /** Count of active clubs with 20+ paid members — for President's 20-Plus Award (#330) */
   clubsWith20PlusMembers: z.number().optional(),
+
+  /** Payment breakdown from All Districts CSV (#327) */
+  newPayments: z.number().optional(),
+  aprilPayments: z.number().optional(),
+  octoberPayments: z.number().optional(),
+  latePayments: z.number().optional(),
+  charterPayments: z.number().optional(),
 })
 
 /**

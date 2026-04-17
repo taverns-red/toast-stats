@@ -134,6 +134,13 @@ export interface DistrictRankingData {
   // Count of clubs with 20+ paid members — for President's 20-Plus Award (#330)
   clubsWith20PlusMembers: number
 
+  // Payment breakdown (#327)
+  newPayments: number
+  aprilPayments: number
+  octoberPayments: number
+  latePayments: number
+  charterPayments: number
+
   // Regional information
   region: string
   districtName: string
@@ -167,6 +174,12 @@ export interface AllDistrictsCSVRecord {
   'Region Advisor Visit'?: string
   /** Smedley Distinguished Clubs count — new tier for 2025-2026 (#329) */
   'Smedley Distinguished Clubs'?: string
+  /** Payment breakdown columns (#327) */
+  'New Payments'?: string
+  'April Payments'?: string
+  'October Payments'?: string
+  'Late Payments'?: string
+  'Charter Payments'?: string
   [key: string]: string | undefined
 }
 
@@ -226,6 +239,12 @@ interface RankingMetrics {
   regionAdvisorVisitMet: boolean
   // Count of clubs with 20+ paid members — for President's 20-Plus Award (#330)
   clubsWith20PlusMembers: number
+  // Payment breakdown (#327)
+  newPayments: number
+  aprilPayments: number
+  octoberPayments: number
+  latePayments: number
+  charterPayments: number
 }
 
 /**
@@ -492,6 +511,12 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           regionAdvisorVisitMet: ranking.regionAdvisorVisitMet,
           // Clubs with 20+ paid members for President's 20-Plus Award (#330)
           clubsWith20PlusMembers: ranking.clubsWith20PlusMembers,
+          // Payment breakdown (#327)
+          newPayments: ranking.newPayments,
+          aprilPayments: ranking.aprilPayments,
+          octoberPayments: ranking.octoberPayments,
+          latePayments: ranking.latePayments,
+          charterPayments: ranking.charterPayments,
         }
       }
     )
@@ -580,6 +605,18 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           clubsWith20PlusMembers: district.clubPerformance
             ? this.countClubsWith20PlusMembers(district.clubPerformance)
             : 0,
+          // Payment breakdown (#327)
+          newPayments: this.parseNumber(districtPerformance['New Payments']),
+          aprilPayments: this.parseNumber(
+            districtPerformance['April Payments']
+          ),
+          octoberPayments: this.parseNumber(
+            districtPerformance['October Payments']
+          ),
+          latePayments: this.parseNumber(districtPerformance['Late Payments']),
+          charterPayments: this.parseNumber(
+            districtPerformance['Charter Payments']
+          ),
         }
 
         // When TI reports 0 Distinguished (pre-April), compute confirmed
@@ -870,6 +907,12 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
         regionAdvisorVisitMet: metric.regionAdvisorVisitMet,
         // Clubs with 20+ paid members for President's 20-Plus Award (#330)
         clubsWith20PlusMembers: metric.clubsWith20PlusMembers,
+        // Payment breakdown (#327)
+        newPayments: metric.newPayments,
+        aprilPayments: metric.aprilPayments,
+        octoberPayments: metric.octoberPayments,
+        latePayments: metric.latePayments,
+        charterPayments: metric.charterPayments,
         region: metric.region,
         districtName: metric.districtName,
         rankingVersion: this.RANKING_VERSION,

@@ -489,4 +489,68 @@ U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
       expect(d42.smedleyDistinguished).toBe(0)
     })
   })
+
+  describe('Payment Breakdown Columns (#327)', () => {
+    it('should parse payment breakdown from All Districts CSV', async () => {
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(tempDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      const csvContent = `REGION,DISTRICT,New Payments,April Payments,October Payments,Late Payments,Charter Payments,Total YTD Payments,Payment Base,% Payment Growth,Paid Clubs,Paid Club Base,% Club Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs
+05,61,1052,2310,2073,11,41,5487,5764,-4.81%,144,156,-7.69%,159,37,14,7`
+
+      await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
+      await createDistrictDir(rawCsvDir, '61')
+
+      await transformService.transform({ date, force: true })
+
+      const rankingsPath = path.join(
+        tempDir,
+        'snapshots',
+        date,
+        'all-districts-rankings.json'
+      )
+      const rankings = JSON.parse(await fs.readFile(rankingsPath, 'utf-8'))
+      const d61 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '61'
+      )
+
+      expect(d61.newPayments).toBe(1052)
+      expect(d61.aprilPayments).toBe(2310)
+      expect(d61.octoberPayments).toBe(2073)
+      expect(d61.latePayments).toBe(11)
+      expect(d61.charterPayments).toBe(41)
+    })
+
+    it('should default to 0 when payment breakdown columns are missing (legacy)', async () => {
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(tempDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      const csvContent = `DISTRICT,REGION,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs
+42,Region 2,200,190,5.26%,2000,1900,5.26%,200,20,10,5`
+
+      await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
+      await createDistrictDir(rawCsvDir, '42')
+
+      await transformService.transform({ date, force: true })
+
+      const rankingsPath = path.join(
+        tempDir,
+        'snapshots',
+        date,
+        'all-districts-rankings.json'
+      )
+      const rankings = JSON.parse(await fs.readFile(rankingsPath, 'utf-8'))
+      const d42 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '42'
+      )
+
+      expect(d42.newPayments).toBe(0)
+      expect(d42.aprilPayments).toBe(0)
+      expect(d42.octoberPayments).toBe(0)
+      expect(d42.latePayments).toBe(0)
+      expect(d42.charterPayments).toBe(0)
+    })
+  })
 })

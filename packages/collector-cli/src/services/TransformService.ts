@@ -87,6 +87,12 @@ interface RankingMetrics {
   regionAdvisorVisitMet: boolean
   // Clubs with 20+ paid members for President's 20-Plus Award (#330)
   clubsWith20PlusMembers: number
+  // Payment breakdown (#327)
+  newPayments: number
+  aprilPayments: number
+  octoberPayments: number
+  latePayments: number
+  charterPayments: number
 }
 
 /**
@@ -616,6 +622,12 @@ export class TransformService {
           ),
           // Default 0; populated later from per-district club-performance.csv (#330)
           clubsWith20PlusMembers: 0,
+          // Payment breakdown (#327)
+          newPayments: this.parseNumber(record['New Payments']),
+          aprilPayments: this.parseNumber(record['April Payments']),
+          octoberPayments: this.parseNumber(record['October Payments']),
+          latePayments: this.parseNumber(record['Late Payments']),
+          charterPayments: this.parseNumber(record['Charter Payments']),
         }
 
         metrics.push(metric)
@@ -1018,6 +1030,12 @@ export class TransformService {
         regionAdvisorVisitMet: metric.regionAdvisorVisitMet,
         // Clubs with 20+ paid members for President's 20-Plus Award (#330)
         clubsWith20PlusMembers: metric.clubsWith20PlusMembers,
+        // Payment breakdown (#327)
+        newPayments: metric.newPayments,
+        aprilPayments: metric.aprilPayments,
+        octoberPayments: metric.octoberPayments,
+        latePayments: metric.latePayments,
+        charterPayments: metric.charterPayments,
       })
     }
 
