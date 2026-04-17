@@ -36,3 +36,23 @@ export {
   type DistinguishedDistrictGap,
   type DistinguishedDistrictStatus,
 } from './DistinguishedDistrictCalculator.js'
+
+export {
+  ClubStrengthAwardCalculator,
+  type ClubStrengthInput,
+  type ClubStrengthResult,
+  type ClubStrengthAwardStandings,
+} from './ClubStrengthAwardCalculator.js'
+
+export {
+  LeadershipExcellenceCalculator,
+  type LeadershipExcellenceInput,
+  type LeadershipExcellenceResult,
+  type LeadershipExcellenceStandings,
+} from './LeadershipExcellenceCalculator.js'
+
+export {
+  OfficerAwardsCalculator,
+  type OfficerAwardResult,
+  type OfficerAwardStandings,
+} from './OfficerAwardsCalculator.js'
