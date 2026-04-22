@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.2.1...shared-contracts-v1.3.0) (2026-04-22)
+
+
+### Features
+
+* implement CompetitiveAwardsCalculator + pipeline integration ([#330](https://github.com/taverns-red/toast-stats/issues/330)) ([b81a1eb](https://github.com/taverns-red/toast-stats/commit/b81a1ebb7f4efaa49f8f7e2ae526640af45349c6))
+* parse payment breakdown columns from All Districts CSV ([#327](https://github.com/taverns-red/toast-stats/issues/327)) ([df695cf](https://github.com/taverns-red/toast-stats/commit/df695cfdf489026629dd5292ccfe8bb7c8f7f5c3))
+* parse prerequisite + Smedley columns from All Districts CSV ([#329](https://github.com/taverns-red/toast-stats/issues/329)) ([13589d2](https://github.com/taverns-red/toast-stats/commit/13589d226ae5668da9ace1b3a55cf058f7680faa))
+
+
+### Bug Fixes
+
+* exclude new charters from District Club Retention Award ([#336](https://github.com/taverns-red/toast-stats/issues/336)) ([#337](https://github.com/taverns-red/toast-stats/issues/337)) ([239a31a](https://github.com/taverns-red/toast-stats/commit/239a31acbb424483ea546c76c85f129d6e6b5707))
+
 ## [1.2.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.2.0...shared-contracts-v1.2.1) (2026-04-06)
 
 

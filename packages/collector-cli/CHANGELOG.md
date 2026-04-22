@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.3.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.2.1...collector-cli-v1.3.0) (2026-04-22)
+
+
+### Features
+
+* Distinguished District tier tracking + trophy case ([#332](https://github.com/taverns-red/toast-stats/issues/332)) ([1e12e5c](https://github.com/taverns-red/toast-stats/commit/1e12e5cd696c9303dae58c5a17e61b89394e9b59))
+* implement CompetitiveAwardsCalculator + pipeline integration ([#330](https://github.com/taverns-red/toast-stats/issues/330)) ([b81a1eb](https://github.com/taverns-red/toast-stats/commit/b81a1ebb7f4efaa49f8f7e2ae526640af45349c6))
+* implement DistrictAwardsHistoryStore (GCS-backed R9 pattern) ([#333](https://github.com/taverns-red/toast-stats/issues/333)) ([e1c2697](https://github.com/taverns-red/toast-stats/commit/e1c269794bff81bc012272c07304013a2ef751fe))
+* parse payment breakdown columns from All Districts CSV ([#327](https://github.com/taverns-red/toast-stats/issues/327)) ([df695cf](https://github.com/taverns-red/toast-stats/commit/df695cfdf489026629dd5292ccfe8bb7c8f7f5c3))
+* parse prerequisite + Smedley columns from All Districts CSV ([#329](https://github.com/taverns-red/toast-stats/issues/329)) ([13589d2](https://github.com/taverns-red/toast-stats/commit/13589d226ae5668da9ace1b3a55cf058f7680faa))
+* PaymentCompositionCard on District Detail Overview ([#327](https://github.com/taverns-red/toast-stats/issues/327)) ([25c0fcc](https://github.com/taverns-red/toast-stats/commit/25c0fcc28f36be41dec28bd0cbaa810f93cf8871))
+* wire threshold + officer awards into pipeline ([#333](https://github.com/taverns-red/toast-stats/issues/333)) ([fed8273](https://github.com/taverns-red/toast-stats/commit/fed82733ca407fa053f066471cb15e27aa898a32))
+
+
+### Bug Fixes
+
+* exclude new charters from District Club Retention Award ([#336](https://github.com/taverns-red/toast-stats/issues/336)) ([#337](https://github.com/taverns-red/toast-stats/issues/337)) ([239a31a](https://github.com/taverns-red/toast-stats/commit/239a31acbb424483ea546c76c85f129d6e6b5707))
+
+
+### Tests
+
+* add failing tests for CompetitiveAwardsCalculator ([#330](https://github.com/taverns-red/toast-stats/issues/330)) ([33e5ae7](https://github.com/taverns-red/toast-stats/commit/33e5ae743458169a6177429698af20748afd1ab2))
+* add failing tests for prerequisite + Smedley CSV columns ([#329](https://github.com/taverns-red/toast-stats/issues/329)) ([291fde8](https://github.com/taverns-red/toast-stats/commit/291fde88e88863e578877539e88fbb49dec3a76d))
+
 ## [1.2.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.2.0...collector-cli-v1.2.1) (2026-04-07)
 
 

@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.10.0](https://github.com/taverns-red/toast-stats/compare/frontend-v2.9.0...frontend-v2.10.0) (2026-04-22)
+
+
+### Features
+
+* display threshold + officer awards in trophy case ([#333](https://github.com/taverns-red/toast-stats/issues/333)) ([91bafe3](https://github.com/taverns-red/toast-stats/commit/91bafe36a7ee2a730f8dc783e4a03d74fa21df8b))
+* Distinguished District tier tracking + trophy case ([#332](https://github.com/taverns-red/toast-stats/issues/332)) ([1e12e5c](https://github.com/taverns-red/toast-stats/commit/1e12e5cd696c9303dae58c5a17e61b89394e9b59))
+* district-free club URL + club index ([#320](https://github.com/taverns-red/toast-stats/issues/320)) ([7f12903](https://github.com/taverns-red/toast-stats/commit/7f12903c8f85a2c270cb6bb47efdf4442ee5d3ae))
+* mark area Distinguished as provisional when visits incomplete ([#325](https://github.com/taverns-red/toast-stats/issues/325)) ([3459456](https://github.com/taverns-red/toast-stats/commit/3459456fef2df5db73749858de6cedf4e3086259))
+* PaymentCompositionCard on District Detail Overview ([#327](https://github.com/taverns-red/toast-stats/issues/327)) ([25c0fcc](https://github.com/taverns-red/toast-stats/commit/25c0fcc28f36be41dec28bd0cbaa810f93cf8871))
+* replace region filter disclosure with pill toggle bar ([#326](https://github.com/taverns-red/toast-stats/issues/326)) ([1a1ce01](https://github.com/taverns-red/toast-stats/commit/1a1ce0148c8914f0155ae94db4b27b8cb72e83ca))
+* show average members per club on district overview ([#318](https://github.com/taverns-red/toast-stats/issues/318)) ([186a257](https://github.com/taverns-red/toast-stats/commit/186a2575cd244f1a58a8dd35e7f4d0fe28bce5cc))
+* staging environment — Phase 1+2 infrastructure + pipeline ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([0be241b](https://github.com/taverns-red/toast-stats/commit/0be241b9041470037070affb96c3737173535fb0))
+* surface competitive award standings on landing page ([#331](https://github.com/taverns-red/toast-stats/issues/331)) ([9451faf](https://github.com/taverns-red/toast-stats/commit/9451faf9f35b16e0d1770b1ced48bee13e77f897))
+
+
+### Bug Fixes
+
+* 'Close to Distinguished' button syncs sort state to URL ([5133273](https://github.com/taverns-red/toast-stats/commit/513327339ab13993ca12b3964d248bab5a53b137))
+* exclude new charters from District Club Retention Award ([#336](https://github.com/taverns-red/toast-stats/issues/336)) ([#337](https://github.com/taverns-red/toast-stats/issues/337)) ([239a31a](https://github.com/taverns-red/toast-stats/commit/239a31acbb424483ea546c76c85f129d6e6b5707))
+* provisional badge in area performance table row ([#325](https://github.com/taverns-red/toast-stats/issues/325)) ([9f60720](https://github.com/taverns-red/toast-stats/commit/9f60720a405bc414343c8142e95a75b1e8ee5dc6))
+* stabilize club detail smoke test selector ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([6534f48](https://github.com/taverns-red/toast-stats/commit/6534f48df657e591067d1af52c4781d401c77092))
+* staging CDN URL detection survives Vite build optimization ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([4c628f7](https://github.com/taverns-red/toast-stats/commit/4c628f74969456c7559544fb2c81dc2f009a582a))
+* Trends tab uses consistent data sources across all sections ([#319](https://github.com/taverns-red/toast-stats/issues/319)) ([3cd3689](https://github.com/taverns-red/toast-stats/commit/3cd36898f3f9301f715ff8b3195351c0c10fdfce))
+* use build-time VITE_CDN_BASE_URL for staging CDN ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([ae8fea2](https://github.com/taverns-red/toast-stats/commit/ae8fea25b9c392bf80f885a4b3165d07377ebe94))
+
+
+### Tests
+
+* red phase — getLatestPayments helper for time-series consistency ([#319](https://github.com/taverns-red/toast-stats/issues/319)) ([569b5a0](https://github.com/taverns-red/toast-stats/commit/569b5a0d1c9d8b743e50ac1e7423bd8b7d7a4923))
+
 ## [2.9.0](https://github.com/taverns-red/toast-stats/compare/frontend-v2.8.0...frontend-v2.9.0) (2026-04-07)
 
 

@@ -1,5 +1,62 @@
 # Changelog
 
+## [2.10.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.9.0...toast-stats-v2.10.0) (2026-04-22)
+
+
+### Features
+
+* display threshold + officer awards in trophy case ([#333](https://github.com/taverns-red/toast-stats/issues/333)) ([91bafe3](https://github.com/taverns-red/toast-stats/commit/91bafe36a7ee2a730f8dc783e4a03d74fa21df8b))
+* Distinguished District tier tracking + trophy case ([#332](https://github.com/taverns-red/toast-stats/issues/332)) ([1e12e5c](https://github.com/taverns-red/toast-stats/commit/1e12e5cd696c9303dae58c5a17e61b89394e9b59))
+* district-free club URL + club index ([#320](https://github.com/taverns-red/toast-stats/issues/320)) ([7f12903](https://github.com/taverns-red/toast-stats/commit/7f12903c8f85a2c270cb6bb47efdf4442ee5d3ae))
+* division eligibility derived from area visit status ([#325](https://github.com/taverns-red/toast-stats/issues/325)) ([a7d2688](https://github.com/taverns-red/toast-stats/commit/a7d26888b2a5a383ec8921d58f2c61a940e53b93))
+* gate area Distinguished status on club visit completion ([#325](https://github.com/taverns-red/toast-stats/issues/325)) ([f191c97](https://github.com/taverns-red/toast-stats/commit/f191c9786868da5e2feb8f9c12561010d5f8b406))
+* implement ClubStrength, LeadershipExcellence, OfficerAwards calculators ([#333](https://github.com/taverns-red/toast-stats/issues/333)) ([10da8b9](https://github.com/taverns-red/toast-stats/commit/10da8b9b8cc8d7284fb7bc5343a7308c51176b6d))
+* implement CompetitiveAwardsCalculator + pipeline integration ([#330](https://github.com/taverns-red/toast-stats/issues/330)) ([b81a1eb](https://github.com/taverns-red/toast-stats/commit/b81a1ebb7f4efaa49f8f7e2ae526640af45349c6))
+* implement DistrictAwardsHistoryStore (GCS-backed R9 pattern) ([#333](https://github.com/taverns-red/toast-stats/issues/333)) ([e1c2697](https://github.com/taverns-red/toast-stats/commit/e1c269794bff81bc012272c07304013a2ef751fe))
+* mark area Distinguished as provisional when visits incomplete ([#325](https://github.com/taverns-red/toast-stats/issues/325)) ([3459456](https://github.com/taverns-red/toast-stats/commit/3459456fef2df5db73749858de6cedf4e3086259))
+* parse payment breakdown columns from All Districts CSV ([#327](https://github.com/taverns-red/toast-stats/issues/327)) ([df695cf](https://github.com/taverns-red/toast-stats/commit/df695cfdf489026629dd5292ccfe8bb7c8f7f5c3))
+* parse prerequisite + Smedley columns from All Districts CSV ([#329](https://github.com/taverns-red/toast-stats/issues/329)) ([13589d2](https://github.com/taverns-red/toast-stats/commit/13589d226ae5668da9ace1b3a55cf058f7680faa))
+* PaymentCompositionCard on District Detail Overview ([#327](https://github.com/taverns-red/toast-stats/issues/327)) ([25c0fcc](https://github.com/taverns-red/toast-stats/commit/25c0fcc28f36be41dec28bd0cbaa810f93cf8871))
+* replace region filter disclosure with pill toggle bar ([#326](https://github.com/taverns-red/toast-stats/issues/326)) ([1a1ce01](https://github.com/taverns-red/toast-stats/commit/1a1ce0148c8914f0155ae94db4b27b8cb72e83ca))
+* show average members per club on district overview ([#318](https://github.com/taverns-red/toast-stats/issues/318)) ([186a257](https://github.com/taverns-red/toast-stats/commit/186a2575cd244f1a58a8dd35e7f4d0fe28bce5cc))
+* staging environment — Phase 1+2 infrastructure + pipeline ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([0be241b](https://github.com/taverns-red/toast-stats/commit/0be241b9041470037070affb96c3737173535fb0))
+* surface competitive award standings on landing page ([#331](https://github.com/taverns-red/toast-stats/issues/331)) ([9451faf](https://github.com/taverns-red/toast-stats/commit/9451faf9f35b16e0d1770b1ced48bee13e77f897))
+* wire threshold + officer awards into pipeline ([#333](https://github.com/taverns-red/toast-stats/issues/333)) ([fed8273](https://github.com/taverns-red/toast-stats/commit/fed82733ca407fa053f066471cb15e27aa898a32))
+
+
+### Bug Fixes
+
+* 'Close to Distinguished' button syncs sort state to URL ([5133273](https://github.com/taverns-red/toast-stats/commit/513327339ab13993ca12b3964d248bab5a53b137))
+* district-snapshot-index uses snapshot date for daily updates ([#309](https://github.com/taverns-red/toast-stats/issues/309)) ([5767907](https://github.com/taverns-red/toast-stats/commit/57679070b883b35932dcc30dc7b00b8911592167))
+* division eligibility is NOT gated on area visits ([#325](https://github.com/taverns-red/toast-stats/issues/325)) ([1b0fe8a](https://github.com/taverns-red/toast-stats/commit/1b0fe8a3d8e97b6a9790ab2dc7a67349a2177b2c))
+* exclude new charters from District Club Retention Award ([#336](https://github.com/taverns-red/toast-stats/issues/336)) ([#337](https://github.com/taverns-red/toast-stats/issues/337)) ([239a31a](https://github.com/taverns-red/toast-stats/commit/239a31acbb424483ea546c76c85f129d6e6b5707))
+* provisional badge in area performance table row ([#325](https://github.com/taverns-red/toast-stats/issues/325)) ([9f60720](https://github.com/taverns-red/toast-stats/commit/9f60720a405bc414343c8142e95a75b1e8ee5dc6))
+* stabilize club detail smoke test selector ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([6534f48](https://github.com/taverns-red/toast-stats/commit/6534f48df657e591067d1af52c4781d401c77092))
+* staging CDN URL detection survives Vite build optimization ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([4c628f7](https://github.com/taverns-red/toast-stats/commit/4c628f74969456c7559544fb2c81dc2f009a582a))
+* Trends tab uses consistent data sources across all sections ([#319](https://github.com/taverns-red/toast-stats/issues/319)) ([3cd3689](https://github.com/taverns-red/toast-stats/commit/3cd36898f3f9301f715ff8b3195351c0c10fdfce))
+* use build-time VITE_CDN_BASE_URL for staging CDN ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([ae8fea2](https://github.com/taverns-red/toast-stats/commit/ae8fea25b9c392bf80f885a4b3165d07377ebe94))
+
+
+### Documentation
+
+* add insights-driven engineering guidelines to CLAUDE.md ([84386ff](https://github.com/taverns-red/toast-stats/commit/84386ff4388231cd9604e2a8441492762e6e7877))
+* ADR-002 staging environment and deployment flow ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([5bf5145](https://github.com/taverns-red/toast-stats/commit/5bf5145d076cfff963bae19b5f303a8bcc99f801))
+* ADR-002 updated — separate staging GCS bucket + diff-based validation ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([9d873e2](https://github.com/taverns-red/toast-stats/commit/9d873e2ed56a8c5c71527d5bea4dcb220a281c7a))
+* correct DAP/DDP eligibility rules — 75% visit threshold per round ([#325](https://github.com/taverns-red/toast-stats/issues/325)) ([5a43963](https://github.com/taverns-red/toast-stats/commit/5a439638fb112780c045fe2b1c678bd802bca820))
+* District Awards Suite — rules reference + product spec ([#328](https://github.com/taverns-red/toast-stats/issues/328)) ([4ed3a12](https://github.com/taverns-red/toast-stats/commit/4ed3a1278194f72ddfae4deeb937d7932e10261c))
+* mark [#333](https://github.com/taverns-red/toast-stats/issues/333) shipped + add Lesson 45 (GCS sync parity) ([27f3ab8](https://github.com/taverns-red/toast-stats/commit/27f3ab8902685bb9f57260f2bedac4fc3549bf0f))
+* move insights guidelines from project to global CLAUDE.md ([873c297](https://github.com/taverns-red/toast-stats/commit/873c297dddb0202cb09710933edeab59e63d7053))
+
+
+### Tests
+
+* add failing tests for CompetitiveAwardsCalculator ([#330](https://github.com/taverns-red/toast-stats/issues/330)) ([33e5ae7](https://github.com/taverns-red/toast-stats/commit/33e5ae743458169a6177429698af20748afd1ab2))
+* add failing tests for DistinguishedDistrictCalculator ([#332](https://github.com/taverns-red/toast-stats/issues/332)) ([a04f296](https://github.com/taverns-red/toast-stats/commit/a04f296564dfbfe398fedfb530b761f80f2c1e9d))
+* add failing tests for prerequisite + Smedley CSV columns ([#329](https://github.com/taverns-red/toast-stats/issues/329)) ([291fde8](https://github.com/taverns-red/toast-stats/commit/291fde88e88863e578877539e88fbb49dec3a76d))
+* add failing tests for threshold + officer award calculators ([#333](https://github.com/taverns-red/toast-stats/issues/333)) ([5630a95](https://github.com/taverns-red/toast-stats/commit/5630a951f5b2163c1175a117febc9c34d1928158))
+* red phase — getLatestPayments helper for time-series consistency ([#319](https://github.com/taverns-red/toast-stats/issues/319)) ([569b5a0](https://github.com/taverns-red/toast-stats/commit/569b5a0d1c9d8b743e50ac1e7423bd8b7d7a4923))
+* red phase — visit-gated area eligibility for DAP ([#325](https://github.com/taverns-red/toast-stats/issues/325)) ([36ac76c](https://github.com/taverns-red/toast-stats/commit/36ac76c4282063031d4b6a909cbd2ecfed7d54aa))
+
 ## [2.9.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.8.0...toast-stats-v2.9.0) (2026-04-07)
 
 
