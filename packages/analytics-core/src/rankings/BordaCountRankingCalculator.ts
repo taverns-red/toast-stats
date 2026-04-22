@@ -41,6 +41,54 @@ const noopLogger: RankingLogger = {
 }
 
 /**
+ * Return the start-of-program-year date (July 1) preceding the given
+ * snapshot date, or null if the snapshot date is unparseable (#336).
+ *
+ * Toastmasters program years run July 1 → June 30.
+ */
+function getProgramYearStartDate(snapshotDate: string): Date | null {
+  const parsed = parseDateFlexible(snapshotDate)
+  if (!parsed) return null
+  const year = parsed.getUTCFullYear()
+  const month = parsed.getUTCMonth() + 1 // 1-indexed
+  const pyStartYear = month >= 7 ? year : year - 1
+  return new Date(Date.UTC(pyStartYear, 6, 1)) // July 1 UTC
+}
+
+/**
+ * Parse a date string in either ISO (YYYY-MM-DD) or US (M/D/YYYY or MM/DD/YYYY)
+ * format and return a UTC-normalized Date. Returns null on failure.
+ */
+function parseDateFlexible(value: string): Date | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  // ISO format: YYYY-MM-DD (optionally with time)
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (isoMatch) {
+    const y = Number(isoMatch[1])
+    const m = Number(isoMatch[2])
+    const d = Number(isoMatch[3])
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+      return new Date(Date.UTC(y, m - 1, d))
+    }
+  }
+
+  // US format: M/D/YYYY or MM/DD/YYYY
+  const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (usMatch) {
+    const m = Number(usMatch[1])
+    const d = Number(usMatch[2])
+    const y = Number(usMatch[3])
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+      return new Date(Date.UTC(y, m - 1, d))
+    }
+  }
+
+  return null
+}
+
+/**
  * Input district statistics for ranking calculation.
  * This interface matches the backend DistrictStatistics structure.
  */
@@ -133,6 +181,11 @@ export interface DistrictRankingData {
 
   // Count of clubs with 20+ paid members — for President's 20-Plus Award (#330)
   clubsWith20PlusMembers: number
+
+  // Count of paid clubs chartered in the current program year (#336).
+  // Subtracted from paidClubs when computing the District Club Retention Award
+  // so the metric reflects base-club survival rather than extension.
+  newCharteredClubs: number
 
   // Payment breakdown (#327)
   newPayments: number
@@ -239,6 +292,8 @@ interface RankingMetrics {
   regionAdvisorVisitMet: boolean
   // Count of clubs with 20+ paid members — for President's 20-Plus Award (#330)
   clubsWith20PlusMembers: number
+  // Count of paid clubs chartered in the current program year (#336)
+  newCharteredClubs: number
   // Payment breakdown (#327)
   newPayments: number
   aprilPayments: number
@@ -511,6 +566,8 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           regionAdvisorVisitMet: ranking.regionAdvisorVisitMet,
           // Clubs with 20+ paid members for President's 20-Plus Award (#330)
           clubsWith20PlusMembers: ranking.clubsWith20PlusMembers,
+          // New chartered clubs for District Club Retention Award (#336)
+          newCharteredClubs: ranking.newCharteredClubs,
           // Payment breakdown (#327)
           newPayments: ranking.newPayments,
           aprilPayments: ranking.aprilPayments,
@@ -605,6 +662,14 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           clubsWith20PlusMembers: district.clubPerformance
             ? this.countClubsWith20PlusMembers(district.clubPerformance)
             : 0,
+          // Count paid clubs chartered in the current program year (#336)
+          newCharteredClubs:
+            district.clubPerformance && district.asOfDate
+              ? this.countNewCharteredClubs(
+                  district.clubPerformance,
+                  district.asOfDate
+                )
+              : 0,
           // Payment breakdown (#327)
           newPayments: this.parseNumber(districtPerformance['New Payments']),
           aprilPayments: this.parseNumber(
@@ -699,6 +764,33 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
         club['Active Members'] ?? club['Membership'] ?? club['Paid Members']
       )
       if (members >= 20) count++
+    }
+    return count
+  }
+
+  /**
+   * Count clubs chartered during the current program year (#336).
+   *
+   * The Toastmasters program year runs July 1 → June 30. A club counts as a
+   * "new charter this year" if its Charter Date falls on or after the most
+   * recent July 1 preceding the snapshot.
+   *
+   * Used to exclude new charters from the District Club Retention Award
+   * numerator so retention measures base-club survival rather than extension.
+   */
+  private countNewCharteredClubs(
+    clubPerformance: Array<Record<string, string | number | null>>,
+    snapshotDate: string
+  ): number {
+    const programYearStart = getProgramYearStartDate(snapshotDate)
+    if (!programYearStart) return 0
+
+    let count = 0
+    for (const club of clubPerformance) {
+      const raw = club['Charter Date'] ?? club['Chartered']
+      if (typeof raw !== 'string' || raw.trim() === '') continue
+      const chartered = parseDateFlexible(raw)
+      if (chartered && chartered >= programYearStart) count++
     }
     return count
   }
@@ -907,6 +999,8 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
         regionAdvisorVisitMet: metric.regionAdvisorVisitMet,
         // Clubs with 20+ paid members for President's 20-Plus Award (#330)
         clubsWith20PlusMembers: metric.clubsWith20PlusMembers,
+        // New chartered clubs for District Club Retention Award (#336)
+        newCharteredClubs: metric.newCharteredClubs,
         // Payment breakdown (#327)
         newPayments: metric.newPayments,
         aprilPayments: metric.aprilPayments,

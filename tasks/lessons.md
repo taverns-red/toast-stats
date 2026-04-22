@@ -957,3 +957,12 @@
 **Rule**: When adding a new GCS-backed persistent store (R9 pattern), audit ALL workflow paths that touch persistent state. Use `grep -n "club-trends\|time-series" data-pipeline.yml` to find every existing sync point and mirror them for the new store. Every `gsutil rsync` for an existing store needs a corresponding command for the new one.
 **Warning**: The staging and production rebuild paths in data-pipeline.yml are structurally duplicated (not shared). Changes to one must be manually mirrored to the other.
 **rules.md**: R9 (extended — new stores need full sync parity across all workflow paths)
+
+## 🗓️ 2026-04-22 — Lesson 46: Two Awards Collapse When Formula Conflates Retention With Growth (#336)
+
+**Discovery**: The District Club Retention Award and President's Extension Award produced identical top-3 standings. Root cause: retention was computed as `paidClubs / paidClubBase * 100`, which algebraically equals `1 + netGrowth / paidClubBase` when `paidClubs = baseRetained + newCharters`. The two awards measured the same underlying thing (club growth), just on different scales.
+**Proof**: Districts 93, 17, and 110 — the Extension Award top 3 — also topped the Retention Award at 105.8%, 105.2%, and 102.8%. Retention values >100% are a tell that the formula counts new charters as "retained" clubs.
+**Fix**: Added `newCharteredClubs` to `DistrictRanking`, computed by counting `clubPerformance` rows whose `Charter Date` falls within the current program year (July 1 – June 30). Retention now uses `(paidClubs − newCharteredClubs) / paidClubBase * 100`, so it measures only base-club survival.
+**Rule**: When two metrics appear to measure different things but share inputs, check the algebra. If `metric_A(x, y) = f(metric_B(x, y))` for any monotonic `f`, they will rank identically. Design metrics to have independent inputs or explicit differentiators.
+**Warning**: Both `BordaCountRankingCalculator.extractRankingMetrics` (analytics-core) and `TransformService.extractRankingMetrics` (collector-cli) have duplicated ranking-metric extraction logic. A new DistrictRanking field must be populated in BOTH or per-district snapshots will diverge from all-districts-rankings.json.
+**rules.md**: none

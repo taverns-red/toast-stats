@@ -60,6 +60,51 @@ import {
 import { DistrictAwardsHistoryStore } from './DistrictAwardsHistoryStore.js'
 
 /**
+ * Parse a date string in either ISO (YYYY-MM-DD) or US (M/D/YYYY) format
+ * and return a UTC-normalized Date. Returns null on failure. (#336)
+ */
+function parseDateFlexible(value: string): Date | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (isoMatch) {
+    const y = Number(isoMatch[1])
+    const m = Number(isoMatch[2])
+    const d = Number(isoMatch[3])
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+      return new Date(Date.UTC(y, m - 1, d))
+    }
+  }
+
+  const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (usMatch) {
+    const m = Number(usMatch[1])
+    const d = Number(usMatch[2])
+    const y = Number(usMatch[3])
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+      return new Date(Date.UTC(y, m - 1, d))
+    }
+  }
+
+  return null
+}
+
+/**
+ * Return the start-of-program-year date (July 1) preceding the given
+ * snapshot date, or null if unparseable. Toastmasters program years run
+ * July 1 → June 30. (#336)
+ */
+function getProgramYearStartDate(snapshotDate: string): Date | null {
+  const parsed = parseDateFlexible(snapshotDate)
+  if (!parsed) return null
+  const year = parsed.getUTCFullYear()
+  const month = parsed.getUTCMonth() + 1
+  const pyStartYear = month >= 7 ? year : year - 1
+  return new Date(Date.UTC(pyStartYear, 6, 1))
+}
+
+/**
  * Internal structure for ranking metrics extraction
  */
 interface RankingMetrics {
@@ -87,6 +132,9 @@ interface RankingMetrics {
   regionAdvisorVisitMet: boolean
   // Clubs with 20+ paid members for President's 20-Plus Award (#330)
   clubsWith20PlusMembers: number
+  // Paid clubs chartered in the current program year (#336) — used to compute
+  // the District Club Retention Award on base-club survival alone.
+  newCharteredClubs: number
   // Payment breakdown (#327)
   newPayments: number
   aprilPayments: number
@@ -622,6 +670,8 @@ export class TransformService {
           ),
           // Default 0; populated later from per-district club-performance.csv (#330)
           clubsWith20PlusMembers: 0,
+          // Default 0; populated later from per-district club-performance.csv (#336)
+          newCharteredClubs: 0,
           // Payment breakdown (#327)
           newPayments: this.parseNumber(record['New Payments']),
           aprilPayments: this.parseNumber(record['April Payments']),
@@ -911,8 +961,10 @@ export class TransformService {
 
     // Aggregate per-district club data from club-performance CSVs:
     // - clubsWith20PlusMembers (#330) — always computed for 20-Plus Award
+    // - newCharteredClubs (#336) — for District Club Retention Award
     // - confirmed Distinguished count (#304) — only when all districts report 0
     const allZeroDistinguished = metrics.every(m => m.distinguishedClubs === 0)
+    const programYearStart = getProgramYearStartDate(date)
     for (const metric of metrics) {
       try {
         const csvPath = path.join(
@@ -928,13 +980,23 @@ export class TransformService {
 
         // Always count clubs with 20+ paid members for President's 20-Plus Award (#330)
         let twentyPlus = 0
+        let newCharters = 0
         for (const club of clubs) {
           const members = this.parseNumber(
             club['Active Members'] ?? club['Membership'] ?? club['Paid Members']
           )
           if (members >= 20) twentyPlus++
+
+          if (programYearStart) {
+            const raw = club['Charter Date'] ?? club['Chartered']
+            if (typeof raw === 'string' && raw.trim() !== '') {
+              const chartered = parseDateFlexible(raw)
+              if (chartered && chartered >= programYearStart) newCharters++
+            }
+          }
         }
         metric.clubsWith20PlusMembers = twentyPlus
+        metric.newCharteredClubs = newCharters
 
         // Compute confirmed Distinguished only when all districts report 0 (#304)
         if (allZeroDistinguished) {
@@ -1030,6 +1092,8 @@ export class TransformService {
         regionAdvisorVisitMet: metric.regionAdvisorVisitMet,
         // Clubs with 20+ paid members for President's 20-Plus Award (#330)
         clubsWith20PlusMembers: metric.clubsWith20PlusMembers,
+        // Paid clubs chartered this program year for District Club Retention Award (#336)
+        newCharteredClubs: metric.newCharteredClubs,
         // Payment breakdown (#327)
         newPayments: metric.newPayments,
         aprilPayments: metric.aprilPayments,

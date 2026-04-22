@@ -88,6 +88,12 @@ export interface DistrictRanking {
   regionAdvisorVisitMet?: boolean
   /** Count of active clubs with 20+ paid members — for President's 20-Plus Award (#330) */
   clubsWith20PlusMembers?: number
+  /**
+   * Count of paid clubs chartered during the current program year (#336).
+   * Subtracted from paidClubs when computing the District Club Retention Award
+   * so retention only reflects base-club survival, not new charters.
+   */
+  newCharteredClubs?: number
   /** Payment breakdown from All Districts CSV (#327) */
   newPayments?: number
   aprilPayments?: number

@@ -141,15 +141,27 @@ export class CompetitiveAwardsCalculator {
 
   /**
    * District Club Retention Award — top 3 retaining ≥90% paid clubs.
-   * Retention % = paidClubs / paidClubBase * 100
+   *
+   * Retention % = (paidClubs − newCharteredClubs) / paidClubBase * 100
+   *
+   * Subtracting newly chartered clubs is what distinguishes this from the
+   * Extension Award (#336). Without that subtraction the formula collapses to
+   * `1 + netGrowth / paidClubBase`, producing identical rankings to Extension.
+   *
+   * Falls back to the legacy `paidClubs / paidClubBase` formula when
+   * `newCharteredClubs` is missing (older snapshots predating #336).
    * Districts below 90% threshold cannot win even if they're in the top 3.
    */
   private rankByRetention(
     rankings: DistrictRanking[]
   ): CompetitiveAwardRanking[] {
     const scored = rankings.map(r => {
-      const value =
-        r.paidClubBase > 0 ? (r.paidClubs / r.paidClubBase) * 100 : 0
+      if (r.paidClubBase <= 0) return { district: r, value: 0 }
+      const retainedBase =
+        r.newCharteredClubs !== undefined
+          ? r.paidClubs - r.newCharteredClubs
+          : r.paidClubs
+      const value = (retainedBase / r.paidClubBase) * 100
       return { district: r, value }
     })
     return this.assignRanks(scored, RETENTION_WINNER_THRESHOLD)

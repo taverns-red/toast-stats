@@ -208,6 +208,111 @@ describe('CompetitiveAwardsCalculator', () => {
       expect(result.retentionAward[2]?.isWinner).toBe(false) // D3 at 89%
       expect(result.retentionAward[3]?.isWinner).toBe(false)
     })
+
+    it('should exclude newly chartered clubs from retention numerator (#336)', () => {
+      // Two districts with identical paidClubs/paidClubBase ratios, but one
+      // achieved its paid count via new charters (low retention) while the
+      // other retained all its base clubs (100% retention).
+      const rankings: DistrictRanking[] = [
+        // D1: 50 base, 50 retained, 0 new charters → 50/50 = 100%
+        buildRanking({
+          districtId: '1',
+          paidClubs: 50,
+          paidClubBase: 50,
+          newCharteredClubs: 0,
+        }),
+        // D2: 50 base, 46 retained, 4 new charters → 46/50 = 92%
+        // Under the old (buggy) formula, this would score 50/50 = 100% and tie with D1.
+        buildRanking({
+          districtId: '2',
+          paidClubs: 50,
+          paidClubBase: 50,
+          newCharteredClubs: 4,
+        }),
+      ]
+
+      const result = calculator.calculate(rankings)
+
+      expect(result.retentionAward[0]?.districtId).toBe('1')
+      expect(result.retentionAward[0]?.value).toBe(100)
+      expect(result.retentionAward[1]?.districtId).toBe('2')
+      expect(result.retentionAward[1]?.value).toBe(92)
+    })
+
+    it('should not exceed 100% retention when new charters outpace losses (#336)', () => {
+      // D1: Extension-style growth — 50 base, 48 retained, 6 new charters.
+      // paidClubs = 54, paidClubBase = 50. Old formula: 108%. New formula: 96%.
+      const rankings: DistrictRanking[] = [
+        buildRanking({
+          districtId: '1',
+          paidClubs: 54,
+          paidClubBase: 50,
+          newCharteredClubs: 6,
+        }),
+      ]
+
+      const result = calculator.calculate(rankings)
+
+      expect(result.retentionAward[0]?.value).toBe(96)
+    })
+
+    it('should fall back to paidClubs / paidClubBase when newCharteredClubs is missing', () => {
+      // Backward compatibility: older snapshots without the new field continue
+      // to use the legacy formula.
+      const rankings: DistrictRanking[] = [
+        buildRanking({
+          districtId: '1',
+          paidClubs: 95,
+          paidClubBase: 100,
+          // newCharteredClubs intentionally undefined
+        }),
+      ]
+
+      const result = calculator.calculate(rankings)
+
+      expect(result.retentionAward[0]?.value).toBe(95)
+    })
+
+    it('should rank districts correctly when distinguishing retention from extension (#336)', () => {
+      // Scenario from the reported bug: three districts at the top of the
+      // Extension Award should not automatically be the top of the Retention
+      // Award when their new-charter counts differ.
+      const rankings: DistrictRanking[] = [
+        // District with lots of growth but some base losses
+        buildRanking({
+          districtId: 'A',
+          paidClubs: 54,
+          paidClubBase: 50,
+          newCharteredClubs: 6, // 48/50 = 96% retention
+        }),
+        // District with steady base, modest growth
+        buildRanking({
+          districtId: 'B',
+          paidClubs: 52,
+          paidClubBase: 50,
+          newCharteredClubs: 2, // 50/50 = 100% retention
+        }),
+        // District with no growth and no losses
+        buildRanking({
+          districtId: 'C',
+          paidClubs: 50,
+          paidClubBase: 50,
+          newCharteredClubs: 0, // 50/50 = 100% retention
+        }),
+      ]
+
+      const result = calculator.calculate(rankings)
+
+      // Extension ranks A first (net +4), B second (+2), C third (0)
+      expect(result.extensionAward[0]?.districtId).toBe('A')
+
+      // Retention puts B and C tied at 100%, A at 96% — decouples from extension
+      const topRetention = result.retentionAward.filter(r => r.value === 100)
+      expect(topRetention.map(r => r.districtId).sort()).toEqual(['B', 'C'])
+      expect(result.retentionAward.find(r => r.districtId === 'A')?.value).toBe(
+        96
+      )
+    })
   })
 
   describe('Per-district lookup', () => {

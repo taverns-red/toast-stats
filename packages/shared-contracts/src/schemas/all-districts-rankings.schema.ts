@@ -98,6 +98,12 @@ export const DistrictRankingSchema = z.object({
   /** Count of active clubs with 20+ paid members — for President's 20-Plus Award (#330) */
   clubsWith20PlusMembers: z.number().optional(),
 
+  /**
+   * Count of paid clubs chartered during the current program year (#336).
+   * Used by CompetitiveAwardsCalculator to compute true base retention.
+   */
+  newCharteredClubs: z.number().optional(),
+
   /** Payment breakdown from All Districts CSV (#327) */
   newPayments: z.number().optional(),
   aprilPayments: z.number().optional(),
