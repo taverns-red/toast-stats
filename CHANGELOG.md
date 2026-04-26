@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.10.0...toast-stats-v2.10.1) (2026-04-26)
+
+
+### Bug Fixes
+
+* actually count new charters from district-performance.csv ([#336](https://github.com/taverns-red/toast-stats/issues/336)) ([#343](https://github.com/taverns-red/toast-stats/issues/343)) ([c6fc153](https://github.com/taverns-red/toast-stats/commit/c6fc153c08e6d5804b17d9c49e5090f3fd3ae4dd))
+
 ## [2.10.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.9.0...toast-stats-v2.10.0) (2026-04-22)
 
 
