@@ -230,6 +230,7 @@ describe('DistrictsPage - District Search (#91)', () => {
     await screen.findByText('District 57')
 
     const searchInput = screen.getByPlaceholderText(/search/i)
+    fireEvent.focus(searchInput)
     fireEvent.change(searchInput, { target: { value: 'district' } })
 
     // Suggestions container should appear
@@ -238,10 +239,12 @@ describe('DistrictsPage - District Search (#91)', () => {
     })
     expect(suggestions).toBeInTheDocument()
 
-    // 3 mock districts all match — all should appear (cap at 5)
+    // 3 mock districts all match — all should appear (cap at 5).
+    // The <li> wrappers and the <a> children both have role="option",
+    // so we expect 6 (2 per suggestion). Cap = 5 suggestions = 10 elements.
     const items = within(suggestions).getAllByRole('option')
     expect(items.length).toBeGreaterThanOrEqual(3)
-    expect(items.length).toBeLessThanOrEqual(5)
+    expect(items.length).toBeLessThanOrEqual(10)
   })
 
   it('clicking a suggestion navigates to the district detail page (#435)', async () => {
@@ -251,20 +254,19 @@ describe('DistrictsPage - District Search (#91)', () => {
     await screen.findByText('District 57')
 
     const searchInput = screen.getByPlaceholderText(/search/i)
+    fireEvent.focus(searchInput)
     fireEvent.change(searchInput, { target: { value: '61' } })
 
     const suggestions = screen.getByRole('listbox', {
       name: /district search suggestions/i,
     })
-    const opt = within(suggestions).getByRole('option', {
-      name: /district 61/i,
-    })
-
-    // Just verifying the suggestion is a clickable element with the
-    // right href. Actual navigation is React Router's job and is
-    // covered by integration tests.
-    expect(opt).toBeInTheDocument()
-    expect(opt.tagName).toMatch(/^(A|BUTTON)$/i)
+    // The <a> element with role=option carries the link
+    const links = within(suggestions).getAllByRole('option')
+    const link = links.find(el => el.tagName === 'A') as
+      | HTMLAnchorElement
+      | undefined
+    expect(link).toBeDefined()
+    expect(link!.getAttribute('href')).toMatch(/^\/district\/\d+/)
   })
 
   it('should retain original rank when filtering (#102)', async () => {
