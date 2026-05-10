@@ -11,6 +11,18 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { renderWithProviders } from '../../__tests__/test-utils'
 
+// renderWithProviders mounts at path '*', so useParams() doesn't see the
+// :districtId segment. Mock react-router-dom's useParams while keeping the
+// rest of the router (Link, useNavigate, etc.) intact.
+vi.mock('react-router-dom', async () => {
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
+  return {
+    ...actual,
+    useParams: () => ({ districtId: '57' }),
+  }
+})
+
 vi.mock('../../services/cdn', async () => {
   const actual =
     await vi.importActual<typeof import('../../services/cdn')>(
@@ -42,7 +54,7 @@ vi.mock('../../hooks/useDistricts', () => ({
 
 vi.mock('../../hooks/useDistrictData', () => ({
   useDistrictCachedDates: () => ({
-    data: ['2025-11-22', '2025-10-15'],
+    data: { dates: ['2025-11-22', '2025-10-15'] },
     isLoading: false,
     isError: false,
   }),

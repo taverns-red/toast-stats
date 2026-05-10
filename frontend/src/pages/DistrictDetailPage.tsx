@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
+import { DistrictExportButton } from '../components/DistrictExportButton'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -516,7 +517,7 @@ const DistrictDetailPage: React.FC = () => {
   if (districtsData && !selectedDistrict && districtId) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-100">
+        <div className="district-detail-page-root">
           <div className="container mx-auto px-4 py-4 sm:py-8">
             <div className="mb-4 sm:mb-6">
               <button
@@ -587,89 +588,77 @@ const DistrictDetailPage: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-100">
-        <div className="container mx-auto px-4 py-4 sm:py-8">
-          {/* Header */}
-          <div className="mb-4 sm:mb-6">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-tm-loyal-blue hover:text-tm-loyal-blue-80 font-tm-headline font-medium transition-colors mb-4"
+      <div className="district-detail-page-root">
+        <div className="district-detail-page">
+          {/* Redesigned page header (#358) */}
+          <nav aria-label="Breadcrumb" className="district-detail-breadcrumbs">
+            <Link to="/" className="district-detail-breadcrumbs__link">
+              Districts
+            </Link>
+            <span
+              aria-hidden="true"
+              className="district-detail-breadcrumbs__separator"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              ›
+            </span>
+            <span className="district-detail-breadcrumbs__current">
+              {districtName}
+            </span>
+          </nav>
+
+          <div className="district-detail-page-header">
+            <div className="district-detail-page-header__intro">
+              <p className="district-detail-page-header__eyebrow">
+                Program Year {selectedProgramYear.label.replace(/-/g, '–')}
+              </p>
+              <h1 className="district-detail-page-header__title">
+                {districtName}
+              </h1>
+              <p
+                className="district-detail-page-header__lede"
+                data-testid="district-detail-lede"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
+                Membership, payments, divisions, and ranking trend for the
+                selected program year.
+              </p>
+            </div>
+
+            <div className="district-detail-page-header__actions">
+              {availableProgramYears.length > 0 && (
+                <ProgramYearSelector
+                  availableProgramYears={availableProgramYears}
+                  selectedProgramYear={selectedProgramYear}
+                  onProgramYearChange={setSelectedProgramYear}
+                  showProgress={false}
                 />
-              </svg>
-              Back to Rankings
-            </button>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-tm-headline font-bold text-tm-black">
-                  {districtName}
-                </h1>
-                <p className="text-sm sm:text-base font-tm-body text-gray-600 mt-1">
-                  District Statistics & Performance Analytics
-                </p>
-              </div>
-
-              {/* Program Year, Date Selector and Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-start">
-                {/* Program Year Selector */}
-                {availableProgramYears.length > 0 && (
-                  <div className="flex-shrink-0">
-                    <ProgramYearSelector
-                      availableProgramYears={availableProgramYears}
-                      selectedProgramYear={selectedProgramYear}
-                      onProgramYearChange={setSelectedProgramYear}
-                      showProgress={true}
-                    />
-                  </div>
-                )}
-
-                {/* Date Selector - Shows only dates in selected program year */}
-                {availableDates.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <label
-                      htmlFor="global-date-selector"
-                      className="text-xs sm:text-sm font-tm-body font-medium text-gray-700"
-                    >
-                      View Specific Date
-                    </label>
-                    <select
-                      id="global-date-selector"
-                      value={selectedDate || 'latest'}
-                      onChange={handleDateChange}
-                      className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:border-transparent bg-white text-gray-900 text-sm font-tm-body"
-                      style={{ color: 'var(--tm-black)' }}
-                    >
-                      <option value="latest" className="text-gray-900 bg-white">
-                        Latest in Program Year
+              )}
+              {availableDates.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="global-date-selector" className="sr-only">
+                    View Specific Date
+                  </label>
+                  <select
+                    id="global-date-selector"
+                    value={selectedDate || 'latest'}
+                    onChange={handleDateChange}
+                    className="px-3 py-2 rounded-md text-sm font-tm-body"
+                    style={{
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--ink)',
+                      border: '1px solid var(--line)',
+                    }}
+                  >
+                    <option value="latest">Latest in Program Year</option>
+                    {availableDates.map(date => (
+                      <option key={date} value={date}>
+                        {formatDate(date)}
                       </option>
-                      {availableDates.map(date => (
-                        <option
-                          key={date}
-                          value={date}
-                          className="text-gray-900 bg-white"
-                        >
-                          {formatDate(date)}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="text-xs font-tm-body text-gray-500">
-                      {availableDates.length} date
-                      {availableDates.length !== 1 ? 's' : ''} in program year
-                    </div>
-                  </div>
-                )}
-              </div>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {districtId && <DistrictExportButton districtId={districtId} />}
+              <DistrictShareButton />
             </div>
           </div>
 
@@ -1082,3 +1071,36 @@ const DistrictDetailPage: React.FC = () => {
 }
 
 export default DistrictDetailPage
+
+/* Inline share button (#358). Copies the current URL to the clipboard
+   and flashes a confirmation. Real share-flow (preview cards, OG meta)
+   is TBD when we know the share story. */
+const DistrictShareButton: React.FC = () => {
+  const [copied, setCopied] = useState(false)
+
+  const handleClick = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      // Clipboard API can fail on insecure contexts; swallow silently.
+    }
+  }, [])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="district-detail-share-button"
+      aria-label="Share this district page"
+    >
+      Share
+      {copied && (
+        <span className="district-detail-share-button__feedback" role="status">
+          ✓ link copied
+        </span>
+      )}
+    </button>
+  )
+}
