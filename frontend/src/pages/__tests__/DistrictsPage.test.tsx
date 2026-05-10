@@ -556,7 +556,7 @@ describe('DistrictsPage - Rankings column order (#436)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [
         {
-          districtId: 'D61',
+          districtId: '61',
           districtName: 'District 61',
           region: '7',
           paidClubs: 100,
