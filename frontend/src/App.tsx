@@ -6,7 +6,6 @@ import { ProgramYearProvider } from './contexts/ProgramYearContext'
 import { DarkModeProvider } from './contexts/DarkModeContext'
 import LandingPage from './pages/LandingPage'
 import AppShell from './components/AppShell'
-import { useGoogleAnalytics } from './hooks/useGoogleAnalytics'
 
 // Code-split: DistrictDetailPage (816 lines + recharts) loads on navigation (#169)
 const DistrictDetailPage = React.lazy(
@@ -32,17 +31,12 @@ function PageLoadingFallback(): React.JSX.Element {
   )
 }
 
-function Layout(): React.JSX.Element {
-  useGoogleAnalytics() // Track SPA route changes (#314)
-  return <AppShell />
-}
-
 // Create router configuration (ready for v7 future flags when available)
 const router = createBrowserRouter(
   [
     {
       path: '/',
-      element: <Layout />,
+      element: <AppShell />,
       children: [
         {
           index: true,

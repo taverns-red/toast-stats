@@ -1,17 +1,4 @@
-/**
- * AppShell Component Tests (#354)
- *
- * The AppShell wraps every route with the redesign chrome:
- * - Sticky top bar (brand mark + Districts/History/Methodology nav)
- * - Skip link for a11y
- * - Outlet for page content
- * - Minimalist footer per handoff spec, with theme toggle preserved
- *
- * Per Epic #352 scope decisions:
- *  - No notifications/help/avatar (no auth today)
- *  - Regions/Awards "soon" nav items are OMITTED entirely (not rendered as
- *    disabled stubs)
- */
+/* AppShell behavior contract — Epic #352 / Issue #354. */
 
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
@@ -30,6 +17,10 @@ const renderShell = (initialPath = '/') => {
           {
             path: 'history',
             element: <div data-testid="page">History</div>,
+          },
+          {
+            path: 'history/:year',
+            element: <div data-testid="page">History year</div>,
           },
           {
             path: 'methodology',
@@ -86,14 +77,16 @@ describe('AppShell (#354)', () => {
 
     it('does NOT render notifications, help, or avatar elements (no auth today)', () => {
       renderShell()
+      // Scope to the top bar so a future footer button doesn't trip this.
+      const header = screen.getByRole('banner')
       expect(
-        screen.queryByRole('button', { name: /notifications/i })
+        within(header).queryByRole('button', { name: /notifications/i })
       ).not.toBeInTheDocument()
       expect(
-        screen.queryByRole('button', { name: /help/i })
+        within(header).queryByRole('button', { name: /help/i })
       ).not.toBeInTheDocument()
       expect(
-        screen.queryByRole('img', { name: /avatar|profile/i })
+        within(header).queryByRole('img', { name: /avatar|profile/i })
       ).not.toBeInTheDocument()
     })
 
@@ -105,6 +98,15 @@ describe('AppShell (#354)', () => {
 
       const districtsLink = within(nav).getByRole('link', { name: 'Districts' })
       expect(districtsLink).not.toHaveAttribute('aria-current')
+    })
+
+    it('keeps History active on nested routes like /history/:year', () => {
+      // Guards against a future flip of NAV_ITEMS.history.end from false→true,
+      // which would silently break highlighting on nested archive routes.
+      renderShell('/history/2024')
+      const nav = screen.getByRole('navigation', { name: /primary/i })
+      const historyLink = within(nav).getByRole('link', { name: 'History' })
+      expect(historyLink).toHaveAttribute('aria-current', 'page')
     })
   })
 

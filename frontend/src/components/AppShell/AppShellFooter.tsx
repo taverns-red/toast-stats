@@ -3,42 +3,26 @@ import ThemeToggle from '../ThemeToggle'
 
 declare const __APP_VERSION__: string
 
-/**
- * Minimalist footer per the 2026 design handoff (#354).
- *
- * Two-column flex, 12px text, top border. Left = attribution; right =
- * data source + license + version. Theme toggle preserved on the right
- * for manual dark-mode access (the redesign drops it visually but the
- * accessibility need stays — see Epic #352 scope decisions).
- */
+/* The handoff design has no theme toggle (it relies on prefers-color-scheme),
+   but Epic #352 keeps the manual [data-theme='dark'] toggle, so the toggle
+   lives here in the footer to preserve a11y access. */
 
 const AppShellFooter: React.FC = () => {
   const version =
     typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 
   return (
-    <footer
-      role="contentinfo"
-      className="border-t"
-      style={{
-        borderColor: 'var(--line)',
-        backgroundColor: 'var(--surface)',
-        color: 'var(--ink-3)',
-      }}
-    >
-      <div
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 max-w-[1280px] mx-auto px-6 py-4"
-        style={{ fontFamily: 'var(--sans)', fontSize: 12 }}
-      >
+    <footer role="contentinfo" className="app-shell-footer">
+      <div className="app-shell-footer__inner">
         <div>Toast Stats · ts.taverns.red · A Red Taverns production</div>
-        <div className="flex items-center gap-2">
+        <div className="app-shell-footer__meta">
           <span data-testid="app-version">
             Data:{' '}
             <a
               href="https://dashboards.toastmasters.org"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: 'var(--link)' }}
+              className="app-shell-footer__link"
             >
               dashboards.toastmasters.org
             </a>
@@ -47,7 +31,7 @@ const AppShellFooter: React.FC = () => {
               href="https://github.com/taverns-red/toast-stats/blob/main/LICENSE"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: 'var(--link)' }}
+              className="app-shell-footer__link"
             >
               MIT License
             </a>
