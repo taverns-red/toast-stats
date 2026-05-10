@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react'
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
-import { DistrictExportButton } from '../components/DistrictExportButton'
+import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -15,7 +15,6 @@ import {
 } from '../hooks/useTimeSeriesYoY'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
-import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -24,7 +23,6 @@ import {
   calculateProgramYearDay,
 } from '../utils/programYear'
 import type { MultiYearPaymentData } from '../hooks/usePaymentsTrend'
-import { formatDisplayDate } from '../utils/dateFormatting'
 import {
   parseFilterState,
   serializeFilterState,
@@ -508,9 +506,6 @@ const DistrictDetailPage: React.FC = () => {
     setSelectedDate(value === 'latest' ? undefined : value)
   }
 
-  // Format date for display (using utility to avoid UTC timezone shift)
-  const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
-
   // If districts data has loaded but this district isn't in the tracked list,
   // show a limited page with Global Rankings (available for all districts)
   // instead of blank data. Only 6 districts have detailed per-district analytics.
@@ -590,79 +585,18 @@ const DistrictDetailPage: React.FC = () => {
     <ErrorBoundary>
       <div className="district-detail-page-root">
         <div className="district-detail-page">
-          <nav aria-label="Breadcrumb" className="district-detail-breadcrumbs">
-            <Link to="/" className="district-detail-breadcrumbs__link">
-              Districts
-            </Link>
-            <span
-              aria-hidden="true"
-              className="district-detail-breadcrumbs__separator"
-            >
-              ›
-            </span>
-            <span
-              aria-current="page"
-              className="district-detail-breadcrumbs__current"
-            >
-              {districtName}
-            </span>
-          </nav>
-
-          <div className="district-detail-page-header">
-            <div className="district-detail-page-header__intro">
-              <p className="district-detail-page-header__eyebrow">
-                Program Year {selectedProgramYear.label.replace(/-/g, '–')}
-              </p>
-              <h1 className="district-detail-page-header__title">
-                {districtName}
-              </h1>
-              <p
-                className="district-detail-page-header__lede"
-                data-testid="district-detail-lede"
-              >
-                Membership, payments, divisions, and ranking trend for the
-                selected program year.
-              </p>
-            </div>
-
-            <div className="district-detail-page-header__actions">
-              {availableProgramYears.length > 0 && (
-                <ProgramYearSelector
-                  availableProgramYears={availableProgramYears}
-                  selectedProgramYear={selectedProgramYear}
-                  onProgramYearChange={setSelectedProgramYear}
-                  showProgress={false}
-                />
-              )}
-              {availableDates.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="global-date-selector" className="sr-only">
-                    View Specific Date
-                  </label>
-                  <select
-                    id="global-date-selector"
-                    value={selectedDate || 'latest'}
-                    onChange={handleDateChange}
-                    className="px-3 py-2 rounded-md text-sm font-tm-body"
-                    style={{
-                      backgroundColor: 'var(--surface)',
-                      color: 'var(--ink)',
-                      border: '1px solid var(--line)',
-                    }}
-                  >
-                    <option value="latest">Latest in Program Year</option>
-                    {availableDates.map(date => (
-                      <option key={date} value={date}>
-                        {formatDate(date)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {districtId && <DistrictExportButton districtId={districtId} />}
-              <DistrictShareButton />
-            </div>
-          </div>
+          {districtId && (
+            <DistrictDetailHeader
+              districtId={districtId}
+              districtName={districtName}
+              selectedProgramYear={selectedProgramYear}
+              setSelectedProgramYear={setSelectedProgramYear}
+              availableProgramYears={availableProgramYears}
+              selectedDate={selectedDate}
+              onDateChange={handleDateChange}
+              availableDates={availableDates}
+            />
+          )}
 
           {/* Tabs */}
           <div className="bg-white rounded-lg shadow-md mb-4 sm:mb-6">
@@ -1073,35 +1007,3 @@ const DistrictDetailPage: React.FC = () => {
 }
 
 export default DistrictDetailPage
-
-/* Inline share button (#358). Copies the current URL to the clipboard
-   and flashes a confirmation. Real share-flow (preview cards, OG meta)
-   is TBD when we know the share story. */
-const DistrictShareButton: React.FC = () => {
-  const [copied, setCopied] = useState(false)
-
-  const handleClick = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
-    } catch {
-      // Clipboard API can fail on insecure contexts; swallow silently.
-    }
-  }, [])
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className="district-detail-share-button"
-    >
-      Share
-      {copied && (
-        <span className="district-detail-share-button__feedback" role="status">
-          ✓ link copied
-        </span>
-      )}
-    </button>
-  )
-}

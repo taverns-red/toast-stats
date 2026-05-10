@@ -1,160 +1,109 @@
-/* District detail page redesign chrome (#358).
-   Asserts the new header (breadcrumbs + eyebrow + h1 + lede + action
-   cluster). The detailed dynamic lede (Region name + active clubs +
-   divisions + overall rank) is deferred to a follow-up sub-issue when
-   the rank/region data flow is settled — this issue ships the chrome. */
+/* District detail header redesign chrome (#358).
+
+   Mounts the extracted DistrictDetailHeader component directly — NOT
+   the full DistrictDetailPage — so the test stays well under the
+   global 5s testTimeout even when --coverage is enabled. The full-page
+   integration is exercised by other DistrictDetailPage.*.test.tsx files
+   that already smoke-test the header indirectly. */
 
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import { renderWithProviders } from '../../__tests__/test-utils'
+import { MemoryRouter } from 'react-router-dom'
+import { DistrictDetailHeader } from '../../components/DistrictDetailHeader'
+import type { ProgramYear } from '../../utils/programYear'
 
-// renderWithProviders mounts at path '*', so useParams() doesn't see the
-// :districtId segment. Mock react-router-dom's useParams while keeping the
-// rest of the router (Link, useNavigate, etc.) intact.
-vi.mock('react-router-dom', async () => {
-  const actual =
-    await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
-  return {
-    ...actual,
-    useParams: () => ({ districtId: '57' }),
+const mockProgramYear: ProgramYear = {
+  year: 2025,
+  startDate: '2025-07-01',
+  endDate: '2026-06-30',
+  label: '2025-2026',
+}
+
+const renderHeader = (
+  overrides: Partial<React.ComponentProps<typeof DistrictDetailHeader>> = {}
+) => {
+  const defaultProps: React.ComponentProps<typeof DistrictDetailHeader> = {
+    districtId: '57',
+    districtName: 'District 57',
+    selectedProgramYear: mockProgramYear,
+    setSelectedProgramYear: () => {},
+    availableProgramYears: [mockProgramYear],
+    selectedDate: undefined,
+    onDateChange: () => {},
+    availableDates: ['2025-11-22', '2025-10-15'],
+    ...overrides,
   }
-})
+  return render(
+    <MemoryRouter>
+      <DistrictDetailHeader {...defaultProps} />
+    </MemoryRouter>
+  )
+}
 
-vi.mock('../../services/cdn', async () => {
-  const actual =
-    await vi.importActual<typeof import('../../services/cdn')>(
-      '../../services/cdn'
-    )
-  return {
-    ...actual,
-    fetchCdnDates: vi
-      .fn()
-      .mockResolvedValue({ dates: [], count: 0, generatedAt: '2025-01-01' }),
-    fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({}),
-    fetchCdnManifest: vi.fn().mockResolvedValue({
-      latestSnapshotDate: '2025-11-22',
-      generatedAt: '2025-01-01',
-    }),
-    fetchCdnRankings: vi
-      .fn()
-      .mockResolvedValue({ rankings: [], date: '2025-11-22' }),
-  }
-})
-
-vi.mock('../../hooks/useDistricts', () => ({
-  useDistricts: () => ({
-    data: { districts: [{ id: '57', name: 'District 57' }] },
-    isLoading: false,
-    isError: false,
-  }),
-}))
-
-vi.mock('../../hooks/useDistrictData', () => ({
-  useDistrictCachedDates: () => ({
-    data: { dates: ['2025-11-22', '2025-10-15'] },
-    isLoading: false,
-    isError: false,
-  }),
-}))
-
-vi.mock('../../hooks/useDistrictAnalytics', async () => {
-  const actual = await vi.importActual<
-    typeof import('../../hooks/useDistrictAnalytics')
-  >('../../hooks/useDistrictAnalytics')
-  return {
-    ...actual,
-    useDistrictAnalytics: () => ({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-      error: null,
-    }),
-  }
-})
-
-import DistrictDetailPage from '../DistrictDetailPage'
-
-describe('District detail page redesign chrome (#358)', () => {
-  beforeEach(() => vi.clearAllMocks())
-
+describe('DistrictDetailHeader (#358)', () => {
   describe('breadcrumbs', () => {
     it('renders a Districts → District N breadcrumb trail', () => {
-      renderWithProviders(<DistrictDetailPage />, {
-        initialEntries: ['/district/57'],
-      })
+      renderHeader()
       const nav = screen.getByRole('navigation', { name: /breadcrumb/i })
-      // First crumb is a link back to /
       const districtsLink = within(nav).getByRole('link', {
         name: /districts/i,
       })
       expect(districtsLink).toHaveAttribute('href', '/')
-      // Second crumb is the current district (not a link — current location)
       expect(within(nav).getByText(/district 57/i)).toBeInTheDocument()
+    })
+
+    it('marks the current crumb with aria-current="page"', () => {
+      renderHeader()
+      const nav = screen.getByRole('navigation', { name: /breadcrumb/i })
+      const current = within(nav).getByText(/district 57/i)
+      expect(current).toHaveAttribute('aria-current', 'page')
     })
   })
 
   describe('page header', () => {
     it('renders the program-year eyebrow (en-dash format)', () => {
-      renderWithProviders(<DistrictDetailPage />, {
-        initialEntries: ['/district/57'],
-      })
-      expect(
-        screen.getByText(/program year 20\d{2}[–-]20\d{2}/i)
-      ).toBeInTheDocument()
+      renderHeader()
+      expect(screen.getByText(/program year 2025[–-]2026/i)).toBeInTheDocument()
     })
 
     it('renders the redesigned h1 "District N"', () => {
-      renderWithProviders(<DistrictDetailPage />, {
-        initialEntries: ['/district/57'],
-      })
+      renderHeader()
       expect(
         screen.getByRole('heading', { level: 1, name: /^district 57$/i })
       ).toBeInTheDocument()
     })
 
     it('renders a lede paragraph below the h1', () => {
-      renderWithProviders(<DistrictDetailPage />, {
-        initialEntries: ['/district/57'],
-      })
-      // Generic copy until follow-up wires dynamic Region/clubs/rank data
+      renderHeader()
       expect(screen.getByTestId('district-detail-lede')).toBeInTheDocument()
     })
   })
 
   describe('action cluster', () => {
     it('keeps the existing program-year + date selectors visible', () => {
-      renderWithProviders(<DistrictDetailPage />, {
-        initialEntries: ['/district/57'],
-      })
-      // Date selector exists (label "View Specific Date" or similar)
+      renderHeader()
       expect(screen.getByLabelText(/view specific date/i)).toBeInTheDocument()
     })
 
     it('renders an Export button', () => {
-      renderWithProviders(<DistrictDetailPage />, {
-        initialEntries: ['/district/57'],
-      })
-      // The existing DistrictExportButton renders a button labeled Export
+      renderHeader()
       expect(
         screen.getByRole('button', { name: /export/i })
       ).toBeInTheDocument()
     })
 
-    it('renders a Share button (primary loyal)', () => {
-      renderWithProviders(<DistrictDetailPage />, {
-        initialEntries: ['/district/57'],
-      })
-      // Share button is new in #358 — copy URL to clipboard placeholder.
+    it('renders a Share button', () => {
+      renderHeader()
       expect(screen.getByRole('button', { name: /share/i })).toBeInTheDocument()
     })
   })
 
   describe('lesson 49/50 nesting check', () => {
     it('does not declare nested min-height: 100vh inside AppShell', () => {
-      // Static guard: the new .district-detail-page-root rule must NOT set
+      // Static guard: the .district-detail-page-root rule must NOT set
       // min-height because AppShell already owns the viewport wrapper.
       const css = readFileSync(
         resolve(__dirname, '../../styles/components/app-shell.css'),
