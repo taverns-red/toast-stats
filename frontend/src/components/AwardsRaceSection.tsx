@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import type {
   CompetitiveAwardRanking,
   CompetitiveAwardStandings,
@@ -113,12 +114,12 @@ const AwardCard: React.FC<AwardCardProps> = ({ spec, entries }) => {
         <p className="awards-race-card__description">{spec.description}</p>
       </header>
       <div className="awards-race-card__leader">
-        <a
-          href={`/district/${leader.districtId}`}
+        <Link
+          to={`/district/${leader.districtId}`}
           className="awards-race-card__leader-link"
         >
           D{leader.districtId}
-        </a>
+        </Link>
         <span className="awards-race-card__leader-value">
           {spec.formatValue(leader.value)}
         </span>

@@ -416,7 +416,6 @@
     line-height: 1;
     letter-spacing: -0.02em;
     color: var(--ink);
-    tabular-nums: 1;
     font-variant-numeric: tabular-nums;
   }
 
