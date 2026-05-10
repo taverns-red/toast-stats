@@ -28,10 +28,12 @@ describe('DistrictDetailTabs (#359)', () => {
         name: /district analysis tabs/i,
       })
       const tabs = within(tablist).getAllByRole('tab')
+      // Tabs render label + (optional) count badge as siblings; textContent
+      // concatenates them without whitespace.
       expect(tabs.map(t => t.textContent?.trim())).toEqual([
         'Overview',
-        expect.stringMatching(/^Clubs\s+305$/),
-        expect.stringMatching(/^Divisions & Areas\s+7$/),
+        'Clubs305',
+        'Divisions & Areas7',
         'Trends',
         'Analytics',
         'Global Rankings',
