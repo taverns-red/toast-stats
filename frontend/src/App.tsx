@@ -1,11 +1,11 @@
 import React, { Suspense } from 'react'
-import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './config/queryClient'
 import { ProgramYearProvider } from './contexts/ProgramYearContext'
 import { DarkModeProvider } from './contexts/DarkModeContext'
 import LandingPage from './pages/LandingPage'
-import SiteFooter from './components/SiteFooter'
+import AppShell from './components/AppShell'
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics'
 
 // Code-split: DistrictDetailPage (816 lines + recharts) loads on navigation (#169)
@@ -34,15 +34,7 @@ function PageLoadingFallback(): React.JSX.Element {
 
 function Layout(): React.JSX.Element {
   useGoogleAnalytics() // Track SPA route changes (#314)
-  return (
-    <>
-      <a href="#main-content" className="tm-skip-link">
-        Skip to main content
-      </a>
-      <Outlet />
-      <SiteFooter />
-    </>
-  )
+  return <AppShell />
 }
 
 // Create router configuration (ready for v7 future flags when available)

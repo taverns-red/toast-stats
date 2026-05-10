@@ -17,6 +17,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import AppShell from '../../components/AppShell/AppShell'
+import { DarkModeProvider } from '../../contexts/DarkModeContext'
 
 const renderShell = (initialPath = '/') => {
   const router = createMemoryRouter(
@@ -39,7 +40,11 @@ const renderShell = (initialPath = '/') => {
     ],
     { initialEntries: [initialPath] }
   )
-  return render(<RouterProvider router={router} />)
+  return render(
+    <DarkModeProvider>
+      <RouterProvider router={router} />
+    </DarkModeProvider>
+  )
 }
 
 describe('AppShell (#354)', () => {
@@ -122,8 +127,12 @@ describe('AppShell (#354)', () => {
     it('preserves the theme toggle for manual dark-mode access', () => {
       renderShell()
       const footer = screen.getByRole('contentinfo')
+      // ThemeToggle's aria-label flips with state ("Switch to dark mode" /
+      // "Switch to light mode") — match either.
       expect(
-        within(footer).getByRole('button', { name: /theme/i })
+        within(footer).getByRole('button', {
+          name: /switch to (light|dark) mode/i,
+        })
       ).toBeInTheDocument()
     })
   })
