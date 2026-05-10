@@ -590,7 +590,6 @@ const DistrictDetailPage: React.FC = () => {
     <ErrorBoundary>
       <div className="district-detail-page-root">
         <div className="district-detail-page">
-          {/* Redesigned page header (#358) */}
           <nav aria-label="Breadcrumb" className="district-detail-breadcrumbs">
             <Link to="/" className="district-detail-breadcrumbs__link">
               Districts
@@ -601,7 +600,10 @@ const DistrictDetailPage: React.FC = () => {
             >
               ›
             </span>
-            <span className="district-detail-breadcrumbs__current">
+            <span
+              aria-current="page"
+              className="district-detail-breadcrumbs__current"
+            >
               {districtName}
             </span>
           </nav>
@@ -1093,7 +1095,6 @@ const DistrictShareButton: React.FC = () => {
       type="button"
       onClick={handleClick}
       className="district-detail-share-button"
-      aria-label="Share this district page"
     >
       Share
       {copied && (
