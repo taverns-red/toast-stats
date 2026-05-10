@@ -160,13 +160,18 @@ const LandingPage: React.FC = () => {
   // at the top of the component, BEFORE the loading/error early returns
   // (rules of hooks).
   const kpiTotals = React.useMemo(() => {
+    let paidClubs = 0
+    let totalPayments = 0
+    let distinguishedClubs = 0
+    for (const r of rankings) {
+      paidClubs += r.paidClubs ?? 0
+      totalPayments += r.totalPayments ?? 0
+      distinguishedClubs += r.distinguishedClubs ?? 0
+    }
     return {
-      paidClubs: rankings.reduce((s, r) => s + (r.paidClubs ?? 0), 0),
-      totalPayments: rankings.reduce((s, r) => s + (r.totalPayments ?? 0), 0),
-      distinguishedClubs: rankings.reduce(
-        (s, r) => s + (r.distinguishedClubs ?? 0),
-        0
-      ),
+      paidClubs,
+      totalPayments,
+      distinguishedClubs,
       tracked: rankings.length,
     }
   }, [rankings])
@@ -324,7 +329,7 @@ const LandingPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="districts-page-root">
         <div className="container mx-auto px-4 py-8">
           <div className="bg-white rounded-lg shadow-md p-8">
             <div className="animate-pulse space-y-4">
@@ -364,7 +369,7 @@ const LandingPage: React.FC = () => {
 
     if (isNoSnapshotError) {
       return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="districts-page-root">
           <div className="container mx-auto px-4 py-8">
             <div
               className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow rounded-lg p-8 mx-auto"
@@ -435,7 +440,7 @@ const LandingPage: React.FC = () => {
 
     // Handle other types of errors
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="districts-page-root">
         <div className="container mx-auto px-4 py-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <h2 className="text-xl font-bold text-red-800 mb-2">
@@ -457,7 +462,7 @@ const LandingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="districts-page-root">
       <div className="districts-page">
         {/* Redesigned page header (#356) */}
         <div className="districts-page-header">
@@ -519,7 +524,7 @@ const LandingPage: React.FC = () => {
         {/* Filters: Program Year + Date Selectors (kept under the new
             chrome rather than in the header — #356 defers the inline
             action-cluster selectors per the simplified Districts scope) */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-3">
+        <div className="districts-filters-card">
           <div className="flex flex-col sm:flex-row gap-4">
             {availableProgramYears.length > 0 && (
               <div className="flex-shrink-0">
@@ -1096,16 +1101,19 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Methodology callout (#356) — short link to the full reference */}
+        {/* Forward-pointer to the dedicated methodology page (#356).
+            The legacy in-page Scoring Methodology block above stays as
+            the canonical explainer until #368 ships real /methodology
+            content; #369 will remove the duplication. */}
         <div className="districts-methodology-callout">
-          Rankings use a Borda-count system. See the full{' '}
+          Definitions, refresh cadence, and known caveats live on the{' '}
           <a
             href="/methodology"
             className="districts-methodology-callout__link"
           >
             Methodology
           </a>{' '}
-          for definitions, refresh cadence, and known caveats.
+          page.
         </div>
       </div>
     </div>

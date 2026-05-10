@@ -167,12 +167,28 @@
   }
 
   /* Districts page redesign chrome (#356). Lives inside LandingPage.tsx
-     until #369 retires the file. */
+     until #369 retires the file. The .districts-* namespace is intentional
+     — Districts is its own surface, distinct from app-shell chrome and
+     from the legacy tm-* brand classes. */
+  .districts-page-root {
+    min-height: 100vh;
+    background-color: var(--bg);
+  }
+
   .districts-page {
     max-width: 1280px;
     margin-left: auto;
     margin-right: auto;
     padding: 32px 24px;
+  }
+
+  .districts-filters-card {
+    margin-bottom: 12px;
+    padding: 16px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md);
+    box-shadow: var(--rds-shadow-sm);
   }
 
   .districts-page-header {
@@ -229,26 +245,6 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-  }
-
-  .districts-page-freshness {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background-color: var(--surface-3);
-    font-family: var(--sans);
-    font-size: 12px;
-    color: var(--ink-2);
-  }
-
-  .districts-page-freshness__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--green-500);
-    flex-shrink: 0;
   }
 
   /* 4-card KPI strip */

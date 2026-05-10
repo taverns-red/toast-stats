@@ -5,7 +5,7 @@
    LandingPage tests. */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import LandingPage from '../LandingPage'
 import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
@@ -128,14 +128,23 @@ describe('Districts page redesign chrome (#356)', () => {
       await screen.findByText('District 1')
       // "Paid Clubs · Global" and "Districts Tracked" are unique to the
       // KPI strip. "Total Payments" + "Distinguished Clubs" also appear
-      // in the Awards Race section, so scope those to their KPI cards.
+      // in the Awards Race section, so scope those queries to their card.
       expect(screen.getByText(/paid clubs · global/i)).toBeInTheDocument()
+
+      const paymentsCard = screen
+        .getByTestId('kpi-total-payments')
+        .closest('.districts-kpi-card') as HTMLElement
       expect(
-        screen.getByTestId('kpi-total-payments').previousSibling
-      ).toHaveTextContent(/total payments/i)
+        within(paymentsCard).getByText(/total payments/i)
+      ).toBeInTheDocument()
+
+      const distinguishedCard = screen
+        .getByTestId('kpi-distinguished-clubs')
+        .closest('.districts-kpi-card') as HTMLElement
       expect(
-        screen.getByTestId('kpi-distinguished-clubs').previousSibling
-      ).toHaveTextContent(/distinguished clubs/i)
+        within(distinguishedCard).getByText(/distinguished clubs/i)
+      ).toBeInTheDocument()
+
       expect(screen.getByText(/districts tracked/i)).toBeInTheDocument()
     })
 
