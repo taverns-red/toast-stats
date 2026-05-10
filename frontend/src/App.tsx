@@ -20,14 +20,15 @@ const ClubRedirectPage = React.lazy(() => import('./pages/ClubRedirectPage'))
 
 /** Loading fallback for lazy-loaded pages */
 function PageLoadingFallback(): React.JSX.Element {
+  // AppShell owns the <main id="main-content"> landmark; this fallback
+  // renders inside it during route-transition Suspense boundaries.
   return (
-    <main
-      id="main-content"
+    <div
       className="tm-container"
       style={{ padding: '2rem', textAlign: 'center' }}
     >
       <div className="tm-loading-spinner" aria-label="Loading page…" />
-    </main>
+    </div>
   )
 }
 
