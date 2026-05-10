@@ -601,6 +601,10 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    /* min-height: 44px ensures WCAG 2.5.5 touch-target size (replaces
+       the explicit class assertion that was removed during the test
+       migration). */
+    min-height: 44px;
     padding: 14px 16px;
     margin-bottom: -1px;
     border: 0;

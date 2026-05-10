@@ -5,6 +5,8 @@
 import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within, fireEvent } from '@testing-library/react'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import { DistrictDetailTabs, type DistrictTabId } from '../DistrictDetailTabs'
 
 const renderTabs = (
@@ -103,6 +105,23 @@ describe('DistrictDetailTabs (#359)', () => {
       expect(
         screen.getByRole('tablist', { name: /district analysis tabs/i })
       ).toBeInTheDocument()
+    })
+
+    it('preserves the 44px touch target size (WCAG 2.5.5)', () => {
+      // Static guard: the brittle Tailwind class-name assertion that
+      // protected this in the old tests was deleted during migration —
+      // replaced by an explicit min-height: 44px declaration in CSS.
+      // Read the rule and assert it stays.
+      const css = readFileSync(
+        resolve(__dirname, '../../styles/components/app-shell.css'),
+        'utf-8'
+      )
+      const rule = css.match(
+        /\.district-detail-tabs__tab\s*\{([\s\S]*?)\n\s*\}/
+      )
+      expect(rule).toBeTruthy()
+      const stripped = (rule?.[1] ?? '').replace(/\/\*[\s\S]*?\*\//g, '')
+      expect(stripped).toMatch(/min-height\s*:\s*44px\s*;/)
     })
   })
 })
