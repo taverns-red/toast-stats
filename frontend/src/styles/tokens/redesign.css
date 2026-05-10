@@ -1,26 +1,12 @@
-/* ═══════════════════════════════════════════
-   2026 Design Handoff Tokens (#353)
-   ───────────────────────────────────────────
-   Sourced from /design_handoff_toast_stats/README.md "Design Tokens".
-
-   These tokens live ALONGSIDE the existing --color-tm-* palette so the
-   redesign can land page-by-page without breaking the current pages.
-   The Districts / District / Club / History / Methodology pages will
-   migrate onto these tokens in subsequent sprint issues.
-
-   Naming conventions:
-   - Color palette tokens (--loyal-*, --maroon-*, --yellow-*) use the
-     handoff names verbatim — they have no Tailwind v4 collision.
-   - Surface, line, ink, link tokens use the handoff names verbatim —
-     scoped under the manual [data-theme='dark'] toggle (NOT
-     prefers-color-scheme — design decision, see Epic #352 scope).
-   - Radii and shadows use a --rds- prefix because --radius-sm is
-     already declared in @theme (Tailwind v4 utility scale = 4px),
-     and --shadow-* would collide with Tailwind shadow utility tokens.
-   ═══════════════════════════════════════════ */
+/* 2026 redesign tokens — live alongside --color-tm-* during the
+   page-by-page migration (Epic #352). Naming notes:
+   - Radii and shadows use a --rds- prefix because --radius-sm is already
+     declared in @theme (Tailwind v4 utility scale = 4px) and bare
+     --shadow-* would collide with Tailwind shadow utility tokens.
+   - Dark variants use the manual [data-theme='dark'] toggle (NOT
+     prefers-color-scheme) to match the existing dark-mode.css convention. */
 
 :root {
-  /* ── Loyal Blue (Toastmasters PRIMARY) ── */
   --loyal-50: #e6eef3;
   --loyal-100: #cbdde7;
   --loyal-200: #9ebccb;
@@ -29,22 +15,18 @@
   --loyal-600: #003352;
   --loyal-700: #002438;
 
-  /* ── Maroon (eyebrow + avatar accent) ── */
-  --maroon-500: #7B1828;
+  --maroon-500: #7b1828;
   --maroon-600: #5a1120;
 
-  /* ── Yellow (status / projection accent) ── */
   --yellow-300: #f9ecaa;
-  --yellow-500: #F2DF74;
+  --yellow-500: #f2df74;
   --yellow-600: #c9b748;
 
-  /* ── Status (delta + health classifications) ── */
   --green-500: #16a34a;
   --green-600: #15803d;
   --red-500: #dc2626;
   --red-600: #b91c1c;
 
-  /* ── Surfaces / lines / ink (light) ── */
   --bg: #f6f7f8;
   --surface: #ffffff;
   --surface-2: #f9fafb;
@@ -57,27 +39,19 @@
   --ink-4: #8b94a3;
   --link: var(--loyal-500);
 
-  /* ── Typography stacks ──
-     --serif aliases the headline/brand/eyebrow font.
-     --sans is body/UI. --mono is for numerics, badges, monospace pills. */
   --serif: 'Montserrat', system-ui, sans-serif;
   --sans: 'Source Sans 3', system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* ── Radii (namespaced --rds-*) ── */
   --rds-radius-sm: 6px;
-  --rds-radius: 8px;
+  --rds-radius-md: 8px;
   --rds-radius-lg: 12px;
 
-  /* ── Shadows (namespaced --rds-*) ── */
   --rds-shadow-sm: 0 1px 2px rgba(15, 23, 32, .04);
   --rds-shadow: 0 1px 2px rgba(15, 23, 32, .04), 0 1px 3px rgba(15, 23, 32, .06);
   --rds-shadow-lg: 0 1px 2px rgba(15, 23, 32, .04), 0 8px 24px rgba(15, 23, 32, .08);
 }
 
-/* ── Manual dark-mode toggle (NOT prefers-color-scheme) ──
-   Mirrors the existing dark-mode.css convention for the existing
-   tm-* token system — keeps a single dark-mode toggle pattern. */
 [data-theme='dark'] {
   --bg: #0a0f15;
   --surface: #111922;
@@ -94,7 +68,8 @@
   --loyal-100: #16344a;
   --loyal-200: #1c4866;
 
-  /* Shadows in dark mode use deeper rgba per handoff spec */
+  /* Deeper rgba per handoff dark-mode spec — the light-mode hairlines
+     disappear at 4% opacity on dark backgrounds. */
   --rds-shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
   --rds-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 1px 3px rgba(0, 0, 0, .4);
   --rds-shadow-lg: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .5);

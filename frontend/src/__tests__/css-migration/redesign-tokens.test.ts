@@ -77,12 +77,14 @@ describe('Redesign token system (#353)', () => {
       expect(css).toMatch(/--mono:\s*['"]?JetBrains Mono['"]?/)
     })
 
-    it('defines radii (sm 6, default 8, lg 12) — namespaced to avoid conflict with @theme --radius-sm 4', () => {
+    it('defines radii (sm 6, md 8, lg 12) — namespaced to avoid conflict with @theme --radius-sm 4', () => {
       const css = readSrc('styles/tokens/redesign.css')
-      // Use --rds- prefix to avoid colliding with the existing --radius-sm: 4px
-      // already declared in @theme (which sets the Tailwind utility radius scale).
+      // --rds- prefix avoids colliding with the existing --radius-sm: 4px
+      // already declared in @theme (Tailwind utility radius scale).
+      // --rds-radius-md (not bare --rds-radius) matches the existing
+      // --tm-radius-sm/md/lg/xl convention in spacing.css.
       expect(css).toMatch(/--rds-radius-sm:\s*6px/)
-      expect(css).toMatch(/--rds-radius:\s*8px/)
+      expect(css).toMatch(/--rds-radius-md:\s*8px/)
       expect(css).toMatch(/--rds-radius-lg:\s*12px/)
     })
 
@@ -159,9 +161,18 @@ describe('Redesign token system (#353)', () => {
       expect(allWeights).toContain('500')
     })
 
-    it('loads JetBrains Mono (mono numerics + badges per handoff)', () => {
+    it('declares the --mono token but defers JetBrains Mono font preload to #354', () => {
+      // The --mono token in redesign.css references JetBrains Mono so future
+      // consumers can use it, but the actual font preload is held until
+      // AppShell (#354) ships a real consumer — saves ~25KB + one stylesheet
+      // RTT on every cold load until then. The CSS fallback chain
+      // ('JetBrains Mono', ui-monospace, monospace) means callers degrade
+      // gracefully to the system mono font in the meantime.
+      const css = readSrc('styles/tokens/redesign.css')
+      expect(css).toMatch(/--mono:\s*['"]?JetBrains Mono['"]?/)
+
       const html = readRoot('index.html')
-      expect(html).toMatch(/family=JetBrains\+Mono/)
+      expect(html).not.toMatch(/family=JetBrains\+Mono/)
     })
   })
 })
