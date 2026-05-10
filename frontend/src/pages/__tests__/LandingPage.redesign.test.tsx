@@ -6,6 +6,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import LandingPage from '../LandingPage'
 import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
@@ -191,6 +193,24 @@ describe('Districts page redesign chrome (#356)', () => {
         l => l.getAttribute('href') === '/methodology'
       )
       expect(calloutLink).toBeDefined()
+    })
+  })
+
+  describe('AppShell integration (Lesson 49 — prior PR shipped a regression that only manifests when nested under the real shell)', () => {
+    it('does not declare its own min-height: 100vh — that belongs to AppShell', () => {
+      // Static check: the .districts-page-root rule must NOT set min-height
+      // because AppShell already owns the viewport wrapper. Nesting another
+      // 100vh div forces a guaranteed scrollbar past the chrome.
+      const css = readFileSync(
+        resolve(__dirname, '../../styles/components/app-shell.css'),
+        'utf-8'
+      )
+      const rule = css.match(/\.districts-page-root\s*\{([\s\S]*?)\n\s*\}/)
+      expect(rule).toBeTruthy()
+      // Strip CSS comments before matching so an explanatory comment that
+      // mentions "min-height: 100vh" doesn't false-positive.
+      const stripped = (rule?.[1] ?? '').replace(/\/\*[\s\S]*?\*\//g, '')
+      expect(stripped).not.toMatch(/min-height\s*:\s*100vh\s*;/)
     })
   })
 })

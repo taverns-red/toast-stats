@@ -171,7 +171,10 @@
      — Districts is its own surface, distinct from app-shell chrome and
      from the legacy tm-* brand classes. */
   .districts-page-root {
-    min-height: 100vh;
+    /* No min-height: 100vh here — AppShell already owns the viewport
+       wrapper (.app-shell { min-height: 100vh } + .app-shell__main
+       { flex: 1 }). Adding 100vh here nests two viewport-tall divs
+       and forces a guaranteed scrollbar past the AppShell chrome. */
     background-color: var(--bg);
   }
 
