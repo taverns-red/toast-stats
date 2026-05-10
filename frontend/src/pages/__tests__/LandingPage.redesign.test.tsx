@@ -89,12 +89,13 @@ describe('Districts page redesign chrome (#356)', () => {
   beforeEach(() => vi.clearAllMocks())
 
   describe('page header', () => {
-    it('renders the program-year eyebrow above the h1', async () => {
+    it('renders the program-year eyebrow above the h1 (en-dash format)', async () => {
       setupWithData()
       renderWithProviders(<LandingPage />)
       await screen.findByText('District 1')
+      // The eyebrow uses an en-dash (–) per the handoff, not a hyphen.
       expect(
-        screen.getByText(/program year 20\d{2}-20\d{2}/i)
+        screen.getByText(/program year 20\d{2}[–-]20\d{2}/i)
       ).toBeInTheDocument()
     })
 
@@ -125,9 +126,16 @@ describe('Districts page redesign chrome (#356)', () => {
       setupWithData()
       renderWithProviders(<LandingPage />)
       await screen.findByText('District 1')
+      // "Paid Clubs · Global" and "Districts Tracked" are unique to the
+      // KPI strip. "Total Payments" + "Distinguished Clubs" also appear
+      // in the Awards Race section, so scope those to their KPI cards.
       expect(screen.getByText(/paid clubs · global/i)).toBeInTheDocument()
-      expect(screen.getByText(/^total payments$/i)).toBeInTheDocument()
-      expect(screen.getByText(/^distinguished clubs$/i)).toBeInTheDocument()
+      expect(
+        screen.getByTestId('kpi-total-payments').previousSibling
+      ).toHaveTextContent(/total payments/i)
+      expect(
+        screen.getByTestId('kpi-distinguished-clubs').previousSibling
+      ).toHaveTextContent(/distinguished clubs/i)
       expect(screen.getByText(/districts tracked/i)).toBeInTheDocument()
     })
 
