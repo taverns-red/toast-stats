@@ -136,6 +136,13 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // Quick-filter chip active flags — derived once per render from filterState.
   // The membersNeeded filter is shared by two chips that interpret different
   // ranges (#433 close-to-distinguished = [1, 4]; needs-members = [2, ∞)).
+  //
+  // NOTE: this chip uses `membersNeeded` (computeMembersToDistinguished —
+  // qualification-aware, includes Goal 7/8 paths), while ClubDetailPage's
+  // banner uses `gap.members` (raw tier gap). They share the numeric ≤4
+  // bound but are not perfectly equivalent — a club can appear in this
+  // chip's filtered results without firing the banner on its detail page
+  // (e.g. goalsAchieved=4 with a Goal-7 path) and vice versa.
   const membersNeededValue = (() => {
     const f = getFilter('membersNeeded')
     return Array.isArray(f?.value) ? f.value : null
