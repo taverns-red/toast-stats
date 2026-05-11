@@ -874,9 +874,11 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
   })
 
   describe('Accessibility', () => {
-    /**
-     * Tests accessibility compliance for the Divisions & Areas tab
-     */
+    // Mount full DistrictDetailPage + tab click + axe scan is
+    // legitimately 6-8s under coverage worker contention. Per-test
+    // 15s budget recognises this category honestly; the other 13
+    // tests in this file scope axe to small surfaces and stay at
+    // the file-wide 5s default (#473).
     it('should have no accessibility violations in Divisions & Areas tab', async () => {
       const user = userEvent.setup()
       renderDistrictDetailPage()
@@ -902,12 +904,7 @@ describe('DistrictDetailPage - Division and Area Recognition Panel Integration',
         (heading.parentElement as HTMLElement)
       const results = await axe(tabpanel)
       expect(results).toHaveNoViolations()
-    }, // Mount full DistrictDetailPage + tab click + axe scan is
-    // legitimately 6-8s under coverage worker contention. Per-test
-    // 15s budget recognises this category honestly; the other 13
-    // tests in this file scope axe to small surfaces and stay at
-    // the file-wide 5s default (#473).
-    15000)
+    }, 15000)
 
     /**
      * Tests that DivisionAreaRecognitionPanel has proper ARIA attributes
