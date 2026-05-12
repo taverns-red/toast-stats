@@ -9,8 +9,14 @@ import RegionsPage from '../RegionsPage'
 
 afterEach(() => cleanup())
 
-const mkRanking = (region: string, districtId: string, aggregateScore = 100) =>
-  ({
+// vi.mock is hoisted; inline the fixtures so they don't reference
+// the outer-scope mkRanking before initialization.
+vi.mock('../../services/cdn', () => {
+  const baseRanking = (
+    region: string,
+    districtId: string,
+    aggregateScore: number
+  ) => ({
     districtId,
     districtName: `District ${districtId}`,
     region,
@@ -43,20 +49,20 @@ const mkRanking = (region: string, districtId: string, aggregateScore = 100) =>
     octoberPayments: 300,
     latePayments: 0,
     charterPayments: 0,
-  }) as unknown as ReturnType<typeof Object>
-
-vi.mock('../../services/cdn', () => ({
-  fetchCdnRankings: vi.fn().mockResolvedValue({
-    date: '2026-05-12',
-    rankings: [
-      mkRanking('01', '01', 500),
-      mkRanking('01', '02', 400),
-      mkRanking('07', '57', 350),
-      mkRanking('07', '60', 300),
-      mkRanking('DNAR', '99', 50),
-    ],
-  }),
-}))
+  })
+  return {
+    fetchCdnRankings: vi.fn().mockResolvedValue({
+      date: '2026-05-12',
+      rankings: [
+        baseRanking('01', '01', 500),
+        baseRanking('01', '02', 400),
+        baseRanking('07', '57', 350),
+        baseRanking('07', '60', 300),
+        baseRanking('DNAR', '99', 50),
+      ],
+    }),
+  }
+})
 
 const renderPage = () => {
   const queryClient = new QueryClient({
