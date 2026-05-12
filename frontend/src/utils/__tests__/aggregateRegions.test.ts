@@ -153,7 +153,14 @@ describe('aggregateRegions (#493)', () => {
 
   it('returns 0 (not NaN) when a denominator is zero', () => {
     const rollups = aggregateRegions([
-      mk({ region: '01', paidClubs: 0, paidClubBase: 0 }),
+      mk({
+        region: '01',
+        paidClubs: 0,
+        paidClubBase: 0,
+        totalPayments: 0,
+        paymentBase: 0,
+        distinguishedClubs: 0,
+      }),
     ])
     expect(rollups[0]?.clubGrowthPercent).toBe(0)
     expect(rollups[0]?.paymentGrowthPercent).toBe(0)
