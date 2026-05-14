@@ -463,18 +463,21 @@ describe('TargetProgressCard', () => {
 
       expect(screen.getByTestId('target-progress-card')).toBeInTheDocument()
 
-      // Rerender with green color scheme
+      // Rerender with green color scheme. Wrap the rerender tree in
+      // MemoryRouter manually — rerender bypasses the wrapper helper.
       rerender(
-        <TargetProgressCard
-          title="Test Metric"
-          icon={<TestIcon />}
-          current={60}
-          base={100}
-          targets={standardTargets}
-          achievedLevel="distinguished"
-          rankings={standardRankings}
-          colorScheme="green"
-        />
+        <MemoryRouter>
+          <TargetProgressCard
+            title="Test Metric"
+            icon={<TestIcon />}
+            current={60}
+            base={100}
+            targets={standardTargets}
+            achievedLevel="distinguished"
+            rankings={standardRankings}
+            colorScheme="green"
+          />
+        </MemoryRouter>
       )
 
       expect(screen.getByTestId('target-progress-card')).toBeInTheDocument()
