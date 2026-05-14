@@ -12,6 +12,47 @@ import { EmptyState } from '../components/ErrorDisplay'
 import type { DistrictRanking } from '../types/districts'
 import { computeTiedRanks } from '../utils/tieRankingUtils'
 
+/* #514 — KPI card with base → current → Δ → ±% rhythm. Used in the
+   Region page's totals strip. Negative deltas render in maroon. */
+const KpiCard: React.FC<{
+  label: string
+  base: number
+  current: number
+}> = ({ label, base, current }) => {
+  const delta = current - base
+  const percent = base === 0 ? null : ((current - base) / base) * 100
+  const sign = delta >= 0 ? '+' : ''
+  const deltaTone = delta >= 0 ? 'text-green-700' : 'text-tm-true-maroon'
+  return (
+    <div className="districts-kpi-card" aria-label={`${label} KPI`}>
+      <p className="districts-kpi-card__label">{label}</p>
+      <div className="districts-kpi-card__value">
+        {current.toLocaleString()}
+      </div>
+      <p className="text-xs text-gray-500 tabular-nums mt-1">
+        <span data-testid="kpi-base">Base {base.toLocaleString()}</span> ·{' '}
+        <span data-testid="kpi-delta" className={`font-semibold ${deltaTone}`}>
+          {sign}
+          {delta.toLocaleString()}
+        </span>
+        {percent !== null && (
+          <>
+            {' '}
+            ·{' '}
+            <span
+              data-testid="kpi-percent"
+              className={`font-semibold ${deltaTone}`}
+            >
+              {sign}
+              {percent.toFixed(1)}%
+            </span>
+          </>
+        )}
+      </p>
+    </div>
+  )
+}
+
 const RegionPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const navigate = useNavigate()
@@ -73,11 +114,19 @@ const RegionPage: React.FC = () => {
   const totals = regionDistricts.reduce(
     (acc, d) => {
       acc.paidClubs += d.paidClubs ?? 0
+      acc.paidClubBase += d.paidClubBase ?? 0
       acc.totalPayments += d.totalPayments ?? 0
+      acc.paymentBase += d.paymentBase ?? 0
       acc.distinguishedClubs += d.distinguishedClubs ?? 0
       return acc
     },
-    { paidClubs: 0, totalPayments: 0, distinguishedClubs: 0 }
+    {
+      paidClubs: 0,
+      paidClubBase: 0,
+      totalPayments: 0,
+      paymentBase: 0,
+      distinguishedClubs: 0,
+    }
   )
 
   return (
@@ -101,30 +150,30 @@ const RegionPage: React.FC = () => {
         style={{ marginBottom: 24 }}
         aria-label="Region totals"
       >
-        <div className="districts-kpi-card">
+        <div className="districts-kpi-card" aria-label="Districts KPI">
           <p className="districts-kpi-card__label">Districts</p>
           <div className="districts-kpi-card__value">
             {regionDistricts.length}
           </div>
         </div>
-        <div className="districts-kpi-card">
-          <p className="districts-kpi-card__label">Paid Clubs</p>
-          <div className="districts-kpi-card__value">
-            {totals.paidClubs.toLocaleString()}
-          </div>
-        </div>
-        <div className="districts-kpi-card">
-          <p className="districts-kpi-card__label">Payments</p>
-          <div className="districts-kpi-card__value">
-            {totals.totalPayments.toLocaleString()}
-          </div>
-        </div>
-        <div className="districts-kpi-card">
-          <p className="districts-kpi-card__label">Distinguished Clubs</p>
-          <div className="districts-kpi-card__value">
-            {totals.distinguishedClubs.toLocaleString()}
-          </div>
-        </div>
+        <KpiCard
+          label="Paid Clubs"
+          base={totals.paidClubBase}
+          current={totals.paidClubs}
+        />
+        <KpiCard
+          label="Payments"
+          base={totals.paymentBase}
+          current={totals.totalPayments}
+        />
+        {/* Distinguished is year-cumulative — every July 1 the count
+            resets to zero. Treating base as 0 is semantically correct
+            and makes Δ equal to the current count. */}
+        <KpiCard
+          label="Distinguished Clubs"
+          base={0}
+          current={totals.distinguishedClubs}
+        />
       </div>
 
       <div className="districts-rankings-table-wrap">
