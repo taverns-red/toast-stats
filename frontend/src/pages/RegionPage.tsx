@@ -12,13 +12,16 @@ import { EmptyState } from '../components/ErrorDisplay'
 import type { DistrictRanking } from '../types/districts'
 import { computeTiedRanks } from '../utils/tieRankingUtils'
 
-/* #514 — KPI card with base → current → Δ → ±% rhythm. Used in the
-   Region page's totals strip. Negative deltas render in maroon. */
-const KpiCard: React.FC<{
+interface KpiCardProps {
   label: string
   base: number
   current: number
-}> = ({ label, base, current }) => {
+}
+
+/** KPI card with a base → current → Δ → ±% rhythm. Negative deltas
+ *  render in maroon. Percent is omitted when base is 0 (avoid /0; the
+ *  Distinguished case in particular relies on this). */
+const KpiCard: React.FC<KpiCardProps> = ({ label, base, current }) => {
   const delta = current - base
   const percent = base === 0 ? null : ((current - base) / base) * 100
   const sign = delta >= 0 ? '+' : ''
@@ -76,8 +79,8 @@ const RegionPage: React.FC = () => {
           .sort((a, b) => (b.aggregateScore ?? 0) - (a.aggregateScore ?? 0))
       : []
 
-  // #515 — rank each district within the region by aggregateScore desc.
-  // Ties share the same rank (competition ranking via computeTiedRanks).
+  // Rank within the region by aggregateScore desc. Ties share rank
+  // (competition ranking via computeTiedRanks).
   const regionRanks = computeTiedRanks(
     regionDistricts,
     d => d.aggregateScore ?? 0
@@ -203,7 +206,7 @@ const RegionPage: React.FC = () => {
             </thead>
             <tbody>
               {regionDistricts.map((d, i) => {
-                const rank = regionRanks[i]
+                const rank = regionRanks[i]!
                 return (
                   <tr
                     key={d.districtId}
@@ -214,8 +217,8 @@ const RegionPage: React.FC = () => {
                       data-testid="region-rank-cell"
                       className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 tabular-nums"
                     >
-                      #{rank?.rank}
-                      {rank?.isTied && (
+                      #{rank.rank}
+                      {rank.isTied && (
                         <span className="ml-1 text-xs text-gray-400 font-normal">
                           (tied)
                         </span>

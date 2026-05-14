@@ -147,6 +147,46 @@ function ordinalSuffix(n: number): string {
   return `${n}th`
 }
 
+interface RegionRankChipProps {
+  region: string
+  regionRank: number | null
+}
+
+const RegionRankChip: React.FC<RegionRankChipProps> = ({
+  region,
+  regionRank,
+}) => {
+  const digits = String(region).match(/\d+/)?.[0]
+  const tooltipContent =
+    regionRank !== null
+      ? `District's rank within ${region} region (1 = best)`
+      : `Regional ranking data unavailable for ${region}`
+  const label = (
+    <>
+      {region}: {regionRank !== null ? `#${regionRank}` : '—'}
+    </>
+  )
+  const sharedClasses = 'px-2 py-1 rounded-sm bg-gray-100 text-gray-700'
+  return (
+    <Tooltip content={tooltipContent}>
+      {digits ? (
+        <Link
+          to={`/region/${digits}`}
+          className={`${sharedClasses} hover:bg-gray-200`}
+          data-testid="region-rank"
+          aria-label={`View Region ${digits} overview`}
+        >
+          {label}
+        </Link>
+      ) : (
+        <span className={sharedClasses} data-testid="region-rank">
+          {label}
+        </span>
+      )}
+    </Tooltip>
+  )
+}
+
 /**
  * Format world percentile as ordinal (e.g., "12th percentile") (#305)
  */
@@ -256,44 +296,15 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
           </span>
         </Tooltip>
 
-        {/* Region Rank - only show if region is known (Requirement 8.3).
-            #518: wrap in a Link to /region/:n when the region string
-            contains digits. Falls back to a plain span for non-numeric
-            regions (no route to send the user to). */}
-        {rankings.region &&
-          (() => {
-            const digits = String(rankings.region).match(/\d+/)?.[0]
-            const tooltipContent =
-              rankings.regionRank !== null
-                ? `District's rank within ${rankings.region} region (1 = best)`
-                : `Regional ranking data unavailable for ${rankings.region}`
-            const label = (
-              <>
-                {rankings.region}:{' '}
-                {rankings.regionRank !== null ? `#${rankings.regionRank}` : '—'}
-              </>
-            )
-            const sharedClasses =
-              'px-2 py-1 rounded-sm bg-gray-100 text-gray-700'
-            return (
-              <Tooltip content={tooltipContent}>
-                {digits ? (
-                  <Link
-                    to={`/region/${digits}`}
-                    className={`${sharedClasses} hover:bg-gray-200`}
-                    data-testid="region-rank"
-                    aria-label={`View Region ${digits} overview`}
-                  >
-                    {label}
-                  </Link>
-                ) : (
-                  <span className={sharedClasses} data-testid="region-rank">
-                    {label}
-                  </span>
-                )}
-              </Tooltip>
-            )
-          })()}
+        {/* Region Rank chip — link to /region/:n when the region string
+            contains digits, otherwise a plain span (no route exists for
+            "Unknown" / non-numeric regions). */}
+        {rankings.region && (
+          <RegionRankChip
+            region={rankings.region}
+            regionRank={rankings.regionRank}
+          />
+        )}
       </div>
 
       {/* Target Progress Bars */}
