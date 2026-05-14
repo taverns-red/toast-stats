@@ -10,6 +10,7 @@ import { fetchCdnRankings } from '../services/cdn'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
 import type { DistrictRanking } from '../types/districts'
+import { computeTiedRanks } from '../utils/tieRankingUtils'
 
 const RegionPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
@@ -31,8 +32,15 @@ const RegionPage: React.FC = () => {
     data?.rankings && region
       ? data.rankings
           .filter(r => r.region === region)
-          .sort((a, b) => (a.overallRank ?? 0) - (b.overallRank ?? 0))
+          .sort((a, b) => (b.aggregateScore ?? 0) - (a.aggregateScore ?? 0))
       : []
+
+  // #515 — rank each district within the region by aggregateScore desc.
+  // Ties share the same rank (competition ranking via computeTiedRanks).
+  const regionRanks = computeTiedRanks(
+    regionDistricts,
+    d => d.aggregateScore ?? 0
+  )
 
   if (isLoading) {
     return <LoadingSkeleton variant="card" />
@@ -125,6 +133,9 @@ const RegionPage: React.FC = () => {
             <thead>
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Region Rank
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   District
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -142,37 +153,51 @@ const RegionPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {regionDistricts.map(d => (
-                <tr
-                  key={d.districtId}
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/district/${d.districtId}`)}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className="districts-rankings-table__district-chip"
-                      aria-hidden="true"
+              {regionDistricts.map((d, i) => {
+                const rank = regionRanks[i]
+                return (
+                  <tr
+                    key={d.districtId}
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/district/${d.districtId}`)}
+                  >
+                    <td
+                      data-testid="region-rank-cell"
+                      className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 tabular-nums"
                     >
-                      D{d.districtId}
-                    </span>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      {d.districtName}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    #{d.overallRank}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                    {d.paidClubs}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                    {d.distinguishedClubs}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
-                    {d.aggregateScore}
-                  </td>
-                </tr>
-              ))}
+                      #{rank?.rank}
+                      {rank?.isTied && (
+                        <span className="ml-1 text-xs text-gray-400 font-normal">
+                          (tied)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className="districts-rankings-table__district-chip"
+                        aria-hidden="true"
+                      >
+                        D{d.districtId}
+                      </span>
+                      <span className="ml-3 text-sm font-medium text-gray-900">
+                        {d.districtName}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      #{d.overallRank}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                      {d.paidClubs}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                      {d.distinguishedClubs}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
+                      {d.aggregateScore}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
