@@ -63,13 +63,10 @@ const DistrictsPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Fetch tracked districts to show indicator badges
-  const { data: districtsData } = useDistricts()
-  const trackedDistrictIds = React.useMemo(() => {
-    const ids = new Set<string>()
-    districtsData?.districts?.forEach(d => ids.add(d.id))
-    return ids
-  }, [districtsData])
+  // useDistricts call retained as a cache primer for the rest of the
+  // app; the tracked-IDs derivation that fed the Analytics chip was
+  // removed alongside the chip (#519).
+  useDistricts()
   // selectedRegions persists across visits (#416). Default = all (empty list,
   // which the existing useEffect inflates to all-known-regions on first
   // data render).
@@ -1094,30 +1091,21 @@ const DistrictsPage: React.FC = () => {
                           >
                             D{district.districtId}
                           </span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {district.districtName}
-                          </span>
-                          {trackedDistrictIds.has(district.districtId) && (
-                            <span
-                              title="Detailed analytics available"
-                              className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700"
-                            >
-                              <svg
-                                className="w-3 h-3 mr-0.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                />
-                              </svg>
-                              Analytics
-                            </span>
-                          )}
+                          {/* #520 — skip the bare district name when it's
+                              purely numeric (TI CSV reality), since the
+                              D## chip already conveys the number. Richer
+                              names like "District 57 Carolinas" still
+                              render. */}
+                          {district.districtName &&
+                            !/^\d+$/.test(district.districtName) && (
+                              <span className="text-sm font-medium text-gray-900">
+                                {district.districtName}
+                              </span>
+                            )}
+                          {/* #519 — Analytics chip removed. The row is
+                              already a link into the district detail
+                              page; the chip added visual noise without
+                              disambiguating anything. */}
                           {/* Competitive award winner badges (#331) */}
                           {competitiveAwards?.byDistrict?.[district.districtId]
                             ?.extensionIsWinner && (
