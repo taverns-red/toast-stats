@@ -31,7 +31,7 @@ import { arrayToCSV, downloadCSV } from '../utils/csvExport'
  *  "District 57 Carolinas" but not "57". The D## chip already conveys
  *  the number, so showing it again is duplication. */
 const hasDescriptiveName = (name: string | undefined): boolean =>
-  !!name && !/^\d+$/.test(name)
+  !!name && !/^\d+$/.test(name.trim())
 
 const DistrictsPage: React.FC = () => {
   const navigate = useNavigate()
