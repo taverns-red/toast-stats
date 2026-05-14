@@ -8,7 +8,6 @@ import {
 } from '../services/cdn'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { AwardsRaceSection } from '../components/AwardsRaceSection'
-import { useDistricts } from '../hooks/useDistricts'
 import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
@@ -27,6 +26,12 @@ import {
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { DistrictRanking } from '../types/districts'
 import { arrayToCSV, downloadCSV } from '../utils/csvExport'
+
+/** A descriptive name is anything beyond the bare district number — e.g.
+ *  "District 57 Carolinas" but not "57". The D## chip already conveys
+ *  the number, so showing it again is duplication. */
+const hasDescriptiveName = (name: string | undefined): boolean =>
+  !!name && !/^\d+$/.test(name)
 
 const DistrictsPage: React.FC = () => {
   const navigate = useNavigate()
@@ -63,10 +68,6 @@ const DistrictsPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // useDistricts call retained as a cache primer for the rest of the
-  // app; the tracked-IDs derivation that fed the Analytics chip was
-  // removed alongside the chip (#519).
-  useDistricts()
   // selectedRegions persists across visits (#416). Default = all (empty list,
   // which the existing useEffect inflates to all-known-regions on first
   // data render).
@@ -1091,21 +1092,16 @@ const DistrictsPage: React.FC = () => {
                           >
                             D{district.districtId}
                           </span>
-                          {/* #520 — skip the bare district name when it's
-                              purely numeric (TI CSV reality), since the
-                              D## chip already conveys the number. Richer
-                              names like "District 57 Carolinas" still
-                              render. */}
-                          {district.districtName &&
-                            !/^\d+$/.test(district.districtName) && (
-                              <span className="text-sm font-medium text-gray-900">
-                                {district.districtName}
-                              </span>
-                            )}
-                          {/* #519 — Analytics chip removed. The row is
-                              already a link into the district detail
-                              page; the chip added visual noise without
-                              disambiguating anything. */}
+                          {/* TI's CSV districtName is just the number ("86"
+                              for D86), which the chip already shows. Only
+                              render the name span when it carries
+                              additional information (e.g. "District 57
+                              Carolinas"). */}
+                          {hasDescriptiveName(district.districtName) && (
+                            <span className="text-sm font-medium text-gray-900">
+                              {district.districtName}
+                            </span>
+                          )}
                           {/* Competitive award winner badges (#331) */}
                           {competitiveAwards?.byDistrict?.[district.districtId]
                             ?.extensionIsWinner && (
