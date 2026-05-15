@@ -545,7 +545,9 @@ const DistrictDetailPage: React.FC = () => {
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
               availableDates={availableDates}
-              latestSnapshotDate={cachedDatesData?.dateRange?.endDate}
+              latestSnapshotDate={
+                cachedDatesData?.dateRange?.endDate ?? availableDates[0]
+              }
             />
           )}
 
