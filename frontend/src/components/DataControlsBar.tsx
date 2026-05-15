@@ -2,9 +2,8 @@ import React from 'react'
 import type { ProgramYear } from '../utils/programYear'
 import { formatDisplayDate } from '../utils/dateFormatting'
 
-/* DataControlsBar (#529 / #528) — tight horizontal cluster of three
-   pill-styled controls used on /districts and /district/:id:
-   freshness pill · PY chip · date chip. */
+/* Tight horizontal cluster of three pill-styled controls — freshness
+   pill, PY chip, date chip — shared by /districts and /district/:id. */
 
 export interface DataControlsBarProps {
   latestSnapshotDate: string | undefined
@@ -35,47 +34,43 @@ const FreshnessPill: React.FC<{ date: string }> = ({ date }) => (
 )
 
 /* Native <select> styled to look like a pill chip — keeps full keyboard
-   a11y and platform popover behaviour without re-implementing dropdowns. */
+   a11y and platform popover behaviour without re-implementing dropdowns.
+   The label uses focus-within ring styling so keyboard users still see
+   focus when tabbing through the invisible select (WCAG 2.4.7). */
 const ChipSelect: React.FC<{
   testId: string
-  selectTestId: string
   ariaLabel: string
   value: string
   onChange: (value: string) => void
   display: React.ReactNode
   options: { value: string; label: string }[]
-}> = ({
-  testId,
-  selectTestId,
-  ariaLabel,
-  value,
-  onChange,
-  display,
-  options,
-}) => (
-  <label
-    data-testid={testId}
-    className={`${CHIP_BASE} relative cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700`}
-  >
-    <span>{display}</span>
-    <span aria-hidden="true" className="text-gray-400">
-      ▾
-    </span>
-    <select
-      data-testid={selectTestId}
-      aria-label={ariaLabel}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="absolute inset-0 opacity-0 cursor-pointer"
+}> = ({ testId, ariaLabel, value, onChange, display, options }) => {
+  const currentLabel = options.find(o => o.value === value)?.label
+  return (
+    <label
+      data-testid={testId}
+      className={`${CHIP_BASE} relative cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 focus-within:ring-2 focus-within:ring-tm-loyal-blue focus-within:ring-offset-1`}
     >
-      {options.map(o => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
-  </label>
-)
+      <span>{display}</span>
+      <span aria-hidden="true" className="text-gray-400">
+        ▾
+      </span>
+      <select
+        data-testid={`${testId}-select`}
+        aria-label={currentLabel ? `${ariaLabel}: ${currentLabel}` : ariaLabel}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="absolute inset-0 opacity-0 cursor-pointer"
+      >
+        {options.map(o => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
 
 const formatPyShort = (py: ProgramYear): string =>
   `PY ${py.year}–${(py.year + 1).toString().slice(-2)}`
@@ -101,7 +96,6 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
 
       <ChipSelect
         testId="py-chip"
-        selectTestId="py-chip-select"
         ariaLabel="Program year"
         value={String(selectedProgramYear.year)}
         onChange={v => {
@@ -117,7 +111,6 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
 
       <ChipSelect
         testId="date-chip"
-        selectTestId="date-chip-select"
         ariaLabel="Snapshot date"
         value={selectedDate ?? ''}
         onChange={v => onDateChange(v === '' ? undefined : v)}

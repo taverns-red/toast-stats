@@ -5,7 +5,6 @@ import {
   fetchCdnSnapshotIndex,
   fetchCdnRankings,
   fetchCdnRankingsForDate,
-  fetchCdnManifest,
 } from '../services/cdn'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { AwardsRaceSection } from '../components/AwardsRaceSection'
@@ -89,13 +88,6 @@ const DistrictsPage: React.FC = () => {
   >([])
   // Mobile-friendly collapsible region filters
   const [isHistoryRegionExpanded, setIsHistoryRegionExpanded] = useState(false)
-
-  // CDN manifest for the freshness pill in DataControlsBar (#530).
-  const { data: manifest } = useQuery({
-    queryKey: ['cdn-manifest'],
-    queryFn: fetchCdnManifest,
-    staleTime: 5 * 60_000,
-  })
 
   // Fetch cached dates from CDN snapshot index (#233)
   // Uses the same data source as DistrictDetailPage for consistency
@@ -592,7 +584,7 @@ const DistrictsPage: React.FC = () => {
           </div>
           <div className="districts-page-header__actions">
             <DataControlsBar
-              latestSnapshotDate={manifest?.latestSnapshotDate}
+              latestSnapshotDate={effectiveRankingsDate}
               availableProgramYears={availableProgramYears}
               selectedProgramYear={selectedProgramYear}
               onProgramYearChange={setSelectedProgramYear}
