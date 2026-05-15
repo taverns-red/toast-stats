@@ -6,7 +6,7 @@ import RegionPage from '../RegionPage'
 import {
   fetchCdnRankings,
   fetchCdnCompetitiveAwards,
-  fetchCdnManifest,
+  type CompetitiveAwardStandings,
 } from '../../services/cdn'
 
 vi.mock('../../services/cdn', () => ({
@@ -19,8 +19,6 @@ vi.mock('../../services/cdn', () => ({
 
 const mockedFetchCdnRankings = vi.mocked(fetchCdnRankings)
 const mockedFetchCdnAwards = vi.mocked(fetchCdnCompetitiveAwards)
-// fetchCdnManifest is mocked at module scope; we don't need a typed handle.
-void fetchCdnManifest
 
 const mkRanking = (overrides: Record<string, unknown>) => ({
   districtId: '1',
@@ -105,7 +103,7 @@ describe('RegionPage tier column (#517 #513)', () => {
         educationTraining: [],
         clubGrowth: [],
       },
-    }) as unknown as Awaited<ReturnType<typeof fetchCdnCompetitiveAwards>>
+    }) as CompetitiveAwardStandings
 
   it('renders an em-dash for districts that have not yet reached Distinguished', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
@@ -224,7 +222,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
         ],
       },
       ...overrides,
-    }) as unknown as Awaited<ReturnType<typeof fetchCdnCompetitiveAwards>>
+    }) as CompetitiveAwardStandings
 
   it('renders five countdown column headers', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
