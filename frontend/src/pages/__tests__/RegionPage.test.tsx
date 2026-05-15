@@ -110,9 +110,7 @@ describe('RegionPage tier column (#517 #513)', () => {
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       date: '2026-05-12',
     })
-    mockedFetchCdnAwards.mockResolvedValueOnce(
-      awardsWithTier('NotDistinguished')
-    )
+    mockedFetchCdnAwards.mockResolvedValue(awardsWithTier('NotDistinguished'))
     renderRegion('2')
 
     const row = (await screen.findByTestId('district-number-chip-D61')).closest(
@@ -133,7 +131,7 @@ describe('RegionPage tier column (#517 #513)', () => {
         rankings: [mkRanking({ districtId: '61', region: '2' })],
         date: '2026-05-12',
       })
-      mockedFetchCdnAwards.mockResolvedValueOnce(awardsWithTier(tier))
+      mockedFetchCdnAwards.mockResolvedValue(awardsWithTier(tier))
       renderRegion('2')
 
       const row = (
@@ -148,7 +146,7 @@ describe('RegionPage tier column (#517 #513)', () => {
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       date: '2026-05-12',
     })
-    mockedFetchCdnAwards.mockResolvedValueOnce(null)
+    mockedFetchCdnAwards.mockResolvedValue(null)
     renderRegion('2')
 
     const row = (await screen.findByTestId('district-number-chip-D61')).closest(
@@ -162,7 +160,7 @@ describe('RegionPage tier column (#517 #513)', () => {
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       date: '2026-05-12',
     })
-    mockedFetchCdnAwards.mockResolvedValueOnce(awardsWithTier('Distinguished'))
+    mockedFetchCdnAwards.mockResolvedValue(awardsWithTier('Distinguished'))
     renderRegion('2')
     expect(
       await screen.findByRole('columnheader', { name: /^tier$/i })
@@ -229,7 +227,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       date: '2026-05-12',
     })
-    mockedFetchCdnAwards.mockResolvedValueOnce(awardsFixture())
+    mockedFetchCdnAwards.mockResolvedValue(awardsFixture())
     renderRegion('2')
 
     expect(
@@ -254,7 +252,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       date: '2026-05-12',
     })
-    mockedFetchCdnAwards.mockResolvedValueOnce(awardsFixture())
+    mockedFetchCdnAwards.mockResolvedValue(awardsFixture())
     renderRegion('2')
 
     const row = (await screen.findByTestId('district-number-chip-D61')).closest(
@@ -276,7 +274,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       date: '2026-05-12',
     })
-    mockedFetchCdnAwards.mockResolvedValueOnce(awardsFixture())
+    mockedFetchCdnAwards.mockResolvedValue(awardsFixture())
     renderRegion('2')
 
     const row = (await screen.findByTestId('district-number-chip-D61')).closest(
@@ -318,7 +316,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       date: '2026-05-12',
     })
-    mockedFetchCdnAwards.mockResolvedValueOnce(fixture)
+    mockedFetchCdnAwards.mockResolvedValue(fixture)
     renderRegion('2')
 
     const row = (await screen.findByTestId('district-number-chip-D61')).closest(
@@ -337,7 +335,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       date: '2026-05-12',
     })
-    mockedFetchCdnAwards.mockResolvedValueOnce(null)
+    mockedFetchCdnAwards.mockResolvedValue(null)
     renderRegion('2')
 
     const row = (await screen.findByTestId('district-number-chip-D61')).closest(

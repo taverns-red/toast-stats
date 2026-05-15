@@ -188,9 +188,11 @@ const RegionPage: React.FC = () => {
     staleTime: 15 * 60 * 1000,
   })
 
-  // Distinguished District prerequisite gaps for each district in the
-  // region. Always latest snapshot — RegionPage has no date control.
-  const { data: awards } = useCompetitiveAwards(undefined)
+  // Distinguished District prerequisite gaps. Pin to the rankings
+  // snapshot date so the countdown/tier columns can never drift to a
+  // newer snapshot than the row they describe — two independent "latest"
+  // calls would race during a publish.
+  const { data: awards } = useCompetitiveAwards(data?.date)
 
   // No useMemo — list is small (≤ ~10 districts) and the page is
   // route-level. The React Compiler manages memoization automatically.
