@@ -825,6 +825,12 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
     // current Active Clubs. Using activeClubs as the denominator
     // under-reports the percentage whenever a district has gained clubs
     // since PY start — which is exactly when recognition matters most.
+    //
+    // When paidClubBase is 0 or missing, return 0 rather than falling
+    // back to activeClubs. A missing base is either a brand-new district
+    // (no clubs at PY start → 0% Distinguished is correct) or a pipeline
+    // schema regression (which we want LOUD, not silently masked by the
+    // old buggy denominator).
     const distinguishedClubs = this.parseNumber(
       data['Total Distinguished Clubs']
     )
