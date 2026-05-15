@@ -1,6 +1,6 @@
 import type { CompetitiveAwardStandings } from '../services/cdn'
 
-/* Per-district countdown to the next Distinguished District tier (#516).
+/* Per-district countdown to the next Distinguished District tier.
    Folds three numeric gaps + two officer-award booleans from the
    competitive-awards JSON into a uniform shape the table cell renderer
    can consume. */
@@ -18,9 +18,48 @@ export interface DistinguishedCountdown {
   clubGrowth: CountdownCell
 }
 
+const gapCell = (value: number): CountdownCell =>
+  value <= 0 ? { kind: 'met' } : { kind: 'gap', value }
+
 export function getDistinguishedCountdown(
-  _districtId: string,
-  _awards: CompetitiveAwardStandings | null
+  districtId: string,
+  awards: CompetitiveAwardStandings | null
 ): DistinguishedCountdown | null {
-  return null
+  if (!awards) return null
+  const status = awards.distinguishedDistrict?.[districtId]
+  if (!status) return null
+
+  // nextTierGap is null when the district is already at Smedley — every
+  // numeric metric has been satisfied at the highest tier.
+  const gap = status.nextTierGap
+  const numeric: Pick<
+    DistinguishedCountdown,
+    'netClubGrowth' | 'paymentGrowth' | 'distinguishedPercent'
+  > = gap
+    ? {
+        netClubGrowth: gapCell(gap.netClubGrowthGap),
+        paymentGrowth: gapCell(gap.paymentGrowthGap),
+        distinguishedPercent: gapCell(gap.distinguishedPercentGap),
+      }
+    : {
+        netClubGrowth: { kind: 'met' },
+        paymentGrowth: { kind: 'met' },
+        distinguishedPercent: { kind: 'met' },
+      }
+
+  const educationTraining: CountdownCell = {
+    kind: 'boolean',
+    met:
+      awards.officerAwards?.educationTraining.find(
+        e => e.districtId === districtId
+      )?.qualifies ?? false,
+  }
+  const clubGrowth: CountdownCell = {
+    kind: 'boolean',
+    met:
+      awards.officerAwards?.clubGrowth.find(c => c.districtId === districtId)
+        ?.qualifies ?? false,
+  }
+
+  return { ...numeric, educationTraining, clubGrowth }
 }

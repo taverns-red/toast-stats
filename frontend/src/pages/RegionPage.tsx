@@ -11,6 +11,11 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
 import type { DistrictRanking } from '../types/districts'
 import { computeTiedRanks } from '../utils/tieRankingUtils'
+import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
+import {
+  getDistinguishedCountdown,
+  type CountdownCell,
+} from '../utils/distinguishedCountdown'
 
 interface KpiCardProps {
   label: string
@@ -56,6 +61,43 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, base, current }) => {
   )
 }
 
+/* Cell renderer for the 5 Distinguished countdown columns (#516).
+   Numeric gaps render as +N; metric-met as ✓; boolean (officer awards)
+   as ✓ or em-dash. Em-dash everywhere when the cell prop is null
+   (district missing from awards or legacy snapshot). */
+const CountdownTd: React.FC<{
+  metric: keyof import('../utils/distinguishedCountdown').DistinguishedCountdown
+  cell: CountdownCell | null
+}> = ({ metric, cell }) => {
+  const inner = (() => {
+    if (!cell) return <span className="text-gray-400">—</span>
+    if (cell.kind === 'met') {
+      return <span className="text-green-700 font-semibold">✓</span>
+    }
+    if (cell.kind === 'boolean') {
+      return cell.met ? (
+        <span className="text-green-700 font-semibold">✓</span>
+      ) : (
+        <span className="text-gray-400">—</span>
+      )
+    }
+    // kind === 'gap'
+    return (
+      <span className="text-tm-true-maroon font-semibold tabular-nums">
+        +{cell.value}
+      </span>
+    )
+  })()
+  return (
+    <td
+      data-testid={`countdown-${metric}`}
+      className="px-3 py-4 whitespace-nowrap text-sm text-right"
+    >
+      {inner}
+    </td>
+  )
+}
+
 const RegionPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const navigate = useNavigate()
@@ -69,6 +111,10 @@ const RegionPage: React.FC = () => {
     },
     staleTime: 15 * 60 * 1000,
   })
+
+  // Distinguished District prerequisite gaps for each district in the
+  // region. Always latest snapshot — RegionPage has no date control.
+  const { data: awards } = useCompetitiveAwards(undefined)
 
   // No useMemo — list is small (≤ ~10 districts) and the page is
   // route-level. The React Compiler manages memoization automatically.
@@ -202,6 +248,25 @@ const RegionPage: React.FC = () => {
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Score
                 </th>
+                {/* Distinguished countdown columns (#516). Show the gap
+                    to the next tier per district: numeric for the three
+                    DD prerequisites that the pipeline calculates a delta
+                    for, ✓ / em-dash for the two officer-award booleans. */}
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Net Club Growth
+                </th>
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Growth
+                </th>
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Distinguished %
+                </th>
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Education / Training
+                </th>
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Club Growth
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -226,6 +291,7 @@ const RegionPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
+                        data-testid={`district-number-chip-D${d.districtId}`}
                         className="districts-rankings-table__district-chip"
                         aria-hidden="true"
                       >
@@ -247,6 +313,36 @@ const RegionPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
                       {d.aggregateScore}
                     </td>
+                    {(() => {
+                      const c = getDistinguishedCountdown(
+                        d.districtId,
+                        awards ?? null
+                      )
+                      return (
+                        <>
+                          <CountdownTd
+                            metric="netClubGrowth"
+                            cell={c?.netClubGrowth ?? null}
+                          />
+                          <CountdownTd
+                            metric="paymentGrowth"
+                            cell={c?.paymentGrowth ?? null}
+                          />
+                          <CountdownTd
+                            metric="distinguishedPercent"
+                            cell={c?.distinguishedPercent ?? null}
+                          />
+                          <CountdownTd
+                            metric="educationTraining"
+                            cell={c?.educationTraining ?? null}
+                          />
+                          <CountdownTd
+                            metric="clubGrowth"
+                            cell={c?.clubGrowth ?? null}
+                          />
+                        </>
+                      )
+                    })()}
                   </tr>
                 )
               })}
