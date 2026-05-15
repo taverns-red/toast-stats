@@ -820,16 +820,21 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
    * Calculate distinguished club percentage from raw data
    */
   private calculateDistinguishedPercent(data: AllDistrictsCSVRecord): number {
+    // Per the Distinguished District Program (Item 1490), % Distinguished
+    // is computed against Paid Club Base (PY-start club count), NOT
+    // current Active Clubs. Using activeClubs as the denominator
+    // under-reports the percentage whenever a district has gained clubs
+    // since PY start — which is exactly when recognition matters most.
     const distinguishedClubs = this.parseNumber(
       data['Total Distinguished Clubs']
     )
-    const activeClubs = this.parseNumber(data['Active Clubs'])
+    const paidClubBase = this.parseNumber(data['Paid Club Base'])
 
-    if (activeClubs === 0) {
+    if (paidClubBase === 0) {
       return 0
     }
 
-    return (distinguishedClubs / activeClubs) * 100
+    return (distinguishedClubs / paidClubBase) * 100
   }
 
   /**
