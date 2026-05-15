@@ -98,6 +98,53 @@ const CountdownTd: React.FC<{
   )
 }
 
+/* Per-tier display label + chip style. Pre-Distinguished districts get
+   an em-dash; achieved tiers get a colored chip matching the tier. */
+const TIER_DISPLAY: Record<string, { label: string; className: string }> = {
+  Distinguished: {
+    label: 'Distinguished',
+    className: 'bg-tm-true-maroon text-white',
+  },
+  Select: {
+    label: 'Select',
+    className: 'bg-tm-cool-gray text-gray-900',
+  },
+  Presidents: {
+    label: "President's",
+    className: 'bg-tm-happy-yellow text-gray-900',
+  },
+  Smedley: {
+    label: 'Smedley',
+    className: 'bg-purple-200 text-purple-900',
+  },
+}
+
+const TierTd: React.FC<{ tier: string | null }> = ({ tier }) => {
+  if (!tier || tier === 'NotDistinguished') {
+    return (
+      <td
+        data-testid="tier-cell"
+        className="px-3 py-4 whitespace-nowrap text-right text-sm text-gray-400"
+      >
+        —
+      </td>
+    )
+  }
+  const config = TIER_DISPLAY[tier]
+  return (
+    <td
+      data-testid="tier-cell"
+      className="px-3 py-4 whitespace-nowrap text-right"
+    >
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${config?.className ?? 'bg-gray-200 text-gray-700'}`}
+      >
+        {config?.label ?? tier}
+      </span>
+    </td>
+  )
+}
+
 const RegionPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const navigate = useNavigate()
@@ -267,6 +314,11 @@ const RegionPage: React.FC = () => {
                 <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Club Growth
                 </th>
+                {/* Tier column (#517). Shows current Distinguished tier
+                    when achieved; em-dash for districts still below. */}
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tier
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -318,6 +370,9 @@ const RegionPage: React.FC = () => {
                         d.districtId,
                         awards ?? null
                       )
+                      const tier =
+                        awards?.distinguishedDistrict?.[d.districtId]
+                          ?.currentTier ?? null
                       return (
                         <>
                           <CountdownTd
@@ -340,6 +395,7 @@ const RegionPage: React.FC = () => {
                             metric="clubGrowth"
                             cell={c?.clubGrowth ?? null}
                           />
+                          <TierTd tier={tier} />
                         </>
                       )
                     })()}
