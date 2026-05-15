@@ -351,8 +351,12 @@ const RegionPage: React.FC = () => {
                 </th>
                 {/* CGD = Club Growth Director — TI officer award. Renamed
                     from "Club Growth" to disambiguate from the % Club
-                    Growth prerequisite immediately to its left. */}
-                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Growth prerequisite immediately to its left. Title
+                    attribute spells out the acronym for non-TM viewers. */}
+                <th
+                  className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  title="Club Growth Director — officer award"
+                >
                   CGD
                 </th>
                 {/* Current Distinguished tier when achieved; em-dash
