@@ -63,12 +63,19 @@ describe('Journey 05: The Division/Area Performance Flow', () => {
 
     // Step 0: Search and Navigate to District 61
     const searchInput = await screen.findByRole(
-      'combobox',
-      {},
+      'textbox',
+      { name: /Search districts by number or name/i },
       { timeout: 5000 }
     )
     await user.type(searchInput, '61')
-    await user.click(await screen.findByText(/District 61/i))
+    // Click the search-suggestion <a>. Both the <li> and inner <Link>
+    // carry role=option (pre-existing a11y nit), so filter to the anchor.
+    const suggestions = await screen.findAllByRole('option', {
+      name: /D61.*District 61/i,
+    })
+    const link = suggestions.find(el => el.tagName === 'A')
+    if (!link) throw new Error('search suggestion link not found')
+    await user.click(link)
 
     // Step 1: Wait for District 61 header to appear to confirm we are inside details
     const districtHeading = await screen.findByRole(

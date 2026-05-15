@@ -64,12 +64,19 @@ describe('Journey 04: The Time Travel Flow', () => {
 
     // Step 0: Search and Navigate
     const searchInput = await screen.findByRole(
-      'combobox',
-      {},
+      'textbox',
+      { name: /Search districts by number or name/i },
       { timeout: 5000 }
     )
     await user.type(searchInput, '61')
-    await user.click(await screen.findByText(/District 61/i))
+    // Click the search-suggestion <a>. Both the <li> and inner <Link>
+    // carry role=option (pre-existing a11y nit), so filter to the anchor.
+    const suggestions = await screen.findAllByRole('option', {
+      name: /D61.*District 61/i,
+    })
+    const link = suggestions.find(el => el.tagName === 'A')
+    if (!link) throw new Error('search suggestion link not found')
+    await user.click(link)
 
     // Step 1: Wait for District 61 header to appear
     const districtHeading = await screen.findByRole(
@@ -87,20 +94,14 @@ describe('Journey 04: The Time Travel Flow', () => {
     )
     expect(smedleyBadge).toBeInTheDocument()
 
-    // Step 3: Find the Date Selector
-    const dateSelect = await screen
-      .findByRole(
-        'combobox',
-        { name: /latest in program year/i },
-        { timeout: 5000 }
-      )
-      .catch(async () => {
-        // Look for generic combo box if aria name wasn't exact
-        const combos = await screen.findAllByRole('combobox')
-        return combos.find(c => c.innerHTML.includes('2024-12-31'))
-      })
-
-    if (!dateSelect) throw new Error('Date Select could not be found')
+    // Step 3: Find the Date Selector — DataControlsBar's date chip (#531).
+    const dateSelect = await screen.findByTestId(
+      'date-chip-select',
+      undefined,
+      {
+        timeout: 5000,
+      }
+    )
 
     // Step 4: Time Travel! Change date to 2024-11-30
     await user.selectOptions(dateSelect, '2024-11-30')
