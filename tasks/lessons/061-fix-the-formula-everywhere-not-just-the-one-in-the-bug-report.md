@@ -64,11 +64,10 @@ Telltale signs you have this kind of bug:
 
 ## Follow-up
 
-Consider an issue to dedupe: `TransformService.calculateDistinguishedPercent`
-should delegate to `BordaCountRankingCalculator.calculateDistinguishedPercent`
-(or both should call a shared helper in `analytics-core`). Until then, R8
-(audit write AND read paths) applies in reverse to fixes too — audit every
-implementation, not just the one you found first.
+Tracked: **#547** — dedupe `calculateDistinguishedPercent` so both
+sites call a single helper in `analytics-core`. Until that lands, R8
+(audit write AND read paths) applies in reverse to fixes too — audit
+every implementation, not just the one you found first.
 
 ## Related
 

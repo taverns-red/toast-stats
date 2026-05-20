@@ -797,7 +797,7 @@ export class TransformService {
     //
     // Mirrors BordaCountRankingCalculator.calculateDistinguishedPercent
     // in analytics-core (PR #538). Both copies must stay in lockstep
-    // until they are deduped (see lesson 61).
+    // until #547 dedupes them.
     const distinguishedClubs = this.parseNumber(
       record['Total Distinguished Clubs']
     )
