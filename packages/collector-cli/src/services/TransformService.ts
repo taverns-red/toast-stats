@@ -780,21 +780,24 @@ export class TransformService {
   }
 
   /**
-   * Calculate distinguished club percentage from raw data.
-   *
-   * Per TI Distinguished District Program (Item 1490, Rev. 04/2025), the
-   * qualifying % is computed against Paid Club Base (PY-start club count),
-   * NOT current Active Clubs. Using activeClubs under-reports the percentage
-   * whenever a district has gained clubs during the PY — exactly the
-   * districts that most deserve to qualify at higher tiers. See lesson 60
-   * and PR #538 which fixed the analytics-core copy of this formula.
-   *
-   * When paidClubBase is 0 (genuinely brand-new district or schema
-   * regression), return 0 rather than silently falling through to
-   * activeClubs. The 0% is semantically correct for the new-district case
-   * and loud-fails the regression case.
+   * Calculate distinguished club percentage from raw data
    */
   private calculateDistinguishedPercent(record: AllDistrictsCSVRecord): number {
+    // Per the Distinguished District Program (Item 1490), % Distinguished
+    // is computed against Paid Club Base (PY-start club count), NOT
+    // current Active Clubs. Using activeClubs as the denominator
+    // under-reports the percentage whenever a district has gained clubs
+    // since PY start — which is exactly when recognition matters most.
+    //
+    // When paidClubBase is 0 or missing, return 0 rather than falling
+    // back to activeClubs. A missing base is either a brand-new district
+    // (no clubs at PY start → 0% Distinguished is correct) or a pipeline
+    // schema regression (which we want LOUD, not silently masked by the
+    // old buggy denominator).
+    //
+    // Mirrors BordaCountRankingCalculator.calculateDistinguishedPercent
+    // in analytics-core (PR #538). Both copies must stay in lockstep
+    // until they are deduped (see lesson 61).
     const distinguishedClubs = this.parseNumber(
       record['Total Distinguished Clubs']
     )
