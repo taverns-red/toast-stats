@@ -780,19 +780,31 @@ export class TransformService {
   }
 
   /**
-   * Calculate distinguished club percentage from raw data
+   * Calculate distinguished club percentage from raw data.
+   *
+   * Per TI Distinguished District Program (Item 1490, Rev. 04/2025), the
+   * qualifying % is computed against Paid Club Base (PY-start club count),
+   * NOT current Active Clubs. Using activeClubs under-reports the percentage
+   * whenever a district has gained clubs during the PY — exactly the
+   * districts that most deserve to qualify at higher tiers. See lesson 60
+   * and PR #538 which fixed the analytics-core copy of this formula.
+   *
+   * When paidClubBase is 0 (genuinely brand-new district or schema
+   * regression), return 0 rather than silently falling through to
+   * activeClubs. The 0% is semantically correct for the new-district case
+   * and loud-fails the regression case.
    */
   private calculateDistinguishedPercent(record: AllDistrictsCSVRecord): number {
     const distinguishedClubs = this.parseNumber(
       record['Total Distinguished Clubs']
     )
-    const activeClubs = this.parseNumber(record['Active Clubs'])
+    const paidClubBase = this.parseNumber(record['Paid Club Base'])
 
-    if (activeClubs === 0) {
+    if (paidClubBase === 0) {
       return 0
     }
 
-    return (distinguishedClubs / activeClubs) * 100
+    return (distinguishedClubs / paidClubBase) * 100
   }
 
   /**
