@@ -930,6 +930,20 @@ const DistrictsPage: React.FC = () => {
 
         {/* Rankings Table */}
         <div className="districts-rankings-table-wrap">
+          {/* Methodology affordance — single visible "i" beside a quiet
+              "About these metrics" label, replacing the four per-column
+              tooltips that used to wrap the header row (#546). Kept
+              outside the table so its focus ring is visible to keyboard
+              users (Lesson 58 / WCAG 2.4.7). */}
+          <div className="flex items-center justify-end mb-2 px-2">
+            <span
+              data-testid="rankings-table-methodology-affordance"
+              className="text-xs text-gray-500 inline-flex items-center"
+            >
+              About these metrics
+              <InfoTooltip text="Paid Clubs = clubs that have met renewal obligations for the program year. Total Payments = year-to-date membership payment count. Distinguished = clubs achieving Distinguished status or higher. Score = Borda-count composite of the three rankings. Higher is better on all four." />
+            </span>
+          </div>
           <div className="overflow-x-auto">
             <table
               className="districts-rankings-table"
@@ -938,12 +952,6 @@ const DistrictsPage: React.FC = () => {
               <caption className="sr-only">
                 District rankings by Paid Clubs, Total Payments, Distinguished
                 club count, and Borda-count Score.
-                <span
-                  data-testid="rankings-table-methodology-affordance"
-                  className="inline-block"
-                >
-                  <InfoTooltip text="Paid Clubs = clubs that have met renewal obligations for the program year. Total Payments = year-to-date membership payment count. Distinguished = clubs achieving Distinguished status or higher. Score = Borda-count composite of the three rankings. Higher is better on all four." />
-                </span>
               </caption>
               <thead>
                 <tr>
