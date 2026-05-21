@@ -1,15 +1,3 @@
-/**
- * KpiBulletCard Unit Tests (#550)
- *
- * Lean KPI card for the District Overview redesign — title, big number,
- * inline rank line (#rank of N · percentile · region rank), and a single
- * bullet bar with current-value marker + 4 tier ticks (D/S/P/Sm).
- *
- * Replaces TargetProgressCard's four parallel progress bars with a single
- * bullet-chart-style indicator that answers "how close to each tier?" at
- * a glance.
- */
-
 import { describe, it, expect, afterEach } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
