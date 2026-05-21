@@ -72,7 +72,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
       </div>
 
       {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <LoadingSkeleton variant="stat" />
           <LoadingSkeleton variant="stat" />
           <LoadingSkeleton variant="stat" />
@@ -103,7 +103,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
       )}
 
       {!isLoading && !error && analytics && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <KpiBulletCard
             title="Paid Clubs"
             current={pt?.paidClubs.current ?? analytics.allClubs.length}

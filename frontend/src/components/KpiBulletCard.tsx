@@ -22,14 +22,19 @@ type TierKey = keyof RecognitionTargets
 interface TierTick {
   key: TierKey
   shortLabel: string
+  fullLabel: string
   value: number
 }
 
-const TIERS: { key: TierKey; shortLabel: string }[] = [
-  { key: 'distinguished', shortLabel: 'D' },
-  { key: 'select', shortLabel: 'S' },
-  { key: 'presidents', shortLabel: 'P' },
-  { key: 'smedley', shortLabel: 'Sm' },
+const TIERS: Omit<TierTick, 'value'>[] = [
+  { key: 'distinguished', shortLabel: 'D', fullLabel: 'Distinguished' },
+  { key: 'select', shortLabel: 'S', fullLabel: 'Select Distinguished' },
+  {
+    key: 'presidents',
+    shortLabel: 'P',
+    fullLabel: "President's Distinguished",
+  },
+  { key: 'smedley', shortLabel: 'Sm', fullLabel: 'Smedley Distinguished' },
 ]
 
 function formatPercentile(percentile: number | null): string {
@@ -57,7 +62,10 @@ const BulletBar: React.FC<BulletBarProps> = ({
   ariaLabel,
 }) => {
   const max = targets.smedley
-  const markerPct = Math.min(100, max > 0 ? (current / max) * 100 : 0)
+  // Real data always has Smedley > Distinguished > 0. Guard for synthetic
+  // zero-target rows so tick positions never become NaN%.
+  if (max <= 0) return null
+  const markerPct = Math.min(100, (current / max) * 100)
   const allAchieved = current >= max
 
   const tiers: TierTick[] = TIERS.map(t => ({ ...t, value: targets[t.key] }))
@@ -102,21 +110,27 @@ const BulletBar: React.FC<BulletBarProps> = ({
         const pos = (t.value / max) * 100
         const achieved = current >= t.value
         return (
-          <div
+          <Tooltip
             key={t.key}
-            data-testid={`tier-tick-${t.key}`}
-            className="absolute top-3 flex flex-col items-center text-xs"
-            style={{ left: formatPct(pos), transform: 'translateX(-50%)' }}
+            content={`${t.fullLabel} — ${t.value.toLocaleString()} (${title.toLowerCase()})`}
           >
             <div
-              aria-hidden="true"
-              className={`h-2 w-px ${
-                achieved ? 'bg-tm-loyal-blue' : 'bg-gray-400'
-              }`}
-            />
-            <div className="mt-1 font-medium text-gray-700">{t.shortLabel}</div>
-            <div className="text-gray-500">{t.value.toLocaleString()}</div>
-          </div>
+              data-testid={`tier-tick-${t.key}`}
+              className="absolute top-3 flex flex-col items-center text-xs"
+              style={{ left: formatPct(pos), transform: 'translateX(-50%)' }}
+            >
+              <div
+                aria-hidden="true"
+                className={`h-2 w-px ${
+                  achieved ? 'bg-tm-loyal-blue' : 'bg-gray-400'
+                }`}
+              />
+              <div className="mt-1 font-medium text-gray-700">
+                {t.shortLabel}
+              </div>
+              <div className="text-gray-500">{t.value.toLocaleString()}</div>
+            </div>
+          </Tooltip>
         )
       })}
     </div>
@@ -164,13 +178,13 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
         <h3 className="text-sm font-medium text-gray-700">{title}</h3>
         {tooltipContent && (
           <Tooltip content={tooltipContent}>
-            <span
+            <button
+              type="button"
               aria-label="More info"
-              role="img"
-              className="inline-flex cursor-help"
+              className="inline-flex items-center justify-center rounded-full p-1 cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue"
             >
               <InfoIcon />
-            </span>
+            </button>
           </Tooltip>
         )}
       </div>

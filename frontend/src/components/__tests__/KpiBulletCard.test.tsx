@@ -216,6 +216,23 @@ describe('KpiBulletCard', () => {
       expect(marker).toHaveAttribute('data-all-achieved', 'true')
     })
 
+    it('does not render the bullet bar when Smedley threshold is zero', () => {
+      renderWithRouter(
+        <KpiBulletCard
+          title="Paid Clubs"
+          current={0}
+          targets={{
+            distinguished: 0,
+            select: 0,
+            presidents: 0,
+            smedley: 0,
+          }}
+          rankings={standardRankings}
+        />
+      )
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    })
+
     it('does not render a bullet bar when targets is null', () => {
       renderWithRouter(
         <KpiBulletCard
