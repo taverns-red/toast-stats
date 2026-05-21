@@ -168,6 +168,37 @@ describe('DistrictsPage — DDP tier chip + density (#546)', () => {
       expect(chip).toHaveAttribute('data-tier', 'Smedley')
       expect(chip).toHaveTextContent(/smedley/i)
     })
+
+    it('exposes data-tier on the <tr> so CSS can style the whole row by tier', async () => {
+      setupRankingsWithFourTiers()
+      renderWithProviders(<DistrictsPage />)
+      await screen.findByTestId('district-row-1')
+      // Row for the Smedley district carries the data-tier hook so
+      // future CSS (e.g. row gold border) is one selector away.
+      expect(findRow('1')).toHaveAttribute('data-tier', 'Smedley')
+      // NotDistinguished rows do not get a data-tier attribute.
+      expect(findRow('99')).not.toHaveAttribute('data-tier')
+    })
+
+    it('renders rows without chips when competitiveAwards fetch fails', async () => {
+      mockedFetchCdnRankings.mockResolvedValue({
+        rankings: [mkRanking('93', '8', 1), mkRanking('110', '11', 2)],
+        date: '2026-05-18',
+      })
+      // CDN fetch failure → hook returns null/undefined → page must
+      // still render rows with em-dash placeholders, not crash.
+      mockedFetchCdnCompetitiveAwards.mockRejectedValue(
+        new Error('CDN fetch failed')
+      )
+      renderWithProviders(<DistrictsPage />)
+      await screen.findByTestId('district-row-93')
+      expect(
+        within(findRow('93')).queryByTestId('tier-chip-93')
+      ).not.toBeInTheDocument()
+      expect(
+        within(findRow('110')).queryByTestId('tier-chip-110')
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe('density — per-metric cells', () => {

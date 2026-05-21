@@ -63,10 +63,16 @@ class lands in the segment that matches its meaning.
 ## Related
 
 - `frontend/src/components/DistrictTierChip.tsx` — the new component
-- `frontend/src/pages/DistrictsPage.tsx:944` — the new Tier column header
+- `frontend/src/pages/DistrictsPage.tsx` — Tier column header + cell
 - Lesson 58 — when an interactive element is invisible to keyboard
   users, you have a focus-visibility bug (caught mid-#546 when the
   methodology InfoTooltip ended up inside sr-only chrome)
+- Lessons 60 + 61 + #545 — note that tier chips depend on
+  `competitiveAwards.distinguishedDistrict[id].currentTier` which is
+  computed from snapshot percentages. Until #545 lands and the next
+  pipeline run completes, the chip will reflect the OLD denominator
+  for some districts (e.g. D93 shows Select instead of President's
+  on the first deploy of this PR). Both must ship as a pair.
 - Issue #546 — the design exploration in the PM/UX framing of the
   issue was right to flag "make the page feel like a sticker
   collection" as a failure mode

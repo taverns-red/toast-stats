@@ -985,10 +985,16 @@ const DistrictsPage: React.FC = () => {
                   const pinDisabled =
                     !isPinned && pinnedDistrictIds.size >= MAX_PINNED
                   const isMine = isMyDistrict(district.districtId)
-                  const ddpTier =
+                  const rawTier =
                     competitiveAwards?.distinguishedDistrict?.[
                       district.districtId
                     ]?.currentTier ?? null
+                  // The row-level data-tier hook is only meaningful for
+                  // ACHIEVED tiers; CSS rules like [data-tier="Smedley"]
+                  // never want to match NotDistinguished. So absence is
+                  // the signal there too — same convention as the chip.
+                  const ddpTier =
+                    rawTier && rawTier !== 'NotDistinguished' ? rawTier : null
                   return (
                     <tr
                       key={district.districtId}
@@ -1006,8 +1012,18 @@ const DistrictsPage: React.FC = () => {
                       {/* District cell first (#436) — primary entity. The
                           number is rendered as a standalone chip so the
                           click affordance reads as obviously interactive.
-                          (#417) Star button toggles 'my district'. */}
-                      <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-white">
+                          (#417) Star button toggles 'my district'.
+                          Sticky cell background must honour the row's
+                          isMine/isPinned tint, not stay white (#546 review). */}
+                      <td
+                        className={`px-6 py-4 whitespace-nowrap sticky left-0 z-10 ${
+                          isMine
+                            ? 'bg-yellow-50'
+                            : isPinned
+                              ? 'bg-blue-50'
+                              : 'bg-white'
+                        }`}
+                      >
                         <div className="flex items-center gap-3 flex-wrap">
                           <button
                             type="button"
@@ -1110,8 +1126,17 @@ const DistrictsPage: React.FC = () => {
                       </td>
                       {/* Rank cell — now second column (#436). Pin button
                           stays adjacent to rank badge for symmetry with
-                          the existing comparison-pin UX. */}
-                      <td className="px-6 py-4 whitespace-nowrap sticky left-[200px] z-10 bg-white sticky-column-shadow">
+                          the existing comparison-pin UX. Sticky background
+                          must honour the row tint (#546 review). */}
+                      <td
+                        className={`px-6 py-4 whitespace-nowrap sticky left-[200px] z-10 sticky-column-shadow ${
+                          isMine
+                            ? 'bg-yellow-50'
+                            : isPinned
+                              ? 'bg-blue-50'
+                              : 'bg-white'
+                        }`}
+                      >
                         <div className="flex items-center gap-2">
                           <button
                             onClick={e => {
@@ -1160,9 +1185,13 @@ const DistrictsPage: React.FC = () => {
                             tier={ddpTier}
                           />
                         ) : (
+                          // Empty Tier cell: the column header "Tier"
+                          // already provides context; an aria-label here
+                          // would chatter on every NotDistinguished row
+                          // (which is the majority).
                           <span
                             className="text-gray-400 text-sm"
-                            aria-label="Not yet Distinguished"
+                            aria-hidden="true"
                           >
                             —
                           </span>
