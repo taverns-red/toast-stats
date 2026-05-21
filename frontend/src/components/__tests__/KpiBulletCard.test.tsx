@@ -199,7 +199,7 @@ describe('KpiBulletCard', () => {
       //   D=158 → (158-142.2)/35.25*100 ≈ 44.82%
       //   S=161 → ≈ 53.33%
       //   P=164 → ≈ 61.84%
-      //   Sm=169 → ≈ 75.74%
+      //   Sm=169 → (169-142.2)/35.25*100 ≈ 76.03%
       renderWithRouter(
         <KpiBulletCard
           title="Paid Clubs"
@@ -219,7 +219,7 @@ describe('KpiBulletCard', () => {
         left: '61.84%',
       })
       expect(within(bar).getByTestId('tier-tick-smedley')).toHaveStyle({
-        left: '75.74%',
+        left: '76.03%',
       })
     })
 
