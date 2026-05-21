@@ -79,7 +79,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
   })
 
   describe('prerequisites — auto-expanded when any item is missing', () => {
-    it('shows the full list and counts the met prerequisites in the summary', () => {
+    it('renders a non-interactive status summary and the full list', () => {
       const unmet: DistinguishedDistrictStatus = {
         ...baseStatus,
         allPrerequisitesMet: false,
@@ -89,10 +89,12 @@ describe('DistinguishedDistrictTrophyCase', () => {
         },
       }
       render(<DistinguishedDistrictTrophyCase status={unmet} />)
-      const toggle = screen.getByRole('button', {
-        name: /4 of 5 prerequisites met/i,
-      })
-      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      // No toggle button when the list is locked open — the summary is a
+      // status, not an interactive control.
+      expect(
+        screen.queryByRole('button', { name: /prerequisites met/i })
+      ).not.toBeInTheDocument()
+      expect(screen.getByText(/4 of 5 prerequisites met/i)).toBeInTheDocument()
       expect(
         screen.getByText(/Market Analysis Plan submitted/i)
       ).toBeInTheDocument()

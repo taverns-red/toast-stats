@@ -61,8 +61,12 @@ export function hasUpcomingAnniversaries(
   referenceDate?: Date,
   windowDays: number = UPCOMING_WINDOW_DAYS
 ): boolean {
-  const rows = buildRows(clubs, referenceDate)
-  return rows.some(r => r.anniversary.daysUntilNext <= windowDays)
+  for (const club of clubs) {
+    if (!club.charterDate) continue
+    const anniversary = getClubAnniversary(club.charterDate, referenceDate)
+    if (anniversary && anniversary.daysUntilNext <= windowDays) return true
+  }
+  return false
 }
 
 export const UpcomingAnniversariesPanel: React.FC<

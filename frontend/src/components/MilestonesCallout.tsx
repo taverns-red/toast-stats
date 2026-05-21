@@ -2,7 +2,10 @@ import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { isMilestoneYear } from '../utils/clubAnniversary'
-import { getCurrentProgramYear } from '../utils/programYear'
+import {
+  getCurrentProgramYear,
+  formatProgramYearShort,
+} from '../utils/programYear'
 
 /* MilestonesCallout (#447 / #511) — district-level program-year
    milestone roster. Tight, single-line groups per milestone year. */
@@ -174,7 +177,7 @@ export const MilestonesCallout: React.FC<MilestonesCalloutProps> = ({
           )
         : null
 
-    const pyLabel = `${pyStart}-${(pyStart + 1).toString().slice(-2)}`
+    const pyLabel = formatProgramYearShort(pyStart)
     const totalCount = milestones.length
 
     return { groups, nextUpcoming, pyLabel, totalCount }

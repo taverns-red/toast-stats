@@ -120,7 +120,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
   educationTrainingQualifies,
   clubGrowthQualifies,
 }) => {
-  const [forceExpanded, setForceExpanded] = useState(false)
+  const [userExpanded, setUserExpanded] = useState(false)
 
   if (!status) return null
 
@@ -128,8 +128,9 @@ export const DistinguishedDistrictTrophyCase: React.FC<
     status
   const metCount = PREREQUISITE_KEYS.filter(k => prerequisites[k]).length
   const totalCount = PREREQUISITE_KEYS.length
-  // Auto-expand when anything is unmet; otherwise honor the user toggle.
-  const expanded = !allPrerequisitesMet || forceExpanded
+  // Unmet prereqs are the whole point of the panel — never let the user
+  // collapse the list when something needs attention.
+  const expanded = !allPrerequisitesMet || userExpanded
   const summaryText = `${metCount} of ${totalCount} prerequisites met`
 
   const additionalAwardsVisible =
@@ -160,28 +161,29 @@ export const DistinguishedDistrictTrophyCase: React.FC<
       </div>
 
       <div className="mb-4">
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-controls="prerequisite-list"
-          onClick={() => allPrerequisitesMet && setForceExpanded(prev => !prev)}
-          // When prereqs aren't all met the list is locked open, so the
-          // toggle reads as a static summary; suppress hover/focus affordance.
-          disabled={!allPrerequisitesMet}
-          className={`flex items-center gap-2 text-sm font-semibold font-tm-body ${
-            allPrerequisitesMet
-              ? 'text-tm-loyal-blue hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue rounded'
-              : 'text-tm-true-maroon cursor-default'
-          }`}
-        >
-          <span aria-hidden="true">{allPrerequisitesMet ? '✓' : '⚠'}</span>
-          {summaryText}
-          {allPrerequisitesMet && (
+        {allPrerequisitesMet ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls="prerequisite-list"
+            onClick={() => setUserExpanded(prev => !prev)}
+            className="flex items-center gap-2 text-sm font-semibold font-tm-body text-tm-loyal-blue hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue rounded"
+          >
+            <span aria-hidden="true">✓</span>
+            {summaryText}
             <span aria-hidden="true" className="text-xs">
               {expanded ? '▴' : '▾'}
             </span>
-          )}
-        </button>
+          </button>
+        ) : (
+          <div
+            role="status"
+            className="flex items-center gap-2 text-sm font-semibold font-tm-body text-tm-true-maroon"
+          >
+            <span aria-hidden="true">⚠</span>
+            {summaryText}
+          </div>
+        )}
         {expanded && (
           <ul
             id="prerequisite-list"

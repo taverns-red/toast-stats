@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
-import { getCurrentProgramYear } from '../utils/programYear'
+import {
+  getCurrentProgramYear,
+  formatProgramYearShort,
+} from '../utils/programYear'
 import {
   UpcomingAnniversariesPanel,
   hasUpcomingAnniversaries,
@@ -24,9 +27,6 @@ export interface NotableDatesSectionProps {
    */
   referenceDate?: Date
 }
-
-const formatProgramYearLabel = (start: number): string =>
-  `${start}-${(start + 1).toString().slice(-2)}`
 
 /**
  * Orchestrates UpcomingAnniversariesPanel and MilestonesCallout:
@@ -54,7 +54,7 @@ export const NotableDatesSection: React.FC<NotableDatesSectionProps> = ({
   )
 
   if (!upcomingPresent && !milestonesPresent) {
-    const pyLabel = formatProgramYearLabel(
+    const pyLabel = formatProgramYearShort(
       programYearStart ?? getCurrentProgramYear().year
     )
     return (
@@ -73,39 +73,36 @@ export const NotableDatesSection: React.FC<NotableDatesSectionProps> = ({
     )
   }
 
-  if (upcomingPresent && milestonesPresent) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        <UpcomingAnniversariesPanel
-          clubs={clubs}
-          {...(districtId !== undefined && { districtId })}
-          {...(referenceDate && { referenceDate })}
-        />
-        <MilestonesCallout
-          clubs={clubs}
-          {...(districtId !== undefined && { districtId })}
-          {...(programYearStart !== undefined && { programYearStart })}
-        />
-      </div>
-    )
+  // Conditional spreads honor exactOptionalPropertyTypes — passing
+  // `{ districtId: undefined }` explicitly violates the panels' optional
+  // string props under the project's strict TS config.
+  const passthrough = {
+    ...(districtId !== undefined && { districtId }),
+  }
+  const upcomingProps = {
+    ...passthrough,
+    ...(referenceDate && { referenceDate }),
+  }
+  const milestoneProps = {
+    ...passthrough,
+    ...(programYearStart !== undefined && { programYearStart }),
   }
 
-  if (upcomingPresent) {
-    return (
-      <UpcomingAnniversariesPanel
-        clubs={clubs}
-        {...(districtId !== undefined && { districtId })}
-        {...(referenceDate && { referenceDate })}
-      />
-    )
-  }
+  const sideBySide = upcomingPresent && milestonesPresent
 
   return (
-    <MilestonesCallout
-      clubs={clubs}
-      {...(districtId !== undefined && { districtId })}
-      {...(programYearStart !== undefined && { programYearStart })}
-    />
+    <div
+      className={
+        sideBySide ? 'grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6' : ''
+      }
+    >
+      {upcomingPresent && (
+        <UpcomingAnniversariesPanel clubs={clubs} {...upcomingProps} />
+      )}
+      {milestonesPresent && (
+        <MilestonesCallout clubs={clubs} {...milestoneProps} />
+      )}
+    </div>
   )
 }
 
