@@ -50,7 +50,7 @@ describe('KpiBulletCard', () => {
         />
       )
       expect(screen.getByText('Paid Clubs')).toBeInTheDocument()
-      expect(screen.getByText('149')).toBeInTheDocument()
+      expect(screen.getByTestId('kpi-value')).toHaveTextContent('149')
     })
 
     it('formats large current values with locale separators', () => {
@@ -67,7 +67,7 @@ describe('KpiBulletCard', () => {
           rankings={standardRankings}
         />
       )
-      expect(screen.getByText('5,707')).toBeInTheDocument()
+      expect(screen.getByTestId('kpi-value')).toHaveTextContent('5,707')
     })
 
     it('renders the info tooltip when tooltipContent is provided', () => {
