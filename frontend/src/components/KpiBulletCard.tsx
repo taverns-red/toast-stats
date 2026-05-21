@@ -70,13 +70,16 @@ const BulletBar: React.FC<BulletBarProps> = ({
   // labels collided and the bar was unreadable (#558). The scale below
   // auto-expands to include `current` whenever it lies outside the tier
   // band, so no clamping is needed and no "below-scale" affordance is
-  // required — the marker is always on the bar.
+  // required — the marker is always on the bar. When the district has
+  // hit Smedley, maxScale collapses to `current` so the marker pins to
+  // 100% (a "you've made it" signal); the 5% headroom only applies when
+  // there's still tier to chase.
+  const allAchieved = current >= targets.smedley
   const minScale = Math.max(0, Math.min(current, 0.9 * targets.distinguished))
-  const maxScale = Math.max(current, 1.05 * targets.smedley)
+  const maxScale = allAchieved ? current : 1.05 * targets.smedley
   const range = maxScale - minScale
   const positionAt = (v: number): number => ((v - minScale) / range) * 100
   const markerPct = positionAt(current)
-  const allAchieved = current >= targets.smedley
 
   const tiers: TierTick[] = TIERS.map(t => ({ ...t, value: targets[t.key] }))
 

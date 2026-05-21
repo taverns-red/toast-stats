@@ -245,6 +245,24 @@ describe('KpiBulletCard', () => {
       expect(marker).toHaveStyle({ left: '0%' })
     })
 
+    it('pins marker at 100% when current is exactly at Smedley (you-made-it signal)', () => {
+      // For current=169 (= Smedley):
+      //   allAchieved = true → maxScale = current = 169
+      //   minScale = min(169, 142.2) = 142.2
+      //   position(169) = (169-142.2)/(169-142.2) * 100 = 100%
+      renderWithRouter(
+        <KpiBulletCard
+          title="Paid Clubs"
+          current={169}
+          targets={standardTargets}
+          rankings={standardRankings}
+        />
+      )
+      const marker = screen.getByTestId('current-marker')
+      expect(marker).toHaveStyle({ left: '100%' })
+      expect(marker).toHaveAttribute('data-all-achieved', 'true')
+    })
+
     it('expands maxScale to include current when current exceeds Smedley', () => {
       // For current=200, targets D=158/Sm=169:
       //   minScale = min(200, 142.2) = 142.2
