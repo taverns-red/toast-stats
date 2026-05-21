@@ -90,17 +90,17 @@ interface GapTileSpec {
 const GapTile: React.FC<GapTileSpec> = ({ label, gap, suffix }) => {
   const closed = gap === 0
   return (
-    <div className="rounded-md border border-gray-200 bg-white px-3 py-2">
+    <div className="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2">
       <div
         data-testid="gap-tile-label"
-        className="text-[11px] uppercase tracking-wide text-gray-500 font-tm-body"
+        className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-tm-body"
       >
         {label}
       </div>
       <div
         data-testid="gap-tile-value"
         className={`mt-0.5 text-base font-semibold tabular-nums ${
-          closed ? 'text-tm-loyal-blue' : 'text-gray-900'
+          closed ? 'text-tm-loyal-blue' : 'text-gray-900 dark:text-gray-100'
         }`}
       >
         {closed ? '✓' : `+${gap.toFixed(1)}${suffix}`}
@@ -152,7 +152,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
         </div>
         <span
           data-testid="distinguished-status-pill"
-          className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-full border ${TIER_BADGE_STYLES[currentTier]}`}
+          className={`inline-flex items-center gap-2 px-4 py-2 text-base font-semibold rounded-full border-2 ${TIER_BADGE_STYLES[currentTier]}`}
           aria-label={`Current tier: ${TIER_LABELS[currentTier]}`}
         >
           <span aria-hidden="true">{TIER_ICONS[currentTier]}</span>
@@ -167,7 +167,8 @@ export const DistinguishedDistrictTrophyCase: React.FC<
             aria-expanded={expanded}
             aria-controls="prerequisite-list"
             onClick={() => setUserExpanded(prev => !prev)}
-            className="flex items-center gap-2 text-sm font-semibold font-tm-body text-tm-loyal-blue hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue rounded"
+            // min-h-11 = 44px touch target on mobile per WCAG 2.5.5.
+            className="flex items-center gap-2 min-h-11 px-1 -mx-1 text-sm font-semibold font-tm-body text-tm-loyal-blue hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue rounded"
           >
             <span aria-hidden="true">✓</span>
             {summaryText}
