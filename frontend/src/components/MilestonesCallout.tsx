@@ -79,6 +79,29 @@ const anniversaryInProgramYear = (
   return new Date(Date.UTC(annivYear, charterMonth, day))
 }
 
+/**
+ * Whether any club hits a milestone (5-year increment) anniversary
+ * inside the given program year. Used by NotableDatesSection to
+ * decide layout before rendering the panel.
+ */
+export function hasProgramYearMilestones(
+  clubs: ClubTrend[],
+  programYearStart?: number
+): boolean {
+  const pyStart = programYearStart ?? getCurrentProgramYear().year
+  for (const club of clubs) {
+    if (!club.charterDate) continue
+    const charter = parseCharterUtc(club.charterDate)
+    if (!charter) continue
+    const annivInPy = anniversaryInProgramYear(charter, pyStart)
+    if (!annivInPy) continue
+    const yearsAtAnniv = annivInPy.getUTCFullYear() - charter.getUTCFullYear()
+    if (yearsAtAnniv <= 0) continue
+    if (isMilestoneYear(yearsAtAnniv)) return true
+  }
+  return false
+}
+
 export const MilestonesCallout: React.FC<MilestonesCalloutProps> = ({
   clubs,
   programYearStart,
