@@ -170,11 +170,9 @@ const BulletBar: React.FC<BulletBarProps> = ({
 }
 
 /**
- * KpiBulletCard — #550 District Overview redesign
- *
- * Single-metric KPI card with a bullet-bar tier-progress visualization.
- * Replaces TargetProgressCard's four parallel progress bars with one
- * bar carrying a current-value marker + four tier ticks (D/S/P/Sm).
+ * KpiBulletCard — single-metric KPI card with a bullet-bar tier-progress
+ * visualization. One bar carries the current-value marker plus four tier
+ * ticks (D / S / P / Sm) showing the Distinguished District thresholds.
  */
 export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
   title,
