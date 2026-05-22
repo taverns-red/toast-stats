@@ -64,6 +64,18 @@ const NARRATIVE_ANCHORS: AnchorSection[] = [
   { id: 'vs-world', label: 'Vs world' },
 ]
 
+// Synthetic rankings used when performance-targets CDN data is missing
+// and the inline analytics rollup is the only source. Stable module-level
+// const so the kpiStripData memo stays referentially clean.
+const NULL_RANKINGS = {
+  worldRank: null,
+  worldPercentile: null,
+  regionRank: null,
+  totalDistricts: 0,
+  totalInRegion: 0,
+  region: null,
+}
+
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
@@ -350,14 +362,6 @@ const DistrictDetailPageInner: React.FC = () => {
   // Sticky KPI strip data (#572). Prefer the usePerformanceTargets CDN
   // hook; fall back to inline analytics so existing snapshots keep
   // working while the targets pipeline is catching up.
-  const NULL_RANKINGS = {
-    worldRank: null,
-    worldPercentile: null,
-    regionRank: null,
-    totalDistricts: 0,
-    totalInRegion: 0,
-    region: null,
-  }
   const kpiStripData: DistrictKpiStripData | null = useMemo(() => {
     if (!analytics) return null
     const pt = performanceTargets ?? analytics.performanceTargets
@@ -379,8 +383,6 @@ const DistrictDetailPageInner: React.FC = () => {
         rankings: pt?.distinguishedClubs.rankings ?? NULL_RANKINGS,
       },
     }
-    // NULL_RANKINGS is a stable literal — safe to ignore for deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analytics, performanceTargets])
 
   // If districts data has loaded but this district isn't in the tracked list,
