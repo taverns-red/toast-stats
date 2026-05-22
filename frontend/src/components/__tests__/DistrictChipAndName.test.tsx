@@ -27,9 +27,11 @@ describe('DistrictChipAndName', () => {
   })
 
   it('omits the name span when name is whitespace-wrapped bare number', () => {
-    render(<DistrictChipAndName districtId="57" name="  57  " />)
-    expect(screen.queryByText(/57\s*$/)).not.toBeInTheDocument()
+    const { container } = render(
+      <DistrictChipAndName districtId="57" name="  57  " />
+    )
     expect(screen.getByText('D57')).toBeInTheDocument()
+    expect(container.querySelectorAll('span')).toHaveLength(1)
   })
 
   it('uses provided chipClassName and nameClassName', () => {
