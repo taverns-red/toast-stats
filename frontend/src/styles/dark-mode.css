@@ -596,8 +596,14 @@
     color: #FDE68A !important;
 }
 
-/* bg-amber-50/50 is generated as a Tailwind arbitrary modifier */
-[data-theme='dark'] [class*="bg-amber-50\\/"] {
+/* bg-amber-50/N is Tailwind's opacity-modifier syntax. The compiled
+   selector escapes the slash (`.bg-amber-50\/50`) but the DOM class
+   attribute carries the plain string `bg-amber-50/50` — no backslash.
+   The prior wildcard `[class*="bg-amber-50\\/"]` looked for a literal
+   backslash + slash and never matched. The literal escaped selector
+   below targets the exact compiled form Tailwind emits and so reaches
+   any element actually wearing the class. */
+[data-theme='dark'] .bg-amber-50\/50 {
     background-color: rgba(161, 98, 7, 0.12) !important;
 }
 

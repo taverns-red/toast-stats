@@ -67,11 +67,11 @@ describe('Opacity-variant dark-mode overrides (#564 Phase 2)', () => {
     'tm-* opacity variant `%s`',
     cls => {
       it("has an explicit [data-theme='dark'] override in dark-mode.css", () => {
-        // Escape `.` is not needed inside a character class; the class name
-        // contains only `[a-z0-9-]` so a plain substring + boundary check
-        // via a regex is sufficient.
+        // `[^,{]*` (not `[^{]*`) prevents the regex from bridging a comma
+        // — `[data-theme='dark'] .foo, .bg-tm-X-N { ... }` only scopes
+        // .foo to dark mode, so we must NOT match the trailing item.
         const pattern = new RegExp(
-          `\\[data-theme=['"]dark['"]\\]\\s+(?:[^{]*\\s)?\\.${cls}(?![\\w-])`,
+          `\\[data-theme=['"]dark['"]\\]\\s+(?:[^,{]*\\s)?\\.${cls}(?![\\w-])`,
           'm'
         )
         expect(DARK_MODE_CSS).toMatch(pattern)
@@ -83,11 +83,14 @@ describe('Opacity-variant dark-mode overrides (#564 Phase 2)', () => {
     // `bg-amber-50/50` is used UNCONDITIONALLY in DCPProjectionsTable.tsx
     // (line ~422). Tailwind compiles this to a baked `rgba(254, 243, 199,
     // 0.5)` value that renders washed-out beige on the dark surface. The
-    // project covers this with a wildcard class-attribute selector since
-    // the slash is escaped in the compiled selector.
-    it('bg-amber-50 wildcard override exists', () => {
+    // override must target the COMPILED selector form (`.bg-amber-50\/50`
+    // — backslash-escaped slash in CSS source, plain `bg-amber-50/50`
+    // class on the DOM element). A prior attempt used an attribute-
+    // substring selector `[class*="bg-amber-50\\/"]` which looks for a
+    // LITERAL backslash in the class attribute and never matched.
+    it('bg-amber-50/50 literal-selector override exists', () => {
       expect(DARK_MODE_CSS).toMatch(
-        /\[data-theme=['"]dark['"]\]\s+\[class\*="bg-amber-50\\\\\/"\]/
+        /\[data-theme=['"]dark['"]\]\s+\.bg-amber-50\\\/50\b/
       )
     })
 
