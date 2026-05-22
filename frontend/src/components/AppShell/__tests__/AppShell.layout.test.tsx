@@ -47,7 +47,11 @@ describe('AppShell layout (#565)', () => {
   it('places the theme toggle between the help icon and the avatar in the header tools cluster', () => {
     renderShell()
     const banner = screen.getByRole('banner')
-    const helpIcon = within(banner).getByRole('link', { name: /how it works/i })
+    // The "How it works" text appears twice in the banner (nav link +
+    // tools-cluster icon button). The help icon in the tools cluster is
+    // the one with the explicit aria-label, identified by its title
+    // attribute as well.
+    const helpIcon = within(banner).getByTitle('How it works')
     const toggle = within(banner).getByRole('button', {
       name: /switch to (dark|light) mode/i,
     })
@@ -56,10 +60,8 @@ describe('AppShell layout (#565)', () => {
     })
 
     // DOM order: help → toggle → avatar
-    const helpPos = Array.from(banner.querySelectorAll('*')).indexOf(helpIcon)
-    const togglePos = Array.from(banner.querySelectorAll('*')).indexOf(toggle)
-    const avatarPos = Array.from(banner.querySelectorAll('*')).indexOf(avatar)
-    expect(helpPos).toBeLessThan(togglePos)
-    expect(togglePos).toBeLessThan(avatarPos)
+    const allEls = Array.from(banner.querySelectorAll('*'))
+    expect(allEls.indexOf(helpIcon)).toBeLessThan(allEls.indexOf(toggle))
+    expect(allEls.indexOf(toggle)).toBeLessThan(allEls.indexOf(avatar))
   })
 })
