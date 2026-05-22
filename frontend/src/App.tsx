@@ -23,6 +23,11 @@ const DistrictDivisionsPage = React.lazy(
   () => import('./pages/DistrictDivisionsPage')
 )
 
+// Code-split: DistrictRankingsPage — rankings subroute (#571, epic #568 Phase 3)
+const DistrictRankingsPage = React.lazy(
+  () => import('./pages/DistrictRankingsPage')
+)
+
 // Code-split: ClubRedirectPage — district-free club URL (#320)
 const ClubRedirectPage = React.lazy(() => import('./pages/ClubRedirectPage'))
 
@@ -93,6 +98,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <DistrictDivisionsPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/rankings',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <DistrictRankingsPage />
             </Suspense>
           ),
         },
