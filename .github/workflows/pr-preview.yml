@@ -1,0 +1,94 @@
+# Per-PR Firebase Hosting preview channels (#554)
+#
+# Builds the frontend on every PR push and publishes it to a temporary
+# Firebase Hosting preview channel under the `staging` site. The
+# FirebaseExtended action posts (and updates) a single sticky PR
+# comment with the live URL.
+#
+# Channels auto-expire after 7 days; closed/merged PRs are cleaned up
+# by Firebase TTL, not by an explicit teardown step.
+#
+# Re-uses the same Workload Identity Federation credentials that
+# .github/workflows/deploy.yml uses for production deploys, so no
+# additional IAM setup is required.
+
+name: PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'frontend/**'
+      - 'packages/shared-contracts/**'
+      - 'packages/analytics-core/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/pr-preview.yml'
+
+# Cancel an in-flight preview build when a new push to the same PR
+# arrives — only the latest commit gets a deploy.
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write # Required for Workload Identity Federation
+  pull-requests: write # Required to post the preview-URL comment
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  preview:
+    name: Deploy preview channel
+    runs-on: ubuntu-latest
+    # Skip PRs from forks — WIF tokens are not issued to fork branches,
+    # and we don't want to leak credentials to untrusted code anyway.
+    # Fork contributors fall back to local-checkout for visual review.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build dependency packages
+        run: |
+          npm run build:shared-contracts
+          npm run build:analytics-core
+
+      - name: Build frontend
+        run: npm run build:frontend
+        env:
+          # Preview channels point at the same data as staging; both
+          # use the staging CDN bucket so the preview matches what the
+          # post-merge staging deploy will look like.
+          VITE_CDN_BASE_URL: https://storage.googleapis.com/toast-stats-data-staging
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to preview channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          projectId: ${{ secrets.GCP_PROJECT_ID }}
+          # Use the staging Hosting target — preview channels are
+          # scoped to a site, and staging is isolated from production
+          # so a preview deploy can never accidentally hit the live
+          # ts.taverns.red URL.
+          target: staging
+          channelId: pr-${{ github.event.pull_request.number }}
+          expires: 7d
