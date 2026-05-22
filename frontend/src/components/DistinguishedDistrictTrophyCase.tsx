@@ -21,6 +21,14 @@ export interface DistinguishedDistrictGap {
   clubGrowthGap: number
   distinguishedPercentGap: number
   netClubGrowthGap: number
+  /**
+   * Program-year baseline values used to derive concrete unit counts
+   * from the gap percentages (#555). Optional during the rollout —
+   * downstream callers that don't populate them simply omit the
+   * secondary "~N units" line.
+   */
+  paidClubBase?: number
+  paymentBase?: number
 }
 
 export interface DistinguishedDistrictStatus {
