@@ -46,6 +46,10 @@ import { EducationLevelsCard } from '../components/EducationLevelsCard'
 import { extractEducationLevels } from '../utils/extractEducationLevels'
 import DivisionsSummaryNarrative from '../components/DivisionsSummaryNarrative'
 import VsWorldNarrative from '../components/VsWorldNarrative'
+import {
+  DistrictKpiStrip,
+  type DistrictKpiStripData,
+} from '../components/DistrictKpiStrip'
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
@@ -330,6 +334,42 @@ const DistrictDetailPageInner: React.FC = () => {
       : null
   }, [districtStatistics])
 
+  // Sticky KPI strip data (#572). Prefer the usePerformanceTargets CDN
+  // hook; fall back to inline analytics so existing snapshots keep
+  // working while the targets pipeline is catching up.
+  const NULL_RANKINGS = {
+    worldRank: null,
+    worldPercentile: null,
+    regionRank: null,
+    totalDistricts: 0,
+    totalInRegion: 0,
+    region: null,
+  }
+  const kpiStripData: DistrictKpiStripData | null = useMemo(() => {
+    if (!analytics) return null
+    const pt = performanceTargets ?? analytics.performanceTargets
+    return {
+      paidClubs: {
+        current: pt?.paidClubs.current ?? analytics.allClubs.length,
+        targets: pt?.paidClubs.targets ?? null,
+        rankings: pt?.paidClubs.rankings ?? NULL_RANKINGS,
+      },
+      membershipPayments: {
+        current: pt?.membershipPayments.current ?? analytics.totalMembership,
+        targets: pt?.membershipPayments.targets ?? null,
+        rankings: pt?.membershipPayments.rankings ?? NULL_RANKINGS,
+      },
+      distinguishedClubs: {
+        current:
+          pt?.distinguishedClubs.current ?? analytics.distinguishedClubs.total,
+        targets: pt?.distinguishedClubs.targets ?? null,
+        rankings: pt?.distinguishedClubs.rankings ?? NULL_RANKINGS,
+      },
+    }
+    // NULL_RANKINGS is a stable literal — safe to ignore for deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analytics, performanceTargets])
+
   // If districts data has loaded but this district isn't in the tracked list,
   // show a limited page with Global Rankings (available for all districts)
   // instead of blank data. Only 6 districts have detailed per-district analytics.
@@ -456,13 +496,22 @@ const DistrictDetailPageInner: React.FC = () => {
               />
             )}
 
+          {/* Sticky KPI strip (#572). Sits above the narrative so the
+              4 numbers stay pinned as the user scrolls; mobile gets a
+              collapse chevron. */}
+          {districtId && hasOverviewData && (
+            <DistrictKpiStrip kpis={kpiStripData} />
+          )}
+
           {/* Narrative content. #571 (IA Phase 3) retired the tab strip
               and the routed Clubs / Divisions / Rankings tabpanels —
               everything else now scrolls as one story, with CTAs at
-              the bottom that link to the dedicated routes. */}
+              the bottom that link to the dedicated routes. Section
+              wrappers carry the ids that the anchor TOC (#572) links
+              to. */}
           <div className="space-y-4 sm:space-y-6">
             {districtId && hasOverviewData && (
-              <>
+              <section id="overview" aria-label="District overview">
                 {/* District Overview - Now uses global date selector */}
                 {hasValidDates && effectiveProgramYear && (
                   <DistrictOverview
@@ -502,11 +551,11 @@ const DistrictDetailPageInner: React.FC = () => {
                     programYearStart: effectiveProgramYear.year,
                   })}
                 />
-              </>
+              </section>
             )}
 
             {/* Trends */}
-            <>
+            <section id="trends" aria-label="Membership and payment trends">
               {/* Membership Trend Chart */}
               {aggregatedAnalytics ? (
                 <LazyChart height="400px">
@@ -650,10 +699,10 @@ const DistrictDetailPageInner: React.FC = () => {
                   <LoadingSkeleton variant="chart" height="300px" />
                 )
               )}
-            </>
+            </section>
 
-            {/* Analytics */}
-            <>
+            {/* Top clubs */}
+            <section id="top-clubs" aria-label="Top clubs">
               {/* Top Growth Clubs */}
               {analytics && (
                 <TopGrowthClubs
@@ -685,33 +734,40 @@ const DistrictDetailPageInner: React.FC = () => {
                   isLoading={isLoadingAnalytics}
                 />
               )}
+            </section>
 
+            {/* Analytics */}
+            <section id="analytics" aria-label="District analytics">
               {/* Education Levels rollup (#426) */}
               {districtStatistics && (
                 <EducationLevelsCard
                   totals={extractEducationLevels(districtStatistics)}
                 />
               )}
-            </>
+            </section>
 
             {/* Division summary block (#571) — inline preview of all
                 divisions with a Letter ⇄ Performance sort toggle and a
                 CTA to the dedicated /district/:id/divisions route. */}
             {districtId && divisionPerformance && (
-              <DivisionsSummaryNarrative
-                districtId={districtId}
-                divisions={divisionPerformance}
-              />
+              <section id="divisions" aria-label="Divisions">
+                <DivisionsSummaryNarrative
+                  districtId={districtId}
+                  divisions={divisionPerformance}
+                />
+              </section>
             )}
 
             {/* Vs world callout (#571) — four mini rank tiles + CTA to
                 the dedicated /district/:id/rankings route. */}
             {districtId && (
-              <VsWorldNarrative
-                districtId={districtId}
-                districtName={districtName}
-                {...(selectedProgramYear && { selectedProgramYear })}
-              />
+              <section id="vs-world" aria-label="District vs world">
+                <VsWorldNarrative
+                  districtId={districtId}
+                  districtName={districtName}
+                  {...(selectedProgramYear && { selectedProgramYear })}
+                />
+              </section>
             )}
 
             {/* Subview CTAs — replace the retired tab strip. */}
