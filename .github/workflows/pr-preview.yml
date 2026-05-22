@@ -95,8 +95,12 @@ jobs:
           # Capture stdout and stderr separately so that a non-zero exit
           # surfaces firebase's actual error message in the logs.
           # `--json` writes the result envelope to stdout on success.
+          # NOTE: `firebase hosting:channel:deploy --only` takes the deploy
+          # target name directly (e.g. `staging`), unlike `firebase deploy
+          # --only` which expects `hosting:staging`. Mixing them up yields:
+          #   "Hosting site or target hosting:staging not detected"
           if ! firebase hosting:channel:deploy "$CHANNEL_ID" \
-              --only "hosting:staging" \
+              --only "staging" \
               --project "${{ secrets.GCP_PROJECT_ID }}" \
               --expires 7d \
               --json > /tmp/firebase-out.json 2> /tmp/firebase-err.log; then
