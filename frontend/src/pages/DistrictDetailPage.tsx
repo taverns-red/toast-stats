@@ -5,7 +5,7 @@ import {
   useNavigate,
   useSearchParams,
 } from 'react-router-dom'
-import { redirectLegacyClubsTab } from '../utils/legacyClubsRedirect'
+import { redirectLegacyDistrictTab } from '../utils/legacyTabRedirect'
 import { useDistricts } from '../hooks/useDistricts'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import {
@@ -982,24 +982,22 @@ const DistrictDetailPageInner: React.FC = () => {
 }
 
 /**
- * Default export: thin wrapper that intercepts the legacy `?tab=clubs`
- * URL and redirects to `/district/:id/clubs` BEFORE the heavy
- * DistrictDetailPageInner hooks run. Without this guard, inner effects
- * (date selection, etc.) would race against `<Navigate>` and clobber
- * the new URL's search params after the route transition.
+ * Default export: thin wrapper that intercepts the legacy `?tab=…` URLs
+ * (clubs / divisions / globalRankings) and redirects to their new routes
+ * BEFORE the heavy DistrictDetailPageInner hooks run. Without this
+ * guard, inner effects (date selection, etc.) would race against
+ * `<Navigate>` and clobber the new URL's search params after the route
+ * transition.
  */
 const DistrictDetailPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
   const [searchParams] = useSearchParams()
-  const legacyClubsTarget = redirectLegacyClubsTab(
+  const legacyTarget = redirectLegacyDistrictTab(
     `http://localhost/district/${districtId ?? ''}?${searchParams.toString()}`,
     districtId
   )
-  if (legacyClubsTarget) {
-    const [pathname, search = ''] = legacyClubsTarget.split('?') as [
-      string,
-      string?,
-    ]
+  if (legacyTarget) {
+    const [pathname, search = ''] = legacyTarget.split('?') as [string, string?]
     return (
       <Navigate to={{ pathname, search: search ? `?${search}` : '' }} replace />
     )
