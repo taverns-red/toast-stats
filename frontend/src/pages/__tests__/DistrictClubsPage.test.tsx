@@ -14,7 +14,13 @@
 
 import React, { Suspense } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   createMemoryRouter,
@@ -233,13 +239,17 @@ describe('DistrictClubsPage (#570 — Phase 2)', () => {
 
     await screen.findByText(/alpha toastmasters/i)
 
-    const vulnerableChip = screen.getByRole('button', {
+    const statusStrip = screen.getByRole('tablist', {
+      name: /filter clubs by health status/i,
+    })
+    const vulnerableChip = within(statusStrip).getByRole('tab', {
       name: /^vulnerable/i,
     })
     await user.click(vulnerableChip)
 
     await waitFor(() => {
-      expect(router.state.location.search).toBe('?status=vulnerable')
+      const params = new URLSearchParams(router.state.location.search)
+      expect(params.get('status')).toBe('vulnerable')
     })
   })
 
@@ -249,11 +259,15 @@ describe('DistrictClubsPage (#570 — Phase 2)', () => {
 
     await screen.findByText(/beta speakers/i)
 
-    const allChip = screen.getByRole('button', { name: /^all\b/i })
+    const statusStrip = screen.getByRole('tablist', {
+      name: /filter clubs by health status/i,
+    })
+    const allChip = within(statusStrip).getByRole('tab', { name: /^all\b/i })
     await user.click(allChip)
 
     await waitFor(() => {
-      expect(router.state.location.search).toBe('')
+      const params = new URLSearchParams(router.state.location.search)
+      expect(params.get('status')).toBeNull()
     })
   })
 
