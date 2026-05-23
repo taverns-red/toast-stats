@@ -61,11 +61,12 @@ export interface DistrictAnalytics {
    * FAC-only clubs (typically ATOs / fresh charters) that aren't in
    * clubPerformance. Surfaced verbatim from the latest snapshot —
    * never folded into rankings, distinguished counts, or membership
-   * trends. Defaults to [] when the snapshot omits the field.
+   * trends. Always an array (possibly empty) — consistent with
+   * sibling list fields (`allClubs`, `vulnerableClubs`).
    *
    * @see Issue #489
    */
-  prospectiveClubs?: ProspectiveClub[]
+  prospectiveClubs: ProspectiveClub[]
 }
 
 /**

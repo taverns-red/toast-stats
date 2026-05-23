@@ -202,13 +202,12 @@ export interface DistrictAnalytics {
    * Clubs in TI's public Find-A-Club registry that aren't yet in
    * clubPerformance — typically ATOs (Applications To Organize) or
    * freshly-chartered clubs that haven't appeared in the dashboard
-   * roster yet. Empty for districts with no such clubs. Deliberately
-   * NOT included in rankings, distinguished counts, or membership
-   * trends.
+   * roster yet. Always an array (possibly empty). Deliberately NOT
+   * included in rankings, distinguished counts, or membership trends.
    *
    * @see Issue #489
    */
-  prospectiveClubs?: ProspectiveClub[]
+  prospectiveClubs: ProspectiveClub[]
 }
 
 // ========== District Performance Targets Types (from districts.ts) ==========

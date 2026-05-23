@@ -177,8 +177,10 @@ export function mergeFacIntoSnapshot(
   // #489 — persist the FAC-only clubs into the snapshot as a compact
   // ProspectiveClub[] so downstream consumers (analytics-core, the
   // frontend prospective panel) can render them without a second
-  // FAC fetch. We deliberately omit fields the panel doesn't render
-  // (coordinates, phone, social links) to keep the payload small.
+  // FAC fetch. Always write the field (even when empty) — if we
+  // skipped on empty, a prior merge's stale prospectiveClubs would
+  // survive the `...snapshot.data` spread and ship to the frontend
+  // forever. The field must always reflect the CURRENT FAC delta.
   const prospectiveClubs = facOnlyClubs.map(projectProspectiveClub)
 
   return {
@@ -193,12 +195,7 @@ export function mergeFacIntoSnapshot(
         ...(enrichedParsedClubs !== undefined && {
           clubs: enrichedParsedClubs,
         }),
-        // Only set prospectiveClubs when there's something to surface;
-        // an empty array would noisily appear in every district's
-        // snapshot and obscure the "0 prospectives today" case.
-        ...(prospectiveClubs.length > 0 && {
-          prospectiveClubs,
-        }),
+        prospectiveClubs,
       },
     },
     matched,
@@ -213,9 +210,14 @@ export function mergeFacIntoSnapshot(
  * ProspectiveClub shape served to the frontend (#489).
  */
 function projectProspectiveClub(enriched: ClubEnrichment): ProspectiveClub {
+  // TI's FAC occasionally returns a club with no Identification.Name
+  // (rare; mostly fresh ATOs that haven't picked a final name yet).
+  // Fall back to a synthetic "Club <id>" label at the projection layer
+  // so the schema's clubName invariant stays meaningful and the UI
+  // doesn't need a parallel fallback.
   const club: ProspectiveClub = {
     clubId: enriched.clubId,
-    clubName: enriched.clubName ?? '',
+    clubName: enriched.clubName ?? `Club ${enriched.clubId}`,
   }
   if (enriched.charterDate) club.charterDate = enriched.charterDate
   if (enriched.address?.city) club.city = enriched.address.city

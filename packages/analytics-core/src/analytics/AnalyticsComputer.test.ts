@@ -517,7 +517,7 @@ describe('AnalyticsComputer', () => {
       const result = await computer.computeDistrictAnalytics('D101', [snapshot])
 
       expect(result.districtAnalytics.prospectiveClubs).toHaveLength(1)
-      expect(result.districtAnalytics.prospectiveClubs?.[0]?.clubId).toBe(
+      expect(result.districtAnalytics.prospectiveClubs[0]?.clubId).toBe(
         '00088888'
       )
     })

@@ -58,7 +58,7 @@ export const ProspectiveClubsPanel: React.FC<ProspectiveClubsPanelProps> = ({
               data-testid="prospective-club-row"
             >
               <span className="flex-1 min-w-0 truncate font-semibold text-gray-800 dark:text-gray-100">
-                {club.clubName || `Club ${club.clubId}`}
+                {club.clubName}
               </span>
               {location && (
                 <span className="hidden sm:inline text-xs text-gray-500 dark:text-gray-400 truncate max-w-[12rem]">
