@@ -877,10 +877,13 @@
   }
 
   /* #618 — match the reference Thriving pill: green text on the white pill,
-     paired with the green dot (colour is never the only signal). */
+     paired with the green dot (colour is never the only signal). The pill
+     background is a fixed white in BOTH themes, so the text uses the literal
+     reference green (#0d6b2f) rather than --green-600 — the dark-mode token
+     lifts to #22c55e, which drops below 4.5:1 on white. */
   .club-hero__pill--thriving,
   .club-hero__pill--healthy {
-    color: var(--green-600);
+    color: #0d6b2f;
   }
 
   .club-hero__pill--thriving .club-hero__pill-dot {
