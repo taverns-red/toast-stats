@@ -161,18 +161,20 @@ describe('Redesign token system (#353)', () => {
       expect(allWeights).toContain('500')
     })
 
-    it('declares the --mono token but defers JetBrains Mono font preload to #354', () => {
-      // The --mono token in redesign.css references JetBrains Mono so future
-      // consumers can use it, but the actual font preload is held until
-      // AppShell (#354) ships a real consumer — saves ~25KB + one stylesheet
-      // RTT on every cold load until then. The CSS fallback chain
-      // ('JetBrains Mono', ui-monospace, monospace) means callers degrade
-      // gracefully to the system mono font in the meantime.
+    it('declares the --mono token and preloads JetBrains Mono (#339 Phase 1 brand-font set)', () => {
+      // The --mono token in redesign.css references JetBrains Mono. The
+      // preload was originally deferred to #354 (AppShell) to save ~25KB +
+      // one stylesheet RTT until a consumer shipped, but #339 Phase 1
+      // brought the deferral forward: Brand v1.0 requires Space Grotesk +
+      // Inter + JetBrains Mono to be preloaded together as the brand-font
+      // set. See `frontend/src/styles/tokens/rt-brand-v1.css` and the
+      // brand block in CLAUDE.md. The CSS fallback chain still degrades
+      // gracefully if the network blocks the font.
       const css = readSrc('styles/tokens/redesign.css')
       expect(css).toMatch(/--mono:\s*['"]?JetBrains Mono['"]?/)
 
       const html = readRoot('index.html')
-      expect(html).not.toMatch(/family=JetBrains\+Mono/)
+      expect(html).toMatch(/family=JetBrains\+Mono/)
     })
   })
 })
