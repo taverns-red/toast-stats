@@ -318,14 +318,15 @@ const ClubDetailPage: React.FC = () => {
   const innerW = CHART.W - CHART.PL - CHART.PR
   const innerH = CHART.H - CHART.PT - CHART.PB
   const membershipValues = filteredMembershipTrend.map(d => d.count)
-  // ±4 padding per reference. For an empty/flat series this still yields a
-  // non-zero window (8 units), so the line sits centred and the y-axis can
-  // never invert — this replaces the old `|| 1` range fallback (tripwire).
+  // ±4 padding per reference. This is what kills the y-axis inversion
+  // tripwire: even a flat/single-point series spans ≥4 units (zero when v=0
+  // → window [0,4]), so yRange is provably never 0 and no `|| 1` fallback is
+  // needed. Empty series falls back to [0,8] but never reaches the SVG.
   const yMin = membershipValues.length
     ? Math.max(0, Math.min(...membershipValues) - 4)
     : 0
   const yMax = membershipValues.length ? Math.max(...membershipValues) + 4 : 8
-  const yRange = yMax - yMin || 1
+  const yRange = yMax - yMin
   const xScale = (day: number) => CHART.PL + (day / 365) * innerW
   const yScale = (count: number) =>
     CHART.PT + (1 - (count - yMin) / yRange) * innerH
@@ -338,6 +339,10 @@ const ClubDetailPage: React.FC = () => {
   ]
 
   const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
+
+  // En-dashed year for display ("2025–2026"), per reference. Used in both the
+  // panel meta and the chart's aria-label so they stay in sync.
+  const programYearLabelDisplay = programYear.label.replace(/-/g, '–')
 
   // Set page title
   React.useEffect(() => {
@@ -647,7 +652,7 @@ const ClubDetailPage: React.FC = () => {
                   Membership Trend
                 </h2>
                 <span className="club-panel__meta">
-                  Program Year {programYear.label.replace('-', '–')} ·{' '}
+                  Program Year {programYearLabelDisplay} ·{' '}
                   {filteredMembershipTrend.length} data point
                   {filteredMembershipTrend.length === 1 ? '' : 's'}
                 </span>
@@ -656,19 +661,19 @@ const ClubDetailPage: React.FC = () => {
                 {filteredMembershipTrend.length > 0 ? (
                   <>
                     <div className="chart-stats">
-                      <div className="stat-row">
+                      <div className="chart-stats__row">
                         <span className="chart-stats__label">Base</span>
                         <span className="chart-stats__val">
                           {baseMembership}
                         </span>
                       </div>
-                      <div className="stat-row">
+                      <div className="chart-stats__row">
                         <span className="chart-stats__label">Current</span>
                         <span className="chart-stats__val">
                           {latestMembership}
                         </span>
                       </div>
-                      <div className="stat-row">
+                      <div className="chart-stats__row">
                         <span className="chart-stats__label">Change</span>
                         <span
                           className={
@@ -693,7 +698,7 @@ const ClubDetailPage: React.FC = () => {
                       viewBox={`0 0 ${CHART.W} ${CHART.H}`}
                       preserveAspectRatio="none"
                       role="img"
-                      aria-label={`Membership trend for program year ${programYear.label}`}
+                      aria-label={`Membership trend for program year ${programYearLabelDisplay}`}
                     >
                       {/* Y grid + labels (4 ticks) */}
                       {[0, 1, 2, 3].map(i => {

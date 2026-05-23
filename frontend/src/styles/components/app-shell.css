@@ -1154,9 +1154,16 @@
     font-size: 13px;
   }
 
+  /* Each Base/Current/Change pair is one flex item (label + value grouped),
+     so the 18px gap falls between groups, not between a label and its value. */
+  .chart-stats__row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
   .chart-stats__label {
     color: var(--ink-3);
-    margin-right: 4px;
   }
 
   .chart-stats__val {
