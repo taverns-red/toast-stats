@@ -20,8 +20,10 @@
  * Exits non-zero with the offending files listed on any violation.
  */
 import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 const PROJECTS = ['unit', 'integration']
+const FRONTEND_DIR = fileURLToPath(new URL('..', import.meta.url))
 
 function listFiles(project) {
   const args = ['vitest', 'list', '--json']
@@ -29,7 +31,7 @@ function listFiles(project) {
   let out
   try {
     out = execFileSync('npx', args, {
-      cwd: new URL('..', import.meta.url).pathname,
+      cwd: FRONTEND_DIR,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
       stdio: ['ignore', 'pipe', 'ignore'],

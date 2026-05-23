@@ -6,8 +6,9 @@
 # (Lesson 53; tasks/473-flaky-prepush-diagnosis-2026-05-11.md).
 #
 # #482 split vitest into first-class `unit` and `integration` projects. The
-# `unit` project runs in <20s with zero variance across 10 runs — fast and
-# reliable enough to gate every push. The heavy `integration` project still
+# `unit` project runs well under the 30s pre-push budget (~18-20s on a 10-core
+# Mac) with zero variance across 10 runs — fast and reliable enough to gate
+# every push. The heavy `integration` project still
 # runs in CI (which runs both projects with --coverage), so nothing is lost
 # as the gate of record; this is purely a fast inner-loop signal.
 npm run test:unit --workspace=frontend

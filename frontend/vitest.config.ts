@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 import { integrationGlobs, baseExclude } from './vitest.shared.mjs'
 
 // Test config is split into two first-class projects (#482):
-//   - `unit`        — fast, contention-free tests. Run by the pre-push hook.
+//   - `unit`        — fast (~18-20s, well under the 30s pre-push budget),
+//                     contention-free tests. Run by the pre-push hook.
 //   - `integration` — page mounts, journeys, axe scans (the heavy tests that
 //                     made the full-suite pre-push gate chronically flaky on
 //                     multi-core dev machines).
