@@ -53,11 +53,16 @@ describe('Red Taverns Brand v1.0 tokens (#339)', () => {
     )
   })
 
-  it('index.html preloads the three brand v1.0 fonts', () => {
+  it('index.html preloads two of the three brand v1.0 display/body fonts (JetBrains Mono deferred — see Lesson 81)', () => {
     const html = readFileSync(indexHtmlPath, 'utf-8')
     expect(html).toMatch(/family=Space\+Grotesk/)
     expect(html).toMatch(/family=Inter/)
-    expect(html).toMatch(/family=JetBrains\+Mono/)
+    // JetBrains Mono preload is intentionally OMITTED in Phase 1. Live
+    // `var(--mono)` consumers in app-shell.css would layout-shift on the
+    // font swap (Lighthouse CLS 0.199 vs threshold 0.1, PR #595 first
+    // push). See the redesign-tokens font-loading test for the matching
+    // deferral assertion, and Lesson 81 for the spec-vs-CLS reasoning.
+    expect(html).not.toMatch(/family=JetBrains\+Mono/)
   })
 
   it('index.html preconnects to Google Fonts hosts', () => {
