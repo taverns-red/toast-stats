@@ -1,7 +1,7 @@
 /**
  * Tests for ClubDetailPage (#208) — full subpage with routing.
  */
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { screen, render, cleanup, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -402,7 +402,10 @@ describe('Close-to-Distinguished call-out — ClubDetailPage', () => {
     const callout = screen.getByRole('region', {
       name: /close to distinguished/i,
     })
-    const baseLabel = screen.getByText('Base')
+    // #619 added a chart-stats "Base" too; scope to the stats grid.
+    const baseLabel = screen
+      .getAllByText('Base')
+      .find(el => el.closest('.club-stats-grid')) as HTMLElement
     // DOCUMENT_POSITION_FOLLOWING (4) means callout precedes baseLabel
     expect(callout.compareDocumentPosition(baseLabel)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
@@ -479,6 +482,16 @@ describe('Close-to-Distinguished call-out — ClubDetailPage', () => {
 
 // ── Sprint 2 (#619) — Membership Trend chart + DCP Status panel re-skin ──────
 describe('Membership Trend + DCP Status re-skin (#619)', () => {
+  // Earlier describes use persistent mockReturnValue; reset to the base club
+  // so these assertions see the 4-point PY 2025–2026 trend.
+  beforeEach(() => {
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: { districtId: '61', allClubs: [baseMockClub] },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useDistrictAnalytics>)
+  })
+
   afterEach(() => {
     cleanup()
   })
