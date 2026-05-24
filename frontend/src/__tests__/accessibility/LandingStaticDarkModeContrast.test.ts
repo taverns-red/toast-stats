@@ -211,4 +211,43 @@ describe('Landing + static pages dark-mode contrast (#611)', () => {
       `live marker ${fg} on ${surface} = ${ratio.toFixed(2)}:1`
     ).toBeGreaterThanOrEqual(4.5)
   })
+
+  // Methodology callouts + code blocks (AC item) sit on their OWN tinted
+  // surfaces, not the page surface — so anchor each against the surface it
+  // actually renders on. These already use remapping semantic tokens; the
+  // anchors harden against a future regression.
+  const ON_OWN_SURFACE: ReadonlyArray<{
+    name: string
+    selector: string
+    bgVar: string
+  }> = [
+    {
+      name: 'methodology code block',
+      selector: '.methodology-section code',
+      bgVar: 'var(--surface-3)',
+    },
+    {
+      name: 'districts methodology callout body',
+      selector: '.districts-methodology-callout',
+      bgVar: 'var(--surface-2)',
+    },
+    {
+      name: 'districts methodology callout link',
+      selector: '.districts-methodology-callout__link',
+      bgVar: 'var(--surface-2)',
+    },
+  ]
+
+  it.each(ON_OWN_SURFACE)(
+    '$name clears AA on its surface',
+    ({ selector, bgVar }) => {
+      const bg = resolveVar(bgVar)
+      const fg = effectiveDark(appShellCss, selector, 'color')
+      const ratio = calculateContrastRatio(fg, bg)
+      expect(
+        ratio,
+        `${selector} ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
+      ).toBeGreaterThanOrEqual(4.5)
+    }
+  )
 })
