@@ -58,4 +58,9 @@ function main(): void {
   console.error(`Wrote ${INDEX_PATH}`)
 }
 
-main()
+export { LESSONS_DIR, INDEX_PATH }
+
+// Only run when invoked as a script, not when imported by a test.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main()
+}

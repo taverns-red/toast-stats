@@ -130,3 +130,52 @@ describe('buildIndex', () => {
     expect(buildIndex(files)).toBe(buildIndex(files))
   })
 })
+
+// Lessons 056–082 carry the auto-memory frontmatter schema
+// (name/description/type). Sprint 1 merges tag fields into them; the
+// generator must read both schemas and prefer the human `name` as title.
+const FM_MEMORY = `---
+name: Cache-primer hook calls rarely earn their keep
+description: Keeping a hook call "for cache warming" rarely pays back.
+type: feedback
+id: '056'
+category: lesson
+tags: [react, hooks, performance, frontend]
+auto_load: true
+issues: [523]
+---
+
+# Lesson 56 — Cache-primer hook calls rarely earn their keep
+`
+
+describe('memory-style frontmatter coexistence', () => {
+  it('captures name alongside tag fields', () => {
+    const m = parseFrontmatter(FM_MEMORY)!
+    expect(m.name).toBe('Cache-primer hook calls rarely earn their keep')
+    expect(m.tags).toEqual(['react', 'hooks', 'performance', 'frontend'])
+    expect(m.category).toBe('lesson')
+    expect(m.issues).toEqual([523])
+  })
+
+  it('buildIndex prefers the frontmatter name over the heading', () => {
+    const out = buildIndex([{ prefix: '056', content: FM_MEMORY }])
+    expect(out).toContain(
+      '- **056** [react, hooks, performance, frontend] — Cache-primer hook calls rarely earn their keep (#523)'
+    )
+  })
+})
+
+describe('extractTitle — legacy 🗓️ heading format', () => {
+  it('strips the date/Lesson prefix and a trailing issue ref', () => {
+    const title = extractTitle(
+      '# 🗓️ 2026-05-10 — Lesson 52: "Close to Distinguished" had two definitions (#433)\n'
+    )
+    expect(title).toBe('"Close to Distinguished" had two definitions')
+  })
+
+  it('still handles the clean "Lesson NN —" format', () => {
+    expect(
+      extractTitle('# Lesson 055 — `isMilestone` fires on `years`\n')
+    ).toBe('`isMilestone` fires on `years`')
+  })
+})

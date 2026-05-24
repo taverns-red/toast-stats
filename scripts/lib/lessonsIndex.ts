@@ -28,6 +28,8 @@ export type LessonCategory =
 
 export interface LessonMeta {
   id: string
+  /** Human title from the auto-memory schema (lessons 056–082); else null. */
+  name: string | null
   category: LessonCategory
   tags: string[]
   autoLoad: boolean
@@ -78,6 +80,7 @@ export function parseFrontmatter(content: string): LessonMeta | null {
 
   return {
     id: unquote(fields.id ?? ''),
+    name: fields.name !== undefined ? unquote(fields.name) : null,
     category: unquote(fields.category ?? 'lesson') as LessonCategory,
     tags: fields.tags !== undefined ? parseList(fields.tags) : [],
     autoLoad: unquote(fields.auto_load ?? 'true') !== 'false',
@@ -94,13 +97,24 @@ export function parseFrontmatter(content: string): LessonMeta | null {
 }
 
 /**
- * Derive a short title from the first markdown heading, dropping the
- * "Lesson NNN — " prefix when present.
+ * Derive a short title from the first markdown heading. Handles both the
+ * clean "# Lesson NN — Title" form and the legacy "# 🗓️ DATE — Lesson NN:
+ * Title (#issue)" form, stripping the lead-in and any trailing issue ref.
  */
 export function extractTitle(content: string): string {
   const heading = content.match(/^#\s+(.*)$/m)
   if (!heading) return ''
-  return heading[1].replace(/^Lesson\s+[\w-]+\s*[—–-]\s*/, '').trim()
+  return heading[1]
+    .replace(/^.*?Lesson\s+[\w.]+\s*[—–:-]\s*/, '')
+    .replace(/\s*\(#\d+(?:,\s*#\d+)*\)\s*$/, '')
+    .trim()
+}
+
+/** Title for the index: prefer the frontmatter `name`, else the heading. */
+export function resolveTitle(meta: LessonMeta, content: string): string {
+  return meta.name && meta.name.trim()
+    ? meta.name.trim()
+    : extractTitle(content)
 }
 
 /** Format a single INDEX.md bullet for one lesson. */
@@ -127,7 +141,11 @@ export function buildIndex(files: LessonFile[]): string {
     .map(file => {
       const meta = parseFrontmatter(file.content)
       if (!meta) return null
-      return { prefix: file.prefix, meta, title: extractTitle(file.content) }
+      return {
+        prefix: file.prefix,
+        meta,
+        title: resolveTitle(meta, file.content),
+      }
     })
     .filter((row): row is NonNullable<typeof row> => row !== null)
     .sort((a, b) =>
