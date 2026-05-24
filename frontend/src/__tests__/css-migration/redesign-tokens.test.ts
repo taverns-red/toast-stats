@@ -119,7 +119,9 @@ describe('Redesign token system (#353)', () => {
       expect(block).toMatch(/--ink:\s*#eef2f7/i)
       expect(block).toMatch(/--ink-2:\s*#c8d1dd/i)
       expect(block).toMatch(/--ink-3:\s*#8a96a6/i)
-      expect(block).toMatch(/--ink-4:\s*#5d6878/i)
+      // #610: lightened from #5d6878 (3.13:1 on --surface, below AA) to clear
+      // AA for the muted CSP pip / chart axis labels it carries.
+      expect(block).toMatch(/--ink-4:\s*#7e8896/i)
       expect(block).toMatch(/--link:\s*#60a5d8/i)
       expect(block).toMatch(/--loyal-50:\s*#112432/i)
       expect(block).toMatch(/--loyal-100:\s*#16344a/i)
