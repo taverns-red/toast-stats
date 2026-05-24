@@ -360,7 +360,10 @@ const RegionPage: React.FC = () => {
 
       <div className="districts-rankings-table-wrap">
         <div className="overflow-x-auto">
-          <table className="districts-rankings-table">
+          <table
+            className="districts-rankings-table"
+            aria-label={`Region ${region} district rankings`}
+          >
             {/* Two-tier header (#687). The four liked single columns span
                 both rows; each metric is a base→current→Δ group with a
                 colspan group label over Base / Current / Δ sub-headers. */}
