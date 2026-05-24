@@ -84,8 +84,17 @@ export function computeGoalTimeline(
     a.date < b.date ? -1 : a.date > b.date ? 1 : 0
   )
 
-  const rows: GoalTimelineRow[] = []
-  let prevGoalsMet: number | null = null
+  // Resolve each target to a snapshot, dropping pre-history targets and
+  // collapsing targets that resolve to the SAME snapshot. The as-of date is a
+  // district-level snapshot date and often isn't an exact point in this club's
+  // trend, so without this several checkpoints (and the "current" row) can all
+  // fall back to the same prior snapshot and render as duplicate dates. Keeping
+  // the earliest checkpoint a snapshot satisfies also avoids a spurious "*"
+  // fallback marker on the current row when the club's latest data predates the
+  // as-of date. actualDates are non-decreasing across chronological targets, so
+  // first-occurrence de-dup yields a clean monotonic timeline.
+  const seenActual = new Set<string>()
+  const resolved: Omit<GoalTimelineRow, 'gain' | 'totalGoals'>[] = []
 
   for (const target of targets) {
     const exact = goalsMetAtDate(sorted, target)
@@ -103,22 +112,27 @@ export function computeGoalTimeline(
       }
       if (!prior) continue // target precedes the earliest snapshot — drop it
       actualDate = prior.date
-      const resolved = goalsMetAtDate(sorted, prior.date)
-      goalsMet = resolved ? resolved.goalsMet : 0
+      const at = goalsMetAtDate(sorted, prior.date)
+      goalsMet = at ? at.goalsMet : 0
     }
 
-    rows.push({
+    if (seenActual.has(actualDate)) continue
+    seenActual.add(actualDate)
+    resolved.push({
       targetDate: target,
       actualDate,
       goalsMet,
-      totalGoals: TOTAL_DCP_GOALS,
-      gain: prevGoalsMet === null ? null : goalsMet - prevGoalsMet,
       isFallback: actualDate !== target,
     })
-    prevGoalsMet = goalsMet
   }
 
-  return rows
+  // gain = delta vs the previous emitted row; null for the first.
+  let prevGoalsMet: number | null = null
+  return resolved.map(r => {
+    const gain = prevGoalsMet === null ? null : r.goalsMet - prevGoalsMet
+    prevGoalsMet = r.goalsMet
+    return { ...r, totalGoals: TOTAL_DCP_GOALS, gain }
+  })
 }
 
 /** Memoized hook wrapper over {@link computeGoalTimeline}. */

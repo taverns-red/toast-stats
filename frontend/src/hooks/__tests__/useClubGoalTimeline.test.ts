@@ -94,4 +94,23 @@ describe('computeGoalTimeline', () => {
     const marchRows = rows.filter(r => r.actualDate === '2026-03-01')
     expect(marchRows).toHaveLength(1)
   })
+
+  it('collapses checkpoints that resolve to the same snapshot date', () => {
+    // Only Sep + Nov snapshots exist. Jan/Mar checkpoints and the as-of date
+    // (a district date with no exact club point) all fall back to Nov 1 —
+    // without de-dup that would render four identical "Nov 1" rows.
+    const gappy: DcpGoalsTrendPoint[] = [
+      { date: '2025-09-01', goalsAchieved: 3 },
+      { date: '2025-11-01', goalsAchieved: 6 },
+    ]
+    const rows = computeGoalTimeline(gappy, PY, '2026-05-10')
+    // Distinct actualDates only.
+    const dates = rows.map(r => r.actualDate)
+    expect(new Set(dates).size).toBe(dates.length)
+    expect(dates).toEqual(['2025-09-01', '2025-11-01'])
+    // The kept Nov row is the earliest checkpoint it satisfies (Nov 1, exact),
+    // so it carries no spurious fallback marker.
+    expect(rows[1]?.isFallback).toBe(false)
+    expect(rows.map(r => r.gain)).toEqual([null, 3])
+  })
 })

@@ -42,7 +42,8 @@ export const GoalAchievementTimeline: React.FC<
       <div className="dcp-subhead">Goal Achievement Timeline</div>
       <div className="goal-timeline" role="list">
         {rows.map(row => {
-          const pct = (row.goalsMet / row.totalGoals) * 100
+          const pct =
+            row.totalGoals > 0 ? (row.goalsMet / row.totalGoals) * 100 : 0
           const dateLabel = formatDisplayDate(row.actualDate)
           // Fallback rows show which snapshot stood in for the checkpoint.
           const fallbackTitle = row.isFallback
