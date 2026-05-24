@@ -70,10 +70,12 @@
   --ink-3: #8a96a6;
   /* #610: was #5d6878 — 3.13:1 on --surface, below WCAG AA for the small
      informational text it carries (the CSP "—" / muted stat values and the
-     membership-chart axis labels). Lightened to clear AA (~4.9:1 on --surface)
-     while staying perceptibly dimmer than --ink-3. Dark-only, fg/stroke-only
-     consumers, so monotonic-safe — same shape as the #609 muted-gray fix. */
-  --ink-4: #7e8896;
+     membership-chart axis labels). Lightened to clear AA on every dark surface
+     it can land on — 5.18:1 on --surface, 4.89:1 on --surface-2, 4.67:1 on
+     --surface-3 — while staying perceptibly dimmer than --ink-3. Dark-only,
+     fg/stroke-only consumers, so monotonic-safe — same shape as the #609
+     muted-gray fix. */
+  --ink-4: #828c9c;
   --link: #60a5d8;
   --loyal-50: #112432;
   --loyal-100: #16344a;

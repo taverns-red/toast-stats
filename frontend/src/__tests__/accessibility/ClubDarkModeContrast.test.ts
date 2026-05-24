@@ -88,8 +88,11 @@ function resolveVar(value: string, depth = 0): string {
   return resolveVar(next, depth + 1)
 }
 
-/** Value of `prop` from the first `[data-theme='dark'] <selector> { … }` rule,
- *  or null if none. `selector` is matched literally (escaped). */
+/** Value of `prop` from the `[data-theme='dark'] <selector> { … }` rule that
+ *  WINS the cascade — i.e. the LAST matching rule that sets `prop`, not the
+ *  first. (`.bg-blue-50` is declared twice in dark-mode.css with different
+ *  alphas; the browser renders the last, so the audit must too.) Null if none.
+ *  `selector` is matched literally (escaped). */
 function darkRuleValue(
   css: string,
   selector: string,
@@ -99,16 +102,19 @@ function darkRuleValue(
     "\\[data-theme='dark'\\]\\s*" +
       selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
       // allow the selector to sit in a comma-group: consume to `{`.
-      '(?![\\w-])[^{}]*\\{'
+      '(?![\\w-])[^{}]*\\{',
+    'g'
   )
-  const m = re.exec(css)
-  if (!m) return null
-  const open = css.indexOf('{', m.index)
-  const close = css.indexOf('}', open)
-  const pm = css
-    .slice(open + 1, close)
-    .match(new RegExp('(?:^|[;{\\s])' + prop + '\\s*:\\s*([^;!]+)'))
-  return pm ? pm[1].trim() : null
+  let winner: string | null = null
+  for (const m of css.matchAll(re)) {
+    const open = css.indexOf('{', m.index)
+    const close = css.indexOf('}', open)
+    const pm = css
+      .slice(open + 1, close)
+      .match(new RegExp('(?:^|[;{\\s])' + prop + '\\s*:\\s*([^;!]+)'))
+    if (pm) winner = pm[1].trim()
+  }
+  return winner
 }
 
 /** Composite an `rgba(r,g,b,a)` over an opaque hex base; pass hex through. */
@@ -185,6 +191,20 @@ describe('ClubDetailPage dark-mode contrast (#610)', () => {
     expect(
       ratio,
       `${token} = ${fg} on ${surface} = ${ratio.toFixed(2)}:1`
+    ).toBeGreaterThanOrEqual(4.5)
+  })
+
+  // --ink-4 is a global token; lightening it for the club page must also clear
+  // AA on the LIGHTEST dark surface it lands on app-wide (--surface-3 #1a2330),
+  // or other consumers (e.g. the nav "soon" badge) silently stay sub-AA. This
+  // locks the bound the bump was sized against (review finding, #610).
+  it('muted --ink-4 clears AA on the lightest dark surface', () => {
+    const fg = resolveVar('var(--ink-4)')
+    const bg = resolveVar('var(--surface-3)')
+    const ratio = calculateContrastRatio(fg, bg)
+    expect(
+      ratio,
+      `--ink-4 ${fg} on --surface-3 ${bg} = ${ratio.toFixed(2)}:1`
     ).toBeGreaterThanOrEqual(4.5)
   })
 })
