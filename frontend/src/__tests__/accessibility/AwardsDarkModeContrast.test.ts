@@ -107,6 +107,7 @@ const TEXT_ELEMENTS: ReadonlyArray<{ sel: string; large: boolean }> = [
   { sel: '.awards-race__title', large: false },
   { sel: '.awards-race__meta', large: false },
   { sel: '.awards-race-card__title', large: false },
+  { sel: '.awards-race-card__description', large: false },
   { sel: '.awards-race-card__threshold', large: false },
   { sel: '.awards-race-card__leader-link', large: false },
   { sel: '.awards-race-card__leader-value', large: true },
@@ -123,6 +124,8 @@ const TEXT_ELEMENTS: ReadonlyArray<{ sel: string; large: boolean }> = [
   { sel: '.awards-page-card__value', large: false },
   { sel: '.awards-page-card__empty', large: false },
   { sel: '.awards-page__empty', large: false },
+  // The AwardsPage header's "Methodology" link reuses this shared class.
+  { sel: '.districts-methodology-callout__link', large: false },
 ]
 
 describe('Awards section dark-mode contrast (#608)', () => {
