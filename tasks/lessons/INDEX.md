@@ -36,8 +36,8 @@
 - **082** [ci, tests, tdd] — A lint rule can be declared-at-error yet inert across a minor version — a sentinel must lint a known-bad snippet, not assert config severity (#375, #345, #348)
 - **083** [bash, automation] — A bash EXIT trap's return value becomes the script's exit code (#603)
 - **084** [bash, automation, prompts] — A "documentation example" of a parsed format is also valid input (#605)
-- **085** [screen, bash, automation, flaky] — `screen -dmS` returns 0 before the socket is visible to `screen -ls` (#623) _(ref-only)_
 - **085** [frontend, router, accessibility] — A breadcrumb removed to fix a collision on ONE page should not stay removed on pages where the collision can't occur (#577, #568, #615)
+- **085** [screen, bash, automation, flaky] — `screen -dmS` returns 0 before the socket is visible to `screen -ls` (#623) _(ref-only)_
 - **086** [automation, sprint-runner] — A sprint-runner relaunch can land on already-merged-but-unverified work; verify the ship state before re-running /sprint (#577, #615, #606) _(ref-only)_
 - **086** [automation, sprint-runner] — Close-then-tick ordering invites a duplicate-launch race (#626) _(ref-only)_
 - **087** [automation, sprint-runner, monorepo] — Spawned automation sessions need their own git worktree (#625)

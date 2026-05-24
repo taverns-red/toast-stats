@@ -133,6 +133,16 @@ export function buildIndexLine(
 }
 
 /**
+ * Locale-independent string compare (code-unit order). Avoids
+ * `localeCompare`, whose result varies by runtime locale and would let CI
+ * sort same-prefix lessons differently than a contributor's machine,
+ * breaking the committed-vs-regenerated guard.
+ */
+function compare(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
+/**
  * Assemble the full INDEX.md body. Files without frontmatter are skipped.
  * Output is deterministic: bullets are sorted by (prefix, title).
  */
@@ -150,8 +160,8 @@ export function buildIndex(files: LessonFile[]): string {
     .filter((row): row is NonNullable<typeof row> => row !== null)
     .sort((a, b) =>
       a.prefix === b.prefix
-        ? a.title.localeCompare(b.title)
-        : a.prefix.localeCompare(b.prefix)
+        ? compare(a.title, b.title)
+        : compare(a.prefix, b.prefix)
     )
 
   const header = [
