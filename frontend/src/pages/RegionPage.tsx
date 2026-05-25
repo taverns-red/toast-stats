@@ -206,8 +206,9 @@ const TierTd: React.FC<{ tier: DistinguishedDistrictTier | null }> = ({
 const DistinguishedCells: React.FC<{
   districtId: string
   awards: import('../services/cdn').CompetitiveAwardStandings | null
-}> = ({ districtId, awards }) => {
-  const c = getDistinguishedCountdown(districtId, awards)
+  ranking: import('../utils/distinguishedCountdown').RemainingInputs
+}> = ({ districtId, awards, ranking }) => {
+  const c = getDistinguishedCountdown(districtId, awards, ranking)
   const tier = awards?.distinguishedDistrict?.[districtId]?.currentTier ?? null
   return (
     <>
@@ -598,6 +599,13 @@ const RegionPage: React.FC = () => {
                     <DistinguishedCells
                       districtId={d.districtId}
                       awards={awards ?? null}
+                      ranking={{
+                        paidClubBase: d.paidClubBase ?? 0,
+                        paymentBase: d.paymentBase ?? 0,
+                        paidClubs: d.paidClubs ?? 0,
+                        totalPayments: d.totalPayments ?? 0,
+                        distinguishedClubs: d.distinguishedClubs ?? 0,
+                      }}
                     />
                   </tr>
                 )

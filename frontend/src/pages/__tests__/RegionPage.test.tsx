@@ -311,13 +311,23 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     ).toHaveTextContent(/^14$/)
   })
 
-  it('derives the absolute count from the gate gap on a pre-pipeline snapshot — D47 payments = 277 (#688)', async () => {
+  it('derives the absolute count from the rankings row on a pre-pipeline snapshot — D47 payments = 277 (#688)', async () => {
     // No canonical *Remaining fields (snapshot predates the pipeline run),
-    // but nextTierGap carries the gate's own clamped gap % + base. The
-    // frontend derives ceil(gap/100 × base), identical to the analytics
-    // field. Anchor from live prod D47: 4.1% × 6738 → 277.
+    // so the count is derived from the rankings row's base + current
+    // counts with the analytics formula — matching the canonical value
+    // EXACTLY. Real prod D47: base 148/6738, current 138/6529, dist 53.
     mockedFetchCdnRankings.mockResolvedValueOnce({
-      rankings: [mkRanking({ districtId: '47', region: '2' })],
+      rankings: [
+        mkRanking({
+          districtId: '47',
+          region: '2',
+          paidClubBase: 148,
+          paidClubs: 138,
+          paymentBase: 6738,
+          totalPayments: 6529,
+          distinguishedClubs: 53,
+        }),
+      ],
       date: '2026-05-12',
     })
     mockedFetchCdnAwards.mockResolvedValue(
@@ -334,15 +344,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
               communicationPlanSubmitted: false,
               regionAdvisorVisitMet: false,
             },
-            nextTierGap: {
-              tier: 'Distinguished',
-              netClubGrowthGap: 10,
-              paymentGrowthGap: 4.1,
-              distinguishedPercentGap: 9.189189189189186,
-              clubGrowthGap: 7.76,
-              paidClubBase: 148,
-              paymentBase: 6738,
-            },
+            nextTierGap: null,
           },
         },
       })
@@ -363,7 +365,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     ).toHaveTextContent(/^14$/)
   })
 
-  it('renders ✓ when a remaining metric is met (0), em-dash when data missing (#688)', async () => {
+  it('renders ✓ when a remaining metric is met (0) and a plain count when not (#688)', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       date: '2026-05-12',
@@ -377,6 +379,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
             allPrerequisitesMet: false,
             paidClubsRemaining: 0,
             paymentsRemaining: 31,
+            distinguishedClubsRemaining: 5,
             prerequisites: {
               dspSubmitted: false,
               trainingMet: false,
@@ -384,15 +387,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
               communicationPlanSubmitted: false,
               regionAdvisorVisitMet: false,
             },
-            // distinguishedClubsRemaining absent AND no base in this gap
-            // ⇒ cannot derive ⇒ em-dash.
-            nextTierGap: {
-              tier: 'Distinguished',
-              netClubGrowthGap: 0,
-              paymentGrowthGap: 0,
-              distinguishedPercentGap: 8,
-              clubGrowthGap: 0,
-            },
+            nextTierGap: null,
           },
         },
       })
@@ -408,6 +403,28 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     expect(
       within(row).getByTestId('countdown-paymentsRemaining')
     ).toHaveTextContent(/^31$/)
+    expect(
+      within(row).getByTestId('countdown-distinguishedClubsRemaining')
+    ).toHaveTextContent(/^5$/)
+  })
+
+  it('renders an em-dash for the remaining columns when the awards JSON is null (#688)', async () => {
+    mockedFetchCdnRankings.mockResolvedValueOnce({
+      rankings: [mkRanking({ districtId: '61', region: '2' })],
+      date: '2026-05-12',
+    })
+    mockedFetchCdnAwards.mockResolvedValue(null)
+    renderRegion('2')
+
+    const row = (await screen.findByTestId('district-number-chip-D61')).closest(
+      'tr'
+    )!
+    expect(
+      within(row).getByTestId('countdown-paidClubsRemaining')
+    ).toHaveTextContent(/—/)
+    expect(
+      within(row).getByTestId('countdown-paymentsRemaining')
+    ).toHaveTextContent(/—/)
     expect(
       within(row).getByTestId('countdown-distinguishedClubsRemaining')
     ).toHaveTextContent(/—/)

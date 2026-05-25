@@ -17,25 +17,30 @@ booleans (Education/Training, CGD) and Tier are untouched.
 - Canonical: `DistinguishedDistrictStatus.{paymentsRemaining,paidClubsRemaining,
 distinguishedClubsRemaining}` (#686), present once the pipeline regenerates.
 - Today's prod snapshot (2026-05-23) predates the pipeline run, so those fields
-  are absent — but `nextTierGap` (with `paidClubBase`/`paymentBase` + clamped
-  gap %) IS present. Frontend fallback derives the count from the gate's own
-  clamped gap output:
-  - paymentsRemaining = ceil(paymentGrowthGap/100 × paymentBase)
-  - paidClubsRemaining = ceil(clubGrowthGap/100 × paidClubBase)
-  - distinguishedClubsRemaining = ceil(distinguishedPercentGap/100 × paidClubBase)
-- **Proof of zero drift:** ceil(gap%/100 × base) = ceil(base×(1+min/100) − current)
-  = ceil(base×(1+min/100)) − current (current is an integer) = canonical field.
-  Exact, not approximate. The gap is the gate's own output ⇒ lesson 103 satisfied,
-  no formula/threshold duplication on the frontend.
-- nextTierGap is to the tier ABOVE current. For NotDistinguished it IS Distinguished
-  (verified D47). For already-Distinguished+ districts the minimum is met ⇒ ✓ (0).
+  are absent. Frontend fallback derives the count from the **rankings row's
+  base + current counts** with the SAME formula the analytics calculator uses
+  (`deriveRemainingToMinimum`, twin of `computeRemainingToMinimum`):
+  - paymentTarget = ceil(paymentBase × 1.01); paymentsRemaining = max(0, paymentTarget − totalPayments)
+  - paidClubTarget = ceil(paidClubBase × 1.01); paidClubsRemaining = max(0, paidClubTarget − paidClubs)
+  - distinguishedTarget = ceil(paidClubBase × 0.45); distinguishedClubsRemaining = max(0, distinguishedTarget − distinguishedClubs)
+- **Why counts, NOT the gap %:** the first cut derived from `nextTierGap`'s gap %
+  (`ceil(gap/100 × base)`). The /review agent caught that TI publishes the
+  paymentGrowth/clubGrowth percentages **pre-rounded to 1 dp**, so a gap-based
+  derivation drifts ±1 from the canonical field on ~12 live districts (D21 1031
+  vs 1032, D33 515 vs 516, D64 265 vs 264 …) and can flip met/not-met. The raw
+  integer counts carry no such rounding, so deriving from base+current matches
+  the canonical analytics value EXACTLY (verified against prod D47/D21/D33/D64).
+  The MINIMUM-tier thresholds (1%, 1%, 45%) are duplicated once on the frontend,
+  cross-referenced to analytics-core's `TIER_THRESHOLDS`, and pinned by an
+  equivalence test (lesson 103: one fact, kept in lockstep + tested).
+- A district already at/above Distinguished has current ≥ target ⇒ remaining 0
+  ⇒ ✓, so the derivation handles met districts without a special tier branch.
 
 ### Render rule (AC #2)
 
 - canonical field present → ✓ if 0, else the count
-- field absent, tier ≥ Distinguished → ✓ (minimum cleared)
-- field absent, NotDistinguished + nextTierGap → derived count (✓ if 0)
-- otherwise (no awards / no gap) → em-dash
+- canonical absent + rankings row present → derived count (✓ if 0)
+- otherwise (no awards entry / awards null) → em-dash
   Count renders plain (e.g. `277`), no `+` prefix — a "remaining" countdown is a
   clamped non-negative count, not a signed delta (lesson 102 family).
 

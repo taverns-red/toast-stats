@@ -1,7 +1,4 @@
-import type {
-  CompetitiveAwardStandings,
-  DistinguishedDistrictStatus,
-} from '../services/cdn'
+import type { CompetitiveAwardStandings } from '../services/cdn'
 
 /* Per-district countdown to the *minimum* Distinguished District tier.
    Folds three absolute "remaining" counts (paid clubs, payments,
@@ -16,11 +13,14 @@ import type {
    Data source (lesson 103 — derive the countdown from the same gate it
    counts down to):
    - prefer the canonical `*Remaining` fields (#686, post-pipeline);
-   - else derive from the gate's own clamped gap %: ceil(gap/100 × base).
-     This is mathematically identical to the canonical field because the
-     current counts are integers — ceil(base×(1+min/100) − current) =
-     ceil(base×(1+min/100)) − current — so the column renders correctly
-     on a pre-pipeline snapshot with zero drift from the analytics value. */
+   - else derive from the rankings row's program-year base + current
+     counts with the SAME formula the analytics calculator uses, so the
+     column renders correctly on a pre-pipeline snapshot and matches the
+     canonical analytics value EXACTLY. We derive from the raw counts —
+     not from `nextTierGap`'s gap % — because the payment/club growth
+     percentages TI publishes are pre-rounded to 1 dp, so deriving from
+     them drifts ±1 from the canonical field (and can flip met/not-met).
+     The raw integer counts have no such rounding. */
 
 export type CountdownCell =
   | { kind: 'count'; value: number }
@@ -35,59 +35,97 @@ export interface DistinguishedCountdown {
   clubGrowth: CountdownCell
 }
 
+/* The MINIMUM (Distinguished) tier thresholds. These MUST stay in lockstep
+   with the Distinguished entry of `TIER_THRESHOLDS` in
+   packages/analytics-core/src/rankings/DistinguishedDistrictCalculator.ts —
+   they are the gate this countdown counts down to. If the program rules
+   change, update both (lesson 103). The equivalence test pins the derived
+   counts to the canonical analytics values for several real districts. */
+const MIN_DISTINGUISHED = {
+  /** +1% net payment growth vs program-year base. */
+  paymentGrowthMin: 1,
+  /** +1% net paid-club growth vs program-year base. */
+  clubGrowthMin: 1,
+  /** ≥45% of paid-club BASE are Distinguished (denominator is the base,
+      not active clubs — lesson 60). */
+  distinguishedPercentMin: 45,
+} as const
+
+/** Inputs needed to derive the remaining-to-minimum counts from a
+    rankings row, when the canonical analytics fields are absent. */
+export interface RemainingInputs {
+  paidClubBase: number
+  paymentBase: number
+  paidClubs: number
+  totalPayments: number
+  distinguishedClubs: number
+}
+
+/* Frontend twin of DistinguishedDistrictCalculator.computeRemainingToMinimum
+   (#686). Same targets, same denominators, same clamp — so the derived
+   value equals the canonical `*Remaining` field for any snapshot. */
+export function deriveRemainingToMinimum(r: RemainingInputs): {
+  paidClubsRemaining: number
+  paymentsRemaining: number
+  distinguishedClubsRemaining: number
+} {
+  const paymentTarget = Math.ceil(
+    r.paymentBase * (1 + MIN_DISTINGUISHED.paymentGrowthMin / 100)
+  )
+  const paidClubTarget = Math.ceil(
+    r.paidClubBase * (1 + MIN_DISTINGUISHED.clubGrowthMin / 100)
+  )
+  const distinguishedTarget = Math.ceil(
+    r.paidClubBase * (MIN_DISTINGUISHED.distinguishedPercentMin / 100)
+  )
+  return {
+    paidClubsRemaining: Math.max(0, paidClubTarget - r.paidClubs),
+    paymentsRemaining: Math.max(0, paymentTarget - r.totalPayments),
+    distinguishedClubsRemaining: Math.max(
+      0,
+      distinguishedTarget - r.distinguishedClubs
+    ),
+  }
+}
+
 const countCell = (value: number): CountdownCell =>
   value <= 0 ? { kind: 'met' } : { kind: 'count', value }
 
 /* Resolve one numeric "remaining to minimum Distinguished" cell.
-   `canonical` is the #686 field (authoritative when present); `gap` and
-   `base` are the gate's own clamped gap % and program-year base used to
-   derive the same count on a pre-pipeline snapshot. Returns null (→ em-dash)
-   only when the count truly can't be determined. */
+   `canonical` is the #686 field (authoritative when present); `derived`
+   is the count computed from the rankings row for a pre-pipeline snapshot.
+   Returns null (→ em-dash) only when neither is available. */
 const remainingCell = (
   canonical: number | undefined,
-  currentTier: DistinguishedDistrictStatus['currentTier'],
-  gap: number | undefined,
-  base: number | undefined
+  derived: number | undefined
 ): CountdownCell | null => {
   if (canonical !== undefined) return countCell(canonical)
-  // Already at or above the Distinguished minimum: the metric is met.
-  // nextTierGap here points at a HIGHER tier, so it must not be used to
-  // derive a remaining-to-minimum count (lesson 103).
-  if (currentTier !== 'NotDistinguished') return { kind: 'met' }
-  if (gap !== undefined && base !== undefined) {
-    return countCell(Math.ceil((gap / 100) * base))
-  }
+  if (derived !== undefined) return countCell(derived)
   return null
 }
 
 export function getDistinguishedCountdown(
   districtId: string,
-  awards: CompetitiveAwardStandings | null
+  awards: CompetitiveAwardStandings | null,
+  ranking?: RemainingInputs | null
 ): DistinguishedCountdown | null {
   if (!awards) return null
   const status = awards.distinguishedDistrict?.[districtId]
   if (!status) return null
 
-  const gap = status.nextTierGap
-  const tier = status.currentTier
+  const derived = ranking ? deriveRemainingToMinimum(ranking) : undefined
 
   const paidClubsRemaining = remainingCell(
     status.paidClubsRemaining,
-    tier,
-    gap?.clubGrowthGap,
-    gap?.paidClubBase
+    derived?.paidClubsRemaining
   )
   const paymentsRemaining = remainingCell(
     status.paymentsRemaining,
-    tier,
-    gap?.paymentGrowthGap,
-    gap?.paymentBase
+    derived?.paymentsRemaining
   )
   const distinguishedClubsRemaining = remainingCell(
     status.distinguishedClubsRemaining,
-    tier,
-    gap?.distinguishedPercentGap,
-    gap?.paidClubBase
+    derived?.distinguishedClubsRemaining
   )
 
   const educationTraining: CountdownCell = {
