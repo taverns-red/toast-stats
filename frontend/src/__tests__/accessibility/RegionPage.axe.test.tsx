@@ -48,12 +48,10 @@ vi.mock('../../services/cdn', () => {
       rankings: [ranking('60', '07', 500), ranking('61', '07', 350)],
     }),
     fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(null),
-    fetchCdnManifest: vi
-      .fn()
-      .mockResolvedValue({
-        latestSnapshotDate: '2026-05-12',
-        generatedAt: 'x',
-      }),
+    fetchCdnManifest: vi.fn().mockResolvedValue({
+      latestSnapshotDate: '2026-05-12',
+      generatedAt: 'x',
+    }),
   }
 })
 
