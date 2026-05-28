@@ -96,9 +96,7 @@ is the same family as Lesson 105 (mobile-table pattern follows data purpose):
 these tables are **browse-one-row** lists, so a card collapse is correct, but
 that hasn't been applied here.
 
-### CC-5 — DistrictSubnav scroll-row is fine; it's the only navigation primitive
-
-            that's been mobile-shaped
+### CC-5 — DistrictSubnav scroll-row is the only nav primitive that's been mobile-shaped
 
 The horizontally-scrollable `DistrictSubnav` (Overview · Clubs · Divisions ·
 Trends · Analytics · Rankings) is the one shipped pattern that fits the phone:
