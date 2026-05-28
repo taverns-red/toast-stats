@@ -50,11 +50,11 @@ original Sprint 2 prose named two classes; per lesson 120 a `.foo-page` class
 may be shared chrome for a whole route family, so the contract is enumerated
 by surface, not by class, to keep the policy auditable as new pages land:
 
-| Surface                                     | Wrapper class           | Rationale                                                              |
-| ------------------------------------------- | ----------------------- | ---------------------------------------------------------------------- |
-| District landing (`DistrictsPage`)          | `.districts-page`       | 13+ column rankings table.                                             |
-| Region landing (`RegionPage`)               | `.districts-page`       | 19-column region rankings table (#848). Reuses the districts chrome.   |
-| District-detail family (7 sub-routes)       | `.district-detail-page` | Shared chrome per lesson 120: clubs/rankings/divisions/trends/changes/analytics/overview. |
+| Surface                               | Wrapper class           | Rationale                                                                                 |
+| ------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------- |
+| District landing (`DistrictsPage`)    | `.districts-page`       | 13+ column rankings table.                                                                |
+| Region landing (`RegionPage`)         | `.districts-page`       | 19-column region rankings table (#848). Reuses the districts chrome.                      |
+| District-detail family (7 sub-routes) | `.district-detail-page` | Shared chrome per lesson 120: clubs/rankings/divisions/trends/changes/analytics/overview. |
 
 The empty-state branch of `RegionPage` (no districts found in a region) stays
 on `.app-shell__page` — it is prose, not a data grid.
