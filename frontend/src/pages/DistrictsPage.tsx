@@ -17,6 +17,7 @@ import InfoTooltip from '../components/InfoTooltip'
 import DistrictTierChip from '../components/DistrictTierChip'
 import { DistrictChipAndName } from '../components/DistrictChipAndName'
 import { useMyDistrict } from '../hooks/useMyDistrict'
+import { usePersistedState } from '../hooks/usePersistedState'
 import { useLastVisit } from '../hooks/useLastVisit'
 import { useUrlSort } from '../hooks/useUrlSort'
 import { useUrlState } from '../hooks/useUrlState'
@@ -49,7 +50,6 @@ const EMPTY_LIST: string[] = []
 const parseList = (v: string): string[] =>
   v ? v.split(',').filter(Boolean) : []
 const serializeList = (a: string[]): string => a.join(',')
-const LIST_OPTS = { parse: parseList, serialize: serializeList }
 
 // Comparison pins cap (#93). Enforced on the inward parse too, not just on
 // togglePin adds, so a hand-edited / shared `?pinned=1,2,3,4,5` can't seed a
@@ -134,10 +134,9 @@ const DistrictsPage: React.FC = () => {
   // An empty list means "all regions" — the filter below treats empty as
   // no-filter, and the toolbar's "All" / solo / shift interactions collapse a
   // full selection back to empty so the param drops off a clean URL.
-  const [selectedRegions, setSelectedRegions] = useUrlState<string[]>(
-    'regions',
-    EMPTY_LIST,
-    LIST_OPTS
+  const [selectedRegions, setSelectedRegions] = usePersistedState<string[]>(
+    'districts-selected-regions',
+    []
   )
 
   // Use URL-synced program year and date (#272)
@@ -310,9 +309,12 @@ const DistrictsPage: React.FC = () => {
     return Array.from(uniqueRegions).sort()
   }, [rankings])
 
-  // No inflate-to-all effect (#978): an empty selection already means "all"
-  // for both the filter and the toolbar's active-state logic, and keeps the
-  // URL clean (no ?regions param) in the default view.
+  // EXPERIMENT: restored inflate-to-all effect
+  React.useEffect(() => {
+    if (regions.length > 0 && selectedRegions.length === 0) {
+      setSelectedRegions(regions)
+    }
+  }, [regions, selectedRegions.length])
 
   // Filter by selected regions
   const filteredRankings = React.useMemo(() => {
@@ -957,14 +959,12 @@ const DistrictsPage: React.FC = () => {
                   const next = base.includes(region)
                     ? base.filter(r => r !== region)
                     : [...base, region]
-                  setSelectedRegions(
-                    next.length === regions.length ? EMPTY_LIST : next
-                  )
+                  setSelectedRegions(next)
                   return
                 }
                 const isSoloActive =
                   selectedRegions.length === 1 && selectedRegions[0] === region
-                setSelectedRegions(isSoloActive ? EMPTY_LIST : [region])
+                setSelectedRegions(isSoloActive ? regions : [region])
               }
               const stateLabel = isAllActive
                 ? 'Showing all regions'
@@ -976,7 +976,7 @@ const DistrictsPage: React.FC = () => {
                   <span className="districts-toolbar__label">Regions:</span>
                   <button
                     type="button"
-                    onClick={() => setSelectedRegions(EMPTY_LIST)}
+                    onClick={() => setSelectedRegions(regions)}
                     className={`districts-toolbar__region-chip${isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
                     aria-pressed={isAllActive}
                   >
