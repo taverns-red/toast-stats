@@ -310,9 +310,12 @@ const DistrictsPage: React.FC = () => {
     return Array.from(uniqueRegions).sort()
   }, [rankings])
 
-  // No inflate-to-all effect (#978): an empty selection already means "all"
-  // for both the filter and the toolbar's active-state logic, and keeps the
-  // URL clean (no ?regions param) in the default view.
+  // EXPERIMENT: inflate-to-all re-added, regions STILL URL-backed
+  React.useEffect(() => {
+    if (regions.length > 0 && selectedRegions.length === 0) {
+      setSelectedRegions(regions)
+    }
+  }, [regions, selectedRegions.length, setSelectedRegions])
 
   // Filter by selected regions
   const filteredRankings = React.useMemo(() => {
