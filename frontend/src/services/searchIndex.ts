@@ -118,16 +118,7 @@ export function buildSearchIndex(
 }
 
 function dedupeTerms(raw: string[]): string[] {
-  const out: string[] = []
-  const seen = new Set<string>()
-  for (const t of raw) {
-    const lower = t.toLowerCase()
-    if (!seen.has(lower)) {
-      seen.add(lower)
-      out.push(lower)
-    }
-  }
-  return out
+  return Array.from(new Set(raw.map(t => t.toLowerCase())))
 }
 
 // Match strength of a single entity against the query: 3 exact, 2 prefix,
