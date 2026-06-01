@@ -100,9 +100,10 @@ describe('searchEntities', () => {
     // Region must outrank any club that only substring-matches "7".
     const regionIdx = ids.indexOf('region:07')
     const firstClubIdx = ids.findIndex(id => id.startsWith('club:'))
-    if (firstClubIdx !== -1) {
-      expect(regionIdx).toBeLessThan(firstClubIdx)
-    }
+    // clubId "00005678" substring-matches "7", so a club is present — the
+    // ordering assertion is not vacuous.
+    expect(firstClubIdx).not.toBe(-1)
+    expect(regionIdx).toBeLessThan(firstClubIdx)
     // Padded form also matches.
     const paddedIds = flatten(searchEntities('07', index)).map(
       e => `${e.type}:${e.id}`
@@ -133,7 +134,7 @@ describe('searchEntities', () => {
     expect(indices).toEqual([...indices].sort((a, b) => a - b))
   })
 
-  it('caps the total number of results', () => {
+  it('caps the total result count', () => {
     const many: Record<string, { districtId: string; clubName: string }> = {}
     for (let i = 0; i < 50; i++) {
       many[`club${i}`] = { districtId: '61', clubName: `Sixty One Club ${i}` }
@@ -141,5 +142,20 @@ describe('searchEntities', () => {
     const bigIndex = buildSearchIndex(RANKINGS, many)
     const total = flatten(searchEntities('six', bigIndex, { cap: 8 })).length
     expect(total).toBeLessThanOrEqual(8)
+  })
+
+  it('keeps a weighted district above the cap when a club flood would crowd it out', () => {
+    // 50 clubs all substring-matching "61" — without the type weighting,
+    // a global sort→cap could evict District 61 entirely.
+    const flood: Record<string, { districtId: string; clubName: string }> = {}
+    for (let i = 0; i < 50; i++) {
+      flood[`club${i}`] = { districtId: '61', clubName: `Club 61 #${i}` }
+    }
+    const bigIndex = buildSearchIndex(RANKINGS, flood)
+    const groups = searchEntities('61', bigIndex, { cap: 8 })
+    const flat = flatten(groups)
+    expect(flat.length).toBeLessThanOrEqual(8)
+    // The exact-id district must survive the cap and lead the results.
+    expect(flat[0]).toMatchObject({ type: 'district', id: '61' })
   })
 })
