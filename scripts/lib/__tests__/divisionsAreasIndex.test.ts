@@ -86,13 +86,24 @@ describe('buildDivisionsAreasIndex', () => {
     expect(index.generatedAt).toBe(GENERATED_AT)
   })
 
-  it('sorts district and division keys for deterministic output', () => {
-    const index = buildFromFixtures()
-    const districtKeys = Object.keys(index.districts)
-    expect(districtKeys).toEqual([...districtKeys].sort())
-    for (const divisions of Object.values(index.districts)) {
-      const divKeys = Object.keys(divisions)
-      expect(divKeys).toEqual([...divKeys].sort())
+  it('serializes identically regardless of input file order (deterministic daily diffs)', () => {
+    // Note: lexicographic district-key order is NOT representable — JS objects
+    // hoist integer-like keys ('61') ahead of string keys ('01' has a leading
+    // zero, so it is a string key). What matters for clean day-over-day diffs
+    // is permutation-invariance of the serialized bytes.
+    const files = [
+      loadFixture('district_61.json'),
+      loadFixture('district_01.json'),
+      loadFixture('district_04.json'),
+    ]
+    const forward = buildDivisionsAreasIndex(files, SNAPSHOT_DATE, GENERATED_AT)
+    const reversed = buildDivisionsAreasIndex(
+      [...files].reverse(),
+      SNAPSHOT_DATE,
+      GENERATED_AT
+    )
+    expect(JSON.stringify(reversed)).toBe(JSON.stringify(forward))
+    for (const divisions of Object.values(forward.districts)) {
       for (const areas of Object.values(divisions)) {
         expect(areas).toEqual([...areas].sort())
       }
