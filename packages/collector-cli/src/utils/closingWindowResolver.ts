@@ -39,8 +39,52 @@ export function resolveClosingWindow(
   requestedDate: string,
   months: ClosingDateEntry[]
 ): ClosingWindowVerdict {
-  if (!DATE_RE.test(requestedDate) || months.length >= 0) {
-    return { kind: 'unknown', reason: 'not implemented' }
+  if (!DATE_RE.test(requestedDate)) {
+    return {
+      kind: 'unknown',
+      reason: `invalid requested date '${requestedDate}' (expected YYYY-MM-DD)`,
+    }
   }
-  return { kind: 'unknown', reason: 'not implemented' }
+
+  const year = Number(requestedDate.slice(0, 4))
+  const month = Number(requestedDate.slice(5, 7))
+  if (month < 1 || month > 12) {
+    return {
+      kind: 'unknown',
+      reason: `invalid month in requested date '${requestedDate}'`,
+    }
+  }
+
+  // A date in month M can only fall inside month M-1's closing window.
+  const prevYear = month === 1 ? year - 1 : year
+  const prevMonth = month === 1 ? 12 : month - 1
+  const prevDataMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`
+
+  const entry = months.find(m => m.dataMonth === prevDataMonth)
+  if (!entry) {
+    return {
+      kind: 'unknown',
+      reason: `registry has no entry for data month ${prevDataMonth}`,
+    }
+  }
+
+  if (!DATE_RE.test(entry.closingDate)) {
+    return {
+      kind: 'unknown',
+      reason: `registry entry for ${prevDataMonth} has malformed closingDate '${entry.closingDate}'`,
+    }
+  }
+
+  // ISO date strings compare correctly as strings. Inclusive boundary: the
+  // registry's closingDate is the LAST closing-period collection date.
+  if (requestedDate <= entry.closingDate) {
+    const lastDay = new Date(Date.UTC(prevYear, prevMonth, 0)).getUTCDate()
+    return {
+      kind: 'closing',
+      dataMonth: prevDataMonth,
+      snapshotDate: `${prevDataMonth}-${String(lastDay).padStart(2, '0')}`,
+    }
+  }
+
+  return { kind: 'non-closing' }
 }
