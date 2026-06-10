@@ -81,7 +81,7 @@ describe('loadSearchIndex (lazy)', () => {
     // The artifact only lands via the scheduled pipeline (#1134) — a 404 must
     // not take down district/region/club search with it.
     fetchCdnDivisionsAreasIndex.mockRejectedValue(
-      new Error('CDN divisions/areas index fetch failed: 404')
+      new Error('CDN fetch failed: 404 for …/config/divisions-areas-index.json')
     )
     const { loadSearchIndex } = await import('../searchIndex')
     const index = await loadSearchIndex()

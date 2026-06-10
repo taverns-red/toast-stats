@@ -109,7 +109,7 @@ const OpenPalette: React.FC<OpenPaletteProps> = ({ onClose }) => {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search districts, clubs, divisions, areas…"
+            placeholder="Search districts, regions, clubs, divisions, areas…"
             aria-label="Universal search input"
             aria-controls={listboxOpen ? LISTBOX_ID : undefined}
             aria-activedescendant={
