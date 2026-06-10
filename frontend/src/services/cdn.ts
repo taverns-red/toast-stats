@@ -517,13 +517,9 @@ export interface CdnDivisionsAreasIndexData {
  * Fetch the global divisions/areas index from CDN (#1134 → #1135).
  */
 export async function fetchCdnDivisionsAreasIndex(): Promise<CdnDivisionsAreasIndexData> {
-  const url = `${cdnBaseUrl()}/config/divisions-areas-index.json`
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error(`CDN divisions/areas index fetch failed: ${res.status}`)
-  }
-  recordCdnResponse(res)
-  return res.json()
+  return fetchFromCdn<CdnDivisionsAreasIndexData>(
+    `${cdnBaseUrl()}/config/divisions-areas-index.json`
+  )
 }
 
 export async function fetchCdnRankHistory(

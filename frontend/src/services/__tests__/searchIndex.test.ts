@@ -251,9 +251,11 @@ describe('searchEntities — division/area query shapes (#1135)', () => {
     expect(flat.some(e => e.id === '57/C/23')).toBe(false)
   })
 
-  it('resolves "61 area 23" to the same area', () => {
-    const flat = flatten(searchEntities('61 area 23', index))
-    expect(flat[0]).toMatchObject({ type: 'area', id: '61/C/23' })
+  it('resolves "61 area 23" and the terse "61 23" to the same area', () => {
+    for (const q of ['61 area 23', '61 23']) {
+      const flat = flatten(searchEntities(q, index))
+      expect(flat[0]).toMatchObject({ type: 'area', id: '61/C/23' })
+    }
   })
 
   it('matches "area 23" (no district) in every district that has one', () => {
