@@ -106,15 +106,20 @@ export function buildDivisionsAreasIndex(
   return { generatedAt, snapshotDate, totalDivisions, totalAreas, districts }
 }
 
-/** Unwrap the collector envelope ({ data: {...} }) or pass a bare payload. */
+/**
+ * Unwrap the collector envelope ({ data: {...} }) or pass a bare payload.
+ * A wrapper whose scrape failed carries districtId at the WRAPPER level with
+ * data: null — returning the wrapper would index a phantom empty district,
+ * so anything with a data key but no usable data object is skipped.
+ */
 function unwrap(file: unknown): Record<string, unknown> | null {
   if (typeof file !== 'object' || file === null) return null
   const obj = file as Record<string, unknown>
+  if (!('data' in obj)) return obj
   const data = obj['data']
-  if (typeof data === 'object' && data !== null) {
-    return data as Record<string, unknown>
-  }
-  return obj
+  return typeof data === 'object' && data !== null
+    ? (data as Record<string, unknown>)
+    : null
 }
 
 /** Read a non-empty string property off an unknown value, else null. */
