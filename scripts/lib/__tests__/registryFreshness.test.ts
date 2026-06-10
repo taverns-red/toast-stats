@@ -204,9 +204,17 @@ describe('parseManualEntryArg', () => {
     expect(() => parseManualEntryArg(input)).toThrow(/--set/)
   })
 
-  it('rejects a closing date that is not after the data month', () => {
-    // A closing date inside (or before) its own data month is nonsense —
-    // closing collections happen early in the FOLLOWING month.
-    expect(() => parseManualEntryArg('2026-02=2026-02-27')).toThrow(/after/)
+  it('rejects a closing date in a month EARLIER than the data month', () => {
+    expect(() => parseManualEntryArg('2026-02=2026-01-31')).toThrow(/before/)
+  })
+
+  it('accepts a same-month closing date (TI archive-outage months)', () => {
+    // April 2022: TI never archived a May reconciliation (dashboard outage)
+    // — its own as-of list for the month ends at 2022-04-30. Verified live
+    // against dashboards.toastmasters.org/2021-2022 on 2026-06-10.
+    expect(parseManualEntryArg('2022-04=2022-04-30')).toEqual({
+      dataMonth: '2022-04',
+      closingDate: '2022-04-30',
+    })
   })
 })
