@@ -93,18 +93,6 @@ export interface YearOverYearComparison {
 }
 
 /**
- * Performance targets (optional)
- */
-export interface PerformanceTargets {
-  /** Target membership count */
-  membershipTarget?: number
-  /** Target number of distinguished clubs */
-  distinguishedTarget?: number
-  /** Target club growth */
-  clubGrowthTarget?: number
-}
-
-/**
  * Aggregated analytics response from CDN analytics-summary JSON
  */
 export interface AggregatedAnalyticsResponse {
@@ -123,8 +111,6 @@ export interface AggregatedAnalyticsResponse {
   trends: TrendData
   /** Year-over-year comparison (optional) */
   yearOverYear?: YearOverYearComparison
-  /** Performance targets (optional) */
-  performanceTargets?: PerformanceTargets
   /** Source of the data: 'precomputed' or 'computed' */
   dataSource: 'precomputed' | 'computed'
   /** ISO timestamp when the data was computed */

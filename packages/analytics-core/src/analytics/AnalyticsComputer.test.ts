@@ -1879,15 +1879,9 @@ describe('computePerformanceTargets', () => {
 
     expect(result.districtId).toBe('D101')
     expect(result.computedAt).toBeDefined()
-    expect(result.membershipTarget).toBe(0)
-    expect(result.distinguishedTarget).toBe(0)
-    expect(result.clubGrowthTarget).toBe(0)
     expect(result.currentProgress.membership).toBe(0)
     expect(result.currentProgress.distinguished).toBe(0)
     expect(result.currentProgress.clubGrowth).toBe(0)
-    expect(result.projectedAchievement.membership).toBe(false)
-    expect(result.projectedAchievement.distinguished).toBe(false)
-    expect(result.projectedAchievement.clubGrowth).toBe(false)
   })
 
   it('should return zero values when district not found in snapshots', () => {
@@ -1899,35 +1893,10 @@ describe('computePerformanceTargets', () => {
     const result = computer.computePerformanceTargets('D101', [snapshot])
 
     expect(result.districtId).toBe('D101')
-    expect(result.membershipTarget).toBe(0)
     expect(result.currentProgress.membership).toBe(0)
   })
 
-  it('should compute membership target as 5% growth from base', () => {
-    const computer = new AnalyticsComputer()
-    const clubs = [
-      createMockClub({
-        clubId: '1',
-        areaId: 'A1',
-        areaName: 'Area A1',
-        divisionId: 'A',
-        membershipCount: 100,
-        paymentsCount: 100, // Set paymentsCount to match expected value
-        dcpGoals: 5,
-        status: 'Active',
-      }),
-    ]
-    const snapshot = createMockSnapshot('D101', '2024-01-15', clubs)
-
-    const result = computer.computePerformanceTargets('D101', [snapshot])
-
-    // Membership target = ceil(100 * 1.05) = 105
-    expect(result.membershipTarget).toBe(105)
-    // currentProgress.membership now uses totalPayments (sum of paymentsCount)
-    expect(result.currentProgress.membership).toBe(100)
-  })
-
-  it('should compute distinguished target as 50% of paid clubs', () => {
+  it('should count distinguished clubs in currentProgress', () => {
     const computer = new AnalyticsComputer()
     const clubs = [
       createMockClub({
@@ -1971,8 +1940,8 @@ describe('computePerformanceTargets', () => {
 
     const result = computer.computePerformanceTargets('D101', [snapshot])
 
-    // 4 paid clubs, distinguished target = ceil(4 * 0.5) = 2
-    expect(result.distinguishedTarget).toBe(2)
+    // 4 paid clubs
+    expect(result.paidClubsCount).toBe(4)
     // 2 clubs have 5+ DCP goals (distinguished)
     expect(result.currentProgress.distinguished).toBe(2)
   })
@@ -2009,75 +1978,6 @@ describe('computePerformanceTargets', () => {
 
     // Club growth = 5 - 3 = 2
     expect(result.currentProgress.clubGrowth).toBe(2)
-    // Club growth target = max(1, ceil(3 * 0.02)) = max(1, 1) = 1
-    expect(result.clubGrowthTarget).toBe(1)
-  })
-
-  it('should project achievement when progress >= 80%', () => {
-    const computer = new AnalyticsComputer()
-    const clubs = [
-      createMockClub({
-        clubId: '1',
-        areaId: 'A1',
-        areaName: 'Area A1',
-        divisionId: 'A',
-        membershipCount: 100,
-        dcpGoals: 6,
-        status: 'Active',
-      }),
-    ]
-    const snapshot = createMockSnapshot('D101', '2024-01-15', clubs)
-
-    const result = computer.computePerformanceTargets('D101', [snapshot])
-
-    // Membership: 100 / 105 = 95.2% >= 80% -> projected true
-    expect(result.projectedAchievement.membership).toBe(true)
-    // Distinguished: 1 / 1 = 100% >= 80% -> projected true
-    expect(result.projectedAchievement.distinguished).toBe(true)
-  })
-
-  it('should not project achievement when progress < 80%', () => {
-    const computer = new AnalyticsComputer()
-
-    // Base snapshot with high membership
-    const baseClubs = [
-      createMockClub({
-        clubId: '1',
-        areaId: 'A1',
-        divisionId: 'A',
-        membershipCount: 100,
-        dcpGoals: 2,
-        status: 'Active',
-      }),
-    ]
-    const baseSnapshot = createMockSnapshot('D101', '2024-01-01', baseClubs)
-
-    // Current snapshot with lower membership (simulating decline)
-    const currentClubs = [
-      createMockClub({
-        clubId: '1',
-        areaId: 'A1',
-        divisionId: 'A',
-        membershipCount: 70,
-        dcpGoals: 2,
-        status: 'Active',
-      }),
-    ]
-    const currentSnapshot = createMockSnapshot(
-      'D101',
-      '2024-03-15',
-      currentClubs
-    )
-
-    const result = computer.computePerformanceTargets('D101', [
-      baseSnapshot,
-      currentSnapshot,
-    ])
-
-    // Membership: 70 / 105 = 66.7% < 80% -> projected false
-    expect(result.projectedAchievement.membership).toBe(false)
-    // Distinguished: 0 / 1 = 0% < 80% -> projected false
-    expect(result.projectedAchievement.distinguished).toBe(false)
   })
 
   it('should filter snapshots by district ID', () => {
@@ -2140,8 +2040,8 @@ describe('computePerformanceTargets', () => {
 
     const result = computer.computePerformanceTargets('D101', [snapshot])
 
-    // Only 1 paid club, distinguished target = ceil(1 * 0.5) = 1
-    expect(result.distinguishedTarget).toBe(1)
+    // Only 1 paid club (the suspended club is not paid)
+    expect(result.paidClubsCount).toBe(1)
     // Only 1 distinguished club (the active one with 6 DCP goals)
     expect(result.currentProgress.distinguished).toBe(1)
   })

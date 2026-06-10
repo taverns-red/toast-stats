@@ -1550,19 +1550,11 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       return {
         districtId,
         computedAt: new Date().toISOString(),
-        membershipTarget: 0,
-        distinguishedTarget: 0,
-        clubGrowthTarget: 0,
         paidClubsCount: 0,
         currentProgress: {
           membership: 0,
           distinguished: 0,
           clubGrowth: 0,
-        },
-        projectedAchievement: {
-          membership: false,
-          distinguished: false,
-          clubGrowth: false,
         },
         paidClubsRankings,
         membershipPaymentsRankings,
@@ -1587,19 +1579,11 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       return {
         districtId,
         computedAt: new Date().toISOString(),
-        membershipTarget: 0,
-        distinguishedTarget: 0,
-        clubGrowthTarget: 0,
         paidClubsCount: 0,
         currentProgress: {
           membership: 0,
           distinguished: 0,
           clubGrowth: 0,
-        },
-        projectedAchievement: {
-          membership: false,
-          distinguished: false,
-          clubGrowth: false,
         },
         paidClubsRankings,
         membershipPaymentsRankings,
@@ -1628,19 +1612,6 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       districtRanking?.totalPayments ??
       this.membershipModule.getTotalPayments(latestSnapshot)
 
-    // Calculate current membership (for membership target calculation)
-    const currentMembership =
-      this.membershipModule.getTotalMembership(latestSnapshot)
-    const baseMembership = baseSnapshot
-      ? this.membershipModule.getTotalMembership(baseSnapshot)
-      : currentMembership
-
-    // Calculate membership target (5% growth from base)
-    const membershipGrowthRate = 0.05
-    const membershipTarget = Math.ceil(
-      baseMembership * (1 + membershipGrowthRate)
-    )
-
     // Use AreaDivisionRecognitionModule to get area recognition data
     const areaRecognitions =
       this.areaDivisionRecognitionModule.calculateAreaRecognition(
@@ -1657,50 +1628,23 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       0
     )
 
-    // Distinguished target: 50% of paid clubs (Distinguished level threshold from DAP)
-    // This aligns with the DAP_DISTINGUISHED_THRESHOLD of 50%
-    const distinguishedTarget = Math.ceil(totalPaidClubs * 0.5)
-
-    // Calculate club growth
+    // Calculate club growth (signed actual; the growth *targets* live in
+    // paidClubsTargets — the legacy scalar targets were removed in #1127)
     const currentClubCount = latestSnapshot.clubs.length
     const baseClubCount = baseSnapshot
       ? baseSnapshot.clubs.length
       : currentClubCount
     const clubGrowth = currentClubCount - baseClubCount
 
-    // Club growth target: Net positive growth (at least 1 new club)
-    const clubGrowthTarget = Math.max(1, Math.ceil(baseClubCount * 0.02)) // 2% growth or at least 1
-
-    // Calculate projected achievements based on current progress and trends
-    const membershipProgress = currentMembership / membershipTarget
-    const distinguishedProgress =
-      distinguishedTarget > 0 ? currentDistinguished / distinguishedTarget : 0
-    const clubGrowthProgress =
-      clubGrowthTarget > 0 ? clubGrowth / clubGrowthTarget : 0
-
-    // Project achievement based on progress rate
-    // If progress is >= 80%, project achievement as likely
-    const projectedMembership = membershipProgress >= 0.8
-    const projectedDistinguished = distinguishedProgress >= 0.8
-    const projectedClubGrowth = clubGrowthProgress >= 0.8
-
     return {
       districtId,
       computedAt: new Date().toISOString(),
-      membershipTarget,
-      distinguishedTarget,
-      clubGrowthTarget,
       paidClubsCount: totalPaidClubs,
       currentProgress: {
         // Use totalPayments from rankings (official Toastmasters value) for membership payments
         membership: currentMembershipPayments,
         distinguished: currentDistinguished,
         clubGrowth,
-      },
-      projectedAchievement: {
-        membership: projectedMembership,
-        distinguished: projectedDistinguished,
-        clubGrowth: projectedClubGrowth,
       },
       paidClubsRankings,
       membershipPaymentsRankings,

@@ -477,7 +477,6 @@ describe('computePerformanceTargets with rankings integration', () => {
 
       // Verify that performance targets are still computed correctly
       expect(result.districtId).toBe('D101')
-      expect(result.membershipTarget).toBe(105) // ceil(100 * 1.05)
       // currentProgress.membership now uses totalPayments from rankings
       expect(result.currentProgress.membership).toBe(100)
       expect(result.computedAt).toBeDefined()
@@ -510,11 +509,6 @@ describe('computePerformanceTargets with rankings integration', () => {
         [],
         allDistrictsRankings
       )
-
-      // Performance targets should be zero
-      expect(result.membershipTarget).toBe(0)
-      expect(result.distinguishedTarget).toBe(0)
-      expect(result.clubGrowthTarget).toBe(0)
 
       // But rankings should still be populated from allDistrictsRankings
       expect(result.paidClubsRankings.worldRank).toBe(5)
@@ -1572,6 +1566,89 @@ describe('computeDistrictAnalytics membership change calculation', () => {
       // Should fall back to snapshot-based calculation: sum(paymentsCount) - sum(membershipBase) from latest
       // Latest snapshot2: paymentsCount=70, membershipBase=20 (default) → 70 - 20 = 50
       expect(result.districtAnalytics.membershipChange).toBe(50)
+    })
+  })
+
+  /**
+   * Legacy district targets removal (#1127, epic #1097, audit §8).
+   *
+   * computePerformanceTargets published a legacy scalar block with wrong or
+   * unsourced rules: distinguishedTarget = ceil(paidClubs * 0.5) (a 50% DAP
+   * area rule with a current-paid denominator, applied to the district
+   * metric — §13.2 is 45% of paid club base), clubGrowthTarget = 2%
+   * (unsourced), membershipTarget = 5% (unsourced), and
+   * projectedAchievement derived from those targets. The §13.2-correct
+   * values already ship in the same payload as paidClubsTargets /
+   * membershipPaymentsTargets / distinguishedClubsTargets (1/3/5/8% growth
+   * tiers, 45/50/55/60% of paid club base) and are the fields the frontend
+   * consumes. The legacy block has zero consumers (R8 inventory in #1127)
+   * and is removed rather than corrected — correcting it would duplicate
+   * the canonical fields (lessons 61/76 two-copies drift).
+   */
+  describe('legacy district targets are not published (#1127)', () => {
+    const LEGACY_KEYS = [
+      'membershipTarget',
+      'distinguishedTarget',
+      'clubGrowthTarget',
+      'projectedAchievement',
+    ] as const
+
+    it('omits the legacy target fields for populated snapshots', () => {
+      const clubs = [
+        createMockClub({
+          clubId: '1',
+          membershipCount: 100,
+          dcpGoals: 6,
+          status: 'Active',
+        }),
+      ]
+      const snapshot = createMockSnapshot('D101', '2024-01-15', clubs)
+      const allDistrictsRankings = createRankingsData(
+        [
+          {
+            districtId: 'D101',
+            clubsRank: 5,
+            paymentsRank: 10,
+            distinguishedRank: 3,
+            region: 'Region 10',
+            totalPayments: 100,
+          },
+        ],
+        100
+      )
+
+      const result = computer.computePerformanceTargets(
+        'D101',
+        [snapshot],
+        allDistrictsRankings
+      )
+
+      for (const key of LEGACY_KEYS) {
+        expect(result).not.toHaveProperty(key)
+      }
+
+      // The consumed fields stay intact: actuals + canonical §13.2 targets.
+      expect(result.paidClubsCount).toBe(1)
+      expect(result.currentProgress.membership).toBe(100)
+      expect(typeof result.currentProgress.distinguished).toBe('number')
+      expect(result.paidClubsTargets).not.toBeNull()
+      expect(result.distinguishedClubsTargets).not.toBeNull()
+      expect(result.paidClubsRankings.worldRank).toBe(5)
+    })
+
+    it('omits the legacy target fields for empty snapshots', () => {
+      const result = computer.computePerformanceTargets('D101', [])
+
+      for (const key of LEGACY_KEYS) {
+        expect(result).not.toHaveProperty(key)
+      }
+
+      expect(result.paidClubsCount).toBe(0)
+      expect(result.currentProgress).toEqual({
+        membership: 0,
+        distinguished: 0,
+        clubGrowth: 0,
+      })
     })
   })
 })

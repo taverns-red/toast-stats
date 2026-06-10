@@ -26,23 +26,21 @@ import type {
 
 /**
  * CDN performance-targets.json shape
+ *
+ * The legacy scalar targets (membershipTarget / distinguishedTarget /
+ * clubGrowthTarget) and projectedAchievement were removed from the
+ * published payload in #1127 — the per-metric `*Targets` fields carry the
+ * canonical §13.2 recognition targets. Older snapshot artifacts may still
+ * contain the removed fields; they were never read here.
  */
 interface CdnPerformanceTargetsData {
   districtId: string
   computedAt: string
-  membershipTarget: number
-  distinguishedTarget: number
-  clubGrowthTarget: number
   paidClubsCount: number
   currentProgress: {
     membership: number
     distinguished: number
     clubGrowth: number
-  }
-  projectedAchievement: {
-    membership: boolean
-    distinguished: boolean
-    clubGrowth: boolean
   }
   paidClubsRankings: CdnRankings
   membershipPaymentsRankings: CdnRankings
