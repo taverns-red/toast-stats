@@ -477,7 +477,6 @@ describe('computePerformanceTargets with rankings integration', () => {
 
       // Verify that performance targets are still computed correctly
       expect(result.districtId).toBe('D101')
-      expect(result.membershipTarget).toBe(105) // ceil(100 * 1.05)
       // currentProgress.membership now uses totalPayments from rankings
       expect(result.currentProgress.membership).toBe(100)
       expect(result.computedAt).toBeDefined()
@@ -510,11 +509,6 @@ describe('computePerformanceTargets with rankings integration', () => {
         [],
         allDistrictsRankings
       )
-
-      // Performance targets should be zero
-      expect(result.membershipTarget).toBe(0)
-      expect(result.distinguishedTarget).toBe(0)
-      expect(result.clubGrowthTarget).toBe(0)
 
       // But rankings should still be populated from allDistrictsRankings
       expect(result.paidClubsRankings.worldRank).toBe(5)

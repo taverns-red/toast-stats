@@ -143,31 +143,21 @@ export interface PerformanceTargetsData {
   districtId: string
   /** ISO timestamp when the data was computed */
   computedAt: string
-  /** Target for membership (based on base membership + growth target) */
-  membershipTarget: number
-  /** Target for distinguished clubs count */
-  distinguishedTarget: number
-  /** Target for club growth (net new clubs) */
-  clubGrowthTarget: number
   /** Total count of paid clubs (clubs with "Active" status) */
   paidClubsCount: number
-  /** Current progress toward targets */
+  /**
+   * Current metric actuals. The recognition targets these are measured
+   * against are the per-metric `*Targets` fields below (§13.2 semantics) —
+   * the legacy scalar targets (membershipTarget / distinguishedTarget /
+   * clubGrowthTarget) and projectedAchievement were removed in #1127.
+   */
   currentProgress: {
-    /** Current membership count */
+    /** Current membership payments (official totalPayments when available) */
     membership: number
     /** Current distinguished clubs count */
     distinguished: number
     /** Current club growth (net change from base) */
     clubGrowth: number
-  }
-  /** Whether targets are projected to be achieved */
-  projectedAchievement: {
-    /** Whether membership target is projected to be achieved */
-    membership: boolean
-    /** Whether distinguished target is projected to be achieved */
-    distinguished: boolean
-    /** Whether club growth target is projected to be achieved */
-    clubGrowth: boolean
   }
   /** Rankings for paid clubs metric (Requirements 4.1, 4.4) */
   paidClubsRankings: MetricRankings

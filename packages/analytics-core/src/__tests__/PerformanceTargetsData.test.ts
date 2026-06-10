@@ -2,8 +2,7 @@
  * Unit Tests for PerformanceTargetsData Serialization
  *
  * Verifies JSON round-trip serialization preserves all fields including
- * paidClubsCount, currentProgress, projectedAchievement, and
- * MetricRankings with nullable values.
+ * paidClubsCount, currentProgress, and MetricRankings with nullable values.
  *
  * Converted from property-based tests — PBT generated random objects;
  * replaced with representative fixed test cases covering null values,
@@ -19,19 +18,11 @@ function createPerformanceTargetsData(
   return {
     districtId: 'D42',
     computedAt: '2024-06-15T10:30:00.000Z',
-    membershipTarget: 500,
-    distinguishedTarget: 10,
-    clubGrowthTarget: 5,
     paidClubsCount: 45,
     currentProgress: {
       membership: 350,
       distinguished: 7,
       clubGrowth: 3,
-    },
-    projectedAchievement: {
-      membership: true,
-      distinguished: false,
-      clubGrowth: true,
     },
     paidClubsRankings: {
       worldRank: 25,
@@ -70,9 +61,6 @@ describe('PerformanceTargetsData Serialization', () => {
 
     expect(deserialized.districtId).toBe(original.districtId)
     expect(deserialized.computedAt).toBe(original.computedAt)
-    expect(deserialized.membershipTarget).toBe(original.membershipTarget)
-    expect(deserialized.distinguishedTarget).toBe(original.distinguishedTarget)
-    expect(deserialized.clubGrowthTarget).toBe(original.clubGrowthTarget)
     expect(deserialized.paidClubsCount).toBe(original.paidClubsCount)
   })
 
@@ -109,33 +97,6 @@ describe('PerformanceTargetsData Serialization', () => {
     expect(deserialized.currentProgress.membership).toBe(999)
     expect(deserialized.currentProgress.distinguished).toBe(42)
     expect(deserialized.currentProgress.clubGrowth).toBe(-5)
-  })
-
-  it('should preserve all projectedAchievement boolean fields', () => {
-    const combos = [
-      { membership: true, distinguished: true, clubGrowth: true },
-      { membership: false, distinguished: false, clubGrowth: false },
-      { membership: true, distinguished: false, clubGrowth: true },
-    ]
-
-    for (const projected of combos) {
-      const original = createPerformanceTargetsData({
-        projectedAchievement: projected,
-      })
-      const deserialized = JSON.parse(
-        JSON.stringify(original)
-      ) as PerformanceTargetsData
-
-      expect(deserialized.projectedAchievement.membership).toBe(
-        projected.membership
-      )
-      expect(deserialized.projectedAchievement.distinguished).toBe(
-        projected.distinguished
-      )
-      expect(deserialized.projectedAchievement.clubGrowth).toBe(
-        projected.clubGrowth
-      )
-    }
   })
 
   it('should preserve MetricRankings with non-null values', () => {
@@ -195,9 +156,6 @@ describe('PerformanceTargetsData Serialization', () => {
 
   it('should handle zero values correctly', () => {
     const original = createPerformanceTargetsData({
-      membershipTarget: 0,
-      distinguishedTarget: 0,
-      clubGrowthTarget: 0,
       paidClubsCount: 0,
       currentProgress: { membership: 0, distinguished: 0, clubGrowth: 0 },
     })
@@ -205,7 +163,6 @@ describe('PerformanceTargetsData Serialization', () => {
       JSON.stringify(original)
     ) as PerformanceTargetsData
 
-    expect(deserialized.membershipTarget).toBe(0)
     expect(deserialized.paidClubsCount).toBe(0)
     expect(deserialized.currentProgress.membership).toBe(0)
   })
