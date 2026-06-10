@@ -1,9 +1,11 @@
 /**
- * ClosingDateRegistry — Auto-maintain month-end-closing-dates.json (#203)
+ * ClosingDateRegistry — Maintain month-end-closing-dates.json (#203, #1128)
  *
  * Reads, appends, deduplicates, and writes closing date entries to the
- * docs/month-end-closing-dates.json registry. Used by the daily pipeline
- * to auto-detect new closing periods and persist them.
+ * docs/month-end-closing-dates.json registry. Written by
+ * scripts/update-closing-date-registry.ts (derived + manual entries); the
+ * daily pipeline guards the committed file's freshness rather than writing
+ * it (ADR-011). Consumed by scripts/rescrape-historical.ts.
  */
 
 import * as fs from 'node:fs/promises'

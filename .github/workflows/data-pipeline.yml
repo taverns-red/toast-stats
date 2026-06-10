@@ -453,6 +453,81 @@ jobs:
           echo "- **Snapshot/analytics files**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
+      # CLOSING-DATE REGISTRY FRESHNESS (#1128, epic #1098)
+      # The committed docs/month-end-closing-dates.json feeds historical
+      # rescrapes and the rebuild's closing remap, and it went 3 months
+      # stale with nothing watching (audit 2026-06-09 §9b). Compare it
+      # against what raw-csv metadata proves and turn drift into a loud,
+      # self-clearing `closing-registry-stale` issue. Decision logic is
+      # unit-tested in scripts/lib/registryFreshness.ts; thin glue here.
+      # Non-blocking by design: a stale doc file must not hold the data
+      # publish hostage.
+      # ════════════════════════════════════════════════════════
+      - name: '[daily] Check closing-date registry freshness (#1128)'
+        id: registrycheck
+        if: steps.mode.outputs.mode == 'daily'
+        # Non-blocking even on a module-load crash: the publish/promotion
+        # steps that follow must never be skipped because a doc-file monitor
+        # broke. On a crashed step both stale outputs are unset, so neither
+        # alert step fires.
+        continue-on-error: true
+        run: npx tsx scripts/closing-registry-check.ts
+
+      - name: '[daily] Ensure closing-registry-stale label exists'
+        if: steps.mode.outputs.mode == 'daily' && steps.registrycheck.outputs.stale == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create closing-registry-stale \
+            --color B60205 \
+            --description "docs/month-end-closing-dates.json is behind raw-csv metadata" \
+            2>/dev/null || echo "Label already exists"
+
+      - name: '[daily] File or refresh closing-registry-stale issue'
+        if: steps.mode.outputs.mode == 'daily' && steps.registrycheck.outputs.stale == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Env indirection: the title embeds dataMonth strings read from GCS
+          # metadata — never splice them into shell text via ${{ }}.
+          ALERT_TITLE: ${{ steps.registrycheck.outputs.title }}
+          ALERT_BODY_FILE: ${{ steps.registrycheck.outputs.body_file }}
+        run: |
+          # Deduplicate: one open alert at a time; refresh instead of spamming.
+          EXISTING=$(gh issue list --label closing-registry-stale --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "${EXISTING}" ]; then
+            echo "Existing open alert #${EXISTING} — adding a refresh comment."
+            gh issue comment "${EXISTING}" --body-file "${ALERT_BODY_FILE}"
+          else
+            echo "No open alert — creating one."
+            gh issue create \
+              --title "${ALERT_TITLE}" \
+              --label closing-registry-stale \
+              --body-file "${ALERT_BODY_FILE}"
+          fi
+
+      - name: '[daily] Auto-close closing-registry-stale issue when fresh'
+        if: steps.mode.outputs.mode == 'daily' && steps.registrycheck.outputs.stale == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Registry is fresh again — the committed fix landed. Close any open
+          # alert; the `concurrency: data-pipeline` group serializes runs, so
+          # a fresh verdict can't race a concurrent stale one.
+          OPEN=$(gh issue list --label closing-registry-stale --state open \
+            --json number --jq '.[].number')
+          if [ -z "${OPEN}" ]; then
+            echo "No open closing-registry-stale issue to close."
+          else
+            for n in ${OPEN}; do
+              echo "Closing closing-registry-stale issue #${n} — registry fresh."
+              gh issue close "${n}" \
+                --comment "✅ The closing-date registry matches raw-csv metadata again. Auto-closing (#1128)." \
+                --reason completed
+            done
+          fi
+
+      # ════════════════════════════════════════════════════════
       # REBUILD MODE
       # ════════════════════════════════════════════════════════
       # Streams one date at a time to stay within runner disk
