@@ -17,6 +17,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { parse } from 'csv-parse/sync'
 import { parseClosingPeriodFromCsv } from '../utils/csvFooterParser.js'
+import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
 import {
   DataTransformer,
   ANALYTICS_SCHEMA_VERSION,
@@ -111,6 +112,16 @@ export interface TransformServiceConfig {
   cacheDir: string
   /** Optional logger for diagnostic output */
   logger?: Logger
+  /**
+   * Closing-date registry months (docs/month-end-closing-dates.json) used as
+   * the third authority in the closing-period chain: metadata.json → CSV
+   * "As of" footer → registry (#1129). When provided, a date none of the
+   * three can decide FAILS CLOSED (ClosingPeriodUndecidedError) instead of
+   * publishing under the raw date. Every production entry point (cli
+   * transform, scrape --transform, RebuildService) MUST inject this;
+   * omitting it preserves legacy fail-open behavior for test fixtures only.
+   */
+  closingDateRegistry?: ClosingDateEntry[]
 }
 
 /**

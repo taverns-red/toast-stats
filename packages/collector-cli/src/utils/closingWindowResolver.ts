@@ -18,6 +18,23 @@
 
 import type { ClosingDateEntry } from './ClosingDateRegistry.js'
 
+/**
+ * Thrown when no authority (metadata.json, CSV footer, registry) can decide
+ * whether a collection date falls in a closing period. Callers must treat
+ * this as "refuse to publish under the raw date" (#1129).
+ */
+export class ClosingPeriodUndecidedError extends Error {
+  constructor(date: string, reason: string) {
+    super(
+      `Cannot decide closing-period status for ${date}: ${reason}. ` +
+        'Failing closed — refusing to publish under the raw date (#1129). ' +
+        'Add the missing month to docs/month-end-closing-dates.json or ' +
+        'restore the raw-csv metadata.json to unblock this date.'
+    )
+    this.name = 'ClosingPeriodUndecidedError'
+  }
+}
+
 export type ClosingWindowVerdict =
   | {
       kind: 'closing'
