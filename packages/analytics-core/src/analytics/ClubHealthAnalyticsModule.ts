@@ -435,8 +435,9 @@ export class ClubHealthAnalyticsModule {
       // DCP checkpoint requirement (varies by month) - MUST match assessClubHealth logic
       const dcpCheckpointMet = dcpGoals >= requiredDcpCheckpoint
 
-      // CSP: for counting methods, assume submitted (actual CSP check is in assessClubHealth)
-      const cspSubmitted = true
+      // CSP requirement — same normalized status assessClubHealth uses
+      // (pre-2025-26 historical data defaults to submitted, §3.3)
+      const cspSubmitted = getCSPStatus(club)
 
       // Vulnerable: some but not all requirements met
       const allRequirementsMet =
@@ -497,8 +498,9 @@ export class ClubHealthAnalyticsModule {
       // DCP checkpoint requirement (varies by month) - MUST match assessClubHealth logic
       const dcpCheckpointMet = dcpGoals >= requiredDcpCheckpoint
 
-      // CSP: for counting methods, assume submitted (actual CSP check is in assessClubHealth)
-      const cspSubmitted = true
+      // CSP requirement — same normalized status assessClubHealth uses
+      // (pre-2025-26 historical data defaults to submitted, §3.3)
+      const cspSubmitted = getCSPStatus(club)
 
       return membershipRequirementMet && dcpCheckpointMet && cspSubmitted
     }).length
