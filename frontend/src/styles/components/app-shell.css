@@ -851,6 +851,32 @@
     border-radius: var(--rds-radius-sm);
   }
 
+  /* #922 — Reserved slot for the mobile-stacked header actions (freshness
+     pill + PY/date chips + Export/Share) in the loading/error shell. At
+     <768px the loaded toolbar stacks BELOW the intro and pushes the KPI
+     strip down ~148px if unreserved — the mobile twin of the #861 search
+     slot (Lessons 107/125). Structural rather than height-matched: the
+     placeholders carry the chips' 44px touch-target floor (CHIP_BASE
+     min-h-[44px] / the base-layer button floor) and the real __actions
+     container supplies the flex wrap + gaps, so the reserved height tracks
+     the loaded geometry across widths instead of pinning a magic 148px.
+     Verified live at 390px by e2e/landing-mobile-cls.smoke.ts. */
+  .districts-actions-skeleton__chip,
+  .districts-actions-skeleton__btn {
+    display: inline-flex;
+    min-height: 44px;
+    background-color: var(--surface-2);
+    border: 1px solid var(--line);
+  }
+
+  .districts-actions-skeleton__chip {
+    border-radius: 9999px;
+  }
+
+  .districts-actions-skeleton__btn {
+    border-radius: var(--rds-radius-sm);
+  }
+
   /* ≥768px — restore the full desktop layout: full KPI strip, search back in
      source order, no reserved slot. */
   @media (min-width: 768px) {
@@ -861,6 +887,9 @@
       display: block;
     }
     .districts-hero-search-skeleton {
+      display: none;
+    }
+    .districts-page-header__actions--skeleton {
       display: none;
     }
   }
