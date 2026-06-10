@@ -20,6 +20,10 @@
  */
 
 import type { DistrictRanking } from '@toastmasters/shared-contracts'
+import {
+  growthTarget,
+  percentageTarget,
+} from '../analytics/TargetCalculator.js'
 
 /**
  * Distinguished District tier names.
@@ -327,9 +331,11 @@ export class DistinguishedDistrictCalculator {
    * they track the same rule `meetsThreshold` enforces — a count of 0 means
    * that metric's Distinguished minimum is satisfied.
    *
-   *   payments   target = ceil(paymentBase × (1 + paymentGrowthMin/100))
-   *   paidClubs  target = ceil(paidClubBase × (1 + clubGrowthMin/100))
-   *   distinguished target = ceil(paidClubBase × distinguishedPercentMin/100)
+   *   payments   target = ceil(paymentBase × (100 + paymentGrowthMin) / 100)
+   *   paidClubs  target = ceil(paidClubBase × (100 + clubGrowthMin) / 100)
+   *   distinguished target = ceil(paidClubBase × distinguishedPercentMin / 100)
+   *
+   * Integer-safe form via the shared TargetCalculator helpers (#798, #1126).
    *
    * Distinguished % uses `paidClubBase` as the denominator, not
    * `activeClubs` (TI DDP Item 1490; lesson 60). `Math.ceil` because the
@@ -350,14 +356,14 @@ export class DistinguishedDistrictCalculator {
       }
     }
 
-    const paymentTarget = Math.ceil(
-      ranking.paymentBase * (1 + min.paymentGrowthMin / 100)
+    const paymentTarget = growthTarget(
+      ranking.paymentBase,
+      min.paymentGrowthMin
     )
-    const paidClubTarget = Math.ceil(
-      ranking.paidClubBase * (1 + min.clubGrowthMin / 100)
-    )
-    const distinguishedTarget = Math.ceil(
-      ranking.paidClubBase * (min.distinguishedPercentMin / 100)
+    const paidClubTarget = growthTarget(ranking.paidClubBase, min.clubGrowthMin)
+    const distinguishedTarget = percentageTarget(
+      ranking.paidClubBase,
+      min.distinguishedPercentMin
     )
 
     return {

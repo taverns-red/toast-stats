@@ -6,6 +6,7 @@
    us compute it client-side from the per-district feed we already
    publish, with no pipeline changes. */
 
+import { calculateDistinguishedPercent } from '@toastmasters/analytics-core'
 import type { DistrictRanking } from '@toastmasters/shared-contracts'
 
 export interface RequirementRatio {
@@ -25,7 +26,9 @@ export interface RegionRollup {
   /** Derived: (totalPayments − paymentBase) / paymentBase × 100. 0 when base is 0. */
   paymentGrowthPercent: number
   distinguishedClubs: number
-  /** Derived: distinguishedClubs / paidClubs × 100. 0 when paidClubs is 0. */
+  /** Derived: distinguishedClubs / paidClubBase × 100 (DDP Item 1490 §9,
+   *  lesson 60 — base denominator, NOT current paidClubs; #1126).
+   *  0 when paidClubBase is 0. */
   distinguishedPercent: number
   /** Region's rank by clubGrowthPercent. 1 = best across all regions. */
   clubsRank: number
@@ -164,7 +167,10 @@ export function aggregateRegions(
         totals.paymentBase
       ),
       distinguishedClubs: totals.distinguishedClubs,
-      distinguishedPercent: pct(totals.distinguishedClubs, totals.paidClubs),
+      distinguishedPercent: calculateDistinguishedPercent(
+        totals.distinguishedClubs,
+        totals.paidClubBase
+      ),
       leadingDistrictId: leading.districtId,
       leadingDistrictName: leading.districtName,
       requirements,

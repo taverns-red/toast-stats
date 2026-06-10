@@ -60,6 +60,8 @@ export {
   calculateGrowthTargets,
   calculatePercentageTargets,
   determineAchievedLevel,
+  growthTarget,
+  percentageTarget,
   GROWTH_PERCENTAGES,
   DISTINGUISHED_PERCENTAGES,
   // Club eligibility utilities

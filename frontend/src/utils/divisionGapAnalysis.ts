@@ -20,6 +20,8 @@
  * Requirements: 5.2, 5.5, 6.1, 6.2, 6.3, 6.4, 6.5, 9.1, 9.2, 9.3, 9.4
  */
 
+import { percentageTarget } from '@toastmasters/analytics-core'
+
 /**
  * Recognition levels for divisions in the Distinguished Division Program
  *
@@ -149,7 +151,7 @@ function calculateRequiredDistinguishedClubs(
   clubBase: number,
   thresholdPercent: number
 ): number {
-  return Math.ceil((clubBase * thresholdPercent) / 100)
+  return percentageTarget(clubBase, thresholdPercent)
 }
 
 /**
