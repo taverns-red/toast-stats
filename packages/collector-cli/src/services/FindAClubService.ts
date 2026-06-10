@@ -22,6 +22,10 @@
  */
 
 import { z } from 'zod'
+import type {
+  ScrapedRecordCoordinates,
+  ScrapedRecordAddress,
+} from '@toastmasters/shared-contracts'
 
 const TI_HQ_LATITUDE = 39.6478
 const TI_HQ_LONGITUDE = -104.9878
@@ -119,14 +123,11 @@ export interface ClubEnrichment {
    *  test fixtures). Surfaced by the prospective-clubs panel (#489). */
   clubName?: string
   charterDate?: string // ISO date
-  coordinates?: { lat: number; lng: number }
-  address?: {
-    street?: string
-    city?: string
-    region?: string
-    postalCode?: string
-    country?: string
-  }
+  // The shared write-contract shapes (#1123, ADR-010) — the merger copies
+  // these verbatim onto clubPerformance rows, so referencing the contract
+  // types here keeps the two from drifting.
+  coordinates?: ScrapedRecordCoordinates
+  address?: ScrapedRecordAddress
   email?: string
   phone?: string
   website?: string
