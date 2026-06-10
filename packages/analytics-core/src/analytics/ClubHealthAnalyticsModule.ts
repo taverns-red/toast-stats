@@ -320,30 +320,29 @@ export class ClubHealthAnalyticsModule {
       clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]
         ?.goalsAchieved ?? club.dcpGoals
 
+    // Calculate net growth from club data (Requirement 5.3)
+    // Net growth = Active Members - Mem. Base
+    const netGrowth = calculateNetGrowth(club)
+
     // Get current program month for DCP checkpoint evaluation
     const currentMonth = getCurrentProgramMonth(snapshotDate)
 
-    // Delegate classification to the shared single-source rule (#1120).
-    // Membership predicates use the trend-derived currentMembership, but
-    // net growth must stay calculateNetGrowth(club) (Requirement 5.3) —
-    // so derive the base that makes the classifier reproduce it exactly.
-    const classification = classifyClubHealth(
+    // Delegate classification to the shared single-source rule (#1120)
+    const {
+      status,
+      requiredDcpCheckpoint,
+      membershipRequirementMet,
+      dcpCheckpointMet,
+      cspRequirementMet,
+    } = classifyClubHealth(
       {
         membership: currentMembership,
-        membershipBase: currentMembership - calculateNetGrowth(club),
+        netGrowth,
         dcpGoals: currentDcpGoals,
         cspSubmitted: getCSPStatus(club),
       },
       currentMonth
     )
-    const {
-      status,
-      netGrowth,
-      requiredDcpCheckpoint,
-      membershipRequirementMet,
-      dcpCheckpointMet,
-      cspRequirementMet,
-    } = classification
 
     // Build risk-factor messages from the classification breakdown
     if (status === 'intervention-required') {

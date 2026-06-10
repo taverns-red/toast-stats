@@ -16,7 +16,11 @@ import type {
   TimeSeriesDataPoint,
   ClubHealthCounts,
 } from '@toastmasters/shared-contracts'
-import { classifyClubHealth } from '../analytics/ClubEligibilityUtils.js'
+import {
+  classifyClubHealth,
+  getCSPStatusFromRecord,
+  isDistinguishedStatusCode,
+} from '../analytics/ClubEligibilityUtils.js'
 import { getCurrentProgramMonth } from '../analytics/AnalyticsUtils.js'
 
 /**
@@ -217,9 +221,9 @@ export class TimeSeriesDataPointBuilder {
       const { status } = classifyClubHealth(
         {
           membership,
-          membershipBase: memBase,
+          netGrowth: membership - memBase,
           dcpGoals,
-          cspSubmitted: this.parseCspSubmitted(club),
+          cspSubmitted: getCSPStatusFromRecord(club),
         },
         month
       )
@@ -239,36 +243,6 @@ export class TimeSeriesDataPointBuilder {
       vulnerable,
       interventionRequired,
     }
-  }
-
-  /**
-   * Parse CSP (Club Success Plan) submission status from a raw record.
-   *
-   * Historical compatibility: when the field is absent (pre-2025-2026
-   * CSVs), CSP is treated as submitted — it was not a requirement then.
-   *
-   * @param club - The club record
-   * @returns True unless the field is present and explicitly negative
-   */
-  parseCspSubmitted(club: ScrapedRecord): boolean {
-    const cspValue =
-      club['CSP'] ??
-      club['Club Success Plan'] ??
-      club['CSP Submitted'] ??
-      club['Club Success Plan Submitted']
-
-    if (cspValue === undefined || cspValue === null) {
-      return true
-    }
-
-    const cspString = String(cspValue).toLowerCase().trim()
-    return !(
-      cspString === 'no' ||
-      cspString === 'false' ||
-      cspString === '0' ||
-      cspString === 'not submitted' ||
-      cspString === 'n'
-    )
   }
 
   /**
@@ -312,7 +286,7 @@ export class TimeSeriesDataPointBuilder {
    */
   isDistinguished(club: ScrapedRecord): boolean {
     // Check CSP status first (absent field = submitted, historical data)
-    if (!this.parseCspSubmitted(club)) {
+    if (!getCSPStatusFromRecord(club)) {
       return false
     }
 
@@ -322,12 +296,7 @@ export class TimeSeriesDataPointBuilder {
     const statusField = club['Club Distinguished Status']
     if (statusField !== null && statusField !== undefined) {
       const status = String(statusField).toLowerCase().trim()
-      if (
-        status === 'd' ||
-        status === 's' ||
-        status === 'p' ||
-        status === 'm'
-      ) {
+      if (isDistinguishedStatusCode(status)) {
         return true
       }
       if (

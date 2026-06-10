@@ -262,6 +262,10 @@ export class DataTransformer implements IDataTransformer {
       // falling back to clubPerformance record
       const paymentSource = dpRecord ?? record
 
+      // Raw distinguished status (#1120) — extracted once, shared by the
+      // legacy mixed `status` field and the dedicated field below
+      const distinguishedStatus = this.extractDistinguishedStatus(record)
+
       const club: ClubStatistics = {
         clubId,
         clubName,
@@ -285,7 +289,7 @@ export class DataTransformer implements IDataTransformer {
         dcpGoalsAchieved: hasDcpGoalColumns(record)
           ? computeDcpGoalsAchieved(record)
           : undefined,
-        status: this.extractClubStatus(record),
+        status: this.extractClubStatus(record, distinguishedStatus),
         // Payment breakdown fields - sourced from districtPerformance when available
         octoberRenewals: this.extractNumber(
           paymentSource,
@@ -326,16 +330,9 @@ export class DataTransformer implements IDataTransformer {
         club.clubStatus = clubStatus
       }
 
-      // Extract the raw distinguished status (#1120). Live CSVs carry
+      // Keep the verbatim distinguished status (#1120). Live CSVs carry
       // letter codes ('D','S','P','M') that extractClubStatus() discards;
-      // keep the verbatim value so downstream consumers (time-series
-      // distinguishedTotal) can count it.
-      const distinguishedStatus = this.extractString(
-        record,
-        'Club Distinguished Status',
-        'Distinguished Status',
-        'Distinguished'
-      )
+      // downstream consumers (time-series distinguishedTotal) need it.
       if (distinguishedStatus) {
         club.distinguishedStatus = distinguishedStatus
       }
@@ -641,24 +638,37 @@ export class DataTransformer implements IDataTransformer {
    * @param record - The parsed record
    * @returns Club status string
    */
-  private extractClubStatus(record: ParsedRecord): string {
-    // Check for distinguished status first
-    const distinguished = this.extractString(
-      record,
-      'Club Distinguished Status',
-      'Distinguished Status',
-      'Distinguished'
-    )
+  private extractClubStatus(
+    record: ParsedRecord,
+    distinguishedStatus: string | undefined
+  ): string {
+    // Word-form distinguished status wins (legacy behavior; letter codes
+    // intentionally fall through — they live in club.distinguishedStatus)
     if (
-      distinguished &&
-      distinguished.toLowerCase().includes('distinguished')
+      distinguishedStatus &&
+      distinguishedStatus.toLowerCase().includes('distinguished')
     ) {
-      return distinguished
+      return distinguishedStatus
     }
 
     // Fall back to general status
     const status = this.extractString(record, 'Club Status', 'Status')
     return status ?? 'Active'
+  }
+
+  /**
+   * Extracts the raw 'Club Distinguished Status' value from a record.
+   *
+   * @param record - The parsed record
+   * @returns The verbatim status value, or undefined when absent/empty
+   */
+  private extractDistinguishedStatus(record: ParsedRecord): string | undefined {
+    return this.extractString(
+      record,
+      'Club Distinguished Status',
+      'Distinguished Status',
+      'Distinguished'
+    )
   }
 
   /**

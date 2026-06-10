@@ -339,7 +339,7 @@ describe('classifyClubHealth', () => {
     // The C3 audit disagreement fixture: dcpGoals > 0 said "thriving",
     // the §5.3 monthly checkpoint says June requires 5 goals.
     const result = classifyClubHealth(
-      { membership: 25, membershipBase: 20, dcpGoals: 3, cspSubmitted: true },
+      { membership: 25, netGrowth: 5, dcpGoals: 3, cspSubmitted: true },
       6
     )
     expect(result.status).toBe('vulnerable')
@@ -351,7 +351,7 @@ describe('classifyClubHealth', () => {
 
   it('classifies the same 3-goal club in July as thriving (checkpoint is 0)', () => {
     const result = classifyClubHealth(
-      { membership: 25, membershipBase: 20, dcpGoals: 3, cspSubmitted: true },
+      { membership: 25, netGrowth: 5, dcpGoals: 3, cspSubmitted: true },
       7
     )
     expect(result.status).toBe('thriving')
@@ -360,7 +360,7 @@ describe('classifyClubHealth', () => {
 
   it('classifies a 5-goal club in June as thriving', () => {
     const result = classifyClubHealth(
-      { membership: 25, membershipBase: 20, dcpGoals: 5, cspSubmitted: true },
+      { membership: 25, netGrowth: 5, dcpGoals: 5, cspSubmitted: true },
       6
     )
     expect(result.status).toBe('thriving')
@@ -369,18 +369,17 @@ describe('classifyClubHealth', () => {
   it('applies the intervention override regardless of goals and CSP', () => {
     // membership < 12 AND net growth < 3 → intervention-required
     const result = classifyClubHealth(
-      { membership: 8, membershipBase: 10, dcpGoals: 9, cspSubmitted: true },
+      { membership: 8, netGrowth: -2, dcpGoals: 9, cspSubmitted: true },
       6
     )
     expect(result.status).toBe('intervention-required')
-    expect(result.netGrowth).toBe(-2)
   })
 
   it('escapes the intervention override via net growth >= 3', () => {
     // membership 11 < 12 but netGrowth 6 >= 3 → not intervention;
     // membership requirement met via growth, June checkpoint 5 met
     const result = classifyClubHealth(
-      { membership: 11, membershipBase: 5, dcpGoals: 5, cspSubmitted: true },
+      { membership: 11, netGrowth: 6, dcpGoals: 5, cspSubmitted: true },
       6
     )
     expect(result.status).toBe('thriving')
@@ -388,7 +387,7 @@ describe('classifyClubHealth', () => {
 
   it('classifies a CSP-less club as vulnerable even when all else is met', () => {
     const result = classifyClubHealth(
-      { membership: 25, membershipBase: 20, dcpGoals: 9, cspSubmitted: false },
+      { membership: 25, netGrowth: 5, dcpGoals: 9, cspSubmitted: false },
       6
     )
     expect(result.status).toBe('vulnerable')
@@ -400,7 +399,7 @@ describe('classifyClubHealth', () => {
   it('fails the membership requirement below 20 members with growth < 3', () => {
     // membership 15 (>= 12, no intervention), growth 2 → requirement not met
     const result = classifyClubHealth(
-      { membership: 15, membershipBase: 13, dcpGoals: 9, cspSubmitted: true },
+      { membership: 15, netGrowth: 2, dcpGoals: 9, cspSubmitted: true },
       6
     )
     expect(result.status).toBe('vulnerable')

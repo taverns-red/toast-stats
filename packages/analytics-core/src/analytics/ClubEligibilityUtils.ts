@@ -24,8 +24,8 @@ import { getDCPCheckpoint } from './AnalyticsUtils.js'
 export interface ClubHealthClassificationInput {
   /** Current active membership count */
   membership: number
-  /** Membership base at the start of the program year */
-  membershipBase: number
+  /** Net membership growth since July (membership - base) */
+  netGrowth: number
   /** DCP goals achieved to date */
   dcpGoals: number
   /** Normalized CSP submission status (pre-2025 data → true) */
@@ -38,7 +38,6 @@ export interface ClubHealthClassificationInput {
  */
 export interface ClubHealthClassification {
   status: ClubHealthStatus
-  netGrowth: number
   requiredDcpCheckpoint: number
   membershipRequirementMet: boolean
   dcpCheckpointMet: boolean
@@ -60,8 +59,7 @@ export function classifyClubHealth(
   input: ClubHealthClassificationInput,
   month: number
 ): ClubHealthClassification {
-  const { membership, membershipBase, dcpGoals, cspSubmitted } = input
-  const netGrowth = membership - membershipBase
+  const { membership, netGrowth, dcpGoals, cspSubmitted } = input
   const requiredDcpCheckpoint = getDCPCheckpoint(month)
 
   // Membership requirement: >= 20 members OR net growth >= 3
@@ -86,12 +84,59 @@ export function classifyClubHealth(
 
   return {
     status,
-    netGrowth,
     requiredDcpCheckpoint,
     membershipRequirementMet,
     dcpCheckpointMet,
     cspRequirementMet,
   }
+}
+
+/**
+ * Distinguished-status letter codes as they appear in live dashboard
+ * CSVs' 'Club Distinguished Status' column:
+ * D = Distinguished, S = Select, P = President's, M = Smedley.
+ */
+export const DISTINGUISHED_STATUS_CODES = ['D', 'S', 'P', 'M'] as const
+
+/**
+ * Check whether a raw 'Club Distinguished Status' value is a live
+ * single-letter distinguished code (case-insensitive).
+ *
+ * @param value - Raw status value, already trimmed
+ * @returns True for 'D' | 'S' | 'P' | 'M' (any case)
+ */
+export function isDistinguishedStatusCode(value: string): boolean {
+  return (DISTINGUISHED_STATUS_CODES as readonly string[]).includes(
+    value.toUpperCase()
+  )
+}
+
+/**
+ * Parse CSP (Club Success Plan) submission status from a raw scraped
+ * record (string-form twin of getCSPStatus, which reads the normalized
+ * boolean on ClubStatistics).
+ *
+ * Historical compatibility: when the field is absent (pre-2025-2026
+ * CSVs), CSP is treated as submitted — it was not a requirement then.
+ *
+ * @param record - Raw club record with dynamic CSV columns
+ * @returns True unless the field is present and explicitly negative
+ */
+export function getCSPStatusFromRecord(
+  record: Record<string, string | number | null | undefined>
+): boolean {
+  const cspValue =
+    record['CSP'] ??
+    record['Club Success Plan'] ??
+    record['CSP Submitted'] ??
+    record['Club Success Plan Submitted']
+
+  if (cspValue === undefined || cspValue === null) {
+    return true
+  }
+
+  const cspString = String(cspValue).toLowerCase().trim()
+  return !['no', 'false', '0', 'not submitted', 'n'].includes(cspString)
 }
 
 /**
