@@ -116,7 +116,7 @@ const rowClubId = r =>
   String(r['Club Number'] ?? r['Club'] ?? '')
     .replace(/\D/g, '')
     .padStart(8, '0')
-write('district-snapshot.json', {
+const truncatedSnapshot = {
   ...snapshot,
   data: {
     ...snapshot.data,
@@ -134,30 +134,13 @@ write('district-snapshot.json', {
       .slice(0, 4),
     prospectiveClubs: (snapshot.data.prospectiveClubs ?? []).slice(0, 2),
   },
-})
+}
+write('district-snapshot.json', truncatedSnapshot)
 // The same recorded snapshot backs the shared-contracts write-contract test
 // (the #1123 "real fixture fails the old schema" regression anchor).
 write(
   'recorded-district-snapshot.json',
-  {
-    ...snapshot,
-    data: {
-      ...snapshot.data,
-      clubs: keptClubs,
-      divisions: snapshot.data.divisions.filter(d =>
-        keptDivisionIds.has(d.divisionId)
-      ),
-      areas: snapshot.data.areas.filter(a => keptAreaIds.has(a.areaId)),
-      clubPerformance: keptCp,
-      divisionPerformance: snapshot.data.divisionPerformance
-        .filter(r => keptIds.has(rowClubId(r)))
-        .slice(0, 4),
-      districtPerformance: snapshot.data.districtPerformance
-        .filter(r => keptIds.has(rowClubId(r)))
-        .slice(0, 4),
-      prospectiveClubs: (snapshot.data.prospectiveClubs ?? []).slice(0, 2),
-    },
-  },
+  truncatedSnapshot,
   sharedContractsFixtureDir
 )
 
