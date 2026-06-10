@@ -77,7 +77,28 @@ function validateDistrict(fetch: DistrictFetchResult): CanaryFailure | null {
   }
 }
 
+/**
+ * The latest date is remote input that ends up in $GITHUB_OUTPUT lines and
+ * issue titles — only a strict YYYY-MM-DD ever propagates (injection guard).
+ */
+const SNAPSHOT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
 export function evaluateCdnSchema(input: CanaryInput): CanaryResult {
+  if (
+    input.latestDate !== null &&
+    !SNAPSHOT_DATE_PATTERN.test(input.latestDate)
+  ) {
+    return {
+      healthy: false,
+      latestDate: null,
+      checked: 0,
+      failures: [],
+      reason: `malformed latest snapshot date from v1/latest.json: ${JSON.stringify(
+        input.latestDate.slice(0, 40)
+      )}`,
+    }
+  }
+
   if (input.manifestError || input.latestDate === null) {
     return {
       healthy: false,
@@ -143,9 +164,10 @@ export function buildCanaryIssueBody(
   ]
 
   if (result.failures.length > 0) {
+    const cell = (s: string) => s.replaceAll('|', '\\|')
     lines.push('| District | Reason |', '| --- | --- |')
     for (const f of result.failures) {
-      lines.push(`| ${f.districtId} | ${f.reason} |`)
+      lines.push(`| ${cell(f.districtId)} | ${cell(f.reason)} |`)
     }
     lines.push('')
   }

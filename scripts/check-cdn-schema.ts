@@ -14,9 +14,11 @@
  * stderr (R4); $GITHUB_OUTPUT carries only the structured decision.
  *
  * Env:
- *   CDN_BASE_URL  — surface to check (default: production CDN bucket)
- *   MAX_DISTRICTS — optional cap on districts checked; skipped districts
- *                   are logged loudly (no silent caps)
+ *   CDN_BASE_URL  — surface to check (default: the production CDN edge,
+ *                   the same base the mcp-server reads)
+ *   MAX_DISTRICTS — optional cap on districts checked; unset, 0 or
+ *                   non-numeric means ALL; skipped districts are logged
+ *                   loudly (no silent caps)
  *
  * The process always exits 0; the workflow decides whether to open an
  * issue (and mark the run red) based on the `unhealthy` output. This
@@ -33,7 +35,9 @@ import {
   type DistrictFetchResult,
 } from './lib/cdnSchemaCanary.js'
 
-const DEFAULT_BASE_URL = 'https://storage.googleapis.com/toast-stats-data-ca'
+// The edge consumers actually read (mcp-server CdnClient default), not the
+// origin bucket — an LB/edge-layer failure must also trip the canary.
+const DEFAULT_BASE_URL = 'https://cdn.taverns.red'
 
 const BODY_FILE = '/tmp/cdn-schema-canary-body.md'
 

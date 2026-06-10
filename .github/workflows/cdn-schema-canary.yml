@@ -104,7 +104,14 @@ jobs:
           fi
 
       - name: Close resolved canary alerts
-        if: steps.canary.outputs.unhealthy != 'true'
+        # Self-clear ONLY when this run checked the same signal the alert is
+        # about: the default (production) surface with no district cap. A
+        # healthy dispatch run against staging or a capped subset must not
+        # close a live prod alert (Lesson 155).
+        if: >-
+          steps.canary.outputs.unhealthy != 'true' &&
+          (inputs.base_url == null || inputs.base_url == '') &&
+          (inputs.max_districts == null || inputs.max_districts == '')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
