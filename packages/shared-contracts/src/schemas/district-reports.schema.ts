@@ -75,15 +75,22 @@ export const ClubSuccessPlanRecordSchema = z.object({
   clubName: z.string(),
 })
 
-/** Education Achievements — de-identified to per-(club, award) COUNTS. */
-export const EducationAchievementCountRecordSchema = z.object({
+/**
+ * Education Achievements — de-identified to per-(club, award) RAW activity
+ * counts. `achievementCount` is a RAW achievement-row count, NOT DCP credit
+ * (#1080): DCP education credit counts DISTINCT MEMBERS per award tier and is
+ * sourced from `clubPerformance` "Level 1s"/"Level 2s"/… (see dcpGoals.ts).
+ * Member-dedup is unrecoverable here — the personal `Member` column is dropped
+ * at parse time, before aggregation. Never conflate the two metrics.
+ */
+export const EducationAchievementActivityRecordSchema = z.object({
   club: z.string(),
   division: z.string(),
   area: z.string(),
   name: z.string(),
   location: z.string(),
   award: z.string(),
-  count: z.number().int().nonnegative(),
+  achievementCount: z.number().int().nonnegative(),
 })
 
 export const NewClubRecordSchema = z.object({
@@ -137,7 +144,7 @@ export const DistrictReportsSectionsSchema = z.object({
   officerList: section(OfficerListRecordSchema).optional(),
   clubSuccessPlan: section(ClubSuccessPlanRecordSchema).optional(),
   educationAchievements: section(
-    EducationAchievementCountRecordSchema
+    EducationAchievementActivityRecordSchema
   ).optional(),
   tripleCrown: z
     .object({
@@ -161,8 +168,8 @@ export const DistrictReportsDatasetSchema = z.object({
 export type DuesRenewalRecord = z.infer<typeof DuesRenewalRecordSchema>
 export type OfficerListRecord = z.infer<typeof OfficerListRecordSchema>
 export type ClubSuccessPlanRecord = z.infer<typeof ClubSuccessPlanRecordSchema>
-export type EducationAchievementCountRecord = z.infer<
-  typeof EducationAchievementCountRecordSchema
+export type EducationAchievementActivityRecord = z.infer<
+  typeof EducationAchievementActivityRecordSchema
 >
 export type NewClubRecord = z.infer<typeof NewClubRecordSchema>
 export type ProspectiveClubRecord = z.infer<typeof ProspectiveClubRecordSchema>

@@ -216,7 +216,8 @@ export function buildDistrictReports(
     }
   }
 
-  // ── Education Achievements (already aggregated to per-club/award counts) ──
+  // ── Education Achievements (already aggregated to per-club/award RAW
+  // activity counts — achievementCount is NOT DCP credit, see #1080) ──
   const edu = parsed(REPORT_GUIDS.education)
   if (edu && edu.report.reportType === 'education-achievements') {
     sections.educationAchievements = {
