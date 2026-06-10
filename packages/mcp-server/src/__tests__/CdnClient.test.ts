@@ -21,7 +21,7 @@ const ROUTES: Record<string, string> = {
   '/config/district-snapshot-index.json': 'district-snapshot-index.json',
   '/config/club-index.json': 'club-index.json',
   '/v1/rankings.json': 'v1-rankings.json',
-  '/snapshots/2026-05-31/all-districts-rankings.json':
+  '/snapshots/2026-06-08/all-districts-rankings.json':
     'dated-all-districts-rankings.json',
 }
 
@@ -100,6 +100,19 @@ describe('CdnClient — discovery reads', () => {
     if (resolved.available) return
     expect(resolved.reason).toMatch(/not available/i)
   })
+
+  it('returns not-available for prototype-member club ids, never a phantom hit (#1112)', async () => {
+    // A bare `clubs[clubId]` lookup resolves inherited Object.prototype
+    // members ('constructor', '__proto__', …) to truthy values, returning
+    // available:true with an undefined district — verified live in the
+    // 2026-06-09 audit (§9a). The lookup must use Object.hasOwn.
+    for (const clubId of ['constructor', '__proto__', 'toString']) {
+      const resolved = await client().resolveClubDistrict(clubId)
+      expect(resolved.available).toBe(false)
+      if (resolved.available) return
+      expect(resolved.reason).toMatch(/not available/i)
+    }
+  })
 })
 
 describe('CdnClient — core analytics reads', () => {
@@ -169,7 +182,7 @@ describe('CdnClient — failure handling (not-available, never throw)', () => {
       new Response(
         JSON.stringify({
           rankings: [{ districtId: 61, paidClubs: 'lots' }],
-          date: '2026-05-31',
+          date: '2026-06-08',
         }),
         { status: 200 }
       )) as typeof fetch

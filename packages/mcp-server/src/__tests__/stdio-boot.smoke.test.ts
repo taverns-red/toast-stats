@@ -109,20 +109,20 @@ describe('installed bin boots over real stdio (offline, fixture-backed)', () => 
     expect(env.sourceUrl).toBe(`${cdn.baseUrl}/v1/latest.json`)
     expect(
       (env.data as { latestSnapshotDate: string }).latestSnapshotDate
-    ).toBe('2026-05-31')
+    ).toBe('2026-06-08')
   })
 
   it('answers a dated district-snapshot read end-to-end over the boot path', async () => {
     const result = await client.callTool({
       name: 'get-district-snapshot',
-      arguments: { districtId: '61', date: '2026-05-31' },
+      arguments: { districtId: '61', date: '2026-06-08' },
     })
     const content = result.content as { type: string; text: string }[]
     const env = JSON.parse(content[0]!.text) as ToolEnvelope
     expect(env.available).toBe(true)
     expect(env.sourceUrl).toBe(
-      `${cdn.baseUrl}/snapshots/2026-05-31/district_61.json`
+      `${cdn.baseUrl}/snapshots/2026-06-08/district_61.json`
     )
-    expect(env.date).toBe('2026-05-31')
+    expect(env.date).toBe('2026-06-08')
   })
 })

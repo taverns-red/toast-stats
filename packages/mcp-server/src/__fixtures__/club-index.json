@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-06-01T10:35:00.074Z",
-  "snapshotDate": "2026-05-31",
-  "totalClubs": 3,
+  "generatedAt": "2026-06-09T13:44:57.120Z",
+  "snapshotDate": "2026-06-08",
+  "totalClubs": 6,
   "clubs": {
     "28675309": {
       "districtId": "113",
@@ -11,9 +11,21 @@
       "districtId": "118",
       "clubName": "WeLink Toastmasters Club"
     },
-    "28675314": {
-      "districtId": "130",
-      "clubName": "Niamey Online"
+    "00003045": {
+      "districtId": "61",
+      "clubName": "Limestone City Club"
+    },
+    "00009560": {
+      "districtId": "61",
+      "clubName": "CFB Kingston Toastmasters"
+    },
+    "01849755": {
+      "districtId": "61",
+      "clubName": "Toastmasters At St. Lawrence College"
+    },
+    "03475582": {
+      "districtId": "61",
+      "clubName": "Tunney's Toastmasters"
     }
   }
 }

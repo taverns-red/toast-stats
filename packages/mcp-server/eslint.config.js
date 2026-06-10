@@ -75,6 +75,18 @@ export default [
       '@typescript-eslint/no-empty-function': 'off',
     },
   },
+  // Dev scripts (fixture recorder) — plain Node ESM, no TS parser needed
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+        ...globals.es2021,
+      },
+    },
+  },
   {
     ignores: ['dist/**', 'node_modules/**', 'src/**/*.js'],
   },
