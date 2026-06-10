@@ -18,6 +18,7 @@
  */
 
 import type { RawCSVEntry } from './monthEndDates.js'
+import { groupByDataMonth } from './monthEndDates.js'
 
 /** One (dataMonth → closingDate) registry entry, e.g. 2026-05 → 2026-06-05. */
 export interface RegistryMonthEntry {
@@ -43,27 +44,142 @@ export interface RegistryFreshnessResult {
   checkedMonths: string[]
 }
 
+/**
+ * Derive (dataMonth → lastClosingDate) for every COMPLETED closing month.
+ *
+ * A month's closing window is complete only when some collection date LATER
+ * than its last closing-period date exists in the feed (TI moved on — a
+ * non-closing day or the next month's window). A month whose last closing
+ * entry is also the newest entry overall may still be extended by TI
+ * tomorrow, so it is not yet demandable. Months with no closing entries at
+ * all (collection outages) are underivable and skipped.
+ */
 export function deriveCompletedClosingMonths(
-  _entries: RawCSVEntry[]
+  entries: RawCSVEntry[]
 ): RegistryMonthEntry[] {
-  throw new Error('not implemented')
+  const byMonth = groupByDataMonth(entries)
+  const allDates = entries.map(e => e.collectionDate).sort()
+  const newestDate = allDates[allDates.length - 1]
+
+  const completed: RegistryMonthEntry[] = []
+  for (const [dataMonth, closingDates] of byMonth) {
+    const lastClosingDate = closingDates[closingDates.length - 1]!
+    if (newestDate !== undefined && newestDate > lastClosingDate) {
+      completed.push({ dataMonth, closingDate: lastClosingDate })
+    }
+  }
+
+  completed.sort((a, b) => a.dataMonth.localeCompare(b.dataMonth))
+  return completed
 }
 
+/**
+ * Compare the committed registry against the derivable completed months.
+ *
+ * - A derivable month absent from the registry → `missing` (stale).
+ * - A registry date EARLIER than derived → `mismatched` (reality moved past
+ *   the committed entry — stale).
+ * - A registry date LATER than derived → trusted: the operator backfilled a
+ *   partial-outage month from TI behavior; our metadata knows less, not more.
+ * - An empty feed → stale with `emptyFeed` (a monitor that cannot read its
+ *   signal must alert, never pass — L107).
+ */
 export function evaluateRegistryFreshness(
-  _registryMonths: RegistryMonthEntry[],
-  _entries: RawCSVEntry[]
+  registryMonths: RegistryMonthEntry[],
+  entries: RawCSVEntry[]
 ): RegistryFreshnessResult {
-  throw new Error('not implemented')
+  if (entries.length === 0) {
+    return {
+      fresh: false,
+      missing: [],
+      mismatched: [],
+      emptyFeed: true,
+      checkedMonths: [],
+    }
+  }
+
+  const expected = deriveCompletedClosingMonths(entries)
+  const registryByMonth = new Map(
+    registryMonths.map(m => [m.dataMonth, m.closingDate])
+  )
+
+  const missing: RegistryMonthEntry[] = []
+  const mismatched: RegistryMismatch[] = []
+
+  for (const exp of expected) {
+    const registered = registryByMonth.get(exp.dataMonth)
+    if (registered === undefined) {
+      missing.push(exp)
+    } else if (registered < exp.closingDate) {
+      mismatched.push({
+        dataMonth: exp.dataMonth,
+        registryClosingDate: registered,
+        derivedClosingDate: exp.closingDate,
+      })
+    }
+  }
+
+  return {
+    fresh: missing.length === 0 && mismatched.length === 0,
+    missing,
+    mismatched,
+    emptyFeed: false,
+    checkedMonths: expected.map(e => e.dataMonth),
+  }
 }
 
 export function buildRegistryStaleTitle(
-  _result: RegistryFreshnessResult
+  result: RegistryFreshnessResult
 ): string {
-  throw new Error('not implemented')
+  if (result.emptyFeed) {
+    return '🟥 closing-date registry check could not read raw-csv metadata'
+  }
+  const months = [
+    ...result.missing.map(m => m.dataMonth),
+    ...result.mismatched.map(m => m.dataMonth),
+  ].sort()
+  return `🟥 closing-date registry stale — ${months.join(', ')}`
 }
 
 export function buildRegistryStaleBody(
-  _result: RegistryFreshnessResult
+  result: RegistryFreshnessResult
 ): string {
-  throw new Error('not implemented')
+  const lines: string[] = []
+
+  if (result.emptyFeed) {
+    lines.push(
+      'The registry freshness check received **no raw-csv metadata entries** —',
+      'the monitor feed itself failed (GCS listing/read error or empty window).',
+      'Treating "cannot tell" as stale (L107). Investigate the check step logs',
+      'before trusting `docs/month-end-closing-dates.json` for rescrapes.'
+    )
+  } else {
+    lines.push(
+      'The committed closing-date registry `docs/month-end-closing-dates.json`',
+      'is behind what raw-csv metadata proves (#1128, epic #1098):',
+      ''
+    )
+    for (const m of result.missing) {
+      lines.push(
+        `- **${m.dataMonth}** — missing; metadata shows its closing window ended on **${m.closingDate}**`
+      )
+    }
+    for (const m of result.mismatched) {
+      lines.push(
+        `- **${m.dataMonth}** — registered as ${m.registryClosingDate}, but reality moved on to **${m.derivedClosingDate}**`
+      )
+    }
+  }
+
+  lines.push(
+    '',
+    '### Remediation',
+    '```bash',
+    'npx tsx scripts/update-closing-date-registry.ts        # derive + append from GCS metadata',
+    '```',
+    'then commit the updated `docs/month-end-closing-dates.json`.',
+    'This issue self-clears on the next daily run that finds the registry fresh.'
+  )
+
+  return lines.join('\n')
 }
