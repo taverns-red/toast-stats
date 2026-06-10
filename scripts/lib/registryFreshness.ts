@@ -154,11 +154,13 @@ export function parseManualEntryArg(input: string): RegistryMonthEntry {
     throw new Error(`--set: not a real calendar month/day: ${input}`)
   }
 
-  // closingDate must be after the last day of dataMonth, i.e. its YYYY-MM
-  // prefix must sort strictly greater than the data month.
-  if (closingDate.slice(0, 7) <= dataMonth) {
+  // A closing date normally falls early in the FOLLOWING month, but a TI
+  // archive-outage month can end inside the data month itself (April 2022's
+  // as-of list stops at 2022-04-30 — TI never archived a May reconciliation).
+  // Same-month is therefore valid; only an EARLIER month is a typo.
+  if (closingDate.slice(0, 7) < dataMonth) {
     throw new Error(
-      `--set: closing date ${closingDate} must fall after data month ${dataMonth}`
+      `--set: closing date ${closingDate} is before data month ${dataMonth}`
     )
   }
 
