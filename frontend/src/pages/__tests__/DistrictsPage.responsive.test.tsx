@@ -95,15 +95,17 @@ const headerByText = (re: RegExp): HTMLElement => {
  * by the loading-slot test (#861) and the error-state tests (#915 V9) so the
  * invariant has one definition.
  */
+/** True when `a` precedes `b` in document order. */
+const precedesInDom = (a: Element, b: Element): boolean =>
+  Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+
 const expectReservedShell = (container: HTMLElement) => {
   const skel = container.querySelector('.districts-hero-search-skeleton')
   const strip = container.querySelector('.districts-kpi-strip')
   expect(skel).not.toBeNull()
   expect(strip).not.toBeNull()
   // Hero-search slot precedes the KPI strip in DOM so it sits above on mobile.
-  expect(
-    skel!.compareDocumentPosition(strip!) & Node.DOCUMENT_POSITION_FOLLOWING
-  ).toBeTruthy()
+  expect(precedesInDom(skel!, strip!)).toBe(true)
   // 3 secondary KPI cards → the strip's mobile height matches across states.
   expect(
     container.querySelectorAll('.districts-kpi-card--secondary').length
@@ -120,10 +122,7 @@ const expectReservedShell = (container: HTMLElement) => {
   expect(actionsSkel).not.toBeNull()
   expect(actionsSkel!.getAttribute('aria-hidden')).toBe('true')
   expect(actionsSkel!.closest('.districts-page-header')).not.toBeNull()
-  expect(
-    actionsSkel!.compareDocumentPosition(strip!) &
-      Node.DOCUMENT_POSITION_FOLLOWING
-  ).toBeTruthy()
+  expect(precedesInDom(actionsSkel!, strip!)).toBe(true)
 }
 
 describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {

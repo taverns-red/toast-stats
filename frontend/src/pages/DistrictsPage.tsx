@@ -45,6 +45,21 @@ import { useIsMobile } from '../hooks/useIsMobile'
 // query never hides its own matches.
 const MOBILE_RANKINGS_CAP = 20
 
+// #922 — pinned widths for the renderShell header-actions skeleton, one per
+// loaded-toolbar item (measured at 390px, both engines). The widths only
+// steer the flex WRAP (pill + PY chip on row 1, date chip wrapping to row 2
+// at phone widths); the reserved height comes from the shared 44px
+// touch-target floor + the real __actions container's gaps. If the loaded
+// toolbar's content changes, e2e/landing-mobile-cls.smoke.ts fails the PR
+// preview and these get re-measured.
+const ACTIONS_SKELETON_WIDTHS = {
+  freshnessPill: 179, // "Data fresh · <date>" pill (DataControlsBar)
+  pyChip: 109, // "PY 25–26 ▾" chip
+  dateChip: 107, // "Latest in PY ▾" chip
+  exportBtn: 105, // "Export CSV" action button
+  shareBtn: 85, // "Share" action button
+}
+
 // Shared parse/serialize for comma-joined string-list URL params (?regions=,
 // ?pinned=). Module-level so their identity is stable across renders (#978).
 const EMPTY_LIST: string[] = []
@@ -587,24 +602,24 @@ const DistrictsPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className="districts-actions-skeleton__chip"
-                style={{ width: 179 }}
+                style={{ width: ACTIONS_SKELETON_WIDTHS.freshnessPill }}
               />
               <span
                 className="districts-actions-skeleton__chip"
-                style={{ width: 109 }}
+                style={{ width: ACTIONS_SKELETON_WIDTHS.pyChip }}
               />
               <span
                 className="districts-actions-skeleton__chip"
-                style={{ width: 107 }}
+                style={{ width: ACTIONS_SKELETON_WIDTHS.dateChip }}
               />
             </div>
             <span
               className="districts-actions-skeleton__btn"
-              style={{ width: 105 }}
+              style={{ width: ACTIONS_SKELETON_WIDTHS.exportBtn }}
             />
             <span
               className="districts-actions-skeleton__btn"
-              style={{ width: 85 }}
+              style={{ width: ACTIONS_SKELETON_WIDTHS.shareBtn }}
             />
           </div>
         </div>
