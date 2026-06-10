@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-19T01:51:46.395Z",
+  "generatedAt": "2026-06-10T22:41:13.700Z",
   "description": "Month-end closing dates derived from raw-csv metadata. Each entry maps a Toastmasters data month (YYYY-MM) to the last closing-period collection date in raw-csv/.",
   "note": "April 2022 is missing — no closing-period metadata found for that month.",
   "months": [
@@ -434,6 +434,18 @@
     {
       "dataMonth": "2026-01",
       "closingDate": "2026-02-13"
+    },
+    {
+      "dataMonth": "2026-03",
+      "closingDate": "2026-04-07"
+    },
+    {
+      "dataMonth": "2026-04",
+      "closingDate": "2026-05-07"
+    },
+    {
+      "dataMonth": "2026-05",
+      "closingDate": "2026-06-05"
     }
   ]
 }
