@@ -571,6 +571,42 @@ const DistrictsPage: React.FC = () => {
               top across visits.
             </p>
           </div>
+          {/* #922 — reserve the mobile-stacked header-actions slot
+              (freshness pill + PY/date chips + Export/Share row) so the
+              shell → loaded swap doesn't insert ~148px above the KPI strip
+              at 390px (Lessons 107/125). Structural skeleton: the real
+              __actions container + width-pinned 44px placeholders reproduce
+              the loaded toolbar's wrap/gap geometry instead of hardcoding a
+              height. Hidden ≥768px via CSS, where the toolbar lays out
+              inline beside the intro (no vertical shift to reserve).
+              Geometry verified live by e2e/landing-mobile-cls.smoke.ts. */}
+          <div
+            className="districts-page-header__actions districts-page-header__actions--skeleton"
+            aria-hidden="true"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="districts-actions-skeleton__chip"
+                style={{ width: 179 }}
+              />
+              <span
+                className="districts-actions-skeleton__chip"
+                style={{ width: 109 }}
+              />
+              <span
+                className="districts-actions-skeleton__chip"
+                style={{ width: 107 }}
+              />
+            </div>
+            <span
+              className="districts-actions-skeleton__btn"
+              style={{ width: 105 }}
+            />
+            <span
+              className="districts-actions-skeleton__btn"
+              style={{ width: 85 }}
+            />
+          </div>
         </div>
         {/* #861 — reserve the mobile-hoisted hero-search slot so the
             skeleton/error → loaded swap is shift-free (CLS, #826/#488,
