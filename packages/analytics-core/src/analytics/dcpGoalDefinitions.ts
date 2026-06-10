@@ -216,6 +216,22 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
 ]
 
 /**
+ * Whether a raw club-performance record carries the per-goal CSV columns.
+ * Keyed on goal 1's header (aliases included). Consumers without goal
+ * columns fall back: DataTransformer omits dcpGoalsAchieved, the analytics
+ * module uses its sequential approximation.
+ */
+export function hasDcpGoalColumns(record: ScrapedRecord): boolean {
+  const goalOneColumns = DCP_GOAL_DEFINITIONS[0]!.requirements[0]!.anyOf
+  return goalOneColumns.some(column =>
+    column.aliases.some(key => {
+      const value = record[key]
+      return value !== null && value !== undefined && value !== ''
+    })
+  )
+}
+
+/**
  * Read a goal column from a raw CSV record, trying aliases in order.
  * Mirrors DataTransformer.extractNumber: a present-but-unparseable value
  * falls through to the next alias; absence everywhere yields 0.

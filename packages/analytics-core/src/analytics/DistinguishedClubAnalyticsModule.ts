@@ -32,6 +32,7 @@ import type {
 import type { ScrapedRecord } from '@toastmasters/shared-contracts'
 import {
   DCP_GOAL_DEFINITIONS,
+  hasDcpGoalColumns,
   isDcpGoalAchieved,
 } from './dcpGoalDefinitions.js'
 import { ensureString } from './AnalyticsUtils.js'
@@ -734,7 +735,7 @@ export class DistinguishedClubAnalyticsModule {
       rawClubRecords &&
       rawClubRecords.length > 0 &&
       rawClubRecords[0] !== undefined &&
-      'Level 1s' in rawClubRecords[0]
+      hasDcpGoalColumns(rawClubRecords[0])
 
     if (hasGoalColumns && rawClubRecords) {
       // #135 fix: Use actual per-goal columns from raw CSV data

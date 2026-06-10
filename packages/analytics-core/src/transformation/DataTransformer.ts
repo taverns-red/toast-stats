@@ -22,7 +22,10 @@ import type {
   SnapshotMetadata,
 } from '../interfaces.js'
 import type { ScrapedRecord } from '@toastmasters/shared-contracts'
-import { computeDcpGoalsAchieved } from '../analytics/dcpGoalDefinitions.js'
+import {
+  computeDcpGoalsAchieved,
+  hasDcpGoalColumns,
+} from '../analytics/dcpGoalDefinitions.js'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
 
 /**
@@ -279,10 +282,9 @@ export class DataTransformer implements IDataTransformer {
           'Total'
         ),
         dcpGoals: this.extractNumber(record, 'Goals Met', 'DCP Goals', 'Goals'),
-        dcpGoalsAchieved:
-          record['Level 1s'] != null && record['Level 1s'] !== ''
-            ? computeDcpGoalsAchieved(record)
-            : undefined,
+        dcpGoalsAchieved: hasDcpGoalColumns(record)
+          ? computeDcpGoalsAchieved(record)
+          : undefined,
         status: this.extractClubStatus(record),
         // Payment breakdown fields - sourced from districtPerformance when available
         octoberRenewals: this.extractNumber(

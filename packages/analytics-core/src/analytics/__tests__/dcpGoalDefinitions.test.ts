@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest'
 import type { ScrapedRecord } from '@toastmasters/shared-contracts'
 import {
   DCP_GOAL_DEFINITIONS,
+  hasDcpGoalColumns,
   readDcpGoalColumn,
   isDcpGoalAchieved,
   computeDcpGoalsAchieved,
@@ -158,6 +159,20 @@ describe('DCP_GOAL_DEFINITIONS', () => {
       expect(readDcpGoalColumn({ 'Level 1s': '' }, column)).toBe(0)
       expect(readDcpGoalColumn({ 'Level 1s': 'N/A' }, column)).toBe(0)
       expect(readDcpGoalColumn({ 'Level 1s': null }, column)).toBe(0)
+    })
+  })
+
+  describe('hasDcpGoalColumns', () => {
+    it('detects records that carry the per-goal columns', () => {
+      expect(hasDcpGoalColumns({ 'Level 1s': '0' })).toBe(true)
+      expect(hasDcpGoalColumns({ 'Level 1s': 3 })).toBe(true)
+    })
+
+    it('rejects records without them (legacy data falls back)', () => {
+      expect(hasDcpGoalColumns({})).toBe(false)
+      expect(hasDcpGoalColumns({ 'Level 1s': '' })).toBe(false)
+      expect(hasDcpGoalColumns({ 'Level 1s': null })).toBe(false)
+      expect(hasDcpGoalColumns({ 'Goals Met': '5' })).toBe(false)
     })
   })
 

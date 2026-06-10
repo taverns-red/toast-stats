@@ -23,6 +23,7 @@ export { diffSnapshots } from './analytics/diffSnapshots.js'
 // Shared DCP goal definitions — single source of truth (epic #1095, #1118)
 export {
   DCP_GOAL_DEFINITIONS,
+  hasDcpGoalColumns,
   readDcpGoalColumn,
   isDcpGoalAchieved,
   computeDcpGoalsAchieved,
