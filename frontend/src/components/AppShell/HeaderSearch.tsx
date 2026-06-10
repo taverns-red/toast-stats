@@ -52,7 +52,7 @@ const HeaderSearch: React.FC<HeaderSearchProps> = ({ onOpenSearch }) => {
         type="button"
         className="app-shell-icon-btn header-search__trigger"
         aria-label="Search"
-        title="Search districts, regions, clubs"
+        title="Search districts, regions, clubs, divisions, areas"
         onClick={onOpenSearch}
       >
         <SearchGlyph />
@@ -139,7 +139,7 @@ const DesktopOmniCombobox: React.FC = () => {
           onFocus={() => setFocused(true)}
           onKeyDown={handleKeyDown}
           placeholder="Search…"
-          aria-label="Search districts, regions, clubs by name or number"
+          aria-label="Search districts, regions, clubs, divisions, areas by name or number"
           aria-autocomplete="list"
           aria-expanded={listboxOpen}
           aria-controls={listboxOpen ? LISTBOX_ID : undefined}
