@@ -11,15 +11,19 @@
  *      whose closing date had to be established from TI behavior (the
  *      registry's value-add is exactly the months metadata cannot prove).
  *
- * All writes go through ClosingDateRegistry (dedupe, same-month update,
- * sort, atomic write) — the class's production caller per the #1128
- * decision (ADR-011). Run locally, then COMMIT the registry diff; the
- * daily pipeline's check step self-clears once the fresh file lands.
+ * Which writes apply is decided by the unit-tested planRegistryUpdates
+ * (skip identical; derived never regresses a later registry date; manual
+ * overrides either way). All writes go through ClosingDateRegistry (dedupe,
+ * same-month update, sort, atomic write) — the class's production caller
+ * per ADR-011. Run locally, then COMMIT the registry diff; the daily
+ * pipeline's check step self-clears once the fresh file lands.
  *
  * Usage:
  *   npx tsx scripts/update-closing-date-registry.ts                # derive + append
  *   npx tsx scripts/update-closing-date-registry.ts --dry-run
- *   npx tsx scripts/update-closing-date-registry.ts --set 2026-02=2026-03-10
+ *   npx tsx scripts/update-closing-date-registry.ts --set 2026-02=2026-03-05
+ *   npx tsx scripts/update-closing-date-registry.ts --no-derive --set ...
+ *     (--no-derive skips the GCS read entirely — offline manual entries)
  *
  * Env: GCS_BUCKET (default toast-stats-data-staging), WINDOW_DAYS (default 130).
  * Logging to stderr, JSON summary to stdout (R4).
@@ -28,15 +32,17 @@
 import * as path from 'node:path'
 import { Storage } from '@google-cloud/storage'
 import { ClosingDateRegistry } from '../packages/collector-cli/src/utils/ClosingDateRegistry.js'
-import { listRawCSVDates, readMetadataForDates } from './lib/gcsHelpers.js'
+import {
+  readRecentRawCSVEntries,
+  RAW_CSV_DEFAULT_BUCKET,
+  RAW_CSV_DEFAULT_WINDOW,
+} from './lib/gcsHelpers.js'
 import {
   deriveCompletedClosingMonths,
   parseManualEntryArg,
+  planRegistryUpdates,
   type RegistryMonthEntry,
 } from './lib/registryFreshness.js'
-
-const DEFAULT_BUCKET = 'toast-stats-data-staging'
-const DEFAULT_WINDOW_DAYS = 130
 
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)
@@ -65,8 +71,8 @@ function parseArgs(argv: string[]): Args {
 
 async function main(): Promise<void> {
   const { dryRun, noDerive, manualEntries } = parseArgs(process.argv.slice(2))
-  const bucket = process.env.GCS_BUCKET ?? DEFAULT_BUCKET
-  const windowDays = Number(process.env.WINDOW_DAYS ?? DEFAULT_WINDOW_DAYS)
+  const bucket = process.env.GCS_BUCKET ?? RAW_CSV_DEFAULT_BUCKET
+  const windowDays = Number(process.env.WINDOW_DAYS ?? RAW_CSV_DEFAULT_WINDOW)
   const projectRoot = path.resolve(import.meta.dirname, '..')
 
   const registry = new ClosingDateRegistry({
@@ -81,59 +87,36 @@ async function main(): Promise<void> {
   })
 
   const before = await registry.read()
-  const beforeByMonth = new Map(
-    before.months.map(m => [m.dataMonth, m.closingDate])
-  )
 
   let derived: RegistryMonthEntry[] = []
   if (!noDerive) {
-    const storage = new Storage()
-    const allDates = await listRawCSVDates(storage, bucket)
-    const windowDates = allDates.slice(-windowDays)
-    log(
-      `raw-csv: ${allDates.length} dates in gs://${bucket}, reading metadata for the last ${windowDates.length}`
+    const entries = await readRecentRawCSVEntries(
+      new Storage(),
+      bucket,
+      windowDays,
+      log
     )
-    const entries = await readMetadataForDates(storage, bucket, windowDates)
     derived = deriveCompletedClosingMonths(entries)
     log(`derived ${derived.length} completed closing months from metadata`)
   }
 
-  const candidates = [...derived, ...manualEntries]
-  const applied: Array<
-    RegistryMonthEntry & { source: string; action: string }
-  > = []
+  const plan = planRegistryUpdates(before.months, derived, manualEntries)
 
-  for (const entry of candidates) {
-    const source = manualEntries.includes(entry) ? 'manual' : 'derived'
-    const existing = beforeByMonth.get(entry.dataMonth)
-
-    if (existing === entry.closingDate) continue
-    // Never let a DERIVED date regress a later registry date — a manual
-    // outage-month entry knows more than partial metadata (same rule the
-    // freshness check applies).
-    if (
-      source === 'derived' &&
-      existing !== undefined &&
-      existing > entry.closingDate
-    ) {
-      log(
-        `[skip] ${entry.dataMonth}: registry has later ${existing} > derived ${entry.closingDate}`
-      )
-      continue
-    }
-
-    const action = existing === undefined ? 'added' : `updated from ${existing}`
+  for (const update of plan) {
+    const detail =
+      update.action === 'add'
+        ? `add ${update.dataMonth} → ${update.closingDate}`
+        : `update ${update.dataMonth} → ${update.closingDate} (was ${update.previous})`
     if (dryRun) {
-      log(
-        `[dry-run] would ${action === 'added' ? 'add' : action}: ${entry.dataMonth} → ${entry.closingDate} (${source})`
-      )
+      log(`[dry-run] would ${detail} (${update.source})`)
     } else {
-      await registry.append(entry)
+      await registry.append({
+        dataMonth: update.dataMonth,
+        closingDate: update.closingDate,
+      })
     }
-    applied.push({ ...entry, source, action })
   }
 
-  const after = await registry.read()
   console.log(
     JSON.stringify(
       {
@@ -141,8 +124,10 @@ async function main(): Promise<void> {
         bucket,
         derivedCount: derived.length,
         manualCount: manualEntries.length,
-        applied,
-        totalMonths: after.months.length,
+        applied: plan,
+        totalMonths: dryRun
+          ? before.months.length
+          : (await registry.read()).months.length,
       },
       null,
       2

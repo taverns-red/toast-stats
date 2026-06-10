@@ -110,6 +110,32 @@ export async function readMetadataForDate(
   }
 }
 
+/** Default bucket + trailing-window size shared by the closing-date registry
+ * check (daily pipeline) and the registry update script — the guard and its
+ * remediation tool must read the SAME feed or a filed alert can never
+ * self-clear (#1128). The window counts raw-csv date DIRECTORIES, not
+ * calendar days. */
+export const RAW_CSV_DEFAULT_BUCKET = 'toast-stats-data-staging'
+export const RAW_CSV_DEFAULT_WINDOW = 130
+
+/**
+ * Read RawCSVEntry metadata for the most recent `windowDays` raw-csv date
+ * directories in a bucket (newest-last listing, trailing slice).
+ */
+export async function readRecentRawCSVEntries(
+  storage: Storage,
+  bucketName: string,
+  windowDays: number,
+  log?: (msg: string) => void
+): Promise<RawCSVEntry[]> {
+  const allDates = await listRawCSVDates(storage, bucketName)
+  const windowDates = allDates.slice(-windowDays)
+  log?.(
+    `raw-csv: ${allDates.length} dates in gs://${bucketName}, reading metadata for the last ${windowDates.length}`
+  )
+  return readMetadataForDates(storage, bucketName, windowDates)
+}
+
 /**
  * Read metadata for a batch of dates in parallel (batch size 20).
  * Returns entries in the same order as the input dates array.

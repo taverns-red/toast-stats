@@ -19,11 +19,20 @@
 
 import type { RawCSVEntry } from './monthEndDates.js'
 import { groupByDataMonth } from './monthEndDates.js'
+import type { ClosingDateEntry } from '../../packages/collector-cli/src/utils/ClosingDateRegistry.js'
 
-/** One (dataMonth → closingDate) registry entry, e.g. 2026-05 → 2026-06-05. */
-export interface RegistryMonthEntry {
-  dataMonth: string
-  closingDate: string
+/**
+ * One (dataMonth → closingDate) registry entry, e.g. 2026-05 → 2026-06-05.
+ * Aliased from the registry's own writer so the file's schema lives once.
+ */
+export type RegistryMonthEntry = ClosingDateEntry
+
+/** A planned registry write, classified by provenance and effect. */
+export interface RegistryUpdate extends ClosingDateEntry {
+  source: 'derived' | 'manual'
+  action: 'add' | 'update'
+  /** The registry date being replaced (present only for updates). */
+  previous?: string
 }
 
 export interface RegistryMismatch {
@@ -58,13 +67,15 @@ export function deriveCompletedClosingMonths(
   entries: RawCSVEntry[]
 ): RegistryMonthEntry[] {
   const byMonth = groupByDataMonth(entries)
-  const allDates = entries.map(e => e.collectionDate).sort()
-  const newestDate = allDates[allDates.length - 1]
+  const newestDate = entries.reduce(
+    (max, e) => (e.collectionDate > max ? e.collectionDate : max),
+    ''
+  )
 
   const completed: RegistryMonthEntry[] = []
   for (const [dataMonth, closingDates] of byMonth) {
     const lastClosingDate = closingDates[closingDates.length - 1]!
-    if (newestDate !== undefined && newestDate > lastClosingDate) {
+    if (newestDate > lastClosingDate) {
       completed.push({ dataMonth, closingDate: lastClosingDate })
     }
   }
@@ -142,11 +153,8 @@ export function parseManualEntryArg(input: string): RegistryMonthEntry {
       `--set expects YYYY-MM=YYYY-MM-DD, got: ${JSON.stringify(input)}`
     )
   }
-  const [, dataMonth, closingDate] = match as unknown as [
-    string,
-    string,
-    string,
-  ]
+  const dataMonth = match[1]!
+  const closingDate = match[2]!
 
   const monthNum = Number(dataMonth.slice(5, 7))
   const dayNum = Number(closingDate.slice(8, 10))
@@ -165,6 +173,55 @@ export function parseManualEntryArg(input: string): RegistryMonthEntry {
   }
 
   return { dataMonth, closingDate }
+}
+
+/**
+ * Plan which registry writes to apply, given the existing registry and the
+ * derived + manual candidate entries.
+ *
+ * - Identical entries are skipped.
+ * - A DERIVED date never regresses a later registry date — partial metadata
+ *   must not undo a manual outage entry that knows more (the same
+ *   trust-later rule evaluateRegistryFreshness applies).
+ * - A MANUAL entry overrides in either direction: it is an operator
+ *   correction sourced from TI's own as-of lists (e.g. the 2026-01
+ *   stray-derived 2026-02-13 corrected back to 2026-02-05).
+ */
+export function planRegistryUpdates(
+  existing: RegistryMonthEntry[],
+  derived: RegistryMonthEntry[],
+  manual: RegistryMonthEntry[]
+): RegistryUpdate[] {
+  const existingByMonth = new Map(
+    existing.map(m => [m.dataMonth, m.closingDate])
+  )
+
+  const candidates: Array<
+    RegistryMonthEntry & { source: 'derived' | 'manual' }
+  > = [
+    ...derived.map(e => ({ ...e, source: 'derived' as const })),
+    ...manual.map(e => ({ ...e, source: 'manual' as const })),
+  ]
+
+  const plan: RegistryUpdate[] = []
+  for (const { dataMonth, closingDate, source } of candidates) {
+    const previous = existingByMonth.get(dataMonth)
+
+    if (previous === closingDate) continue
+    if (
+      source === 'derived' &&
+      previous !== undefined &&
+      previous > closingDate
+    )
+      continue
+
+    plan.push(
+      previous === undefined
+        ? { dataMonth, closingDate, source, action: 'add' }
+        : { dataMonth, closingDate, source, action: 'update', previous }
+    )
+  }
+  return plan
 }
 
 export function buildRegistryStaleTitle(

@@ -3,10 +3,11 @@
  *
  * Thin glue around the pure functions in ./lib/registryFreshness.js. Run by
  * the daily data-pipeline after the GCS upload:
- *   1. list recent raw-csv dates in the staging bucket and read their
- *      metadata.json (the same feed find-month-end-dates.ts uses),
+ *   1. read the recent raw-csv metadata window from the staging bucket (the
+ *      same feed scripts/update-closing-date-registry.ts derives from),
  *   2. compare the derivable completed closing months against the committed
- *      docs/month-end-closing-dates.json,
+ *      docs/month-end-closing-dates.json (read via ClosingDateRegistry, the
+ *      file's single owner),
  *   3. emit stale/fresh + alert title/body via $GITHUB_OUTPUT; the workflow
  *      files/refreshes or auto-closes the `closing-registry-stale` issue
  *      (same self-clearing shape as the promotion-held alert, #1073).
@@ -18,26 +19,27 @@
  * itself reported as stale (L107: "cannot tell" must alert, not pass).
  *
  * Env:
- *   GCS_BUCKET    — bucket holding raw-csv/ (default: toast-stats-data-staging)
- *   WINDOW_DAYS   — how many trailing days of raw-csv metadata to read
- *                   (default: 130 — covers ~4 closing windows)
- *   REGISTRY_PATH — registry file (default: docs/month-end-closing-dates.json)
+ *   GCS_BUCKET  — bucket holding raw-csv/ (default: toast-stats-data-staging)
+ *   WINDOW_DAYS — how many trailing raw-csv date dirs to read (default: 130,
+ *                 ~4 closing windows)
  */
 
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, writeFileSync } from 'node:fs'
+import * as path from 'node:path'
 import { Storage } from '@google-cloud/storage'
-import { listRawCSVDates, readMetadataForDates } from './lib/gcsHelpers.js'
+import { ClosingDateRegistry } from '../packages/collector-cli/src/utils/ClosingDateRegistry.js'
+import {
+  readRecentRawCSVEntries,
+  RAW_CSV_DEFAULT_BUCKET,
+  RAW_CSV_DEFAULT_WINDOW,
+} from './lib/gcsHelpers.js'
 import type { RawCSVEntry } from './lib/monthEndDates.js'
 import {
   evaluateRegistryFreshness,
   buildRegistryStaleTitle,
   buildRegistryStaleBody,
-  type RegistryMonthEntry,
 } from './lib/registryFreshness.js'
 
-const DEFAULT_BUCKET = 'toast-stats-data-staging'
-const DEFAULT_WINDOW_DAYS = 130
-const DEFAULT_REGISTRY_PATH = 'docs/month-end-closing-dates.json'
 const BODY_FILE = '/tmp/closing-registry-stale-body.md'
 
 function log(msg: string): void {
@@ -49,40 +51,26 @@ function emitOutput(key: string, value: string): void {
   if (out) appendFileSync(out, `${key}=${value}\n`)
 }
 
-function readRegistry(path: string): RegistryMonthEntry[] {
-  const parsed = JSON.parse(readFileSync(path, 'utf8')) as {
-    months?: RegistryMonthEntry[]
-  }
-  if (!Array.isArray(parsed.months)) {
-    throw new Error(`${path} has no months[] array`)
-  }
-  return parsed.months
-}
-
-async function fetchRecentEntries(
-  bucket: string,
-  windowDays: number
-): Promise<RawCSVEntry[]> {
-  const storage = new Storage()
-  const allDates = await listRawCSVDates(storage, bucket)
-  const windowDates = allDates.slice(-windowDays)
-  log(
-    `raw-csv: ${allDates.length} dates total, reading metadata for the last ${windowDates.length}`
-  )
-  return readMetadataForDates(storage, bucket, windowDates)
-}
-
 async function main(): Promise<void> {
-  const bucket = process.env.GCS_BUCKET ?? DEFAULT_BUCKET
-  const windowDays = Number(process.env.WINDOW_DAYS ?? DEFAULT_WINDOW_DAYS)
-  const registryPath = process.env.REGISTRY_PATH ?? DEFAULT_REGISTRY_PATH
+  const bucket = process.env.GCS_BUCKET ?? RAW_CSV_DEFAULT_BUCKET
+  const windowDays = Number(process.env.WINDOW_DAYS ?? RAW_CSV_DEFAULT_WINDOW)
+  const projectRoot = path.resolve(import.meta.dirname, '..')
 
-  const registryMonths = readRegistry(registryPath)
-  log(`registry: ${registryMonths.length} entries in ${registryPath}`)
+  // ClosingDateRegistry owns the file's path + shape. A missing/corrupt file
+  // reads as an empty registry, which the evaluation reports as missing
+  // months — the informative alert, not a silent pass.
+  const registry = new ClosingDateRegistry({ projectRoot })
+  const registryMonths = (await registry.read()).months
+  log(`registry: ${registryMonths.length} committed entries`)
 
   let entries: RawCSVEntry[] = []
   try {
-    entries = await fetchRecentEntries(bucket, windowDays)
+    entries = await readRecentRawCSVEntries(
+      new Storage(),
+      bucket,
+      windowDays,
+      log
+    )
   } catch (err) {
     // Feed failure → evaluate with an empty feed, which reports stale with
     // emptyFeed=true. The monitor must not pass when it cannot read.
@@ -104,8 +92,8 @@ async function main(): Promise<void> {
 }
 
 main().catch(err => {
-  // Unexpected failure (e.g. unreadable registry file): report stale rather
-  // than green-by-crash, then exit 0 so the publish itself is not blocked.
+  // Unexpected failure: report stale rather than green-by-crash, then exit 0
+  // so the publish itself is not blocked.
   log(`closing-registry-check failed: ${(err as Error).stack ?? err}`)
   writeFileSync(
     BODY_FILE,

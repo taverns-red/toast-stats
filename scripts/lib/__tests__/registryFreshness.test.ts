@@ -17,6 +17,7 @@ import {
   buildRegistryStaleTitle,
   buildRegistryStaleBody,
   parseManualEntryArg,
+  planRegistryUpdates,
 } from '../registryFreshness.js'
 
 /** Shorthand for a raw-csv metadata entry. */
@@ -182,6 +183,90 @@ describe('alert builders', () => {
     const result = evaluateRegistryFreshness([], [])
     const body = buildRegistryStaleBody(result)
     expect(body).toMatch(/metadata|feed/i)
+  })
+})
+
+describe('planRegistryUpdates', () => {
+  const existing = [
+    { dataMonth: '2026-01', closingDate: '2026-02-13' },
+    { dataMonth: '2026-03', closingDate: '2026-04-07' },
+  ]
+
+  it('adds a derived month absent from the registry', () => {
+    expect(
+      planRegistryUpdates(
+        existing,
+        [{ dataMonth: '2026-05', closingDate: '2026-06-05' }],
+        []
+      )
+    ).toEqual([
+      {
+        dataMonth: '2026-05',
+        closingDate: '2026-06-05',
+        source: 'derived',
+        action: 'add',
+      },
+    ])
+  })
+
+  it('skips an entry identical to the registry', () => {
+    expect(
+      planRegistryUpdates(
+        existing,
+        [{ dataMonth: '2026-03', closingDate: '2026-04-07' }],
+        []
+      )
+    ).toEqual([])
+  })
+
+  it('updates when a derived date moves past the registered one, carrying previous', () => {
+    expect(
+      planRegistryUpdates(
+        existing,
+        [{ dataMonth: '2026-03', closingDate: '2026-04-08' }],
+        []
+      )
+    ).toEqual([
+      {
+        dataMonth: '2026-03',
+        closingDate: '2026-04-08',
+        source: 'derived',
+        action: 'update',
+        previous: '2026-04-07',
+      },
+    ])
+  })
+
+  it('never lets a DERIVED date regress a later registry date', () => {
+    // Partial metadata must not undo a manual outage entry that knows more —
+    // the same trust-later rule evaluateRegistryFreshness applies.
+    expect(
+      planRegistryUpdates(
+        existing,
+        [{ dataMonth: '2026-03', closingDate: '2026-04-05' }],
+        []
+      )
+    ).toEqual([])
+  })
+
+  it('lets a MANUAL entry override in either direction (operator correction)', () => {
+    // The 2026-01 case: stray-derived 2026-02-13 corrected BACK to TI's
+    // authoritative 2026-02-05.
+    expect(
+      planRegistryUpdates(
+        existing,
+        [],
+        [{ dataMonth: '2026-01', closingDate: '2026-02-05' }]
+      )
+    ).toEqual([
+      {
+        dataMonth: '2026-01',
+        closingDate: '2026-02-05',
+        source: 'manual',
+        action: 'update',
+        previous: '2026-02-13',
+      },
+    ])
   })
 })
 
