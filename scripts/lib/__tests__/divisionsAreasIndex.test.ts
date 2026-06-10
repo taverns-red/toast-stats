@@ -113,6 +113,13 @@ describe('buildDivisionsAreasIndex', () => {
 
 // ── Shape tolerance (mirrors the club-index step's raw.data || raw) ───────
 
+// Minimal single-district payload: one division A, caller-supplied areas.
+const payloadWithAreas = (areas: unknown[]) => ({
+  districtId: '99',
+  divisions: [{ divisionId: 'A', divisionName: 'Division A' }],
+  areas,
+})
+
 describe('buildDivisionsAreasIndex shape tolerance', () => {
   it('accepts a bare DistrictStatisticsFile payload (no collector wrapper)', () => {
     const wrapped = loadFixture('district_61.json') as { data: unknown }
@@ -126,14 +133,10 @@ describe('buildDivisionsAreasIndex shape tolerance', () => {
   })
 
   it("creates a division key for an area whose division is missing from divisions[] (faithful to areas[], TI's source of truth)", () => {
-    const payload = {
-      districtId: '99',
-      divisions: [{ divisionId: 'A', divisionName: 'Division A' }],
-      areas: [
-        { areaId: '01', areaName: 'Area 01', divisionId: 'A' },
-        { areaId: '02', areaName: 'Area 02', divisionId: 'Z' },
-      ],
-    }
+    const payload = payloadWithAreas([
+      { areaId: '01', areaName: 'Area 01', divisionId: 'A' },
+      { areaId: '02', areaName: 'Area 02', divisionId: 'Z' },
+    ])
     const index = buildDivisionsAreasIndex(
       [payload],
       SNAPSHOT_DATE,
@@ -144,14 +147,10 @@ describe('buildDivisionsAreasIndex shape tolerance', () => {
   })
 
   it('dedupes a repeated (division, area) pair', () => {
-    const payload = {
-      districtId: '99',
-      divisions: [{ divisionId: 'A', divisionName: 'Division A' }],
-      areas: [
-        { areaId: '01', areaName: 'Area 01', divisionId: 'A' },
-        { areaId: '01', areaName: 'Area 01', divisionId: 'A' },
-      ],
-    }
+    const payload = payloadWithAreas([
+      { areaId: '01', areaName: 'Area 01', divisionId: 'A' },
+      { areaId: '01', areaName: 'Area 01', divisionId: 'A' },
+    ])
     const index = buildDivisionsAreasIndex(
       [payload],
       SNAPSHOT_DATE,
@@ -162,13 +161,8 @@ describe('buildDivisionsAreasIndex shape tolerance', () => {
   })
 
   it('keeps a division that has no areas as an empty list', () => {
-    const payload = {
-      districtId: '99',
-      divisions: [{ divisionId: 'A', divisionName: 'Division A' }],
-      areas: [],
-    }
     const index = buildDivisionsAreasIndex(
-      [payload],
+      [payloadWithAreas([])],
       SNAPSHOT_DATE,
       GENERATED_AT
     )

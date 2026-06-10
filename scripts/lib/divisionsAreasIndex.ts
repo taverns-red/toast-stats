@@ -31,9 +31,6 @@ export interface DivisionsAreasIndex {
   districts: Record<string, Record<string, string[]>>
 }
 
-/** The two fields the index reads from a division/area entry. */
-type IdRecord = { divisionId?: unknown; areaId?: unknown }
-
 /**
  * Parse one district_*.json file's raw contents. Returns null for corrupt
  * JSON so the runner can skip the file (same policy as the club-index step).
@@ -66,7 +63,7 @@ export function buildDivisionsAreasIndex(
   for (const file of files) {
     const payload = unwrap(file)
     if (payload === null) continue
-    const districtId = stringField(payload, 'districtId')
+    const districtId = stringProp(payload, 'districtId')
     if (districtId === null) continue
 
     const divisions =
@@ -74,7 +71,7 @@ export function buildDivisionsAreasIndex(
     collected.set(districtId, divisions)
 
     for (const entry of recordArray(payload, 'divisions')) {
-      const divisionId = idOf(entry, 'divisionId')
+      const divisionId = stringProp(entry, 'divisionId')
       if (divisionId === null) continue
       if (!divisions.has(divisionId)) divisions.set(divisionId, new Set())
     }
@@ -82,8 +79,8 @@ export function buildDivisionsAreasIndex(
     // areas[] is the source of truth for membership: an area whose division
     // is missing from divisions[] still creates that division's key.
     for (const entry of recordArray(payload, 'areas')) {
-      const divisionId = idOf(entry, 'divisionId')
-      const areaId = idOf(entry, 'areaId')
+      const divisionId = stringProp(entry, 'divisionId')
+      const areaId = stringProp(entry, 'areaId')
       if (divisionId === null || areaId === null) continue
       const areas = divisions.get(divisionId) ?? new Set<string>()
       divisions.set(divisionId, areas)
@@ -120,18 +117,14 @@ function unwrap(file: unknown): Record<string, unknown> | null {
   return obj
 }
 
-function stringField(obj: Record<string, unknown>, key: string): string | null {
-  const value = obj[key]
-  return typeof value === 'string' && value !== '' ? value : null
+/** Read a non-empty string property off an unknown value, else null. */
+function stringProp(value: unknown, key: string): string | null {
+  if (typeof value !== 'object' || value === null) return null
+  const prop = (value as Record<string, unknown>)[key]
+  return typeof prop === 'string' && prop !== '' ? prop : null
 }
 
-function recordArray(obj: Record<string, unknown>, key: string): IdRecord[] {
+function recordArray(obj: Record<string, unknown>, key: string): unknown[] {
   const value = obj[key]
-  return Array.isArray(value) ? (value as IdRecord[]) : []
-}
-
-function idOf(entry: IdRecord, key: keyof IdRecord): string | null {
-  if (typeof entry !== 'object' || entry === null) return null
-  const value = entry[key]
-  return typeof value === 'string' && value !== '' ? value : null
+  return Array.isArray(value) ? value : []
 }

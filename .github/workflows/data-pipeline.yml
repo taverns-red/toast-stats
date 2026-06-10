@@ -1280,8 +1280,8 @@ jobs:
             cp /tmp/divisions-areas-index.json "gs://${GCS_BUCKET}/config/divisions-areas-index.json"
 
           echo "## 🗺️ Divisions/Areas Index" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Divisions indexed**: $(jq '.totalDivisions' /tmp/divisions-areas-index.json)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Areas indexed**: $(jq '.totalAreas' /tmp/divisions-areas-index.json)" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"- **Divisions indexed**: \(.totalDivisions)\n- **Areas indexed**: \(.totalAreas)"' \
+            /tmp/divisions-areas-index.json >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
       # STAGING → PRODUCTION PROMOTION (#316)
