@@ -185,6 +185,24 @@ describe('buildDivisionsAreasIndex shape tolerance', () => {
     expect(index.totalAreas).toBe(0)
   })
 
+  it('skips a failed-scrape wrapper instead of creating a phantom empty district', () => {
+    // Collector wrapper for a failed district: status 'failed', data null,
+    // but districtId present at the WRAPPER level — must not be indexed.
+    const failed = {
+      collectedAt: '2026-06-10T14:16:46.073Z',
+      districtId: '77',
+      districtName: 'District 77',
+      status: 'failed',
+      data: null,
+    }
+    const index = buildDivisionsAreasIndex(
+      [failed, loadFixture('district_61.json')],
+      SNAPSHOT_DATE,
+      GENERATED_AT
+    )
+    expect(Object.keys(index.districts)).toEqual(['61'])
+  })
+
   it('returns an empty index for an empty file list', () => {
     const index = buildDivisionsAreasIndex([], SNAPSHOT_DATE, GENERATED_AT)
     expect(index.districts).toEqual({})
