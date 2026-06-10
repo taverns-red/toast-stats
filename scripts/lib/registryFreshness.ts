@@ -131,11 +131,38 @@ export function evaluateRegistryFreshness(
 /**
  * Parse a manual `--set YYYY-MM=YYYY-MM-DD` argument (outage months whose
  * closing date cannot be derived from metadata and was established from TI
- * behavior instead). Throws on malformed input. Typed as a stub here for the
- * Red commit; implemented in the update-script change.
+ * behavior instead). Throws on malformed input or a closing date that does
+ * not fall after its data month — closing collections happen early in the
+ * FOLLOWING month, so anything else is a typo.
  */
-export function parseManualEntryArg(_input: string): RegistryMonthEntry {
-  throw new Error('--set: not implemented')
+export function parseManualEntryArg(input: string): RegistryMonthEntry {
+  const match = /^(\d{4}-\d{2})=(\d{4}-\d{2}-\d{2})$/.exec(input)
+  if (!match) {
+    throw new Error(
+      `--set expects YYYY-MM=YYYY-MM-DD, got: ${JSON.stringify(input)}`
+    )
+  }
+  const [, dataMonth, closingDate] = match as unknown as [
+    string,
+    string,
+    string,
+  ]
+
+  const monthNum = Number(dataMonth.slice(5, 7))
+  const dayNum = Number(closingDate.slice(8, 10))
+  if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) {
+    throw new Error(`--set: not a real calendar month/day: ${input}`)
+  }
+
+  // closingDate must be after the last day of dataMonth, i.e. its YYYY-MM
+  // prefix must sort strictly greater than the data month.
+  if (closingDate.slice(0, 7) <= dataMonth) {
+    throw new Error(
+      `--set: closing date ${closingDate} must fall after data month ${dataMonth}`
+    )
+  }
+
+  return { dataMonth, closingDate }
 }
 
 export function buildRegistryStaleTitle(
