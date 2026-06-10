@@ -178,9 +178,9 @@ export function calculateDivisionDistinguishedRequirement(
  *
  * Property 1: Recognition Level Classification
  * - If paidClubs < clubBase: "none" (net club loss - not eligible)
- * - Else if paidClubs >= clubBase + 2 AND distinguishedClubs >= Math.ceil(clubBase * 0.55): "presidents"
- * - Else if paidClubs >= clubBase + 1 AND distinguishedClubs >= Math.ceil(clubBase * 0.50): "select"
- * - Else if paidClubs >= clubBase AND distinguishedClubs >= Math.ceil(clubBase * 0.45): "distinguished"
+ * - Else if paidClubs >= clubBase + 2 AND distinguishedClubs >= ceil(clubBase × 55 / 100): "presidents"
+ * - Else if paidClubs >= clubBase + 1 AND distinguishedClubs >= ceil(clubBase × 50 / 100): "select"
+ * - Else if paidClubs >= clubBase AND distinguishedClubs >= ceil(clubBase × 45 / 100): "distinguished"
  * - Else: "none"
  *
  * @param metrics - Division metrics (clubBase, paidClubs, distinguishedClubs)
