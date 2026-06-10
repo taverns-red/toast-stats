@@ -142,10 +142,13 @@ export function buildSearchIndex(
   // Divisions + areas — from the global divisions/areas index (#1134).
   // Labels are derivable (`Division {id}` / `Area {id}`, zero deviations
   // across 128 live districts) and areas nest under divisions because
-  // areaIds are not district-unique. District-scoped combo terms ("61 c")
-  // are exact-only so partial queries like "61" don't flood with every
-  // division/area of that district.
+  // areaIds are not district-unique. District-scoped combo shapes ("61 c")
+  // match by full equality only (exactTerms), so a partial query like "61"
+  // reaches these entities only at substring level — below clubs, which
+  // TYPE_RANK keeps ahead. Values are unvalidated CDN JSON: junk shapes
+  // must contribute nothing (a string is iterable — guard, don't iterate).
   for (const [districtId, divisions] of Object.entries(divisionsAreas)) {
+    if (typeof divisions !== 'object' || divisions === null) continue
     const dist = districtId.toLowerCase()
     for (const [divisionId, areaIds] of Object.entries(divisions)) {
       const div = divisionId.toLowerCase()
@@ -162,7 +165,7 @@ export function buildSearchIndex(
           `${dist} division ${div}`,
         ]),
       })
-      for (const areaId of areaIds) {
+      for (const areaId of Array.isArray(areaIds) ? areaIds : []) {
         const area = areaId.toLowerCase()
         entities.push({
           type: 'area',
@@ -255,10 +258,10 @@ export async function loadSearchIndex(): Promise<SearchIndex> {
     fetchCdnRankings(),
     fetchCdnClubIndex(),
     // Fail-soft (#1135): the divisions/areas artifact only lands via the
-    // scheduled pipeline (#1134) — a missing or failed index must not take
-    // district/region/club search down with it.
+    // scheduled pipeline (#1134) — a missing, failed, or malformed index
+    // must not take district/region/club search down with it.
     fetchCdnDivisionsAreasIndex().then(
-      idx => idx.districts,
+      idx => idx.districts ?? {},
       () => ({})
     ),
   ])
