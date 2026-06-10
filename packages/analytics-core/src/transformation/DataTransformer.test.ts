@@ -1343,6 +1343,63 @@ describe('DataTransformer', () => {
     })
 
     /**
+     * The transformed club model must carry the raw 'Club Distinguished
+     * Status' value (#1120). Live CSVs use letter codes ('D','S','P','M');
+     * extractClubStatus() only keeps word-form values, so without a
+     * dedicated field the letter codes were lost and downstream consumers
+     * (time-series distinguishedTotal) received the operational status.
+     */
+    it('should extract distinguishedStatus from Club Distinguished Status, including letter codes (#1120)', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          [
+            'Club Number',
+            'Club Name',
+            'Division',
+            'Area',
+            'Club Status',
+            'Club Distinguished Status',
+          ],
+          ['1234', 'Letter Code Club', 'A', '1', 'Active', 'D'],
+          ['5678', 'Word Form Club', 'A', '2', 'Active', 'Distinguished'],
+          ['9012', 'Not Yet Club', 'B', '1', 'Low', ''],
+        ],
+        divisionPerformance: [],
+        districtPerformance: [],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2026-06-08',
+        'D61',
+        csvData
+      )
+
+      expect(result.clubs[0]?.distinguishedStatus).toBe('D')
+      expect(result.clubs[1]?.distinguishedStatus).toBe('Distinguished')
+      // Empty / absent column → undefined (heuristic fallback downstream)
+      expect(result.clubs[2]?.distinguishedStatus).toBeUndefined()
+    })
+
+    it('should leave distinguishedStatus undefined when the column is absent', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          ['Club Number', 'Club Name', 'Division', 'Area'],
+          ['1234', 'Historical Club', 'A', '1'],
+        ],
+        divisionPerformance: [],
+        districtPerformance: [],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2020-01-15',
+        'D101',
+        csvData
+      )
+
+      expect(result.clubs[0]?.distinguishedStatus).toBeUndefined()
+    })
+
+    /**
      * Test empty CSV arrays produce empty arrays in output
      * Validates: Requirements 1.5
      */

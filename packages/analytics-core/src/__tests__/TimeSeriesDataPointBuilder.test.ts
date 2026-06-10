@@ -362,6 +362,55 @@ describe('TimeSeriesDataPointBuilder', () => {
     })
   })
 
+  // ---------- isDistinguished letter codes (#1120) ----------
+  describe('isDistinguished letter codes (#1120)', () => {
+    // Live dashboard CSVs carry single-letter codes, not words.
+    // Fixture deliberately fails the DCP heuristic (2 goals, no growth)
+    // so only the status field can make it distinguished.
+    const baseClub: ScrapedRecord = {
+      'Club Number': '4444',
+      'Club Name': 'Code Club',
+      'Active Members': '15',
+      'Mem. Base': '15',
+      'Goals Met': '2',
+      CSP: 'Yes',
+    }
+
+    it.each(['D', 'S', 'P', 'M'])(
+      'counts live status code %s as distinguished',
+      code => {
+        expect(
+          builder.isDistinguished({
+            ...baseClub,
+            'Club Distinguished Status': code,
+          })
+        ).toBe(true)
+      }
+    )
+
+    it('does not treat operational status values as distinguished', () => {
+      for (const value of ['Active', 'Low', 'Suspended', 'Ineligible']) {
+        expect(
+          builder.isDistinguished({
+            ...baseClub,
+            'Club Distinguished Status': value,
+          })
+        ).toBe(false)
+      }
+    })
+
+    it('still ignores empty and none-like values', () => {
+      for (const value of ['', 'None', 'N/A']) {
+        expect(
+          builder.isDistinguished({
+            ...baseClub,
+            'Club Distinguished Status': value,
+          })
+        ).toBe(false)
+      }
+    })
+  })
+
   // ---------- calculateDistinguishedTotal equivalence ----------
   describe('calculateDistinguishedTotal equivalence', () => {
     it('should match reference for mixed clubs', () => {
