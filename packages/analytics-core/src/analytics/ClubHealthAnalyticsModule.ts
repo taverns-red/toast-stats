@@ -19,11 +19,7 @@
 
 import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type { ClubTrend, ClubHealthData } from '../types.js'
-import {
-  getDCPCheckpoint,
-  getCurrentProgramMonth,
-  getMonthName,
-} from './AnalyticsUtils.js'
+import { getCurrentProgramMonth, getMonthName } from './AnalyticsUtils.js'
 import {
   calculateNetGrowth,
   classifyClubHealth,
@@ -407,101 +403,71 @@ export class ClubHealthAnalyticsModule {
    * Count vulnerable clubs in a snapshot
    *
    * Requirement 3.2: Vulnerable if some but not all requirements met
-   * Uses new classification logic based on monthly DCP checkpoints
-   *
-   * This method MUST use the same logic as assessClubHealth() to ensure consistency.
+   * (membership, monthly DCP checkpoint, CSP). Delegates to the same
+   * shared classification rule as assessClubHealth().
    *
    * @param snapshot - District statistics snapshot
    * @returns Count of vulnerable clubs
    */
   countVulnerableClubs(snapshot: DistrictStatistics): number {
-    // Get current program month from snapshot date for DCP checkpoint evaluation
-    const currentMonth = getCurrentProgramMonth(snapshot.snapshotDate)
-    const requiredDcpCheckpoint = getDCPCheckpoint(currentMonth)
-
-    return snapshot.clubs.filter(club => {
-      const membership = club.membershipCount
-      const dcpGoals = club.dcpGoals
-      const netGrowth = calculateNetGrowth(club)
-
-      // Intervention override: membership < 12 AND net growth < 3 is NOT vulnerable
-      if (membership < 12 && netGrowth < 3) {
-        return false
-      }
-
-      // Membership requirement: >= 20 OR net growth >= 3
-      const membershipRequirementMet = membership >= 20 || netGrowth >= 3
-
-      // DCP checkpoint requirement (varies by month) - MUST match assessClubHealth logic
-      const dcpCheckpointMet = dcpGoals >= requiredDcpCheckpoint
-
-      // CSP: for counting methods, assume submitted (actual CSP check is in assessClubHealth)
-      const cspSubmitted = true
-
-      // Vulnerable: some but not all requirements met
-      const allRequirementsMet =
-        membershipRequirementMet && dcpCheckpointMet && cspSubmitted
-      return !allRequirementsMet
-    }).length
+    return this.countClubsWithStatus(snapshot, 'vulnerable')
   }
 
   /**
    * Count intervention-required clubs
    *
-   * Requirement 3.2: Intervention Required if membership < 12 AND net growth < 3
-   * Uses new classification logic based on intervention override rule
+   * Requirement 3.2: Intervention Required if membership < 12 AND net
+   * growth < 3. Delegates to the same shared classification rule as
+   * assessClubHealth().
    *
    * @param snapshot - District statistics snapshot
    * @returns Count of intervention-required clubs
    */
   countInterventionRequiredClubs(snapshot: DistrictStatistics): number {
-    return snapshot.clubs.filter(club => {
-      const membership = club.membershipCount
-      const netGrowth = calculateNetGrowth(club)
-
-      // Intervention required: membership < 12 AND net growth < 3
-      return membership < 12 && netGrowth < 3
-    }).length
+    return this.countClubsWithStatus(snapshot, 'intervention-required')
   }
 
   /**
    * Count thriving clubs in a snapshot
    *
-   * Requirement 3.2: Thriving if all requirements met (membership, DCP checkpoint, CSP)
-   * Uses new classification logic based on monthly DCP checkpoints
-   *
-   * This method MUST use the same logic as assessClubHealth() to ensure consistency
-   * between the thriving count used for projections and the actual club health status.
+   * Requirement 3.2: Thriving if all requirements met (membership,
+   * monthly DCP checkpoint, CSP). Delegates to the same shared
+   * classification rule as assessClubHealth(), so the thriving count
+   * used for the distinguished projection matches club health status.
    *
    * @param snapshot - District statistics snapshot
    * @returns Count of thriving clubs
    */
   countThrivingClubs(snapshot: DistrictStatistics): number {
-    // Get current program month from snapshot date for DCP checkpoint evaluation
+    return this.countClubsWithStatus(snapshot, 'thriving')
+  }
+
+  /**
+   * Count clubs classified into a given health status by the shared
+   * single-source rule (#1120), so the counting methods cannot drift
+   * from assessClubHealth(). CSP-aware (#1121): the classification
+   * reads each club's real normalized CSP status; getCSPStatus()
+   * defaults pre-2025-26 historical data (field absent) to submitted
+   * per rules-reference §3.3.
+   */
+  private countClubsWithStatus(
+    snapshot: DistrictStatistics,
+    status: 'thriving' | 'vulnerable' | 'intervention-required'
+  ): number {
     const currentMonth = getCurrentProgramMonth(snapshot.snapshotDate)
-    const requiredDcpCheckpoint = getDCPCheckpoint(currentMonth)
 
-    return snapshot.clubs.filter(club => {
-      const membership = club.membershipCount
-      const dcpGoals = club.dcpGoals
-      const netGrowth = calculateNetGrowth(club)
-
-      // Intervention override: membership < 12 AND net growth < 3 is NOT thriving
-      if (membership < 12 && netGrowth < 3) {
-        return false
-      }
-
-      // Membership requirement: >= 20 OR net growth >= 3
-      const membershipRequirementMet = membership >= 20 || netGrowth >= 3
-
-      // DCP checkpoint requirement (varies by month) - MUST match assessClubHealth logic
-      const dcpCheckpointMet = dcpGoals >= requiredDcpCheckpoint
-
-      // CSP: for counting methods, assume submitted (actual CSP check is in assessClubHealth)
-      const cspSubmitted = true
-
-      return membershipRequirementMet && dcpCheckpointMet && cspSubmitted
-    }).length
+    return snapshot.clubs.filter(
+      club =>
+        classifyClubHealth(
+          {
+            membership: club.membershipCount,
+            netGrowth: calculateNetGrowth(club),
+            dcpGoals: club.dcpGoals,
+            cspSubmitted: getCSPStatus(club),
+          },
+          currentMonth
+        ).status === status
+    ).length
   }
 
   // NOTE: calculateNetGrowth, getCSPStatus, and determineDistinguishedLevel

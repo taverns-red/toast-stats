@@ -113,6 +113,30 @@ describe('AnalyticsComputer', () => {
       expect(result.districtAnalytics.allClubs).toHaveLength(3)
     })
 
+    it('excludes CSP-less clubs from the distinguished projection (#1121)', async () => {
+      // Live-shaped fixture (D61 2026-06): 58 clubs meet membership +
+      // June checkpoint, but one (Dorval City 00005600) has no CSP —
+      // ineligible per rules-reference §3.3, so the projection is 57.
+      const computer = new AnalyticsComputer()
+      const clubs = Array.from({ length: 58 }, (_, i) =>
+        createMockClub({
+          clubId: i === 0 ? '00005600' : `${1000 + i}`,
+          clubName: i === 0 ? 'Dorval City' : `Club ${i}`,
+          membershipCount: 25,
+          membershipBase: 20,
+          dcpGoals: 5,
+          cspSubmitted: i !== 0,
+        })
+      )
+      const snapshot = createMockSnapshot('D61', '2026-06-08', clubs)
+
+      const result = await computer.computeDistrictAnalytics('D61', [snapshot])
+
+      expect(
+        result.districtAnalytics.distinguishedProjection?.projectedDistinguished
+      ).toBe(57)
+    })
+
     it('should compute membership change from multiple snapshots', async () => {
       const computer = new AnalyticsComputer()
 

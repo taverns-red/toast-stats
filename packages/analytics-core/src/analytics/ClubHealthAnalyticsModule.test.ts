@@ -1696,4 +1696,67 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(interventionClub?.clubStatus).toBe(allSuspendedClub?.clubStatus)
     })
   })
+
+  describe('CSP-aware counting methods (#1121)', () => {
+    const module = new ClubHealthAnalyticsModule()
+
+    // June snapshot → DCP checkpoint is 5 goals. The base mock club
+    // (25 members, base 20, 5 goals) meets membership + checkpoint.
+    const JUNE_DATE = '2026-06-08'
+
+    it('countThrivingClubs does NOT count a club meeting membership + checkpoint but with CSP not submitted', () => {
+      const clubs = [
+        createMockClub({ clubId: 'csp-yes', cspSubmitted: true }),
+        createMockClub({ clubId: 'csp-no', cspSubmitted: false }),
+      ]
+      const snapshot = createMockSnapshot(JUNE_DATE, clubs)
+
+      expect(module.countThrivingClubs(snapshot)).toBe(1)
+    })
+
+    it('countVulnerableClubs counts a CSP-less club as vulnerable, matching assessClubHealth', () => {
+      const clubs = [
+        createMockClub({ clubId: 'csp-yes', cspSubmitted: true }),
+        createMockClub({ clubId: 'csp-no', cspSubmitted: false }),
+      ]
+      const snapshot = createMockSnapshot(JUNE_DATE, clubs)
+
+      expect(module.countVulnerableClubs(snapshot)).toBe(1)
+    })
+
+    it('counting methods agree with generateClubHealthData categorization for mixed CSP states', () => {
+      const clubs = [
+        createMockClub({ clubId: 'csp-yes', cspSubmitted: true }),
+        createMockClub({ clubId: 'csp-no', cspSubmitted: false }),
+        // Intervention-required regardless of CSP
+        createMockClub({
+          clubId: 'small',
+          membershipCount: 8,
+          membershipBase: 10,
+          cspSubmitted: false,
+        }),
+      ]
+      const snapshot = createMockSnapshot(JUNE_DATE, clubs)
+      const healthData = module.generateClubHealthData([snapshot])
+
+      expect(module.countThrivingClubs(snapshot)).toBe(
+        healthData.thrivingClubs.length
+      )
+      expect(module.countVulnerableClubs(snapshot)).toBe(
+        healthData.vulnerableClubs.length
+      )
+      expect(module.countInterventionRequiredClubs(snapshot)).toBe(
+        healthData.interventionRequiredClubs.length
+      )
+    })
+
+    it('treats pre-2025-26 historical data (cspSubmitted undefined) as submitted per §3.3', () => {
+      const club = createMockClub({ clubId: 'historical' })
+      delete (club as Record<string, unknown>)['cspSubmitted']
+      const snapshot = createMockSnapshot(JUNE_DATE, [club])
+
+      expect(module.countThrivingClubs(snapshot)).toBe(1)
+      expect(module.countVulnerableClubs(snapshot)).toBe(0)
+    })
+  })
 })
