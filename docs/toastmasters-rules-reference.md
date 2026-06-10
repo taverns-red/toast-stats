@@ -163,14 +163,24 @@ A club meets the membership requirement if:
 
 ### 5.3 DCP Checkpoint by Month
 
+> **Provenance:** Toastmasters International publishes no official monthly DCP pacing —
+> this table is a Toast Stats product heuristic (origin: club-health-classification spec,
+> 2026-01-08). **Operator ruling 2026-06-09 (#1122):** the implementation's table
+> (below) is canonical. An earlier revision of this document showed October = 1 and
+> December = 2, which matched no reviewed spec or implementation; empirically (PY 2025-26,
+> D61 + D86) those values passed 84–94% of clubs that did NOT finish Distinguished —
+> no early-warning signal — while the canonical values pass 79–89% of eventually-
+> distinguished clubs and only 31–48% of the rest. Implemented by
+> `packages/analytics-core/src/analytics/AnalyticsUtils.ts::getDCPCheckpoint`.
+
 | Month     | Minimum DCP Goals  |
 | --------- | ------------------ |
 | July      | 0 (administrative) |
 | August    | 0                  |
 | September | 1                  |
-| October   | 1                  |
+| October   | 2                  |
 | November  | 2                  |
-| December  | 2                  |
+| December  | 3                  |
 | January   | 3                  |
 | February  | 4                  |
 | March     | 4                  |
@@ -395,12 +405,13 @@ Smedley Distinguished is new for the 2025-2026 program year.
 
 ## 14. Version History
 
-| Version | Date          | Changes                                                                                                                                                                                                                                                          |
-| ------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1.0     | January 2026  | Initial canonical rules reference                                                                                                                                                                                                                                |
-| 1.1     | February 2026 | Added membership dues payment schedule (§4.1)                                                                                                                                                                                                                    |
-| 1.2     | April 2026    | Added §13 District Recognition Program (all 11 award types)                                                                                                                                                                                                      |
-| 1.3     | May 2026      | Corrected §6 (DAP) and §7 (DDP) to the manual (item 1490) model — distinguished **clubs** as % of **club base** (DAP 50/50+1, DDP 45/50/55) + paid-club growth; removed the legacy area-%/paid-% recognition model; clarified §9 recognition denominators (#799) |
+| Version | Date          | Changes                                                                                                                                                                                                                                                                                                                      |
+| ------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | January 2026  | Initial canonical rules reference                                                                                                                                                                                                                                                                                            |
+| 1.1     | February 2026 | Added membership dues payment schedule (§4.1)                                                                                                                                                                                                                                                                                |
+| 1.2     | April 2026    | Added §13 District Recognition Program (all 11 award types)                                                                                                                                                                                                                                                                  |
+| 1.3     | May 2026      | Corrected §6 (DAP) and §7 (DDP) to the manual (item 1490) model — distinguished **clubs** as % of **club base** (DAP 50/50+1, DDP 45/50/55) + paid-club growth; removed the legacy area-%/paid-% recognition model; clarified §9 recognition denominators (#799)                                                             |
+| 1.4     | June 2026     | §5.3 corrected to the canonical (implemented) checkpoint table — October 2 (was 1), December 3 (was 2) — per operator ruling on #1122: no official TI monthly pacing exists; the implementation matched the original club-health spec and empirically discriminates, the doc's earlier values did not (audit 2026-06-09, H1) |
 
 ---
 
