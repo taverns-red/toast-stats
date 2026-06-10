@@ -689,8 +689,8 @@ describe('DistinguishedClubAnalyticsModule', () => {
             'Level 2s': '0',
             'Add. Level 2s': '0',
             'Level 3s': '0',
-            'Level 4s, Level 5s, or DTM award': '0',
-            'Add. Level 4s, Level 5s, or DTM award': '0',
+            'Level 4s, Path Completions, or DTM Awards': '0',
+            'Add. Level 4s, Path Completions, or DTM award': '0',
             'New Members': '4', // Goal 7: achieved
             'Add. New Members': '0',
             'Off. Trained Round 1': '0',
@@ -713,8 +713,8 @@ describe('DistinguishedClubAnalyticsModule', () => {
             'Level 2s': '0',
             'Add. Level 2s': '0',
             'Level 3s': '0',
-            'Level 4s, Level 5s, or DTM award': '0',
-            'Add. Level 4s, Level 5s, or DTM award': '0',
+            'Level 4s, Path Completions, or DTM Awards': '0',
+            'Add. Level 4s, Path Completions, or DTM award': '0',
             'New Members': '0',
             'Add. New Members': '0',
             'Off. Trained Round 1': '4', // Goal 9a: achieved
@@ -752,6 +752,143 @@ describe('DistinguishedClubAnalyticsModule', () => {
 
       // Goal 2: neither club achieved it → count = 0
       expect(goal2?.achievementCount).toBe(0)
+    })
+
+    /**
+     * #1118 (epic #1095 C1/C2): goal evaluation must use the REAL current
+     * CSV headers and the official rule semantics:
+     * - Goals 5/6 columns are 'Level 4s, Path Completions, or DTM Awards'
+     *   (the legacy 'Level 4s, Level 5s, or DTM award' header no longer
+     *   appears in live CSVs — reading it reports goals 5/6 as 0 forever).
+     * - Goal 10 is officer list + (Oct dues OR Apr dues), not all three.
+     * - Goals 1-8 use the official thresholds (4/2/2/2/1/1/4/4), not "> 0".
+     */
+    const REAL_HEADER_GOAL_COLUMNS = {
+      'Level 1s': '0',
+      'Level 2s': '0',
+      'Add. Level 2s': '0',
+      'Level 3s': '0',
+      'Level 4s, Path Completions, or DTM Awards': '0',
+      'Add. Level 4s, Path Completions, or DTM award': '0',
+      'New Members': '0',
+      'Add. New Members': '0',
+      'Off. Trained Round 1': '0',
+      'Off. Trained Round 2': '0',
+      'Mem. dues on time Oct': '0',
+      'Mem. dues on time Apr': '0',
+      'Off. List On Time': '0',
+    }
+
+    function createRawClubRecord(
+      clubId: string,
+      goalOverrides: Record<string, string>
+    ) {
+      return {
+        'Club Number': clubId,
+        'Club Name': `Club ${clubId}`,
+        Division: 'A',
+        Area: '01',
+        'Active Members': '20',
+        'Goals Met': '0',
+        'Club Status': 'Active',
+        'Mem. Base': '20',
+        ...REAL_HEADER_GOAL_COLUMNS,
+        ...goalOverrides,
+      }
+    }
+
+    function goalCountsFor(records: Record<string, string>[]) {
+      const module = new DistinguishedClubAnalyticsModule()
+      const clubs = records.map(r =>
+        createMockClub(String(r['Club Number']), 0, 20)
+      )
+      const snapshot: DistrictStatistics = {
+        ...createMockSnapshot(clubs),
+        clubPerformance: records,
+      }
+      const analytics = module.generateDistinguishedClubAnalytics('D101', [
+        snapshot,
+      ])
+      const allGoals = [
+        ...analytics.dcpGoalAnalysis.mostCommonlyAchieved,
+        ...analytics.dcpGoalAnalysis.leastCommonlyAchieved,
+      ]
+      return (goal: number) =>
+        allGoals.find(g => g.goalNumber === goal)?.achievementCount
+    }
+
+    it('counts goals 5/6 from the real current CSV headers (#1118 C1)', () => {
+      const count = goalCountsFor([
+        createRawClubRecord('A', {
+          'Level 4s, Path Completions, or DTM Awards': '1',
+          'Add. Level 4s, Path Completions, or DTM award': '1',
+        }),
+      ])
+
+      expect(count(5)).toBe(1)
+      expect(count(6)).toBe(1)
+    })
+
+    it('counts goal 10 with Oct-only dues + officer list (#1118 C2)', () => {
+      const count = goalCountsFor([
+        createRawClubRecord('A', {
+          'Mem. dues on time Oct': '1',
+          'Off. List On Time': '1',
+        }),
+      ])
+
+      expect(count(10)).toBe(1)
+    })
+
+    it('counts goal 10 with Apr-only dues + officer list (#1118 C2)', () => {
+      const count = goalCountsFor([
+        createRawClubRecord('A', {
+          'Mem. dues on time Apr': '1',
+          'Off. List On Time': '1',
+        }),
+      ])
+
+      expect(count(10)).toBe(1)
+    })
+
+    it('does not count goal 10 when dues are on time but the officer list is not', () => {
+      const count = goalCountsFor([
+        createRawClubRecord('A', {
+          'Mem. dues on time Oct': '1',
+          'Mem. dues on time Apr': '1',
+        }),
+      ])
+
+      expect(count(10)).toBe(0)
+    })
+
+    it('does not count goal 10 when the officer list is on time but no dues are', () => {
+      const count = goalCountsFor([
+        createRawClubRecord('A', {
+          'Off. List On Time': '1',
+        }),
+      ])
+
+      expect(count(10)).toBe(0)
+    })
+
+    it('applies the official DCP thresholds to goals 1-8, not "> 0" (#1118)', () => {
+      const count = goalCountsFor([
+        createRawClubRecord('A', {
+          'Level 1s': '3', // goal 1 needs 4
+          'Level 2s': '1', // goal 2 needs 2
+          'New Members': '3', // goal 7 needs 4
+        }),
+        createRawClubRecord('B', {
+          'Level 1s': '4',
+          'Level 2s': '2',
+          'New Members': '4',
+        }),
+      ])
+
+      expect(count(1)).toBe(1)
+      expect(count(2)).toBe(1)
+      expect(count(7)).toBe(1)
     })
 
     it('should fall back to sequential approximation when raw CSV data is unavailable', () => {
