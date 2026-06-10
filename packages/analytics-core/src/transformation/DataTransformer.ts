@@ -26,6 +26,7 @@ import {
   computeDcpGoalsAchieved,
   hasDcpGoalColumns,
 } from '../analytics/dcpGoalDefinitions.js'
+import { classifyDistinguishedTier } from '../analytics/ClubEligibilityUtils.js'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
 
 /**
@@ -103,14 +104,19 @@ export class DataTransformer implements IDataTransformer {
     // Extract clubs from club performance data, merging payment fields from district performance
     const clubs = this.extractClubs(clubPerformance, districtPerformance)
 
-    // Extract divisions from division performance data
-    const divisions = this.extractDivisions(divisionPerformance)
+    // Derive division/area aggregates from the merged clubs (#1124).
+    // The real dashboard CSVs share one club universe: clubPerformance
+    // carries membership ('Active Members'), districtPerformance carries
+    // payments ('Total to Date'), and divisionPerformance has no
+    // aggregate rows at all (it is per-club too). Deriving both blocks
+    // from the merged clubs keeps divisions, areas, and totals
+    // internally consistent.
+    const divisions = this.extractDivisions(clubs)
 
-    // Extract areas from club performance data (clubs contain area info)
-    const areas = this.extractAreas(clubPerformance)
+    const areas = this.extractAreas(clubs)
 
     // Calculate district totals
-    const totals = this.calculateTotals(clubs, districtPerformance)
+    const totals = this.calculateTotals(clubs)
 
     const districtStats: DistrictStatistics = {
       districtId,
@@ -440,52 +446,36 @@ export class DataTransformer implements IDataTransformer {
   }
 
   /**
-   * Extracts division statistics from division performance records.
+   * Derives division statistics from the merged club statistics (#1124).
    *
-   * @param divisionPerformance - Array of division performance records
+   * The real divisionperformance CSV is per-club rows (no aggregate
+   * rows and no payments column), so division aggregates are summed
+   * from the clubs, whose membership comes from clubPerformance
+   * ('Active Members') and payments from districtPerformance
+   * ('Total to Date'). Cross-checked against TI's division report in
+   * DataTransformer.realHeaders.test.ts.
+   *
+   * @param clubs - Merged club statistics
    * @returns Array of division statistics
    */
-  private extractDivisions(
-    divisionPerformance: ParsedRecord[]
-  ): DivisionStatistics[] {
+  private extractDivisions(clubs: ClubStatistics[]): DivisionStatistics[] {
     const divisionMap = new Map<string, DivisionStatistics>()
 
-    for (const record of divisionPerformance) {
-      const divisionId = this.extractString(record, 'Division', 'Div')
-      if (!divisionId) continue
+    for (const club of clubs) {
+      if (!club.divisionId) continue
 
-      const existing = divisionMap.get(divisionId)
+      const existing = divisionMap.get(club.divisionId)
       if (existing) {
-        // Aggregate values
-        existing.clubCount += this.extractNumber(record, 'Club Count', 'Clubs')
-        existing.membershipTotal += this.extractNumber(
-          record,
-          'Membership',
-          'Members',
-          'Active Members'
-        )
-        existing.paymentsTotal += this.extractNumber(
-          record,
-          'Total to Date',
-          'Payments'
-        )
+        existing.clubCount += 1
+        existing.membershipTotal += club.membershipCount
+        existing.paymentsTotal += club.paymentsCount
       } else {
-        divisionMap.set(divisionId, {
-          divisionId,
-          divisionName:
-            this.extractString(record, 'Division Name', 'Name') ?? divisionId,
-          clubCount: this.extractNumber(record, 'Club Count', 'Clubs'),
-          membershipTotal: this.extractNumber(
-            record,
-            'Membership',
-            'Members',
-            'Active Members'
-          ),
-          paymentsTotal: this.extractNumber(
-            record,
-            'Total to Date',
-            'Payments'
-          ),
+        divisionMap.set(club.divisionId, {
+          divisionId: club.divisionId,
+          divisionName: club.divisionName,
+          clubCount: 1,
+          membershipTotal: club.membershipCount,
+          paymentsTotal: club.paymentsCount,
         })
       }
     }
@@ -494,54 +484,36 @@ export class DataTransformer implements IDataTransformer {
   }
 
   /**
-   * Extracts area statistics from club performance records.
-   * Areas are derived from club data since clubs contain area information.
+   * Derives area statistics from the merged club statistics (#1124).
    *
-   * @param clubPerformance - Array of club performance records
+   * Same sourcing as extractDivisions: the real clubperformance CSV has
+   * no payments column, so paymentsTotal comes from the per-club
+   * districtPerformance merge.
+   *
+   * @param clubs - Merged club statistics
    * @returns Array of area statistics
    */
-  private extractAreas(clubPerformance: ParsedRecord[]): AreaStatistics[] {
+  private extractAreas(clubs: ClubStatistics[]): AreaStatistics[] {
     const areaMap = new Map<string, AreaStatistics>()
 
-    for (const record of clubPerformance) {
-      const areaId = this.extractString(record, 'Area')
-      const divisionId = this.extractString(record, 'Division', 'Div')
+    for (const club of clubs) {
+      if (!club.areaId) continue
 
-      if (!areaId) continue
-
-      const key = `${divisionId ?? ''}-${areaId}`
+      const key = `${club.divisionId}-${club.areaId}`
       const existing = areaMap.get(key)
 
       if (existing) {
         existing.clubCount += 1
-        existing.membershipTotal += this.extractNumber(
-          record,
-          'Active Members',
-          'Membership',
-          'Members'
-        )
-        existing.paymentsTotal += this.extractNumber(
-          record,
-          'Total to Date',
-          'Payments'
-        )
+        existing.membershipTotal += club.membershipCount
+        existing.paymentsTotal += club.paymentsCount
       } else {
         areaMap.set(key, {
-          areaId,
-          areaName: `Area ${areaId}`,
-          divisionId: divisionId ?? '',
+          areaId: club.areaId,
+          areaName: club.areaName,
+          divisionId: club.divisionId,
           clubCount: 1,
-          membershipTotal: this.extractNumber(
-            record,
-            'Active Members',
-            'Membership',
-            'Members'
-          ),
-          paymentsTotal: this.extractNumber(
-            record,
-            'Total to Date',
-            'Payments'
-          ),
+          membershipTotal: club.membershipCount,
+          paymentsTotal: club.paymentsCount,
         })
       }
     }
@@ -550,85 +522,56 @@ export class DataTransformer implements IDataTransformer {
   }
 
   /**
-   * Calculates district totals from club data and district performance.
+   * Calculates district totals from club data.
+   *
+   * Distinguished tiers are disjoint per-tier counts (#1124) classified
+   * from the verbatim 'Club Distinguished Status' value: live CSVs carry
+   * letter codes (D/S/P/M), historical CSVs carry word forms. Sum the
+   * four fields for "distinguished or better".
+   *
+   * The former districtPerformance fallback ('Distinguished Clubs'
+   * columns) is gone: the real district-performance CSV is per-club
+   * payment rows and has never carried district-level tier counts.
    *
    * @param clubs - Array of club statistics
-   * @param districtPerformance - Array of district performance records
    * @returns District totals
    */
-  private calculateTotals(
-    clubs: ClubStatistics[],
-    districtPerformance: ParsedRecord[]
-  ): DistrictTotals {
-    // Calculate from clubs
-    const totalClubs = clubs.length
-    const totalMembership = clubs.reduce(
-      (sum, club) => sum + club.membershipCount,
-      0
-    )
-    const totalPayments = clubs.reduce(
-      (sum, club) => sum + club.paymentsCount,
-      0
-    )
-
-    // Count distinguished clubs by status
+  private calculateTotals(clubs: ClubStatistics[]): DistrictTotals {
+    let totalMembership = 0
+    let totalPayments = 0
     let distinguishedClubs = 0
     let selectDistinguishedClubs = 0
     let presidentDistinguishedClubs = 0
+    let smedleyDistinguishedClubs = 0
 
     for (const club of clubs) {
-      const status = club.status.toLowerCase()
-      if (status.includes('president')) {
-        presidentDistinguishedClubs++
-        distinguishedClubs++
-      } else if (status.includes('select')) {
-        selectDistinguishedClubs++
-        distinguishedClubs++
-      } else if (status.includes('distinguished')) {
-        distinguishedClubs++
-      }
-    }
+      totalMembership += club.membershipCount
+      totalPayments += club.paymentsCount
 
-    // Try to get totals from district performance if available
-    if (districtPerformance.length > 0) {
-      const districtRecord = districtPerformance[0]
-      if (districtRecord) {
-        const dcpDistinguished = this.extractNumber(
-          districtRecord,
-          'Distinguished Clubs',
-          'Distinguished'
-        )
-        const dcpSelect = this.extractNumber(
-          districtRecord,
-          'Select Distinguished',
-          'Select'
-        )
-        const dcpPresident = this.extractNumber(
-          districtRecord,
-          "President's Distinguished",
-          'President'
-        )
-
-        // Use district performance values if they're higher (more accurate)
-        if (dcpDistinguished > distinguishedClubs) {
-          distinguishedClubs = dcpDistinguished
-        }
-        if (dcpSelect > selectDistinguishedClubs) {
-          selectDistinguishedClubs = dcpSelect
-        }
-        if (dcpPresident > presidentDistinguishedClubs) {
-          presidentDistinguishedClubs = dcpPresident
-        }
+      switch (classifyDistinguishedTier(club.distinguishedStatus)) {
+        case 'D':
+          distinguishedClubs++
+          break
+        case 'S':
+          selectDistinguishedClubs++
+          break
+        case 'P':
+          presidentDistinguishedClubs++
+          break
+        case 'M':
+          smedleyDistinguishedClubs++
+          break
       }
     }
 
     return {
-      totalClubs,
+      totalClubs: clubs.length,
       totalMembership,
       totalPayments,
       distinguishedClubs,
       selectDistinguishedClubs,
       presidentDistinguishedClubs,
+      smedleyDistinguishedClubs,
     }
   }
 

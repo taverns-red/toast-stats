@@ -299,12 +299,24 @@ export interface DistrictTotalsFile {
   /** Total payments across all clubs */
   totalPayments: number
 
-  /** Number of Distinguished clubs */
+  /**
+   * Number of Distinguished clubs (D tier only, #1124).
+   *
+   * The distinguished* fields are disjoint per-tier counts sourced from
+   * the 'Club Distinguished Status' letter codes (D/S/P/M); sum the four
+   * fields for "distinguished or better".
+   */
   distinguishedClubs: number
 
-  /** Number of Select Distinguished clubs */
+  /** Number of Select Distinguished clubs (S tier only) */
   selectDistinguishedClubs: number
 
-  /** Number of President's Distinguished clubs */
+  /** Number of President's Distinguished clubs (P tier only) */
   presidentDistinguishedClubs: number
+
+  /**
+   * Number of Smedley Distinguished clubs (M tier only).
+   * Absent in snapshots written before 2026-06 (#1124).
+   */
+  smedleyDistinguishedClubs?: number
 }

@@ -149,9 +149,16 @@ export interface DistrictTotals {
   totalClubs: number
   totalMembership: number
   totalPayments: number
+  /**
+   * Per-tier counts (#1124): each field counts only its own tier
+   * ('Club Distinguished Status' letter codes D/S/P/M). Sum the four
+   * fields for "distinguished or better".
+   */
   distinguishedClubs: number
   selectDistinguishedClubs: number
   presidentDistinguishedClubs: number
+  /** Optional only for pre-2026-06 data; DataTransformer always sets it. */
+  smedleyDistinguishedClubs?: number
 }
 
 /**

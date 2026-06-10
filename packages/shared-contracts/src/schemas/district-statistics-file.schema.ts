@@ -214,14 +214,24 @@ export const DistrictTotalsFileSchema = z.object({
   /** Total payments across all clubs */
   totalPayments: z.number(),
 
-  /** Number of Distinguished clubs */
+  /**
+   * Number of Distinguished clubs (D tier only, #1124). The
+   * distinguished* fields are disjoint per-tier counts from the
+   * 'Club Distinguished Status' letter codes (D/S/P/M).
+   */
   distinguishedClubs: z.number(),
 
-  /** Number of Select Distinguished clubs */
+  /** Number of Select Distinguished clubs (S tier only) */
   selectDistinguishedClubs: z.number(),
 
-  /** Number of President's Distinguished clubs */
+  /** Number of President's Distinguished clubs (P tier only) */
   presidentDistinguishedClubs: z.number(),
+
+  /**
+   * Number of Smedley Distinguished clubs (M tier only).
+   * Optional: absent in snapshots written before 2026-06 (#1124).
+   */
+  smedleyDistinguishedClubs: z.number().optional(),
 })
 
 /**
