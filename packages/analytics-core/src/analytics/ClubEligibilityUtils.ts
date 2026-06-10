@@ -12,7 +12,57 @@
  */
 
 import type { ClubStatistics } from '../interfaces.js'
-import type { DistinguishedLevel } from '../types.js'
+import type { ClubHealthStatus, DistinguishedLevel } from '../types.js'
+
+/**
+ * Scalar inputs for club-health classification.
+ *
+ * Value-based (not tied to ClubStatistics) so both transformed club data
+ * and raw scraped CSV records can be classified by the same rule.
+ */
+export interface ClubHealthClassificationInput {
+  /** Current active membership count */
+  membership: number
+  /** Membership base at the start of the program year */
+  membershipBase: number
+  /** DCP goals achieved to date */
+  dcpGoals: number
+  /** Normalized CSP submission status (pre-2025 data → true) */
+  cspSubmitted: boolean
+}
+
+/**
+ * Classification verdict with the per-requirement breakdown, so callers
+ * can build risk-factor messages without re-deriving the predicates.
+ */
+export interface ClubHealthClassification {
+  status: ClubHealthStatus
+  netGrowth: number
+  requiredDcpCheckpoint: number
+  membershipRequirementMet: boolean
+  dcpCheckpointMet: boolean
+  cspRequirementMet: boolean
+}
+
+/**
+ * Classify a club's health per the §5 monthly-checkpoint system.
+ *
+ * Single source of truth (#1120) — ClubHealthAnalyticsModule.assessClubHealth
+ * and TimeSeriesDataPointBuilder.calculateClubHealthCounts must both
+ * delegate here so dashboard and time-series counts cannot drift.
+ *
+ * @param input - Scalar club metrics (see ClubHealthClassificationInput)
+ * @param month - Calendar month (1-12) of the snapshot date
+ * @returns Classification with per-requirement breakdown
+ */
+export function classifyClubHealth(
+  input: ClubHealthClassificationInput,
+  month: number
+): ClubHealthClassification {
+  void input
+  void month
+  throw new Error('Not implemented (TDD red phase, #1120)')
+}
 
 /**
  * Calculate net growth for a club.

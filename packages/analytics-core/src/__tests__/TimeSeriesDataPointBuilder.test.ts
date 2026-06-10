@@ -17,6 +17,12 @@ import {
   type DistrictStatisticsInput,
   type ScrapedRecord,
 } from '../timeseries/TimeSeriesDataPointBuilder.js'
+import {
+  getCurrentProgramMonth,
+  getDCPCheckpoint,
+} from '../analytics/AnalyticsUtils.js'
+import { ClubHealthAnalyticsModule } from '../analytics/ClubHealthAnalyticsModule.js'
+import type { ClubStatistics, DistrictStatistics } from '../interfaces.js'
 
 // Reference implementations for equivalence checking
 function refParseIntSafe(value: string | number | null | undefined): number {
@@ -106,8 +112,27 @@ function refCalculateDistinguishedTotal(
   return (district.clubPerformance ?? []).filter(refIsDistinguished).length
 }
 
+function refParseCspSubmitted(club: ScrapedRecord): boolean {
+  const cspValue =
+    club['CSP'] ??
+    club['Club Success Plan'] ??
+    club['CSP Submitted'] ??
+    club['Club Success Plan Submitted']
+  // Historical compatibility: field absent → assume submitted
+  if (cspValue === undefined || cspValue === null) return true
+  const csp = String(cspValue).toLowerCase().trim()
+  return !['no', 'false', '0', 'not submitted', 'n'].includes(csp)
+}
+
+/**
+ * Reference club-health classification (#1120): must match
+ * ClubHealthAnalyticsModule.assessClubHealth — monthly DCP checkpoint
+ * (§5.3) + CSP requirement, not the legacy `dcpGoals > 0` rule.
+ */
 function refCalculateClubHealthCounts(district: DistrictStatisticsInput) {
   const clubs = district.clubPerformance ?? []
+  const month = getCurrentProgramMonth(district.asOfDate)
+  const requiredCheckpoint = getDCPCheckpoint(month)
   let thriving = 0,
     vulnerable = 0,
     interventionRequired = 0
@@ -119,7 +144,12 @@ function refCalculateClubHealthCounts(district: DistrictStatisticsInput) {
     const memBase = refParseIntSafe(club['Mem. Base'])
     const netGrowth = membership - memBase
     if (membership < 12 && netGrowth < 3) interventionRequired++
-    else if ((membership >= 20 || netGrowth >= 3) && dcpGoals > 0) thriving++
+    else if (
+      (membership >= 20 || netGrowth >= 3) &&
+      dcpGoals >= requiredCheckpoint &&
+      refParseCspSubmitted(club)
+    )
+      thriving++
     else vulnerable++
   }
   return { total: clubs.length, thriving, vulnerable, interventionRequired }
@@ -384,6 +414,193 @@ describe('TimeSeriesDataPointBuilder', () => {
       expect(
         counts.thriving + counts.vulnerable + counts.interventionRequired
       ).toBe(counts.total)
+    })
+
+    it('classifies a 3-goal club in June as vulnerable, not thriving (#1120)', () => {
+      // The C3 audit disagreement fixture: the legacy `dcpGoals > 0` rule
+      // counted this club thriving; the §5.3 June checkpoint requires 5 goals.
+      const district: DistrictStatisticsInput = {
+        districtId: '61',
+        asOfDate: '2026-06-15',
+        clubPerformance: [
+          {
+            'Club Number': '1111',
+            'Club Name': 'June Three Goals',
+            'Active Members': '25',
+            'Mem. Base': '20',
+            'Goals Met': '3',
+            CSP: 'Yes',
+          },
+        ],
+      }
+      expect(builder.calculateClubHealthCounts(district)).toEqual({
+        total: 1,
+        thriving: 0,
+        vulnerable: 1,
+        interventionRequired: 0,
+      })
+    })
+
+    it('does not count a CSP-less club as thriving (#1120)', () => {
+      const district: DistrictStatisticsInput = {
+        districtId: '61',
+        asOfDate: '2026-06-15',
+        clubPerformance: [
+          {
+            'Club Number': '2222',
+            'Club Name': 'No CSP',
+            'Active Members': '25',
+            'Mem. Base': '20',
+            'Goals Met': '9',
+            CSP: 'No',
+          },
+        ],
+      }
+      expect(builder.calculateClubHealthCounts(district)).toEqual({
+        total: 1,
+        thriving: 0,
+        vulnerable: 1,
+        interventionRequired: 0,
+      })
+    })
+
+    it('treats a missing CSP field as submitted (historical data)', () => {
+      const district: DistrictStatisticsInput = {
+        districtId: '61',
+        asOfDate: '2024-06-15',
+        clubPerformance: [
+          {
+            'Club Number': '3333',
+            'Club Name': 'Pre-CSP Era',
+            'Active Members': '25',
+            'Mem. Base': '20',
+            'Goals Met': '6',
+          },
+        ],
+      }
+      expect(builder.calculateClubHealthCounts(district)).toEqual({
+        total: 1,
+        thriving: 1,
+        vulnerable: 0,
+        interventionRequired: 0,
+      })
+    })
+  })
+
+  // ---------- parity with ClubHealthAnalyticsModule (#1120) ----------
+  describe('parity with ClubHealthAnalyticsModule', () => {
+    /**
+     * Mirror of AnalyticsComputeService.convertToDistrictStatisticsInput's
+     * field mapping (the real conversion is integration-tested in
+     * collector-cli). Keys must stay in sync with that method.
+     */
+    function toScrapedRecord(club: ClubStatistics): ScrapedRecord {
+      return {
+        'Active Members': club.membershipCount,
+        'Mem. Base': club.membershipBase,
+        'Goals Met': club.dcpGoals,
+        'Club Number': club.clubId,
+        'Club Name': club.clubName,
+        CSP: (club.cspSubmitted ?? true) ? 'Yes' : 'No',
+      }
+    }
+
+    function makeClubStat(
+      overrides: Partial<ClubStatistics> & { clubId: string }
+    ): ClubStatistics {
+      return {
+        clubName: `Club ${overrides.clubId}`,
+        divisionId: 'A',
+        areaId: 'A1',
+        divisionName: 'Division A',
+        areaName: 'Area A1',
+        membershipCount: 20,
+        paymentsCount: 0,
+        dcpGoals: 0,
+        status: 'Active',
+        octoberRenewals: 0,
+        aprilRenewals: 0,
+        newMembers: 0,
+        membershipBase: 20,
+        ...overrides,
+      }
+    }
+
+    it('produces the same thriving/vulnerable/intervention counts as the module', () => {
+      const snapshotDate = '2026-06-15'
+      const clubs: ClubStatistics[] = [
+        // thriving: 25 members, 7 goals (June checkpoint 5), CSP submitted
+        makeClubStat({ clubId: '1', dcpGoals: 7, cspSubmitted: true }),
+        // vulnerable: 3 goals < June checkpoint 5
+        makeClubStat({ clubId: '2', dcpGoals: 3, cspSubmitted: true }),
+        // vulnerable: everything met except CSP
+        makeClubStat({ clubId: '3', dcpGoals: 9, cspSubmitted: false }),
+        // intervention: 8 members, base 10 → growth -2
+        makeClubStat({
+          clubId: '4',
+          membershipCount: 8,
+          membershipBase: 10,
+          dcpGoals: 9,
+          cspSubmitted: true,
+        }),
+        // vulnerable: 15 members, growth 2 → membership requirement not met
+        makeClubStat({
+          clubId: '5',
+          membershipCount: 15,
+          membershipBase: 13,
+          dcpGoals: 9,
+          cspSubmitted: true,
+        }),
+        // thriving via growth: 11 members, base 5 → growth 6
+        makeClubStat({
+          clubId: '6',
+          membershipCount: 11,
+          membershipBase: 5,
+          dcpGoals: 6,
+          cspSubmitted: true,
+        }),
+        // historical club without CSP field → treated as submitted
+        makeClubStat({ clubId: '7', dcpGoals: 5 }),
+      ]
+      const snapshot: DistrictStatistics = {
+        districtId: '61',
+        snapshotDate,
+        clubs,
+        divisions: [],
+        areas: [],
+        totals: {
+          totalClubs: clubs.length,
+          totalMembership: 0,
+          totalPayments: 0,
+          distinguishedClubs: 0,
+          selectDistinguishedClubs: 0,
+          presidentDistinguishedClubs: 0,
+        },
+        divisionPerformance: [],
+        clubPerformance: [],
+        districtPerformance: [],
+      }
+
+      const module = new ClubHealthAnalyticsModule()
+      const healthData = module.generateClubHealthData([snapshot])
+
+      const district: DistrictStatisticsInput = {
+        districtId: '61',
+        asOfDate: snapshotDate,
+        clubPerformance: clubs.map(toScrapedRecord),
+      }
+      const counts = builder.calculateClubHealthCounts(district)
+
+      expect(counts.total).toBe(healthData.allClubs.length)
+      expect(counts.thriving).toBe(healthData.thrivingClubs.length)
+      expect(counts.vulnerable).toBe(healthData.vulnerableClubs.length)
+      expect(counts.interventionRequired).toBe(
+        healthData.interventionRequiredClubs.length
+      )
+      // Sanity: the fixture covers all three classes
+      expect(counts.thriving).toBeGreaterThan(0)
+      expect(counts.vulnerable).toBeGreaterThan(0)
+      expect(counts.interventionRequired).toBeGreaterThan(0)
     })
   })
 
