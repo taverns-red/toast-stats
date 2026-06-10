@@ -108,6 +108,22 @@ const expectReservedShell = (container: HTMLElement) => {
   expect(
     container.querySelectorAll('.districts-kpi-card--secondary').length
   ).toBe(3)
+  // #922: the loaded header stacks an actions toolbar (freshness/PY/date
+  // chips + Export/Share) between the intro and the KPI strip on mobile.
+  // The shell must reserve that slot too, inside the header (so the header's
+  // column gap applies identically) and above the strip — or loading→loaded
+  // shifts the strip down ~148px at 390px. jsdom can't measure the height
+  // (Lesson 66); e2e/landing-mobile-cls.smoke.ts proves the geometry live.
+  const actionsSkel = container.querySelector(
+    '.districts-page-header__actions--skeleton'
+  )
+  expect(actionsSkel).not.toBeNull()
+  expect(actionsSkel!.getAttribute('aria-hidden')).toBe('true')
+  expect(actionsSkel!.closest('.districts-page-header')).not.toBeNull()
+  expect(
+    actionsSkel!.compareDocumentPosition(strip!) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy()
 }
 
 describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
