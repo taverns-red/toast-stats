@@ -381,6 +381,22 @@ jobs:
           SUCCEEDED=$(jq '.districts.succeeded' /tmp/analytics-output.json)
           echo "- **Districts computed**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Daily Step 4.5: Snapshot schema gate (#1125) ──
+      # The transform write path validates, but merge-find-a-club rewrites
+      # snapshots in place WITHOUT re-validating — the exact path the #1096
+      # FAC-enrichment drift took to prod. Validate the final on-disk files
+      # against shared-contracts immediately before upload: fail-loud with
+      # district + date, staging-side. Decision logic is unit-tested in
+      # scripts/lib/__tests__/snapshotPublishGate.test.ts.
+      - name: '[daily] Validate snapshots against shared contracts'
+        if: steps.mode.outputs.mode == 'daily'
+        run: |
+          SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.snapshot_date }}"
+          if [ -z "${SNAPSHOT_DATE}" ]; then
+            SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.date }}"
+          fi
+          npx tsx scripts/validate-snapshots.ts "./cache/snapshots/${SNAPSHOT_DATE}"
+
       # ── Daily Step 5: Upload to GCS ──
       - name: '[daily] Upload to GCS'
         if: steps.mode.outputs.mode == 'daily'
