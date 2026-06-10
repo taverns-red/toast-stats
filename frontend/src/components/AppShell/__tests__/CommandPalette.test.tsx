@@ -10,14 +10,18 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import CommandPalette from '../CommandPalette'
 
-// The palette now loads the unified index, which fans out to two CDN
-// fetches (rankings → districts+regions, club-index → clubs). Mock both.
+// The palette now loads the unified index, which fans out to three CDN
+// fetches (rankings → districts+regions, club-index → clubs,
+// divisions-areas-index → divisions+areas, #1135). Mock all three.
 const fetchCdnRankings = vi.fn()
 const fetchCdnClubIndex = vi.fn()
+const fetchCdnDivisionsAreasIndex = vi.fn()
 
 vi.mock('../../../services/cdn', () => ({
   fetchCdnRankings: (...args: unknown[]) => fetchCdnRankings(...args),
   fetchCdnClubIndex: (...args: unknown[]) => fetchCdnClubIndex(...args),
+  fetchCdnDivisionsAreasIndex: (...args: unknown[]) =>
+    fetchCdnDivisionsAreasIndex(...args),
 }))
 
 const rankingRow = (
@@ -30,6 +34,7 @@ const setupCdn = (
   opts: {
     rankings?: Array<ReturnType<typeof rankingRow>>
     clubs?: Record<string, { districtId: string; clubName: string }>
+    divisionsAreas?: Record<string, Record<string, string[]>>
   } = {}
 ) => {
   fetchCdnRankings.mockResolvedValue({
@@ -43,6 +48,13 @@ const setupCdn = (
     clubs: opts.clubs ?? {
       '12345': { districtId: '61', clubName: 'Toast of the Town' },
     },
+  })
+  fetchCdnDivisionsAreasIndex.mockResolvedValue({
+    generatedAt: '2026-06-10T00:00:00Z',
+    snapshotDate: '2026-06-09',
+    totalDivisions: 1,
+    totalAreas: 1,
+    districts: opts.divisionsAreas ?? { '61': { C: ['23'] } },
   })
 }
 
@@ -148,6 +160,42 @@ describe('CommandPalette omni-search (#1057)', () => {
     })
     // At least the Clubs group is present (club name contains "o").
     await within(listbox).findByRole('group', { name: /clubs/i })
+  })
+
+  it('finds a division ("61 c") under a Divisions group and routes to the scoped division page (#1135)', async () => {
+    renderPalette(true)
+    const input = screen.getByLabelText(/universal search input/i)
+    fireEvent.change(input, { target: { value: '61 c' } })
+
+    const listbox = await screen.findByRole('listbox', {
+      name: /search results/i,
+    })
+    const divisions = await within(listbox).findByRole('group', {
+      name: /divisions/i,
+    })
+    const link = within(divisions).getByRole('link')
+    expect(link).toHaveTextContent(/Division C/)
+    // Disambiguation context (which district the division belongs to).
+    expect(link).toHaveTextContent(/District 61/)
+    // Route-keyed (Lesson 152): the stable identifier, not a CDN label.
+    expect(link.getAttribute('href')).toBe('/district/61/division/C')
+  })
+
+  it('finds an area ("area 23 61") under an Areas group and routes to the nested area page (#1135)', async () => {
+    renderPalette(true)
+    const input = screen.getByLabelText(/universal search input/i)
+    fireEvent.change(input, { target: { value: 'area 23 61' } })
+
+    const listbox = await screen.findByRole('listbox', {
+      name: /search results/i,
+    })
+    const areas = await within(listbox).findByRole('group', {
+      name: /areas/i,
+    })
+    const link = within(areas).getByRole('link')
+    expect(link).toHaveTextContent(/Area 23/)
+    expect(link).toHaveTextContent(/District 61 · Division C/)
+    expect(link.getAttribute('href')).toBe('/district/61/division/C/area/23')
   })
 
   it('shows an empty-state prompt before the user types', async () => {

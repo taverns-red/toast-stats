@@ -11,7 +11,12 @@
 
 import { fetchCdnRankings, fetchCdnClubIndex } from './cdn'
 
-export type SearchEntityType = 'district' | 'region' | 'club'
+export type SearchEntityType =
+  | 'district'
+  | 'region'
+  | 'club'
+  | 'division'
+  | 'area'
 
 export interface SearchEntity {
   type: SearchEntityType
@@ -25,6 +30,10 @@ export interface SearchEntity {
   route: string
   /** Lowercased terms the query is matched against (id, name, aliases) */
   terms: string[]
+  /** Lowercased combo terms matched ONLY by full equality (e.g. "61 c") —
+      never by prefix/substring, so partial queries like "61" don't flood
+      with every division/area of that district (#1135). */
+  exactTerms?: string[]
 }
 
 export interface SearchIndex {
@@ -53,15 +62,25 @@ type ClubIndexEntry = { districtId: string; clubName: string }
 const DEFAULT_CAP = 8
 
 // Group display order: navigate-to-a-place entities (districts, regions) lead;
-// clubs follow. The matcher also weights types so this order survives the cap.
-const GROUP_ORDER: SearchEntityType[] = ['district', 'region', 'club']
+// clubs follow; divisions/areas trail (#1135 — Districts / Clubs / Divisions /
+// Areas per epic #1101). The matcher also weights types so this order
+// survives the cap.
+const GROUP_ORDER: SearchEntityType[] = [
+  'district',
+  'region',
+  'club',
+  'division',
+  'area',
+]
 
 // Higher = ranked first among equal-strength matches, and weighted to survive
 // the result cap (so a club merely containing "61" can't bury District 61).
 const TYPE_RANK: Record<SearchEntityType, number> = {
-  district: 2,
-  region: 1,
-  club: 0,
+  district: 4,
+  region: 3,
+  club: 2,
+  division: 1,
+  area: 0,
 }
 
 /**
@@ -71,7 +90,9 @@ const TYPE_RANK: Record<SearchEntityType, number> = {
  */
 export function buildSearchIndex(
   rankings: ReadonlyArray<RankingRow>,
-  clubs: Readonly<Record<string, ClubIndexEntry>>
+  clubs: Readonly<Record<string, ClubIndexEntry>>,
+  /** districtId → divisionId → areaIds, from config/divisions-areas-index.json (#1134). */
+  _divisionsAreas: Readonly<Record<string, Record<string, string[]>>> = {}
 ): SearchIndex {
   const entities: SearchEntity[] = []
 
