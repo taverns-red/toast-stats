@@ -142,9 +142,8 @@ export function evaluateRegistryFreshness(
 /**
  * Parse a manual `--set YYYY-MM=YYYY-MM-DD` argument (outage months whose
  * closing date cannot be derived from metadata and was established from TI
- * behavior instead). Throws on malformed input or a closing date that does
- * not fall after its data month — closing collections happen early in the
- * FOLLOWING month, so anything else is a typo.
+ * behavior instead). Throws on malformed input or a closing date in a month
+ * EARLIER than the data month (same-month is valid — see the rule below).
  */
 export function parseManualEntryArg(input: string): RegistryMonthEntry {
   const match = /^(\d{4}-\d{2})=(\d{4}-\d{2}-\d{2})$/.exec(input)
