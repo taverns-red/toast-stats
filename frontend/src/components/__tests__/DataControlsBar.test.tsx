@@ -87,6 +87,35 @@ describe('DataControlsBar (#529 #528)', () => {
     expect(screen.queryByTestId('freshness-pill')).toBeNull()
   })
 
+  // #922 — on a cold load the rankings query usually wins the race against
+  // the dates/index query, so the toolbar first paints without the pill and
+  // rewraps (one row shorter on mobile) when it lands ~tens of ms later —
+  // a real-user CLS hit the shell skeleton alone can't fix. While the date
+  // is merely PENDING (vs truly absent), reserve the pill's slot.
+  it('reserves the pill slot with an aria-hidden placeholder while the date is pending (#922)', () => {
+    render(
+      <DataControlsBar
+        {...baseProps}
+        latestSnapshotDate={undefined}
+        freshnessPending
+      />
+    )
+    expect(screen.queryByTestId('freshness-pill')).toBeNull()
+    const skel = screen.getByTestId('freshness-pill-skeleton')
+    expect(skel.getAttribute('aria-hidden')).toBe('true')
+  })
+
+  it('does not render the pill placeholder once the date has resolved', () => {
+    render(<DataControlsBar {...baseProps} freshnessPending={false} />)
+    expect(screen.getByTestId('freshness-pill')).not.toBeNull()
+    expect(screen.queryByTestId('freshness-pill-skeleton')).toBeNull()
+  })
+
+  it('does not render the pill placeholder when the date is truly absent (pending settled empty)', () => {
+    render(<DataControlsBar {...baseProps} latestSnapshotDate={undefined} />)
+    expect(screen.queryByTestId('freshness-pill-skeleton')).toBeNull()
+  })
+
   it('groups all three chips inside one container with role=toolbar', () => {
     render(<DataControlsBar {...baseProps} />)
     const bar = screen.getByRole('toolbar', { name: /data controls/i })
