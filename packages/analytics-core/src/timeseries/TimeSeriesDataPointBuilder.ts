@@ -16,6 +16,8 @@ import type {
   TimeSeriesDataPoint,
   ClubHealthCounts,
 } from '@toastmasters/shared-contracts'
+import { classifyClubHealth } from '../analytics/ClubEligibilityUtils.js'
+import { getCurrentProgramMonth } from '../analytics/AnalyticsUtils.js'
 
 /**
  * Scraped record type - represents raw CSV data with dynamic columns.
@@ -179,11 +181,12 @@ export class TimeSeriesDataPointBuilder {
   /**
    * Calculate club health counts from district statistics.
    *
-   * MIGRATED from RefreshService.calculateClubHealthCounts
-   *
-   * Classification rules from ClubHealthAnalyticsModule:
+   * Delegates per-club classification to the shared classifyClubHealth
+   * (#1120) so these counts cannot drift from the dashboard's
+   * ClubHealthAnalyticsModule.assessClubHealth:
    * - Intervention Required: membership < 12 AND net growth < 3
-   * - Thriving: (membership >= 20 OR net growth >= 3) AND dcpGoals > 0
+   * - Thriving: (membership >= 20 OR net growth >= 3) AND the §5.3
+   *   monthly DCP checkpoint is met AND CSP is submitted
    * - Vulnerable: All other clubs
    *
    * @param district - The district statistics
@@ -196,6 +199,7 @@ export class TimeSeriesDataPointBuilder {
   ): ClubHealthCounts {
     const clubs = district.clubPerformance ?? []
     const total = clubs.length
+    const month = getCurrentProgramMonth(district.asOfDate)
 
     let thriving = 0
     let vulnerable = 0
@@ -209,20 +213,23 @@ export class TimeSeriesDataPointBuilder {
       )
       const dcpGoals = this.parseIntSafe(club['Goals Met'])
       const memBase = this.parseIntSafe(club['Mem. Base'])
-      const netGrowth = membership - memBase
 
-      // Classification rules from ClubHealthAnalyticsModule
-      if (membership < 12 && netGrowth < 3) {
+      const { status } = classifyClubHealth(
+        {
+          membership,
+          membershipBase: memBase,
+          dcpGoals,
+          cspSubmitted: this.parseCspSubmitted(club),
+        },
+        month
+      )
+
+      if (status === 'intervention-required') {
         interventionRequired++
+      } else if (status === 'thriving') {
+        thriving++
       } else {
-        const membershipRequirementMet = membership >= 20 || netGrowth >= 3
-        const dcpCheckpointMet = dcpGoals > 0
-
-        if (membershipRequirementMet && dcpCheckpointMet) {
-          thriving++
-        } else {
-          vulnerable++
-        }
+        vulnerable++
       }
     }
 
@@ -232,6 +239,36 @@ export class TimeSeriesDataPointBuilder {
       vulnerable,
       interventionRequired,
     }
+  }
+
+  /**
+   * Parse CSP (Club Success Plan) submission status from a raw record.
+   *
+   * Historical compatibility: when the field is absent (pre-2025-2026
+   * CSVs), CSP is treated as submitted — it was not a requirement then.
+   *
+   * @param club - The club record
+   * @returns True unless the field is present and explicitly negative
+   */
+  parseCspSubmitted(club: ScrapedRecord): boolean {
+    const cspValue =
+      club['CSP'] ??
+      club['Club Success Plan'] ??
+      club['CSP Submitted'] ??
+      club['Club Success Plan Submitted']
+
+    if (cspValue === undefined || cspValue === null) {
+      return true
+    }
+
+    const cspString = String(cspValue).toLowerCase().trim()
+    return !(
+      cspString === 'no' ||
+      cspString === 'false' ||
+      cspString === '0' ||
+      cspString === 'not submitted' ||
+      cspString === 'n'
+    )
   }
 
   /**

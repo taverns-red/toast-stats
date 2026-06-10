@@ -13,6 +13,7 @@
 
 import type { ClubStatistics } from '../interfaces.js'
 import type { ClubHealthStatus, DistinguishedLevel } from '../types.js'
+import { getDCPCheckpoint } from './AnalyticsUtils.js'
 
 /**
  * Scalar inputs for club-health classification.
@@ -59,9 +60,38 @@ export function classifyClubHealth(
   input: ClubHealthClassificationInput,
   month: number
 ): ClubHealthClassification {
-  void input
-  void month
-  throw new Error('Not implemented (TDD red phase, #1120)')
+  const { membership, membershipBase, dcpGoals, cspSubmitted } = input
+  const netGrowth = membership - membershipBase
+  const requiredDcpCheckpoint = getDCPCheckpoint(month)
+
+  // Membership requirement: >= 20 members OR net growth >= 3
+  const membershipRequirementMet = membership >= 20 || netGrowth >= 3
+  // DCP checkpoint requirement varies by month (§5.3)
+  const dcpCheckpointMet = dcpGoals >= requiredDcpCheckpoint
+  const cspRequirementMet = cspSubmitted
+
+  // Intervention override: membership < 12 AND net growth < 3
+  let status: ClubHealthStatus
+  if (membership < 12 && netGrowth < 3) {
+    status = 'intervention-required'
+  } else if (
+    membershipRequirementMet &&
+    dcpCheckpointMet &&
+    cspRequirementMet
+  ) {
+    status = 'thriving'
+  } else {
+    status = 'vulnerable'
+  }
+
+  return {
+    status,
+    netGrowth,
+    requiredDcpCheckpoint,
+    membershipRequirementMet,
+    dcpCheckpointMet,
+    cspRequirementMet,
+  }
 }
 
 /**
