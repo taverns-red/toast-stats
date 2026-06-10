@@ -101,6 +101,16 @@ describe('evaluateCdnSchema', () => {
     expect(result.reason).toContain('503')
   })
 
+  it('alerts on a malformed latest date instead of propagating it (output-injection guard)', () => {
+    const result = evaluateCdnSchema({
+      latestDate: 'evil\ntitle=injected',
+      districts: [fetched('61')],
+    })
+    expect(result.healthy).toBe(false)
+    expect(result.latestDate).toBeNull()
+    expect(result.reason).toMatch(/malformed/i)
+  })
+
   it('alerts when there are zero districts to check — a canary that checks nothing must not pass', () => {
     const result = evaluateCdnSchema({
       latestDate: LATEST_DATE,
@@ -137,5 +147,17 @@ describe('issue title and body', () => {
     expect(body).toContain('42')
     expect(body).toContain('clubPerformance')
     expect(body).toContain('2026-06-10T15:30:00')
+  })
+
+  it('escapes pipes in failure reasons so the markdown table stays intact', () => {
+    const result = evaluateCdnSchema({
+      latestDate: LATEST_DATE,
+      districts: [
+        { districtId: '61', ok: false, error: 'weird | piped | message' },
+      ],
+    })
+    const body = buildCanaryIssueBody(result, { baseUrl, now })
+    expect(body).not.toContain('weird | piped')
+    expect(body).toContain('weird \\| piped \\| message')
   })
 })
