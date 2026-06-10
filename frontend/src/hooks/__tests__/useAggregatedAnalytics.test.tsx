@@ -8,7 +8,7 @@
  * - Fetches analytics from CDN (no Express fallback — #173)
  * - Converts CDN format to aggregated response format
  * - Handles loading and error states appropriately
- * - Populates yearOverYear and performanceTargets from CDN data
+ * - Populates yearOverYear from CDN data
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
