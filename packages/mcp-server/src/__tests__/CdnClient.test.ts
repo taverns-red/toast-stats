@@ -109,7 +109,7 @@ describe('CdnClient — discovery reads', () => {
     for (const clubId of ['constructor', '__proto__', 'toString']) {
       const resolved = await client().resolveClubDistrict(clubId)
       expect(resolved.available).toBe(false)
-      if (resolved.available) return
+      if (resolved.available) continue
       expect(resolved.reason).toMatch(/not available/i)
     }
   })

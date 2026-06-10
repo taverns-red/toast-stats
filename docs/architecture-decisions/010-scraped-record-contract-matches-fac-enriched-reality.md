@@ -51,7 +51,9 @@ Specifics:
   schema would accept — and silently strip to `{}` — _any_ object, making
   the contract meaningless. `coordinates` precedes `address` in the union
   so a coordinates object can never be matched (and emptied) by the
-  all-optional address shape.
+  all-optional address shape. Known looseness: `{}` and address-subset
+  objects (e.g. `{ city: 'X' }`) validate as record values — inherent to
+  an all-optional address shape and acceptable for this contract.
 - `ClubStatisticsFileSchema` gains the enrichment fields the merger writes
   to `.clubs[]` that the schema previously **silently stripped** on every
   validating parse: `phone`, `website`, `twitterLink`, `meetingDay`,

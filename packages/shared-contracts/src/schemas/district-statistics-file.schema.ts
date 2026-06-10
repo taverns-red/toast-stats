@@ -50,8 +50,9 @@ export const FacAddressSchema = z.strictObject({
  * carries them. The schema describes what the collector actually writes —
  * narrowing it would permanently invalidate weeks of immutable published
  * snapshots (this is what took 2 of 8 MCP tools down, audit §9a).
- * `coordinates` must precede the all-optional `address` in the union so a
- * coordinates object can never be matched (and stripped) by it.
+ * `coordinates` is ordered before the all-optional `address` in the union
+ * as defense-in-depth: with strictObject the address branch rejects lat/lng
+ * keys anyway, but the ordering removes any reliance on that.
  *
  * @see Requirements 2.5, 5.3
  */
