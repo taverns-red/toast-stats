@@ -112,6 +112,39 @@ export function isDistinguishedStatusCode(value: string): boolean {
 }
 
 /**
+ * Distinguished tier letter code: D | S | P | M.
+ */
+export type DistinguishedTierCode = (typeof DISTINGUISHED_STATUS_CODES)[number]
+
+/**
+ * Classifies a 'Club Distinguished Status' value into its DCP tier (#1124).
+ *
+ * Live dashboard CSVs use letter codes: D (Distinguished), S (Select),
+ * P (President's), M (Smedley). Historical CSVs spelled the tier out
+ * ('Select Distinguished', "President's Distinguished", ...).
+ *
+ * @param value - Verbatim distinguished status (may be undefined)
+ * @returns The tier code, or null when the club is not distinguished
+ */
+export function classifyDistinguishedTier(
+  value: string | undefined
+): DistinguishedTierCode | null {
+  if (!value) return null
+
+  const code = value.trim().toUpperCase()
+  if ((DISTINGUISHED_STATUS_CODES as readonly string[]).includes(code)) {
+    return code as DistinguishedTierCode
+  }
+
+  const words = value.toLowerCase()
+  if (!words.includes('distinguished')) return null
+  if (words.includes('smedley')) return 'M'
+  if (words.includes('president')) return 'P'
+  if (words.includes('select')) return 'S'
+  return 'D'
+}
+
+/**
  * Parse CSP (Club Success Plan) submission status from a raw scraped
  * record (string-form twin of getCSPStatus, which reads the normalized
  * boolean on ClubStatistics).

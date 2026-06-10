@@ -26,6 +26,7 @@ import {
   computeDcpGoalsAchieved,
   hasDcpGoalColumns,
 } from '../analytics/dcpGoalDefinitions.js'
+import { classifyDistinguishedTier } from '../analytics/ClubEligibilityUtils.js'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
 
 /**
@@ -536,25 +537,18 @@ export class DataTransformer implements IDataTransformer {
    * @returns District totals
    */
   private calculateTotals(clubs: ClubStatistics[]): DistrictTotals {
-    // Calculate from clubs
-    const totalClubs = clubs.length
-    const totalMembership = clubs.reduce(
-      (sum, club) => sum + club.membershipCount,
-      0
-    )
-    const totalPayments = clubs.reduce(
-      (sum, club) => sum + club.paymentsCount,
-      0
-    )
-
-    // Count distinguished clubs per tier
+    let totalMembership = 0
+    let totalPayments = 0
     let distinguishedClubs = 0
     let selectDistinguishedClubs = 0
     let presidentDistinguishedClubs = 0
     let smedleyDistinguishedClubs = 0
 
     for (const club of clubs) {
-      switch (this.classifyDistinguishedTier(club.distinguishedStatus)) {
+      totalMembership += club.membershipCount
+      totalPayments += club.paymentsCount
+
+      switch (classifyDistinguishedTier(club.distinguishedStatus)) {
         case 'D':
           distinguishedClubs++
           break
@@ -571,7 +565,7 @@ export class DataTransformer implements IDataTransformer {
     }
 
     return {
-      totalClubs,
+      totalClubs: clubs.length,
       totalMembership,
       totalPayments,
       distinguishedClubs,
@@ -579,34 +573,6 @@ export class DataTransformer implements IDataTransformer {
       presidentDistinguishedClubs,
       smedleyDistinguishedClubs,
     }
-  }
-
-  /**
-   * Classifies a 'Club Distinguished Status' value into its DCP tier.
-   *
-   * Live dashboard CSVs use letter codes: D (Distinguished), S (Select),
-   * P (President's), M (Smedley). Historical CSVs spelled the tier out
-   * ('Select Distinguished', "President's Distinguished", ...).
-   *
-   * @param value - Verbatim distinguished status (may be undefined)
-   * @returns The tier code, or null when the club is not distinguished
-   */
-  private classifyDistinguishedTier(
-    value: string | undefined
-  ): 'D' | 'S' | 'P' | 'M' | null {
-    if (!value) return null
-
-    const code = value.trim().toUpperCase()
-    if (code === 'D' || code === 'S' || code === 'P' || code === 'M') {
-      return code
-    }
-
-    const words = value.toLowerCase()
-    if (!words.includes('distinguished')) return null
-    if (words.includes('smedley')) return 'M'
-    if (words.includes('president')) return 'P'
-    if (words.includes('select')) return 'S'
-    return 'D'
   }
 
   /**

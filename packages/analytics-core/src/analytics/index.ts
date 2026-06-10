@@ -20,11 +20,13 @@ export { AreaDivisionRecognitionModule } from './AreaDivisionRecognitionModule.j
 // Club eligibility utilities (shared across modules)
 export {
   calculateNetGrowth,
+  classifyDistinguishedTier,
   determineDistinguishedLevel,
   getConfirmedDistinguishedLevel,
   getCSPStatus,
   isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
+export type { DistinguishedTierCode } from './ClubEligibilityUtils.js'
 
 // Utility functions
 export {
