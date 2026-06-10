@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.10.0...frontend-v3.11.0) (2026-06-10)
+
+
+### Features
+
+* frontend dcpGoals consumes shared DCP goal definitions — per-goal panel == TI Goals Met ([#1119](https://github.com/taverns-red/toast-stats/issues/1119)) ([#1137](https://github.com/taverns-red/toast-stats/issues/1137)) ([ba892ce](https://github.com/taverns-red/toast-stats/commit/ba892cea2beef8a3ed1c6e8f7fce386b5d3a9cde))
+
 ## [3.10.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.9.0...frontend-v3.10.0) (2026-06-01)
 
 

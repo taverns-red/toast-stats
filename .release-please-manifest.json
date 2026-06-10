@@ -1,7 +1,7 @@
 {
-  ".": "2.25.1",
-  "frontend": "3.10.0",
+  ".": "2.26.0",
+  "frontend": "3.11.0",
   "packages/shared-contracts": "1.6.0",
   "packages/collector-cli": "1.5.0",
-  "packages/analytics-core": "1.8.0"
+  "packages/analytics-core": "1.9.0"
 }
