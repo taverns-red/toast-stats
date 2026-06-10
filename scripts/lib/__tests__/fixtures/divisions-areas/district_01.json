@@ -1,0 +1,336 @@
+{
+  "collectedAt": "2026-06-10T14:16:45.981Z",
+  "districtId": "01",
+  "districtName": "District 01",
+  "status": "success",
+  "data": {
+    "districtId": "01",
+    "snapshotDate": "2026-06-09",
+    "clubs": [
+      {
+        "clubId": "00000977",
+        "clubName": "Professional Women Toastmasters",
+        "divisionId": "A",
+        "areaId": "01",
+        "membershipCount": 18,
+        "paymentsCount": 40,
+        "dcpGoals": 6,
+        "status": "Active",
+        "divisionName": "Division A",
+        "areaName": "Area 01",
+        "octoberRenewals": 18,
+        "aprilRenewals": 17,
+        "newMembers": 5,
+        "membershipBase": 20,
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "charterDate": "1990-03-01",
+        "coordinates": {
+          "lat": 34.01401,
+          "lng": -118.40319
+        },
+        "address": {
+          "street": "4095 Overland Ave",
+          "city": "Culver City",
+          "region": "CA",
+          "postalCode": "90232",
+          "country": "United States"
+        },
+        "email": "shinn.jean.ho@gmail.com",
+        "website": "https://professionalwomentoastmasters.wordpress.com/events-page/",
+        "facebookLink": "https://www.facebook.com/ProfessionalWomenToastmasters",
+        "meetingDay": "1st Thu (online) | 3rd Thu (in-person)",
+        "meetingTime": "7:00 to 8:30 PM",
+        "allowsVirtualAttendance": true,
+        "isProspective": false
+      },
+      {
+        "clubId": "00005942",
+        "clubName": "Dynamic Orators Club",
+        "divisionId": "A",
+        "areaId": "01",
+        "membershipCount": 9,
+        "paymentsCount": 18,
+        "dcpGoals": 4,
+        "status": "Active",
+        "divisionName": "Division A",
+        "areaName": "Area 01",
+        "octoberRenewals": 8,
+        "aprilRenewals": 9,
+        "newMembers": 1,
+        "membershipBase": 8,
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "charterDate": "1990-04-01",
+        "coordinates": {
+          "lat": 33.97829,
+          "lng": -118.38531
+        },
+        "address": {
+          "street": "6666 Green Valley Circle",
+          "city": "Culver City",
+          "region": "CA",
+          "postalCode": "90230-7068",
+          "country": "United States"
+        },
+        "email": "lblackwell0621@gmail.com",
+        "phone": "+13107227238",
+        "website": "https://www.meetup.com/dynamic-90s-toastmasters-club/?eventOrigin=your_groups",
+        "meetingDay": "1st and 3rd Saturday of Each Month",
+        "meetingTime": "8:00 am",
+        "allowsVirtualAttendance": true,
+        "isProspective": false
+      }
+    ],
+    "divisions": [
+      {
+        "divisionId": "A",
+        "divisionName": "Division A",
+        "clubCount": 19,
+        "membershipTotal": 271,
+        "paymentsTotal": 595
+      },
+      {
+        "divisionId": "B",
+        "divisionName": "Division B",
+        "clubCount": 18,
+        "membershipTotal": 272,
+        "paymentsTotal": 619
+      },
+      {
+        "divisionId": "C",
+        "divisionName": "Division C",
+        "clubCount": 20,
+        "membershipTotal": 289,
+        "paymentsTotal": 681
+      },
+      {
+        "divisionId": "D",
+        "divisionName": "Division D",
+        "clubCount": 19,
+        "membershipTotal": 202,
+        "paymentsTotal": 464
+      },
+      {
+        "divisionId": "E",
+        "divisionName": "Division E",
+        "clubCount": 21,
+        "membershipTotal": 335,
+        "paymentsTotal": 751
+      },
+      {
+        "divisionId": "F",
+        "divisionName": "Division F",
+        "clubCount": 19,
+        "membershipTotal": 236,
+        "paymentsTotal": 536
+      }
+    ],
+    "areas": [
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "A",
+        "clubCount": 5,
+        "membershipTotal": 68,
+        "paymentsTotal": 136
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "A",
+        "clubCount": 5,
+        "membershipTotal": 50,
+        "paymentsTotal": 117
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "A",
+        "clubCount": 4,
+        "membershipTotal": 95,
+        "paymentsTotal": 214
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "A",
+        "clubCount": 5,
+        "membershipTotal": 58,
+        "paymentsTotal": 128
+      },
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "B",
+        "clubCount": 5,
+        "membershipTotal": 63,
+        "paymentsTotal": 140
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "B",
+        "clubCount": 5,
+        "membershipTotal": 96,
+        "paymentsTotal": 210
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "B",
+        "clubCount": 4,
+        "membershipTotal": 56,
+        "paymentsTotal": 133
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "B",
+        "clubCount": 4,
+        "membershipTotal": 57,
+        "paymentsTotal": 136
+      },
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "C",
+        "clubCount": 5,
+        "membershipTotal": 73,
+        "paymentsTotal": 154
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "C",
+        "clubCount": 5,
+        "membershipTotal": 49,
+        "paymentsTotal": 172
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "C",
+        "clubCount": 5,
+        "membershipTotal": 81,
+        "paymentsTotal": 170
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "C",
+        "clubCount": 5,
+        "membershipTotal": 86,
+        "paymentsTotal": 185
+      },
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "D",
+        "clubCount": 4,
+        "membershipTotal": 51,
+        "paymentsTotal": 120
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "D",
+        "clubCount": 5,
+        "membershipTotal": 53,
+        "paymentsTotal": 111
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "D",
+        "clubCount": 5,
+        "membershipTotal": 44,
+        "paymentsTotal": 103
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "D",
+        "clubCount": 5,
+        "membershipTotal": 54,
+        "paymentsTotal": 130
+      },
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "E",
+        "clubCount": 5,
+        "membershipTotal": 94,
+        "paymentsTotal": 211
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "E",
+        "clubCount": 4,
+        "membershipTotal": 54,
+        "paymentsTotal": 140
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "E",
+        "clubCount": 6,
+        "membershipTotal": 100,
+        "paymentsTotal": 210
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "E",
+        "clubCount": 6,
+        "membershipTotal": 87,
+        "paymentsTotal": 190
+      },
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "F",
+        "clubCount": 5,
+        "membershipTotal": 47,
+        "paymentsTotal": 107
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "F",
+        "clubCount": 4,
+        "membershipTotal": 61,
+        "paymentsTotal": 139
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "F",
+        "clubCount": 5,
+        "membershipTotal": 75,
+        "paymentsTotal": 173
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "F",
+        "clubCount": 5,
+        "membershipTotal": 53,
+        "paymentsTotal": 117
+      }
+    ],
+    "totals": {
+      "totalClubs": 116,
+      "totalMembership": 1605,
+      "totalPayments": 3646,
+      "distinguishedClubs": 9,
+      "selectDistinguishedClubs": 5,
+      "presidentDistinguishedClubs": 3,
+      "smedleyDistinguishedClubs": 3
+    },
+    "divisionPerformance": [],
+    "clubPerformance": [],
+    "districtPerformance": []
+  }
+}
