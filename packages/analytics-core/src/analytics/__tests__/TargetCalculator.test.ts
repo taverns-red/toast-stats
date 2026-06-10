@@ -1260,3 +1260,72 @@ describe('TargetCalculator Property Tests', () => {
     })
   })
 })
+
+/* #798 float-overshoot survivors (#1126 C5). `Math.ceil(base * 0.55)`
+   overshoots whenever base*55 is divisible by 100 (0.55 is not exactly
+   representable: 100 * 0.55 = 55.00000000000001 → ceil → 56). The
+   integer-safe form is `Math.ceil((base * 55) / 100)`. Same class for
+   growth targets: 225 * 1.08 = 243.00000000000003 → ceil → 244, when
+   8% growth on 225 is exactly 243. Live wrong numbers: D86 presidents
+   target 56 (correct 55), D94 111 (correct 110). */
+describe('integer-safe targets — #798 overshoot regressions (#1126)', () => {
+  it('presidents target at base 100 is exactly 55 (live D86 regression)', () => {
+    expect(calculatePercentageTargets(100).presidents).toBe(55)
+  })
+
+  it('presidents target at base 200 is exactly 110 (live D94 regression)', () => {
+    expect(calculatePercentageTargets(200).presidents).toBe(110)
+  })
+
+  it('smedley growth target at base 225 is exactly 243', () => {
+    expect(calculateGrowthTargets(225).smedley).toBe(243)
+  })
+
+  it('every percentage target matches integer arithmetic for bases 1..10000', () => {
+    const mismatches: Array<[number, string, number, number]> = []
+    for (let base = 1; base <= 10000; base++) {
+      const t = calculatePercentageTargets(base)
+      const expected = {
+        distinguished: Math.ceil((base * 45) / 100),
+        select: Math.ceil((base * 50) / 100),
+        presidents: Math.ceil((base * 55) / 100),
+        smedley: Math.ceil((base * 60) / 100),
+      }
+      for (const level of [
+        'distinguished',
+        'select',
+        'presidents',
+        'smedley',
+      ] as const) {
+        if (t[level] !== expected[level]) {
+          mismatches.push([base, level, t[level], expected[level]])
+        }
+      }
+    }
+    expect(mismatches).toEqual([])
+  })
+
+  it('every growth target matches integer arithmetic for bases 1..10000', () => {
+    const mismatches: Array<[number, string, number, number]> = []
+    for (let base = 1; base <= 10000; base++) {
+      const t = calculateGrowthTargets(base)
+      const expected = {
+        distinguished: Math.ceil((base * 101) / 100),
+        select: Math.ceil((base * 103) / 100),
+        presidents: Math.ceil((base * 105) / 100),
+        smedley: Math.ceil((base * 108) / 100),
+      }
+      for (const level of [
+        'distinguished',
+        'select',
+        'presidents',
+        'smedley',
+      ] as const) {
+        if (t[level] !== expected[level]) {
+          mismatches.push([base, level, t[level], expected[level]])
+        }
+      }
+    }
+    expect(mismatches).toEqual([])
+  })
+})
