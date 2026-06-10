@@ -102,6 +102,21 @@ describe('buildSearchIndex', () => {
     expect(a!.route).toBe('/district/61/division/C/area/23')
   })
 
+  it('skips malformed division/area values instead of throwing or indexing junk', () => {
+    // A string is iterable — a naive for…of over a junk areaIds value would
+    // index phantom one-character areas. Both junk shapes must contribute
+    // nothing (review finding on #1135).
+    const malformed = buildSearchIndex(RANKINGS, CLUBS, {
+      '61': { C: 'junk' as unknown as string[] },
+      '57': null as unknown as Record<string, string[]>,
+    })
+    expect(malformed.entities.some(e => e.type === 'area')).toBe(false)
+    expect(
+      malformed.entities.some(e => e.type === 'division' && e.id === '61/C')
+    ).toBe(true)
+    expect(malformed.entities.some(e => e.id.startsWith('57/'))).toBe(false)
+  })
+
   it('indexes pseudo-divisions (e.g. 0D) verbatim — same source the division pages read', () => {
     const div = index.entities.find(
       e => e.type === 'division' && e.id === '04/0D'

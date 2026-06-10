@@ -95,4 +95,18 @@ describe('loadSearchIndex (lazy)', () => {
     expect(index.entities.some(e => e.type === 'division')).toBe(false)
     expect(index.entities.some(e => e.type === 'area')).toBe(false)
   })
+
+  it('tolerates a malformed divisions/areas payload without taking search down', async () => {
+    // Fail-soft must cover payload shape, not just fetch failure: the
+    // fetcher does no schema validation, so districts:null must degrade
+    // exactly like a 404 (review finding on #1135).
+    fetchCdnDivisionsAreasIndex.mockResolvedValue({ districts: null })
+    const { loadSearchIndex } = await import('../searchIndex')
+    const index = await loadSearchIndex()
+
+    expect(
+      index.entities.some(e => e.type === 'district' && e.id === '61')
+    ).toBe(true)
+    expect(index.entities.some(e => e.type === 'division')).toBe(false)
+  })
 })
