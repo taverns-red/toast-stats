@@ -1,0 +1,437 @@
+{
+  "collectedAt": "2026-06-10T14:16:46.640Z",
+  "districtId": "61",
+  "districtName": "District 61",
+  "status": "success",
+  "data": {
+    "districtId": "61",
+    "snapshotDate": "2026-06-09",
+    "clubs": [
+      {
+        "clubId": "00003045",
+        "clubName": "Limestone City Club",
+        "divisionId": "A",
+        "areaId": "01",
+        "membershipCount": 13,
+        "paymentsCount": 23,
+        "dcpGoals": 4,
+        "status": "Active",
+        "divisionName": "Division A",
+        "areaName": "Area 01",
+        "octoberRenewals": 9,
+        "aprilRenewals": 9,
+        "newMembers": 5,
+        "membershipBase": 13,
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "charterDate": "1960-01-01",
+        "coordinates": {
+          "lat": 44.25068,
+          "lng": -76.551
+        },
+        "address": {
+          "street": "790 Edgar Street, Court Building ",
+          "city": "Kingston",
+          "region": "ON",
+          "postalCode": "K7M 9G5",
+          "country": "Canada"
+        },
+        "email": "douglas.cameron71@gmail.com",
+        "phone": "+16135323684",
+        "website": "https://limestonetm.com/",
+        "meetingDay": "Wed.1st and 3rd in person  (2nd online)",
+        "meetingTime": "7:30 pm",
+        "allowsVirtualAttendance": false,
+        "isProspective": false
+      },
+      {
+        "clubId": "00009560",
+        "clubName": "CFB Kingston Toastmasters",
+        "divisionId": "A",
+        "areaId": "01",
+        "membershipCount": 8,
+        "paymentsCount": 21,
+        "dcpGoals": 3,
+        "status": "Active",
+        "divisionName": "Division A",
+        "areaName": "Area 01",
+        "octoberRenewals": 9,
+        "aprilRenewals": 7,
+        "newMembers": 5,
+        "membershipBase": 8,
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "charterDate": "1993-08-01",
+        "coordinates": {
+          "lat": 44.24505,
+          "lng": -76.4587
+        },
+        "address": {
+          "street": "2 Sadie Ave",
+          "city": "Kingston ",
+          "region": "ON",
+          "postalCode": "K7K 5R5",
+          "country": "Canada"
+        },
+        "email": "cfbkingstontoastmasters@gmail.com",
+        "website": "https://www.eventbrite.com/o/cfb-kingston-toastmasters-66865171583?aff=ebeseadeeplink",
+        "meetingDay": "Wednesdays",
+        "meetingTime": "08:00 am",
+        "allowsVirtualAttendance": false,
+        "isProspective": false
+      }
+    ],
+    "divisions": [
+      {
+        "divisionId": "A",
+        "divisionName": "Division A",
+        "clubCount": 18,
+        "membershipTotal": 281,
+        "paymentsTotal": 587
+      },
+      {
+        "divisionId": "B",
+        "divisionName": "Division B",
+        "clubCount": 28,
+        "membershipTotal": 374,
+        "paymentsTotal": 789
+      },
+      {
+        "divisionId": "C",
+        "divisionName": "Division C",
+        "clubCount": 23,
+        "membershipTotal": 321,
+        "paymentsTotal": 674
+      },
+      {
+        "divisionId": "D",
+        "divisionName": "Division D",
+        "clubCount": 17,
+        "membershipTotal": 268,
+        "paymentsTotal": 564
+      },
+      {
+        "divisionId": "F",
+        "divisionName": "Division F",
+        "clubCount": 20,
+        "membershipTotal": 364,
+        "paymentsTotal": 784
+      },
+      {
+        "divisionId": "G",
+        "divisionName": "Division G",
+        "clubCount": 19,
+        "membershipTotal": 466,
+        "paymentsTotal": 963
+      },
+      {
+        "divisionId": "H",
+        "divisionName": "Division H",
+        "clubCount": 18,
+        "membershipTotal": 343,
+        "paymentsTotal": 716
+      },
+      {
+        "divisionId": "I",
+        "divisionName": "Division I",
+        "clubCount": 19,
+        "membershipTotal": 370,
+        "paymentsTotal": 731
+      }
+    ],
+    "areas": [
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "A",
+        "clubCount": 5,
+        "membershipTotal": 55,
+        "paymentsTotal": 131
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "A",
+        "clubCount": 4,
+        "membershipTotal": 76,
+        "paymentsTotal": 160
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "A",
+        "clubCount": 5,
+        "membershipTotal": 93,
+        "paymentsTotal": 185
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "A",
+        "clubCount": 4,
+        "membershipTotal": 57,
+        "paymentsTotal": 111
+      },
+      {
+        "areaId": "10",
+        "areaName": "Area 10",
+        "divisionId": "B",
+        "clubCount": 4,
+        "membershipTotal": 54,
+        "paymentsTotal": 116
+      },
+      {
+        "areaId": "11",
+        "areaName": "Area 11",
+        "divisionId": "B",
+        "clubCount": 6,
+        "membershipTotal": 90,
+        "paymentsTotal": 185
+      },
+      {
+        "areaId": "12",
+        "areaName": "Area 12",
+        "divisionId": "B",
+        "clubCount": 5,
+        "membershipTotal": 63,
+        "paymentsTotal": 144
+      },
+      {
+        "areaId": "13",
+        "areaName": "Area 13",
+        "divisionId": "B",
+        "clubCount": 4,
+        "membershipTotal": 61,
+        "paymentsTotal": 121
+      },
+      {
+        "areaId": "14",
+        "areaName": "Area 14",
+        "divisionId": "B",
+        "clubCount": 5,
+        "membershipTotal": 82,
+        "paymentsTotal": 169
+      },
+      {
+        "areaId": "15",
+        "areaName": "Area 15",
+        "divisionId": "B",
+        "clubCount": 4,
+        "membershipTotal": 24,
+        "paymentsTotal": 54
+      },
+      {
+        "areaId": "20",
+        "areaName": "Area 20",
+        "divisionId": "C",
+        "clubCount": 5,
+        "membershipTotal": 77,
+        "paymentsTotal": 163
+      },
+      {
+        "areaId": "21",
+        "areaName": "Area 21",
+        "divisionId": "C",
+        "clubCount": 4,
+        "membershipTotal": 49,
+        "paymentsTotal": 99
+      },
+      {
+        "areaId": "22",
+        "areaName": "Area 22",
+        "divisionId": "C",
+        "clubCount": 6,
+        "membershipTotal": 69,
+        "paymentsTotal": 156
+      },
+      {
+        "areaId": "23",
+        "areaName": "Area 23",
+        "divisionId": "C",
+        "clubCount": 4,
+        "membershipTotal": 56,
+        "paymentsTotal": 111
+      },
+      {
+        "areaId": "24",
+        "areaName": "Area 24",
+        "divisionId": "C",
+        "clubCount": 4,
+        "membershipTotal": 70,
+        "paymentsTotal": 145
+      },
+      {
+        "areaId": "30",
+        "areaName": "Area 30",
+        "divisionId": "D",
+        "clubCount": 4,
+        "membershipTotal": 62,
+        "paymentsTotal": 136
+      },
+      {
+        "areaId": "31",
+        "areaName": "Area 31",
+        "divisionId": "D",
+        "clubCount": 5,
+        "membershipTotal": 82,
+        "paymentsTotal": 168
+      },
+      {
+        "areaId": "33",
+        "areaName": "Area 33",
+        "divisionId": "D",
+        "clubCount": 4,
+        "membershipTotal": 84,
+        "paymentsTotal": 176
+      },
+      {
+        "areaId": "34",
+        "areaName": "Area 34",
+        "divisionId": "D",
+        "clubCount": 4,
+        "membershipTotal": 40,
+        "paymentsTotal": 84
+      },
+      {
+        "areaId": "50",
+        "areaName": "Area 50",
+        "divisionId": "F",
+        "clubCount": 5,
+        "membershipTotal": 107,
+        "paymentsTotal": 232
+      },
+      {
+        "areaId": "52",
+        "areaName": "Area 52",
+        "divisionId": "F",
+        "clubCount": 6,
+        "membershipTotal": 91,
+        "paymentsTotal": 189
+      },
+      {
+        "areaId": "53",
+        "areaName": "Area 53",
+        "divisionId": "F",
+        "clubCount": 5,
+        "membershipTotal": 97,
+        "paymentsTotal": 208
+      },
+      {
+        "areaId": "54",
+        "areaName": "Area 54",
+        "divisionId": "F",
+        "clubCount": 4,
+        "membershipTotal": 69,
+        "paymentsTotal": 155
+      },
+      {
+        "areaId": "61",
+        "areaName": "Area 61",
+        "divisionId": "G",
+        "clubCount": 5,
+        "membershipTotal": 97,
+        "paymentsTotal": 178
+      },
+      {
+        "areaId": "62",
+        "areaName": "Area 62",
+        "divisionId": "G",
+        "clubCount": 5,
+        "membershipTotal": 167,
+        "paymentsTotal": 312
+      },
+      {
+        "areaId": "63",
+        "areaName": "Area 63",
+        "divisionId": "G",
+        "clubCount": 5,
+        "membershipTotal": 109,
+        "paymentsTotal": 259
+      },
+      {
+        "areaId": "64",
+        "areaName": "Area 64",
+        "divisionId": "G",
+        "clubCount": 4,
+        "membershipTotal": 93,
+        "paymentsTotal": 214
+      },
+      {
+        "areaId": "70",
+        "areaName": "Area 70",
+        "divisionId": "H",
+        "clubCount": 4,
+        "membershipTotal": 87,
+        "paymentsTotal": 191
+      },
+      {
+        "areaId": "71",
+        "areaName": "Area 71",
+        "divisionId": "H",
+        "clubCount": 5,
+        "membershipTotal": 91,
+        "paymentsTotal": 183
+      },
+      {
+        "areaId": "72",
+        "areaName": "Area 72",
+        "divisionId": "H",
+        "clubCount": 5,
+        "membershipTotal": 74,
+        "paymentsTotal": 159
+      },
+      {
+        "areaId": "73",
+        "areaName": "Area 73",
+        "divisionId": "H",
+        "clubCount": 4,
+        "membershipTotal": 91,
+        "paymentsTotal": 183
+      },
+      {
+        "areaId": "90",
+        "areaName": "Area 90",
+        "divisionId": "I",
+        "clubCount": 4,
+        "membershipTotal": 69,
+        "paymentsTotal": 139
+      },
+      {
+        "areaId": "91",
+        "areaName": "Area 91",
+        "divisionId": "I",
+        "clubCount": 4,
+        "membershipTotal": 63,
+        "paymentsTotal": 135
+      },
+      {
+        "areaId": "92",
+        "areaName": "Area 92",
+        "divisionId": "I",
+        "clubCount": 5,
+        "membershipTotal": 125,
+        "paymentsTotal": 252
+      },
+      {
+        "areaId": "93",
+        "areaName": "Area 93",
+        "divisionId": "I",
+        "clubCount": 6,
+        "membershipTotal": 113,
+        "paymentsTotal": 205
+      }
+    ],
+    "totals": {
+      "totalClubs": 162,
+      "totalMembership": 2787,
+      "totalPayments": 5808,
+      "distinguishedClubs": 20,
+      "selectDistinguishedClubs": 14,
+      "presidentDistinguishedClubs": 11,
+      "smedleyDistinguishedClubs": 12
+    },
+    "divisionPerformance": [],
+    "clubPerformance": [],
+    "districtPerformance": []
+  }
+}

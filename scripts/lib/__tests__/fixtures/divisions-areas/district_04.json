@@ -1,0 +1,273 @@
+{
+  "collectedAt": "2026-06-10T14:16:46.073Z",
+  "districtId": "04",
+  "districtName": "District 04",
+  "status": "success",
+  "data": {
+    "districtId": "04",
+    "snapshotDate": "2026-06-09",
+    "clubs": [
+      {
+        "clubId": "28679905",
+        "clubName": "Bloomberg San Francisco Toastmasters - Employees Only",
+        "divisionId": "0D",
+        "areaId": "0A",
+        "membershipCount": 20,
+        "paymentsCount": 20,
+        "dcpGoals": 1,
+        "status": "Active",
+        "divisionName": "Division 0D",
+        "areaName": "Area 0A",
+        "octoberRenewals": 0,
+        "aprilRenewals": 0,
+        "newMembers": 0,
+        "membershipBase": 20,
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "charterDate": "2026-04-30",
+        "coordinates": {
+          "lat": 37.78667,
+          "lng": -122.39999
+        },
+        "address": {
+          "street": "140 New Montgomery St",
+          "city": "San Francisco",
+          "region": "CA",
+          "postalCode": "94105",
+          "country": "United States"
+        },
+        "email": "kpereira3@bloomberg.net",
+        "phone": "+12126175916",
+        "meetingDay": "1st & 3rd Thursdays",
+        "meetingTime": "12:00 PM",
+        "allowsVirtualAttendance": true,
+        "isProspective": false
+      },
+      {
+        "clubId": "00002117",
+        "clubName": "Early Risers Club",
+        "divisionId": "A",
+        "areaId": "01",
+        "membershipCount": 25,
+        "paymentsCount": 60,
+        "dcpGoals": 10,
+        "status": "Active",
+        "divisionName": "Division A",
+        "areaName": "Area 01",
+        "octoberRenewals": 26,
+        "aprilRenewals": 24,
+        "newMembers": 10,
+        "membershipBase": 31,
+        "clubStatus": "Active",
+        "distinguishedStatus": "M",
+        "cspSubmitted": true,
+        "charterDate": "1958-10-01",
+        "coordinates": {
+          "lat": 37.42693,
+          "lng": -122.11806
+        },
+        "address": {
+          "street": "3391 Middlefield Rd",
+          "city": "Palo Alto",
+          "region": "CA",
+          "postalCode": "94306",
+          "country": "United States"
+        },
+        "email": "contact-2117@toastmastersclubs.org",
+        "website": "http://2117.toastmastersclubs.org/",
+        "facebookLink": "www.facebook.com/earlyrisers2117",
+        "meetingDay": "Tuesday",
+        "meetingTime": "6:30 am",
+        "allowsVirtualAttendance": true,
+        "isProspective": false
+      }
+    ],
+    "divisions": [
+      {
+        "divisionId": "0D",
+        "divisionName": "Division 0D",
+        "clubCount": 1,
+        "membershipTotal": 20,
+        "paymentsTotal": 20
+      },
+      {
+        "divisionId": "A",
+        "divisionName": "Division A",
+        "clubCount": 20,
+        "membershipTotal": 289,
+        "paymentsTotal": 642
+      },
+      {
+        "divisionId": "B",
+        "divisionName": "Division B",
+        "clubCount": 20,
+        "membershipTotal": 344,
+        "paymentsTotal": 718
+      },
+      {
+        "divisionId": "C",
+        "divisionName": "Division C",
+        "clubCount": 19,
+        "membershipTotal": 272,
+        "paymentsTotal": 607
+      },
+      {
+        "divisionId": "D",
+        "divisionName": "Division D",
+        "clubCount": 20,
+        "membershipTotal": 231,
+        "paymentsTotal": 597
+      }
+    ],
+    "areas": [
+      {
+        "areaId": "0A",
+        "areaName": "Area 0A",
+        "divisionId": "0D",
+        "clubCount": 1,
+        "membershipTotal": 20,
+        "paymentsTotal": 20
+      },
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "A",
+        "clubCount": 5,
+        "membershipTotal": 62,
+        "paymentsTotal": 139
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "A",
+        "clubCount": 5,
+        "membershipTotal": 99,
+        "paymentsTotal": 208
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "A",
+        "clubCount": 5,
+        "membershipTotal": 72,
+        "paymentsTotal": 166
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "A",
+        "clubCount": 5,
+        "membershipTotal": 56,
+        "paymentsTotal": 129
+      },
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "B",
+        "clubCount": 5,
+        "membershipTotal": 57,
+        "paymentsTotal": 125
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "B",
+        "clubCount": 5,
+        "membershipTotal": 73,
+        "paymentsTotal": 165
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "B",
+        "clubCount": 5,
+        "membershipTotal": 74,
+        "paymentsTotal": 168
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "B",
+        "clubCount": 5,
+        "membershipTotal": 140,
+        "paymentsTotal": 260
+      },
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "C",
+        "clubCount": 5,
+        "membershipTotal": 76,
+        "paymentsTotal": 161
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "C",
+        "clubCount": 4,
+        "membershipTotal": 58,
+        "paymentsTotal": 128
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "C",
+        "clubCount": 5,
+        "membershipTotal": 37,
+        "paymentsTotal": 85
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "C",
+        "clubCount": 5,
+        "membershipTotal": 101,
+        "paymentsTotal": 233
+      },
+      {
+        "areaId": "01",
+        "areaName": "Area 01",
+        "divisionId": "D",
+        "clubCount": 5,
+        "membershipTotal": 62,
+        "paymentsTotal": 145
+      },
+      {
+        "areaId": "02",
+        "areaName": "Area 02",
+        "divisionId": "D",
+        "clubCount": 5,
+        "membershipTotal": 55,
+        "paymentsTotal": 174
+      },
+      {
+        "areaId": "03",
+        "areaName": "Area 03",
+        "divisionId": "D",
+        "clubCount": 5,
+        "membershipTotal": 64,
+        "paymentsTotal": 139
+      },
+      {
+        "areaId": "04",
+        "areaName": "Area 04",
+        "divisionId": "D",
+        "clubCount": 5,
+        "membershipTotal": 50,
+        "paymentsTotal": 139
+      }
+    ],
+    "totals": {
+      "totalClubs": 80,
+      "totalMembership": 1156,
+      "totalPayments": 2584,
+      "distinguishedClubs": 3,
+      "selectDistinguishedClubs": 8,
+      "presidentDistinguishedClubs": 5,
+      "smedleyDistinguishedClubs": 5
+    },
+    "divisionPerformance": [],
+    "clubPerformance": [],
+    "districtPerformance": []
+  }
+}
