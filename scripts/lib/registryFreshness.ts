@@ -137,12 +137,19 @@ export function evaluateRegistryFreshness(
     }
   }
 
+  // A healthy multi-month window always contains at least one completed
+  // closing month. Zero derivable months from a non-empty feed means the
+  // per-object metadata reads degraded to non-closing defaults (gcsHelpers
+  // swallows read errors) — the monitor cannot see, so it must alert (L107).
+  const noDerivableMonths = expected.length === 0
+
   return {
-    fresh: missing.length === 0 && mismatched.length === 0,
+    fresh:
+      !noDerivableMonths && missing.length === 0 && mismatched.length === 0,
     missing,
     mismatched,
     emptyFeed: false,
-    noDerivableMonths: false,
+    noDerivableMonths,
     checkedMonths: expected.map(e => e.dataMonth),
   }
 }
@@ -164,8 +171,16 @@ export function parseManualEntryArg(input: string): RegistryMonthEntry {
   const closingDate = match[2]!
 
   const monthNum = Number(dataMonth.slice(5, 7))
+  const closingMonthNum = Number(closingDate.slice(5, 7))
   const dayNum = Number(closingDate.slice(8, 10))
-  if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) {
+  if (
+    monthNum < 1 ||
+    monthNum > 12 ||
+    closingMonthNum < 1 ||
+    closingMonthNum > 12 ||
+    dayNum < 1 ||
+    dayNum > 31
+  ) {
     throw new Error(`--set: not a real calendar month/day: ${input}`)
   }
 
@@ -237,6 +252,9 @@ export function buildRegistryStaleTitle(
   if (result.emptyFeed) {
     return '🟥 closing-date registry check could not read raw-csv metadata'
   }
+  if (result.noDerivableMonths) {
+    return '🟥 closing-date registry check derived zero closing months — metadata reads degraded'
+  }
   const months = [
     ...result.missing.map(m => m.dataMonth),
     ...result.mismatched.map(m => m.dataMonth),
@@ -255,6 +273,14 @@ export function buildRegistryStaleBody(
       'the monitor feed itself failed (GCS listing/read error or empty window).',
       'Treating "cannot tell" as stale (L107). Investigate the check step logs',
       'before trusting `docs/month-end-closing-dates.json` for rescrapes.'
+    )
+  } else if (result.noDerivableMonths) {
+    lines.push(
+      'The metadata window was non-empty but yielded **zero derivable completed',
+      'closing months**. Per-object read failures degrade to non-closing entries,',
+      'so this usually means the metadata reads (not the listing) are failing —',
+      'the monitor cannot see. Treating "cannot tell" as stale (L107); check the',
+      'step logs and GCS object permissions before trusting the registry.'
     )
   } else {
     lines.push(

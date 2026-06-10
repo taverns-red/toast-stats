@@ -466,6 +466,11 @@ jobs:
       - name: '[daily] Check closing-date registry freshness (#1128)'
         id: registrycheck
         if: steps.mode.outputs.mode == 'daily'
+        # Non-blocking even on a module-load crash: the publish/promotion
+        # steps that follow must never be skipped because a doc-file monitor
+        # broke. On a crashed step both stale outputs are unset, so neither
+        # alert step fires.
+        continue-on-error: true
         run: npx tsx scripts/closing-registry-check.ts
 
       - name: '[daily] Ensure closing-registry-stale label exists'
@@ -482,20 +487,23 @@ jobs:
         if: steps.mode.outputs.mode == 'daily' && steps.registrycheck.outputs.stale == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          # Env indirection: the title embeds dataMonth strings read from GCS
+          # metadata — never splice them into shell text via ${{ }}.
+          ALERT_TITLE: ${{ steps.registrycheck.outputs.title }}
+          ALERT_BODY_FILE: ${{ steps.registrycheck.outputs.body_file }}
         run: |
           # Deduplicate: one open alert at a time; refresh instead of spamming.
           EXISTING=$(gh issue list --label closing-registry-stale --state open \
             --json number --jq '.[0].number // empty')
           if [ -n "${EXISTING}" ]; then
             echo "Existing open alert #${EXISTING} — adding a refresh comment."
-            gh issue comment "${EXISTING}" \
-              --body-file "${{ steps.registrycheck.outputs.body_file }}"
+            gh issue comment "${EXISTING}" --body-file "${ALERT_BODY_FILE}"
           else
             echo "No open alert — creating one."
             gh issue create \
-              --title "${{ steps.registrycheck.outputs.title }}" \
+              --title "${ALERT_TITLE}" \
               --label closing-registry-stale \
-              --body-file "${{ steps.registrycheck.outputs.body_file }}"
+              --body-file "${ALERT_BODY_FILE}"
           fi
 
       - name: '[daily] Auto-close closing-registry-stale issue when fresh'
