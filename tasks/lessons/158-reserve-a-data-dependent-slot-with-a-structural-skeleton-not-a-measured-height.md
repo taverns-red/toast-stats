@@ -62,6 +62,24 @@ real chrome _can't_ be rendered in the shell (its content is the very data
 you're loading — here the freshness pill's date), reproduce its box
 structure instead of approximating its total.
 
+## Second half: end-state equality is not "no CLS" — trace the live timeline
+
+The bounding-box guard (loading y == settled-loaded y) went green on the
+preview while a PerformanceObserver `layout-shift` capture on the same URL
+read **0.28–0.31**: on a real cold load the rankings query beats the
+dates/index query, so the loaded toolbar first paints **without** the
+freshness pill (one wrap row shorter than reserved), then rewraps ~30ms
+later when the pill lands — two mirrored shifts between the two states the
+guard compares. A state-pair equality check can pass across an
+intermediate it never samples. The fix is the same invariant applied to
+the loaded state's own pending sub-state: `DataControlsBar` reserves the
+pill's slot (`freshnessPending` → an `aria-hidden` pill-width placeholder)
+until the dates query settles. Cold-load CLS: 0.306 → 0.0913. So: verify a
+CLS fix with a buffered `layout-shift` observer over the full load
+timeline (read `entry.sources[].node` to attribute), not only with
+settled-state geometry equality — and treat "query A usually beats query
+B" as a sibling state that needs its own reservation.
+
 ## How to apply
 
 - Before pinning a skeleton height, ask: does this height survive a longer
