@@ -140,4 +140,5 @@
 - **154** [data-pipeline, analytics, collector-cli, privacy, tdd] — A pre-filtered report's MEMBERSHIP SET can itself be the datum; derive from presence, not a column (#1065, #1062)
 - **154** [data-pipeline, ci, automation, tdd, verification, fixtures] — Synthetic fixtures validate the code; only a captured real pair validates the policy (#1092, #1086, #1083)
 - **155** [ci, automation, data-pipeline, monitoring, gcs] — A recency-based freshness monitor is blind to a held-promotion "content-stale" state; freshness has two orthogonal axes (#1073, #1072)
+- **156** [data-pipeline, analytics, monorepo, transformation, verification] — A re-keyed conversion field must match the target key's DOMAIN, not just its shape (#1120, #1095)
 - **156** [analytics, dcp, refactor, monorepo, verification] — An audit's defect list for a forked implementation is a lower bound; consolidation must re-derive the full semantic diff (#1118, #1095)

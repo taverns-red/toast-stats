@@ -195,6 +195,10 @@ export class TimeSeriesDataPointBuilder {
    *
    * @param district - The district statistics
    * @returns Club health counts breakdown
+   * @throws Error when district.asOfDate is not a parseable date — the
+   *   §5.3 checkpoint is month-dependent, so a corrupt date must fail
+   *   loudly (same behavior as the dashboard module) rather than emit a
+   *   silently misclassified data point.
    *
    * @see Requirements 6.6
    */
