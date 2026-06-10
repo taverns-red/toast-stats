@@ -9,15 +9,21 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React, { ReactNode } from 'react'
 import { useOmniSearch } from '../useOmniSearch'
-import { fetchCdnRankings, fetchCdnClubIndex } from '../../services/cdn'
+import {
+  fetchCdnRankings,
+  fetchCdnClubIndex,
+  fetchCdnDivisionsAreasIndex,
+} from '../../services/cdn'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
   fetchCdnClubIndex: vi.fn(),
+  fetchCdnDivisionsAreasIndex: vi.fn(),
 }))
 
 const mockedRankings = vi.mocked(fetchCdnRankings)
 const mockedClubIndex = vi.mocked(fetchCdnClubIndex)
+const mockedDivisionsAreas = vi.mocked(fetchCdnDivisionsAreasIndex)
 
 const wrapper = ({ children }: { children: ReactNode }) => {
   const client = new QueryClient({
@@ -45,6 +51,9 @@ const setupCdn = () => {
   mockedClubIndex.mockResolvedValue({
     clubs: { '12345': { districtId: '61', clubName: 'Toast of the Town' } },
   } as Awaited<ReturnType<typeof fetchCdnClubIndex>>)
+  mockedDivisionsAreas.mockResolvedValue({
+    districts: { '61': { C: ['23'] } },
+  } as Awaited<ReturnType<typeof fetchCdnDivisionsAreasIndex>>)
 }
 
 describe('useOmniSearch (#1058)', () => {

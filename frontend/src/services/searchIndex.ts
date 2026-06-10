@@ -9,7 +9,11 @@
    invoked, never at import / app boot. `buildSearchIndex` is pure (data in,
    index out) so it is trivially unit-testable without the network. */
 
-import { fetchCdnRankings, fetchCdnClubIndex } from './cdn'
+import {
+  fetchCdnRankings,
+  fetchCdnClubIndex,
+  fetchCdnDivisionsAreasIndex,
+} from './cdn'
 
 export type SearchEntityType =
   | 'district'
@@ -92,7 +96,7 @@ export function buildSearchIndex(
   rankings: ReadonlyArray<RankingRow>,
   clubs: Readonly<Record<string, ClubIndexEntry>>,
   /** districtId → divisionId → areaIds, from config/divisions-areas-index.json (#1134). */
-  _divisionsAreas: Readonly<Record<string, Record<string, string[]>>> = {}
+  divisionsAreas: Readonly<Record<string, Record<string, string[]>>> = {}
 ): SearchIndex {
   const entities: SearchEntity[] = []
 
@@ -135,6 +139,48 @@ export function buildSearchIndex(
     })
   }
 
+  // Divisions + areas — from the global divisions/areas index (#1134).
+  // Labels are derivable (`Division {id}` / `Area {id}`, zero deviations
+  // across 128 live districts) and areas nest under divisions because
+  // areaIds are not district-unique. District-scoped combo terms ("61 c")
+  // are exact-only so partial queries like "61" don't flood with every
+  // division/area of that district.
+  for (const [districtId, divisions] of Object.entries(divisionsAreas)) {
+    const dist = districtId.toLowerCase()
+    for (const [divisionId, areaIds] of Object.entries(divisions)) {
+      const div = divisionId.toLowerCase()
+      entities.push({
+        type: 'division',
+        id: `${districtId}/${divisionId}`,
+        label: `Division ${divisionId}`,
+        context: `District ${districtId}`,
+        route: `/district/${districtId}/division/${divisionId}`,
+        terms: dedupeTerms([`division ${div}`, `division ${div} ${dist}`]),
+        exactTerms: dedupeTerms([
+          `${dist} ${div}`,
+          `${div} ${dist}`,
+          `${dist} division ${div}`,
+        ]),
+      })
+      for (const areaId of areaIds) {
+        const area = areaId.toLowerCase()
+        entities.push({
+          type: 'area',
+          id: `${districtId}/${divisionId}/${areaId}`,
+          label: `Area ${areaId}`,
+          context: `District ${districtId} · Division ${divisionId}`,
+          route: `/district/${districtId}/division/${divisionId}/area/${areaId}`,
+          terms: dedupeTerms([`area ${area}`, `area ${area} ${dist}`]),
+          exactTerms: dedupeTerms([
+            `${dist} area ${area}`,
+            `${area} ${dist}`,
+            `${dist} ${area}`,
+          ]),
+        })
+      }
+    }
+  }
+
   return { entities }
 }
 
@@ -144,9 +190,11 @@ function dedupeTerms(raw: string[]): string[] {
 
 // Match strength of a single entity against the query: 3 exact, 2 prefix,
 // 1 substring, 0 no match (best over all of the entity's terms).
-function matchLevel(terms: string[], q: string): number {
+// `exactTerms` count only at full equality — never prefix/substring.
+function matchLevel(entity: SearchEntity, q: string): number {
+  if (entity.exactTerms?.includes(q)) return 3
   let best = 0
-  for (const term of terms) {
+  for (const term of entity.terms) {
     if (term === q) return 3
     if (term.startsWith(q)) best = Math.max(best, 2)
     else if (term.includes(q)) best = Math.max(best, 1)
@@ -172,7 +220,7 @@ export function searchEntities(
   const cap = options.cap ?? DEFAULT_CAP
 
   const scored = index.entities
-    .map(entity => ({ entity, level: matchLevel(entity.terms, q) }))
+    .map(entity => ({ entity, level: matchLevel(entity, q) }))
     .filter(s => s.level > 0)
     .sort((a, b) => {
       // 1) stronger match first
@@ -203,9 +251,16 @@ export function searchEntities(
  * fetched here — never at import — so it does not regress cold app-load.
  */
 export async function loadSearchIndex(): Promise<SearchIndex> {
-  const [rankings, clubIndex] = await Promise.all([
+  const [rankings, clubIndex, divisionsAreas] = await Promise.all([
     fetchCdnRankings(),
     fetchCdnClubIndex(),
+    // Fail-soft (#1135): the divisions/areas artifact only lands via the
+    // scheduled pipeline (#1134) — a missing or failed index must not take
+    // district/region/club search down with it.
+    fetchCdnDivisionsAreasIndex().then(
+      idx => idx.districts,
+      () => ({})
+    ),
   ])
-  return buildSearchIndex(rankings.rankings, clubIndex.clubs)
+  return buildSearchIndex(rankings.rankings, clubIndex.clubs, divisionsAreas)
 }

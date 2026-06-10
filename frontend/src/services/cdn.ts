@@ -503,6 +503,29 @@ export async function fetchCdnClubIndex(): Promise<{
   return res.json()
 }
 
+/** Shape of config/divisions-areas-index.json (#1134, epic #1101). */
+export interface CdnDivisionsAreasIndexData {
+  generatedAt: string
+  snapshotDate: string
+  totalDivisions: number
+  totalAreas: number
+  /** districtId → divisionId → sorted areaIds in that division. */
+  districts: Record<string, Record<string, string[]>>
+}
+
+/**
+ * Fetch the global divisions/areas index from CDN (#1134 → #1135).
+ */
+export async function fetchCdnDivisionsAreasIndex(): Promise<CdnDivisionsAreasIndexData> {
+  const url = `${cdnBaseUrl()}/config/divisions-areas-index.json`
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw new Error(`CDN divisions/areas index fetch failed: ${res.status}`)
+  }
+  recordCdnResponse(res)
+  return res.json()
+}
+
 export async function fetchCdnRankHistory(
   districtId: string
 ): Promise<CdnRankHistoryData> {
