@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.8.0...analytics-core-v1.9.0) (2026-06-10)
+
+
+### Features
+
+* shared DCP goal definitions — fix legacy L4/L5 header + Goal-10 OR in analytics-core ([#1118](https://github.com/taverns-red/toast-stats/issues/1118)) ([#1136](https://github.com/taverns-red/toast-stats/issues/1136)) ([8dcd370](https://github.com/taverns-red/toast-stats/commit/8dcd3707a68c93da090ff03917ac3c7b49ebb610))
+
 ## [1.8.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.7.1...analytics-core-v1.8.0) (2026-05-27)
 
 
