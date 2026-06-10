@@ -63,6 +63,10 @@
 #                         when two consumers might otherwise share a default path.
 #   SPRINT_RUNNER_LOG     Path to append-log; used for size-based rotation
 #                         (default: ~/.red-barkeep-<RUNNER_NAME>.log)
+#   SPRINT_RUNNER_MODEL   Model pin for spawned sessions (#1142; default
+#                         claude-fable-5[1m]). Spawned sessions must NOT
+#                         inherit the operator's saved default — it changes
+#                         silently on every interactive /model save.
 #   SPRINT_RUNNER_LOCK_DIR  Override the mkdir-lock path (default
 #                         /tmp/red-barkeep-<RUNNER_NAME>.lock). Used by the
 #                         regression test so it can't collide with a live tick.
@@ -96,6 +100,10 @@ STRICT_GATE="${STRICT_GATE:-0}"
 # differently-named repo dirs don't collide on shared default paths. Two repos
 # with the SAME basename would still collide — set RUNNER_NAME explicitly there.
 RUNNER_NAME="${RUNNER_NAME:-${REPO_DIR##*/}}"
+# Fleet model pin (#1142). Deliberate and reproducible: spawned sessions get
+# this model via the --settings overlay instead of inheriting the operator's
+# saved interactive default.
+RUNNER_MODEL="${SPRINT_RUNNER_MODEL:-claude-fable-5[1m]}"
 LOCK_DIR="${SPRINT_RUNNER_LOCK_DIR:-/tmp/red-barkeep-$RUNNER_NAME.lock}"
 BOOTSTRAP_PROMPT="$REPO_DIR/scripts/sprint-bootstrap.prompt"
 LOG_FILE="${SPRINT_RUNNER_LOG:-$HOME/.red-barkeep-$RUNNER_NAME.log}"
@@ -546,8 +554,11 @@ launch_sprint_session() {
   # --settings (an *additional* settings overlay) so it scopes to the runner's
   # sessions ONLY — the operator's own interactive `claude` keeps its configured
   # effortLevel. "ultracode" is not a valid --effort flag choice; it must come
-  # through settings. Single-quoted so the inner bash passes the JSON literally.
-  local ultracode_settings='{"effortLevel":"ultracode"}'
+  # through settings. The model is PINNED here too (#1142, operator ruling
+  # 2026-06-10): without it, sessions inherit ~/.claude/settings.json's saved
+  # default, which retargets the whole fleet on every interactive /model save.
+  local ultracode_settings='{"effortLevel":"ultracode","model":"'"$RUNNER_MODEL"'"}'
+  log "Session model: $RUNNER_MODEL (SPRINT_RUNNER_MODEL to override)"
 
   # Per-session screen logfile (epic #933 §2.3) — the on-disk feed the liveness
   # log probe samples to catch a #871-shape loop (output repeating, no commits).
