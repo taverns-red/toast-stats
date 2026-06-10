@@ -1247,6 +1247,42 @@ jobs:
           CLUB_COUNT=$(jq '.totalClubs' /tmp/club-index.json)
           echo "- **Clubs indexed**: ${CLUB_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Shared: Generate divisions-areas-index.json (#1134, epic #1101) ──
+      # Mirror of club-index for divisions/areas, built by the unit-tested
+      # scripts/lib/divisionsAreasIndex.ts (thin-glue step, Lesson 107).
+      # Promotion rsyncs config/ wholesale, so this reaches prod with the run.
+      - name: Generate divisions-areas index
+        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        run: |
+          LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
+            | jq -r '.latestSnapshotDate' || echo "")
+          if [ -z "${LATEST_DATE}" ]; then
+            echo "::warning::No latest date found, skipping divisions-areas index"
+            exit 0
+          fi
+          echo "Building divisions-areas index from snapshots/${LATEST_DATE}/..."
+
+          # R2: explicitly sync the district files this step reads
+          mkdir -p /tmp/divisions-areas-src
+          gsutil -m cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
+            /tmp/divisions-areas-src/ 2>/dev/null || true
+
+          # Fails the step when no district files were synced — an empty
+          # index must never overwrite a populated one.
+          npx tsx scripts/build-divisions-areas-index.ts \
+            --src /tmp/divisions-areas-src \
+            --out /tmp/divisions-areas-index.json \
+            --snapshot-date "${LATEST_DATE}"
+
+          gsutil \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=300" \
+            cp /tmp/divisions-areas-index.json "gs://${GCS_BUCKET}/config/divisions-areas-index.json"
+
+          echo "## 🗺️ Divisions/Areas Index" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Divisions indexed**: $(jq '.totalDivisions' /tmp/divisions-areas-index.json)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Areas indexed**: $(jq '.totalAreas' /tmp/divisions-areas-index.json)" >> "$GITHUB_STEP_SUMMARY"
+
       # ════════════════════════════════════════════════════════
       # STAGING → PRODUCTION PROMOTION (#316)
       # ════════════════════════════════════════════════════════
