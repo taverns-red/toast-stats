@@ -11,7 +11,12 @@ export {
 // File format types
 export type { PerDistrictData } from './types/per-district-data.js'
 
-export type { ScrapedRecord } from './types/scraped-record.js'
+export type {
+  ScrapedRecord,
+  ScrapedRecordValue,
+  ScrapedRecordCoordinates,
+  ScrapedRecordAddress,
+} from './types/scraped-record.js'
 
 export type {
   DistrictStatisticsFile,
