@@ -316,3 +316,35 @@ describe('getDistinguishedCountdown — absolute remaining counts (#688 #683)', 
     expect(c!.clubGrowth).toEqual({ kind: 'boolean', met: false })
   })
 })
+
+/* #798 float-overshoot survivors (#1126 C5): the tier targets must use
+   integer-percent arithmetic. `ceil(100 * (55/100))` = 56 under floats;
+   55% of 100 is exactly 55. Must agree with the canonical
+   analytics-core calculators (see recognitionTargetParity.test.ts). */
+describe('integer-safe tier targets (#1126, #798)', () => {
+  const zeroed = (
+    overrides: Partial<RemainingInputs> = {}
+  ): RemainingInputs => ({
+    paidClubBase: 0,
+    paymentBase: 0,
+    paidClubs: 0,
+    totalPayments: 0,
+    distinguishedClubs: 0,
+    ...overrides,
+  })
+
+  it('Presidents distinguished-clubs target at base 100 is exactly 55', () => {
+    const r = deriveRemainingToTier('Presidents', zeroed({ paidClubBase: 100 }))
+    expect(r.distinguishedClubsRemaining).toBe(55)
+  })
+
+  it('Presidents distinguished-clubs target at base 200 is exactly 110', () => {
+    const r = deriveRemainingToTier('Presidents', zeroed({ paidClubBase: 200 }))
+    expect(r.distinguishedClubsRemaining).toBe(110)
+  })
+
+  it('Smedley payment target at base 225 is exactly 243 (8% growth)', () => {
+    const r = deriveRemainingToTier('Smedley', zeroed({ paymentBase: 225 }))
+    expect(r.paymentsRemaining).toBe(243)
+  })
+})

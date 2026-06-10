@@ -28,10 +28,12 @@ describe('TargetCalculator', () => {
      * **Validates: Requirements 2.1-2.4, 3.1-3.4**
      */
     it('should have correct percentage values for each recognition level', () => {
-      expect(GROWTH_PERCENTAGES.distinguished).toBe(0.01) // +1%
-      expect(GROWTH_PERCENTAGES.select).toBe(0.03) // +3%
-      expect(GROWTH_PERCENTAGES.presidents).toBe(0.05) // +5%
-      expect(GROWTH_PERCENTAGES.smedley).toBe(0.08) // +8%
+      // Whole percents (#1126): integer-percent arithmetic avoids the
+      // #798 float overshoot of fractional multipliers.
+      expect(GROWTH_PERCENTAGES.distinguished).toBe(1) // +1%
+      expect(GROWTH_PERCENTAGES.select).toBe(3) // +3%
+      expect(GROWTH_PERCENTAGES.presidents).toBe(5) // +5%
+      expect(GROWTH_PERCENTAGES.smedley).toBe(8) // +8%
     })
   })
 
@@ -42,10 +44,12 @@ describe('TargetCalculator', () => {
      * **Validates: Requirements 4.1-4.4**
      */
     it('should have correct percentage values for each recognition level', () => {
-      expect(DISTINGUISHED_PERCENTAGES.distinguished).toBe(0.45) // 45%
-      expect(DISTINGUISHED_PERCENTAGES.select).toBe(0.5) // 50%
-      expect(DISTINGUISHED_PERCENTAGES.presidents).toBe(0.55) // 55%
-      expect(DISTINGUISHED_PERCENTAGES.smedley).toBe(0.6) // 60%
+      // Whole percents (#1126): integer-percent arithmetic avoids the
+      // #798 float overshoot of fractional multipliers.
+      expect(DISTINGUISHED_PERCENTAGES.distinguished).toBe(45) // 45%
+      expect(DISTINGUISHED_PERCENTAGES.select).toBe(50) // 50%
+      expect(DISTINGUISHED_PERCENTAGES.presidents).toBe(55) // 55%
+      expect(DISTINGUISHED_PERCENTAGES.smedley).toBe(60) // 60%
     })
   })
 
@@ -197,13 +201,12 @@ describe('TargetCalculator', () => {
      * Formula: base * percentage, rounded up using Math.ceil
      *
      * Expected results:
-     * - Distinguished: 100 * 0.45 = 45 → ceil → 45
-     * - Select: 100 * 0.50 = 50 → ceil → 50
-     * - President's: 100 * 0.55 = 55.00000000000001 (floating-point) → ceil → 56
-     * - Smedley: 100 * 0.60 = 60 → ceil → 60
-     *
-     * Note: Due to floating-point precision, 100 * 0.55 = 55.00000000000001,
-     * which Math.ceil() correctly rounds up to 56.
+     * - Distinguished: 45% of 100 = 45
+     * - Select: 50% of 100 = 50
+     * - President's: 55% of 100 = 55 (exactly — the old float form
+     *   `100 * 0.55 = 55.00000000000001 → ceil → 56` was the #798 bug,
+     *   live-wrong on D86; fixed by integer arithmetic in #1126)
+     * - Smedley: 60% of 100 = 60
      *
      * **Validates: Requirements 4.1-4.4, 4.6**
      */
@@ -212,7 +215,7 @@ describe('TargetCalculator', () => {
 
       expect(targets.distinguished).toBe(45)
       expect(targets.select).toBe(50)
-      expect(targets.presidents).toBe(56) // 55.00000000000001 → ceil → 56
+      expect(targets.presidents).toBe(55)
       expect(targets.smedley).toBe(60)
     })
 
@@ -580,10 +583,11 @@ describe('TargetCalculator', () => {
   describe('integration: calculatePercentageTargets + determineAchievedLevel', () => {
     /**
      * Test: End-to-end flow for distinguished clubs
-     * Base=100 → targets: 45, 50, 56, 60
+     * Base=100 → targets: 45, 50, 55, 60
      *
-     * Note: President's target is 56 (not 55) due to floating-point precision:
-     * 100 * 0.55 = 55.00000000000001 → Math.ceil() → 56
+     * 55% of 100 is exactly 55. The old float form produced 56 here
+     * (100 * 0.55 = 55.00000000000001 → ceil → 56) — the #798 bug,
+     * live-wrong on D86/D94; fixed with integer arithmetic in #1126.
      *
      * **Validates: Requirements 4.1-4.4, 5.1-5.5**
      */
@@ -594,7 +598,7 @@ describe('TargetCalculator', () => {
       expect(targets).toEqual({
         distinguished: 45,
         select: 50,
-        presidents: 56, // 55.00000000000001 → ceil → 56
+        presidents: 55,
         smedley: 60,
       })
 
@@ -602,7 +606,7 @@ describe('TargetCalculator', () => {
       expect(determineAchievedLevel(44, targets)).toBeNull()
       expect(determineAchievedLevel(45, targets)).toBe('distinguished')
       expect(determineAchievedLevel(50, targets)).toBe('select')
-      expect(determineAchievedLevel(56, targets)).toBe('presidents')
+      expect(determineAchievedLevel(55, targets)).toBe('presidents')
       expect(determineAchievedLevel(60, targets)).toBe('smedley')
       expect(determineAchievedLevel(70, targets)).toBe('smedley')
     })
@@ -637,18 +641,23 @@ describe('TargetCalculator Property Tests', () => {
     /**
      * Helper to verify ceiling rounding invariant for a single target value.
      *
-     * For any base B and percentage P, the target T = ⌈B × P⌉ SHALL satisfy:
+     * For any base B and whole percent P, the target T = ⌈B × P / 100⌉ SHALL
+     * satisfy:
      * 1. T is an integer
-     * 2. T ≥ B × P (target is at least the mathematical result)
-     * 3. T - (B × P) < 1 (target is less than 1 above the mathematical result)
+     * 2. T ≥ B × P / 100 (target is at least the mathematical result)
+     * 3. T - (B × P / 100) < 1 (target is less than 1 above it)
+     *
+     * The mathematical result is computed with the integer-safe form
+     * `(base * wholePercent) / 100` — exact whenever the true result is a
+     * whole number — never `base * (percent/100)` (#798, #1126).
      */
     function verifyCeilingInvariant(
       target: number,
       base: number,
-      percentage: number,
+      wholePercent: number,
       targetName: string
     ): void {
-      const mathematicalResult = base * percentage
+      const mathematicalResult = (base * wholePercent) / 100
 
       // Invariant 1: Target must be an integer
       expect(
@@ -688,25 +697,25 @@ describe('TargetCalculator Property Tests', () => {
           verifyCeilingInvariant(
             targets.distinguished,
             base,
-            1 + GROWTH_PERCENTAGES.distinguished,
+            100 + GROWTH_PERCENTAGES.distinguished,
             'Distinguished'
           )
           verifyCeilingInvariant(
             targets.select,
             base,
-            1 + GROWTH_PERCENTAGES.select,
+            100 + GROWTH_PERCENTAGES.select,
             'Select'
           )
           verifyCeilingInvariant(
             targets.presidents,
             base,
-            1 + GROWTH_PERCENTAGES.presidents,
+            100 + GROWTH_PERCENTAGES.presidents,
             "President's"
           )
           verifyCeilingInvariant(
             targets.smedley,
             base,
-            1 + GROWTH_PERCENTAGES.smedley,
+            100 + GROWTH_PERCENTAGES.smedley,
             'Smedley'
           )
 
@@ -848,24 +857,24 @@ describe('TargetCalculator Property Tests', () => {
           const growthPercentages = [
             {
               target: growthTargets.distinguished,
-              pct: 1 + GROWTH_PERCENTAGES.distinguished,
+              pct: 100 + GROWTH_PERCENTAGES.distinguished,
             },
             {
               target: growthTargets.select,
-              pct: 1 + GROWTH_PERCENTAGES.select,
+              pct: 100 + GROWTH_PERCENTAGES.select,
             },
             {
               target: growthTargets.presidents,
-              pct: 1 + GROWTH_PERCENTAGES.presidents,
+              pct: 100 + GROWTH_PERCENTAGES.presidents,
             },
             {
               target: growthTargets.smedley,
-              pct: 1 + GROWTH_PERCENTAGES.smedley,
+              pct: 100 + GROWTH_PERCENTAGES.smedley,
             },
           ]
 
           for (const { target, pct } of growthPercentages) {
-            const mathematicalResult = base * pct
+            const mathematicalResult = (base * pct) / 100
             const difference = target - mathematicalResult
             expect(difference).toBeGreaterThanOrEqual(0)
             expect(difference).toBeLessThan(1)
@@ -892,7 +901,7 @@ describe('TargetCalculator Property Tests', () => {
           ]
 
           for (const { target, pct } of distinguishedPercentages) {
-            const mathematicalResult = base * pct
+            const mathematicalResult = (base * pct) / 100
             const difference = target - mathematicalResult
             expect(difference).toBeGreaterThanOrEqual(0)
             expect(difference).toBeLessThan(1)
@@ -1258,5 +1267,74 @@ describe('TargetCalculator Property Tests', () => {
         { numRuns: 100 }
       )
     })
+  })
+})
+
+/* #798 float-overshoot survivors (#1126 C5). `Math.ceil(base * 0.55)`
+   overshoots whenever base*55 is divisible by 100 (0.55 is not exactly
+   representable: 100 * 0.55 = 55.00000000000001 → ceil → 56). The
+   integer-safe form is `Math.ceil((base * 55) / 100)`. Same class for
+   growth targets: 225 * 1.08 = 243.00000000000003 → ceil → 244, when
+   8% growth on 225 is exactly 243. Live wrong numbers: D86 presidents
+   target 56 (correct 55), D94 111 (correct 110). */
+describe('integer-safe targets — #798 overshoot regressions (#1126)', () => {
+  it('presidents target at base 100 is exactly 55 (live D86 regression)', () => {
+    expect(calculatePercentageTargets(100).presidents).toBe(55)
+  })
+
+  it('presidents target at base 200 is exactly 110 (live D94 regression)', () => {
+    expect(calculatePercentageTargets(200).presidents).toBe(110)
+  })
+
+  it('smedley growth target at base 225 is exactly 243', () => {
+    expect(calculateGrowthTargets(225).smedley).toBe(243)
+  })
+
+  it('every percentage target matches integer arithmetic for bases 1..10000', () => {
+    const mismatches: Array<[number, string, number, number]> = []
+    for (let base = 1; base <= 10000; base++) {
+      const t = calculatePercentageTargets(base)
+      const expected = {
+        distinguished: Math.ceil((base * 45) / 100),
+        select: Math.ceil((base * 50) / 100),
+        presidents: Math.ceil((base * 55) / 100),
+        smedley: Math.ceil((base * 60) / 100),
+      }
+      for (const level of [
+        'distinguished',
+        'select',
+        'presidents',
+        'smedley',
+      ] as const) {
+        if (t[level] !== expected[level]) {
+          mismatches.push([base, level, t[level], expected[level]])
+        }
+      }
+    }
+    expect(mismatches).toEqual([])
+  })
+
+  it('every growth target matches integer arithmetic for bases 1..10000', () => {
+    const mismatches: Array<[number, string, number, number]> = []
+    for (let base = 1; base <= 10000; base++) {
+      const t = calculateGrowthTargets(base)
+      const expected = {
+        distinguished: Math.ceil((base * 101) / 100),
+        select: Math.ceil((base * 103) / 100),
+        presidents: Math.ceil((base * 105) / 100),
+        smedley: Math.ceil((base * 108) / 100),
+      }
+      for (const level of [
+        'distinguished',
+        'select',
+        'presidents',
+        'smedley',
+      ] as const) {
+        if (t[level] !== expected[level]) {
+          mismatches.push([base, level, t[level], expected[level]])
+        }
+      }
+    }
+    expect(mismatches).toEqual([])
   })
 })

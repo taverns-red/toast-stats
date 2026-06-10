@@ -145,3 +145,4 @@
 - **157** [zod, schemas, data-pipeline, monorepo, verification, contracts] — In a zod union, a non-strict all-optional object schema matches (and silently EMPTIES) any object; strictness is what keeps the union falsifiable (#1123, #1096)
 - **157** [data-pipeline, analytics, transformation, fixtures, verification] — When sibling reports share one entity universe, derive every aggregate block from the single merged entity set (#1124, #1096)
 - **158** [ci, automation, monitoring, data-pipeline, verification] — A parameterized monitor's self-clear must be scoped to the signal it alarms on (#1125, #1096)
+- **158** [tests, tdd, verification, analytics, floats] — A test comment that justifies a surprising expectation by MECHANISM ("due to floating-point precision") instead of by RULE is a pinned bug wearing documentation (#1126, #1097, #798)

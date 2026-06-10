@@ -223,13 +223,50 @@ describe('aggregateRegions (#493)', () => {
     expect(rollups[0]?.paymentGrowthPercent).toBeCloseTo(8.695, 2)
   })
 
-  it('derives distinguishedPercent from sums', () => {
+  it('derives distinguishedPercent from sums over the paid club BASE (#1126 C4, lesson 60)', () => {
     const rollups = aggregateRegions([
-      mk({ region: '01', paidClubs: 100, distinguishedClubs: 50 }),
-      mk({ region: '01', paidClubs: 50, distinguishedClubs: 22 }),
+      mk({
+        region: '01',
+        paidClubs: 100,
+        paidClubBase: 110,
+        distinguishedClubs: 50,
+      }),
+      mk({
+        region: '01',
+        paidClubs: 50,
+        paidClubBase: 70,
+        distinguishedClubs: 22,
+      }),
     ])
-    // distinguished=72, paidClubs=150 → 48%
-    expect(rollups[0]?.distinguishedPercent).toBeCloseTo(48, 1)
+    // distinguished=72, paidClubBase=180 → 40%. The DDP rule
+    // (rules-reference §9, Item 1490) divides by PY-start base, NOT
+    // current paidClubs (which would inflate this to 72/150 = 48%).
+    expect(rollups[0]?.distinguishedPercent).toBeCloseTo(40, 5)
+  })
+
+  it('matches the live R13 shape: base denominator, not current paid clubs (#1126 C4)', () => {
+    // Live 2026-06-09 audit: R13 rendered 49.7% (distinguished / current
+    // paidClubs) where the canonical value is 43.8% (distinguished /
+    // paidClubBase) — every region inflated 0.3–6.0pp, feeding region
+    // ranks + Borda scores.
+    const rollups = aggregateRegions([
+      mk({
+        districtId: 'A',
+        region: '13',
+        distinguishedClubs: 80,
+        paidClubs: 160,
+        paidClubBase: 180,
+      }),
+      mk({
+        districtId: 'B',
+        region: '13',
+        distinguishedClubs: 69,
+        paidClubs: 140,
+        paidClubBase: 160,
+      }),
+    ])
+    // 149/340 = 43.82%, NOT 149/300 = 49.67%
+    expect(rollups[0]?.distinguishedPercent).toBeCloseTo((149 / 340) * 100, 10)
   })
 
   it('returns 0 (not NaN) when a denominator is zero', () => {

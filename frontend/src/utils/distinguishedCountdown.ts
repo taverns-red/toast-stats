@@ -1,3 +1,4 @@
+import { growthTarget, percentageTarget } from '@toastmasters/analytics-core'
 import type {
   CompetitiveAwardStandings,
   DistinguishedDistrictTier,
@@ -103,12 +104,14 @@ export function deriveRemainingToTier(
   distinguishedClubsRemaining: number
 } {
   const t = TIER_THRESHOLDS[tier]
-  const paymentTarget = Math.ceil(
-    r.paymentBase * (1 + t.paymentGrowthMin / 100)
-  )
-  const paidClubTarget = Math.ceil(r.paidClubBase * (1 + t.clubGrowthMin / 100))
-  const distinguishedTarget = Math.ceil(
-    r.paidClubBase * (t.distinguishedPercentMin / 100)
+  // Integer-safe targets via the shared analytics-core helpers — the
+  // float form `ceil(base * (pct/100))` overshoots (100 → 56 at 55%);
+  // see #798/#1126 and recognitionTargetParity.test.ts.
+  const paymentTarget = growthTarget(r.paymentBase, t.paymentGrowthMin)
+  const paidClubTarget = growthTarget(r.paidClubBase, t.clubGrowthMin)
+  const distinguishedTarget = percentageTarget(
+    r.paidClubBase,
+    t.distinguishedPercentMin
   )
   return {
     paidClubsRemaining: Math.max(0, paidClubTarget - r.paidClubs),

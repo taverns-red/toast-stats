@@ -55,6 +55,8 @@ export {
   calculateGrowthTargets,
   calculatePercentageTargets,
   determineAchievedLevel,
+  growthTarget,
+  percentageTarget,
   GROWTH_PERCENTAGES,
   DISTINGUISHED_PERCENTAGES,
 } from './TargetCalculator.js'

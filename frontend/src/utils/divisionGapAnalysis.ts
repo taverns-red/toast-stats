@@ -20,6 +20,8 @@
  * Requirements: 5.2, 5.5, 6.1, 6.2, 6.3, 6.4, 6.5, 9.1, 9.2, 9.3, 9.4
  */
 
+import { percentageTarget } from '@toastmasters/analytics-core'
+
 /**
  * Recognition levels for divisions in the Distinguished Division Program
  *
@@ -149,7 +151,7 @@ function calculateRequiredDistinguishedClubs(
   clubBase: number,
   thresholdPercent: number
 ): number {
-  return Math.ceil((clubBase * thresholdPercent) / 100)
+  return percentageTarget(clubBase, thresholdPercent)
 }
 
 /**
@@ -176,9 +178,9 @@ export function calculateDivisionDistinguishedRequirement(
  *
  * Property 1: Recognition Level Classification
  * - If paidClubs < clubBase: "none" (net club loss - not eligible)
- * - Else if paidClubs >= clubBase + 2 AND distinguishedClubs >= Math.ceil(clubBase * 0.55): "presidents"
- * - Else if paidClubs >= clubBase + 1 AND distinguishedClubs >= Math.ceil(clubBase * 0.50): "select"
- * - Else if paidClubs >= clubBase AND distinguishedClubs >= Math.ceil(clubBase * 0.45): "distinguished"
+ * - Else if paidClubs >= clubBase + 2 AND distinguishedClubs >= ceil(clubBase × 55 / 100): "presidents"
+ * - Else if paidClubs >= clubBase + 1 AND distinguishedClubs >= ceil(clubBase × 50 / 100): "select"
+ * - Else if paidClubs >= clubBase AND distinguishedClubs >= ceil(clubBase × 45 / 100): "distinguished"
  * - Else: "none"
  *
  * @param metrics - Division metrics (clubBase, paidClubs, distinguishedClubs)
