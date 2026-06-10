@@ -19,6 +19,10 @@ import { parse } from 'csv-parse/sync'
 import { parseClosingPeriodFromCsv } from '../utils/csvFooterParser.js'
 import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
 import {
+  resolveClosingWindow,
+  ClosingPeriodUndecidedError,
+} from '../utils/closingWindowResolver.js'
+import {
   DataTransformer,
   ANALYTICS_SCHEMA_VERSION,
   getConfirmedDistinguishedLevel,
@@ -195,11 +199,13 @@ export class TransformService {
   private readonly cacheDir: string
   private readonly logger: Logger
   private readonly dataTransformer: DataTransformer
+  private readonly closingDateRegistry: ClosingDateEntry[] | undefined
 
   constructor(config: TransformServiceConfig) {
     this.cacheDir = config.cacheDir
     this.logger = config.logger ?? noopLogger
     this.dataTransformer = new DataTransformer({ logger: this.logger })
+    this.closingDateRegistry = config.closingDateRegistry
   }
 
   /**
@@ -292,6 +298,10 @@ export class TransformService {
    * Derive cache metadata by parsing the all-districts.csv footer.
    * Used when metadata.json is missing or has undefined isClosingPeriod.
    * Writes the derived metadata back to disk for future runs.
+   *
+   * When the footer cannot decide (no footer line, unreadable CSV), the
+   * decision falls to the closing-date registry (#1129); see
+   * resolveWithoutFooter for the fail-closed semantics.
    */
   private async deriveMetadataFromCsv(
     date: string,
@@ -303,44 +313,117 @@ export class TransformService {
       const csvContent = await fs.readFile(csvPath, 'utf-8')
       const parsed = parseClosingPeriodFromCsv(csvContent, date)
 
+      if (parsed.footerFound) {
+        const metadata: CacheMetadata = {
+          date: existing?.date ?? date,
+          isClosingPeriod: parsed.isClosingPeriod,
+          dataMonth: parsed.dataMonth,
+        }
+
+        this.logger.info('Derived closing period from CSV footer', {
+          date,
+          isClosingPeriod: parsed.isClosingPeriod,
+          dataMonth: parsed.dataMonth,
+        })
+
+        await this.writeBackDerivedMetadata(date, metadata, 'csv-footer')
+        return metadata
+      }
+    } catch {
+      // CSV unreadable — fall through to the registry
+    }
+
+    return this.resolveWithoutFooter(date, existing)
+  }
+
+  /**
+   * Decide closing-period status when neither metadata.json nor the CSV
+   * footer could (#1129).
+   *
+   * - An explicit scraper-written isClosingPeriod:false is trusted (there is
+   *   no footer to verify it against, per the #309 verification rule).
+   * - With a registry configured, the date's closing-window membership
+   *   decides; a date the registry cannot cover FAILS CLOSED
+   *   (ClosingPeriodUndecidedError) — never published under its raw date.
+   * - Without a registry (test fixtures only — production entry points must
+   *   inject one), the pre-#1129 fail-open default is preserved.
+   */
+  private async resolveWithoutFooter(
+    date: string,
+    existing: CacheMetadata | null
+  ): Promise<CacheMetadata | null> {
+    const nonClosing: CacheMetadata = {
+      date: existing?.date ?? date,
+      isClosingPeriod: false,
+      dataMonth: undefined,
+    }
+
+    if (existing?.isClosingPeriod === false) {
+      return nonClosing
+    }
+
+    if (this.closingDateRegistry === undefined) {
+      return nonClosing
+    }
+
+    const verdict = resolveClosingWindow(date, this.closingDateRegistry)
+
+    if (verdict.kind === 'closing') {
       const metadata: CacheMetadata = {
         date: existing?.date ?? date,
-        isClosingPeriod: parsed.isClosingPeriod,
-        dataMonth: parsed.dataMonth,
+        isClosingPeriod: true,
+        dataMonth: verdict.dataMonth,
       }
 
-      this.logger.info('Derived closing period from CSV footer', {
+      this.logger.info('Derived closing period from closing-date registry', {
         date,
-        isClosingPeriod: parsed.isClosingPeriod,
-        dataMonth: parsed.dataMonth,
+        dataMonth: verdict.dataMonth,
+        snapshotDate: verdict.snapshotDate,
       })
 
-      // Write back to metadata.json for future runs
-      try {
-        const metadataPath = path.join(this.getRawCsvDir(date), 'metadata.json')
-        const existingContent = await fs
-          .readFile(metadataPath, 'utf-8')
-          .then(c => JSON.parse(c) as Record<string, unknown>)
-          .catch(() => ({}))
-        const updated = {
-          ...existingContent,
-          date: metadata.date,
-          isClosingPeriod: metadata.isClosingPeriod,
-          ...(metadata.dataMonth ? { dataMonth: metadata.dataMonth } : {}),
-        }
-        await fs.writeFile(metadataPath, JSON.stringify(updated, null, 2))
-      } catch {
-        // Non-fatal: metadata write failure doesn't block transform
-      }
-
+      await this.writeBackDerivedMetadata(
+        date,
+        metadata,
+        'closing-date-registry'
+      )
       return metadata
-    } catch {
-      // No CSV file available — return non-closing-period default
-      return {
-        date: existing?.date ?? date,
-        isClosingPeriod: false,
-        dataMonth: undefined,
+    }
+
+    if (verdict.kind === 'non-closing') {
+      this.logger.info('Closing-date registry confirms non-closing date', {
+        date,
+      })
+      return nonClosing
+    }
+
+    throw new ClosingPeriodUndecidedError(date, verdict.reason)
+  }
+
+  /**
+   * Write derived metadata back to raw-csv/{date}/metadata.json for future
+   * runs, recording which authority decided it.
+   */
+  private async writeBackDerivedMetadata(
+    date: string,
+    metadata: CacheMetadata,
+    source: 'csv-footer' | 'closing-date-registry'
+  ): Promise<void> {
+    try {
+      const metadataPath = path.join(this.getRawCsvDir(date), 'metadata.json')
+      const existingContent = await fs
+        .readFile(metadataPath, 'utf-8')
+        .then(c => JSON.parse(c) as Record<string, unknown>)
+        .catch(() => ({}))
+      const updated = {
+        ...existingContent,
+        date: metadata.date,
+        isClosingPeriod: metadata.isClosingPeriod,
+        ...(metadata.dataMonth ? { dataMonth: metadata.dataMonth } : {}),
+        closingPeriodSource: source,
       }
+      await fs.writeFile(metadataPath, JSON.stringify(updated, null, 2))
+    } catch {
+      // Non-fatal: metadata write failure doesn't block transform
     }
   }
 
@@ -1865,7 +1948,38 @@ export class TransformService {
     }
 
     // Step 1: Read cache metadata to detect closing periods (Requirement 1.1)
-    const cacheMetadata = await this.readCacheMetadata(date)
+    // Fails CLOSED (#1129): a date whose closing-period status no authority
+    // (metadata.json, CSV footer, registry) can decide is refused, never
+    // published under its raw date.
+    let cacheMetadata: CacheMetadata | null
+    try {
+      cacheMetadata = await this.readCacheMetadata(date)
+    } catch (error) {
+      if (error instanceof ClosingPeriodUndecidedError) {
+        this.logger.error(
+          'Refusing to publish: closing-period status undecided',
+          { date, error: error.message }
+        )
+        return {
+          success: false,
+          date,
+          districtsProcessed: [],
+          districtsSucceeded: [],
+          districtsFailed: [],
+          districtsSkipped: [],
+          snapshotLocations: [],
+          errors: [
+            {
+              districtId: 'all-districts',
+              error: error.message,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+          duration_ms: Date.now() - startTime,
+        }
+      }
+      throw error
+    }
 
     // Step 2: Determine the correct snapshot date based on closing period detection
     // (Requirements 2.1, 2.2, 2.3, 2.4, 5.1, 5.2)
