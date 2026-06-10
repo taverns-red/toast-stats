@@ -53,12 +53,17 @@ const MOBILE_RANKINGS_CAP = 20
 // toolbar's content changes, e2e/landing-mobile-cls.smoke.ts fails the PR
 // preview and these get re-measured.
 const ACTIONS_SKELETON_WIDTHS = {
-  freshnessPill: 179, // "Data fresh · <date>" pill (DataControlsBar)
+  // "Data fresh · <date>" pill. Width tracks the date text; the pill+PY row
+  // has ~60px of slack at 390px before a longer date changes the wrap. The
+  // pill is also conditional on the cached-dates query — when that fails,
+  // the loaded toolbar renders 2 chips (one row shorter than reserved); an
+  // accepted residual for that degraded path.
+  freshnessPill: 179,
   pyChip: 109, // "PY 25–26 ▾" chip
   dateChip: 107, // "Latest in PY ▾" chip
   exportBtn: 105, // "Export CSV" action button
   shareBtn: 85, // "Share" action button
-}
+} as const
 
 // Shared parse/serialize for comma-joined string-list URL params (?regions=,
 // ?pinned=). Module-level so their identity is stable across renders (#978).

@@ -32,7 +32,7 @@ const TOLERANCE_PX = 1
 const RANKINGS_GLOB = '**/*rankings.json'
 
 async function kpiStripY(page: Page): Promise<number> {
-  await page.evaluate(() => document.fonts.ready)
+  await page.evaluate(() => document.fonts.ready.then(() => undefined))
   await page.evaluate(() => window.scrollTo(0, 0))
   const box = await page.locator('.districts-kpi-strip').boundingBox()
   if (!box) throw new Error('.districts-kpi-strip has no bounding box')
@@ -40,6 +40,9 @@ async function kpiStripY(page: Page): Promise<number> {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Route-gated navigations + React Query retry backoff overrun the 30s
+  // config default on a cold preview channel (cf. touch-targets.smoke.ts).
+  test.setTimeout(90_000)
   await page.setViewportSize(VIEWPORT)
 })
 
@@ -63,6 +66,12 @@ test('landing / loading shell holds the KPI strip at the loaded y (390px)', asyn
   release?.()
   await page
     .locator('table[aria-label="District rankings"]')
+    .waitFor({ state: 'visible', timeout: 30_000 })
+  // The freshness pill renders only once the cached-dates query (not gated
+  // above) resolves; measure the settled 3-chip toolbar, not a 2-chip
+  // intermediate that wraps one row shorter.
+  await page
+    .locator('[data-testid="freshness-pill"]')
     .waitFor({ state: 'visible', timeout: 30_000 })
   const loadedY = await kpiStripY(page)
 
