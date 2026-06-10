@@ -193,10 +193,10 @@ describe('buildDistrictReports — triple-crown district scalar', () => {
 })
 
 describe('buildDistrictReports — remaining sections', () => {
-  it('education aggregates to per-club/award counts (33 groups, 40 total)', () => {
+  it('education aggregates to per-club/award raw activity counts (33 groups, 40 total)', () => {
     const recs = build().sections.educationAchievements!.records
     expect(recs).toHaveLength(33)
-    expect(recs.reduce((s, r) => s + r.count, 0)).toBe(40)
+    expect(recs.reduce((s, r) => s + r.achievementCount, 0)).toBe(40)
   })
 
   it('dues renewal April + October are separate provenanced sections', () => {

@@ -122,6 +122,47 @@ describe('DistrictReportsDatasetSchema', () => {
     expect(DistrictReportsDatasetSchema.safeParse(bad).success).toBe(false)
   })
 
+  // #1080 — the education record's count is RAW activity (achievementCount),
+  // NOT DCP credit. The field name is the guard: a legacy `count`-shaped
+  // record must fail validation so the ambiguous name can't sneak back in.
+  it('education achievements require achievementCount; the legacy `count`-only shape fails (strip mode: unknown keys are dropped, the missing required field is what rejects)', () => {
+    const record = {
+      club: '1234',
+      division: 'A',
+      area: '1',
+      name: 'Club X',
+      location: 'Town',
+      award: 'PM1',
+      achievementCount: 2,
+    }
+    const sources = [
+      source(
+        'education-achievements',
+        'c757d313-f815-4b22-93dc-b839d04cec7b',
+        'June 01, 2026'
+      ),
+    ]
+    const withActivity = structuredClone(VALID)
+    withActivity.sections.educationAchievements = {
+      sources,
+      records: [record],
+    }
+    expect(DistrictReportsDatasetSchema.safeParse(withActivity).success).toBe(
+      true
+    )
+
+    const { achievementCount, ...legacy } = record
+    const withLegacyCount = structuredClone(VALID)
+    withLegacyCount.sections.educationAchievements = {
+      sources,
+      // @ts-expect-error — the pre-#1080 shape: ambiguous `count`
+      records: [{ ...legacy, count: achievementCount }],
+    }
+    expect(
+      DistrictReportsDatasetSchema.safeParse(withLegacyCount).success
+    ).toBe(false)
+  })
+
   it('requires coach activeCoach to be a boolean', () => {
     const bad = structuredClone(VALID)
     // @ts-expect-error — deliberately wrong type

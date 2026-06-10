@@ -46,7 +46,7 @@ export {
   type DuesRenewalRow,
   type OfficerListRow,
   type ClubSuccessPlanRow,
-  type EducationAchievementCount,
+  type EducationAchievementActivity,
   type TripleCrownRow,
   type NewClubRow,
   type ProspectiveClubRow,

@@ -47,12 +47,19 @@ export interface ClubSuccessPlanRow {
 }
 
 /**
- * Education Achievements de-identified: per (club, area, award) achievement
- * COUNT. The raw report is a member-level ledger (one row per achievement, with
- * a personal `Member` column); we drop `Member` and aggregate to counts so no
- * member is identifiable while the per-club recognition signal survives.
+ * Education Achievements de-identified: per (club, area, award) RAW achievement
+ * ACTIVITY. The raw report is a member-level ledger (one row per achievement,
+ * with a personal `Member` column); we drop `Member` and aggregate to counts so
+ * no member is identifiable while the per-club recognition signal survives.
+ *
+ * NOT DCP credit (#1080): DCP education credit counts DISTINCT MEMBERS per
+ * award tier (a member's repeat achievements in a tier count once), and is
+ * sourced from the main dashboard's `clubPerformance` "Level 1s"/"Level 2s"/…
+ * fields — see `frontend/src/utils/dcpGoals.ts`. This raw count cannot apply
+ * that dedup (`Member` is dropped before aggregation, by design) and must never
+ * be conflated with it. Its value is raw activity volume + path/level breakdown.
  */
-export interface EducationAchievementCount {
+export interface EducationAchievementActivity {
   club: string
   division: string
   area: string
@@ -60,7 +67,8 @@ export interface EducationAchievementCount {
   name: string
   location: string
   award: string
-  count: number
+  /** RAW achievement-row count for this (club, award) — NOT member-deduped DCP credit. */
+  achievementCount: number
 }
 
 /**
@@ -132,7 +140,7 @@ export type ParsedDistrictReport =
   | {
       tableId: string
       reportType: 'education-achievements'
-      rows: EducationAchievementCount[]
+      rows: EducationAchievementActivity[]
     }
   | { tableId: string; reportType: 'triple-crown'; rows: TripleCrownRow[] }
   | { tableId: string; reportType: 'education-archive'; rows: never[] }
@@ -356,13 +364,18 @@ function projectRows(
 
 /**
  * Collapse Education Achievements' member-level rows into per-(club, award)
- * counts. Insertion order is preserved (first appearance of each group), so the
- * output is deterministic for a given input.
+ * RAW activity counts. Insertion order is preserved (first appearance of each
+ * group), so the output is deterministic for a given input.
+ *
+ * `achievementCount` is a RAW achievement-row count, NOT DCP credit: DCP counts
+ * distinct members per award tier and lives in `clubPerformance` (dcpGoals.ts).
+ * Member-dedup is impossible here — the personal `Member` column is dropped
+ * before this aggregation runs (#1080).
  */
 function aggregateEducation(
   projected: Array<Record<string, string>>
-): EducationAchievementCount[] {
-  const groups = new Map<string, EducationAchievementCount>()
+): EducationAchievementActivity[] {
+  const groups = new Map<string, EducationAchievementActivity>()
   for (const r of projected) {
     const club = r['club'] ?? ''
     const division = r['division'] ?? ''
@@ -373,9 +386,17 @@ function aggregateEducation(
     const key = [club, division, area, name, location, award].join('\u0000')
     const existing = groups.get(key)
     if (existing) {
-      existing.count += 1
+      existing.achievementCount += 1
     } else {
-      groups.set(key, { club, division, area, name, location, award, count: 1 })
+      groups.set(key, {
+        club,
+        division,
+        area,
+        name,
+        location,
+        award,
+        achievementCount: 1,
+      })
     }
   }
   return [...groups.values()]
