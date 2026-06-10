@@ -83,6 +83,12 @@ export interface ClubStatistics {
   // Club operational status (Active, Suspended, Low, Ineligible)
   clubStatus?: string
 
+  // Raw 'Club Distinguished Status' value from the dashboard CSV.
+  // Live data uses letter codes ('' | 'D' | 'S' | 'P' | 'M'); historical
+  // data may use word forms ("President's Distinguished"). Distinct from
+  // clubStatus (operational) and status (mixed legacy field). (#1120)
+  distinguishedStatus?: string
+
   // CSP (Club Success Plan) submission status
   // Present from 2025-2026 program year onward; undefined for earlier years
   cspSubmitted?: boolean

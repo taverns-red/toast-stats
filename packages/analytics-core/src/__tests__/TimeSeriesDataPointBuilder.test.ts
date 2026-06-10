@@ -17,6 +17,10 @@ import {
   type DistrictStatisticsInput,
   type ScrapedRecord,
 } from '../timeseries/TimeSeriesDataPointBuilder.js'
+import {
+  getCurrentProgramMonth,
+  getDCPCheckpoint,
+} from '../analytics/AnalyticsUtils.js'
 
 // Reference implementations for equivalence checking
 function refParseIntSafe(value: string | number | null | undefined): number {
@@ -106,8 +110,27 @@ function refCalculateDistinguishedTotal(
   return (district.clubPerformance ?? []).filter(refIsDistinguished).length
 }
 
+function refParseCspSubmitted(club: ScrapedRecord): boolean {
+  const cspValue =
+    club['CSP'] ??
+    club['Club Success Plan'] ??
+    club['CSP Submitted'] ??
+    club['Club Success Plan Submitted']
+  // Historical compatibility: field absent → assume submitted
+  if (cspValue === undefined || cspValue === null) return true
+  const csp = String(cspValue).toLowerCase().trim()
+  return !['no', 'false', '0', 'not submitted', 'n'].includes(csp)
+}
+
+/**
+ * Reference club-health classification (#1120): must match
+ * ClubHealthAnalyticsModule.assessClubHealth — monthly DCP checkpoint
+ * (§5.3) + CSP requirement, not the legacy `dcpGoals > 0` rule.
+ */
 function refCalculateClubHealthCounts(district: DistrictStatisticsInput) {
   const clubs = district.clubPerformance ?? []
+  const month = getCurrentProgramMonth(district.asOfDate)
+  const requiredCheckpoint = getDCPCheckpoint(month)
   let thriving = 0,
     vulnerable = 0,
     interventionRequired = 0
@@ -119,7 +142,12 @@ function refCalculateClubHealthCounts(district: DistrictStatisticsInput) {
     const memBase = refParseIntSafe(club['Mem. Base'])
     const netGrowth = membership - memBase
     if (membership < 12 && netGrowth < 3) interventionRequired++
-    else if ((membership >= 20 || netGrowth >= 3) && dcpGoals > 0) thriving++
+    else if (
+      (membership >= 20 || netGrowth >= 3) &&
+      dcpGoals >= requiredCheckpoint &&
+      refParseCspSubmitted(club)
+    )
+      thriving++
     else vulnerable++
   }
   return { total: clubs.length, thriving, vulnerable, interventionRequired }
@@ -332,6 +360,55 @@ describe('TimeSeriesDataPointBuilder', () => {
     })
   })
 
+  // ---------- isDistinguished letter codes (#1120) ----------
+  describe('isDistinguished letter codes (#1120)', () => {
+    // Live dashboard CSVs carry single-letter codes, not words.
+    // Fixture deliberately fails the DCP heuristic (2 goals, no growth)
+    // so only the status field can make it distinguished.
+    const baseClub: ScrapedRecord = {
+      'Club Number': '4444',
+      'Club Name': 'Code Club',
+      'Active Members': '15',
+      'Mem. Base': '15',
+      'Goals Met': '2',
+      CSP: 'Yes',
+    }
+
+    it.each(['D', 'S', 'P', 'M'])(
+      'counts live status code %s as distinguished',
+      code => {
+        expect(
+          builder.isDistinguished({
+            ...baseClub,
+            'Club Distinguished Status': code,
+          })
+        ).toBe(true)
+      }
+    )
+
+    it('does not treat operational status values as distinguished', () => {
+      for (const value of ['Active', 'Low', 'Suspended', 'Ineligible']) {
+        expect(
+          builder.isDistinguished({
+            ...baseClub,
+            'Club Distinguished Status': value,
+          })
+        ).toBe(false)
+      }
+    })
+
+    it('still ignores empty and none-like values', () => {
+      for (const value of ['', 'None', 'N/A']) {
+        expect(
+          builder.isDistinguished({
+            ...baseClub,
+            'Club Distinguished Status': value,
+          })
+        ).toBe(false)
+      }
+    })
+  })
+
   // ---------- calculateDistinguishedTotal equivalence ----------
   describe('calculateDistinguishedTotal equivalence', () => {
     it('should match reference for mixed clubs', () => {
@@ -384,6 +461,76 @@ describe('TimeSeriesDataPointBuilder', () => {
       expect(
         counts.thriving + counts.vulnerable + counts.interventionRequired
       ).toBe(counts.total)
+    })
+
+    it('classifies a 3-goal club in June as vulnerable, not thriving (#1120)', () => {
+      // The C3 audit disagreement fixture: the legacy `dcpGoals > 0` rule
+      // counted this club thriving; the §5.3 June checkpoint requires 5 goals.
+      const district: DistrictStatisticsInput = {
+        districtId: '61',
+        asOfDate: '2026-06-15',
+        clubPerformance: [
+          {
+            'Club Number': '1111',
+            'Club Name': 'June Three Goals',
+            'Active Members': '25',
+            'Mem. Base': '20',
+            'Goals Met': '3',
+            CSP: 'Yes',
+          },
+        ],
+      }
+      expect(builder.calculateClubHealthCounts(district)).toEqual({
+        total: 1,
+        thriving: 0,
+        vulnerable: 1,
+        interventionRequired: 0,
+      })
+    })
+
+    it('does not count a CSP-less club as thriving (#1120)', () => {
+      const district: DistrictStatisticsInput = {
+        districtId: '61',
+        asOfDate: '2026-06-15',
+        clubPerformance: [
+          {
+            'Club Number': '2222',
+            'Club Name': 'No CSP',
+            'Active Members': '25',
+            'Mem. Base': '20',
+            'Goals Met': '9',
+            CSP: 'No',
+          },
+        ],
+      }
+      expect(builder.calculateClubHealthCounts(district)).toEqual({
+        total: 1,
+        thriving: 0,
+        vulnerable: 1,
+        interventionRequired: 0,
+      })
+    })
+
+    it('treats a missing CSP field as submitted (historical data)', () => {
+      const district: DistrictStatisticsInput = {
+        districtId: '61',
+        asOfDate: '2024-06-15',
+        clubPerformance: [
+          {
+            'Club Number': '3333',
+            'Club Name': 'Pre-CSP Era',
+            'Active Members': '25',
+            'Mem. Base': '20',
+            'Goals Met': '6',
+          },
+        ],
+      }
+      expect(builder.calculateClubHealthCounts(district)).toEqual({
+        total: 1,
+        thriving: 1,
+        vulnerable: 0,
+        interventionRequired: 0,
+      })
     })
   })
 

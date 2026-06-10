@@ -16,6 +16,12 @@ import type {
   TimeSeriesDataPoint,
   ClubHealthCounts,
 } from '@toastmasters/shared-contracts'
+import {
+  classifyClubHealth,
+  getCSPStatusFromRecord,
+  isDistinguishedStatusCode,
+} from '../analytics/ClubEligibilityUtils.js'
+import { getCurrentProgramMonth } from '../analytics/AnalyticsUtils.js'
 
 /**
  * Scraped record type - represents raw CSV data with dynamic columns.
@@ -179,15 +185,20 @@ export class TimeSeriesDataPointBuilder {
   /**
    * Calculate club health counts from district statistics.
    *
-   * MIGRATED from RefreshService.calculateClubHealthCounts
-   *
-   * Classification rules from ClubHealthAnalyticsModule:
+   * Delegates per-club classification to the shared classifyClubHealth
+   * (#1120) so these counts cannot drift from the dashboard's
+   * ClubHealthAnalyticsModule.assessClubHealth:
    * - Intervention Required: membership < 12 AND net growth < 3
-   * - Thriving: (membership >= 20 OR net growth >= 3) AND dcpGoals > 0
+   * - Thriving: (membership >= 20 OR net growth >= 3) AND the §5.3
+   *   monthly DCP checkpoint is met AND CSP is submitted
    * - Vulnerable: All other clubs
    *
    * @param district - The district statistics
    * @returns Club health counts breakdown
+   * @throws Error when district.asOfDate is not a parseable date — the
+   *   §5.3 checkpoint is month-dependent, so a corrupt date must fail
+   *   loudly (same behavior as the dashboard module) rather than emit a
+   *   silently misclassified data point.
    *
    * @see Requirements 6.6
    */
@@ -196,6 +207,7 @@ export class TimeSeriesDataPointBuilder {
   ): ClubHealthCounts {
     const clubs = district.clubPerformance ?? []
     const total = clubs.length
+    const month = getCurrentProgramMonth(district.asOfDate)
 
     let thriving = 0
     let vulnerable = 0
@@ -209,20 +221,23 @@ export class TimeSeriesDataPointBuilder {
       )
       const dcpGoals = this.parseIntSafe(club['Goals Met'])
       const memBase = this.parseIntSafe(club['Mem. Base'])
-      const netGrowth = membership - memBase
 
-      // Classification rules from ClubHealthAnalyticsModule
-      if (membership < 12 && netGrowth < 3) {
+      const { status } = classifyClubHealth(
+        {
+          membership,
+          netGrowth: membership - memBase,
+          dcpGoals,
+          cspSubmitted: getCSPStatusFromRecord(club),
+        },
+        month
+      )
+
+      if (status === 'intervention-required') {
         interventionRequired++
+      } else if (status === 'thriving') {
+        thriving++
       } else {
-        const membershipRequirementMet = membership >= 20 || netGrowth >= 3
-        const dcpCheckpointMet = dcpGoals > 0
-
-        if (membershipRequirementMet && dcpCheckpointMet) {
-          thriving++
-        } else {
-          vulnerable++
-        }
+        vulnerable++
       }
     }
 
@@ -274,31 +289,20 @@ export class TimeSeriesDataPointBuilder {
    * @see Requirements 6.7
    */
   isDistinguished(club: ScrapedRecord): boolean {
-    // Check CSP status first
-    const cspValue =
-      club['CSP'] ??
-      club['Club Success Plan'] ??
-      club['CSP Submitted'] ??
-      club['Club Success Plan Submitted']
-
-    // Historical data compatibility: if field doesn't exist, assume submitted
-    if (cspValue !== undefined && cspValue !== null) {
-      const cspString = String(cspValue).toLowerCase().trim()
-      if (
-        cspString === 'no' ||
-        cspString === 'false' ||
-        cspString === '0' ||
-        cspString === 'not submitted' ||
-        cspString === 'n'
-      ) {
-        return false
-      }
+    // Check CSP status first (absent field = submitted, historical data)
+    if (!getCSPStatusFromRecord(club)) {
+      return false
     }
 
-    // Check Club Distinguished Status field
+    // Check Club Distinguished Status field. Live dashboard CSVs carry
+    // single-letter codes (D = Distinguished, S = Select, P = President's,
+    // M = Smedley); historical data may use the word forms. (#1120)
     const statusField = club['Club Distinguished Status']
     if (statusField !== null && statusField !== undefined) {
       const status = String(statusField).toLowerCase().trim()
+      if (isDistinguishedStatusCode(status)) {
+        return true
+      }
       if (
         status !== '' &&
         status !== 'none' &&

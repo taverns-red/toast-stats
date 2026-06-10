@@ -20,6 +20,7 @@ import * as os from 'node:os'
 import { AnalyticsComputeService } from '../services/AnalyticsComputeService.js'
 import {
   ANALYTICS_SCHEMA_VERSION,
+  ClubHealthAnalyticsModule,
   type DistrictStatistics,
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
@@ -2432,6 +2433,153 @@ describe('Time-series generation integration (Requirements 4.1, 9.1, 9.2, 9.4)',
     expect(typeof dataPoint?.clubCounts.thriving).toBe('number')
     expect(typeof dataPoint?.clubCounts.vulnerable).toBe('number')
     expect(typeof dataPoint?.clubCounts.interventionRequired).toBe('number')
+  })
+
+  it('classifies club health per ClubHealthAnalyticsModule and counts letter-code distinguished status (#1120)', async () => {
+    // Verdict-layer test (through the real compute() → conversion → builder
+    // path) for the two C3 audit defects:
+    // 1. club health used `dcpGoals > 0` instead of the §5.3 monthly
+    //    checkpoint + CSP (June requires 5 goals)
+    // 2. the conversion mapped the operational clubStatus into
+    //    'Club Distinguished Status', so live letter codes were lost
+    const date = '2026-06-15' // June → DCP checkpoint 5
+    const districtId = '61'
+
+    const makeClub = (
+      overrides: Partial<DistrictStatistics['clubs'][number]> & {
+        clubId: string
+        clubName: string
+      }
+    ): DistrictStatistics['clubs'][number] => ({
+      divisionId: 'A',
+      areaId: 'A1',
+      divisionName: 'Division A',
+      areaName: 'Area A1',
+      membershipCount: 25,
+      paymentsCount: 0,
+      dcpGoals: 0,
+      status: 'Active',
+      octoberRenewals: 0,
+      aprilRenewals: 0,
+      newMembers: 0,
+      membershipBase: 20,
+      clubStatus: 'Active',
+      ...overrides,
+    })
+
+    const clubs = [
+      // thriving + distinguished (heuristic and letter code agree)
+      makeClub({
+        clubId: '1001',
+        clubName: 'Thriving Select',
+        dcpGoals: 7,
+        cspSubmitted: true,
+        distinguishedStatus: 'S',
+      }),
+      // 3 goals in June → vulnerable (legacy dcpGoals>0 said thriving)
+      makeClub({
+        clubId: '1002',
+        clubName: 'June Three Goals',
+        dcpGoals: 3,
+        cspSubmitted: true,
+      }),
+      // distinguished ONLY via the live letter code — fails the heuristic
+      makeClub({
+        clubId: '1003',
+        clubName: 'Code Only Distinguished',
+        membershipCount: 15,
+        membershipBase: 15,
+        dcpGoals: 2,
+        cspSubmitted: true,
+        distinguishedStatus: 'D',
+      }),
+      // intervention required: 8 members, base 10
+      makeClub({
+        clubId: '1004',
+        clubName: 'Critical Club',
+        membershipCount: 8,
+        membershipBase: 10,
+        dcpGoals: 2,
+        cspSubmitted: true,
+        clubStatus: 'Low',
+      }),
+      // all metrics met but CSP not submitted → vulnerable, not distinguished
+      makeClub({
+        clubId: '1005',
+        clubName: 'No CSP Club',
+        dcpGoals: 9,
+        cspSubmitted: false,
+      }),
+    ]
+
+    const stats: DistrictStatistics = {
+      districtId,
+      snapshotDate: date,
+      clubs,
+      divisions: [],
+      areas: [],
+      totals: {
+        totalClubs: clubs.length,
+        totalMembership: 98,
+        totalPayments: 0,
+        distinguishedClubs: 0,
+        selectDistinguishedClubs: 0,
+        presidentDistinguishedClubs: 0,
+      },
+      divisionPerformance: [],
+      clubPerformance: [],
+      districtPerformance: [],
+    }
+
+    await writeDistrictSnapshot(testCache.path, date, districtId, stats)
+    const result = await analyticsComputeService.computeDistrictAnalytics(
+      date,
+      districtId
+    )
+    expect(result.timeSeriesWritten).toBe(true)
+
+    const indexPath = path.join(
+      testCache.path,
+      'time-series',
+      `district_${districtId}`,
+      '2025-2026.json'
+    )
+    const indexFile = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as {
+      dataPoints: Array<{
+        distinguishedTotal: number
+        clubCounts: {
+          total: number
+          thriving: number
+          vulnerable: number
+          interventionRequired: number
+        }
+      }>
+    }
+    const dataPoint = indexFile.dataPoints[0]
+
+    // §5.3 June classification: 1001 thriving; 1002 (checkpoint), 1003
+    // (membership), 1005 (CSP) vulnerable; 1004 intervention
+    expect(dataPoint?.clubCounts).toEqual({
+      total: 5,
+      thriving: 1,
+      vulnerable: 3,
+      interventionRequired: 1,
+    })
+
+    // 1001 (code 'S' + heuristic) and 1003 (code 'D' only); 1005 blocked by CSP
+    expect(dataPoint?.distinguishedTotal).toBe(2)
+
+    // Parity: the time-series counts must equal the dashboard's
+    // ClubHealthAnalyticsModule classification for the same snapshot
+    const module = new ClubHealthAnalyticsModule()
+    const healthData = module.generateClubHealthData([stats])
+    expect(dataPoint?.clubCounts.thriving).toBe(healthData.thrivingClubs.length)
+    expect(dataPoint?.clubCounts.vulnerable).toBe(
+      healthData.vulnerableClubs.length
+    )
+    expect(dataPoint?.clubCounts.interventionRequired).toBe(
+      healthData.interventionRequiredClubs.length
+    )
   })
 
   it('should use same snapshot data as other analytics (Requirement 9.2)', async () => {

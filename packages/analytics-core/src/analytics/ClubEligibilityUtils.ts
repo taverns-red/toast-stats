@@ -12,7 +12,132 @@
  */
 
 import type { ClubStatistics } from '../interfaces.js'
-import type { DistinguishedLevel } from '../types.js'
+import type { ClubHealthStatus, DistinguishedLevel } from '../types.js'
+import { getDCPCheckpoint } from './AnalyticsUtils.js'
+
+/**
+ * Scalar inputs for club-health classification.
+ *
+ * Value-based (not tied to ClubStatistics) so both transformed club data
+ * and raw scraped CSV records can be classified by the same rule.
+ */
+export interface ClubHealthClassificationInput {
+  /** Current active membership count */
+  membership: number
+  /** Net membership growth since July (membership - base) */
+  netGrowth: number
+  /** DCP goals achieved to date */
+  dcpGoals: number
+  /** Normalized CSP submission status (pre-2025 data → true) */
+  cspSubmitted: boolean
+}
+
+/**
+ * Classification verdict with the per-requirement breakdown, so callers
+ * can build risk-factor messages without re-deriving the predicates.
+ */
+export interface ClubHealthClassification {
+  status: ClubHealthStatus
+  requiredDcpCheckpoint: number
+  membershipRequirementMet: boolean
+  dcpCheckpointMet: boolean
+  cspRequirementMet: boolean
+}
+
+/**
+ * Classify a club's health per the §5 monthly-checkpoint system.
+ *
+ * Single source of truth (#1120) — ClubHealthAnalyticsModule.assessClubHealth
+ * and TimeSeriesDataPointBuilder.calculateClubHealthCounts must both
+ * delegate here so dashboard and time-series counts cannot drift.
+ *
+ * @param input - Scalar club metrics (see ClubHealthClassificationInput)
+ * @param month - Calendar month (1-12) of the snapshot date
+ * @returns Classification with per-requirement breakdown
+ */
+export function classifyClubHealth(
+  input: ClubHealthClassificationInput,
+  month: number
+): ClubHealthClassification {
+  const { membership, netGrowth, dcpGoals, cspSubmitted } = input
+  const requiredDcpCheckpoint = getDCPCheckpoint(month)
+
+  // Membership requirement: >= 20 members OR net growth >= 3
+  const membershipRequirementMet = membership >= 20 || netGrowth >= 3
+  // DCP checkpoint requirement varies by month (§5.3)
+  const dcpCheckpointMet = dcpGoals >= requiredDcpCheckpoint
+  const cspRequirementMet = cspSubmitted
+
+  // Intervention override: membership < 12 AND net growth < 3
+  let status: ClubHealthStatus
+  if (membership < 12 && netGrowth < 3) {
+    status = 'intervention-required'
+  } else if (
+    membershipRequirementMet &&
+    dcpCheckpointMet &&
+    cspRequirementMet
+  ) {
+    status = 'thriving'
+  } else {
+    status = 'vulnerable'
+  }
+
+  return {
+    status,
+    requiredDcpCheckpoint,
+    membershipRequirementMet,
+    dcpCheckpointMet,
+    cspRequirementMet,
+  }
+}
+
+/**
+ * Distinguished-status letter codes as they appear in live dashboard
+ * CSVs' 'Club Distinguished Status' column:
+ * D = Distinguished, S = Select, P = President's, M = Smedley.
+ */
+export const DISTINGUISHED_STATUS_CODES = ['D', 'S', 'P', 'M'] as const
+
+/**
+ * Check whether a raw 'Club Distinguished Status' value is a live
+ * single-letter distinguished code (case-insensitive).
+ *
+ * @param value - Raw status value, already trimmed
+ * @returns True for 'D' | 'S' | 'P' | 'M' (any case)
+ */
+export function isDistinguishedStatusCode(value: string): boolean {
+  return (DISTINGUISHED_STATUS_CODES as readonly string[]).includes(
+    value.toUpperCase()
+  )
+}
+
+/**
+ * Parse CSP (Club Success Plan) submission status from a raw scraped
+ * record (string-form twin of getCSPStatus, which reads the normalized
+ * boolean on ClubStatistics).
+ *
+ * Historical compatibility: when the field is absent (pre-2025-2026
+ * CSVs), CSP is treated as submitted — it was not a requirement then.
+ *
+ * @param record - Raw club record with dynamic CSV columns
+ * @returns True unless the field is present and explicitly negative
+ */
+export function getCSPStatusFromRecord(
+  record: Record<string, string | number | null | undefined>
+): boolean {
+  const cspValue =
+    record['CSP'] ??
+    record['Club Success Plan'] ??
+    record['CSP Submitted'] ??
+    record['Club Success Plan Submitted']
+
+  if (cspValue === undefined || cspValue === null) {
+    return true
+  }
+
+  const cspString = String(cspValue).toLowerCase().trim()
+  return !['no', 'false', '0', 'not submitted', 'n'].includes(cspString)
+}
 
 /**
  * Calculate net growth for a club.
