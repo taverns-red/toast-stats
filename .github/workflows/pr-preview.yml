@@ -180,3 +180,14 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/touch-targets.smoke.ts
+
+      # Mobile loading/error→loaded CLS guard (#922). The Lighthouse CLS gate
+      # runs the desktop preset, where the landing header actions lay out
+      # inline — it is blind to the mobile-only stack that pushed the KPI
+      # strip down ~148px on loading→loaded at 390px. Bounding-box equality
+      # across states (Lesson 134), both engines, against the real preview.
+      - name: Cross-engine mobile CLS guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/landing-mobile-cls.smoke.ts
