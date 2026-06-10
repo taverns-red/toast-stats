@@ -181,6 +181,13 @@ export interface ClubStatisticsFile {
   clubStatus?: string
 
   /**
+   * Raw 'Club Distinguished Status' value from the dashboard CSV (#1120).
+   * Live data uses letter codes ('D' | 'S' | 'P' | 'M'); historical data
+   * may use word forms. Absent when the club has no status yet.
+   */
+  distinguishedStatus?: string
+
+  /**
    * CSP (Club Success Plan) submission status
    * Present from 2025-2026 program year onward; undefined for earlier years
    */

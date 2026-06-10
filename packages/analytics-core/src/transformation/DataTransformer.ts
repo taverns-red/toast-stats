@@ -326,6 +326,20 @@ export class DataTransformer implements IDataTransformer {
         club.clubStatus = clubStatus
       }
 
+      // Extract the raw distinguished status (#1120). Live CSVs carry
+      // letter codes ('D','S','P','M') that extractClubStatus() discards;
+      // keep the verbatim value so downstream consumers (time-series
+      // distinguishedTotal) can count it.
+      const distinguishedStatus = this.extractString(
+        record,
+        'Club Distinguished Status',
+        'Distinguished Status',
+        'Distinguished'
+      )
+      if (distinguishedStatus) {
+        club.distinguishedStatus = distinguishedStatus
+      }
+
       // Extract CSP (Club Success Plan) submission status
       // Present from 2025-2026 program year onward; undefined for earlier CSVs
       const cspValue = this.extractString(record, 'CSP', 'Club Success Plan')

@@ -346,8 +346,11 @@ export class AnalyticsComputeService {
       ClubID: club.clubId,
       'Club Name': club.clubName,
 
-      // Status fields - map clubStatus to distinguished status if available
-      'Club Distinguished Status': club.clubStatus ?? '',
+      // Status fields. clubStatus is the OPERATIONAL status (Active,
+      // Suspended, …) — mapping it into 'Club Distinguished Status' was
+      // the #1120 corruption; pass the true distinguished value through.
+      'Club Status': club.clubStatus ?? '',
+      'Club Distinguished Status': club.distinguishedStatus ?? '',
 
       // CSP field - normalized via getCSPStatus (pre-2025 defaults to true)
       CSP: getCSPStatus(club) ? 'Yes' : 'No',

@@ -316,10 +316,20 @@ export class TimeSeriesDataPointBuilder {
       return false
     }
 
-    // Check Club Distinguished Status field
+    // Check Club Distinguished Status field. Live dashboard CSVs carry
+    // single-letter codes (D = Distinguished, S = Select, P = President's,
+    // M = Smedley); historical data may use the word forms. (#1120)
     const statusField = club['Club Distinguished Status']
     if (statusField !== null && statusField !== undefined) {
       const status = String(statusField).toLowerCase().trim()
+      if (
+        status === 'd' ||
+        status === 's' ||
+        status === 'p' ||
+        status === 'm'
+      ) {
+        return true
+      }
       if (
         status !== '' &&
         status !== 'none' &&
