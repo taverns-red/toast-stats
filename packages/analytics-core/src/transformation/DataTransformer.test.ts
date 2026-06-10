@@ -1676,4 +1676,126 @@ describe('DataTransformer', () => {
       )
     })
   })
+
+  /**
+   * #1118 (epic #1095) parity pin: dcpGoalsAchieved encodes the official
+   * DCP rules verified against TI's own Goals Met (audit 2026-06-09).
+   * This fixture must produce the identical array before and after the
+   * migration onto the shared goal-definition module.
+   */
+  describe('dcpGoalsAchieved parity (#1118)', () => {
+    const GOAL_HEADER = [
+      'Club Number',
+      'Club Name',
+      'Division',
+      'Area',
+      'Active Members',
+      'Goals Met',
+      'Club Status',
+      'Mem. Base',
+      'Level 1s',
+      'Level 2s',
+      'Add. Level 2s',
+      'Level 3s',
+      'Level 4s, Path Completions, or DTM Awards',
+      'Add. Level 4s, Path Completions, or DTM award',
+      'New Members',
+      'Add. New Members',
+      'Off. Trained Round 1',
+      'Off. Trained Round 2',
+      'Mem. dues on time Oct',
+      'Mem. dues on time Apr',
+      'Off. List On Time',
+    ]
+
+    async function goalsFor(goalValues: string[]): Promise<boolean[]> {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          GOAL_HEADER,
+          [
+            '1234',
+            'Parity Club',
+            'A',
+            '1',
+            '20',
+            '0',
+            'Active',
+            '20',
+            ...goalValues,
+          ],
+        ],
+        divisionPerformance: [],
+        districtPerformance: [],
+      }
+      const result = await transformer.transformRawCSV(
+        '2026-06-08',
+        'D61',
+        csvData
+      )
+      const achieved = result.clubs[0]?.dcpGoalsAchieved
+      expect(achieved).toBeDefined()
+      return achieved as boolean[]
+    }
+
+    it('marks every goal achieved at exactly the official thresholds', async () => {
+      // 4 L1s, 2 L2s, 2 add. L2s, 2 L3s, 1 L4/PC/DTM, 1 add., 4 new, 4 add.,
+      // 4+4 officers trained, Oct dues + officer list (Apr not needed: OR)
+      const achieved = await goalsFor([
+        '4',
+        '2',
+        '2',
+        '2',
+        '1',
+        '1',
+        '4',
+        '4',
+        '4',
+        '4',
+        '1',
+        '0',
+        '1',
+      ])
+      expect(achieved).toEqual(Array(10).fill(true))
+    })
+
+    it('marks every goal unachieved one below the official thresholds', async () => {
+      // One short on each counted goal; goal 10 has dues but no officer list
+      const achieved = await goalsFor([
+        '3',
+        '1',
+        '1',
+        '1',
+        '0',
+        '0',
+        '3',
+        '3',
+        '4',
+        '3',
+        '1',
+        '1',
+        '0',
+      ])
+      expect(achieved).toEqual(Array(10).fill(false))
+    })
+
+    it('passes goal 10 with Apr-only dues + officer list', async () => {
+      const achieved = await goalsFor([
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '1',
+        '1',
+      ])
+      expect(achieved?.[9]).toBe(true)
+      expect(achieved?.slice(0, 9)).toEqual(Array(9).fill(false))
+    })
+  })
 })

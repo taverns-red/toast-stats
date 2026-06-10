@@ -22,6 +22,10 @@ import type {
   SnapshotMetadata,
 } from '../interfaces.js'
 import type { ScrapedRecord } from '@toastmasters/shared-contracts'
+import {
+  computeDcpGoalsAchieved,
+  hasDcpGoalColumns,
+} from '../analytics/dcpGoalDefinitions.js'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
 
 /**
@@ -278,39 +282,9 @@ export class DataTransformer implements IDataTransformer {
           'Total'
         ),
         dcpGoals: this.extractNumber(record, 'Goals Met', 'DCP Goals', 'Goals'),
-        dcpGoalsAchieved:
-          record['Level 1s'] != null && record['Level 1s'] !== ''
-            ? [
-                this.extractNumber(record, 'Level 1s') >= 4,
-                this.extractNumber(record, 'Level 2s') >= 2,
-                this.extractNumber(record, 'Add. Level 2s', 'Add Level 2s') >=
-                  2,
-                this.extractNumber(record, 'Level 3s') >= 2,
-                this.extractNumber(
-                  record,
-                  'Level 4s, Path Completions, or DTM Awards',
-                  'Level 4s',
-                  'Level 4'
-                ) >= 1,
-                this.extractNumber(
-                  record,
-                  'Add. Level 4s, Path Completions, or DTM award',
-                  'Add. Level 4s',
-                  'Add Level 4'
-                ) >= 1,
-                this.extractNumber(record, 'New Members') >= 4,
-                this.extractNumber(
-                  record,
-                  'Add. New Members',
-                  'Add New Members'
-                ) >= 4,
-                this.extractNumber(record, 'Off. Trained Round 1') >= 4 &&
-                  this.extractNumber(record, 'Off. Trained Round 2') >= 4,
-                (this.extractNumber(record, 'Mem. dues on time Oct') >= 1 ||
-                  this.extractNumber(record, 'Mem. dues on time Apr') >= 1) &&
-                  this.extractNumber(record, 'Off. List On Time') >= 1,
-              ]
-            : undefined,
+        dcpGoalsAchieved: hasDcpGoalColumns(record)
+          ? computeDcpGoalsAchieved(record)
+          : undefined,
         status: this.extractClubStatus(record),
         // Payment breakdown fields - sourced from districtPerformance when available
         octoberRenewals: this.extractNumber(
