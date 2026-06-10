@@ -142,3 +142,4 @@
 - **155** [ci, automation, data-pipeline, monitoring, gcs] — A recency-based freshness monitor is blind to a held-promotion "content-stale" state; freshness has two orthogonal axes (#1073, #1072)
 - **156** [data-pipeline, analytics, monorepo, transformation, verification] — A re-keyed conversion field must match the target key's DOMAIN, not just its shape (#1120, #1095)
 - **156** [analytics, dcp, refactor, monorepo, verification] — An audit's defect list for a forked implementation is a lower bound; consolidation must re-derive the full semantic diff (#1118, #1095)
+- **157** [zod, schemas, data-pipeline, monorepo, verification, contracts] — In a zod union, a non-strict all-optional object schema matches (and silently EMPTIES) any object; strictness is what keeps the union falsifiable (#1123, #1096)

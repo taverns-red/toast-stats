@@ -140,6 +140,32 @@ describe('ScrapedRecordSchema validation', () => {
       }
     })
 
+    it('should accept ScrapedRecord with FAC enrichment values (booleans, coordinates, address) (#1123)', () => {
+      const record = {
+        'Club Number': '00003045',
+        'Club Name': 'Limestone City Club',
+        allowsVirtualAttendance: true,
+        isProspective: false,
+        coordinates: { lat: 44.23, lng: -76.48 },
+        address: {
+          street: '120 Clergy St E',
+          city: 'Kingston',
+          region: 'ON',
+          postalCode: 'K7K 3S3',
+          country: 'Canada',
+        },
+      }
+
+      const result = ScrapedRecordSchema.safeParse(record)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        // The union must preserve the object values verbatim (no stripping).
+        expect(result.data['coordinates']).toEqual(record.coordinates)
+        expect(result.data['address']).toEqual(record.address)
+      }
+    })
+
     it('should accept empty ScrapedRecord', () => {
       const record = {}
 
@@ -159,7 +185,11 @@ describe('ScrapedRecordSchema validation', () => {
      * WHEN a raw data field contains invalid data, THE validation SHALL
      * fail with a descriptive error message.
      */
-    it('should reject ScrapedRecord with object value', () => {
+    it('should reject ScrapedRecord with an arbitrary (non-FAC-shaped) object value', () => {
+      // Booleans and the two FAC enrichment shapes are valid since #1123
+      // (ADR-010); any OTHER object shape must still fail. The FAC schemas
+      // are strict precisely so this stays false — an all-optional
+      // non-strict address schema would swallow any object.
       const record = {
         'Club Name': 'Test Club',
         'Nested Object': { key: 'value' },
@@ -179,21 +209,6 @@ describe('ScrapedRecordSchema validation', () => {
       const record = {
         'Club Name': 'Test Club',
         'Array Field': ['item1', 'item2'],
-      }
-
-      const result = ScrapedRecordSchema.safeParse(record)
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.message).toBeDefined()
-        expect(result.error.issues.length).toBeGreaterThan(0)
-      }
-    })
-
-    it('should reject ScrapedRecord with boolean value', () => {
-      const record = {
-        'Club Name': 'Test Club',
-        'Is Active': true,
       }
 
       const result = ScrapedRecordSchema.safeParse(record)

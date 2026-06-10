@@ -59,7 +59,7 @@ describe('MCP server (end-to-end over in-memory transport)', () => {
     }
     expect(env.available).toBe(true)
     expect(env.sourceUrl).toBe(`${BASE}/v1/latest.json`)
-    expect(env.data.latestSnapshotDate).toBe('2026-05-31')
+    expect(env.data.latestSnapshotDate).toBe('2026-06-08')
     await client.close()
   })
 

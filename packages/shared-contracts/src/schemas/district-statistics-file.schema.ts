@@ -14,17 +14,58 @@
 import { z } from 'zod'
 
 /**
+ * Find-A-Club coordinates enrichment shape (#429/#431). Strict: a record
+ * value only counts as coordinates when it is EXACTLY this shape, so
+ * arbitrary objects still fail ScrapedRecordSchema validation.
+ */
+export const FacCoordinatesSchema = z.strictObject({
+  lat: z.number(),
+  lng: z.number(),
+})
+
+/**
+ * Find-A-Club address enrichment shape (#429/#431). Strict for the same
+ * reason as {@link FacCoordinatesSchema} — with every key optional, a
+ * non-strict object schema would accept (and silently empty) ANY object.
+ */
+export const FacAddressSchema = z.strictObject({
+  street: z.string().optional(),
+  city: z.string().optional(),
+  region: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+})
+
+/**
  * Zod schema for a single scraped record from CSV data.
  *
- * Validates that each record is an object with string keys and values
- * that are either strings, numbers, or null. This matches the ScrapedRecord
- * type definition in scraped-record.ts.
+ * Validates that each record is an object with string keys and values that
+ * are strings, numbers, null, booleans, or the two Find-A-Club enrichment
+ * object shapes. This matches the ScrapedRecord type in scraped-record.ts.
+ *
+ * Contract decision (#1123, ADR-010): since #429/#431 the collector's
+ * FindAClubMerger writes `coordinates`/`address` objects and
+ * `allowsVirtualAttendance`/`isProspective` booleans onto matched
+ * `clubPerformance` rows, and every published snapshot ≥ 2026-05-15
+ * carries them. The schema describes what the collector actually writes —
+ * narrowing it would permanently invalidate weeks of immutable published
+ * snapshots (this is what took 2 of 8 MCP tools down, audit §9a).
+ * `coordinates` is ordered before the all-optional `address` in the union
+ * as defense-in-depth: with strictObject the address branch rejects lat/lng
+ * keys anyway, but the ordering removes any reliance on that.
  *
  * @see Requirements 2.5, 5.3
  */
 export const ScrapedRecordSchema = z.record(
   z.string(),
-  z.union([z.string(), z.number(), z.null()])
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    FacCoordinatesSchema,
+    FacAddressSchema,
+  ])
 )
 
 /**
@@ -91,24 +132,17 @@ export const ClubStatisticsFileSchema = z.object({
    * All optional — populated by the daily collector from the public
    * TI Find-A-Club Search endpoint when available.
    */
-  coordinates: z
-    .object({
-      lat: z.number(),
-      lng: z.number(),
-    })
-    .optional(),
-  address: z
-    .object({
-      street: z.string().optional(),
-      city: z.string().optional(),
-      region: z.string().optional(),
-      postalCode: z.string().optional(),
-      country: z.string().optional(),
-    })
-    .optional(),
+  coordinates: FacCoordinatesSchema.optional(),
+  address: FacAddressSchema.optional(),
   email: z.string().optional(),
+  phone: z.string().optional(),
+  website: z.string().optional(),
   facebookLink: z.string().optional(),
+  twitterLink: z.string().optional(),
+  meetingDay: z.string().optional(),
+  meetingTime: z.string().optional(),
   allowsVirtualAttendance: z.boolean().optional(),
+  isProspective: z.boolean().optional(),
   meetingSchedule: z
     .array(
       z.object({

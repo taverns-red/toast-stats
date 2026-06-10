@@ -55,7 +55,7 @@ describe('discovery tools', () => {
     expect(env.sourceUrl).toBe(`${BASE}/v1/latest.json`)
     expect(
       (env.data as { latestSnapshotDate: string }).latestSnapshotDate
-    ).toBe('2026-05-31')
+    ).toBe('2026-06-08')
   })
 
   it('list-dates returns the date list', async () => {
@@ -99,18 +99,18 @@ describe('snapshot + rankings tools', () => {
   it('get-district-snapshot reads the dated snapshot when a date is given', async () => {
     const env = await call('get-district-snapshot', {
       districtId: '61',
-      date: '2026-05-31',
+      date: '2026-06-08',
     })
     expect(env.available).toBe(true)
-    expect(env.sourceUrl).toBe(`${BASE}/snapshots/2026-05-31/district_61.json`)
-    expect(env.date).toBe('2026-05-31')
+    expect(env.sourceUrl).toBe(`${BASE}/snapshots/2026-06-08/district_61.json`)
+    expect(env.date).toBe('2026-06-08')
   })
 
   it('get-district-snapshot resolves the latest date when date is omitted', async () => {
     const env = await call('get-district-snapshot', { districtId: '61' })
     expect(env.available).toBe(true)
-    // resolved to latest (2026-05-31) under the hood
-    expect(env.sourceUrl).toBe(`${BASE}/snapshots/2026-05-31/district_61.json`)
+    // resolved to latest (2026-06-08) under the hood
+    expect(env.sourceUrl).toBe(`${BASE}/snapshots/2026-06-08/district_61.json`)
   })
 
   it('query-rankings returns current rankings when no date is given', async () => {
@@ -120,10 +120,10 @@ describe('snapshot + rankings tools', () => {
   })
 
   it('query-rankings returns the dated rankings when a date is given', async () => {
-    const env = await call('query-rankings', { date: '2026-05-31' })
+    const env = await call('query-rankings', { date: '2026-06-08' })
     expect(env.available).toBe(true)
     expect(env.sourceUrl).toBe(
-      `${BASE}/snapshots/2026-05-31/all-districts-rankings.json`
+      `${BASE}/snapshots/2026-06-08/all-districts-rankings.json`
     )
   })
 })
@@ -132,14 +132,14 @@ describe('get-club-health — raw fields, no derivation', () => {
   it('returns raw health-signal fields per club and never a derived status', async () => {
     const env = await call('get-club-health', {
       districtId: '61',
-      date: '2026-05-31',
+      date: '2026-06-08',
     })
     expect(env.available).toBe(true)
     const data = env.data as {
       note: string
       clubs: Record<string, unknown>[]
     }
-    expect(data.clubs.length).toBe(2)
+    expect(data.clubs.length).toBe(4)
     const club = data.clubs[0]!
     expect(club).toHaveProperty('membershipCount')
     expect(club).toHaveProperty('membershipBase')
@@ -156,7 +156,7 @@ describe('get-club-health — raw fields, no derivation', () => {
   it('filters clubs to a single division when divisionId is given', async () => {
     const env = await call('get-club-health', {
       districtId: '61',
-      date: '2026-05-31',
+      date: '2026-06-08',
       divisionId: 'B',
     })
     const data = env.data as { clubs: { divisionId: string }[] }

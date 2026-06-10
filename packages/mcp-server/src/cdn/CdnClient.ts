@@ -121,7 +121,11 @@ export class CdnClient {
   ): Promise<CdnReadResult<ResolvedClub>> {
     const index = await this.getClubIndex()
     if (!index.available) return index
-    const entry = index.data.clubs[clubId]
+    // Object.hasOwn: a bare lookup resolves Object.prototype members
+    // ('constructor', '__proto__', …) to phantom truthy hits (#1112).
+    const entry = Object.hasOwn(index.data.clubs, clubId)
+      ? index.data.clubs[clubId]
+      : undefined
     if (!entry) {
       return notAvailable(
         index.sourceUrl,

@@ -215,10 +215,22 @@ export interface ClubStatisticsFile {
   }
   /** Club contact email. */
   email?: string
+  /** Club contact phone number. */
+  phone?: string
+  /** Public club website URL. */
+  website?: string
   /** Public Facebook page URL. */
   facebookLink?: string
+  /** Public Twitter/X profile URL. */
+  twitterLink?: string
+  /** Recurring meeting day text, as published in Find-A-Club. */
+  meetingDay?: string
+  /** Recurring meeting time text, as published in Find-A-Club. */
+  meetingTime?: string
   /** Whether the club lists virtual attendance as supported. */
   allowsVirtualAttendance?: boolean
+  /** FAC's IsProspective flag — true for clubs still in ATO state. */
+  isProspective?: boolean
   /** Recurring meeting schedule. */
   meetingSchedule?: Array<{
     day: string

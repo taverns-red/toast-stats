@@ -3,42 +3,42 @@
   "programYear": "2025-2026",
   "startDate": "2025-07-01",
   "endDate": "2026-06-30",
-  "lastUpdated": "2026-05-31T10:00:00.000Z",
+  "lastUpdated": "2026-06-09T13:39:44.994Z",
   "dataPoints": [
     {
-      "date": "2025-07-31",
-      "snapshotId": "2025-07-31",
-      "membership": 2800,
-      "payments": 2750,
-      "dcpGoals": 120,
-      "distinguishedTotal": 8,
+      "date": "2026-06-07",
+      "snapshotId": "2026-06-07",
+      "membership": 2777,
+      "payments": 5682,
+      "dcpGoals": 815,
+      "distinguishedTotal": 57,
       "clubCounts": {
-        "total": 160,
-        "thriving": 90,
-        "vulnerable": 50,
-        "interventionRequired": 20
+        "total": 162,
+        "thriving": 78,
+        "vulnerable": 38,
+        "interventionRequired": 46
       }
     },
     {
-      "date": "2026-05-31",
-      "snapshotId": "2026-05-31",
-      "membership": 3050,
-      "payments": 2990,
-      "dcpGoals": 410,
-      "distinguishedTotal": 22,
+      "date": "2026-06-08",
+      "snapshotId": "2026-06-08",
+      "membership": 2779,
+      "payments": 5684,
+      "dcpGoals": 817,
+      "distinguishedTotal": 57,
       "clubCounts": {
         "total": 162,
-        "thriving": 110,
+        "thriving": 78,
         "vulnerable": 38,
-        "interventionRequired": 14
+        "interventionRequired": 46
       }
     }
   ],
   "summary": {
-    "totalDataPoints": 2,
-    "membershipStart": 2800,
-    "membershipEnd": 3050,
-    "membershipPeak": 3050,
-    "membershipLow": 2800
+    "totalDataPoints": 67,
+    "membershipStart": 2794,
+    "membershipEnd": 2779,
+    "membershipPeak": 2928,
+    "membershipLow": 2247
   }
 }
