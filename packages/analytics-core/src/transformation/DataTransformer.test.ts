@@ -140,21 +140,26 @@ describe('DataTransformer', () => {
       expect(result.totals.totalPayments).toBe(92) // 30 + 22 + 40
     })
 
-    it('should extract division statistics from division performance data', async () => {
+    it('should derive division statistics from merged club data', async () => {
+      // #1124: real divisionperformance CSVs are per-club rows with no
+      // aggregate columns, so divisions are derived from the merged
+      // clubs (membership from clubPerformance, payments from
+      // districtPerformance). Real-header coverage lives in
+      // DataTransformer.realHeaders.test.ts.
       const csvData: RawCSVData = {
-        clubPerformance: [],
-        divisionPerformance: [
-          [
-            'Division',
-            'Division Name',
-            'Club Count',
-            'Membership',
-            'Total to Date',
-          ],
-          ['A', 'Division Alpha', '5', '120', '150'],
-          ['B', 'Division Beta', '4', '95', '110'],
+        clubPerformance: [
+          ['Club Number', 'Club Name', 'Division', 'Area', 'Active Members'],
+          ['1234', 'Club A', 'A', '1', '25'],
+          ['5678', 'Club B', 'A', '2', '18'],
+          ['9012', 'Club C', 'B', '1', '32'],
         ],
-        districtPerformance: [],
+        divisionPerformance: [],
+        districtPerformance: [
+          ['Club', 'Total to Date'],
+          ['1234', '30'],
+          ['5678', '22'],
+          ['9012', '40'],
+        ],
       }
 
       const result = await transformer.transformRawCSV(
@@ -166,17 +171,17 @@ describe('DataTransformer', () => {
       expect(result.divisions).toHaveLength(2)
       expect(result.divisions[0]).toEqual({
         divisionId: 'A',
-        divisionName: 'Division Alpha',
-        clubCount: 5,
-        membershipTotal: 120,
-        paymentsTotal: 150,
+        divisionName: 'Division A',
+        clubCount: 2,
+        membershipTotal: 43,
+        paymentsTotal: 52,
       })
       expect(result.divisions[1]).toEqual({
         divisionId: 'B',
-        divisionName: 'Division Beta',
-        clubCount: 4,
-        membershipTotal: 95,
-        paymentsTotal: 110,
+        divisionName: 'Division B',
+        clubCount: 1,
+        membershipTotal: 32,
+        paymentsTotal: 40,
       })
     })
 
@@ -312,9 +317,12 @@ describe('DataTransformer', () => {
         csvData
       )
 
-      expect(result.totals.distinguishedClubs).toBe(3)
+      // #1124: per-tier counts are disjoint — distinguishedClubs is the
+      // D tier only, no longer a cumulative distinguished-or-better total.
+      expect(result.totals.distinguishedClubs).toBe(1)
       expect(result.totals.selectDistinguishedClubs).toBe(1)
       expect(result.totals.presidentDistinguishedClubs).toBe(1)
+      expect(result.totals.smedleyDistinguishedClubs).toBe(0)
     })
 
     it('should handle numeric values as strings', async () => {
