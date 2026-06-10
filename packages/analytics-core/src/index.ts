@@ -20,6 +20,18 @@ export type { Logger, DataTransformerConfig } from './transformation/index.js'
 // Snapshot diff engine ("What Changed", epic #797)
 export { diffSnapshots } from './analytics/diffSnapshots.js'
 
+// Shared DCP goal definitions — single source of truth (epic #1095, #1118)
+export {
+  DCP_GOAL_DEFINITIONS,
+  readDcpGoalColumn,
+  isDcpGoalAchieved,
+  computeDcpGoalsAchieved,
+} from './analytics/dcpGoalDefinitions.js'
+export type {
+  DcpGoalColumn,
+  DcpGoalDefinition,
+} from './analytics/dcpGoalDefinitions.js'
+
 // Analytics computation
 export {
   AnalyticsComputer,
