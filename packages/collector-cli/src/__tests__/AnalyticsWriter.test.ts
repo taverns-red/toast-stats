@@ -682,18 +682,11 @@ function createSamplePerformanceTargets(
   return {
     districtId,
     computedAt: new Date().toISOString(),
-    membershipTarget: 1600,
-    distinguishedTarget: 35,
-    clubGrowthTarget: 5,
+    paidClubsCount: 70,
     currentProgress: {
       membership: 1500,
       distinguished: 27,
       clubGrowth: 2,
-    },
-    projectedAchievement: {
-      membership: true,
-      distinguished: false,
-      clubGrowth: true,
     },
   }
 }
@@ -2173,13 +2166,9 @@ describe('AnalyticsWriter', () => {
         content
       ) as PreComputedAnalyticsFile<PerformanceTargetsData>
 
-      // Verify targets are included
-      expect(parsed.data.membershipTarget).toBeDefined()
-      expect(typeof parsed.data.membershipTarget).toBe('number')
-      expect(parsed.data.distinguishedTarget).toBeDefined()
-      expect(typeof parsed.data.distinguishedTarget).toBe('number')
-      expect(parsed.data.clubGrowthTarget).toBeDefined()
-      expect(typeof parsed.data.clubGrowthTarget).toBe('number')
+      // Verify paid clubs count is included
+      expect(parsed.data.paidClubsCount).toBeDefined()
+      expect(typeof parsed.data.paidClubsCount).toBe('number')
 
       // Verify current progress is included
       expect(parsed.data.currentProgress).toBeDefined()
@@ -2187,13 +2176,11 @@ describe('AnalyticsWriter', () => {
       expect(parsed.data.currentProgress.distinguished).toBeDefined()
       expect(parsed.data.currentProgress.clubGrowth).toBeDefined()
 
-      // Verify projected achievement is included
-      expect(parsed.data.projectedAchievement).toBeDefined()
-      expect(typeof parsed.data.projectedAchievement.membership).toBe('boolean')
-      expect(typeof parsed.data.projectedAchievement.distinguished).toBe(
-        'boolean'
-      )
-      expect(typeof parsed.data.projectedAchievement.clubGrowth).toBe('boolean')
+      // Legacy district targets were removed in #1127
+      expect(parsed.data).not.toHaveProperty('membershipTarget')
+      expect(parsed.data).not.toHaveProperty('distinguishedTarget')
+      expect(parsed.data).not.toHaveProperty('clubGrowthTarget')
+      expect(parsed.data).not.toHaveProperty('projectedAchievement')
     })
   })
 

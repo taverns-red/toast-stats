@@ -34,9 +34,9 @@ export async function fetchIndividualAnalytics(
 /**
  * Convert individual analytics response to aggregated format.
  *
- * Populates yearOverYear and performanceTargets from the CDN analytics
- * data, fixing the Overview tab "— —" and "N/A" placeholders that appeared
- * after the Express /analytics-summary route was deleted (#173).
+ * Populates yearOverYear from the CDN analytics data, fixing the Overview
+ * tab "— —" and "N/A" placeholders that appeared after the Express
+ * /analytics-summary route was deleted (#173).
  */
 export function convertToAggregatedFormat(
   analytics: DistrictAnalytics
@@ -98,19 +98,6 @@ export function convertToAggregatedFormat(
   // Populate yearOverYear from CDN analytics data (#173)
   if (analytics.yearOverYear) {
     response.yearOverYear = analytics.yearOverYear
-  }
-
-  // Populate performanceTargets from CDN analytics data (#173)
-  if (analytics.performanceTargets) {
-    const pt = analytics.performanceTargets
-    const targets: AggregatedAnalyticsResponse['performanceTargets'] = {}
-    if (pt.membershipPayments?.base != null) {
-      targets.membershipTarget = pt.membershipPayments.base
-    }
-    if (pt.distinguishedClubs?.base != null) {
-      targets.distinguishedTarget = pt.distinguishedClubs.base
-    }
-    response.performanceTargets = targets
   }
 
   return response

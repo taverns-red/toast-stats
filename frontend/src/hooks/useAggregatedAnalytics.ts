@@ -23,7 +23,6 @@ export type {
   PaymentsTrendPoint,
   TrendData,
   YearOverYearComparison,
-  PerformanceTargets,
   AggregatedAnalyticsResponse,
   UseAggregatedAnalyticsResult,
 } from './aggregatedAnalytics/types'

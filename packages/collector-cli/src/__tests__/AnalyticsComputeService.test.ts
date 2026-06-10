@@ -2156,18 +2156,11 @@ describe('AnalyticsComputeService', () => {
       const file = JSON.parse(content) as PreComputedAnalyticsFile<{
         districtId: string
         computedAt: string
-        membershipTarget: number
-        distinguishedTarget: number
-        clubGrowthTarget: number
+        paidClubsCount: number
         currentProgress: {
           membership: number
           distinguished: number
           clubGrowth: number
-        }
-        projectedAchievement: {
-          membership: boolean
-          distinguished: boolean
-          clubGrowth: boolean
         }
       }>
 
@@ -2175,11 +2168,14 @@ describe('AnalyticsComputeService', () => {
       expect(file.metadata.districtId).toBe(districtId)
       expect(file.data.districtId).toBe(districtId)
       expect(file.data.computedAt).toBeDefined()
-      expect(typeof file.data.membershipTarget).toBe('number')
-      expect(typeof file.data.distinguishedTarget).toBe('number')
-      expect(typeof file.data.clubGrowthTarget).toBe('number')
+      expect(typeof file.data.paidClubsCount).toBe('number')
       expect(file.data.currentProgress).toBeDefined()
-      expect(file.data.projectedAchievement).toBeDefined()
+      // Legacy district targets were removed in #1127 — the canonical
+      // recognition targets ship as paidClubsTargets / *Targets fields.
+      expect(file.data).not.toHaveProperty('membershipTarget')
+      expect(file.data).not.toHaveProperty('distinguishedTarget')
+      expect(file.data).not.toHaveProperty('clubGrowthTarget')
+      expect(file.data).not.toHaveProperty('projectedAchievement')
     })
 
     it('should generate valid club-trends-index.json with correct structure', async () => {
