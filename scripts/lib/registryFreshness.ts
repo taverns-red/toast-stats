@@ -128,6 +128,16 @@ export function evaluateRegistryFreshness(
   }
 }
 
+/**
+ * Parse a manual `--set YYYY-MM=YYYY-MM-DD` argument (outage months whose
+ * closing date cannot be derived from metadata and was established from TI
+ * behavior instead). Throws on malformed input. Typed as a stub here for the
+ * Red commit; implemented in the update-script change.
+ */
+export function parseManualEntryArg(_input: string): RegistryMonthEntry {
+  throw new Error('--set: not implemented')
+}
+
 export function buildRegistryStaleTitle(
   result: RegistryFreshnessResult
 ): string {

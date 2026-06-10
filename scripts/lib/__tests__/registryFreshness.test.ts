@@ -16,6 +16,7 @@ import {
   evaluateRegistryFreshness,
   buildRegistryStaleTitle,
   buildRegistryStaleBody,
+  parseManualEntryArg,
 } from '../registryFreshness.js'
 
 /** Shorthand for a raw-csv metadata entry. */
@@ -181,5 +182,31 @@ describe('alert builders', () => {
     const result = evaluateRegistryFreshness([], [])
     const body = buildRegistryStaleBody(result)
     expect(body).toMatch(/metadata|feed/i)
+  })
+})
+
+describe('parseManualEntryArg', () => {
+  it('parses a valid MONTH=DATE pair', () => {
+    expect(parseManualEntryArg('2026-02=2026-03-10')).toEqual({
+      dataMonth: '2026-02',
+      closingDate: '2026-03-10',
+    })
+  })
+
+  it.each([
+    '2026-02',
+    '2026-02=03-10',
+    '202602=2026-03-10',
+    '2026-13=2026-03-10',
+    '2026-02=2026-03-32',
+    '',
+  ])('rejects malformed input %j', input => {
+    expect(() => parseManualEntryArg(input)).toThrow(/--set/)
+  })
+
+  it('rejects a closing date that is not after the data month', () => {
+    // A closing date inside (or before) its own data month is nonsense —
+    // closing collections happen early in the FOLLOWING month.
+    expect(() => parseManualEntryArg('2026-02=2026-02-27')).toThrow(/after/)
   })
 })
