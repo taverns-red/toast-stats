@@ -1,0 +1,135 @@
+# CDN Schema Canary (#1125)
+#
+# Non-gating, propagation-axis complement of the publish-time snapshot
+# schema gate (Lesson 155: freshness has two orthogonal axes — recency
+# AND propagation). The publish gate certifies what the daily pipeline is
+# about to upload; this canary runs the real read-validation (the same
+# PerDistrictDataSchema.safeParse the mcp-server performs) against what
+# the published production CDN is ACTUALLY serving, and opens a
+# `cdn-schema-canary` issue when a validating consumer would get schema
+# not-available — the #1096 outage class.
+#
+# Self-clearing: a healthy run closes any open canary alert. Safe because
+# runs are serialized by the concurrency group.
+#
+# Decision logic is unit-tested in scripts/lib/__tests__/cdnSchemaCanary.test.ts;
+# this workflow is the scheduler + alerter around scripts/check-cdn-schema.ts.
+
+name: CDN Schema Canary
+
+on:
+  schedule:
+    # Daily pipeline runs at 08:00 UTC (backup 11:00), freshness monitor
+    # at 14:00. Check at 15:30 UTC so the day's promotion has landed.
+    - cron: '30 15 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'CDN base URL to check (default: production CDN)'
+        required: false
+        type: string
+      max_districts:
+        description: 'Cap on districts checked (default: all; skips are logged)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: cdn-schema-canary
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Validate published district snapshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The canary imports PerDistrictDataSchema from the workspace
+      # package, which resolves to its built dist/ (R16/R2 — the runner
+      # starts empty; nothing is implicitly built).
+      - name: Build shared contracts
+        run: npm run build:shared-contracts
+
+      - name: Validate published snapshots against shared contracts
+        id: canary
+        env:
+          CDN_BASE_URL: ${{ inputs.base_url }}
+          MAX_DISTRICTS: ${{ inputs.max_districts }}
+        run: npx tsx scripts/check-cdn-schema.ts
+
+      - name: Ensure cdn-schema-canary label exists
+        if: steps.canary.outputs.unhealthy == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create cdn-schema-canary \
+            --color B60205 \
+            --description "Published CDN snapshot fails shared-contracts read-validation" \
+            2>/dev/null || echo "Label already exists"
+
+      - name: Open or update alert issue
+        if: steps.canary.outputs.unhealthy == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Deduplicate: one open alert at a time. Comment on the existing
+          # issue rather than spamming a new one each daily check.
+          EXISTING=$(gh issue list --label cdn-schema-canary --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "${EXISTING}" ]; then
+            echo "Existing open alert #${EXISTING} — adding a comment."
+            gh issue comment "${EXISTING}" \
+              --body-file "${{ steps.canary.outputs.body_file }}"
+          else
+            echo "No open alert — creating one."
+            gh issue create \
+              --title "${{ steps.canary.outputs.title }}" \
+              --label cdn-schema-canary \
+              --body-file "${{ steps.canary.outputs.body_file }}"
+          fi
+
+      - name: Close resolved canary alerts
+        # Self-clear ONLY when this run checked the same signal the alert is
+        # about: the default (production) surface with no district cap. A
+        # healthy dispatch run against staging or a capped subset must not
+        # close a live prod alert (Lesson 155).
+        if: >-
+          steps.canary.outputs.unhealthy != 'true' &&
+          (inputs.base_url == null || inputs.base_url == '') &&
+          (inputs.max_districts == null || inputs.max_districts == '')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Self-clearing (Lesson 155): the positive event — a healthy run —
+          # closes the alert. Safe to close all open alerts because runs are
+          # serialized by the concurrency group.
+          MSG='✅ CDN schema canary healthy — published snapshots pass'
+          MSG="${MSG} read-validation again. Self-clearing (#1125)."
+          for N in $(gh issue list --label cdn-schema-canary --state open \
+            --json number --jq '.[].number'); do
+            echo "Closing resolved canary alert #${N}"
+            gh issue close "${N}" --comment "${MSG}"
+          done
+
+      - name: Fail the run when unhealthy
+        if: steps.canary.outputs.unhealthy == 'true'
+        run: |
+          MSG='Published CDN snapshots fail shared-contracts'
+          MSG="${MSG} read-validation — a cdn-schema-canary issue has been filed."
+          echo "::error::${MSG}"
+          exit 1

@@ -144,3 +144,4 @@
 - **156** [analytics, dcp, refactor, monorepo, verification] — An audit's defect list for a forked implementation is a lower bound; consolidation must re-derive the full semantic diff (#1118, #1095)
 - **157** [zod, schemas, data-pipeline, monorepo, verification, contracts] — In a zod union, a non-strict all-optional object schema matches (and silently EMPTIES) any object; strictness is what keeps the union falsifiable (#1123, #1096)
 - **157** [data-pipeline, analytics, transformation, fixtures, verification] — When sibling reports share one entity universe, derive every aggregate block from the single merged entity set (#1124, #1096)
+- **158** [ci, automation, monitoring, data-pipeline, verification] — A parameterized monitor's self-clear must be scoped to the signal it alarms on (#1125, #1096)
