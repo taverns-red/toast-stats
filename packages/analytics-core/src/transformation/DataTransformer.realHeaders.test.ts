@@ -196,6 +196,7 @@ describe('DataTransformer real headers (#1124)', () => {
           clubRow('1002', 'Select Distinguished'),
           clubRow('1003', "President's Distinguished"),
           clubRow('1004', 'Smedley Distinguished'),
+          clubRow('1005', 'Not Distinguished'),
         ],
         divisionPerformance: [],
         districtPerformance: [],

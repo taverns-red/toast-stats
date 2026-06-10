@@ -138,6 +138,7 @@ export function classifyDistinguishedTier(
 
   const words = value.toLowerCase()
   if (!words.includes('distinguished')) return null
+  if (words.includes('not distinguished')) return null
   if (words.includes('smedley')) return 'M'
   if (words.includes('president')) return 'P'
   if (words.includes('select')) return 'S'
