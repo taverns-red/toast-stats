@@ -49,6 +49,12 @@ export interface RegistryFreshnessResult {
   mismatched: RegistryMismatch[]
   /** True when no metadata entries were supplied — a monitor-feed failure. */
   emptyFeed: boolean
+  /**
+   * True when entries were supplied but none yielded a completed closing
+   * month — per-object read failures degrade to non-closing entries, so a
+   * full window with zero derivable months means the monitor cannot see.
+   */
+  noDerivableMonths: boolean
   /** The derivable completed months that were actually verified. */
   checkedMonths: string[]
 }
@@ -105,6 +111,7 @@ export function evaluateRegistryFreshness(
       missing: [],
       mismatched: [],
       emptyFeed: true,
+      noDerivableMonths: false,
       checkedMonths: [],
     }
   }
@@ -135,6 +142,7 @@ export function evaluateRegistryFreshness(
     missing,
     mismatched,
     emptyFeed: false,
+    noDerivableMonths: false,
     checkedMonths: expected.map(e => e.dataMonth),
   }
 }

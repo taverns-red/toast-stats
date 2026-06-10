@@ -145,6 +145,25 @@ describe('evaluateRegistryFreshness', () => {
     expect(result.emptyFeed).toBe(true)
   })
 
+  it('alerts when a non-empty feed yields ZERO derivable months (silent read failures)', () => {
+    // gcsHelpers swallows per-object read errors into non-closing entries, so
+    // an IAM/timeout storm produces a full window with no closing entry at
+    // all. A healthy ~130-dir window always contains at least one completed
+    // closing month — zero derivable months means the monitor cannot see,
+    // and "cannot tell" must alert, not pass (L107).
+    const allNonClosing = Array.from({ length: 130 }, (_, i) =>
+      entry(
+        `2026-0${1 + Math.floor(i / 28)}-${String((i % 28) + 1).padStart(2, '0')}`,
+        false
+      )
+    )
+    const result = evaluateRegistryFreshness(registryWithMay, allNonClosing)
+    expect(result.fresh).toBe(false)
+    expect(result.noDerivableMonths).toBe(true)
+    const body = buildRegistryStaleBody(result)
+    expect(body).toMatch(/derivable|closing/i)
+  })
+
   it('ignores registry entries for months outside the derivable set', () => {
     // Manual entries for outage months (2026-02, 2022-04) are not derivable
     // and must not be flagged.
@@ -284,6 +303,7 @@ describe('parseManualEntryArg', () => {
     '202602=2026-03-10',
     '2026-13=2026-03-10',
     '2026-02=2026-03-32',
+    '2026-02=2026-19-10', // closing date's MONTH must also be real
     '',
   ])('rejects malformed input %j', input => {
     expect(() => parseManualEntryArg(input)).toThrow(/--set/)
