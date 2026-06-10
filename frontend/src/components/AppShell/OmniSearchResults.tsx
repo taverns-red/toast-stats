@@ -20,6 +20,8 @@ const GROUP_LABEL: Record<SearchEntityType, string> = {
   district: 'Districts',
   region: 'Regions',
   club: 'Clubs',
+  division: 'Divisions',
+  area: 'Areas',
 }
 
 interface OmniSearchResultsProps {

@@ -109,7 +109,7 @@ const OpenPalette: React.FC<OpenPaletteProps> = ({ onClose }) => {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search districts, regions, clubs by name or number…"
+            placeholder="Search districts, regions, clubs, divisions, areas…"
             aria-label="Universal search input"
             aria-controls={listboxOpen ? LISTBOX_ID : undefined}
             aria-activedescendant={
@@ -124,7 +124,7 @@ const OpenPalette: React.FC<OpenPaletteProps> = ({ onClose }) => {
           // Before the user types, guide them — listing every indexed entity
           // (14k+ clubs) is meaningless, so the empty query shows no listbox.
           <p className="command-palette__empty">
-            Type to search districts, regions, and clubs.
+            Type to search districts, regions, clubs, divisions, and areas.
           </p>
         ) : !index ? (
           <p className="command-palette__empty">Searching…</p>

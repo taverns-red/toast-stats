@@ -14,10 +14,13 @@ import { useIsMobile } from '../../../hooks/useIsMobile'
 
 const fetchCdnRankings = vi.fn()
 const fetchCdnClubIndex = vi.fn()
+const fetchCdnDivisionsAreasIndex = vi.fn()
 
 vi.mock('../../../services/cdn', () => ({
   fetchCdnRankings: (...args: unknown[]) => fetchCdnRankings(...args),
   fetchCdnClubIndex: (...args: unknown[]) => fetchCdnClubIndex(...args),
+  fetchCdnDivisionsAreasIndex: (...args: unknown[]) =>
+    fetchCdnDivisionsAreasIndex(...args),
 }))
 
 vi.mock('../../../hooks/useIsMobile', () => ({
@@ -34,6 +37,9 @@ const setupCdn = () => {
   })
   fetchCdnClubIndex.mockResolvedValue({
     clubs: { '12345': { districtId: '61', clubName: 'Toast of the Town' } },
+  })
+  fetchCdnDivisionsAreasIndex.mockResolvedValue({
+    districts: { '61': { C: ['23'] } },
   })
 }
 
