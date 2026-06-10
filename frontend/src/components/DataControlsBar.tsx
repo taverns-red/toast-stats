@@ -13,6 +13,12 @@ export interface DataControlsBarProps {
   availableDates: string[]
   selectedDate: string | undefined
   onDateChange: (date: string | undefined) => void
+  /** #922 — true while the query feeding latestSnapshotDate is still in
+   * flight. On a cold load the rankings query usually resolves first, so
+   * without this the toolbar paints 2-chip and rewraps (one row shorter on
+   * mobile) when the pill lands — a real-user CLS hit. While pending, the
+   * pill's slot is reserved with an aria-hidden placeholder. */
+  freshnessPending?: boolean
 }
 
 // min-h-[44px]: the WCAG 2.5.5 / handoff 44px touch-target floor (#886, epic
@@ -37,6 +43,22 @@ const FreshnessPill: React.FC<{ date: string }> = ({ date }) => (
     />
     <span>Data fresh · {formatDisplayDate(date)}</span>
   </div>
+)
+
+/** #922 — width of the pill-slot placeholder rendered while the snapshot
+ * date is pending. Matches the rendered pill ("Data fresh · <Mon D, YYYY>",
+ * measured 179px at 390px, both engines) so the toolbar's wrap geometry is
+ * settled from the first loaded paint. The landing renderShell skeleton
+ * pins the same width (ACTIONS_SKELETON_WIDTHS.freshnessPill). */
+export const FRESHNESS_PILL_WIDTH = 179
+
+const FreshnessPillSkeleton: React.FC = () => (
+  <div
+    data-testid="freshness-pill-skeleton"
+    aria-hidden="true"
+    className={CHIP_BASE}
+    style={{ width: FRESHNESS_PILL_WIDTH }}
+  />
 )
 
 /* Native <select> styled to look like a pill chip — keeps full keyboard
@@ -95,6 +117,7 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
   availableDates,
   selectedDate,
   onDateChange,
+  freshnessPending = false,
 }) => {
   const sortedDates = [...availableDates].sort((a, b) => b.localeCompare(a))
 
@@ -104,7 +127,11 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
       aria-label="Data controls"
       className="flex flex-wrap items-center gap-2"
     >
-      {latestSnapshotDate && <FreshnessPill date={latestSnapshotDate} />}
+      {latestSnapshotDate ? (
+        <FreshnessPill date={latestSnapshotDate} />
+      ) : (
+        freshnessPending && <FreshnessPillSkeleton />
+      )}
 
       <ChipSelect
         testId="py-chip"

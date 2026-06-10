@@ -11,7 +11,10 @@ import { AwardsRaceSection } from '../components/AwardsRaceSection'
 import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
 import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
-import { DataControlsBar } from '../components/DataControlsBar'
+import {
+  DataControlsBar,
+  FRESHNESS_PILL_WIDTH,
+} from '../components/DataControlsBar'
 import { useRankHistory } from '../hooks/useRankHistory'
 import InfoTooltip from '../components/InfoTooltip'
 import DistrictTierChip from '../components/DistrictTierChip'
@@ -53,12 +56,13 @@ const MOBILE_RANKINGS_CAP = 20
 // toolbar's content changes, e2e/landing-mobile-cls.smoke.ts fails the PR
 // preview and these get re-measured.
 const ACTIONS_SKELETON_WIDTHS = {
-  // "Data fresh · <date>" pill. Width tracks the date text; the pill+PY row
-  // has ~60px of slack at 390px before a longer date changes the wrap. The
-  // pill is also conditional on the cached-dates query — when that fails,
-  // the loaded toolbar renders 2 chips (one row shorter than reserved); an
-  // accepted residual for that degraded path.
-  freshnessPill: 179,
+  // "Data fresh · <date>" pill — shares DataControlsBar's placeholder width
+  // so the shell skeleton and the loaded toolbar's pending state agree.
+  // Width tracks the date text; the pill+PY row has ~60px of slack at 390px
+  // before a longer date changes the wrap. If the dates query ultimately
+  // FAILS (settled, no date), the loaded toolbar renders 2 chips — one row
+  // shorter than reserved; an accepted residual for that degraded path.
+  freshnessPill: FRESHNESS_PILL_WIDTH,
   pyChip: 109, // "PY 25–26 ▾" chip
   dateChip: 107, // "Latest in PY ▾" chip
   exportBtn: 105, // "Export CSV" action button
@@ -186,7 +190,7 @@ const DistrictsPage: React.FC = () => {
 
   // Fetch cached dates from CDN snapshot index (#233)
   // Uses the same data source as DistrictDetailPage for consistency
-  const { data: cachedDatesData } = useQuery({
+  const { data: cachedDatesData, isPending: isDatesPending } = useQuery({
     queryKey: ['cached-dates-from-index'],
     queryFn: async () => {
       const index = await fetchCdnSnapshotIndex()
@@ -862,6 +866,10 @@ const DistrictsPage: React.FC = () => {
               availableDates={cachedDates}
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
+              // #922 — reserve the pill slot until the dates/index query
+              // settles, so the cold-load rankings-first paint doesn't
+              // rewrap the toolbar when the pill lands (mobile CLS).
+              freshnessPending={isDatesPending}
             />
             <button
               type="button"
