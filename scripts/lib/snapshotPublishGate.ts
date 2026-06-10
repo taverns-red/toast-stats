@@ -18,6 +18,7 @@
  */
 
 import { PerDistrictDataSchema } from '@toastmasters/shared-contracts'
+import { summarizeZodIssues } from './zodIssueSummary.js'
 
 export interface SnapshotFileInput {
   /** Base file name, e.g. `district_61.json`. */
@@ -44,9 +45,6 @@ export interface SnapshotGateResult {
 }
 
 const DISTRICT_FILE_PATTERN = /^district_(.+)\.json$/
-
-/** Keep zod error detail bounded — first few issues tell the story. */
-const MAX_ZOD_ISSUES = 5
 
 export function isDistrictSnapshotFile(fileName: string): boolean {
   return DISTRICT_FILE_PATTERN.test(fileName)
@@ -88,21 +86,11 @@ function validateDistrictFile(
       ? record.data.snapshotDate
       : null
 
-  const issues = result.error.issues
-  const detail = issues
-    .slice(0, MAX_ZOD_ISSUES)
-    .map(issue => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
-    .join('; ')
-  const more =
-    issues.length > MAX_ZOD_ISSUES
-      ? ` (+${issues.length - MAX_ZOD_ISSUES} more issues)`
-      : ''
-
   return {
     fileName: file.fileName,
     districtId,
     snapshotDate,
-    reason: `schema validation failed: ${detail}${more}`,
+    reason: `schema validation failed: ${summarizeZodIssues(result.error.issues)}`,
   }
 }
 

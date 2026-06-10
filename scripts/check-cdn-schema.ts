@@ -39,6 +39,9 @@ const BODY_FILE = '/tmp/cdn-schema-canary-body.md'
 
 const FETCH_TIMEOUT_MS = 20_000
 
+/** Bound the fan-out against GCS — ~128 published districts (#1125). */
+const FETCH_CONCURRENCY = 16
+
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)
 }
@@ -143,9 +146,15 @@ async function main(): Promise<void> {
     }
 
     log(`Checking ${districtIds.length} published district snapshot(s)...`)
-    const districts = await Promise.all(
-      districtIds.map(id => fetchDistrict(baseUrl, latestDate as string, id))
-    )
+    const districts: DistrictFetchResult[] = []
+    for (let i = 0; i < districtIds.length; i += FETCH_CONCURRENCY) {
+      const batch = districtIds.slice(i, i + FETCH_CONCURRENCY)
+      districts.push(
+        ...(await Promise.all(
+          batch.map(id => fetchDistrict(baseUrl, latestDate as string, id))
+        ))
+      )
+    }
 
     result = evaluateCdnSchema({ latestDate, districts })
   } catch (err) {

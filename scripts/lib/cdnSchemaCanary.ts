@@ -16,6 +16,7 @@
  */
 
 import { PerDistrictDataSchema } from '@toastmasters/shared-contracts'
+import { summarizeZodIssues } from './zodIssueSummary.js'
 
 export interface DistrictFetchResult {
   districtId: string
@@ -49,9 +50,6 @@ export interface CanaryResult {
   reason: string
 }
 
-/** Keep zod error detail bounded — first few issues tell the story. */
-const MAX_ZOD_ISSUES = 5
-
 function validateDistrict(fetch: DistrictFetchResult): CanaryFailure | null {
   if (!fetch.ok) {
     return {
@@ -73,19 +71,9 @@ function validateDistrict(fetch: DistrictFetchResult): CanaryFailure | null {
   const result = PerDistrictDataSchema.safeParse(parsed)
   if (result.success) return null
 
-  const issues = result.error.issues
-  const detail = issues
-    .slice(0, MAX_ZOD_ISSUES)
-    .map(issue => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
-    .join('; ')
-  const more =
-    issues.length > MAX_ZOD_ISSUES
-      ? ` (+${issues.length - MAX_ZOD_ISSUES} more issues)`
-      : ''
-
   return {
     districtId: fetch.districtId,
-    reason: `schema validation failed: ${detail}${more}`,
+    reason: `schema validation failed: ${summarizeZodIssues(result.error.issues)}`,
   }
 }
 
@@ -166,8 +154,10 @@ export function buildCanaryIssueBody(
     '### Remediation',
     '',
     '- Schema validation failures: the published payload has drifted from',
-    '  `shared-contracts` — find the writer that bypassed the publish gate',
-    '  (`scripts/validate-snapshots.ts`) and fix the contract or the writer.',
+    '  `shared-contracts` — find the writer that produced the invalid',
+    '  snapshot (transform, merge-find-a-club, or a newer post-processor)',
+    '  and fix the contract or the writer. Check why the publish gate',
+    '  (`scripts/validate-snapshots.ts`) did not catch it before upload.',
     '- Fetch failures: check the CDN/bucket and the daily pipeline run.',
     '- This issue self-clears: the next healthy canary run closes it.',
     ''
