@@ -125,7 +125,7 @@ describe('DistrictReportsDatasetSchema', () => {
   // #1080 — the education record's count is RAW activity (achievementCount),
   // NOT DCP credit. The field name is the guard: a legacy `count`-shaped
   // record must fail validation so the ambiguous name can't sneak back in.
-  it('education achievements require achievementCount; legacy `count` is rejected', () => {
+  it('education achievements require achievementCount; the legacy `count`-only shape fails (strip mode: unknown keys are dropped, the missing required field is what rejects)', () => {
     const record = {
       club: '1234',
       division: 'A',
