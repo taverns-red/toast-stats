@@ -18,7 +18,7 @@
  */
 
 import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
-import type { ClubTrend, ClubHealthStatus, ClubHealthData } from '../types.js'
+import type { ClubTrend, ClubHealthData } from '../types.js'
 import {
   getDCPCheckpoint,
   getCurrentProgramMonth,
@@ -26,6 +26,7 @@ import {
 } from './AnalyticsUtils.js'
 import {
   calculateNetGrowth,
+  classifyClubHealth,
   determineDistinguishedLevel,
   getCSPStatus,
   isDistinguishedProvisional,
@@ -319,71 +320,59 @@ export class ClubHealthAnalyticsModule {
       clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]
         ?.goalsAchieved ?? club.dcpGoals
 
-    // Calculate net growth from club data (Requirement 5.3)
-    // Net growth = Active Members - Mem. Base
-    const netGrowth = calculateNetGrowth(club)
-
     // Get current program month for DCP checkpoint evaluation
     const currentMonth = getCurrentProgramMonth(snapshotDate)
 
-    // Get required DCP checkpoint for current month
-    const requiredDcpCheckpoint = getDCPCheckpoint(currentMonth)
+    // Delegate classification to the shared single-source rule (#1120).
+    // Membership predicates use the trend-derived currentMembership, but
+    // net growth must stay calculateNetGrowth(club) (Requirement 5.3) —
+    // so derive the base that makes the classifier reproduce it exactly.
+    const classification = classifyClubHealth(
+      {
+        membership: currentMembership,
+        membershipBase: currentMembership - calculateNetGrowth(club),
+        dcpGoals: currentDcpGoals,
+        cspSubmitted: getCSPStatus(club),
+      },
+      currentMonth
+    )
+    const {
+      status,
+      netGrowth,
+      requiredDcpCheckpoint,
+      membershipRequirementMet,
+      dcpCheckpointMet,
+      cspRequirementMet,
+    } = classification
 
-    // Get CSP status (Requirements 5.4, 5.5: CSP guaranteed in 2025-2026+, absent in prior years)
-    const cspSubmitted = getCSPStatus(club)
-
-    // Apply classification rules - mutually exclusive categories
-    let status: ClubHealthStatus
-
-    // Requirement 1.2: Intervention override rule
-    // If membership < 12 AND net growth < 3, assign "Intervention Required" regardless of other criteria
-    if (currentMembership < 12 && netGrowth < 3) {
-      status = 'intervention-required'
+    // Build risk-factor messages from the classification breakdown
+    if (status === 'intervention-required') {
       riskFactors.push('Membership below 12 (critical)')
       riskFactors.push(
         `Net growth since July: ${netGrowth} (need 3+ to override)`
       )
-    } else {
-      // Evaluate each requirement for Thriving status
+    } else if (status === 'vulnerable') {
+      // Requirement 4.2: Add specific reason for membership requirement not met
+      if (!membershipRequirementMet) {
+        riskFactors.push(
+          `Membership below threshold (${currentMembership} members, need 20+ or net growth 3+)`
+        )
+      }
 
-      // Requirement 1.3: Membership requirement (>= 20 OR net growth >= 3)
-      const membershipRequirementMet = currentMembership >= 20 || netGrowth >= 3
+      // Requirement 4.3: Add specific reason for DCP checkpoint not met
+      if (!dcpCheckpointMet) {
+        const monthName = getMonthName(currentMonth)
+        riskFactors.push(
+          `DCP checkpoint not met: ${currentDcpGoals} goal${currentDcpGoals !== 1 ? 's' : ''} achieved, ${requiredDcpCheckpoint} required for ${monthName}`
+        )
+      }
 
-      // DCP checkpoint requirement (varies by month)
-      const dcpCheckpointMet = currentDcpGoals >= requiredDcpCheckpoint
-
-      // CSP requirement (CSP guaranteed in 2025-2026+, absent in prior years)
-      const cspRequirementMet = cspSubmitted
-
-      // Requirement 1.4: Thriving if ALL requirements met
-      if (membershipRequirementMet && dcpCheckpointMet && cspRequirementMet) {
-        status = 'thriving'
-        // Requirement 4.5: Clear riskFactors for Thriving clubs
-      } else {
-        // Requirement 1.5: Vulnerable if some but not all requirements met
-        status = 'vulnerable'
-
-        // Requirement 4.2: Add specific reason for membership requirement not met
-        if (!membershipRequirementMet) {
-          riskFactors.push(
-            `Membership below threshold (${currentMembership} members, need 20+ or net growth 3+)`
-          )
-        }
-
-        // Requirement 4.3: Add specific reason for DCP checkpoint not met
-        if (!dcpCheckpointMet) {
-          const monthName = getMonthName(currentMonth)
-          riskFactors.push(
-            `DCP checkpoint not met: ${currentDcpGoals} goal${currentDcpGoals !== 1 ? 's' : ''} achieved, ${requiredDcpCheckpoint} required for ${monthName}`
-          )
-        }
-
-        // Requirement 4.4: Add specific reason for CSP not submitted
-        if (!cspRequirementMet) {
-          riskFactors.push('CSP not submitted')
-        }
+      // Requirement 4.4: Add specific reason for CSP not submitted
+      if (!cspRequirementMet) {
+        riskFactors.push('CSP not submitted')
       }
     }
+    // Requirement 4.5: riskFactors stay empty for Thriving clubs
 
     clubTrend.riskFactors = riskFactors
     clubTrend.currentStatus = status

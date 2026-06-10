@@ -311,25 +311,9 @@ export class TimeSeriesDataPointBuilder {
    * @see Requirements 6.7
    */
   isDistinguished(club: ScrapedRecord): boolean {
-    // Check CSP status first
-    const cspValue =
-      club['CSP'] ??
-      club['Club Success Plan'] ??
-      club['CSP Submitted'] ??
-      club['Club Success Plan Submitted']
-
-    // Historical data compatibility: if field doesn't exist, assume submitted
-    if (cspValue !== undefined && cspValue !== null) {
-      const cspString = String(cspValue).toLowerCase().trim()
-      if (
-        cspString === 'no' ||
-        cspString === 'false' ||
-        cspString === '0' ||
-        cspString === 'not submitted' ||
-        cspString === 'n'
-      ) {
-        return false
-      }
+    // Check CSP status first (absent field = submitted, historical data)
+    if (!this.parseCspSubmitted(club)) {
+      return false
     }
 
     // Check Club Distinguished Status field
