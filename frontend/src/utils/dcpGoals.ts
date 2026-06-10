@@ -37,20 +37,21 @@ function buildStatusText(
   definition: DcpGoalDefinition
 ): string {
   const gaps = definition.requirements
-    .filter(
-      requirement =>
-        !requirement.anyOf.some(
-          column => readDcpGoalColumn(record, column) >= column.required
-        )
-    )
     .map(requirement => {
-      if (requirement.anyOf.length === 1) {
-        const column = requirement.anyOf[0]!
-        const gap = column.required - readDcpGoalColumn(record, column)
-        return `${gap} ${column.label} needed`
+      const columns = requirement.anyOf.map(column => ({
+        column,
+        value: readDcpGoalColumn(record, column),
+      }))
+      if (columns.some(({ column, value }) => value >= column.required)) {
+        return null
       }
-      return `${requirement.anyOf.map(c => c.label).join(' or ')} needed`
+      if (columns.length === 1) {
+        const { column, value } = columns[0]!
+        return `${column.required - value} ${column.label} needed`
+      }
+      return `${columns.map(c => c.column.label).join(' or ')} needed`
     })
+    .filter(gap => gap !== null)
   return gaps.join(', ')
 }
 
