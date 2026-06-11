@@ -94,7 +94,9 @@ export class LeadershipExcellenceCalculator {
 
     for (let i = sorted.length - 1; i >= 0; i--) {
       const entry = sorted[i]!
-      if (entry.tier === 'NotDistinguished') break
+      // Unknown (#1116 item 5) breaks the streak too: an unprovable year
+      // can never count toward "3+ consecutive years Distinguished".
+      if (entry.tier === 'NotDistinguished' || entry.tier === 'Unknown') break
 
       // Check for consecutive year gap
       if (i < sorted.length - 1) {

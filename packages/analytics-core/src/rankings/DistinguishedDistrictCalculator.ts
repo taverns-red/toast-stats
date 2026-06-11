@@ -28,8 +28,12 @@ import {
 /**
  * Distinguished District tier names.
  * Listed from lowest to highest. NotDistinguished means no tier earned.
+ * Unknown (#1116 item 5, rules-reference §12.5) means the metrics earn a
+ * tier but a prerequisite REQUIRED by that program year's rules is
+ * unknowable from the data (column absent) — distinct from an explicit No.
  */
 export type DistinguishedDistrictTier =
+  | 'Unknown'
   | 'NotDistinguished'
   | 'Distinguished'
   | 'Select'
@@ -135,6 +139,32 @@ interface TierThreshold {
  * Tier thresholds in ascending order. Order matters for tier matching:
  * we check from highest to lowest and award the first one that qualifies.
  */
+/**
+ * Per-program-year ruleset (#1116 item 5).
+ *
+ * Sourced from the 2026-06-10 DRP rules research (item 1490 revisions +
+ * archive.org, verified by back-solving TI's own frozen dashboard goal
+ * numbers for multiple districts/years — exact and discriminating). Full
+ * table + sources: docs/investigations/1116-historical-drp-rules.md.
+ *
+ * Era structure:
+ * - 2016-17..2017-18: 3 tiers, symmetric 3/5/8% (both metrics), 40/45/50%
+ * - 2018-19..2021-22: Smedley added (Board change ~Jan 2019, applied to
+ *   the full 2018-19 PY) — symmetric 1.5/3/5/8%, 40/45/50/55%
+ * - 2022-23..2024-25: asymmetric (Rev. 12/2022) — payments 1/3/5/8%;
+ *   clubs no-net-loss / net+1 / 3% / 5%; distinguished 40/45/50/55%
+ * - 2025-26+: symmetric 1/3/5/8%, 45/50/55/60% (current; §13)
+ *
+ * Prerequisites: exactly DSP + Training (85%, Sep 30) for every year
+ * 2016-17..2024-25 (matches the only prerequisite columns in TI's
+ * pre-2025-26 all-districts CSVs); 2025-26 adds Market Analysis,
+ * Communication Plan, and 2+ Region Advisor meetings (5 gates).
+ */
+interface YearRuleset {
+  requiredPrerequisites: ReadonlyArray<keyof DistinguishedDistrictPrerequisites>
+  tiers: ReadonlyArray<TierThreshold>
+}
+
 const TIER_THRESHOLDS: TierThreshold[] = [
   {
     tier: 'Smedley',
@@ -166,25 +196,199 @@ const TIER_THRESHOLDS: TierThreshold[] = [
   },
 ]
 
+const CURRENT_RULESET: YearRuleset = {
+  requiredPrerequisites: [
+    'dspSubmitted',
+    'trainingMet',
+    'marketAnalysisSubmitted',
+    'communicationPlanSubmitted',
+    'regionAdvisorVisitMet',
+  ],
+  tiers: TIER_THRESHOLDS,
+}
+
+const HISTORICAL_PREREQUISITES: YearRuleset['requiredPrerequisites'] = [
+  'dspSubmitted',
+  'trainingMet',
+]
+
+/** 2022-23..2024-25 (Item 1490 Rev. 12/2022): asymmetric ladder. */
+const ERA_2022_RULESET: YearRuleset = {
+  requiredPrerequisites: HISTORICAL_PREREQUISITES,
+  tiers: [
+    {
+      tier: 'Smedley',
+      paymentGrowthMin: 8,
+      clubGrowthMin: 5,
+      distinguishedPercentMin: 55,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Presidents',
+      paymentGrowthMin: 5,
+      clubGrowthMin: 3,
+      distinguishedPercentMin: 50,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Select',
+      paymentGrowthMin: 3,
+      clubGrowthMin: 0,
+      distinguishedPercentMin: 45,
+      netGrowthRule: 'plus-one',
+    },
+    {
+      tier: 'Distinguished',
+      paymentGrowthMin: 1,
+      clubGrowthMin: 0,
+      distinguishedPercentMin: 40,
+      netGrowthRule: 'no-loss',
+    },
+  ],
+}
+
+/** 2018-19..2021-22: Smedley's first district-level years; symmetric. */
+const ERA_2018_RULESET: YearRuleset = {
+  requiredPrerequisites: HISTORICAL_PREREQUISITES,
+  tiers: [
+    {
+      tier: 'Smedley',
+      paymentGrowthMin: 8,
+      clubGrowthMin: 8,
+      distinguishedPercentMin: 55,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Presidents',
+      paymentGrowthMin: 5,
+      clubGrowthMin: 5,
+      distinguishedPercentMin: 50,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Select',
+      paymentGrowthMin: 3,
+      clubGrowthMin: 3,
+      distinguishedPercentMin: 45,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Distinguished',
+      paymentGrowthMin: 1.5,
+      clubGrowthMin: 1.5,
+      distinguishedPercentMin: 40,
+      netGrowthRule: 'none',
+    },
+  ],
+}
+
+/** 2016-17..2017-18: three tiers, no Smedley, symmetric 3/5/8%. */
+const ERA_2016_RULESET: YearRuleset = {
+  requiredPrerequisites: HISTORICAL_PREREQUISITES,
+  tiers: [
+    {
+      tier: 'Presidents',
+      paymentGrowthMin: 8,
+      clubGrowthMin: 8,
+      distinguishedPercentMin: 50,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Select',
+      paymentGrowthMin: 5,
+      clubGrowthMin: 5,
+      distinguishedPercentMin: 45,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Distinguished',
+      paymentGrowthMin: 3,
+      clubGrowthMin: 3,
+      distinguishedPercentMin: 40,
+      netGrowthRule: 'none',
+    },
+  ],
+}
+
+/**
+ * Resolve the ruleset for a program year ("YYYY-YYYY"). Unknown or
+ * missing input falls back to the current rules (the daily pipeline's
+ * behavior before #1116). Years before 2016-17 (outside our data range)
+ * get the earliest researched era.
+ */
+function rulesetForProgramYear(programYear?: string): YearRuleset {
+  if (!programYear) return CURRENT_RULESET
+  const startYear = Number.parseInt(programYear.slice(0, 4), 10)
+  if (Number.isNaN(startYear)) return CURRENT_RULESET
+  if (startYear >= 2025) return CURRENT_RULESET
+  if (startYear >= 2022) return ERA_2022_RULESET
+  if (startYear >= 2018) return ERA_2018_RULESET
+  return ERA_2016_RULESET
+}
+
 export class DistinguishedDistrictCalculator {
   /**
    * Calculate Distinguished District status for a single district.
+   *
+   * @param ranking - the district's metrics for the snapshot date
+   * @param _programYear - the program year the snapshot belongs to
+   *   ("YYYY-YYYY"). Determines which year's ruleset applies (#1116
+   *   item 5). Omitted → current (2025-26) rules.
    */
-  calculate(ranking: DistrictRanking): DistinguishedDistrictStatus {
-    const prerequisites: DistinguishedDistrictPrerequisites = {
-      dspSubmitted: ranking.dspSubmitted ?? false,
-      trainingMet: ranking.trainingMet ?? false,
-      marketAnalysisSubmitted: ranking.marketAnalysisSubmitted ?? false,
-      communicationPlanSubmitted: ranking.communicationPlanSubmitted ?? false,
-      regionAdvisorVisitMet: ranking.regionAdvisorVisitMet ?? false,
+  calculate(
+    ranking: DistrictRanking,
+    programYear?: string
+  ): DistinguishedDistrictStatus {
+    const ruleset = rulesetForProgramYear(programYear)
+
+    // Tri-state per prerequisite: true / false / undefined (column absent
+    // from that year's export — unknowable, NOT the same as an explicit N).
+    const raw: Record<
+      keyof DistinguishedDistrictPrerequisites,
+      boolean | undefined
+    > = {
+      dspSubmitted: ranking.dspSubmitted,
+      trainingMet: ranking.trainingMet,
+      marketAnalysisSubmitted: ranking.marketAnalysisSubmitted,
+      communicationPlanSubmitted: ranking.communicationPlanSubmitted,
+      regionAdvisorVisitMet: ranking.regionAdvisorVisitMet,
     }
-    const allPrerequisitesMet = Object.values(prerequisites).every(v => v)
+    // Display breakdown keeps the legacy 5-boolean shape (checklist UI);
+    // gating below uses the tri-state + the year's required set only.
+    const prerequisites: DistinguishedDistrictPrerequisites = {
+      dspSubmitted: raw.dspSubmitted ?? false,
+      trainingMet: raw.trainingMet ?? false,
+      marketAnalysisSubmitted: raw.marketAnalysisSubmitted ?? false,
+      communicationPlanSubmitted: raw.communicationPlanSubmitted ?? false,
+      regionAdvisorVisitMet: raw.regionAdvisorVisitMet ?? false,
+    }
 
-    const currentTier: DistinguishedDistrictTier = allPrerequisitesMet
-      ? this.determineTier(ranking)
-      : 'NotDistinguished'
+    const required = ruleset.requiredPrerequisites
+    const allPrerequisitesMet = required.every(k => raw[k] === true)
+    const anyRequiredNo = required.some(k => raw[k] === false)
 
-    const nextTierGap = this.computeNextTierGap(currentTier, ranking)
+    const earnedTier = this.determineTier(ranking, ruleset.tiers)
+    let currentTier: DistinguishedDistrictTier
+    if (earnedTier === 'NotDistinguished') {
+      // Metrics earn nothing — prerequisites are moot (§12.5 Unknown is
+      // only for "tier otherwise earned but eligibility undeterminable").
+      currentTier = 'NotDistinguished'
+    } else if (allPrerequisitesMet) {
+      currentTier = earnedTier
+    } else if (anyRequiredNo) {
+      currentTier = 'NotDistinguished'
+    } else {
+      currentTier = 'Unknown'
+    }
+
+    // Gap analysis is metric-based: for Unknown, measure from the tier the
+    // metrics earned so the UI still shows a meaningful next-tier distance.
+    const gapBasis = currentTier === 'Unknown' ? earnedTier : currentTier
+    const nextTierGap = this.computeNextTierGap(
+      gapBasis,
+      ranking,
+      ruleset.tiers
+    )
     const remaining = this.computeRemainingToMinimum(ranking)
 
     return {
@@ -202,11 +406,12 @@ export class DistinguishedDistrictCalculator {
    * Calculate Distinguished District status for all districts, keyed by ID.
    */
   calculateAll(
-    rankings: DistrictRanking[]
+    rankings: DistrictRanking[],
+    programYear?: string
   ): Record<string, DistinguishedDistrictStatus> {
     const result: Record<string, DistinguishedDistrictStatus> = {}
     for (const ranking of rankings) {
-      result[ranking.districtId] = this.calculate(ranking)
+      result[ranking.districtId] = this.calculate(ranking, programYear)
     }
     return result
   }
@@ -214,10 +419,14 @@ export class DistinguishedDistrictCalculator {
   // ========== Private helpers ==========
 
   /**
-   * Determine the highest tier earned. Assumes prerequisites are met.
+   * Determine the highest tier earned on metrics alone (prerequisites are
+   * gated by the caller), within the given year's tier set.
    */
-  private determineTier(ranking: DistrictRanking): DistinguishedDistrictTier {
-    for (const threshold of TIER_THRESHOLDS) {
+  private determineTier(
+    ranking: DistrictRanking,
+    tiers: ReadonlyArray<TierThreshold> = TIER_THRESHOLDS
+  ): DistinguishedDistrictTier {
+    for (const threshold of tiers) {
       if (this.meetsThreshold(ranking, threshold)) {
         return threshold.tier
       }
@@ -260,12 +469,15 @@ export class DistinguishedDistrictCalculator {
    */
   private computeNextTierGap(
     currentTier: DistinguishedDistrictTier,
-    ranking: DistrictRanking
+    ranking: DistrictRanking,
+    tiers: ReadonlyArray<TierThreshold> = TIER_THRESHOLDS
   ): DistinguishedDistrictGap | null {
     const nextTier = this.getNextTier(currentTier)
     if (nextTier === null) return null
 
-    const threshold = TIER_THRESHOLDS.find(t => t.tier === nextTier)
+    // The next tier must exist in this year's tier set — pre-2025-26 the
+    // tier above Presidents is nothing, not Smedley.
+    const threshold = tiers.find(t => t.tier === nextTier)
     if (!threshold) return null
 
     const netChange = ranking.paidClubs - ranking.paidClubBase
@@ -301,6 +513,7 @@ export class DistinguishedDistrictCalculator {
     | 'Smedley'
     | null {
     switch (tier) {
+      case 'Unknown':
       case 'NotDistinguished':
         return 'Distinguished'
       case 'Distinguished':

@@ -646,12 +646,15 @@ U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
         (r: { districtId: string }) => r.districtId === '42'
       )
 
-      // Legacy CSVs should default to false (unknown = not met)
-      expect(d42.dspSubmitted).toBe(false)
-      expect(d42.trainingMet).toBe(false)
-      expect(d42.marketAnalysisSubmitted).toBe(false)
-      expect(d42.communicationPlanSubmitted).toBe(false)
-      expect(d42.regionAdvisorVisitMet).toBe(false)
+      // #1116 item 5 (rules-reference §12.5): an absent prerequisite
+      // column is UNKNOWABLE, not an explicit No. The old behavior
+      // (default false → NotDistinguished) silently mis-scored every
+      // pre-2025-26 year. Absent columns serialize as absent fields.
+      expect(d42.dspSubmitted).toBeUndefined()
+      expect(d42.trainingMet).toBeUndefined()
+      expect(d42.marketAnalysisSubmitted).toBeUndefined()
+      expect(d42.communicationPlanSubmitted).toBeUndefined()
+      expect(d42.regionAdvisorVisitMet).toBeUndefined()
       expect(d42.smedleyDistinguished).toBe(0)
     })
   })

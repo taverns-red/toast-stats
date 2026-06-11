@@ -151,4 +151,19 @@ describe('LeadershipExcellenceCalculator (#333)', () => {
     expect(result.allDistricts[0]?.districtId).toBe('2') // 5 years
     expect(result.allDistricts[1]?.districtId).toBe('1') // 3 years
   })
+
+  it('Unknown tier breaks a streak — unprovable years never count as Distinguished (#1116 item 5)', () => {
+    const result = calculator.calculate([
+      input({
+        yearEndTiers: [
+          tier('2022-2023', 'Distinguished'),
+          tier('2023-2024', 'Unknown'),
+          tier('2024-2025', 'Distinguished'),
+          tier('2025-2026', 'Select'),
+        ],
+      }),
+    ])
+    expect(result.qualifyingDistricts).toHaveLength(0)
+    expect(result.allDistricts[0]?.consecutiveYears).toBe(2)
+  })
 })

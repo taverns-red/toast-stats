@@ -1,7 +1,10 @@
 import React from 'react'
 import type { DistinguishedDistrictTier } from '../services/cdn'
 
-type AchievedTier = Exclude<DistinguishedDistrictTier, 'NotDistinguished'>
+type AchievedTier = Exclude<
+  DistinguishedDistrictTier,
+  'NotDistinguished' | 'Unknown'
+>
 
 const TIER_CONFIG: Record<AchievedTier, { label: string; className: string }> =
   {
@@ -35,7 +38,7 @@ export const DistrictTierChip: React.FC<Props> = ({ districtId, tier }) => {
   // Absence = signal: pre-Distinguished districts render nothing.
   // This keeps the row visually quiet while letting achieved districts
   // pop.
-  if (!tier || tier === 'NotDistinguished') return null
+  if (!tier || tier === 'NotDistinguished' || tier === 'Unknown') return null
   const cfg = TIER_CONFIG[tier]
   return (
     <span

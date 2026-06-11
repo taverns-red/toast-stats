@@ -158,7 +158,10 @@ const MetricValueTd: React.FC<{
 
 /* Per-tier display label + chip style. Pre-Distinguished districts get
    an em-dash; achieved tiers get a colored chip matching the tier. */
-type AchievedTier = Exclude<DistinguishedDistrictTier, 'NotDistinguished'>
+type AchievedTier = Exclude<
+  DistinguishedDistrictTier,
+  'NotDistinguished' | 'Unknown'
+>
 
 const TIER_DISPLAY: Record<AchievedTier, { label: string; className: string }> =
   {
@@ -183,7 +186,7 @@ const TIER_DISPLAY: Record<AchievedTier, { label: string; className: string }> =
 const TierTd: React.FC<{ tier: DistinguishedDistrictTier | null }> = ({
   tier,
 }) => {
-  if (!tier || tier === 'NotDistinguished') {
+  if (!tier || tier === 'NotDistinguished' || tier === 'Unknown') {
     return (
       <td
         data-testid="tier-cell"
