@@ -43,6 +43,30 @@ import {
   UploadOptions,
 } from './types/index.js'
 import { resolveConfiguration } from './utils/config.js'
+import {
+  ClosingDateRegistry,
+  type ClosingDateEntry,
+} from './utils/ClosingDateRegistry.js'
+
+/**
+ * Load closing-date registry months for the fail-closed closing remap
+ * (#1129). Resolves docs/month-end-closing-dates.json relative to cwd — the
+ * repo root in CI and local runs. A missing or empty registry yields [], so
+ * every metadata-less, footer-less date fails closed (refused) rather than
+ * being published under its raw date.
+ */
+async function loadClosingDateRegistryMonths(): Promise<ClosingDateEntry[]> {
+  const registry = new ClosingDateRegistry({ projectRoot: process.cwd() })
+  const file = await registry.read()
+  if (file.months.length === 0) {
+    console.error(
+      '[WARN] Closing-date registry is empty or missing ' +
+        '(docs/month-end-closing-dates.json) — dates undecidable from ' +
+        'metadata/CSV footer will FAIL CLOSED (#1129)'
+    )
+  }
+  return file.months
+}
 
 // Re-export configuration utilities for external use
 export {
@@ -237,6 +261,7 @@ export function createCLI(): Command {
           const transformService = new TransformService({
             cacheDir,
             logger: createVerboseLogger(options.verbose),
+            closingDateRegistry: await loadClosingDateRegistryMonths(),
           })
 
           // Transform only the successfully scraped districts
@@ -449,6 +474,7 @@ export function createCLI(): Command {
       const transformService = new TransformService({
         cacheDir,
         logger: createVerboseLogger(options.verbose),
+        closingDateRegistry: await loadClosingDateRegistryMonths(),
       })
 
       // Execute transformation
@@ -1062,6 +1088,7 @@ export function createCLI(): Command {
         const service = new RebuildService({
           cacheDir,
           logger: createVerboseLogger(options.verbose),
+          closingDateRegistry: await loadClosingDateRegistryMonths(),
         })
 
         const dates = options.dates ?? (await service.discoverDates())

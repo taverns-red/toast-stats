@@ -17,6 +17,7 @@ import * as path from 'node:path'
 import type { Logger } from '@toastmasters/analytics-core'
 import { TransformService } from './TransformService.js'
 import { AnalyticsComputeService } from './AnalyticsComputeService.js'
+import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
 
 /**
  * Options for RebuildService
@@ -78,12 +79,18 @@ export class RebuildService {
   private readonly transformService: TransformService
   private readonly analyticsService: AnalyticsComputeService
 
-  constructor(options: { cacheDir: string; logger?: Logger }) {
+  constructor(options: {
+    cacheDir: string
+    logger?: Logger
+    /** Closing-date registry months for the fail-closed remap (#1129) */
+    closingDateRegistry?: ClosingDateEntry[]
+  }) {
     this.cacheDir = options.cacheDir
     this.logger = options.logger ?? noopLogger
     this.transformService = new TransformService({
       cacheDir: options.cacheDir,
       logger: options.logger,
+      closingDateRegistry: options.closingDateRegistry,
     })
     this.analyticsService = new AnalyticsComputeService({
       cacheDir: options.cacheDir,
