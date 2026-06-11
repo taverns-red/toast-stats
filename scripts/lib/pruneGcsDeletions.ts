@@ -91,11 +91,7 @@ export function parsePruneOutput(json: string): PruneClassification[] {
     if (typeof c.keep !== 'boolean') {
       throw new Error(`classification[${i}] has invalid keep flag (#1131)`)
     }
-    return {
-      rawCsvDate: c.rawCsvDate,
-      snapshotDate: c.snapshotDate,
-      keep: c.keep,
-      reason: c.reason,
-    }
+    // All required fields proven above
+    return c as PruneClassification
   })
 }
