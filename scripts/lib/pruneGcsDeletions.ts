@@ -35,6 +35,16 @@ export const PRUNE_RETAINED_LAYERS = [
   'v1/rank-history',
 ] as const
 
+/**
+ * The one human-readable layer-scope statement (#1132), shared by every
+ * prune surface's log output so the retention asymmetry is never silent.
+ */
+export function formatPruneLayerScopeNote(): string {
+  return `Layer scope (#1132): deletions limited to ${PRUNE_DELETABLE_LAYERS.join(
+    ', '
+  )} — derived layers retained by design: ${PRUNE_RETAINED_LAYERS.join(', ')}`
+}
+
 const DELETABLE_PATH = new RegExp(
   `^(${PRUNE_DELETABLE_LAYERS.join('|')})/\\d{4}-\\d{2}-\\d{2}$`
 )

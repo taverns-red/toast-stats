@@ -69,7 +69,7 @@ export interface PruneLayerScope {
  * PRUNE_RETAINED_LAYERS — kept duplicated because scripts/ must not depend
  * on this package's build (Lesson 140); each side pins the values in tests.
  */
-export const PRUNE_LAYER_SCOPE: Readonly<PruneLayerScope> = {
+export const PRUNE_LAYER_SCOPE: PruneLayerScope = {
   pruned: ['raw-csv', 'snapshots'],
   retained: ['time-series', 'club-trends', 'v1/rank-history'],
   note: 'Derived layers retained by design (#1132) — trend surfaces keep full daily resolution',
@@ -345,11 +345,7 @@ export class PruneService {
 
     return {
       success: errors.length === 0,
-      layerScope: {
-        pruned: [...PRUNE_LAYER_SCOPE.pruned],
-        retained: [...PRUNE_LAYER_SCOPE.retained],
-        note: PRUNE_LAYER_SCOPE.note,
-      },
+      layerScope: PRUNE_LAYER_SCOPE,
       totalDates: classifications.length,
       keptDates: kept.length,
       prunedDates: pruned.length,

@@ -21,9 +21,8 @@ import { readFileSync } from 'node:fs'
 import {
   assertPruneDeletionScope,
   computePruneGcsDeletions,
+  formatPruneLayerScopeNote,
   parsePruneOutput,
-  PRUNE_DELETABLE_LAYERS,
-  PRUNE_RETAINED_LAYERS,
 } from './lib/pruneGcsDeletions.js'
 
 const inputPath = process.argv[2] ?? '/tmp/prune-output.json'
@@ -55,11 +54,7 @@ try {
   console.error(
     `[INFO] ${classifications.length} classifications → deleting ${rawCsvDates.length} raw-csv and ${snapshotDates.length} snapshot dates`
   )
-  console.error(
-    `[INFO] Layer scope (#1132): deletions limited to ${PRUNE_DELETABLE_LAYERS.join(
-      ', '
-    )} — derived layers retained by design: ${PRUNE_RETAINED_LAYERS.join(', ')}`
-  )
+  console.error(`[INFO] ${formatPruneLayerScopeNote()}`)
 
   for (const p of paths) console.log(p)
 } catch (error) {

@@ -13,6 +13,7 @@ import { describe, it, expect } from 'vitest'
 import {
   assertPruneDeletionScope,
   computePruneGcsDeletions,
+  formatPruneLayerScopeNote,
   parsePruneOutput,
   PRUNE_DELETABLE_LAYERS,
   PRUNE_RETAINED_LAYERS,
@@ -123,6 +124,13 @@ describe('assertPruneDeletionScope (#1132)', () => {
         'club-trends/b.json',
       ])
     ).toThrow(/time-series\/a\.json.*club-trends\/b\.json/s)
+  })
+
+  it('formats one shared layer-scope note naming both layer sets (#1132)', () => {
+    const note = formatPruneLayerScopeNote()
+    expect(note).toContain('raw-csv, snapshots')
+    expect(note).toContain('time-series, club-trends, v1/rank-history')
+    expect(note).toContain('retained by design')
   })
 
   it('declares the layer scope the prune is allowed to touch (#1132)', () => {
