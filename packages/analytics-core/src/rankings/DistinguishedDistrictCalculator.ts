@@ -142,15 +142,23 @@ interface TierThreshold {
 /**
  * Per-program-year ruleset (#1116 item 5).
  *
- * Empirical basis: TI's all-districts CSV exports carried ONLY the `DSP`
- * and `Training` prerequisite columns from 2017 through 2024-25; the
- * Market Analysis / Communication Plan / Region Advisor Visit columns
- * (and the Smedley tier) first appear in the 2025-26 program year. A
- * year's tier can only be gated on prerequisites that existed that year.
+ * Sourced from the 2026-06-10 DRP rules research (item 1490 revisions +
+ * archive.org, verified by back-solving TI's own frozen dashboard goal
+ * numbers for multiple districts/years — exact and discriminating). Full
+ * table + sources: docs/investigations/1116-historical-drp-rules.md.
  *
- * Historical tier thresholds: pending confirmation from the DRP rules
- * research (item 1490 revisions); until a sourced per-era table lands,
- * pre-2025-26 years use the same 1/3/5% + 45/50/55% model minus Smedley.
+ * Era structure:
+ * - 2016-17..2017-18: 3 tiers, symmetric 3/5/8% (both metrics), 40/45/50%
+ * - 2018-19..2021-22: Smedley added (Board change ~Jan 2019, applied to
+ *   the full 2018-19 PY) — symmetric 1.5/3/5/8%, 40/45/50/55%
+ * - 2022-23..2024-25: asymmetric (Rev. 12/2022) — payments 1/3/5/8%;
+ *   clubs no-net-loss / net+1 / 3% / 5%; distinguished 40/45/50/55%
+ * - 2025-26+: symmetric 1/3/5/8%, 45/50/55/60% (current; §13)
+ *
+ * Prerequisites: exactly DSP + Training (85%, Sep 30) for every year
+ * 2016-17..2024-25 (matches the only prerequisite columns in TI's
+ * pre-2025-26 all-districts CSVs); 2025-26 adds Market Analysis,
+ * Communication Plan, and 2+ Region Advisor meetings (5 gates).
  */
 interface YearRuleset {
   requiredPrerequisites: ReadonlyArray<keyof DistinguishedDistrictPrerequisites>
@@ -199,21 +207,123 @@ const CURRENT_RULESET: YearRuleset = {
   tiers: TIER_THRESHOLDS,
 }
 
-const PRE_2025_RULESET: YearRuleset = {
-  requiredPrerequisites: ['dspSubmitted', 'trainingMet'],
-  tiers: TIER_THRESHOLDS.filter(t => t.tier !== 'Smedley'),
+const HISTORICAL_PREREQUISITES: YearRuleset['requiredPrerequisites'] = [
+  'dspSubmitted',
+  'trainingMet',
+]
+
+/** 2022-23..2024-25 (Item 1490 Rev. 12/2022): asymmetric ladder. */
+const ERA_2022_RULESET: YearRuleset = {
+  requiredPrerequisites: HISTORICAL_PREREQUISITES,
+  tiers: [
+    {
+      tier: 'Smedley',
+      paymentGrowthMin: 8,
+      clubGrowthMin: 5,
+      distinguishedPercentMin: 55,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Presidents',
+      paymentGrowthMin: 5,
+      clubGrowthMin: 3,
+      distinguishedPercentMin: 50,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Select',
+      paymentGrowthMin: 3,
+      clubGrowthMin: 0,
+      distinguishedPercentMin: 45,
+      netGrowthRule: 'plus-one',
+    },
+    {
+      tier: 'Distinguished',
+      paymentGrowthMin: 1,
+      clubGrowthMin: 0,
+      distinguishedPercentMin: 40,
+      netGrowthRule: 'no-loss',
+    },
+  ],
+}
+
+/** 2018-19..2021-22: Smedley's first district-level years; symmetric. */
+const ERA_2018_RULESET: YearRuleset = {
+  requiredPrerequisites: HISTORICAL_PREREQUISITES,
+  tiers: [
+    {
+      tier: 'Smedley',
+      paymentGrowthMin: 8,
+      clubGrowthMin: 8,
+      distinguishedPercentMin: 55,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Presidents',
+      paymentGrowthMin: 5,
+      clubGrowthMin: 5,
+      distinguishedPercentMin: 50,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Select',
+      paymentGrowthMin: 3,
+      clubGrowthMin: 3,
+      distinguishedPercentMin: 45,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Distinguished',
+      paymentGrowthMin: 1.5,
+      clubGrowthMin: 1.5,
+      distinguishedPercentMin: 40,
+      netGrowthRule: 'none',
+    },
+  ],
+}
+
+/** 2016-17..2017-18: three tiers, no Smedley, symmetric 3/5/8%. */
+const ERA_2016_RULESET: YearRuleset = {
+  requiredPrerequisites: HISTORICAL_PREREQUISITES,
+  tiers: [
+    {
+      tier: 'Presidents',
+      paymentGrowthMin: 8,
+      clubGrowthMin: 8,
+      distinguishedPercentMin: 50,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Select',
+      paymentGrowthMin: 5,
+      clubGrowthMin: 5,
+      distinguishedPercentMin: 45,
+      netGrowthRule: 'none',
+    },
+    {
+      tier: 'Distinguished',
+      paymentGrowthMin: 3,
+      clubGrowthMin: 3,
+      distinguishedPercentMin: 40,
+      netGrowthRule: 'none',
+    },
+  ],
 }
 
 /**
  * Resolve the ruleset for a program year ("YYYY-YYYY"). Unknown or
  * missing input falls back to the current rules (the daily pipeline's
- * behavior before #1116).
+ * behavior before #1116). Years before 2016-17 (outside our data range)
+ * get the earliest researched era.
  */
 function rulesetForProgramYear(programYear?: string): YearRuleset {
   if (!programYear) return CURRENT_RULESET
   const startYear = Number.parseInt(programYear.slice(0, 4), 10)
   if (Number.isNaN(startYear)) return CURRENT_RULESET
-  return startYear >= 2025 ? CURRENT_RULESET : PRE_2025_RULESET
+  if (startYear >= 2025) return CURRENT_RULESET
+  if (startYear >= 2022) return ERA_2022_RULESET
+  if (startYear >= 2018) return ERA_2018_RULESET
+  return ERA_2016_RULESET
 }
 
 export class DistinguishedDistrictCalculator {

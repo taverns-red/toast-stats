@@ -383,20 +383,40 @@ All four Distinguished District tiers require these prerequisites:
 | President's Distinguished |        —         |       ≥5%       |     ≥5%     |      ≥55%       |
 | Smedley Distinguished     |        —         |       ≥8%       |     ≥8%     |      ≥60%       |
 
-Smedley Distinguished is new for the 2025-2026 program year.
+Smedley Distinguished has existed at district level since **2018-19** (it is NOT new
+for 2025-2026 — a prior revision of this doc and #329 said otherwise). What changed in
+2025-2026: the symmetric 8%/8% growth ladder (club growth was 5% under Rev. 12/2022)
+and %-distinguished 55%→60%, alongside every tier's %-distinguished rising 5 points.
+For pre-2025-26 tier requirements see §13.3.
 
-### 13.3 Competitive Awards (Top 3 Globally)
+### 13.3 Historical District Recognition requirements (2016-17 → 2024-25)
+
+Authoritative per-era table (sourced from Item 1490 revisions and verified by
+back-solving TI's frozen dashboard goal numbers — see
+[`docs/investigations/1116-historical-drp-rules.md`](investigations/1116-historical-drp-rules.md)):
+
+| Era               | Tiers         | Payments growth | Club requirement              | % Distinguished (of club base) | Prerequisites       |
+| ----------------- | ------------- | --------------- | ----------------------------- | ------------------------------ | ------------------- |
+| 2016-17 → 2017-18 | D/S/P         | 3/5/8%          | 3/5/8%                        | 40/45/50                       | DSP + Training only |
+| 2018-19 → 2021-22 | D/S/P/Smedley | 1.5/3/5/8%      | 1.5/3/5/8%                    | 40/45/50/55                    | DSP + Training only |
+| 2022-23 → 2024-25 | D/S/P/Smedley | 1/3/5/8%        | no-net-loss / net+1 / 3% / 5% | 40/45/50/55                    | DSP + Training only |
+
+Implemented by `DistinguishedDistrictCalculator.rulesetForProgramYear` (#1116 item 5).
+A prerequisite required by a year's rules but unknowable from the data yields tier
+**Unknown** (§12.5), never a silent NotDistinguished.
+
+### 13.4 Competitive Awards (Top 3 Globally)
 
 - **President's Extension Award:** Top 3 districts by net club growth
 - **President's 20-Plus Award:** Top 3 districts by % of active clubs with 20+ paid members
 - **District Club Retention Award:** Top 3 districts retaining 90%+ paid clubs
 
-### 13.4 Threshold Awards
+### 13.5 Threshold Awards
 
 - **District Club Strength Award:** 10%+ growth in average club size (Total Membership / Active Clubs) year-over-year
 - **District Leadership Excellence Award:** 3+ consecutive years Distinguished (any tier)
 
-### 13.5 Officer Awards
+### 13.6 Officer Awards
 
 - **Excellence in Education & Training Award:** Awarded to PQD in districts that train 85% of Directors and meet Distinguished goals in Distinguished clubs
 - **Excellence in Club Growth Award:** Awarded to CGD in districts that meet Distinguished goals in club and membership payments growth
@@ -412,6 +432,7 @@ Smedley Distinguished is new for the 2025-2026 program year.
 | 1.2     | April 2026    | Added §13 District Recognition Program (all 11 award types)                                                                                                                                                                                                                                                                  |
 | 1.3     | May 2026      | Corrected §6 (DAP) and §7 (DDP) to the manual (item 1490) model — distinguished **clubs** as % of **club base** (DAP 50/50+1, DDP 45/50/55) + paid-club growth; removed the legacy area-%/paid-% recognition model; clarified §9 recognition denominators (#799)                                                             |
 | 1.4     | June 2026     | §5.3 corrected to the canonical (implemented) checkpoint table — October 2 (was 1), December 3 (was 2) — per operator ruling on #1122: no official TI monthly pacing exists; the implementation matched the original club-health spec and empirically discriminates, the doc's earlier values did not (audit 2026-06-09, H1) |
+| 1.5     | June 2026     | Added §13.3 historical DRP requirements (2016-17→2024-25, per-era, dashboard-verified — investigation 1116); corrected §13.2 (Smedley exists at district level since 2018-19, not new in 2025-26); renumbered §13.4-13.6 (#1116 item 5)                                                                                      |
 
 ---
 

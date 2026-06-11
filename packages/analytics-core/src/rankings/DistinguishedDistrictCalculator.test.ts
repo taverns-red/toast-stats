@@ -408,25 +408,48 @@ describe('DistinguishedDistrictCalculator', () => {
 
   describe('Per-program-year rules (#1116 item 5)', () => {
     describe('historical years (pre-2025-26): only DSP + Training existed', () => {
-      it('awards Distinguished when DSP+Training are Y and MA/CP/RA columns are absent', () => {
+      it('awards Distinguished on the era ladder when MA/CP/RA columns are absent (2018-19 D61, dashboard-verified)', () => {
+        // Real back-solved TI goals: D61 2018-19 base 190 clubs / 7,276
+        // payments → Distinguished at 193 clubs / 7,386 payments / 76
+        // distinguished (1.5%/1.5%/40% era).
         const ranking = buildRanking({
-          paidClubs: 101,
-          paidClubBase: 100,
-          clubGrowthPercent: 1.5,
-          paymentGrowthPercent: 1.2,
-          distinguishedPercent: 46,
+          paidClubBase: 190,
+          paidClubs: 193,
+          clubGrowthPercent: (3 / 190) * 100,
+          paymentBase: 7276,
+          totalPayments: 7386,
+          paymentGrowthPercent: (110 / 7276) * 100,
+          distinguishedClubs: 76,
+          distinguishedPercent: 40,
           marketAnalysisSubmitted: undefined,
           communicationPlanSubmitted: undefined,
           regionAdvisorVisitMet: undefined,
         })
 
-        const result = calculator.calculate(ranking, '2017-2018')
+        const result = calculator.calculate(ranking, '2018-2019')
 
         expect(result.currentTier).toBe('Distinguished')
         expect(result.allPrerequisitesMet).toBe(true)
       })
 
-      it('caps at Presidents — Smedley did not exist before 2025-2026', () => {
+      it('2016-17/2017-18 era requires 3% — the same +1.5% growth is NotDistinguished', () => {
+        const ranking = buildRanking({
+          paidClubBase: 190,
+          paidClubs: 193,
+          clubGrowthPercent: (3 / 190) * 100,
+          paymentGrowthPercent: 1.51,
+          distinguishedPercent: 40,
+          marketAnalysisSubmitted: undefined,
+          communicationPlanSubmitted: undefined,
+          regionAdvisorVisitMet: undefined,
+        })
+
+        expect(calculator.calculate(ranking, '2017-2018').currentTier).toBe(
+          'NotDistinguished'
+        )
+      })
+
+      it('caps at Presidents in the 3-tier 2016-17/2017-18 era — Smedley did not exist yet', () => {
         const ranking = buildRanking({
           paidClubs: 110,
           paidClubBase: 100,
@@ -440,6 +463,66 @@ describe('DistinguishedDistrictCalculator', () => {
 
         expect(calculator.calculate(ranking, '2017-2018').currentTier).toBe(
           'Presidents'
+        )
+      })
+
+      it('Smedley exists at district level from 2018-19 (8%/8%/55%)', () => {
+        const ranking = buildRanking({
+          paidClubs: 110,
+          paidClubBase: 100,
+          clubGrowthPercent: 10,
+          paymentGrowthPercent: 10,
+          distinguishedPercent: 56,
+          marketAnalysisSubmitted: undefined,
+          communicationPlanSubmitted: undefined,
+          regionAdvisorVisitMet: undefined,
+        })
+
+        expect(calculator.calculate(ranking, '2018-2019').currentTier).toBe(
+          'Smedley'
+        )
+      })
+
+      it('2022-23 asymmetric era (Rev. 12/2022): flat clubs + 1% payments + 40% earns Distinguished (D61 numbers); the same district fails 2021-22 rules', () => {
+        // Real back-solved TI goals: D61 2022-23 base 178 clubs / 5,590
+        // payments → Distinguished at no-net-loss / 5,646 / 72.
+        const ranking = buildRanking({
+          paidClubBase: 178,
+          paidClubs: 178,
+          clubGrowthPercent: 0,
+          paymentBase: 5590,
+          totalPayments: 5646,
+          paymentGrowthPercent: (56 / 5590) * 100,
+          distinguishedClubs: 72,
+          distinguishedPercent: (72 / 178) * 100,
+          marketAnalysisSubmitted: undefined,
+          communicationPlanSubmitted: undefined,
+          regionAdvisorVisitMet: undefined,
+        })
+
+        expect(calculator.calculate(ranking, '2022-2023').currentTier).toBe(
+          'Distinguished'
+        )
+        // One year earlier the same performance misses the 1.5% club floor.
+        expect(calculator.calculate(ranking, '2021-2022').currentTier).toBe(
+          'NotDistinguished'
+        )
+      })
+
+      it('2022-23 Select needs net +1 club — flat clubs with 3% payments stays Distinguished', () => {
+        const ranking = buildRanking({
+          paidClubBase: 178,
+          paidClubs: 178,
+          clubGrowthPercent: 0,
+          paymentGrowthPercent: 3.1,
+          distinguishedPercent: 46,
+          marketAnalysisSubmitted: undefined,
+          communicationPlanSubmitted: undefined,
+          regionAdvisorVisitMet: undefined,
+        })
+
+        expect(calculator.calculate(ranking, '2022-2023').currentTier).toBe(
+          'Distinguished'
         )
       })
 
