@@ -4,7 +4,8 @@
 #   daily    — scrape → transform → compute-analytics → upload ONE date (default, cron)
 #   rebuild  — sync all raw-csv from GCS → rebuild ALL dates → upload ALL snapshots
 #   rescrape — re-collect CSVs from the dashboard for specific dates or a program year
-#   prune    — remove non-month-end dates from local cache and GCS
+#   prune    — remove non-month-end dates from local cache and GCS staging;
+#              with reconcile_prod=true, also reconcile production (#1133)
 #
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
@@ -60,6 +61,11 @@ on:
         default: false
       dry_run:
         description: 'Prune only: classify and report without deleting'
+        required: false
+        type: boolean
+        default: false
+      reconcile_prod:
+        description: 'Prune only: also reconcile PRODUCTION — delete pruned prefixes + sync manifests (#1133, see runbook)'
         required: false
         type: boolean
         default: false
@@ -129,7 +135,17 @@ jobs:
         id: mode
         run: |
           MODE="${{ inputs.mode || 'daily' }}"
+          # Boolean inputs are BOOLEANS in the `inputs` expression context;
+          # comparing one to the string 'true' in an `if:` coerces
+          # true→1 vs 'true'→NaN and NEVER matches — the dry-run gate on
+          # the GCS deletion step was inert (#1133). Normalize booleans to
+          # step-output strings here, once; every `if:` compares strings.
+          # Guarded by scripts/lib/workflowBooleanInputGuard.ts.
+          DRY_RUN="${{ inputs.dry_run }}"
+          RECONCILE_PROD="${{ inputs.reconcile_prod }}"
           echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
+          echo "dry_run=${DRY_RUN:-false}" >> "$GITHUB_OUTPUT"
+          echo "reconcile_prod=${RECONCILE_PROD:-false}" >> "$GITHUB_OUTPUT"
           echo "## 🔧 Pipeline Mode: \`${MODE}\`" >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
@@ -1001,7 +1017,7 @@ jobs:
           set -o pipefail
 
           DRY_RUN_FLAG=""
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "${{ steps.mode.outputs.dry_run }}" = "true" ]; then
             DRY_RUN_FLAG="--dry-run"
             echo "::notice::Dry-run mode — no data will be deleted"
           fi
@@ -1014,7 +1030,7 @@ jobs:
 
       # ── Prune Step 3: Delete pruned dates from GCS ──
       - name: '[prune] Delete pruned dates from GCS'
-        if: steps.mode.outputs.mode == 'prune' && inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode == 'prune' && steps.mode.outputs.dry_run != 'true'
         run: |
           echo "Deleting pruned dates from GCS..."
 
@@ -1041,7 +1057,7 @@ jobs:
       # ════════════════════════════════════════════════════════
 
       - name: Generate CDN manifests
-        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
           # Determine the latest date from local snapshots (falls back to GCS
           # listing when local cache is empty, e.g. after a rebuild that deletes
@@ -1199,7 +1215,7 @@ jobs:
 
       # ── Shared: Update district-snapshot-index ──
       - name: Update district-snapshot-index
-        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
           MODE="${{ steps.mode.outputs.mode }}"
           INDEX_PATH="gs://${GCS_BUCKET}/config/district-snapshot-index.json"
@@ -1266,7 +1282,7 @@ jobs:
 
       # ── Shared: Generate club-index.json (#320) ──
       - name: Generate club-index
-        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
           LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
             | jq -r '.latestSnapshotDate' || echo "")
@@ -1329,7 +1345,7 @@ jobs:
       # scripts/lib/divisionsAreasIndex.ts (thin-glue step, Lesson 107).
       # Promotion rsyncs config/ wholesale, so this reaches prod with the run.
       - name: Generate divisions-areas index
-        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
           LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
             | jq -r '.latestSnapshotDate' || echo "")
@@ -1359,6 +1375,68 @@ jobs:
           echo "## 🗺️ Divisions/Areas Index" >> "$GITHUB_STEP_SUMMARY"
           jq -r '"- **Divisions indexed**: \(.totalDivisions)\n- **Areas indexed**: \(.totalAreas)"' \
             /tmp/divisions-areas-index.json >> "$GITHUB_STEP_SUMMARY"
+
+      # ════════════════════════════════════════════════════════
+      # PRUNE MODE: PROD RECONCILIATION (#1133)
+      # Prune deletes only from staging; promotion rsync has no -d, so a
+      # staging-only prune leaves staging < prod and the count gate freezes
+      # promotion. The plan is the prod-minus-staging diff of dated dirs
+      # (fail-closed in scripts/lib/pruneProdReconcile.ts), which also
+      # sweeps stragglers from earlier staging-only prunes. These steps run
+      # AFTER the shared manifest regeneration above, so the v1/ rsync
+      # copies the post-prune dates.json — rsyncing the stale manifest
+      # would re-freeze the count gate the mechanism exists to unfreeze.
+      # Runbook: docs/runbooks/prune-prod-reconciliation.md
+      # ════════════════════════════════════════════════════════
+
+      - name: '[prune] Plan prod reconciliation'
+        if: steps.mode.outputs.mode == 'prune' && steps.mode.outputs.reconcile_prod == 'true'
+        run: |
+          set -o pipefail
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/" > /tmp/ls-staging-snapshots.txt
+          gsutil ls "gs://${GCS_BUCKET}/raw-csv/" > /tmp/ls-staging-rawcsv.txt
+          gsutil ls "gs://${GCS_BUCKET_PRODUCTION}/snapshots/" > /tmp/ls-prod-snapshots.txt
+          # Promotion never syncs raw-csv, so prod may legitimately lack it.
+          gsutil ls "gs://${GCS_BUCKET_PRODUCTION}/raw-csv/" > /tmp/ls-prod-rawcsv.txt \
+            || : > /tmp/ls-prod-rawcsv.txt
+
+          # In a dry run staging is untouched: the prune output's pending
+          # deletions are previewed as already gone. In a real run staging
+          # is already pruned and the subtraction is a no-op.
+          npx tsx scripts/prune-prod-reconcile.ts \
+            --staging-snapshots /tmp/ls-staging-snapshots.txt \
+            --staging-rawcsv /tmp/ls-staging-rawcsv.txt \
+            --prod-snapshots /tmp/ls-prod-snapshots.txt \
+            --prod-rawcsv /tmp/ls-prod-rawcsv.txt \
+            --prune-output /tmp/prune-output.json > /tmp/prod-reconcile-paths.txt
+
+          COUNT=$(wc -l < /tmp/prod-reconcile-paths.txt | tr -d ' ')
+          echo "## 🔁 Prod Reconcile Plan (#1133)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Prod-only prefixes to delete**: ${COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          sed 's/^/- `/; s/$/`/' /tmp/prod-reconcile-paths.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: '[prune] Reconcile production'
+        if: >-
+          steps.mode.outputs.mode == 'prune' &&
+          steps.mode.outputs.reconcile_prod == 'true' &&
+          steps.mode.outputs.dry_run != 'true'
+        run: |
+          DELETED=0
+          while IFS= read -r PREFIX; do
+            echo "Deleting gs://${GCS_BUCKET_PRODUCTION}/${PREFIX}/..."
+            gsutil -m rm -r "gs://${GCS_BUCKET_PRODUCTION}/${PREFIX}/" || true
+            DELETED=$((DELETED + 1))
+          done < /tmp/prod-reconcile-paths.txt
+
+          # Sync the regenerated manifests so the next daily's count gate
+          # compares like with like (prod's v1/dates.json would otherwise
+          # still list the pruned dates and freeze promotion).
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"
+
+          echo "## ✅ Prod Reconciliation Complete (#1133)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Prefixes deleted from prod**: ${DELETED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Manifests (v1/, config/) synced staging → prod" >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
       # STAGING → PRODUCTION PROMOTION (#316)

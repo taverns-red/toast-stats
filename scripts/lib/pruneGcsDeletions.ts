@@ -86,7 +86,8 @@ export interface PruneGcsDeletions {
   snapshotDates: string[]
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+/** Strict YYYY-MM-DD — the only shape a deletion path may carry (#1131). */
+export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /**
  * Derive the GCS deletion lists from prune classifications.

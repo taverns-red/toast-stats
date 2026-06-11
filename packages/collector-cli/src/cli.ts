@@ -1161,6 +1161,8 @@ export function createCLI(): Command {
           JSON.stringify(
             {
               dryRun: options.dryRun,
+              closingGuard: result.closingGuard,
+              blocked: result.blocked,
               layerScope: result.layerScope,
               totalDates: result.totalDates,
               keptDates: result.keptDates,

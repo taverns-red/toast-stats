@@ -33,6 +33,10 @@ import {
 import type { CacheMetadata } from '../types/collector.js'
 import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
 import { resolveClosingWindow } from '../utils/closingWindowResolver.js'
+import {
+  evaluatePruneClosingGuard,
+  type PruneClosingGuardVerdict,
+} from '../utils/pruneClosingGuard.js'
 
 /**
  * Classification of a raw-csv date for pruning
@@ -80,6 +84,15 @@ export const PRUNE_LAYER_SCOPE: PruneLayerScope = {
  */
 export interface PruneResult {
   success: boolean
+  /**
+   * Closing-period guard verdict for the run date (#1133). A destructive
+   * run with `allowed: false` is refused before any classification; a
+   * dry-run proceeds (read-only) but carries the refused verdict so the
+   * operator knows a real run would block.
+   */
+  closingGuard: PruneClosingGuardVerdict
+  /** True when the closing-period guard refused this destructive run (#1133). */
+  blocked: boolean
   /** Layer scope of this run — retained derived layers stated explicitly (#1132). */
   layerScope: PruneLayerScope
   totalDates: number
@@ -141,17 +154,24 @@ export class PruneService {
   private readonly logger: Logger
   private readonly closingPeriodDetector: ClosingPeriodDetector
   private readonly closingDateRegistry: ClosingDateEntry[]
+  private readonly today: string
 
   constructor(options: {
     cacheDir: string
     logger?: Logger
     /** Registry months from docs/month-end-closing-dates.json (#1131) */
     closingDateRegistry?: ClosingDateEntry[]
+    /**
+     * Run date (YYYY-MM-DD) for the closing-period guard (#1133).
+     * Injectable for tests; defaults to the current UTC date.
+     */
+    today?: string
   }) {
     this.cacheDir = options.cacheDir
     this.logger = options.logger ?? noopLogger
     this.closingPeriodDetector = new ClosingPeriodDetector()
     this.closingDateRegistry = options.closingDateRegistry ?? []
+    this.today = options.today ?? new Date().toISOString().slice(0, 10)
   }
 
   /**
@@ -304,6 +324,38 @@ export class PruneService {
    */
   async prune(dryRun = false): Promise<PruneResult> {
     const startTime = Date.now()
+
+    // Closing-period guard (#1133/#1037): a destructive prune must never
+    // run while TI is still reconciling the previous month. Fail closed —
+    // 'closing' and 'unknown' both refuse. Dry-run is read-only, so it
+    // proceeds, carrying the verdict for the operator.
+    const closingGuard = evaluatePruneClosingGuard(
+      this.today,
+      this.closingDateRegistry
+    )
+    if (!closingGuard.allowed) {
+      if (!dryRun) {
+        this.logger.error(closingGuard.reason)
+        return {
+          success: false,
+          closingGuard,
+          blocked: true,
+          layerScope: PRUNE_LAYER_SCOPE,
+          totalDates: 0,
+          keptDates: 0,
+          prunedDates: 0,
+          classifications: [],
+          deletedRawCsv: [],
+          deletedSnapshots: [],
+          errors: [closingGuard.reason],
+          duration_ms: Date.now() - startTime,
+        }
+      }
+      this.logger.warn(
+        `Dry-run proceeding, but a destructive prune would be refused: ${closingGuard.reason}`
+      )
+    }
+
     const classifications = await this.classifyAll()
 
     const kept = classifications.filter(c => c.keep)
@@ -345,6 +397,8 @@ export class PruneService {
 
     return {
       success: errors.length === 0,
+      closingGuard,
+      blocked: false,
       layerScope: PRUNE_LAYER_SCOPE,
       totalDates: classifications.length,
       keptDates: kept.length,
