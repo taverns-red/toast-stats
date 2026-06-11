@@ -235,3 +235,68 @@ describe('RebuildService', () => {
     })
   })
 })
+
+describe('RebuildService — closing-date registry pass-through (#1129)', () => {
+  let testDir: string
+
+  beforeEach(async () => {
+    testDir = path.join(
+      tmpdir(),
+      `rebuild-1129-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    )
+    await fs.mkdir(path.join(testDir, 'raw-csv'), { recursive: true })
+  })
+
+  afterEach(async () => {
+    await fs.rm(testDir, { recursive: true, force: true })
+  })
+
+  async function createFooterlessFixture(date: string): Promise<void> {
+    const rawCsvDir = path.join(testDir, 'raw-csv', date)
+    const districtDir = path.join(rawCsvDir, 'district-42')
+    await fs.mkdir(districtDir, { recursive: true })
+    await fs.writeFile(
+      path.join(rawCsvDir, 'all-districts.csv'),
+      'DISTRICT,REGION,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs\n42,Region 2,200,190,5.26%,2000,1900,5.26%,200,20,10,5'
+    )
+    await fs.writeFile(
+      path.join(districtDir, 'club-performance.csv'),
+      'Club Number,Club Name,Division,Area,Active Members,Goals Met\n1234,Test Club,A,1,20,5'
+    )
+  }
+
+  it('remaps a metadata-less closing-window date via the injected registry', async () => {
+    await createFooterlessFixture('2026-02-03')
+
+    const service = new RebuildService({
+      cacheDir: testDir,
+      closingDateRegistry: [
+        { dataMonth: '2026-01', closingDate: '2026-02-05' },
+      ],
+    })
+
+    const result = await service.rebuildDate('2026-02-03')
+
+    expect(result.transformSuccess).toBe(true)
+    expect(result.snapshotDate).toBe('2026-01-31')
+  })
+
+  it('marks an undecided date failed instead of publishing it', async () => {
+    await createFooterlessFixture('2026-06-08')
+
+    const service = new RebuildService({
+      cacheDir: testDir,
+      closingDateRegistry: [
+        { dataMonth: '2026-01', closingDate: '2026-02-05' },
+      ],
+    })
+
+    const result = await service.rebuildDate('2026-06-08')
+
+    expect(result.transformSuccess).toBe(false)
+    expect(result.error).toMatch(/registry|undecided/i)
+    await expect(
+      fs.stat(path.join(testDir, 'snapshots', '2026-06-08'))
+    ).rejects.toThrow()
+  })
+})
