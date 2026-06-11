@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { RebuildService } from '../services/RebuildService.js'
+import { createRawCsvFixture } from './fixtures/rawCsvFixture.js'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { tmpdir } from 'node:os'
@@ -233,5 +234,56 @@ describe('RebuildService', () => {
       const manifest = JSON.parse(await fs.readFile(latestPath, 'utf-8'))
       expect(manifest.latestSnapshotDate).toBe('2026-02-28')
     })
+  })
+})
+
+describe('RebuildService — closing-date registry pass-through (#1129)', () => {
+  let testDir: string
+
+  beforeEach(async () => {
+    testDir = path.join(
+      tmpdir(),
+      `rebuild-1129-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    )
+    await fs.mkdir(path.join(testDir, 'raw-csv'), { recursive: true })
+  })
+
+  afterEach(async () => {
+    await fs.rm(testDir, { recursive: true, force: true })
+  })
+
+  it('remaps a metadata-less closing-window date via the injected registry', async () => {
+    await createRawCsvFixture(testDir, '2026-02-03')
+
+    const service = new RebuildService({
+      cacheDir: testDir,
+      closingDateRegistry: [
+        { dataMonth: '2026-01', closingDate: '2026-02-05' },
+      ],
+    })
+
+    const result = await service.rebuildDate('2026-02-03')
+
+    expect(result.transformSuccess).toBe(true)
+    expect(result.snapshotDate).toBe('2026-01-31')
+  })
+
+  it('marks an undecided date failed instead of publishing it', async () => {
+    await createRawCsvFixture(testDir, '2026-06-08')
+
+    const service = new RebuildService({
+      cacheDir: testDir,
+      closingDateRegistry: [
+        { dataMonth: '2026-01', closingDate: '2026-02-05' },
+      ],
+    })
+
+    const result = await service.rebuildDate('2026-06-08')
+
+    expect(result.transformSuccess).toBe(false)
+    expect(result.error).toMatch(/registry|undecided/i)
+    await expect(
+      fs.stat(path.join(testDir, 'snapshots', '2026-06-08'))
+    ).rejects.toThrow()
   })
 })

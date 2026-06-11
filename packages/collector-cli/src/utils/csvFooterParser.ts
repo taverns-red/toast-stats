@@ -31,8 +31,12 @@ const MONTHS: Record<string, string> = {
 export function parseClosingPeriodFromCsv(
   csvContent: string,
   requestedDate: string
-): { isClosingPeriod: boolean; dataMonth?: string } {
-  if (!csvContent) return { isClosingPeriod: false }
+): { isClosingPeriod: boolean; dataMonth?: string; footerFound: boolean } {
+  // `footerFound: false` means UNDECIDED, not non-closing — a CSV without an
+  // "As of" footer says nothing about its data month. Callers needing
+  // fail-closed semantics (#1129) must consult the next authority instead of
+  // treating the default isClosingPeriod:false as a decision.
+  if (!csvContent) return { isClosingPeriod: false, footerFound: false }
 
   const lines = csvContent.split(/\r?\n/).slice(-20) // Search the end of the file
   for (const line of lines) {
@@ -71,9 +75,10 @@ export function parseClosingPeriodFromCsv(
       return {
         isClosingPeriod,
         dataMonth: isClosingPeriod ? formattedDataMonth : undefined,
+        footerFound: true,
       }
     }
   }
 
-  return { isClosingPeriod: false }
+  return { isClosingPeriod: false, footerFound: false }
 }
