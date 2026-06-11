@@ -16,6 +16,21 @@
  * workflow supplies the JSON and loops `gsutil rm` over the printed paths.
  */
 
+/** Layers the prune is allowed to delete from (#1132). */
+export const PRUNE_DELETABLE_LAYERS: readonly string[] = []
+
+/** Derived layers retained by design — operator ruling on #1132. */
+export const PRUNE_RETAINED_LAYERS: readonly string[] = []
+
+/**
+ * Structural scope guard (#1132): every deletion path must sit under a
+ * deletable layer. Throws otherwise.
+ */
+export function assertPruneDeletionScope(prefixes: string[]): void {
+  void prefixes
+  throw new Error('not implemented')
+}
+
 /** One classification entry from `collector-cli prune` JSON output. */
 export interface PruneClassification {
   /** Raw-csv collection date (YYYY-MM-DD) — keys raw-csv/ deletions. */

@@ -53,10 +53,23 @@ export interface DateClassification {
 }
 
 /**
+ * Layer scope of a prune run (#1132): which GCS/cache layers the prune may
+ * delete from, and which derived layers are retained by design. Reported in
+ * every prune result so the retention asymmetry is never a silent gap.
+ */
+export interface PruneLayerScope {
+  pruned: string[]
+  retained: string[]
+  note: string
+}
+
+/**
  * Result of a prune operation
  */
 export interface PruneResult {
   success: boolean
+  /** Populated by GREEN of #1132 — optional only during the RED commit. */
+  layerScope?: PruneLayerScope
   totalDates: number
   keptDates: number
   prunedDates: number
