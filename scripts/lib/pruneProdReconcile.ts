@@ -28,9 +28,7 @@
  * prefixes.
  */
 
-import { assertPruneDeletionScope } from './pruneGcsDeletions.js'
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+import { assertPruneDeletionScope, ISO_DATE } from './pruneGcsDeletions.js'
 
 /** Dated-dir listings for the two prune-deletable layers (#1132). */
 export interface LayerDates {
@@ -160,7 +158,8 @@ export function planProdReconcile(options: {
   return { deletePrefixes }
 }
 
+/** Inputs are already deduped (parseGcsDatedDirListing / computePruneGcsDeletions). */
 function subtract(from: string[], remove: string[]): string[] {
   const removeSet = new Set(remove)
-  return [...new Set(from.filter(d => !removeSet.has(d)))].sort()
+  return from.filter(d => !removeSet.has(d)).sort()
 }
