@@ -1014,25 +1014,23 @@ jobs:
         run: |
           echo "Deleting pruned dates from GCS..."
 
-          # Find dates that were in GCS but no longer exist locally (pruned)
-          # List local snapshot dates
-          LOCAL_DATES=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
-          # List GCS snapshot dates
-          GCS_DATES=$(gsutil ls "gs://${GCS_BUCKET}/snapshots/" | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u)
+          # Deletions are keyed by the prune classification output (#1131):
+          # raw-csv/ by COLLECTION date, snapshots/ by SNAPSHOT date. The
+          # previous local-vs-GCS snapshot-date diff orphaned remapped
+          # raw-csv dirs (collection date ≠ snapshot date) forever. The
+          # script fails closed: malformed output fails this step before
+          # any gsutil rm runs.
+          npx tsx scripts/prune-gcs-deletions.ts /tmp/prune-output.json > /tmp/prune-gcs-paths.txt
 
           DELETED=0
-          for GCS_DATE in ${GCS_DATES}; do
-            if ! echo "${LOCAL_DATES}" | grep -q "^${GCS_DATE}$"; then
-              echo "Deleting gs://${GCS_BUCKET}/snapshots/${GCS_DATE}/..."
-              gsutil -m rm -r "gs://${GCS_BUCKET}/snapshots/${GCS_DATE}/" || true
-              echo "Deleting gs://${GCS_BUCKET}/raw-csv/${GCS_DATE}/..."
-              gsutil -m rm -r "gs://${GCS_BUCKET}/raw-csv/${GCS_DATE}/" || true
-              DELETED=$((DELETED + 1))
-            fi
-          done
+          while IFS= read -r PREFIX; do
+            echo "Deleting gs://${GCS_BUCKET}/${PREFIX}/..."
+            gsutil -m rm -r "gs://${GCS_BUCKET}/${PREFIX}/" || true
+            DELETED=$((DELETED + 1))
+          done < /tmp/prune-gcs-paths.txt
 
           echo "## 🗑️ GCS Cleanup" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Dates deleted from GCS**: ${DELETED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Prefixes deleted from GCS**: ${DELETED}" >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
       # SHARED: CDN Manifests (daily + rebuild)
