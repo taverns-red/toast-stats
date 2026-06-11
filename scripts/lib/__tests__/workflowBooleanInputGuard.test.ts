@@ -60,6 +60,14 @@ describe('findBooleanInputStringComparisons', () => {
     expect(findBooleanInputStringComparisons(clean)).toEqual([])
   })
 
+  it('does not flag github.event.inputs.* — those ARE strings, so string comparison is correct there', () => {
+    const eventContext = KNOWN_BAD.replace(
+      "if: inputs.dry_run != 'true'",
+      "if: github.event.inputs.dry_run != 'true'"
+    )
+    expect(findBooleanInputStringComparisons(eventContext)).toEqual([])
+  })
+
   it('catches reversed and double-quoted forms', () => {
     const reversed = KNOWN_BAD.replace(
       "inputs.dry_run != 'true'",

@@ -122,6 +122,49 @@ describe('planProdReconcile', () => {
     expect(plan.deletePrefixes).toEqual([])
   })
 
+  it('throws when the plan would delete more than half of a prod layer (degraded-staging ceiling)', () => {
+    // Staging lost most of its snapshots to some incident (NOT via
+    // classification) — prod-minus-staging balloons. The count gate that
+    // normally catches subtractive staging is exactly what reconcile
+    // bypasses, so the plan itself must refuse implausible scale.
+    expect(() =>
+      planProdReconcile({
+        staging: {
+          rawCsvDates: ['2026-01-31'],
+          snapshotDates: ['2026-01-31'],
+        },
+        prod: {
+          rawCsvDates: ['2026-01-31'],
+          snapshotDates: [
+            '2025-10-31',
+            '2025-11-30',
+            '2025-12-31',
+            '2026-01-31',
+          ],
+        },
+      })
+    ).toThrow(/ceiling/i)
+  })
+
+  it('allows an operator-raised ceiling to pass the same plan', () => {
+    const plan = planProdReconcile({
+      staging: {
+        rawCsvDates: ['2026-01-31'],
+        snapshotDates: ['2026-01-31'],
+      },
+      prod: {
+        rawCsvDates: ['2026-01-31'],
+        snapshotDates: ['2025-10-31', '2025-11-30', '2025-12-31', '2026-01-31'],
+      },
+      maxDeletionFraction: 1,
+    })
+    expect(plan.deletePrefixes).toEqual([
+      'snapshots/2025-10-31',
+      'snapshots/2025-11-30',
+      'snapshots/2025-12-31',
+    ])
+  })
+
   it('throws on a malformed date in any listing (nothing non-ISO can reach gsutil rm)', () => {
     expect(() =>
       planProdReconcile({
