@@ -996,6 +996,10 @@ jobs:
         if: steps.mode.outputs.mode == 'prune'
         id: prune
         run: |
+          # Without pipefail, `| tee` masks a non-zero prune exit and Step 3
+          # would consume a partial-failure artifact as if it were clean (#1131)
+          set -o pipefail
+
           DRY_RUN_FLAG=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             DRY_RUN_FLAG="--dry-run"

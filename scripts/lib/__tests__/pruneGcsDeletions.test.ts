@@ -132,4 +132,14 @@ describe('parsePruneOutput', () => {
 
     expect(() => parsePruneOutput(json)).toThrow(/rawCsvDate/)
   })
+
+  it('rejects a malformed snapshotDate the same way', () => {
+    const json = JSON.stringify({
+      classifications: [
+        { rawCsvDate: '2026-01-15', snapshotDate: '../latest', keep: false },
+      ],
+    })
+
+    expect(() => parsePruneOutput(json)).toThrow(/snapshotDate/)
+  })
 })

@@ -237,6 +237,42 @@ describe('PruneService', () => {
       expect(result.keep).toBe(true)
       expect(result.reason).toContain('Protected')
     })
+
+    it('remaps a metadata-less January date across the year boundary (Dec window)', async () => {
+      // 2026-01-05 ≤ 2025-12's closingDate 2026-01-08 → December's window
+      await createRawCsvDateWithoutMetadata('2026-01-05')
+      const service = new PruneService({
+        cacheDir: testDir,
+        closingDateRegistry: registryMonths,
+      })
+
+      const result = await service.classifyDate('2026-01-05')
+
+      expect(result.keep).toBe(true)
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.snapshotDate).toBe('2025-12-31')
+    })
+
+    it('warns when metadata says non-closing but the date sits inside a registry closing window (Lesson 158)', async () => {
+      // Laundered default: a footer-less legacy scrape persisted
+      // isClosingPeriod:false. Keep rules stay unchanged — but the
+      // contradiction must be surfaced.
+      await createRawCsvDate('2026-02-03', { isClosingPeriod: false })
+      const warn = vi.fn()
+      const service = new PruneService({
+        cacheDir: testDir,
+        closingDateRegistry: registryMonths,
+        logger: { info: vi.fn(), warn, error: vi.fn(), debug: vi.fn() },
+      })
+
+      const result = await service.classifyDate('2026-02-03')
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('registry closing window')
+      )
+      // Keep rules unchanged: trusted metadata still classifies by raw date
+      expect(result.keep).toBe(false)
+    })
   })
 
   describe('prune', () => {
