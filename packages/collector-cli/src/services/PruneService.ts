@@ -53,10 +53,35 @@ export interface DateClassification {
 }
 
 /**
+ * Layer scope of a prune run (#1132): which GCS/cache layers the prune may
+ * delete from, and which derived layers are retained by design. Reported in
+ * every prune result so the retention asymmetry is never a silent gap.
+ */
+export interface PruneLayerScope {
+  pruned: string[]
+  retained: string[]
+  note: string
+}
+
+/**
+ * The one layer-scope statement every prune result carries (#1132).
+ * Mirrors scripts/lib/pruneGcsDeletions.ts PRUNE_DELETABLE_LAYERS /
+ * PRUNE_RETAINED_LAYERS — kept duplicated because scripts/ must not depend
+ * on this package's build (Lesson 140); each side pins the values in tests.
+ */
+export const PRUNE_LAYER_SCOPE: PruneLayerScope = {
+  pruned: ['raw-csv', 'snapshots'],
+  retained: ['time-series', 'club-trends', 'v1/rank-history'],
+  note: 'Derived layers retained by design (#1132) — trend surfaces keep full daily resolution',
+}
+
+/**
  * Result of a prune operation
  */
 export interface PruneResult {
   success: boolean
+  /** Layer scope of this run — retained derived layers stated explicitly (#1132). */
+  layerScope: PruneLayerScope
   totalDates: number
   keptDates: number
   prunedDates: number
@@ -320,6 +345,7 @@ export class PruneService {
 
     return {
       success: errors.length === 0,
+      layerScope: PRUNE_LAYER_SCOPE,
       totalDates: classifications.length,
       keptDates: kept.length,
       prunedDates: pruned.length,

@@ -300,6 +300,56 @@ describe('PruneService', () => {
       expect(snapshotEntries).toEqual(['2026-01-31'])
     })
 
+    it('reports the layer scope so retained derived layers are never a silent gap (#1132)', async () => {
+      await createRawCsvDate('2026-01-15')
+
+      const service = new PruneService({ cacheDir: testDir })
+      const dryRun = await service.prune(true)
+      const execute = await service.prune(false)
+
+      const expectedScope = {
+        pruned: ['raw-csv', 'snapshots'],
+        retained: ['time-series', 'club-trends', 'v1/rank-history'],
+        note: 'Derived layers retained by design (#1132) — trend surfaces keep full daily resolution',
+      }
+      expect(dryRun.layerScope).toEqual(expectedScope)
+      expect(execute.layerScope).toEqual(expectedScope)
+    })
+
+    it('never deletes under time-series/, club-trends/, or v1/rank-history/ (#1132 guard)', async () => {
+      // A prunable mid-month date
+      await createRawCsvDate('2026-01-15')
+      await createSnapshotDate('2026-01-15')
+
+      // Seed derived layers — including dirs named after the prunable date,
+      // the exact shape a future "thin the derived layers too" regression
+      // would reach for.
+      const derivedFiles = [
+        'time-series/d61/2026-01-15.json',
+        'club-trends/2026-01-15/district_61.json',
+        'v1/rank-history/61.json',
+      ]
+      for (const rel of derivedFiles) {
+        const abs = path.join(testDir, rel)
+        await fs.mkdir(path.dirname(abs), { recursive: true })
+        await fs.writeFile(abs, '{}')
+      }
+
+      const service = new PruneService({ cacheDir: testDir })
+      const result = await service.prune(false)
+
+      // The prunable date is gone from the deletable layers…
+      expect(result.deletedRawCsv).toEqual(['2026-01-15'])
+      expect(result.deletedSnapshots).toEqual(['2026-01-15'])
+
+      // …while every derived-layer file survives untouched.
+      for (const rel of derivedFiles) {
+        await expect(
+          fs.access(path.join(testDir, rel))
+        ).resolves.toBeUndefined()
+      }
+    })
+
     it('dry-run mode does not delete anything', async () => {
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')

@@ -19,7 +19,9 @@
 
 import { readFileSync } from 'node:fs'
 import {
+  assertPruneDeletionScope,
   computePruneGcsDeletions,
+  formatPruneLayerScopeNote,
   parsePruneOutput,
 } from './lib/pruneGcsDeletions.js'
 
@@ -40,12 +42,21 @@ try {
   const { rawCsvDates, snapshotDates } =
     computePruneGcsDeletions(classifications)
 
+  const paths = [
+    ...rawCsvDates.map(d => `raw-csv/${d}`),
+    ...snapshotDates.map(d => `snapshots/${d}`),
+  ]
+
+  // Structural scope guard (#1132): nothing outside the deletable layers can
+  // ever be printed for the workflow's `gsutil rm` loop.
+  assertPruneDeletionScope(paths)
+
   console.error(
     `[INFO] ${classifications.length} classifications → deleting ${rawCsvDates.length} raw-csv and ${snapshotDates.length} snapshot dates`
   )
+  console.error(`[INFO] ${formatPruneLayerScopeNote()}`)
 
-  for (const date of rawCsvDates) console.log(`raw-csv/${date}`)
-  for (const date of snapshotDates) console.log(`snapshots/${date}`)
+  for (const p of paths) console.log(p)
 } catch (error) {
   console.error(
     `[ERROR] ${error instanceof Error ? error.message : 'unknown error'}`

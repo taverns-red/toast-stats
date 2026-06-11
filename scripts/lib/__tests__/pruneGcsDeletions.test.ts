@@ -11,8 +11,12 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  assertPruneDeletionScope,
   computePruneGcsDeletions,
+  formatPruneLayerScopeNote,
   parsePruneOutput,
+  PRUNE_DELETABLE_LAYERS,
+  PRUNE_RETAINED_LAYERS,
   type PruneClassification,
 } from '../pruneGcsDeletions'
 
@@ -77,6 +81,65 @@ describe('computePruneGcsDeletions', () => {
 
     expect(result.rawCsvDates).toEqual([])
     expect(result.snapshotDates).toEqual([])
+  })
+})
+
+describe('assertPruneDeletionScope (#1132)', () => {
+  it('accepts strictly-dated paths under the deletable layers', () => {
+    expect(() =>
+      assertPruneDeletionScope(['raw-csv/2026-01-15', 'snapshots/2026-01-15'])
+    ).not.toThrow()
+    expect(() => assertPruneDeletionScope([])).not.toThrow()
+  })
+
+  it.each([
+    'time-series/d61/2026-01-15.json',
+    'club-trends/2026-01-15',
+    'v1/rank-history/61.json',
+  ])('rejects retained derived-layer path %s (#1132 ruling)', path => {
+    expect(() => assertPruneDeletionScope([path])).toThrow(/#1132/)
+  })
+
+  it('rejects any path outside the allowlist, not just known derived layers (deny by default)', () => {
+    expect(() => assertPruneDeletionScope(['config/districts.json'])).toThrow(
+      /#1132/
+    )
+    expect(() => assertPruneDeletionScope(['v1/latest.json'])).toThrow(/#1132/)
+  })
+
+  it('rejects a deletable layer without a strict YYYY-MM-DD dir (glob/traversal can never pass)', () => {
+    expect(() => assertPruneDeletionScope(['raw-csv/*'])).toThrow(/#1132/)
+    expect(() => assertPruneDeletionScope(['snapshots/../v1'])).toThrow(/#1132/)
+    expect(() => assertPruneDeletionScope(['raw-csv'])).toThrow(/#1132/)
+    expect(() =>
+      assertPruneDeletionScope(['snapshots/2026-01-15/extra'])
+    ).toThrow(/#1132/)
+  })
+
+  it('names every violating path in the error so nothing fails silently', () => {
+    expect(() =>
+      assertPruneDeletionScope([
+        'raw-csv/2026-01-15',
+        'time-series/a.json',
+        'club-trends/b.json',
+      ])
+    ).toThrow(/time-series\/a\.json.*club-trends\/b\.json/s)
+  })
+
+  it('formats one shared layer-scope note naming both layer sets (#1132)', () => {
+    const note = formatPruneLayerScopeNote()
+    expect(note).toContain('raw-csv, snapshots')
+    expect(note).toContain('time-series, club-trends, v1/rank-history')
+    expect(note).toContain('retained by design')
+  })
+
+  it('declares the layer scope the prune is allowed to touch (#1132)', () => {
+    expect(PRUNE_DELETABLE_LAYERS).toEqual(['raw-csv', 'snapshots'])
+    expect(PRUNE_RETAINED_LAYERS).toEqual([
+      'time-series',
+      'club-trends',
+      'v1/rank-history',
+    ])
   })
 })
 

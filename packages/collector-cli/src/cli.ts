@@ -1161,6 +1161,7 @@ export function createCLI(): Command {
           JSON.stringify(
             {
               dryRun: options.dryRun,
+              layerScope: result.layerScope,
               totalDates: result.totalDates,
               keptDates: result.keptDates,
               prunedDates: result.prunedDates,

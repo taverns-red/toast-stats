@@ -142,6 +142,27 @@ To reset a store, delete the GCS file before rebuilding.
 
 ---
 
+## Prune Retention Asymmetry (#1132)
+
+Prune deletes **only** under `raw-csv/` and `snapshots/` (strictly dated
+dirs). The derived layers — `time-series/`, `club-trends/`,
+`v1/rank-history/` — are **retained at full daily resolution by design**
+(operator ruling, 2026-06-10): the trend surfaces are the product, and
+thinning them to month-ends would be a visible regression for trivial
+storage savings. The asymmetry is deliberate, not a gap.
+
+Enforcement is structural, not conventional:
+
+- `scripts/lib/pruneGcsDeletions.ts` exports the
+  `PRUNE_DELETABLE_LAYERS` allowlist; `assertPruneDeletionScope()` fails the
+  workflow's delete step before any `gsutil rm` if a path outside
+  `raw-csv/<date>` / `snapshots/<date>` is ever emitted.
+- `PruneService` results (and the `collector-cli prune` JSON, dry-run and
+  execute) carry a `layerScope` block naming the pruned and retained layers,
+  so no report ever implies the derived layers were covered.
+
+---
+
 ## GCS Update Order
 
 When manually fixing GCS data:

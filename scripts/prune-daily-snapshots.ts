@@ -30,6 +30,10 @@ import {
   readMetadataForDates,
 } from './lib/gcsHelpers.js'
 import { classifySnapshotDates } from './lib/pruneClassifier.js'
+import {
+  assertPruneDeletionScope,
+  formatPruneLayerScopeNote,
+} from './lib/pruneGcsDeletions.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -118,6 +122,7 @@ async function main(): Promise<void> {
   console.log('='.repeat(80))
   console.log(`Bucket: gs://${bucket}/`)
   console.log(`Target: ${target}`)
+  console.log(formatPruneLayerScopeNote())
   if (programYear) console.log(`Filter: program year ${programYear} only`)
   console.log()
 
@@ -182,6 +187,12 @@ async function main(): Promise<void> {
       today,
       programYear
     )
+
+    // Structural scope guard (#1132): this manual entry point deletes too,
+    // so it must prove every path sits under a deletable layer before any
+    // delete (and loudly in dry-run as well) — same gate as the workflow's
+    // prune-gcs-deletions path.
+    assertPruneDeletionScope(toDelete.map(date => `${prefix}/${date}`))
 
     // Hard fail on safety violations
     if (guardViolations.length > 0) {
