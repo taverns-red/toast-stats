@@ -155,4 +155,12 @@ describe('OfficerAwardsCalculator (#333)', () => {
       expect(result.clubGrowth[0]?.qualifies).toBe(false)
     })
   })
+
+  it('Unknown tier does not qualify for Education & Training (#1116 item 5)', () => {
+    const result = calculator.calculate(
+      [buildRanking({ districtId: '1', trainingMet: true })],
+      { '1': buildStatus({ currentTier: 'Unknown' }) }
+    )
+    expect(result.educationTraining[0]?.qualifies).toBe(false)
+  })
 })

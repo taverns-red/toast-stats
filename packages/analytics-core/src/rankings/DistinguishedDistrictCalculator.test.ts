@@ -406,6 +406,123 @@ describe('DistinguishedDistrictCalculator', () => {
     })
   })
 
+  describe('Per-program-year rules (#1116 item 5)', () => {
+    describe('historical years (pre-2025-26): only DSP + Training existed', () => {
+      it('awards Distinguished when DSP+Training are Y and MA/CP/RA columns are absent', () => {
+        const ranking = buildRanking({
+          paidClubs: 101,
+          paidClubBase: 100,
+          clubGrowthPercent: 1.5,
+          paymentGrowthPercent: 1.2,
+          distinguishedPercent: 46,
+          marketAnalysisSubmitted: undefined,
+          communicationPlanSubmitted: undefined,
+          regionAdvisorVisitMet: undefined,
+        })
+
+        const result = calculator.calculate(ranking, '2017-2018')
+
+        expect(result.currentTier).toBe('Distinguished')
+        expect(result.allPrerequisitesMet).toBe(true)
+      })
+
+      it('caps at Presidents — Smedley did not exist before 2025-2026', () => {
+        const ranking = buildRanking({
+          paidClubs: 110,
+          paidClubBase: 100,
+          clubGrowthPercent: 10,
+          paymentGrowthPercent: 10,
+          distinguishedPercent: 65,
+          marketAnalysisSubmitted: undefined,
+          communicationPlanSubmitted: undefined,
+          regionAdvisorVisitMet: undefined,
+        })
+
+        expect(calculator.calculate(ranking, '2017-2018').currentTier).toBe(
+          'Presidents'
+        )
+      })
+
+      it('explicit N on a required historical prerequisite → NotDistinguished', () => {
+        const ranking = buildRanking({
+          dspSubmitted: false,
+          marketAnalysisSubmitted: undefined,
+          communicationPlanSubmitted: undefined,
+          regionAdvisorVisitMet: undefined,
+          paidClubs: 101,
+          paidClubBase: 100,
+          clubGrowthPercent: 2,
+          paymentGrowthPercent: 2,
+          distinguishedPercent: 50,
+        })
+
+        expect(calculator.calculate(ranking, '2018-2019').currentTier).toBe(
+          'NotDistinguished'
+        )
+      })
+    })
+
+    describe('Unknown (§12.5): required prerequisite unknowable, tier otherwise earned', () => {
+      it('2025-26 with a required prerequisite column absent → Unknown, not NotDistinguished', () => {
+        const ranking = buildRanking({
+          marketAnalysisSubmitted: undefined,
+          paidClubs: 101,
+          paidClubBase: 100,
+          clubGrowthPercent: 2,
+          paymentGrowthPercent: 2,
+          distinguishedPercent: 50,
+        })
+
+        expect(calculator.calculate(ranking, '2025-2026').currentTier).toBe(
+          'Unknown'
+        )
+      })
+
+      it('explicit false beats unknowable: any required prerequisite N → NotDistinguished', () => {
+        const ranking = buildRanking({
+          dspSubmitted: false,
+          marketAnalysisSubmitted: undefined,
+          paidClubs: 101,
+          paidClubBase: 100,
+          clubGrowthPercent: 2,
+          paymentGrowthPercent: 2,
+          distinguishedPercent: 50,
+        })
+
+        expect(calculator.calculate(ranking, '2025-2026').currentTier).toBe(
+          'NotDistinguished'
+        )
+      })
+
+      it('metrics below every tier → NotDistinguished even with unknowable prerequisites', () => {
+        const ranking = buildRanking({
+          marketAnalysisSubmitted: undefined,
+          distinguishedPercent: 10,
+          clubGrowthPercent: 0,
+          paymentGrowthPercent: 0,
+        })
+
+        expect(calculator.calculate(ranking, '2025-2026').currentTier).toBe(
+          'NotDistinguished'
+        )
+      })
+    })
+
+    describe('backward compatibility', () => {
+      it('no programYear argument applies current (2025-26) rules', () => {
+        const ranking = buildRanking({
+          paidClubs: 108,
+          paidClubBase: 100,
+          clubGrowthPercent: 8,
+          paymentGrowthPercent: 8,
+          distinguishedPercent: 60,
+        })
+
+        expect(calculator.calculate(ranking).currentTier).toBe('Smedley')
+      })
+    })
+  })
+
   describe('Bulk calculation', () => {
     it('should calculate tiers for multiple districts', () => {
       const rankings: DistrictRanking[] = [

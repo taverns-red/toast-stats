@@ -28,8 +28,12 @@ import {
 /**
  * Distinguished District tier names.
  * Listed from lowest to highest. NotDistinguished means no tier earned.
+ * Unknown (#1116 item 5, rules-reference §12.5) means the metrics earn a
+ * tier but a prerequisite REQUIRED by that program year's rules is
+ * unknowable from the data (column absent) — distinct from an explicit No.
  */
 export type DistinguishedDistrictTier =
+  | 'Unknown'
   | 'NotDistinguished'
   | 'Distinguished'
   | 'Select'
@@ -169,8 +173,16 @@ const TIER_THRESHOLDS: TierThreshold[] = [
 export class DistinguishedDistrictCalculator {
   /**
    * Calculate Distinguished District status for a single district.
+   *
+   * @param ranking - the district's metrics for the snapshot date
+   * @param _programYear - the program year the snapshot belongs to
+   *   ("YYYY-YYYY"). Determines which year's ruleset applies (#1116
+   *   item 5). Omitted → current (2025-26) rules.
    */
-  calculate(ranking: DistrictRanking): DistinguishedDistrictStatus {
+  calculate(
+    ranking: DistrictRanking,
+    _programYear?: string
+  ): DistinguishedDistrictStatus {
     const prerequisites: DistinguishedDistrictPrerequisites = {
       dspSubmitted: ranking.dspSubmitted ?? false,
       trainingMet: ranking.trainingMet ?? false,
@@ -202,11 +214,12 @@ export class DistinguishedDistrictCalculator {
    * Calculate Distinguished District status for all districts, keyed by ID.
    */
   calculateAll(
-    rankings: DistrictRanking[]
+    rankings: DistrictRanking[],
+    programYear?: string
   ): Record<string, DistinguishedDistrictStatus> {
     const result: Record<string, DistinguishedDistrictStatus> = {}
     for (const ranking of rankings) {
-      result[ranking.districtId] = this.calculate(ranking)
+      result[ranking.districtId] = this.calculate(ranking, programYear)
     }
     return result
   }
@@ -301,6 +314,7 @@ export class DistinguishedDistrictCalculator {
     | 'Smedley'
     | null {
     switch (tier) {
+      case 'Unknown':
       case 'NotDistinguished':
         return 'Distinguished'
       case 'Distinguished':
