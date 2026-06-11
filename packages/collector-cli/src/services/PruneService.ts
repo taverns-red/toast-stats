@@ -16,6 +16,11 @@
  * 4. Delete raw-csv/{date}/ for non-keepers
  * 5. Delete snapshots/{snapshot-date}/ for non-keepers
  * 6. Regenerate CDN manifests and indexes after pruning
+ *
+ * Fail-closed rule (#1131): a date with NO metadata.json can never prove its
+ * raw→snapshot mapping, so it is never classified deletable. The closing-date
+ * registry (docs/month-end-closing-dates.json) refines the verdict for dates
+ * inside a known closing window.
  */
 
 import * as fs from 'node:fs/promises'
@@ -26,6 +31,8 @@ import {
   type ClosingPeriodInfo,
 } from '../utils/ClosingPeriodDetector.js'
 import type { CacheMetadata } from '../types/collector.js'
+import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
+import { resolveClosingWindow } from '../utils/closingWindowResolver.js'
 
 /**
  * Classification of a raw-csv date for pruning
@@ -108,11 +115,18 @@ export class PruneService {
   private readonly cacheDir: string
   private readonly logger: Logger
   private readonly closingPeriodDetector: ClosingPeriodDetector
+  private readonly closingDateRegistry: ClosingDateEntry[]
 
-  constructor(options: { cacheDir: string; logger?: Logger }) {
+  constructor(options: {
+    cacheDir: string
+    logger?: Logger
+    /** Registry months from docs/month-end-closing-dates.json (#1131) */
+    closingDateRegistry?: ClosingDateEntry[]
+  }) {
     this.cacheDir = options.cacheDir
     this.logger = options.logger ?? noopLogger
     this.closingPeriodDetector = new ClosingPeriodDetector()
+    this.closingDateRegistry = options.closingDateRegistry ?? []
   }
 
   /**
@@ -140,10 +154,33 @@ export class PruneService {
    */
   async classifyDate(rawCsvDate: string): Promise<DateClassification> {
     const metadata = await this.readMetadata(rawCsvDate)
+
+    // No metadata.json → the raw→snapshot mapping is unprovable. Deletion is
+    // irreversible, so fail closed: never classify deletable (#1131). The
+    // registry (the third authority in the #1129 chain) refines the verdict:
+    // a date inside a known closing window remaps to its month-end snapshot.
+    if (metadata === null) {
+      return this.classifyMetadataLessDate(rawCsvDate)
+    }
+
     const closingInfo: ClosingPeriodInfo = this.closingPeriodDetector.detect(
       rawCsvDate,
       metadata
     )
+
+    // Lesson 158: legacy metadata may carry a laundered isClosingPeriod:false
+    // (a parser default persisted as a decision). When it contradicts a
+    // registry closing window, warn — the keep rules stay unchanged, but the
+    // operator should verify the date before trusting a deletion of it.
+    if (
+      !closingInfo.isClosingPeriod &&
+      resolveClosingWindow(rawCsvDate, this.closingDateRegistry).kind ===
+        'closing'
+    ) {
+      this.logger.warn(
+        `Metadata for ${rawCsvDate} says non-closing, but the date falls inside a registry closing window — possible laundered default (#1129/#1131); verify before trusting its deletion`
+      )
+    }
 
     const snapshotDate = closingInfo.snapshotDate
     const isMonthEnd = isLastDayOfMonth(snapshotDate)
@@ -161,6 +198,50 @@ export class PruneService {
         : isPenultimate
           ? `Penultimate snapshot (${snapshotDate})`
           : `Non-month-end snapshot (${snapshotDate})`,
+    }
+  }
+
+  /**
+   * Classify a raw-csv date that has no metadata.json (#1131).
+   *
+   * Always protected (keep = true): without metadata the raw→snapshot
+   * mapping cannot be proven, and prune deletes irreversibly. The
+   * closing-date registry refines the verdict:
+   * - inside a closing window → remap to the data month's month-end
+   *   (ClosingPeriodDetector owns the last-day math)
+   * - non-closing / unknown → snapshot date stays the raw date
+   */
+  private classifyMetadataLessDate(rawCsvDate: string): DateClassification {
+    const verdict = resolveClosingWindow(rawCsvDate, this.closingDateRegistry)
+
+    if (verdict.kind === 'closing') {
+      const closingInfo = this.closingPeriodDetector.detect(rawCsvDate, {
+        date: rawCsvDate,
+        isClosingPeriod: true,
+        dataMonth: verdict.dataMonth,
+      })
+      return {
+        rawCsvDate,
+        snapshotDate: closingInfo.snapshotDate,
+        isClosingPeriod: true,
+        isMonthEnd: isLastDayOfMonth(closingInfo.snapshotDate),
+        keep: true,
+        reason: `Protected: no metadata.json; registry closing window for ${verdict.dataMonth} maps to ${closingInfo.snapshotDate} (#1131)`,
+      }
+    }
+
+    const detail =
+      verdict.kind === 'unknown'
+        ? `closing status undecidable (${verdict.reason})`
+        : 'registry says non-closing, but the mapping is unproven without metadata'
+
+    return {
+      rawCsvDate,
+      snapshotDate: rawCsvDate,
+      isClosingPeriod: false,
+      isMonthEnd: isLastDayOfMonth(rawCsvDate),
+      keep: true,
+      reason: `Protected: no metadata.json — ${detail}; refusing irreversible delete (#1131)`,
     }
   }
 
