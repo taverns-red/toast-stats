@@ -378,11 +378,27 @@ export class TransformService {
       dataMonth: undefined,
     }
 
-    // Explicit scraper-written false is trusted; no registry = legacy mode.
-    if (
-      existing?.isClosingPeriod === false ||
-      this.closingDateRegistry === undefined
-    ) {
+    // Explicit scraper-written false is trusted — but pre-#1129 scrapers
+    // wrote a laundered false for footer-less days, so warn when the
+    // registry says the date sits inside a closing window (operator should
+    // verify that raw-csv dir; see #1129 review).
+    if (existing?.isClosingPeriod === false) {
+      if (this.closingDateRegistry !== undefined) {
+        const check = resolveClosingWindow(date, this.closingDateRegistry)
+        if (check.kind === 'closing') {
+          this.logger.warn(
+            'Explicit isClosingPeriod:false contradicts a registry closing ' +
+              'window — trusting the metadata, but this may be a pre-#1129 ' +
+              'laundered false; verify the raw-csv dir',
+            { date, registryDataMonth: check.dataMonth }
+          )
+        }
+      }
+      return nonClosing
+    }
+
+    // No registry = legacy fail-open mode (test fixtures only).
+    if (this.closingDateRegistry === undefined) {
       return nonClosing
     }
 

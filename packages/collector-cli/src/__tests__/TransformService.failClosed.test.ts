@@ -146,6 +146,40 @@ describe('TransformService — fail-closed closing remap (#1129)', () => {
     expect(metadata?.isClosingPeriod).toBe(false)
   })
 
+  it('warns when a trusted explicit false contradicts a registry closing window', async () => {
+    // Pre-#1129 scrapers laundered "no footer" into isClosingPeriod:false.
+    // The value stays trusted (no behavior change) but the contradiction is
+    // surfaced for operator review.
+    const rawCsvDir = await createRawCsvFixture(tempDir, '2026-02-03', {
+      csv: null,
+    })
+    await fs.writeFile(
+      path.join(rawCsvDir, 'metadata.json'),
+      JSON.stringify({ date: '2026-02-03', isClosingPeriod: false })
+    )
+
+    const warnings: string[] = []
+    const service = new TransformService({
+      cacheDir: tempDir,
+      closingDateRegistry: REGISTRY,
+      logger: {
+        info: () => {},
+        warn: (msg: string) => {
+          warnings.push(msg)
+        },
+        error: () => {},
+        debug: () => {},
+      },
+    })
+
+    const metadata = await service.readCacheMetadata('2026-02-03')
+
+    expect(metadata?.isClosingPeriod).toBe(false)
+    expect(
+      warnings.some(w => /contradicts a registry closing window/.test(w))
+    ).toBe(true)
+  })
+
   it('writes registry-derived metadata back to the raw-csv dir with provenance', async () => {
     const rawCsvDir = await createRawCsvFixture(tempDir, '2026-02-03')
     const service = serviceWithRegistry(REGISTRY)
