@@ -30,6 +30,10 @@ import {
   readMetadataForDates,
 } from './lib/gcsHelpers.js'
 import { classifySnapshotDates } from './lib/pruneClassifier.js'
+import {
+  PRUNE_DELETABLE_LAYERS,
+  PRUNE_RETAINED_LAYERS,
+} from './lib/pruneGcsDeletions.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -118,6 +122,11 @@ async function main(): Promise<void> {
   console.log('='.repeat(80))
   console.log(`Bucket: gs://${bucket}/`)
   console.log(`Target: ${target}`)
+  console.log(
+    `Layer scope (#1132): only ${PRUNE_DELETABLE_LAYERS.join(
+      ', '
+    )} are ever pruned — derived layers retained by design: ${PRUNE_RETAINED_LAYERS.join(', ')}`
+  )
   if (programYear) console.log(`Filter: program year ${programYear} only`)
   console.log()
 

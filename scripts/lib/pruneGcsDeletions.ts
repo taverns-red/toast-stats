@@ -16,19 +16,46 @@
  * workflow supplies the JSON and loops `gsutil rm` over the printed paths.
  */
 
-/** Layers the prune is allowed to delete from (#1132). */
-export const PRUNE_DELETABLE_LAYERS: readonly string[] = []
-
-/** Derived layers retained by design — operator ruling on #1132. */
-export const PRUNE_RETAINED_LAYERS: readonly string[] = []
+/**
+ * Layers the prune is allowed to delete from (#1132). This is an ALLOWLIST:
+ * a path outside these layers can never reach `gsutil rm`, whatever a future
+ * classification or report shape change emits.
+ */
+export const PRUNE_DELETABLE_LAYERS = ['raw-csv', 'snapshots'] as const
 
 /**
- * Structural scope guard (#1132): every deletion path must sit under a
- * deletable layer. Throws otherwise.
+ * Derived layers retained by design — operator ruling on #1132. The trend
+ * surfaces are the product; they keep full daily resolution. Listed here so
+ * the scope guard's error and the runner's report can name them, never as a
+ * deletion input.
+ */
+export const PRUNE_RETAINED_LAYERS = [
+  'time-series',
+  'club-trends',
+  'v1/rank-history',
+] as const
+
+const DELETABLE_PATH = new RegExp(
+  `^(${PRUNE_DELETABLE_LAYERS.join('|')})/\\d{4}-\\d{2}-\\d{2}$`
+)
+
+/**
+ * Structural scope guard (#1132): every deletion path must be a strictly
+ * dated dir directly under a deletable layer. Anything else — a derived
+ * layer, a glob, a traversal, an unknown prefix — throws, naming every
+ * violating path, before any deletion runs.
  */
 export function assertPruneDeletionScope(prefixes: string[]): void {
-  void prefixes
-  throw new Error('not implemented')
+  const violations = prefixes.filter(p => !DELETABLE_PATH.test(p))
+  if (violations.length > 0) {
+    throw new Error(
+      `prune deletion scope violation (#1132): only ${PRUNE_DELETABLE_LAYERS.join(
+        ', '
+      )} are deletable; derived layers (${PRUNE_RETAINED_LAYERS.join(
+        ', '
+      )}) are retained by design. Refusing: ${violations.join(', ')}`
+    )
+  }
 }
 
 /** One classification entry from `collector-cli prune` JSON output. */
