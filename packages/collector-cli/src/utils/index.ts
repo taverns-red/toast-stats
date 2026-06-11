@@ -26,3 +26,8 @@ export {
   ClosingPeriodDetector,
   type ClosingPeriodInfo,
 } from './ClosingPeriodDetector.js'
+export {
+  resolveClosingWindow,
+  ClosingPeriodUndecidedError,
+  type ClosingWindowVerdict,
+} from './closingWindowResolver.js'
