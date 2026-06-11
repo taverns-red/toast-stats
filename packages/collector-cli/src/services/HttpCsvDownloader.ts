@@ -129,6 +129,12 @@ export interface CsvClosingPeriodInfo {
   isClosingPeriod: boolean
   /** The data month in YYYY-MM format (e.g., "2026-03") */
   dataMonth: string | undefined
+  /**
+   * Whether a "Month of …, As of …" footer was actually found. When false,
+   * isClosingPeriod:false is a DEFAULT, not a decision — callers must treat
+   * the result as undecided, never persist it as an explicit verdict (#1129).
+   */
+  footerFound: boolean
 }
 
 const MONTH_NAMES: Record<string, string> = {
@@ -195,15 +201,17 @@ export function parseClosingPeriodFromCsv(
         return {
           isClosingPeriod,
           dataMonth,
+          footerFound: true,
         }
       }
     }
   }
 
-  // No footer found — not a closing period
+  // No footer found — UNDECIDED, not a non-closing decision (#1129)
   return {
     isClosingPeriod: false,
     dataMonth: undefined,
+    footerFound: false,
   }
 }
 

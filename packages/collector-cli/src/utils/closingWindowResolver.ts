@@ -38,15 +38,25 @@ export class ClosingPeriodUndecidedError extends Error {
 export type ClosingWindowVerdict =
   | {
       kind: 'closing'
-      /** The data month the window belongs to (YYYY-MM) */
+      /**
+       * The data month the window belongs to (YYYY-MM). The snapshot date to
+       * publish under is derived downstream by ClosingPeriodDetector — the
+       * single owner of last-day-of-month math.
+       */
       dataMonth: string
-      /** Last day of the data month — the date to publish under (YYYY-MM-DD) */
-      snapshotDate: string
     }
   | { kind: 'non-closing' }
   | { kind: 'unknown'; reason: string }
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+/** Real calendar date in YYYY-MM-DD (UTC round-trip rejects e.g. 02-30) */
+function isRealIsoDate(dateStr: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false
+  const parsed = new Date(`${dateStr}T00:00:00Z`)
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === dateStr
+  )
+}
 
 /**
  * Resolve whether `requestedDate` falls inside the previous month's closing
@@ -56,7 +66,7 @@ export function resolveClosingWindow(
   requestedDate: string,
   months: ClosingDateEntry[]
 ): ClosingWindowVerdict {
-  if (!DATE_RE.test(requestedDate)) {
+  if (!isRealIsoDate(requestedDate)) {
     return {
       kind: 'unknown',
       reason: `invalid requested date '${requestedDate}' (expected YYYY-MM-DD)`,
@@ -65,12 +75,6 @@ export function resolveClosingWindow(
 
   const year = Number(requestedDate.slice(0, 4))
   const month = Number(requestedDate.slice(5, 7))
-  if (month < 1 || month > 12) {
-    return {
-      kind: 'unknown',
-      reason: `invalid month in requested date '${requestedDate}'`,
-    }
-  }
 
   // A date in month M can only fall inside month M-1's closing window.
   const prevYear = month === 1 ? year - 1 : year
@@ -85,7 +89,7 @@ export function resolveClosingWindow(
     }
   }
 
-  if (!DATE_RE.test(entry.closingDate)) {
+  if (!isRealIsoDate(entry.closingDate)) {
     return {
       kind: 'unknown',
       reason: `registry entry for ${prevDataMonth} has malformed closingDate '${entry.closingDate}'`,
@@ -95,12 +99,7 @@ export function resolveClosingWindow(
   // ISO date strings compare correctly as strings. Inclusive boundary: the
   // registry's closingDate is the LAST closing-period collection date.
   if (requestedDate <= entry.closingDate) {
-    const lastDay = new Date(Date.UTC(prevYear, prevMonth, 0)).getUTCDate()
-    return {
-      kind: 'closing',
-      dataMonth: prevDataMonth,
-      snapshotDate: `${prevDataMonth}-${String(lastDay).padStart(2, '0')}`,
-    }
+    return { kind: 'closing', dataMonth: prevDataMonth }
   }
 
   return { kind: 'non-closing' }

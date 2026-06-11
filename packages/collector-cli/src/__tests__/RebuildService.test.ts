@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { RebuildService } from '../services/RebuildService.js'
+import { createRawCsvFixture } from './fixtures/rawCsvFixture.js'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { tmpdir } from 'node:os'
@@ -251,22 +252,8 @@ describe('RebuildService — closing-date registry pass-through (#1129)', () => 
     await fs.rm(testDir, { recursive: true, force: true })
   })
 
-  async function createFooterlessFixture(date: string): Promise<void> {
-    const rawCsvDir = path.join(testDir, 'raw-csv', date)
-    const districtDir = path.join(rawCsvDir, 'district-42')
-    await fs.mkdir(districtDir, { recursive: true })
-    await fs.writeFile(
-      path.join(rawCsvDir, 'all-districts.csv'),
-      'DISTRICT,REGION,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs\n42,Region 2,200,190,5.26%,2000,1900,5.26%,200,20,10,5'
-    )
-    await fs.writeFile(
-      path.join(districtDir, 'club-performance.csv'),
-      'Club Number,Club Name,Division,Area,Active Members,Goals Met\n1234,Test Club,A,1,20,5'
-    )
-  }
-
   it('remaps a metadata-less closing-window date via the injected registry', async () => {
-    await createFooterlessFixture('2026-02-03')
+    await createRawCsvFixture(testDir, '2026-02-03')
 
     const service = new RebuildService({
       cacheDir: testDir,
@@ -282,7 +269,7 @@ describe('RebuildService — closing-date registry pass-through (#1129)', () => 
   })
 
   it('marks an undecided date failed instead of publishing it', async () => {
-    await createFooterlessFixture('2026-06-08')
+    await createRawCsvFixture(testDir, '2026-06-08')
 
     const service = new RebuildService({
       cacheDir: testDir,

@@ -691,7 +691,10 @@ export class CollectorOrchestrator {
         .filter(r => r.success)
         .map(r => r.districtId)
       if (succeededDistricts.length > 0) {
-        let isClosingPeriod = false
+        // undefined = no footer decided it; the key is then OMITTED from
+        // metadata.json so downstream resolution (CSV footer → registry)
+        // stays undecided instead of trusting a laundered false (#1129)
+        let isClosingPeriod: boolean | undefined
         let dataMonth: string | undefined
 
         // Detect closing period from standard all-districts output
@@ -714,13 +717,16 @@ export class CollectorOrchestrator {
             })
 
             const parsed = parseClosingPeriodFromCsv(csvContent, date)
-            isClosingPeriod = parsed.isClosingPeriod
-            dataMonth = parsed.dataMonth
+            if (parsed.footerFound) {
+              isClosingPeriod = parsed.isClosingPeriod
+              dataMonth = parsed.dataMonth
+            }
 
             logger.info('Closing period detection result', {
               date,
               isClosingPeriod,
               dataMonth,
+              footerFound: parsed.footerFound,
             })
           } catch (e) {
             logger.warn('Failed to parse closing period from CSV', {
@@ -731,19 +737,20 @@ export class CollectorOrchestrator {
         }
 
         // Fallback: use closingPeriodInfo from initial parse if disk parse missed it (#309)
-        if (
-          !isClosingPeriod &&
-          allDistrictsResult.closingPeriodInfo?.isClosingPeriod
-        ) {
+        const initialParse = allDistrictsResult.closingPeriodInfo
+        if (isClosingPeriod !== true && initialParse?.isClosingPeriod) {
           logger.warn(
             'Disk re-parse missed closing period — using initial parse result',
             {
               date,
-              initialResult: allDistrictsResult.closingPeriodInfo,
+              initialResult: initialParse,
             }
           )
           isClosingPeriod = true
-          dataMonth = allDistrictsResult.closingPeriodInfo.dataMonth
+          dataMonth = initialParse.dataMonth
+        } else if (isClosingPeriod === undefined && initialParse?.footerFound) {
+          isClosingPeriod = initialParse.isClosingPeriod
+          dataMonth = initialParse.dataMonth
         }
 
         const metaPath = buildMetadataPath(this.config.cacheDir, date)
@@ -751,7 +758,7 @@ export class CollectorOrchestrator {
           date,
           timestamp: Date.now(),
           programYear: calculateProgramYear(date),
-          isClosingPeriod,
+          ...(isClosingPeriod !== undefined ? { isClosingPeriod } : {}),
           ...(dataMonth ? { dataMonth } : {}),
           csvFiles: {
             allDistricts: allDistrictsResult.success,

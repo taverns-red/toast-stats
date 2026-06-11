@@ -16,20 +16,12 @@ describe('resolveClosingWindow', () => {
 
   it('maps a date inside the previous-month closing window to that month-end', () => {
     const verdict = resolveClosingWindow('2026-02-03', [JAN_2026])
-    expect(verdict).toEqual({
-      kind: 'closing',
-      dataMonth: '2026-01',
-      snapshotDate: '2026-01-31',
-    })
+    expect(verdict).toEqual({ kind: 'closing', dataMonth: '2026-01' })
   })
 
   it('treats the registry closingDate itself as closing (inclusive boundary)', () => {
     const verdict = resolveClosingWindow('2026-02-05', [JAN_2026])
-    expect(verdict).toEqual({
-      kind: 'closing',
-      dataMonth: '2026-01',
-      snapshotDate: '2026-01-31',
-    })
+    expect(verdict).toEqual({ kind: 'closing', dataMonth: '2026-01' })
   })
 
   it('treats the day after the closing window as non-closing', () => {
@@ -51,22 +43,14 @@ describe('resolveClosingWindow', () => {
     const verdict = resolveClosingWindow('2026-01-05', [
       { dataMonth: '2025-12', closingDate: '2026-01-08' },
     ])
-    expect(verdict).toEqual({
-      kind: 'closing',
-      dataMonth: '2025-12',
-      snapshotDate: '2025-12-31',
-    })
+    expect(verdict).toEqual({ kind: 'closing', dataMonth: '2025-12' })
   })
 
-  it('remaps to a leap-year February 29', () => {
+  it('resolves a leap-year February window to dataMonth 2024-02', () => {
     const verdict = resolveClosingWindow('2024-03-05', [
       { dataMonth: '2024-02', closingDate: '2024-03-08' },
     ])
-    expect(verdict).toEqual({
-      kind: 'closing',
-      dataMonth: '2024-02',
-      snapshotDate: '2024-02-29',
-    })
+    expect(verdict).toEqual({ kind: 'closing', dataMonth: '2024-02' })
   })
 
   it('is non-closing after an IN-month closing date (2022-04 outage shape)', () => {
@@ -94,6 +78,7 @@ describe('resolveClosingWindow', () => {
     expect(resolveClosingWindow('2026-2-3', [JAN_2026]).kind).toBe('unknown')
     expect(resolveClosingWindow('garbage', [JAN_2026]).kind).toBe('unknown')
     expect(resolveClosingWindow('2026-13-01', [JAN_2026]).kind).toBe('unknown')
+    expect(resolveClosingWindow('2026-02-30', [JAN_2026]).kind).toBe('unknown')
   })
 
   it('returns unknown when the matching entry has a malformed closingDate', () => {

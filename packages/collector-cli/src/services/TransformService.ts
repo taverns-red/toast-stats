@@ -314,26 +314,46 @@ export class TransformService {
       const parsed = parseClosingPeriodFromCsv(csvContent, date)
 
       if (parsed.footerFound) {
-        const metadata: CacheMetadata = {
-          date: existing?.date ?? date,
+        return this.finalizeDerivedMetadata(date, existing, {
           isClosingPeriod: parsed.isClosingPeriod,
           dataMonth: parsed.dataMonth,
-        }
-
-        this.logger.info('Derived closing period from CSV footer', {
-          date,
-          isClosingPeriod: parsed.isClosingPeriod,
-          dataMonth: parsed.dataMonth,
+          source: 'csv-footer',
         })
-
-        await this.writeBackDerivedMetadata(date, metadata, 'csv-footer')
-        return metadata
       }
     } catch {
       // CSV unreadable — fall through to the registry
     }
 
     return this.resolveWithoutFooter(date, existing)
+  }
+
+  /**
+   * Build the derived metadata, log the decision, and persist it back to
+   * raw-csv/{date}/metadata.json with its provenance.
+   */
+  private async finalizeDerivedMetadata(
+    date: string,
+    existing: CacheMetadata | null,
+    decision: {
+      isClosingPeriod: boolean
+      dataMonth: string | undefined
+      source: 'csv-footer' | 'closing-date-registry'
+    }
+  ): Promise<CacheMetadata> {
+    const metadata: CacheMetadata = {
+      date: existing?.date ?? date,
+      isClosingPeriod: decision.isClosingPeriod,
+      dataMonth: decision.dataMonth,
+    }
+
+    this.logger.info(`Derived closing period from ${decision.source}`, {
+      date,
+      isClosingPeriod: decision.isClosingPeriod,
+      dataMonth: decision.dataMonth,
+    })
+
+    await this.writeBackDerivedMetadata(date, metadata, decision.source)
+    return metadata
   }
 
   /**
@@ -358,35 +378,22 @@ export class TransformService {
       dataMonth: undefined,
     }
 
-    if (existing?.isClosingPeriod === false) {
-      return nonClosing
-    }
-
-    if (this.closingDateRegistry === undefined) {
+    // Explicit scraper-written false is trusted; no registry = legacy mode.
+    if (
+      existing?.isClosingPeriod === false ||
+      this.closingDateRegistry === undefined
+    ) {
       return nonClosing
     }
 
     const verdict = resolveClosingWindow(date, this.closingDateRegistry)
 
     if (verdict.kind === 'closing') {
-      const metadata: CacheMetadata = {
-        date: existing?.date ?? date,
+      return this.finalizeDerivedMetadata(date, existing, {
         isClosingPeriod: true,
         dataMonth: verdict.dataMonth,
-      }
-
-      this.logger.info('Derived closing period from closing-date registry', {
-        date,
-        dataMonth: verdict.dataMonth,
-        snapshotDate: verdict.snapshotDate,
+        source: 'closing-date-registry',
       })
-
-      await this.writeBackDerivedMetadata(
-        date,
-        metadata,
-        'closing-date-registry'
-      )
-      return metadata
     }
 
     if (verdict.kind === 'non-closing') {
