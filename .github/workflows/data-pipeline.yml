@@ -129,7 +129,15 @@ jobs:
         id: mode
         run: |
           MODE="${{ inputs.mode || 'daily' }}"
+          # Boolean inputs are BOOLEANS in the `inputs` expression context;
+          # comparing one to the string 'true' in an `if:` coerces
+          # true→1 vs 'true'→NaN and NEVER matches — the dry-run gate on
+          # the GCS deletion step was inert (#1133). Normalize booleans to
+          # step-output strings here, once; every `if:` compares strings.
+          # Guarded by scripts/lib/workflowBooleanInputGuard.ts.
+          DRY_RUN="${{ inputs.dry_run }}"
           echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
+          echo "dry_run=${DRY_RUN:-false}" >> "$GITHUB_OUTPUT"
           echo "## 🔧 Pipeline Mode: \`${MODE}\`" >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
@@ -1014,7 +1022,7 @@ jobs:
 
       # ── Prune Step 3: Delete pruned dates from GCS ──
       - name: '[prune] Delete pruned dates from GCS'
-        if: steps.mode.outputs.mode == 'prune' && inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode == 'prune' && steps.mode.outputs.dry_run != 'true'
         run: |
           echo "Deleting pruned dates from GCS..."
 
@@ -1041,7 +1049,7 @@ jobs:
       # ════════════════════════════════════════════════════════
 
       - name: Generate CDN manifests
-        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
           # Determine the latest date from local snapshots (falls back to GCS
           # listing when local cache is empty, e.g. after a rebuild that deletes
@@ -1199,7 +1207,7 @@ jobs:
 
       # ── Shared: Update district-snapshot-index ──
       - name: Update district-snapshot-index
-        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
           MODE="${{ steps.mode.outputs.mode }}"
           INDEX_PATH="gs://${GCS_BUCKET}/config/district-snapshot-index.json"
@@ -1266,7 +1274,7 @@ jobs:
 
       # ── Shared: Generate club-index.json (#320) ──
       - name: Generate club-index
-        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
           LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
             | jq -r '.latestSnapshotDate' || echo "")
@@ -1329,7 +1337,7 @@ jobs:
       # scripts/lib/divisionsAreasIndex.ts (thin-glue step, Lesson 107).
       # Promotion rsyncs config/ wholesale, so this reaches prod with the run.
       - name: Generate divisions-areas index
-        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
           LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
             | jq -r '.latestSnapshotDate' || echo "")
