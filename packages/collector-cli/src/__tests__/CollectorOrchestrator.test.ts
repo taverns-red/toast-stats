@@ -16,13 +16,23 @@ import type { CollectorOrchestratorConfig } from '../types/index.js'
 // Track which districts should fail when downloadCsv is called
 let failingDistricts = new Set<string>()
 
+// CSV content the mock downloader returns (reset per test)
+const DEFAULT_MOCK_CSV = `Header\nRow1\nMonth of December, As of 01/11/2026`
+let mockCsvContent = DEFAULT_MOCK_CSV
+
 vi.mock('../services/HttpCsvDownloader.js', () => {
   return {
     parseClosingPeriodFromCsv: (content: string, fetchDate: string) => {
-      // Use real parsing logic: detect "Month of X" footer
+      // Use real parsing logic: detect "Month of X" footer.
+      // Mirrors the real contract: footerFound distinguishes "decided
+      // non-closing" from "no footer = undecided" (#1129).
       const match = content.match(/Month of\s+(\w+)/i)
       if (!match) {
-        return { isClosingPeriod: false, dataMonth: undefined }
+        return {
+          isClosingPeriod: false,
+          dataMonth: undefined,
+          footerFound: false,
+        }
       }
       const monthNames = [
         'January',
@@ -42,7 +52,11 @@ vi.mock('../services/HttpCsvDownloader.js', () => {
         m => m.toLowerCase() === match[1].toLowerCase()
       )
       if (monthIndex === -1) {
-        return { isClosingPeriod: false, dataMonth: undefined }
+        return {
+          isClosingPeriod: false,
+          dataMonth: undefined,
+          footerFound: false,
+        }
       }
       const fetchMonth = new Date(fetchDate).getMonth() // 0-indexed
       const isClosingPeriod = monthIndex !== fetchMonth
@@ -51,7 +65,7 @@ vi.mock('../services/HttpCsvDownloader.js', () => {
           ? new Date(fetchDate).getFullYear() - 1
           : new Date(fetchDate).getFullYear()
       const dataMonth = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
-      return { isClosingPeriod, dataMonth }
+      return { isClosingPeriod, dataMonth, footerFound: true }
     },
     HttpCsvDownloader: class MockHttpCsvDownloader {
       private requestCount = 0
@@ -72,10 +86,10 @@ vi.mock('../services/HttpCsvDownloader.js', () => {
           throw new Error(`Simulated failure for district ${spec.districtId}`)
         }
 
-        // Return minimal CSV content with a hardcoded closing period footer for testing
+        // Return mock CSV content (default has a closing-period footer)
         return {
           url: `https://example.com/${spec.reportType}`,
-          content: `Header\nRow1\nMonth of December, As of 01/11/2026`,
+          content: mockCsvContent,
           statusCode: 200,
           byteSize: 12,
         }
@@ -102,6 +116,7 @@ describe('CollectorOrchestrator - Partial Failure Resilience (#124)', () => {
     testConfigPath = path.join(testCacheDir, 'config', 'districts.json')
     await fs.mkdir(path.dirname(testConfigPath), { recursive: true })
     failingDistricts = new Set()
+    mockCsvContent = DEFAULT_MOCK_CSV
   })
 
   afterEach(async () => {
@@ -273,5 +288,27 @@ describe('CollectorOrchestrator - Partial Failure Resilience (#124)', () => {
 
     expect(metadata['isClosingPeriod']).toBe(true)
     expect(metadata['dataMonth']).toBe('2025-12')
+  })
+
+  it('omits isClosingPeriod from metadata.json when the CSV has no footer (#1129)', async () => {
+    // A footer-less CSV is UNDECIDED, not non-closing. Writing an explicit
+    // isClosingPeriod:false here would launder "no footer" into a decision
+    // that TransformService trusts, re-opening the raw-date publish hole the
+    // fail-closed chain exists to close.
+    mockCsvContent = 'Header\nRow1\nRow2'
+
+    await runScrapeTest(['09'], new Set())
+
+    const metadataPath = path.join(
+      testCacheDir,
+      'raw-csv',
+      '2026-01-11',
+      'metadata.json'
+    )
+    const content = await fs.readFile(metadataPath, 'utf-8')
+    const metadata = JSON.parse(content) as Record<string, unknown>
+
+    expect('isClosingPeriod' in metadata).toBe(false)
+    expect('dataMonth' in metadata).toBe(false)
   })
 })
