@@ -145,6 +145,7 @@
 - **157** [zod, schemas, data-pipeline, monorepo, verification, contracts] — In a zod union, a non-strict all-optional object schema matches (and silently EMPTIES) any object; strictness is what keeps the union falsifiable (#1123, #1096)
 - **157** [data-pipeline, analytics, transformation, fixtures, verification] — When sibling reports share one entity universe, derive every aggregate block from the single merged entity set (#1124, #1096)
 - **158** [data-pipeline, tests, tdd, verification, json, determinism] — A JSON artifact with numeric-like keys cannot promise lexicographic key order; test permutation-invariance of the serialized bytes instead (#1134, #1101)
+- **158** [data-pipeline, collector-cli, verification, tdd, metadata] — A fail-closed chain is only as honest as its writers: a persisted default reads as a decision (#1129, #1098)
 - **158** [git, bash, tests, process, verification] — A literal control byte in a source file flips git and grep into binary mode; write control characters as escapes (#1080, #1156)
 - **158** [ci, automation, monitoring, data-pipeline, verification] — A parameterized monitor's self-clear must be scoped to the signal it alarms on (#1125, #1096)
 - **158** [tests, tdd, verification, analytics, floats] — A test comment that justifies a surprising expectation by MECHANISM ("due to floating-point precision") instead of by RULE is a pinned bug wearing documentation (#1126, #1097, #798)
