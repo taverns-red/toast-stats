@@ -193,4 +193,31 @@ describe('buildPromotionHeldBody', () => {
     expect(body).toMatch(/count gate/i)
     expect(body).toMatch(/value gate/i)
   })
+
+  it('caps oversized bodies under the GitHub 64KB issue limit with a truncation notice (#1168)', () => {
+    // A full-range re-derive: hundreds of reasons, every district affected —
+    // the raw body would exceed 65,536 chars and crash gh issue create.
+    const r = evaluatePromotion({
+      countPromote: true,
+      valuePromote: false,
+      valueDiff: {
+        ...CHANGED_DIFF,
+        changedDates: Array.from({ length: 160 }, (_, i) => ({
+          date: `2024-01-${String((i % 28) + 1).padStart(2, '0')}`,
+          districtsChanged: 120,
+        })),
+        reasons: Array.from(
+          { length: 2000 },
+          (_, i) =>
+            `2024-01-01 district ${i}: totalPayments 11111111 -> 22222222, paidClubs 333 -> 444 (digest mismatch on overlap date)`
+        ),
+        affectedDistricts: Array.from({ length: 130 }, (_, i) => String(i + 1)),
+      },
+    })
+    const body = buildPromotionHeldBody(r, OPTS)
+    expect(body.length).toBeLessThanOrEqual(60000)
+    expect(body).toMatch(/truncated/i)
+    // The operational core must survive truncation:
+    expect(body).toMatch(/allow_value_changes=true/)
+  })
 })
