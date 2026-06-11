@@ -152,3 +152,4 @@
 - **158** [cls, css, frontend, responsive, mobile, verification, playwright] — Reserve a data-dependent slot with a structural skeleton (pinned widths, inherited heights), not a measured total height (#922, #1100)
 - **158** [data-pipeline, verification, scraping, collector-cli, process] — When reconstructing an upstream system's calendar, the upstream's own UI affordances are the authority; calibrate the probe on knowns and expect it to falsify your derived records (#1128, #1098)
 - **159** [verification, playwright, cdn, data-pipeline, automation, frontend] — Live-verify a pipeline-gated CDN artifact by injecting the REAL locally-built artifact via route interception (and drive the missing-artifact path un-injected) (#1135, #1101)
+- **160** [research, analytics, verification, data-pipeline] — The system's own published per-entity goal numbers are an oracle for recovering historical business rules; back-solve before trusting documents (#1116, #1147)
