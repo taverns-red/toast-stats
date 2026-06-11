@@ -37,7 +37,9 @@ export class OfficerAwardsCalculator {
       const status = statuses[r.districtId]
       const trainingMet = r.trainingMet ?? false
       const isDistinguished =
-        status !== undefined && status.currentTier !== 'NotDistinguished'
+        status !== undefined &&
+        status.currentTier !== 'NotDistinguished' &&
+        status.currentTier !== 'Unknown'
 
       return {
         districtId: r.districtId,

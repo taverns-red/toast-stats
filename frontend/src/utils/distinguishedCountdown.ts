@@ -48,7 +48,7 @@ export interface DistinguishedCountdown {
    canonical analytics values for several real districts. */
 export type DistinguishedTier = Exclude<
   DistinguishedDistrictTier,
-  'NotDistinguished'
+  'NotDistinguished' | 'Unknown'
 >
 
 interface TierThreshold {

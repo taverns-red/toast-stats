@@ -89,12 +89,14 @@ interface RankingMetrics {
   presidentsDistinguished: number
   // Smedley Distinguished tier (#329)
   smedleyDistinguished: number
-  // District Recognition Program prerequisites (#329)
-  dspSubmitted: boolean
-  trainingMet: boolean
-  marketAnalysisSubmitted: boolean
-  communicationPlanSubmitted: boolean
-  regionAdvisorVisitMet: boolean
+  // District Recognition Program prerequisites (#329). Tri-state since
+  // #1116 item 5: undefined = column absent from that year's export
+  // (pre-2025-26 carries only DSP + Training) — unknowable, not an N.
+  dspSubmitted: boolean | undefined
+  trainingMet: boolean | undefined
+  marketAnalysisSubmitted: boolean | undefined
+  communicationPlanSubmitted: boolean | undefined
+  regionAdvisorVisitMet: boolean | undefined
   // Clubs with 20+ paid members for President's 20-Plus Award (#330)
   clubsWith20PlusMembers: number
   // Paid clubs chartered in the current program year (#336) — used to compute
@@ -851,7 +853,11 @@ export class TransformService {
    * Defaults to false when the column is missing (legacy CSVs) or contains
    * any value other than "Y" (case-insensitive).
    */
-  private parseYesNo(value: string | undefined): boolean {
+  private parseYesNo(value: string | undefined): boolean | undefined {
+    // Absent column → undefined (unknowable; pre-2025-26 exports lack the
+    // Market Analysis / Communication Plan / Region Advisor columns —
+    // #1116 item 5). Present-but-empty → false (an explicit non-Y).
+    if (value === undefined) return undefined
     if (!value) return false
     return value.trim().toUpperCase() === 'Y'
   }
@@ -1789,9 +1795,12 @@ export class TransformService {
     const standings = competitiveCalculator.calculate(rankings.rankings)
 
     // ── Distinguished District tier status (#332) ──
+    // Per-program-year rules (#1116 item 5): historical years gate on the
+    // prerequisites that existed that year and exclude Smedley pre-2025-26.
     const distinguishedCalculator = new DistinguishedDistrictCalculator()
     const distinguishedDistrict = distinguishedCalculator.calculateAll(
-      rankings.rankings
+      rankings.rankings,
+      calculateProgramYear(snapshotDate)
     )
 
     // ── Load/create awards history store (#333) ──

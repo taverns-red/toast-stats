@@ -187,6 +187,7 @@ export interface CompetitiveAwardsByDistrict {
  * Distinguished District tier (#332)
  */
 export type DistinguishedDistrictTier =
+  | 'Unknown'
   | 'NotDistinguished'
   | 'Distinguished'
   | 'Select'

@@ -5,6 +5,7 @@ import {
 } from '../utils/distinguishedCountdown'
 
 export type DistinguishedDistrictTier =
+  | 'Unknown'
   | 'NotDistinguished'
   | 'Distinguished'
   | 'Select'
@@ -61,6 +62,7 @@ interface DistinguishedDistrictTrophyCaseProps {
 }
 
 const TIER_LABELS: Record<DistinguishedDistrictTier, string> = {
+  Unknown: 'Recognition Unknown',
   NotDistinguished: 'Not Yet Distinguished',
   Distinguished: 'Distinguished District',
   Select: 'Select Distinguished District',
@@ -69,6 +71,7 @@ const TIER_LABELS: Record<DistinguishedDistrictTier, string> = {
 }
 
 const TIER_BADGE_STYLES: Record<DistinguishedDistrictTier, string> = {
+  Unknown: 'bg-gray-50 text-gray-500 border-gray-200',
   NotDistinguished: 'bg-gray-100 text-gray-700 border-gray-300',
   Distinguished: 'bg-tm-true-maroon text-white border-tm-true-maroon',
   Select: 'bg-tm-cool-gray text-gray-900 border-gray-400',
@@ -78,6 +81,7 @@ const TIER_BADGE_STYLES: Record<DistinguishedDistrictTier, string> = {
 }
 
 const TIER_ICONS: Record<DistinguishedDistrictTier, string> = {
+  Unknown: '◌',
   NotDistinguished: '○',
   Distinguished: '🥉',
   Select: '🥈',
@@ -202,7 +206,8 @@ export const DistinguishedDistrictTrophyCase: React.FC<
         paymentsCount === null ||
         distinguishedClubsCount === null) &&
       ranking &&
-      nextTierGap.tier !== 'NotDistinguished'
+      nextTierGap.tier !== 'NotDistinguished' &&
+      nextTierGap.tier !== 'Unknown'
     ) {
       const derived = deriveRemainingToTier(nextTierGap.tier, ranking)
       paidClubsCount = paidClubsCount ?? derived.paidClubsRemaining
