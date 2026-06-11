@@ -17,7 +17,8 @@
  *   npx tsx scripts/prune-prod-reconcile.ts \
  *     --staging-snapshots <file> --staging-rawcsv <file> \
  *     --prod-snapshots <file> --prod-rawcsv <file> \
- *     [--prune-output /tmp/prune-output.json]
+ *     [--prune-output /tmp/prune-output.json] \
+ *     [--max-deletion-fraction 0.5]
  */
 
 import { readFileSync } from 'node:fs'
@@ -81,7 +82,27 @@ try {
     )
   }
 
-  const plan = planProdReconcile({ staging, prod, pendingStagingDeletions })
+  let maxDeletionFraction: number | undefined
+  const rawFraction = args.get('max-deletion-fraction')
+  if (rawFraction !== undefined) {
+    maxDeletionFraction = Number(rawFraction)
+    if (
+      !Number.isFinite(maxDeletionFraction) ||
+      maxDeletionFraction <= 0 ||
+      maxDeletionFraction > 1
+    ) {
+      throw new Error(
+        `--max-deletion-fraction must be in (0, 1], got '${rawFraction}'`
+      )
+    }
+  }
+
+  const plan = planProdReconcile({
+    staging,
+    prod,
+    pendingStagingDeletions,
+    maxDeletionFraction,
+  })
 
   console.error(
     `[INFO] staging: ${staging.rawCsvDates.length} raw-csv / ${staging.snapshotDates.length} snapshot dates; ` +

@@ -1017,7 +1017,7 @@ jobs:
           set -o pipefail
 
           DRY_RUN_FLAG=""
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "${{ steps.mode.outputs.dry_run }}" = "true" ]; then
             DRY_RUN_FLAG="--dry-run"
             echo "::notice::Dry-run mode — no data will be deleted"
           fi

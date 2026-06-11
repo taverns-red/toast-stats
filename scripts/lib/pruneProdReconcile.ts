@@ -77,13 +77,23 @@ export function parseGcsDatedDirListing(listing: string): string[] {
  *                     delete from staging (from the classification output).
  *                     Subtracted from staging so a dry-run can preview the
  *                     reconcile before staging is actually touched.
+ * @param maxDeletionFraction  ceiling on the fraction of a prod layer the
+ *                     plan may delete (default 0.5). A partially degraded
+ *                     staging (incident deletion, half-failed rebuild)
+ *                     passes the empty/disjoint guards but balloons the
+ *                     prod-minus-staging diff — and reconcile bypasses the
+ *                     count gate that normally catches subtractive staging.
+ *                     An operator who has verified a legitimately large
+ *                     plan raises it explicitly (--max-deletion-fraction).
  */
 export function planProdReconcile(options: {
   staging: LayerDates
   prod: LayerDates
   pendingStagingDeletions?: LayerDates
+  maxDeletionFraction?: number
 }): ProdReconcilePlan {
   const { staging, prod, pendingStagingDeletions } = options
+  const maxDeletionFraction = options.maxDeletionFraction ?? 0.5
 
   for (const [label, dates] of [
     ['staging raw-csv', staging.rawCsvDates],
@@ -145,6 +155,20 @@ export function planProdReconcile(options: {
     prod.snapshotDates,
     effectiveStaging.snapshotDates
   )
+
+  for (const [layer, planned, total] of [
+    ['raw-csv', prodOnlyRawCsv.length, prod.rawCsvDates.length],
+    ['snapshots', prodOnlySnapshots.length, prod.snapshotDates.length],
+  ] as const) {
+    if (total > 0 && planned / total > maxDeletionFraction) {
+      throw new Error(
+        `plan would delete ${planned}/${total} of prod ${layer} — over the ` +
+          `${maxDeletionFraction} ceiling; staging may be degraded (#1133). ` +
+          'Verify both buckets, then re-run with an explicit higher ' +
+          '--max-deletion-fraction if the plan is legitimate.'
+      )
+    }
+  }
 
   const deletePrefixes = [
     ...prodOnlyRawCsv.map(d => `raw-csv/${d}`),

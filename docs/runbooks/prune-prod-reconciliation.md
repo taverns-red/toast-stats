@@ -24,18 +24,46 @@ on both buckets (#1132) and are never part of reconciliation.
 
 ## Safety interlocks (all fail closed)
 
-| Interlock                | Where                                         | Refuses when                                                                                                        |
-| ------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Closing-period guard     | `collector-cli prune` (`PruneService`, #1133) | today is inside — or cannot be proven outside — a TI closing window (registry: `docs/month-end-closing-dates.json`) |
-| Metadata-less protection | `PruneService` (#1131)                        | a raw-csv date has no `metadata.json` — never classified deletable                                                  |
-| Deletion-scope guard     | `scripts/lib/pruneGcsDeletions.ts` (#1132)    | any deletion path is outside `raw-csv/<date>` / `snapshots/<date>`                                                  |
-| Reconcile plan guards    | `scripts/lib/pruneProdReconcile.ts` (#1133)   | staging listing empty · staging/prod snapshot listings disjoint · any non-ISO date                                  |
-| Dry-run                  | `dry_run=true` dispatch input                 | nothing is deleted anywhere; classification + reconcile plan are reported only                                      |
+| Interlock                | Where                                         | Refuses when                                                                                                                                   |
+| ------------------------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Closing-period guard     | `collector-cli prune` (`PruneService`, #1133) | today is inside — or cannot be proven outside — a TI closing window (registry: `docs/month-end-closing-dates.json`)                            |
+| Metadata-less protection | `PruneService` (#1131)                        | a raw-csv date has no `metadata.json` — never classified deletable                                                                             |
+| Deletion-scope guard     | `scripts/lib/pruneGcsDeletions.ts` (#1132)    | any deletion path is outside `raw-csv/<date>` / `snapshots/<date>`                                                                             |
+| Reconcile plan guards    | `scripts/lib/pruneProdReconcile.ts` (#1133)   | staging listing empty · staging/prod snapshot listings disjoint · any non-ISO date · plan exceeds the per-layer deletion ceiling (default 0.5) |
+| Dry-run                  | `dry_run=true` dispatch input                 | nothing is deleted anywhere; classification + reconcile plan are reported only                                                                 |
 
 The closing-period guard has **no override flag**. If it refuses with
 `unknown`, the registry is missing the previous month's entry — add it via
 `scripts/update-closing-date-registry.ts` once TI's dashboard month
 dropdown shows the close (ADR-011, Lesson 158), then re-dispatch.
+
+Two further reconcile-plan refusals and their escapes:
+
+- **Plan-size ceiling**: the plan refuses to delete more than half of a
+  prod layer (default `0.5`) — a partially degraded staging passes the
+  empty/disjoint guards but balloons the prod-minus-staging diff, and
+  reconcile bypasses the count gate that normally catches subtractive
+  staging. If you have verified both buckets and the large plan is
+  legitimate, pass an explicit `--max-deletion-fraction` to the script
+  (Path B). There is deliberately no workflow input for this.
+- **Disjoint-listings tripwire**: fires when staging and prod snapshots
+  share no date. Normally that means a mis-pointed bucket — but it can
+  fire legitimately on a young prod bucket whose entire snapshot set is
+  prunable. Escape: verify both listings by eye, then delete the reviewed
+  prefixes with explicit `gsutil rm` commands (skip the planner); the
+  tripwire is intentionally not overridable.
+
+## Known side effect — mid-month `latest.json` regression (≤ ~24h)
+
+The keep-set is month-end + penultimate dates only. A mid-month prune
+therefore deletes the current month's daily snapshots, the regenerated
+manifests point `latestSnapshotDate` back to the last month-end, and a
+same-run reconcile pushes that regressed `latest.json` to prod — the live
+site shows last month-end's data until the **next daily run** re-scrapes
+and promotes (≤ ~24h; the daily cron runs 08:00/11:00 UTC). Prefer
+dispatching a prune shortly after a successful daily run, and expect the
+brief regression. The #753 freshness monitor keys on `generatedAt` (which
+stays current), so it correctly does not alarm.
 
 ## Path A — same-run reconcile (preferred)
 

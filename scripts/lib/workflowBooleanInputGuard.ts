@@ -76,9 +76,11 @@ export function findBooleanInputStringComparisons(
   const lines = yamlSource.split('\n')
 
   for (const input of booleanInputs) {
+    // `(?<!\.)inputs.` excludes `github.event.inputs.*` — those are
+    // STRINGS, so comparing them to 'true' is the correct pattern there.
     const patterns = [
-      new RegExp(`inputs\\.${input}\\s*[!=]=\\s*['"]`),
-      new RegExp(`['"]\\s*[!=]=\\s*inputs\\.${input}\\b`),
+      new RegExp(`(?<!\\.)inputs\\.${input}\\s*[!=]=\\s*['"]`),
+      new RegExp(`['"]\\s*[!=]=\\s*(?<!\\.)inputs\\.${input}\\b`),
     ]
     lines.forEach((text, i) => {
       if (patterns.some(p => p.test(text))) {
