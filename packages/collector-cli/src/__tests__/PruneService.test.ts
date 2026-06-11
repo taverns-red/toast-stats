@@ -4,6 +4,7 @@ import {
   isLastDayOfMonth,
   isPenultimateDayOfMonth,
 } from '../services/PruneService.js'
+import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { tmpdir } from 'node:os'
@@ -95,6 +96,15 @@ describe('PruneService', () => {
     await fs.writeFile(path.join(dir, 'district_49.json'), '{}')
   }
 
+  /**
+   * Helper: create a raw-csv date WITHOUT metadata.json (#1131)
+   */
+  async function createRawCsvDateWithoutMetadata(date: string): Promise<void> {
+    const dateDir = path.join(testDir, 'raw-csv', date)
+    await fs.mkdir(dateDir, { recursive: true })
+    await fs.writeFile(path.join(dateDir, 'all-districts.csv'), 'dummy')
+  }
+
   describe('classifyDate', () => {
     it('classifies a non-closing-period month-end date as keeper', async () => {
       await createRawCsvDate('2026-01-31')
@@ -162,6 +172,109 @@ describe('PruneService', () => {
     })
   })
 
+  describe('metadata-less date protection (#1131)', () => {
+    // Mirrors docs/month-end-closing-dates.json entries relevant to the
+    // 2026-01/2026-02 window (corrected by #1128: 2026-01 closes 2026-02-05).
+    const registryMonths: ClosingDateEntry[] = [
+      { dataMonth: '2025-12', closingDate: '2026-01-08' },
+      { dataMonth: '2026-01', closingDate: '2026-02-05' },
+    ]
+
+    it('protects a metadata-less date inside a registry closing window and remaps it to month-end', async () => {
+      // 2026-02-03 ≤ 2026-01's closingDate 2026-02-05 → inside the window
+      await createRawCsvDateWithoutMetadata('2026-02-03')
+      const service = new PruneService({
+        cacheDir: testDir,
+        closingDateRegistry: registryMonths,
+      })
+
+      const result = await service.classifyDate('2026-02-03')
+
+      expect(result.keep).toBe(true)
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.snapshotDate).toBe('2026-01-31')
+      expect(result.reason).toContain('Protected')
+    })
+
+    it('protects a metadata-less date even when the registry says non-closing (mapping unprovable)', async () => {
+      // 2026-02-13 > 2026-02-05 → registry verdict is non-closing, but with
+      // no metadata.json the raw→snapshot mapping is unproven. An
+      // irreversible delete must fail closed (this is the live
+      // gs://…/raw-csv/2026-02-13 case from the #1036 audit).
+      await createRawCsvDateWithoutMetadata('2026-02-13')
+      const service = new PruneService({
+        cacheDir: testDir,
+        closingDateRegistry: registryMonths,
+      })
+
+      const result = await service.classifyDate('2026-02-13')
+
+      expect(result.keep).toBe(true)
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.snapshotDate).toBe('2026-02-13')
+      expect(result.reason).toContain('Protected')
+    })
+
+    it('protects a metadata-less date when the registry has no entry for the window (unknown)', async () => {
+      await createRawCsvDateWithoutMetadata('2024-05-15')
+      const service = new PruneService({
+        cacheDir: testDir,
+        closingDateRegistry: registryMonths,
+      })
+
+      const result = await service.classifyDate('2024-05-15')
+
+      expect(result.keep).toBe(true)
+      expect(result.reason).toContain('Protected')
+    })
+
+    it('protects metadata-less dates when no registry is provided at all', async () => {
+      await createRawCsvDateWithoutMetadata('2026-02-13')
+      const service = new PruneService({ cacheDir: testDir })
+
+      const result = await service.classifyDate('2026-02-13')
+
+      expect(result.keep).toBe(true)
+      expect(result.reason).toContain('Protected')
+    })
+
+    it('remaps a metadata-less January date across the year boundary (Dec window)', async () => {
+      // 2026-01-05 ≤ 2025-12's closingDate 2026-01-08 → December's window
+      await createRawCsvDateWithoutMetadata('2026-01-05')
+      const service = new PruneService({
+        cacheDir: testDir,
+        closingDateRegistry: registryMonths,
+      })
+
+      const result = await service.classifyDate('2026-01-05')
+
+      expect(result.keep).toBe(true)
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.snapshotDate).toBe('2025-12-31')
+    })
+
+    it('warns when metadata says non-closing but the date sits inside a registry closing window (Lesson 158)', async () => {
+      // Laundered default: a footer-less legacy scrape persisted
+      // isClosingPeriod:false. Keep rules stay unchanged — but the
+      // contradiction must be surfaced.
+      await createRawCsvDate('2026-02-03', { isClosingPeriod: false })
+      const warn = vi.fn()
+      const service = new PruneService({
+        cacheDir: testDir,
+        closingDateRegistry: registryMonths,
+        logger: { info: vi.fn(), warn, error: vi.fn(), debug: vi.fn() },
+      })
+
+      const result = await service.classifyDate('2026-02-03')
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('registry closing window')
+      )
+      // Keep rules unchanged: trusted metadata still classifies by raw date
+      expect(result.keep).toBe(false)
+    })
+  })
+
   describe('prune', () => {
     it('deletes non-month-end raw-csv and snapshot directories', async () => {
       // Month-end keeper
@@ -221,6 +334,32 @@ describe('PruneService', () => {
       expect(result.prunedDates).toBe(1)
       expect(result.deletedRawCsv).toContain('2026-02-05')
       expect(result.deletedSnapshots).toContain('2026-02-05')
+    })
+
+    it('never deletes a protected metadata-less date (#1131)', async () => {
+      // Metadata-less: classification is unprovable → protected
+      await createRawCsvDateWithoutMetadata('2026-02-13')
+      await createSnapshotDate('2026-02-13')
+      // Metadata-full mid-month: still prunes (keep rules unchanged)
+      await createRawCsvDate('2026-03-15')
+      await createSnapshotDate('2026-03-15')
+
+      const service = new PruneService({
+        cacheDir: testDir,
+        closingDateRegistry: [
+          { dataMonth: '2026-01', closingDate: '2026-02-05' },
+        ],
+      })
+      const result = await service.prune(false)
+
+      expect(result.keptDates).toBe(1)
+      expect(result.prunedDates).toBe(1)
+      expect(result.deletedRawCsv).toEqual(['2026-03-15'])
+
+      const rawCsvEntries = await fs.readdir(path.join(testDir, 'raw-csv'))
+      expect(rawCsvEntries).toContain('2026-02-13')
+      const snapshotEntries = await fs.readdir(path.join(testDir, 'snapshots'))
+      expect(snapshotEntries).toContain('2026-02-13')
     })
 
     it('retains both month-end AND penultimate dates (#203)', async () => {

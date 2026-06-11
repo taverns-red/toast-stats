@@ -1151,6 +1151,7 @@ export function createCLI(): Command {
         const service = new PruneService({
           cacheDir,
           logger: createVerboseLogger(options.verbose),
+          closingDateRegistry: await loadClosingDateRegistryMonths(),
         })
 
         const result = await service.prune(options.dryRun)
