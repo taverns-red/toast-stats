@@ -412,6 +412,86 @@ describe('PruneService', () => {
       expect(snapshotEntries).toContain('2026-02-13')
     })
 
+    describe('closing-period guard (#1133)', () => {
+      // Registry: May 2026 closed on 2026-06-05.
+      const MAY_CLOSED: ClosingDateEntry[] = [
+        { dataMonth: '2026-05', closingDate: '2026-06-05' },
+      ]
+
+      it('refuses a destructive prune while today is inside a closing window', async () => {
+        await createRawCsvDate('2026-01-15') // prunable if the run proceeded
+        await createSnapshotDate('2026-01-15')
+
+        const service = new PruneService({
+          cacheDir: testDir,
+          closingDateRegistry: MAY_CLOSED,
+          today: '2026-06-03', // inside May's closing window
+        })
+        const result = await service.prune(false)
+
+        expect(result.success).toBe(false)
+        expect(result.blocked).toBe(true)
+        expect(result.closingGuard.allowed).toBe(false)
+        expect(result.closingGuard.windowVerdict).toBe('closing')
+        expect(result.deletedRawCsv).toHaveLength(0)
+        expect(result.deletedSnapshots).toHaveLength(0)
+        expect(result.errors.join(' ')).toContain('closing')
+
+        // Nothing was touched on disk.
+        const rawCsvEntries = await fs.readdir(path.join(testDir, 'raw-csv'))
+        expect(rawCsvEntries).toContain('2026-01-15')
+      })
+
+      it('refuses a destructive prune when the registry cannot decide (fail closed)', async () => {
+        await createRawCsvDate('2026-01-15')
+
+        const service = new PruneService({
+          cacheDir: testDir,
+          closingDateRegistry: [], // no entry for the previous month
+          today: '2026-06-11',
+        })
+        const result = await service.prune(false)
+
+        expect(result.blocked).toBe(true)
+        expect(result.closingGuard.windowVerdict).toBe('unknown')
+        expect(result.deletedRawCsv).toHaveLength(0)
+      })
+
+      it('lets a dry-run proceed during a closing window but surfaces the refused verdict', async () => {
+        await createRawCsvDate('2026-01-15')
+        await createSnapshotDate('2026-01-15')
+
+        const service = new PruneService({
+          cacheDir: testDir,
+          closingDateRegistry: MAY_CLOSED,
+          today: '2026-06-03',
+        })
+        const result = await service.prune(true)
+
+        expect(result.blocked).toBe(false) // dry-run is read-only — it ran
+        expect(result.closingGuard.allowed).toBe(false) // …but a real run would refuse
+        expect(result.prunedDates).toBe(1)
+        expect(result.deletedRawCsv).toHaveLength(0)
+      })
+
+      it('allows a destructive prune once today is past the closing window', async () => {
+        await createRawCsvDate('2026-01-15')
+        await createSnapshotDate('2026-01-15')
+
+        const service = new PruneService({
+          cacheDir: testDir,
+          closingDateRegistry: MAY_CLOSED,
+          today: '2026-06-11', // after 2026-06-05
+        })
+        const result = await service.prune(false)
+
+        expect(result.blocked).toBe(false)
+        expect(result.closingGuard.allowed).toBe(true)
+        expect(result.closingGuard.windowVerdict).toBe('non-closing')
+        expect(result.deletedRawCsv).toEqual(['2026-01-15'])
+      })
+    })
+
     it('retains both month-end AND penultimate dates (#203)', async () => {
       // Month-end: Jan 31
       await createRawCsvDate('2026-01-31')
