@@ -276,6 +276,15 @@ describe('PruneService', () => {
   })
 
   describe('prune', () => {
+    // Guard-satisfying context (#1133): today is past May-2026's closing
+    // window, so destructive prune mechanics can be exercised.
+    const NON_CLOSING = {
+      today: '2026-06-20',
+      closingDateRegistry: [
+        { dataMonth: '2026-05', closingDate: '2026-06-05' },
+      ] as ClosingDateEntry[],
+    }
+
     it('deletes non-month-end raw-csv and snapshot directories', async () => {
       // Month-end keeper
       await createRawCsvDate('2026-01-31')
@@ -284,7 +293,7 @@ describe('PruneService', () => {
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')
 
-      const service = new PruneService({ cacheDir: testDir })
+      const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const result = await service.prune(false)
 
       expect(result.keptDates).toBe(1)
@@ -303,7 +312,7 @@ describe('PruneService', () => {
     it('reports the layer scope so retained derived layers are never a silent gap (#1132)', async () => {
       await createRawCsvDate('2026-01-15')
 
-      const service = new PruneService({ cacheDir: testDir })
+      const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const dryRun = await service.prune(true)
       const execute = await service.prune(false)
 
@@ -335,7 +344,7 @@ describe('PruneService', () => {
         await fs.writeFile(abs, '{}')
       }
 
-      const service = new PruneService({ cacheDir: testDir })
+      const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const result = await service.prune(false)
 
       // The prunable date is gone from the deletable layers…
@@ -377,7 +386,7 @@ describe('PruneService', () => {
       await createRawCsvDate('2026-02-05')
       await createSnapshotDate('2026-02-05')
 
-      const service = new PruneService({ cacheDir: testDir })
+      const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const result = await service.prune(false)
 
       expect(result.keptDates).toBe(1)
@@ -396,7 +405,9 @@ describe('PruneService', () => {
 
       const service = new PruneService({
         cacheDir: testDir,
+        today: NON_CLOSING.today,
         closingDateRegistry: [
+          ...NON_CLOSING.closingDateRegistry,
           { dataMonth: '2026-01', closingDate: '2026-02-05' },
         ],
       })
@@ -503,7 +514,7 @@ describe('PruneService', () => {
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')
 
-      const service = new PruneService({ cacheDir: testDir })
+      const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const result = await service.prune(false)
 
       expect(result.keptDates).toBe(2) // Jan 31 + Jan 30
