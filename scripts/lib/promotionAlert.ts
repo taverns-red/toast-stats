@@ -156,6 +156,11 @@ export function buildPromotionHeldTitle(result: PromotionAlertResult): string {
  * before clearing). When both refused, the regression is the more serious
  * signal and leads.
  */
+/** GitHub rejects issue bodies over 65,536 chars; stay well under (#1168). */
+const MAX_BODY_CHARS = 60_000
+/** Reasons shown inline; the run's Step Summary always has the full list. */
+const MAX_REASONS = 40
+
 export function buildPromotionHeldBody(
   result: PromotionAlertResult,
   opts: PromotionAlertBodyOptions
@@ -200,7 +205,15 @@ export function buildPromotionHeldBody(
     }
     if (result.reasons.length > 0) {
       lines.push('**Value-gate reasons:**', '')
-      for (const r of result.reasons) lines.push(`- ${r}`)
+      // Bounded: a full-range re-derive emits thousands of reasons and the
+      // raw body blows GitHub's 65,536-char issue limit (#1168). The full
+      // list always lives in the run's Step Summary.
+      for (const r of result.reasons.slice(0, MAX_REASONS)) lines.push(`- ${r}`)
+      if (result.reasons.length > MAX_REASONS) {
+        lines.push(
+          `- _…and ${result.reasons.length - MAX_REASONS} more — truncated; full value-diff in the run's Step Summary._`
+        )
+      }
       lines.push('')
     }
     lines.push(
@@ -227,5 +240,19 @@ export function buildPromotionHeldBody(
     '_This issue auto-closes when a later run successfully promotes. Filed by `.github/workflows/data-pipeline.yml` (#1073)._'
   )
 
-  return lines.join('\n')
+  const body = lines.join('\n')
+  if (body.length <= MAX_BODY_CHARS) return body
+  // Hard guard (#1168): never hand `gh issue create` a body GitHub rejects.
+  // Keep the head, then re-state the operational essentials the cut may
+  // have removed (clear path + footer).
+  const tail = [
+    '',
+    "⚠️ _Body truncated to fit GitHub's 64KB issue limit — full detail in the run's Step Summary._",
+    '',
+    '**Clear path** (value gate only, after review): `gh workflow run data-pipeline.yml -f mode=daily -f allow_value_changes=true`',
+    '',
+    '---',
+    '_This issue auto-closes when a later run successfully promotes. Filed by `.github/workflows/data-pipeline.yml` (#1073)._',
+  ].join('\n')
+  return body.slice(0, MAX_BODY_CHARS - tail.length) + tail
 }
