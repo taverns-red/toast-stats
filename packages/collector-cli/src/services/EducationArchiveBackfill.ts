@@ -27,6 +27,7 @@ import {
   type DistrictReportsDataset,
 } from '@toastmasters/shared-contracts'
 
+import { validateDistrictId } from '../utils/validateDistrictId.js'
 import type { DailyReportFetcher } from './DailyReportFetcher.js'
 import {
   extractReportAsOf,
@@ -137,6 +138,10 @@ export async function backfillEducationArchive(
   options: EducationArchiveBackfillOptions
 ): Promise<EducationArchiveBackfillResult> {
   const { cacheDir, districtId, programYear, fetcher } = options
+  // Active tripwire: the district id is interpolated into a file path below —
+  // validate before ANY use (the writer re-checks, but the dry-run and merge
+  // read paths must never see a raw id either).
+  validateDistrictId(districtId)
   const snapshotDate = programYearEndDate(programYear)
   const generatedAt = options.generatedAt ?? new Date().toISOString()
 
@@ -181,6 +186,10 @@ export async function backfillEducationArchive(
   // Merge with an existing reports file at this date, if any (upsert the
   // educationAchievements section; preserve everything else). Fail-closed on
   // a malformed file or a programYear mismatch — never silently blend.
+  // NOTE: an existing educationAchievements section is REPLACED wholesale —
+  // archive provenance supersedes any prior daily-feed section at this date.
+  // That is intended for the one-shot backfill (prior-PY dirs predate the
+  // daily flow); the runbook's staging diff STOPs if a remote file pre-exists.
   const existingPath = path.join(
     cacheDir,
     'snapshots',
