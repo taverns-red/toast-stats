@@ -192,7 +192,7 @@ jobs:
         run: npm run test --workspace=@toastmasters/collector-cli -- --coverage
 
       - name: Run mcp-server tests
-        run: npm run test --workspace=@toastmasters/mcp-server -- --coverage
+        run: npm run test --workspace=@taverns-red/toast-stats-mcp -- --coverage
 
       - name: Check vitest project partition (#482)
         run: npm run test:projects:check --workspace=frontend

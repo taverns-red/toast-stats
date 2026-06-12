@@ -1,4 +1,4 @@
-# @toastmasters/mcp-server
+# @taverns-red/toast-stats-mcp
 
 A **thin, local, read-only [MCP](https://modelcontextprotocol.io) server** over the
 public Toast Stats snapshot CDN ([ADR-008](../../docs/architecture-decisions/008-ai-enable-toast-stats.md)).
@@ -112,7 +112,7 @@ against a localhost server serving committed CDN fixtures — no network, no liv
 Claude client. It asserts the bin lists its tools and answers a tool call:
 
 ```bash
-npm run smoke --workspace=@toastmasters/mcp-server
+npm run smoke --workspace=@taverns-red/toast-stats-mcp
 ```
 
 This is the same offline check CI runs (it's part of the package test suite). It
