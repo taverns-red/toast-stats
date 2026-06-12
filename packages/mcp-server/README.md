@@ -146,3 +146,23 @@ a release PR that bumps `package.json` and maintains the package CHANGELOG.
 Merging a release PR tags `toast-stats-mcp-vX.Y.Z` — it does **not** publish
 to npm. The `npm publish` wiring (provenance, 2FA/token policy) is a later
 sprint of epic #1162; until it lands, publishing is a manual operator action.
+
+## Releasing (manual, operator-attended — ruling 2026-06-12, #1164)
+
+Releases are deliberately **not** automated: no `NPM_TOKEN` lives in CI, and
+every publish requires the operator's 2FA. Flow:
+
+1. Bump the version via PR (`npm version patch --no-git-tag-version` in
+   `packages/mcp-server`, commit **both** `package.json` and the root
+   `package-lock.json`), merge.
+2. `git pull && cd packages/mcp-server && npm publish` — the `prepack` hook
+   rebuilds from source; enter your OTP at the prompt.
+3. Verify from the outside: `npm view @taverns-red/toast-stats-mcp version`
+   and the clean-machine smoke
+   (`cd $(mktemp -d) && npx -y @taverns-red/toast-stats-mcp` driven by any
+   MCP client).
+
+First-publish provenance: 0.1.0 was staged by npm's new-account flow and
+released from the Staged Packages page (2026-06-12). A version number that
+enters staging is burned — never reuse one that 403s with "previously
+published".
