@@ -28,7 +28,8 @@
     "district-statistics"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && npm run build:bin",
+    "build:bin": "esbuild src/bin.ts --bundle --platform=node --format=esm --outfile=dist/bin.js --external:@modelcontextprotocol/sdk --external:zod --log-level=warning",
     "clean": "rm -rf dist",
     "lint": "eslint . --ext .ts",
     "test": "vitest --run",
@@ -44,6 +45,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@toastmasters/shared-contracts": "^1.0.0",
+    "esbuild": "^0.28.0",
     "@types/node": "^25.9.2",
     "@typescript-eslint/eslint-plugin": "^8.60.1",
     "@typescript-eslint/parser": "^8.56.0",
