@@ -66,6 +66,7 @@ const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/club/01479548' },
   { path: '/history' },
   { path: '/methodology' },
+  { path: '/mcp' },
   { path: '/awards' },
   { path: '/regions', mustRender: '.region-finder__chip' }, // family C
   { path: '/region/1' },

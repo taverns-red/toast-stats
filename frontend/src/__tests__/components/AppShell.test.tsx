@@ -210,6 +210,16 @@ describe('AppShell (#354)', () => {
       expect(footer).toHaveTextContent(/mit license/i)
     })
 
+    it('links "MCP server" to the /mcp page (#1165)', () => {
+      // AppMeta is the single chrome source rendered in BOTH the desktop
+      // footer and the mobile "About ▾" disclosure (#889), so this one link
+      // makes /mcp reachable from every page at every breakpoint.
+      renderShell()
+      const footer = screen.getByRole('contentinfo')
+      const link = within(footer).getByRole('link', { name: /mcp server/i })
+      expect(link).toHaveAttribute('href', '/mcp')
+    })
+
     it('renders a non-empty version (no double-v, no bare-v)', () => {
       // Three regression guards:
       //   1. No 'vv' — VITE_APP_VERSION ships pre-prefixed with 'v', so

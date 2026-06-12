@@ -3,7 +3,7 @@
 
 import React from 'react'
 import { describe, it, expect } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import MethodologyPage from '../MethodologyPage'
 
@@ -72,5 +72,15 @@ describe('MethodologyPage — Club health classifications (#440)', () => {
     const txt = document.body.textContent || ''
     expect(txt).toMatch(/paid members\s*&?lt;?\s*12|paid members\s*<\s*12/i)
     expect(txt).toMatch(/net growth\s*&?lt;?\s*3|net growth\s*<\s*3/i)
+  })
+})
+
+describe('MethodologyPage — pointer to the MCP server page (#1165)', () => {
+  it('links to /mcp from the data source section', () => {
+    renderPage()
+    expect(screen.getByRole('link', { name: /mcp server/i })).toHaveAttribute(
+      'href',
+      '/mcp'
+    )
   })
 })

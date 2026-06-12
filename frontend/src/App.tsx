@@ -55,6 +55,9 @@ const MethodologyPage = React.lazy(() => import('./pages/MethodologyPage'))
 // Code-split: AwardsPage — top-10 leaderboards per district award (#370-#373)
 const AwardsPage = React.lazy(() => import('./pages/AwardsPage'))
 
+// Code-split: McpPage — public MCP-server install page (#1165, epic #1162)
+const McpPage = React.lazy(() => import('./pages/McpPage'))
+
 // Code-split: RegionPage — /region/:n landing (#423)
 const RegionPage = React.lazy(() => import('./pages/RegionPage'))
 
@@ -194,6 +197,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <AwardsPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'mcp',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <McpPage />
             </Suspense>
           ),
         },

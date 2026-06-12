@@ -18,7 +18,14 @@ const REPO_ROOT = join(
 )
 const PUBLIC_DIR = join(REPO_ROOT, 'frontend', 'public')
 
-const EXPECTED_PATHS = ['/', '/methodology', '/history', '/regions', '/awards']
+const EXPECTED_PATHS = [
+  '/',
+  '/methodology',
+  '/history',
+  '/regions',
+  '/awards',
+  '/mcp', // #1165 — public MCP-server install page
+]
 
 function locs(xml: string): string[] {
   return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1])
