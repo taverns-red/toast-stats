@@ -176,6 +176,14 @@ const MethodologyPage: React.FC = () => {
           stops publishing a file, the pipeline fails loudly rather than
           silently inferring values.
         </p>
+        <p className="methodology-source">
+          Prefer asking an AI? The same public snapshots are exposed through a
+          local read-only MCP server — see{' '}
+          <Link to="/mcp" className="methodology-link">
+            MCP Server
+          </Link>{' '}
+          for the one-command install.
+        </p>
       </CollapsibleSection>
 
       <CollapsibleSection

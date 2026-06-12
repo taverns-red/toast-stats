@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 
 declare const __APP_VERSION__: string
 
@@ -36,6 +37,15 @@ const AppMeta: React.FC = () => {
           >
             dashboards.toastmasters.org
           </a>
+          {' · '}
+          {/* /mcp entry point (#1165): AppMeta renders in both the desktop
+              footer and the mobile "About ▾" disclosure (#889), so this one
+              link covers every page at every breakpoint. Placed before the
+              license so the "MIT License · <version>" slot pairing the
+              version guard asserts on stays adjacent. */}
+          <Link to="/mcp" className="app-shell-footer__link">
+            MCP server
+          </Link>
           {' · '}
           <a
             href="https://github.com/taverns-red/toast-stats/blob/main/LICENSE"
