@@ -46,7 +46,7 @@ describe('publishable manifest (@taverns-red/toast-stats-mcp)', () => {
   })
 
   it('is publishable: not private, public access', () => {
-    expect(pkg.private ?? false).toBe(false)
+    expect(pkg.private).toBeUndefined()
     expect(pkg.publishConfig?.access).toBe('public')
   })
 

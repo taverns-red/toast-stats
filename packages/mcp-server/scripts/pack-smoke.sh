@@ -27,9 +27,11 @@ npm run build >&2
 
 TMP_DIR="$(mktemp -d -t toast-stats-mcp-pack-smoke)"
 echo "[pack-smoke] packing into $TMP_DIR ..." >&2
-npm pack --pack-destination "$TMP_DIR" >&2
-
-TARBALL="$(ls "$TMP_DIR"/taverns-red-toast-stats-mcp-*.tgz)"
+# Derive the tarball name from npm itself and the bin path from the manifest,
+# so a future rename only ever touches package.json.
+TARBALL_FILE="$(npm pack --pack-destination "$TMP_DIR" --json \
+  | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s)[0].filename))")"
+TARBALL="$TMP_DIR/$TARBALL_FILE"
 echo "[pack-smoke] tarball: $TARBALL" >&2
 tar -tzf "$TARBALL" >&2
 
@@ -42,7 +44,9 @@ mkdir -p "$INSTALL_DIR"
   npm install --no-audit --no-fund "$TARBALL" >&2
 )
 
-INSTALLED_BIN="$INSTALL_DIR/node_modules/@taverns-red/toast-stats-mcp/dist/bin.js"
+PKG_NAME="$(node -p "require('$PACKAGE_ROOT/package.json').name")"
+BIN_REL="$(node -p "Object.values(require('$PACKAGE_ROOT/package.json').bin)[0]")"
+INSTALLED_BIN="$INSTALL_DIR/node_modules/$PKG_NAME/${BIN_REL#./}"
 if [[ ! -f "$INSTALLED_BIN" ]]; then
   echo "[pack-smoke] FAIL: installed bin not found at $INSTALLED_BIN" >&2
   exit 1
