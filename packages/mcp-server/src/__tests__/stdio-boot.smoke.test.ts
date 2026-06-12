@@ -24,7 +24,11 @@ import { FIXTURE_ROUTES } from './_fixture-routes.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const packageRoot = join(here, '..', '..')
-const binPath = join(packageRoot, 'dist', 'bin.js')
+// `TOAST_STATS_MCP_BIN` points the smoke at an *installed* copy of the bin
+// (the npm-pack smoke installs the tarball into a temp dir and boots that
+// artifact — see scripts/pack-smoke.sh). Default: the workspace build.
+const binPath =
+  process.env.TOAST_STATS_MCP_BIN ?? join(packageRoot, 'dist', 'bin.js')
 const fixtureDir = join(here, '..', '__fixtures__')
 
 interface ToolEnvelope {
