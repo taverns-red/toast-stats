@@ -102,11 +102,13 @@ describe('release flow (release-please owns the version)', () => {
 describe('no stale references to the old name (R8 grep-proof)', () => {
   const OLD_NAME = '@toastmasters/mcp-server'
 
-  it.each(['package.json', join('.github', 'workflows', 'ci.yml')])(
-    '%s does not reference the old package name',
-    relPath => {
-      const text = readFileSync(join(repoRoot, relPath), 'utf8')
-      expect(text).not.toContain(OLD_NAME)
-    }
-  )
+  it.each([
+    'package.json',
+    join('.github', 'workflows', 'ci.yml'),
+    join('packages', 'mcp-server', 'package.json'),
+    join('packages', 'mcp-server', 'README.md'),
+  ])('%s does not reference the old package name', relPath => {
+    const text = readFileSync(join(repoRoot, relPath), 'utf8')
+    expect(text).not.toContain(OLD_NAME)
+  })
 })

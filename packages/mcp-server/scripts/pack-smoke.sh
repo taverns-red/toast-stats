@@ -22,10 +22,14 @@ trap cleanup EXIT
 
 cd "$PACKAGE_ROOT"
 
-echo "[pack-smoke] building the package..." >&2
-npm run build >&2
+# No explicit build here: the manifest's `prepack` hook rebuilds (tsc +
+# esbuild bundle) inside `npm pack` itself, so the tarball can never ship a
+# stale dist/bin.js — including a bare `npm pack`/`npm publish` outside this
+# script.
 
-TMP_DIR="$(mktemp -d -t toast-stats-mcp-pack-smoke)"
+# Portable mktemp: GNU (ubuntu CI) requires an explicit XXXXXX template; BSD
+# (macOS) accepts it too. `-t prefix` is BSD-only and dies on Linux.
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/toast-stats-mcp-pack-smoke.XXXXXX")"
 echo "[pack-smoke] packing into $TMP_DIR ..." >&2
 # Derive the tarball name from npm itself and the bin path from the manifest,
 # so a future rename only ever touches package.json.
