@@ -169,8 +169,10 @@ Releases are deliberately **not** automated: no `NPM_TOKEN` lives in CI, and
 every publish requires the operator's 2FA. Flow:
 
 1. Bump the version via PR (`npm version patch --no-git-tag-version` in
-   `packages/mcp-server`, commit **both** `package.json` and the root
-   `package-lock.json`), merge.
+   `packages/mcp-server`, commit `package.json`, the root
+   `package-lock.json`, **and** the root `.release-please-manifest.json` —
+   the packaging test pins manifest == package.json, so skipping the
+   manifest sync ships a red Test Suite, as the 0.1.1 bump did), merge.
 2. `git pull && cd packages/mcp-server && npm publish` — the `prepack` hook
    rebuilds from source; enter your OTP at the prompt.
 3. Verify from the outside: `npm view @taverns-red/toast-stats-mcp version`
