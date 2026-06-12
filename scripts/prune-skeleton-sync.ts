@@ -52,18 +52,18 @@ if (!rawListingPath || !snapshotListingPath || !cacheDir) {
 }
 
 try {
-  const readLines = (p: string) => readFileSync(p, 'utf-8').split('\n')
   const plan = planSkeletonDirs(
-    readLines(rawListingPath),
-    readLines(snapshotListingPath)
+    readFileSync(rawListingPath, 'utf-8'),
+    readFileSync(snapshotListingPath, 'utf-8')
   )
 
-  for (const date of plan.rawCsvDates) {
-    mkdirSync(path.join(cacheDir, 'raw-csv', date), { recursive: true })
+  const materialize = (layer: 'raw-csv' | 'snapshots', dates: string[]) => {
+    for (const date of dates) {
+      mkdirSync(path.join(cacheDir, layer, date), { recursive: true })
+    }
   }
-  for (const date of plan.snapshotDates) {
-    mkdirSync(path.join(cacheDir, 'snapshots', date), { recursive: true })
-  }
+  materialize('raw-csv', plan.rawCsvDates)
+  materialize('snapshots', plan.snapshotDates)
 
   console.error(
     `[INFO] Skeleton materialized: ${plan.rawCsvDates.length} raw-csv date dirs, ${plan.snapshotDates.length} snapshot date dirs under ${cacheDir}`

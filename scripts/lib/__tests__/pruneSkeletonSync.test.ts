@@ -11,53 +11,20 @@
 
 import { describe, it, expect } from 'vitest'
 import {
-  datesFromGcsListing,
   planSkeletonDirs,
   RAW_CSV_METADATA_ONLY_EXCLUDE,
 } from '../pruneSkeletonSync'
 
-describe('datesFromGcsListing', () => {
-  it('extracts date-dir names from a gsutil ls prefix listing', () => {
-    const lines = [
-      'gs://toast-stats-data-staging/raw-csv/2026-02-13/',
-      'gs://toast-stats-data-staging/raw-csv/2026-01-31/',
-      'gs://toast-stats-data-staging/raw-csv/2025-12-31/',
-    ]
-    expect(datesFromGcsListing(lines)).toEqual([
-      '2025-12-31',
-      '2026-01-31',
-      '2026-02-13',
-    ])
-  })
-
-  it('ignores non-date prefixes, bare files at the root, and blank lines', () => {
-    const lines = [
-      'gs://bucket/raw-csv/2026-02-13/',
-      'gs://bucket/raw-csv/index.json',
-      'gs://bucket/raw-csv/temp-debug/',
-      'gs://bucket/raw-csv/2026-2-3/',
-      '',
-      '  ',
-    ]
-    expect(datesFromGcsListing(lines)).toEqual(['2026-02-13'])
-  })
-
-  it('dedupes repeated prefixes', () => {
-    const lines = [
-      'gs://bucket/snapshots/2026-01-31/',
-      'gs://bucket/snapshots/2026-01-31/',
-    ]
-    expect(datesFromGcsListing(lines)).toEqual(['2026-01-31'])
-  })
-
-  it('returns [] for an empty listing', () => {
-    expect(datesFromGcsListing([])).toEqual([])
-  })
-})
-
+// Listing parsing is shared with the prod-reconcile plan:
+// parseGcsDatedDirListing (pruneProdReconcile.ts) owns — and its tests pin —
+// the non-date/dedupe/blank-line edge cases.
 describe('planSkeletonDirs', () => {
-  const raw = ['gs://b/raw-csv/2026-02-13/', 'gs://b/raw-csv/2026-01-31/']
-  const snap = ['gs://b/snapshots/2026-01-31/']
+  const raw = [
+    'gs://b/raw-csv/2026-02-13/',
+    'gs://b/raw-csv/2026-01-31/',
+    'gs://b/raw-csv/index.json',
+  ].join('\n')
+  const snap = 'gs://b/snapshots/2026-01-31/'
 
   it('plans dirs for every raw-csv and snapshot date in the listings', () => {
     const plan = planSkeletonDirs(raw, snap)
@@ -66,14 +33,14 @@ describe('planSkeletonDirs', () => {
   })
 
   it('fails closed on a zero-date raw-csv listing — an empty ls on a populated bucket means the listing failed, and proceeding would silently classify nothing', () => {
-    expect(() => planSkeletonDirs([], snap)).toThrow(/raw-csv listing/)
-    expect(() => planSkeletonDirs(['gs://b/raw-csv/junk.txt'], snap)).toThrow(
+    expect(() => planSkeletonDirs('', snap)).toThrow(/raw-csv listing/)
+    expect(() => planSkeletonDirs('gs://b/raw-csv/junk.txt', snap)).toThrow(
       /raw-csv listing/
     )
   })
 
   it('tolerates an empty snapshots listing — snapshots are not a classification input', () => {
-    const plan = planSkeletonDirs(raw, [])
+    const plan = planSkeletonDirs(raw, '')
     expect(plan.snapshotDates).toEqual([])
   })
 })

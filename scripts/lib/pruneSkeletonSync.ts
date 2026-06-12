@@ -19,22 +19,7 @@
  * glue and the workflow supplies the listings.
  */
 
-/** Matches one `gsutil ls` prefix line, capturing a date-dir name. */
-const DATE_PREFIX = /\/(\d{4}-\d{2}-\d{2})\/\s*$/
-
-/**
- * Extract the date-dir names from a `gsutil ls gs://bucket/<layer>/`
- * listing. Non-date prefixes, bare files at the layer root, blank lines
- * and duplicates are ignored. Sorted ascending.
- */
-export function datesFromGcsListing(lines: string[]): string[] {
-  const dates = new Set<string>()
-  for (const line of lines) {
-    const match = DATE_PREFIX.exec(line.trim())
-    if (match?.[1]) dates.add(match[1])
-  }
-  return [...dates].sort()
-}
+import { parseGcsDatedDirListing } from './pruneProdReconcile.js'
 
 /** Date-dir sets the skeleton sync must materialize locally. */
 export interface SkeletonDirPlan {
@@ -53,10 +38,10 @@ export interface SkeletonDirPlan {
  * classification input (PruneService reads only raw-csv).
  */
 export function planSkeletonDirs(
-  rawCsvListing: string[],
-  snapshotListing: string[]
+  rawCsvListing: string,
+  snapshotListing: string
 ): SkeletonDirPlan {
-  const rawCsvDates = datesFromGcsListing(rawCsvListing)
+  const rawCsvDates = parseGcsDatedDirListing(rawCsvListing)
   if (rawCsvDates.length === 0) {
     throw new Error(
       'prune skeleton sync (#1175): raw-csv listing parsed to zero date dirs — ' +
@@ -66,7 +51,7 @@ export function planSkeletonDirs(
   }
   return {
     rawCsvDates,
-    snapshotDates: datesFromGcsListing(snapshotListing),
+    snapshotDates: parseGcsDatedDirListing(snapshotListing),
   }
 }
 
