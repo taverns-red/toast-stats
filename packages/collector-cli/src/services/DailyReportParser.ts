@@ -143,7 +143,11 @@ export type ParsedDistrictReport =
       rows: EducationAchievementActivity[]
     }
   | { tableId: string; reportType: 'triple-crown'; rows: TripleCrownRow[] }
-  | { tableId: string; reportType: 'education-archive'; rows: never[] }
+  | {
+      tableId: string
+      reportType: 'education-archive'
+      rows: EducationAchievementActivity[]
+    }
   | { tableId: string; reportType: 'new-clubs'; rows: NewClubRow[] }
   | {
       tableId: string
@@ -241,8 +245,23 @@ const REGISTRY: Record<string, ReportSpec> = {
     columns: [col('Count', 'count'), col('Award', 'award')],
   },
   'a30b93f3-081e-42c8-9a36-137acb24be69': {
+    // Educational Achievement Archive: same ledger shape as Education
+    // Achievements but for PRIOR program years (the `year` param selects the
+    // PY — #1146 backfill; re-verified live 2026-06-12, PYs 2019-2020 …
+    // 2024-2025 populated, current PY empty). Unlike the in-PY report the
+    // archive emits NO Member column; the KEEP-only projection drops one
+    // defensively if it ever appears. `Date` (per-achievement) is intentionally
+    // not projected — it varies per row, so keeping it would shatter every
+    // (club, award) group to count 1 and defeat the de-identification (L153).
     reportType: 'education-archive',
-    columns: [],
+    columns: [
+      col('Club', 'club'),
+      col('Division', 'division'),
+      col('Area', 'area'),
+      col('Award', 'award'),
+      col('Name', 'name'),
+      col('Location', 'location'),
+    ],
   },
   'ac6df5db-13de-425a-b8b9-f9c6093b538a': {
     reportType: 'new-clubs',
@@ -426,7 +445,13 @@ export function parseDistrictReport(
   // string>`, so the one whole-result cast is sound — and reportType carries the
   // discriminant so callers still narrow `rows` correctly).
   if (spec.reportType === 'education-archive') {
-    return { tableId, reportType: 'education-archive', rows: [] }
+    // Same aggregation as the in-PY report: per-(club, award) RAW activity
+    // counts. An empty body (the current PY) yields no rows, not a throw.
+    return {
+      tableId,
+      reportType: 'education-archive',
+      rows: aggregateEducation(projected),
+    }
   }
   if (spec.reportType === 'education-achievements') {
     return {
