@@ -161,20 +161,13 @@ export async function backfillEducationArchive(
   const groups = rows.length
   const achievements = rows.reduce((s, r) => s + r.achievementCount, 0)
 
-  const base: EducationArchiveBackfillResult = {
-    districtId,
-    programYear,
-    snapshotDate,
-    groups,
-    achievements,
-    action: 'dry-run',
-  }
+  const base = { districtId, programYear, snapshotDate, groups, achievements }
 
   if (groups === 0) {
     return { ...base, action: 'skipped-empty' }
   }
   if (options.dryRun) {
-    return base
+    return { ...base, action: 'dry-run' }
   }
 
   const dataset = buildEducationArchiveDataset({

@@ -1823,8 +1823,6 @@ export function createCLI(): Command {
         // fetchDistrictReports; this loop is one request per call, so space
         // the (district × PY) pairs here — the endpoint is rate-sensitive.
         const fetcher = new DailyReportFetcher({})
-        const sleep = (ms: number) =>
-          new Promise(resolve => setTimeout(resolve, ms))
 
         const results: Array<
           | {
@@ -1848,7 +1846,9 @@ export function createCLI(): Command {
         let first = true
         for (const programYear of programYears) {
           for (const districtId of districts) {
-            if (!first && options.rateMs > 0) await sleep(options.rateMs)
+            if (!first && options.rateMs > 0) {
+              await new Promise(resolve => setTimeout(resolve, options.rateMs))
+            }
             first = false
             try {
               const r = await backfillEducationArchive({
