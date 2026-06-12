@@ -96,7 +96,7 @@ jobs:
     name: '${{ inputs.mode || ''daily'' }} pipeline'
     runs-on: ubuntu-latest
     # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
-    timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape' || inputs.mode == 'rescrape-historical' || inputs.mode == 'prune') && 240 || 30 }}
+    timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape' || inputs.mode == 'rescrape-historical') && 240 || 30 }}
 
     steps:
       # ── Setup ────────────────────────────────────────────────
@@ -994,18 +994,43 @@ jobs:
       # PRUNE MODE
       # ════════════════════════════════════════════════════════
 
-      # ── Prune Step 1: Sync all data from GCS ──
-      - name: '[prune] Sync all data from GCS'
+      # ── Prune Step 1: Skeleton sync from GCS (#1175) ──
+      # Classification needs only the raw-csv date-dir SET plus each date's
+      # metadata.json; the previous full-content rsync outgrew the runner's
+      # disk after #1147 (run 27393189818: No space left on device). The
+      # skeleton sync materializes EVERY date dir from the listing first —
+      # a metadata-less dir must stay VISIBLE for the #1131 protection —
+      # then overlays metadata.json files only.
+      - name: '[prune] Skeleton sync from GCS (listings + metadata.json)'
         if: steps.mode.outputs.mode == 'prune'
         run: |
-          echo "Syncing all data from GCS for pruning..."
+          echo "Skeleton sync from GCS for pruning (listings + metadata.json only)..."
           mkdir -p ./cache/raw-csv ./cache/snapshots
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/raw-csv/" "./cache/raw-csv/"
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/snapshots/" "./cache/snapshots/"
 
-          echo "## ⏬ Sync for Prune" >> "$GITHUB_STEP_SUMMARY"
+          gsutil ls "gs://${GCS_BUCKET}/raw-csv/" > /tmp/prune-raw-listing.txt
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/" > /tmp/prune-snapshot-listing.txt
+
+          # Materialize ALL date dirs (fails closed on a zero-date raw-csv
+          # listing — classifying an empty cache would silently prune nothing)
+          npx tsx scripts/prune-skeleton-sync.ts \
+            --raw-listing /tmp/prune-raw-listing.txt \
+            --snapshot-listing /tmp/prune-snapshot-listing.txt \
+            --cache-dir ./cache
+
+          # Overlay metadata.json files only (exclude regex is single-sourced
+          # from the tested scripts/lib constant; rsync never downloads CSVs)
+          EXCLUDE_REGEX=$(npx tsx scripts/prune-skeleton-sync.ts --print-exclude-regex)
+          gsutil -m rsync -r -x "${EXCLUDE_REGEX}" \
+            "gs://${GCS_BUCKET}/raw-csv/" "./cache/raw-csv/"
+
+          echo "## ⏬ Skeleton Sync for Prune (#1175)" >> "$GITHUB_STEP_SUMMARY"
           DATE_COUNT=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' | wc -l | tr -d ' ')
+          META_COUNT=$(find ./cache/raw-csv -mindepth 2 -maxdepth 2 -name 'metadata.json' | wc -l | tr -d ' ')
+          CACHE_SIZE=$(du -sh ./cache | cut -f1)
           echo "- **Raw-csv dates**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **metadata.json overlaid**: ${META_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Metadata-less (protected #1131)**: $((DATE_COUNT - META_COUNT))" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Local cache size**: ${CACHE_SIZE} (<1 GB acceptance bound, #1175)" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Prune Step 2: Run collector-cli prune ──
       - name: '[prune] Identify and remove non-month-end dates'
