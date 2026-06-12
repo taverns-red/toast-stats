@@ -20,11 +20,37 @@ It is deliberately **thin**:
 
 ## Install
 
-This package is **publishable but not yet published** (`@taverns-red/toast-stats-mcp`
-— npm distribution ships with the `/mcp` page, epic #1162). Until then it is
-distributed **locally / self-installed** from the
-[Toast Stats monorepo](../../). Build it once, then point your MCP client at
-the built binary.
+Published on npm as
+[`@taverns-red/toast-stats-mcp`](https://www.npmjs.com/package/@taverns-red/toast-stats-mcp).
+Requires **Node.js 22+**. No clone, no build — `npx` fetches and runs the
+published bin.
+
+**Claude Code** — one command:
+
+```bash
+claude mcp add toast-stats -- npx -y @taverns-red/toast-stats-mcp
+```
+
+**Claude Desktop** (`claude_desktop_config.json`) or any other MCP-capable
+client — add an `mcpServers` entry:
+
+```json
+{
+  "mcpServers": {
+    "toast-stats": {
+      "command": "npx",
+      "args": ["-y", "@taverns-red/toast-stats-mcp"]
+    }
+  }
+}
+```
+
+Restart the client; the `toast-stats` tools below become available.
+
+### Development install (from the monorepo)
+
+Working on the server itself? Build the workspace and point your client at the
+local bin (use an **absolute** path) instead of the published package:
 
 ```bash
 # from the monorepo root
@@ -32,14 +58,6 @@ npm install
 npm run build:shared-contracts   # mcp-server depends on the built contracts
 npm run build:mcp-server         # emits packages/mcp-server/dist/bin.js
 ```
-
-This produces the executable `dist/bin.js` (bin name: `toast-stats-mcp`).
-
-## Configure your MCP client
-
-Add a `mcpServers` entry pointing at the built bin. Use an **absolute** path.
-
-**Claude Desktop** (`claude_desktop_config.json`) / **Claude Code** (`.mcp.json`):
 
 ```json
 {
@@ -52,8 +70,6 @@ Add a `mcpServers` entry pointing at the built bin. Use an **absolute** path.
 }
 ```
 
-Restart the client; the `toast-stats` tools below become available.
-
 ### Pointing at a different CDN (optional)
 
 The server reads `https://cdn.taverns.red` by default. Set `CDN_BASE_URL` to read a
@@ -63,8 +79,8 @@ staging origin or a local fixture server instead:
 {
   "mcpServers": {
     "toast-stats": {
-      "command": "node",
-      "args": ["/absolute/path/to/.../dist/bin.js"],
+      "command": "npx",
+      "args": ["-y", "@taverns-red/toast-stats-mcp"],
       "env": { "CDN_BASE_URL": "https://staging.example" }
     }
   }
