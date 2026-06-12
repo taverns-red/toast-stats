@@ -195,8 +195,8 @@ const MethodologyPage: React.FC = () => {
         onToggle={toggle}
       >
         <p>
-          The data pipeline runs once daily at 09:15 UTC (≈04:15 ET / 02:15 PT)
-          — the schedule lives in{' '}
+          The data pipeline runs once daily at 08:00 UTC (4 AM EST / 5 AM EDT),
+          with an 11:00 UTC backup run — the schedule lives in{' '}
           <code>.github/workflows/data-pipeline.yml</code>. Each run pulls the
           latest TI CSVs, transforms them, computes rankings + analytics, and
           writes a dated snapshot to GCS. Frontend serves the most recent

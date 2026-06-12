@@ -208,7 +208,7 @@ const McpPage: React.FC = () => {
         <ul>
           <li>
             <strong>Refresh cadence.</strong> The data pipeline runs once daily
-            (~09:15 UTC); the server reads whatever snapshot is currently
+            (08:00 UTC); the server reads whatever snapshot is currently
             published. Answers are as-of the snapshot <code>date</code> they
             cite — not real time.
           </li>
