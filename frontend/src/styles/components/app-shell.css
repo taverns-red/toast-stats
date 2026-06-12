@@ -4881,6 +4881,28 @@
     color: var(--ink-2);
   }
 
+  /* MCP Server page (#1165) — block install snippets. Inline `code` inherits
+     the .methodology-section treatment; the block form needs its own box and
+     horizontal scroll so a one-liner never wraps mid-command on mobile. */
+  .mcp-page__snippet {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.55;
+    background-color: var(--surface-3);
+    color: var(--ink-2);
+    padding: 12px 14px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0 14px;
+  }
+
+  .mcp-page__snippet code {
+    /* Reset the inline-code chip styling inside the block. */
+    background-color: transparent;
+    padding: 0;
+    font-size: inherit;
+  }
+
   /* Awards page (#371-#373). Top-10 leaderboards per district award. */
   .awards-page {
     max-width: 1280px;
