@@ -25,6 +25,13 @@ on:
     # re-uploaded) and the `data-pipeline` concurrency group already
     # serializes runs, so a backup that overlaps a slow primary is safe.
     - cron: '0 11 * * *'
+    # Quarterly prune (#1148, operator-ruled cadence 2026-06-12): day 25
+    # of Feb/May/Aug/Nov at 06:00 UTC — offset from closing windows and
+    # the daily runs. Mapped to mode=prune (+ reconcile_prod) in the
+    # Determine-mode step by matching github.event.schedule against this
+    # exact string; the PruneService closing guard still verifies the
+    # window independently at runtime (fail-closed, no override).
+    - cron: '0 6 25 2,5,8,11 *'
   workflow_dispatch:
     inputs:
       mode:
@@ -135,6 +142,12 @@ jobs:
         id: mode
         run: |
           MODE="${{ inputs.mode || 'daily' }}"
+          # Scheduled events carry no inputs; the quarterly prune cron is
+          # identified by its exact expression (#1148). Any other schedule
+          # stays the daily default.
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "0 6 25 2,5,8,11 *" ]; then
+            MODE="prune"
+          fi
           # Boolean inputs are BOOLEANS in the `inputs` expression context;
           # comparing one to the string 'true' in an `if:` coerces
           # true→1 vs 'true'→NaN and NEVER matches — the dry-run gate on
@@ -143,6 +156,13 @@ jobs:
           # Guarded by scripts/lib/workflowBooleanInputGuard.ts.
           DRY_RUN="${{ inputs.dry_run }}"
           RECONCILE_PROD="${{ inputs.reconcile_prod }}"
+          if [ "${MODE}" = "prune" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+            # Scheduled prunes always reconcile prod in the same run —
+            # a staging-only scheduled prune would freeze promotion until
+            # manual recovery (runbook Path B). Never dry-run on schedule.
+            DRY_RUN="false"
+            RECONCILE_PROD="true"
+          fi
           echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
           echo "dry_run=${DRY_RUN:-false}" >> "$GITHUB_OUTPUT"
           echo "reconcile_prod=${RECONCILE_PROD:-false}" >> "$GITHUB_OUTPUT"
