@@ -267,6 +267,24 @@ describe('backfillEducationArchive (fetch → parse → write)', () => {
     ).rejects.toThrow(/program year/i)
   })
 
+  it('rejects a path-traversal district id BEFORE any fetch or path use (active tripwire)', async () => {
+    let fetched = false
+    const spyFetch = async (url: string) => {
+      fetched = true
+      return archiveFetch(url)
+    }
+    await expect(
+      backfillEducationArchive({
+        cacheDir,
+        districtId: '../../evil',
+        programYear: '2024-2025',
+        fetcher: makeFetcher(spyFetch),
+        dryRun: true,
+      })
+    ).rejects.toThrow(/district id/i)
+    expect(fetched).toBe(false)
+  })
+
   it('propagates a persistent fetch failure as an error (not a silent skip)', async () => {
     const failFetch = async () => ({
       ok: false,
