@@ -149,6 +149,41 @@ export function isPenultimateDayOfMonth(dateStr: string): boolean {
   return day === lastDay - 1
 }
 
+/**
+ * In-progress-month exemption (#1178), applied over a full classification set.
+ *
+ * A month's dailies may be thinned only once that month has closed AND its
+ * month-end snapshot exists. Set-level evidence: the most recent month-end
+ * snapshot present in the classifications. Every non-kept date whose
+ * snapshot falls AFTER that boundary (or every date, when no month-end
+ * exists at all) is re-marked keep with an explicit reason — never silently.
+ *
+ * Mutates and returns the same array (classifyAll's single consumer).
+ */
+export function applyInProgressMonthExemption(
+  classifications: DateClassification[]
+): DateClassification[] {
+  let latestMonthEnd: string | undefined
+  for (const c of classifications) {
+    if (c.isMonthEnd && (!latestMonthEnd || c.snapshotDate > latestMonthEnd)) {
+      latestMonthEnd = c.snapshotDate
+    }
+  }
+
+  for (const c of classifications) {
+    if (c.keep) continue
+    if (latestMonthEnd === undefined || c.snapshotDate > latestMonthEnd) {
+      c.keep = true
+      c.reason =
+        latestMonthEnd === undefined
+          ? `In-progress month (${c.snapshotDate.slice(0, 7)}): no completed month-end snapshot exists yet — thinning deferred until the month closes (#1178)`
+          : `In-progress month (${c.snapshotDate.slice(0, 7)}): after the latest completed month-end (${latestMonthEnd}) — thinning deferred until the month closes (#1178)`
+    }
+  }
+
+  return classifications
+}
+
 export class PruneService {
   private readonly cacheDir: string
   private readonly logger: Logger
@@ -292,6 +327,13 @@ export class PruneService {
 
   /**
    * Classify all raw-csv dates for pruning.
+   *
+   * Applies the in-progress-month exemption (#1178) on top of the per-date
+   * rules: a month's dailies are thinnable only once that month has closed
+   * and its month-end snapshot exists in the set. Anything after the most
+   * recent completed month-end (or everything, when no month-end exists at
+   * all) is always kept — otherwise a prune run mid-month deletes the live
+   * latest snapshot and regresses staging/prod to the previous month-end.
    */
   async classifyAll(): Promise<DateClassification[]> {
     const rawCsvDir = path.join(this.cacheDir, 'raw-csv')
@@ -314,7 +356,7 @@ export class PruneService {
       classifications.push(await this.classifyDate(date))
     }
 
-    return classifications
+    return applyInProgressMonthExemption(classifications)
   }
 
   /**

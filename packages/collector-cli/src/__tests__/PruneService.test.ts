@@ -326,7 +326,9 @@ describe('PruneService', () => {
     })
 
     it('never deletes under time-series/, club-trends/, or v1/rank-history/ (#1132 guard)', async () => {
-      // A prunable mid-month date
+      // A prunable mid-month date — January must be closed (#1178), so its
+      // month-end is present too.
+      await createRawCsvDate('2026-01-31')
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')
 
@@ -360,6 +362,8 @@ describe('PruneService', () => {
     })
 
     it('dry-run mode does not delete anything', async () => {
+      // Month-end present so January is closed and 01-15 is thinnable (#1178)
+      await createRawCsvDate('2026-01-31')
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')
 
@@ -385,11 +389,14 @@ describe('PruneService', () => {
       // Also a mid-month: raw-csv/2026-02-05 → snapshots/2026-02-05 (non-keeper)
       await createRawCsvDate('2026-02-05')
       await createSnapshotDate('2026-02-05')
+      // February's own month-end, so the month is closed and thinnable (#1178)
+      await createRawCsvDate('2026-02-28')
+      await createSnapshotDate('2026-02-28')
 
       const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const result = await service.prune(false)
 
-      expect(result.keptDates).toBe(1)
+      expect(result.keptDates).toBe(2) // 2026-01-31 (via remap) + 2026-02-28
       expect(result.prunedDates).toBe(1)
       expect(result.deletedRawCsv).toContain('2026-02-05')
       expect(result.deletedSnapshots).toContain('2026-02-05')
@@ -399,9 +406,12 @@ describe('PruneService', () => {
       // Metadata-less: classification is unprovable → protected
       await createRawCsvDateWithoutMetadata('2026-02-13')
       await createSnapshotDate('2026-02-13')
-      // Metadata-full mid-month: still prunes (keep rules unchanged)
+      // Metadata-full mid-month: still prunes (keep rules unchanged).
+      // March's month-end closes the month so 03-15 is thinnable (#1178).
       await createRawCsvDate('2026-03-15')
       await createSnapshotDate('2026-03-15')
+      await createRawCsvDate('2026-03-31')
+      await createSnapshotDate('2026-03-31')
 
       const service = new PruneService({
         cacheDir: testDir,
@@ -413,7 +423,7 @@ describe('PruneService', () => {
       })
       const result = await service.prune(false)
 
-      expect(result.keptDates).toBe(1)
+      expect(result.keptDates).toBe(2) // protected 2026-02-13 + 2026-03-31
       expect(result.prunedDates).toBe(1)
       expect(result.deletedRawCsv).toEqual(['2026-03-15'])
 
@@ -469,6 +479,7 @@ describe('PruneService', () => {
       })
 
       it('lets a dry-run proceed during a closing window but surfaces the refused verdict', async () => {
+        await createRawCsvDate('2026-01-31') // closes January (#1178)
         await createRawCsvDate('2026-01-15')
         await createSnapshotDate('2026-01-15')
 
@@ -486,6 +497,7 @@ describe('PruneService', () => {
       })
 
       it('allows a destructive prune once today is past the closing window', async () => {
+        await createRawCsvDate('2026-01-31') // closes January (#1178)
         await createRawCsvDate('2026-01-15')
         await createSnapshotDate('2026-01-15')
 
@@ -690,10 +702,12 @@ describe('PruneService', () => {
         }
       }
 
-      // Month-end keeper, mid-month non-keeper, closing-period remap,
+      // Month-end keeper, mid-month non-keeper (with its own month-end so
+      // March is closed and thinnable, #1178), closing-period remap,
       // and the live #1131 case: a metadata-less date dir.
       await writeDate('2026-01-31', { isClosingPeriod: false })
       await writeDate('2026-03-15', { isClosingPeriod: false })
+      await writeDate('2026-03-31', { isClosingPeriod: false })
       await writeDate('2026-02-03', {
         isClosingPeriod: true,
         dataMonth: '2026-01',
@@ -726,7 +740,7 @@ describe('PruneService', () => {
 
       // Spot-pin the decisions themselves so the equivalence can't be
       // vacuously satisfied by two empty/broken caches.
-      expect(skeleton).toHaveLength(4)
+      expect(skeleton).toHaveLength(5)
       const byDate = new Map(skeleton.map(c => [c.rawCsvDate, c]))
       expect(byDate.get('2026-01-31')?.keep).toBe(true)
       expect(byDate.get('2026-03-15')?.keep).toBe(false)
