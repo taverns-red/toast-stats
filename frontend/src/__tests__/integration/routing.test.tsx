@@ -18,6 +18,7 @@ import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import HistoryPage from '../../pages/HistoryPage'
 import MethodologyPage from '../../pages/MethodologyPage'
+import McpPage from '../../pages/McpPage'
 
 // HistoryPage now fetches per-year summary cards (#892). This routing test
 // only asserts the synchronous scaffold (heading, year strip, TI link), so
@@ -106,6 +107,22 @@ describe('Routing scaffolding (#355)', () => {
           })
         ).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('/mcp page (#1165)', () => {
+    it('renders the page heading', () => {
+      renderRoute(McpPage, '/mcp')
+      expect(
+        screen.getByRole('heading', { level: 1, name: /mcp server/i })
+      ).toBeInTheDocument()
+    })
+
+    it('renders the install snippet with the published package name', () => {
+      renderRoute(McpPage, '/mcp')
+      expect(document.body.textContent).toContain(
+        '@taverns-red/toast-stats-mcp'
+      )
     })
   })
 })

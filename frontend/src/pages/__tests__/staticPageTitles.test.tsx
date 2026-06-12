@@ -7,6 +7,7 @@ import { render, cleanup, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import MethodologyPage from '../MethodologyPage'
 import HistoryPage from '../HistoryPage'
+import McpPage from '../McpPage'
 
 // HistoryPage fetches per-year cards (#892); the title is still synchronous on
 // mount, so stub the data hook to keep this title test network-free.
@@ -42,5 +43,14 @@ describe('static page document titles (#780)', () => {
     await waitFor(() =>
       expect(document.title).toBe('Program Year History — Toast Stats')
     )
+  })
+
+  it('titles the MCP Server page (#1165)', async () => {
+    render(
+      <MemoryRouter>
+        <McpPage />
+      </MemoryRouter>
+    )
+    await waitFor(() => expect(document.title).toBe('MCP Server — Toast Stats'))
   })
 })
