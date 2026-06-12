@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.0...analytics-core-v1.9.1) (2026-06-12)
+
+
+### Bug Fixes
+
+* **rankings:** per-program-year DD rules — Unknown for unknowable prerequisites, no Smedley pre-2025-26 ([#1116](https://github.com/taverns-red/toast-stats/issues/1116)) ([#1166](https://github.com/taverns-red/toast-stats/issues/1166)) ([b3052d8](https://github.com/taverns-red/toast-stats/commit/b3052d815548022ce6601bc353cfdeb0a1308434))
+
 ## [1.9.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.8.0...analytics-core-v1.9.0) (2026-06-10)
 
 

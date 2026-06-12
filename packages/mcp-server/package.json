@@ -1,6 +1,6 @@
 {
   "name": "@taverns-red/toast-stats-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "type": "module",
   "description": "Thin, local, read-only MCP server over the public Toast Stats snapshot CDN (ADR-008). Exposes the pre-computed snapshot fields as MCP tools over stdio — no computation, no analytics-core.",
