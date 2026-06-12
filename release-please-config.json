@@ -22,6 +22,10 @@
     "packages/analytics-core": {
       "release-type": "node",
       "component": "analytics-core"
+    },
+    "packages/mcp-server": {
+      "release-type": "node",
+      "component": "toast-stats-mcp"
     }
   },
   "bump-minor-pre-major": true,

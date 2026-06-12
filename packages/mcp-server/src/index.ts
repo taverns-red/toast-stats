@@ -1,4 +1,5 @@
-// @toastmasters/mcp-server — public barrel.
+// @taverns-red/toast-stats-mcp — public barrel (monorepo-internal; the
+// published artifact is the self-contained `dist/bin.js` only).
 //
 // ADR-008 Sprint 1 (#1043): the typed, read-only CDN read client.
 // ADR-008 Sprint 2 (#1044): the read-only MCP tools + stdio server over it.

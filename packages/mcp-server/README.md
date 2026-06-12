@@ -1,4 +1,4 @@
-# @toastmasters/mcp-server
+# @taverns-red/toast-stats-mcp
 
 A **thin, local, read-only [MCP](https://modelcontextprotocol.io) server** over the
 public Toast Stats snapshot CDN ([ADR-008](../../docs/architecture-decisions/008-ai-enable-toast-stats.md)).
@@ -20,9 +20,11 @@ It is deliberately **thin**:
 
 ## Install
 
-This is a workspace package in the [Toast Stats monorepo](../../), distributed
-**locally / self-installed** (not published to a public registry). Build it once,
-then point your MCP client at the built binary.
+This package is **publishable but not yet published** (`@taverns-red/toast-stats-mcp`
+— npm distribution ships with the `/mcp` page, epic #1162). Until then it is
+distributed **locally / self-installed** from the
+[Toast Stats monorepo](../../). Build it once, then point your MCP client at
+the built binary.
 
 ```bash
 # from the monorepo root
@@ -112,9 +114,35 @@ against a localhost server serving committed CDN fixtures — no network, no liv
 Claude client. It asserts the bin lists its tools and answers a tool call:
 
 ```bash
-npm run smoke --workspace=@toastmasters/mcp-server
+npm run smoke --workspace=@taverns-red/toast-stats-mcp
 ```
 
 This is the same offline check CI runs (it's part of the package test suite). It
 proves the install/boot path end to end; live end-to-end verification against the
 real CDN from a Claude client is a separate operator-run step.
+
+### Verify the published artifact (npm-pack smoke)
+
+`npm run smoke:pack` packs the tarball exactly as `npm publish` would, installs
+it into a clean temp dir (runtime deps resolve from the public registry only),
+and runs the same offline stdio smoke against the **installed** bin:
+
+```bash
+npm run smoke:pack --workspace=@taverns-red/toast-stats-mcp
+```
+
+CI runs this on every PR. The published surface is the **bin only**: `files`
+whitelists the self-contained `dist/bin.js` (esbuild-bundled — the private
+workspace `shared-contracts` package is inlined at build time) plus this
+README. The library barrel (`src/index.ts`) is monorepo-internal and is not
+part of the published API.
+
+## Versioning & release
+
+The version is owned by [release-please](../../release-please-config.json)
+(component `toast-stats-mcp`, manifest-tracked like every other workspace
+package): conventional commits touching `packages/mcp-server` accumulate into
+a release PR that bumps `package.json` and maintains the package CHANGELOG.
+Merging a release PR tags `toast-stats-mcp-vX.Y.Z` — it does **not** publish
+to npm. The `npm publish` wiring (provenance, 2FA/token policy) is a later
+sprint of epic #1162; until it lands, publishing is a manual operator action.
