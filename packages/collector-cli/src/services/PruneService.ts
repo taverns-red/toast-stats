@@ -173,11 +173,12 @@ export function applyInProgressMonthExemption(
   for (const c of classifications) {
     if (c.keep) continue
     if (latestMonthEnd === undefined || c.snapshotDate > latestMonthEnd) {
-      c.keep = true
-      c.reason =
+      const boundary =
         latestMonthEnd === undefined
-          ? `In-progress month (${c.snapshotDate.slice(0, 7)}): no completed month-end snapshot exists yet — thinning deferred until the month closes (#1178)`
-          : `In-progress month (${c.snapshotDate.slice(0, 7)}): after the latest completed month-end (${latestMonthEnd}) — thinning deferred until the month closes (#1178)`
+          ? 'no completed month-end snapshot exists yet'
+          : `after the latest completed month-end (${latestMonthEnd})`
+      c.keep = true
+      c.reason = `In-progress month (${c.snapshotDate.slice(0, 7)}): ${boundary} — thinning deferred until the month closes (#1178)`
     }
   }
 

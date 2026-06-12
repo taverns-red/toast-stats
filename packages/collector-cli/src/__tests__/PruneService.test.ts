@@ -580,9 +580,10 @@ describe('PruneService', () => {
 
       // Every June daily is kept, with an explicit in-progress-month reason.
       for (const date of juneDailies) {
-        expect(byDate.get(date)?.keep).toBe(true)
-        expect(byDate.get(date)?.reason).toMatch(/in-progress month/i)
-        expect(byDate.get(date)?.reason).toContain('2026-05-31')
+        const c = byDate.get(date)
+        expect(c?.keep).toBe(true)
+        expect(c?.reason).toMatch(/in-progress month/i)
+        expect(c?.reason).toContain('2026-05-31')
       }
 
       // Completed-month behavior unchanged: April/May dailies still thinned,
