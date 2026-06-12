@@ -58,7 +58,10 @@ describe('publishable manifest (@taverns-red/toast-stats-mcp)', () => {
   })
 
   it('exposes the toast-stats-mcp bin at the bundled entry', () => {
-    expect(pkg.bin).toEqual({ 'toast-stats-mcp': './dist/bin.js' })
+    // No `./` prefix: npm normalizes bin paths on publish, and the manifest
+    // was deliberately aligned with the normalized form so `npm publish`
+    // ships without auto-corrections (#1185).
+    expect(pkg.bin).toEqual({ 'toast-stats-mcp': 'dist/bin.js' })
   })
 
   it('carries repository/homepage/license metadata', () => {
