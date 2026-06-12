@@ -54,6 +54,14 @@ export interface DateClassification {
   keep: boolean
   /** Reason for keep/prune decision */
   reason: string
+  /**
+   * Whether the raw→snapshot mapping is proven by an authority — a
+   * metadata.json or a registry closing window (#1178). A metadata-less
+   * date outside any known window reports its raw date as snapshotDate,
+   * but that mapping is a guess and must never count as completed-month
+   * evidence for the thinning boundary.
+   */
+  mappingProven: boolean
 }
 
 /**
@@ -149,6 +157,49 @@ export function isPenultimateDayOfMonth(dateStr: string): boolean {
   return day === lastDay - 1
 }
 
+/**
+ * In-progress-month exemption (#1178), applied over a full classification set.
+ *
+ * Set-level boundary: the most recent PROVEN month-end snapshot in the
+ * classifications (metadata-backed or registry-remapped — an unproven
+ * metadata-less dir that merely LOOKS month-end-dated must not count, or a
+ * crashed scrape on the 30th/31st would un-protect its whole month). Every
+ * non-kept date whose snapshot falls AFTER that boundary (or every date,
+ * when no proven month-end exists at all) is re-marked keep with an
+ * explicit reason — never silently. Dates at or before the boundary keep
+ * the per-date rules unchanged.
+ *
+ * Mutates and returns the same array (classifyAll's single consumer).
+ */
+export function applyInProgressMonthExemption(
+  classifications: DateClassification[]
+): DateClassification[] {
+  let latestMonthEnd: string | undefined
+  for (const c of classifications) {
+    if (
+      c.isMonthEnd &&
+      c.mappingProven &&
+      (!latestMonthEnd || c.snapshotDate > latestMonthEnd)
+    ) {
+      latestMonthEnd = c.snapshotDate
+    }
+  }
+
+  for (const c of classifications) {
+    if (c.keep) continue
+    if (latestMonthEnd === undefined || c.snapshotDate > latestMonthEnd) {
+      const boundary =
+        latestMonthEnd === undefined
+          ? 'no completed month-end snapshot exists yet'
+          : `after the latest completed month-end (${latestMonthEnd})`
+      c.keep = true
+      c.reason = `In-progress month (${c.snapshotDate.slice(0, 7)}): ${boundary} — thinning deferred until the month closes (#1178)`
+    }
+  }
+
+  return classifications
+}
+
 export class PruneService {
   private readonly cacheDir: string
   private readonly logger: Logger
@@ -238,6 +289,7 @@ export class PruneService {
       isClosingPeriod: closingInfo.isClosingPeriod,
       isMonthEnd,
       keep,
+      mappingProven: true,
       reason: isMonthEnd
         ? `Month-end snapshot (${snapshotDate})`
         : isPenultimate
@@ -271,6 +323,7 @@ export class PruneService {
         isClosingPeriod: true,
         isMonthEnd: isLastDayOfMonth(closingInfo.snapshotDate),
         keep: true,
+        mappingProven: true,
         reason: `Protected: no metadata.json; registry closing window for ${verdict.dataMonth} maps to ${closingInfo.snapshotDate} (#1131)`,
       }
     }
@@ -286,12 +339,20 @@ export class PruneService {
       isClosingPeriod: false,
       isMonthEnd: isLastDayOfMonth(rawCsvDate),
       keep: true,
+      mappingProven: false,
       reason: `Protected: no metadata.json — ${detail}; refusing irreversible delete (#1131)`,
     }
   }
 
   /**
    * Classify all raw-csv dates for pruning.
+   *
+   * Applies the in-progress-month exemption (#1178) on top of the per-date
+   * rules: anything after the most recent PROVEN completed month-end in the
+   * set (or everything, when none exists) is always kept — otherwise a
+   * prune run mid-month deletes the live latest snapshot and regresses
+   * staging/prod to the previous month-end. Note the boundary is global,
+   * not per-month: dates at or before it follow the per-date rules alone.
    */
   async classifyAll(): Promise<DateClassification[]> {
     const rawCsvDir = path.join(this.cacheDir, 'raw-csv')
@@ -314,7 +375,7 @@ export class PruneService {
       classifications.push(await this.classifyDate(date))
     }
 
-    return classifications
+    return applyInProgressMonthExemption(classifications)
   }
 
   /**

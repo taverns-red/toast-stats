@@ -326,7 +326,9 @@ describe('PruneService', () => {
     })
 
     it('never deletes under time-series/, club-trends/, or v1/rank-history/ (#1132 guard)', async () => {
-      // A prunable mid-month date
+      // A prunable mid-month date — January must be closed (#1178), so its
+      // month-end is present too.
+      await createRawCsvDate('2026-01-31')
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')
 
@@ -360,6 +362,8 @@ describe('PruneService', () => {
     })
 
     it('dry-run mode does not delete anything', async () => {
+      // Month-end present so January is closed and 01-15 is thinnable (#1178)
+      await createRawCsvDate('2026-01-31')
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')
 
@@ -385,11 +389,14 @@ describe('PruneService', () => {
       // Also a mid-month: raw-csv/2026-02-05 → snapshots/2026-02-05 (non-keeper)
       await createRawCsvDate('2026-02-05')
       await createSnapshotDate('2026-02-05')
+      // February's own month-end, so the month is closed and thinnable (#1178)
+      await createRawCsvDate('2026-02-28')
+      await createSnapshotDate('2026-02-28')
 
       const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const result = await service.prune(false)
 
-      expect(result.keptDates).toBe(1)
+      expect(result.keptDates).toBe(2) // 2026-01-31 (via remap) + 2026-02-28
       expect(result.prunedDates).toBe(1)
       expect(result.deletedRawCsv).toContain('2026-02-05')
       expect(result.deletedSnapshots).toContain('2026-02-05')
@@ -399,9 +406,12 @@ describe('PruneService', () => {
       // Metadata-less: classification is unprovable → protected
       await createRawCsvDateWithoutMetadata('2026-02-13')
       await createSnapshotDate('2026-02-13')
-      // Metadata-full mid-month: still prunes (keep rules unchanged)
+      // Metadata-full mid-month: still prunes (keep rules unchanged).
+      // March's month-end closes the month so 03-15 is thinnable (#1178).
       await createRawCsvDate('2026-03-15')
       await createSnapshotDate('2026-03-15')
+      await createRawCsvDate('2026-03-31')
+      await createSnapshotDate('2026-03-31')
 
       const service = new PruneService({
         cacheDir: testDir,
@@ -413,7 +423,7 @@ describe('PruneService', () => {
       })
       const result = await service.prune(false)
 
-      expect(result.keptDates).toBe(1)
+      expect(result.keptDates).toBe(2) // protected 2026-02-13 + 2026-03-31
       expect(result.prunedDates).toBe(1)
       expect(result.deletedRawCsv).toEqual(['2026-03-15'])
 
@@ -469,6 +479,7 @@ describe('PruneService', () => {
       })
 
       it('lets a dry-run proceed during a closing window but surfaces the refused verdict', async () => {
+        await createRawCsvDate('2026-01-31') // closes January (#1178)
         await createRawCsvDate('2026-01-15')
         await createSnapshotDate('2026-01-15')
 
@@ -486,6 +497,7 @@ describe('PruneService', () => {
       })
 
       it('allows a destructive prune once today is past the closing window', async () => {
+        await createRawCsvDate('2026-01-31') // closes January (#1178)
         await createRawCsvDate('2026-01-15')
         await createSnapshotDate('2026-01-15')
 
@@ -527,6 +539,172 @@ describe('PruneService', () => {
     })
   })
 
+  describe('in-progress month exemption (#1178)', () => {
+    // The dry-run v3 failure class: June dailies with no June month-end yet
+    // were classified deletable, which would regress staging's latest
+    // snapshot to 2026-05-31 and propagate to prod. The keep rule must
+    // exempt every date after the most recent completed month-end.
+    const ctx = {
+      today: '2026-06-12',
+      closingDateRegistry: [
+        { dataMonth: '2026-05', closingDate: '2026-06-05' },
+      ] as ClosingDateEntry[],
+    }
+
+    /** April + May fully closed (month-end + penultimate + a daily each). */
+    async function createCompletedAprilMay(): Promise<void> {
+      for (const date of [
+        '2026-04-15',
+        '2026-04-29',
+        '2026-04-30',
+        '2026-05-15',
+        '2026-05-30',
+        '2026-05-31',
+      ]) {
+        await createRawCsvDate(date)
+        await createSnapshotDate(date)
+      }
+    }
+
+    it('keeps every current-month daily when the month has no month-end snapshot yet', async () => {
+      await createCompletedAprilMay()
+      const juneDailies = ['2026-06-06', '2026-06-08', '2026-06-10']
+      for (const date of juneDailies) {
+        await createRawCsvDate(date)
+        await createSnapshotDate(date)
+      }
+
+      const service = new PruneService({ cacheDir: testDir, ...ctx })
+      const classifications = await service.classifyAll()
+      const byDate = new Map(classifications.map(c => [c.rawCsvDate, c]))
+
+      // Every June daily is kept, with an explicit in-progress-month reason.
+      for (const date of juneDailies) {
+        const c = byDate.get(date)
+        expect(c?.keep).toBe(true)
+        expect(c?.reason).toMatch(/in-progress month/i)
+        expect(c?.reason).toContain('2026-05-31')
+      }
+
+      // Completed-month behavior unchanged: April/May dailies still thinned,
+      // month-end and penultimate keeps keep their original reasons.
+      expect(byDate.get('2026-04-15')?.keep).toBe(false)
+      expect(byDate.get('2026-05-15')?.keep).toBe(false)
+      expect(byDate.get('2026-05-31')?.reason).toContain('Month-end')
+      expect(byDate.get('2026-05-30')?.reason).toContain('Penultimate')
+
+      // No silent keeps: every classification carries a non-empty reason.
+      for (const c of classifications) {
+        expect(c.reason.length).toBeGreaterThan(0)
+      }
+    })
+
+    it('keeps everything when no month-end snapshot exists anywhere (fail closed)', async () => {
+      for (const date of ['2026-06-06', '2026-06-08', '2026-06-10']) {
+        await createRawCsvDate(date)
+      }
+
+      const service = new PruneService({ cacheDir: testDir, ...ctx })
+      const classifications = await service.classifyAll()
+
+      expect(classifications).toHaveLength(3)
+      for (const c of classifications) {
+        expect(c.keep).toBe(true)
+        expect(c.reason).toMatch(/in-progress month/i)
+      }
+    })
+
+    it('treats a closing-remapped month-end as the completed-month boundary', async () => {
+      // raw 2026-06-03 → snapshot 2026-05-31 (May closing): May is closed,
+      // so its daily is thinned, while June dailies stay protected.
+      await createRawCsvDate('2026-06-03', {
+        isClosingPeriod: true,
+        dataMonth: '2026-05',
+      })
+      await createRawCsvDate('2026-05-15')
+      await createRawCsvDate('2026-06-08')
+
+      const service = new PruneService({ cacheDir: testDir, ...ctx })
+      const classifications = await service.classifyAll()
+      const byDate = new Map(classifications.map(c => [c.rawCsvDate, c]))
+
+      expect(byDate.get('2026-06-03')?.snapshotDate).toBe('2026-05-31')
+      expect(byDate.get('2026-06-03')?.keep).toBe(true)
+      expect(byDate.get('2026-05-15')?.keep).toBe(false)
+      expect(byDate.get('2026-06-08')?.keep).toBe(true)
+      expect(byDate.get('2026-06-08')?.reason).toMatch(/in-progress month/i)
+    })
+
+    it('keeps a new-month daily that lands right after a completed month-end', async () => {
+      await createRawCsvDate('2026-06-30')
+      await createRawCsvDate('2026-07-01')
+
+      const service = new PruneService({ cacheDir: testDir })
+      const classifications = await service.classifyAll()
+      const byDate = new Map(classifications.map(c => [c.rawCsvDate, c]))
+
+      expect(byDate.get('2026-07-01')?.keep).toBe(true)
+      expect(byDate.get('2026-07-01')?.reason).toMatch(/in-progress month/i)
+    })
+
+    it('an UNPROVEN metadata-less month-end dir does not set the boundary (review M1)', async () => {
+      // A scrape that crashed before writing metadata.json on the last day
+      // of the in-progress month: the dir exists, its raw date LOOKS like a
+      // month-end, but the raw→snapshot mapping is unproven (#1131). It must
+      // not count as "the month closed" evidence, or it would un-protect
+      // every daily of the month it sits in.
+      await createCompletedAprilMay()
+      await createRawCsvDate('2026-06-06')
+      await createRawCsvDateWithoutMetadata('2026-06-30')
+
+      const service = new PruneService({ cacheDir: testDir, ...ctx })
+      const classifications = await service.classifyAll()
+      const byDate = new Map(classifications.map(c => [c.rawCsvDate, c]))
+
+      // The bare dir stays protected (#1131)…
+      expect(byDate.get('2026-06-30')?.keep).toBe(true)
+      // …and June dailies stay in-progress-protected: the proven boundary
+      // is still May 31.
+      expect(byDate.get('2026-06-06')?.keep).toBe(true)
+      expect(byDate.get('2026-06-06')?.reason).toMatch(/in-progress month/i)
+      expect(byDate.get('2026-06-06')?.reason).toContain('2026-05-31')
+    })
+
+    it('a registry-remapped metadata-less month-end DOES set the boundary', async () => {
+      // Registry-proven closing remap: raw 2026-06-03 (no metadata) sits in
+      // May's closing window → snapshot 2026-05-31. That month-end is
+      // registry-proven, so May's dailies are thinnable.
+      await createRawCsvDateWithoutMetadata('2026-06-03')
+      await createRawCsvDate('2026-05-15')
+
+      const service = new PruneService({ cacheDir: testDir, ...ctx })
+      const classifications = await service.classifyAll()
+      const byDate = new Map(classifications.map(c => [c.rawCsvDate, c]))
+
+      expect(byDate.get('2026-06-03')?.snapshotDate).toBe('2026-05-31')
+      expect(byDate.get('2026-06-03')?.keep).toBe(true)
+      expect(byDate.get('2026-05-15')?.keep).toBe(false)
+    })
+
+    it('a destructive prune never deletes in-progress month dates', async () => {
+      await createCompletedAprilMay()
+      await createRawCsvDate('2026-06-10')
+      await createSnapshotDate('2026-06-10')
+
+      const service = new PruneService({ cacheDir: testDir, ...ctx })
+      const result = await service.prune(false)
+
+      expect(result.deletedRawCsv).toEqual(['2026-04-15', '2026-05-15'])
+      expect(result.deletedRawCsv).not.toContain('2026-06-10')
+      expect(result.deletedSnapshots).not.toContain('2026-06-10')
+
+      const rawCsvEntries = await fs.readdir(path.join(testDir, 'raw-csv'))
+      expect(rawCsvEntries).toContain('2026-06-10')
+      const snapshotEntries = await fs.readdir(path.join(testDir, 'snapshots'))
+      expect(snapshotEntries).toContain('2026-06-10')
+    })
+  })
+
   describe('skeleton-shape cache contract (#1175)', () => {
     // The prune sync no longer downloads CSV payloads or snapshot contents
     // (post-#1147 the full bucket exceeds the runner's disk). The skeleton
@@ -564,10 +742,12 @@ describe('PruneService', () => {
         }
       }
 
-      // Month-end keeper, mid-month non-keeper, closing-period remap,
+      // Month-end keeper, mid-month non-keeper (with its own month-end so
+      // March is closed and thinnable, #1178), closing-period remap,
       // and the live #1131 case: a metadata-less date dir.
       await writeDate('2026-01-31', { isClosingPeriod: false })
       await writeDate('2026-03-15', { isClosingPeriod: false })
+      await writeDate('2026-03-31', { isClosingPeriod: false })
       await writeDate('2026-02-03', {
         isClosingPeriod: true,
         dataMonth: '2026-01',
@@ -600,7 +780,7 @@ describe('PruneService', () => {
 
       // Spot-pin the decisions themselves so the equivalence can't be
       // vacuously satisfied by two empty/broken caches.
-      expect(skeleton).toHaveLength(4)
+      expect(skeleton).toHaveLength(5)
       const byDate = new Map(skeleton.map(c => [c.rawCsvDate, c]))
       expect(byDate.get('2026-01-31')?.keep).toBe(true)
       expect(byDate.get('2026-03-15')?.keep).toBe(false)

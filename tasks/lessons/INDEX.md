@@ -156,3 +156,4 @@
 - **161** [ci, automation, verification, tests] — A `workflow_dispatch` boolean input compared to a string in `if:` is inert; normalize booleans to step-output strings once (#1133, #1102)
 - **161** [data-pipeline, gcs, collector-cli, verification, process] — The same authority verdict can clear a reversible action but not an irreversible one: scale fail-closed thresholds to reversibility (#1131, #1102)
 - **162** [gcs, ci, data-pipeline, verification, regex] — A "keep only X" rsync exclude must also keep the bare directory path, or traversal prunes the parent before X is ever compared (#1175, #1102)
+- **163** [data-pipeline, collector-cli, verification, tdd, metadata, gcs] — A destructive boundary derived from set-level evidence must filter that evidence by provenance, not by shape (#1178, #1102)
