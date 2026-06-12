@@ -76,5 +76,13 @@ export {
   ingestDistrictReports,
   type IngestDistrictReportsOptions,
 } from './DistrictReportsIngest.js'
+export {
+  EDUCATION_ARCHIVE_GUID,
+  backfillEducationArchive,
+  buildEducationArchiveDataset,
+  programYearEndDate,
+  type EducationArchiveBackfillOptions,
+  type EducationArchiveBackfillResult,
+} from './EducationArchiveBackfill.js'
 // CollectorOrchestrator will be added in Task 3
 // export { CollectorOrchestrator } from './CollectorOrchestrator.js'

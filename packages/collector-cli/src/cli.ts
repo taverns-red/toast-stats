@@ -1729,5 +1729,189 @@ export function createCLI(): Command {
       }
     )
 
+  // One-time prior-PY Education-Achievement backfill (epic #1145, #1146;
+  // operator ruling 2026-06-10 on #1070). Fetches the Educational Achievement
+  // Archive per (district, prior PY), aggregates to de-identified counts, and
+  // writes/merges snapshots/<endYear>-06-30/district_{id}_reports.json in the
+  // LOCAL cache dir. Staging upload + diff + promote are operator runbook
+  // steps (ADR-002 validate-first) — this command never touches GCS.
+  program
+    .command('backfill-education-archive')
+    .description(
+      'One-time backfill: fetch the prior-PY Educational Achievement Archive ' +
+        'per district and write de-identified counts to the PY-end reports ' +
+        'dataset (epic #1145)'
+    )
+    .requiredOption(
+      '--program-years <list>',
+      'Comma-separated PRIOR program years to backfill, e.g. 2023-2024,2024-2025'
+    )
+    .option(
+      '--districts <list>',
+      'Comma-separated district IDs (default: read from config)',
+      parseDistrictList
+    )
+    .option(
+      '--rate-ms <ms>',
+      'Min ms between report requests (default 1100 ≈ 0.9 req/sec)',
+      (value: string) => parseInt(value, 10),
+      1100
+    )
+    .option(
+      '--dry-run',
+      'Fetch + parse + report counts, but write nothing',
+      false
+    )
+    .option('-v, --verbose', 'Enable detailed logging output', false)
+    .option('-c, --config <path>', 'Alternative configuration file path')
+    .action(
+      async (options: {
+        programYears: string
+        districts?: string[]
+        rateMs: number
+        dryRun: boolean
+        verbose: boolean
+        config?: string
+      }) => {
+        const {
+          DailyReportFetcher,
+          backfillEducationArchive,
+          programYearEndDate,
+        } = await import('./services/index.js')
+        const { readFile } = await import('fs/promises')
+
+        const programYears = options.programYears
+          .split(',')
+          .map(py => py.trim())
+          .filter(py => py.length > 0)
+
+        // Validate every PY up front (fail fast before any network call).
+        for (const py of programYears) {
+          try {
+            programYearEndDate(py)
+          } catch (err) {
+            console.error(
+              `Error: ${err instanceof Error ? err.message : String(err)}`
+            )
+            process.exit(ExitCode.COMPLETE_FAILURE)
+          }
+        }
+
+        const { cacheDir, districtConfigPath } = resolveConfiguration({
+          configPath: options.config,
+        })
+
+        let districts: string[]
+        if (options.districts && options.districts.length > 0) {
+          districts = options.districts
+        } else {
+          const districtsConfig = JSON.parse(
+            await readFile(districtConfigPath, 'utf-8')
+          ) as { districts: Array<{ id: string }> }
+          districts = districtsConfig.districts.map(d => d.id)
+        }
+
+        if (options.verbose) {
+          console.error(
+            `[INFO] Archive backfill: ${districts.length} districts × ${programYears.length} PYs` +
+              (options.dryRun ? ' (DRY RUN)' : '')
+          )
+          console.error(`[INFO] Cache: ${cacheDir}`)
+        }
+
+        // The fetcher's own interval only spaces requests WITHIN
+        // fetchDistrictReports; this loop is one request per call, so space
+        // the (district × PY) pairs here — the endpoint is rate-sensitive.
+        const fetcher = new DailyReportFetcher({})
+
+        const results: Array<
+          | {
+              districtId: string
+              programYear: string
+              ok: true
+              action: string
+              snapshotDate: string
+              groups: number
+              achievements: number
+              path?: string
+            }
+          | {
+              districtId: string
+              programYear: string
+              ok: false
+              error: string
+            }
+        > = []
+
+        let first = true
+        for (const programYear of programYears) {
+          for (const districtId of districts) {
+            if (!first && options.rateMs > 0) {
+              await new Promise(resolve => setTimeout(resolve, options.rateMs))
+            }
+            first = false
+            try {
+              const r = await backfillEducationArchive({
+                cacheDir,
+                districtId,
+                programYear,
+                fetcher,
+                dryRun: options.dryRun,
+              })
+              results.push({
+                districtId,
+                programYear,
+                ok: true,
+                action: r.action,
+                snapshotDate: r.snapshotDate,
+                groups: r.groups,
+                achievements: r.achievements,
+                ...(r.path ? { path: r.path } : {}),
+              })
+              if (options.verbose) {
+                console.error(
+                  `[INFO] D${districtId} ${programYear}: ${r.action} (${r.groups} groups, ${r.achievements} achievements)`
+                )
+              }
+            } catch (err) {
+              // Per-pair try/catch: one failure doesn't abort the bulk run —
+              // the summary surfaces it and the exit code goes non-zero.
+              const message = err instanceof Error ? err.message : String(err)
+              results.push({
+                districtId,
+                programYear,
+                ok: false,
+                error: message,
+              })
+              if (options.verbose) {
+                console.error(
+                  `[ERROR] D${districtId} ${programYear}: ${message}`
+                )
+              }
+            }
+          }
+        }
+
+        const summary = {
+          dryRun: options.dryRun,
+          programYears,
+          totalPairs: results.length,
+          succeeded: results.filter(r => r.ok).length,
+          failed: results.filter(r => !r.ok).length,
+          results,
+        }
+        // Structured JSON to stdout (R4: logs to stderr only).
+        console.log(JSON.stringify(summary, null, 2))
+
+        const exitCode =
+          summary.failed === 0
+            ? ExitCode.SUCCESS
+            : summary.succeeded === 0 && summary.totalPairs > 0
+              ? ExitCode.COMPLETE_FAILURE
+              : ExitCode.PARTIAL_FAILURE
+        process.exit(exitCode)
+      }
+    )
+
   return program
 }

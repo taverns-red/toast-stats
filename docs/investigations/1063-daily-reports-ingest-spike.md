@@ -30,6 +30,9 @@ builds to this list.
 Decision #8 depends on this: prior-PY education-achievement data is retrievable for a scoped
 one-time backfill. Sprint 3 should re-verify per-PY retrieval for the specific reports it
 backfills, but the capability is accepted.
+**Re-verified 2026-06-12 (#1146):** the Archive returns distinct populated ledgers for PYs
+2019-2020 … 2024-2025 (D61; current PY still empty) and emits NO `Member` column — see
+`docs/runbooks/education-archive-backfill.md`.
 
 ---
 

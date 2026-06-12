@@ -87,8 +87,12 @@ export class DailyReportFetcher {
       ((ms: number) => new Promise(resolve => setTimeout(resolve, ms)))
   }
 
-  /** Fetch a single report's HTML, with retry. Returns null on persistent failure. */
-  private async fetchOne(
+  /**
+   * Fetch a single report's HTML, with retry. Returns null on persistent
+   * failure. Public for single-report flows (the #1146 archive backfill);
+   * `fetchDistrictReports` remains the daily-flow entry point.
+   */
+  async fetchReport(
     tableId: string,
     districtId: string,
     programYear: string
@@ -137,7 +141,7 @@ export class DailyReportFetcher {
       if (i > 0 && this.requestIntervalMs > 0) {
         await this.sleep(this.requestIntervalMs)
       }
-      const report = await this.fetchOne(
+      const report = await this.fetchReport(
         IN_SCOPE_REPORT_GUIDS[i]!,
         districtId,
         programYear
