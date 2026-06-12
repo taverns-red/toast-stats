@@ -647,6 +647,45 @@ describe('PruneService', () => {
       expect(byDate.get('2026-07-01')?.reason).toMatch(/in-progress month/i)
     })
 
+    it('an UNPROVEN metadata-less month-end dir does not set the boundary (review M1)', async () => {
+      // A scrape that crashed before writing metadata.json on the last day
+      // of the in-progress month: the dir exists, its raw date LOOKS like a
+      // month-end, but the raw→snapshot mapping is unproven (#1131). It must
+      // not count as "the month closed" evidence, or it would un-protect
+      // every daily of the month it sits in.
+      await createCompletedAprilMay()
+      await createRawCsvDate('2026-06-06')
+      await createRawCsvDateWithoutMetadata('2026-06-30')
+
+      const service = new PruneService({ cacheDir: testDir, ...ctx })
+      const classifications = await service.classifyAll()
+      const byDate = new Map(classifications.map(c => [c.rawCsvDate, c]))
+
+      // The bare dir stays protected (#1131)…
+      expect(byDate.get('2026-06-30')?.keep).toBe(true)
+      // …and June dailies stay in-progress-protected: the proven boundary
+      // is still May 31.
+      expect(byDate.get('2026-06-06')?.keep).toBe(true)
+      expect(byDate.get('2026-06-06')?.reason).toMatch(/in-progress month/i)
+      expect(byDate.get('2026-06-06')?.reason).toContain('2026-05-31')
+    })
+
+    it('a registry-remapped metadata-less month-end DOES set the boundary', async () => {
+      // Registry-proven closing remap: raw 2026-06-03 (no metadata) sits in
+      // May's closing window → snapshot 2026-05-31. That month-end is
+      // registry-proven, so May's dailies are thinnable.
+      await createRawCsvDateWithoutMetadata('2026-06-03')
+      await createRawCsvDate('2026-05-15')
+
+      const service = new PruneService({ cacheDir: testDir, ...ctx })
+      const classifications = await service.classifyAll()
+      const byDate = new Map(classifications.map(c => [c.rawCsvDate, c]))
+
+      expect(byDate.get('2026-06-03')?.snapshotDate).toBe('2026-05-31')
+      expect(byDate.get('2026-06-03')?.keep).toBe(true)
+      expect(byDate.get('2026-05-15')?.keep).toBe(false)
+    })
+
     it('a destructive prune never deletes in-progress month dates', async () => {
       await createCompletedAprilMay()
       await createRawCsvDate('2026-06-10')
