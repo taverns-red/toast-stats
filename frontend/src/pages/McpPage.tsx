@@ -153,7 +153,7 @@ const McpPage: React.FC = () => {
           Requires <strong>Node.js 22+</strong>. For{' '}
           <strong>Claude Code</strong>, one command:
         </p>
-        <pre className="mcp-page__snippet">
+        <pre className="mcp-page__snippet" tabIndex={0}>
           <code>{CLAUDE_CODE_SNIPPET}</code>
         </pre>
         <p>
@@ -161,7 +161,7 @@ const McpPage: React.FC = () => {
           <code>claude_desktop_config.json</code>) or any other MCP-capable
           client, add an <code>mcpServers</code> entry:
         </p>
-        <pre className="mcp-page__snippet">
+        <pre className="mcp-page__snippet" tabIndex={0}>
           <code>{JSON_CONFIG_SNIPPET}</code>
         </pre>
         <p>
