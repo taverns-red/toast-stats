@@ -78,8 +78,9 @@ describe('MethodologyPage — Club health classifications (#440)', () => {
 describe('MethodologyPage — pointer to the MCP server page (#1165)', () => {
   it('links to /mcp from the data source section', () => {
     renderPage()
-    const links = screen.getAllByRole('link')
-    const mcpLink = links.find(a => a.getAttribute('href') === '/mcp')
-    expect(mcpLink).toBeTruthy()
+    expect(screen.getByRole('link', { name: /mcp server/i })).toHaveAttribute(
+      'href',
+      '/mcp'
+    )
   })
 })

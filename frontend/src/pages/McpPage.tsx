@@ -69,14 +69,6 @@ const JSON_CONFIG_SNIPPET = `{
   }
 }`
 
-const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
-  { id: 'what-it-is', num: '01', title: 'What it is' },
-  { id: 'install', num: '02', title: 'Install' },
-  { id: 'tools', num: '03', title: 'The eight tools' },
-  { id: 'freshness', num: '04', title: 'Data freshness & provenance' },
-  { id: 'developers', num: '05', title: 'For developers' },
-]
-
 const McpPage: React.FC = () => {
   useDocumentTitle('MCP Server')
 
@@ -84,7 +76,7 @@ const McpPage: React.FC = () => {
   // a disclosure on <768px; desktop renders the full static page. This page is
   // short enough that open-state is plain local state — no URL round-trip.
   const isMobile = useIsMobile()
-  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(new Set())
+  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(() => new Set())
   const toggle = useCallback((id: string) => {
     setOpenIds(prev => {
       const next = new Set(prev)
@@ -96,8 +88,6 @@ const McpPage: React.FC = () => {
 
   const sectionProps = (id: string) => ({
     id,
-    num: SECTIONS.find(s => s.id === id)?.num ?? '',
-    title: SECTIONS.find(s => s.id === id)?.title ?? '',
     collapsible: isMobile,
     open: openIds.has(id),
     onToggle: toggle,
@@ -115,7 +105,11 @@ const McpPage: React.FC = () => {
         </p>
       </header>
 
-      <CollapsibleSection {...sectionProps('what-it-is')}>
+      <CollapsibleSection
+        num="01"
+        title="What it is"
+        {...sectionProps('what-it-is')}
+      >
         <p>
           <code>{PACKAGE_NAME}</code> is a thin, local, read-only{' '}
           <a
@@ -154,7 +148,7 @@ const McpPage: React.FC = () => {
         </ul>
       </CollapsibleSection>
 
-      <CollapsibleSection {...sectionProps('install')}>
+      <CollapsibleSection num="02" title="Install" {...sectionProps('install')}>
         <p>
           Requires <strong>Node.js 22+</strong>. For{' '}
           <strong>Claude Code</strong>, one command:
@@ -185,7 +179,11 @@ const McpPage: React.FC = () => {
         </p>
       </CollapsibleSection>
 
-      <CollapsibleSection {...sectionProps('tools')}>
+      <CollapsibleSection
+        num="03"
+        title="The eight tools"
+        {...sectionProps('tools')}
+      >
         <p>
           All eight tools are read-only and return a JSON envelope citing the
           CDN URL and snapshot date they read.
@@ -202,7 +200,11 @@ const McpPage: React.FC = () => {
         </dl>
       </CollapsibleSection>
 
-      <CollapsibleSection {...sectionProps('freshness')}>
+      <CollapsibleSection
+        num="04"
+        title="Data freshness & provenance"
+        {...sectionProps('freshness')}
+      >
         <ul>
           <li>
             <strong>Refresh cadence.</strong> The data pipeline runs once daily
@@ -233,7 +235,11 @@ const McpPage: React.FC = () => {
         </p>
       </CollapsibleSection>
 
-      <CollapsibleSection {...sectionProps('developers')}>
+      <CollapsibleSection
+        num="05"
+        title="For developers"
+        {...sectionProps('developers')}
+      >
         <p>
           The server is MIT-licensed and lives in the{' '}
           <a
