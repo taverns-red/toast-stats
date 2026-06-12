@@ -105,6 +105,17 @@ const DAILY_REPORTS: ReportSpec[] = [
     allowEmpty: true,
   },
   {
+    // Prior-PY shape (#1146 backfill): populated, and — unlike the in-PY
+    // Education Achievements report — the archive emits NO Member column
+    // (re-verified live across PYs 2019-2020 … 2024-2025 on 2026-06-12).
+    // `Date` is KEEP-safe per the map but dropped pre-aggregation (Lesson 153).
+    report: 'Educational Achievement Archive (prior PY, populated)',
+    tableId: 'a30b93f3-081e-42c8-9a36-137acb24be69',
+    fixture: 'education-archive-2024-2025.html',
+    keep: ['Club', 'Division', 'Area', 'Award', 'Date', 'Name', 'Location'],
+    exclude: [],
+  },
+  {
     report: 'New Clubs',
     tableId: 'ac6df5db-13de-425a-b8b9-f9c6093b538a',
     fixture: 'new-clubs.html',
@@ -203,8 +214,9 @@ function projectKeep(
 }
 
 describe('Daily Reports keep/EXCLUDE column map (spike #1063)', () => {
-  it('covers all 12 report types', () => {
-    expect(DAILY_REPORTS).toHaveLength(12)
+  it('covers all 12 report types (the archive has two PY shapes: empty + populated)', () => {
+    expect(new Set(DAILY_REPORTS.map(s => s.tableId)).size).toBe(12)
+    expect(DAILY_REPORTS).toHaveLength(13)
   })
 
   it.each(DAILY_REPORTS)(
