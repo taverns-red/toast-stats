@@ -526,6 +526,111 @@ describe('PruneService', () => {
       expect(rawCsvEntries).not.toContain('2026-01-15')
     })
   })
+
+  describe('skeleton-shape cache contract (#1175)', () => {
+    // The prune sync no longer downloads CSV payloads or snapshot contents
+    // (post-#1147 the full bucket exceeds the runner's disk). The skeleton
+    // sync materializes every raw-csv date dir from the `gsutil ls` listing
+    // and overlays ONLY metadata.json. This contract pins that
+    // classification depends on nothing the skeleton omits — and that a
+    // metadata-less dir (locally an EMPTY dir under the new shape, since
+    // there is no metadata.json to overlay) stays VISIBLE and protected,
+    // not invisible (#1131 constraint).
+    const registryMonths: ClosingDateEntry[] = [
+      { dataMonth: '2025-12', closingDate: '2026-01-08' },
+      { dataMonth: '2026-01', closingDate: '2026-02-05' },
+    ]
+
+    /** Same logical bucket state in both shapes. */
+    async function populate(
+      dir: string,
+      shape: 'full' | 'skeleton'
+    ): Promise<void> {
+      const writeDate = async (
+        date: string,
+        metadata: { isClosingPeriod?: boolean; dataMonth?: string } | null
+      ) => {
+        const dateDir = path.join(dir, 'raw-csv', date)
+        await fs.mkdir(dateDir, { recursive: true })
+        if (metadata !== null) {
+          await fs.writeFile(
+            path.join(dateDir, 'metadata.json'),
+            JSON.stringify({ date, ...metadata })
+          )
+        }
+        if (shape === 'full') {
+          await fs.writeFile(path.join(dateDir, 'all-districts.csv'), 'dummy')
+          await fs.writeFile(path.join(dateDir, 'district_61.csv'), 'dummy')
+        }
+      }
+
+      // Month-end keeper, mid-month non-keeper, closing-period remap,
+      // and the live #1131 case: a metadata-less date dir.
+      await writeDate('2026-01-31', { isClosingPeriod: false })
+      await writeDate('2026-03-15', { isClosingPeriod: false })
+      await writeDate('2026-02-03', {
+        isClosingPeriod: true,
+        dataMonth: '2026-01',
+      })
+      await writeDate('2026-02-13', null)
+
+      const snapshotDir = path.join(dir, 'snapshots', '2026-01-31')
+      await fs.mkdir(snapshotDir, { recursive: true })
+      if (shape === 'full') {
+        await fs.writeFile(path.join(snapshotDir, 'district_61.json'), '{}')
+      }
+    }
+
+    it('classifies a skeleton-shape cache identically to a full-shape cache, including the metadata-less protection', async () => {
+      const fullDir = path.join(testDir, 'full')
+      const skeletonDir = path.join(testDir, 'skeleton')
+      await populate(fullDir, 'full')
+      await populate(skeletonDir, 'skeleton')
+
+      const classify = (cacheDir: string) =>
+        new PruneService({
+          cacheDir,
+          closingDateRegistry: registryMonths,
+        }).classifyAll()
+
+      const full = await classify(fullDir)
+      const skeleton = await classify(skeletonDir)
+
+      expect(skeleton).toEqual(full)
+
+      // Spot-pin the decisions themselves so the equivalence can't be
+      // vacuously satisfied by two empty/broken caches.
+      expect(skeleton).toHaveLength(4)
+      const byDate = new Map(skeleton.map(c => [c.rawCsvDate, c]))
+      expect(byDate.get('2026-01-31')?.keep).toBe(true)
+      expect(byDate.get('2026-03-15')?.keep).toBe(false)
+      expect(byDate.get('2026-02-03')?.snapshotDate).toBe('2026-01-31')
+      expect(byDate.get('2026-02-13')?.keep).toBe(true)
+      expect(byDate.get('2026-02-13')?.reason).toContain('Protected')
+    })
+
+    it('dry-run prune on a skeleton cache reports the same counts as on a full cache', async () => {
+      const fullDir = path.join(testDir, 'full')
+      const skeletonDir = path.join(testDir, 'skeleton')
+      await populate(fullDir, 'full')
+      await populate(skeletonDir, 'skeleton')
+
+      const run = (cacheDir: string) =>
+        new PruneService({
+          cacheDir,
+          closingDateRegistry: registryMonths,
+          today: '2026-06-12',
+        }).prune(true)
+
+      const full = await run(fullDir)
+      const skeleton = await run(skeletonDir)
+
+      expect(skeleton.totalDates).toBe(full.totalDates)
+      expect(skeleton.keptDates).toBe(full.keptDates)
+      expect(skeleton.prunedDates).toBe(full.prunedDates)
+      expect(skeleton.classifications).toEqual(full.classifications)
+    })
+  })
 })
 
 describe('isPenultimateDayOfMonth', () => {
