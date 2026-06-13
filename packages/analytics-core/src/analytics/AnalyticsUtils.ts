@@ -138,25 +138,31 @@ export function getDCPCheckpoint(month: number): number {
  * @throws Error if date string is invalid
  */
 export function getCurrentProgramMonth(dateString?: string): number {
-  let date: Date
-
   if (dateString) {
-    // Parse the date string (expected format: YYYY-MM-DD)
-    date = new Date(dateString)
-
-    // Validate the parsed date
-    if (isNaN(date.getTime())) {
+    // Read the month directly from the YYYY-MM-DD string. Going through
+    // `new Date(dateString)` parses it as UTC midnight, but `getMonth()`
+    // reads LOCAL time — so in a UTC-negative zone a first-of-month date
+    // rolls back to the prior month (a 2026-07-01 snapshot evaluated as
+    // June → wrong DCP checkpoint). Validate the date is real, then take
+    // the month from the string itself so the result is TZ-invariant.
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString)
+    const parsed = new Date(dateString)
+    if (!match || isNaN(parsed.getTime())) {
       throw new Error(
         `Invalid date string: ${dateString}. Expected format: YYYY-MM-DD`
       )
     }
-  } else {
-    // Use current date
-    date = new Date()
+    const month = parseInt(match[2]!, 10)
+    if (month < 1 || month > 12) {
+      throw new Error(
+        `Invalid date string: ${dateString}. Expected format: YYYY-MM-DD`
+      )
+    }
+    return month
   }
 
-  // getMonth() returns 0-11, so add 1 to get 1-12
-  return date.getMonth() + 1
+  // No date provided: use the current local month (getMonth() returns 0-11).
+  return new Date().getMonth() + 1
 }
 
 /**
