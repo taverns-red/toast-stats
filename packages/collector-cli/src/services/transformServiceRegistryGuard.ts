@@ -14,12 +14,6 @@
  * (Lesson 82 — a sentinel must catch a known-bad snippet, not assert config.)
  */
 
-/** A flagged construction site: its byte offset and the captured argument. */
-export interface RegistryInjectionViolation {
-  index: number
-  snippet: string
-}
-
 const CTOR_TOKEN = 'new TransformService('
 
 /**
@@ -46,12 +40,15 @@ function stripComments(source: string): string {
  * walks to the matching close paren (respecting nested `(` `[` `{`) and
  * inspects the captured argument text. A site that passes the registry —
  * literally or by spread/option pass-through that names the key — is honest;
- * one that omits the key is a fail-open regression waiting to happen.
+ * one that omits the key, or passes it as literal `undefined`, is a fail-open
+ * regression waiting to happen.
+ *
+ * @returns the captured argument text of each offending construction.
  */
 export function findUninjectedTransformServiceConstructions(
   source: string
-): RegistryInjectionViolation[] {
-  const violations: RegistryInjectionViolation[] = []
+): string[] {
+  const violations: string[] = []
   const scanned = stripComments(source)
   let from = 0
   for (;;) {
@@ -75,8 +72,13 @@ export function findUninjectedTransformServiceConstructions(
     }
 
     const snippet = scanned.slice(openParen, end + 1)
-    if (!snippet.includes('closingDateRegistry')) {
-      violations.push({ index: start, snippet })
+    // A present key is necessary but not sufficient: an explicit
+    // `closingDateRegistry: undefined` re-opens the fail-open hole.
+    const injected =
+      snippet.includes('closingDateRegistry') &&
+      !/closingDateRegistry\s*:\s*undefined\b/.test(snippet)
+    if (!injected) {
+      violations.push(snippet)
     }
     from = end + 1
   }

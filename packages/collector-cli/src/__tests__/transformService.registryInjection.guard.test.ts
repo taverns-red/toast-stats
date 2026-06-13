@@ -25,7 +25,17 @@ describe('TransformService registry-injection guard (#1160)', () => {
       `
       const violations = findUninjectedTransformServiceConstructions(bad)
       expect(violations).toHaveLength(1)
-      expect(violations[0].snippet).toContain('cacheDir')
+      expect(violations[0]).toContain('cacheDir')
+    })
+
+    it('flags an explicit closingDateRegistry: undefined (fail-open in disguise)', () => {
+      const bad = `
+        const svc = new TransformService({
+          cacheDir: '/tmp/x',
+          closingDateRegistry: undefined,
+        })
+      `
+      expect(findUninjectedTransformServiceConstructions(bad)).toHaveLength(1)
     })
 
     it('does NOT flag a construction that injects the registry literally', () => {
@@ -68,7 +78,7 @@ describe('TransformService registry-injection guard (#1160)', () => {
       `
       const violations = findUninjectedTransformServiceConstructions(mixed)
       expect(violations).toHaveLength(1)
-      expect(violations[0].snippet).toContain('cacheDir: b')
+      expect(violations[0]).toContain('cacheDir: b')
     })
   })
 
