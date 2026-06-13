@@ -42,8 +42,17 @@ import { validateDistrictId } from './utils/validateDistrictId.js'
  * R4 is unaffected: structured JSON goes to stdout, logs to stderr. Output is
  * byte-identical to the previous `console.log(JSON.stringify(payload, null,
  * 2))` (trailing newline included).
+ *
+ * Because the exit is deferred, this function returns control synchronously —
+ * so it must be the last thing a code path does. Inside a `catch` (or any
+ * block with code after it), call it as `return emitJsonAndExit(...)`, or the
+ * handler keeps running past the "exit" on the same tick.
  */
 export function emitJsonAndExit(payload: unknown, exitCode: number): never {
+  // A closed reader (e.g. `| head`) makes stdout emit 'error'; the drain
+  // callback isn't guaranteed to fire then, so exit on error too rather than
+  // hang. (The pre-fix synchronous process.exit could never hang.)
+  process.stdout.once('error', () => process.exit(exitCode))
   process.stdout.write(JSON.stringify(payload, null, 2) + '\n', () =>
     process.exit(exitCode)
   )

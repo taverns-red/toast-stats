@@ -75,6 +75,32 @@ describe('#1182 stdout flush-before-exit', () => {
     expect(exitSpy).toHaveBeenCalledWith(0)
   })
 
+  it('still exits (does not hang) if stdout errors before draining — e.g. a closed `| head` pipe', () => {
+    // Simulate a broken pipe: the drain callback never fires, but stdout
+    // emits 'error'. The exit must still happen.
+    let errorHandler: (() => void) | undefined
+    const onceSpy = vi.spyOn(process.stdout, 'once').mockImplementation(((
+      event: string,
+      cb: () => void
+    ) => {
+      if (event === 'error') errorHandler = cb
+      return process.stdout
+    }) as never)
+    writeSpy = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation((() => false) as never) // backpressure; callback withheld
+
+    emitJsonAndExit({ ok: false }, 1)
+
+    expect(exitSpy).not.toHaveBeenCalled() // nothing drained yet
+    expect(errorHandler).toBeTypeOf('function')
+
+    errorHandler!() // pipe reader went away
+    expect(exitSpy).toHaveBeenCalledWith(1)
+
+    onceSpy.mockRestore()
+  })
+
   it('guard: cli.ts emits no structured JSON via console.log — every terminal summary routes through emitJsonAndExit', () => {
     const here = dirname(fileURLToPath(import.meta.url))
     const cliSrc = readFileSync(join(here, '..', 'cli.ts'), 'utf-8')

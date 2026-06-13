@@ -1536,10 +1536,11 @@ export function createCLI(): Command {
           // Fail-closed: if we cannot read/compare the snapshots, do NOT promote.
           const message = err instanceof Error ? err.message : String(err)
           console.error(`[ERROR] value-diff failed: ${message}`)
-          // Namespace call (not the destructured alias) so TS sees the `never`
-          // return and narrows `result` to defined below; flush-before-exit
-          // (#1182).
-          helpers.emitJsonAndExit(
+          // `return` so the catch actually terminates the handler — the exit
+          // is deferred (#1182), so without it control would fall through to
+          // the destructure below with `result` still undefined. The return
+          // also narrows `result` to defined past the try/catch.
+          return emitJsonAndExit(
             {
               promote: false,
               requiresReview: true,
