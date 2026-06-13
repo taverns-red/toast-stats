@@ -38,6 +38,13 @@ const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
 const tokensCss = stripComments(
   readFileSync(resolve(stylesDir, 'tokens/redesign.css'), 'utf8')
 )
+// The brand tokens (--rt-stats etc.) live in their own file; the dark focus
+// ring remaps to --rt-stats, so we must resolve it from there — NOT lean on the
+// inline `var(--rt-stats, #d4873f)` fallback, which would be undefined-token
+// theatre (lesson 132). --rt-* are theme-independent (`:root` only).
+const brandCss = stripComments(
+  readFileSync(resolve(stylesDir, 'tokens/rt-brand-v1.css'), 'utf8')
+)
 const appShellRaw = readFileSync(
   resolve(stylesDir, 'components/app-shell.css'),
   'utf8'
@@ -69,7 +76,12 @@ function parseTokenBlock(
   return map
 }
 
-const lightTokens = parseTokenBlock(tokensCss, ':root')
+const brandTokens = parseTokenBlock(brandCss, ':root')
+// Brand `:root` is the theme-independent base under both light and dark.
+const lightTokens = new Map([
+  ...brandTokens,
+  ...parseTokenBlock(tokensCss, ':root'),
+])
 const darkTokens = parseTokenBlock(tokensCss, "[data-theme='dark']")
 
 /** Resolve a token / var() chain to a hex string in the requested theme. */

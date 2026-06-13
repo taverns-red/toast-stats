@@ -32,7 +32,7 @@
 
   .chart-spark__trigger:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--rt-stats, #d4873f);
+    box-shadow: 0 0 0 2px var(--rt-stats-focus, #b5651d);
   }
 
   .chart-spark__headline {
@@ -134,7 +134,7 @@
 
   .chart-expand-sheet__close:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--rt-stats, #d4873f);
+    box-shadow: 0 0 0 2px var(--rt-stats-focus, #b5651d);
   }
 
   .chart-expand-sheet__body {
