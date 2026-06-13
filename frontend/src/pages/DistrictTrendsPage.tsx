@@ -117,7 +117,11 @@ const DistrictTrendsPage: React.FC = () => {
     )
 
   const { data: timeSeries } = useTimeSeries(
-    hasValidDates ? districtId || null : null
+    hasValidDates ? districtId || null : null,
+    // #1184: thread the selected program year so the series, base membership,
+    // and YoY comparison follow the selector instead of the calendar-current PY
+    // (R3 — the parent holds the PY; don't let the child self-select).
+    effectiveProgramYear?.label
   )
 
   const { data: performanceTargets } = usePerformanceTargets(
