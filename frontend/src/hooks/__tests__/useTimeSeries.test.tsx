@@ -23,10 +23,13 @@ vi.mock('../../services/cdnTimeSeries', () => ({
   fetchTimeSeriesMetadata: vi.fn(),
   fetchTimeSeriesProgramYear: vi.fn(),
   getCurrentProgramYear: vi.fn(() => '2025-2026'),
-  getPreviousProgramYears: vi.fn((_current: string, count: number) => {
+  getPreviousProgramYears: vi.fn((current: string, count: number) => {
+    // Honour the passed anchor year (mirrors the real implementation) so that
+    // a SELECTED program year anchors its own priors, not the calendar-current.
+    const start = parseInt(current.split('-')[0] ?? '0', 10)
     const years = []
     for (let i = 1; i <= count; i++) {
-      years.push(`${2025 - i}-${2026 - i}`)
+      years.push(`${start - i}-${start - i + 1}`)
     }
     return years
   }),
@@ -175,6 +178,98 @@ describe('useTimeSeries', () => {
     expect(result.current.data!.currentMembership).toBe(2810)
     expect(result.current.data!.memberChange).toBe(-90)
     expect(result.current.data!.availableYears).toEqual(['2025-2026'])
+  })
+
+  it('should anchor on the SELECTED program year when one is provided (#1184)', async () => {
+    // Backfill (#1147) made historical PYs selectable. The selector must drive
+    // which series is fetched — not the calendar-current year (R3 violation).
+    mockFetchMetadata.mockResolvedValue({
+      districtId: '61',
+      lastUpdated: '2026-03-20T00:00:00.000Z',
+      availableProgramYears: [
+        '2020-2021',
+        '2021-2022',
+        '2024-2025',
+        '2025-2026',
+      ],
+      totalDataPoints: 40,
+    })
+
+    const priorYear = makeProgramYearIndex('61', '2020-2021', [
+      { date: '2020-07-31', membership: 2600, payments: 5200 },
+      { date: '2021-06-30', membership: 2700, payments: 5400 },
+    ])
+    const selectedYear = makeProgramYearIndex('61', '2021-2022', [
+      { date: '2021-07-31', membership: 2710, payments: 5420 },
+      { date: '2022-06-30', membership: 2790, payments: 5580 },
+    ])
+
+    mockFetchProgramYear.mockImplementation(async (_id, year) => {
+      if (year === '2020-2021') return priorYear
+      if (year === '2021-2022') return selectedYear
+      throw new Error(`Unexpected fetch for ${year}`)
+    })
+
+    const { result } = renderHook(() => useTimeSeries('61', '2021-2022'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.data).not.toBeNull())
+
+    // Anchor is the selected PY, not the calendar-current 2025-2026.
+    expect(result.current.data!.currentProgramYear).toBe('2021-2022')
+    // Current = last point of the SELECTED year.
+    expect(result.current.data!.currentMembership).toBe(2790)
+    // Base = last point of the prior PY (2020-2021), the selected year's prior.
+    expect(result.current.data!.baseMembership).toBe(2700)
+    expect(result.current.data!.memberChange).toBe(90)
+    // Only the selected year + its prior are fetched — never the current PY.
+    expect(result.current.data!.availableYears).toEqual([
+      '2021-2022',
+      '2020-2021',
+    ])
+    expect(mockFetchProgramYear).not.toHaveBeenCalledWith('61', '2025-2026')
+  })
+
+  it('should isolate the query cache per program year (#1184)', async () => {
+    // A shared QueryClient must not serve one PY's series for another — the
+    // query key has to include the selected PY.
+    mockFetchMetadata.mockResolvedValue({
+      districtId: '61',
+      lastUpdated: '2026-03-20T00:00:00.000Z',
+      availableProgramYears: ['2020-2021', '2021-2022'],
+      totalDataPoints: 20,
+    })
+    const y2021 = makeProgramYearIndex('61', '2021-2022', [
+      { date: '2022-06-30', membership: 2790, payments: 5580 },
+    ])
+    const y2020 = makeProgramYearIndex('61', '2020-2021', [
+      { date: '2021-06-30', membership: 2700, payments: 5400 },
+    ])
+    mockFetchProgramYear.mockImplementation(async (_id, year) => {
+      if (year === '2021-2022') return y2021
+      if (year === '2020-2021') return y2020
+      throw new Error(`Unexpected fetch for ${year}`)
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        children
+      )
+
+    const a = renderHook(() => useTimeSeries('61', '2021-2022'), { wrapper })
+    await waitFor(() => expect(a.result.current.data).not.toBeNull())
+    expect(a.result.current.data!.currentProgramYear).toBe('2021-2022')
+
+    const b = renderHook(() => useTimeSeries('61', '2020-2021'), { wrapper })
+    await waitFor(() => expect(b.result.current.data).not.toBeNull())
+    // Distinct key → 2020-2021 anchor, NOT the cached 2021-2022 entry.
+    expect(b.result.current.data!.currentProgramYear).toBe('2020-2021')
   })
 
   it('should handle metadata fetch failure', async () => {
