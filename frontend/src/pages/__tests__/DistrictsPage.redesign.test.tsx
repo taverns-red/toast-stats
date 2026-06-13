@@ -121,6 +121,20 @@ describe('Districts page redesign chrome (#356)', () => {
         screen.getByText(/compare district performance/i)
       ).toBeInTheDocument()
     })
+
+    // #1107 — orientation copy hardcoded "117 districts" while the KPI strip
+    // (and the table) showed the real tracked count (128 in prod). Derive the
+    // count from data so the sentence can never drift from the rows below it.
+    it('derives the orientation district count from data, not a hardcoded 117', async () => {
+      setupWithData()
+      renderWithProviders(<DistrictsPage />)
+      await screen.findByText('District 1')
+      const orientation = screen.getByTestId('districts-orientation')
+      expect(orientation).toHaveTextContent(
+        /one of the 2 Toastmasters districts worldwide/i
+      )
+      expect(orientation.textContent).not.toMatch(/117/)
+    })
   })
 
   describe('global KPI strip (4 cards)', () => {
