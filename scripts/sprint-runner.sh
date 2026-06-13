@@ -69,7 +69,7 @@
 #                         overlay entirely). Set to a concrete model id to
 #                         PIN the fleet. History: #1142 pinned claude-fable-5,
 #                         #1195 tried a "default" alias (which the settings
-#                         overlay rejects — "model may not exist"), #1196
+#                         overlay rejects — "model may not exist"), #1197
 #                         reverted to inherit-by-omission after Fable 5 was
 #                         removed (probe-verified 2026-06-13).
 #   SPRINT_RUNNER_LOCK_DIR  Override the mkdir-lock path (default
@@ -106,7 +106,7 @@ STRICT_GATE="${STRICT_GATE:-0}"
 # with the SAME basename would still collide — set RUNNER_NAME explicitly there.
 RUNNER_NAME="${RUNNER_NAME:-${REPO_DIR##*/}}"
 # Fleet model selection. UNSET = inherit the operator's resolved default
-# (model key omitted from the overlay — pre-#1142 behavior, restored in #1196
+# (model key omitted from the overlay — pre-#1142 behavior, restored in #1197
 # after #1142's fable-5 pin and #1195's non-resolving "default" alias both
 # broke when Fable 5 was removed). Set SPRINT_RUNNER_MODEL to a concrete,
 # currently-available id (e.g. claude-opus-4-8[1m]) to pin instead.
@@ -563,7 +563,7 @@ launch_sprint_session() {
   # effortLevel. "ultracode" is not a valid --effort flag choice; it must come
   # through settings. The model is included ONLY when SPRINT_RUNNER_MODEL pins
   # one; otherwise the key is omitted so the spawned session inherits the
-  # operator's resolved default (#1196). A literal alias like "default" is NOT
+  # operator's resolved default (#1197). A literal alias like "default" is NOT
   # accepted by the overlay (the settings model field needs a concrete id or
   # nothing), which is what silently husked the fleet when #1195 shipped it.
   local ultracode_settings
