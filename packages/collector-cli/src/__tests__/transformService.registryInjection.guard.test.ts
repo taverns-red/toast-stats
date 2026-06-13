@@ -49,6 +49,18 @@ describe('TransformService registry-injection guard (#1160)', () => {
       expect(findUninjectedTransformServiceConstructions(good)).toHaveLength(0)
     })
 
+    it('does NOT flag the token when it appears only in a comment (Lesson 84)', () => {
+      const commented = `
+        // A doc-comment may mention new TransformService(...) in prose, e.g.
+        // "any production new TransformService({ cacheDir }) site MUST inject".
+        /* block: new TransformService({ cacheDir: x }) is just an example */
+        const real = new TransformService({ cacheDir, closingDateRegistry })
+      `
+      expect(
+        findUninjectedTransformServiceConstructions(commented)
+      ).toHaveLength(0)
+    })
+
     it('flags exactly the uninjected site when good and bad are interleaved', () => {
       const mixed = `
         new TransformService({ cacheDir: a, closingDateRegistry: r })

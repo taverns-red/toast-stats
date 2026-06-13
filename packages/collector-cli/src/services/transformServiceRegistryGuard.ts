@@ -23,6 +23,22 @@ export interface RegistryInjectionViolation {
 const CTOR_TOKEN = 'new TransformService('
 
 /**
+ * Strip `//` line comments and block comments from source before scanning.
+ *
+ * A comment (or doc-comment) that mentions the constructor token in prose is
+ * not a real construction site — but a naive substring scan would flag it
+ * (Lesson 84: a documentation example of a parsed format is also valid
+ * input). Removing comments first keeps the guard from tripping on its own
+ * documentation. String literals are left intact; the only production string
+ * carrying the token lives in this module, which the guard test excludes.
+ */
+function stripComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '') // block comments
+    .replace(/\/\/[^\n]*/g, '') // line comments
+}
+
+/**
  * Find every `new TransformService(...)` in `source` whose constructor
  * argument does NOT mention `closingDateRegistry`.
  *
@@ -36,17 +52,18 @@ export function findUninjectedTransformServiceConstructions(
   source: string
 ): RegistryInjectionViolation[] {
   const violations: RegistryInjectionViolation[] = []
+  const scanned = stripComments(source)
   let from = 0
   for (;;) {
-    const start = source.indexOf(CTOR_TOKEN, from)
+    const start = scanned.indexOf(CTOR_TOKEN, from)
     if (start === -1) break
 
     // Walk from the opening paren to its match, tracking nesting depth.
     const openParen = start + CTOR_TOKEN.length - 1
     let depth = 0
     let end = openParen
-    for (let i = openParen; i < source.length; i++) {
-      const ch = source[i]
+    for (let i = openParen; i < scanned.length; i++) {
+      const ch = scanned[i]
       if (ch === '(' || ch === '[' || ch === '{') depth++
       else if (ch === ')' || ch === ']' || ch === '}') {
         depth--
@@ -57,7 +74,7 @@ export function findUninjectedTransformServiceConstructions(
       }
     }
 
-    const snippet = source.slice(openParen, end + 1)
+    const snippet = scanned.slice(openParen, end + 1)
     if (!snippet.includes('closingDateRegistry')) {
       violations.push({ index: start, snippet })
     }
