@@ -80,10 +80,20 @@ function computeBaseMembership(
  * Computes base membership and member change for the "+N members" badge.
  *
  * @param districtId - District ID to fetch data for (null to skip)
+ * @param selectedProgramYear - Program year to anchor on (e.g. "2021-2022").
+ *   When provided, this drives which series is fetched and which prior years
+ *   are compared against. Omitting it falls back to the calendar-current PY.
+ *   #1184: the parent (DistrictTrendsPage) holds the selected PY; the hook must
+ *   not self-select the latest year and ignore the selector (R3 violation).
  */
-export function useTimeSeries(districtId: string | null) {
+export function useTimeSeries(
+  districtId: string | null,
+  selectedProgramYear?: string
+) {
   const query = useQuery({
-    queryKey: ['timeSeries', districtId],
+    // #1184: the selected PY is part of the cache identity — without it, two
+    // different PYs share one cache entry and crosstalk (stale-cache bug).
+    queryKey: ['timeSeries', districtId, selectedProgramYear ?? null],
     queryFn: async (): Promise<TimeSeriesData> => {
       if (!districtId) {
         throw new Error('District ID is required')
@@ -92,7 +102,8 @@ export function useTimeSeries(districtId: string | null) {
       // Step 1: Fetch metadata to discover available program years
       const metadata = await fetchTimeSeriesMetadata(districtId)
 
-      const currentProgramYear = getCurrentProgramYear()
+      // Anchor on the selected PY when provided; otherwise the calendar-current.
+      const currentProgramYear = selectedProgramYear ?? getCurrentProgramYear()
       const desiredPriorYears = getPreviousProgramYears(currentProgramYear, 2)
 
       // Step 2: Determine which years to fetch (current + available priors)
