@@ -124,7 +124,9 @@ export const ClubStatisticsFileSchema = z.object({
    * (computeDcpGoalsAchieved, #1118) when the per-goal CSV columns are
    * present; omitted otherwise. Was absent from this schema, so a
    * validating parse silently stripped it from .clubs[] — the ADR-010
-   * silent-strip class (#1143).
+   * silent-strip class (#1143). Length is intentionally unbounded (not
+   * pinned to 10) so historical/variant snapshots stay valid; the
+   * consumer (membersToDistinguished) length-guards before indexing.
    */
   dcpGoalsAchieved: z.array(z.boolean()).optional(),
 
