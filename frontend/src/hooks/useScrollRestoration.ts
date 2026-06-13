@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useLocation, useNavigationType } from 'react-router-dom'
 
 /**
@@ -12,24 +12,32 @@ import { useLocation, useNavigationType } from 'react-router-dom'
  * `scrollTo` clamps to the short height and Back lands at the top.
  *
  * This hook owns restoration instead:
- *  - records the live scroll offset per `location.key`;
- *  - on PUSH/REPLACE scrolls to the top (honoring a resolvable hash);
- *  - on POP re-applies the saved offset across animation frames until the
- *    document has grown tall enough to honor it (or a frame budget elapses).
+ *  - records the live scroll offset per location via a scroll listener keyed by
+ *    an `activeKey` ref. Recording continuously (not at navigation time) is what
+ *    makes it work on WebKit: by the time a layout-effect cleanup runs, Safari
+ *    has already clamped `window.scrollY` to 0 on the new (short) DOM, so any
+ *    navigation-time read saves 0. The ref is advanced *after* each navigation's
+ *    scroll decision, so the browser's reset events record under the new key and
+ *    never clobber the page we're leaving.
+ *  - PUSH → scroll to top; REPLACE → preserve scroll (same-page URL updates like
+ *    the region-filter `?regions=…` normalization must not jump to top);
+ *  - POP → re-apply the saved offset across animation frames until it sticks for
+ *    a few consecutive frames (async height has settled AND no late native reset
+ *    is pulling it back) or a frame budget elapses;
+ *  - a resolvable hash defers to `scrollIntoView` (don't fight the TOC jumps).
  *
- * It depends only on `useLocation`/`useNavigationType`, so it works under any
- * router (no data-router requirement).
+ * Depends only on `useLocation`/`useNavigationType`, so it works under any router.
  */
 
-// Module-scoped so positions survive the per-route component remounts.
+// Module-scoped so positions survive across navigations (AppShell stays mounted).
 const scrollPositions = new Map<string, number>()
 
 /** Test-only: reset the cross-render position store between cases. */
 export const __scrollPositionsForTest = scrollPositions
 
-// ~50 frames ≈ 0.8s at 60fps — long enough for async, data-driven height growth
-// to settle, short enough to never feel like a fight with the user.
-const MAX_RESTORE_FRAMES = 50
+// ~1.2s of frames — long enough for async, data-driven height growth AND a late
+// WebKit native scroll reset to settle, short enough to never feel like a fight.
+const MAX_RESTORE_FRAMES = 72
 
 // `behavior: 'instant'` is mandatory: the app sets `html { scroll-behavior:
 // smooth }`, so the (x, y) form of scrollTo *animates* — restoration would
@@ -39,12 +47,17 @@ function jumpTo(top: number): void {
   window.scrollTo({ top, left: 0, behavior: 'instant' })
 }
 
+// Re-apply the target every frame until it holds for a few consecutive frames
+// (data-driven height settled AND no late native reset pulling it back), or the
+// budget elapses.
 function restoreScroll(target: number): void {
   let frame = 0
+  let stableFrames = 0
   const tick = (): void => {
     jumpTo(target)
     frame += 1
-    if (Math.abs(window.scrollY - target) <= 2 || frame >= MAX_RESTORE_FRAMES) {
+    stableFrames = Math.abs(window.scrollY - target) <= 2 ? stableFrames + 1 : 0
+    if (stableFrames >= 3 || frame >= MAX_RESTORE_FRAMES) {
       return
     }
     requestAnimationFrame(tick)
@@ -55,29 +68,26 @@ function restoreScroll(target: number): void {
 export function useScrollRestoration(): void {
   const location = useLocation()
   const navigationType = useNavigationType()
+  // The location key that scroll events should currently be recorded against.
+  // Advanced at the END of each navigation's layout effect (see below).
+  const activeKey = useRef(location.key)
 
-  // Continuously record the active location's scroll offset so a later POP back
-  // to it restores exactly where the user left off.
-  useEffect(() => {
-    const key = location.key
-    const record = (): void => {
-      scrollPositions.set(key, window.scrollY)
-    }
-    record()
-    window.addEventListener('scroll', record, { passive: true })
-    return () => window.removeEventListener('scroll', record)
-  }, [location.key])
-
-  // The browser's native restoration races our SPA restoration; own it.
   useEffect(() => {
     const previous = window.history.scrollRestoration
     window.history.scrollRestoration = 'manual'
+    const record = (): void => {
+      scrollPositions.set(activeKey.current, window.scrollY)
+    }
+    window.addEventListener('scroll', record, { passive: true })
     return () => {
+      window.removeEventListener('scroll', record)
       window.history.scrollRestoration = previous
     }
   }, [])
 
   useLayoutEffect(() => {
+    const key = location.key
+
     // Hash anchors: scroll the target element into view (matches the browser /
     // RR default). Don't fight JumpToChip / MethodologyPage TOC jumps.
     if (location.hash) {
@@ -87,6 +97,7 @@ export function useScrollRestoration(): void {
         )
         if (el) {
           el.scrollIntoView({ behavior: 'instant', block: 'start' })
+          activeKey.current = key
           return
         }
       } catch {
@@ -95,15 +106,19 @@ export function useScrollRestoration(): void {
     }
 
     if (navigationType === 'POP') {
-      const saved = scrollPositions.get(location.key)
+      const saved = scrollPositions.get(key)
       if (saved != null && saved > 0) {
         restoreScroll(saved)
-        return
       }
+    } else if (navigationType === 'PUSH') {
+      // New page: start at the top. (REPLACE is a same-page URL update — leave
+      // the scroll where it is.)
+      jumpTo(0)
     }
 
-    // PUSH / REPLACE (or POP with nothing to restore): start at the top.
-    jumpTo(0)
-    // location.key + navigationType together identify a single navigation.
+    // Advance the recording key only now, so the browser's post-navigation
+    // scroll-reset events record under the NEW key and never overwrite the
+    // offset saved for the page we just left.
+    activeKey.current = key
   }, [location.key, location.hash, navigationType])
 }

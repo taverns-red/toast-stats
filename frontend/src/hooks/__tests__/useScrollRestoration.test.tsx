@@ -88,7 +88,8 @@ describe('useScrollRestoration (#1103)', () => {
 
   it('restores the saved offset on a POP (back) navigation', async () => {
     const { router } = renderAt('/')
-    // User scrolls the landing page, then navigates away (PUSH).
+    // User scrolls the landing page (recorded via scroll events), then navigates
+    // away (PUSH).
     currentScrollY = 900
     window.dispatchEvent(new Event('scroll'))
     await navigate(router, '/detail')
@@ -96,6 +97,16 @@ describe('useScrollRestoration (#1103)', () => {
     // Browser Back → POP restores the landing offset.
     await navigate(router, -1)
     expect(currentScrollY).toBe(900)
+  })
+
+  it('preserves scroll on a REPLACE (same-page URL update)', async () => {
+    const { router } = renderAt('/')
+    currentScrollY = 700
+    window.dispatchEvent(new Event('scroll'))
+    await act(async () => {
+      await router.navigate('/?regions=1,2', { replace: true })
+    })
+    expect(currentScrollY).toBe(700) // not reset to top
   })
 
   it('re-applies the target across frames until the page is tall enough (no clamp)', async () => {
