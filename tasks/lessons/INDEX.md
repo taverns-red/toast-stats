@@ -161,3 +161,4 @@
 - **165** [process, ci, automation, release, monorepo] — An attended gate-bypass merge must re-green every artifact the gate pins, or the red lands on the next unrelated session (#1165, #1162, #1186)
 - **166** [frontend, react, tanstack, error-handling, verification] — When a page derives "not found" from query data, check the error branch FIRST or every fetch failure is misreported as a missing entity (#1104, #1191)
 - **167** [accessibility, css, frontend, dark-mode, tests] — A focus ring built from the brand accent needs its own darkened token; the 3:1 non-text floor is a different bar than where the accent is safe as fill (#1106)
+- **168** [analytics, date, timezone, frontend, monorepo, verification, refactor] — Fix a date-derivation bug by grepping the PRIMITIVE, not the named function (#1116, #1192)
