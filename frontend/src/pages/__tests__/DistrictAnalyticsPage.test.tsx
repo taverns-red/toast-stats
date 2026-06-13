@@ -8,7 +8,13 @@
 
 import React, { Suspense } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import {
   createMemoryRouter,
   RouterProvider,
@@ -19,6 +25,7 @@ import '@testing-library/jest-dom'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import DistrictDetailPage from '../DistrictDetailPage'
+import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: vi.fn(() => ({
@@ -207,5 +214,28 @@ describe('DistrictAnalyticsPage (#680 — ADR-005)', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/district/61/analytics')
     })
+  })
+
+  // #1104 — a fetch reject must surface a retryable error state, not silently
+  // render an empty page (the old `{analytics ? … : isLoading && <Skeleton/>}`
+  // collapsed to nothing on error).
+  it('surfaces a retryable error state when the analytics fetch rejects', async () => {
+    const refetch = vi.fn()
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    renderAt('/district/61/analytics')
+
+    const retry = await screen.findByRole('button', {
+      name: /retry loading data/i,
+    })
+    expect(screen.queryByTestId('top-growth-clubs')).not.toBeInTheDocument()
+    fireEvent.click(retry)
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 })

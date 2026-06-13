@@ -16,6 +16,7 @@ import React, { Suspense } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -29,7 +30,10 @@ import {
 } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@testing-library/jest-dom'
-import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
+import {
+  useDistrictAnalytics,
+  type ClubTrend,
+} from '../../hooks/useDistrictAnalytics'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import DistrictDetailPage from '../DistrictDetailPage'
@@ -473,5 +477,28 @@ describe('DistrictClubsPage (#570 — Phase 2)', () => {
       expect(params.get('dir')).toBe('desc')
       expect(params.get('page')).toBeNull()
     })
+  })
+
+  // #1104 — a fetch reject must surface a retryable error state, not silently
+  // render an empty ClubsTable (the old `allClubs = analytics?.allClubs || []`
+  // collapsed to `[]` on error).
+  it('surfaces a retryable error state when the analytics fetch rejects', async () => {
+    const refetch = vi.fn()
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    renderAt('/district/61/clubs')
+
+    const retry = await screen.findByRole('button', {
+      name: /retry loading data/i,
+    })
+    expect(screen.queryByText(/alpha toastmasters/i)).not.toBeInTheDocument()
+    fireEvent.click(retry)
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 })

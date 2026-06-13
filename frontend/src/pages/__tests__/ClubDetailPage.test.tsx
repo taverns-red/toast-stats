@@ -284,6 +284,28 @@ describe('ClubDetailPage (#208)', () => {
     expect(screen.getByText('Club Not Found')).toBeInTheDocument()
   })
 
+  // #1104 — a transient CDN fetch reject must surface a distinct, retryable
+  // error state, NOT the false "Club Not Found" empty state (which claims the
+  // club was removed). Error is checked before the loaded-but-absent branch.
+  it('renders a retryable error state — not "Club Not Found" — when the analytics fetch rejects', () => {
+    const refetch = vi.fn()
+    vi.mocked(useDistrictAnalytics).mockReturnValueOnce({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    renderWithRoute()
+
+    expect(screen.queryByText('Club Not Found')).not.toBeInTheDocument()
+    const retry = screen.getByRole('button', { name: /retry loading data/i })
+    expect(retry).toBeInTheDocument()
+    fireEvent.click(retry)
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
   it('renders DCP status section', () => {
     renderWithRoute()
 
