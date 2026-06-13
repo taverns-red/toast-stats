@@ -206,7 +206,13 @@ const TrophyCaseSkeleton: React.FC = () => (
     </div>
 
     {/* Gap-to-next-tier: the dominant slot. Reuse the real section border +
-        3-up grid so the tiles land in place. */}
+        3-up grid so the tiles land in place. We always reserve this block
+        because it's the common loaded shape (any district below its top tier
+        shows a gap). Districts that resolve with `nextTierGap == null` (already
+        Smedley, or Unknown) omit it and settle slightly UPWARD — a bounded,
+        rare residual, far smaller than the original 0→full downward pop, and
+        unknowable before the query lands. Same accepted-collapse tradeoff as
+        AwardsRaceSection (#750). */}
     <div className="border-t border-gray-200 pt-4">
       <SkeletonBar className="h-4 w-40 mb-2" />
       <div
