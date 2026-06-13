@@ -102,3 +102,47 @@ describe('DistinguishedClubAnalyticsModule.calculateDistinguishedYearOverYear (#
     expect(result?.change).toBe(1)
   })
 })
+
+describe('DistinguishedClubAnalyticsModule achievement tracking (#1116 item 4)', () => {
+  it('tracks a club that reaches Select via the net-growth alternative (members < 20)', () => {
+    const module = new DistinguishedClubAnalyticsModule()
+    // 7 goals + 18 members but +6 net growth (base 12) qualifies as Select via
+    // the net-growth path. The inlined ladder (members >= 20 only) missed it.
+    const snapshot = createMockSnapshot('2025-08-15', [
+      createMockClub({
+        clubId: 'growth1',
+        clubName: 'Growth Club',
+        dcpGoals: 7,
+        membershipCount: 18,
+        membershipBase: 12,
+      }),
+    ])
+
+    const result = module.generateDistinguishedClubAnalytics('D101', [snapshot])
+
+    const achievement = result.achievements.find(a => a.clubId === 'growth1')
+    expect(achievement).toBeDefined()
+    expect(achievement?.level).toBe('Select')
+  })
+
+  it('does not track a CSP-less club as a distinguished achievement', () => {
+    const module = new DistinguishedClubAnalyticsModule()
+    // 5 goals + 25 members would be Distinguished, but no submitted CSP (a
+    // 2025-26 requirement) makes the club ineligible. The inlined ladder had
+    // no CSP gate and tracked it anyway.
+    const snapshot = createMockSnapshot('2025-08-15', [
+      createMockClub({
+        clubId: 'nocsp1',
+        clubName: 'No CSP Club',
+        dcpGoals: 5,
+        membershipCount: 25,
+        membershipBase: 20,
+        cspSubmitted: false,
+      }),
+    ])
+
+    const result = module.generateDistinguishedClubAnalytics('D101', [snapshot])
+
+    expect(result.achievements.find(a => a.clubId === 'nocsp1')).toBeUndefined()
+  })
+})
