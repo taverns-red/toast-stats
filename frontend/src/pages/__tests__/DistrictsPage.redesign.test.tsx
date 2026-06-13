@@ -135,6 +135,20 @@ describe('Districts page redesign chrome (#356)', () => {
       )
       expect(orientation.textContent).not.toMatch(/117/)
     })
+
+    // #1107 — before data loads (the shared shell renders with zero rankings)
+    // the count is dropped entirely so the sentence stays grammatical and never
+    // shows "0 districts". Driven via the error shell (rankings stay empty).
+    it('drops the count (no number) when no districts are loaded', async () => {
+      mockedFetchCdnRankings.mockRejectedValueOnce(new Error('network down'))
+      renderWithProviders(<DistrictsPage />)
+      await screen.findByText(/error loading rankings/i)
+      const orientation = screen.getByTestId('districts-orientation')
+      expect(orientation).toHaveTextContent(
+        /each row below is a Toastmasters district worldwide/i
+      )
+      expect(orientation.textContent).not.toMatch(/\d/)
+    })
   })
 
   describe('global KPI strip (4 cards)', () => {
