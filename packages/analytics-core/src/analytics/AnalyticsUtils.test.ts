@@ -15,6 +15,8 @@ import {
   getCurrentProgramMonth,
   getMonthName,
   findPreviousProgramYearDate,
+  getProgramYearStartYear,
+  selectPreviousProgramYearSnapshot,
   calculatePercentageChange,
   determineTrend,
 } from './AnalyticsUtils.js'
@@ -164,6 +166,56 @@ describe('AnalyticsUtils', () => {
       expect(findPreviousProgramYearDate('2024-01-15')).toBe('2023-01-15')
       expect(findPreviousProgramYearDate('2024-07-01')).toBe('2023-07-01')
       expect(findPreviousProgramYearDate('2025-12-31')).toBe('2024-12-31')
+    })
+  })
+
+  describe('getProgramYearStartYear', () => {
+    it('maps Jul–Dec dates to their own calendar year', () => {
+      expect(getProgramYearStartYear('2025-07-01')).toBe(2025)
+      expect(getProgramYearStartYear('2025-08-15')).toBe(2025)
+      expect(getProgramYearStartYear('2025-12-31')).toBe(2025)
+    })
+
+    it('maps Jan–Jun dates to the prior calendar year (program year start)', () => {
+      expect(getProgramYearStartYear('2026-01-01')).toBe(2025)
+      expect(getProgramYearStartYear('2026-06-30')).toBe(2025)
+    })
+  })
+
+  describe('selectPreviousProgramYearSnapshot (#1116 item 1)', () => {
+    it('picks the previous PROGRAM year, not a same-PY snapshot in the prior calendar year', () => {
+      // currentDate 2026-06-15 is in program year 2025-26 (Jul 2025 – Jun 2026).
+      // The matching predicate `snapshotYear === currentYear-1` (calendar 2025)
+      // wrongly matched the 2025-08-15 snapshot, which is the SAME program year.
+      // The correct comparison anchor is the previous program year (2024-25),
+      // e.g. 2025-06-15.
+      const snapshots = [
+        { snapshotDate: '2026-06-15', tag: 'current' },
+        { snapshotDate: '2025-08-15', tag: 'same-py' },
+        { snapshotDate: '2025-06-15', tag: 'prev-py' },
+      ]
+      const prev = selectPreviousProgramYearSnapshot(snapshots, '2026-06-15')
+      expect(prev?.tag).toBe('prev-py')
+    })
+
+    it('picks the candidate closest to the same calendar day one year earlier', () => {
+      const snapshots = [
+        { snapshotDate: '2024-09-01', tag: 'far' },
+        { snapshotDate: '2025-05-20', tag: 'near' }, // prev PY (2024-25), near anchor
+        { snapshotDate: '2026-05-20', tag: 'current' },
+      ]
+      const prev = selectPreviousProgramYearSnapshot(snapshots, '2026-05-20')
+      expect(prev?.tag).toBe('near')
+    })
+
+    it('returns undefined when no snapshot falls in the previous program year', () => {
+      const snapshots = [
+        { snapshotDate: '2026-01-15' },
+        { snapshotDate: '2026-03-15' },
+      ]
+      expect(
+        selectPreviousProgramYearSnapshot(snapshots, '2026-03-15')
+      ).toBeUndefined()
     })
   })
 
