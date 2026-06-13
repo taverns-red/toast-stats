@@ -249,10 +249,19 @@ export function determineDistinguishedLevel(
  * When cspSubmitted is undefined (pre-2025 data), we assume CSP was submitted
  * for backward compatibility — CSP was not a requirement before 2025-2026.
  *
- * @param club - Club statistics data
+ * The parameter is widened to the structural `{ cspSubmitted?: boolean }`
+ * (the only field this rule reads) so frontend models that carry the same
+ * normalized boolean — e.g. `ClubTrend` (#1139) — can source the gate from
+ * this single shared rule instead of forking a local copy (lessons 61/76).
+ * Every `ClubStatistics` still satisfies it, so existing callers are
+ * unaffected.
+ *
+ * @param club - Any object carrying the normalized `cspSubmitted` boolean
  * @returns true if CSP is submitted or field is absent (historical data), false otherwise
  */
-export function getCSPStatus(club: ClubStatistics): boolean {
+export function getCSPStatus(
+  club: Pick<ClubStatistics, 'cspSubmitted'>
+): boolean {
   // If cspSubmitted is undefined, this is pre-2025 data — assume submitted
   return club.cspSubmitted ?? true
 }

@@ -350,4 +350,45 @@ describe('DCP Projections Utility (#6)', () => {
       expect(projections).toEqual([])
     })
   })
+
+  // #1139 — frontend distinguished projections must not be CSP-blind.
+  // A club without a submitted Club Success Plan cannot be Distinguished
+  // (2025-2026+ rule), even when it meets goal/membership thresholds.
+  describe('CSP gate (#1139)', () => {
+    const distinguishedShape = {
+      dcpGoalsTrend: [{ date: '2025-01-01', goalsAchieved: 5 }],
+      membershipTrend: [{ date: '2025-01-01', count: 20 }],
+    }
+
+    it('does NOT project Distinguished when cspSubmitted is false', () => {
+      const club = makeClub({
+        clubId: 'csp-no',
+        ...distinguishedShape,
+        cspSubmitted: false,
+      })
+      const projection = calculateClubProjection(club)
+      expect(projection.currentLevel).toBe('NotDistinguished')
+      expect(projection.projectedLevel).toBe('NotDistinguished')
+    })
+
+    it('projects Distinguished when cspSubmitted is true', () => {
+      const club = makeClub({
+        clubId: 'csp-yes',
+        ...distinguishedShape,
+        cspSubmitted: true,
+      })
+      const projection = calculateClubProjection(club)
+      expect(projection.currentLevel).toBe('Distinguished')
+    })
+
+    it('treats undefined cspSubmitted as submitted (pre-2025-26 historical data)', () => {
+      const club = makeClub({
+        clubId: 'csp-historical',
+        ...distinguishedShape,
+        // cspSubmitted intentionally omitted → undefined
+      })
+      const projection = calculateClubProjection(club)
+      expect(projection.currentLevel).toBe('Distinguished')
+    })
+  })
 })

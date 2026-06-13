@@ -15,6 +15,7 @@
  * It provides additive projections for district leaders (issue #6 constraint).
  */
 
+import { getCSPStatus } from '@toastmasters/analytics-core'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 
 // --- Types ---
@@ -56,12 +57,20 @@ export interface ClubDCPProjection {
  * Determine distinguished level from goals + membership.
  * Mirrors ClubEligibilityUtils.determineDistinguishedLevel but operates
  * on raw numbers without needing ClubStatistics.
+ *
+ * CSP gate (#1139): from 2025-2026 a club without a submitted Club Success
+ * Plan cannot reach any distinguished level. `cspSubmitted` is the value the
+ * shared `getCSPStatus` rule has already normalized (undefined → true for
+ * pre-2025-26 historical data), so this gate stays in lockstep with
+ * analytics-core's distinguished paths.
  */
 function determineLevel(
   goals: number,
   members: number,
-  netGrowth: number
+  netGrowth: number,
+  cspSubmitted: boolean
 ): DistinguishedLevel {
+  if (!cspSubmitted) return 'NotDistinguished'
   if (goals >= 10 && members >= 25) return 'Smedley'
   if (goals >= 9 && members >= 20) return 'President'
   if (goals >= 7 && (members >= 20 || netGrowth >= 5)) return 'Select'
@@ -149,12 +158,22 @@ export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
 
   const netGrowth = currentMembers - membershipBase
 
-  const currentLevel = determineLevel(currentGoals, currentMembers, netGrowth)
+  // CSP gate (#1139): source the rule from analytics-core so a CSP-less club
+  // is never projected Distinguished (undefined → submitted for historical).
+  const cspSubmitted = getCSPStatus(club)
+
+  const currentLevel = determineLevel(
+    currentGoals,
+    currentMembers,
+    netGrowth,
+    cspSubmitted
+  )
   const projectedNetGrowth = projectedMembers - membershipBase
   const projectedLevel = determineLevel(
     currentGoals,
     projectedMembers,
-    projectedNetGrowth
+    projectedNetGrowth,
+    cspSubmitted
   )
 
   const gapToDistinguished = computeGap(

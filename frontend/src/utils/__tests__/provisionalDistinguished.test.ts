@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { isProvisionallyDistinguished } from '../provisionalDistinguished'
+import {
+  isProvisionallyDistinguished,
+  getConfirmedLevel,
+} from '../provisionalDistinguished'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 
 function makeClub(overrides: Partial<ClubTrend> = {}): ClubTrend {
@@ -89,5 +92,41 @@ describe('isProvisionallyDistinguished', () => {
     const club = makeClub({ membershipBase: 15 })
     // No aprilRenewals → defaults to 0 → provisional
     expect(isProvisionallyDistinguished(club, '2026-02-15')).toBe(true)
+  })
+})
+
+// #1139 — getConfirmedLevel mirrored the distinguished thresholds without
+// the CSP gate, so a CSP-less club meeting goals/renewals was still
+// returned as Distinguished. CSP is required for distinguished recognition
+// from 2025-2026 onward.
+describe('getConfirmedLevel CSP gate (#1139)', () => {
+  const confirmedDistinguishedShape = {
+    dcpGoalsTrend: [{ date: '2026-02-15', goalsAchieved: 5 }],
+    aprilRenewals: 20,
+    membershipBase: 20,
+  }
+
+  it('returns NotDistinguished when cspSubmitted is false', () => {
+    const club = makeClub({
+      ...confirmedDistinguishedShape,
+      cspSubmitted: false,
+    })
+    expect(getConfirmedLevel(club)).toBe('NotDistinguished')
+  })
+
+  it('returns Distinguished when cspSubmitted is true', () => {
+    const club = makeClub({
+      ...confirmedDistinguishedShape,
+      cspSubmitted: true,
+    })
+    expect(getConfirmedLevel(club)).toBe('Distinguished')
+  })
+
+  it('treats undefined cspSubmitted as submitted (pre-2025-26 historical data)', () => {
+    const club = makeClub({
+      ...confirmedDistinguishedShape,
+      // cspSubmitted omitted → undefined
+    })
+    expect(getConfirmedLevel(club)).toBe('Distinguished')
   })
 })
