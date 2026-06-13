@@ -35,7 +35,11 @@ import {
   hasDcpGoalColumns,
   isDcpGoalAchieved,
 } from './dcpGoalDefinitions.js'
-import { ensureString } from './AnalyticsUtils.js'
+import {
+  ensureString,
+  findPreviousProgramYearDate,
+  selectPreviousProgramYearSnapshot,
+} from './AnalyticsUtils.js'
 import {
   calculateNetGrowth,
   determineDistinguishedLevel,
@@ -363,23 +367,22 @@ export class DistinguishedClubAnalyticsModule {
       return undefined
     }
 
-    // Calculate previous year date (subtract 1 year)
-    const currentYear = parseInt(currentDate.substring(0, 4))
-    const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
-
-    // Find current and previous year snapshots
+    // Find current and the previous-PROGRAM-year snapshots. Matching the
+    // previous snapshot by calendar year alone (snapshotYear === currentYear-1)
+    // matched a Jul-Dec snapshot of the SAME program year as a June currentDate
+    // (#1116 item 1); anchor on the previous program year instead.
     const currentSnapshot = snapshots.find(s => s.snapshotDate === currentDate)
-    const previousSnapshot = snapshots.find(s => {
-      const snapshotYear = parseInt(s.snapshotDate.substring(0, 4))
-      return snapshotYear === currentYear - 1
-    })
+    const previousSnapshot = selectPreviousProgramYearSnapshot(
+      snapshots,
+      currentDate
+    )
 
     if (!currentSnapshot || !previousSnapshot) {
       logger.info(
         'Insufficient data for year-over-year distinguished comparison',
         {
           currentDate,
-          previousYearDate,
+          previousYearDate: findPreviousProgramYearDate(currentDate),
           hasCurrentSnapshot: !!currentSnapshot,
           hasPreviousSnapshot: !!previousSnapshot,
         }
@@ -647,21 +650,24 @@ export class DistinguishedClubAnalyticsModule {
         const clubId = ensureString(club.clubId)
         const clubName = ensureString(club.clubName)
         const dcpGoals = club.dcpGoals
-        const membership = club.membershipCount
 
         if (!clubId) continue
 
-        let currentLevel: string | undefined
-        // Check levels from highest to lowest
-        if (dcpGoals >= 10 && membership >= 25) {
-          currentLevel = 'Smedley'
-        } else if (dcpGoals >= 9 && membership >= 20) {
-          currentLevel = 'President'
-        } else if (dcpGoals >= 7 && membership >= 20) {
-          currentLevel = 'Select'
-        } else if (dcpGoals >= 5 && membership >= 20) {
-          currentLevel = 'Distinguished'
-        }
+        // Use the shared distinguished-level logic (net-growth alternative for
+        // Select/Distinguished) and the CSP gate, matching the other
+        // distinguished paths in this module (#1116 item 4). The inlined ladder
+        // here had neither, so it missed net-growth qualifiers and tracked
+        // CSP-less clubs. 'NotDistinguished' is normalised to undefined so the
+        // achievement-history checks below stay unchanged.
+        const level = getCSPStatus(club)
+          ? determineDistinguishedLevel(
+              dcpGoals,
+              club.membershipCount,
+              calculateNetGrowth(club)
+            )
+          : 'NotDistinguished'
+        const currentLevel: string | undefined =
+          level === 'NotDistinguished' ? undefined : level
 
         const previousRecord = clubLevelHistory.get(clubId)
 

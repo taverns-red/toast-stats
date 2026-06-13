@@ -97,7 +97,7 @@ describe('DCP Projections Utility (#6)', () => {
       expect(projection.gapToSelect.members).toBe(0) // 22 >= 20
     })
 
-    it('should project membership using aprilRenewals when available', () => {
+    it('does not inflate projected membership with April renewals (#1116 item 3)', () => {
       const club = makeClub({
         clubId: '4',
         membershipTrend: [{ date: '2025-01-01', count: 15 }],
@@ -107,11 +107,11 @@ describe('DCP Projections Utility (#6)', () => {
 
       const projection = calculateClubProjection(club)
 
-      // projectedMembers should factor in April renewals
+      // April renewals are renewal PAYMENTS by members already counted in
+      // currentMembers; adding them double-counts (§4.1). The renewal count is
+      // still surfaced informationally, but it must not inflate the projection.
       expect(projection.aprilRenewals).toBe(8)
-      expect(projection.projectedMembers).toBeGreaterThan(
-        projection.currentMembers
-      )
+      expect(projection.projectedMembers).toBe(projection.currentMembers)
     })
 
     it('should use current members as projected when aprilRenewals is missing', () => {

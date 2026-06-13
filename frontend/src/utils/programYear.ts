@@ -11,6 +11,26 @@ export interface ProgramYear {
 }
 
 /**
+ * Extract calendar year + month from a `YYYY-MM-DD` string WITHOUT going
+ * through `new Date()`. `new Date("YYYY-MM-DD")` parses as UTC midnight, but
+ * `.getFullYear()` / `.getMonth()` read LOCAL time — so in a UTC-negative
+ * zone a first-of-month date rolls back to the prior month (and, at Jan 1 /
+ * Jul 1, the prior year), flipping the derived program year. Reading the
+ * components from the string keeps program-year derivation TZ-invariant.
+ *
+ * Falls back to `new Date()` for non-ISO inputs (e.g. a Date coerced to a
+ * locale string), preserving prior behaviour for those callers.
+ */
+function calendarParts(dateStr: string): { year: number; month: number } {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr)
+  if (match) {
+    return { year: parseInt(match[1]!, 10), month: parseInt(match[2]!, 10) }
+  }
+  const date = new Date(dateStr)
+  return { year: date.getFullYear(), month: date.getMonth() + 1 }
+}
+
+/**
  * Get the current program year
  */
 export function getCurrentProgramYear(): ProgramYear {
@@ -51,9 +71,7 @@ export function getAvailableProgramYears(dates: string[]): ProgramYear[] {
   const programYears = new Set<number>()
 
   dates.forEach(dateStr => {
-    const date = new Date(dateStr)
-    const year = date.getFullYear()
-    const month = date.getMonth() + 1
+    const { year, month } = calendarParts(dateStr)
 
     // Determine which program year this date belongs to
     const programYearStart = month >= 7 ? year : year - 1
@@ -82,9 +100,7 @@ export function filterDatesByProgramYear(
  * Get the program year that a specific date belongs to
  */
 export function getProgramYearForDate(dateStr: string): ProgramYear {
-  const date = new Date(dateStr)
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
+  const { year, month } = calendarParts(dateStr)
 
   const programYearStart = month >= 7 ? year : year - 1
   return getProgramYear(programYearStart)
@@ -157,20 +173,36 @@ export function getProgramYearProgress(programYear: ProgramYear): number {
  * Requirements: 2.2 - Align data by relative position within the program year
  */
 export function calculateProgramYearDay(dateStr: string | Date): number {
-  const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
+  // Resolve the calendar day (year, 0-indexed month, day-of-month). For a
+  // YYYY-MM-DD string read the components directly — `new Date(str)` is UTC
+  // midnight but local getters shift it (see calendarParts). For a Date,
+  // honour the local calendar day the caller intended.
+  let year: number
+  let month: number // 0-indexed (0 = January, 6 = July)
+  let day: number
+  const isoMatch =
+    typeof dateStr === 'string'
+      ? /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr)
+      : null
+  if (isoMatch) {
+    year = parseInt(isoMatch[1]!, 10)
+    month = parseInt(isoMatch[2]!, 10) - 1
+    day = parseInt(isoMatch[3]!, 10)
+  } else {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
+    year = date.getFullYear()
+    month = date.getMonth()
+    day = date.getDate()
+  }
 
-  // Get the program year start date for this date
-  const year = date.getFullYear()
-  const month = date.getMonth() // 0-indexed (0 = January, 6 = July)
-
-  // Program year starts July 1
-  // If month >= 6 (July or later), program year started this calendar year
-  // If month < 6 (before July), program year started previous calendar year
+  // Program year starts July 1. month >= 6 (July+) → started this calendar
+  // year; earlier → started last calendar year.
   const programYearStartYear = month >= 6 ? year : year - 1
-  const programYearStart = new Date(programYearStartYear, 6, 1) // July 1
 
-  // Calculate days since program year start
-  const diffTime = date.getTime() - programYearStart.getTime()
+  // Anchor both endpoints in UTC so the day count is timezone- and
+  // DST-invariant (a local-July-1 anchor drifts across the spring DST jump).
+  const diffTime =
+    Date.UTC(year, month, day) - Date.UTC(programYearStartYear, 6, 1)
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
   // Clamp to valid range [0, 365]

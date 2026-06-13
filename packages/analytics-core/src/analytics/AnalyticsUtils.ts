@@ -138,25 +138,31 @@ export function getDCPCheckpoint(month: number): number {
  * @throws Error if date string is invalid
  */
 export function getCurrentProgramMonth(dateString?: string): number {
-  let date: Date
-
   if (dateString) {
-    // Parse the date string (expected format: YYYY-MM-DD)
-    date = new Date(dateString)
-
-    // Validate the parsed date
-    if (isNaN(date.getTime())) {
+    // Read the month directly from the YYYY-MM-DD string. Going through
+    // `new Date(dateString)` parses it as UTC midnight, but `getMonth()`
+    // reads LOCAL time — so in a UTC-negative zone a first-of-month date
+    // rolls back to the prior month (a 2026-07-01 snapshot evaluated as
+    // June → wrong DCP checkpoint). Validate the date is real, then take
+    // the month from the string itself so the result is TZ-invariant.
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString)
+    const parsed = new Date(dateString)
+    if (!match || isNaN(parsed.getTime())) {
       throw new Error(
         `Invalid date string: ${dateString}. Expected format: YYYY-MM-DD`
       )
     }
-  } else {
-    // Use current date
-    date = new Date()
+    const month = parseInt(match[2]!, 10)
+    if (month < 1 || month > 12) {
+      throw new Error(
+        `Invalid date string: ${dateString}. Expected format: YYYY-MM-DD`
+      )
+    }
+    return month
   }
 
-  // getMonth() returns 0-11, so add 1 to get 1-12
-  return date.getMonth() + 1
+  // No date provided: use the current local month (getMonth() returns 0-11).
+  return new Date().getMonth() + 1
 }
 
 /**
@@ -196,6 +202,62 @@ export function findPreviousProgramYearDate(currentDate: string): string {
   const currentYear = parseInt(currentDate.substring(0, 4))
   const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
   return previousYearDate
+}
+
+/**
+ * Resolve the program-year START year for a YYYY-MM-DD date.
+ *
+ * The Toastmasters program year runs July 1 – June 30, so a Jul–Dec date
+ * belongs to the program year named by its own calendar year, while a Jan–Jun
+ * date belongs to the prior calendar year's program year. Uses
+ * `getCurrentProgramMonth` (string-based, timezone-invariant) so a
+ * first-of-month boundary date is classified correctly in every timezone.
+ *
+ * @param dateString - Date in YYYY-MM-DD format
+ * @returns The starting calendar year of the program year (e.g. 2025 for 2025-26)
+ */
+export function getProgramYearStartYear(dateString: string): number {
+  const year = parseInt(dateString.substring(0, 4), 10)
+  return getCurrentProgramMonth(dateString) >= 7 ? year : year - 1
+}
+
+/**
+ * Select the snapshot that best represents the same point in the PREVIOUS
+ * program year.
+ *
+ * Callers historically matched `parseInt(snapshotDate) === currentYear - 1`
+ * (calendar year). Because a single calendar year straddles two program years
+ * (Jan–Jun = prior PY, Jul–Dec = current PY), that predicate matched a Jul–Dec
+ * snapshot of the SAME program year as a June `currentDate` — a within-year
+ * comparison masquerading as year-over-year (#1116 item 1). This anchors on the
+ * previous program year and, among its snapshots, returns the one closest to
+ * the same calendar day one year earlier.
+ *
+ * @param snapshots - Snapshots carrying a `snapshotDate` (YYYY-MM-DD)
+ * @param currentDate - The current snapshot's date
+ * @returns The previous-program-year snapshot, or undefined if none exists
+ */
+export function selectPreviousProgramYearSnapshot<
+  T extends { snapshotDate: string },
+>(snapshots: T[], currentDate: string): T | undefined {
+  const targetStartYear = getProgramYearStartYear(currentDate) - 1
+  // Date.parse on a YYYY-MM-DD string is UTC for both anchor and candidates,
+  // so the proximity delta is timezone-consistent.
+  const anchorTime = Date.parse(findPreviousProgramYearDate(currentDate))
+
+  let best: T | undefined
+  let bestDelta = Infinity
+  for (const snapshot of snapshots) {
+    if (getProgramYearStartYear(snapshot.snapshotDate) !== targetStartYear) {
+      continue
+    }
+    const delta = Math.abs(Date.parse(snapshot.snapshotDate) - anchorTime)
+    if (delta < bestDelta) {
+      best = snapshot
+      bestDelta = delta
+    }
+  }
+  return best
 }
 
 /**

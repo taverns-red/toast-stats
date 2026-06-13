@@ -18,6 +18,7 @@
  */
 
 import type { DistrictStatistics } from '../interfaces.js'
+import { selectPreviousProgramYearSnapshot } from './AnalyticsUtils.js'
 import type {
   MembershipTrendPoint,
   PaymentsTrendPoint,
@@ -567,13 +568,14 @@ export class MembershipAnalyticsModule {
     }
 
     const currentDate = latestSnapshot.snapshotDate
-    const currentYear = parseInt(currentDate.substring(0, 4))
 
-    // Find snapshot closest to previous year date
-    const previousSnapshot = snapshots.find(s => {
-      const snapshotYear = parseInt(s.snapshotDate.substring(0, 4))
-      return snapshotYear === currentYear - 1
-    })
+    // Compare against the previous PROGRAM year, not the prior calendar year —
+    // a calendar-year match picks a Jul-Dec snapshot of the SAME program year
+    // for a Jan-Jun currentDate (#1116 item 1).
+    const previousSnapshot = selectPreviousProgramYearSnapshot(
+      snapshots,
+      currentDate
+    )
 
     if (!previousSnapshot) {
       return undefined
@@ -690,11 +692,13 @@ export class MembershipAnalyticsModule {
     const currentDate = latestSnapshot.snapshotDate
     const currentYear = parseInt(currentDate.substring(0, 4))
 
-    // Find snapshot closest to previous year date
-    const previousSnapshot = snapshots.find(s => {
-      const snapshotYear = parseInt(s.snapshotDate.substring(0, 4))
-      return snapshotYear === currentYear - 1
-    })
+    // Compare against the previous PROGRAM year, not the prior calendar year —
+    // a calendar-year match picks a Jul-Dec snapshot of the SAME program year
+    // for a Jan-Jun currentDate (#1116 item 1).
+    const previousSnapshot = selectPreviousProgramYearSnapshot(
+      snapshots,
+      currentDate
+    )
 
     if (!previousSnapshot) {
       return undefined
@@ -717,6 +721,9 @@ export class MembershipAnalyticsModule {
         : 0
 
     return {
+      // currentYear/previousYear are calendar-year labels; they stay aligned
+      // with the program-year-selected previousSnapshot because the selector's
+      // anchor is currentDate minus one calendar year (findPreviousProgramYearDate).
       currentYear,
       previousYear: currentYear - 1,
       membershipChange,
