@@ -308,6 +308,16 @@ const DistrictsPage: React.FC = () => {
     }
   }, [rankings])
 
+  // #1107 — derive the orientation count from the same data the table and
+  // KPI strip render, never a hardcoded literal (it had drifted to "117"
+  // while the snapshot tracked 128). Drops the number entirely before data
+  // loads (the shared shell renders with zero rankings), so the sentence can
+  // never contradict the rows below it.
+  const districtCountPhrase =
+    kpiTotals.tracked > 0
+      ? `one of the ${kpiTotals.tracked} Toastmasters districts`
+      : 'a Toastmasters district'
+
   // Get district IDs for selected regions
   const selectedDistricts = React.useMemo(() => {
     if (selectedRegionsForHistory.length === 0) return []
@@ -587,12 +597,15 @@ const DistrictsPage: React.FC = () => {
               Compare district performance across paid clubs, payments, and
               distinguished clubs.
             </p>
-            <p className="districts-page-header__orientation">
-              Each row below is one of the 117 Toastmasters districts worldwide.
-              Click a district to drill into its clubs, divisions, and trends.
-              Use the search bar (or press <kbd>/</kbd>) to jump to a district
-              by number or name. Star (★) a district to keep it pinned at the
-              top across visits.
+            <p
+              className="districts-page-header__orientation"
+              data-testid="districts-orientation"
+            >
+              Each row below is {districtCountPhrase} worldwide. Click a
+              district to drill into its clubs, divisions, and trends. Use the
+              search bar (or press <kbd>/</kbd>) to jump to a district by number
+              or name. Star (★) a district to keep it pinned at the top across
+              visits.
             </p>
           </div>
           {/* #922 — reserve the mobile-stacked header-actions slot
@@ -813,12 +826,15 @@ const DistrictsPage: React.FC = () => {
               distinguished clubs.
             </p>
             {/* Orientation strip (#415) — orients first-time visitors. */}
-            <p className="districts-page-header__orientation">
-              Each row below is one of the 117 Toastmasters districts worldwide.
-              Click a district to drill into its clubs, divisions, and trends.
-              Use the search bar (or press <kbd>/</kbd>) to jump to a district
-              by number or name. Star (★) a district to keep it pinned at the
-              top across visits.
+            <p
+              className="districts-page-header__orientation"
+              data-testid="districts-orientation"
+            >
+              Each row below is {districtCountPhrase} worldwide. Click a
+              district to drill into its clubs, divisions, and trends. Use the
+              search bar (or press <kbd>/</kbd>) to jump to a district by number
+              or name. Star (★) a district to keep it pinned at the top across
+              visits.
             </p>
             {/* What changed since last visit (#418) — only renders when the
                 user has visited before AND the snapshot date has changed.
@@ -987,7 +1003,7 @@ const DistrictsPage: React.FC = () => {
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
                 Districts Tracked
-                <InfoTooltip text="Number of districts in the current snapshot. Toastmasters has 117 districts worldwide; this counts those with usable data in the most recent rankings file." />
+                <InfoTooltip text="Number of districts with usable data in the most recent rankings file." />
               </p>
               <div
                 className="districts-kpi-card__value"

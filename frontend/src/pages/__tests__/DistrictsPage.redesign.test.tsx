@@ -121,6 +121,34 @@ describe('Districts page redesign chrome (#356)', () => {
         screen.getByText(/compare district performance/i)
       ).toBeInTheDocument()
     })
+
+    // #1107 — orientation copy hardcoded "117 districts" while the KPI strip
+    // (and the table) showed the real tracked count (128 in prod). Derive the
+    // count from data so the sentence can never drift from the rows below it.
+    it('derives the orientation district count from data, not a hardcoded 117', async () => {
+      setupWithData()
+      renderWithProviders(<DistrictsPage />)
+      await screen.findByText('District 1')
+      const orientation = screen.getByTestId('districts-orientation')
+      expect(orientation).toHaveTextContent(
+        /one of the 2 Toastmasters districts worldwide/i
+      )
+      expect(orientation.textContent).not.toMatch(/117/)
+    })
+
+    // #1107 — before data loads (the shared shell renders with zero rankings)
+    // the count is dropped entirely so the sentence stays grammatical and never
+    // shows "0 districts". Driven via the error shell (rankings stay empty).
+    it('drops the count (no number) when no districts are loaded', async () => {
+      mockedFetchCdnRankings.mockRejectedValueOnce(new Error('network down'))
+      renderWithProviders(<DistrictsPage />)
+      await screen.findByText(/error loading rankings/i)
+      const orientation = screen.getByTestId('districts-orientation')
+      expect(orientation).toHaveTextContent(
+        /each row below is a Toastmasters district worldwide/i
+      )
+      expect(orientation.textContent).not.toMatch(/\d/)
+    })
   })
 
   describe('global KPI strip (4 cards)', () => {
