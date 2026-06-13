@@ -650,21 +650,24 @@ export class DistinguishedClubAnalyticsModule {
         const clubId = ensureString(club.clubId)
         const clubName = ensureString(club.clubName)
         const dcpGoals = club.dcpGoals
-        const membership = club.membershipCount
 
         if (!clubId) continue
 
-        let currentLevel: string | undefined
-        // Check levels from highest to lowest
-        if (dcpGoals >= 10 && membership >= 25) {
-          currentLevel = 'Smedley'
-        } else if (dcpGoals >= 9 && membership >= 20) {
-          currentLevel = 'President'
-        } else if (dcpGoals >= 7 && membership >= 20) {
-          currentLevel = 'Select'
-        } else if (dcpGoals >= 5 && membership >= 20) {
-          currentLevel = 'Distinguished'
-        }
+        // Use the shared distinguished-level logic (net-growth alternative for
+        // Select/Distinguished) and the CSP gate, matching the other
+        // distinguished paths in this module (#1116 item 4). The inlined ladder
+        // here had neither, so it missed net-growth qualifiers and tracked
+        // CSP-less clubs. 'NotDistinguished' is normalised to undefined so the
+        // achievement-history checks below stay unchanged.
+        const level = getCSPStatus(club)
+          ? determineDistinguishedLevel(
+              dcpGoals,
+              club.membershipCount,
+              calculateNetGrowth(club)
+            )
+          : 'NotDistinguished'
+        const currentLevel: string | undefined =
+          level === 'NotDistinguished' ? undefined : level
 
         const previousRecord = clubLevelHistory.get(clubId)
 
