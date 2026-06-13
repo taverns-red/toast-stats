@@ -85,8 +85,15 @@ const DistinguishedCompositionBar: React.FC<
         >
           Distinguished Clubs · Composition
         </h2>
+        {/* #1107 — `totalClubs` is the district's full club roster
+            (`analytics.allClubs.length`), the same denominator every bar
+            segment (incl. "Not yet") divides by — so the caption reads
+            "of N clubs", not "paid". The paid/base-relative distinguished
+            percentage is the recognition-gating metric and lives in the
+            rankings + countdown surfaces (Lesson 60), not this descriptive
+            composition. */}
         <span className="text-sm text-gray-600 font-tm-body">
-          {distinguishedTotal} of {totalClubs} paid ({distinguishedPct}%)
+          {distinguishedTotal} of {totalClubs} clubs ({distinguishedPct}%)
         </span>
       </div>
 
