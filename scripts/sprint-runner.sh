@@ -63,13 +63,15 @@
 #                         when two consumers might otherwise share a default path.
 #   SPRINT_RUNNER_LOG     Path to append-log; used for size-based rotation
 #                         (default: ~/.red-barkeep-<RUNNER_NAME>.log)
-#   SPRINT_RUNNER_MODEL   Model for spawned sessions (#1142; default
-#                         "default" — the recommended-default alias). Set
-#                         explicitly via the --settings overlay so spawned
-#                         sessions track Anthropic's recommended default across
-#                         releases WITHOUT inheriting the operator's saved
-#                         interactive default, which changes silently on every
-#                         /model save. Override with a concrete model id to pin.
+#   SPRINT_RUNNER_MODEL   Model for spawned sessions. UNSET (default) =
+#                         inherit the operator's resolved default model
+#                         (the `model` key is omitted from the --settings
+#                         overlay entirely). Set to a concrete model id to
+#                         PIN the fleet. History: #1142 pinned claude-fable-5,
+#                         #1195 tried a "default" alias (which the settings
+#                         overlay rejects — "model may not exist"), #1196
+#                         reverted to inherit-by-omission after Fable 5 was
+#                         removed (probe-verified 2026-06-13).
 #   SPRINT_RUNNER_LOCK_DIR  Override the mkdir-lock path (default
 #                         /tmp/red-barkeep-<RUNNER_NAME>.lock). Used by the
 #                         regression test so it can't collide with a live tick.
@@ -103,12 +105,12 @@ STRICT_GATE="${STRICT_GATE:-0}"
 # differently-named repo dirs don't collide on shared default paths. Two repos
 # with the SAME basename would still collide — set RUNNER_NAME explicitly there.
 RUNNER_NAME="${RUNNER_NAME:-${REPO_DIR##*/}}"
-# Fleet model selection (#1142). Deliberate and reproducible: spawned sessions
-# get this model via the --settings overlay instead of inheriting the operator's
-# saved interactive default. The value is the "default" alias — Anthropic's
-# recommended default model — so the fleet tracks the current default across
-# model releases automatically; set SPRINT_RUNNER_MODEL to a concrete id to pin.
-RUNNER_MODEL="${SPRINT_RUNNER_MODEL:-default}"
+# Fleet model selection. UNSET = inherit the operator's resolved default
+# (model key omitted from the overlay — pre-#1142 behavior, restored in #1196
+# after #1142's fable-5 pin and #1195's non-resolving "default" alias both
+# broke when Fable 5 was removed). Set SPRINT_RUNNER_MODEL to a concrete,
+# currently-available id (e.g. claude-opus-4-8[1m]) to pin instead.
+RUNNER_MODEL="${SPRINT_RUNNER_MODEL:-}"
 LOCK_DIR="${SPRINT_RUNNER_LOCK_DIR:-/tmp/red-barkeep-$RUNNER_NAME.lock}"
 BOOTSTRAP_PROMPT="$REPO_DIR/scripts/sprint-bootstrap.prompt"
 LOG_FILE="${SPRINT_RUNNER_LOG:-$HOME/.red-barkeep-$RUNNER_NAME.log}"
@@ -559,13 +561,19 @@ launch_sprint_session() {
   # --settings (an *additional* settings overlay) so it scopes to the runner's
   # sessions ONLY — the operator's own interactive `claude` keeps its configured
   # effortLevel. "ultracode" is not a valid --effort flag choice; it must come
-  # through settings. The model is SET here too (#1142, operator ruling
-  # 2026-06-10): without it, sessions inherit ~/.claude/settings.json's saved
-  # default, which retargets the whole fleet on every interactive /model save.
-  # The value (default "default" — the recommended-default alias) is supplied
-  # explicitly so the overlay still shields the fleet from those saves.
-  local ultracode_settings='{"effortLevel":"ultracode","model":"'"$RUNNER_MODEL"'"}'
-  log "Session model: $RUNNER_MODEL (SPRINT_RUNNER_MODEL to override)"
+  # through settings. The model is included ONLY when SPRINT_RUNNER_MODEL pins
+  # one; otherwise the key is omitted so the spawned session inherits the
+  # operator's resolved default (#1196). A literal alias like "default" is NOT
+  # accepted by the overlay (the settings model field needs a concrete id or
+  # nothing), which is what silently husked the fleet when #1195 shipped it.
+  local ultracode_settings
+  if [[ -n "$RUNNER_MODEL" ]]; then
+    ultracode_settings='{"effortLevel":"ultracode","model":"'"$RUNNER_MODEL"'"}'
+    log "Session model: $RUNNER_MODEL (pinned via SPRINT_RUNNER_MODEL)"
+  else
+    ultracode_settings='{"effortLevel":"ultracode"}'
+    log "Session model: inherits operator default (set SPRINT_RUNNER_MODEL to pin)"
+  fi
 
   # Per-session screen logfile (epic #933 §2.3) — the on-disk feed the liveness
   # log probe samples to catch a #871-shape loop (output repeating, no commits).
