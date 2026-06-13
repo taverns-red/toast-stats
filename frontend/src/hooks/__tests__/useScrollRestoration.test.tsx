@@ -57,8 +57,9 @@ beforeEach(() => {
     configurable: true,
     get: () => currentScrollY,
   })
-  vi.spyOn(window, 'scrollTo').mockImplementation(((...args: number[]) => {
-    if (typeof args[1] === 'number') currentScrollY = args[1]
+  // The hook calls scrollTo({ top, behavior: 'instant' }); model the jump.
+  vi.spyOn(window, 'scrollTo').mockImplementation(((opts: { top?: number }) => {
+    if (opts && typeof opts.top === 'number') currentScrollY = opts.top
   }) as typeof window.scrollTo)
   // Run rAF callbacks synchronously so retries resolve within the test.
   vi.stubGlobal('requestAnimationFrame', (cb: (t: number) => void): number => {
@@ -105,9 +106,11 @@ describe('useScrollRestoration (#1103)', () => {
 
     // Simulate a short first POP render: scrollTo clamps to a max that grows.
     let maxScroll = 100
-    vi.spyOn(window, 'scrollTo').mockImplementation(((...args: number[]) => {
-      if (typeof args[1] === 'number')
-        currentScrollY = Math.min(args[1], maxScroll)
+    vi.spyOn(window, 'scrollTo').mockImplementation(((opts: {
+      top?: number
+    }) => {
+      if (opts && typeof opts.top === 'number')
+        currentScrollY = Math.min(opts.top, maxScroll)
     }) as typeof window.scrollTo)
     // rAF grows the page on each frame, then settles tall enough.
     let frames = 0

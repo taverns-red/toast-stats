@@ -31,10 +31,18 @@ export const __scrollPositionsForTest = scrollPositions
 // to settle, short enough to never feel like a fight with the user.
 const MAX_RESTORE_FRAMES = 50
 
+// `behavior: 'instant'` is mandatory: the app sets `html { scroll-behavior:
+// smooth }`, so the (x, y) form of scrollTo *animates* — restoration would
+// crawl toward the target and the rAF budget would expire mid-animation,
+// landing the page partway up. 'instant' overrides the CSS and jumps.
+function jumpTo(top: number): void {
+  window.scrollTo({ top, left: 0, behavior: 'instant' })
+}
+
 function restoreScroll(target: number): void {
   let frame = 0
   const tick = (): void => {
-    window.scrollTo(0, target)
+    jumpTo(target)
     frame += 1
     if (Math.abs(window.scrollY - target) <= 2 || frame >= MAX_RESTORE_FRAMES) {
       return
@@ -78,7 +86,7 @@ export function useScrollRestoration(): void {
           decodeURIComponent(location.hash.slice(1))
         )
         if (el) {
-          el.scrollIntoView()
+          el.scrollIntoView({ behavior: 'instant', block: 'start' })
           return
         }
       } catch {
@@ -95,7 +103,7 @@ export function useScrollRestoration(): void {
     }
 
     // PUSH / REPLACE (or POP with nothing to restore): start at the top.
-    window.scrollTo(0, 0)
+    jumpTo(0)
     // location.key + navigationType together identify a single navigation.
   }, [location.key, location.hash, navigationType])
 }
