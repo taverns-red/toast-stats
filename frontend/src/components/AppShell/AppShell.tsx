@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Outlet, ScrollRestoration } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import AppShellTopBar from './AppShellTopBar'
 import AppShellFooter from './AppShellFooter'
 import CommandPalette from './CommandPalette'
 import { useGoogleAnalytics } from '../../hooks/useGoogleAnalytics'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { useScrollRestoration } from '../../hooks/useScrollRestoration'
 
 /* Per Epic #352: no notifications/help/avatar (no auth today),
    no Regions/Awards "soon" stubs. ThemeToggle now lives in the top
@@ -16,6 +17,12 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 
 const AppShell: React.FC = () => {
   useGoogleAnalytics()
+
+  // #1103: restore scroll on Back/Forward, reset to top on push navigations.
+  // A custom hook (not RR's <ScrollRestoration/>) because the landing
+  // leaderboard renders short on first commit and a single synchronous restore
+  // clamps — see useScrollRestoration for the full rationale.
+  useScrollRestoration()
 
   // <768px: drop the full footer chrome to recover above-the-fold space on
   // short pages (CC-11, Epic H #889). Its version/license meta moves to the
@@ -39,11 +46,6 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="app-shell">
-      {/* #1103: with createBrowserRouter the framework no longer auto-resets
-          scroll on navigation. Mounting <ScrollRestoration/> once at the shell
-          scrolls push/replace navigations to the top and restores the prior
-          offset on POP (browser Back/Forward), keyed by location. */}
-      <ScrollRestoration />
       <a href="#main-content" className="tm-skip-link">
         Skip to main content
       </a>

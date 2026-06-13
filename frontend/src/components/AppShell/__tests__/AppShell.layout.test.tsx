@@ -5,7 +5,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import AppShell from '../AppShell'
@@ -14,20 +14,17 @@ import { ProgramYearProvider } from '../../../contexts/ProgramYearContext'
 
 afterEach(() => cleanup())
 
-// AppShell mounts <ScrollRestoration/> (#1103), which requires a data router —
-// render it as a layout route via createMemoryRouter, mirroring production.
 const renderShell = () => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  const router = createMemoryRouter([
-    { path: '/', element: <AppShell />, children: [{ index: true }] },
-  ])
   return render(
     <QueryClientProvider client={client}>
       <ProgramYearProvider>
         <DarkModeProvider>
-          <RouterProvider router={router} />
+          <MemoryRouter>
+            <AppShell />
+          </MemoryRouter>
         </DarkModeProvider>
       </ProgramYearProvider>
     </QueryClientProvider>
