@@ -119,10 +119,19 @@ describe('AnalyticsUtils', () => {
 
   describe('getCurrentProgramMonth', () => {
     it('should parse valid date strings', () => {
-      // Note: Date parsing can be affected by timezone, so we test with mid-month dates
       expect(getCurrentProgramMonth('2024-01-15')).toBe(1)
       expect(getCurrentProgramMonth('2024-07-15')).toBe(7)
       expect(getCurrentProgramMonth('2024-12-15')).toBe(12)
+    })
+
+    it('should derive the month from the string, not a timezone-shifted Date (#1116 item 2)', () => {
+      // `new Date("YYYY-MM-DD")` parses as UTC midnight; `.getMonth()` reads
+      // LOCAL time, so in a UTC-negative zone a first-of-month date rolls back
+      // to the prior month (a 2026-07-01 snapshot read as June → wrong DCP
+      // checkpoint). The month must come from the string itself, TZ-invariant.
+      expect(getCurrentProgramMonth('2026-07-01')).toBe(7)
+      expect(getCurrentProgramMonth('2026-01-01')).toBe(1)
+      expect(getCurrentProgramMonth('2026-12-01')).toBe(12)
     })
 
     it('should throw for invalid date strings', () => {
