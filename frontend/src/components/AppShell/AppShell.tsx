@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, ScrollRestoration } from 'react-router-dom'
 import AppShellTopBar from './AppShellTopBar'
 import AppShellFooter from './AppShellFooter'
 import CommandPalette from './CommandPalette'
@@ -39,6 +39,11 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="app-shell">
+      {/* #1103: with createBrowserRouter the framework no longer auto-resets
+          scroll on navigation. Mounting <ScrollRestoration/> once at the shell
+          scrolls push/replace navigations to the top and restores the prior
+          offset on POP (browser Back/Forward), keyed by location. */}
+      <ScrollRestoration />
       <a href="#main-content" className="tm-skip-link">
         Skip to main content
       </a>
