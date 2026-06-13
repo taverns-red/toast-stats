@@ -60,6 +60,7 @@ export {
   validateDateFormat,
   getCurrentDateString,
   parseDistrictList,
+  emitJsonAndExit,
   determineExitCode,
   determineTransformExitCode,
   determineComputeAnalyticsExitCode,
@@ -76,6 +77,7 @@ const {
   validateDateFormat,
   getCurrentDateString,
   parseDistrictList,
+  emitJsonAndExit,
   determineExitCode,
   determineTransformExitCode,
   determineComputeAnalyticsExitCode,
@@ -324,14 +326,12 @@ export function createCLI(): Command {
         }
       }
 
-      // Output JSON summary
-      console.log(JSON.stringify(summary, null, 2))
-
       if (options.verbose) {
         console.error(`[INFO] Scrape completed with exit code: ${exitCode}`)
       }
 
-      process.exit(exitCode)
+      // Output JSON summary, then exit after stdout drains (#1182)
+      emitJsonAndExit(summary, exitCode)
     })
 
   // Add status command for checking cache status
@@ -384,8 +384,8 @@ export function createCLI(): Command {
           missingDistricts: status.missingDistricts,
         }
 
-        console.log(JSON.stringify(output, null, 2))
-        process.exit(ExitCode.SUCCESS)
+        // Output JSON summary, then exit after stdout drains (#1182)
+        emitJsonAndExit(output, ExitCode.SUCCESS)
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error'
@@ -479,9 +479,8 @@ export function createCLI(): Command {
         duration_ms: transformResult.duration_ms,
       }
 
-      // Format and output JSON summary
+      // Format JSON summary
       const summary = formatTransformSummary(result, snapshotDir)
-      console.log(JSON.stringify(summary, null, 2))
 
       // Determine and use exit code
       const exitCode = determineTransformExitCode(result)
@@ -490,7 +489,8 @@ export function createCLI(): Command {
         console.error(`[INFO] Transform completed with exit code: ${exitCode}`)
       }
 
-      process.exit(exitCode)
+      // Output JSON summary, then exit after stdout drains (#1182)
+      emitJsonAndExit(summary, exitCode)
     })
 
   // Add compute-analytics command for computing analytics from existing snapshots
@@ -591,7 +591,6 @@ export function createCLI(): Command {
       // Format and output JSON summary
       // Requirement 8.4: THE `compute-analytics` command SHALL output a JSON summary
       const summary = formatComputeAnalyticsSummary(result, analyticsDir)
-      console.log(JSON.stringify(summary, null, 2))
 
       // Determine and use exit code
       const exitCode = determineComputeAnalyticsExitCode(result)
@@ -602,7 +601,8 @@ export function createCLI(): Command {
         )
       }
 
-      process.exit(exitCode)
+      // Output JSON summary, then exit after stdout drains (#1182)
+      emitJsonAndExit(summary, exitCode)
     })
 
   // Add upload command for syncing local snapshots and analytics to Google Cloud Storage
@@ -842,7 +842,6 @@ export function createCLI(): Command {
         prefix,
         options.dryRun
       )
-      console.log(JSON.stringify(summary, null, 2))
 
       // Determine and use exit code
       const exitCode = determineUploadExitCode(result)
@@ -851,7 +850,8 @@ export function createCLI(): Command {
         console.error(`[INFO] Upload completed with exit code: ${exitCode}`)
       }
 
-      process.exit(exitCode)
+      // Output JSON summary, then exit after stdout drains (#1182)
+      emitJsonAndExit(summary, exitCode)
     })
 
   // Add backfill command for historical data collection (#123)
@@ -1081,16 +1081,15 @@ export function createCLI(): Command {
           cleanSnapshots: options.cleanSnapshots,
         })
 
-        // Output JSON summary
-        console.log(JSON.stringify(result, null, 2))
-
         if (options.verbose) {
           console.error(
             `[INFO] Rebuild complete: ${result.datesSucceeded}/${result.datesProcessed} succeeded in ${result.duration_ms}ms`
           )
         }
 
-        process.exit(
+        // Output JSON summary, then exit after stdout drains (#1182)
+        emitJsonAndExit(
+          result,
           result.success ? ExitCode.SUCCESS : ExitCode.PARTIAL_FAILURE
         )
       }
@@ -1135,32 +1134,25 @@ export function createCLI(): Command {
 
         const result = await service.prune(options.dryRun)
 
-        // Output JSON summary
-        console.log(
-          JSON.stringify(
-            {
-              dryRun: options.dryRun,
-              closingGuard: result.closingGuard,
-              blocked: result.blocked,
-              layerScope: result.layerScope,
-              totalDates: result.totalDates,
-              keptDates: result.keptDates,
-              prunedDates: result.prunedDates,
-              deletedRawCsv: result.deletedRawCsv,
-              deletedSnapshots: result.deletedSnapshots,
-              errors: result.errors,
-              classifications: result.classifications.map(c => ({
-                rawCsvDate: c.rawCsvDate,
-                snapshotDate: c.snapshotDate,
-                keep: c.keep,
-                reason: c.reason,
-              })),
-              duration_ms: result.duration_ms,
-            },
-            null,
-            2
-          )
-        )
+        const summary = {
+          dryRun: options.dryRun,
+          closingGuard: result.closingGuard,
+          blocked: result.blocked,
+          layerScope: result.layerScope,
+          totalDates: result.totalDates,
+          keptDates: result.keptDates,
+          prunedDates: result.prunedDates,
+          deletedRawCsv: result.deletedRawCsv,
+          deletedSnapshots: result.deletedSnapshots,
+          errors: result.errors,
+          classifications: result.classifications.map(c => ({
+            rawCsvDate: c.rawCsvDate,
+            snapshotDate: c.snapshotDate,
+            keep: c.keep,
+            reason: c.reason,
+          })),
+          duration_ms: result.duration_ms,
+        }
 
         if (options.verbose) {
           console.error(
@@ -1168,7 +1160,9 @@ export function createCLI(): Command {
           )
         }
 
-        process.exit(
+        // Output JSON summary, then exit after stdout drains (#1182)
+        emitJsonAndExit(
+          summary,
           result.success ? ExitCode.SUCCESS : ExitCode.PARTIAL_FAILURE
         )
       }
@@ -1373,9 +1367,9 @@ export function createCLI(): Command {
               : undefined,
           results,
         }
-        console.log(JSON.stringify(summary, null, 2))
-
-        process.exit(
+        // Output JSON summary, then exit after stdout drains (#1182)
+        emitJsonAndExit(
+          summary,
           summary.failed === 0 ? ExitCode.SUCCESS : ExitCode.PARTIAL_FAILURE
         )
       }
@@ -1490,9 +1484,9 @@ export function createCLI(): Command {
           totalFacOnly: results.reduce((s, r) => s + (r.facOnly ?? 0), 0),
           results,
         }
-        console.log(JSON.stringify(summary, null, 2))
-
-        process.exit(
+        // Output JSON summary, then exit after stdout drains (#1182)
+        emitJsonAndExit(
+          summary,
           summary.failed === 0 ? ExitCode.SUCCESS : ExitCode.PARTIAL_FAILURE
         )
       }
@@ -1542,18 +1536,17 @@ export function createCLI(): Command {
           // Fail-closed: if we cannot read/compare the snapshots, do NOT promote.
           const message = err instanceof Error ? err.message : String(err)
           console.error(`[ERROR] value-diff failed: ${message}`)
-          console.log(
-            JSON.stringify(
-              {
-                promote: false,
-                requiresReview: true,
-                reasons: [`value-diff failed: ${message}`],
-              },
-              null,
-              2
-            )
+          // Namespace call (not the destructured alias) so TS sees the `never`
+          // return and narrows `result` to defined below; flush-before-exit
+          // (#1182).
+          helpers.emitJsonAndExit(
+            {
+              promote: false,
+              requiresReview: true,
+              reasons: [`value-diff failed: ${message}`],
+            },
+            ExitCode.PARTIAL_FAILURE
           )
-          process.exit(ExitCode.PARTIAL_FAILURE)
         }
 
         const { report, decision } = result
@@ -1567,10 +1560,9 @@ export function createCLI(): Command {
         }
 
         // Structured JSON to stdout (R4: logs to stderr only).
-        console.log(JSON.stringify({ ...decision, report }, null, 2))
-
         // result.exitCode is the single source of truth (0 promote / 1 blocked).
-        process.exit(result.exitCode)
+        // Flush-before-exit so the full diff isn't truncated through a pipe (#1182).
+        emitJsonAndExit({ ...decision, report }, result.exitCode)
       }
     )
 
@@ -1693,9 +1685,6 @@ export function createCLI(): Command {
           failed: results.filter(r => !r.ok).length,
           results,
         }
-        // Structured JSON to stdout (R4: logs to stderr only).
-        console.log(JSON.stringify(summary, null, 2))
-
         // Distinguish total outage (every district failed) from partial — a
         // monitoring caller reads 2 vs 1 differently (matches the enum).
         const exitCode =
@@ -1704,7 +1693,8 @@ export function createCLI(): Command {
             : summary.succeeded === 0 && summary.totalDistricts > 0
               ? ExitCode.COMPLETE_FAILURE
               : ExitCode.PARTIAL_FAILURE
-        process.exit(exitCode)
+        // Structured JSON to stdout (R4), then exit after stdout drains (#1182).
+        emitJsonAndExit(summary, exitCode)
       }
     )
 
@@ -1879,16 +1869,15 @@ export function createCLI(): Command {
           failed: results.filter(r => !r.ok).length,
           results,
         }
-        // Structured JSON to stdout (R4: logs to stderr only).
-        console.log(JSON.stringify(summary, null, 2))
-
         const exitCode =
           summary.failed === 0
             ? ExitCode.SUCCESS
             : summary.succeeded === 0 && summary.totalPairs > 0
               ? ExitCode.COMPLETE_FAILURE
               : ExitCode.PARTIAL_FAILURE
-        process.exit(exitCode)
+        // Structured JSON to stdout (R4), then exit after stdout drains (#1182).
+        // This is the command the #1070 768-result dry-run truncated.
+        emitJsonAndExit(summary, exitCode)
       }
     )
 

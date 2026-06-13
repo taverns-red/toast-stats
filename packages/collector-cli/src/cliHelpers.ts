@@ -20,6 +20,39 @@ import {
 import { validateDistrictId } from './utils/validateDistrictId.js'
 
 // ============================================================================
+// Structured-output Termination
+// ============================================================================
+
+/**
+ * Print a structured JSON summary to stdout and exit — but only after that
+ * write has fully drained.
+ *
+ * `process.exit()` terminates synchronously and discards any stdout bytes
+ * still buffered for an async pipe, so a large summary gets cut at the ~64KB
+ * highWaterMark when the command runs through `| tee`/`| jq` (the #1070
+ * 768-result dry-run died mid-record), while the same data prints intact to a
+ * file or TTY (#1182). Deferring the exit to the write's drain callback
+ * guarantees every byte reaches the OS first.
+ *
+ * Use this for the *terminal* JSON-summary emit at the end of a command — it
+ * both emits and exits, so nothing should run after it. (Fail-fast option
+ * validators stay on `process.exit()`: they write only small stderr and must
+ * stop the world immediately, which a deferred exit would not do.)
+ *
+ * R4 is unaffected: structured JSON goes to stdout, logs to stderr. Output is
+ * byte-identical to the previous `console.log(JSON.stringify(payload, null,
+ * 2))` (trailing newline included).
+ */
+export function emitJsonAndExit(payload: unknown, exitCode: number): never {
+  process.stdout.write(JSON.stringify(payload, null, 2) + '\n', () =>
+    process.exit(exitCode)
+  )
+  // The drain callback owns termination; `never` lets callers treat this as
+  // the end of the command.
+  return undefined as never
+}
+
+// ============================================================================
 // Date Utilities
 // ============================================================================
 

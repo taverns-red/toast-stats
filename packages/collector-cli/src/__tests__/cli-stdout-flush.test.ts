@@ -4,16 +4,18 @@ import { dirname, join } from 'path'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { exitAfterStdoutFlush } from '../cliHelpers.js'
+import { emitJsonAndExit } from '../cliHelpers.js'
 
 /**
  * #1182 — `process.exit()` terminates synchronously and discards any stdout
  * bytes still buffered for an async pipe, truncating a large summary JSON at
  * the ~64KB highWaterMark when piped through `| tee`/`| jq` (the #1070
- * 768-result dry-run died mid-record). The fix: defer the exit until the
- * stdout write has drained. These tests pin that contract at the unit level
- * (acceptance-criterion-approved) plus a source guard so no exit path
- * regresses back to a raw synchronous `process.exit`.
+ * 768-result dry-run died mid-record, while the same data printed intact to a
+ * file). The fix routes every terminal JSON summary through `emitJsonAndExit`,
+ * which defers the exit until the stdout write has drained. These tests pin
+ * that contract at the unit level (acceptance-criterion-approved) plus a
+ * source guard so no command regresses back to the raw
+ * `console.log(JSON.stringify(...))` + `process.exit()` footgun.
  */
 describe('#1182 stdout flush-before-exit', () => {
   let exitSpy: ReturnType<typeof vi.spyOn>
@@ -30,52 +32,55 @@ describe('#1182 stdout flush-before-exit', () => {
     writeSpy?.mockRestore()
   })
 
-  it('does NOT call process.exit synchronously — it waits for the stdout write callback', () => {
-    // Capture the write callback without actually flushing.
-    let flush: (() => void) | undefined
+  it('does NOT call process.exit synchronously — it waits for the stdout write to drain', () => {
+    // Capture the drain callback without firing it.
+    let drain: (() => void) | undefined
     writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(((
       _chunk: unknown,
       cb?: () => void
     ) => {
-      flush = cb
+      drain = cb
       return true
     }) as never)
 
-    exitAfterStdoutFlush(3)
+    emitJsonAndExit({ ok: true }, 3)
 
-    // The exit is queued behind the flush, not fired inline.
+    // The exit is queued behind the drain, not fired inline.
     expect(exitSpy).not.toHaveBeenCalled()
-    expect(flush).toBeTypeOf('function')
+    expect(drain).toBeTypeOf('function')
 
     // Once stdout drains, the deferred exit fires with the right code.
-    flush!()
+    drain!()
     expect(exitSpy).toHaveBeenCalledWith(3)
   })
 
-  it('emits the FULL payload before exiting — no 64KB truncation', () => {
-    const big = JSON.stringify({ results: 'x'.repeat(200_000) })
-    const chunks: string[] = []
+  it('writes the FULL payload before exiting — no 64KB truncation — and stays valid JSON', () => {
+    const payload = { results: 'x'.repeat(200_000), totalPairs: 768 }
+    let written = ''
     writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(((
       chunk: unknown,
       cb?: () => void
     ) => {
-      chunks.push(String(chunk))
+      written += String(chunk)
       cb?.() // simulate a fully-drained pipe
       return true
     }) as never)
 
-    process.stdout.write(big)
-    exitAfterStdoutFlush(0)
+    emitJsonAndExit(payload, 0)
 
-    expect(chunks.join('')).toContain(big)
-    expect(chunks.join('')).toHaveLength(big.length + 0) // flush write is empty
+    expect(written.length).toBeGreaterThan(200_000)
+    // Byte-identical to the previous console.log(JSON.stringify(p, null, 2)).
+    expect(written).toBe(JSON.stringify(payload, null, 2) + '\n')
+    expect(JSON.parse(written)).toEqual(payload)
     expect(exitSpy).toHaveBeenCalledWith(0)
   })
 
-  it('guard: cli.ts has no raw process.exit() — every exit path drains stdout first', () => {
+  it('guard: cli.ts emits no structured JSON via console.log — every terminal summary routes through emitJsonAndExit', () => {
     const here = dirname(fileURLToPath(import.meta.url))
     const cliSrc = readFileSync(join(here, '..', 'cli.ts'), 'utf-8')
-    const rawExits = cliSrc.match(/process\.exit\(/g) ?? []
-    expect(rawExits).toEqual([])
+    // The exact #1182 footgun: a large stdout write immediately before a
+    // synchronous process.exit. Routing through emitJsonAndExit eliminates it.
+    const footguns = cliSrc.match(/console\.log\(\s*JSON\.stringify/g) ?? []
+    expect(footguns).toEqual([])
   })
 })
