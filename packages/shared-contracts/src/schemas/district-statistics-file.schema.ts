@@ -118,6 +118,18 @@ export const ClubStatisticsFileSchema = z.object({
   /** Membership base for net growth calculation */
   membershipBase: z.number(),
 
+  /**
+   * Exact list of 10 boolean flags representing which DCP goals were
+   * achieved (0-indexed; index 0 is Goal 1). Written by DataTransformer
+   * (computeDcpGoalsAchieved, #1118) when the per-goal CSV columns are
+   * present; omitted otherwise. Was absent from this schema, so a
+   * validating parse silently stripped it from .clubs[] — the ADR-010
+   * silent-strip class (#1143). Length is intentionally unbounded (not
+   * pinned to 10) so historical/variant snapshots stay valid; the
+   * consumer (membersToDistinguished) length-guards before indexing.
+   */
+  dcpGoalsAchieved: z.array(z.boolean()).optional(),
+
   /** Club operational status (Active, Suspended, Low, Ineligible) */
   clubStatus: z.string().optional(),
 
