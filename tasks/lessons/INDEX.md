@@ -162,3 +162,4 @@
 - **166** [collector-cli, monorepo, verification, tdd, data-pipeline, process] — A structural injection guard must check value-honesty, not just key-presence (and a factory beats type-required when fixtures block it) (#1160, #1129, #1098)
 - **166** [frontend, react, tanstack, error-handling, verification] — When a page derives "not found" from query data, check the error branch FIRST or every fetch failure is misreported as a missing entity (#1104, #1191)
 - **167** [accessibility, css, frontend, dark-mode, tests] — A focus ring built from the brand accent needs its own darkened token; the 3:1 non-text floor is a different bar than where the accent is safe as fill (#1106)
+- **168** [collector-cli, typescript, tdd, verification, node] — A `: never`-typed _deferred_ exit narrows types but does NOT halt runtime; inside a `catch` you must `return` it (#1182, #1193)
