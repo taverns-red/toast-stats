@@ -23,8 +23,18 @@ const CTOR_TOKEN = 'new TransformService('
  * not a real construction site — but a naive substring scan would flag it
  * (Lesson 84: a documentation example of a parsed format is also valid
  * input). Removing comments first keeps the guard from tripping on its own
- * documentation. String literals are left intact; the only production string
- * carrying the token lives in this module, which the guard test excludes.
+ * documentation.
+ *
+ * LIMITATION (intentional, honest about its reach): this is a regex heuristic,
+ * not a lexer. It does NOT understand string literals — a `//` inside a string
+ * is still treated as a comment, and the constructor token hidden inside a
+ * string would evade the scan. Both are acceptable for a guard over our own
+ * prettier-formatted production source: no production site embeds the token in
+ * a string (the only such string is this module's own CTOR_TOKEN, which the
+ * guard test excludes), and constructor calls span multiple lines so a `//`
+ * sequence cannot sit on the same physical line as a `new TransformService(`.
+ * A fully correct stripper would need a TS tokenizer; that is not worth it for
+ * a single-token presence check.
  */
 function stripComments(source: string): string {
   return source
