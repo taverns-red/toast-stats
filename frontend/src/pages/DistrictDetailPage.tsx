@@ -243,10 +243,12 @@ const DistrictDetailPageInner: React.FC = () => {
     }
   }, [aggregatedAnalytics])
 
-  // Fetch competitive awards / Distinguished District status (#332)
-  const { data: competitiveAwards } = useCompetitiveAwards(
-    effectiveEndDate ?? undefined
-  )
+  // Fetch competitive awards / Distinguished District status (#332). This
+  // query resolves separately from (and later than) the page-analytics query;
+  // its loading flag reserves the trophy-case slot to avoid the late-insert
+  // CLS shift (#1105 / Lesson 107).
+  const { data: competitiveAwards, isLoading: isLoadingCompetitiveAwards } =
+    useCompetitiveAwards(effectiveEndDate ?? undefined)
   const distinguishedDistrictStatus = React.useMemo(() => {
     if (!districtId || !competitiveAwards?.distinguishedDistrict) return null
     return competitiveAwards.distinguishedDistrict[districtId] ?? null
@@ -514,6 +516,7 @@ const DistrictDetailPageInner: React.FC = () => {
                 {/* Distinguished District Trophy Case (#332) */}
                 <DistinguishedDistrictTrophyCase
                   status={distinguishedDistrictStatus}
+                  isLoading={isLoadingCompetitiveAwards}
                   ranking={distinguishedRankingInputs}
                   clubStrengthQualifies={clubStrengthResult?.qualifies}
                   clubStrengthGrowth={clubStrengthResult?.growthPercent}

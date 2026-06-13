@@ -49,6 +49,16 @@ export interface DistinguishedDistrictStatus {
 
 interface DistinguishedDistrictTrophyCaseProps {
   status: DistinguishedDistrictStatus | null
+  /**
+   * True while the competitive-awards query is still in flight (#1105).
+   * That query resolves *separately from and later than* the page-analytics
+   * query that paints DistrictDetailPage, so without a reserved slot the
+   * panel pops in from 0px when the query lands and shoves everything below
+   * it down — the AwardsRaceSection (#750) / Lesson 107 failure class. While
+   * loading we render a height-matched skeleton so the real panel fills the
+   * slot in place.
+   */
+  isLoading?: boolean
   /** Optional rankings row used to derive the absolute remaining counts
       when the canonical fields are absent or the next tier is above
       Distinguished. Matches the region page's data source. */
@@ -156,10 +166,82 @@ const GapTile: React.FC<GapTileSpec> = ({
   )
 }
 
+/* Height-matched loading placeholder (#1105 / Lesson 107, 158). Reuses the
+   real panel's chrome — the `redesign-panel` wrapper, the static title +
+   "Program Item 1490" caption, the section borders, and the gap-tiles grid
+   container — so the reserved height emerges from the SAME CSS that sizes the
+   loaded panel (across breakpoints + dark mode) rather than a pinned `Npx`
+   that drifts the day a label changes. Only the data rows (pill, summary,
+   per-tile label/value) become skeleton bars. `aria-hidden` keeps it out of
+   the AT tree and the gap-tile test queries. */
+const SkeletonBar: React.FC<{ className: string }> = ({ className }) => (
+  <span
+    className={`block animate-pulse rounded bg-gray-200 theme-dark:bg-gray-700 ${className}`}
+  />
+)
+
+const TrophyCaseSkeleton: React.FC = () => (
+  <div
+    className="redesign-panel"
+    aria-hidden="true"
+    data-testid="distinguished-trophy-skeleton"
+  >
+    <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+      <div>
+        <h2 className="text-lg font-bold text-gray-900 font-tm-headline">
+          Distinguished District Status
+        </h2>
+        <p className="mt-0.5 text-xs uppercase tracking-wide text-gray-500 font-tm-body">
+          Program Item 1490
+        </p>
+      </div>
+      {/* Status pill placeholder — matches the px-4 py-2 text-base pill box. */}
+      <SkeletonBar className="h-10 w-48 rounded-full" />
+    </div>
+
+    {/* Prerequisite summary line — 44px touch-target floor like the real
+        toggle/status row, so the reserved height tracks it. */}
+    <div className="mb-4 flex items-center min-h-11">
+      <SkeletonBar className="h-4 w-44" />
+    </div>
+
+    {/* Gap-to-next-tier: the dominant slot. Reuse the real section border +
+        3-up grid so the tiles land in place. We always reserve this block
+        because it's the common loaded shape (any district below its top tier
+        shows a gap). Districts that resolve with `nextTierGap == null` (already
+        Smedley, or Unknown) omit it and settle slightly UPWARD — a bounded,
+        rare residual, far smaller than the original 0→full downward pop, and
+        unknowable before the query lands. Same accepted-collapse tradeoff as
+        AwardsRaceSection (#750). */}
+    <div className="border-t border-gray-200 pt-4">
+      <SkeletonBar className="h-4 w-40 mb-2" />
+      <div
+        data-testid="distinguished-trophy-skeleton-tiles"
+        className="grid grid-cols-1 md:grid-cols-3 gap-2"
+      >
+        {[0, 1, 2].map(i => (
+          <div
+            key={i}
+            className="rounded-md border border-gray-200 theme-dark:border-gray-700 px-3 py-2"
+          >
+            {/* label · value · "+x%" sub-item — the three rows a populated
+                GapTile renders in the common (count present, gate open)
+                case, so the tile height matches the loaded one. */}
+            <SkeletonBar className="h-3 w-20" />
+            <SkeletonBar className="mt-1.5 h-5 w-16" />
+            <SkeletonBar className="mt-1.5 h-3 w-10" />
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)
+
 export const DistinguishedDistrictTrophyCase: React.FC<
   DistinguishedDistrictTrophyCaseProps
 > = ({
   status,
+  isLoading = false,
   ranking,
   clubStrengthQualifies,
   clubStrengthGrowth,
@@ -170,7 +252,10 @@ export const DistinguishedDistrictTrophyCase: React.FC<
 }) => {
   const [userExpanded, setUserExpanded] = useState(false)
 
-  if (!status) return null
+  // Reserve the slot while the (separate, slower) competitive-awards query is
+  // in flight so its late arrival doesn't shift the page below it (#1105 /
+  // Lesson 107). Once it settles with genuinely no status, collapse to null.
+  if (!status) return isLoading ? <TrophyCaseSkeleton /> : null
 
   const { currentTier, allPrerequisitesMet, prerequisites, nextTierGap } =
     status
