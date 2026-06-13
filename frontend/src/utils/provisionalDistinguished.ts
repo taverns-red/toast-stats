@@ -16,6 +16,7 @@
  *   All Distinguished = confirmed.
  */
 
+import { getCSPStatus } from '@toastmasters/analytics-core'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { DistinguishedLevel } from '@toastmasters/analytics-core'
 
@@ -96,6 +97,11 @@ const LEVEL_THRESHOLDS: Record<string, { members: number; growth?: number }> = {
  * with confirmed renewals.
  */
 export function getConfirmedLevel(club: ClubTrend): DistinguishedLevel {
+  // CSP gate (#1139): a club without a submitted Club Success Plan cannot be
+  // confirmed Distinguished (2025-2026+). Source the rule from analytics-core
+  // (undefined → submitted for pre-2025-26 historical data).
+  if (!getCSPStatus(club)) return 'NotDistinguished'
+
   const renewals = club.aprilRenewals ?? 0
   const base = club.membershipBase ?? 0
   const trend = club.dcpGoalsTrend
