@@ -67,8 +67,10 @@ export const useRankHistory = ({
 
 /**
  * Derive a ProgramYearInfo from the start/end date range or history data.
+ *
+ * Exported for unit testing of the timezone-boundary behaviour (#1116 item 2).
  */
-function deriveProgramYear(
+export function deriveProgramYear(
   startDate?: string,
   _endDate?: string,
   history?: Array<{ date: string }>
