@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.27.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.26.0...toast-stats-v2.27.0) (2026-06-12)
+
+
+### Features
+
+* **pipeline:** quarterly scheduled prune — day 25 of Feb/May/Aug/Nov ([#1148](https://github.com/taverns-red/toast-stats/issues/1148)) ([#1180](https://github.com/taverns-red/toast-stats/issues/1180)) ([cc09c42](https://github.com/taverns-red/toast-stats/commit/cc09c424247e4b7786b5eac6195d745f9b29357b))
+
+
+### Bug Fixes
+
+* **pipeline:** cap promotion-held alert body under GitHub's 64KB issue limit ([#1168](https://github.com/taverns-red/toast-stats/issues/1168)) ([#1169](https://github.com/taverns-red/toast-stats/issues/1169)) ([9513050](https://github.com/taverns-red/toast-stats/commit/9513050266988a2cd82cf232e78b5048b110f2ae))
+* **pipeline:** prune joins the 240-min timeout branch — full-bucket sync outgrew 30 min after the [#1147](https://github.com/taverns-red/toast-stats/issues/1147) backfill ([#1175](https://github.com/taverns-red/toast-stats/issues/1175)) ([#1176](https://github.com/taverns-red/toast-stats/issues/1176)) ([2adb145](https://github.com/taverns-red/toast-stats/commit/2adb14516ba04af8afc81ba2da4ccec3191b50d4))
+* **rankings:** per-program-year DD rules — Unknown for unknowable prerequisites, no Smedley pre-2025-26 ([#1116](https://github.com/taverns-red/toast-stats/issues/1116)) ([#1166](https://github.com/taverns-red/toast-stats/issues/1166)) ([b3052d8](https://github.com/taverns-red/toast-stats/commit/b3052d815548022ce6601bc353cfdeb0a1308434))
+
+
+### Documentation
+
+* **lessons:** back-solve published goal numbers as the oracle for historical rules ([#1116](https://github.com/taverns-red/toast-stats/issues/1116)) ([#1171](https://github.com/taverns-red/toast-stats/issues/1171)) ([bafc85a](https://github.com/taverns-red/toast-stats/commit/bafc85aef1e474c5bd4ea1c9c9e5b8a6b7e7fcca))
+* **mcp:** document the manual operator-attended release flow ([#1164](https://github.com/taverns-red/toast-stats/issues/1164)) ([#1189](https://github.com/taverns-red/toast-stats/issues/1189)) ([61bda9b](https://github.com/taverns-red/toast-stats/commit/61bda9bdae3f084bc8aa43b28484919343fd7144))
+
 ## [2.26.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.25.1...toast-stats-v2.26.0) (2026-06-10)
 
 

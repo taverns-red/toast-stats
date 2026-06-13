@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.11.0...frontend-v3.11.1) (2026-06-12)
+
+
+### Bug Fixes
+
+* **rankings:** per-program-year DD rules — Unknown for unknowable prerequisites, no Smedley pre-2025-26 ([#1116](https://github.com/taverns-red/toast-stats/issues/1116)) ([#1166](https://github.com/taverns-red/toast-stats/issues/1166)) ([b3052d8](https://github.com/taverns-red/toast-stats/commit/b3052d815548022ce6601bc353cfdeb0a1308434))
+
 ## [3.11.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.10.0...frontend-v3.11.0) (2026-06-10)
 
 
