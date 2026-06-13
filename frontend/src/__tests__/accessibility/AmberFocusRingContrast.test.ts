@@ -101,19 +101,15 @@ function resolve_(value: string, dark: boolean, depth = 0): string {
   return v
 }
 
-// Surfaces a focus ring actually lands on, per theme (lesson 112 — audit
-// EVERY surface a token lands on, not just the canonical one).
-const LIGHT_SURFACES = [
-  'var(--surface)',
-  'var(--surface-2)',
-  'var(--surface-3)',
-]
-const DARK_SURFACES = ['var(--surface)', 'var(--surface-2)', 'var(--surface-3)']
+// Surfaces a focus ring actually lands on (lesson 112 — audit EVERY surface a
+// token lands on, not just the canonical one). The same surface tokens carry
+// both themes; resolve_(…, dark) maps each to the right per-theme value.
+const SURFACES = ['var(--surface)', 'var(--surface-2)', 'var(--surface-3)']
 
 describe('Amber focus-ring contrast (#1106)', () => {
   it('--rt-stats-focus clears WCAG 1.4.11 (3:1) on every LIGHT surface', () => {
     const ring = resolve_('var(--rt-stats-focus)', false)
-    for (const s of LIGHT_SURFACES) {
+    for (const s of SURFACES) {
       const surface = resolve_(s, false)
       const ratio = calculateContrastRatio(ring, surface)
       expect(
@@ -125,7 +121,7 @@ describe('Amber focus-ring contrast (#1106)', () => {
 
   it('--rt-stats-focus clears WCAG 1.4.11 (3:1) on every DARK surface', () => {
     const ring = resolve_('var(--rt-stats-focus)', true)
-    for (const s of DARK_SURFACES) {
+    for (const s of SURFACES) {
       const surface = resolve_(s, true)
       const ratio = calculateContrastRatio(ring, surface)
       expect(
