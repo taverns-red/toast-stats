@@ -168,13 +168,9 @@ export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
     netGrowth,
     cspSubmitted
   )
-  const projectedNetGrowth = projectedMembers - membershipBase
-  const projectedLevel = determineLevel(
-    currentGoals,
-    projectedMembers,
-    projectedNetGrowth,
-    cspSubmitted
-  )
+  // projectedMembers === currentMembers (no April-renewal inflation, #1116
+  // item 3), so the projected level is identical to the current level.
+  const projectedLevel = currentLevel
 
   const gapToDistinguished = computeGap(
     currentGoals,
