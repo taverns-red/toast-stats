@@ -149,12 +149,12 @@ export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
       ? club.membershipTrend[0]!.count
       : currentMembers)
 
-  // Project year-end membership:
-  // If April renewals available, assume renewals represent re-committed members
-  // projected = currentMembers + aprilRenewals (additive signal)
-  // If not available, use current members as projection
-  const projectedMembers =
-    aprilRenewals !== null ? currentMembers + aprilRenewals : currentMembers
+  // Project year-end membership. April renewals are renewal PAYMENTS made by
+  // members who are already counted in currentMembers, so adding them
+  // double-counts membership (#1116 item 3 / §4.1). Without a forward
+  // retention model the honest year-end estimate is the current membership;
+  // aprilRenewals is surfaced separately as an informational signal.
+  const projectedMembers = currentMembers
 
   const netGrowth = currentMembers - membershipBase
 
