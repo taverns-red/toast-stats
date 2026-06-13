@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankHistory } from '../services/cdn'
 import type { RankHistoryResponse } from '../types/districts'
+import { getProgramYearForDate } from '../utils/programYear'
 
 interface UseRankHistoryParams {
   districtIds: string[]
@@ -75,28 +76,17 @@ export function deriveProgramYear(
   _endDate?: string,
   history?: Array<{ date: string }>
 ) {
-  // If explicit dates provided, derive from them
-  if (startDate) {
-    const start = new Date(startDate)
-    const startYear =
-      start.getMonth() >= 6 ? start.getFullYear() : start.getFullYear() - 1
+  // Resolve from the explicit start date, else the most recent history point.
+  // Route through getProgramYearForDate so the July-1 boundary is derived
+  // timezone-invariantly (a `new Date(str).getMonth()` deriver rolls a
+  // first-of-July date back to June in UTC-negative zones — #1116 item 2).
+  const anchorDate = startDate ?? history?.[history.length - 1]?.date
+  if (anchorDate) {
+    const py = getProgramYearForDate(anchorDate)
     return {
-      startDate: `${startYear}-07-01`,
-      endDate: `${startYear + 1}-06-30`,
-      year: `${startYear}-${startYear + 1}`,
-    }
-  }
-
-  // Fall back to the most recent history point
-  if (history?.length) {
-    const latestDate = history[history.length - 1]!.date
-    const latest = new Date(latestDate)
-    const startYear =
-      latest.getMonth() >= 6 ? latest.getFullYear() : latest.getFullYear() - 1
-    return {
-      startDate: `${startYear}-07-01`,
-      endDate: `${startYear + 1}-06-30`,
-      year: `${startYear}-${startYear + 1}`,
+      startDate: py.startDate,
+      endDate: py.endDate,
+      year: py.label,
     }
   }
 

@@ -721,6 +721,9 @@ export class MembershipAnalyticsModule {
         : 0
 
     return {
+      // currentYear/previousYear are calendar-year labels; they stay aligned
+      // with the program-year-selected previousSnapshot because the selector's
+      // anchor is currentDate minus one calendar year (findPreviousProgramYearDate).
       currentYear,
       previousYear: currentYear - 1,
       membershipChange,
