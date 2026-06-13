@@ -279,4 +279,45 @@ describe('DistinguishedDistrictTrophyCase', () => {
     )
     expect(container).toBeEmptyDOMElement()
   })
+
+  describe('loading slot reservation (#1105 — Lesson 107 CLS pattern)', () => {
+    /* The competitive-awards query resolves separately from and later than
+       the page analytics query that paints DistrictDetailPage. Without a
+       reserved slot the trophy case pops in from 0px when that query lands
+       and shoves everything below it down — the AwardsRaceSection (#750)
+       failure class. While the awards query is in flight we render a
+       height-matched skeleton so the real panel fills the slot in place. */
+
+    it('renders a height-matched skeleton while the awards query is loading', () => {
+      render(<DistinguishedDistrictTrophyCase status={null} isLoading />)
+      const skeleton = screen.getByTestId('distinguished-trophy-skeleton')
+      expect(skeleton).toBeInTheDocument()
+      // Reuses the real panel chrome so the loaded content lands in place.
+      expect(skeleton).toHaveClass('redesign-panel')
+      // Decorative — read by neither AT nor the gap-tile queries.
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true')
+      // Reserves the dominant gap-tiles slot (3-up grid) that the loaded
+      // panel renders, so the slot height is present before data arrives.
+      expect(
+        within(skeleton).getByTestId('distinguished-trophy-skeleton-tiles')
+      ).toBeInTheDocument()
+    })
+
+    it('still renders nothing when not loading and status is null', () => {
+      const { container } = render(
+        <DistinguishedDistrictTrophyCase status={null} isLoading={false} />
+      )
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it('renders the real panel, not the skeleton, once status resolves even if isLoading is stale', () => {
+      render(<DistinguishedDistrictTrophyCase status={baseStatus} isLoading />)
+      expect(
+        screen.queryByTestId('distinguished-trophy-skeleton')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: /Distinguished District Status/i })
+      ).toBeInTheDocument()
+    })
+  })
 })
