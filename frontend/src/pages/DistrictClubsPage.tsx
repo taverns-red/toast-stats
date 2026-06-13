@@ -23,6 +23,7 @@ import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ClubsTable } from '../components/ClubsTable'
 import { ProspectiveClubsPanel } from '../components/ProspectiveClubsPanel'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import type { SortDirection, SortField } from '../components/filters/types'
 import type { FilterState } from '../components/filters/types'
@@ -210,7 +211,13 @@ const DistrictClubsPage: React.FC = () => {
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
 
-  const { data: analytics, isLoading } = useDistrictAnalytics(
+  const {
+    data: analytics,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useDistrictAnalytics(
     hasValidDates ? districtId || null : null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined
@@ -289,7 +296,20 @@ const DistrictClubsPage: React.FC = () => {
           <DistrictSubnav districtId={districtId} />
 
           <div className="space-y-4 sm:space-y-6">
-            {isLoading && allClubs.length === 0 ? (
+            {isError && allClubs.length === 0 ? (
+              // #1104 — a fetch reject must surface a retryable error state,
+              // not silently render an empty ClubsTable (`allClubs` falls back
+              // to `[]` on error). Gated on emptiness so a background refetch
+              // error never wipes already-rendered rows.
+              <ErrorDisplay
+                error={error ?? 'Failed to load clubs data'}
+                title="Failed to Load Clubs"
+                onRetry={() => {
+                  refetch()
+                }}
+                showDetails={true}
+              />
+            ) : isLoading && allClubs.length === 0 ? (
               <LoadingSkeleton variant="table" count={6} />
             ) : (
               <>

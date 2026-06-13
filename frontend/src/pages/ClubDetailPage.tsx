@@ -28,7 +28,7 @@ import {
 } from '../utils/dcpProjections'
 import { isCloseToDistinguished } from '../utils/closeToDistinguished'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
-import { EmptyState } from '../components/ErrorDisplay'
+import { EmptyState, ErrorDisplay } from '../components/ErrorDisplay'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -233,7 +233,13 @@ const ClubDetailPage: React.FC = () => {
     effectiveProgramYear !== null && effectiveEndDate !== null
 
   // Fetch district analytics to get this club's data
-  const { data: analytics, isLoading } = useDistrictAnalytics(
+  const {
+    data: analytics,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useDistrictAnalytics(
     hasValidDates ? districtId || null : null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined
@@ -405,6 +411,32 @@ const ClubDetailPage: React.FC = () => {
           <div className="mt-6">
             <LoadingSkeleton variant="chart" height="400px" />
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Fetch error ──────────────────────────────────────────────────────────
+  // #1104 — a transient CDN/analytics fetch reject must surface a distinct,
+  // retryable error state. Checked BEFORE the not-found branch below, because
+  // on error `analytics` is undefined and `club` is null too — without this
+  // gate the page would falsely claim "Club Not Found" (that the club was
+  // removed) for what is really a network failure. Same outer wrapper geometry
+  // as the loading / not-found states so the error path adds no layout shift
+  // (L125).
+
+  if (isError) {
+    return (
+      <div className="min-h-screen">
+        <div className="container mx-auto px-4 py-8">
+          <ErrorDisplay
+            error={error ?? 'Failed to load club data'}
+            title="Failed to Load Club"
+            onRetry={() => {
+              refetch()
+            }}
+            showDetails={true}
+          />
         </div>
       </div>
     )

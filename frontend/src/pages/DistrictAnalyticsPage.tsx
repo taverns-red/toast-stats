@@ -19,6 +19,7 @@ import { DistrictSubnav } from '../components/DistrictSubnav'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { EducationLevelsCard } from '../components/EducationLevelsCard'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 /* District Analytics Page (#680, epic #674 Sprint 6, ADR-005 §1/§2).
@@ -98,12 +99,17 @@ const DistrictAnalyticsPage: React.FC = () => {
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
 
-  const { data: analytics, isLoading: isLoadingAnalytics } =
-    useDistrictAnalytics(
-      hasValidDates ? districtId || null : null,
-      effectiveProgramYear?.startDate,
-      effectiveEndDate ?? undefined
-    )
+  const {
+    data: analytics,
+    isLoading: isLoadingAnalytics,
+    isError: isAnalyticsError,
+    error: analyticsError,
+    refetch: refetchAnalytics,
+  } = useDistrictAnalytics(
+    hasValidDates ? districtId || null : null,
+    effectiveProgramYear?.startDate,
+    effectiveEndDate ?? undefined
+  )
 
   const { data: districtStatistics } = useDistrictStatistics(
     hasValidDates ? districtId || null : null,
@@ -184,6 +190,18 @@ const DistrictAnalyticsPage: React.FC = () => {
                 topGrowthClubs={analytics.topGrowthClubs}
                 topDCPClubs={topDCPClubs}
                 isLoading={isLoadingAnalytics}
+              />
+            ) : isAnalyticsError ? (
+              // #1104 — a fetch reject must surface a retryable error state,
+              // not silently render nothing (the old `: isLoading && …` arm
+              // collapsed to empty on error).
+              <ErrorDisplay
+                error={analyticsError ?? 'Failed to load analytics data'}
+                title="Failed to Load Analytics"
+                onRetry={() => {
+                  refetchAnalytics()
+                }}
+                showDetails={true}
               />
             ) : (
               isLoadingAnalytics && <LoadingSkeleton variant="card" />
