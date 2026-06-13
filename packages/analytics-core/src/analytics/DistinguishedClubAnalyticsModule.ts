@@ -35,7 +35,11 @@ import {
   hasDcpGoalColumns,
   isDcpGoalAchieved,
 } from './dcpGoalDefinitions.js'
-import { ensureString } from './AnalyticsUtils.js'
+import {
+  ensureString,
+  findPreviousProgramYearDate,
+  selectPreviousProgramYearSnapshot,
+} from './AnalyticsUtils.js'
 import {
   calculateNetGrowth,
   determineDistinguishedLevel,
@@ -363,23 +367,22 @@ export class DistinguishedClubAnalyticsModule {
       return undefined
     }
 
-    // Calculate previous year date (subtract 1 year)
-    const currentYear = parseInt(currentDate.substring(0, 4))
-    const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
-
-    // Find current and previous year snapshots
+    // Find current and the previous-PROGRAM-year snapshots. Matching the
+    // previous snapshot by calendar year alone (snapshotYear === currentYear-1)
+    // matched a Jul-Dec snapshot of the SAME program year as a June currentDate
+    // (#1116 item 1); anchor on the previous program year instead.
     const currentSnapshot = snapshots.find(s => s.snapshotDate === currentDate)
-    const previousSnapshot = snapshots.find(s => {
-      const snapshotYear = parseInt(s.snapshotDate.substring(0, 4))
-      return snapshotYear === currentYear - 1
-    })
+    const previousSnapshot = selectPreviousProgramYearSnapshot(
+      snapshots,
+      currentDate
+    )
 
     if (!currentSnapshot || !previousSnapshot) {
       logger.info(
         'Insufficient data for year-over-year distinguished comparison',
         {
           currentDate,
-          previousYearDate,
+          previousYearDate: findPreviousProgramYearDate(currentDate),
           hasCurrentSnapshot: !!currentSnapshot,
           hasPreviousSnapshot: !!previousSnapshot,
         }

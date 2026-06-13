@@ -205,6 +205,62 @@ export function findPreviousProgramYearDate(currentDate: string): string {
 }
 
 /**
+ * Resolve the program-year START year for a YYYY-MM-DD date.
+ *
+ * The Toastmasters program year runs July 1 – June 30, so a Jul–Dec date
+ * belongs to the program year named by its own calendar year, while a Jan–Jun
+ * date belongs to the prior calendar year's program year. Uses
+ * `getCurrentProgramMonth` (string-based, timezone-invariant) so a
+ * first-of-month boundary date is classified correctly in every timezone.
+ *
+ * @param dateString - Date in YYYY-MM-DD format
+ * @returns The starting calendar year of the program year (e.g. 2025 for 2025-26)
+ */
+export function getProgramYearStartYear(dateString: string): number {
+  const year = parseInt(dateString.substring(0, 4), 10)
+  return getCurrentProgramMonth(dateString) >= 7 ? year : year - 1
+}
+
+/**
+ * Select the snapshot that best represents the same point in the PREVIOUS
+ * program year.
+ *
+ * Callers historically matched `parseInt(snapshotDate) === currentYear - 1`
+ * (calendar year). Because a single calendar year straddles two program years
+ * (Jan–Jun = prior PY, Jul–Dec = current PY), that predicate matched a Jul–Dec
+ * snapshot of the SAME program year as a June `currentDate` — a within-year
+ * comparison masquerading as year-over-year (#1116 item 1). This anchors on the
+ * previous program year and, among its snapshots, returns the one closest to
+ * the same calendar day one year earlier.
+ *
+ * @param snapshots - Snapshots carrying a `snapshotDate` (YYYY-MM-DD)
+ * @param currentDate - The current snapshot's date
+ * @returns The previous-program-year snapshot, or undefined if none exists
+ */
+export function selectPreviousProgramYearSnapshot<
+  T extends { snapshotDate: string },
+>(snapshots: T[], currentDate: string): T | undefined {
+  const targetStartYear = getProgramYearStartYear(currentDate) - 1
+  // Date.parse on a YYYY-MM-DD string is UTC for both anchor and candidates,
+  // so the proximity delta is timezone-consistent.
+  const anchorTime = Date.parse(findPreviousProgramYearDate(currentDate))
+
+  let best: T | undefined
+  let bestDelta = Infinity
+  for (const snapshot of snapshots) {
+    if (getProgramYearStartYear(snapshot.snapshotDate) !== targetStartYear) {
+      continue
+    }
+    const delta = Math.abs(Date.parse(snapshot.snapshotDate) - anchorTime)
+    if (delta < bestDelta) {
+      best = snapshot
+      bestDelta = delta
+    }
+  }
+  return best
+}
+
+/**
  * Calculate percentage change between two values
  *
  * Returns 100 if previous value is 0 and current is positive,
