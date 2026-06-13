@@ -26,6 +26,17 @@ vi.mock('../../hooks/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
 }))
 
+// #1103: ScrollRestoration renders null in the real DOM, so we replace it
+// with a sentinel to assert AppShell actually mounts it. createMemoryRouter,
+// RouterProvider and Outlet are preserved from the real module.
+vi.mock('react-router-dom', async importOriginal => {
+  const actual = await importOriginal<typeof import('react-router-dom')>()
+  return {
+    ...actual,
+    ScrollRestoration: () => <div data-testid="scroll-restoration" />,
+  }
+})
+
 const renderShell = (initialPath = '/') => {
   const router = createMemoryRouter(
     [
@@ -256,6 +267,11 @@ describe('AppShell (#354)', () => {
     it('renders the routed page inside an <Outlet />', () => {
       renderShell('/history')
       expect(screen.getByTestId('page')).toHaveTextContent('History')
+    })
+
+    it('mounts <ScrollRestoration /> inside the router so push navigations reset scroll and back/forward restores it (#1103)', () => {
+      renderShell()
+      expect(screen.getByTestId('scroll-restoration')).toBeInTheDocument()
     })
 
     it('includes a skip link for keyboard users', () => {
