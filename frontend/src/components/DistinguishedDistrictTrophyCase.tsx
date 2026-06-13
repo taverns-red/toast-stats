@@ -224,8 +224,12 @@ const TrophyCaseSkeleton: React.FC = () => (
             key={i}
             className="rounded-md border border-gray-200 theme-dark:border-gray-700 px-3 py-2"
           >
+            {/* label · value · "+x%" sub-item — the three rows a populated
+                GapTile renders in the common (count present, gate open)
+                case, so the tile height matches the loaded one. */}
             <SkeletonBar className="h-3 w-20" />
             <SkeletonBar className="mt-1.5 h-5 w-16" />
+            <SkeletonBar className="mt-1.5 h-3 w-10" />
           </div>
         ))}
       </div>
