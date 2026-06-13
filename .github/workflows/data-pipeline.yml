@@ -747,6 +747,15 @@ jobs:
           mkdir -p ./cache/time-series ./cache/club-trends
           gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
           gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
+
+          # District awards history store (~5 KB) (#1111): pull before push, or
+          # the end-of-run push back (DistrictAwardsHistoryStore starts empty
+          # when absent) clobbers the accumulated multi-PY GCS store with a
+          # single-PY partial. Mirrors the daily/rebuild sync steps.
+          echo "Syncing district-awards-history..."
+          gsutil cp "gs://${GCS_BUCKET}/district-awards-history.json" \
+            "./cache/district-awards-history.json" 2>/dev/null || true
+
           echo "## ⏬ Store Sync (rescrape)" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Rescrape Step 2: Scrape → transform → compute → upload ──

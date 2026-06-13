@@ -17,6 +17,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { parse } from 'csv-parse/sync'
 import { parseClosingPeriodFromCsv } from '../utils/csvFooterParser.js'
+import { validateDistrictId } from '../utils/validateDistrictId.js'
 import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
 import {
   resolveClosingWindow,
@@ -228,6 +229,7 @@ export class TransformService {
    * Get the district snapshot file path
    */
   private getDistrictSnapshotPath(date: string, districtId: string): string {
+    validateDistrictId(districtId)
     return path.join(this.getSnapshotDir(date), `district_${districtId}.json`)
   }
 

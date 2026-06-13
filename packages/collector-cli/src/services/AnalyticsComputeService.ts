@@ -33,6 +33,7 @@ import type {
 import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
+import { validateDistrictId } from '../utils/validateDistrictId.js'
 import type { CacheMetadata } from '../types/collector.js'
 import {
   ClosingPeriodDetector,
@@ -204,7 +205,20 @@ export class AnalyticsComputeService {
    * Get the district snapshot file path
    */
   private getDistrictSnapshotPath(date: string, districtId: string): string {
+    validateDistrictId(districtId)
     return path.join(this.getSnapshotDir(date), `district_${districtId}.json`)
+  }
+
+  /**
+   * Get the per-district analytics file path. Validates districtId (#1111)
+   * before interpolating it into the path (active path-traversal tripwire).
+   */
+  private getDistrictAnalyticsPath(date: string, districtId: string): string {
+    validateDistrictId(districtId)
+    return path.join(
+      this.getAnalyticsDir(date),
+      `district_${districtId}_analytics.json`
+    )
   }
 
   /**
@@ -385,11 +399,7 @@ export class AnalyticsComputeService {
    * Check if analytics already exist for a district
    */
   async analyticsExist(date: string, districtId: string): Promise<boolean> {
-    const analyticsDir = this.getAnalyticsDir(date)
-    const analyticsPath = path.join(
-      analyticsDir,
-      `district_${districtId}_analytics.json`
-    )
+    const analyticsPath = this.getDistrictAnalyticsPath(date, districtId)
     try {
       await fs.access(analyticsPath)
       return true
@@ -435,11 +445,7 @@ export class AnalyticsComputeService {
     date: string,
     districtId: string
   ): Promise<string | null> {
-    const analyticsDir = this.getAnalyticsDir(date)
-    const analyticsPath = path.join(
-      analyticsDir,
-      `district_${districtId}_analytics.json`
-    )
+    const analyticsPath = this.getDistrictAnalyticsPath(date, districtId)
 
     try {
       const content = await fs.readFile(analyticsPath, 'utf-8')
@@ -1419,6 +1425,7 @@ export class AnalyticsComputeService {
     currentDate: string,
     districtId: string
   ): Promise<string[]> {
+    validateDistrictId(districtId) // #1111: guards the path.join below
     // Calculate program year boundaries
     const d = new Date(currentDate + 'T00:00:00Z')
     const year = d.getUTCFullYear()

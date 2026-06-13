@@ -17,6 +17,7 @@ import {
   UploadResult,
   UploadSummary,
 } from './types/index.js'
+import { validateDistrictId } from './utils/validateDistrictId.js'
 
 // ============================================================================
 // Date Utilities
@@ -78,12 +79,18 @@ export function getCurrentDateString(): string {
 /**
  * Parse comma-separated district list
  * Requirement 1.5: Comma-separated district parsing
+ *
+ * Each id is validated as the single CLI chokepoint (#1111): a district id is
+ * interpolated into file/GCS paths downstream, so a non-alphanumeric value
+ * (e.g. `--districts '../x'`) must be rejected here before any path is built.
  */
 export function parseDistrictList(value: string): string[] {
-  return value
+  const ids = value
     .split(',')
     .map(d => d.trim())
     .filter(d => d.length > 0)
+  ids.forEach(validateDistrictId)
+  return ids
 }
 
 // ============================================================================
