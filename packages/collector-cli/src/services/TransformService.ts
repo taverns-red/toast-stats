@@ -127,6 +127,11 @@ export interface TransformServiceConfig {
    * publishing under the raw date. Every production entry point (cli
    * transform, scrape --transform, RebuildService) MUST inject this;
    * omitting it preserves legacy fail-open behavior for test fixtures only.
+   *
+   * This "production sites MUST inject" rule is no longer comment-only: it is
+   * structurally enforced by `transformServiceRegistryGuard` + its guard test
+   * (#1160), which fails CI if any production `new TransformService(...)` site
+   * omits `closingDateRegistry`.
    */
   closingDateRegistry?: ClosingDateEntry[]
 }

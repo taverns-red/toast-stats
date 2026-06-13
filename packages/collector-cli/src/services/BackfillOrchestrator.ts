@@ -208,11 +208,17 @@ export function buildBackfillMetadata(
     }
   }
 
+  // isClosingPeriod is intentionally OMITTED. Backfill writes raw CSVs
+  // without parsing the "As of" footer, so it cannot decide closing-period
+  // status. Writing a hardcoded `false` would be a laundered default that the
+  // downstream trust branch (TransformService) honors as an explicit scraper
+  // decision — the #1129 twin-writer hole (Lesson 158). Omitting the key
+  // leaves the decision to the resolution chain (CSV footer → registry),
+  // which fails closed when undecided rather than publishing under a raw date.
   return {
     date: dateStr,
     timestamp: Date.now(),
     programYear: calculateProgramYear(date),
-    isClosingPeriod: false,
     csvFiles: {
       allDistricts: true,
       districts,

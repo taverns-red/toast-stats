@@ -22,7 +22,10 @@
 
 import { Command } from 'commander'
 import { CollectorOrchestrator } from './CollectorOrchestrator.js'
-import { TransformService } from './services/TransformService.js'
+import {
+  createProductionTransformService,
+  loadClosingDateRegistryMonths,
+} from './services/transformServiceFactory.js'
 import { AnalyticsComputeService } from './services/AnalyticsComputeService.js'
 import { UploadService } from './services/UploadService.js'
 import {
@@ -43,30 +46,6 @@ import {
   UploadOptions,
 } from './types/index.js'
 import { resolveConfiguration } from './utils/config.js'
-import {
-  ClosingDateRegistry,
-  type ClosingDateEntry,
-} from './utils/ClosingDateRegistry.js'
-
-/**
- * Load closing-date registry months for the fail-closed closing remap
- * (#1129). Resolves docs/month-end-closing-dates.json relative to cwd — the
- * repo root in CI and local runs. A missing or empty registry yields [], so
- * every metadata-less, footer-less date fails closed (refused) rather than
- * being published under its raw date.
- */
-async function loadClosingDateRegistryMonths(): Promise<ClosingDateEntry[]> {
-  const registry = new ClosingDateRegistry({ projectRoot: process.cwd() })
-  const file = await registry.read()
-  if (file.months.length === 0) {
-    console.error(
-      '[WARN] Closing-date registry is empty or missing ' +
-        '(docs/month-end-closing-dates.json) — dates undecidable from ' +
-        'metadata/CSV footer will FAIL CLOSED (#1129)'
-    )
-  }
-  return file.months
-}
 
 // Re-export configuration utilities for external use
 export {
@@ -257,11 +236,11 @@ export function createCLI(): Command {
             console.error(`[INFO] Running transformation after scrape...`)
           }
 
-          // Create TransformService with optional verbose logger
-          const transformService = new TransformService({
+          // Create TransformService via the production factory, which loads
+          // and injects the closing-date registry (#1160).
+          const transformService = await createProductionTransformService({
             cacheDir,
             logger: createVerboseLogger(options.verbose),
-            closingDateRegistry: await loadClosingDateRegistryMonths(),
           })
 
           // Transform only the successfully scraped districts
@@ -469,12 +448,12 @@ export function createCLI(): Command {
         console.error(`[INFO] Config source: ${resolvedConfig.source}`)
       }
 
-      // Create TransformService with optional verbose logger
+      // Create TransformService via the production factory, which loads and
+      // injects the closing-date registry (#1160).
       // Requirement 2.2: Use the same DataTransformationService logic as the Backend
-      const transformService = new TransformService({
+      const transformService = await createProductionTransformService({
         cacheDir,
         logger: createVerboseLogger(options.verbose),
-        closingDateRegistry: await loadClosingDateRegistryMonths(),
       })
 
       // Execute transformation
