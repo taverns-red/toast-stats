@@ -69,6 +69,9 @@
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md}": "prettier --write"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "overrides": {
     "minimatch": "^10.2.3",
     "fast-xml-parser": "^5.5.8",
