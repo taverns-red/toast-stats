@@ -1,16 +1,16 @@
 /**
  * Pure utility functions for touch target validation.
  *
- * Extracted from useTouchTarget hook to enable unit testing
- * without React rendering overhead.
+ * The selector set and 44px floor are the single source of truth shared by the
+ * runtime audit helpers here and the dual-engine Playwright touch-target smoke.
  */
 
 /**
  * The single selector set defining what counts as an interactive (tappable)
  * element. Exported as the one source of truth so every consumer agrees:
- * `getAllInteractiveElements` (runtime audit), `useTouchTarget`
- * (`validateAllTouchTargets`), AND the dual-engine 44px touch-target tripwire
- * smoke (`frontend/e2e/touch-targets.smoke.ts`, #887) all import this array.
+ * `getAllInteractiveElements` (runtime audit) AND the dual-engine 44px
+ * touch-target tripwire smoke (`frontend/e2e/touch-targets.smoke.ts`, #887)
+ * both import this array.
  * Drift between the product and its guard is the failure mode this prevents
  * (R20 spirit — source the partition from the tool itself, not a re-typed glob).
  */
@@ -30,9 +30,9 @@ export const INTERACTIVE_SELECTORS = [
 
 /**
  * The minimum tap-target dimension in px (WCAG 2.5.5 / mobile handoff floor).
- * One source of truth for the policy: `useTouchTarget`'s default `minSize` and
- * the dual-engine touch-target tripwire (`frontend/e2e/touch-targets.smoke.ts`,
- * #887) both use it, so the guard and the runtime check the same number.
+ * The single source of truth for the policy: the dual-engine touch-target
+ * tripwire (`frontend/e2e/touch-targets.smoke.ts`, #887) imports it, so the
+ * guard and the runtime audit check the same number.
  */
 export const MIN_TOUCH_TARGET_PX = 44
 
