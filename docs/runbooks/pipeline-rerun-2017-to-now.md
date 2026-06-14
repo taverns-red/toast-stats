@@ -54,10 +54,13 @@ Run these **before** dispatching. They take minutes and prevent a wasted 2–4h 
 ### 2a. Coverage / known gaps (Sprint 1, live 2026-05-31 — re-confirm)
 
 ```bash
-# raw-csv coverage: expect 2017-02-08 → most-recent, one collection/month
-gsutil ls gs://toast-stats-data-ca/raw-csv/ | sed 's#.*/raw-csv/##;s#/$##' \
+# raw-csv coverage: expect 2017-02-08 → most-recent, one collection/month.
+# Read STAGING — that is the raw-csv the rebuild actually reads (GCS_BUCKET=staging,
+# §1). Promotion never syncs raw-csv to prod, so prod's raw-csv may be empty/stale and
+# would mis-report coverage.
+gsutil ls gs://toast-stats-data-staging/raw-csv/ | sed 's#.*/raw-csv/##;s#/$##' \
   | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' | sort
-# prod snapshot index (the count the gate compares against)
+# prod snapshot index (the count the gate compares against — prod is correct here)
 gsutil cat gs://toast-stats-data-ca/v1/dates.json | jq '.count, .dates[0], .dates[-1]'
 ```
 
@@ -348,5 +351,3 @@ so it **overwrote** changed objects but did not delete prod-only ones. To restor
 - Pipeline mechanics — [`docs/data-pipeline-flow.md`](../data-pipeline-flow.md)
 - Lesson 139 — closing-period remap (July collection → prior June-30 year-end)
 - `R2` (sync from GCS first), `R9` (GCS-backed store pattern), `R11` (gates are ANDed, not replaced)
-  </content>
-  </invoke>

@@ -1542,9 +1542,13 @@ These rules govern DAP/DDP calculations:
 
 **Club Visit Data**:
 
-- Club visit completion data is **not currently available** from the Toastmasters dashboard CSV exports
-- Until this data becomes available, eligibility gates based on club visits **cannot be evaluated**
-- Implementation should track eligibility as "unknown" when visit data is unavailable
+- Club visit completion **is** available from the club-performance CSV: the **`Nov Visit award`**
+  and **`May Visit award`** columns indicate per-club first-round and second-round visit
+  completion (`1` = submitted). Surfaced and used for DAP/DDP eligibility in #833/#976.
+- The §6.1 eligibility gate evaluates each round against the **75% of club base** threshold
+  (not 100%); see [toastmasters-rules-reference.md §6.1](docs/toastmasters-rules-reference.md).
+- Eligibility is still tracked as **"unknown"** only when the columns are genuinely absent for a
+  date/district (e.g. some historical exports), not as a blanket "unavailable."
 
 **Paid Status**:
 
@@ -1555,7 +1559,7 @@ These rules govern DAP/DDP calculations:
 ### Implementation Considerations
 
 1. Recognition calculations must follow the exact thresholds specified
-2. Percentage calculations must use the correct denominator (paid units only for distinguished %)
+2. Percentage calculations must use the correct denominator: DAP/DDP recognition counts distinguished **clubs** against the **club base** (the tables above), per rules-reference §6.3/§7.3 — **not** "paid units" (corrected in #799). The separate district-ranking % Distinguished metric uses the paid club base (Lesson 60).
 3. Eligibility gates must be evaluated before scoring metrics
 4. Recognition level must be the highest level for which all criteria are met
 5. When eligibility cannot be determined, recognition should be marked as "Unknown"
