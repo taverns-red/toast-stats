@@ -4,7 +4,7 @@
 **Applies to:** All Toastmasters reporting and analytics calculations  
 **Audience:** Developers, Analytics Engine, Reporting Systems  
 **Owner:** Development Team  
-**Last Updated:** January 2026
+**Last Updated:** June 2026 (v1.6 — see §14 Version History)
 
 ---
 
