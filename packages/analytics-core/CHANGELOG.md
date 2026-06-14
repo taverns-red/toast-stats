@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.2](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.1...analytics-core-v1.9.2) (2026-06-14)
+
+
+### Bug Fixes
+
+* **analytics:** secondary correctness bundle — YoY same-PY, timezone month, dcpProjections, inline thresholds ([#1116](https://github.com/taverns-red/toast-stats/issues/1116)) ([#1207](https://github.com/taverns-red/toast-stats/issues/1207)) ([8b5261e](https://github.com/taverns-red/toast-stats/commit/8b5261ef94b8cf481cd86f525049d0de45c99044))
+* CSP-gate frontend distinguished projections ([#1139](https://github.com/taverns-red/toast-stats/issues/1139)) ([#1205](https://github.com/taverns-red/toast-stats/issues/1205)) ([8446933](https://github.com/taverns-red/toast-stats/commit/8446933182bdad0cb9eab74131f31a382b1ba2be))
+
 ## [1.9.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.0...analytics-core-v1.9.1) (2026-06-12)
 
 
