@@ -19,13 +19,12 @@ const readWorkflow = (f: string) => readFileSync(join(workflowsDir, f), 'utf8')
 const readJson = (rel: string) =>
   JSON.parse(readFileSync(join(repoRoot, rel), 'utf8'))
 
-const WORKSPACE_PKGS = [
-  'frontend/package.json',
-  'packages/collector-cli/package.json',
-  'packages/analytics-core/package.json',
-  'packages/shared-contracts/package.json',
-  'packages/mcp-server/package.json',
-]
+// Source the workspace package.json list from root `workspaces`, not a
+// hardcoded array — a new workspace then auto-falls into the lint-cap and
+// engines-pin guards instead of silently escaping them (R20/R21, L150).
+const WORKSPACE_PKGS: string[] = readJson('package.json').workspaces.map(
+  (ws: string) => `${ws}/package.json`
+)
 
 describe('findDevelopBranchRefs', () => {
   it('fires on a known-bad develop trigger (sentinel)', () => {
@@ -66,14 +65,23 @@ describe('findLiteralNodeVersions', () => {
 })
 
 describe('.nvmrc is the single Node pin (AC4)', () => {
-  it('exists and its major matches root engines.node', () => {
-    const nvmrcPath = join(repoRoot, '.nvmrc')
+  const nvmrcPath = join(repoRoot, '.nvmrc')
+
+  it('exists', () => {
     expect(existsSync(nvmrcPath)).toBe(true)
-    const major = nvmrcMajor(readFileSync(nvmrcPath, 'utf8'))
-    const engines: string = readJson('package.json').engines?.node ?? ''
-    expect(engines).not.toBe('')
-    expect(engines).toContain(major)
   })
+
+  // Every engines.node declaration (root + each workspace) must agree with
+  // .nvmrc's major, or a workspace can silently pin a divergent Node.
+  it.each(['package.json', ...WORKSPACE_PKGS])(
+    '%s engines.node agrees with .nvmrc',
+    rel => {
+      const major = nvmrcMajor(readFileSync(nvmrcPath, 'utf8'))
+      const engines: string = readJson(rel).engines?.node ?? ''
+      expect(engines).not.toBe('')
+      expect(engines).toContain(major)
+    }
+  )
 })
 
 describe('lint caps (AC5)', () => {

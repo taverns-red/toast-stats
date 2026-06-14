@@ -21,17 +21,22 @@ export interface WorkflowMatch {
   text: string
 }
 
+/** Every line matching `pattern`, as 1-based {line, trimmed text} matches. */
+function findMatchingLines(source: string, pattern: RegExp): WorkflowMatch[] {
+  const out: WorkflowMatch[] = []
+  source.split('\n').forEach((text, i) => {
+    if (pattern.test(text)) out.push({ line: i + 1, text: text.trim() })
+  })
+  return out
+}
+
 /**
  * Find references to a `develop` branch (dead trigger). Matches `develop` as a
  * standalone word — `\bdevelop\b` does NOT match `development`/`developer`
  * because the trailing letter keeps the word boundary from landing after `p`.
  */
 export function findDevelopBranchRefs(yamlSource: string): WorkflowMatch[] {
-  const out: WorkflowMatch[] = []
-  yamlSource.split('\n').forEach((text, i) => {
-    if (/\bdevelop\b/.test(text)) out.push({ line: i + 1, text: text.trim() })
-  })
-  return out
+  return findMatchingLines(yamlSource, /\bdevelop\b/)
 }
 
 /**
@@ -42,12 +47,7 @@ export function findDevelopBranchRefs(yamlSource: string): WorkflowMatch[] {
  * because `-file` sits between `node-version` and the colon.
  */
 export function findLiteralNodeVersions(yamlSource: string): WorkflowMatch[] {
-  const out: WorkflowMatch[] = []
-  yamlSource.split('\n').forEach((text, i) => {
-    if (/^\s*node-version:\s*\S/.test(text))
-      out.push({ line: i + 1, text: text.trim() })
-  })
-  return out
+  return findMatchingLines(yamlSource, /^\s*node-version:\s*\S/)
 }
 
 /**
