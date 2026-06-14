@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.6.0...shared-contracts-v1.6.1) (2026-06-14)
+
+
+### Bug Fixes
+
+* **contracts:** add dcpGoalsAchieved to ClubStatisticsFileSchema ([#1143](https://github.com/taverns-red/toast-stats/issues/1143)) ([#1209](https://github.com/taverns-red/toast-stats/issues/1209)) ([0ed280c](https://github.com/taverns-red/toast-stats/commit/0ed280c761dfd76fc1f6cb7db0b4bd516c2e3b43))
+
 ## [1.6.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.5.0...shared-contracts-v1.6.0) (2026-05-31)
 
 
