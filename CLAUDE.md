@@ -77,7 +77,7 @@ Read `tasks/rules.md` completely before every task. Key rules:
 
 ## Active Tripwires
 
-- `SnapshotBuilder.build()` has two district-tracking code paths (success + validation-failure) — must update both.
+- District success/failure tracking lives in **one place** — `TransformService.transform()` (`packages/collector-cli`) loops over per-district `transformDistrictToDate` results and derives `districtsSucceeded`/`districtsFailed`/`districtsSkipped` by filtering that single `results[]` array. There is no second validation-failure path: the old `SnapshotBuilder.build()` two-path hazard died with the now-deleted backend (the name survives only in `DataTransformer.ts` comments). Changing district discovery touches only that one loop — don't reintroduce a parallel path.
 - DCP goals are **independent**, not sequential. Use `clubPerformance` raw fields, never infer count as Goals 1-N.
 - Chart `|| 1` range fallback causes y-axis inversion. Pad symmetrically when `range === 0`.
 - `Path.join()` with raw user input = path traversal. Always call `validateDistrictId()` first.
