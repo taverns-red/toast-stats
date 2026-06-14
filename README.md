@@ -10,11 +10,15 @@ A data visualization platform for Toastmasters district leaders to track perform
 
 This is a monorepo containing:
 
-- `frontend/` - React + TypeScript + Vite application
-- `backend/` - Node.js + Express + TypeScript API server (read-only, serves pre-computed data)
-- `packages/collector-cli/` - Standalone CLI tool for scraping Toastmasters dashboard data
+- `frontend/` - React + TypeScript + Vite application (the entire user-facing product)
+- `packages/collector-cli/` - Standalone CLI tool that scrapes, transforms, and computes analytics
 - `packages/analytics-core/` - Shared analytics computation library
 - `packages/shared-contracts/` - Data contracts (types + Zod schemas) between packages
+- `packages/mcp-server/` - Thin local read-only MCP server over the public snapshot CDN (`@taverns-red/toast-stats-mcp`, ADR-008)
+
+> **No backend server.** The Express API was decommissioned — all data is pre-computed by the
+> collector-cli pipeline, stored as static JSON in GCS, and served directly to the SPA via
+> Cloud CDN. There is nothing to run between the CDN and the browser.
 
 ## Prerequisites
 
@@ -24,7 +28,7 @@ This is a monorepo containing:
 
 ### Installation
 
-Install dependencies for both frontend and backend:
+Install all workspace dependencies:
 
 ```bash
 npm install
@@ -32,18 +36,17 @@ npm install
 
 ### Configuration
 
-1. Copy the example environment files:
+1. Copy the example frontend environment file:
 
 ```bash
 cp frontend/.env.example frontend/.env
-cp backend/.env.example backend/.env
 ```
 
-2. Update the environment variables in the `.env` files as needed.
+2. Update the environment variables in the `.env` file as needed.
 
 #### Cache Configuration
 
-The application uses a unified cache configuration system. Set the `CACHE_DIR` environment variable to configure where cached data is stored:
+The collector-cli uses a unified cache configuration system. Set the `CACHE_DIR` environment variable to configure where scraped data is cached during a pipeline run:
 
 ```bash
 # Development (relative path)
@@ -57,25 +60,21 @@ For detailed cache configuration examples for different deployment scenarios, se
 
 ### Development
 
-Run both frontend and backend in development mode:
+Run the frontend dev server:
 
 ```bash
-# Run frontend (in one terminal)
 npm run dev:frontend
-
-# Run backend (in another terminal)
-npm run dev:backend
 ```
 
-The frontend will be available at `http://localhost:3000` and the backend at `http://localhost:5001`.
+The frontend will be available at `http://localhost:3000`. In development it reads pre-computed
+snapshots straight from the public CDN — there is no local API server to run.
 
 ### Building for Production
 
-Build both projects:
+Build the frontend (TypeScript check + Vite build):
 
 ```bash
 npm run build:frontend
-npm run build:backend
 ```
 
 ### Code Quality
@@ -96,22 +95,21 @@ npm run lint
 
 ### Frontend
 
-- React 18
+- React 19
 - TypeScript
 - Vite
 - TailwindCSS
 - React Router
-- TanStack Query (React Query)
+- TanStack Query (React Query) — data fetching + caching from the CDN
 - Recharts
-- Axios
 
-### Backend
+### Data Pipeline (collector-cli)
 
-- Node.js
-- Express
-- TypeScript
+- Node.js + TypeScript
+- Commander (CLI)
+- csv-parse (Toastmasters CSV parsing)
 - Zod for runtime validation
-- In-memory caching
+- `@google-cloud/storage` (GCS reads/writes)
 
 ### Shared Packages
 
@@ -124,24 +122,26 @@ The application fetches data from the public Toastmasters dashboards at https://
 
 ### Architecture Overview
 
-The system uses a **two-process architecture** that separates data acquisition from data serving:
+The system separates data acquisition from data serving — there is no API server in the request path:
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Collector CLI    │────▶│  Raw CSV Cache  │◀────│    Backend      │
-│  (scrapes data) │     │  (shared cache) │     │ (serves data)   │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+┌─────────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Collector CLI  │────▶│  GCS buckets │────▶│  Cloud CDN   │────▶│  React SPA   │
+│ (GitHub Actions)│     │ (static JSON)│     │ cdn.taverns… │     │  (browser)   │
+└─────────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
 ```
 
-1. **Collector CLI** (`packages/collector-cli/`): Standalone tool that scrapes Toastmasters dashboard, transforms data, and computes analytics
-2. **Backend** (`backend/`): Read-only API server that serves pre-computed data from snapshots (no scraping, no computation)
+1. **Collector CLI** (`packages/collector-cli/`): runs in scheduled GitHub Actions, scrapes the Toastmasters dashboard, transforms data, computes analytics, and uploads pre-computed snapshots/analytics as static JSON to GCS.
+2. **Cloud CDN** serves that static JSON directly to the SPA — no backend, no computation at request time.
 
-This separation enables:
+This architecture enables:
 
 - Independent scheduling of scraping operations
-- Backend remains responsive during scraping
-- Scraping failures don't affect data serving
+- Infinite read scaling (the CDN serves immutable static files)
+- Scraping failures never affect data serving
 - Easier testing and maintenance
+
+See [docs/architecture.md](./docs/architecture.md) and [docs/data-pipeline-flow.md](./docs/data-pipeline-flow.md) for the full data flow, including the staging→prod promotion model.
 
 ### Running the Collector
 
@@ -159,17 +159,9 @@ npm run collector-cli -- scrape --districts 57,58,59
 npm run collector-cli -- status
 ```
 
-### Mock Data vs Real Data
-
-- **Mock Data** (default): Fast, fake data for development
-- **Real Data**: Uses collector-cli to collect live data from Toastmasters dashboards
-
-Toggle between them in `backend/.env`:
-
-```bash
-USE_MOCK_DATA=true   # Use mock data (fast)
-USE_MOCK_DATA=false  # Use real data from cache (requires collector-cli to populate cache)
-```
+The collector-cli writes its output to GCS; the frontend reads the published snapshots from the
+CDN. For local frontend development you do not run the collector — the dev server fetches the
+live public snapshots directly.
 
 ## Features
 
@@ -232,18 +224,17 @@ For production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 Production architecture:
 
-- **Frontend**: Firebase Hosting (static SPA)
-- **Backend**: Google Cloud Run (containerized API)
-- **Storage**: Firestore (snapshots) + Cloud Storage (CSV cache)
+- **Frontend**: Firebase Hosting (static SPA, `ts.taverns.red`)
+- **Data**: GCS buckets — staging (`toast-stats-data-staging`) and production (`toast-stats-data-ca`) — served via Cloud CDN (`cdn.taverns.red`). No Cloud Run, no Firestore.
 
 ### CI/CD Pipeline
 
 The project uses GitHub Actions for continuous integration and deployment:
 
 - **CI** (`ci.yml`): Runs on every push — typecheck, lint, and test across all workspaces
-- **Deploy** (`deploy.yml`): Builds Docker image, deploys backend to Cloud Run, deploys frontend to Firebase Hosting
-- **PR Preview** (`pr-preview.yml`): On every PR that touches frontend code, deploys a temporary Firebase Hosting preview channel (7-day TTL) and posts the live URL as a PR comment
-- **Data Pipeline** (`data-pipeline.yml`): Scheduled scraping and analytics computation
+- **Deploy** (`deploy.yml`): Builds the frontend and deploys it to Firebase Hosting
+- **PR Preview** (`pr-preview.yml`): On every PR that touches `frontend/**`, `packages/{shared-contracts,analytics-core}/**`, or Firebase config, deploys a temporary Firebase Hosting preview channel and posts the live URL as a PR comment
+- **Data Pipeline** (`data-pipeline.yml`): Scheduled scraping + analytics computation into staging, gated promotion to production
 
 See [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) for pre-deployment verification steps.
 
@@ -257,10 +248,10 @@ npm test
 
 # Individual workspaces
 npm run test:frontend
-npm run test:backend
 npm run test:analytics-core
 npm run test:collector-cli
 npm run test:shared-contracts
+npm run test:mcp-server
 
 # Coverage report
 npm run test:coverage
