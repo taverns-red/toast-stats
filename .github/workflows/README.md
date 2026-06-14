@@ -10,8 +10,8 @@ This directory contains the CI/CD workflows for the Toastmasters District Visual
 
 **Triggers**:
 
-- Push to `main` or `develop` branches
-- Pull requests to `main` or `develop` branches
+- Push to `main` (post-merge CI)
+- Pull requests targeting `main`
 - Daily scheduled run at 9 AM UTC for compliance monitoring
 
 **Jobs**:
