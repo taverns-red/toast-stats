@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
     # Skip CI when a push touches only non-code artifacts (lessons, docs,
     # markdown, ignore/license). Runs whenever ANY changed file is outside
     # these globs, so mixed code+docs changes are still fully gated.
@@ -13,7 +13,7 @@ on:
       - '.gitignore'
       - 'LICENSE'
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     paths-ignore:
       - '**/*.md'
       - 'tasks/**'
@@ -27,9 +27,6 @@ permissions:
   packages: write
   security-events: write
   pull-requests: write
-
-env:
-  NODE_VERSION: '22'
 
 jobs:
   # Quality Gates - Must pass before any other jobs
@@ -47,7 +44,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -57,7 +54,14 @@ jobs:
         run: |
           npm run build:shared-contracts
           npm run build:analytics-core
+          npm run build:collector-cli
           npm run build:mcp-server
+
+      - name: Typecheck collector-cli (#1109)
+        # collector-cli is never built/typechecked in PR CI otherwise — its
+        # type errors first surface in the scheduled data pipeline. Gate it
+        # here so they fail the PR instead (epic #1194 AC2).
+        run: npm run typecheck --workspace=@toastmasters/collector-cli
 
       - name: TypeScript Zero Error Check
         id: typescript
@@ -170,7 +174,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -239,7 +243,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -276,7 +280,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
