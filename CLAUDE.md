@@ -12,6 +12,7 @@ Toastmasters District Statistics Visualizer — a data visualization platform fo
 - `packages/shared-contracts/` — Zod schemas + TypeScript types (ESM + CJS dual export)
 - `packages/analytics-core/` — Analytics computation engine (~58K lines)
 - `packages/collector-cli/` — Data scraping CLI (Commander, csv-parse, GCS)
+- `packages/mcp-server/` — Read-only MCP server over the public snapshot CDN (`@taverns-red/toast-stats-mcp`, ADR-008)
 
 ## Commands
 
@@ -51,7 +52,7 @@ npm run pre-commit
 
 **Frontend structure (`frontend/src/`):**
 
-- `pages/` — 3 lazy-loaded routes: LandingPage, DistrictDetailPage, ClubDetailPage
+- `pages/` — 18 lazy-loaded page components across ~19 routes (`React.lazy` in `App.tsx`): DistrictsPage, DistrictDetailPage + routed subpages (Clubs/Divisions/Rankings/Trends/Analytics/Changes), DivisionPage, AreaPage, ClubDetailPage, RegionsPage, RegionPage, History/Methodology/Awards/McpPage, plus a root `errorElement` branded 404 (#1010)
 - `components/` — UI components (tables, charts, cards, modals)
 - `hooks/` — Custom hooks (`useDistrictAnalytics`, `useTimeSeries`, `usePaymentsTrend`, `useColumnFilters`, etc.)
 - `services/` — CDN/API service layer (`cdn.ts`, `cdnTimeSeries.ts`)
@@ -61,7 +62,7 @@ npm run pre-commit
 
 **Styling:** Tailwind 4 with CSS layers. Dark mode via `[data-theme='dark']` CSS scope. Opacity variants (`text-tm-*-80`) bake in hardcoded rgba and must be overridden explicitly — they don't inherit CSS variable overrides.
 
-**Deployment:** Frontend → Firebase Hosting. Backend → Cloud Run (Docker). Storage → Firestore + GCS. CI via GitHub Actions.
+**Deployment:** Frontend → Firebase Hosting. No backend server — data is pre-computed by the collector-cli pipeline into GCS (staging `toast-stats-data-staging` → gated promotion → prod `toast-stats-data-ca`) and served via Cloud CDN. CI via GitHub Actions.
 
 ## Engineering Rules (from `tasks/rules.md`)
 
