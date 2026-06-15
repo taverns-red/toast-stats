@@ -41,6 +41,28 @@ function createValidDistrictTotals() {
 }
 
 /**
+ * Creates a valid ClubStatisticsFile object (required fields only).
+ */
+function createValidClub() {
+  return {
+    clubId: '00012345',
+    clubName: 'Test Club',
+    divisionId: 'A',
+    areaId: '1',
+    membershipCount: 25,
+    paymentsCount: 30,
+    dcpGoals: 7,
+    status: 'Active',
+    divisionName: 'Division A',
+    areaName: 'Area 1',
+    octoberRenewals: 20,
+    aprilRenewals: 5,
+    newMembers: 3,
+    membershipBase: 20,
+  }
+}
+
+/**
  * Creates a valid DistrictStatisticsFile object for testing.
  */
 function createValidDistrictStatisticsFile() {
@@ -527,6 +549,60 @@ describe('DistrictStatisticsFileSchema validation', () => {
       }
       const result = DistrictStatisticsFileSchema.safeParse(data)
       expect(result.success).toBe(false)
+    })
+  })
+
+  // ============================================================================
+  // ClubStatisticsFile dcpGoalsAchieved field tests (#1143)
+  // ============================================================================
+
+  describe('ClubStatisticsFileSchema — dcpGoalsAchieved (#1143)', () => {
+    // Silent-strip class (ADR-010, audit §9a): dcpGoalsAchieved is declared on
+    // the ClubStatisticsFile interface and written by DataTransformer
+    // (computeDcpGoalsAchieved, #1118) but was absent from the schema, so a
+    // validating parse silently STRIPPED it from every .clubs[] row.
+    it('preserves dcpGoalsAchieved on a parsed club (no silent strip)', () => {
+      const club = {
+        ...createValidClub(),
+        dcpGoalsAchieved: [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+        ],
+      }
+      const res = ClubStatisticsFileSchema.safeParse(club)
+      expect(res.success).toBe(true)
+      if (res.success) {
+        // Keyed access (not dotted) so this test type-checks at the Red step,
+        // before the schema's inferred type carries the new field.
+        const parsed = res.data as Record<string, unknown>
+        expect(parsed['dcpGoalsAchieved']).toEqual(club.dcpGoalsAchieved)
+      }
+    })
+
+    it('accepts a club that omits dcpGoalsAchieved (dormant snapshots)', () => {
+      const res = ClubStatisticsFileSchema.safeParse(createValidClub())
+      expect(res.success).toBe(true)
+      if (res.success) {
+        const parsed = res.data as Record<string, unknown>
+        expect(parsed['dcpGoalsAchieved']).toBeUndefined()
+      }
+    })
+
+    it('rejects a non-boolean-array dcpGoalsAchieved (keeps the contract falsifiable)', () => {
+      const club = {
+        ...createValidClub(),
+        dcpGoalsAchieved: [1, 0, 1],
+      }
+      const res = ClubStatisticsFileSchema.safeParse(club)
+      expect(res.success).toBe(false)
     })
   })
 

@@ -88,7 +88,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: '22'
   # Daily pipeline writes to staging first; promotion copies to production (#316)
   GCS_BUCKET: 'toast-stats-data-staging'
   GCS_BUCKET_PRODUCTION: 'toast-stats-data-ca'
@@ -113,7 +112,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -747,6 +746,15 @@ jobs:
           mkdir -p ./cache/time-series ./cache/club-trends
           gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
           gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
+
+          # District awards history store (~5 KB) (#1111): pull before push, or
+          # the end-of-run push back (DistrictAwardsHistoryStore starts empty
+          # when absent) clobbers the accumulated multi-PY GCS store with a
+          # single-PY partial. Mirrors the daily/rebuild sync steps.
+          echo "Syncing district-awards-history..."
+          gsutil cp "gs://${GCS_BUCKET}/district-awards-history.json" \
+            "./cache/district-awards-history.json" 2>/dev/null || true
+
           echo "## ⏬ Store Sync (rescrape)" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Rescrape Step 2: Scrape → transform → compute → upload ──

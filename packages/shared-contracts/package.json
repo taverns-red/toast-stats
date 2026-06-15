@@ -1,6 +1,6 @@
 {
   "name": "@toastmasters/shared-contracts",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -29,7 +29,7 @@
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:cjs-package": "echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
     "clean": "rm -rf dist",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint . --ext .ts --max-warnings 0",
     "test": "vitest --run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit --skipLibCheck"

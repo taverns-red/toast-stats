@@ -17,6 +17,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { parse } from 'csv-parse/sync'
 import { parseClosingPeriodFromCsv } from '../utils/csvFooterParser.js'
+import { validateDistrictId } from '../utils/validateDistrictId.js'
 import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
 import {
   resolveClosingWindow,
@@ -126,6 +127,11 @@ export interface TransformServiceConfig {
    * publishing under the raw date. Every production entry point (cli
    * transform, scrape --transform, RebuildService) MUST inject this;
    * omitting it preserves legacy fail-open behavior for test fixtures only.
+   *
+   * This "production sites MUST inject" rule is no longer comment-only: it is
+   * structurally enforced by `transformServiceRegistryGuard` + its guard test
+   * (#1160), which fails CI if any production `new TransformService(...)` site
+   * omits `closingDateRegistry`.
    */
   closingDateRegistry?: ClosingDateEntry[]
 }
@@ -228,6 +234,7 @@ export class TransformService {
    * Get the district snapshot file path
    */
   private getDistrictSnapshotPath(date: string, districtId: string): string {
+    validateDistrictId(districtId)
     return path.join(this.getSnapshotDir(date), `district_${districtId}.json`)
   }
 

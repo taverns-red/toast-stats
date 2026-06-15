@@ -17,6 +17,49 @@ import {
   UploadResult,
   UploadSummary,
 } from './types/index.js'
+import { validateDistrictId } from './utils/validateDistrictId.js'
+
+// ============================================================================
+// Structured-output Termination
+// ============================================================================
+
+/**
+ * Print a structured JSON summary to stdout and exit — but only after that
+ * write has fully drained.
+ *
+ * `process.exit()` terminates synchronously and discards any stdout bytes
+ * still buffered for an async pipe, so a large summary gets cut at the ~64KB
+ * highWaterMark when the command runs through `| tee`/`| jq` (the #1070
+ * 768-result dry-run died mid-record), while the same data prints intact to a
+ * file or TTY (#1182). Deferring the exit to the write's drain callback
+ * guarantees every byte reaches the OS first.
+ *
+ * Use this for the *terminal* JSON-summary emit at the end of a command — it
+ * both emits and exits, so nothing should run after it. (Fail-fast option
+ * validators stay on `process.exit()`: they write only small stderr and must
+ * stop the world immediately, which a deferred exit would not do.)
+ *
+ * R4 is unaffected: structured JSON goes to stdout, logs to stderr. Output is
+ * byte-identical to the previous `console.log(JSON.stringify(payload, null,
+ * 2))` (trailing newline included).
+ *
+ * Because the exit is deferred, this function returns control synchronously —
+ * so it must be the last thing a code path does. Inside a `catch` (or any
+ * block with code after it), call it as `return emitJsonAndExit(...)`, or the
+ * handler keeps running past the "exit" on the same tick.
+ */
+export function emitJsonAndExit(payload: unknown, exitCode: number): never {
+  // A closed reader (e.g. `| head`) makes stdout emit 'error'; the drain
+  // callback isn't guaranteed to fire then, so exit on error too rather than
+  // hang. (The pre-fix synchronous process.exit could never hang.)
+  process.stdout.once('error', () => process.exit(exitCode))
+  process.stdout.write(JSON.stringify(payload, null, 2) + '\n', () =>
+    process.exit(exitCode)
+  )
+  // The drain callback owns termination; `never` lets callers treat this as
+  // the end of the command.
+  return undefined as never
+}
 
 // ============================================================================
 // Date Utilities
@@ -78,12 +121,18 @@ export function getCurrentDateString(): string {
 /**
  * Parse comma-separated district list
  * Requirement 1.5: Comma-separated district parsing
+ *
+ * Each id is validated as the single CLI chokepoint (#1111): a district id is
+ * interpolated into file/GCS paths downstream, so a non-alphanumeric value
+ * (e.g. `--districts '../x'`) must be rejected here before any path is built.
  */
 export function parseDistrictList(value: string): string[] {
-  return value
+  const ids = value
     .split(',')
     .map(d => d.trim())
     .filter(d => d.length > 0)
+  ids.forEach(validateDistrictId)
+  return ids
 }
 
 // ============================================================================

@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.5.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.5.1...collector-cli-v1.5.2) (2026-06-14)
+
+
+### Bug Fixes
+
+* **collector-cli:** flush stdout before exit so piped JSON isn't truncated ([#1182](https://github.com/taverns-red/toast-stats/issues/1182)) ([#1212](https://github.com/taverns-red/toast-stats/issues/1212)) ([e2ad2d0](https://github.com/taverns-red/toast-stats/commit/e2ad2d04289e8b2d26eb08bd90ed83a9060cc81f))
+* **collector:** backfill omits isClosingPeriod + structural registry-injection guard ([#1160](https://github.com/taverns-red/toast-stats/issues/1160)) ([#1211](https://github.com/taverns-red/toast-stats/issues/1211)) ([eac731e](https://github.com/taverns-red/toast-stats/commit/eac731e7bc90f4631be98ef6ec238c978799369a))
+* **pipeline:** rescrape clobbers district-awards-history.json (R2) + validateDistrictId gaps ([#1111](https://github.com/taverns-red/toast-stats/issues/1111)) ([#1210](https://github.com/taverns-red/toast-stats/issues/1210)) ([4295728](https://github.com/taverns-red/toast-stats/commit/42957288c0ec6570cda2bcd58660bae4bee9f0e8))
+
 ## [1.5.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.5.0...collector-cli-v1.5.1) (2026-06-12)
 
 

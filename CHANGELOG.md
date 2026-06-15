@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.27.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.27.0...toast-stats-v2.27.1) (2026-06-14)
+
+
+### Bug Fixes
+
+* **a11y:** darken amber focus rings to clear WCAG 1.4.11 3:1 on light surfaces ([#1106](https://github.com/taverns-red/toast-stats/issues/1106)) ([#1206](https://github.com/taverns-red/toast-stats/issues/1206)) ([53a2585](https://github.com/taverns-red/toast-stats/commit/53a2585f24abd737a188f213d58e328d3fa50c40))
+* **analytics:** secondary correctness bundle — YoY same-PY, timezone month, dcpProjections, inline thresholds ([#1116](https://github.com/taverns-red/toast-stats/issues/1116)) ([#1207](https://github.com/taverns-red/toast-stats/issues/1207)) ([8b5261e](https://github.com/taverns-red/toast-stats/commit/8b5261ef94b8cf481cd86f525049d0de45c99044))
+* **collector-cli:** flush stdout before exit so piped JSON isn't truncated ([#1182](https://github.com/taverns-red/toast-stats/issues/1182)) ([#1212](https://github.com/taverns-red/toast-stats/issues/1212)) ([e2ad2d0](https://github.com/taverns-red/toast-stats/commit/e2ad2d04289e8b2d26eb08bd90ed83a9060cc81f))
+* **collector:** backfill omits isClosingPeriod + structural registry-injection guard ([#1160](https://github.com/taverns-red/toast-stats/issues/1160)) ([#1211](https://github.com/taverns-red/toast-stats/issues/1211)) ([eac731e](https://github.com/taverns-red/toast-stats/commit/eac731e7bc90f4631be98ef6ec238c978799369a))
+* **contracts:** add dcpGoalsAchieved to ClubStatisticsFileSchema ([#1143](https://github.com/taverns-red/toast-stats/issues/1143)) ([#1209](https://github.com/taverns-red/toast-stats/issues/1209)) ([0ed280c](https://github.com/taverns-red/toast-stats/commit/0ed280c761dfd76fc1f6cb7db0b4bd516c2e3b43))
+* **copy:** derive landing district count from data; label composition denominator as clubs ([#1107](https://github.com/taverns-red/toast-stats/issues/1107)) ([#1204](https://github.com/taverns-red/toast-stats/issues/1204)) ([cab797b](https://github.com/taverns-red/toast-stats/commit/cab797bcbc8f4a22995800026999804cd4292400))
+* CSP-gate frontend distinguished projections ([#1139](https://github.com/taverns-red/toast-stats/issues/1139)) ([#1205](https://github.com/taverns-red/toast-stats/issues/1205)) ([8446933](https://github.com/taverns-red/toast-stats/commit/8446933182bdad0cb9eab74131f31a382b1ba2be))
+* **district-hub:** reserve DistinguishedDistrictTrophyCase slot while awards query loads ([#1105](https://github.com/taverns-red/toast-stats/issues/1105)) ([#1202](https://github.com/taverns-red/toast-stats/issues/1202)) ([a39dd81](https://github.com/taverns-red/toast-stats/commit/a39dd817b92a1ddf04351df19e8c4dbeaa7f1d5a))
+* **pages:** district subpages surface retryable fetch errors ([#1104](https://github.com/taverns-red/toast-stats/issues/1104)) ([#1201](https://github.com/taverns-red/toast-stats/issues/1201)) ([79df908](https://github.com/taverns-red/toast-stats/commit/79df908f258e31be9e933361421dd0295b62531a))
+* **pipeline:** rescrape clobbers district-awards-history.json (R2) + validateDistrictId gaps ([#1111](https://github.com/taverns-red/toast-stats/issues/1111)) ([#1210](https://github.com/taverns-red/toast-stats/issues/1210)) ([4295728](https://github.com/taverns-red/toast-stats/commit/42957288c0ec6570cda2bcd58660bae4bee9f0e8))
+* **routing:** add ScrollRestoration — navigations land at top, Back restores scroll ([#1103](https://github.com/taverns-red/toast-stats/issues/1103)) ([#1203](https://github.com/taverns-red/toast-stats/issues/1203)) ([ef33d54](https://github.com/taverns-red/toast-stats/commit/ef33d549a450b66e53dbf47a9bbe643ca7a1203b))
+* **trends:** program-year selector now drives useTimeSeries ([#1184](https://github.com/taverns-red/toast-stats/issues/1184)) ([#1198](https://github.com/taverns-red/toast-stats/issues/1198)) ([78754a4](https://github.com/taverns-red/toast-stats/commit/78754a4eb65a131e260451313a9967431c14ab70))
+
+
+### Documentation
+
+* retire stale SnapshotBuilder.build() tripwire ([#1113](https://github.com/taverns-red/toast-stats/issues/1113)) ([#1215](https://github.com/taverns-red/toast-stats/issues/1215)) ([86e3c16](https://github.com/taverns-red/toast-stats/commit/86e3c160b0fcfbf1628cc05806ed80acfd89b696))
+* **runner:** correct model-fix refs [#1196](https://github.com/taverns-red/toast-stats/issues/1196)→[#1197](https://github.com/taverns-red/toast-stats/issues/1197) (PR number; [#1196](https://github.com/taverns-red/toast-stats/issues/1196) is the husk-loop bug) ([#1199](https://github.com/taverns-red/toast-stats/issues/1199)) ([0b533ba](https://github.com/taverns-red/toast-stats/commit/0b533ba5139ccddad3b108bb7b9d33153c9a767c))
+* staging-era rewrite — README/architecture/pipeline-flow/CLAUDE/product-spec/rules-ref/runbook ([#1108](https://github.com/taverns-red/toast-stats/issues/1108)) ([#1214](https://github.com/taverns-red/toast-stats/issues/1214)) ([89d011d](https://github.com/taverns-red/toast-stats/commit/89d011d7a7a1be052bebfc75dc4d15644bbfaf85))
+
 ## [2.27.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.26.0...toast-stats-v2.27.0) (2026-06-12)
 
 

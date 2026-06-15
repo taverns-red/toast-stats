@@ -4,7 +4,7 @@
 **Applies to:** All Toastmasters reporting and analytics calculations  
 **Audience:** Developers, Analytics Engine, Reporting Systems  
 **Owner:** Development Team  
-**Last Updated:** January 2026
+**Last Updated:** June 2026 (v1.6 — see §14 Version History)
 
 ---
 
@@ -339,18 +339,17 @@ This section documents differences between legacy report assumptions and current
 
 When calculating recognition status, apply rules in this order:
 
-1. **Eligibility Gates**: Check club visits (if data available)
-2. **Paid Status**: Determine paid clubs/areas
-3. **Paid Threshold**: Verify minimum paid percentage met
-4. **Distinguished Calculation**: Calculate distinguished % against paid units only
-5. **Recognition Level**: Assign highest level for which all criteria are met
+1. **Eligibility Gates**: Check club visits (if data available — §6.1, 75% per round)
+2. **No Net Loss**: Verify paid clubs ≥ the unit's **club base** (paid clubs as of July 1), plus the per-level paid-club growth (§6.2 / §7.2)
+3. **Distinguished Calculation**: Count distinguished **clubs** as a percentage of the **club base**, rounded up (`Math.ceil(base × pct)`) — DAP 50/50+1, DDP 45/50/55 (§6.3 / §7.3). **Not** "paid units." (The district-ranking `% Distinguished` _metric_ is a separate calculation that uses the **paid club base** as its denominator — Lesson 60, §9 — and must not be conflated with these recognition tiers.)
+4. **Recognition Level**: Assign the highest level for which all criteria are met
 
 ---
 
 ## 12. Implementation Requirements
 
 1. **CSP Check**: Always check CSP status for 2025-2026+ data
-2. **Paid Denominator**: Distinguished percentages MUST use paid units as denominator
+2. **Recognition Denominator**: DAP/DDP recognition percentages count distinguished **clubs** against the **club base** (paid clubs as of July 1), per §6.3/§7.3 — corrected in #799. The legacy "paid units only" denominator is wrong for recognition tiers. (Separately, the district-ranking `% Distinguished` metric uses the **paid club base** — Lesson 60, §9; it is not a recognition tier.)
 3. **Eligibility First**: Evaluate eligibility gates before scoring metrics
 4. **Highest Level**: Recognition level is the highest level for which ALL criteria are met
 5. **Unknown Handling**: When eligibility cannot be determined, mark as "Unknown"
@@ -425,21 +424,22 @@ A prerequisite required by a year's rules but unknowable from the data yields ti
 
 ## 14. Version History
 
-| Version | Date          | Changes                                                                                                                                                                                                                                                                                                                      |
-| ------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1.0     | January 2026  | Initial canonical rules reference                                                                                                                                                                                                                                                                                            |
-| 1.1     | February 2026 | Added membership dues payment schedule (§4.1)                                                                                                                                                                                                                                                                                |
-| 1.2     | April 2026    | Added §13 District Recognition Program (all 11 award types)                                                                                                                                                                                                                                                                  |
-| 1.3     | May 2026      | Corrected §6 (DAP) and §7 (DDP) to the manual (item 1490) model — distinguished **clubs** as % of **club base** (DAP 50/50+1, DDP 45/50/55) + paid-club growth; removed the legacy area-%/paid-% recognition model; clarified §9 recognition denominators (#799)                                                             |
-| 1.4     | June 2026     | §5.3 corrected to the canonical (implemented) checkpoint table — October 2 (was 1), December 3 (was 2) — per operator ruling on #1122: no official TI monthly pacing exists; the implementation matched the original club-health spec and empirically discriminates, the doc's earlier values did not (audit 2026-06-09, H1) |
-| 1.5     | June 2026     | Added §13.3 historical DRP requirements (2016-17→2024-25, per-era, dashboard-verified — investigation 1116); corrected §13.2 (Smedley exists at district level since 2018-19, not new in 2025-26); renumbered §13.4-13.6 (#1116 item 5)                                                                                      |
+| Version | Date          | Changes                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | January 2026  | Initial canonical rules reference                                                                                                                                                                                                                                                                                                                                                                                     |
+| 1.1     | February 2026 | Added membership dues payment schedule (§4.1)                                                                                                                                                                                                                                                                                                                                                                         |
+| 1.2     | April 2026    | Added §13 District Recognition Program (all 11 award types)                                                                                                                                                                                                                                                                                                                                                           |
+| 1.3     | May 2026      | Corrected §6 (DAP) and §7 (DDP) to the manual (item 1490) model — distinguished **clubs** as % of **club base** (DAP 50/50+1, DDP 45/50/55) + paid-club growth; removed the legacy area-%/paid-% recognition model; clarified §9 recognition denominators (#799)                                                                                                                                                      |
+| 1.4     | June 2026     | §5.3 corrected to the canonical (implemented) checkpoint table — October 2 (was 1), December 3 (was 2) — per operator ruling on #1122: no official TI monthly pacing exists; the implementation matched the original club-health spec and empirically discriminates, the doc's earlier values did not (audit 2026-06-09, H1)                                                                                          |
+| 1.5     | June 2026     | Added §13.3 historical DRP requirements (2016-17→2024-25, per-era, dashboard-verified — investigation 1116); corrected §13.2 (Smedley exists at district level since 2018-19, not new in 2025-26); renumbered §13.4-13.6 (#1116 item 5)                                                                                                                                                                               |
+| 1.6     | June 2026     | Aligned §11 (Calculation Precedence), §12 (Implementation Requirements), and §15 (Final Rules) with the v1.3 #799 correction — DAP/DDP recognition counts distinguished **clubs** against the **club base**, not "paid units"; clarified that the separate district-ranking % Distinguished metric still uses the paid club base (§9, Lesson 60). Removes the self-contradiction the 2026-06-09 audit flagged (#1108) |
 
 ---
 
 ## 15. Final Rules
 
 > **CSP submission is required for Distinguished status (2025-2026+).**  
-> **Distinguished percentages use paid units as denominator.**  
+> **DAP/DDP recognition counts distinguished _clubs_ against the _club base_ (§6.3/§7.3); the district-ranking % Distinguished _metric_ uses the _paid club base_ (§9, Lesson 60).**  
 > **Eligibility gates are hard blockers.**  
 > **Recognition levels are ordinal and mutually exclusive.**  
 > **When in doubt, defer to current Toastmasters International official rules.**

@@ -45,9 +45,6 @@ concurrency:
   group: flake-sentinel
   cancel-in-progress: false
 
-env:
-  NODE_VERSION: '22'
-
 jobs:
   stress:
     name: Suspect-set stress run (gating)
@@ -60,7 +57,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies

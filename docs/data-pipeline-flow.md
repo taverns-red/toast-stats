@@ -1,6 +1,6 @@
 # Data Pipeline Flow — Toast Stats
 
-**Last updated:** April 5, 2026
+**Last updated:** June 13, 2026
 
 Complete data flow from Toastmasters dashboard scraping through GCS to Cloud CDN to the frontend SPA.
 
@@ -20,22 +20,31 @@ Complete data flow from Toastmasters dashboard scraping through GCS to Cloud CDN
 
 ### Pipeline Modes
 
-| Mode       | Trigger          | Behavior                                             |
-| ---------- | ---------------- | ---------------------------------------------------- |
-| `daily`    | Scheduled (cron) | Scrapes today's data, processes single date          |
-| `rebuild`  | Manual dispatch  | Re-processes specific dates from existing raw-csv    |
-| `rescrape` | Manual dispatch  | Re-downloads CSVs for specific dates, then processes |
-| `prune`    | Manual dispatch  | Reduces to one snapshot per month per program year   |
+| Mode                  | Trigger                       | Behavior                                             |
+| --------------------- | ----------------------------- | ---------------------------------------------------- |
+| `daily`               | Scheduled (08:00 + 11:00 UTC) | Scrapes today's data, processes single date          |
+| `rebuild`             | Manual dispatch               | Re-processes specific dates from existing raw-csv    |
+| `rescrape`            | Manual dispatch               | Re-downloads CSVs for specific dates, then processes |
+| `rescrape-historical` | Manual dispatch               | Re-downloads ALL historical CSVs, then rebuilds      |
+| `prune`               | Manual + quarterly cron       | Reduces to one snapshot per month per program year   |
+
+**Every mode writes to the staging bucket first.** A run never mutates production directly —
+processed data is promoted staging → prod only after passing both promotion gates (see
+[Staging → Production Promotion](#staging--production-promotion)).
 
 ---
 
 ## GCS Bucket Structure
 
-**Bucket:** `gs://toast-stats-data-ca/`
+There are **two** buckets with identical internal layout:
+
+- **`gs://toast-stats-data-staging/`** (`GCS_BUCKET`) — every pipeline run writes here first.
+- **`gs://toast-stats-data-ca/`** (`GCS_BUCKET_PRODUCTION`) — the CDN origin; written **only** by
+  the gated promotion step. `raw-csv/` is staging-only (promotion never syncs it).
 
 ```
-toast-stats-data-ca/
-├── raw-csv/{YYYY-MM-DD}/                  # Input: raw CSV from Toastmasters
+toast-stats-data-{staging|ca}/
+├── raw-csv/{YYYY-MM-DD}/                  # Input: raw CSV from Toastmasters (staging only)
 │   ├── all-districts.csv                  # All-districts summary
 │   ├── district-{id}/                     # Per-district CSVs
 │   │   ├── club-performance.csv
@@ -75,6 +84,28 @@ toast-stats-data-ca/
 └── metrics/deploys/                       # DORA deploy metrics
     └── {YYYY-MM-DD}_{HHMMSS}.json
 ```
+
+---
+
+## Staging → Production Promotion
+
+Production is never written directly. Each run processes into **staging**; a two-gate promotion
+step then decides whether to `rsync` staging → prod (`v1/`, `snapshots/`, `time-series/`,
+`club-trends/`, `config/` — additive, no `-d`):
+
+1. **Count gate (#316)** — blocks if staging has _fewer_ ranked districts or _fewer_ dates than
+   prod (a subtractive change). Catches accidental data loss.
+2. **Value-diff gate (#1034)** — the count gate is blind to a re-derive that keeps the same
+   dates/districts but changes the underlying _values_. This gate digests per-date district
+   values over the staging∩prod overlap and **blocks unless the run is dispatched with
+   `allow_value_changes=true`** after the operator reviews the diff. Fail-closed.
+
+Promotion fires only when **both** gates pass. On a block, prod is left untouched and a
+`promotion-held` alert issue is filed/refreshed (#1072) — a held promotion is a content-stale
+state the freshness monitor (which only checks `latest.json`'s date) cannot see.
+
+Full operator procedure for a reviewed re-derive:
+[docs/runbooks/pipeline-rerun-2017-to-now.md](runbooks/pipeline-rerun-2017-to-now.md).
 
 ---
 
@@ -163,12 +194,28 @@ Enforcement is structural, not conventional:
 
 ---
 
-## GCS Update Order
+## Fixing Bad Data (staging-first — never mutate prod directly)
 
-When manually fixing GCS data:
+> **⚠️ Do not `gsutil rm` or `gsutil cp` against `toast-stats-data-ca` (prod) by hand.** Prod is
+> only ever written by the promotion step, which is guarded by the count (#316) and value (#1034)
+> gates. Editing prod directly bypasses those gates — the exact failure mode they exist to
+> prevent. All fixes go through staging and the normal promotion path.
 
-1. Fix `raw-csv/{date}/metadata.json` if closing period was misdetected
-2. Delete stale `snapshots/{date}/` directories
-3. Run pipeline rebuild (transform + compute) for affected dates
-4. Manifests are regenerated automatically by the pipeline
-5. Wait for CDN cache expiry (1hr for analytics, 5min for manifests)
+When a date's data is wrong (e.g. a misdetected closing period):
+
+1. **Fix the input in staging.** Correct `raw-csv/{date}/metadata.json` in
+   `gs://toast-stats-data-staging/` if the closing period was misdetected.
+2. **Re-derive in staging via a workflow dispatch**, not by hand: run `data-pipeline.yml` with
+   `mode=rebuild` and the affected `dates`. The rebuild reads staging `raw-csv/`, regenerates
+   `snapshots/{date}/` + analytics + manifests, and writes them back to **staging**. (To force a
+   clean rebuild of a date, delete the stale `snapshots/{date}/` in **staging** first.)
+3. **Review the value diff.** The run's two gates compare staging vs prod and write the diff to
+   the GitHub Step Summary. A re-derive that changes values will **block** promotion (correct) —
+   inspect the `Changed` dates and confirm they match your intended fix.
+4. **Promote the reviewed fix.** Re-dispatch with `allow_value_changes=true` once the diff is
+   verified. Promotion runs only when both gates pass, then rsyncs staging → prod.
+5. **Wait for CDN cache expiry** (1 hr for analytics/snapshots, 5–15 min for manifests).
+
+If a count-gate block is unexpected (staging has _fewer_ dates than prod), re-seed staging from
+prod first — see [the re-derive runbook §3](runbooks/pipeline-rerun-2017-to-now.md). Never
+override a block by editing prod.

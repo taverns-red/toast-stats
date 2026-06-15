@@ -26,9 +26,6 @@ permissions:
   contents: read
   id-token: write # Required for Workload Identity Federation
 
-env:
-  NODE_VERSION: '22'
-
 jobs:
   cleanup:
     name: Delete preview channel
@@ -52,7 +49,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3

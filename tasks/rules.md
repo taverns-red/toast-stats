@@ -103,7 +103,7 @@ _Trigger:_ writing a test that imports a `pages/*Page` component or `<App/>`.
 
 ## ⚠️ Active Tripwires
 
-- `SnapshotBuilder.build()` has **two** district-tracking code paths (success + validation-failure). Changing district discovery must update both.
+- District success/failure tracking lives in **one place** — `TransformService.transform()` (`packages/collector-cli`) loops over per-district `transformDistrictToDate` results and derives `districtsSucceeded`/`districtsFailed`/`districtsSkipped` by filtering that single `results[]` array. No second validation-failure path exists: the `SnapshotBuilder.build()` two-path hazard is gone with the now-deleted backend (the name survives only in `DataTransformer.ts` comments). Changing district discovery touches only that one loop.
 - DCP goals are **independent** (not sequential). Never approximate `dcpGoals` count as Goals 1-N achieved in order. Use `clubPerformance` raw fields.
 - Any chart with `|| 1` range fallback is a y-axis inversion bug waiting to happen. Pad symmetrically when `range === 0`.
 - Tailwind opacity variants (`text-tm-*-80`) don't inherit CSS variable overrides. Audit on every new brand token.

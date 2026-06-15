@@ -1,6 +1,6 @@
 {
   "name": "toastmasters-district-visualizer",
-  "version": "2.27.0",
+  "version": "2.27.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -68,6 +68,9 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md}": "prettier --write"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "overrides": {
     "minimatch": "^10.2.3",

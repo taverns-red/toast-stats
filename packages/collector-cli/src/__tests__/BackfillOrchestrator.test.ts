@@ -290,10 +290,25 @@ describe('buildBackfillMetadata (#125)', () => {
     expect(metadata.programYear).toBe('2024-2025')
     expect(metadata.source).toBe('backfill')
     expect(metadata.cacheVersion).toBe(1)
-    expect(metadata.isClosingPeriod).toBe(false)
+    // Backfill does not parse the CSV footer, so it cannot DECIDE the
+    // closing-period status. It must OMIT the key (undecided) rather than
+    // launder a hardcoded false that the downstream trust branch would honor
+    // — the #1129 twin-writer pattern (Lesson 158, #1160). Downstream
+    // resolution (CSV footer → registry) then decides honestly.
+    expect('isClosingPeriod' in metadata).toBe(false)
     expect((metadata.csvFiles as Record<string, unknown>).allDistricts).toBe(
       true
     )
+  })
+
+  it('omits isClosingPeriod entirely — never a laundered false (#1160)', () => {
+    // A closing-window date (e.g. 2024-07-01 sits in June 2024's window)
+    // must NOT carry an explicit false; the writer did not decide it.
+    const date = new Date(2024, 6, 1) // July 1, 2024
+    const metadata = buildBackfillMetadata(date, ['09'])
+
+    expect(metadata.isClosingPeriod).toBeUndefined()
+    expect(Object.keys(metadata)).not.toContain('isClosingPeriod')
   })
 
   it('should produce correct programYear for January date', () => {

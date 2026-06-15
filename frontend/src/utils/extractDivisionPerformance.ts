@@ -11,7 +11,6 @@
 import type {
   DivisionPerformance,
   AreaPerformance,
-  VisitStatus,
   MissingVisitClub,
   IneligibleMissingVisitClub,
 } from './divisionStatus.js'
@@ -364,70 +363,6 @@ export function countVisitCompletions(
   }
 
   return count
-}
-
-/**
- * Extracts area visit data from snapshot JSON
- *
- * Retrieves first round visits from "Nov Visit award" field and second round
- * visits from "May visit award" field. Handles missing visit data gracefully
- * by treating missing values as zero completed visits.
- *
- * @param areaData - Raw area data from district snapshot (unknown type for safety)
- * @param clubBase - Number of clubs at the start of the program year
- * @returns Object containing first round and second round visit status
- *
- * @example
- * const areaData = { "Nov Visit award": "3", "May visit award": "4" }
- * const result = extractVisitData(areaData, 4)
- * // Returns: {
- * //   firstRound: { completed: 3, required: 3, percentage: 75, meetsThreshold: true },
- * //   secondRound: { completed: 4, required: 3, percentage: 100, meetsThreshold: true }
- * // }
- *
- * Requirements: 7.1, 7.2, 7.5
- */
-export function extractVisitData(
-  areaData: unknown,
-  clubBase: number
-): { firstRound: VisitStatus; secondRound: VisitStatus } {
-  // Type guard: ensure areaData is an object
-  if (typeof areaData !== 'object' || areaData === null) {
-    // Missing area data - return zero visits for both rounds
-    return {
-      firstRound: calculateVisitStatus(0, clubBase),
-      secondRound: calculateVisitStatus(0, clubBase),
-    }
-  }
-
-  // Cast to record type for property access
-  const data = areaData as Record<string, unknown>
-
-  // Extract first round visits from "Nov Visit award"
-  const novVisitRaw = data['Nov Visit award']
-  const firstRoundCompleted =
-    typeof novVisitRaw === 'string' || typeof novVisitRaw === 'number'
-      ? Number(novVisitRaw)
-      : 0
-
-  // Extract second round visits from "May Visit award"
-  const mayVisitRaw = data['May Visit award'] ?? data['May visit award']
-  const secondRoundCompleted =
-    typeof mayVisitRaw === 'string' || typeof mayVisitRaw === 'number'
-      ? Number(mayVisitRaw)
-      : 0
-
-  // Calculate visit status for both rounds
-  const firstRound = calculateVisitStatus(
-    isNaN(firstRoundCompleted) ? 0 : firstRoundCompleted,
-    clubBase
-  )
-  const secondRound = calculateVisitStatus(
-    isNaN(secondRoundCompleted) ? 0 : secondRoundCompleted,
-    clubBase
-  )
-
-  return { firstRound, secondRound }
 }
 
 /**

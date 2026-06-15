@@ -1,5 +1,5 @@
 ---
-id: '168'
+id: '170'
 category: lesson
 tags: [analytics, date, timezone, frontend, monorepo, verification, refactor]
 auto_load: true
@@ -7,7 +7,7 @@ date: 2026-06-13
 issues: [1116, 1192]
 ---
 
-# Lesson 168 — Fix a date-derivation bug by grepping the PRIMITIVE, not the named function
+# Lesson 170 — Fix a date-derivation bug by grepping the PRIMITIVE, not the named function
 
 **Date:** 2026-06-13
 **Issue:** #1116 (epic #1192 Sprint 1)

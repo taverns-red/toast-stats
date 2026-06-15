@@ -1,6 +1,6 @@
 # Architecture — Toast Stats
 
-**Last updated:** March 2026
+**Last updated:** June 2026
 
 ---
 
@@ -18,12 +18,13 @@ Toast Stats is a CDN-served analytics platform for Toastmasters district leaders
 
 ## Monorepo Workspaces
 
-| Workspace          | Path                         | Purpose                                | Dependencies                     |
-| ------------------ | ---------------------------- | -------------------------------------- | -------------------------------- |
-| `frontend`         | `frontend/`                  | React SPA (Vite, React 19)             | shared-contracts                 |
-| `collector-cli`    | `packages/collector-cli/`    | Data pipeline CLI                      | analytics-core, shared-contracts |
-| `analytics-core`   | `packages/analytics-core/`   | Transformation + analytics computation | shared-contracts                 |
-| `shared-contracts` | `packages/shared-contracts/` | Zod schemas, types, validators         | (none)                           |
+| Workspace          | Path                         | Purpose                                                                              | Dependencies                           |
+| ------------------ | ---------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------- |
+| `frontend`         | `frontend/`                  | React SPA (Vite, React 19)                                                           | shared-contracts                       |
+| `collector-cli`    | `packages/collector-cli/`    | Data pipeline CLI                                                                    | analytics-core, shared-contracts       |
+| `analytics-core`   | `packages/analytics-core/`   | Transformation + analytics computation                                               | shared-contracts                       |
+| `shared-contracts` | `packages/shared-contracts/` | Zod schemas, types, validators                                                       | (none)                                 |
+| `mcp-server`       | `packages/mcp-server/`       | Read-only MCP server over the snapshot CDN (`@taverns-red/toast-stats-mcp`, ADR-008) | shared-contracts (build-time, inlined) |
 
 ### Dependency Direction
 
@@ -38,14 +39,19 @@ No circular dependencies. `shared-contracts` is the foundation.
 
 ## Data Pipeline Architecture
 
-The pipeline runs as a GitHub Actions workflow (`data-pipeline.yml`) with 4 modes:
+The pipeline runs as a GitHub Actions workflow (`data-pipeline.yml`) with 5 modes:
 
-| Mode       | Trigger          | What It Does                                                   |
-| ---------- | ---------------- | -------------------------------------------------------------- |
-| `daily`    | Cron (13:00 UTC) | Scrape today → transform → compute → upload                    |
-| `rebuild`  | Manual           | Re-process all historical dates from GCS raw-csv               |
-| `rescrape` | Manual           | Re-collect CSVs from dashboard for specific dates/program year |
-| `prune`    | Manual           | Remove non-month-end snapshots to reduce storage               |
+| Mode                  | Trigger                                                  | What It Does                                                         |
+| --------------------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
+| `daily`               | Cron (08:00 UTC, backup 11:00 UTC)                       | Scrape today → transform → compute → upload to staging               |
+| `rebuild`             | Manual                                                   | Re-process historical dates from GCS raw-csv (no re-scrape)          |
+| `rescrape`            | Manual                                                   | Re-collect CSVs from dashboard for specific dates/program year       |
+| `rescrape-historical` | Manual                                                   | Re-download ALL historical CSVs (4-segment URL format), then rebuild |
+| `prune`               | Manual + cron (06:00 UTC on the 25th of Feb/May/Aug/Nov) | Remove non-month-end snapshots to reduce storage                     |
+
+The two daily crons are deliberate: the 11:00 UTC run is a backup that absorbs GitHub's
+occasionally-dropped scheduled events (#753). Every write lands in **staging** first; a gated
+promotion copies it to production (see [Staging → Production Promotion](#staging--production-promotion)).
 
 ### Data Flow (daily)
 
@@ -57,11 +63,16 @@ The pipeline runs as a GitHub Actions workflow (`data-pipeline.yml`) with 4 mode
 5. Generate manifests   → v1/latest.json, v1/dates.json, v1/rankings.json
 ```
 
-### Storage Layout (GCS: `toast-stats-data-ca`)
+### Storage Layout (same layout in both buckets)
+
+There are **two** GCS buckets with the same internal layout:
+
+- **`toast-stats-data-staging`** (`GCS_BUCKET`) — every pipeline run writes here first.
+- **`toast-stats-data-ca`** (`GCS_BUCKET_PRODUCTION`) — the CDN origin; only the gated promotion writes here.
 
 ```
-gs://toast-stats-data-ca/
-├── raw-csv/{YYYY-MM-DD}/
+gs://toast-stats-data-{staging|ca}/
+├── raw-csv/{YYYY-MM-DD}/                  # staging-only; promotion never syncs raw-csv
 │   ├── all-districts.csv
 │   ├── district-{id}/
 │   │   ├── club-performance.csv
@@ -83,6 +94,24 @@ gs://toast-stats-data-ca/
     └── rankings.json      (1-hr cache)
 ```
 
+### Staging → Production Promotion
+
+The pipeline never writes production directly. After a run finishes processing into **staging**,
+two gates decide whether staging is promoted to production (`gsutil rsync` of `v1/`, `snapshots/`,
+`time-series/`, `club-trends/`, `config/` — additive, no `-d`):
+
+1. **Count gate (#316)** — additive guard. Blocks promotion if staging has _fewer_ ranked
+   districts or _fewer_ dates than production (a subtractive change).
+2. **Value-diff gate (#1034)** — value guard. The count gate is blind to a re-derive that keeps
+   the same dates/districts but changes the underlying _values_. This gate digests per-date
+   district values over the overlap set and **blocks unless the operator dispatches with
+   `allow_value_changes=true`** after reviewing the diff. Fail-closed: any error → no promote.
+
+Both gates must pass (`promote && value_promote`). When a gate blocks, production is left
+untouched and a `promotion-held` alert issue is filed/refreshed (#1072) so stale-prod can't
+persist unnoticed. Full operator procedure: [docs/data-pipeline-flow.md](data-pipeline-flow.md)
+and [docs/runbooks/pipeline-rerun-2017-to-now.md](runbooks/pipeline-rerun-2017-to-now.md).
+
 ---
 
 ## Frontend Architecture
@@ -97,9 +126,20 @@ gs://toast-stats-data-ca/
 
 ### Routing
 
+All pages are code-split via `React.lazy()`. The district detail surface is a set of **routed
+subpages** (Overview · Clubs · Divisions · Trends · Analytics · Rankings), not a tab strip
+(epic #674) — deep-linkable and back-button friendly. Selected routes:
+
 ```
-/                      → LandingPage (global rankings table)
-/district/:districtId  → DistrictDetailPage (5-tab detail view)
+/                                              → DistrictsPage (global rankings table)
+/district/:districtId                          → DistrictDetailPage (Overview hub)
+/district/:districtId/{clubs,divisions,rankings,trends,analytics,changes}
+/district/:districtId/division/:divId          → DivisionPage
+/district/:districtId/division/:divId/area/:areaId → AreaPage
+/district/:districtId/club/:clubId             → ClubDetailPage
+/regions, /region/:n                           → Regions overview + region page
+/history, /methodology, /awards, /mcp          → static + MCP install page
+(root errorElement)                            → branded 404 / error boundary (#1010)
 ```
 
 ### Data Fetching Pattern
@@ -157,12 +197,13 @@ CDN URL structure: `https://cdn.taverns.red/snapshots/{date}/district_{id}_analy
 
 ## Infrastructure
 
-| Service                           | Purpose                     | Config                                |
-| --------------------------------- | --------------------------- | ------------------------------------- |
-| **GCS** (`toast-stats-data-ca`)   | Data storage + CDN origin   | Workload Identity Federation          |
-| **Cloud CDN** (`cdn.taverns.red`) | Serves all data to frontend | Immutable cache for snapshots         |
-| **GitHub Pages / Vercel**         | Hosts the React SPA         | `ts.taverns.red`                      |
-| **GitHub Actions**                | Data pipeline runtime       | WIF auth, 240-min timeout for rebuild |
+| Service                              | Purpose                      | Config                                |
+| ------------------------------------ | ---------------------------- | ------------------------------------- |
+| **GCS** (`toast-stats-data-staging`) | Pipeline write target        | Workload Identity Federation          |
+| **GCS** (`toast-stats-data-ca`)      | Production data + CDN origin | Promotion target (gated)              |
+| **Cloud CDN** (`cdn.taverns.red`)    | Serves all data to frontend  | Immutable cache for snapshots         |
+| **Firebase Hosting**                 | Hosts the React SPA          | `ts.taverns.red` (`deploy.yml`)       |
+| **GitHub Actions**                   | Data pipeline + deploy       | WIF auth, 240-min timeout for rebuild |
 
 ### Authentication
 
