@@ -10,6 +10,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { ClubDCPGoalsPanel } from '../ClubDCPGoalsPanel'
+import { extractDcpGoalProgress } from '../../utils/dcpGoals'
 
 // A record where goals 1–5, 7, 9 are met (7 of 10). Keys mirror dcpGoals.ts.
 const record = {
@@ -102,6 +103,34 @@ describe('ClubDCPGoalsPanel (#620)', () => {
     ) as HTMLElement
     // Goal 1 is met → row carries a screen-reader-only "Achieved" label.
     expect(within(firstRow).getByText(/achieved/i)).toBeInTheDocument()
+  })
+
+  it("renders the 'what's missing' gap text for unmet goals only (#1227)", () => {
+    const { container } = render(
+      <ClubDCPGoalsPanel
+        goalsAchieved={7}
+        clubRecord={record}
+        isLoading={false}
+      />
+    )
+    // Drive the assertion from the live util, not hand-typed strings — the gap
+    // text is the same `statusText` the panel must surface (R3: single source).
+    const progress = extractDcpGoalProgress(record)
+    const rows = container.querySelectorAll('.goals-table .goal-row')
+    expect(rows).toHaveLength(progress.length)
+
+    progress.forEach((goal, i) => {
+      const gap = rows[i]!.querySelector('.goal-gap')
+      if (goal.achieved) {
+        // Met goals keep the ✓ and carry NO gap text.
+        expect(gap).toBeNull()
+      } else {
+        // Sanity: the fixture's unmet goals do produce a non-empty gap string.
+        expect(goal.statusText).not.toBe('')
+        expect(gap).not.toBeNull()
+        expect(gap!.textContent).toBe(goal.statusText)
+      }
+    })
   })
 
   it('still renders the progress bar when no raw record is available', () => {
