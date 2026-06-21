@@ -9,8 +9,9 @@
  * The program-year column is sticky so rows stay labelled while metrics scroll.
  *
  * Tier badge colours and dark-mode are owned by `club-history.css` themed
- * variables (R10 — CSS-level overrides), NOT Tailwind `dark:` variants (which
- * misfire under this app's manual `[data-theme='dark']` toggle — Lesson 107).
+ * variables (R10 — CSS-level overrides), NOT Tailwind prefers-color-scheme
+ * variants (which misfire under this app's manual `[data-theme='dark']`
+ * toggle — Lesson 107). Dark styling is scoped to that toggle in the CSS.
  */
 
 import { useMemo, useState } from 'react'
