@@ -116,7 +116,17 @@ export const ClubDCPGoalsPanel: React.FC<ClubDCPGoalsPanelProps> = ({
                     {goal.achieved ? '✓' : ''}
                   </span>
                   <span className="goal-num">{goal.goalNumber}</span>
-                  <span className="goal-name">{goal.name}</span>
+                  <span className="goal-body">
+                    <span className="goal-name">{goal.name}</span>
+                    {/* "What's missing" gap text for unmet goals (#1227,
+                        restoring the breakdown #642 dropped). `statusText` is
+                        '' for met goals, so this only renders when there's a
+                        real gap. It's visible text, so it conveys the gap to
+                        assistive tech without colour reliance. */}
+                    {!goal.achieved && goal.statusText ? (
+                      <span className="goal-gap">{goal.statusText}</span>
+                    ) : null}
+                  </span>
                   {/* Met state is also carried by bg + the check glyph, but
                       colour/glyph alone is not accessible — expose the status
                       as screen-reader-only text. */}
