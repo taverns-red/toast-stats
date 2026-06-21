@@ -2251,7 +2251,9 @@
 
   .goal-row {
     display: flex;
-    align-items: center;
+    /* Top-align so the check + number sit beside the goal name's first line
+       when an unmet goal wraps its gap text onto a second line (#1227). */
+    align-items: flex-start;
     gap: 10px;
     padding: 10px 12px;
     background: var(--surface-2);
@@ -2293,8 +2295,17 @@
     min-width: 16px;
   }
 
-  .goal-row .goal-name {
+  /* Name + gap-text column. flex:1 lives here (moved off .goal-name) so the
+     unmet "what's missing" line stacks under the name (#1227). */
+  .goal-row .goal-body {
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .goal-row .goal-name {
     color: var(--ink-2);
     min-width: 0;
   }
@@ -2302,6 +2313,15 @@
   .goal-row.met .goal-name {
     color: var(--ink);
     font-weight: 500;
+  }
+
+  /* "What's missing" gap text for unmet goals (#1227). --red-500 clears AA on
+     --surface-2 in BOTH themes (it remaps lighter to #f87171 in dark, per the
+     #670 filter-error precedent); --red-600 was 4.42:1, just under (L116/L112). */
+  .goal-row .goal-gap {
+    color: var(--red-500);
+    font-size: 11px;
+    line-height: 1.35;
   }
 
   [data-theme='dark'] .goal-row.met {
