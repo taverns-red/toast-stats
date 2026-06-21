@@ -83,6 +83,75 @@ const HEALTH_MODIFIER: Record<ClubTrend['currentStatus'], string> = {
   'intervention-required': 'club-grid-tile--intervention',
 }
 
+/** Health statuses in the order the legend lists them (best → worst). */
+const HEALTH_LEGEND_ORDER: ClubTrend['currentStatus'][] = [
+  'thriving',
+  'vulnerable',
+  'intervention-required',
+]
+
+/** Confirmed tiers in the order the legend lists them (best → entry). */
+const TIER_LEGEND_ORDER: ConfirmedTier[] = [
+  'President',
+  'Select',
+  'Distinguished',
+  'Smedley',
+]
+
+/** Descriptive legend labels (longer than the per-tile `statusLabel`). */
+const TIER_LEGEND_LABEL: Record<ConfirmedTier, string> = {
+  President: "President's Distinguished",
+  Select: 'Select Distinguished',
+  Distinguished: 'Distinguished',
+  Smedley: 'Smedley (10/10)',
+}
+
+export interface LegendItem {
+  modifierClass: string
+  glyph: string
+  label: string
+}
+
+const NOT_DISTINGUISHED_LEGEND: LegendItem = {
+  modifierClass: 'club-grid-tile--tier-none',
+  glyph: '—',
+  label: 'Not yet Distinguished',
+}
+
+const SUSPENDED_LEGEND: LegendItem = {
+  modifierClass: 'club-grid-tile--suspended',
+  glyph: '⊘',
+  label: 'Suspended',
+}
+
+/**
+ * The legend rows for a colour mode, derived from the SAME modifier/glyph maps
+ * the tiles use — so legend and grid can never drift (adding a tier or status
+ * is a single-file edit here, not parallel edits in the legend component). The
+ * Suspended row is always last because suspended tiles appear in both modes.
+ */
+export function getLegendItems(mode: GridColorMode): LegendItem[] {
+  if (mode === 'tier') {
+    return [
+      ...TIER_LEGEND_ORDER.map(tier => ({
+        modifierClass: TIER_MODIFIER[tier],
+        glyph: TIER_GLYPH[tier],
+        label: TIER_LEGEND_LABEL[tier],
+      })),
+      NOT_DISTINGUISHED_LEGEND,
+      SUSPENDED_LEGEND,
+    ]
+  }
+  return [
+    ...HEALTH_LEGEND_ORDER.map(status => ({
+      modifierClass: HEALTH_MODIFIER[status],
+      glyph: getClubHealthStatusIcon(status),
+      label: getClubHealthStatusLabel(status),
+    })),
+    SUSPENDED_LEGEND,
+  ]
+}
+
 function isSuspended(club: ClubTrend): boolean {
   return club.clubStatus?.toLowerCase() === 'suspended'
 }

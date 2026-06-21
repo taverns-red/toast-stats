@@ -3,6 +3,7 @@ import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import {
   parseColorMode,
   getTileVisual,
+  getLegendItems,
   GRID_COLOR_MODES,
 } from '../clubGridColor'
 
@@ -116,6 +117,34 @@ describe('getTileVisual — tier mode (per-club distinguishedLevel, NOT totals.*
     expect(v.modifierClass).toBe('club-grid-tile--tier-none')
     expect(v.signalGlyph).toBe('—')
     expect(v.statusLabel).toBe('Not yet Distinguished')
+  })
+})
+
+describe('getLegendItems — single source shared with the tiles', () => {
+  it('health legend lists the three health states + suspended, last', () => {
+    const items = getLegendItems('health')
+    expect(items.map(i => i.label)).toEqual([
+      'Thriving',
+      'Vulnerable',
+      'Intervention Required',
+      'Suspended',
+    ])
+    // swatch modifier matches the tile modifier the mapping produces
+    expect(items[0].modifierClass).toBe('club-grid-tile--thriving')
+  })
+
+  it('tier legend lists tiers + not-yet + suspended, with matching modifiers', () => {
+    const items = getLegendItems('tier')
+    expect(items.map(i => i.modifierClass)).toEqual([
+      'club-grid-tile--tier-presidents',
+      'club-grid-tile--tier-select',
+      'club-grid-tile--tier-distinguished',
+      'club-grid-tile--tier-smedley',
+      'club-grid-tile--tier-none',
+      'club-grid-tile--suspended',
+    ])
+    // glyphs are the same single-letter codes the tiles render
+    expect(items[0].glyph).toBe('P')
   })
 })
 
