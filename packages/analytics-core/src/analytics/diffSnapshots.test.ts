@@ -181,6 +181,26 @@ describe('diffSnapshots', () => {
     )
   })
 
+  it('labels a P→M promotion as "Smedley Distinguished" (#1226)', () => {
+    // Tier code M = Smedley Distinguished (top DCP tier), NOT plain
+    // "Distinguished". DataTransformer counts M into smedleyDistinguishedClubs.
+    const from = snapshot({
+      date: '2026-05-25',
+      clubs: [club({ clubId: '001' })],
+      perf: [perf('001', 'P')],
+    })
+    const to = snapshot({
+      date: '2026-05-26',
+      clubs: [club({ clubId: '001' })],
+      perf: [perf('001', 'M')],
+    })
+    const event = diffSnapshots(from, to).events.find(
+      e => e.category === 'distinguished'
+    )
+    expect(event?.label).toContain('Smedley Distinguished')
+    expect(event?.label).toBe('Club 001 moved to Smedley Distinguished')
+  })
+
   it('returns no events when nothing changed (valid outcome)', () => {
     const a = snapshot({
       date: '2026-05-25',
