@@ -153,6 +153,11 @@ export function getLegendItems(mode: GridColorMode): LegendItem[] {
 }
 
 function isSuspended(club: ClubTrend): boolean {
+  // The read-time Dues-Renewal overlay (#1062) only ever PROMOTES a frozen club
+  // to Active, so an overlaid club is effectively Active — match ClubStatusCell
+  // and never render it Suspended, or the grid and the Clubs table disagree on
+  // the same club (cross-surface consistency — Lesson 052/154).
+  if (club.statusOverlay) return false
   return club.clubStatus?.toLowerCase() === 'suspended'
 }
 

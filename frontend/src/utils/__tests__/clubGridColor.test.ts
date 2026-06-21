@@ -168,6 +168,28 @@ describe('getTileVisual — suspended override (handled in BOTH modes)', () => {
     ).toBe('club-grid-tile--suspended')
   })
 
+  it('does not treat a Suspended club promoted by the renewal overlay as suspended', () => {
+    // The read-time Dues-Renewal overlay (#1062) only ever promotes to Active,
+    // so an overlaid club is effectively Active — the grid must match
+    // ClubStatusCell and never render it struck-through Suspended (L052/L154).
+    const overlay = {
+      status: 'Active' as const,
+      source: 'dues-renewal' as const,
+      activeSince: '2026-05-31',
+      asOf: 'June 01, 2026',
+    }
+    const v = getTileVisual(
+      club({
+        clubStatus: 'Suspended',
+        currentStatus: 'vulnerable',
+        statusOverlay: overlay,
+      }),
+      'health'
+    )
+    expect(v.modifierClass).toBe('club-grid-tile--vulnerable')
+    expect(v.statusLabel).toBe('Vulnerable')
+  })
+
   it('does not treat Active/Low/undefined as suspended', () => {
     for (const status of ['Active', 'Low', 'Ineligible', undefined]) {
       const v = getTileVisual(
