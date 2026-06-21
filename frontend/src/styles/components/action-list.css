@@ -1,0 +1,183 @@
+/* District Action List (#1231, epic #1228 Sprint 3) — the area-director
+   "what to do next" destination. Built entirely on theme-aware tokens
+   (--ink, --ink-3, --surface, --line) so dark mode remaps automatically with
+   no per-utility override needed (lesson 093/094 — text + background remap
+   together). Mirrors the .club-grid-page chrome from Sprint 2. */
+
+.action-list-page {
+  margin-top: 1rem;
+}
+
+.action-list-page__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.action-list-page__subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  max-width: 60ch;
+}
+
+/* ── Controls: scope filter + export ───────────────────────────────────── */
+
+.action-list-page__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin: 1rem 0 1.25rem;
+}
+
+.action-list-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.action-list-scope__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.action-list-scope__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.action-list-scope__select {
+  /* appearance:none so the 44px min touch target is honoured in WebKit, which
+     ignores min-height on a native select with default chrome (lesson 111). */
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 44px;
+  padding: 0.4rem 2rem 0.4rem 0.65rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+}
+
+.action-list-scope__clear,
+.action-list-page__export {
+  min-height: 44px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+}
+
+.action-list-page__export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-list-scope__clear:hover:not(:disabled),
+.action-list-page__export:hover:not(:disabled) {
+  border-color: var(--ink-3);
+}
+
+/* ── Sections ──────────────────────────────────────────────────────────── */
+
+.action-list-sections {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.action-list-section {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+}
+
+.action-list-section__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.action-list-section__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--line);
+  border-radius: 999px;
+}
+
+.action-list-section__empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.action-list-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.action-list-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.action-list-item:first-child {
+  border-top: none;
+}
+
+.action-list-item__link {
+  font-weight: 600;
+  color: var(--link, #2563eb);
+  text-decoration: none;
+}
+
+.action-list-item__link:hover {
+  text-decoration: underline;
+}
+
+.action-list-item__meta {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+@media (max-width: 480px) {
+  .action-list-page__controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-list-page__export {
+    width: 100%;
+  }
+}

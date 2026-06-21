@@ -27,9 +27,9 @@ import type { DivisionPerformance, MissingVisitClub } from './divisionStatus'
 
 export interface ActionListScope {
   /** Restrict to a single division id (e.g. `'A'`). Absent = all divisions. */
-  division?: string
+  division?: string | undefined
   /** Restrict to a single area id (e.g. `'A1'`). Absent = all areas. */
-  area?: string
+  area?: string | undefined
 }
 
 export interface CloseToDistinguishedItem {

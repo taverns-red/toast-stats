@@ -36,6 +36,7 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
       Trends: '/district/61/trends',
       Analytics: '/district/61/analytics',
       Rankings: '/district/61/rankings',
+      'Action List': '/district/61/action-list',
     }
     for (const [label, href] of Object.entries(expected)) {
       expect(screen.getByRole('link', { name: label })).toHaveAttribute(
@@ -58,6 +59,8 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
     // ADR-005 §3 order: lateral views read Overview · What Changed · Clubs ·
     // Divisions · Grid · Trends · Analytics · Rankings. Grid (#1230) sits after
     // Divisions as the dense whole-district companion to the division breakdown.
+    // Action List (#1231) closes the epic as the area-director "what to do
+    // next" destination — last, since it's a task view, not a lateral data view.
     expect(DISTRICT_SECTIONS.map(s => s.label)).toEqual([
       'Overview',
       'What Changed',
@@ -67,6 +70,7 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
       'Trends',
       'Analytics',
       'Rankings',
+      'Action List',
     ])
   })
 
