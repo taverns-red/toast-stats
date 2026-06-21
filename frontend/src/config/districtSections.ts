@@ -23,6 +23,10 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   { label: 'What Changed', segment: 'changes' },
   { label: 'Clubs', segment: 'clubs' },
   { label: 'Divisions', segment: 'divisions' },
+  // 'Grid' (#1230, epic #1228) — the at-a-glance Chiclet/LEO board, one
+  // colour-coded tile per club. Sits after Divisions as the dense
+  // whole-district companion to the division/area breakdown.
+  { label: 'Grid', segment: 'grid' },
   { label: 'Trends', segment: 'trends' },
   { label: 'Analytics', segment: 'analytics' },
   { label: 'Rankings', segment: 'rankings' },

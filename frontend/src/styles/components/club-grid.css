@@ -1,0 +1,286 @@
+/* District Club Grid (#1230, epic #1228 Sprint 2) — the at-a-glance
+   "Chiclet / LEO board": one colour-coded tile per club. Colour is never the
+   only signal (WCAG 1.4.1): each tile also carries a text status (in its
+   aria-label), a non-colour glyph, and the {n}/10 DCP count.
+
+   Colour values are reused from the shipped clubs-table pills so the two
+   surfaces never drift:
+     • Health tiles use the opaque, THEME-STABLE soft tints (dark text) — the
+       exact same treatment as `.clubs-status-pill--*`, which intentionally
+       carries no dark remap (lesson 062/116: these chips are theme-stable).
+     • Tier tiles use solid dark fills with white text, pinned to literal hex
+       (maroon/loyal/green) that hold white text AA in BOTH themes — so the
+       dark-lightening of `--green-600` can't strand the label (lesson 095).
+     • Neutral (not-yet-Distinguished) and Suspended carry explicit dark
+       overrides (lesson 067/116 — a surface fill must remap with its theme). */
+
+.club-grid-page {
+  margin-top: 1rem;
+}
+
+.club-grid-page__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.club-grid-page__subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.club-grid-page__empty {
+  margin-top: 2rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--ink-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+}
+
+/* ── Controls: colour-by toggle + legend ───────────────────────────────── */
+
+.club-grid-page__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin: 1rem 0 1.25rem;
+}
+
+.club-grid-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.club-grid-toggle__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+/* Segmented toggle buttons. These FILTER the same view (recolour the tiles),
+   they do not swap panels — so they are aria-pressed toggle buttons, never
+   role="tab" (lesson 128). */
+.club-grid-toggle__btn {
+  min-height: 36px;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+}
+
+.club-grid-toggle__btn:hover {
+  border-color: var(--ink-3);
+}
+
+.club-grid-toggle__btn[aria-pressed='true'] {
+  color: #fff;
+  background: var(--loyal-500);
+  border-color: var(--loyal-500);
+}
+
+.club-grid-toggle__btn:focus-visible {
+  outline: 2px solid var(--loyal-400);
+  outline-offset: 2px;
+}
+
+.club-grid-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.club-grid-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.club-grid-legend__swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 4px;
+}
+
+/* ── Grouping: Division → Area ─────────────────────────────────────────── */
+
+.club-grid-division {
+  margin-bottom: 1.5rem;
+}
+
+.club-grid-division__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+  padding-bottom: 0.25rem;
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 0.75rem;
+}
+
+.club-grid-area {
+  margin-bottom: 1rem;
+}
+
+.club-grid-area__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+  margin-bottom: 0.5rem;
+}
+
+.club-grid-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .club-grid-tiles {
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  }
+}
+
+/* ── Tile ──────────────────────────────────────────────────────────────── */
+
+.club-grid-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 72px;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.club-grid-tile:focus-visible {
+  outline: 3px solid var(--loyal-400);
+  outline-offset: 2px;
+}
+
+.club-grid-tile__name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+  /* Truncate long club names to keep tiles uniform (the full name is in the
+     aria-label + title). */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.club-grid-tile__signal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.club-grid-tile__glyph {
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.club-grid-tile__dcp {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+/* Health fills (theme-stable soft tints, dark text — mirrors clubs-status-pill) */
+.club-grid-tile--thriving {
+  background-color: #dcfce7;
+  color: #14532d;
+}
+.club-grid-tile--vulnerable {
+  background-color: #fef9c3;
+  color: #713f12;
+}
+.club-grid-tile--intervention {
+  background-color: #fee2e2;
+  color: #7f1d1d;
+}
+
+/* Tier fills (solid, white text — literal hex, theme-stable AA both modes) */
+.club-grid-tile--tier-presidents {
+  background-color: #004165; /* --loyal-500 */
+  color: #fff;
+}
+.club-grid-tile--tier-select {
+  background-color: #2c6e90; /* --loyal-400 */
+  color: #fff;
+}
+.club-grid-tile--tier-distinguished {
+  background-color: #15803d; /* --green-600 (light) pinned for white text */
+  color: #fff;
+}
+.club-grid-tile--tier-smedley {
+  background-color: #7b1828; /* --maroon-500 */
+  color: #fff;
+  box-shadow: inset 0 0 0 2px #d4af37; /* rare-tier gold ring (#546) */
+}
+
+/* Neutral (not yet Distinguished) — light surface, remaps in dark */
+.club-grid-tile--tier-none {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+/* Suspended — muted; the operational state overrides health/tier in both modes */
+.club-grid-tile--suspended {
+  background-color: #e5e7eb;
+  color: #6b7280;
+  border-style: dashed;
+}
+.club-grid-tile--suspended .club-grid-tile__name {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* ── Dark mode: only the surfaces whose LIGHT value would be wrong on a dark
+   background need a remap. Health tints + solid tier fills are theme-stable by
+   design and are intentionally left as-is. ───────────────────────────────── */
+
+[data-theme='dark'] .club-grid-tile--tier-none {
+  background-color: #2a3340;
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .club-grid-tile--suspended {
+  background-color: #2a3038;
+  color: #9aa4b2;
+}
+
+[data-theme='dark'] .club-grid-tile {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .club-grid-legend__swatch.club-grid-tile--tier-none {
+  background-color: #2a3340;
+  color: #cbd5e1;
+}

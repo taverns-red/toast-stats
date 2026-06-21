@@ -47,6 +47,7 @@
 @import './styles/components/district-subnav.css';
 @import './styles/components/district-changes.css';
 @import './styles/components/club-history.css';
+@import './styles/components/club-grid.css';
 @import './styles/responsive.css';
 @import './styles/dark-mode.css';
 @import './styles/print.css';

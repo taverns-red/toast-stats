@@ -55,13 +55,15 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
       'href',
       '/district/61/analytics'
     )
-    // ADR-005 §3 order: lateral views read Overview · Clubs · Divisions ·
-    // Trends · Analytics · Rankings.
+    // ADR-005 §3 order: lateral views read Overview · What Changed · Clubs ·
+    // Divisions · Grid · Trends · Analytics · Rankings. Grid (#1230) sits after
+    // Divisions as the dense whole-district companion to the division breakdown.
     expect(DISTRICT_SECTIONS.map(s => s.label)).toEqual([
       'Overview',
       'What Changed',
       'Clubs',
       'Divisions',
+      'Grid',
       'Trends',
       'Analytics',
       'Rankings',
