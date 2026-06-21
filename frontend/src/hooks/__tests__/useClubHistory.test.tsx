@@ -116,6 +116,8 @@ describe('useClubHistory (#1229)', () => {
       yearEndDate: '2023-06-30',
       dcpGoals: 5,
     })
+    // clubName is taken from the most-recent year the club appears in.
+    expect(result.current.clubName).toBe('Test Club')
   })
 
   it('uses the LATEST in-PY date as the year-end (nearest-prior to Jun 30)', async () => {

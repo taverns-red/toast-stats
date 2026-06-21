@@ -32,9 +32,17 @@ export const clubHistoryQueryKey = (
   clubId: string
 ): readonly unknown[] => ['club-history', districtId, clubId]
 
+interface ClubHistoryData {
+  rows: ClubHistoryRow[]
+  /** Most recent name the club was recorded under, for headings/breadcrumbs. */
+  clubName: string | null
+}
+
 export interface UseClubHistoryResult {
   /** Completed program years the club appears in, newest first. */
   rows: ClubHistoryRow[]
+  /** Most recent name the club was recorded under, or null if never found. */
+  clubName: string | null
   isLoading: boolean
   isError: boolean
   error: Error | null
@@ -60,7 +68,7 @@ export function useClubHistory(
   const query = useQuery({
     queryKey: clubHistoryQueryKey(districtId ?? '', clubId ?? ''),
     enabled,
-    queryFn: async (): Promise<ClubHistoryRow[]> => {
+    queryFn: async (): Promise<ClubHistoryData> => {
       const index = await fetchCdnSnapshotIndex()
       const dates = index[districtId!] ?? []
 
@@ -72,7 +80,9 @@ export function useClubHistory(
         )
         .sort(([a], [b]) => b - a)
 
-      const rows = await Promise.all(
+      // One fetch per completed year. Each yields the history row plus the
+      // name the club was recorded under that year (for heading/breadcrumb).
+      const built = await Promise.all(
         completed.map(async ([startYear, yearEndDate]) => {
           let club
           try {
@@ -88,11 +98,21 @@ export function useClubHistory(
           }
           // The club did not exist / was not reported that year — skip it.
           if (!club) return null
-          return buildClubHistoryRow(startYear, yearEndDate, club)
+          return {
+            row: buildClubHistoryRow(startYear, yearEndDate, club),
+            clubName: club.clubName,
+          }
         })
       )
 
-      return rows.filter((r): r is ClubHistoryRow => r !== null)
+      const resolved = built.filter(
+        (r): r is { row: ClubHistoryRow; clubName: string } => r !== null
+      )
+      // `completed` is newest-first, so the first resolved name is the most recent.
+      return {
+        rows: resolved.map(r => r.row),
+        clubName: resolved[0]?.clubName ?? null,
+      }
     },
     staleTime: 15 * 60 * 1000, // archived years are immutable
     gcTime: 30 * 60 * 1000,
@@ -101,7 +121,8 @@ export function useClubHistory(
   })
 
   return {
-    rows: query.data ?? [],
+    rows: query.data?.rows ?? [],
+    clubName: query.data?.clubName ?? null,
     isLoading: enabled ? query.isLoading : false,
     isError: query.isError,
     error: query.error,

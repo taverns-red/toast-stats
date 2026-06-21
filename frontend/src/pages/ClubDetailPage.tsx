@@ -519,6 +519,13 @@ const ClubDetailPage: React.FC = () => {
                   </>
                 )}
               </p>
+              {/* #1229 — deep link to the per-club multi-year history view. */}
+              <Link
+                to={`/district/${districtId}/club/${clubId}/history`}
+                className="club-hero__history-link"
+              >
+                View multi-year history →
+              </Link>
             </div>
 
             <div className="club-hero__pills">

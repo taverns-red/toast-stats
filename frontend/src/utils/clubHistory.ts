@@ -126,3 +126,45 @@ export function buildClubHistoryRow(
     clubStatus: club.clubStatus ?? club.status ?? null,
   }
 }
+
+/** Column headers for the club-history CSV export, in render order. */
+export const CLUB_HISTORY_CSV_HEADERS = [
+  'Program Year',
+  'DCP Goals',
+  'Distinguished',
+  'Membership Base',
+  'Membership End',
+  'Membership Net',
+  'October Renewals',
+  'April Renewals',
+  'Status',
+] as const
+
+/** A missing value in the CSV is an empty cell, never an em-dash (keep it numeric). */
+function csvCell(value: number | string | null): number | string {
+  return value == null ? '' : value
+}
+
+/**
+ * Shape history rows into a 2D array for `arrayToCSV`. Pure (no DOM) so it can
+ * be unit-tested; the download wrapper lives in `csvExport.ts`. The tier column
+ * uses the human label, missing values become empty cells.
+ */
+export function toClubHistoryCsvRows(
+  rows: ClubHistoryRow[]
+): (string | number)[][] {
+  return [
+    [...CLUB_HISTORY_CSV_HEADERS],
+    ...rows.map(r => [
+      r.label,
+      csvCell(r.dcpGoals),
+      r.tierCode ? r.tierLabel : '',
+      csvCell(r.membershipBase),
+      csvCell(r.membershipEnd),
+      csvCell(r.membershipNet),
+      csvCell(r.octoberRenewals),
+      csvCell(r.aprilRenewals),
+      csvCell(r.clubStatus),
+    ]),
+  ]
+}

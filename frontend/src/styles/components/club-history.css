@@ -9,6 +9,87 @@
  * 105: comparison-across-rows tables stay tables, with a non-trap scroll).
  */
 
+.club-history-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 2.5rem;
+}
+
+.club-history-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.club-history-page__title {
+  font-family: var(--serif);
+  font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.club-history-page__sub {
+  color: var(--ink-3);
+  font-size: 0.9rem;
+  margin: 0.35rem 0 0;
+  max-width: 52ch;
+}
+
+.club-history-page__export {
+  flex: none;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--rds-radius-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.club-history-page__export:hover {
+  background: var(--surface-2);
+}
+
+.club-history-page__export:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--rt-stats-focus);
+}
+
+.club-history-page__back {
+  margin: 1.25rem 0 0;
+  font-size: 0.9rem;
+}
+
+.club-history-page__back a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.club-history-page__back a:hover {
+  text-decoration: underline;
+}
+
+/* Deep-link affordance from the club hero into the history view. */
+.club-hero__history-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.club-hero__history-link:hover {
+  opacity: 1;
+}
+
 .club-history-scroll {
   position: relative;
   overflow-x: auto;

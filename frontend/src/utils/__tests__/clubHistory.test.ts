@@ -11,6 +11,7 @@ import type { ClubStatisticsFile } from '@toastmasters/shared-contracts'
 import {
   buildClubHistoryRow,
   normalizeTierCode,
+  toClubHistoryCsvRows,
   type ClubHistoryRow,
 } from '../clubHistory'
 
@@ -131,5 +132,45 @@ describe('buildClubHistoryRow', () => {
       makeClub({ membershipBase: 40, membershipCount: 25 })
     )
     expect(row.membershipNet).toBe(-15)
+  })
+})
+
+describe('toClubHistoryCsvRows', () => {
+  it('emits a header row followed by one data row per program year', () => {
+    const rows: ClubHistoryRow[] = [
+      buildClubHistoryRow(2023, '2024-06-30', makeClub()),
+      buildClubHistoryRow(2022, '2023-06-30', undefined),
+    ]
+    const csv = toClubHistoryCsvRows(rows)
+    expect(csv).toHaveLength(3) // header + 2 rows
+    expect(csv[0]).toEqual([
+      'Program Year',
+      'DCP Goals',
+      'Distinguished',
+      'Membership Base',
+      'Membership End',
+      'Membership Net',
+      'October Renewals',
+      'April Renewals',
+      'Status',
+    ])
+    expect(csv[1]).toEqual([
+      '2023-2024',
+      7,
+      'Select Distinguished',
+      20,
+      32,
+      12,
+      18,
+      16,
+      'Active',
+    ])
+  })
+
+  it('uses empty cells (not em-dashes) for missing values so the CSV stays numeric', () => {
+    const csv = toClubHistoryCsvRows([
+      buildClubHistoryRow(2021, '2022-06-30', undefined),
+    ])
+    expect(csv[1]).toEqual(['2021-2022', '', '', '', '', '', '', '', ''])
   })
 })
