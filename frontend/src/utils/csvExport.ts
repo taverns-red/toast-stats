@@ -4,6 +4,7 @@
 
 import type { SnapshotDiff } from '@toastmasters/shared-contracts'
 import { distinguishedTierName } from './distinguishedTier'
+import { toClubHistoryCsvRows, type ClubHistoryRow } from './clubHistory'
 import { logger } from './logger'
 
 /**
@@ -82,6 +83,28 @@ export const exportMembershipHistory = (
 
   const csvContent = arrayToCSV(csvData)
   const filename = generateFilename('membership_history', districtId)
+  downloadCSV(csvContent, filename)
+}
+
+/**
+ * Export one club's per-program-year history to CSV (#1229). Row-shaping is the
+ * pure `toClubHistoryCsvRows`; this wrapper only adds the download side effect.
+ */
+export const exportClubHistory = (
+  rows: ClubHistoryRow[],
+  districtId: string,
+  clubId: string,
+  clubName: string
+): void => {
+  const csvData = [
+    [`Club: ${clubName} (${clubId})`],
+    [`District: ${districtId}`],
+    [`Export Date: ${new Date().toISOString()}`],
+    [],
+    ...toClubHistoryCsvRows(rows),
+  ]
+  const csvContent = arrayToCSV(csvData)
+  const filename = generateFilename(`club_${clubId}_history`, districtId)
   downloadCSV(csvContent, filename)
 }
 

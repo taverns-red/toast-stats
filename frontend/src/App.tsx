@@ -16,6 +16,9 @@ const DistrictDetailPage = React.lazy(
 // Code-split: ClubDetailPage — full club subpage (#208)
 const ClubDetailPage = React.lazy(() => import('./pages/ClubDetailPage'))
 
+// Code-split: ClubHistoryPage — per-club multi-year history subpage (#1229)
+const ClubHistoryPage = React.lazy(() => import('./pages/ClubHistoryPage'))
+
 // Code-split: DistrictClubsPage — district clubs subroute (#570, epic #568 Phase 2)
 const DistrictClubsPage = React.lazy(() => import('./pages/DistrictClubsPage'))
 
@@ -165,6 +168,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <ClubDetailPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/club/:clubId/history',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <ClubHistoryPage />
             </Suspense>
           ),
         },
