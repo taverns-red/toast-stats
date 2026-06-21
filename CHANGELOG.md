@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.28.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.27.1...toast-stats-v2.28.0) (2026-06-21)
+
+
+### Features
+
+* **area:** Area Director action list — shareable 'what to do next' ([#1231](https://github.com/taverns-red/toast-stats/issues/1231)) ([#1239](https://github.com/taverns-red/toast-stats/issues/1239)) ([7d9a998](https://github.com/taverns-red/toast-stats/commit/7d9a998363e25fb27df138828dcc0494d414d9c4))
+* **club:** per-club historical view — multi-year DCP / Distinguished / membership timeline ([#1229](https://github.com/taverns-red/toast-stats/issues/1229)) ([#1235](https://github.com/taverns-red/toast-stats/issues/1235)) ([06a00d0](https://github.com/taverns-red/toast-stats/commit/06a00d0f338f0a1e3eb1945f0f3737f05cee16b8))
+* **club:** restore DCP per-goal 'what's missing' breakdown on club detail ([#1227](https://github.com/taverns-red/toast-stats/issues/1227)) ([#1234](https://github.com/taverns-red/toast-stats/issues/1234)) ([37c53cf](https://github.com/taverns-red/toast-stats/commit/37c53cf7966236639543335284ac19ea6fa4d8f0))
+* **district:** at-a-glance club grid (Chiclet / LEO board) — one tile per club ([#1230](https://github.com/taverns-red/toast-stats/issues/1230)) ([#1237](https://github.com/taverns-red/toast-stats/issues/1237)) ([017327d](https://github.com/taverns-red/toast-stats/commit/017327db54545a8d8675e046ab648cb058ee4502))
+
+
+### Bug Fixes
+
+* **changes:** label tier M as 'Smedley Distinguished' in change feed + CSV export ([#1226](https://github.com/taverns-red/toast-stats/issues/1226)) ([#1233](https://github.com/taverns-red/toast-stats/issues/1233)) ([c482b07](https://github.com/taverns-red/toast-stats/commit/c482b071de15872245fb2f63d343b38f2ccc6459))
+
+
+### Documentation
+
+* add PM competitor-gap memo underpinning epics [#1225](https://github.com/taverns-red/toast-stats/issues/1225) and [#1228](https://github.com/taverns-red/toast-stats/issues/1228) ([#1232](https://github.com/taverns-red/toast-stats/issues/1232)) ([8341d0a](https://github.com/taverns-red/toast-stats/commit/8341d0a79800b15a1adaa088c589fe39c8bbf3dd))
+* **lessons:** grep the date-derivation primitive, not the named function ([#1116](https://github.com/taverns-red/toast-stats/issues/1116)) ([#1208](https://github.com/taverns-red/toast-stats/issues/1208)) ([1c1ae69](https://github.com/taverns-red/toast-stats/commit/1c1ae692e2764dd5dbe9cfbaec2c45610e22c562))
+* **lessons:** L172 — a new status surface must resolve the read-time overlay ([#1230](https://github.com/taverns-red/toast-stats/issues/1230)) ([#1238](https://github.com/taverns-red/toast-stats/issues/1238)) ([c2ae864](https://github.com/taverns-red/toast-stats/commit/c2ae8646a059ea14f7fb8a7a5e3086c18738cfa7))
+
 ## [2.27.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.27.0...toast-stats-v2.27.1) (2026-06-14)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.3](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.2...analytics-core-v1.9.3) (2026-06-21)
+
+
+### Bug Fixes
+
+* **changes:** label tier M as 'Smedley Distinguished' in change feed + CSV export ([#1226](https://github.com/taverns-red/toast-stats/issues/1226)) ([#1233](https://github.com/taverns-red/toast-stats/issues/1233)) ([c482b07](https://github.com/taverns-red/toast-stats/commit/c482b071de15872245fb2f63d343b38f2ccc6459))
+
 ## [1.9.2](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.1...analytics-core-v1.9.2) (2026-06-14)
 
 
