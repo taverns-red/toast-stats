@@ -167,3 +167,4 @@
 - **169** [process, documentation, verification, automation] — Sibling docs rot at different rates; a doc-accuracy pass must re-verify each file against the live system, never assume a shared baseline (#1108, #1194)
 - **170** [analytics, date, timezone, frontend, monorepo, verification, refactor] — Fix a date-derivation bug by grepping the PRIMITIVE, not the named function (#1116, #1192)
 - **171** [frontend, hooks, data-pipeline, cdn, verification, tests, contracts] — A dated CDN district snapshot is a `PerDistrictData` envelope; mock the wrapper or the page reads empty on live (#1229, #1228)
+- **172** [frontend, react, data-pipeline, scope, verification, accessibility] — A new status-consuming surface must resolve the read-time overlay, not the frozen base (#1230, #1228)
