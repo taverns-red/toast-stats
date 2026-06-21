@@ -11,7 +11,9 @@ describe('distinguishedTierName (#795)', () => {
     expect(distinguishedTierName('D')).toBe('Distinguished')
     expect(distinguishedTierName('S')).toBe('Select Distinguished')
     expect(distinguishedTierName('P')).toBe("President's Distinguished")
-    expect(distinguishedTierName('M')).toBe('Distinguished')
+    // M = Smedley Distinguished, the top DCP tier — NOT plain "Distinguished"
+    // (#1226). The prior assertion here pinned the mislabeling bug.
+    expect(distinguishedTierName('M')).toBe('Smedley Distinguished')
   })
 
   it('maps the empty code to "None"', () => {
