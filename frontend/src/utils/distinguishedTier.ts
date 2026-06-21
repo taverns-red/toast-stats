@@ -11,7 +11,7 @@ const TIER_NAMES: Record<string, string> = {
   D: 'Distinguished',
   S: 'Select Distinguished',
   P: "President's Distinguished",
-  M: 'Distinguished',
+  M: 'Smedley Distinguished',
 }
 
 export function distinguishedTierName(code: string): string {

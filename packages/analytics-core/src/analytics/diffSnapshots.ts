@@ -58,7 +58,7 @@ const TIER_NAMES: Record<string, string> = {
   D: 'Distinguished',
   S: 'Select Distinguished',
   P: "President's Distinguished",
-  M: 'Distinguished',
+  M: 'Smedley Distinguished',
 }
 
 function tierName(code: string): string {
