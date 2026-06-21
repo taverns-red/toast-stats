@@ -23,7 +23,7 @@ import {
   fetchCdnSnapshotIndex,
   fetchCdnDistrictSnapshot,
 } from '../services/cdn'
-import type { DistrictStatisticsFile } from '@toastmasters/shared-contracts'
+import type { PerDistrictData } from '@toastmasters/shared-contracts'
 import { getProgramYearForDate } from '../utils/programYear'
 import { buildClubHistoryRow, type ClubHistoryRow } from '../utils/clubHistory'
 
@@ -88,11 +88,15 @@ export function useClubHistory(
         completed.map(async ([startYear, yearEndDate]) => {
           let club
           try {
-            const snap = await fetchCdnDistrictSnapshot<DistrictStatisticsFile>(
+            // The dated file is a PerDistrictData ENVELOPE — the parsed clubs
+            // live at `.data.clubs` (the diff engine unwraps the same way, see
+            // useSnapshotDiff). A `failed` collection has no usable `.data`.
+            const snap = await fetchCdnDistrictSnapshot<PerDistrictData>(
               yearEndDate,
               districtId!
             )
-            club = snap.clubs.find(c => c.clubId === clubId)
+            if (snap.status === 'failed') return null
+            club = snap.data?.clubs?.find(c => c.clubId === clubId)
           } catch {
             // A missing year-end snapshot for this district — skip the year
             // rather than fail the whole history (the index can outrun storage).

@@ -16,6 +16,7 @@ import { ReactNode } from 'react'
 import type {
   ClubStatisticsFile,
   DistrictStatisticsFile,
+  PerDistrictData,
 } from '@toastmasters/shared-contracts'
 import { useClubHistory } from '../useClubHistory'
 import {
@@ -63,11 +64,11 @@ function club(overrides: Partial<ClubStatisticsFile> = {}): ClubStatisticsFile {
   }
 }
 
-function snapshot(
-  date: string,
-  clubs: ClubStatisticsFile[]
-): DistrictStatisticsFile {
-  return {
+// The dated CDN file is a PerDistrictData ENVELOPE — the parsed clubs live at
+// `.data.clubs`, not the top level. The mock must mirror the wire shape or it
+// hides the unwrap (the live file top-level is {districtId, …, status, data}).
+function snapshot(date: string, clubs: ClubStatisticsFile[]): PerDistrictData {
+  const data: DistrictStatisticsFile = {
     districtId: '61',
     snapshotDate: date,
     clubs,
@@ -77,6 +78,13 @@ function snapshot(
     divisionPerformance: [],
     clubPerformance: [],
     districtPerformance: [],
+  }
+  return {
+    districtId: '61',
+    districtName: 'District 61',
+    collectedAt: `${date}T12:00:00.000Z`,
+    status: 'success',
+    data,
   }
 }
 
@@ -196,6 +204,28 @@ describe('useClubHistory (#1229)', () => {
 
     expect(result.current.isError).toBe(false)
     expect(result.current.rows.map(r => r.startYear)).toEqual([2023]) // 2024-06-30 = PY 2023-24
+  })
+
+  it('skips a year whose snapshot collection failed (no usable data)', async () => {
+    mockedIndex.mockResolvedValue({ '61': ['2023-06-30', '2024-06-30'] })
+    mockedSnapshot.mockImplementation(async (date: string) => {
+      if (date === '2023-06-30') {
+        return {
+          districtId: '61',
+          districtName: 'District 61',
+          collectedAt: `${date}T12:00:00.000Z`,
+          status: 'failed',
+          errorMessage: 'scrape error',
+        } as never
+      }
+      return snapshot(date, [club()]) as never
+    })
+
+    const { result } = renderHook(() => useClubHistory('61', CLUB_ID), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.rows.map(r => r.startYear)).toEqual([2023])
   })
 
   it('is idle (no fetch) when districtId or clubId is missing', async () => {
