@@ -1,0 +1,177 @@
+/**
+ * Club per-program-year history table (#1229, epic #1228).
+ *
+ * Themed entirely through remapping tokens (--surface / --ink / --line, which
+ * flip under [data-theme='dark']) plus explicit per-tier light/dark badge
+ * colours below — NEVER Tailwind `dark:` variants, which misfire under this
+ * app's manual theme toggle (Lesson 107). Sticky program-year column keeps
+ * rows labelled while the metric columns scroll on narrow viewports (Lesson
+ * 105: comparison-across-rows tables stay tables, with a non-trap scroll).
+ */
+
+.club-history-scroll {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--rds-radius-md);
+  background: var(--surface);
+}
+
+.club-history-scroll:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--rt-stats-focus);
+}
+
+/* Right-edge fade cue — "there's more →" when the table overflows (Lesson 105). */
+.club-history-scroll::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface));
+  opacity: 0.9;
+}
+
+.club-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.club-history-th {
+  text-align: left;
+  padding: 0.6rem 0.85rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  white-space: nowrap;
+  border-bottom: 2px solid var(--line);
+  background: var(--surface);
+}
+
+.club-history-th--num {
+  text-align: right;
+}
+
+.club-history-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.club-history-th--num .club-history-sort {
+  flex-direction: row-reverse;
+}
+
+.club-history-sort:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--rt-stats-focus);
+  border-radius: 3px;
+}
+
+.club-history-sort__icon {
+  color: var(--ink-4);
+  font-size: 0.75rem;
+}
+
+.club-history-td {
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--line-2);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.club-history-td--num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.club-history-td--year {
+  font-weight: 600;
+  text-align: left;
+}
+
+/* Sticky identity column — keeps the program year visible while metrics scroll. */
+.club-history-table thead th:first-child,
+.club-history-table tbody th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+
+.club-history-muted {
+  color: var(--ink-3);
+}
+
+.club-history-net--pos {
+  color: var(--green-600);
+}
+
+.club-history-net--neg {
+  color: var(--red-600);
+}
+
+[data-theme='dark'] .club-history-net--pos {
+  color: var(--green-500);
+}
+
+[data-theme='dark'] .club-history-net--neg {
+  color: var(--red-500);
+}
+
+/* --- Distinguished tier badges (explicit light + dark, R10) --- */
+.club-history-tier {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.club-history-tier--distinguished {
+  background: #dcfce7;
+  color: #166534;
+}
+.club-history-tier--select {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.club-history-tier--presidents {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+.club-history-tier--smedley {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+[data-theme='dark'] .club-history-tier--distinguished {
+  background: #14361f;
+  color: #86efac;
+}
+[data-theme='dark'] .club-history-tier--select {
+  background: #16273f;
+  color: #93c5fd;
+}
+[data-theme='dark'] .club-history-tier--presidents {
+  background: #271b40;
+  color: #c4b5fd;
+}
+[data-theme='dark'] .club-history-tier--smedley {
+  background: #3a2a0c;
+  color: #fcd34d;
+}
