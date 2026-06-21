@@ -95,23 +95,20 @@ export function buildActionList(
 
   const closeToDistinguished: CloseToDistinguishedItem[] = clubs
     .filter(club => inScope(club.divisionId, club.areaId, scope))
-    .filter(club =>
-      isCloseToDistinguished({
-        projection: calculateClubProjection(club),
-        cspSubmitted: club.cspSubmitted,
-      })
+    // Project once per club, then filter+map off that single projection — the
+    // projection is the most expensive call in this file (four gap passes).
+    .map(club => ({ club, projection: calculateClubProjection(club) }))
+    .filter(({ club, projection }) =>
+      isCloseToDistinguished({ projection, cspSubmitted: club.cspSubmitted })
     )
-    .map(club => {
-      const { gapToDistinguished } = calculateClubProjection(club)
-      return {
-        clubId: club.clubId,
-        clubName: club.clubName,
-        divisionId: club.divisionId,
-        areaId: club.areaId,
-        membersNeeded: gapToDistinguished.members,
-        goalsNeeded: gapToDistinguished.goals,
-      }
-    })
+    .map(({ club, projection }) => ({
+      clubId: club.clubId,
+      clubName: club.clubName,
+      divisionId: club.divisionId,
+      areaId: club.areaId,
+      membersNeeded: projection.gapToDistinguished.members,
+      goalsNeeded: projection.gapToDistinguished.goals,
+    }))
 
   const { r1, r2 } = getAreaVisitDeadlines(snapshotDate)
   const visitGaps: VisitGapArea[] = divisions.flatMap(division =>
@@ -138,4 +135,25 @@ export function buildActionList(
     }))
 
   return { closeToDistinguished, visitGaps, interventionRequired }
+}
+
+function plural(n: number, noun: string): string {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`
+}
+
+/** "needs 2 members + 1 DCP goal" — shared by the list row and the CSV export
+ *  so the pluralization rule lives in one place. */
+export function formatCloseGap(item: CloseToDistinguishedItem): string {
+  return `needs ${plural(item.membersNeeded, 'member')} + ${plural(
+    item.goalsNeeded,
+    'DCP goal'
+  )}`
+}
+
+/** "1 club unvisited · Round 1, due 2025-11-30" — shared by the list row and
+ *  the CSV export. */
+export function formatVisitGap(gap: VisitGapArea): string {
+  return `${plural(gap.missingClubs.length, 'club')} unvisited · Round ${
+    gap.currentRound
+  }, due ${gap.deadline}`
 }

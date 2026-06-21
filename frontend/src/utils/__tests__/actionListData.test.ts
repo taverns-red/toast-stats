@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { buildActionList } from '../actionListData'
+import {
+  buildActionList,
+  formatCloseGap,
+  formatVisitGap,
+} from '../actionListData'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import type { AreaPerformance, DivisionPerformance } from '../divisionStatus'
 
@@ -266,5 +270,54 @@ describe('buildActionList', () => {
       expect(result.visitGaps).toEqual([])
       expect(result.interventionRequired).toEqual([])
     })
+  })
+})
+
+describe('formatCloseGap / formatVisitGap (shared list + CSV strings)', () => {
+  it('pluralizes the close-to-Distinguished gap', () => {
+    expect(
+      formatCloseGap({
+        clubId: 'c',
+        clubName: 'C',
+        divisionId: 'A',
+        areaId: 'A1',
+        membersNeeded: 2,
+        goalsNeeded: 1,
+      })
+    ).toBe('needs 2 members + 1 DCP goal')
+    expect(
+      formatCloseGap({
+        clubId: 'c',
+        clubName: 'C',
+        divisionId: 'A',
+        areaId: 'A1',
+        membersNeeded: 1,
+        goalsNeeded: 2,
+      })
+    ).toBe('needs 1 member + 2 DCP goals')
+  })
+
+  it('pluralizes the visit-gap summary', () => {
+    expect(
+      formatVisitGap({
+        divisionId: 'A',
+        areaId: 'A1',
+        currentRound: 1,
+        deadline: '2025-11-30',
+        missingClubs: [{ clubNumber: '1', clubName: 'X' }],
+      })
+    ).toBe('1 club unvisited · Round 1, due 2025-11-30')
+    expect(
+      formatVisitGap({
+        divisionId: 'A',
+        areaId: 'A1',
+        currentRound: 2,
+        deadline: '2026-05-31',
+        missingClubs: [
+          { clubNumber: '1', clubName: 'X' },
+          { clubNumber: '2', clubName: 'Y' },
+        ],
+      })
+    ).toBe('2 clubs unvisited · Round 2, due 2026-05-31')
   })
 })

@@ -15,6 +15,8 @@ import {
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import {
   buildActionList,
+  formatCloseGap,
+  formatVisitGap,
   type ActionListSections,
 } from '../utils/actionListData'
 import { arrayToCSV, downloadCSV, generateFilename } from '../utils/csvExport'
@@ -48,11 +50,33 @@ function compareId(a: string, b: string): number {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
 }
 
-const EMPTY_SECTIONS: ActionListSections = {
-  closeToDistinguished: [],
-  visitGaps: [],
-  interventionRequired: [],
-}
+/** One action section: heading + count badge, then either the empty state or
+ *  the caller-supplied list rows. The section/heading/count/empty scaffold is
+ *  shared; the divergent `<li>` bodies are passed as children. */
+const ActionListSection: React.FC<{
+  id: string
+  testId: string
+  heading: string
+  count: number
+  emptyText: string
+  children: React.ReactNode
+}> = ({ id, testId, heading, count, emptyText, children }) => (
+  <section
+    className="action-list-section"
+    aria-labelledby={id}
+    data-testid={testId}
+  >
+    <h3 id={id} className="action-list-section__heading">
+      {heading}
+      <span className="action-list-section__count">{count}</span>
+    </h3>
+    {count === 0 ? (
+      <p className="action-list-section__empty">{emptyText}</p>
+    ) : (
+      <ul className="action-list-items">{children}</ul>
+    )}
+  </section>
+)
 
 const DistrictActionListPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
@@ -172,7 +196,8 @@ const DistrictActionListPage: React.FC = () => {
   )
 
   const sections = useMemo<ActionListSections>(() => {
-    if (!analytics && divisionPerformance.length === 0) return EMPTY_SECTIONS
+    // buildActionList already returns empty sections for empty input, so no
+    // separate no-data guard is needed — the `?? []` fallbacks make it safe.
     return buildActionList(
       {
         clubs: analytics?.allClubs ?? [],
@@ -228,7 +253,7 @@ const DistrictActionListPage: React.FC = () => {
         c.divisionId,
         c.areaId,
         c.clubName,
-        `needs ${c.membersNeeded} member${c.membersNeeded === 1 ? '' : 's'} + ${c.goalsNeeded} DCP goal${c.goalsNeeded === 1 ? '' : 's'}`,
+        formatCloseGap(c),
       ])
     }
     for (const g of sections.visitGaps) {
@@ -237,7 +262,7 @@ const DistrictActionListPage: React.FC = () => {
         g.divisionId,
         g.areaId,
         `Area ${g.areaId}`,
-        `${g.missingClubs.length} club(s) unvisited (Round ${g.currentRound}, due ${g.deadline})`,
+        formatVisitGap(g),
       ])
     }
     for (const i of sections.interventionRequired) {
@@ -362,125 +387,74 @@ const DistrictActionListPage: React.FC = () => {
               <LoadingSkeleton variant="table" count={3} />
             ) : (
               <div className="action-list-sections">
-                <section
-                  className="action-list-section"
-                  aria-labelledby="action-close"
-                  data-testid="section-close"
+                <ActionListSection
+                  id="action-close"
+                  testId="section-close"
+                  heading="Clubs close to Distinguished"
+                  count={sections.closeToDistinguished.length}
+                  emptyText="No clubs are within reach of Distinguished for this scope."
                 >
-                  <h3
-                    id="action-close"
-                    className="action-list-section__heading"
-                  >
-                    Clubs close to Distinguished
-                    <span className="action-list-section__count">
-                      {sections.closeToDistinguished.length}
-                    </span>
-                  </h3>
-                  {sections.closeToDistinguished.length === 0 ? (
-                    <p className="action-list-section__empty">
-                      No clubs are within reach of Distinguished for this scope.
-                    </p>
-                  ) : (
-                    <ul className="action-list-items">
-                      {sections.closeToDistinguished.map(c => (
-                        <li key={c.clubId} className="action-list-item">
-                          <Link
-                            className="action-list-item__link"
-                            to={`/district/${districtId}/club/${c.clubId}`}
-                          >
-                            {c.clubName}
-                          </Link>
-                          <span className="action-list-item__meta">
-                            {c.divisionId}/{c.areaId} · needs {c.membersNeeded}{' '}
-                            member{c.membersNeeded === 1 ? '' : 's'} +{' '}
-                            {c.goalsNeeded} DCP goal
-                            {c.goalsNeeded === 1 ? '' : 's'}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
+                  {sections.closeToDistinguished.map(c => (
+                    <li key={c.clubId} className="action-list-item">
+                      <Link
+                        className="action-list-item__link"
+                        to={`/district/${districtId}/club/${c.clubId}`}
+                      >
+                        {c.clubName}
+                      </Link>
+                      <span className="action-list-item__meta">
+                        {c.divisionId}/{c.areaId} · {formatCloseGap(c)}
+                      </span>
+                    </li>
+                  ))}
+                </ActionListSection>
 
-                <section
-                  className="action-list-section"
-                  aria-labelledby="action-visits"
-                  data-testid="section-visits"
+                <ActionListSection
+                  id="action-visits"
+                  testId="section-visits"
+                  heading="Areas missing club visits"
+                  count={sections.visitGaps.length}
+                  emptyText="Every area has completed the current round's club visits for this scope."
                 >
-                  <h3
-                    id="action-visits"
-                    className="action-list-section__heading"
-                  >
-                    Areas missing club visits
-                    <span className="action-list-section__count">
-                      {sections.visitGaps.length}
-                    </span>
-                  </h3>
-                  {sections.visitGaps.length === 0 ? (
-                    <p className="action-list-section__empty">
-                      Every area has completed the current round&rsquo;s club
-                      visits for this scope.
-                    </p>
-                  ) : (
-                    <ul className="action-list-items">
-                      {sections.visitGaps.map(g => (
-                        <li
-                          key={`${g.divisionId}-${g.areaId}`}
-                          className="action-list-item"
-                        >
-                          <Link
-                            className="action-list-item__link"
-                            to={`/district/${districtId}/division/${g.divisionId}/area/${g.areaId}`}
-                          >
-                            Area {g.areaId}
-                          </Link>
-                          <span className="action-list-item__meta">
-                            {g.missingClubs.length} club
-                            {g.missingClubs.length === 1 ? '' : 's'} unvisited ·
-                            Round {g.currentRound}, due {g.deadline}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
+                  {sections.visitGaps.map(g => (
+                    <li
+                      key={`${g.divisionId}-${g.areaId}`}
+                      className="action-list-item"
+                    >
+                      <Link
+                        className="action-list-item__link"
+                        to={`/district/${districtId}/division/${g.divisionId}/area/${g.areaId}`}
+                      >
+                        Area {g.areaId}
+                      </Link>
+                      <span className="action-list-item__meta">
+                        {formatVisitGap(g)}
+                      </span>
+                    </li>
+                  ))}
+                </ActionListSection>
 
-                <section
-                  className="action-list-section"
-                  aria-labelledby="action-intervention"
-                  data-testid="section-intervention"
+                <ActionListSection
+                  id="action-intervention"
+                  testId="section-intervention"
+                  heading="Clubs needing intervention"
+                  count={sections.interventionRequired.length}
+                  emptyText="No clubs are flagged intervention-required for this scope."
                 >
-                  <h3
-                    id="action-intervention"
-                    className="action-list-section__heading"
-                  >
-                    Clubs needing intervention
-                    <span className="action-list-section__count">
-                      {sections.interventionRequired.length}
-                    </span>
-                  </h3>
-                  {sections.interventionRequired.length === 0 ? (
-                    <p className="action-list-section__empty">
-                      No clubs are flagged intervention-required for this scope.
-                    </p>
-                  ) : (
-                    <ul className="action-list-items">
-                      {sections.interventionRequired.map(i => (
-                        <li key={i.clubId} className="action-list-item">
-                          <Link
-                            className="action-list-item__link"
-                            to={`/district/${districtId}/club/${i.clubId}`}
-                          >
-                            {i.clubName}
-                          </Link>
-                          <span className="action-list-item__meta">
-                            {i.divisionId}/{i.areaId} · intervention required
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
+                  {sections.interventionRequired.map(i => (
+                    <li key={i.clubId} className="action-list-item">
+                      <Link
+                        className="action-list-item__link"
+                        to={`/district/${districtId}/club/${i.clubId}`}
+                      >
+                        {i.clubName}
+                      </Link>
+                      <span className="action-list-item__meta">
+                        {i.divisionId}/{i.areaId} · intervention required
+                      </span>
+                    </li>
+                  ))}
+                </ActionListSection>
               </div>
             )}
           </div>
