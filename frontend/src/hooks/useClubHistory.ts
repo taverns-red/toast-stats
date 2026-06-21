@@ -52,6 +52,8 @@ export interface UseClubHistoryResult {
 function latestDateByProgramYear(dates: string[]): Map<number, string> {
   const latestByYear = new Map<number, string>()
   for (const d of dates) {
+    // getProgramYearForDate parses the ISO string via calendarParts (regex,
+    // timezone-safe) — not new Date() — so the Jul-1 boundary is exact.
     const startYear = getProgramYearForDate(d).year
     const cur = latestByYear.get(startYear)
     if (!cur || d > cur) latestByYear.set(startYear, d)

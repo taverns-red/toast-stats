@@ -10,7 +10,6 @@ import { describe, it, expect } from 'vitest'
 import type { ClubStatisticsFile } from '@toastmasters/shared-contracts'
 import {
   buildClubHistoryRow,
-  normalizeTierCode,
   toClubHistoryCsvRows,
   type ClubHistoryRow,
 } from '../clubHistory'
@@ -38,35 +37,6 @@ function makeClub(
     ...overrides,
   }
 }
-
-describe('normalizeTierCode', () => {
-  it('returns null for absent / empty status (no distinguished status)', () => {
-    expect(normalizeTierCode(undefined)).toBeNull()
-    expect(normalizeTierCode('')).toBeNull()
-  })
-
-  it('passes through canonical letter codes', () => {
-    expect(normalizeTierCode('D')).toBe('D')
-    expect(normalizeTierCode('S')).toBe('S')
-    expect(normalizeTierCode('P')).toBe('P')
-    expect(normalizeTierCode('M')).toBe('M')
-  })
-
-  it('maps historical word forms back to letter codes (incl. Smedley)', () => {
-    expect(normalizeTierCode('Distinguished')).toBe('D')
-    expect(normalizeTierCode('Select Distinguished')).toBe('S')
-    expect(normalizeTierCode("President's Distinguished")).toBe('P')
-    expect(normalizeTierCode('Smedley Distinguished')).toBe('M')
-  })
-
-  it('is case- and whitespace-insensitive for word forms', () => {
-    expect(normalizeTierCode('  smedley distinguished  ')).toBe('M')
-  })
-
-  it('returns null for an unrecognised value rather than guessing', () => {
-    expect(normalizeTierCode('Mystery')).toBeNull()
-  })
-})
 
 describe('buildClubHistoryRow', () => {
   it('builds a full row from a present club (Select Distinguished)', () => {

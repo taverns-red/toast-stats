@@ -8,16 +8,22 @@
  * Distinguished tier comes from the raw `distinguishedStatus` letter code
  * (`'' | D | S | P | M`), the same authoritative field the "What Changed"
  * surface uses (lesson 123) — never inferred from goal counts. Tier M is
- * Smedley Distinguished (#1226). Historical snapshots may carry word forms
- * instead of letter codes, so `normalizeTierCode` maps both.
+ * Smedley Distinguished (#1226). The code/word-form normalization lives in
+ * `distinguishedTier.ts`, beside the canonical code→name map (lesson 117).
  */
 
 import type { ClubStatisticsFile } from '@toastmasters/shared-contracts'
 import { getProgramYear } from './programYear'
-import { distinguishedTierName } from './distinguishedTier'
+import {
+  distinguishedTierName,
+  normalizeTierCode,
+  type ClubTierCode,
+} from './distinguishedTier'
 
-/** Canonical Toastmasters distinguished tier codes (empty = no status). */
-export type ClubTierCode = 'D' | 'S' | 'P' | 'M'
+export type { ClubTierCode }
+
+/** Em-dash used for every missing value in the history view. */
+export const EM_DASH = '—'
 
 export interface ClubHistoryRow {
   /** Program-year start year (e.g. 2023 for the 2023-2024 program year). */
@@ -46,30 +52,6 @@ export interface ClubHistoryRow {
   aprilRenewals: number | null
   /** Operational club status (Active / Suspended / Low / Ineligible), or null. */
   clubStatus: string | null
-}
-
-const EM_DASH = '—'
-
-/** Word-form → letter-code map for historical snapshots that pre-date codes. */
-const WORD_FORM_TO_CODE: Record<string, ClubTierCode> = {
-  distinguished: 'D',
-  'select distinguished': 'S',
-  "president's distinguished": 'P',
-  'smedley distinguished': 'M',
-}
-
-const LETTER_CODES: ReadonlySet<string> = new Set(['D', 'S', 'P', 'M'])
-
-/**
- * Normalize a raw `distinguishedStatus` value to a canonical letter code.
- * Returns null for an absent, empty, or unrecognised value (→ em-dash, never a
- * guess). Accepts both live letter codes and historical word forms.
- */
-export function normalizeTierCode(raw?: string): ClubTierCode | null {
-  if (!raw) return null
-  const trimmed = raw.trim()
-  if (LETTER_CODES.has(trimmed)) return trimmed as ClubTierCode
-  return WORD_FORM_TO_CODE[trimmed.toLowerCase()] ?? null
 }
 
 /**

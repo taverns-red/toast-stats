@@ -16,11 +16,11 @@
 
 import { useMemo, useState } from 'react'
 import type { ClubHistoryRow, ClubTierCode } from '../utils/clubHistory'
-
-const EM_DASH = '—'
+import { EM_DASH } from '../utils/clubHistory'
+import { SortableHeader } from './SortableHeader'
+import type { SortDirection } from '../hooks/useUrlSort'
 
 type SortField = 'year' | 'dcpGoals' | 'tier' | 'membershipNet' | 'status'
-type SortDirection = 'asc' | 'desc'
 
 /** Sort rank for the distinguished tier (none < D < S < P < Smedley). */
 const TIER_RANK: Record<ClubTierCode, number> = { D: 1, S: 2, P: 3, M: 4 }
@@ -45,48 +45,6 @@ function signedNet(value: number | null): string {
   return value > 0 ? `+${value}` : String(value)
 }
 
-interface SortableHeaderProps {
-  field: SortField
-  label: string
-  active: SortField
-  direction: SortDirection
-  onSort: (field: SortField) => void
-  numeric?: boolean
-}
-
-function SortableHeader({
-  field,
-  label,
-  active,
-  direction,
-  onSort,
-  numeric,
-}: SortableHeaderProps) {
-  const isActive = active === field
-  return (
-    <th
-      scope="col"
-      className={
-        numeric ? 'club-history-th club-history-th--num' : 'club-history-th'
-      }
-      aria-sort={
-        isActive ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'
-      }
-    >
-      <button
-        type="button"
-        className="club-history-sort"
-        onClick={() => onSort(field)}
-      >
-        {label}
-        <span aria-hidden="true" className="club-history-sort__icon">
-          {isActive ? (direction === 'asc' ? '↑' : '↓') : '↕'}
-        </span>
-      </button>
-    </th>
-  )
-}
-
 export interface ClubHistoryTableProps {
   rows: ClubHistoryRow[]
   clubName: string
@@ -95,6 +53,8 @@ export interface ClubHistoryTableProps {
 export function ClubHistoryTable({ rows, clubName }: ClubHistoryTableProps) {
   const [sortField, setSortField] = useState<SortField>('year')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+
+  const currentSort = { field: sortField, direction: sortDirection }
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -145,45 +105,50 @@ export function ClubHistoryTable({ rows, clubName }: ClubHistoryTableProps) {
         </caption>
         <thead>
           <tr>
-            <SortableHeader
+            <SortableHeader<SortField>
               field="year"
               label="Program Year"
-              active={sortField}
-              direction={sortDirection}
+              currentSort={currentSort}
               onSort={handleSort}
+              thClassName="club-history-th"
+              buttonClassName="club-history-sort"
             />
-            <SortableHeader
+            <SortableHeader<SortField>
               field="dcpGoals"
               label="DCP Goals"
-              active={sortField}
-              direction={sortDirection}
+              currentSort={currentSort}
               onSort={handleSort}
+              thClassName="club-history-th club-history-th--num"
+              buttonClassName="club-history-sort club-history-sort--num"
               numeric
             />
-            <SortableHeader
+            <SortableHeader<SortField>
               field="tier"
               label="Distinguished"
-              active={sortField}
-              direction={sortDirection}
+              currentSort={currentSort}
               onSort={handleSort}
+              thClassName="club-history-th"
+              buttonClassName="club-history-sort"
             />
-            <SortableHeader
+            <SortableHeader<SortField>
               field="membershipNet"
               label="Membership (base → end)"
-              active={sortField}
-              direction={sortDirection}
+              currentSort={currentSort}
               onSort={handleSort}
+              thClassName="club-history-th club-history-th--num"
+              buttonClassName="club-history-sort club-history-sort--num"
               numeric
             />
             <th scope="col" className="club-history-th club-history-th--num">
               Renewals (Oct / Apr)
             </th>
-            <SortableHeader
+            <SortableHeader<SortField>
               field="status"
               label="Status"
-              active={sortField}
-              direction={sortDirection}
+              currentSort={currentSort}
               onSort={handleSort}
+              thClassName="club-history-th"
+              buttonClassName="club-history-sort"
             />
           </tr>
         </thead>

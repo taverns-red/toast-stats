@@ -139,10 +139,11 @@
   text-align: right;
 }
 
+/* Button reset for the shared SortableHeader (it owns the SVG sort indicator). */
 .club-history-sort {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.3rem;
   background: none;
   border: none;
   padding: 0;
@@ -152,7 +153,8 @@
   cursor: pointer;
 }
 
-.club-history-th--num .club-history-sort {
+/* Right-aligned numeric headers put the indicator before the label. */
+.club-history-sort--num {
   flex-direction: row-reverse;
 }
 
@@ -162,9 +164,9 @@
   border-radius: 3px;
 }
 
-.club-history-sort__icon {
+.club-history-sort .sortable-header__indicator {
+  display: inline-flex;
   color: var(--ink-4);
-  font-size: 0.75rem;
 }
 
 .club-history-td {
