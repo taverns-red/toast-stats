@@ -39,6 +39,11 @@ const DistrictRankingsPage = React.lazy(
 // Code-split: DistrictGridPage — at-a-glance club grid subroute (#1230, epic #1228)
 const DistrictGridPage = React.lazy(() => import('./pages/DistrictGridPage'))
 
+// Code-split: DistrictActionListPage — area-director action list (#1231, epic #1228)
+const DistrictActionListPage = React.lazy(
+  () => import('./pages/DistrictActionListPage')
+)
+
 // Code-split: DistrictTrendsPage — trends subroute (#680, epic #674 Sprint 6)
 const DistrictTrendsPage = React.lazy(
   () => import('./pages/DistrictTrendsPage')
@@ -155,6 +160,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <DistrictGridPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/action-list',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <DistrictActionListPage />
             </Suspense>
           ),
         },

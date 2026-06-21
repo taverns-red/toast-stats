@@ -30,6 +30,10 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   { label: 'Trends', segment: 'trends' },
   { label: 'Analytics', segment: 'analytics' },
   { label: 'Rankings', segment: 'rankings' },
+  // 'Action List' (#1231, epic #1228) — the area-director "what to do next"
+  // destination (close-to-Distinguished gaps, missing club visits, clubs needing
+  // intervention). Last in the strip: a task view, not a lateral data view.
+  { label: 'Action List', segment: 'action-list' },
 ]
 
 /** Build the URL for a district section. Empty segment = the Overview hub. */
