@@ -17,9 +17,16 @@
 name: Data Pipeline
 
 on:
-  schedule:
-    # Primary daily run at 08:00 UTC (4 AM EST / 5 AM EDT).
-    - cron: '0 8 * * *'
+  # The daily run is intentionally NOT scheduled here. GitHub's cron fires
+  # late or drops events under load, which is unacceptable for the freshness-
+  # critical daily pipeline (#1242). It is triggered on time by an external
+  # launchd job on the operator Mac at 05:00 America/Toronto (DST-aware):
+  #   gh workflow run data-pipeline.yml --ref main -f mode=daily
+  # Runbook: docs/runbooks/local-daily-pipeline-trigger.md
+  #
+  # The quarterly-prune cron remains operator-gated (#1148) and is not wired
+  # as a trigger yet; when flipped on it is matched by its exact expression in
+  # the Determine-mode step below.
   workflow_dispatch:
     inputs:
       mode:
