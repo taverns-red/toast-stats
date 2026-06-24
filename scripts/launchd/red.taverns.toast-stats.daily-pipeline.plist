@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Local launchd trigger for the Toast Stats daily data pipeline (#1242).
+
+  Fires at 05:00 America/Toronto. launchd's StartCalendarInterval uses the Mac's
+  LOCAL wall-clock, so this automatically tracks EST/EDT — no UTC drift like the
+  old GitHub cron.
+
+  This is a TEMPLATE. The installed copy lives at:
+    ~/Library/LaunchAgents/red.taverns.toast-stats.daily-pipeline.plist
+  and points at the operator-stable script copy (see runbook). Replace the home
+  path below if the operator account differs.
+
+  Install / reload:
+    launchctl bootout  gui/$(id -u)/red.taverns.toast-stats.daily-pipeline 2>/dev/null || true
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/red.taverns.toast-stats.daily-pipeline.plist
+  Verify:
+    launchctl print gui/$(id -u)/red.taverns.toast-stats.daily-pipeline
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>red.taverns.toast-stats.daily-pipeline</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>/Users/rservant/Library/Application Support/toast-stats/trigger-daily-pipeline.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+      <key>Hour</key>
+      <integer>5</integer>
+      <key>Minute</key>
+      <integer>0</integer>
+    </dict>
+
+    <!-- Do not fire on load/login; only on the calendar schedule. -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- If the Mac was asleep at 05:00, launchd runs the missed job once on wake. -->
+    <key>StandardOutPath</key>
+    <string>/Users/rservant/Library/Logs/toast-stats/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/rservant/Library/Logs/toast-stats/launchd.err.log</string>
+  </dict>
+</plist>
