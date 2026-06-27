@@ -33,6 +33,12 @@ export type AggregateDelta = z.infer<typeof AggregateDeltaSchema>
  * analytics-core engine (which deliberately dropped tier logic in #799 to avoid
  * divergence — Lesson 117). Such events set `areaId`/`divisionId` rather than a
  * `clubId`.
+ *
+ * `club-status` (#1247) carries club OPERATIONAL-status transitions
+ * (`Active`/`Low`/`Suspended`/`Ineligible`) — distinct from `distinguished`, a
+ * recognition tier. Like the area/division transitions it is derived in the
+ * frontend (`diffClubStatus`), comparing the `clubStatus` already present on
+ * both snapshots; it is club-scoped (sets `clubId`/`clubName`).
  */
 export const DiffEventCategorySchema = z.enum([
   'membership',
@@ -40,6 +46,7 @@ export const DiffEventCategorySchema = z.enum([
   'distinguished',
   'club-added',
   'club-removed',
+  'club-status',
   'area-status',
   'division-status',
 ])
