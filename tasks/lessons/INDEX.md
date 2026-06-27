@@ -168,3 +168,4 @@
 - **170** [analytics, date, timezone, frontend, monorepo, verification, refactor] — Fix a date-derivation bug by grepping the PRIMITIVE, not the named function (#1116, #1192)
 - **171** [frontend, hooks, data-pipeline, cdn, verification, tests, contracts] — A dated CDN district snapshot is a `PerDistrictData` envelope; mock the wrapper or the page reads empty on live (#1229, #1228)
 - **172** [frontend, react, data-pipeline, scope, verification, accessibility] — A new status-consuming surface must resolve the read-time overlay, not the frozen base (#1230, #1228)
+- **173** [ci, deploy, firebase, node, auth, wif] — A Node security patch (not firebase-tools) broke all firebase deploys via keep-alive (#1250) _(ref-only)_
