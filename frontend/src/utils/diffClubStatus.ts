@@ -62,12 +62,11 @@ function statusRank(status: string): number {
  */
 function statusLabel(name: string, from: string, to: string): string {
   if (to === 'Active') return `${name} became Active (was ${from})`
-  if (from === 'Active' && to === 'Low')
-    return `${name} dropped to Low (was Active)`
-  if (from === 'Active' && to === 'Suspended')
-    return `${name} was suspended (was Active)`
-  if (from === 'Active' && to === 'Ineligible')
-    return `${name} became Ineligible (was Active)`
+  if (from === 'Active') {
+    if (to === 'Low') return `${name} dropped to Low (was Active)`
+    if (to === 'Suspended') return `${name} was suspended (was Active)`
+    if (to === 'Ineligible') return `${name} became Ineligible (was Active)`
+  }
   return `${name} changed status: ${from} → ${to}`
 }
 
