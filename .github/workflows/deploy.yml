@@ -89,7 +89,9 @@ jobs:
       - name: Build and deploy production
         run: |
           npm run build:frontend
-          npm install -g firebase-tools
+          # Pinned: firebase-tools 15.22.2/.3 regressed WIF/external_account auth
+          # (GoogleAuth keep-alive change, commit 2ad25cf98). Bump via tested Dependabot PR. See #1250.
+          npm install -g firebase-tools@15.22.0
           firebase deploy --only hosting:production --project ${{ secrets.GCP_PROJECT_ID }}
         env:
           VITE_APP_VERSION: v${{ steps.pkg.outputs.version }}
