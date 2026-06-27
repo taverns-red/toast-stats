@@ -146,6 +146,53 @@ describe('DistrictChangesPage', () => {
     )
   })
 
+  it('renders a Club status changes group adjacent to Clubs that joined, club name linked (#1247)', () => {
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-05-25', '2026-05-26'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    mockedDiff.mockReturnValue({
+      data: diffFixture({
+        events: [
+          {
+            category: 'club-added',
+            clubId: '28680300',
+            clubName: 'iA Montreal Toastmasters',
+            label: 'iA Montreal Toastmasters (Active) joined the roster',
+            magnitude: 1,
+          },
+          {
+            category: 'club-status',
+            clubId: '00001234',
+            clubName: 'Health Canada Club',
+            label: 'Health Canada Club became Active (was Low)',
+            magnitude: 1,
+          },
+        ],
+      }),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    const { container } = renderPage()
+    expect(screen.getByText(/Club status changes/)).toBeInTheDocument()
+    // The club name links to its scoped route (ChangeLabel, #1013).
+    expect(
+      screen.getByRole('link', { name: 'Health Canada Club' })
+    ).toHaveAttribute('href', '/district/61/club/00001234')
+    expect(screen.getByText(/became Active \(was Low\)/)).toBeInTheDocument()
+
+    // Adjacency (operator decision): the Club-status group renders immediately
+    // after the Clubs-that-joined group, not folded into it.
+    const headings = Array.from(
+      container.querySelectorAll('details summary')
+    ).map(s => s.textContent ?? '')
+    const joined = headings.findIndex(h => /Clubs that joined/.test(h))
+    const status = headings.findIndex(h => /Club status changes/.test(h))
+    expect(joined).toBeGreaterThanOrEqual(0)
+    expect(status).toBe(joined + 1)
+  })
+
   it('renders the date-pair picker when at least two snapshots exist (#794)', () => {
     mockedDates.mockReturnValue({
       data: { dates: ['2026-05-25', '2026-05-26'] },

@@ -11,17 +11,17 @@ from `.github/workflows/data-pipeline.yml`. The daily run is now triggered
 America/Toronto**.
 
 - The pipeline workflow is unchanged except for the removed `schedule:` block —
-  it still runs on GitHub's runners. We only moved the *trigger*.
+  it still runs on GitHub's runners. We only moved the _trigger_.
 - `workflow_dispatch` (mode defaults to `daily`) is the entry point.
 - The quarterly-prune cron stays operator-gated (#1148) and is unaffected.
 
 ## Components
 
-| Piece | Repo (canonical) | Installed (live) |
-| --- | --- | --- |
-| Trigger script | `scripts/trigger-daily-pipeline.sh` | `~/Library/Application Support/toast-stats/trigger-daily-pipeline.sh` |
-| launchd job | `scripts/launchd/red.taverns.toast-stats.daily-pipeline.plist` | `~/Library/LaunchAgents/red.taverns.toast-stats.daily-pipeline.plist` |
-| Logs | — | `~/Library/Logs/toast-stats/daily-pipeline-trigger.log` (+ `launchd.{out,err}.log`) |
+| Piece          | Repo (canonical)                                               | Installed (live)                                                                    |
+| -------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Trigger script | `scripts/trigger-daily-pipeline.sh`                            | `~/Library/Application Support/toast-stats/trigger-daily-pipeline.sh`               |
+| launchd job    | `scripts/launchd/red.taverns.toast-stats.daily-pipeline.plist` | `~/Library/LaunchAgents/red.taverns.toast-stats.daily-pipeline.plist`               |
+| Logs           | —                                                              | `~/Library/Logs/toast-stats/daily-pipeline-trigger.log` (+ `launchd.{out,err}.log`) |
 
 The live script is a **stable copy** outside the repo working tree so it does not
 depend on which branch is checked out. After changing the repo script, re-copy it
@@ -73,7 +73,7 @@ rm "$HOME/Library/LaunchAgents/red.taverns.toast-stats.daily-pipeline.plist"
 ## Caveats & safety net
 
 - **Mac must be awake (or wake) at 05:00.** launchd does not power on a sleeping
-  Mac; it runs a *missed* `StartCalendarInterval` job once on next wake. To
+  Mac; it runs a _missed_ `StartCalendarInterval` job once on next wake. To
   guarantee on-time runs, schedule a wake:
   `sudo pmset repeat wakeorpoweron MTWRFSU 04:58:00`
 - **Independent freshness alarm.** `pipeline-freshness-monitor.yml` still runs on

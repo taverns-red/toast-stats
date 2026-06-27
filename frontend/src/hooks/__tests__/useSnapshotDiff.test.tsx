@@ -172,6 +172,31 @@ describe('useSnapshotDiff', () => {
     })
   })
 
+  it('merges club operational-status transitions into the events list (#1247)', async () => {
+    // Club 001 flips Low → Active between the two snapshots — a club-status
+    // transition the analytics-core club diff never produces.
+    mockedFetch.mockImplementation((date: string) => {
+      const snap = wrapper(date, 20)
+      snap.data.clubs[0]!.clubStatus = date === '2026-05-26' ? 'Active' : 'Low'
+      return Promise.resolve(snap as unknown) as Promise<unknown>
+    })
+
+    const { result } = renderHook(
+      () => useSnapshotDiff('61', '2026-05-25', '2026-05-26'),
+      { wrapper: makeWrapper() }
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    const statusEvent = result.current.data?.events.find(
+      e => e.category === 'club-status'
+    )
+    expect(statusEvent).toMatchObject({
+      clubId: '001',
+      clubName: 'Club 001',
+      label: 'Club 001 became Active (was Low)',
+    })
+  })
+
   it('is disabled (does not fetch) when from or to is missing', () => {
     renderHook(() => useSnapshotDiff('61', undefined, '2026-05-26'), {
       wrapper: makeWrapper(),

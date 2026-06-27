@@ -37,10 +37,13 @@ function fmtDate(iso: string): string {
 
 /* Display order + headings for the grouped change list. Roster moves first
    (most material), then club / division / area recognition, then the per-club
-   metric churn. Division & area status changes (#1014) sit with the club
-   distinguished group as the "recognition" band. */
+   metric churn. Club operational-status changes (#1247) sit adjacent to the
+   club-added group (a reactivation reads next to "joined", not folded into it).
+   Division & area status changes (#1014) sit with the club distinguished group
+   as the "recognition" band. */
 const CATEGORY_GROUPS: { category: DiffEventCategory; heading: string }[] = [
   { category: 'club-added', heading: 'Clubs that joined' },
+  { category: 'club-status', heading: 'Club status changes' },
   { category: 'club-removed', heading: 'Clubs that left' },
   { category: 'distinguished', heading: 'Distinguished status changes' },
   { category: 'division-status', heading: 'Division status changes' },
