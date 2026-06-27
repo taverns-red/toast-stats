@@ -11,8 +11,8 @@ issues: [1250]
 
 **Symptom (2026-06-27):** every firebase deploy (preview + prod) failed with
 `Error: Failed to authenticate, have you run firebase login?`, despite a healthy WIF
-setup. `gcloud auth print-access-token` minted a token from the *same* credential in the
-*same* job, so the WIF→service-account binding was fine.
+setup. `gcloud auth print-access-token` minted a token from the _same_ credential in the
+_same_ job, so the WIF→service-account binding was fine.
 
 **Root cause:** **Node.js bug [nodejs/node#63989](https://github.com/nodejs/node/issues/63989).**
 The 2026-06-17 coordinated **security release** (CVE-2026-48931, commit `179ddaedfb` —
@@ -24,6 +24,7 @@ firebase-tools (Node, via gaxios→node-fetch) hits it on the token exchange; `g
 firebase side as firebase-tools #10716 / #10726.
 
 **Why it was a trap:**
+
 - It looked like a **firebase-tools version regression** (the issue was first filed as
   "15.22.2 broke it"). It is NOT — pinning firebase-tools to the last-green 15.22.0 fails
   identically. The CLI version was correlation; **prove the pin before shipping it.**
