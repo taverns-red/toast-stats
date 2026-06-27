@@ -106,10 +106,6 @@ jobs:
           fi
         env:
           VITE_APP_VERSION: v${{ steps.pkg.outputs.version }}
-          # TEMP (#1250): firebase-tools can't use our WIF external_account ADC since
-          # ~2026-06-27 (gcloud still can). Use FIREBASE_TOKEN (firebase's refresh-token
-          # auth path, unaffected) until upstream fixes external_account. WIF stays for gcloud/GCS.
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Record DORA deploy metrics
         if: success()
