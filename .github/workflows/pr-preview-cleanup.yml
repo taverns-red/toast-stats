@@ -44,7 +44,7 @@ jobs:
       # before it makes any API call, even with explicit --site/--project (#776).
       # This only places files; the job runs no repo code, just the firebase CLI.
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
