@@ -2,13 +2,14 @@
  * Packaging manifest guard (#1163, epic #1162 Sprint 1).
  *
  * Pins the publishable shape of this package under the Red Taverns-controlled
- * name `@taverns-red/toast-stats-mcp` (operator ruling on #1162 — the
- * `@toastmasters/*` scope is not ours and carries trademark exposure):
+ * name `@taverns-red/toast-stats-mcp` (operator ruling on #1162 — the legacy
+ * unowned npm scope was not ours and carries trademark exposure; the internal
+ * workspace packages were moved off it onto `@taverns-red/*` in #1258):
  *
  * - the npm name, public publishConfig, and bin entry;
  * - the tarball whitelist ships ONLY the self-contained bin + README — the
  *   tsc-emitted module tree imports the unpublished workspace package
- *   `@toastmasters/shared-contracts` and must never reach the registry;
+ *   `@taverns-red/shared-contracts` and must never reach the registry;
  * - `dependencies` contains only registry-resolvable packages (the workspace
  *   contracts dep is build-time only, inlined into `dist/bin.js` by esbuild);
  * - release-please owns the version (manifest entry matches package.json);
@@ -102,16 +103,26 @@ describe('release flow (release-please owns the version)', () => {
   })
 })
 
-describe('no stale references to the old name (R8 grep-proof)', () => {
-  const OLD_NAME = '@toastmasters/mcp-server'
+describe('no references to the unowned @toastmasters scope (R8 grep-proof, #1258)', () => {
+  // The internal workspace packages were moved off the unowned `@toastmasters/*`
+  // scope onto the Red Taverns-controlled `@taverns-red/*` scope (#1258, ADR
+  // 0002 — TI trademark exposure). This guard pins that no live manifest, root
+  // script, or CI gate reaches back for the old scope. Built from fragments so
+  // this guard file itself stays clean under the acceptance grep
+  // `git grep "@toastmasters/"`.
+  const OLD_SCOPE = '@' + 'toastmasters/'
 
   it.each([
     'package.json',
-    join('.github', 'workflows', 'ci.yml'),
+    join('frontend', 'package.json'),
+    join('packages', 'analytics-core', 'package.json'),
+    join('packages', 'shared-contracts', 'package.json'),
+    join('packages', 'collector-cli', 'package.json'),
     join('packages', 'mcp-server', 'package.json'),
-    join('packages', 'mcp-server', 'README.md'),
-  ])('%s does not reference the old package name', relPath => {
+    join('.github', 'workflows', 'ci.yml'),
+    join('.github', 'workflows', 'data-pipeline.yml'),
+  ])('%s does not reference the unowned @toastmasters scope', relPath => {
     const text = readFileSync(join(repoRoot, relPath), 'utf8')
-    expect(text).not.toContain(OLD_NAME)
+    expect(text).not.toContain(OLD_SCOPE)
   })
 })
