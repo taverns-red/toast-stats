@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.28.0...toast-stats-v2.29.0) (2026-06-27)
+
+
+### Features
+
+* **changes:** add 'Club status changes' group — club operational-status transitions ([#1247](https://github.com/taverns-red/toast-stats/issues/1247)) ([#1248](https://github.com/taverns-red/toast-stats/issues/1248)) ([b9c1a72](https://github.com/taverns-red/toast-stats/commit/b9c1a7255888c7258a90cf2ec148defe53a498e3))
+
 ## [2.28.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.27.1...toast-stats-v2.28.0) (2026-06-21)
 
 
