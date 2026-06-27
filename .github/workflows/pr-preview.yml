@@ -97,13 +97,19 @@ jobs:
           npm install -g firebase-tools@15.22.0
           CHANNEL_ID="pr-${{ github.event.pull_request.number }}"
 
-          # Capture stdout and stderr separately so that a non-zero exit
-          # surfaces firebase's actual error message in the logs.
-          # `--json` writes the result envelope to stdout on success.
-          # NOTE: `firebase hosting:channel:deploy --only` takes the deploy
-          # target name directly (e.g. `staging`), unlike `firebase deploy
-          # --only` which expects `hosting:staging`. Mixing them up yields:
-          #   "Hosting site or target hosting:staging not detected"
+          # --- TEMP WIF DIAGNOSTIC (#1250): bisect "firebase bug" vs "GCP infra" ---
+          echo "::group::WIF diagnostic"
+          echo "ADC credential type: $(jq -r '.type // "?"' "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null)"
+          gcloud auth list 2>&1 || true
+          if gcloud auth print-access-token >/dev/null 2>/tmp/gcloud-err.log; then
+            echo "GCLOUD_TOKEN=OK  -> WIF->service-account works; firebase-tools is the problem"
+          else
+            echo "GCLOUD_TOKEN=FAILED  -> WIF/service-account binding broken server-side:"
+            cat /tmp/gcloud-err.log || true
+          fi
+          echo "::endgroup::"
+          # --- end diagnostic ---
+
           if ! firebase hosting:channel:deploy "$CHANNEL_ID" \
               --only "staging" \
               --project "${{ secrets.GCP_PROJECT_ID }}" \
@@ -115,6 +121,9 @@ jobs:
             echo "::endgroup::"
             echo "::group::firebase stderr"
             cat /tmp/firebase-err.log || true
+            echo "::endgroup::"
+            echo "::group::firebase-debug.log"
+            cat firebase-debug.log 2>/dev/null || echo "(no firebase-debug.log in CWD)"
             echo "::endgroup::"
             echo "::error::firebase hosting:channel:deploy failed"
             exit 1
