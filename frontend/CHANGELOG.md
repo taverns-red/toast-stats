@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.13.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.12.0...frontend-v3.13.0) (2026-06-27)
+
+
+### Features
+
+* **changes:** add 'Club status changes' group — club operational-status transitions ([#1247](https://github.com/taverns-red/toast-stats/issues/1247)) ([#1248](https://github.com/taverns-red/toast-stats/issues/1248)) ([b9c1a72](https://github.com/taverns-red/toast-stats/commit/b9c1a7255888c7258a90cf2ec148defe53a498e3))
+
 ## [3.12.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.11.2...frontend-v3.12.0) (2026-06-21)
 
 

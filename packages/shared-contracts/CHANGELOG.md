@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.6.1...shared-contracts-v1.7.0) (2026-06-27)
+
+
+### Features
+
+* **changes:** add 'Club status changes' group — club operational-status transitions ([#1247](https://github.com/taverns-red/toast-stats/issues/1247)) ([#1248](https://github.com/taverns-red/toast-stats/issues/1248)) ([b9c1a72](https://github.com/taverns-red/toast-stats/commit/b9c1a7255888c7258a90cf2ec148defe53a498e3))
+
 ## [1.6.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.6.0...shared-contracts-v1.6.1) (2026-06-14)
 
 
