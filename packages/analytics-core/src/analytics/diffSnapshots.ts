@@ -26,7 +26,7 @@ import type {
   ClubPresence,
   DiffEvent,
   SnapshotDiff,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 function aggregate(from: number, to: number): AggregateDelta {
   return { from, to, delta: to - from }

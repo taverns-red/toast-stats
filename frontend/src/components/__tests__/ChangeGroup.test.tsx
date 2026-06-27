@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { ChangeGroup } from '../ChangeGroup'
-import type { DiffEvent } from '@toastmasters/shared-contracts'
+import type { DiffEvent } from '@taverns-red/shared-contracts'
 
 /* Unit test for the District "What Changed" feed group (#1013, epic #1007).
    Every club-scoped change line links the club name to that club's detail page

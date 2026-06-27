@@ -22,7 +22,7 @@
  * @module clubStatusOverlay
  */
 
-import type { DistrictReportsDataset } from '@toastmasters/shared-contracts'
+import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
 
 /** The augmented status + provenance attached to a club at read time. */
 export interface ClubStatusOverlay {

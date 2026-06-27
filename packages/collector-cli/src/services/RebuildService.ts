@@ -14,7 +14,7 @@
 
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import type { Logger } from '@toastmasters/analytics-core'
+import type { Logger } from '@taverns-red/analytics-core'
 import { TransformService } from './TransformService.js'
 import { AnalyticsComputeService } from './AnalyticsComputeService.js'
 import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'

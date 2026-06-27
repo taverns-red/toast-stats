@@ -34,7 +34,7 @@ import {
   type AnalyticsMetadata,
   type AnalyticsManifest,
   type AnalyticsManifestEntry,
-} from '@toastmasters/analytics-core'
+} from '@taverns-red/analytics-core'
 
 /**
  * Configuration for AnalyticsWriter

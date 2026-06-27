@@ -13,7 +13,7 @@
  * Source: Item 1490, Rev. 04/2025
  */
 
-import type { DistrictRanking } from '@toastmasters/shared-contracts'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
 import type { DistinguishedDistrictStatus } from './DistinguishedDistrictCalculator.js'
 
 export interface OfficerAwardResult {

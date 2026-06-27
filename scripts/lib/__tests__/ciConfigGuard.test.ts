@@ -109,6 +109,6 @@ describe('collector-cli is in the PR gate (AC2)', () => {
   })
 
   it('ci.yml typechecks collector-cli', () => {
-    expect(ci).toMatch(/typecheck.*@toastmasters\/collector-cli/)
+    expect(ci).toMatch(/typecheck.*@taverns-red\/collector-cli/)
   })
 })

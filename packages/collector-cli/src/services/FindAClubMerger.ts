@@ -26,7 +26,7 @@
  * writes around it.
  */
 
-import type { ProspectiveClub } from '@toastmasters/shared-contracts'
+import type { ProspectiveClub } from '@taverns-red/shared-contracts'
 import {
   TI_CLUB_NUMBER_KEY,
   type FacRawResponse,

@@ -26,7 +26,7 @@ import type {
   TimeSeriesDataPoint,
   ProgramYearIndexFile,
   TimeSeriesIndexMetadata,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 // ========== Test Utilities ==========
 

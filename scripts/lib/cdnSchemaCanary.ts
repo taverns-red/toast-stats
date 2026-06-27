@@ -15,7 +15,7 @@
  * workflow alerts. Mirrors the pipelineFreshness / promotionAlert pattern.
  */
 
-import { PerDistrictDataSchema } from '@toastmasters/shared-contracts'
+import { PerDistrictDataSchema } from '@taverns-red/shared-contracts'
 import { summarizeZodIssues } from './zodIssueSummary.js'
 
 export interface DistrictFetchResult {

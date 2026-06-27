@@ -1,4 +1,4 @@
-import { growthTarget, percentageTarget } from '@toastmasters/analytics-core'
+import { growthTarget, percentageTarget } from '@taverns-red/analytics-core'
 import type {
   CompetitiveAwardStandings,
   DistinguishedDistrictTier,

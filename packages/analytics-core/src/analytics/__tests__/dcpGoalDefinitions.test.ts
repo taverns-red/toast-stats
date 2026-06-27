@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { ScrapedRecord } from '@toastmasters/shared-contracts'
+import type { ScrapedRecord } from '@taverns-red/shared-contracts'
 import {
   DCP_GOAL_DEFINITIONS,
   hasDcpGoalColumns,

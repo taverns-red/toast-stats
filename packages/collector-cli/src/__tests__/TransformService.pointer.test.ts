@@ -24,7 +24,7 @@ import { TransformService } from '../services/TransformService.js'
 import {
   SnapshotPointerSchema,
   SCHEMA_VERSION,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /**
  * Create an isolated test cache directory with unique ID for parallel test safety.

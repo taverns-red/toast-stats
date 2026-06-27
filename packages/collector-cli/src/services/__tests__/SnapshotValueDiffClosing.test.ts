@@ -21,7 +21,7 @@ import {
   validateAllDistrictsRankings,
   type AllDistrictsRankingsData,
   type DistrictRanking,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import {
   digestDate,
   diffSnapshots,

@@ -14,7 +14,7 @@
  * parity tests in ../transformation/DataTransformer.test.ts.
  */
 
-import type { ScrapedRecord } from '@toastmasters/shared-contracts'
+import type { ScrapedRecord } from '@taverns-red/shared-contracts'
 
 export interface DcpGoalColumn {
   /** CSV header aliases, tried in order; the first present key wins */

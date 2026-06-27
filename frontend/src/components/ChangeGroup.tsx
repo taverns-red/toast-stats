@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type {
   DiffEvent,
   DiffEventCategory,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /* District "What Changed" feed group (#1013/#1014, epic #1007 — entity links).
    Extracted from DistrictChangesPage so the link logic can be unit-tested

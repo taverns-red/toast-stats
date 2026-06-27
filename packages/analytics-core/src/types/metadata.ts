@@ -5,7 +5,7 @@
  * and file/manifest wrappers used across the pre-computed analytics pipeline.
  */
 
-import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
+import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
 
 /**
  * Metadata included in every pre-computed analytics file.

@@ -11,7 +11,7 @@
  * contract exactly, is validated by the full shared schema instead.
  */
 import { z } from 'zod'
-import { DistrictRankingSchema } from '@toastmasters/shared-contracts'
+import { DistrictRankingSchema } from '@taverns-red/shared-contracts'
 import { ISO_DATE_RE } from './common.js'
 
 export const CdnRankingsSchema = z.object({

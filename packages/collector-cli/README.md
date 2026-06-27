@@ -324,7 +324,7 @@ This package is part of the pre-computed analytics pipeline:
 
 ### Shared Package
 
-The `@toastmasters/analytics-core` package provides shared analytics computation logic used by both:
+The `@taverns-red/analytics-core` package provides shared analytics computation logic used by both:
 
 - `collector-cli` (for pre-computing analytics)
 - `backend` (for validation and type definitions)
@@ -335,13 +335,13 @@ This ensures analytics computed by the CLI are identical to what the backend wou
 
 ```bash
 # Run in development mode
-npm run dev --workspace=@toastmasters/collector-cli
+npm run dev --workspace=@taverns-red/collector-cli
 
 # Run tests
 npm run test:collector-cli
 
 # Type check
-npm run typecheck --workspace=@toastmasters/collector-cli
+npm run typecheck --workspace=@taverns-red/collector-cli
 ```
 
 ## License

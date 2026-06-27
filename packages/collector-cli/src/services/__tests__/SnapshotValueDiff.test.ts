@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type {
   AllDistrictsRankingsData,
   DistrictRanking,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import {
   digestDistrict,
   digestDate,

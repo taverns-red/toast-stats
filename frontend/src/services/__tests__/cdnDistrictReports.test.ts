@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import type { DistrictReportsDataset } from '@toastmasters/shared-contracts'
+import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
 import { cdnDistrictReportsUrl, fetchCdnDistrictReports } from '../cdn'
 
 const validDataset: DistrictReportsDataset = {

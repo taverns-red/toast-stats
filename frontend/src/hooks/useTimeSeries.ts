@@ -18,7 +18,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
-import type { ProgramYearIndexFile } from '@toastmasters/shared-contracts'
+import type { ProgramYearIndexFile } from '@taverns-red/shared-contracts'
 import {
   fetchTimeSeriesMetadata,
   fetchTimeSeriesProgramYear,

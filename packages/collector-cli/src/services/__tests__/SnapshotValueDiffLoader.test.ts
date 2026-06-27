@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
+import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
 import { loadDateDigests, runValueDiff } from '../SnapshotValueDiffLoader.js'
 
 function rankings(

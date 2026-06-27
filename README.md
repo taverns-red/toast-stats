@@ -113,8 +113,8 @@ npm run lint
 
 ### Shared Packages
 
-- `@toastmasters/shared-contracts` - TypeScript types and Zod schemas shared across all packages
-- `@toastmasters/analytics-core` - Analytics computation engine (membership, club health, distinguished, leadership)
+- `@taverns-red/shared-contracts` - TypeScript types and Zod schemas shared across all packages
+- `@taverns-red/analytics-core` - Analytics computation engine (membership, club health, distinguished, leadership)
 
 ## Data Source
 

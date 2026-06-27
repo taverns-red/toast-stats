@@ -27,7 +27,7 @@
 import type {
   DistrictStatisticsFile,
   DiffEvent,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import { extractDivisionPerformance } from './extractDivisionPerformance'
 import type {
   DivisionPerformance,

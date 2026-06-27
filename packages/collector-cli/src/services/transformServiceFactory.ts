@@ -14,7 +14,7 @@
  * `new TransformService(...)` that omits the registry.
  */
 
-import type { Logger } from '@toastmasters/analytics-core'
+import type { Logger } from '@taverns-red/analytics-core'
 import {
   ClosingDateRegistry,
   type ClosingDateEntry,

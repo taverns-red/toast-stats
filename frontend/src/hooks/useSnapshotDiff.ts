@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnDistrictSnapshot } from '../services/cdn'
-import { diffSnapshots } from '@toastmasters/analytics-core'
+import { diffSnapshots } from '@taverns-red/analytics-core'
 import type {
   PerDistrictData,
   SnapshotDiff,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import { diffAreaDivisionStatus } from '../utils/diffAreaDivisionStatus'
 import { diffClubStatus } from '../utils/diffClubStatus'
 

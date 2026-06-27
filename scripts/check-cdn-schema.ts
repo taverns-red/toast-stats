@@ -26,7 +26,7 @@
  */
 
 import { appendFileSync, writeFileSync } from 'node:fs'
-import { SnapshotManifestSchema } from '@toastmasters/shared-contracts'
+import { SnapshotManifestSchema } from '@taverns-red/shared-contracts'
 import {
   evaluateCdnSchema,
   buildCanaryIssueTitle,

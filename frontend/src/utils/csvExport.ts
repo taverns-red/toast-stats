@@ -2,7 +2,7 @@
  * Utility functions for exporting data to CSV format
  */
 
-import type { SnapshotDiff } from '@toastmasters/shared-contracts'
+import type { SnapshotDiff } from '@taverns-red/shared-contracts'
 import { distinguishedTierName } from './distinguishedTier'
 import { toClubHistoryCsvRows, type ClubHistoryRow } from './clubHistory'
 import { logger } from './logger'

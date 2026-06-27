@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { CompetitiveAwardsCalculator } from './CompetitiveAwardsCalculator.js'
-import type { DistrictRanking } from '@toastmasters/shared-contracts'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
 
 // Helper: build a minimal DistrictRanking with the fields competitive awards care about
 function buildRanking(overrides: Partial<DistrictRanking>): DistrictRanking {

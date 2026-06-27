@@ -12,8 +12,8 @@ import {
   isDcpGoalAchieved,
   readDcpGoalColumn,
   type DcpGoalDefinition,
-} from '@toastmasters/analytics-core'
-import type { ScrapedRecord } from '@toastmasters/shared-contracts'
+} from '@taverns-red/analytics-core'
+import type { ScrapedRecord } from '@taverns-red/shared-contracts'
 
 export type { ScrapedRecord }
 

@@ -17,7 +17,7 @@
 import {
   DistrictReportsDatasetSchema,
   type DistrictReportsDataset,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 import { recordCdnResponse } from './cdnCacheTracker'
 

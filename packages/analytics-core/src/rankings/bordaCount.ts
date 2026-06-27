@@ -8,7 +8,7 @@
  * and 76 warn about. These pure functions are the single home; both call
  * sites invoke them directly.
  *
- * @module @toastmasters/analytics-core/rankings
+ * @module @taverns-red/analytics-core/rankings
  */
 
 /**

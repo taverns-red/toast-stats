@@ -29,7 +29,7 @@ import * as crypto from 'node:crypto'
 import { type Dirent } from 'node:fs'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import type { Logger } from '@toastmasters/analytics-core'
+import type { Logger } from '@taverns-red/analytics-core'
 import type { UploadResult } from '../types/index.js'
 
 // ─── Injectable Dependency Interfaces ────────────────────────────────────────

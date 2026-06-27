@@ -11,7 +11,7 @@
 import type {
   ProgramYearIndexFile,
   TimeSeriesIndexMetadata,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import { fetchFromCdn } from './cdn'
 
 const CDN_BASE_URL =

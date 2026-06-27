@@ -61,7 +61,7 @@ jobs:
         # collector-cli is never built/typechecked in PR CI otherwise — its
         # type errors first surface in the scheduled data pipeline. Gate it
         # here so they fail the PR instead (epic #1194 AC2).
-        run: npm run typecheck --workspace=@toastmasters/collector-cli
+        run: npm run typecheck --workspace=@taverns-red/collector-cli
 
       - name: TypeScript Zero Error Check
         id: typescript
@@ -187,13 +187,13 @@ jobs:
           npm run build:mcp-server
 
       - name: Run shared-contracts tests
-        run: npm run test --workspace=@toastmasters/shared-contracts -- --coverage
+        run: npm run test --workspace=@taverns-red/shared-contracts -- --coverage
 
       - name: Run analytics-core tests
-        run: npm run test --workspace=@toastmasters/analytics-core -- --coverage
+        run: npm run test --workspace=@taverns-red/analytics-core -- --coverage
 
       - name: Run collector-cli tests
-        run: npm run test --workspace=@toastmasters/collector-cli -- --coverage
+        run: npm run test --workspace=@taverns-red/collector-cli -- --coverage
 
       - name: Run mcp-server tests
         run: npm run test --workspace=@taverns-red/toast-stats-mcp -- --coverage

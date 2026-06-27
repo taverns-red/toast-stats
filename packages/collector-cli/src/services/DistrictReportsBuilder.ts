@@ -25,7 +25,7 @@ import type {
   DistrictReportsSections,
   OfficerListRecord,
   ReportSource,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 import {
   extractReportAsOf,

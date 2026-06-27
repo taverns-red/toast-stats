@@ -28,7 +28,7 @@ import type { DateRange } from './metadata.js'
 import type { LeadershipInsightsData } from './leadership.js'
 import type { YearOverYearData } from './yearOverYear.js'
 import type { PerformanceTargetsData } from './performanceTargets.js'
-import type { ProspectiveClub } from '@toastmasters/shared-contracts'
+import type { ProspectiveClub } from '@taverns-red/shared-contracts'
 
 /**
  * Complete district analytics structure.

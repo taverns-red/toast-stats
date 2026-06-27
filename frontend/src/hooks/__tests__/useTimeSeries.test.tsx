@@ -16,7 +16,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import { useTimeSeries } from '../useTimeSeries'
-import type { ProgramYearIndexFile } from '@toastmasters/shared-contracts'
+import type { ProgramYearIndexFile } from '@taverns-red/shared-contracts'
 
 // Mock the CDN fetch functions
 vi.mock('../../services/cdnTimeSeries', () => ({

@@ -25,7 +25,7 @@
 
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import type { Logger } from '@toastmasters/analytics-core'
+import type { Logger } from '@taverns-red/analytics-core'
 import {
   ClosingPeriodDetector,
   type ClosingPeriodInfo,

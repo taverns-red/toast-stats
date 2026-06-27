@@ -115,9 +115,9 @@ jobs:
 
       - name: Build packages
         run: |
-          npm run build --workspace=@toastmasters/shared-contracts
-          npm run build --workspace=@toastmasters/analytics-core
-          npm run build --workspace=@toastmasters/collector-cli
+          npm run build --workspace=@taverns-red/shared-contracts
+          npm run build --workspace=@taverns-red/analytics-core
+          npm run build --workspace=@taverns-red/collector-cli
 
       - name: Install Playwright browsers
         if: inputs.mode == 'daily' || inputs.mode == '' || github.event_name == 'schedule'

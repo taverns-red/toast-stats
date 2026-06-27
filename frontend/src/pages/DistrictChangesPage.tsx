@@ -16,7 +16,7 @@ import { ChangeGroup } from '../components/ChangeGroup'
 import type {
   DiffEvent,
   DiffEventCategory,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /* District "What Changed" page (#793, epic #797 Sprint 1–2, ADR-005 §1).
    What changed between two recorded snapshot dates. The from/to pair is owned

@@ -29,7 +29,7 @@ import type {
   DistinguishedClubSummary,
   DistinguishedProjection,
 } from '../types.js'
-import type { ScrapedRecord } from '@toastmasters/shared-contracts'
+import type { ScrapedRecord } from '@taverns-red/shared-contracts'
 import {
   DCP_GOAL_DEFINITIONS,
   hasDcpGoalColumns,

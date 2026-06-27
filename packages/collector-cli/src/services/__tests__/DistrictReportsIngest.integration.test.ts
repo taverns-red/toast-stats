@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { DistrictReportsDatasetSchema } from '@toastmasters/shared-contracts'
+import { DistrictReportsDatasetSchema } from '@taverns-red/shared-contracts'
 
 import { DailyReportFetcher } from '../DailyReportFetcher'
 import { REPORT_GUIDS } from '../DistrictReportsBuilder'

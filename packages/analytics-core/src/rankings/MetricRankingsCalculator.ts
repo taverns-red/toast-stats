@@ -8,13 +8,13 @@
  * The key insight is that we don't recompute world rankings - we reuse the existing
  * clubsRank, paymentsRank, and distinguishedRank from all-districts-rankings.json.
  *
- * @module @toastmasters/analytics-core/rankings
+ * @module @taverns-red/analytics-core/rankings
  */
 
 import type {
   AllDistrictsRankingsData,
   DistrictRanking,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import type { MetricRankings } from '../types.js'
 
 /**

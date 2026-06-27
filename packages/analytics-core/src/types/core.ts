@@ -8,7 +8,7 @@
 import type {
   AllDistrictsRankingsData,
   ClubHealthStatus,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /**
  * Metadata included in every pre-computed analytics file.
@@ -82,7 +82,7 @@ export interface ClubRiskFactors {
  *
  * @see Requirements 2.3
  */
-export type { ClubHealthStatus } from '@toastmasters/shared-contracts'
+export type { ClubHealthStatus } from '@taverns-red/shared-contracts'
 
 /**
  * Distinguished level classification for clubs.

@@ -20,8 +20,8 @@ import type {
   DistrictStatistics,
   PreComputedAnalyticsFile,
   PerformanceTargetsData,
-} from '@toastmasters/analytics-core'
-import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
+} from '@taverns-red/analytics-core'
+import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
 
 /**
  * Create an isolated test cache directory with unique ID

@@ -225,10 +225,10 @@ export interface AvailableDatesResponse {
 }
 
 // District Rankings Types (from shared-contracts)
-export type { DistrictRanking } from '@toastmasters/shared-contracts'
+export type { DistrictRanking } from '@taverns-red/shared-contracts'
 
 export interface DistrictRankingsResponse {
-  rankings: import('@toastmasters/shared-contracts').DistrictRanking[]
+  rankings: import('@taverns-red/shared-contracts').DistrictRanking[]
   date: string
 }
 
@@ -237,7 +237,7 @@ export interface DistrictRankingsResponse {
 export type {
   ProgramYearWithData,
   AvailableRankingYearsResponse,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 // ========== District Performance Targets Types ==========
 

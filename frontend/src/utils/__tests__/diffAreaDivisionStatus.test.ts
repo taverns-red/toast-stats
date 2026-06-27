@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { diffAreaDivisionStatus } from '../diffAreaDivisionStatus'
-import type { DistrictStatisticsFile } from '@toastmasters/shared-contracts'
+import type { DistrictStatisticsFile } from '@taverns-red/shared-contracts'
 
 /* Pure diff helper for area/division recognition-status transitions (#1014,
    epic #1007 Sprint 2). It runs the verified frontend recognition

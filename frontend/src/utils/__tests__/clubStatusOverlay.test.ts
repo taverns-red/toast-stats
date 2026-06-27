@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { DistrictReportsDataset } from '@toastmasters/shared-contracts'
+import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
 import {
   parseVerifiedComplete,
   resolveClubStatusOverlay,

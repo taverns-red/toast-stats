@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   DistrictReportsDatasetSchema,
   type DistrictReportsDataset,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 import { writeDistrictReports } from '../DistrictReportsWriter'
 

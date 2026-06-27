@@ -3,8 +3,8 @@ import {
   calculateGrowthTargets,
   calculatePercentageTargets,
   DistinguishedDistrictCalculator,
-} from '@toastmasters/analytics-core'
-import type { DistrictRanking } from '@toastmasters/shared-contracts'
+} from '@taverns-red/analytics-core'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
 import {
   deriveRemainingToTier,
   type DistinguishedTier,

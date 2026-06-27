@@ -18,7 +18,7 @@
 
 import React from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
-import type { ClubDiff } from '@toastmasters/shared-contracts'
+import type { ClubDiff } from '@taverns-red/shared-contracts'
 import type { ProcessedClubTrend } from './filters/types'
 import { ChangeIndicator } from './ChangeIndicator'
 import { distinguishedTierName } from '../utils/distinguishedTier'

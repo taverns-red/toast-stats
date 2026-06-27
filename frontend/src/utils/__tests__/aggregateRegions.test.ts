@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { aggregateRegions } from '../aggregateRegions'
-import type { DistrictRanking } from '@toastmasters/shared-contracts'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
 
 /* Sprint A test suite (#493). Red-first per Lesson 54: this file is
    committed BEFORE the implementation. Tests fail until the utility

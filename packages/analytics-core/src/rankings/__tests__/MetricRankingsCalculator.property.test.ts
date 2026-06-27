@@ -40,7 +40,7 @@ import {
 import type {
   AllDistrictsRankingsData,
   DistrictRanking,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 // ========== Arbitraries (Generators) ==========
 

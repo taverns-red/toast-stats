@@ -20,7 +20,7 @@ import type {
   DistrictStatistics,
   PreComputedAnalyticsFile,
   ClubTrendsIndex,
-} from '@toastmasters/analytics-core'
+} from '@taverns-red/analytics-core'
 
 /**
  * Create an isolated test cache directory with automatic cleanup.

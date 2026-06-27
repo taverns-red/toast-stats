@@ -20,13 +20,13 @@
 
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { TimeSeriesDataPointBuilder } from '@toastmasters/analytics-core'
+import { TimeSeriesDataPointBuilder } from '@taverns-red/analytics-core'
 import type {
   TimeSeriesDataPoint,
   ProgramYearIndexFile,
   ProgramYearSummary,
   TimeSeriesIndexMetadata,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /**
  * Logger interface for TimeSeriesIndexWriter
