@@ -6,3 +6,11 @@ coverage
 .env.local
 *.log
 **/CHANGELOG.md
+
+# npm-managed — prettier must not reformat the lockfile (causes format-gate reds
+# on every dep PR + churn vs npm's own format)
+package-lock.json
+
+# Learning artifacts are prose/notes, not code — formatting them just creates
+# inherited format-gate reds on unrelated PRs (e.g. lesson 173 blocked #1256)
+tasks/lessons/
