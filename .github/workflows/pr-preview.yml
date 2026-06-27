@@ -87,6 +87,11 @@ jobs:
 
       - name: Deploy preview channel
         id: deploy
+        env:
+          # TEMP (#1250): firebase-tools can't use our WIF external_account ADC since
+          # ~2026-06-27 (gcloud still can). Use FIREBASE_TOKEN (firebase's refresh-token
+          # auth path, unaffected) until upstream fixes external_account. WIF stays for gcloud/GCS.
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         # Use firebase-tools directly (matches deploy.yml) rather than
         # FirebaseExtended/action-hosting-deploy, which expects a JSON
         # service-account key — incompatible with our WIF-only setup.
