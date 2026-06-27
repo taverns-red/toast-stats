@@ -34,7 +34,7 @@ describe('no analytics-core dependency (ADR-008 thin-reader rule)', () => {
     // "analytics-core" in a comment (which is legitimate, e.g. documenting the
     // rule). Covers static `from '…'`, dynamic `import('…')`, and `require('…')`.
     const importRe =
-      /(?:from\s*|import\s*\(\s*|require\s*\(\s*)['"]@toastmasters\/analytics-core(?:\/[^'"]*)?['"]/
+      /(?:from\s*|import\s*\(\s*|require\s*\(\s*)['"]@taverns-red\/analytics-core(?:\/[^'"]*)?['"]/
     const offenders: string[] = []
     const walk = (dir: string): void => {
       for (const entry of readdirSync(dir)) {
