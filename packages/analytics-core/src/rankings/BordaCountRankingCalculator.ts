@@ -8,14 +8,14 @@
  * CRITICAL: This code is migrated from backend/src/services/RankingCalculator.ts,
  * not rewritten, to preserve bug fixes.
  *
- * @module @toastmasters/analytics-core/rankings
+ * @module @taverns-red/analytics-core/rankings
  */
 
 import type {
   AllDistrictsRankingsData,
   AllDistrictsRankingsMetadata,
   DistrictRanking,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 import { getConfirmedDistinguishedLevel } from '../analytics/ClubEligibilityUtils.js'
 import { calculateDistinguishedPercent } from './distinguishedPercent.js'

@@ -15,7 +15,7 @@
  * It provides additive projections for district leaders (issue #6 constraint).
  */
 
-import { getCSPStatus } from '@toastmasters/analytics-core'
+import { getCSPStatus } from '@taverns-red/analytics-core'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 
 // --- Types ---

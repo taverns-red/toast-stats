@@ -12,7 +12,7 @@ import type {
 import type {
   ProspectiveClub,
   ScrapedRecord,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /**
  * Raw CSV data structure from Toastmasters dashboard.

@@ -5,7 +5,7 @@ import {
   getLatestPayments,
 } from '../useTimeSeriesYoY'
 import type { TimeSeriesData } from '../useTimeSeries'
-import type { ProgramYearIndexFile } from '@toastmasters/shared-contracts'
+import type { ProgramYearIndexFile } from '@taverns-red/shared-contracts'
 
 function makeProgramYear(
   programYear: string,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { SnapshotDiff } from '@toastmasters/shared-contracts'
+import type { SnapshotDiff } from '@taverns-red/shared-contracts'
 import { exportSnapshotDiff } from '../csvExport'
 
 /* #795 (epic #797 Sprint 3) — diff CSV export. A sibling of exportClubPerformance

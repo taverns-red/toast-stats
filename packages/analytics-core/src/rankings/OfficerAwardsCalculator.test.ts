@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { OfficerAwardsCalculator } from './OfficerAwardsCalculator.js'
-import type { DistrictRanking } from '@toastmasters/shared-contracts'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
 import type { DistinguishedDistrictStatus } from './DistinguishedDistrictCalculator.js'
 
 function buildRanking(overrides: Partial<DistrictRanking>): DistrictRanking {

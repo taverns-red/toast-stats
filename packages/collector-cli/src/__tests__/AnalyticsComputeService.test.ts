@@ -27,7 +27,7 @@ import {
   type MembershipTrendData,
   type ClubHealthData,
   type AnalyticsManifest,
-} from '@toastmasters/analytics-core'
+} from '@taverns-red/analytics-core'
 
 /**
  * Create an isolated test cache directory

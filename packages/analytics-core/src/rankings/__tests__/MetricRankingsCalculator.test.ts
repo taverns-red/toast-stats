@@ -15,7 +15,7 @@ import { MetricRankingsCalculator } from '../MetricRankingsCalculator.js'
 import type {
   AllDistrictsRankingsData,
   DistrictRanking,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /**
  * Helper to create a minimal AllDistrictsRankingsData structure for testing.

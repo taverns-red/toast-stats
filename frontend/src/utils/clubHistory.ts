@@ -12,7 +12,7 @@
  * `distinguishedTier.ts`, beside the canonical code→name map (lesson 117).
  */
 
-import type { ClubStatisticsFile } from '@toastmasters/shared-contracts'
+import type { ClubStatisticsFile } from '@taverns-red/shared-contracts'
 import { getProgramYear } from './programYear'
 import {
   distinguishedTierName,

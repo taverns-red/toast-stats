@@ -19,7 +19,7 @@
  * - 2+ Region Advisor meetings
  */
 
-import type { DistrictRanking } from '@toastmasters/shared-contracts'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
 import {
   growthTarget,
   percentageTarget,

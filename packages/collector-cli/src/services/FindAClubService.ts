@@ -25,7 +25,7 @@ import { z } from 'zod'
 import type {
   ScrapedRecordCoordinates,
   ScrapedRecordAddress,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 const TI_HQ_LATITUDE = 39.6478
 const TI_HQ_LONGITUDE = -104.9878

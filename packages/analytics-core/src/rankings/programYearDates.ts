@@ -6,7 +6,7 @@
  * (analytics-core) and `TransformService` (collector-cli). This module is the
  * single home; both import from here.
  *
- * @module @toastmasters/analytics-core/rankings
+ * @module @taverns-red/analytics-core/rankings
  */
 
 /**

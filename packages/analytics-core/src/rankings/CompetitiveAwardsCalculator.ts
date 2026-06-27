@@ -12,7 +12,7 @@
  * Operates on already-ranked DistrictRanking[] data. Stateless and pure.
  */
 
-import type { DistrictRanking } from '@toastmasters/shared-contracts'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
 
 /**
  * Single ranked entry in a competitive award leaderboard.

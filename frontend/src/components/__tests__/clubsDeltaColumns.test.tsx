@@ -16,7 +16,7 @@ import { render, cleanup, screen } from '@testing-library/react'
 import { flexRender, type CellContext } from '@tanstack/react-table'
 import { buildClubsDeltaColumns } from '../clubsDeltaColumns'
 import type { ProcessedClubTrend } from '../filters/types'
-import type { ClubDiff } from '@toastmasters/shared-contracts'
+import type { ClubDiff } from '@taverns-red/shared-contracts'
 
 afterEach(() => cleanup())
 

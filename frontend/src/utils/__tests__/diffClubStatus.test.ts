@@ -3,7 +3,7 @@ import { diffClubStatus } from '../diffClubStatus'
 import type {
   DistrictStatisticsFile,
   ClubStatisticsFile,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /* Pure diff helper for club OPERATIONAL-status transitions (#1247). It compares
    the `clubStatus` (Active/Low/Suspended/Ineligible) already present on both

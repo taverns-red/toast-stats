@@ -6,8 +6,8 @@
    us compute it client-side from the per-district feed we already
    publish, with no pipeline changes. */
 
-import { calculateDistinguishedPercent } from '@toastmasters/analytics-core'
-import type { DistrictRanking } from '@toastmasters/shared-contracts'
+import { calculateDistinguishedPercent } from '@taverns-red/analytics-core'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
 
 export interface RequirementRatio {
   met: number

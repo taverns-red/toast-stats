@@ -14,7 +14,7 @@ import {
   type AllDistrictsRankingsData,
   PerDistrictDataSchema,
   ProgramYearIndexFileSchema,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import {
   LatestManifestSchema,
   type LatestManifest,

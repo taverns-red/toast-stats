@@ -36,7 +36,7 @@ import type {
   ExtendedAnalyticsComputationResult,
   MetricRankings,
 } from '../types.js'
-import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
+import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
 import { MetricRankingsCalculator } from '../rankings/MetricRankingsCalculator.js'
 import { MembershipAnalyticsModule } from './MembershipAnalyticsModule.js'

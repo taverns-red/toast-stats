@@ -15,7 +15,7 @@ const srcRoot = join(pkgRoot, 'src')
  * any source import.
  */
 describe('no analytics-core dependency (ADR-008 thin-reader rule)', () => {
-  it('does not declare @toastmasters/analytics-core in package.json', () => {
+  it('does not declare @taverns-red/analytics-core in package.json', () => {
     const pkg = JSON.parse(
       readFileSync(join(pkgRoot, 'package.json'), 'utf8')
     ) as {
@@ -26,7 +26,7 @@ describe('no analytics-core dependency (ADR-008 thin-reader rule)', () => {
       ...(pkg.dependencies ?? {}),
       ...(pkg.devDependencies ?? {}),
     }
-    expect(Object.keys(all)).not.toContain('@toastmasters/analytics-core')
+    expect(Object.keys(all)).not.toContain('@taverns-red/analytics-core')
   })
 
   it('does not import analytics-core from any source file', () => {

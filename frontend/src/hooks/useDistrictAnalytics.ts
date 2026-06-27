@@ -8,7 +8,7 @@ import {
 import type {
   ClubHealthStatus,
   ProspectiveClub,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import {
   applyDuesRenewalOverlay,
   buildDuesRenewalLookup,

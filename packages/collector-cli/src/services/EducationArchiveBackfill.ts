@@ -25,7 +25,7 @@ import * as path from 'node:path'
 import {
   DistrictReportsDatasetSchema,
   type DistrictReportsDataset,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 import { validateDistrictId } from '../utils/validateDistrictId.js'
 import type { DailyReportFetcher } from './DailyReportFetcher.js'

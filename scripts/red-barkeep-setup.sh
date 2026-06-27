@@ -4,7 +4,7 @@
 #
 # A fresh worktree has no node_modules and no built workspace dist/. Without
 # this, the session's first commit fails the pre-commit hook on a missing
-# @toastmasters/* package import (Lesson 092), and the failed commit cancels
+# @taverns-red/* package import (Lesson 092), and the failed commit cancels
 # its batched edits. So: install deps, then build the workspace packages whose
 # built dist/ the hooks + frontend import (dependency order: shared-contracts →
 # analytics-core → collector-cli).

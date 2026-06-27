@@ -39,7 +39,7 @@ import {
   parseCharterDateFromStatusField,
   type Logger,
   type RawCSVData,
-} from '@toastmasters/analytics-core'
+} from '@taverns-red/analytics-core'
 import {
   RANKING_VERSION,
   SCHEMA_VERSION,
@@ -55,7 +55,7 @@ import {
   type SnapshotManifest,
   type DistrictManifestEntry,
   type SnapshotPointer,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import type {
   AllDistrictsCSVRecord,
   CacheMetadata,

@@ -17,7 +17,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import { TransformService } from '../services/TransformService.js'
-import { ANALYTICS_SCHEMA_VERSION } from '@toastmasters/analytics-core'
+import { ANALYTICS_SCHEMA_VERSION } from '@taverns-red/analytics-core'
 
 /**
  * Create an isolated test cache directory

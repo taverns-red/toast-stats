@@ -25,12 +25,12 @@ import {
   type AnalyticsManifestEntry,
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
-} from '@toastmasters/analytics-core'
+} from '@taverns-red/analytics-core'
 import type {
   DistrictStatisticsInput,
   ScrapedRecord,
-} from '@toastmasters/analytics-core'
-import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
+} from '@taverns-red/analytics-core'
+import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
 import { validateDistrictId } from '../utils/validateDistrictId.js'

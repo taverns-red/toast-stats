@@ -15,12 +15,12 @@
 
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import type { DistrictStatistics } from '@toastmasters/analytics-core'
+import type { DistrictStatistics } from '@taverns-red/analytics-core'
 import type {
   ClubTrend,
   MembershipTrendPoint,
   DcpGoalsTrendPoint,
-} from '@toastmasters/analytics-core'
+} from '@taverns-red/analytics-core'
 import { calculateProgramYear } from '../utils/CachePaths.js'
 
 /**

@@ -6,7 +6,7 @@
  * changes for membership, distinguished clubs, and club health.
  */
 
-import type { ProgramYearIndexFile } from '@toastmasters/shared-contracts'
+import type { ProgramYearIndexFile } from '@taverns-red/shared-contracts'
 import type { TimeSeriesData } from './useTimeSeries'
 
 /**

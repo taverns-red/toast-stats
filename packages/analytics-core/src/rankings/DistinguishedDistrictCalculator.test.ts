@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { DistinguishedDistrictCalculator } from './DistinguishedDistrictCalculator.js'
-import type { DistrictRanking } from '@toastmasters/shared-contracts'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
 
 function buildRanking(overrides: Partial<DistrictRanking>): DistrictRanking {
   return {

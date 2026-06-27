@@ -7,7 +7,7 @@ import { fetchCdnDistrictSnapshot } from '../../services/cdn'
 import type {
   PerDistrictData,
   ClubStatisticsFile,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnDistrictSnapshot: vi.fn(),

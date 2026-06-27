@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type { ClubHealthStatus } from '@toastmasters/shared-contracts'
+import type { ClubHealthStatus } from '@taverns-red/shared-contracts'
 import {
   fetchCdnManifest,
   cdnAnalyticsUrl,

@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { ClubStatisticsFile } from '@toastmasters/shared-contracts'
+import type { ClubStatisticsFile } from '@taverns-red/shared-contracts'
 import {
   buildClubHistoryRow,
   toClubHistoryCsvRows,

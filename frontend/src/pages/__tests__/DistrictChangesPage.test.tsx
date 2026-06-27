@@ -6,7 +6,7 @@ import DistrictChangesPage from '../DistrictChangesPage'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import { useSnapshotDiff } from '../../hooks/useSnapshotDiff'
 import { useDistricts } from '../../hooks/useDistricts'
-import type { SnapshotDiff } from '@toastmasters/shared-contracts'
+import type { SnapshotDiff } from '@taverns-red/shared-contracts'
 
 vi.mock('../../hooks/useDistrictData')
 vi.mock('../../hooks/useDistricts')

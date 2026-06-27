@@ -12,7 +12,7 @@ import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type {
   AllDistrictsRankingsData,
   DistrictRanking,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /**
  * Helper to create a mock club

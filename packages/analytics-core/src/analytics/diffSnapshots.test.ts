@@ -4,7 +4,7 @@ import type {
   DistrictStatisticsFile,
   ClubStatisticsFile,
   ScrapedRecord,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 function club(
   over: Partial<ClubStatisticsFile> & { clubId: string }

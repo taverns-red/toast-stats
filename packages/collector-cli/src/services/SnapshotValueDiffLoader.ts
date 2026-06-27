@@ -8,7 +8,7 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { validateAllDistrictsRankings } from '@toastmasters/shared-contracts'
+import { validateAllDistrictsRankings } from '@taverns-red/shared-contracts'
 import {
   digestDate,
   diffSnapshots,

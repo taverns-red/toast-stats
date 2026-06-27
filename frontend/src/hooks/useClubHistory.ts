@@ -23,7 +23,7 @@ import {
   fetchCdnSnapshotIndex,
   fetchCdnDistrictSnapshot,
 } from '../services/cdn'
-import type { PerDistrictData } from '@toastmasters/shared-contracts'
+import type { PerDistrictData } from '@taverns-red/shared-contracts'
 import { getProgramYearForDate } from '../utils/programYear'
 import { buildClubHistoryRow, type ClubHistoryRow } from '../utils/clubHistory'
 

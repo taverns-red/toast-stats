@@ -1,4 +1,4 @@
-# @toastmasters/analytics-core
+# @taverns-red/analytics-core
 
 Shared analytics computation logic for Toastmasters statistics.
 
@@ -42,7 +42,7 @@ import {
   type ClubHealthData,
   type PreComputedAnalyticsFile,
   type AnalyticsManifest,
-} from '@toastmasters/analytics-core'
+} from '@taverns-red/analytics-core'
 ```
 
 ### CommonJS
@@ -54,7 +54,7 @@ const {
   isCompatibleVersion,
   AnalyticsComputer,
   DataTransformer,
-} = require('@toastmasters/analytics-core')
+} = require('@taverns-red/analytics-core')
 ```
 
 ## Exports
@@ -183,7 +183,7 @@ The package uses semantic versioning for analytics files:
 import {
   isCompatibleVersion,
   ANALYTICS_SCHEMA_VERSION,
-} from '@toastmasters/analytics-core'
+} from '@taverns-red/analytics-core'
 
 const fileVersion = analyticsFile.schemaVersion
 if (!isCompatibleVersion(fileVersion)) {

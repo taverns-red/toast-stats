@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest'
 import { computeGoalTimeline } from '../useClubGoalTimeline'
 import type { ProgramYear } from '../../utils/programYear'
-import type { DcpGoalsTrendPoint } from '@toastmasters/analytics-core'
+import type { DcpGoalsTrendPoint } from '@taverns-red/analytics-core'
 
 const PY: ProgramYear = {
   year: 2025,

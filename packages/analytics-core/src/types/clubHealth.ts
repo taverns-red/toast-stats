@@ -5,7 +5,7 @@
  * vulnerable clubs, and club trends indexes.
  */
 
-import type { ClubHealthStatus } from '@toastmasters/shared-contracts'
+import type { ClubHealthStatus } from '@taverns-red/shared-contracts'
 import type { MembershipTrendPoint } from './membership.js'
 
 /**
@@ -27,7 +27,7 @@ export interface ClubRiskFactors {
  *
  * @see Requirements 2.3
  */
-export type { ClubHealthStatus } from '@toastmasters/shared-contracts'
+export type { ClubHealthStatus } from '@taverns-red/shared-contracts'
 
 /**
  * Distinguished level classification for clubs.

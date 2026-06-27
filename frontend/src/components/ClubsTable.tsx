@@ -8,7 +8,7 @@ import {
   type ColumnPinningState,
   type VisibilityState,
 } from '@tanstack/react-table'
-import type { SnapshotDiff } from '@toastmasters/shared-contracts'
+import type { SnapshotDiff } from '@taverns-red/shared-contracts'
 import { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { calculateClubProjection } from '../utils/dcpProjections'
 import { isCloseToDistinguished } from '../utils/closeToDistinguished'
@@ -465,7 +465,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   const clubDiffsById = useMemo(() => {
     const m = new Map<
       string,
-      import('@toastmasters/shared-contracts').ClubDiff
+      import('@taverns-red/shared-contracts').ClubDiff
     >()
     if (snapshotDiff) {
       for (const c of snapshotDiff.clubs.bothPresent) m.set(c.clubId, c)

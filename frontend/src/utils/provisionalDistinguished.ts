@@ -16,9 +16,9 @@
  *   All Distinguished = confirmed.
  */
 
-import { getCSPStatus } from '@toastmasters/analytics-core'
+import { getCSPStatus } from '@taverns-red/analytics-core'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
-import type { DistinguishedLevel } from '@toastmasters/analytics-core'
+import type { DistinguishedLevel } from '@taverns-red/analytics-core'
 
 /**
  * Determine if a Distinguished club's status is provisional.

@@ -104,12 +104,12 @@ describe('release flow (release-please owns the version)', () => {
 })
 
 describe('no references to the unowned @toastmasters scope (R8 grep-proof, #1258)', () => {
-  // The internal workspace packages were moved off the unowned `@toastmasters/*`
-  // scope onto the Red Taverns-controlled `@taverns-red/*` scope (#1258, ADR
-  // 0002 — TI trademark exposure). This guard pins that no live manifest, root
-  // script, or CI gate reaches back for the old scope. Built from fragments so
-  // this guard file itself stays clean under the acceptance grep
-  // `git grep "@toastmasters/"`.
+  // The internal workspace packages were moved off the unowned legacy
+  // `@toastmasters` scope onto the Red Taverns-controlled `@taverns-red/*`
+  // scope (#1258, ADR 0002 — TI trademark exposure). This guard pins that no
+  // live manifest, root script, or CI gate reaches back for the old scope.
+  // Built from fragments so this guard file itself stays clean under the
+  // acceptance grep for the old scope-with-slash.
   const OLD_SCOPE = '@' + 'toastmasters/'
 
   it.each([

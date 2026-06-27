@@ -15,7 +15,7 @@
 import type {
   TimeSeriesDataPoint,
   ClubHealthCounts,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import {
   classifyClubHealth,
   getCSPStatusFromRecord,

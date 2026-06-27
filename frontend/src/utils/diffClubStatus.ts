@@ -31,7 +31,7 @@ import type {
   DistrictStatisticsFile,
   ClubStatisticsFile,
   DiffEvent,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /** Operational status, base field with the legacy `status` fallback the rest of
  *  the diff uses (`diffSnapshots` reads `clubStatus ?? status` identically). */

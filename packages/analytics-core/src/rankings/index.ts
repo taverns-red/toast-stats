@@ -3,7 +3,7 @@
  *
  * Provides ranking computation algorithms for district statistics.
  *
- * @module @toastmasters/analytics-core/rankings
+ * @module @taverns-red/analytics-core/rankings
  */
 
 export {

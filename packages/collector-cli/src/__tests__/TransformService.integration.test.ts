@@ -27,7 +27,7 @@ import { TransformService } from '../services/TransformService.js'
 import {
   DistrictStatisticsFileSchema,
   type PerDistrictData,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 
 /**
  * Create an isolated test cache directory with unique ID for parallel test safety.

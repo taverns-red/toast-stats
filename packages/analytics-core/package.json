@@ -1,5 +1,5 @@
 {
-  "name": "@toastmasters/analytics-core",
+  "name": "@taverns-red/analytics-core",
   "version": "1.9.3",
   "license": "MIT",
   "private": true,
@@ -35,7 +35,7 @@
     "typecheck": "tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
-    "@toastmasters/shared-contracts": "^1.0.0",
+    "@taverns-red/shared-contracts": "^1.0.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

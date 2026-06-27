@@ -20,7 +20,7 @@ import {
   goalsMetAtDate,
   TOTAL_DCP_GOALS,
   type DcpGoalsTrendPoint,
-} from '@toastmasters/analytics-core'
+} from '@taverns-red/analytics-core'
 import type { ProgramYear } from '../utils/programYear'
 
 export interface GoalTimelineRow {

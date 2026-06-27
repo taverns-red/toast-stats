@@ -23,7 +23,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import { TransformService } from '../services/TransformService.js'
-import { SnapshotPointerSchema } from '@toastmasters/shared-contracts'
+import { SnapshotPointerSchema } from '@taverns-red/shared-contracts'
 
 // ============================================================================
 // Test Helpers

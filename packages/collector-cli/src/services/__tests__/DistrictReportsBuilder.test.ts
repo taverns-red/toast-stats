@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-import { DistrictReportsDatasetSchema } from '@toastmasters/shared-contracts'
+import { DistrictReportsDatasetSchema } from '@taverns-red/shared-contracts'
 
 import { parseDistrictReport } from '../DailyReportParser'
 import {

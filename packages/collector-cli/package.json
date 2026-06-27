@@ -1,5 +1,5 @@
 {
-  "name": "@toastmasters/collector-cli",
+  "name": "@taverns-red/collector-cli",
   "version": "1.5.2",
   "license": "MIT",
   "private": true,
@@ -20,8 +20,8 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",
-    "@toastmasters/analytics-core": "^1.0.0",
-    "@toastmasters/shared-contracts": "^1.0.0",
+    "@taverns-red/analytics-core": "^1.0.0",
+    "@taverns-red/shared-contracts": "^1.0.0",
     "commander": "^15.0.0",
     "csv-parse": "^6.2.1",
     "dotenv": "^17.4.2",

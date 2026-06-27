@@ -17,7 +17,7 @@ import type {
   ClubStatisticsFile,
   DistrictStatisticsFile,
   PerDistrictData,
-} from '@toastmasters/shared-contracts'
+} from '@taverns-red/shared-contracts'
 import { useClubHistory } from '../useClubHistory'
 import {
   fetchCdnSnapshotIndex,
