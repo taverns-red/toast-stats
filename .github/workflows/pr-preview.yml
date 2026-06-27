@@ -108,6 +108,7 @@ jobs:
               --only "staging" \
               --project "${{ secrets.GCP_PROJECT_ID }}" \
               --expires 7d \
+              --debug \
               --json > /tmp/firebase-out.json 2> /tmp/firebase-err.log; then
             echo "::group::firebase stdout"
             cat /tmp/firebase-out.json || true
