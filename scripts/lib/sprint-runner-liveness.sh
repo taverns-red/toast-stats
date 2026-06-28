@@ -277,11 +277,16 @@ evaluate_liveness() {
 
   LIVENESS_COMMIT="$(probe_commit_age "$now" "$start_epoch" "$last_commit" "$wt_present")"
   LIVENESS_PROCESS="$(probe_process "$screen_alive" "$claude_pid" "$cpu1" "$cpu2")"
-  if (( log_present == 1 )); then
-    LIVENESS_LOG="$(tail -n 40 "$logfile" 2>/dev/null | probe_log 1 "$mtime_age")"
-  else
-    LIVENESS_LOG="$(printf '' | probe_log 0 "$mtime_age")"
-  fi
+  # Read the tail into a var and feed probe_log via a HERE-STRING, never a live
+  # `tail | probe_log` pipe (#1196). probe_log early-returns on a stale/missing
+  # log WITHOUT consuming stdin; a live producer would then take SIGPIPE, which
+  # under `set -o pipefail` makes the command-substitution exit 141 and `set -e`
+  # kills the whole tick BEFORE the reap branch — defeating liveness for exactly
+  # the husk-with-stale-log shape it exists to catch (R14/Lesson 89). A here-doc
+  # string has no producer to signal, so an unread input is harmless.
+  local logtail=""
+  (( log_present == 1 )) && logtail="$(tail -n 40 "$logfile" 2>/dev/null || true)"
+  LIVENESS_LOG="$(probe_log "$log_present" "$mtime_age" <<<"$logtail")"
 
   LIVENESS_VERDICT="$(fuse_verdict "$LIVENESS_COMMIT" "$LIVENESS_PROCESS" "$LIVENESS_LOG")"
   return 0
