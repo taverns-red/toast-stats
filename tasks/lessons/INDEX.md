@@ -170,3 +170,4 @@
 - **172** [frontend, react, data-pipeline, scope, verification, accessibility] — A new status-consuming surface must resolve the read-time overlay, not the frozen base (#1230, #1228)
 - **173** [ci, deploy, firebase, node, auth, wif] — A Node security patch (not firebase-tools) broke all firebase deploys via keep-alive (#1250) _(ref-only)_
 - **174** [monorepo, refactor, tests, verification, process, ci] — A scope-rename "grep-proof" must also search the regex-escaped-slash form (#1258, #1257)
+- **175** [ci, automation, monitoring, data-pipeline, gcs, verification, tdd] — A fail-closed monitor whose single read can fail transiently cries wolf; pull the live log before trusting the issue's diagnosis (#1267, #1266, #1245, #1128)
