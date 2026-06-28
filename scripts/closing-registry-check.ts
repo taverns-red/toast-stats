@@ -39,6 +39,7 @@ import {
   buildRegistryStaleTitle,
   buildRegistryStaleBody,
 } from './lib/registryFreshness.js'
+import { retryAsync } from './lib/retry.js'
 
 const BODY_FILE = '/tmp/closing-registry-stale-body.md'
 
@@ -63,18 +64,31 @@ async function main(): Promise<void> {
   const registryMonths = (await registry.read()).months
   log(`registry: ${registryMonths.length} committed entries`)
 
+  const storage = new Storage()
   let entries: RawCSVEntry[] = []
   try {
-    entries = await readRecentRawCSVEntries(
-      new Storage(),
-      bucket,
-      windowDays,
-      log
+    // The GCS read can throw on a TRANSIENT WIF/STS token exchange
+    // (`sts.googleapis.com/v1/token: Premature close`, #1245). Retry with
+    // bounded backoff so a single flaky token fetch no longer fires a false
+    // empty-feed STALE alert. If it still fails after the attempts are spent
+    // the catch below leaves entries empty → emptyFeed=true → stale: the
+    // monitor must not pass when it genuinely cannot read (fail-closed, L107).
+    entries = await retryAsync(
+      () => readRecentRawCSVEntries(storage, bucket, windowDays, log),
+      {
+        attempts: 3,
+        baseDelayMs: 2000,
+        onRetry: (err, attempt, delayMs) =>
+          log(
+            `GCS metadata read attempt ${attempt} failed (${(err as Error).message}); ` +
+              `retrying in ${delayMs}ms`
+          ),
+      }
     )
   } catch (err) {
-    // Feed failure → evaluate with an empty feed, which reports stale with
-    // emptyFeed=true. The monitor must not pass when it cannot read.
-    log(`GCS metadata fetch failed: ${(err as Error).message}`)
+    // Persistent feed failure → evaluate with an empty feed, which reports
+    // stale with emptyFeed=true. The monitor must not pass when it cannot read.
+    log(`GCS metadata fetch failed after retries: ${(err as Error).message}`)
   }
 
   const result = evaluateRegistryFreshness(registryMonths, entries)
