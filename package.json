@@ -47,7 +47,7 @@
     "quality:check": "npm run lint && npm run lint:yaml && npm run typecheck && npm run format:check && npm run test",
     "quality:fix": "npm run lint --workspaces -- --fix && npm run format",
     "pre-commit": "npm run typecheck && npm run lint && npm run lint:yaml",
-    "prepare": "husky install",
+    "prepare": "husky install && npm run build:shared-contracts && npm run build:analytics-core",
     "cleanup:test-dirs": "bash scripts/cleanup-all-test-dirs.sh",
     "cleanup:frontend": "bash frontend/scripts/cleanup-test-dirs.sh",
     "pipeline:dry-run": "npx tsx scripts/prune-month-end-pipeline.ts --dry-run",
