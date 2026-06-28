@@ -52,8 +52,8 @@
     "pipeline:dry-run": "npx tsx scripts/prune-month-end-pipeline.ts --dry-run",
     "pipeline:run": "npx tsx scripts/prune-month-end-pipeline.ts --execute",
     "pipeline:step": "npx tsx scripts/prune-month-end-pipeline.ts",
-    "lessons:index": "npx tsx scripts/regenerate-lessons-index.ts",
-    "lessons:index:check": "npx tsx scripts/regenerate-lessons-index.ts --check",
+    "lessons:index": "LESSONS_DIR=tasks/lessons bash scripts/lessons-index.sh",
+    "lessons:index:check": "LESSONS_DIR=tasks/lessons bash scripts/lessons-index.sh --check",
     "seo:generate": "npx tsx scripts/generate-seo-assets.ts",
     "seo:check": "npx tsx scripts/generate-seo-assets.ts --check"
   },
