@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# barkeep-queue — deterministically queue an epic + its sprint(s) onto a Red
+# Barkeep META_EPIC (#29).
+#
+# The queue ritual is ~8 manual steps and error-prone (~25% on fresh context):
+# re-query META_EPIC → create epic → create sprint(s) → GraphQL-link sub-issues
+# → write the META_EPIC `Epics` checklist line → decision-log → verify. This
+# script makes the mechanics deterministic and, crucially, VALIDATES the epic
+# line against the runner's own matcher (`sprint-runner.sh --validate-epic-line`,
+# #28) BEFORE mutating the META_EPIC — so it can never write a line the runner
+# won't pick. It refuses an unvalidated line. Sprint bodies carry NO `Closes #N`
+# (closing is the runner's gated handshake, not GitHub auto-close).
+#
+# Usage:
+#   barkeep-queue --repo <owner/name> --meta-epic <#> --epic-title "<title>" \
+#                 --sprint-title "<title>" [--sprint-title "<title>" ...] \
+#                 [--epic-body "<md>"] [--dry-run]
+#
+# Idempotent: re-queries META_EPIC first; if an epic line for <title> already
+# exists, it is a no-op (no duplicate line, no new issues).
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The single source of truth for the epic-line format. Held as an ARRAY (not a
+# string) so a repo path containing spaces (common on macOS) can't word-split the
+# command — `$RUNNER` is one argv element, the flag another. Override `RUNNER` to
+# point at a different validator (e.g. in tests).
+RUNNER="${RUNNER:-$SCRIPT_DIR/sprint-runner.sh}"
+VALIDATE_CMD=("$RUNNER" --validate-epic-line)
+
+REPO="" META_EPIC="" EPIC_TITLE="" EPIC_BODY="" DRY_RUN=0
+SPRINT_TITLES=()
+
+die() { echo "barkeep-queue: $*" >&2; exit 1; }
+
+need_val() { [[ -n "${2:-}" ]] || die "missing value for $1"; }
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --repo)         need_val "$1" "${2:-}"; REPO="$2"; shift 2 ;;
+    --meta-epic)    need_val "$1" "${2:-}"; META_EPIC="$2"; shift 2 ;;
+    --epic-title)   need_val "$1" "${2:-}"; EPIC_TITLE="$2"; shift 2 ;;
+    --epic-body)    need_val "$1" "${2:-}"; EPIC_BODY="$2"; shift 2 ;;
+    --sprint-title) need_val "$1" "${2:-}"; SPRINT_TITLES+=("$2"); shift 2 ;;
+    --dry-run)      DRY_RUN=1; shift ;;
+    -h|--help)      sed -n '2,28p' "$0"; exit 0 ;;
+    *)              die "unknown arg: $1" ;;
+  esac
+done
+
+[[ -n "$REPO" ]]       || die "--repo is required"
+[[ -n "$META_EPIC" ]]  || die "--meta-epic is required"
+[[ -n "$EPIC_TITLE" ]] || die "--epic-title is required"
+[[ ${#SPRINT_TITLES[@]} -gt 0 ]] || die "at least one --sprint-title is required"
+
+# 1. Validate the epic-line FORMAT before creating anything — catches an
+#    asterisk in the title (the failure that left an epic unpicked for hours)
+#    while it is still cheap to abort, with no orphaned issues.
+probe_line="- [ ] **Epic ${EPIC_TITLE}** — #1"
+if ! "${VALIDATE_CMD[@]}" "$probe_line" >/dev/null 2>&1; then
+  reason="$("${VALIDATE_CMD[@]}" "$probe_line" 2>&1 >/dev/null || true)"
+  die "refusing to queue — epic title yields an unpickable line: ${reason}"
+fi
+
+# 2. Re-query the META_EPIC body (a concurrent runner may have advanced it).
+meta_body="$(gh issue view "$META_EPIC" --repo "$REPO" --json body --jq .body 2>/dev/null || true)"
+
+# 3. Idempotence: if this epic title is already queued, do nothing.
+if printf '%s\n' "$meta_body" | grep -qF "**Epic ${EPIC_TITLE}**"; then
+  echo "barkeep-queue: epic '${EPIC_TITLE}' already queued on META_EPIC #${META_EPIC} — no-op."
+  exit 0
+fi
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "DRY-RUN: would create epic '${EPIC_TITLE}' + ${#SPRINT_TITLES[@]} sprint(s) and append a validated line to META_EPIC #${META_EPIC}."
+  exit 0
+fi
+
+issue_num() { printf '%s' "${1##*/}"; }
+
+# 4. Create the epic issue.
+epic_url="$(gh issue create --repo "$REPO" \
+  --title "$EPIC_TITLE" \
+  --body "${EPIC_BODY:-Epic queued by barkeep-queue. Sprints are tracked as sub-issues below.}")"
+epic_num="$(issue_num "$epic_url")"
+[[ "$epic_num" =~ ^[0-9]+$ ]] || die "could not parse epic issue number from '$epic_url'"
+
+# 5. Create each sprint sub-issue (NO `Closes #N` — closing is the runner's
+#    gated handshake), then GraphQL-link it under the epic.
+sprint_nums=()
+i=0
+for st in "${SPRINT_TITLES[@]}"; do
+  i=$((i + 1))
+  s_url="$(gh issue create --repo "$REPO" \
+    --title "Sprint ${i} — ${st}" \
+    --body "Part of epic #${epic_num}. Runner-ready sprint queued by barkeep-queue.")"
+  s_num="$(issue_num "$s_url")"
+  [[ "$s_num" =~ ^[0-9]+$ ]] || die "could not parse sprint issue number from '$s_url'"
+  sprint_nums+=("$s_num")
+  # Link as a sub-issue (best-effort; the epic body checklist is the source of
+  # truth the runner reads).
+  gh api graphql -f query='mutation($e:ID!,$s:ID!){addSubIssue(input:{issueId:$e,subIssueId:$s}){clientMutationId}}' \
+    -F e="$epic_num" -F s="$s_num" >/dev/null 2>&1 || true
+done
+
+# 6. Build the epic line and VALIDATE it against the runner's matcher before
+#    committing the META_EPIC edit. Refuse to write an unvalidated line.
+epic_line="- [ ] **Epic ${EPIC_TITLE}** — #${epic_num}"
+if ! parsed="$("${VALIDATE_CMD[@]}" "$epic_line" 2>/dev/null)" || [[ "$parsed" != "$epic_num" ]]; then
+  die "refusing to write unvalidated epic line: '$epic_line'"
+fi
+
+# 7. Append the validated line to the META_EPIC body and commit the edit.
+if printf '%s\n' "$meta_body" | grep -qE '^## Epics'; then
+  new_body="$(printf '%s\n%s' "$meta_body" "$epic_line")"
+else
+  new_body="$(printf '%s\n\n## Epics\n%s' "$meta_body" "$epic_line")"
+fi
+gh issue edit "$META_EPIC" --repo "$REPO" --body "$new_body"
+
+# 8. Decision-log: a comment on the META_EPIC recording what was queued.
+sprint_refs=""
+for n in "${sprint_nums[@]}"; do sprint_refs+=" #${n}"; done
+gh issue comment "$META_EPIC" --repo "$REPO" \
+  --body "Queued **Epic ${EPIC_TITLE}** (#${epic_num}) with sprint(s):${sprint_refs}. Epic line validated against the runner matcher before commit (barkeep-queue, #29)." \
+  >/dev/null 2>&1 || true
+
+echo "barkeep-queue: queued Epic '${EPIC_TITLE}' #${epic_num} with ${#sprint_nums[@]} sprint(s):${sprint_refs}"
