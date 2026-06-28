@@ -51,6 +51,11 @@
 #   scripts/sprint-runner.sh --dry-run   # report what it would launch, no side effects
 #   scripts/sprint-runner.sh --status    # read-only state report (no lock)
 #   scripts/sprint-runner.sh --reap      # kill stuck sprint-runner screen sessions
+#   scripts/sprint-runner.sh --validate-epic-line "<line>"
+#                                        # single source of truth for the
+#                                        # META_EPIC epic-line format: echoes #N
+#                                        # + exit 0 if pickable, else reason +
+#                                        # non-zero. Used by the queueing tools.
 #
 # Environment:
 #   META_EPIC=<n>         GitHub issue # of the meta-epic (roadmap of epics).
@@ -63,15 +68,6 @@
 #                         when two consumers might otherwise share a default path.
 #   SPRINT_RUNNER_LOG     Path to append-log; used for size-based rotation
 #                         (default: ~/.red-barkeep-<RUNNER_NAME>.log)
-#   SPRINT_RUNNER_MODEL   Model for spawned sessions. UNSET (default) =
-#                         inherit the operator's resolved default model
-#                         (the `model` key is omitted from the --settings
-#                         overlay entirely). Set to a concrete model id to
-#                         PIN the fleet. History: #1142 pinned claude-fable-5,
-#                         #1195 tried a "default" alias (which the settings
-#                         overlay rejects — "model may not exist"), #1197
-#                         reverted to inherit-by-omission after Fable 5 was
-#                         removed (probe-verified 2026-06-13).
 #   SPRINT_RUNNER_LOCK_DIR  Override the mkdir-lock path (default
 #                         /tmp/red-barkeep-<RUNNER_NAME>.lock). Used by the
 #                         regression test so it can't collide with a live tick.
@@ -105,12 +101,6 @@ STRICT_GATE="${STRICT_GATE:-0}"
 # differently-named repo dirs don't collide on shared default paths. Two repos
 # with the SAME basename would still collide — set RUNNER_NAME explicitly there.
 RUNNER_NAME="${RUNNER_NAME:-${REPO_DIR##*/}}"
-# Fleet model selection. UNSET = inherit the operator's resolved default
-# (model key omitted from the overlay — pre-#1142 behavior, restored in #1197
-# after #1142's fable-5 pin and #1195's non-resolving "default" alias both
-# broke when Fable 5 was removed). Set SPRINT_RUNNER_MODEL to a concrete,
-# currently-available id (e.g. claude-opus-4-8[1m]) to pin instead.
-RUNNER_MODEL="${SPRINT_RUNNER_MODEL:-}"
 LOCK_DIR="${SPRINT_RUNNER_LOCK_DIR:-/tmp/red-barkeep-$RUNNER_NAME.lock}"
 BOOTSTRAP_PROMPT="$REPO_DIR/scripts/sprint-bootstrap.prompt"
 LOG_FILE="${SPRINT_RUNNER_LOG:-$HOME/.red-barkeep-$RUNNER_NAME.log}"
@@ -152,11 +142,19 @@ source "$REPO_DIR/scripts/lib/sprint-runner-liveness.sh"
 source "$REPO_DIR/scripts/lib/sprint-runner-process.sh"
 # shellcheck source=lib/sprint-runner-worktree.sh
 source "$REPO_DIR/scripts/lib/sprint-runner-worktree.sh"
+# verify — ground-truth assert_git_state/assert_pr_merged/assert_ci_green that
+# fail closed before a state-change claim is reported (epic A, #24). Sourcing
+# only defines functions; call sites are wired in #26.
+# shellcheck source=lib/sprint-runner-verify.sh
+source "$REPO_DIR/scripts/lib/sprint-runner-verify.sh"
 
 # Populated by resolve_active_epic(); used by callers to decide whether
 # auto-tick fires and to print the source in --status.
 EPIC_SOURCE=""
 META_PAUSED=0
+
+# Argument to --validate-epic-line (set by mode parsing below).
+EPIC_LINE_ARG=""
 
 # Append (not prepend) the standard dirs so launchd's minimal PATH can still
 # find gh/screen/git, while leaving any caller-supplied PATH entries ahead of
@@ -171,9 +169,10 @@ case "${1:-}" in
   --status)  MODE=status ;;
   --reap)    MODE=reap ;;
   --gc)      MODE=gc ;;
+  --validate-epic-line) MODE=validate-epic-line; EPIC_LINE_ARG="${2:-}" ;;
   "") ;;
   *) echo "Unknown arg: $1" >&2
-     echo "Usage: $0 [--dry-run|--status|--reap|--gc]" >&2
+     echo "Usage: $0 [--dry-run|--status|--reap|--gc|--validate-epic-line \"<line>\"]" >&2
      exit 2 ;;
 esac
 
@@ -271,12 +270,56 @@ find_sprint_line_by_issue() {
 }
 
 # === META_EPIC helpers ===
-# Format: `- [ ] **Epic <anything>** — #N`
+# Single source of truth for the pickable epic-line format: `- [ ] **Epic
+# <anything>** — #N`. find_first_unchecked_epic (the picker) AND
+# --validate-epic-line (validate_epic_line, used by the queueing tools) both
+# match against THIS one pattern, so a queued line can never drift from what the
+# runner will actually pick (#28). The `[^*]*` title is deliberately non-greedy
+# of asterisks — a stray `*` in a title breaks the closing `\*\*` match, which
+# is exactly the failure --validate-epic-line exists to catch before it ships.
+EPIC_LINE_RE='^- \[ \] \*\*Epic[^*]*\*\* — #[0-9]+'
+
 find_first_unchecked_epic() {
   local body="$1" line
-  line=$(printf '%s\n' "$body" | grep -m1 -E '^- \[ \] \*\*Epic[^*]*\*\* — #[0-9]+' || true)
+  line=$(printf '%s\n' "$body" | grep -m1 -E "$EPIC_LINE_RE" || true)
   [[ -z "$line" ]] && return 0
   printf '%s\n' "$line" | grep -oE '#[0-9]+' | head -1 | tr -d '#'
+}
+
+# Validate ONE epic-line against EPIC_LINE_RE — the exact match the runner uses
+# to pick an epic. On a pickable line, echo the parsed issue number (no '#') and
+# return 0. Otherwise print a specific reason to stderr and return 1. The
+# queueing tools (barkeep-queue, #29) call this before committing a META_EPIC
+# edit, so the format is defined in exactly one place and can never drift.
+validate_epic_line() {
+  local line="$1"
+  if [[ -z "$line" ]]; then
+    echo "empty epic-line" >&2
+    return 1
+  fi
+  if printf '%s\n' "$line" | grep -qE "$EPIC_LINE_RE"; then
+    printf '%s\n' "$line" | grep -oE '#[0-9]+' | head -1 | tr -d '#'
+    return 0
+  fi
+  # Not pickable — diagnose the failure modes the runner has actually hit so the
+  # caller gets an actionable reason, not just "no match".
+  if ! printf '%s\n' "$line" | grep -qE '^- \[ \] '; then
+    echo "not an unchecked checklist item (must start '- [ ] ')" >&2
+  elif ! printf '%s\n' "$line" | grep -qE '#[0-9]+'; then
+    echo "missing '#N' issue reference" >&2
+  elif printf '%s\n' "$line" | grep -qE '\*\*Epic[^*]*\*[^*]'; then
+    echo "asterisk in the epic title breaks the '**Epic ...**' match" >&2
+  else
+    echo "does not match the runner's epic-line format: ${EPIC_LINE_RE}" >&2
+  fi
+  return 1
+}
+
+mode_validate_epic_line() {
+  if validate_epic_line "$EPIC_LINE_ARG"; then
+    exit 0
+  fi
+  exit 1
 }
 
 # Resolve which epic the runner should work on this tick.
@@ -561,19 +604,8 @@ launch_sprint_session() {
   # --settings (an *additional* settings overlay) so it scopes to the runner's
   # sessions ONLY — the operator's own interactive `claude` keeps its configured
   # effortLevel. "ultracode" is not a valid --effort flag choice; it must come
-  # through settings. The model is included ONLY when SPRINT_RUNNER_MODEL pins
-  # one; otherwise the key is omitted so the spawned session inherits the
-  # operator's resolved default (#1197). A literal alias like "default" is NOT
-  # accepted by the overlay (the settings model field needs a concrete id or
-  # nothing), which is what silently husked the fleet when #1195 shipped it.
-  local ultracode_settings
-  if [[ -n "$RUNNER_MODEL" ]]; then
-    ultracode_settings='{"effortLevel":"ultracode","model":"'"$RUNNER_MODEL"'"}'
-    log "Session model: $RUNNER_MODEL (pinned via SPRINT_RUNNER_MODEL)"
-  else
-    ultracode_settings='{"effortLevel":"ultracode"}'
-    log "Session model: inherits operator default (set SPRINT_RUNNER_MODEL to pin)"
-  fi
+  # through settings. Single-quoted so the inner bash passes the JSON literally.
+  local ultracode_settings='{"effortLevel":"ultracode"}'
 
   # Per-session screen logfile (epic #933 §2.3) — the on-disk feed the liveness
   # log probe samples to catch a #871-shape loop (output repeating, no commits).
@@ -1141,8 +1173,9 @@ mode_run() {
 
 # === Dispatch ===
 case "$MODE" in
-  status)      mode_status ;;
-  reap)        mode_reap ;;
-  gc)          mode_gc ;;
-  run|dry-run) mode_run ;;
+  status)               mode_status ;;
+  reap)                 mode_reap ;;
+  gc)                   mode_gc ;;
+  validate-epic-line)   mode_validate_epic_line ;;
+  run|dry-run)          mode_run ;;
 esac
