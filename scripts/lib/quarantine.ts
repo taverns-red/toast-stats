@@ -95,9 +95,9 @@ export function validateQuarantine(entries: QuarantineEntry[]): string[] {
  * from the BLOCKING run consistently across ALL / unit / integration, so a
  * quarantined flake never silently blocks the queue — while the partition guard
  * (R20) stays exhaustive because the file disappears from every set at once.
- * The flake-detection harness still exercises the file explicitly, so it is
- * never silently ignored. Exclusion is file-level even when `test` narrows to a
- * single case (the rest of the file rides along into the non-gating harness).
+ * A quarantine entry is never silently ignored: `test:quarantine:check` fails
+ * CI if it lacks a reason/issue (quarantine != skip, R1). Exclusion is
+ * file-level even when `test` narrows to a single case.
  */
 export function quarantineExcludeGlobs(entries: QuarantineEntry[]): string[] {
   return entries.map(e => e.file)
