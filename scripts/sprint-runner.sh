@@ -52,10 +52,12 @@
 #   scripts/sprint-runner.sh --status    # read-only state report (no lock)
 #   scripts/sprint-runner.sh --reap      # kill stuck sprint-runner screen sessions
 #   scripts/sprint-runner.sh --validate-epic-line "<line>"
+#   scripts/sprint-runner.sh --validate-sprint-line "<line>"
 #                                        # single source of truth for the
-#                                        # META_EPIC epic-line format: echoes #N
-#                                        # + exit 0 if pickable, else reason +
-#                                        # non-zero. Used by the queueing tools.
+#                                        # META_EPIC epic-line / epic-body
+#                                        # sprint-line formats: echoes #N + exit
+#                                        # 0 if pickable, else reason + non-zero.
+#                                        # Used by the queueing tools.
 #
 # Environment:
 #   META_EPIC=<n>         GitHub issue # of the meta-epic (roadmap of epics).
@@ -153,8 +155,9 @@ source "$REPO_DIR/scripts/lib/sprint-runner-verify.sh"
 EPIC_SOURCE=""
 META_PAUSED=0
 
-# Argument to --validate-epic-line (set by mode parsing below).
+# Arguments to --validate-epic-line / --validate-sprint-line (set by mode parsing).
 EPIC_LINE_ARG=""
+SPRINT_LINE_ARG=""
 
 # Append (not prepend) the standard dirs so launchd's minimal PATH can still
 # find gh/screen/git, while leaving any caller-supplied PATH entries ahead of
@@ -170,9 +173,10 @@ case "${1:-}" in
   --reap)    MODE=reap ;;
   --gc)      MODE=gc ;;
   --validate-epic-line) MODE=validate-epic-line; EPIC_LINE_ARG="${2:-}" ;;
+  --validate-sprint-line) MODE=validate-sprint-line; SPRINT_LINE_ARG="${2:-}" ;;
   "") ;;
   *) echo "Unknown arg: $1" >&2
-     echo "Usage: $0 [--dry-run|--status|--reap|--gc|--validate-epic-line \"<line>\"]" >&2
+     echo "Usage: $0 [--dry-run|--status|--reap|--gc|--validate-epic-line \"<line>\"|--validate-sprint-line \"<line>\"]" >&2
      exit 2 ;;
 esac
 
@@ -239,14 +243,53 @@ find_sprint_issue() {
     | grep -oE '#[0-9]+' | head -1 | tr -d '#' || true
 }
 
+# Single source of truth for the pickable sprint-line format: `- [ ] **Sprint N**
+# — #issue`. find_first_unchecked_sprint (the picker) AND --validate-sprint-line
+# (validate_sprint_line, used by barkeep-queue to prove the checklist it writes
+# into an epic body is pickable) match against THIS one pattern — so a queued
+# epic can never carry a checklist the runner refuses (#37).
+SPRINT_LINE_RE='^- \[ \] \*\*Sprint [0-9]+\*\* — #[0-9]+'
+
 find_first_unchecked_sprint() {
   local body="$1" line
-  line=$(printf '%s\n' "$body" | grep -m1 -E '^- \[ \] \*\*Sprint [0-9]+\*\* — #[0-9]+' || true)
+  line=$(printf '%s\n' "$body" | grep -m1 -E "$SPRINT_LINE_RE" || true)
   [[ -z "$line" ]] && return 0
   local n issue
   n=$(printf '%s\n' "$line" | sed -nE 's/.*Sprint ([0-9]+)\*\*.*/\1/p')
   issue=$(printf '%s\n' "$line" | sed -nE 's/.*Sprint [0-9]+\*\* — #([0-9]+).*/\1/p')
   printf '%s %s\n' "$n" "$issue"
+}
+
+# Validate ONE sprint-line against SPRINT_LINE_RE — the exact match the runner
+# uses to pick a sprint from an epic body. On a pickable line, echo the parsed
+# issue number (no '#') and return 0; otherwise print a reason to stderr and
+# return 1. barkeep-queue checks every generated checklist line against this
+# before writing the epic body, so the format can never drift (#37).
+validate_sprint_line() {
+  local line="$1"
+  if [[ -z "$line" ]]; then
+    echo "empty sprint-line" >&2
+    return 1
+  fi
+  if printf '%s\n' "$line" | grep -qE "$SPRINT_LINE_RE"; then
+    printf '%s\n' "$line" | grep -oE '#[0-9]+' | head -1 | tr -d '#'
+    return 0
+  fi
+  if ! printf '%s\n' "$line" | grep -qE '^- \[ \] '; then
+    echo "not an unchecked checklist item (must start '- [ ] ')" >&2
+  elif ! printf '%s\n' "$line" | grep -qE '#[0-9]+'; then
+    echo "missing '#N' issue reference" >&2
+  else
+    echo "does not match the runner's sprint-line format: ${SPRINT_LINE_RE}" >&2
+  fi
+  return 1
+}
+
+mode_validate_sprint_line() {
+  if validate_sprint_line "$SPRINT_LINE_ARG"; then
+    exit 0
+  fi
+  exit 1
 }
 
 # Count epic-body lines matching the runner's sprint format, ANY checkbox state.
@@ -1177,5 +1220,6 @@ case "$MODE" in
   reap)                 mode_reap ;;
   gc)                   mode_gc ;;
   validate-epic-line)   mode_validate_epic_line ;;
+  validate-sprint-line) mode_validate_sprint_line ;;
   run|dry-run)          mode_run ;;
 esac
