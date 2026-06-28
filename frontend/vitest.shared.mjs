@@ -38,10 +38,6 @@ import { dirname, join } from 'node:path'
 // baseline was already 0% at unbounded on a clean runner; the cap is the durable
 // guard against a future oversubscribed/larger runner drifting toward the
 // workstation stress ceiling (100% flake, 30.9→171.9s spread).
-//
-// NOTE: the non-gating flake-detection harness (scripts/run-flake-detection.ts)
-// deliberately OVERRIDES this with `--maxWorkers=100%` so the DETECTOR stays
-// maximally sensitive while the GATE stays capped/stable.
 export function resolveMaxWorkers(env) {
   return env && env.CI ? '50%' : 3
 }
@@ -67,8 +63,7 @@ export const integrationGlobs = [
 // a known-flaky test never silently blocks the queue. Folding them into the
 // shared baseExclude removes them from ALL / unit / integration consistently,
 // so the partition guard (R20) stays exhaustive — the file leaves every set at
-// once rather than orphaning. They are NOT silently ignored: the non-gating
-// flake-detection harness (scripts/run-flake-detection.ts) still runs them, and
+// once rather than orphaning. They are NOT silently ignored:
 // `npm run test:quarantine:check` fails CI if an entry lacks a reason/issue
 // (quarantine != skip, R1). Empty list → no-op.
 function quarantinedExcludes() {

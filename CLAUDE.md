@@ -84,7 +84,11 @@ Read `tasks/rules.md` completely before every task. Key rules:
 
 ### Test-infra contracts (flakiness epic #917 — don't unknowingly break)
 
-- **Flake detector is sensitive by design (R21).** `scripts/run-flake-detection.ts` pins `--maxWorkers=100%` (the contention amplifier) while the blocking CI `test` job is capped at 50% (`resolveMaxWorkers`). Never "fix" the detector to inherit the cap — it would go blind. The detector is **non-gating per-PR** (a contention blip must not red an unrelated PR); the **0% gate lives on the nightly `flake-sentinel.yml`** (gating via `FLAKE_MAX_RATE=0`, ×30). Coverage instrumentation is kept but thresholds zeroed in the harness (a filtered subset can't meet the 55% whole-repo gate — L135).
+<!-- The flake-DETECTION layer (per-PR job, nightly sentinel, detector script, R21)
+was removed in #1263 (epic #1262) once its root causes — local-machine contention
+and over-strict timeouts — were solved. The PREVENTION (no-page-mounts/R22) and
+DISCIPLINE (quarantine/R1) guards below contain those root causes, so they stay. -->
+
 - **Unit tests must not full-page-mount (R22).** `npm run test:no-page-mounts:check` fails if a unit-project test imports a `pages/*Page` / `<App>`. Page mounts → `src/pages/__tests__/` or `src/__tests__/integration/`.
 - **Quarantine ≠ skip (R1).** `frontend/test-quarantine.json` is empty; an entry needs a reason + tracking issue and is loudly reported by `npm run test:quarantine:check`. Don't bump `testTimeout` to mask contention — root-cause it.
 
