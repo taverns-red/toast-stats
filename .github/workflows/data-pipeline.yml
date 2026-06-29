@@ -1268,8 +1268,12 @@ jobs:
           MODE="${{ steps.mode.outputs.mode }}"
           INDEX_PATH="gs://${GCS_BUCKET}/config/district-snapshot-index.json"
 
-          if [ "${MODE}" = "rebuild" ]; then
-            # Rebuild: generate from GCS listing (local snapshots are cleaned per-date)
+          if [ "${MODE}" = "rebuild" ] || [ "${MODE}" = "prune" ]; then
+            # Rebuild/prune: regenerate from the GCS listing so the index only
+            # lists dates whose district_*.json files actually still exist.
+            # Prune deletes snapshot prefixes from GCS; merging (the daily path)
+            # would write the stale index back unchanged and keep advertising
+            # the just-deleted dates → change-digest 404s (#1279).
             echo "Generating snapshot index from GCS..."
             gsutil ls "gs://${GCS_BUCKET}/snapshots/*/district_*.json" > /tmp/snapshot-files.txt 2>/dev/null || true
             node -e "
