@@ -95,7 +95,17 @@ describe('data-pipeline.yml prune reconciles district-snapshot-index (#1279)', (
     expect(modes.has('rebuild')).toBe(true)
   })
 
-  it('daily still takes the merge-existing path, not the regenerate path', () => {
+  it('daily keeps the merge-existing path (downloads + merges the current index)', () => {
+    // daily is the else-branch fallthrough — never a `"${MODE}" = "daily"`
+    // literal in the gating condition, so it must NOT appear among the
+    // regenerate-branch modes…
     expect(modes.has('daily')).toBe(false)
+    // …and the merge path it falls through to must still download the existing
+    // index before merging today's date (only the merge branch does this).
+    expect(
+      /gsutil cp "\$\{INDEX_PATH\}" \/tmp\/district-snapshot-index\.json/.test(
+        step.run!
+      )
+    ).toBe(true)
   })
 })
