@@ -55,8 +55,10 @@ Two further reconcile-plan refusals and their escapes:
 
 ## Known side effect — mid-month `latest.json` regression (≤ ~24h)
 
-The keep-set is month-end + penultimate dates only. A mid-month prune
-therefore deletes the current month's daily snapshots, the regenerated
+The keep-set is the first-available-of-month + month-end dates only
+(#1280; this replaced the old penultimate second anchor — the in-progress
+month itself stays exempt, #1178). A mid-month prune therefore deletes
+completed months' interior daily snapshots, the regenerated
 manifests point `latestSnapshotDate` back to the last month-end, and a
 same-run reconcile pushes that regressed `latest.json` to prod — the live
 site shows last month-end's data until the **next daily run** re-scrapes

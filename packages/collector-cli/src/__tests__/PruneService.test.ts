@@ -159,16 +159,19 @@ describe('PruneService', () => {
       expect(result.snapshotDate).toBe('2025-12-31')
     })
 
-    it('classifies a penultimate day as keeper (#203)', async () => {
-      // Jan 30 is penultimate (day before Jan 31)
+    it('no longer keeps a penultimate day at the per-date level (#1280)', async () => {
+      // Jan 30 is the day before Jan 31. The penultimate keeper is retired —
+      // the second per-month anchor is now the SET-level first-of-month, not
+      // a per-date predicate — so a lone penultimate date is not a keeper.
       await createRawCsvDate('2026-01-30')
       const service = new PruneService({ cacheDir: testDir })
 
       const result = await service.classifyDate('2026-01-30')
 
-      expect(result.keep).toBe(true)
+      expect(result.keep).toBe(false)
       expect(result.isMonthEnd).toBe(false)
-      expect(result.reason).toContain('Penultimate')
+      expect(result.reason).not.toContain('Penultimate')
+      expect(result.reason).toContain('Non-month-end')
     })
   })
 
@@ -285,28 +288,31 @@ describe('PruneService', () => {
       ] as ClosingDateEntry[],
     }
 
-    it('deletes non-month-end raw-csv and snapshot directories', async () => {
+    it('deletes interior non-keeper raw-csv and snapshot directories', async () => {
       // Month-end keeper
       await createRawCsvDate('2026-01-31')
       await createSnapshotDate('2026-01-31')
-      // Mid-month non-keeper
+      // First-of-month keeper (#1280)
+      await createRawCsvDate('2026-01-05')
+      await createSnapshotDate('2026-01-05')
+      // Interior non-keeper (neither first nor month-end)
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')
 
       const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const result = await service.prune(false)
 
-      expect(result.keptDates).toBe(1)
-      expect(result.prunedDates).toBe(1)
+      expect(result.keptDates).toBe(2) // 01-05 (first) + 01-31 (month-end)
+      expect(result.prunedDates).toBe(1) // 01-15 (interior)
       expect(result.deletedRawCsv).toContain('2026-01-15')
       expect(result.deletedSnapshots).toContain('2026-01-15')
 
-      // Verify files: keeper should exist, non-keeper should be gone
+      // Verify files: keepers should exist, non-keeper should be gone
       const rawCsvEntries = await fs.readdir(path.join(testDir, 'raw-csv'))
-      expect(rawCsvEntries).toEqual(['2026-01-31'])
+      expect(rawCsvEntries).toEqual(['2026-01-05', '2026-01-31'])
 
       const snapshotEntries = await fs.readdir(path.join(testDir, 'snapshots'))
-      expect(snapshotEntries).toEqual(['2026-01-31'])
+      expect(snapshotEntries).toEqual(['2026-01-05', '2026-01-31'])
     })
 
     it('reports the layer scope so retained derived layers are never a silent gap (#1132)', async () => {
@@ -326,18 +332,20 @@ describe('PruneService', () => {
     })
 
     it('never deletes under time-series/, club-trends/, or v1/rank-history/ (#1132 guard)', async () => {
-      // A prunable mid-month date — January must be closed (#1178), so its
-      // month-end is present too.
+      // A prunable interior date — January must be closed (#1178), so its
+      // month-end is present, plus the first-of-month keeper (#1280), so
+      // 01-20 is the genuine interior non-keeper.
       await createRawCsvDate('2026-01-31')
-      await createRawCsvDate('2026-01-15')
-      await createSnapshotDate('2026-01-15')
+      await createRawCsvDate('2026-01-05')
+      await createRawCsvDate('2026-01-20')
+      await createSnapshotDate('2026-01-20')
 
       // Seed derived layers — including dirs named after the prunable date,
       // the exact shape a future "thin the derived layers too" regression
       // would reach for.
       const derivedFiles = [
-        'time-series/d61/2026-01-15.json',
-        'club-trends/2026-01-15/district_61.json',
+        'time-series/d61/2026-01-20.json',
+        'club-trends/2026-01-20/district_61.json',
         'v1/rank-history/61.json',
       ]
       for (const rel of derivedFiles) {
@@ -350,8 +358,8 @@ describe('PruneService', () => {
       const result = await service.prune(false)
 
       // The prunable date is gone from the deletable layers…
-      expect(result.deletedRawCsv).toEqual(['2026-01-15'])
-      expect(result.deletedSnapshots).toEqual(['2026-01-15'])
+      expect(result.deletedRawCsv).toEqual(['2026-01-20'])
+      expect(result.deletedSnapshots).toEqual(['2026-01-20'])
 
       // …while every derived-layer file survives untouched.
       for (const rel of derivedFiles) {
@@ -362,8 +370,10 @@ describe('PruneService', () => {
     })
 
     it('dry-run mode does not delete anything', async () => {
-      // Month-end present so January is closed and 01-15 is thinnable (#1178)
+      // Month-end + first-of-month present so January is closed and the
+      // interior 01-15 is thinnable (#1178/#1280)
       await createRawCsvDate('2026-01-31')
+      await createRawCsvDate('2026-01-05')
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')
 
@@ -386,9 +396,12 @@ describe('PruneService', () => {
         dataMonth: '2026-01',
       })
       await createSnapshotDate('2026-01-31')
-      // Also a mid-month: raw-csv/2026-02-05 → snapshots/2026-02-05 (non-keeper)
-      await createRawCsvDate('2026-02-05')
-      await createSnapshotDate('2026-02-05')
+      // First-of-month Feb keeper (#1280): raw-csv/2026-02-04 → 2026-02-04
+      await createRawCsvDate('2026-02-04')
+      await createSnapshotDate('2026-02-04')
+      // Interior Feb non-keeper: raw-csv/2026-02-20 → snapshots/2026-02-20
+      await createRawCsvDate('2026-02-20')
+      await createSnapshotDate('2026-02-20')
       // February's own month-end, so the month is closed and thinnable (#1178)
       await createRawCsvDate('2026-02-28')
       await createSnapshotDate('2026-02-28')
@@ -396,20 +409,24 @@ describe('PruneService', () => {
       const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const result = await service.prune(false)
 
-      expect(result.keptDates).toBe(2) // 2026-01-31 (via remap) + 2026-02-28
+      // 2026-01-31 (via remap) + 2026-02-04 (first) + 2026-02-28 (month-end)
+      expect(result.keptDates).toBe(3)
       expect(result.prunedDates).toBe(1)
-      expect(result.deletedRawCsv).toContain('2026-02-05')
-      expect(result.deletedSnapshots).toContain('2026-02-05')
+      expect(result.deletedRawCsv).toContain('2026-02-20')
+      expect(result.deletedSnapshots).toContain('2026-02-20')
     })
 
     it('never deletes a protected metadata-less date (#1131)', async () => {
       // Metadata-less: classification is unprovable → protected
       await createRawCsvDateWithoutMetadata('2026-02-13')
       await createSnapshotDate('2026-02-13')
-      // Metadata-full mid-month: still prunes (keep rules unchanged).
-      // March's month-end closes the month so 03-15 is thinnable (#1178).
-      await createRawCsvDate('2026-03-15')
-      await createSnapshotDate('2026-03-15')
+      // Metadata-full interior: still prunes (keep rules unchanged).
+      // March's first-of-month (03-05) + month-end (03-31) close the month
+      // so the interior 03-20 is thinnable (#1178/#1280).
+      await createRawCsvDate('2026-03-05')
+      await createSnapshotDate('2026-03-05')
+      await createRawCsvDate('2026-03-20')
+      await createSnapshotDate('2026-03-20')
       await createRawCsvDate('2026-03-31')
       await createSnapshotDate('2026-03-31')
 
@@ -423,9 +440,10 @@ describe('PruneService', () => {
       })
       const result = await service.prune(false)
 
-      expect(result.keptDates).toBe(2) // protected 2026-02-13 + 2026-03-31
+      // protected 2026-02-13 + 2026-03-05 (first) + 2026-03-31 (month-end)
+      expect(result.keptDates).toBe(3)
       expect(result.prunedDates).toBe(1)
-      expect(result.deletedRawCsv).toEqual(['2026-03-15'])
+      expect(result.deletedRawCsv).toEqual(['2026-03-20'])
 
       const rawCsvEntries = await fs.readdir(path.join(testDir, 'raw-csv'))
       expect(rawCsvEntries).toContain('2026-02-13')
@@ -480,7 +498,8 @@ describe('PruneService', () => {
 
       it('lets a dry-run proceed during a closing window but surfaces the refused verdict', async () => {
         await createRawCsvDate('2026-01-31') // closes January (#1178)
-        await createRawCsvDate('2026-01-15')
+        await createRawCsvDate('2026-01-05') // first-of-month keeper (#1280)
+        await createRawCsvDate('2026-01-15') // interior non-keeper
         await createSnapshotDate('2026-01-15')
 
         const service = new PruneService({
@@ -498,7 +517,8 @@ describe('PruneService', () => {
 
       it('allows a destructive prune once today is past the closing window', async () => {
         await createRawCsvDate('2026-01-31') // closes January (#1178)
-        await createRawCsvDate('2026-01-15')
+        await createRawCsvDate('2026-01-05') // first-of-month keeper (#1280)
+        await createRawCsvDate('2026-01-15') // interior non-keeper
         await createSnapshotDate('2026-01-15')
 
         const service = new PruneService({
@@ -515,27 +535,101 @@ describe('PruneService', () => {
       })
     })
 
-    it('retains both month-end AND penultimate dates (#203)', async () => {
+    it('retains first-of-month AND month-end, pruning the old penultimate (#1280)', async () => {
       // Month-end: Jan 31
       await createRawCsvDate('2026-01-31')
       await createSnapshotDate('2026-01-31')
-      // Penultimate: Jan 30
+      // First-of-month: Jan 03 (earliest available)
+      await createRawCsvDate('2026-01-03')
+      await createSnapshotDate('2026-01-03')
+      // Old penultimate: Jan 30 (now pruned)
       await createRawCsvDate('2026-01-30')
       await createSnapshotDate('2026-01-30')
-      // Mid-month: Jan 15 (should be pruned)
+      // Mid-month: Jan 15 (pruned)
       await createRawCsvDate('2026-01-15')
       await createSnapshotDate('2026-01-15')
 
       const service = new PruneService({ cacheDir: testDir, ...NON_CLOSING })
       const result = await service.prune(false)
 
-      expect(result.keptDates).toBe(2) // Jan 31 + Jan 30
-      expect(result.prunedDates).toBe(1) // Jan 15
+      expect(result.keptDates).toBe(2) // Jan 03 (first) + Jan 31 (month-end)
+      expect(result.prunedDates).toBe(2) // Jan 15 + Jan 30 (old penultimate)
 
       const rawCsvEntries = await fs.readdir(path.join(testDir, 'raw-csv'))
-      expect(rawCsvEntries).toContain('2026-01-30')
+      expect(rawCsvEntries).toContain('2026-01-03')
       expect(rawCsvEntries).toContain('2026-01-31')
+      expect(rawCsvEntries).not.toContain('2026-01-30') // penultimate retired
       expect(rawCsvEntries).not.toContain('2026-01-15')
+    })
+  })
+
+  describe('first-of-month + month-end retention (#1280)', () => {
+    // May 2026 closed on 2026-06-05; today is past it, so destructive
+    // prune is allowed and January is a fully-closed completed month.
+    const CLOSED = {
+      today: '2026-06-20',
+      closingDateRegistry: [
+        { dataMonth: '2026-05', closingDate: '2026-06-05' },
+      ] as ClosingDateEntry[],
+    }
+
+    it('keeps exactly the first-available and the month-end, pruning the rest incl. the old penultimate', async () => {
+      // A January with several dailies: first (05), a mid (15), the old
+      // penultimate (30), and the month-end (31).
+      for (const date of [
+        '2026-01-05',
+        '2026-01-15',
+        '2026-01-30',
+        '2026-01-31',
+      ]) {
+        await createRawCsvDate(date)
+        await createSnapshotDate(date)
+      }
+
+      const service = new PruneService({ cacheDir: testDir, ...CLOSED })
+      const result = await service.prune(false)
+
+      expect(result.keptDates).toBe(2)
+      expect(result.prunedDates).toBe(2)
+
+      const rawCsvEntries = await fs.readdir(path.join(testDir, 'raw-csv'))
+      expect(rawCsvEntries.sort()).toEqual(['2026-01-05', '2026-01-31'])
+      // The old penultimate (30) is explicitly no longer a keeper.
+      expect(rawCsvEntries).not.toContain('2026-01-30')
+      expect(rawCsvEntries).not.toContain('2026-01-15')
+
+      const byDate = new Map(result.classifications.map(c => [c.rawCsvDate, c]))
+      expect(byDate.get('2026-01-05')?.reason).toMatch(/first-of-month/i)
+      expect(byDate.get('2026-01-31')?.reason).toContain('Month-end')
+    })
+
+    it('resolves first-of-month on snapshotDate, so a closing-remapped early date anchors its data month, not its collection month', async () => {
+      // raw 2026-02-03 sits in January's closing window → snapshot
+      // 2026-01-31 (month-end). The first TRUE February snapshot is
+      // 2026-02-04; the earlier collection date that remaps OUT of February
+      // must not be mistaken for February's first-of-month.
+      await createRawCsvDate('2026-02-03', {
+        isClosingPeriod: true,
+        dataMonth: '2026-01',
+      }) // → 2026-01-31
+      await createRawCsvDate('2026-02-04') // → 2026-02-04, first real February snapshot
+      await createRawCsvDate('2026-02-20') // → 2026-02-20, interior, pruned
+      await createRawCsvDate('2026-02-28') // → February month-end
+
+      const service = new PruneService({ cacheDir: testDir, ...CLOSED })
+      const classifications = await service.classifyAll()
+      const byDate = new Map(classifications.map(c => [c.rawCsvDate, c]))
+
+      // The closing remap anchors January's month-end, not February's first.
+      expect(byDate.get('2026-02-03')?.snapshotDate).toBe('2026-01-31')
+      expect(byDate.get('2026-02-03')?.keep).toBe(true)
+      // The first TRUE February snapshot is kept as first-of-month…
+      expect(byDate.get('2026-02-04')?.keep).toBe(true)
+      expect(byDate.get('2026-02-04')?.reason).toMatch(/first-of-month/i)
+      // …the February month-end is kept…
+      expect(byDate.get('2026-02-28')?.keep).toBe(true)
+      // …and the interior February daily is pruned.
+      expect(byDate.get('2026-02-20')?.keep).toBe(false)
     })
   })
 
@@ -551,7 +645,7 @@ describe('PruneService', () => {
       ] as ClosingDateEntry[],
     }
 
-    /** April + May fully closed (month-end + penultimate + a daily each). */
+    /** April + May fully closed (first-of-month + interior + month-end each). */
     async function createCompletedAprilMay(): Promise<void> {
       for (const date of [
         '2026-04-15',
@@ -586,12 +680,15 @@ describe('PruneService', () => {
         expect(c?.reason).toContain('2026-05-31')
       }
 
-      // Completed-month behavior unchanged: April/May dailies still thinned,
-      // month-end and penultimate keeps keep their original reasons.
-      expect(byDate.get('2026-04-15')?.keep).toBe(false)
-      expect(byDate.get('2026-05-15')?.keep).toBe(false)
+      // Completed-month behavior (#1280): the interior daily is thinned,
+      // while the first-of-month and month-end are both kept.
+      expect(byDate.get('2026-04-29')?.keep).toBe(false) // interior, thinned
+      expect(byDate.get('2026-05-30')?.keep).toBe(false) // old penultimate, thinned
+      expect(byDate.get('2026-04-15')?.keep).toBe(true)
+      expect(byDate.get('2026-04-15')?.reason).toMatch(/first-of-month/i)
+      expect(byDate.get('2026-05-15')?.keep).toBe(true)
+      expect(byDate.get('2026-05-15')?.reason).toMatch(/first-of-month/i)
       expect(byDate.get('2026-05-31')?.reason).toContain('Month-end')
-      expect(byDate.get('2026-05-30')?.reason).toContain('Penultimate')
 
       // No silent keeps: every classification carries a non-empty reason.
       for (const c of classifications) {
@@ -616,12 +713,13 @@ describe('PruneService', () => {
 
     it('treats a closing-remapped month-end as the completed-month boundary', async () => {
       // raw 2026-06-03 → snapshot 2026-05-31 (May closing): May is closed,
-      // so its daily is thinned, while June dailies stay protected.
+      // so its interior daily is thinned, while June dailies stay protected.
       await createRawCsvDate('2026-06-03', {
         isClosingPeriod: true,
         dataMonth: '2026-05',
       })
-      await createRawCsvDate('2026-05-15')
+      await createRawCsvDate('2026-05-15') // May first-of-month (kept #1280)
+      await createRawCsvDate('2026-05-20') // May interior (thinned — proves boundary set)
       await createRawCsvDate('2026-06-08')
 
       const service = new PruneService({ cacheDir: testDir, ...ctx })
@@ -630,7 +728,11 @@ describe('PruneService', () => {
 
       expect(byDate.get('2026-06-03')?.snapshotDate).toBe('2026-05-31')
       expect(byDate.get('2026-06-03')?.keep).toBe(true)
-      expect(byDate.get('2026-05-15')?.keep).toBe(false)
+      // May's first-of-month is kept (#1280) but NOT in-progress-protected —
+      // the boundary was set by the closing remap, so the month is thinnable.
+      expect(byDate.get('2026-05-15')?.keep).toBe(true)
+      expect(byDate.get('2026-05-15')?.reason).toMatch(/first-of-month/i)
+      expect(byDate.get('2026-05-20')?.keep).toBe(false) // interior thinned
       expect(byDate.get('2026-06-08')?.keep).toBe(true)
       expect(byDate.get('2026-06-08')?.reason).toMatch(/in-progress month/i)
     })
@@ -675,7 +777,8 @@ describe('PruneService', () => {
       // May's closing window → snapshot 2026-05-31. That month-end is
       // registry-proven, so May's dailies are thinnable.
       await createRawCsvDateWithoutMetadata('2026-06-03')
-      await createRawCsvDate('2026-05-15')
+      await createRawCsvDate('2026-05-15') // May first-of-month (kept #1280)
+      await createRawCsvDate('2026-05-20') // May interior (thinned — proves boundary set)
 
       const service = new PruneService({ cacheDir: testDir, ...ctx })
       const classifications = await service.classifyAll()
@@ -683,7 +786,11 @@ describe('PruneService', () => {
 
       expect(byDate.get('2026-06-03')?.snapshotDate).toBe('2026-05-31')
       expect(byDate.get('2026-06-03')?.keep).toBe(true)
-      expect(byDate.get('2026-05-15')?.keep).toBe(false)
+      // May is thinnable (boundary set): its interior is dropped while the
+      // first-of-month is kept by the #1280 rule, not in-progress protection.
+      expect(byDate.get('2026-05-15')?.keep).toBe(true)
+      expect(byDate.get('2026-05-15')?.reason).toMatch(/first-of-month/i)
+      expect(byDate.get('2026-05-20')?.keep).toBe(false)
     })
 
     it('a destructive prune never deletes in-progress month dates', async () => {
@@ -694,7 +801,8 @@ describe('PruneService', () => {
       const service = new PruneService({ cacheDir: testDir, ...ctx })
       const result = await service.prune(false)
 
-      expect(result.deletedRawCsv).toEqual(['2026-04-15', '2026-05-15'])
+      // The interior dailies are thinned; first-of-month + month-end kept (#1280).
+      expect(result.deletedRawCsv).toEqual(['2026-04-29', '2026-05-30'])
       expect(result.deletedRawCsv).not.toContain('2026-06-10')
       expect(result.deletedSnapshots).not.toContain('2026-06-10')
 
@@ -783,7 +891,9 @@ describe('PruneService', () => {
       expect(skeleton).toHaveLength(5)
       const byDate = new Map(skeleton.map(c => [c.rawCsvDate, c]))
       expect(byDate.get('2026-01-31')?.keep).toBe(true)
-      expect(byDate.get('2026-03-15')?.keep).toBe(false)
+      // 03-15 is March's only non-month-end snapshot → its first-of-month (#1280)
+      expect(byDate.get('2026-03-15')?.keep).toBe(true)
+      expect(byDate.get('2026-03-15')?.reason).toMatch(/first-of-month/i)
       expect(byDate.get('2026-02-03')?.snapshotDate).toBe('2026-01-31')
       expect(byDate.get('2026-02-13')?.keep).toBe(true)
       expect(byDate.get('2026-02-13')?.reason).toContain('Protected')
