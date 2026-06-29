@@ -12,7 +12,10 @@
  * The prune logic:
  * 1. List all raw-csv/{date}/ directories
  * 2. For each, read metadata.json to detect closing period → snapshot date
- * 3. Keep dates whose snapshot date is a month-end (last day of month)
+ * 3. Keep two snapshots per month (#1280): the month-end (last day) AND the
+ *    first available snapshot of the month (earliest snapshotDate in the
+ *    month group — a set-level decision, see applyFirstOfMonthKeep). This
+ *    replaced the old {penultimate, month-end} pair (#203).
  * 4. Delete raw-csv/{date}/ for non-keepers
  * 5. Delete snapshots/{snapshot-date}/ for non-keepers
  * 6. Regenerate CDN manifests and indexes after pruning
@@ -200,6 +203,51 @@ export function applyInProgressMonthExemption(
   return classifications
 }
 
+/**
+ * First-of-month keep (#1280), applied over a full classification set.
+ *
+ * The second per-month retention anchor (replacing the old penultimate, #203):
+ * for each calendar month present, keep the EARLIEST available snapshot —
+ * the "new cycle started" anchor, a far better change-digest delta partner
+ * than the near-redundant day-before-month-end.
+ *
+ * This is SET-relative, not a per-date predicate: the keeper is whichever
+ * date has the minimum `snapshotDate` within its YYYY-MM group, so it falls
+ * out naturally even when no calendar "1st" was ever collected. Grouping on
+ * `snapshotDate` (post-closing-remap) — never `rawCsvDate` — means a date
+ * collected early next month but remapped back to the prior month-end belongs
+ * to the prior month's group, not this one (the closing-window invariant).
+ *
+ * Purely additive: it only ever sets `keep = true`, never false, so it can
+ * never move a destructive boundary (Lesson 163) — an already-kept earliest
+ * date (in-progress-protected, or a single-snapshot month whose first IS its
+ * month-end) keeps its existing reason. Apply AFTER
+ * applyInProgressMonthExemption so a live-month daily that is also its month's
+ * earliest retains the in-progress reason.
+ *
+ * Mutates and returns the same array (classifyAll's single consumer).
+ */
+export function applyFirstOfMonthKeep(
+  classifications: DateClassification[]
+): DateClassification[] {
+  const earliestByMonth = new Map<string, DateClassification>()
+  for (const c of classifications) {
+    const month = c.snapshotDate.slice(0, 7)
+    const existing = earliestByMonth.get(month)
+    if (!existing || c.snapshotDate < existing.snapshotDate) {
+      earliestByMonth.set(month, c)
+    }
+  }
+
+  for (const c of earliestByMonth.values()) {
+    if (c.keep) continue
+    c.keep = true
+    c.reason = `First-of-month snapshot (${c.snapshotDate}) — first available of ${c.snapshotDate.slice(0, 7)} (#1280)`
+  }
+
+  return classifications
+}
+
 export class PruneService {
   private readonly cacheDir: string
   private readonly logger: Logger
@@ -246,7 +294,9 @@ export class PruneService {
   /**
    * Classify a single raw-csv date for pruning.
    *
-   * Keeps both month-end AND penultimate dates (#203).
+   * Per-date keep is month-end only (#1280). The first-of-month second anchor
+   * is a set-level decision (applyFirstOfMonthKeep in classifyAll), so a lone
+   * mid-month date classified here is NOT a keeper on its own.
    */
   async classifyDate(rawCsvDate: string): Promise<DateClassification> {
     const metadata = await this.readMetadata(rawCsvDate)
@@ -280,8 +330,11 @@ export class PruneService {
 
     const snapshotDate = closingInfo.snapshotDate
     const isMonthEnd = isLastDayOfMonth(snapshotDate)
-    const isPenultimate = isPenultimateDayOfMonth(snapshotDate)
-    const keep = isMonthEnd || isPenultimate
+    // Per-date keep is month-end only (#1280). The second per-month anchor —
+    // the first available snapshot of the month — is a SET-level decision
+    // (applyFirstOfMonthKeep), not a per-date predicate, so it is applied in
+    // classifyAll, not here. The old penultimate keeper is retired (#203 → #1280).
+    const keep = isMonthEnd
 
     return {
       rawCsvDate,
@@ -292,9 +345,7 @@ export class PruneService {
       mappingProven: true,
       reason: isMonthEnd
         ? `Month-end snapshot (${snapshotDate})`
-        : isPenultimate
-          ? `Penultimate snapshot (${snapshotDate})`
-          : `Non-month-end snapshot (${snapshotDate})`,
+        : `Non-month-end snapshot (${snapshotDate})`,
     }
   }
 
@@ -375,7 +426,11 @@ export class PruneService {
       classifications.push(await this.classifyDate(date))
     }
 
-    return applyInProgressMonthExemption(classifications)
+    // Order matters: in-progress exemption (#1178) first so a live-month
+    // daily keeps its in-progress reason; then the first-of-month keep
+    // (#1280) adds each completed month's earliest snapshot as the second
+    // anchor alongside its month-end. Both passes are additive-keep only.
+    return applyFirstOfMonthKeep(applyInProgressMonthExemption(classifications))
   }
 
   /**
