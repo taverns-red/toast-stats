@@ -37,6 +37,44 @@ export interface ProgramYearResolution {
   programYear: string
   /** True when the calendar year was empty and we fell back to the prior year. */
   fellBack: boolean
+  /**
+   * The validated districtsummary CSV body for `programYear`, or undefined when
+   * neither year returned valid data (callers must then fail loudly).
+   */
+  content?: string
+}
+
+/**
+ * Extract the sorted, de-duplicated list of district IDs from a districtsummary
+ * CSV. Returns [] for anything that isn't a valid districtsummary (missing
+ * DISTRICT column, HTML error page, empty) — never throws (#1284).
+ */
+export function parseDistrictIdsFromSummaryCsv(
+  content: string | undefined | null
+): string[] {
+  if (!content) return []
+  const lines = content.trim().split(/\r?\n/)
+  if (lines.length < 2) return []
+  const headers = lines[0]!
+    .split(',')
+    .map(h => h.replace(/"/g, '').trim().toUpperCase())
+  const col = headers.indexOf('DISTRICT')
+  if (col === -1) return []
+
+  const ids = [
+    ...new Set(
+      lines
+        .slice(1)
+        .map(l => l.split(',')[col]?.replace(/"/g, '').trim() ?? '')
+        .filter(id => /^[A-Z0-9]+$/i.test(id))
+    ),
+  ]
+  ids.sort((a, b) => {
+    const na = parseInt(a, 10)
+    const nb = parseInt(b, 10)
+    return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb
+  })
+  return ids
 }
 
 /**
@@ -57,7 +95,11 @@ export async function resolveActiveProgramYear(
 
   const calendarContent = await tryFetch(fetchSummary, calendarPY, date)
   if (isValidDistrictSummaryCsv(calendarContent)) {
-    return { programYear: calendarPY, fellBack: false }
+    return {
+      programYear: calendarPY,
+      fellBack: false,
+      content: calendarContent,
+    }
   }
 
   const priorPY = getPriorProgramYear(calendarPY)
@@ -75,7 +117,7 @@ export async function resolveActiveProgramYear(
         programYear: priorPY,
       }
     )
-    return { programYear: priorPY, fellBack: true }
+    return { programYear: priorPY, fellBack: true, content: priorContent }
   }
 
   // Neither validated: return the calendar year so downstream fails loudly with

@@ -334,6 +334,98 @@ export function createCLI(): Command {
       emitJsonAndExit(summary, exitCode)
     })
 
+  // Discover the in-scope districts for a date from the Toastmasters
+  // districtsummary CSV, resolving the active program year by data (#1284).
+  // Replaces the pipeline's fragile inline-node discovery: robust to the HTML
+  // error page TM serves for an unpublished program year, and falls back to the
+  // prior year during the July rollover window.
+  program
+    .command('discover-districts')
+    .description(
+      'Discover district IDs from the Toastmasters districtsummary CSV, ' +
+        'resolving the active program year by data (#1284)'
+    )
+    .option(
+      '-d, --date <YYYY-MM-DD>',
+      'Target date (default: today)',
+      (value: string) => {
+        if (!validateDateFormat(value)) {
+          console.error(
+            `Error: Invalid date format "${value}". Use YYYY-MM-DD.`
+          )
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+        return value
+      }
+    )
+    .option('-v, --verbose', 'Enable detailed logging output', false)
+    .action(async (options: { date?: string; verbose?: boolean }) => {
+      const targetDate = options.date ?? getCurrentDateString()
+
+      const { HttpCsvDownloader } =
+        await import('./services/HttpCsvDownloader.js')
+      const { resolveActiveProgramYear, parseDistrictIdsFromSummaryCsv } =
+        await import('./utils/programYearResolver.js')
+
+      const downloader = new HttpCsvDownloader({
+        ratePerSecond: 5,
+        cooldownEvery: 50,
+        cooldownMs: 3000,
+        maxRetries: 3,
+      })
+      const resolution = await resolveActiveProgramYear(
+        targetDate,
+        async programYear => {
+          const result = await downloader.downloadCsv({
+            programYear,
+            reportType: 'districtsummary',
+            date: new Date(targetDate + 'T00:00:00'),
+          })
+          return result.content
+        }
+      )
+
+      const districts = parseDistrictIdsFromSummaryCsv(resolution.content)
+
+      if (options.verbose) {
+        console.error(
+          `[INFO] discover-districts date=${targetDate} ` +
+            `programYear=${resolution.programYear} fellBack=${resolution.fellBack} ` +
+            `count=${districts.length}`
+        )
+      }
+
+      if (districts.length === 0) {
+        console.error(
+          `Error: No districts discovered for ${targetDate}. The Toastmasters ` +
+            `dashboard for program year ${resolution.programYear} returned no ` +
+            `valid districtsummary data.`
+        )
+        emitJsonAndExit(
+          {
+            date: targetDate,
+            programYear: resolution.programYear,
+            fellBack: resolution.fellBack,
+            districts: '',
+            count: 0,
+          },
+          ExitCode.COMPLETE_FAILURE
+        )
+        return
+      }
+
+      emitJsonAndExit(
+        {
+          date: targetDate,
+          programYear: resolution.programYear,
+          fellBack: resolution.fellBack,
+          districts: districts.join(','),
+          count: districts.length,
+        },
+        ExitCode.SUCCESS
+      )
+    })
+
   // Add status command for checking cache status
   program
     .command('status')

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   isValidDistrictSummaryCsv,
+  parseDistrictIdsFromSummaryCsv,
   resolveActiveProgramYear,
 } from '../programYearResolver.js'
 
@@ -31,6 +32,27 @@ describe('isValidDistrictSummaryCsv', () => {
   })
 })
 
+describe('parseDistrictIdsFromSummaryCsv', () => {
+  it('extracts sorted, de-duplicated district IDs from a real CSV', () => {
+    const csv = `"REGION","DISTRICT","Paid Clubs"
+"14","118","201"
+"01","02","192"
+"01","02","192"
+"DNAR","U","37"`
+    expect(parseDistrictIdsFromSummaryCsv(csv)).toEqual(['02', '118', 'U'])
+  })
+
+  it('returns [] for the HTML error page (no DISTRICT column) — never throws', () => {
+    expect(parseDistrictIdsFromSummaryCsv(HTML_ERROR)).toEqual([])
+  })
+
+  it('returns [] for empty / header-only / nullish content', () => {
+    expect(parseDistrictIdsFromSummaryCsv('')).toEqual([])
+    expect(parseDistrictIdsFromSummaryCsv('"REGION","DISTRICT"')).toEqual([])
+    expect(parseDistrictIdsFromSummaryCsv(undefined)).toEqual([])
+  })
+})
+
 describe('resolveActiveProgramYear', () => {
   it('uses the calendar program year when its dashboard has data', async () => {
     const fetchSummary = vi.fn(async () => REAL_CSV)
@@ -38,6 +60,7 @@ describe('resolveActiveProgramYear', () => {
 
     expect(res.programYear).toBe('2025-2026')
     expect(res.fellBack).toBe(false)
+    expect(res.content).toBe(REAL_CSV)
     expect(fetchSummary).toHaveBeenCalledTimes(1)
     expect(fetchSummary).toHaveBeenCalledWith('2025-2026')
   })
@@ -52,6 +75,7 @@ describe('resolveActiveProgramYear', () => {
 
     expect(res.programYear).toBe('2025-2026')
     expect(res.fellBack).toBe(true)
+    expect(res.content).toBe(REAL_CSV)
     expect(fetchSummary).toHaveBeenCalledWith('2026-2027')
     expect(fetchSummary).toHaveBeenCalledWith('2025-2026')
   })
@@ -82,5 +106,6 @@ describe('resolveActiveProgramYear', () => {
 
     expect(res.programYear).toBe('2026-2027')
     expect(res.fellBack).toBe(false)
+    expect(res.content).toBeUndefined()
   })
 })
