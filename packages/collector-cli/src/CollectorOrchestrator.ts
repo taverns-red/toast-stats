@@ -40,6 +40,7 @@ import {
   buildMetadataPath,
   calculateProgramYear,
 } from './utils/CachePaths.js'
+import { resolveActiveProgramYear } from './utils/programYearResolver.js'
 /**
  * District configuration file structure
  * Matches the backend's DistrictConfigurationService format
@@ -276,7 +277,8 @@ export class CollectorOrchestrator {
   private async scrapeAllDistricts(
     downloader: HttpCsvDownloader,
     date: string,
-    force: boolean
+    force: boolean,
+    programYear: string
   ): Promise<DistrictScrapeResult> {
     const startTime = Date.now()
     const timestamp = new Date().toISOString()
@@ -306,7 +308,6 @@ export class CollectorOrchestrator {
 
       const retryResult = await RetryManager.executeWithRetry(
         async () => {
-          const programYear = calculateProgramYear(date)
           const result = await downloader.downloadCsv({
             programYear,
             reportType: 'districtsummary',
@@ -383,7 +384,8 @@ export class CollectorOrchestrator {
     downloader: HttpCsvDownloader,
     districtId: string,
     date: string,
-    force: boolean
+    force: boolean,
+    programYear: string
   ): Promise<DistrictScrapeResult> {
     const startTime = Date.now()
     const timestamp = new Date().toISOString()
@@ -412,7 +414,6 @@ export class CollectorOrchestrator {
 
       const retryResult = await RetryManager.executeWithRetry(
         async () => {
-          const programYear = calculateProgramYear(date)
           const reportTypes: Array<{ report: HttpReportType; csv: CSVType }> = [
             { report: 'clubperformance', csv: CSVType.CLUB_PERFORMANCE },
             {
@@ -596,6 +597,31 @@ export class CollectorOrchestrator {
     // Initialize HTTP downloader
     const downloader = this.initDownloader()
 
+    // Resolve the *active* program year by data, not the calendar (#1284).
+    // At the July rollover the calendar year has no published dashboard yet;
+    // June's close is still live under the prior year. Resolving once here and
+    // threading it means every fetch (all-districts + per-district) and the
+    // stored metadata agree on the year we actually scraped.
+    const { programYear: activeProgramYear, fellBack } =
+      await resolveActiveProgramYear(date, async programYear => {
+        const result = await downloader.downloadCsv({
+          programYear,
+          reportType: 'districtsummary',
+          date: new Date(date + 'T00:00:00'),
+        })
+        return result.content
+      })
+    if (fellBack) {
+      logger.warn(
+        'Scraping the prior program year — new program year not yet published (#1284)',
+        {
+          date,
+          calendarProgramYear: calculateProgramYear(date),
+          activeProgramYear,
+        }
+      )
+    }
+
     // Process districts sequentially with error isolation
     const results: DistrictScrapeResult[] = []
     const errors: Array<{
@@ -609,7 +635,8 @@ export class CollectorOrchestrator {
     const allDistrictsResult = await this.scrapeAllDistricts(
       downloader,
       date,
-      force
+      force,
+      activeProgramYear
     )
     if (allDistrictsResult.success) {
       allCacheLocations.push(...allDistrictsResult.cacheLocations)
@@ -644,7 +671,14 @@ export class CollectorOrchestrator {
 
       try {
         const result = await this.circuitBreaker.execute(
-          () => this.scrapeDistrict(downloader, districtId, date, force),
+          () =>
+            this.scrapeDistrict(
+              downloader,
+              districtId,
+              date,
+              force,
+              activeProgramYear
+            ),
           { districtId, date }
         )
 
@@ -757,7 +791,7 @@ export class CollectorOrchestrator {
         const metadata: Record<string, unknown> = {
           date,
           timestamp: Date.now(),
-          programYear: calculateProgramYear(date),
+          programYear: activeProgramYear,
           ...(isClosingPeriod !== undefined ? { isClosingPeriod } : {}),
           ...(dataMonth ? { dataMonth } : {}),
           csvFiles: {
