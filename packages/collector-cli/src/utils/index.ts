@@ -31,3 +31,8 @@ export {
   ClosingPeriodUndecidedError,
   type ClosingWindowVerdict,
 } from './closingWindowResolver.js'
+export {
+  isValidDistrictSummaryCsv,
+  resolveActiveProgramYear,
+  type ProgramYearResolution,
+} from './programYearResolver.js'
