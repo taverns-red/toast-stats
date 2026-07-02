@@ -396,11 +396,37 @@ describe('evaluateClosingAutoAllow — edges (decision doc §8.3)', () => {
     expect(res.reasons.join(' ')).toMatch(/cap/i)
   })
 
-  it('blocks base drift (paymentBase moved)', () => {
+  it('allows base drift during closing — bases reconcile too (#1289)', () => {
+    // paymentBase 4800→4801: bases legitimately move during the closing window
+    // (this is the only time CPAA runs). Operator decision 2026-07-02.
     const [s, p] = syntheticPair({ paymentBase: 4801 })
     const res = evaluateClosingAutoAllow(s, p)
+    expect(res.allowed).toBe(true)
+    // recorded as provenance
+    expect(
+      res.deltas.some(d => d.field === 'paymentBase' && d.delta === 1)
+    ).toBe(true)
+  })
+
+  it('allows a large base move during closing — any magnitude (#1289)', () => {
+    // No cap on base during closing (operator: "lots of change in July").
+    const [s, p] = syntheticPair({ paidClubBase: 40 }) // prod 98 → 40
+    const res = evaluateClosingAutoAllow(s, p)
+    expect(res.allowed).toBe(true)
+    expect(
+      res.deltas.some(d => d.field === 'paidClubBase' && d.delta === -58)
+    ).toBe(true)
+  })
+
+  it('still blocks a base optionality transition (structural, not reconciliation) (#1289)', () => {
+    // A base field vanishing is a schema/code change, not data reconciliation.
+    const [s, p] = syntheticPair(
+      { paymentBase: undefined as unknown as number },
+      {}
+    )
+    const res = evaluateClosingAutoAllow(s, p)
     expect(res.allowed).toBe(false)
-    expect(res.reasons.join(' ')).toMatch(/base/i)
+    expect(res.reasons.join(' ')).toMatch(/optionality/i)
   })
 
   it('blocks identity drift (districtName changed)', () => {

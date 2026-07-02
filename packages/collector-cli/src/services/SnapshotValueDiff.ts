@@ -57,7 +57,8 @@ export const FIELD_CLASSIFICATION: Record<string, FieldClass> = {
   smedleyDistinguished: 'counter',
   clubsWith20PlusMembers: 'counter',
   newCharteredClubs: 'counter',
-  // Bases — fixed at program-year start; any move is an anomaly
+  // Bases — reconcile during the closing window (the only time CPAA runs);
+  // base value moves are allowed as provenance, any magnitude (#1289).
   paidClubBase: 'base',
   paymentBase: 'base',
   // Plan booleans — one-way false→true
@@ -168,7 +169,7 @@ export interface ClosingAutoAllowResult {
  * identical, and every changed field obeys its class rule:
  *
  *   counter      |Δ| ≤ max(50, 10% × prod)   (direction-agnostic, #1092)
- *   base         must be equal
+ *   base         any move allowed as provenance (reconciles during closing, #1289)
  *   identity     must be equal
  *   planBoolean  false→true allowed; true→false blocks
  *   derived      excluded (zero-sum re-derivations)
@@ -298,10 +299,18 @@ export function evaluateClosingAutoAllow(
           break
         }
         case 'base':
-          reasons.push(
-            `${date} D${id} ${field}: base drift ${String(prodValue)}→` +
-              `${String(stagingValue)} blocks (fixed at program-year start)`
-          )
+          // Bases reconcile during the closing window too — and CPAA only ever
+          // runs on closing-pinned dates, so a base move here is routine
+          // reconciliation, not an anomaly. Allow any magnitude/direction and
+          // record it as provenance (operator decision 2026-07-02, #1289). A
+          // base optionality transition still blocks above (structural change).
+          deltas.push({
+            districtId: id,
+            field,
+            prod: prodValue as number,
+            staging: stagingValue as number,
+            delta: (stagingValue as number) - (prodValue as number),
+          })
           break
         case 'identity':
           reasons.push(
