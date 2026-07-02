@@ -81,6 +81,7 @@ Read `tasks/rules.md` completely before every task. Key rules:
 - DCP goals are **independent**, not sequential. Use `clubPerformance` raw fields, never infer count as Goals 1-N.
 - Chart `|| 1` range fallback causes y-axis inversion. Pad symmetrically when `range === 0`.
 - `Path.join()` with raw user input = path traversal. Always call `validateDistrictId()` first.
+- **Program year is resolved by data, not the calendar, at the fetch path (#1284).** TM's rollover lags July 1 — June's close stays live under the prior PY into late July while the new PY's dashboard 302-redirects to an error page (a 200 HTML body, so a successful fetch ≠ valid data). `resolveActiveProgramYear` probes the calendar PY, validates the districtsummary content (header must contain `DISTRICT`), and falls back to `getPriorProgramYear(...)`; it's self-healing. Resolve **once per run** in `CollectorOrchestrator.scrape()` and thread it — don't recompute `calculateProgramYear(date)` per fetch site (they'd disagree at the boundary). Keep `calculateProgramYear` calendar-pure (cache paths/history depend on it). Discovery goes through `collector-cli discover-districts`, not inline node.
 
 ### Test-infra contracts (flakiness epic #917 — don't unknowingly break)
 
