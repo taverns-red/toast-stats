@@ -8,6 +8,9 @@
 **direction-agnostic** — see [Amendment](#amendment-2026-06-04-1092--decreases-are-normal-the-counter-rule-is-direction-agnostic)
 at the end of this doc. §3(b)'s "decreases must still block" reading and §4's
 decrease floor are superseded.
+**Amended 2026-07-02 (#1289):** the §4 **base** rule is now **any move allowed**
+(bases reconcile during closing) — see [Amendment](#amendment-2026-07-02-1289--bases-reconcile-during-closing)
+at the end of this doc.
 
 ## 1. Problem (verified)
 
@@ -89,13 +92,13 @@ read errors) is unchanged.
    disappearing on an overlap date blocks (the #1034 D61 protection).
 3. Per district, per field, by class:
 
-| Field class       | Fields                                                                                                                                                                                                                                                                           | Rule                                                                    |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Counters**      | `paidClubs`, `activeClubs`, `totalPayments`, `newPayments`, `aprilPayments`, `octoberPayments`, `latePayments`, `charterPayments`, `distinguishedClubs`, `selectDistinguished`, `presidentsDistinguished`, `smedleyDistinguished`, `clubsWith20PlusMembers`, `newCharteredClubs` | `0 ≤ Δ ≤ max(50, 10% × prodValue)` — non-decreasing, magnitude-capped   |
-| **Bases**         | `paidClubBase`, `paymentBase`                                                                                                                                                                                                                                                    | Must be **equal** (fixed at program-year start; any move is an anomaly) |
-| **Identity**      | `districtId`, `districtName`, `region`                                                                                                                                                                                                                                           | Must be **equal**                                                       |
-| **Plan booleans** | `dspSubmitted`, `trainingMet`, `marketAnalysisSubmitted`, `communicationPlanSubmitted`, `regionAdvisorVisitMet`                                                                                                                                                                  | `false→true` allowed; `true→false` blocks                               |
-| **Derived**       | `clubGrowthPercent`, `paymentGrowthPercent`, `distinguishedPercent`, `clubsRank`, `paymentsRank`, `distinguishedRank`, `overallRank`, `aggregateScore`                                                                                                                           | **Excluded** from the check (re-derived, zero-sum across districts)     |
+| Field class       | Fields                                                                                                                                                                                                                                                                           | Rule                                                                           |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Counters**      | `paidClubs`, `activeClubs`, `totalPayments`, `newPayments`, `aprilPayments`, `octoberPayments`, `latePayments`, `charterPayments`, `distinguishedClubs`, `selectDistinguished`, `presidentsDistinguished`, `smedleyDistinguished`, `clubsWith20PlusMembers`, `newCharteredClubs` | `0 ≤ Δ ≤ max(50, 10% × prodValue)` — non-decreasing, magnitude-capped          |
+| **Bases**         | `paidClubBase`, `paymentBase`                                                                                                                                                                                                                                                    | **Any move allowed** as provenance (reconciles during closing — amended #1289) |
+| **Identity**      | `districtId`, `districtName`, `region`                                                                                                                                                                                                                                           | Must be **equal**                                                              |
+| **Plan booleans** | `dspSubmitted`, `trainingMet`, `marketAnalysisSubmitted`, `communicationPlanSubmitted`, `regionAdvisorVisitMet`                                                                                                                                                                  | `false→true` allowed; `true→false` blocks                                      |
+| **Derived**       | `clubGrowthPercent`, `paymentGrowthPercent`, `distinguishedPercent`, `clubsRank`, `paymentsRank`, `distinguishedRank`, `overallRank`, `aggregateScore`                                                                                                                           | **Excluded** from the check (re-derived, zero-sum across districts)            |
 
 4. **Optionality transitions block:** a field `undefined` in one side and
    present in the other (in any class except Derived) ⇒ block. During closing
@@ -271,3 +274,25 @@ Residual risk (replaces §7 bullet 2): a genuine systematic error that moves
 every district **downward** ≤ cap during closing would now auto-promote, the
 mirror of §7 bullet 1's upward case — same mitigations (full delta
 provenance, deterministic re-derive recovery, historical dates still block).
+
+## Amendment 2026-07-02 (#1289) — bases reconcile during closing
+
+§4 originally classified `paidClubBase`/`paymentBase` as **must be equal**
+("fixed at program-year start; any move is an anomaly"). That premise is wrong
+for the closing window — **the only time CPAA runs**. Bases legitimately
+reconcile during closing (late charters, corrections), and the July
+program-year rollover in particular carries lots of change. The equality rule
+forced needless operator overrides during the busiest reconciliation period
+(it held the 2026-07-01 promotion on `2026-06-30 D85 paymentBase 4774→4769`, a
+−5 / 0.1% move).
+
+**Amended rule:** base value moves are **allowed, any magnitude/direction**,
+recorded as delta provenance in the run summary — never blocking. A base
+_optionality transition_ (a base field appearing/vanishing) still blocks: that
+is a schema/code change, not data reconciliation. Non-closing-pinned changed
+dates are unaffected (they block earlier as a re-derive review).
+
+Residual risk: a re-derive bug that corrupts a base (collapse-to-zero, ×10)
+during closing would now auto-promote. Accepted by the operator — promotion is
+recoverable (deterministic re-derive from raw-csv + re-promote), moves are in
+the provenance table, and historical-date changes still block.
