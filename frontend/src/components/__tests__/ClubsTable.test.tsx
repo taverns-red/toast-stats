@@ -49,9 +49,15 @@ const createMockClub = (overrides: Partial<ClubTrend> = {}): ClubTrend => ({
 describe('ClubsTable', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Pin "now" to the confirmed window (Apr–Jun) so createMockClub's
+    // new Date() trend dates yield confirmed (non-provisional) Distinguished
+    // tiers deterministically across the program-year rollover (#1285).
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-05-15T00:00:00Z'))
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     cleanup()
     vi.restoreAllMocks()
   })

@@ -102,9 +102,15 @@ const createWrapper = () => {
 describe('useAvailableProgramYears', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Pin "now" inside PY 2025-2026 so completeness/current-year assertions are
+    // deterministic across the program-year rollover (#1285). shouldAdvanceTime
+    // keeps React Query's async waitFor working under fake timers.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2025-12-01T00:00:00Z'))
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.resetAllMocks()
   })
 
