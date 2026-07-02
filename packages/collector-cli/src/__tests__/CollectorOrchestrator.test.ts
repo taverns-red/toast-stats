@@ -20,6 +20,16 @@ let failingDistricts = new Set<string>()
 const DEFAULT_MOCK_CSV = `Header\nRow1\nMonth of December, As of 01/11/2026`
 let mockCsvContent = DEFAULT_MOCK_CSV
 
+// Optional per-program-year content override (rollover tests, #1284). When set,
+// downloadCsv returns the mapped content for spec.programYear, else falls back
+// to mockCsvContent. Every downloadCsv spec is recorded for assertions.
+let mockCsvByProgramYear: Record<string, string> | null = null
+let capturedDownloadSpecs: Array<{
+  reportType: string
+  programYear: string
+  districtId?: string
+}> = []
+
 vi.mock('../services/HttpCsvDownloader.js', () => {
   return {
     parseClosingPeriodFromCsv: (content: string, fetchDate: string) => {
@@ -81,15 +91,22 @@ vi.mock('../services/HttpCsvDownloader.js', () => {
         programYear: string
       }) {
         this.requestCount++
+        capturedDownloadSpecs.push({
+          reportType: spec.reportType,
+          programYear: spec.programYear,
+          districtId: spec.districtId,
+        })
 
         if (spec.districtId && failingDistricts.has(spec.districtId)) {
           throw new Error(`Simulated failure for district ${spec.districtId}`)
         }
 
         // Return mock CSV content (default has a closing-period footer)
+        const content =
+          mockCsvByProgramYear?.[spec.programYear] ?? mockCsvContent
         return {
           url: `https://example.com/${spec.reportType}`,
-          content: mockCsvContent,
+          content,
           statusCode: 200,
           byteSize: 12,
         }
@@ -117,6 +134,8 @@ describe('CollectorOrchestrator - Partial Failure Resilience (#124)', () => {
     await fs.mkdir(path.dirname(testConfigPath), { recursive: true })
     failingDistricts = new Set()
     mockCsvContent = DEFAULT_MOCK_CSV
+    mockCsvByProgramYear = null
+    capturedDownloadSpecs = []
   })
 
   afterEach(async () => {
@@ -269,6 +288,59 @@ describe('CollectorOrchestrator - Partial Failure Resilience (#124)', () => {
     expect(csvFiles['allDistricts']).toBe(true)
     const districts = csvFiles['districts'] as Record<string, unknown>
     expect(districts['09']).toBeDefined()
+  })
+
+  it('scrapes the prior program year at the July rollover when the new year is unpublished (#1284)', async () => {
+    // 2026-07-01: calendar PY 2026-2027 is not published yet — TM serves an
+    // HTML error page. June's close is still live under prior PY 2025-2026.
+    // Full month name here: this file's simplified mock parser matches full
+    // names only. The real parser's "Jun" abbreviation + rollover handling is
+    // covered authoritatively in csvFooterParser.test.ts.
+    const priorCsv = `"REGION","DISTRICT","Paid Clubs"
+"01","02","192"
+Month of June, As of 07/01/2026`
+    mockCsvByProgramYear = {
+      '2026-2027': `<html><head><title>Object moved</title></head><body></body></html>`,
+      '2025-2026': priorCsv,
+    }
+
+    await createDistrictConfig(['09'])
+    const orchestrator = new CollectorOrchestrator(createConfig())
+    const result = await orchestrator.scrape({
+      date: '2026-07-01',
+      force: true,
+    })
+    await orchestrator.close()
+
+    expect(result.success).toBe(true)
+
+    // Every real fetch (all-districts + per-district reports) must target the
+    // prior program year, never the unpublished calendar year.
+    const reportFetches = capturedDownloadSpecs.filter(
+      s => s.reportType !== 'districtsummary' || s.districtId !== undefined
+    )
+    expect(reportFetches.length).toBeGreaterThan(0)
+    for (const spec of capturedDownloadSpecs) {
+      if (spec.programYear === '2026-2027') {
+        // Only the initial resolution probe is allowed to touch the new year.
+        expect(spec.reportType).toBe('districtsummary')
+        expect(spec.districtId).toBeUndefined()
+      }
+    }
+    expect(capturedDownloadSpecs.some(s => s.programYear === '2025-2026')).toBe(
+      true
+    )
+
+    // Metadata records the year actually scraped (not the calendar year). The
+    // June-footer → closing-period remap is proven against the real parser in
+    // csvFooterParser.test.ts; this file's mock parser is not TZ-safe.
+    const metadata = JSON.parse(
+      await fs.readFile(
+        path.join(testCacheDir, 'raw-csv', '2026-07-01', 'metadata.json'),
+        'utf-8'
+      )
+    ) as Record<string, unknown>
+    expect(metadata['programYear']).toBe('2025-2026')
   })
 
   it('should detect closing period and write dataMonth to metadata.json', async () => {

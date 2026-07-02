@@ -26,6 +26,19 @@ Month of December, As of 01/05/2026`
     expect(result.dataMonth).toBe('2025-12')
   })
 
+  it('remaps the July program-year rollover: prior-year "Month of Jun" → June close (#1284)', () => {
+    // Exact footer TM serves for the prior PY (2025-2026) on July 1, while the
+    // new PY dashboard is still unpublished. The June close must remain dated
+    // to June, not July 1.
+    const csv = `"REGION","DISTRICT","Paid Clubs"
+"01","02","192"
+Month of Jun, As of 07/01/2026`
+    const result = parseClosingPeriodFromCsv(csv, '2026-07-01')
+    expect(result.isClosingPeriod).toBe(true)
+    expect(result.dataMonth).toBe('2026-06')
+    expect(result.footerFound).toBe(true)
+  })
+
   it('detects closing period with abbreviated month name', () => {
     const csv = `Club Number
 Month of Mar, As of 04/01/2026`

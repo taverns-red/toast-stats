@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `resolve-the-active-program-year-by-data-not-the-calendar.md` — Resolve the active Toastmasters program year by probing data, not the calendar — TM's rollover lags July 1  (2026-07-02)
 - `a-delete-path-must-reconcile-derived-indexes-not-only-the-additive-path.md` — A delete/prune path must reconcile its derived indexes, not just the additive path  (2026-06-29)
 - `order-additive-set-level-keep-passes-by-whose-reason-should-win.md` — Order additive set-level keep passes by whose reason should win, and have later passes yield to already-set state  (2026-06-29)
 - `a-fail-closed-monitor-whose-single-read-can-fail-transiently-cries-wolf-pull-the-live-log-before-trusting-the-diagnosis.md` — A fail-closed monitor whose single read can fail transiently cries wolf; pull the live log before trusting the issue's diagnosis  (2026-06-27)
@@ -138,9 +139,9 @@
 - `ticket-helper-signatures-bend-to-the-real-data-shape.md` — A ticket's helper signature is a sketch; bend it to the real data shape  (2026-05-23)
 - `vitest-project-split-needs-a-partition-guard.md` — Splitting one test suite into named projects needs a partition guard, or files silently fall out of both  (2026-05-23)
 - `workspace-package-dist-is-gitignored-and-not-auto-rebuilt.md` — Workspace-package `dist/` is gitignored; local pre-push does not auto-rebuild  (2026-05-23)
-- `IA-tab-strip-retirement-test-cascade.md` — IA tab-strip retirement deletes more test code than the prod diff  (2026-05-22)
 - `axe-core-jsdom-and-the-allowlist-pattern.md` — axe-core in JSDOM + the allowlist-as-tracked-debt pattern  (2026-05-22)
 - `dark-mode-overrides-must-keep-up-with-component-color-utilities.md` — Dark-mode overrides must keep up with component color utilities  (2026-05-22)
+- `IA-tab-strip-retirement-test-cascade.md` — IA tab-strip retirement deletes more test code than the prod diff  (2026-05-22)
 - `intersectionobserver-callbacks-must-tolerate-test-local-mock-shapes.md` — IntersectionObserver callbacks must tolerate test-local mock shapes  (2026-05-22)
 - `jsdom-style-assertions-do-not-catch-positioning-bugs.md` — JSDOM style assertions don't catch positioning bugs  (2026-05-22)
 - `light-mode-small-text-tightening-thresholds.md` — Light-mode small-text contrast: where to tighten, where to stop  (2026-05-22)

@@ -183,33 +183,29 @@ jobs:
             DISTRICTS="${{ inputs.districts }}"
             echo "Using manual district override: ${DISTRICTS}"
           else
-            # Auto-discover districts from the Toastmasters districtsummary CSV
-            PROGRAM_YEAR=$(node -e "
-              const d = new Date('${TARGET_DATE}');
-              const y = d.getFullYear(); const m = d.getMonth();
-              console.log(m >= 6 ? y+'-'+(y+1) : (y-1)+'-'+y);
-            ")
-            DATE_FORMATTED=$(date -d "${TARGET_DATE}" +'%-m/%-d/%Y')
-            DISTRICTS_CSV_URL="https://dashboards.toastmasters.org/${PROGRAM_YEAR}/export.aspx?type=CSV&report=districtsummary~${DATE_FORMATTED}~~${PROGRAM_YEAR}"
+            # Auto-discover districts, resolving the active program year by data
+            # (#1284). At the July rollover the new PY has no dashboard yet, so
+            # this falls back to the prior PY (June's close is still live there).
+            echo "Discovering districts for ${TARGET_DATE}..."
+            set +e
+            DISCOVERY_JSON=$(npx collector-cli discover-districts --date "${TARGET_DATE}" --verbose)
+            DISCOVERY_STATUS=$?
+            set -e
+            if [ ${DISCOVERY_STATUS} -ne 0 ]; then
+              echo "::error::Failed to discover districts from Toastmasters CSV (exit ${DISCOVERY_STATUS})."
+              echo "${DISCOVERY_JSON}"
+              exit 1
+            fi
+            DISTRICTS=$(echo "${DISCOVERY_JSON}" | jq -r '.districts')
+            DISCOVERED_PY=$(echo "${DISCOVERY_JSON}" | jq -r '.programYear')
+            DISCOVERED_FELLBACK=$(echo "${DISCOVERY_JSON}" | jq -r '.fellBack')
 
-            echo "Discovering districts from: ${DISTRICTS_CSV_URL}"
-            DISTRICTS=$(curl -sf --retry 3 --max-time 30 "${DISTRICTS_CSV_URL}" | node -e "
-              const data = require('fs').readFileSync('/dev/stdin','utf8');
-              const lines = data.trim().split('\n');
-              const headers = lines[0].split(',').map(h => h.replace(/\"/g,'').trim());
-              const col = headers.indexOf('DISTRICT');
-              const ids = [...new Set(lines.slice(1)
-                .map(l => l.split(',')[col].replace(/\"/g,'').trim())
-                .filter(id => /^[A-Z0-9]+$/i.test(id)))];
-              ids.sort((a,b) => { const na=parseInt(a,10),nb=parseInt(b,10); return isNaN(na)||isNaN(nb)?a.localeCompare(b):na-nb; });
-              process.stdout.write(ids.join(','));
-            ")
-
-            if [ -z "${DISTRICTS}" ]; then
+            if [ -z "${DISTRICTS}" ] || [ "${DISTRICTS}" = "null" ]; then
               echo "::error::Failed to discover districts from Toastmasters CSV."
               exit 1
             fi
-            echo "Discovered $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ') districts"
+            DISTRICT_COUNT=$(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')
+            echo "Discovered ${DISTRICT_COUNT} districts for PY ${DISCOVERED_PY} (fellBack=${DISCOVERED_FELLBACK})"
           fi
 
           echo "districts=${DISTRICTS}" >> "$GITHUB_OUTPUT"
@@ -792,34 +788,29 @@ jobs:
             DISTRICTS="${{ inputs.districts }}"
             echo "Using manual district override: ${DISTRICTS}"
           else
-            # Use the first date to determine program year for district discovery
+            # Use the first date to discover districts, resolving the active
+            # program year by data (#1284) — falls back to the prior PY at the
+            # July rollover when the new year's dashboard isn't published yet.
             FIRST_DATE=$(echo "$DATES" | awk '{print $1}')
-            PROGRAM_YEAR=$(node -e "
-              const d = new Date('${FIRST_DATE}');
-              const y = d.getFullYear(); const m = d.getMonth();
-              console.log(m >= 6 ? y+'-'+(y+1) : (y-1)+'-'+y);
-            ")
-            DATE_FORMATTED=$(date -d "${FIRST_DATE}" +'%-m/%-d/%Y')
-            DISTRICTS_CSV_URL="https://dashboards.toastmasters.org/${PROGRAM_YEAR}/export.aspx?type=CSV&report=districtsummary~${DATE_FORMATTED}~~${PROGRAM_YEAR}"
+            echo "Discovering districts for ${FIRST_DATE}..."
+            set +e
+            DISCOVERY_JSON=$(npx collector-cli discover-districts --date "${FIRST_DATE}" --verbose)
+            DISCOVERY_STATUS=$?
+            set -e
+            if [ ${DISCOVERY_STATUS} -ne 0 ]; then
+              echo "::error::Failed to discover districts from Toastmasters CSV (exit ${DISCOVERY_STATUS})."
+              echo "${DISCOVERY_JSON}"
+              exit 1
+            fi
+            DISTRICTS=$(echo "${DISCOVERY_JSON}" | jq -r '.districts')
+            DISCOVERED_PY=$(echo "${DISCOVERY_JSON}" | jq -r '.programYear')
 
-            echo "Discovering districts from: ${DISTRICTS_CSV_URL}"
-            DISTRICTS=$(curl -sf --retry 3 --max-time 30 "${DISTRICTS_CSV_URL}" | node -e "
-              const data = require('fs').readFileSync('/dev/stdin','utf8');
-              const lines = data.trim().split('\n');
-              const headers = lines[0].split(',').map(h => h.replace(/\\\"/g,'').trim());
-              const col = headers.indexOf('DISTRICT');
-              const ids = [...new Set(lines.slice(1)
-                .map(l => l.split(',')[col].replace(/\\\"/g,'').trim())
-                .filter(id => /^[A-Z0-9]+$/i.test(id)))];
-              ids.sort((a,b) => { const na=parseInt(a,10),nb=parseInt(b,10); return isNaN(na)||isNaN(nb)?a.localeCompare(b):na-nb; });
-              process.stdout.write(ids.join(','));
-            ")
-
-            if [ -z "${DISTRICTS}" ]; then
+            if [ -z "${DISTRICTS}" ] || [ "${DISTRICTS}" = "null" ]; then
               echo "::error::Failed to discover districts from Toastmasters CSV."
               exit 1
             fi
-            echo "Discovered $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ') districts"
+            DISTRICT_COUNT=$(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')
+            echo "Discovered ${DISTRICT_COUNT} districts for PY ${DISCOVERED_PY}"
           fi
           echo "- **Districts**: $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')" >> "$GITHUB_STEP_SUMMARY"
 
