@@ -83,7 +83,12 @@ export default function ClubHistoryPage() {
           message={`No completed program years on file yet for ${heading}. History appears once a program year closes (June 30).`}
         />
       ) : (
-        <ClubHistoryTable rows={rows} clubName={heading} />
+        <ClubHistoryTable
+          rows={rows}
+          clubName={heading}
+          districtId={districtId}
+          clubId={clubId}
+        />
       )}
 
       <p className="club-history-page__back">

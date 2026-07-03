@@ -186,6 +186,20 @@
   text-align: left;
 }
 
+/* #1302 — the year label deep-links into ClubDetailPage for that program year.
+   Reads as a link (accent colour, underline on hover/focus) without disturbing
+   the sticky identity column's weight/alignment. */
+.club-history-year-link {
+  color: var(--rt-stats, var(--accent, currentColor));
+  text-decoration: none;
+  font-weight: inherit;
+}
+
+.club-history-year-link:hover,
+.club-history-year-link:focus-visible {
+  text-decoration: underline;
+}
+
 /* Sticky identity column — keeps the program year visible while metrics scroll. */
 .club-history-table thead th:first-child,
 .club-history-table tbody th:first-child {

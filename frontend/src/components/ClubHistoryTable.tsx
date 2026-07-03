@@ -15,6 +15,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { ClubHistoryRow, ClubTierCode } from '../utils/clubHistory'
 import { EM_DASH } from '../utils/clubHistory'
 import { SortableHeader } from './SortableHeader'
@@ -48,9 +49,20 @@ function signedNet(value: number | null): string {
 export interface ClubHistoryTableProps {
   rows: ClubHistoryRow[]
   clubName: string
+  /** When both are provided (#1302), each year label becomes a deep link to
+   *  ClubDetailPage focused on that program year (`?py=<startYear>`), so a user
+   *  reading the multi-year table can jump into a single year. Omitted → plain
+   *  text (keeps the component usable outside a Router). */
+  districtId?: string | undefined
+  clubId?: string | undefined
 }
 
-export function ClubHistoryTable({ rows, clubName }: ClubHistoryTableProps) {
+export function ClubHistoryTable({
+  rows,
+  clubName,
+  districtId,
+  clubId,
+}: ClubHistoryTableProps) {
   const [sortField, setSortField] = useState<SortField>('year')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
@@ -156,7 +168,16 @@ export function ClubHistoryTable({ rows, clubName }: ClubHistoryTableProps) {
           {sortedRows.map(row => (
             <tr key={row.startYear}>
               <th scope="row" className="club-history-td club-history-td--year">
-                {row.label}
+                {districtId && clubId ? (
+                  <Link
+                    to={`/district/${districtId}/club/${clubId}?py=${row.startYear}`}
+                    className="club-history-year-link"
+                  >
+                    {row.label}
+                  </Link>
+                ) : (
+                  row.label
+                )}
               </th>
               <td className="club-history-td club-history-td--num">
                 {row.dcpGoals == null ? EM_DASH : `${row.dcpGoals} / 10`}
