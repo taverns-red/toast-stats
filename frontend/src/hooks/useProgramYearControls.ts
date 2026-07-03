@@ -49,6 +49,10 @@ export interface ProgramYearControls {
   cachedDates: string[]
   /** The date the page should fetch: `?date=` if set, else the PY's latest. */
   effectiveDate: string | undefined
+  /** True when the selected date is the most recent snapshot in the PY (or no
+   * explicit date is chosen). Drives the freshness pill's reconciliation axis
+   * (#1296) — memoized here so each consuming page doesn't re-sort per render. */
+  isLatestSnapshot: boolean
   /** True while the dates index query is in flight (freshness-pill reserve). */
   isDatesPending: boolean
 }
@@ -103,6 +107,16 @@ export function useProgramYearControls(): ProgramYearControls {
     )
   }, [selectedDate, allCachedDates, selectedProgramYear])
 
+  // Whether the selection is the newest snapshot in the PY — the freshness
+  // pill only flags month-end reconciliation for the latest snapshot (#1296).
+  // Memoized once here so every consuming page skips the per-render re-sort.
+  const isLatestSnapshot = useMemo(() => {
+    if (!selectedDate) return true
+    if (cachedDates.length === 0) return false
+    const latest = [...cachedDates].sort((a, b) => b.localeCompare(a))[0]
+    return selectedDate === latest
+  }, [selectedDate, cachedDates])
+
   return {
     selectedProgramYear,
     setSelectedProgramYear,
@@ -111,6 +125,7 @@ export function useProgramYearControls(): ProgramYearControls {
     availableProgramYears,
     cachedDates,
     effectiveDate,
+    isLatestSnapshot,
     isDatesPending,
   }
 }

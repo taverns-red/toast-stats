@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { DataControlsBar } from '../components/DataControlsBar'
-import { computeFreshness } from '../utils/dataFreshness'
 import type {
   CompetitiveAwardRanking,
   CompetitiveAwardStandings,
@@ -68,22 +67,35 @@ const AwardsPage: React.FC = () => {
 
   const { data: standings, isLoading } = useCompetitiveAwards(effectiveDate)
 
-  // Freshness pill (#1296). The awards standings carry no `sourceCsvDate`, so
-  // the pill shows the snapshot date itself (no month-end reconciliation axis).
-  const freshness = computeFreshness({
-    asOfDate: effectiveDate,
-    snapshotDate: effectiveDate,
-    isLatest: !selectedDate,
-  })
-
   return (
     <div className="awards-page">
-      <header className="awards-page__header">
+      {/* Adopt the shared page-header layout (Districts/Regions/Region) so the
+          DataControlsBar toolbar lays out top-right on desktop and stacks on
+          mobile — awards-page__header keeps its own bottom-margin. The awards
+          standings carry no `sourceCsvDate`, so the freshness pill just shows
+          the snapshot date (no month-end reconciliation axis). */}
+      <header className="districts-page-header awards-page__header">
+        <div className="districts-page-header__intro">
+          <p className="placeholder-page__eyebrow">
+            Awards · {standings?.metadata?.totalDistricts ?? 117} districts
+          </p>
+          <h1 className="placeholder-page__title">District Awards</h1>
+          <p className="placeholder-page__body">
+            Competitive district-level awards from Toastmasters International.
+            Rankings are computed from the same public data as the District
+            leaderboard — see the{' '}
+            <Link
+              to="/methodology#borda-count"
+              className="districts-methodology-callout__link"
+            >
+              Methodology
+            </Link>{' '}
+            page for the full Borda definition and per-award threshold notes.
+          </p>
+        </div>
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveDate}
-            asOfDate={freshness.displayDate}
-            reconcilingMonthLabel={freshness.reconcilingMonthLabel}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}
             onProgramYearChange={setSelectedProgramYear}
@@ -93,22 +105,6 @@ const AwardsPage: React.FC = () => {
             freshnessPending={isDatesPending}
           />
         </div>
-        <p className="placeholder-page__eyebrow">
-          Awards · {standings?.metadata?.totalDistricts ?? 117} districts
-        </p>
-        <h1 className="placeholder-page__title">District Awards</h1>
-        <p className="placeholder-page__body">
-          Competitive district-level awards from Toastmasters International.
-          Rankings are computed from the same public data as the District
-          leaderboard — see the{' '}
-          <Link
-            to="/methodology#borda-count"
-            className="districts-methodology-callout__link"
-          >
-            Methodology
-          </Link>{' '}
-          page for the full Borda definition and per-award threshold notes.
-        </p>
       </header>
 
       {isLoading && (

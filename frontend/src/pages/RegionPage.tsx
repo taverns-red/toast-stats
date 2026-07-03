@@ -277,6 +277,7 @@ const RegionPage: React.FC = () => {
     availableProgramYears,
     cachedDates,
     effectiveDate,
+    isLatestSnapshot,
     isDatesPending,
   } = useProgramYearControls()
 
@@ -292,10 +293,6 @@ const RegionPage: React.FC = () => {
   })
 
   // Freshness pill (#1296) — as-of date + month-end reconciliation state.
-  const isLatestSnapshot =
-    !selectedDate ||
-    (cachedDates.length > 0 &&
-      selectedDate === [...cachedDates].sort((a, b) => b.localeCompare(a))[0])
   const freshness = computeFreshness({
     asOfDate: data?.date,
     snapshotDate: effectiveDate,
