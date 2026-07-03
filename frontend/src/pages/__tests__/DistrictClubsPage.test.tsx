@@ -93,6 +93,16 @@ const TEST_CLUBS: ClubTrend[] = [
   },
 ]
 
+// Pin the "current" program year to 2025-2026 (this file's fixture PY) so the
+// app doesn't append ?py=2025 to URLs after the July calendar rollover flips
+// getCurrentProgramYear() to 2026-2027. Interim guard until epic #1298 Sprint 1
+// (#1300) makes the default data-driven; without it the release PR #1253 is
+// blocked. See #1285 for the wall-clock-coupling pattern.
+vi.mock('../../utils/programYear', async importActual => {
+  const actual = await importActual<typeof import('../../utils/programYear')>()
+  return { ...actual, getCurrentProgramYear: () => actual.getProgramYear(2025) }
+})
+
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: vi.fn(() => ({
     data: {
