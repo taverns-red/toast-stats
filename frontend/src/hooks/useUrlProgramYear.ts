@@ -14,8 +14,9 @@
 import { useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useProgramYear } from '../contexts/ProgramYearContext'
-import { getCurrentProgramYear, getProgramYear } from '../utils/programYear'
+import { getProgramYear } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
+import { useDefaultProgramYear } from './useDefaultProgramYear'
 
 export function useUrlProgramYear() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -26,9 +27,14 @@ export function useUrlProgramYear() {
     setSelectedDate: setContextDate,
   } = useProgramYear()
 
-  const currentPY = getCurrentProgramYear()
+  // The "invisible default" PY is DATA-DRIVEN — the latest program year with
+  // snapshots (#1300), not the calendar year. Only a *non-default* PY writes
+  // `?py=`; selecting the default omits it. This keeps the July rollover from
+  // pinning `?py=<last-calendar-year>` on every URL (which blocked release
+  // #1253) and self-heals when the new PY's data publishes.
+  const defaultPY = useDefaultProgramYear()
 
-  // Read program year from URL; fall back to context value (not getCurrentProgramYear)
+  // Read program year from URL; fall back to context value (not the default)
   // This avoids extra render cycles when context already has the right year
   const urlPyRaw = searchParams.get('py')
   const urlPyYear = urlPyRaw !== null ? parseInt(urlPyRaw, 10) : null
@@ -68,7 +74,7 @@ export function useUrlProgramYear() {
       setSearchParams(
         prev => {
           const next = new URLSearchParams(prev)
-          if (py.year === currentPY.year) {
+          if (py.year === defaultPY.year) {
             next.delete('py')
           } else {
             next.set('py', py.year.toString())
@@ -79,7 +85,7 @@ export function useUrlProgramYear() {
       )
       setContextPY(py)
     },
-    [setSearchParams, setContextPY, currentPY.year]
+    [setSearchParams, setContextPY, defaultPY.year]
   )
 
   const setSelectedDate = useCallback(
