@@ -21,6 +21,8 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
 import { ClubMiniList } from '../components/ClubMiniList'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
+import { DataControlsBar } from '../components/DataControlsBar'
 
 const AreaPage: React.FC = () => {
   const { districtId, divId, areaId } = useParams<{
@@ -31,10 +33,25 @@ const AreaPage: React.FC = () => {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
 
+  // PY selector state (#1302) — the page owns program year/date (R3) and threads
+  // the selected PY's effective end date into its own queries so switching the
+  // year re-queries. Was hardcoded to "latest snapshot only" (undefined dates).
+  const {
+    selectedProgramYear,
+    setSelectedProgramYear,
+    selectedDate,
+    setSelectedDate,
+    availableProgramYears,
+    availableDates,
+    effectiveEndDate,
+    hasValidDates,
+    latestSnapshotDate,
+  } = useDistrictProgramYearControls(districtId)
+
   const { data, isLoading, error } = useDistrictAnalytics(
-    districtId ?? '',
+    hasValidDates ? (districtId ?? null) : null,
     undefined,
-    undefined
+    effectiveEndDate ?? undefined
   )
 
   // Recognition / gap / visit data come from the same raw snapshot the Divisions
@@ -44,7 +61,11 @@ const AreaPage: React.FC = () => {
   // it. Per Lesson 147, this surface is fed by the snapshot and must NOT be
   // hidden behind the allClubs emptiness check below.
   const { data: snapshot, isLoading: isLoadingSnapshot } =
-    useDistrictStatistics(districtId ?? '', undefined, 'divisions')
+    useDistrictStatistics(
+      hasValidDates ? (districtId ?? null) : null,
+      effectiveEndDate ?? undefined,
+      'divisions'
+    )
   const normalizedDivId = divId?.toUpperCase()
   const normalizedAreaId = areaId?.toUpperCase()
   const matched = React.useMemo(() => {
@@ -151,6 +172,18 @@ const AreaPage: React.FC = () => {
               ? 'Area recognition standing for this program year.'
               : `${clubs.length} club${clubs.length === 1 ? '' : 's'} in this area.`}
           </p>
+        </div>
+        <div className="districts-page-header__actions">
+          <DataControlsBar
+            latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
+            asOfDate={snapshot?.asOfDate}
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={availableDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
         </div>
       </header>
 
