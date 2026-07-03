@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.14.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.13.0...frontend-v3.14.0) (2026-07-03)
+
+
+### Features
+
+* **frontend:** data-driven default program year — unblock release [#1253](https://github.com/taverns-red/toast-stats/issues/1253) ([#1300](https://github.com/taverns-red/toast-stats/issues/1300)) ([#1304](https://github.com/taverns-red/toast-stats/issues/1304)) ([e42675b](https://github.com/taverns-red/toast-stats/commit/e42675bee3937cdbfcd84bd7634921622caaf82d))
+
+
+### Bug Fixes
+
+* July program-year rollover — resolve active PY by data + de-couple tests from the clock ([#1284](https://github.com/taverns-red/toast-stats/issues/1284), [#1285](https://github.com/taverns-red/toast-stats/issues/1285)) ([#1286](https://github.com/taverns-red/toast-stats/issues/1286)) ([982f045](https://github.com/taverns-red/toast-stats/commit/982f0450d41c5577c315c1c7a6c61881a96ba5a1))
+* **ui:** freshness badge shows as-of date + month-end reconciliation ([#1296](https://github.com/taverns-red/toast-stats/issues/1296)) ([#1297](https://github.com/taverns-red/toast-stats/issues/1297)) ([1d3ffeb](https://github.com/taverns-red/toast-stats/commit/1d3ffeb4143a6f233c33f5f3410f51f99ad84052))
+
+
+### Refactors
+
+* rename @toastmasters/{analytics-core,shared-contracts,collector-cli} → @taverns-red/* ([#1258](https://github.com/taverns-red/toast-stats/issues/1258)) ([#1259](https://github.com/taverns-red/toast-stats/issues/1259)) ([5e33f2d](https://github.com/taverns-red/toast-stats/commit/5e33f2d7546e72eef1146b8ae84bf8a6df4903d9))
+
+
+### Tests
+
+* **ui:** pin current PY in DistrictClubsPage test to unblock release [#1253](https://github.com/taverns-red/toast-stats/issues/1253) ([#1303](https://github.com/taverns-red/toast-stats/issues/1303)) ([0dc30c5](https://github.com/taverns-red/toast-stats/commit/0dc30c5f01d885afa90165e5e4e1944f5ce0817a))
+
 ## [3.13.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.12.0...frontend-v3.13.0) (2026-06-27)
 
 
