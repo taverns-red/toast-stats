@@ -50,6 +50,31 @@ const SNAPSHOT = {
 
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }))
 
+// PY-selector wiring (#1302): DivisionPage/AreaPage now own program-year state
+// via useDistrictProgramYearControls. Mock its two dependencies so these tests
+// stay provider-free and PY-agnostic (fixed to the snapshot's PY 2025-2026).
+vi.mock('../../hooks/useDistrictData', () => ({
+  useDistrictCachedDates: () => ({
+    data: {
+      districtId: '61',
+      dates: ['2026-03-15'],
+      count: 1,
+      dateRange: { startDate: '2026-03-15', endDate: '2026-03-15' },
+    },
+  }),
+}))
+vi.mock('../../hooks/useUrlProgramYear', async () => {
+  const { getProgramYear } = await import('../../utils/programYear')
+  return {
+    useUrlProgramYear: () => ({
+      selectedProgramYear: getProgramYear(2025),
+      setSelectedProgramYear: () => {},
+      selectedDate: undefined,
+      setSelectedDate: () => {},
+    }),
+  }
+})
+
 vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(() => ({
     data: SNAPSHOT,
