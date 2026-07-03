@@ -59,7 +59,7 @@ const FreshnessPill: React.FC<{
       />
       <span>
         {reconciling
-          ? `As of ${formatDisplayDate(date)} · reconciling`
+          ? `As of ${formatDisplayDate(date)} · month-end reconciliation`
           : `Data fresh · ${formatDisplayDate(date)}`}
       </span>
     </div>

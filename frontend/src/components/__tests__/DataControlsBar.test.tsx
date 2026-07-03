@@ -53,7 +53,7 @@ describe('DataControlsBar (#529 #528)', () => {
       />
     )
     const pill = screen.getByTestId('freshness-pill')
-    expect(pill).toHaveTextContent(/reconciling/i)
+    expect(pill).toHaveTextContent(/month-end reconciliation/i)
     expect(pill).toHaveTextContent(/Jul 2, 2026/)
     expect(pill.getAttribute('data-reconciling')).toBe('true')
     expect(pill.getAttribute('title')).toMatch(
