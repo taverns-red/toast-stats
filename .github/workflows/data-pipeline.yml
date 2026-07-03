@@ -1646,6 +1646,28 @@ jobs:
           echo "## ✅ Promotion Complete" >> "$GITHUB_STEP_SUMMARY"
           echo "Staging data synced to production bucket." >> "$GITHUB_STEP_SUMMARY"
 
+      # Purge the Cloud CDN edge so freshly-promoted data is served immediately
+      # (#1294). Without this, cdn.taverns.red keeps the previous objects until
+      # their max-age TTL expires (~1h), making a successful promotion look
+      # stale. Non-fatal: a promotion must never be undone by an invalidation
+      # hiccup, and the edge expires on its own TTL as a fallback. Note this
+      # purges the EDGE only — an already-open browser tab still honours the
+      # response's max-age until it reloads.
+      - name: Invalidate CDN cache after promotion (#1294)
+        if: steps.diff.outputs.promote == 'true' && steps.valuediff.outputs.value_promote == 'true' && steps.mode.outputs.mode != 'prune'
+        continue-on-error: true
+        run: |
+          echo "Invalidating Cloud CDN cache (toast-stats-cdn-url-map, cdn.taverns.red)..."
+          if gcloud compute url-maps invalidate-cdn-cache toast-stats-cdn-url-map \
+               --path '/*' --async; then
+            echo "## 🧹 CDN Cache Invalidated" >> "$GITHUB_STEP_SUMMARY"
+            echo "Purged cdn.taverns.red edge — promoted data is served immediately." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::CDN invalidation failed — promotion succeeded, but the" \
+              "edge may serve stale data until max-age expires (~1h). Grant the" \
+              "pipeline SA 'compute.urlMaps.invalidateCache' (see #1294)."
+          fi
+
       - name: Promotion blocked
         if: (steps.diff.outputs.promote == 'false' || steps.valuediff.outputs.value_promote == 'false') && steps.mode.outputs.mode != 'prune'
         run: |
