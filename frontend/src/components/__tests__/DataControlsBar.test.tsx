@@ -30,6 +30,39 @@ describe('DataControlsBar (#529 #528)', () => {
     expect(pill.querySelector('[data-testid="freshness-dot"]')).not.toBeNull()
   })
 
+  it('shows the as-of date (not the pinned snapshot date) when provided (#1296)', () => {
+    render(
+      <DataControlsBar
+        {...baseProps}
+        latestSnapshotDate="2026-06-30"
+        asOfDate="2026-07-02"
+      />
+    )
+    const pill = screen.getByTestId('freshness-pill')
+    expect(pill).toHaveTextContent(/Jul 2, 2026/)
+    expect(pill).not.toHaveTextContent(/Jun 30/)
+  })
+
+  it('renders a month-end reconciliation state (amber dot, tooltip) when reconciling (#1296)', () => {
+    render(
+      <DataControlsBar
+        {...baseProps}
+        latestSnapshotDate="2026-06-30"
+        asOfDate="2026-07-02"
+        reconcilingMonthLabel="June 2026"
+      />
+    )
+    const pill = screen.getByTestId('freshness-pill')
+    expect(pill).toHaveTextContent(/month-end reconciliation/i)
+    expect(pill).toHaveTextContent(/Jul 2, 2026/)
+    expect(pill.getAttribute('data-reconciling')).toBe('true')
+    expect(pill.getAttribute('title')).toMatch(
+      /June 2026 month-end reconciliation/
+    )
+    const dot = pill.querySelector('[data-testid="freshness-dot"]')
+    expect(dot?.className).toMatch(/amber/)
+  })
+
   it('renders the PY chip showing the selected program year as "PY YYYY–YY"', () => {
     render(<DataControlsBar {...baseProps} />)
     const py = screen.getByTestId('py-chip')
