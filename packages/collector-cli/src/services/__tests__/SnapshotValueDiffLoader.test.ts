@@ -181,7 +181,7 @@ describe('runValueDiff — Closing-Pinned Auto-Allow end-to-end (#1086)', () => 
     expect(exitCode).toBe(0)
   })
 
-  it('still blocks (exit 1) an implausible-magnitude closing decrease (#1092)', () => {
+  it('auto-allows (exit 0) a large closing counter move — no cap (#1292)', () => {
     const staging = join(tmp, 'staging')
     const prod = join(tmp, 'prod')
     writeSnapshot(
@@ -192,15 +192,17 @@ describe('runValueDiff — Closing-Pinned Auto-Allow end-to-end (#1086)', () => 
     writeSnapshot(
       staging,
       '2026-05-31',
-      closingRankings('2026-05-31', '2026-06-02', 4400) // Δ −600 > cap 500
+      closingRankings('2026-05-31', '2026-06-02', 4400) // Δ −600, no longer capped
     )
     const { decision, exitCode } = runValueDiff({
       stagingDir: staging,
       prodDir: prod,
     })
-    expect(decision.promote).toBe(false)
-    expect(decision.autoAllowed).toBeUndefined()
-    expect(decision.reasons.join(' ')).toMatch(/cap/i)
-    expect(exitCode).toBe(1)
+    expect(decision.promote).toBe(true)
+    expect(decision.autoAllowed).toBe('closing-reconciliation')
+    expect(decision.closingDeltas).toEqual([
+      expect.objectContaining({ delta: -600 }),
+    ])
+    expect(exitCode).toBe(0)
   })
 })

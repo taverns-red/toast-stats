@@ -357,15 +357,33 @@ describe('evaluateClosingAutoAllow — edges (decision doc §8.3)', () => {
     expect(evaluateClosingAutoAllow(s, p).allowed).toBe(true)
   })
 
-  it('blocks a counter exceeding the max(50, 10%) cap', () => {
-    // Δ +600 on prod 5000: cap is max(50, 500) = 500.
+  it('allows a large counter move during closing — no cap (#1292)', () => {
+    // Δ +600 on prod 5000. Charter payments and dues reconcile in lumps during
+    // closing (charters land ~20+ payments at once); the magnitude cap forced
+    // needless daily overrides. Operator decision 2026-07-03: allow freely.
     const [s, p] = syntheticPair({ totalPayments: 5600 })
     const res = evaluateClosingAutoAllow(s, p)
-    expect(res.allowed).toBe(false)
-    expect(res.reasons.join(' ')).toMatch(/cap/i)
+    expect(res.allowed).toBe(true)
+    expect(
+      res.deltas.some(d => d.field === 'totalPayments' && d.delta === 600)
+    ).toBe(true)
   })
 
-  it('allows a counter decrease within the cap — direction-agnostic (#1092)', () => {
+  it('allows the D82-style lumpy charterPayments spike (#1292)', () => {
+    // The live case that blocked 2026-07-03: charterPayments 106→186 (+80),
+    // verified against upstream TM data.
+    const [s, p] = syntheticPair(
+      { charterPayments: 186 },
+      { charterPayments: 106 }
+    )
+    const res = evaluateClosingAutoAllow(s, p)
+    expect(res.allowed).toBe(true)
+    expect(
+      res.deltas.some(d => d.field === 'charterPayments' && d.delta === 80)
+    ).toBe(true)
+  })
+
+  it('allows a counter decrease during closing — direction-agnostic (#1292)', () => {
     const [s, p] = syntheticPair({ totalPayments: 4999 })
     const res = evaluateClosingAutoAllow(s, p)
     expect(res.allowed).toBe(true)
@@ -380,20 +398,15 @@ describe('evaluateClosingAutoAllow — edges (decision doc §8.3)', () => {
     ])
   })
 
-  it('blocks an implausible-magnitude decrease (symmetric cap, #1092)', () => {
-    // Δ −600 on prod 5000: symmetric cap is max(50, 500) = 500. A per-unit
-    // reconciliation never moves this much — a collapse is a regression.
+  it('allows a large counter decrease during closing — no cap (#1292)', () => {
+    // Δ −600 on prod 5000: a charter reversal / bulk correction. Recorded as
+    // provenance, not blocked.
     const [s, p] = syntheticPair({ totalPayments: 4400 })
     const res = evaluateClosingAutoAllow(s, p)
-    expect(res.allowed).toBe(false)
-    expect(res.reasons.join(' ')).toMatch(/cap/i)
-  })
-
-  it('blocks a counter collapsing to zero on a large base (#1092)', () => {
-    const [s, p] = syntheticPair({ totalPayments: 0 })
-    const res = evaluateClosingAutoAllow(s, p)
-    expect(res.allowed).toBe(false)
-    expect(res.reasons.join(' ')).toMatch(/cap/i)
+    expect(res.allowed).toBe(true)
+    expect(
+      res.deltas.some(d => d.field === 'totalPayments' && d.delta === -600)
+    ).toBe(true)
   })
 
   it('allows base drift during closing — bases reconcile too (#1289)', () => {
@@ -567,13 +580,15 @@ describe('evaluatePromote CPAA wiring (#1086)', () => {
     ])
   })
 
-  it('keeps blocking when CPAA finds a cap breach, surfacing the violation', () => {
-    const { report, digests } = promoteCase({ totalPayments: 4400 }) // Δ −600
+  it('keeps blocking when CPAA finds a real violation, surfacing it (identity drift)', () => {
+    // Counters/bases now allow freely (#1292/#1289); identity drift still
+    // blocks, so it exercises the "CPAA found a violation" wiring.
+    const { report, digests } = promoteCase({ districtName: 'Renamed' })
     const decision = evaluatePromote(report, {}, digests)
     expect(decision.promote).toBe(false)
     expect(decision.requiresReview).toBe(true)
     expect(decision.autoAllowed).toBeUndefined()
-    expect(decision.reasons.join(' ')).toMatch(/cap/i)
+    expect(decision.reasons.join(' ')).toMatch(/identity/i)
   })
 
   it('blocks when ANY changed date lacks the closing signature, even if another passes', () => {
@@ -657,26 +672,14 @@ describe('evaluatePromote CPAA wiring (#1086)', () => {
   })
 })
 
-describe('evaluateClosingAutoAllow — absolute-floor cap boundary (review nit)', () => {
-  // On a small base (prod 100, 10% = 10) the cap resolves to the absolute
-  // floor of 50: Δ +50 is the last allowed step, Δ +51 blocks.
-  it('allows Δ = 50 and blocks Δ = 51 when the cap is the absolute floor', () => {
-    const [allowS, allowP] = syntheticPair({ paidClubs: 150 }) // prod 100, Δ +50
-    expect(evaluateClosingAutoAllow(allowS, allowP).allowed).toBe(true)
+describe('evaluateClosingAutoAllow — counters allow freely during closing (#1292)', () => {
+  // The magnitude cap was removed: on a closing-pinned date, a counter move of
+  // any size and direction auto-allows, recorded as delta provenance.
+  it('allows large moves either direction on a small base', () => {
+    const [upS, upP] = syntheticPair({ paidClubs: 151 }) // prod 100, Δ +51
+    expect(evaluateClosingAutoAllow(upS, upP).allowed).toBe(true)
 
-    const [blockS, blockP] = syntheticPair({ paidClubs: 151 }) // prod 100, Δ +51
-    const res = evaluateClosingAutoAllow(blockS, blockP)
-    expect(res.allowed).toBe(false)
-    expect(res.reasons.join(' ')).toMatch(/cap/i)
-  })
-
-  it('applies the same boundary on the decrease side (Δ −50 allows, Δ −51 blocks) (#1092)', () => {
-    const [allowS, allowP] = syntheticPair({ paidClubs: 50 }) // prod 100, Δ −50
-    expect(evaluateClosingAutoAllow(allowS, allowP).allowed).toBe(true)
-
-    const [blockS, blockP] = syntheticPair({ paidClubs: 49 }) // prod 100, Δ −51
-    const res = evaluateClosingAutoAllow(blockS, blockP)
-    expect(res.allowed).toBe(false)
-    expect(res.reasons.join(' ')).toMatch(/cap/i)
+    const [downS, downP] = syntheticPair({ paidClubs: 49 }) // prod 100, Δ −51
+    expect(evaluateClosingAutoAllow(downS, downP).allowed).toBe(true)
   })
 })
