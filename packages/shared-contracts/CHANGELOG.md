@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.7.0...shared-contracts-v1.7.1) (2026-07-03)
+
+
+### Refactors
+
+* rename @toastmasters/{analytics-core,shared-contracts,collector-cli} → @taverns-red/* ([#1258](https://github.com/taverns-red/toast-stats/issues/1258)) ([#1259](https://github.com/taverns-red/toast-stats/issues/1259)) ([5e33f2d](https://github.com/taverns-red/toast-stats/commit/5e33f2d7546e72eef1146b8ae84bf8a6df4903d9))
+
 ## [1.7.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.6.1...shared-contracts-v1.7.0) (2026-06-27)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.4](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.3...analytics-core-v1.9.4) (2026-07-03)
+
+
+### Refactors
+
+* rename @toastmasters/{analytics-core,shared-contracts,collector-cli} → @taverns-red/* ([#1258](https://github.com/taverns-red/toast-stats/issues/1258)) ([#1259](https://github.com/taverns-red/toast-stats/issues/1259)) ([5e33f2d](https://github.com/taverns-red/toast-stats/commit/5e33f2d7546e72eef1146b8ae84bf8a6df4903d9))
+
 ## [1.9.3](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.2...analytics-core-v1.9.3) (2026-06-21)
 
 

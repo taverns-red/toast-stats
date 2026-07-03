@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.6.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.5.2...collector-cli-v1.6.0) (2026-07-03)
+
+
+### Features
+
+* **pipeline:** prune keeps first-of-month + month-end, retires penultimate ([#1280](https://github.com/taverns-red/toast-stats/issues/1280)) ([#1283](https://github.com/taverns-red/toast-stats/issues/1283)) ([53e24df](https://github.com/taverns-red/toast-stats/commit/53e24dff57e0b632323a1a4790ffca713d8f59c5))
+
+
+### Bug Fixes
+
+* July program-year rollover — resolve active PY by data + de-couple tests from the clock ([#1284](https://github.com/taverns-red/toast-stats/issues/1284), [#1285](https://github.com/taverns-red/toast-stats/issues/1285)) ([#1286](https://github.com/taverns-red/toast-stats/issues/1286)) ([982f045](https://github.com/taverns-red/toast-stats/commit/982f0450d41c5577c315c1c7a6c61881a96ba5a1))
+* **promote-gate:** allow base moves during closing ([#1289](https://github.com/taverns-red/toast-stats/issues/1289)) ([#1290](https://github.com/taverns-red/toast-stats/issues/1290)) ([0ec69d0](https://github.com/taverns-red/toast-stats/commit/0ec69d0a1f9c8714c58e5b7105024e8070a980f6))
+* **promote-gate:** allow counter moves freely during closing ([#1292](https://github.com/taverns-red/toast-stats/issues/1292)) ([#1293](https://github.com/taverns-red/toast-stats/issues/1293)) ([08938c7](https://github.com/taverns-red/toast-stats/commit/08938c7cb5e83e0861b48fe0eccb19a639af2f70))
+
+
+### Refactors
+
+* rename @toastmasters/{analytics-core,shared-contracts,collector-cli} → @taverns-red/* ([#1258](https://github.com/taverns-red/toast-stats/issues/1258)) ([#1259](https://github.com/taverns-red/toast-stats/issues/1259)) ([5e33f2d](https://github.com/taverns-red/toast-stats/commit/5e33f2d7546e72eef1146b8ae84bf8a6df4903d9))
+
 ## [1.5.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.5.1...collector-cli-v1.5.2) (2026-06-14)
 
 
