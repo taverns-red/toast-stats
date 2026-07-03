@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import RegionsPage from '../RegionsPage'
 
 /* Reads the live URL search string so URL-sync round-trips are assertable
@@ -58,17 +59,27 @@ vi.mock('../../services/cdn', () => {
     latePayments: 0,
     charterPayments: 0,
   })
+  const rankings = {
+    date: '2026-05-12',
+    rankings: [
+      baseRanking('01', '01', 500),
+      baseRanking('01', '02', 400),
+      baseRanking('07', '57', 350),
+      baseRanking('07', '60', 300),
+      baseRanking('DNAR', '99', 50),
+    ],
+  }
   return {
-    fetchCdnRankings: vi.fn().mockResolvedValue({
-      date: '2026-05-12',
-      rankings: [
-        baseRanking('01', '01', 500),
-        baseRanking('01', '02', 400),
-        baseRanking('07', '57', 350),
-        baseRanking('07', '60', 300),
-        baseRanking('DNAR', '99', 50),
-      ],
+    // #1301 — RegionsPage now threads the selected PY's snapshot date through
+    // its query. The dates index + per-date fetch return the same fixture so
+    // the leaderboard content is unchanged regardless of which path resolves.
+    fetchCdnDates: vi.fn().mockResolvedValue({
+      dates: ['2026-05-12'],
+      count: 1,
+      generatedAt: '2026-05-13T00:00:00Z',
     }),
+    fetchCdnRankings: vi.fn().mockResolvedValue(rankings),
+    fetchCdnRankingsForDate: vi.fn().mockResolvedValue(rankings),
   }
 })
 
@@ -78,11 +89,13 @@ const renderPage = () => {
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/regions']}>
-        <Routes>
-          <Route path="/regions" element={<RegionsPage />} />
-        </Routes>
-      </MemoryRouter>
+      <ProgramYearProvider>
+        <MemoryRouter initialEntries={['/regions']}>
+          <Routes>
+            <Route path="/regions" element={<RegionsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ProgramYearProvider>
     </QueryClientProvider>
   )
 }
@@ -93,12 +106,14 @@ const renderPageAt = (url: string) => {
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[url]}>
-        <LocationProbe />
-        <Routes>
-          <Route path="/regions" element={<RegionsPage />} />
-        </Routes>
-      </MemoryRouter>
+      <ProgramYearProvider>
+        <MemoryRouter initialEntries={[url]}>
+          <LocationProbe />
+          <Routes>
+            <Route path="/regions" element={<RegionsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ProgramYearProvider>
     </QueryClientProvider>
   )
 }

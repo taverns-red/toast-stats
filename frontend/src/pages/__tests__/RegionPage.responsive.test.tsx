@@ -14,11 +14,16 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import RegionPage from '../RegionPage'
 import { fetchCdnRankings } from '../../services/cdn'
 
+// #1301 — empty dates index keeps effectiveDate undefined → the page uses its
+// existing fetchCdnRankings ("latest") path, so these fixtures are unchanged.
 vi.mock('../../services/cdn', () => ({
+  fetchCdnDates: vi.fn().mockResolvedValue({ dates: [], count: 0 }),
   fetchCdnRankings: vi.fn(),
+  fetchCdnRankingsForDate: vi.fn(),
   fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(null),
   fetchCdnManifest: vi
     .fn()
@@ -54,11 +59,13 @@ const renderRegion = (region: string) => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/region/${region}`]}>
-        <Routes>
-          <Route path="/region/:n" element={<RegionPage />} />
-        </Routes>
-      </MemoryRouter>
+      <ProgramYearProvider>
+        <MemoryRouter initialEntries={[`/region/${region}`]}>
+          <Routes>
+            <Route path="/region/:n" element={<RegionPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ProgramYearProvider>
     </QueryClientProvider>
   )
 }

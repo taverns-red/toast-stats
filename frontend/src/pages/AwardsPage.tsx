@@ -1,6 +1,9 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
+import { useProgramYearControls } from '../hooks/useProgramYearControls'
+import { DataControlsBar } from '../components/DataControlsBar'
+import { computeFreshness } from '../utils/dataFreshness'
 import type {
   CompetitiveAwardRanking,
   CompetitiveAwardStandings,
@@ -49,12 +52,47 @@ const AWARDS: ReadonlyArray<AwardSpec> = [
 ]
 
 const AwardsPage: React.FC = () => {
-  // Latest snapshot — pass undefined and let the hook resolve.
-  const { data: standings, isLoading } = useCompetitiveAwards(undefined)
+  // PY selector state (#1301) — the page owns program year/date (R3) and
+  // fetches the awards snapshot for the SELECTED program year, so switching
+  // the year re-queries (was hardcoded "latest").
+  const {
+    selectedProgramYear,
+    setSelectedProgramYear,
+    selectedDate,
+    setSelectedDate,
+    availableProgramYears,
+    cachedDates,
+    effectiveDate,
+    isDatesPending,
+  } = useProgramYearControls()
+
+  const { data: standings, isLoading } = useCompetitiveAwards(effectiveDate)
+
+  // Freshness pill (#1296). The awards standings carry no `sourceCsvDate`, so
+  // the pill shows the snapshot date itself (no month-end reconciliation axis).
+  const freshness = computeFreshness({
+    asOfDate: effectiveDate,
+    snapshotDate: effectiveDate,
+    isLatest: !selectedDate,
+  })
 
   return (
     <div className="awards-page">
       <header className="awards-page__header">
+        <div className="districts-page-header__actions">
+          <DataControlsBar
+            latestSnapshotDate={effectiveDate}
+            asOfDate={freshness.displayDate}
+            reconcilingMonthLabel={freshness.reconcilingMonthLabel}
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={cachedDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            freshnessPending={isDatesPending}
+          />
+        </div>
         <p className="placeholder-page__eyebrow">
           Awards · {standings?.metadata?.totalDistricts ?? 117} districts
         </p>
