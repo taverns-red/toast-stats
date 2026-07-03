@@ -83,6 +83,10 @@ export function useProgramYearControls(): ProgramYearControls {
 
   // Self-heal a selected PY that has no data (e.g. a hand-edited ?py=) to the
   // newest available year — never strand the user on an empty grid (L124).
+  // Invariant: availableProgramYears[0] is the same year useDefaultProgramYear
+  // resolves to — both derive from the shared ['available-dates'] query — so
+  // healing to it deletes `?py=` rather than pinning the default year on. If
+  // that shared-cache invariant ever breaks, this would flip `?py=` back on.
   useEffect(() => {
     if (availableProgramYears.length === 0) return
     const isAvailable = availableProgramYears.some(
