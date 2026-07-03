@@ -42,7 +42,8 @@ export const FIELD_CLASSIFICATION: Record<string, FieldClass> = {
   districtId: 'identity',
   districtName: 'identity',
   region: 'identity',
-  // Counters — non-decreasing, magnitude-capped during closing
+  // Counters — reconcile in lumps during closing; any move allowed as
+  // provenance, no magnitude cap (#1292)
   paidClubs: 'counter',
   activeClubs: 'counter',
   totalPayments: 'counter',
@@ -168,7 +169,7 @@ export interface ClosingAutoAllowResult {
  * the closing-remap signature in STAGING's own metadata, the district set is
  * identical, and every changed field obeys its class rule:
  *
- *   counter      |Δ| ≤ max(50, 10% × prod)   (direction-agnostic, #1092)
+ *   counter      any move allowed as provenance (reconciles in lumps, #1292)
  *   base         any move allowed as provenance (reconciles during closing, #1289)
  *   identity     must be equal
  *   planBoolean  false→true allowed; true→false blocks
@@ -277,33 +278,18 @@ export function evaluateClosingAutoAllow(
       }
 
       switch (cls) {
-        case 'counter': {
-          const prod = prodValue as number
-          const staging = stagingValue as number
-          const delta = staging - prod
-          // Direction-agnostic (#1092): closing reconciliation legitimately
-          // moves counters BOTH ways (payments reversed, a club slipping
-          // under a threshold). Only an implausible MAGNITUDE blocks — the
-          // symmetric cap catches systematic re-derive inflation or a
-          // collapse-to-zero, never a per-unit downward correction.
-          const cap = Math.max(50, 0.1 * prod)
-          if (Math.abs(delta) > cap) {
-            reasons.push(
-              `${date} D${id} ${field}: counter move ${prod}→${staging} ` +
-                `(Δ ${delta > 0 ? '+' : ''}${delta}) exceeds symmetric cap ` +
-                `${cap} = max(50, 10% × ${prod})`
-            )
-          } else {
-            deltas.push({ districtId: id, field, prod, staging, delta })
-          }
-          break
-        }
+        case 'counter':
         case 'base':
-          // Bases reconcile during the closing window too — and CPAA only ever
-          // runs on closing-pinned dates, so a base move here is routine
-          // reconciliation, not an anomaly. Allow any magnitude/direction and
-          // record it as provenance (operator decision 2026-07-02, #1289). A
-          // base optionality transition still blocks above (structural change).
+          // Counters and bases both reconcile during the closing window — and
+          // CPAA only ever runs on closing-pinned dates. Closing moves are
+          // legitimately large and either-directional: charter payments land in
+          // lumps (~20+ at once), dues reverse, a club slips under a threshold,
+          // a base is corrected. The magnitude cap forced a manual override
+          // most days through the closing window (a different field/district
+          // each day), so both classes now allow ANY move, recorded as delta
+          // provenance (operator decisions 2026-07-02 #1289 base, 2026-07-03
+          // #1292 counter). A value optionality transition still blocks above
+          // (structural / schema change, not data reconciliation).
           deltas.push({
             districtId: id,
             field,

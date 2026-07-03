@@ -11,6 +11,11 @@ decrease floor are superseded.
 **Amended 2026-07-02 (#1289):** the §4 **base** rule is now **any move allowed**
 (bases reconcile during closing) — see [Amendment](#amendment-2026-07-02-1289--bases-reconcile-during-closing)
 at the end of this doc.
+**Amended 2026-07-03 (#1292):** the §4 **counter** magnitude cap is **removed**
+— counters reconcile in lumps during closing (charters land ~20+ payments at
+once); see [Amendment](#amendment-2026-07-03-1292--counters-reconcile-in-lumps-the-cap-is-removed)
+at the end of this doc. §3(b) reversal-blocking and §7's cap-based residual-risk
+framing are superseded.
 
 ## 1. Problem (verified)
 
@@ -92,13 +97,13 @@ read errors) is unchanged.
    disappearing on an overlap date blocks (the #1034 D61 protection).
 3. Per district, per field, by class:
 
-| Field class       | Fields                                                                                                                                                                                                                                                                           | Rule                                                                           |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **Counters**      | `paidClubs`, `activeClubs`, `totalPayments`, `newPayments`, `aprilPayments`, `octoberPayments`, `latePayments`, `charterPayments`, `distinguishedClubs`, `selectDistinguished`, `presidentsDistinguished`, `smedleyDistinguished`, `clubsWith20PlusMembers`, `newCharteredClubs` | `0 ≤ Δ ≤ max(50, 10% × prodValue)` — non-decreasing, magnitude-capped          |
-| **Bases**         | `paidClubBase`, `paymentBase`                                                                                                                                                                                                                                                    | **Any move allowed** as provenance (reconciles during closing — amended #1289) |
-| **Identity**      | `districtId`, `districtName`, `region`                                                                                                                                                                                                                                           | Must be **equal**                                                              |
-| **Plan booleans** | `dspSubmitted`, `trainingMet`, `marketAnalysisSubmitted`, `communicationPlanSubmitted`, `regionAdvisorVisitMet`                                                                                                                                                                  | `false→true` allowed; `true→false` blocks                                      |
-| **Derived**       | `clubGrowthPercent`, `paymentGrowthPercent`, `distinguishedPercent`, `clubsRank`, `paymentsRank`, `distinguishedRank`, `overallRank`, `aggregateScore`                                                                                                                           | **Excluded** from the check (re-derived, zero-sum across districts)            |
+| Field class       | Fields                                                                                                                                                                                                                                                                           | Rule                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Counters**      | `paidClubs`, `activeClubs`, `totalPayments`, `newPayments`, `aprilPayments`, `octoberPayments`, `latePayments`, `charterPayments`, `distinguishedClubs`, `selectDistinguished`, `presidentsDistinguished`, `smedleyDistinguished`, `clubsWith20PlusMembers`, `newCharteredClubs` | **Any move allowed** as provenance (reconcile in lumps during closing — amended #1292) |
+| **Bases**         | `paidClubBase`, `paymentBase`                                                                                                                                                                                                                                                    | **Any move allowed** as provenance (reconciles during closing — amended #1289)         |
+| **Identity**      | `districtId`, `districtName`, `region`                                                                                                                                                                                                                                           | Must be **equal**                                                                      |
+| **Plan booleans** | `dspSubmitted`, `trainingMet`, `marketAnalysisSubmitted`, `communicationPlanSubmitted`, `regionAdvisorVisitMet`                                                                                                                                                                  | `false→true` allowed; `true→false` blocks                                              |
+| **Derived**       | `clubGrowthPercent`, `paymentGrowthPercent`, `distinguishedPercent`, `clubsRank`, `paymentsRank`, `distinguishedRank`, `overallRank`, `aggregateScore`                                                                                                                           | **Excluded** from the check (re-derived, zero-sum across districts)                    |
 
 4. **Optionality transitions block:** a field `undefined` in one side and
    present in the other (in any class except Derived) ⇒ block. During closing
@@ -296,3 +301,29 @@ Residual risk: a re-derive bug that corrupts a base (collapse-to-zero, ×10)
 during closing would now auto-promote. Accepted by the operator — promotion is
 recoverable (deterministic re-derive from raw-csv + re-promote), moves are in
 the provenance table, and historical-date changes still block.
+
+## Amendment 2026-07-03 (#1292) — counters reconcile in lumps; the cap is removed
+
+§4 capped counter moves at `|Δ| ≤ max(50, 10% × prod)` (direction-agnostic
+since #1092). That cap still blocked routine closing days: the 2026-07-03
+promotion was held on `2026-06-30 D82 charterPayments 106→186 (Δ +80)` —
+verified against live TI data (D82 Charter Payments = 186), a real charter
+spike, not a re-derive bug. Charter payments and dues reconcile in **lumps**
+during the closing/charter window (a chartering club lands ~20+ payments at
+once), so counter moves routinely exceed the floor of 50 — a different
+field/district tripping it most days, forcing a daily manual override.
+
+**Amended rule:** counter value moves are **allowed, any magnitude/direction**,
+recorded as delta provenance — never blocking, matching the #1289 base rule.
+CPAA now blocks a closing-pinned date only on **identity** drift, a
+**plan-boolean** revert (`true→false`), an **optionality transition**
+(structural), a district-set change, or a **non-closing-pinned** changed date
+(a re-derive of history). Counters and bases are pure provenance.
+
+Residual risk (supersedes §7's cap-based framing): a systematic re-derive bug
+(every district +30%) or a unit-scale (×10) error during closing would now
+auto-promote. Accepted by the operator (2026-07-03): closing reconciliation
+genuinely carries lots of change, especially at the July program-year rollover;
+promotion is recoverable (deterministic re-derive from raw-csv + re-promote),
+every move is in the provenance table, and non-closing-pinned/historical dates
+still block.
