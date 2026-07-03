@@ -3,15 +3,12 @@ import React, {
   createContext,
   useContext,
   useState,
-  useEffect,
+  useCallback,
   ReactNode,
 } from 'react'
 import { logger } from '../utils/logger'
-import {
-  ProgramYear,
-  getCurrentProgramYear,
-  getProgramYear,
-} from '../utils/programYear'
+import { ProgramYear, getProgramYear } from '../utils/programYear'
+import { useDefaultProgramYear } from '../hooks/useDefaultProgramYear'
 
 interface ProgramYearContextType {
   selectedProgramYear: ProgramYear
@@ -31,34 +28,40 @@ interface ProgramYearProviderProps {
 export const ProgramYearProvider: React.FC<ProgramYearProviderProps> = ({
   children,
 }) => {
-  // Initialize with saved program year or current program year
-  const [selectedProgramYear, setSelectedProgramYear] = useState<ProgramYear>(
-    () => {
+  // The DATA-DRIVEN default program year: the latest PY that has snapshots,
+  // falling back to the calendar PY only while data loads (#1300). Self-heals
+  // as new data publishes.
+  const defaultProgramYear = useDefaultProgramYear()
+
+  // The user's EXPLICIT selection (persisted from a prior UI choice), or null
+  // when they've made none. Only explicit choices are persisted; the
+  // auto-adopted default is NEVER written to localStorage, so the effective
+  // default can advance with the data instead of being frozen at first visit.
+  const [explicitProgramYear, setExplicitProgramYear] =
+    useState<ProgramYear | null>(() => {
       const savedYear = localStorage.getItem('selectedProgramYear')
       if (savedYear) {
-        try {
-          const year = parseInt(savedYear)
+        const year = parseInt(savedYear, 10)
+        if (!Number.isNaN(year)) {
           return getProgramYear(year)
-        } catch (error) {
-          logger.error('Failed to load saved program year:', error)
         }
+        logger.error('Failed to load saved program year:', savedYear)
       }
-      return getCurrentProgramYear()
-    }
-  )
+      return null
+    })
+
+  // Effective selection: explicit user choice wins; otherwise the data-driven
+  // default (which advances automatically as new program years publish).
+  const selectedProgramYear = explicitProgramYear ?? defaultProgramYear
+
+  const setSelectedProgramYear = useCallback((programYear: ProgramYear) => {
+    setExplicitProgramYear(programYear)
+    localStorage.setItem('selectedProgramYear', programYear.year.toString())
+  }, [])
+
   const [selectedDate, setSelectedDate] = useState<string | undefined>(
     undefined
   )
-
-  // No useEffect needed for initialization - handled in lazy initial state
-
-  // Save to localStorage when changed
-  useEffect(() => {
-    localStorage.setItem(
-      'selectedProgramYear',
-      selectedProgramYear.year.toString()
-    )
-  }, [selectedProgramYear])
 
   const value: ProgramYearContextType = {
     selectedProgramYear,
