@@ -15,6 +15,7 @@ import { render, screen, cleanup } from '@testing-library/react'
 import { axe, toHaveNoViolations } from 'jest-axe'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import RegionPage from '../../pages/RegionPage'
 
 // @ts-expect-error - jest-axe matcher types vs vitest expect
@@ -42,11 +43,19 @@ vi.mock('../../services/cdn', () => {
     overallRank: 1,
     aggregateScore: score,
   })
+  // #1301 — the page hosts the shared PY selector; provide a dates index +
+  // per-date fetch so the DataControlsBar toolbar is fully populated for the
+  // a11y scan.
+  const rankings = {
+    date: '2026-05-12',
+    rankings: [ranking('60', '07', 500), ranking('61', '07', 350)],
+  }
   return {
-    fetchCdnRankings: vi.fn().mockResolvedValue({
-      date: '2026-05-12',
-      rankings: [ranking('60', '07', 500), ranking('61', '07', 350)],
-    }),
+    fetchCdnDates: vi
+      .fn()
+      .mockResolvedValue({ dates: ['2026-05-12'], count: 1 }),
+    fetchCdnRankings: vi.fn().mockResolvedValue(rankings),
+    fetchCdnRankingsForDate: vi.fn().mockResolvedValue(rankings),
     fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(null),
     fetchCdnManifest: vi.fn().mockResolvedValue({
       latestSnapshotDate: '2026-05-12',
@@ -61,11 +70,13 @@ const renderPage = () => {
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/region/07']}>
-        <Routes>
-          <Route path="/region/:n" element={<RegionPage />} />
-        </Routes>
-      </MemoryRouter>
+      <ProgramYearProvider>
+        <MemoryRouter initialEntries={['/region/07']}>
+          <Routes>
+            <Route path="/region/:n" element={<RegionPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ProgramYearProvider>
     </QueryClientProvider>
   )
 }

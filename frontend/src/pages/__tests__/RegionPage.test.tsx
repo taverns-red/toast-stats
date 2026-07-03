@@ -8,6 +8,7 @@ import {
 } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import RegionPage from '../RegionPage'
 import {
   fetchCdnRankings,
@@ -15,8 +16,13 @@ import {
   type CompetitiveAwardStandings,
 } from '../../services/cdn'
 
+// #1301 — RegionPage now hosts the shared PY selector. An empty dates index
+// keeps effectiveDate undefined, so the page uses its existing fetchCdnRankings
+// ("latest") path and these fixtures/assertions are unchanged.
 vi.mock('../../services/cdn', () => ({
+  fetchCdnDates: vi.fn().mockResolvedValue({ dates: [], count: 0 }),
   fetchCdnRankings: vi.fn(),
+  fetchCdnRankingsForDate: vi.fn(),
   fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(null),
   fetchCdnManifest: vi
     .fn()
@@ -55,11 +61,13 @@ const renderRegion = (region: string) => {
   })
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/region/${region}`]}>
-        <Routes>
-          <Route path="/region/:n" element={<RegionPage />} />
-        </Routes>
-      </MemoryRouter>
+      <ProgramYearProvider>
+        <MemoryRouter initialEntries={[`/region/${region}`]}>
+          <Routes>
+            <Route path="/region/:n" element={<RegionPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ProgramYearProvider>
     </QueryClientProvider>
   )
 }
@@ -77,15 +85,17 @@ const renderRegionWithRegionsRoute = (region: string) => {
   })
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/region/${region}`]}>
-        <Routes>
-          <Route path="/region/:n" element={<RegionPage />} />
-          <Route
-            path="/regions"
-            element={<div data-testid="regions-overview">All regions</div>}
-          />
-        </Routes>
-      </MemoryRouter>
+      <ProgramYearProvider>
+        <MemoryRouter initialEntries={[`/region/${region}`]}>
+          <Routes>
+            <Route path="/region/:n" element={<RegionPage />} />
+            <Route
+              path="/regions"
+              element={<div data-testid="regions-overview">All regions</div>}
+            />
+          </Routes>
+        </MemoryRouter>
+      </ProgramYearProvider>
     </QueryClientProvider>
   )
 }

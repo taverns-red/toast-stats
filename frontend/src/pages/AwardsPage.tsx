@@ -1,6 +1,8 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
+import { useProgramYearControls } from '../hooks/useProgramYearControls'
+import { DataControlsBar } from '../components/DataControlsBar'
 import type {
   CompetitiveAwardRanking,
   CompetitiveAwardStandings,
@@ -49,28 +51,60 @@ const AWARDS: ReadonlyArray<AwardSpec> = [
 ]
 
 const AwardsPage: React.FC = () => {
-  // Latest snapshot — pass undefined and let the hook resolve.
-  const { data: standings, isLoading } = useCompetitiveAwards(undefined)
+  // PY selector state (#1301) — the page owns program year/date (R3) and
+  // fetches the awards snapshot for the SELECTED program year, so switching
+  // the year re-queries (was hardcoded "latest").
+  const {
+    selectedProgramYear,
+    setSelectedProgramYear,
+    selectedDate,
+    setSelectedDate,
+    availableProgramYears,
+    cachedDates,
+    effectiveDate,
+    isDatesPending,
+  } = useProgramYearControls()
+
+  const { data: standings, isLoading } = useCompetitiveAwards(effectiveDate)
 
   return (
     <div className="awards-page">
-      <header className="awards-page__header">
-        <p className="placeholder-page__eyebrow">
-          Awards · {standings?.metadata?.totalDistricts ?? 117} districts
-        </p>
-        <h1 className="placeholder-page__title">District Awards</h1>
-        <p className="placeholder-page__body">
-          Competitive district-level awards from Toastmasters International.
-          Rankings are computed from the same public data as the District
-          leaderboard — see the{' '}
-          <Link
-            to="/methodology#borda-count"
-            className="districts-methodology-callout__link"
-          >
-            Methodology
-          </Link>{' '}
-          page for the full Borda definition and per-award threshold notes.
-        </p>
+      {/* Adopt the shared page-header layout (Districts/Regions/Region) so the
+          DataControlsBar toolbar lays out top-right on desktop and stacks on
+          mobile — awards-page__header keeps its own bottom-margin. The awards
+          standings carry no `sourceCsvDate`, so the freshness pill just shows
+          the snapshot date (no month-end reconciliation axis). */}
+      <header className="districts-page-header awards-page__header">
+        <div className="districts-page-header__intro">
+          <p className="placeholder-page__eyebrow">
+            Awards · {standings?.metadata?.totalDistricts ?? 117} districts
+          </p>
+          <h1 className="placeholder-page__title">District Awards</h1>
+          <p className="placeholder-page__body">
+            Competitive district-level awards from Toastmasters International.
+            Rankings are computed from the same public data as the District
+            leaderboard — see the{' '}
+            <Link
+              to="/methodology#borda-count"
+              className="districts-methodology-callout__link"
+            >
+              Methodology
+            </Link>{' '}
+            page for the full Borda definition and per-award threshold notes.
+          </p>
+        </div>
+        <div className="districts-page-header__actions">
+          <DataControlsBar
+            latestSnapshotDate={effectiveDate}
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={cachedDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            freshnessPending={isDatesPending}
+          />
+        </div>
       </header>
 
       {isLoading && (

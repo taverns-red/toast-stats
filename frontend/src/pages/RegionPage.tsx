@@ -6,12 +6,15 @@
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnRankings } from '../services/cdn'
+import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
 import type { DistrictRanking } from '../types/districts'
 import { computeTiedRanks } from '../utils/tieRankingUtils'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
+import { useProgramYearControls } from '../hooks/useProgramYearControls'
+import { DataControlsBar } from '../components/DataControlsBar'
+import { computeFreshness } from '../utils/dataFreshness'
 import type { DistinguishedDistrictTier } from '../services/cdn'
 import {
   getDistinguishedCountdown,
@@ -263,13 +266,37 @@ const RegionPage: React.FC = () => {
     defaultDirection: 'desc',
   })
 
+  // PY selector state (#1301) — the page owns program year/date (R3) and
+  // threads the selected snapshot date into the rankings query so switching
+  // the year re-queries (the awards query below follows via data.date).
+  const {
+    selectedProgramYear,
+    setSelectedProgramYear,
+    selectedDate,
+    setSelectedDate,
+    availableProgramYears,
+    cachedDates,
+    effectiveDate,
+    isLatestSnapshot,
+    isDatesPending,
+  } = useProgramYearControls()
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['district-rankings', 'latest'],
+    queryKey: ['district-rankings', effectiveDate ?? 'latest'],
     queryFn: async () => {
+      if (effectiveDate) return fetchCdnRankingsForDate(effectiveDate)
       const cdnData = await fetchCdnRankings()
       return { rankings: cdnData.rankings, date: cdnData.date }
     },
     staleTime: 15 * 60 * 1000,
+    placeholderData: prev => prev,
+  })
+
+  // Freshness pill (#1296) — as-of date + month-end reconciliation state.
+  const freshness = computeFreshness({
+    asOfDate: data?.date,
+    snapshotDate: effectiveDate,
+    isLatest: isLatestSnapshot,
   })
 
   // Distinguished District prerequisite gaps. Pin to the rankings
@@ -399,6 +426,20 @@ const RegionPage: React.FC = () => {
             {regionDistricts.length === 1 ? '' : 's'} in this region. Click a
             district to drill into its clubs.
           </p>
+        </div>
+        <div className="districts-page-header__actions">
+          <DataControlsBar
+            latestSnapshotDate={effectiveDate}
+            asOfDate={freshness.displayDate}
+            reconcilingMonthLabel={freshness.reconcilingMonthLabel}
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={cachedDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            freshnessPending={isDatesPending}
+          />
         </div>
       </header>
 

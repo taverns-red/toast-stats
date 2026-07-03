@@ -1,12 +1,15 @@
 import React, { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnRankings } from '../services/cdn'
+import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
 import { aggregateRegions } from '../utils/aggregateRegions'
 import { RegionsLeaderboard } from '../components/RegionsLeaderboard'
 import { RegionFinder } from '../components/RegionFinder'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
 import { useUrlState } from '../hooks/useUrlState'
+import { useProgramYearControls } from '../hooks/useProgramYearControls'
+import { DataControlsBar } from '../components/DataControlsBar'
+import { computeFreshness } from '../utils/dataFreshness'
 
 /* Region selection is URL state (#979) so it survives reload, back, and shared
    links — `?region=07`. Module-level options keep a stable reference so
@@ -29,13 +32,40 @@ const REGION_URL_OPTIONS = {
    count is visible without polluting the leaderboard. */
 
 const RegionsPage: React.FC = () => {
+  // PY selector state (#1301) — the page owns program year/date (R3) and
+  // threads the selected snapshot date into its own rankings query so
+  // switching the year re-queries.
+  const {
+    selectedProgramYear,
+    setSelectedProgramYear,
+    selectedDate,
+    setSelectedDate,
+    availableProgramYears,
+    cachedDates,
+    effectiveDate,
+    isLatestSnapshot,
+    isDatesPending,
+  } = useProgramYearControls()
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['district-rankings', 'latest'],
+    queryKey: ['district-rankings', effectiveDate ?? 'latest'],
     queryFn: async () => {
+      if (effectiveDate) return fetchCdnRankingsForDate(effectiveDate)
       const cdn = await fetchCdnRankings()
       return { rankings: cdn.rankings, date: cdn.date }
     },
     staleTime: 15 * 60 * 1000,
+    // Keep the prior snapshot visible while a PY switch re-queries, so the
+    // leaderboard doesn't flash back to the full-page skeleton.
+    placeholderData: prev => prev,
+  })
+
+  // Freshness pill: show the "as of" date and flag month-end reconciliation
+  // when viewing the latest snapshot (#1296).
+  const freshness = computeFreshness({
+    asOfDate: data?.date,
+    snapshotDate: effectiveDate,
+    isLatest: isLatestSnapshot,
   })
 
   const [selectedRegion, setSelectedRegion] = useUrlState<string | null>(
@@ -103,6 +133,20 @@ const RegionsPage: React.FC = () => {
             Aggregate ranking of all 14 Toastmasters regions. Click any region
             to drill into its districts.
           </p>
+        </div>
+        <div className="districts-page-header__actions">
+          <DataControlsBar
+            latestSnapshotDate={effectiveDate}
+            asOfDate={freshness.displayDate}
+            reconcilingMonthLabel={freshness.reconcilingMonthLabel}
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={cachedDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            freshnessPending={isDatesPending}
+          />
         </div>
       </header>
 

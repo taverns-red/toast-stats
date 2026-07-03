@@ -6,7 +6,16 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import type { CompetitiveAwardStandings } from '../../services/cdn'
+
+// #1301 — AwardsPage now hosts the shared PY selector (useProgramYearControls
+// → the ['available-dates'] CDN query). An empty dates index keeps
+// effectiveDate undefined, so the awards fetch (mocked below) is unchanged.
+vi.mock('../../services/cdn', () => ({
+  fetchCdnDates: vi.fn().mockResolvedValue({ dates: [], count: 0 }),
+}))
 
 const mockStandings: CompetitiveAwardStandings = {
   metadata: {
@@ -81,12 +90,20 @@ vi.mock('../../hooks/useCompetitiveAwards', () => ({
 
 import AwardsPage from '../AwardsPage'
 
-const renderPage = () =>
-  render(
-    <MemoryRouter>
-      <AwardsPage />
-    </MemoryRouter>
+const renderPage = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ProgramYearProvider>
+        <MemoryRouter>
+          <AwardsPage />
+        </MemoryRouter>
+      </ProgramYearProvider>
+    </QueryClientProvider>
   )
+}
 
 describe('AwardsPage (#371-#373)', () => {
   beforeEach(() => vi.clearAllMocks())
