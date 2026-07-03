@@ -19,6 +19,13 @@
  * Self-healing (L124): a hand-edited / shared `?py=` naming a year with no
  * district data falls back to the newest available PY, so the user is never
  * stranded on an empty grid — validated at the page, not the picker.
+ *
+ * `selfHeal` (default true) controls whether that fallback is WRITTEN back to
+ * the URL. Pages reached via a plain Link (DivisionPage, AreaPage) want the
+ * write so the chip and `?py=` agree. ClubDetailPage receives navigation state
+ * (`location.state.fromClubsSearch`, the #577 filter round-trip) that a mount-
+ * time `setSearchParams` would clobber, so it opts OUT and instead renders the
+ * derived `effectiveProgramYear` in the chip — honest without touching the URL.
  */
 
 import { useEffect, useMemo } from 'react'
@@ -54,7 +61,8 @@ export interface DistrictProgramYearControls {
 }
 
 export function useDistrictProgramYearControls(
-  districtId: string | null | undefined
+  districtId: string | null | undefined,
+  { selfHeal = true }: { selfHeal?: boolean } = {}
 ): DistrictProgramYearControls {
   const {
     selectedProgramYear,
@@ -76,7 +84,11 @@ export function useDistrictProgramYearControls(
 
   // Self-heal a selected PY that has no district data (e.g. a hand-edited ?py=)
   // to the newest available year — never strand the user on an empty grid (L124).
+  // Skipped when selfHeal is false so a mount-time URL write can't clobber the
+  // caller's navigation state (ClubDetailPage's #577 filter round-trip); that
+  // caller instead reads the derived effectiveProgramYear below.
   useEffect(() => {
+    if (!selfHeal) return
     if (availableProgramYears.length === 0) return
     const has = availableProgramYears.some(
       py => py.year === selectedProgramYear.year
@@ -85,7 +97,12 @@ export function useDistrictProgramYearControls(
       const newest = availableProgramYears[0]
       if (newest) setSelectedProgramYear(newest)
     }
-  }, [availableProgramYears, selectedProgramYear.year, setSelectedProgramYear])
+  }, [
+    selfHeal,
+    availableProgramYears,
+    selectedProgramYear.year,
+    setSelectedProgramYear,
+  ])
 
   // Derive (don't sync) the reconciled selection so the fetched date can never
   // lag a render behind the self-heal effect above.

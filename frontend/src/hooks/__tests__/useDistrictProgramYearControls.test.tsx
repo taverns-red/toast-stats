@@ -80,10 +80,28 @@ describe('useDistrictProgramYearControls (#1302)', () => {
     const { result } = renderHook(() => useDistrictProgramYearControls('61'), {
       wrapper: wrapperFor('/district/61?py=2019'),
     })
-    // 2019 has no snapshots → effective year falls back to the newest (2026).
+    // 2019 has no snapshots → effective year falls back to the newest (2026)
+    // AND the selected year is rewritten to match (selfHeal default).
     await waitFor(() =>
       expect(result.current.effectiveProgramYear?.year).toBe(2026)
     )
+    await waitFor(() =>
+      expect(result.current.selectedProgramYear.year).toBe(2026)
+    )
+    expect(result.current.effectiveEndDate).toBe('2026-08-01')
+  })
+
+  it('with selfHeal:false, derives the effective year WITHOUT rewriting the selection', async () => {
+    const { result } = renderHook(
+      () => useDistrictProgramYearControls('61', { selfHeal: false }),
+      { wrapper: wrapperFor('/district/61?py=2019') }
+    )
+    // Effective year still heals to the newest with data...
+    await waitFor(() =>
+      expect(result.current.effectiveProgramYear?.year).toBe(2026)
+    )
+    // ...but the selected year stays put — no URL write to clobber nav state.
+    expect(result.current.selectedProgramYear.year).toBe(2019)
     expect(result.current.effectiveEndDate).toBe('2026-08-01')
   })
 })
