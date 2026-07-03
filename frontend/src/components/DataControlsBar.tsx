@@ -7,6 +7,11 @@ import { formatDisplayDate } from '../utils/dateFormatting'
 
 export interface DataControlsBarProps {
   latestSnapshotDate: string | undefined
+  /** The "as of" date (sourceCsvDate) — shown in the pill when set, instead of
+   * the pinned snapshot date (#1296). Falls back to latestSnapshotDate. */
+  asOfDate?: string | undefined
+  /** When set, the pill renders a month-end reconciliation state (#1296). */
+  reconcilingMonthLabel?: string | undefined
   availableProgramYears: ProgramYear[]
   selectedProgramYear: ProgramYear
   onProgramYearChange: (py: ProgramYear) => void
@@ -30,20 +35,36 @@ export interface DataControlsBarProps {
 const CHIP_BASE =
   'inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-full text-xs font-medium border bg-white border-gray-200 text-gray-700 theme-dark:bg-gray-800 theme-dark:border-gray-700 theme-dark:text-gray-200'
 
-const FreshnessPill: React.FC<{ date: string }> = ({ date }) => (
-  <div
-    data-testid="freshness-pill"
-    className={CHIP_BASE}
-    title={`Latest snapshot: ${date}`}
-  >
-    <span
-      data-testid="freshness-dot"
-      aria-hidden="true"
-      className="w-2 h-2 rounded-full bg-green-500"
-    />
-    <span>Data fresh · {formatDisplayDate(date)}</span>
-  </div>
-)
+const FreshnessPill: React.FC<{
+  date: string
+  /** When set, the pill shows a month-end reconciliation state (#1296). */
+  reconcilingMonthLabel?: string | undefined
+}> = ({ date, reconcilingMonthLabel }) => {
+  const reconciling = Boolean(reconcilingMonthLabel)
+  return (
+    <div
+      data-testid="freshness-pill"
+      data-reconciling={reconciling ? 'true' : undefined}
+      className={CHIP_BASE}
+      title={
+        reconciling
+          ? `${reconcilingMonthLabel} month-end reconciliation — figures update daily until finalized. As of ${formatDisplayDate(date)}.`
+          : `Latest snapshot: ${date}`
+      }
+    >
+      <span
+        data-testid="freshness-dot"
+        aria-hidden="true"
+        className={`w-2 h-2 rounded-full ${reconciling ? 'bg-amber-500' : 'bg-green-500'}`}
+      />
+      <span>
+        {reconciling
+          ? `As of ${formatDisplayDate(date)} · reconciling`
+          : `Data fresh · ${formatDisplayDate(date)}`}
+      </span>
+    </div>
+  )
+}
 
 /** #922 — width of the pill-slot placeholder rendered while the snapshot
  * date is pending. Matches the rendered pill ("Data fresh · <Mon D, YYYY>",
@@ -111,6 +132,8 @@ const formatPyShort = (py: ProgramYear): string =>
 
 export const DataControlsBar: React.FC<DataControlsBarProps> = ({
   latestSnapshotDate,
+  asOfDate,
+  reconcilingMonthLabel,
   availableProgramYears,
   selectedProgramYear,
   onProgramYearChange,
@@ -120,6 +143,7 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
   freshnessPending = false,
 }) => {
   const sortedDates = [...availableDates].sort((a, b) => b.localeCompare(a))
+  const pillDate = asOfDate ?? latestSnapshotDate
 
   return (
     <div
@@ -127,8 +151,11 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
       aria-label="Data controls"
       className="flex flex-wrap items-center gap-2"
     >
-      {latestSnapshotDate ? (
-        <FreshnessPill date={latestSnapshotDate} />
+      {pillDate ? (
+        <FreshnessPill
+          date={pillDate}
+          reconcilingMonthLabel={reconcilingMonthLabel}
+        />
       ) : (
         freshnessPending && <FreshnessPillSkeleton />
       )}
