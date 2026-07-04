@@ -89,6 +89,14 @@ export function useDistrictProgramYearControls(
   // Skipped when selfHeal is false so a mount-time URL write can't clobber the
   // caller's navigation state (ClubDetailPage's #577 filter round-trip); that
   // caller instead reads the derived effectiveProgramYear below.
+  //
+  // NOTE (vs. the sibling useProgramYearControls): that hook heals to a year
+  // drawn from the SAME global ['available-dates'] cache that useUrlProgramYear's
+  // default is computed from, so healing to it deletes `?py=`. Here the healed
+  // year comes from the per-DISTRICT index, which can lag the global newest —
+  // so when a district's data trails, healing may WRITE `?py=<districtNewest>`
+  // rather than clear it. Still correct (it points at data that exists); the
+  // "heal clears ?py=" parity with the sibling simply doesn't hold district-side.
   useEffect(() => {
     if (!selfHeal) return
     if (availableProgramYears.length === 0) return

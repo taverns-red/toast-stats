@@ -39,6 +39,7 @@ const DivisionPage: React.FC = () => {
     setSelectedDate,
     availableProgramYears,
     availableDates,
+    effectiveProgramYear,
     effectiveEndDate,
     hasValidDates,
     latestSnapshotDate,
@@ -159,7 +160,10 @@ const DivisionPage: React.FC = () => {
             latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
             asOfDate={snapshot?.asOfDate}
             availableProgramYears={availableProgramYears}
-            selectedProgramYear={selectedProgramYear}
+            // Derived (healed) year so the chip value is always in its option
+            // list — avoids a transient controlled-select mismatch for an
+            // out-of-range ?py= before the self-heal effect fires.
+            selectedProgramYear={effectiveProgramYear ?? selectedProgramYear}
             onProgramYearChange={setSelectedProgramYear}
             availableDates={availableDates}
             selectedDate={selectedDate}
