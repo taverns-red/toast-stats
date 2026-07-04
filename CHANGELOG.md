@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.32.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.31.0...toast-stats-v2.32.0) (2026-07-04)
+
+
+### Features
+
+* **frontend:** normalize freshness pill on every page ([#1310](https://github.com/taverns-red/toast-stats/issues/1310)) ([#1311](https://github.com/taverns-red/toast-stats/issues/1311)) ([cd513f1](https://github.com/taverns-red/toast-stats/commit/cd513f1ed53d7686b94f27250756306ae7146c63))
+
 ## [2.31.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.30.0...toast-stats-v2.31.0) (2026-07-04)
 
 
