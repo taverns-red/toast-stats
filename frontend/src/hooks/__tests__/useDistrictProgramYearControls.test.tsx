@@ -71,8 +71,11 @@ describe('useDistrictProgramYearControls (#1302)', () => {
       expect(result.current.effectiveProgramYear?.year).toBe(2025)
     )
     expect(result.current.effectiveEndDate).toBe('2026-05-01')
-    // Dates within the selected PY, newest first.
-    expect(result.current.availableDates).toEqual(['2026-05-01', '2025-08-01'])
+    // Dates within the selected PY (order is DataControlsBar's concern).
+    expect([...result.current.availableDates].sort()).toEqual([
+      '2025-08-01',
+      '2026-05-01',
+    ])
     expect(result.current.hasValidDates).toBe(true)
   })
 

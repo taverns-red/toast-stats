@@ -12,9 +12,11 @@
  * It is the district-scoped sibling of useProgramYearControls: the dates come
  * from the per-district snapshot index (useDistrictCachedDates), NOT the global
  * ['available-dates'] query. The derivation (available PYs, in-PY dates,
- * effective end date, self-heal to the newest year) mirrors the proven inline
- * logic that DistrictClubsPage / DistrictDivisionsPage already ship, so those
- * routes and these leaf pages behave identically (R6 — real code overlap).
+ * effective end date, self-heal to the newest year) is lifted from the proven
+ * inline logic that DistrictClubsPage / DistrictDivisionsPage still ship — those
+ * two index pages feed a DistrictDetailHeader and haven't been migrated to this
+ * hook yet (a deliberate scope boundary for #1302); the shared derivation keeps
+ * both behaving the same until they are.
  *
  * Self-healing (L124): a hand-edited / shared `?py=` naming a year with no
  * district data falls back to the newest available PY, so the user is never
@@ -48,7 +50,7 @@ export interface DistrictProgramYearControls {
   setSelectedDate: (date: string | undefined) => void
   /** Program years that actually have snapshots for this district, newest first. */
   availableProgramYears: ProgramYear[]
-  /** Snapshot dates within the selected PY, newest first — feeds the date chip. */
+  /** Snapshot dates within the selected PY — feeds the date chip (which sorts). */
   availableDates: string[]
   /** The selected PY reconciled to one with data (self-heal); null until dates load. */
   effectiveProgramYear: ProgramYear | null
@@ -132,12 +134,13 @@ export function useDistrictProgramYearControls(
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
 
+  // Dates within the selected PY. Left unsorted — DataControlsBar (the only
+  // consumer) sorts newest-first itself, matching the sibling
+  // useProgramYearControls which also returns its in-PY dates unsorted.
   const availableDates = useMemo(
     () =>
       effectiveProgramYear
-        ? filterDatesByProgramYear(allCachedDates, effectiveProgramYear).sort(
-            (a, b) => b.localeCompare(a)
-          )
+        ? filterDatesByProgramYear(allCachedDates, effectiveProgramYear)
         : EMPTY_DATES,
     [allCachedDates, effectiveProgramYear]
   )
