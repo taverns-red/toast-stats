@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-self-heal-hook-that-writes-the-url-on-mount-clobbers-a-consumers-navigation-state.md` — A shared "self-heal" hook that rewrites the URL on mount clobbers a consumer's navigation state; gate the write for pages that receive location.state  (2026-07-04)
 - `resolve-the-active-program-year-by-data-not-the-calendar.md` — Resolve the active Toastmasters program year by probing data, not the calendar — TM's rollover lags July 1  (2026-07-02)
 - `a-delete-path-must-reconcile-derived-indexes-not-only-the-additive-path.md` — A delete/prune path must reconcile its derived indexes, not just the additive path  (2026-06-29)
 - `order-additive-set-level-keep-passes-by-whose-reason-should-win.md` — Order additive set-level keep passes by whose reason should win, and have later passes yield to already-set state  (2026-06-29)
