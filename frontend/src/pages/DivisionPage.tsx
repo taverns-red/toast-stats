@@ -18,6 +18,8 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
 import { ClubMiniList } from '../components/ClubMiniList'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
+import { DataControlsBar } from '../components/DataControlsBar'
 
 const DivisionPage: React.FC = () => {
   const { districtId, divId } = useParams<{
@@ -27,10 +29,26 @@ const DivisionPage: React.FC = () => {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
 
+  // PY selector state (#1302) — the page owns program year/date (R3) and threads
+  // the selected PY's effective end date into its own queries so switching the
+  // year re-queries. Was hardcoded to "latest snapshot only" (undefined dates).
+  const {
+    selectedProgramYear,
+    setSelectedProgramYear,
+    selectedDate,
+    setSelectedDate,
+    availableProgramYears,
+    availableDates,
+    effectiveProgramYear,
+    effectiveEndDate,
+    hasValidDates,
+    latestSnapshotDate,
+  } = useDistrictProgramYearControls(districtId)
+
   const { data, isLoading, error } = useDistrictAnalytics(
-    districtId ?? '',
+    hasValidDates ? (districtId ?? null) : null,
     undefined,
-    undefined
+    effectiveEndDate ?? undefined
   )
 
   // Recognition / gap / visit data come from the same raw snapshot the
@@ -38,7 +56,11 @@ const DivisionPage: React.FC = () => {
   // overview's extractDivisionPerformance util + DivisionPerformanceCard rather
   // than re-deriving from allClubs, so this scoped page can't drift from it.
   const { data: snapshot, isLoading: isLoadingSnapshot } =
-    useDistrictStatistics(districtId ?? '', undefined, 'divisions')
+    useDistrictStatistics(
+      hasValidDates ? (districtId ?? null) : null,
+      effectiveEndDate ?? undefined,
+      'divisions'
+    )
   const normalizedDivId = divId?.toUpperCase()
   const divisionPerformance = React.useMemo(() => {
     if (!snapshot || !normalizedDivId) return undefined
@@ -132,6 +154,21 @@ const DivisionPage: React.FC = () => {
               ? 'Division recognition standing for this program year.'
               : `${clubs.length} club${clubs.length === 1 ? '' : 's'} across ${areas.length} area${areas.length === 1 ? '' : 's'} in this division.`}
           </p>
+        </div>
+        <div className="districts-page-header__actions">
+          <DataControlsBar
+            latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
+            asOfDate={snapshot?.asOfDate}
+            availableProgramYears={availableProgramYears}
+            // Derived (healed) year so the chip value is always in its option
+            // list — avoids a transient controlled-select mismatch for an
+            // out-of-range ?py= before the self-heal effect fires.
+            selectedProgramYear={effectiveProgramYear ?? selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={availableDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
         </div>
       </header>
 

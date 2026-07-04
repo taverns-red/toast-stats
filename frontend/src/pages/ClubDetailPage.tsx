@@ -3,14 +3,9 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
-import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
-import { useDistrictCachedDates } from '../hooks/useDistrictData'
-import {
-  getAvailableProgramYears,
-  getMostRecentDateInProgramYear,
-  calculateProgramYearDay,
-  type ProgramYear,
-} from '../utils/programYear'
+import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
+import { calculateProgramYearDay } from '../utils/programYear'
+import { DataControlsBar } from '../components/DataControlsBar'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { formatCharterDate } from '../utils/formatCharterDate'
 import { getClubAnniversary } from '../utils/clubAnniversary'
@@ -190,7 +185,22 @@ const ClubDetailPage: React.FC = () => {
       ? (location.state as { fromClubsSearch: string }).fromClubsSearch
       : ''
 
-  const { selectedProgramYear } = useUrlProgramYear()
+  // PY selector state (#1302) — the page owns program year/date (R3). Previously
+  // this read `?py=` and computed the effective PY/date inline with no selector
+  // UI (users had to edit the URL / use back); the shared district-scoped hook
+  // now packages that wiring AND feeds the DataControlsBar chip in the hero.
+  const {
+    selectedProgramYear,
+    setSelectedProgramYear,
+    selectedDate,
+    setSelectedDate,
+    availableProgramYears,
+    availableDates,
+    effectiveProgramYear,
+    effectiveEndDate,
+    hasValidDates,
+    latestSnapshotDate,
+  } = useDistrictProgramYearControls(districtId, { selfHeal: false })
 
   // Fetch district info
   const { data: districtsData } = useDistricts()
@@ -199,38 +209,6 @@ const ClubDetailPage: React.FC = () => {
   )
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
-
-  // Fetch cached dates to determine effective date range
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId || '')
-  const allCachedDates = useMemo(
-    () => cachedDatesData?.dates || [],
-    [cachedDatesData?.dates]
-  )
-
-  // Determine effective program year
-  const availableProgramYears = useMemo(
-    () => getAvailableProgramYears(allCachedDates),
-    [allCachedDates]
-  )
-
-  const effectiveProgramYear: ProgramYear | null = useMemo(() => {
-    if (availableProgramYears.length === 0) return null
-    const match = availableProgramYears.find(
-      py => py.year === selectedProgramYear.year
-    )
-    return match ?? availableProgramYears[0] ?? null
-  }, [availableProgramYears, selectedProgramYear.year])
-
-  const effectiveEndDate = useMemo(() => {
-    if (!effectiveProgramYear) return null
-    return (
-      getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear) ||
-      effectiveProgramYear.endDate
-    )
-  }, [effectiveProgramYear, allCachedDates])
-
-  const hasValidDates =
-    effectiveProgramYear !== null && effectiveEndDate !== null
 
   // Fetch district analytics to get this club's data
   const {
@@ -526,6 +504,26 @@ const ClubDetailPage: React.FC = () => {
               >
                 View multi-year history →
               </Link>
+              {/* #1302 — PY selector replaces the URL-edit / back workaround.
+                  The page already filtered trends by `?py=`; this surfaces the
+                  control so users can switch year (and snapshot date) directly. */}
+              <div className="club-hero__controls">
+                <DataControlsBar
+                  latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
+                  availableProgramYears={availableProgramYears}
+                  // Show the DERIVED (healed) year so the chip is honest even
+                  // when `?py=` names a year without data — selfHeal is off here
+                  // to protect the #577 navigation state, so nothing writes it
+                  // back to the URL until the user explicitly changes it.
+                  selectedProgramYear={
+                    effectiveProgramYear ?? selectedProgramYear
+                  }
+                  onProgramYearChange={setSelectedProgramYear}
+                  availableDates={availableDates}
+                  selectedDate={selectedDate}
+                  onDateChange={setSelectedDate}
+                />
+              </div>
             </div>
 
             <div className="club-hero__pills">

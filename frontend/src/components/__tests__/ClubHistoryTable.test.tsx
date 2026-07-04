@@ -11,6 +11,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { ClubHistoryTable } from '../ClubHistoryTable'
 import type { ClubHistoryRow } from '../../utils/clubHistory'
 
@@ -107,5 +108,32 @@ describe('ClubHistoryTable (#1229)', () => {
     render(<ClubHistoryTable rows={rows} clubName="Test Club" />)
     const bodyRows = screen.getAllByRole('row').slice(1)
     expect(within(bodyRows[0]!).getByText('2023-2024')).toBeInTheDocument()
+  })
+})
+
+describe('ClubHistoryTable — per-year focus links (#1302)', () => {
+  it('links each program-year row to that year on the club detail page', () => {
+    render(
+      <MemoryRouter>
+        <ClubHistoryTable
+          rows={rows}
+          clubName="Test Club"
+          districtId="61"
+          clubId="00000606"
+        />
+      </MemoryRouter>
+    )
+    // The year label becomes a deep link to ClubDetailPage focused on that PY,
+    // so a user reading the multi-year table can jump into a single year.
+    const link = screen.getByRole('link', { name: '2023-2024' })
+    expect(link).toHaveAttribute('href', '/district/61/club/00000606?py=2023')
+    const older = screen.getByRole('link', { name: '2022-2023' })
+    expect(older).toHaveAttribute('href', '/district/61/club/00000606?py=2022')
+  })
+
+  it('renders plain year labels (no links) when district/club are absent', () => {
+    render(<ClubHistoryTable rows={rows} clubName="Test Club" />)
+    expect(screen.queryByRole('link', { name: '2023-2024' })).toBeNull()
+    expect(screen.getByText('2023-2024')).toBeInTheDocument()
   })
 })
