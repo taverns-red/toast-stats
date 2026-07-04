@@ -77,6 +77,23 @@ describe('useDistrictProgramYearControls (#1302)', () => {
       '2026-05-01',
     ])
     expect(result.current.hasValidDates).toBe(true)
+    // Viewing a prior PY's latest (2026-05-01) is NOT the district's overall
+    // newest snapshot (2026-08-01) → freshness must not flag reconciliation.
+    expect(result.current.latestSnapshotDate).toBe('2026-08-01')
+    expect(result.current.isLatestSnapshot).toBe(false)
+  })
+
+  it('flags isLatestSnapshot when the effective end date is the district newest (#1310)', async () => {
+    const { result } = renderHook(() => useDistrictProgramYearControls('61'), {
+      wrapper: wrapperFor('/district/61?py=2026'),
+    })
+    await waitFor(() =>
+      expect(result.current.effectiveProgramYear?.year).toBe(2026)
+    )
+    // PY2026 latest === the district's overall newest snapshot.
+    expect(result.current.effectiveEndDate).toBe('2026-08-01')
+    expect(result.current.latestSnapshotDate).toBe('2026-08-01')
+    expect(result.current.isLatestSnapshot).toBe(true)
   })
 
   it('self-heals a PY with no district data to the newest available year', async () => {

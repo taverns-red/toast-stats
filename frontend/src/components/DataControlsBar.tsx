@@ -1,17 +1,24 @@
 import React from 'react'
 import type { ProgramYear } from '../utils/programYear'
 import { formatDisplayDate } from '../utils/dateFormatting'
+import { computeFreshness } from '../utils/dataFreshness'
 
 /* Tight horizontal cluster of three pill-styled controls — freshness
    pill, PY chip, date chip — shared by /districts and /district/:id. */
 
 export interface DataControlsBarProps {
+  /** The pinned snapshot date currently being viewed (the month-end during
+   * closing). Also the fallback pill date when no as-of date is known. */
   latestSnapshotDate: string | undefined
   /** The "as of" date (sourceCsvDate) — shown in the pill when set, instead of
    * the pinned snapshot date (#1296). Falls back to latestSnapshotDate. */
   asOfDate?: string | undefined
-  /** When set, the pill renders a month-end reconciliation state (#1296). */
-  reconcilingMonthLabel?: string | undefined
+  /** True when viewing the most recent available snapshot. DataControlsBar
+   * derives the month-end reconciliation state itself via computeFreshness
+   * (#1310) — a single source of truth so no consumer can render the pill in a
+   * different freshness state than another. A finalized historical month-end
+   * (isLatest=false) is never flagged as reconciling. */
+  isLatest?: boolean
   availableProgramYears: ProgramYear[]
   selectedProgramYear: ProgramYear
   onProgramYearChange: (py: ProgramYear) => void
@@ -133,7 +140,7 @@ const formatPyShort = (py: ProgramYear): string =>
 export const DataControlsBar: React.FC<DataControlsBarProps> = ({
   latestSnapshotDate,
   asOfDate,
-  reconcilingMonthLabel,
+  isLatest = false,
   availableProgramYears,
   selectedProgramYear,
   onProgramYearChange,
@@ -143,7 +150,16 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
   freshnessPending = false,
 }) => {
   const sortedDates = [...availableDates].sort((a, b) => b.localeCompare(a))
-  const pillDate = asOfDate ?? latestSnapshotDate
+  // Single source of truth for the pill (#1310): derive the display date and
+  // the month-end reconciliation state here so every consumer only supplies raw
+  // facts (asOfDate, the pinned snapshotDate, isLatest) and can't drift.
+  const freshness = computeFreshness({
+    asOfDate,
+    snapshotDate: latestSnapshotDate,
+    isLatest,
+  })
+  const pillDate = freshness.displayDate
+  const reconcilingMonthLabel = freshness.reconcilingMonthLabel
 
   return (
     <div

@@ -2,6 +2,7 @@ import React from 'react'
 import { DataControlsBar } from './DataControlsBar'
 import { HeaderActionsMenu } from './HeaderActionsMenu'
 import { ProgramYearTitleSuffix } from './ProgramYearTitleSuffix'
+import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import type { ProgramYear } from '../utils/programYear'
 
 /* District detail page header (#358). Extracted from DistrictDetailPage so
@@ -36,6 +37,19 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
   availableDates,
   latestSnapshotDate,
 }) => {
+  // Freshness parity (#1310): every district detail + subnav page shares this
+  // header, and most fetch no per-district snapshot, so the as-of date comes
+  // from the shared global source. The pill reflects the VIEWED date and only
+  // flags month-end reconciliation when the viewed snapshot is BOTH the
+  // district's latest AND the global pinned month-end — a district whose latest
+  // snapshot lags the global scrape never mislabels reconciliation.
+  const { asOfDate: globalAsOfDate, latestSnapshotDate: globalLatestSnapshot } =
+    useLatestAsOfDate()
+  const viewedDate = selectedDate ?? latestSnapshotDate
+  const isLatest =
+    (!selectedDate || selectedDate === latestSnapshotDate) &&
+    !!latestSnapshotDate &&
+    latestSnapshotDate === globalLatestSnapshot
   return (
     <>
       {/* Breadcrumb removed per #442 — duplicated the AppShell's active
@@ -63,7 +77,9 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
 
         <div className="district-detail-page-header__actions">
           <DataControlsBar
-            latestSnapshotDate={latestSnapshotDate}
+            latestSnapshotDate={viewedDate}
+            asOfDate={isLatest ? globalAsOfDate : undefined}
+            isLatest={isLatest}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}
             onProgramYearChange={setSelectedProgramYear}

@@ -7,7 +7,7 @@
    that already smoke-test the header indirectly. */
 
 import React from 'react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { readFileSync } from 'fs'
@@ -15,6 +15,15 @@ import { resolve } from 'path'
 import { MemoryRouter } from 'react-router-dom'
 import { DistrictDetailHeader } from '../../components/DistrictDetailHeader'
 import type { ProgramYear } from '../../utils/programYear'
+
+// The header sources the freshness as-of date from this shared hook (#1310);
+// mock it so the presentational header mounts without a QueryClientProvider.
+vi.mock('../../hooks/useLatestAsOfDate', () => ({
+  useLatestAsOfDate: () => ({
+    asOfDate: undefined,
+    latestSnapshotDate: undefined,
+  }),
+}))
 
 const mockProgramYear: ProgramYear = {
   year: 2025,

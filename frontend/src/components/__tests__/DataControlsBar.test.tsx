@@ -43,13 +43,18 @@ describe('DataControlsBar (#529 #528)', () => {
     expect(pill).not.toHaveTextContent(/Jun 30/)
   })
 
-  it('renders a month-end reconciliation state (amber dot, tooltip) when reconciling (#1296)', () => {
+  // #1310 — DataControlsBar now OWNS the freshness derivation: given the raw
+  // facts (asOfDate, the pinned snapshotDate, and whether we're viewing the
+  // latest snapshot) it calls computeFreshness itself, so no consumer can pass
+  // an inconsistent reconciliation state. The month label is derived from the
+  // pinned snapshot date, not supplied by the caller.
+  it('derives the month-end reconciliation state (amber dot, tooltip) from isLatest (#1310)', () => {
     render(
       <DataControlsBar
         {...baseProps}
         latestSnapshotDate="2026-06-30"
         asOfDate="2026-07-02"
-        reconcilingMonthLabel="June 2026"
+        isLatest
       />
     )
     const pill = screen.getByTestId('freshness-pill')
@@ -61,6 +66,26 @@ describe('DataControlsBar (#529 #528)', () => {
     )
     const dot = pill.querySelector('[data-testid="freshness-dot"]')
     expect(dot?.className).toMatch(/amber/)
+  })
+
+  // A finalized historical month-end selected via the date picker must NEVER be
+  // mislabelled as reconciling, even if an as-of date in a later month is passed
+  // — the guard is isLatest=false (computeFreshness enforces it, #1310).
+  it('does NOT flag reconciliation for a historical snapshot (isLatest=false) (#1310)', () => {
+    render(
+      <DataControlsBar
+        {...baseProps}
+        latestSnapshotDate="2026-06-30"
+        asOfDate="2026-07-02"
+        isLatest={false}
+      />
+    )
+    const pill = screen.getByTestId('freshness-pill')
+    expect(pill).not.toHaveTextContent(/month-end reconciliation/i)
+    expect(pill.getAttribute('data-reconciling')).toBeNull()
+    expect(pill).toHaveTextContent(/Data fresh/i)
+    const dot = pill.querySelector('[data-testid="freshness-dot"]')
+    expect(dot?.className).toMatch(/green/)
   })
 
   it('renders the PY chip showing the selected program year as "PY YYYY–YY"', () => {

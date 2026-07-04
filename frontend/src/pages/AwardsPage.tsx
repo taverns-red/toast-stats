@@ -2,6 +2,7 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
+import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import type {
   CompetitiveAwardRanking,
@@ -62,18 +63,25 @@ const AwardsPage: React.FC = () => {
     availableProgramYears,
     cachedDates,
     effectiveDate,
+    isLatestSnapshot,
     isDatesPending,
   } = useProgramYearControls()
 
   const { data: standings, isLoading } = useCompetitiveAwards(effectiveDate)
 
+  // Awards standings carry no `sourceCsvDate`, so source the as-of date from the
+  // shared global freshness signal so the pill matches every other page (#1310).
+  // Gated on isLatestSnapshot: the global as-of date only describes the latest
+  // snapshot, never a finalized historical date selected via the picker.
+  const { asOfDate: globalAsOfDate } = useLatestAsOfDate()
+
   return (
     <div className="awards-page">
       {/* Adopt the shared page-header layout (Districts/Regions/Region) so the
           DataControlsBar toolbar lays out top-right on desktop and stacks on
-          mobile — awards-page__header keeps its own bottom-margin. The awards
-          standings carry no `sourceCsvDate`, so the freshness pill just shows
-          the snapshot date (no month-end reconciliation axis). */}
+          mobile — awards-page__header keeps its own bottom-margin. The as-of
+          date + month-end reconciliation state come from the shared global
+          freshness source (#1310), matching every other page's pill. */}
       <header className="districts-page-header awards-page__header">
         <div className="districts-page-header__intro">
           <p className="placeholder-page__eyebrow">
@@ -96,6 +104,8 @@ const AwardsPage: React.FC = () => {
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveDate}
+            asOfDate={isLatestSnapshot ? globalAsOfDate : undefined}
+            isLatest={isLatestSnapshot}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}
             onProgramYearChange={setSelectedProgramYear}

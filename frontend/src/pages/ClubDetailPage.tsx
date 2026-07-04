@@ -200,6 +200,7 @@ const ClubDetailPage: React.FC = () => {
     effectiveEndDate,
     hasValidDates,
     latestSnapshotDate,
+    isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId, { selfHeal: false })
 
   // Fetch district info
@@ -510,6 +511,8 @@ const ClubDetailPage: React.FC = () => {
               <div className="club-hero__controls">
                 <DataControlsBar
                   latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
+                  asOfDate={districtStats?.asOfDate}
+                  isLatest={isLatestSnapshot}
                   availableProgramYears={availableProgramYears}
                   // Show the DERIVED (healed) year so the chip is honest even
                   // when `?py=` names a year without data — selfHeal is off here

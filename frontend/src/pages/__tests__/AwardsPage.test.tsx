@@ -17,6 +17,16 @@ vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn().mockResolvedValue({ dates: [], count: 0 }),
 }))
 
+// AwardsPage now sources the freshness as-of date from this shared hook (#1310).
+// These tests exercise the award tables, not the pill — stub it to undefined so
+// the pill falls back to the snapshot date (its prior behaviour here).
+vi.mock('../../hooks/useLatestAsOfDate', () => ({
+  useLatestAsOfDate: () => ({
+    asOfDate: undefined,
+    latestSnapshotDate: undefined,
+  }),
+}))
+
 const mockStandings: CompetitiveAwardStandings = {
   metadata: {
     snapshotId: '2026-04-15',
