@@ -21,6 +21,16 @@ const LocationProbe = () => {
   return <div data-testid="loc-search">{search}</div>
 }
 
+// AwardsPage now sources the freshness as-of date from this shared hook (#1310).
+// This suite exercises the PY/date selector, not the pill — stub it so the pill
+// falls back to the snapshot date (its prior behaviour here).
+vi.mock('../../hooks/useLatestAsOfDate', () => ({
+  useLatestAsOfDate: () => ({
+    asOfDate: undefined,
+    latestSnapshotDate: undefined,
+  }),
+}))
+
 afterEach(() => cleanup())
 
 vi.mock('../../services/cdn', () => {

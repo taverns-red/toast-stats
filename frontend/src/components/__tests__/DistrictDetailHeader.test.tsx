@@ -1,11 +1,28 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { DistrictDetailHeader } from '../DistrictDetailHeader'
 import { getProgramYear } from '../../utils/programYear'
+import { useLatestAsOfDate } from '../../hooks/useLatestAsOfDate'
+
+// Mock the global freshness source so the presentational header stays testable
+// without a QueryClientProvider. Default: no reconciliation.
+vi.mock('../../hooks/useLatestAsOfDate', () => ({
+  useLatestAsOfDate: vi.fn(() => ({
+    asOfDate: undefined,
+    latestSnapshotDate: undefined,
+  })),
+}))
+const mockUseLatestAsOfDate = vi.mocked(useLatestAsOfDate)
 
 afterEach(() => cleanup())
+beforeEach(() =>
+  mockUseLatestAsOfDate.mockReturnValue({
+    asOfDate: undefined,
+    latestSnapshotDate: undefined,
+  })
+)
 
 const py2526 = getProgramYear(2025)
 
@@ -93,5 +110,52 @@ describe('DistrictDetailHeader action cluster consolidation (#676)', () => {
     ).toBeInTheDocument()
     expect(screen.getByTestId('py-chip')).toBeInTheDocument()
     expect(screen.getByTestId('date-chip')).toBeInTheDocument()
+  })
+})
+
+describe('DistrictDetailHeader freshness parity (#1310)', () => {
+  it('shows the month-end reconciliation pill when the global as-of date has advanced past the district month-end', () => {
+    mockUseLatestAsOfDate.mockReturnValue({
+      asOfDate: '2026-07-02',
+      latestSnapshotDate: '2026-06-30',
+    })
+    // Viewing the district's latest snapshot (no explicit date), and that latest
+    // === the global pinned month-end → reconciliation is live.
+    renderHeader({ selectedDate: undefined, latestSnapshotDate: '2026-06-30' })
+    const pill = screen.getByTestId('freshness-pill')
+    expect(pill).toHaveTextContent(/As of Jul 2, 2026/)
+    expect(pill).toHaveTextContent(/month-end reconciliation/i)
+    expect(pill.getAttribute('data-reconciling')).toBe('true')
+  })
+
+  it('does NOT flag reconciliation for a district whose latest snapshot lags the global scrape', () => {
+    mockUseLatestAsOfDate.mockReturnValue({
+      asOfDate: '2026-07-02',
+      latestSnapshotDate: '2026-06-30',
+    })
+    // District's newest is May 31 — it lags behind the global June month-end, so
+    // the July as-of date must not paint a spurious "May reconciliation".
+    renderHeader({ selectedDate: undefined, latestSnapshotDate: '2026-05-31' })
+    const pill = screen.getByTestId('freshness-pill')
+    expect(pill).not.toHaveTextContent(/month-end reconciliation/i)
+    expect(pill.getAttribute('data-reconciling')).toBeNull()
+    expect(pill).toHaveTextContent(/Data fresh · May 31, 2026/)
+  })
+
+  it('does NOT flag reconciliation when viewing a finalized historical date', () => {
+    mockUseLatestAsOfDate.mockReturnValue({
+      asOfDate: '2026-07-02',
+      latestSnapshotDate: '2026-06-30',
+    })
+    // A specific past date is selected (not the latest) → isLatest false. The
+    // pill reflects the VIEWED date, matching DistrictsPage.
+    renderHeader({
+      selectedDate: '2026-05-31',
+      latestSnapshotDate: '2026-06-30',
+    })
+    const pill = screen.getByTestId('freshness-pill')
+    expect(pill).not.toHaveTextContent(/month-end reconciliation/i)
+    expect(pill.getAttribute('data-reconciling')).toBeNull()
+    expect(pill).toHaveTextContent(/Data fresh · May 31, 2026/)
   })
 })

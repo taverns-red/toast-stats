@@ -43,6 +43,7 @@ const DivisionPage: React.FC = () => {
     effectiveEndDate,
     hasValidDates,
     latestSnapshotDate,
+    isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId)
 
   const { data, isLoading, error } = useDistrictAnalytics(
@@ -159,6 +160,7 @@ const DivisionPage: React.FC = () => {
           <DataControlsBar
             latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
             asOfDate={snapshot?.asOfDate}
+            isLatest={isLatestSnapshot}
             availableProgramYears={availableProgramYears}
             // Derived (healed) year so the chip value is always in its option
             // list — avoids a transient controlled-select mismatch for an

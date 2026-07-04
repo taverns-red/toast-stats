@@ -9,7 +9,6 @@ import { EmptyState } from '../components/ErrorDisplay'
 import { useUrlState } from '../hooks/useUrlState'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { DataControlsBar } from '../components/DataControlsBar'
-import { computeFreshness } from '../utils/dataFreshness'
 
 /* Region selection is URL state (#979) so it survives reload, back, and shared
    links — `?region=07`. Module-level options keep a stable reference so
@@ -58,14 +57,6 @@ const RegionsPage: React.FC = () => {
     // Keep the prior snapshot visible while a PY switch re-queries, so the
     // leaderboard doesn't flash back to the full-page skeleton.
     placeholderData: prev => prev,
-  })
-
-  // Freshness pill: show the "as of" date and flag month-end reconciliation
-  // when viewing the latest snapshot (#1296).
-  const freshness = computeFreshness({
-    asOfDate: data?.date,
-    snapshotDate: effectiveDate,
-    isLatest: isLatestSnapshot,
   })
 
   const [selectedRegion, setSelectedRegion] = useUrlState<string | null>(
@@ -137,8 +128,8 @@ const RegionsPage: React.FC = () => {
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveDate}
-            asOfDate={freshness.displayDate}
-            reconcilingMonthLabel={freshness.reconcilingMonthLabel}
+            asOfDate={data?.date}
+            isLatest={isLatestSnapshot}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}
             onProgramYearChange={setSelectedProgramYear}

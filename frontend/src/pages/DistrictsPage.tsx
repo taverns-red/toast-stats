@@ -7,7 +7,6 @@ import {
   fetchCdnRankingsForDate,
 } from '../services/cdn'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
-import { computeFreshness } from '../utils/dataFreshness'
 import { AwardsRaceSection } from '../components/AwardsRaceSection'
 import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
 import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
@@ -277,17 +276,13 @@ const DistrictsPage: React.FC = () => {
     placeholderData: prev => prev,
   })
 
-  // Freshness pill: show the "as of" date (sourceCsvDate) and flag month-end
-  // reconciliation when the latest snapshot is still finalizing (#1296).
+  // Freshness pill: DataControlsBar derives the "as of" date + month-end
+  // reconciliation state itself from these raw facts (#1310). isLatestSnapshot
+  // gates reconciliation to the live snapshot only.
   const isLatestSnapshot =
     !selectedDate ||
     (cachedDates.length > 0 &&
       selectedDate === [...cachedDates].sort((a, b) => b.localeCompare(a))[0])
-  const freshness = computeFreshness({
-    asOfDate: data?.date,
-    snapshotDate: effectiveRankingsDate,
-    isLatest: isLatestSnapshot,
-  })
 
   // Fetch competitive award standings for the same snapshot (#331).
   // isLoading reserves the AwardsRaceSection slot so its late arrival (this
@@ -889,8 +884,8 @@ const DistrictsPage: React.FC = () => {
           <div className="districts-page-header__actions">
             <DataControlsBar
               latestSnapshotDate={effectiveRankingsDate}
-              asOfDate={freshness.displayDate}
-              reconcilingMonthLabel={freshness.reconcilingMonthLabel}
+              asOfDate={data?.date}
+              isLatest={isLatestSnapshot}
               availableProgramYears={availableProgramYears}
               selectedProgramYear={selectedProgramYear}
               onProgramYearChange={setSelectedProgramYear}

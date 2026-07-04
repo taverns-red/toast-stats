@@ -60,6 +60,10 @@ export interface DistrictProgramYearControls {
   hasValidDates: boolean
   /** The district's overall most-recent snapshot date (for the freshness pill). */
   latestSnapshotDate: string | undefined
+  /** True when the effective end date is the district's newest snapshot — the
+   * signal computeFreshness needs to flag month-end reconciliation only on the
+   * live snapshot, never a finalized historical date (#1310). */
+  isLatestSnapshot: boolean
 }
 
 export function useDistrictProgramYearControls(
@@ -142,6 +146,10 @@ export function useDistrictProgramYearControls(
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
 
+  const latestSnapshotDate = cachedDatesData?.dateRange?.endDate
+  const isLatestSnapshot =
+    !!effectiveEndDate && effectiveEndDate === latestSnapshotDate
+
   // Dates within the selected PY. Left unsorted — DataControlsBar (the only
   // consumer) sorts newest-first itself, matching the sibling
   // useProgramYearControls which also returns its in-PY dates unsorted.
@@ -163,6 +171,7 @@ export function useDistrictProgramYearControls(
     effectiveProgramYear,
     effectiveEndDate,
     hasValidDates,
-    latestSnapshotDate: cachedDatesData?.dateRange?.endDate,
+    latestSnapshotDate,
+    isLatestSnapshot,
   }
 }

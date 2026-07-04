@@ -14,7 +14,6 @@ import { computeTiedRanks } from '../utils/tieRankingUtils'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { DataControlsBar } from '../components/DataControlsBar'
-import { computeFreshness } from '../utils/dataFreshness'
 import type { DistinguishedDistrictTier } from '../services/cdn'
 import {
   getDistinguishedCountdown,
@@ -292,13 +291,6 @@ const RegionPage: React.FC = () => {
     placeholderData: prev => prev,
   })
 
-  // Freshness pill (#1296) — as-of date + month-end reconciliation state.
-  const freshness = computeFreshness({
-    asOfDate: data?.date,
-    snapshotDate: effectiveDate,
-    isLatest: isLatestSnapshot,
-  })
-
   // Distinguished District prerequisite gaps. Pin to the rankings
   // snapshot date so the countdown/tier columns can never drift to a
   // newer snapshot than the row they describe — two independent "latest"
@@ -430,8 +422,8 @@ const RegionPage: React.FC = () => {
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveDate}
-            asOfDate={freshness.displayDate}
-            reconcilingMonthLabel={freshness.reconcilingMonthLabel}
+            asOfDate={data?.date}
+            isLatest={isLatestSnapshot}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}
             onProgramYearChange={setSelectedProgramYear}
