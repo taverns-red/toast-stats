@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.31.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.30.0...toast-stats-v2.31.0) (2026-07-04)
+
+
+### Features
+
+* **frontend:** PY selector on Division, Area, Club detail/history pages ([#1302](https://github.com/taverns-red/toast-stats/issues/1302)) ([#1308](https://github.com/taverns-red/toast-stats/issues/1308)) ([089c2f0](https://github.com/taverns-red/toast-stats/commit/089c2f0a4c4b80e3cccd40cf75ecaca4e7cb251c))
+* **frontend:** PY selector on Regions, Region, and Awards pages ([#1301](https://github.com/taverns-red/toast-stats/issues/1301)) ([#1305](https://github.com/taverns-red/toast-stats/issues/1305)) ([cc6a19e](https://github.com/taverns-red/toast-stats/commit/cc6a19eb19eacdad9a34cf228ad9809279de1e8c))
+
 ## [2.30.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.29.0...toast-stats-v2.30.0) (2026-07-03)
 
 
