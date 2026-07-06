@@ -12,12 +12,40 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import RegionPage from '../RegionPage'
-import { fetchCdnRankingsForDate } from '../../services/cdn'
+import {
+  fetchCdnRankingsForDate,
+  fetchCdnCompetitiveAwards,
+} from '../../services/cdn'
 
 const LocationProbe = () => {
   const { search } = useLocation()
   return <div data-testid="loc-search">{search}</div>
 }
+
+const mockedAwards = vi.mocked(fetchCdnCompetitiveAwards)
+
+// Minimal region-07 ranking rows for override scenarios.
+const mkRanking = (districtId: string, score: number) => ({
+  districtId,
+  districtName: `District ${districtId}`,
+  region: '07',
+  paidClubs: 50,
+  paidClubBase: 48,
+  clubGrowthPercent: 4,
+  totalPayments: 2000,
+  paymentBase: 1900,
+  paymentGrowthPercent: 5,
+  activeClubs: 50,
+  distinguishedClubs: 20,
+  selectDistinguished: 5,
+  presidentsDistinguished: 3,
+  distinguishedPercent: 40,
+  clubsRank: 1,
+  paymentsRank: 1,
+  distinguishedRank: 1,
+  overallRank: 1,
+  aggregateScore: score,
+})
 
 afterEach(() => cleanup())
 
@@ -95,6 +123,24 @@ describe('RegionPage — program year selector (#1301)', () => {
     renderAt('/region/07')
     await screen.findByRole('table', { name: /region 07 district rankings/i })
     expect(screen.getByTestId('py-chip')).toBeInTheDocument()
+  })
+
+  it('keys competitive-awards on the SNAPSHOT date, not the as-of sourceCsvDate (month-end reconciliation)', async () => {
+    // Reconciliation window: the 2026-05-01 snapshot's sourceCsvDate has
+    // advanced to 2026-05-20. The countdown/tier columns read from the awards
+    // file, which is stored under the SNAPSHOT date — keying it on the advanced
+    // sourceCsvDate 404s and blanks those columns.
+    mockedForDate.mockImplementation((date: string) =>
+      Promise.resolve({
+        date: date === '2026-05-01' ? '2026-05-20' : date,
+        rankings: [mkRanking('57', 350), mkRanking('60', 300)],
+      })
+    )
+    renderAt('/region/07?py=2025') // latest in PY2025 = 2026-05-01
+    await screen.findByRole('table', { name: /region 07 district rankings/i })
+    await waitFor(() => expect(mockedAwards).toHaveBeenCalled())
+    expect(mockedAwards).toHaveBeenCalledWith('2026-05-01')
+    expect(mockedAwards).not.toHaveBeenCalledWith('2026-05-20')
   })
 
   it('honors a ?py= deep link and fetches that PY latest snapshot', async () => {

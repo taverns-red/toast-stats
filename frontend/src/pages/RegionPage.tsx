@@ -291,11 +291,12 @@ const RegionPage: React.FC = () => {
     placeholderData: prev => prev,
   })
 
-  // Distinguished District prerequisite gaps. Pin to the rankings
-  // snapshot date so the countdown/tier columns can never drift to a
-  // newer snapshot than the row they describe — two independent "latest"
-  // calls would race during a publish.
-  const { data: awards } = useCompetitiveAwards(data?.date)
+  // Distinguished District prerequisite gaps. Pin to the rankings SNAPSHOT
+  // date (effectiveDate), NOT data.date (the as-of sourceCsvDate). The
+  // competitive-awards file is stored under the snapshot date; during
+  // month-end reconciliation the sourceCsvDate advances past it, so keying on
+  // data.date 404s and blanks the countdown/tier columns (#1315).
+  const { data: awards } = useCompetitiveAwards(effectiveDate)
 
   // Region ranks are ALWAYS computed from aggregate score, regardless of
   // the visible sort order — a district's regional rank is a property of
