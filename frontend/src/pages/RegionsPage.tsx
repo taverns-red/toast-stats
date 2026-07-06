@@ -50,8 +50,7 @@ const RegionsPage: React.FC = () => {
     queryKey: ['district-rankings', effectiveDate ?? 'latest'],
     queryFn: async () => {
       if (effectiveDate) return fetchCdnRankingsForDate(effectiveDate)
-      const cdn = await fetchCdnRankings()
-      return cdn
+      return fetchCdnRankings()
     },
     staleTime: 15 * 60 * 1000,
     // Keep the prior snapshot visible while a PY switch re-queries, so the

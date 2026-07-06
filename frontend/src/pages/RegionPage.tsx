@@ -284,8 +284,7 @@ const RegionPage: React.FC = () => {
     queryKey: ['district-rankings', effectiveDate ?? 'latest'],
     queryFn: async () => {
       if (effectiveDate) return fetchCdnRankingsForDate(effectiveDate)
-      const cdnData = await fetchCdnRankings()
-      return cdnData
+      return fetchCdnRankings()
     },
     staleTime: 15 * 60 * 1000,
     placeholderData: prev => prev,

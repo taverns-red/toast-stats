@@ -269,8 +269,7 @@ const DistrictsPage: React.FC = () => {
       if (effectiveRankingsDate) {
         return fetchCdnRankingsForDate(effectiveRankingsDate)
       }
-      const cdnData = await fetchCdnRankings()
-      return cdnData
+      return fetchCdnRankings()
     },
     staleTime: 15 * 60 * 1000, // 15 minutes
     placeholderData: prev => prev,
