@@ -112,7 +112,7 @@ const setupWithData = () => {
   // Rankings query from CDN (#173)
   mockedFetchCdnRankings.mockResolvedValueOnce({
     rankings: MOCK_RANKINGS,
-    date: '2025-11-22',
+    asOfDate: '2025-11-22',
     generatedAt: '2025-01-01T00:00:00Z',
   })
 }
@@ -301,7 +301,7 @@ describe('DistrictsPage - District Search (#91)', () => {
           region: '6',
         },
       ],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
       generatedAt: '2025-01-01T00:00:00Z',
     })
     renderWithProviders(<DistrictsPage />)

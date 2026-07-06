@@ -112,7 +112,7 @@ describe('DistrictsPage — click-header sort (#851)', () => {
     vi.clearAllMocks()
     mockedFetchCdnRankings.mockResolvedValue({
       rankings,
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
   })
 

@@ -117,7 +117,20 @@ export interface CdnRankingsData {
     aggregateScore: number
     overallRank: number
   }>
-  date: string
+  /**
+   * The dashboard **as-of** date (`metadata.sourceCsvDate`). This advances past
+   * the pinned snapshot date during month-end reconciliation — it is a
+   * display/provenance value ONLY. Never key a per-snapshot fetch, query key, or
+   * date comparison on it (that is the #1315 blank-UI class). Key those on the
+   * page-owned snapshot date (`effectiveDate`) per R3.
+   */
+  asOfDate: string
+  /**
+   * The pinned snapshot date this data lives under. Set to its `date` argument
+   * by `fetchCdnRankingsForDate`; `undefined` on the `fetchCdnRankings()` latest
+   * path and whenever the per-date file 404s and we fall back to latest.
+   */
+  snapshotDate?: string
   generatedAt: string
 }
 
@@ -129,7 +142,21 @@ export async function fetchCdnRankings(): Promise<CdnRankingsData> {
   const res = await fetch(`${cdnBaseUrl()}/v1/rankings.json`)
   if (!res.ok) throw new Error(`CDN rankings fetch failed: ${res.status}`)
   recordCdnResponse(res)
-  return res.json() as Promise<CdnRankingsData>
+  const raw = (await res.json()) as {
+    _format?: CdnRankingsData['_format']
+    rankings: CdnRankingsData['rankings']
+    date: string
+    generatedAt: string
+  }
+  // The latest file carries its as-of date as a bare `date`; expose it under the
+  // unambiguous `asOfDate`. There is no pinned snapshot on the latest path.
+  const data: CdnRankingsData = {
+    rankings: raw.rankings,
+    asOfDate: raw.date,
+    generatedAt: raw.generatedAt,
+  }
+  if (raw._format) data._format = raw._format
+  return data
 }
 
 /**
@@ -151,7 +178,10 @@ export async function fetchCdnRankingsForDate(
   }
   return {
     rankings: raw.rankings,
-    date: raw.metadata?.sourceCsvDate || date,
+    // The file lives under `date` (the pinned snapshot); its `sourceCsvDate` is
+    // the advancing as-of date. During closing these DIVERGE — keep them apart.
+    snapshotDate: date,
+    asOfDate: raw.metadata?.sourceCsvDate || date,
     generatedAt: raw.metadata?.calculatedAt || new Date().toISOString(),
   }
 }

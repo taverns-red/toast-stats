@@ -42,7 +42,7 @@ export function useLatestAsOfDate(): LatestAsOfDate {
   })
 
   return {
-    asOfDate: rankings?.date,
+    asOfDate: rankings?.asOfDate,
     latestSnapshotDate: manifest?.latestSnapshotDate,
   }
 }

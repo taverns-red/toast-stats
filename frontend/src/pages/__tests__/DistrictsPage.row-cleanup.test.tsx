@@ -45,7 +45,7 @@ describe('DistrictsPage data controls bar (#530 #528)', () => {
   it('renders the unified DataControlsBar toolbar', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
     renderWithProviders(<DistrictsPage />)
 
@@ -57,7 +57,7 @@ describe('DistrictsPage data controls bar (#530 #528)', () => {
   it('does not render the legacy DataFreshnessBadge', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
     renderWithProviders(<DistrictsPage />)
 
@@ -68,7 +68,7 @@ describe('DistrictsPage data controls bar (#530 #528)', () => {
   it('does not render the legacy "View Specific Date" filters card label', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
     renderWithProviders(<DistrictsPage />)
 
@@ -81,7 +81,7 @@ describe('DistrictsPage row cleanup (#519 #520)', () => {
   it('does not render an "Analytics" chip on any ranking row', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -93,7 +93,7 @@ describe('DistrictsPage row cleanup (#519 #520)', () => {
   it('omits the bare district number when districtName is purely numeric', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -113,7 +113,7 @@ describe('DistrictsPage row cleanup (#519 #520)', () => {
           districtName: 'District 57 Carolinas',
         },
       ],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
 
     renderWithProviders(<DistrictsPage />)

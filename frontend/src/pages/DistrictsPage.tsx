@@ -270,7 +270,7 @@ const DistrictsPage: React.FC = () => {
         return fetchCdnRankingsForDate(effectiveRankingsDate)
       }
       const cdnData = await fetchCdnRankings()
-      return { rankings: cdnData.rankings, date: cdnData.date }
+      return cdnData
     },
     staleTime: 15 * 60 * 1000, // 15 minutes
     placeholderData: prev => prev,
@@ -432,7 +432,7 @@ const DistrictsPage: React.FC = () => {
   }, [rankedRankings, myDistrictId])
 
   const { diff: lastVisitDiff, commit: commitLastVisit } = useLastVisit({
-    currentDate: data?.date ?? null,
+    currentAsOfDate: data?.asOfDate ?? null,
     currentMyRank: myDistrictCurrentRank,
     currentMyDistrictId: myDistrictId,
   })
@@ -441,8 +441,8 @@ const DistrictsPage: React.FC = () => {
   // so the next visit reads it as the previous one. The effect runs once
   // per data load.
   React.useEffect(() => {
-    if (data?.date) commitLastVisit()
-  }, [data?.date, commitLastVisit])
+    if (data?.asOfDate) commitLastVisit()
+  }, [data?.asOfDate, commitLastVisit])
 
   // Sticky-pin 'my district' to the top of the rankings table (#417).
   // Reorder ONLY for visual placement; ranks stay correct.
@@ -884,7 +884,7 @@ const DistrictsPage: React.FC = () => {
           <div className="districts-page-header__actions">
             <DataControlsBar
               latestSnapshotDate={effectiveRankingsDate}
-              asOfDate={data?.date}
+              asOfDate={data?.asOfDate}
               isLatest={isLatestSnapshot}
               availableProgramYears={availableProgramYears}
               selectedProgramYear={selectedProgramYear}

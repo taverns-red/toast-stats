@@ -105,7 +105,7 @@ const setupSingleRow = () => {
         overallRank: 1,
       },
     ],
-    date: '2025-11-22',
+    asOfDate: '2025-11-22',
   } as never)
 }
 

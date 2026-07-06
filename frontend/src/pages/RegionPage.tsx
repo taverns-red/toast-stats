@@ -285,7 +285,7 @@ const RegionPage: React.FC = () => {
     queryFn: async () => {
       if (effectiveDate) return fetchCdnRankingsForDate(effectiveDate)
       const cdnData = await fetchCdnRankings()
-      return { rankings: cdnData.rankings, date: cdnData.date }
+      return cdnData
     },
     staleTime: 15 * 60 * 1000,
     placeholderData: prev => prev,
@@ -423,7 +423,7 @@ const RegionPage: React.FC = () => {
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveDate}
-            asOfDate={data?.date}
+            asOfDate={data?.asOfDate}
             isLatest={isLatestSnapshot}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}

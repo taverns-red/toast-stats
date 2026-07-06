@@ -16,7 +16,7 @@ export function useDistrictRanking(districtId: string | undefined): {
     queryKey: ['district-rankings', 'latest'],
     queryFn: async () => {
       const cdnData = await fetchCdnRankings()
-      return { rankings: cdnData.rankings, date: cdnData.date }
+      return { rankings: cdnData.rankings, asOfDate: cdnData.asOfDate }
     },
     staleTime: 15 * 60 * 1000,
   })

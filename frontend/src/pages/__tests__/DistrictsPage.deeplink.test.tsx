@@ -94,7 +94,7 @@ const row = (
 const setupThreeRegions = () => {
   mockedFetchCdnRankings.mockResolvedValue({
     rankings: [row(1, '1'), row(2, '2'), row(3, '3')],
-    date: '2025-11-22',
+    asOfDate: '2025-11-22',
     generatedAt: '2025-01-01T00:00:00Z',
   })
 }
@@ -102,7 +102,7 @@ const setupThreeRegions = () => {
 const setupFiveDistricts = () => {
   mockedFetchCdnRankings.mockResolvedValue({
     rankings: [row(1, '1'), row(2, '1'), row(3, '1'), row(4, '1'), row(5, '1')],
-    date: '2025-11-22',
+    asOfDate: '2025-11-22',
     generatedAt: '2025-01-01T00:00:00Z',
   })
 }

@@ -73,7 +73,7 @@ const makeRow = (i: number) => ({
 const setupRows = (n: number) => {
   mockedFetchCdnRankings.mockResolvedValue({
     rankings: Array.from({ length: n }, (_, idx) => makeRow(idx + 1)),
-    date: '2025-11-22',
+    asOfDate: '2025-11-22',
   } as never)
 }
 
