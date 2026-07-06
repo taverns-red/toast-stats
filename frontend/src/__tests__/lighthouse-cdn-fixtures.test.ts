@@ -36,7 +36,17 @@ import awards from '../../lighthouse/cdn-fixtures/snapshots/2025-11-22/competiti
 
 // Compile-time contract (enforced by `typecheck:test`, not the prod build):
 // a fixture that drifts from the CDN response shape fails `tsc` here.
-const typedRankings: CdnRankingsData = rankings
+//
+// The SERVED `v1/rankings.json` is the RAW pre-map file: `fetchCdnRankings()`
+// reads its bare `date` and re-exposes it as the mapped `CdnRankingsData.asOfDate`
+// (#1320). So the fixture contract is the mapped row shape MINUS the mapped date
+// fields, PLUS the raw `date` the server must keep — dropping it would make
+// `fetchCdnRankings` read `undefined`. Typing it as the mapped `CdnRankingsData`
+// (which no longer has `date`) would be wrong on both ends.
+type RawRankingsFile = Omit<CdnRankingsData, 'asOfDate' | 'snapshotDate'> & {
+  date: string
+}
+const typedRankings: RawRankingsFile = rankings
 const typedManifest: CdnManifest = manifest
 const typedDates: CdnDatesIndex = dates
 const typedAwards: CompetitiveAwardStandings = awards
@@ -95,6 +105,9 @@ describe('Lighthouse CDN fixtures (#915 V10)', () => {
 
   it('manifest + dates point at the same snapshot date the rankings carry', () => {
     expect(typedManifest.latestSnapshotDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    // The raw file's as-of `date` equals the manifest snapshot here on purpose:
+    // this is a normal non-diverged mid-month fixture (as-of == snapshot). They
+    // only diverge during month-end reconciliation (#1320) — not modelled here.
     expect(typedRankings.date).toBe(typedManifest.latestSnapshotDate)
     expect(typedDates.dates).toContain(typedManifest.latestSnapshotDate)
     expect(typedDates.count).toBe(typedDates.dates.length)
