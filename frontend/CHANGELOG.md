@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.16.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.16.0...frontend-v3.16.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **region:** key competitive-awards on snapshot date, not sourceCsvDate ([#1315](https://github.com/taverns-red/toast-stats/issues/1315)) ([#1316](https://github.com/taverns-red/toast-stats/issues/1316)) ([2ea597e](https://github.com/taverns-red/toast-stats/commit/2ea597e989bc261b45effcba25a3baed9008f484))
+
 ## [3.16.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.15.0...frontend-v3.16.0) (2026-07-04)
 
 
