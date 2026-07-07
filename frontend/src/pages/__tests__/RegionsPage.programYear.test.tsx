@@ -136,7 +136,7 @@ describe('RegionsPage — program year selector (#1301)', () => {
 
   it('still renders when the dates index is unavailable (fallback to latest)', async () => {
     mockedLatest.mockResolvedValueOnce({
-      date: '2026-08-01',
+      asOfDate: '2026-08-01',
       rankings: [
         {
           districtId: '01',

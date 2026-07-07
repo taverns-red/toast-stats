@@ -118,7 +118,7 @@ describe('RegionPage — click-header sort (#851)', () => {
   beforeEach(() => {
     mockedFetchCdnRankings.mockResolvedValue({
       rankings,
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
   })
 

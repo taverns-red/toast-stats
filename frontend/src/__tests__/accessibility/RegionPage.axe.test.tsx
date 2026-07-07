@@ -47,7 +47,7 @@ vi.mock('../../services/cdn', () => {
   // per-date fetch so the DataControlsBar toolbar is fully populated for the
   // a11y scan.
   const rankings = {
-    date: '2026-05-12',
+    asOfDate: '2026-05-12',
     rankings: [ranking('60', '07', 500), ranking('61', '07', 350)],
   }
   return {

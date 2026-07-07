@@ -13,7 +13,7 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 // palette opens — keeps these tests isolated from the network layer. All
 // three fetches are stubbed so opening the modal doesn't hit the network.
 vi.mock('../../services/cdn', () => ({
-  fetchCdnRankings: vi.fn().mockResolvedValue({ rankings: [], date: '' }),
+  fetchCdnRankings: vi.fn().mockResolvedValue({ rankings: [], asOfDate: '' }),
   fetchCdnClubIndex: vi.fn().mockResolvedValue({ clubs: {} }),
   fetchCdnDivisionsAreasIndex: vi.fn().mockResolvedValue({ districts: {} }),
 }))

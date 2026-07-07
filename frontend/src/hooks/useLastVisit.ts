@@ -1,10 +1,13 @@
-/* useLastVisit (#418) — track the snapshot date the user last saw, and
-   the rank of their pinned district at that time. Returns a diff vs
-   the current snapshot so the Districts page can surface a "what
-   changed since your last visit" strip.
+/* useLastVisit (#418) — track the data the user last saw, and the rank of
+   their pinned district at that time. Returns a diff vs the current data so the
+   Districts page can surface a "what changed since your last visit" strip.
 
    We persist three things:
-     - lastSeenDate: the data?.date the user saw last
+     - lastSeenDate: the rankings **as-of** date (`asOfDate`, the advancing
+       dashboard sourceCsvDate) the user saw last. This is deliberately the
+       as-of date, not the pinned snapshot date: the strip's purpose is "did the
+       underlying data change since you were last here", and the as-of date is
+       what moves when it does (#1320).
      - lastSeenMyRank: their my-district's rank at that time
 
    On every render we compare current → stored and return a diff. The
@@ -35,11 +38,11 @@ const EMPTY: VisitSnapshot = {
 }
 
 export function useLastVisit({
-  currentDate,
+  currentAsOfDate,
   currentMyRank,
   currentMyDistrictId,
 }: {
-  currentDate: string | null
+  currentAsOfDate: string | null
   currentMyRank: number | null
   currentMyDistrictId: string | null
 }): { diff: VisitDiff; commit: () => void; clear: () => void } {
@@ -51,8 +54,8 @@ export function useLastVisit({
   const diff = useMemo<VisitDiff>(() => {
     const isNewSnapshot =
       !!snapshot.lastSeenDate &&
-      !!currentDate &&
-      snapshot.lastSeenDate !== currentDate
+      !!currentAsOfDate &&
+      snapshot.lastSeenDate !== currentAsOfDate
 
     let myRankDelta: number | null = null
     // Only compute a meaningful rank delta when the same district is the
@@ -77,18 +80,18 @@ export function useLastVisit({
     snapshot.lastSeenDate,
     snapshot.lastSeenMyRank,
     snapshot.lastSeenMyDistrictId,
-    currentDate,
+    currentAsOfDate,
     currentMyRank,
     currentMyDistrictId,
   ])
 
   const commit = useCallback(() => {
     setSnapshot({
-      lastSeenDate: currentDate,
+      lastSeenDate: currentAsOfDate,
       lastSeenMyRank: currentMyRank,
       lastSeenMyDistrictId: currentMyDistrictId,
     })
-  }, [setSnapshot, currentDate, currentMyRank, currentMyDistrictId])
+  }, [setSnapshot, currentAsOfDate, currentMyRank, currentMyDistrictId])
 
   const clear = useCallback(() => {
     setSnapshot(EMPTY)

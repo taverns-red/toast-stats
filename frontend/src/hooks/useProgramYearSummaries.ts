@@ -74,7 +74,8 @@ export function useProgramYearSummaries(): UseProgramYearSummariesResult {
 
       const built = await Promise.all(
         completed.map(async ([startYear, yearEndDate]) => {
-          const { rankings, date } = await fetchCdnRankingsForDate(yearEndDate)
+          const { rankings, asOfDate } =
+            await fetchCdnRankingsForDate(yearEndDate)
           // `fetchCdnRankingsForDate` silently falls back to the CURRENT
           // v1/rankings.json when a year-end file 404s. Building a past-year
           // "final standings" card from current data would be actively
@@ -84,7 +85,7 @@ export function useProgramYearSummaries(): UseProgramYearSummariesResult {
           // check, not a same-program-year check — July data is legitimate; the
           // fallback's current data is months-to-years newer.
           const lagDays =
-            (Date.parse(date) - Date.parse(yearEndDate)) / 86_400_000
+            (Date.parse(asOfDate) - Date.parse(yearEndDate)) / 86_400_000
           if (!Number.isFinite(lagDays) || lagDays > MAX_YEAR_END_LAG_DAYS) {
             return null
           }

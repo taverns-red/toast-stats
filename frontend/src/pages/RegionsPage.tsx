@@ -50,8 +50,7 @@ const RegionsPage: React.FC = () => {
     queryKey: ['district-rankings', effectiveDate ?? 'latest'],
     queryFn: async () => {
       if (effectiveDate) return fetchCdnRankingsForDate(effectiveDate)
-      const cdn = await fetchCdnRankings()
-      return { rankings: cdn.rankings, date: cdn.date }
+      return fetchCdnRankings()
     },
     staleTime: 15 * 60 * 1000,
     // Keep the prior snapshot visible while a PY switch re-queries, so the
@@ -128,7 +127,7 @@ const RegionsPage: React.FC = () => {
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveDate}
-            asOfDate={data?.date}
+            asOfDate={data?.asOfDate}
             isLatest={isLatestSnapshot}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}

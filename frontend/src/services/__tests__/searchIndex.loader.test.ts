@@ -29,7 +29,7 @@ describe('loadSearchIndex (lazy)', () => {
       rankings: [
         { districtId: '61', districtName: 'District 61', region: '07' },
       ],
-      date: '2026-06-01',
+      asOfDate: '2026-06-01',
       generatedAt: '2026-06-01T00:00:00Z',
     })
     fetchCdnClubIndex.mockResolvedValue({

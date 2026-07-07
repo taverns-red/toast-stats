@@ -267,7 +267,7 @@ const RegionPage: React.FC = () => {
 
   // PY selector state (#1301) — the page owns program year/date (R3) and
   // threads the selected snapshot date into the rankings query so switching
-  // the year re-queries (the awards query below follows via data.date).
+  // the year re-queries (the awards query below follows via effectiveDate).
   const {
     selectedProgramYear,
     setSelectedProgramYear,
@@ -284,18 +284,17 @@ const RegionPage: React.FC = () => {
     queryKey: ['district-rankings', effectiveDate ?? 'latest'],
     queryFn: async () => {
       if (effectiveDate) return fetchCdnRankingsForDate(effectiveDate)
-      const cdnData = await fetchCdnRankings()
-      return { rankings: cdnData.rankings, date: cdnData.date }
+      return fetchCdnRankings()
     },
     staleTime: 15 * 60 * 1000,
     placeholderData: prev => prev,
   })
 
   // Distinguished District prerequisite gaps. Pin to the rankings SNAPSHOT
-  // date (effectiveDate), NOT data.date (the as-of sourceCsvDate). The
+  // date (effectiveDate), NOT data.asOfDate (the as-of sourceCsvDate). The
   // competitive-awards file is stored under the snapshot date; during
   // month-end reconciliation the sourceCsvDate advances past it, so keying on
-  // data.date 404s and blanks the countdown/tier columns (#1315).
+  // the as-of date 404s and blanks the countdown/tier columns (#1315).
   const { data: awards } = useCompetitiveAwards(effectiveDate)
 
   // Region ranks are ALWAYS computed from aggregate score, regardless of
@@ -423,7 +422,7 @@ const RegionPage: React.FC = () => {
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveDate}
-            asOfDate={data?.date}
+            asOfDate={data?.asOfDate}
             isLatest={isLatestSnapshot}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}

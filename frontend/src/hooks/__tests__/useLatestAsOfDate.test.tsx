@@ -14,7 +14,7 @@ import { useLatestAsOfDate } from '../useLatestAsOfDate'
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn().mockResolvedValue({
     rankings: [],
-    date: '2026-07-02', // sourceCsvDate — advanced past the pinned month-end
+    asOfDate: '2026-07-02', // sourceCsvDate — advanced past the pinned month-end
     generatedAt: '2026-07-02T00:00:00Z',
   }),
   fetchCdnManifest: vi.fn().mockResolvedValue({
@@ -36,7 +36,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => {
 }
 
 describe('useLatestAsOfDate (#1310)', () => {
-  it('returns the global as-of date (rankings.date) and pinned latest snapshot (manifest)', async () => {
+  it('returns the global as-of date (rankings.asOfDate) and pinned latest snapshot (manifest)', async () => {
     const { result } = renderHook(() => useLatestAsOfDate(), { wrapper })
     await waitFor(() => expect(result.current.asOfDate).toBe('2026-07-02'))
     expect(result.current.latestSnapshotDate).toBe('2026-06-30')

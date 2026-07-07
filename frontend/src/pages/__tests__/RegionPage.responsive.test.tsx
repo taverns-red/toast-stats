@@ -79,7 +79,7 @@ describe('RegionPage responsive scroll region (#689)', () => {
   it('wraps the rankings table in a focusable, labelled scroll region', async () => {
     mockedFetchCdnRankings.mockResolvedValue({
       rankings: [mkRanking({ districtId: '7', districtName: 'Seven' })],
-      date: '2026-05-12',
+      asOfDate: '2026-05-12',
     } as never)
 
     renderRegion('7')
@@ -97,7 +97,7 @@ describe('RegionPage responsive scroll region (#689)', () => {
   it('sticks the Region Rank and District identity columns to the left', async () => {
     mockedFetchCdnRankings.mockResolvedValue({
       rankings: [mkRanking({ districtId: '7', districtName: 'Seven' })],
-      date: '2026-05-12',
+      asOfDate: '2026-05-12',
     } as never)
 
     renderRegion('7')

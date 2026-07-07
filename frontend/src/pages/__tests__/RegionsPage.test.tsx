@@ -60,7 +60,7 @@ vi.mock('../../services/cdn', () => {
     charterPayments: 0,
   })
   const rankings = {
-    date: '2026-05-12',
+    asOfDate: '2026-05-12',
     rankings: [
       baseRanking('01', '01', 500),
       baseRanking('01', '02', 400),

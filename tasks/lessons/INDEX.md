@@ -3,6 +3,7 @@
 
 ## lessons (manifest-pinned + session-judged)
 - `key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md` — During month-end closing the CSV as-of date (sourceCsvDate / data.date) drifts past the pinned snapshot date — key every per-snapshot fetch and date-scoped lookup on the snapshot date, never data.date  (2026-07-06)
+- `renaming-a-typed-field-the-prod-compiler-misses-test-only-typed-fixtures-and-untyped-mocks.md` — When you rename a widely-typed field, the prod `tsc` enumerates prod consumers but is blind to test-only typed fixtures (caught only by non-CI `typecheck:test`) and to untyped mocks (caught by nothing) — sweep both by hand  (2026-07-06)
 - `a-self-heal-hook-that-writes-the-url-on-mount-clobbers-a-consumers-navigation-state.md` — A shared "self-heal" hook that rewrites the URL on mount clobbers a consumer's navigation state; gate the write for pages that receive location.state  (2026-07-04)
 - `resolve-the-active-program-year-by-data-not-the-calendar.md` — Resolve the active Toastmasters program year by probing data, not the calendar — TM's rollover lags July 1  (2026-07-02)
 - `a-delete-path-must-reconcile-derived-indexes-not-only-the-additive-path.md` — A delete/prune path must reconcile its derived indexes, not just the additive path  (2026-06-29)
@@ -141,9 +142,9 @@
 - `ticket-helper-signatures-bend-to-the-real-data-shape.md` — A ticket's helper signature is a sketch; bend it to the real data shape  (2026-05-23)
 - `vitest-project-split-needs-a-partition-guard.md` — Splitting one test suite into named projects needs a partition guard, or files silently fall out of both  (2026-05-23)
 - `workspace-package-dist-is-gitignored-and-not-auto-rebuilt.md` — Workspace-package `dist/` is gitignored; local pre-push does not auto-rebuild  (2026-05-23)
+- `IA-tab-strip-retirement-test-cascade.md` — IA tab-strip retirement deletes more test code than the prod diff  (2026-05-22)
 - `axe-core-jsdom-and-the-allowlist-pattern.md` — axe-core in JSDOM + the allowlist-as-tracked-debt pattern  (2026-05-22)
 - `dark-mode-overrides-must-keep-up-with-component-color-utilities.md` — Dark-mode overrides must keep up with component color utilities  (2026-05-22)
-- `IA-tab-strip-retirement-test-cascade.md` — IA tab-strip retirement deletes more test code than the prod diff  (2026-05-22)
 - `intersectionobserver-callbacks-must-tolerate-test-local-mock-shapes.md` — IntersectionObserver callbacks must tolerate test-local mock shapes  (2026-05-22)
 - `jsdom-style-assertions-do-not-catch-positioning-bugs.md` — JSDOM style assertions don't catch positioning bugs  (2026-05-22)
 - `light-mode-small-text-tightening-thresholds.md` — Light-mode small-text contrast: where to tighten, where to stop  (2026-05-22)

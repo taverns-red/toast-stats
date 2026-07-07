@@ -51,10 +51,10 @@ const rankingEntry = (id: string, rank: number) => ({
   overallRank: rank,
 })
 
-const rankingsData = (date: string) => ({
+const rankingsData = (asOfDate: string) => ({
   rankings: [rankingEntry('1', 1), rankingEntry('2', 2), rankingEntry('3', 3)],
-  date,
-  generatedAt: `${date}T00:00:00Z`,
+  asOfDate,
+  generatedAt: `${asOfDate}T00:00:00Z`,
 })
 
 beforeEach(() => {

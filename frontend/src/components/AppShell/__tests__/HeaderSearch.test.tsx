@@ -33,7 +33,7 @@ const setupCdn = () => {
       { districtId: '57', districtName: 'District 57', region: '7' },
       { districtId: '61', districtName: 'District 61', region: '7' },
     ],
-    date: '2025-11-22',
+    asOfDate: '2025-11-22',
   })
   fetchCdnClubIndex.mockResolvedValue({
     clubs: { '12345': { districtId: '61', clubName: 'Toast of the Town' } },

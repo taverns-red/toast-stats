@@ -42,7 +42,7 @@ const setupCdn = (
       rankingRow('57', 'District 57', '7'),
       rankingRow('61', 'District 61', '7'),
     ],
-    date: '2025-11-22',
+    asOfDate: '2025-11-22',
   })
   fetchCdnClubIndex.mockResolvedValue({
     clubs: opts.clubs ?? {

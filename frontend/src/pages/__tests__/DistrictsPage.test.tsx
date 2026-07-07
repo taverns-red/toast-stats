@@ -65,7 +65,7 @@ describe('DistrictsPage - Percentage Formatting', () => {
             aggregateScore: 300,
           },
         ],
-        date: '2025-11-22',
+        asOfDate: '2025-11-22',
       })
 
       renderWithProviders(<DistrictsPage />)
@@ -100,7 +100,7 @@ describe('DistrictsPage - Percentage Formatting', () => {
             aggregateScore: 300,
           },
         ],
-        date: '2025-11-22',
+        asOfDate: '2025-11-22',
       })
 
       renderWithProviders(<DistrictsPage />)
@@ -135,7 +135,7 @@ describe('DistrictsPage - Percentage Formatting', () => {
             aggregateScore: 300,
           },
         ],
-        date: '2025-11-22',
+        asOfDate: '2025-11-22',
       })
 
       renderWithProviders(<DistrictsPage />)
@@ -170,7 +170,7 @@ describe('DistrictsPage - Percentage Formatting', () => {
             aggregateScore: 300,
           },
         ],
-        date: '2025-11-22',
+        asOfDate: '2025-11-22',
       })
 
       renderWithProviders(<DistrictsPage />)
@@ -304,7 +304,7 @@ describe('DistrictsPage - Table Cell Rendering', () => {
           aggregateScore: 300,
         },
       ],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -344,7 +344,7 @@ describe('DistrictsPage - Table Cell Rendering', () => {
           aggregateScore: 300,
         },
       ],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -382,7 +382,7 @@ describe('DistrictsPage - Table Cell Rendering', () => {
           aggregateScore: 300,
         },
       ],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -421,7 +421,7 @@ describe('DistrictsPage - Table Cell Rendering', () => {
           aggregateScore: 300,
         },
       ],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
 
     const { container } = renderWithProviders(<DistrictsPage />)
@@ -484,7 +484,7 @@ describe('DistrictsPage - Layout Order (#83)', () => {
           aggregateScore: 300,
         },
       ],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
   }
 
@@ -678,7 +678,7 @@ describe('DistrictsPage - My District sticky pin (#417)', () => {
     })
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [baseRow(1), baseRow(2)],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
   }
 
@@ -763,7 +763,7 @@ describe('DistrictsPage - Rankings column order (#436)', () => {
           aggregateScore: 300,
         },
       ],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
   }
 
@@ -831,7 +831,7 @@ describe('DistrictsPage - Region filter solo-select (#434)', () => {
     })
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [baseRow(1, '1'), baseRow(2, '2'), baseRow(3, '3')],
-      date: '2025-11-22',
+      asOfDate: '2025-11-22',
     })
   }
 
