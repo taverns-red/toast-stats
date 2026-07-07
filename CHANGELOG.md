@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.32.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.32.0...toast-stats-v2.32.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **region:** key competitive-awards on snapshot date, not sourceCsvDate ([#1315](https://github.com/taverns-red/toast-stats/issues/1315)) ([#1316](https://github.com/taverns-red/toast-stats/issues/1316)) ([2ea597e](https://github.com/taverns-red/toast-stats/commit/2ea597e989bc261b45effcba25a3baed9008f484))
+
+
+### Documentation
+
+* lesson + groomed snapshot-date-guard epic (sourceCsvDate divergence) ([#1318](https://github.com/taverns-red/toast-stats/issues/1318)) ([b09fd6d](https://github.com/taverns-red/toast-stats/commit/b09fd6df6c35ba47e15052333ba97803c2816475))
+
 ## [2.32.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.31.0...toast-stats-v2.32.0) (2026-07-04)
 
 
