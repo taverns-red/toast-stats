@@ -3,6 +3,7 @@
 
 ## lessons (manifest-pinned + session-judged)
 - `key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md` — During month-end closing the CSV as-of date (sourceCsvDate / data.date) drifts past the pinned snapshot date — key every per-snapshot fetch and date-scoped lookup on the snapshot date, never data.date  (2026-07-06)
+- `renaming-a-typed-field-the-prod-compiler-misses-test-only-typed-fixtures-and-untyped-mocks.md` — When you rename a widely-typed field, the prod `tsc` enumerates prod consumers but is blind to test-only typed fixtures (caught only by non-CI `typecheck:test`) and to untyped mocks (caught by nothing) — sweep both by hand  (2026-07-06)
 - `a-self-heal-hook-that-writes-the-url-on-mount-clobbers-a-consumers-navigation-state.md` — A shared "self-heal" hook that rewrites the URL on mount clobbers a consumer's navigation state; gate the write for pages that receive location.state  (2026-07-04)
 - `resolve-the-active-program-year-by-data-not-the-calendar.md` — Resolve the active Toastmasters program year by probing data, not the calendar — TM's rollover lags July 1  (2026-07-02)
 - `a-delete-path-must-reconcile-derived-indexes-not-only-the-additive-path.md` — A delete/prune path must reconcile its derived indexes, not just the additive path  (2026-06-29)
