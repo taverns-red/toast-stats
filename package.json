@@ -58,12 +58,12 @@
     "seo:check": "npx tsx scripts/generate-seo-assets.ts --check"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/coverage-v8": "^4.1.10",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.8",
-    "prettier": "^3.8.4",
-    "tsx": "^4.22.4"
+    "prettier": "^3.9.5",
+    "tsx": "^4.23.1"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md}": "prettier --write"
