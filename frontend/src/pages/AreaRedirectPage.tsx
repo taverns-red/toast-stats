@@ -42,10 +42,9 @@ const AreaRedirectPage: React.FC = () => {
   // it passes the snapshot's OWN date (#1321). The date only gates visit rounds,
   // which the redirect ignores — but there is no honest wall-clock answer, and
   // `snapshot.asOfDate` never existed on the wire.
+  const snapshotDate = resolveSnapshotDate(snapshot)
   const target = React.useMemo(() => {
-    if (!snapshot || !normalizedAreaId) return undefined
-    const snapshotDate = resolveSnapshotDate(snapshot)
-    if (!snapshotDate) return undefined
+    if (!snapshot || !normalizedAreaId || !snapshotDate) return undefined
     const divisions = extractDivisionPerformance(snapshot, snapshotDate)
     const division = divisions.find(d =>
       d.areas.some(a => a.areaId.toUpperCase() === normalizedAreaId)
@@ -56,7 +55,7 @@ const AreaRedirectPage: React.FC = () => {
     return division && area
       ? { divId: division.divisionId, areaId: area.areaId }
       : undefined
-  }, [snapshot, normalizedAreaId])
+  }, [snapshot, normalizedAreaId, snapshotDate])
 
   React.useEffect(() => {
     if (target && districtId) {
@@ -85,7 +84,7 @@ const AreaRedirectPage: React.FC = () => {
   // never 404 while loading/errored (data-unavailable ≠ not-found). A snapshot
   // that doesn't report its own date is data-unavailable too, not a bad slug —
   // it would make `target` undefined for a perfectly valid area (#1321).
-  if (snapshot && resolveSnapshotDate(snapshot) && !target) {
+  if (snapshot && snapshotDate && !target) {
     throw new Response(null, { status: 404, statusText: 'Area not found' })
   }
 

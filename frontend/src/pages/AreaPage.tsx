@@ -22,7 +22,7 @@ import { EmptyState } from '../components/ErrorDisplay'
 import { ClubMiniList } from '../components/ClubMiniList'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
-import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
+import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 
 const AreaPage: React.FC = () => {
@@ -53,16 +53,12 @@ const AreaPage: React.FC = () => {
 
   // Freshness parity (#1321): the per-district snapshot carries no as-of date —
   // the old `snapshot.asOfDate` was a phantom, so this pill was permanently
-  // blank. Read the GLOBAL as-of date, and only flag month-end reconciliation
-  // when the viewed snapshot is BOTH this district's latest AND the global
-  // pinned month-end, so a district whose data lags never mislabels it. Same
-  // shape as DistrictDetailHeader (#1310).
-  const { asOfDate: globalAsOfDate, latestSnapshotDate: globalLatestSnapshot } =
-    useLatestAsOfDate()
-  const isLatestGlobal =
-    isLatestSnapshot &&
-    !!latestSnapshotDate &&
-    latestSnapshotDate === globalLatestSnapshot
+  // blank. The shared hook owns the "is this really the latest?" rule.
+  const { asOfDate: globalAsOfDate, isLatest: isLatestGlobal } =
+    useGlobalFreshness({
+      districtLatestSnapshotDate: latestSnapshotDate,
+      isLatestSnapshot,
+    })
 
   const { data, isLoading, error } = useDistrictAnalytics(
     hasValidDates ? (districtId ?? null) : null,
@@ -195,7 +191,7 @@ const AreaPage: React.FC = () => {
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
-            asOfDate={isLatestGlobal ? globalAsOfDate : undefined}
+            asOfDate={globalAsOfDate}
             isLatest={isLatestGlobal}
             availableProgramYears={availableProgramYears}
             // Derived (healed) year so the chip value is always in its option

@@ -84,13 +84,29 @@ function clubNameOf(club: Record<string, unknown>): string {
 }
 
 /**
- * Read a dated CDN snapshot's OWN pinned date (#1321).
+ * Unwrap a district snapshot to its payload — the single place that knows a
+ * dated CDN snapshot is a `PerDistrictData` envelope.
  *
- * The live envelope is `{districtId, districtName, collectedAt, status, data}`
- * with the real date at `data.snapshotDate` — verified against
- * `snapshots/2026-06-30/district_61.json`. Unwrapped payloads carry it at the
- * top level, so both shapes are supported, mirroring the unwrap
- * `extractDivisionPerformance` already does.
+ * The live file is `{districtId, districtName, collectedAt, status, data}` with
+ * the payload at `.data` (verified against `snapshots/2026-06-30/district_61.json`).
+ * Already-unwrapped payloads are passed through, so both shapes work.
+ *
+ * Returns `undefined` for anything that isn't an object.
+ */
+function unwrapSnapshotPayload(
+  districtSnapshot: unknown
+): Record<string, unknown> | undefined {
+  if (typeof districtSnapshot !== 'object' || districtSnapshot === null) {
+    return undefined
+  }
+  const raw = districtSnapshot as Record<string, unknown>
+  return typeof raw['data'] === 'object' && raw['data'] !== null
+    ? (raw['data'] as Record<string, unknown>)
+    : raw
+}
+
+/**
+ * Read a dated CDN snapshot's OWN pinned date (#1321).
  *
  * For callers that pin a date themselves, pass THAT date — it's the honest
  * answer to "which snapshot am I showing". This is for the few callers reading
@@ -101,15 +117,7 @@ function clubNameOf(club: Record<string, unknown>): string {
 export function resolveSnapshotDate(
   districtSnapshot: unknown
 ): string | undefined {
-  if (typeof districtSnapshot !== 'object' || districtSnapshot === null) {
-    return undefined
-  }
-  const raw = districtSnapshot as Record<string, unknown>
-  const inner =
-    typeof raw['data'] === 'object' && raw['data'] !== null
-      ? (raw['data'] as Record<string, unknown>)
-      : raw
-  const date = inner['snapshotDate']
+  const date = unwrapSnapshotPayload(districtSnapshot)?.['snapshotDate']
   return typeof date === 'string' && date !== '' ? date : undefined
 }
 
@@ -418,20 +426,8 @@ export function extractDivisionPerformance(
   districtSnapshot: unknown,
   snapshotDate: string
 ): DivisionPerformance[] {
-  // Type guard: ensure districtSnapshot is an object
-  if (typeof districtSnapshot !== 'object' || districtSnapshot === null) {
-    return []
-  }
-
-  const rawSnapshot = districtSnapshot as Record<string, unknown>
-
-  // CDN snapshots wrap their payload in a `.data` key
-  // (e.g. { districtId, data: { divisionPerformance, clubPerformance, … } })
-  // Support both the wrapped and unwrapped shapes.
-  const snapshot =
-    typeof rawSnapshot['data'] === 'object' && rawSnapshot['data'] !== null
-      ? (rawSnapshot['data'] as Record<string, unknown>)
-      : rawSnapshot
+  const snapshot = unwrapSnapshotPayload(districtSnapshot)
+  if (!snapshot) return []
 
   // The divisionPerformance array contains club-level data organized by division/area
   // The clubPerformance array contains club status and distinguished status

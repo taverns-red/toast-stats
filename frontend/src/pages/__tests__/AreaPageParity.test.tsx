@@ -110,10 +110,7 @@ vi.mock('../../hooks/useUrlProgramYear', async () => {
 // deliberately provider-free and assert recognition data, not the pill, so stub
 // it rather than stand up a QueryClientProvider.
 vi.mock('../../hooks/useLatestAsOfDate', () => ({
-  useLatestAsOfDate: () => ({
-    asOfDate: undefined,
-    latestSnapshotDate: undefined,
-  }),
+  useGlobalFreshness: () => ({ asOfDate: undefined, isLatest: false }),
 }))
 
 vi.mock('../../hooks/useMembershipData', () => ({

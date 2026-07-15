@@ -16,8 +16,9 @@
  *   - 'provisional'         — a round is unmet but its deadline has NOT passed
  *   - 'not-distinguished'   — a round's deadline has passed unmet (hard fail)
  *
- * Reference date is the snapshot's `asOfDate` (not wall-clock) so historical
- * snapshots gate correctly.
+ * Reference date is the caller's PINNED snapshot date (not wall-clock) so
+ * historical snapshots gate correctly. It used to say `asOfDate` — a field that
+ * never existed on the wire, which is exactly how the wall clock got in (#1321).
  *
  * `AreaPerformanceRow` is a pure presenter that reads this state — it must
  * NOT re-derive deadline-blind provisional logic locally. See #832.

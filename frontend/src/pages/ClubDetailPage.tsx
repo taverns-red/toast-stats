@@ -4,7 +4,7 @@ import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
-import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
+import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { calculateProgramYearDay } from '../utils/programYear'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { formatDisplayDate } from '../utils/dateFormatting'
@@ -206,16 +206,12 @@ const ClubDetailPage: React.FC = () => {
 
   // Freshness parity (#1321): the per-district snapshot carries no as-of date —
   // the old `districtStats.asOfDate` was a phantom, so this pill was permanently
-  // blank. Read the GLOBAL as-of date, and only flag month-end reconciliation
-  // when the viewed snapshot is BOTH this district's latest AND the global
-  // pinned month-end, so a district whose data lags never mislabels it. Same
-  // shape as DistrictDetailHeader (#1310).
-  const { asOfDate: globalAsOfDate, latestSnapshotDate: globalLatestSnapshot } =
-    useLatestAsOfDate()
-  const isLatestGlobal =
-    isLatestSnapshot &&
-    !!latestSnapshotDate &&
-    latestSnapshotDate === globalLatestSnapshot
+  // blank. The shared hook owns the "is this really the latest?" rule.
+  const { asOfDate: globalAsOfDate, isLatest: isLatestGlobal } =
+    useGlobalFreshness({
+      districtLatestSnapshotDate: latestSnapshotDate,
+      isLatestSnapshot,
+    })
 
   // Fetch district info
   const { data: districtsData } = useDistricts()
@@ -525,7 +521,7 @@ const ClubDetailPage: React.FC = () => {
               <div className="club-hero__controls">
                 <DataControlsBar
                   latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
-                  asOfDate={isLatestGlobal ? globalAsOfDate : undefined}
+                  asOfDate={globalAsOfDate}
                   isLatest={isLatestGlobal}
                   availableProgramYears={availableProgramYears}
                   // Show the DERIVED (healed) year so the chip is honest even
