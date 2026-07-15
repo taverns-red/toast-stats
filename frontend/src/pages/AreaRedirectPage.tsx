@@ -80,11 +80,23 @@ const AreaRedirectPage: React.FC = () => {
     )
   }
 
+  // A snapshot that doesn't report its own date is data-UNAVAILABLE, not a bad
+  // slug (#1321) — 404-ing here would blame the user's URL for our data problem,
+  // and falling through would hang on a skeleton forever. Say so instead.
+  // Unreachable against the live wire, which always carries `data.snapshotDate`.
+  if (snapshot && !snapshotDate) {
+    return (
+      <EmptyState
+        title="Could not load area"
+        message="The district snapshot is missing its date, so this area link can't be resolved. Try again in a moment."
+        icon="data"
+      />
+    )
+  }
+
   // Snapshot loaded but no division owns this area → bad slug → branded 404,
-  // never 404 while loading/errored (data-unavailable ≠ not-found). A snapshot
-  // that doesn't report its own date is data-unavailable too, not a bad slug —
-  // it would make `target` undefined for a perfectly valid area (#1321).
-  if (snapshot && snapshotDate && !target) {
+  // never 404 while loading/errored (data-unavailable ≠ not-found).
+  if (snapshot && !target) {
     throw new Response(null, { status: 404, statusText: 'Area not found' })
   }
 

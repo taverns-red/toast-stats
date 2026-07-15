@@ -9,8 +9,11 @@
  * - 1.1: Display one performance card for each division in the district
  * - 1.2: Display all division performance cards simultaneously on the same page
  * - 1.3: Order division performance cards by division identifier
- * - 10.3: Display the timestamp of the current snapshot data
  * - 10.4: Indicate loading state to the user when snapshot data is being refreshed
+ *
+ * (Req 10.3 "display the snapshot timestamp" is served by the page header's
+ * freshness pill (#1310); this component's own timestamp panel was dead code
+ * bound to a phantom field and was removed in #1321.)
  *
  * The component uses the extractDivisionPerformance utility to transform raw
  * snapshot data into typed performance structures, then renders a DivisionPerformanceCard
@@ -20,7 +23,6 @@
 import React from 'react'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DivisionPerformanceCard } from './DivisionPerformanceCard'
-import { formatDisplayDate } from '../utils/dateFormatting'
 import { logger } from '../utils/logger'
 
 /**
@@ -47,11 +49,10 @@ export interface DivisionPerformanceCardsProps {
  * DivisionPerformanceCards Component
  *
  * Renders a collection of division performance cards with the following features:
- * 1. Snapshot timestamp display at the top
- * 2. Loading state handling
- * 3. Error state handling for invalid data
- * 4. Ordered rendering of division cards (by division identifier)
- * 5. Empty state handling when no divisions are present
+ * 1. Loading state handling
+ * 2. Error state handling for invalid data
+ * 3. Ordered rendering of division cards (by division identifier)
+ * 4. Empty state handling when no divisions are present
  *
  * The component follows the existing patterns in DistrictDetailPage.tsx and uses
  * Toastmasters brand styling (TM Loyal Blue, Montserrat fonts) for consistency.
@@ -179,45 +180,23 @@ export const DivisionPerformanceCards: React.FC<
     )
   }
 
-  // Main render - display divisions with timestamp
+  // Main render — division cards.
+  //
+  // A "Division & Area Performance" + "Data as of {date}" panel used to sit here
+  // behind `{snapshotTimestamp && …}`. It was DEAD: its only caller
+  // (DistrictDivisionsPage) fed it `districtStatistics.asOfDate` — the phantom
+  // this sprint deletes — so the guard was always false and the panel has never
+  // rendered in production. Its unit tests passed only because their fixtures
+  // carried the phantom the wire never sends.
+  //
+  // Removed rather than resurrected (#1321). Passing the real pinned date would
+  // have switched it on as a silent side effect, and it was redundant + wrong:
+  // the header's freshness pill already reports the date (#1310), and labelling
+  // a PINNED SNAPSHOT date "Data as of" is precisely the snapshot-vs-as-of
+  // conflation epic #1319 exists to eliminate — a 5th recurrence, in new copy.
+  // `snapshotTimestamp` stays required; it gates the visit round below.
   return (
     <div className="space-y-6">
-      {/* Snapshot Timestamp Header */}
-      {snapshotTimestamp && (
-        <div className="redesign-panel">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2
-                className="font-tm-headline font-semibold text-tm-black"
-                style={{ fontSize: '18px' }}
-              >
-                Division & Area Performance
-              </h2>
-              <p
-                className="font-tm-body text-gray-600 mt-1"
-                style={{ fontSize: '14px' }}
-              >
-                Performance metrics for all divisions and areas
-              </p>
-            </div>
-            <div className="text-right">
-              <p
-                className="font-tm-body text-gray-500 uppercase tracking-wide"
-                style={{ fontSize: '12px' }}
-              >
-                Data as of
-              </p>
-              <p
-                className="font-tm-body font-medium text-gray-900"
-                style={{ fontSize: '14px' }}
-              >
-                {formatDisplayDate(snapshotTimestamp)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Division Performance Cards */}
       <div
         className="space-y-6"

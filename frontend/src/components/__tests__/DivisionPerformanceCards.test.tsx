@@ -219,52 +219,55 @@ describe('DivisionPerformanceCards', () => {
     })
   })
 
-  describe('Snapshot Timestamp Display (Requirement 10.3)', () => {
-    it('should display snapshot timestamp when provided', () => {
+  describe('Snapshot timestamp panel — removed (#1321)', () => {
+    /**
+     * This block used to assert a "Division & Area Performance" + "Data as of
+     * {date}" panel. That panel was DEAD in production: its only caller passed
+     * `districtStatistics.asOfDate`, a phantom absent from the live CDN
+     * envelope, so its `{snapshotTimestamp && …}` guard was never true. These
+     * tests passed only because the fixture supplied the phantom — the mock
+     * asserting the wire shape into existence (Lesson 171).
+     *
+     * It is not coming back here: the page header's freshness pill already
+     * reports the date (#1310), and "Data as of" is the wrong label for a
+     * PINNED SNAPSHOT date — the exact conflation epic #1319 exists to kill.
+     * A tripwire, not just a comment: re-adding it fails here.
+     */
+    it('renders no timestamp panel — the header pill owns the date', () => {
       vi.mocked(extractDivisionPerformance).mockReturnValue(mockDivisions)
 
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockSnapshot}
           isLoading={false}
-          snapshotTimestamp="2024-01-15T10:30:00Z"
-        />
-      )
-
-      expect(screen.getByText('Data as of')).toBeInTheDocument()
-      expect(screen.getByText(/Jan 15, 2024/i)).toBeInTheDocument()
-    })
-
-    it('should not display timestamp section when not provided', () => {
-      vi.mocked(extractDivisionPerformance).mockReturnValue(mockDivisions)
-
-      render(
-        <DivisionPerformanceCards
-          districtSnapshot={mockSnapshot}
-          isLoading={false}
+          snapshotTimestamp="2026-06-30"
         />
       )
 
       expect(screen.queryByText('Data as of')).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('Division & Area Performance')
+      ).not.toBeInTheDocument()
+      // The date itself must not appear as prose here either.
+      expect(screen.queryByText(/Jun 30, 2026/i)).not.toBeInTheDocument()
     })
 
-    it('should display section header with timestamp', () => {
+    it('still feeds the pinned date to the visit-round gate', () => {
       vi.mocked(extractDivisionPerformance).mockReturnValue(mockDivisions)
 
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockSnapshot}
           isLoading={false}
-          snapshotTimestamp="2024-01-15T10:30:00Z"
+          snapshotTimestamp="2026-06-30"
         />
       )
 
-      expect(
-        screen.getByText('Division & Area Performance')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(/Performance metrics for all divisions and areas/i)
-      ).toBeInTheDocument()
+      // The prop is load-bearing, not decorative: it gates getCurrentVisitRound.
+      expect(extractDivisionPerformance).toHaveBeenCalledWith(
+        mockSnapshot,
+        '2026-06-30'
+      )
     })
   })
 
@@ -557,12 +560,13 @@ describe('DivisionPerformanceCards', () => {
         <DivisionPerformanceCards
           districtSnapshot={mockSnapshot}
           isLoading={false}
-          snapshotTimestamp="2024-01-15T10:30:00Z"
+          snapshotTimestamp="2026-06-30"
         />
       )
 
-      const heading = screen.getByText('Division & Area Performance')
-      expect(heading.tagName).toBe('H2')
+      expect(
+        screen.getByRole('region', { name: 'Division performance cards' })
+      ).toBeInTheDocument()
     })
   })
 

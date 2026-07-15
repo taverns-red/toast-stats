@@ -169,9 +169,11 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
         />
       )
 
-      // Verify component renders
+      // Verify component renders. The old "Division & Area Performance" panel
+      // was dead code bound to the phantom asOfDate and is gone (#1321) — the
+      // division cards themselves are the render evidence.
       expect(
-        screen.getByText('Division & Area Performance')
+        screen.getByRole('region', { name: 'Division performance cards' })
       ).toBeInTheDocument()
 
       // Verify divisions are rendered
@@ -221,7 +223,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       expect(screen.getByText('B1')).toBeInTheDocument()
     })
 
-    it('should display snapshot timestamp', () => {
+    it('renders no snapshot-timestamp panel — the header pill owns the date (#1321)', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
@@ -230,8 +232,10 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
         />
       )
 
-      expect(screen.getByText('Data as of')).toBeInTheDocument()
-      expect(screen.getByText(/Jan 15, 2024/i)).toBeInTheDocument()
+      // The timestamp panel is gone (#1321): the page header's freshness pill
+      // owns the date, and "Data as of" mislabels a pinned snapshot date.
+      expect(screen.queryByText('Data as of')).not.toBeInTheDocument()
+      expect(screen.queryByText(/Jan 15, 2024/i)).not.toBeInTheDocument()
     })
 
     it('should show loading state', () => {
