@@ -4,6 +4,7 @@ import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
+import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import { calculateProgramYearDay } from '../utils/programYear'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { formatDisplayDate } from '../utils/dateFormatting'
@@ -202,6 +203,19 @@ const ClubDetailPage: React.FC = () => {
     latestSnapshotDate,
     isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId, { selfHeal: false })
+
+  // Freshness parity (#1321): the per-district snapshot carries no as-of date —
+  // the old `districtStats.asOfDate` was a phantom, so this pill was permanently
+  // blank. Read the GLOBAL as-of date, and only flag month-end reconciliation
+  // when the viewed snapshot is BOTH this district's latest AND the global
+  // pinned month-end, so a district whose data lags never mislabels it. Same
+  // shape as DistrictDetailHeader (#1310).
+  const { asOfDate: globalAsOfDate, latestSnapshotDate: globalLatestSnapshot } =
+    useLatestAsOfDate()
+  const isLatestGlobal =
+    isLatestSnapshot &&
+    !!latestSnapshotDate &&
+    latestSnapshotDate === globalLatestSnapshot
 
   // Fetch district info
   const { data: districtsData } = useDistricts()
@@ -511,8 +525,8 @@ const ClubDetailPage: React.FC = () => {
               <div className="club-hero__controls">
                 <DataControlsBar
                   latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
-                  asOfDate={districtStats?.asOfDate}
-                  isLatest={isLatestSnapshot}
+                  asOfDate={isLatestGlobal ? globalAsOfDate : undefined}
+                  isLatest={isLatestGlobal}
                   availableProgramYears={availableProgramYears}
                   // Show the DERIVED (healed) year so the chip is honest even
                   // when `?py=` names a year without data — selfHeal is off here

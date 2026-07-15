@@ -22,6 +22,7 @@ import { EmptyState } from '../components/ErrorDisplay'
 import { ClubMiniList } from '../components/ClubMiniList'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
+import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 
 const AreaPage: React.FC = () => {
@@ -50,6 +51,19 @@ const AreaPage: React.FC = () => {
     isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId)
 
+  // Freshness parity (#1321): the per-district snapshot carries no as-of date —
+  // the old `snapshot.asOfDate` was a phantom, so this pill was permanently
+  // blank. Read the GLOBAL as-of date, and only flag month-end reconciliation
+  // when the viewed snapshot is BOTH this district's latest AND the global
+  // pinned month-end, so a district whose data lags never mislabels it. Same
+  // shape as DistrictDetailHeader (#1310).
+  const { asOfDate: globalAsOfDate, latestSnapshotDate: globalLatestSnapshot } =
+    useLatestAsOfDate()
+  const isLatestGlobal =
+    isLatestSnapshot &&
+    !!latestSnapshotDate &&
+    latestSnapshotDate === globalLatestSnapshot
+
   const { data, isLoading, error } = useDistrictAnalytics(
     hasValidDates ? (districtId ?? null) : null,
     undefined,
@@ -71,18 +85,21 @@ const AreaPage: React.FC = () => {
   const normalizedDivId = divId?.toUpperCase()
   const normalizedAreaId = areaId?.toUpperCase()
   const matched = React.useMemo(() => {
-    if (!snapshot || !normalizedDivId || !normalizedAreaId) return undefined
-    // The CDN snapshot carries the as-of date; pass it so historical snapshots
-    // gate visit deadlines correctly (R3).
+    if (!snapshot || !normalizedDivId || !normalizedAreaId || !effectiveEndDate)
+      return undefined
+    // Gate visit deadlines on the date this page PINNED its snapshot query to
+    // (#1321), never the wall clock — the snapshot carries no as-of date of its
+    // own (the old `snapshot.asOfDate` was a phantom, absent from the live CDN
+    // envelope, so this silently fell back to `today`).
     const division = extractDivisionPerformance(
       snapshot,
-      snapshot.asOfDate
+      effectiveEndDate
     ).find(d => d.divisionId.toUpperCase() === normalizedDivId)
     const area = division?.areas.find(
       a => a.areaId.toUpperCase() === normalizedAreaId
     )
     return area ? { area, divisionId: division!.divisionId } : undefined
-  }, [snapshot, normalizedDivId, normalizedAreaId])
+  }, [snapshot, normalizedDivId, normalizedAreaId, effectiveEndDate])
   const areaPerformance = matched?.area
 
   const areaNarrative = React.useMemo(() => {
@@ -178,8 +195,8 @@ const AreaPage: React.FC = () => {
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
-            asOfDate={snapshot?.asOfDate}
-            isLatest={isLatestSnapshot}
+            asOfDate={isLatestGlobal ? globalAsOfDate : undefined}
+            isLatest={isLatestGlobal}
             availableProgramYears={availableProgramYears}
             // Derived (healed) year so the chip value is always in its option
             // list — avoids a transient controlled-select mismatch for an

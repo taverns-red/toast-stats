@@ -31,8 +31,13 @@ export interface DivisionPerformanceCardsProps {
   districtSnapshot: unknown
   /** Optional loading state indicator */
   isLoading?: boolean
-  /** Optional snapshot timestamp for display */
-  snapshotTimestamp?: string
+  /**
+   * The date (`YYYY-MM-DD`) the snapshot is PINNED to. Required (#1321): it
+   * gates the area visit round/deadlines, so it is load-bearing, not display —
+   * and when it was optional it fell through to the wall clock, which disagrees
+   * with the viewed snapshot every closing window.
+   */
+  snapshotTimestamp: string
   /** District id — threaded to each card so its heading links to the division
    *  page (CC-7, #872). */
   districtId?: string | undefined
@@ -57,7 +62,7 @@ export interface DivisionPerformanceCardsProps {
  * <DivisionPerformanceCards
  *   districtSnapshot={snapshot}
  *   isLoading={false}
- *   snapshotTimestamp="2024-01-15T10:30:00Z"
+ *   snapshotTimestamp="2026-06-30"
  * />
  * ```
  */

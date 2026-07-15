@@ -39,6 +39,15 @@ vi.mock('../../services/cdn', () => ({
     count: 3,
     generatedAt: '2026-08-02T00:00:00Z',
   }),
+  // The freshness pill's global as-of source (#1321) — the page reads it via
+  // useLatestAsOfDate now that the per-district `asOfDate` phantom is gone.
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2026-08-05',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2026-08-01',
+  }),
 }))
 
 const SNAPSHOT = {

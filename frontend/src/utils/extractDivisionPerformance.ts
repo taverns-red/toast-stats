@@ -84,13 +84,33 @@ function clubNameOf(club: Record<string, unknown>): string {
 }
 
 /**
- * Fallback snapshot date when none is provided by the caller. Today's date
- * preserves the legacy wall-clock behaviour for unwired callers (tests,
- * stories), while wired callers (DistrictDivisionsPage) MUST pass
- * `districtStatistics.asOfDate` so historical snapshots gate correctly.
+ * Read a dated CDN snapshot's OWN pinned date (#1321).
+ *
+ * The live envelope is `{districtId, districtName, collectedAt, status, data}`
+ * with the real date at `data.snapshotDate` — verified against
+ * `snapshots/2026-06-30/district_61.json`. Unwrapped payloads carry it at the
+ * top level, so both shapes are supported, mirroring the unwrap
+ * `extractDivisionPerformance` already does.
+ *
+ * For callers that pin a date themselves, pass THAT date — it's the honest
+ * answer to "which snapshot am I showing". This is for the few callers reading
+ * the *latest* snapshot with no pinned date of their own (AreaRedirectPage),
+ * where the snapshot's self-reported date is the only non-racy source: a
+ * separate manifest query can still be in flight after the snapshot resolves.
  */
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
+export function resolveSnapshotDate(
+  districtSnapshot: unknown
+): string | undefined {
+  if (typeof districtSnapshot !== 'object' || districtSnapshot === null) {
+    return undefined
+  }
+  const raw = districtSnapshot as Record<string, unknown>
+  const inner =
+    typeof raw['data'] === 'object' && raw['data'] !== null
+      ? (raw['data'] as Record<string, unknown>)
+      : raw
+  const date = inner['snapshotDate']
+  return typeof date === 'string' && date !== '' ? date : undefined
 }
 
 /**
@@ -373,6 +393,14 @@ export function countVisitCompletions(
  * for each. Divisions and areas are sorted by their identifiers.
  *
  * @param districtSnapshot - Raw district snapshot data (unknown type for safety)
+ * @param snapshotDate - The date the snapshot is PINNED to (`YYYY-MM-DD`).
+ *   REQUIRED (#1321): it gates `getCurrentVisitRound` / `getAreaVisitDeadlines`,
+ *   so a wrong date silently reports the wrong program year's visit round. This
+ *   used to fall back to the wall clock when omitted, which diverges from the
+ *   viewed snapshot for the ~1-3 week closing window each month — and for all of
+ *   July, when the pinned June close still belongs to the PRIOR program year.
+ *   Callers pass the date their page pinned its own query to; there is
+ *   deliberately no default, so TypeScript names every site that can't.
  * @returns Array of DivisionPerformance objects, sorted by division identifier
  *
  * @example
@@ -381,17 +409,15 @@ export function countVisitCompletions(
  *     { Division: "A", "Club Base": "10", "Paid Clubs": "12", "Distinguished Clubs": "6" }
  *   ]
  * }
- * const divisions = extractDivisionPerformance(snapshot)
+ * const divisions = extractDivisionPerformance(snapshot, '2026-06-30')
  * // Returns array of DivisionPerformance objects with calculated metrics
  *
  * Requirements: 1.1, 1.3, 1.4, 6.8
  */
 export function extractDivisionPerformance(
   districtSnapshot: unknown,
-  snapshotDate?: string
+  snapshotDate: string
 ): DivisionPerformance[] {
-  const effectiveSnapshotDate = snapshotDate ?? todayIso()
-
   // Type guard: ensure districtSnapshot is an object
   if (typeof districtSnapshot !== 'object' || districtSnapshot === null) {
     return []
@@ -561,7 +587,7 @@ export function extractDivisionPerformance(
       divisionId,
       clubDataRaw,
       clubPerformanceMap,
-      effectiveSnapshotDate
+      snapshotDate
     )
 
     // Add division to results

@@ -106,6 +106,16 @@ vi.mock('../../hooks/useUrlProgramYear', async () => {
   }
 })
 
+// The freshness pill reads the GLOBAL as-of date (#1321). These tests are
+// deliberately provider-free and assert recognition data, not the pill, so stub
+// it rather than stand up a QueryClientProvider.
+vi.mock('../../hooks/useLatestAsOfDate', () => ({
+  useLatestAsOfDate: () => ({
+    asOfDate: undefined,
+    latestSnapshotDate: undefined,
+  }),
+}))
+
 vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(() => ({
     data: SNAPSHOT,

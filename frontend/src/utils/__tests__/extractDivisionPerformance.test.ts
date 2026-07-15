@@ -12,7 +12,19 @@ import {
   extractDivisionPerformance,
   determineDistinguishedLevel,
   countVisitCompletions,
+  resolveSnapshotDate,
 } from '../extractDivisionPerformance.js'
+
+/**
+ * Snapshot date for the cases below that don't exercise the visit round (#1321).
+ *
+ * `snapshotDate` used to be optional and defaulted to the wall clock, so these
+ * cases were implicitly asserted against "today" — which silently re-dated them
+ * on every run (and put them in a different PROGRAM YEAR each July). The
+ * round-sensitive cases all pass their own date explicitly; see the
+ * "visit round" describe block below.
+ */
+const SNAPSHOT_DATE = '2026-02-15'
 
 describe('extractDivisionPerformance', () => {
   /**
@@ -35,7 +47,7 @@ describe('extractDivisionPerformance', () => {
       clubPerformance: [],
     }
 
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     expect(result).toHaveLength(1)
     expect(result[0].clubBase).toBe(17)
@@ -55,7 +67,7 @@ describe('extractDivisionPerformance', () => {
     }
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Should return empty array
     expect(result).toEqual([])
@@ -72,7 +84,7 @@ describe('extractDivisionPerformance', () => {
     }
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Should return empty array
     expect(result).toEqual([])
@@ -87,7 +99,7 @@ describe('extractDivisionPerformance', () => {
     const snapshot = null
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Should return empty array
     expect(result).toEqual([])
@@ -102,7 +114,7 @@ describe('extractDivisionPerformance', () => {
     const snapshot = undefined
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Should return empty array
     expect(result).toEqual([])
@@ -127,7 +139,7 @@ describe('extractDivisionPerformance', () => {
     }
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Should return division with empty areas array
     expect(result).toHaveLength(1)
@@ -156,7 +168,7 @@ describe('extractDivisionPerformance', () => {
     }
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Invalid "Division Club Base" falls back to counting clubs (1 club in this case)
     expect(result).toHaveLength(1)
@@ -196,7 +208,7 @@ describe('extractDivisionPerformance', () => {
     }
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Divisions should be sorted alphabetically
     expect(result).toHaveLength(3)
@@ -253,7 +265,7 @@ describe('extractDivisionPerformance', () => {
     }
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Areas should be sorted alphabetically
     expect(result).toHaveLength(1)
@@ -293,7 +305,7 @@ describe('extractDivisionPerformance', () => {
     }
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Should have 2 divisions (A and B) with clubs grouped
     expect(result).toHaveLength(2)
@@ -338,7 +350,7 @@ describe('extractDivisionPerformance', () => {
     }
 
     // Act: Extract division performance
-    const result = extractDivisionPerformance(snapshot)
+    const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
     // Assert: Should have 2 unique divisions (clubs grouped)
     expect(result).toHaveLength(2)
@@ -382,7 +394,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should use the "Division Club Base" value (15), not the club count (3)
       expect(result).toHaveLength(1)
@@ -413,7 +425,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should use the "Division Club Base" value from first club
       expect(result).toHaveLength(1)
@@ -443,7 +455,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should handle numeric value correctly
       expect(result).toHaveLength(1)
@@ -479,7 +491,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (4 clubs)
       expect(result).toHaveLength(1)
@@ -515,7 +527,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (3 clubs)
       expect(result).toHaveLength(1)
@@ -546,7 +558,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (2 clubs) since 0 is invalid
       expect(result).toHaveLength(1)
@@ -582,7 +594,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (3 clubs) since negative is invalid
       expect(result).toHaveLength(1)
@@ -613,7 +625,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (2 clubs)
       expect(result).toHaveLength(1)
@@ -659,7 +671,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (5 clubs)
       expect(result).toHaveLength(1)
@@ -710,7 +722,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Each division should have correct "Division Club Base"
       expect(result).toHaveLength(3)
@@ -763,7 +775,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should use the "Area Club Base" value (8), not the club count (3)
       expect(result).toHaveLength(1)
@@ -799,7 +811,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should use the "Area Club Base" value from first club
       expect(result).toHaveLength(1)
@@ -834,7 +846,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should handle numeric value correctly
       expect(result).toHaveLength(1)
@@ -879,7 +891,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (4 clubs)
       expect(result).toHaveLength(1)
@@ -922,7 +934,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (3 clubs)
       expect(result).toHaveLength(1)
@@ -958,7 +970,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (2 clubs) since 0 is invalid
       expect(result).toHaveLength(1)
@@ -1001,7 +1013,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (3 clubs) since negative is invalid
       expect(result).toHaveLength(1)
@@ -1037,7 +1049,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (2 clubs)
       expect(result).toHaveLength(1)
@@ -1094,7 +1106,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should fall back to counting clubs (5 clubs)
       expect(result).toHaveLength(1)
@@ -1158,7 +1170,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Each area should have correct "Area Club Base"
       expect(result).toHaveLength(1)
@@ -1205,7 +1217,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act: Extract division performance
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Each division's area should have correct "Area Club Base"
       expect(result).toHaveLength(2)
@@ -1277,7 +1289,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Division should have 4 distinguished clubs
       expect(result).toHaveLength(1)
@@ -1331,7 +1343,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Area should have 3 distinguished clubs
       expect(result).toHaveLength(1)
@@ -1383,7 +1395,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should count 3 distinguished (2 from status field, 1 from DCP calculation)
       // Club1: Presidents Distinguished (from status)
@@ -1451,7 +1463,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should count 3 distinguished (calculated from DCP)
       // Club1: Distinguished (5 goals + 20 members)
@@ -1520,7 +1532,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should count only 2 distinguished (those with CSP submitted)
       // Club1: Smedley (CSP submitted)
@@ -1585,7 +1597,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Division should have 4 distinguished clubs (all levels count)
       expect(result).toHaveLength(1)
@@ -1668,7 +1680,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Each division should have correct distinguished count
       expect(result).toHaveLength(3)
@@ -1723,7 +1735,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Division and area should have 0 distinguished clubs
       expect(result).toHaveLength(1)
@@ -1775,7 +1787,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Should count 2 distinguished (CSP field absence = historical data = allowed)
       // Club1: Distinguished (from status)
@@ -1843,7 +1855,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Both rounds should have completed count equal to club count (4)
       expect(result).toHaveLength(1)
@@ -1898,7 +1910,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Both rounds should have 0 completed visits
       expect(result).toHaveLength(1)
@@ -1972,7 +1984,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: First round = 3 completed, Second round = 2 completed
       expect(result).toHaveLength(1)
@@ -2044,7 +2056,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: First round = 2 (Club1, Club2), Second round = 2 (Club1, Club3)
       expect(result).toHaveLength(1)
@@ -2132,7 +2144,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Area 01 has all visits, Area 02 has none
       expect(result).toHaveLength(1)
@@ -2199,7 +2211,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: Numeric values should be counted correctly
       expect(result).toHaveLength(1)
@@ -2261,7 +2273,7 @@ describe('extractDivisionPerformance', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: 3 out of 4 = 75%, meets threshold
       expect(result).toHaveLength(1)
@@ -2296,7 +2308,7 @@ describe('extractDivisionPerformance', () => {
         const snapshot = 'not an object'
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should return empty array, not throw
         expect(result).toEqual([])
@@ -2307,7 +2319,7 @@ describe('extractDivisionPerformance', () => {
         const snapshot = 12345
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should return empty array, not throw
         expect(result).toEqual([])
@@ -2318,7 +2330,7 @@ describe('extractDivisionPerformance', () => {
         const snapshot = [1, 2, 3]
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should return empty array, not throw
         expect(result).toEqual([])
@@ -2329,7 +2341,7 @@ describe('extractDivisionPerformance', () => {
         const snapshot = true
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should return empty array, not throw
         expect(result).toEqual([])
@@ -2340,7 +2352,7 @@ describe('extractDivisionPerformance', () => {
         const snapshot = () => ({ divisionPerformance: [] })
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should return empty array, not throw
         expect(result).toEqual([])
@@ -2360,7 +2372,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should return empty array
         expect(result).toEqual([])
@@ -2379,7 +2391,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should extract division with defaults for missing club performance data
         expect(result).toHaveLength(1)
@@ -2412,7 +2424,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should only include clubs with Division field
         expect(result).toHaveLength(1)
@@ -2429,7 +2441,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should return empty array
         expect(result).toEqual([])
@@ -2460,7 +2472,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should skip invalid Division and process valid one
         expect(result).toHaveLength(1)
@@ -2486,7 +2498,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should skip invalid Division and process valid one
         expect(result).toHaveLength(1)
@@ -2511,7 +2523,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should use fallback values
         expect(result).toHaveLength(1)
@@ -2530,7 +2542,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should return empty array
         expect(result).toEqual([])
@@ -2554,7 +2566,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should skip invalid entries and process valid one
         expect(result).toHaveLength(1)
@@ -2586,7 +2598,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should skip empty Division and process valid one
         expect(result).toHaveLength(1)
@@ -2612,7 +2624,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should fall back to counting clubs (2)
         expect(result).toHaveLength(1)
@@ -2640,7 +2652,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should only include area with valid Area field
         expect(result).toHaveLength(1)
@@ -2671,7 +2683,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Should fall back to counting clubs in area (2)
         expect(result).toHaveLength(1)
@@ -2706,7 +2718,7 @@ describe('extractDivisionPerformance', () => {
         }
 
         // Act: Extract division performance
-        const result = extractDivisionPerformance(snapshot)
+        const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
         // Assert: Only Club2 has first round visit completed
         expect(result).toHaveLength(1)
@@ -3682,7 +3694,7 @@ describe('countVisitCompletions', () => {
       }
 
       // Act
-      const result = extractDivisionPerformance(snapshot)
+      const result = extractDivisionPerformance(snapshot, SNAPSHOT_DATE)
 
       // Assert: First round = 3 (Club1, Club2, Club4), Second round = 2 (Club1, Club3)
       expect(result).toHaveLength(1)
@@ -3814,5 +3826,54 @@ describe('AreaPerformance — per-area current-round missing club-visit list (#9
     const area = extractDivisionPerformance(snapshot, '2025-09-15')[0].areas[0]
     expect(area.clubsMissingCurrentRoundVisit).toEqual([])
     expect(area.clubsMissingCurrentRoundVisitIneligible).toEqual([])
+  })
+})
+
+/**
+ * `resolveSnapshotDate` reads a dated CDN snapshot's OWN pinned date (#1321),
+ * for the callers that read the latest snapshot and pin no date themselves.
+ *
+ * The shapes below mirror the LIVE envelope, verified against
+ * `snapshots/2026-06-30/district_61.json`: `{districtId, districtName,
+ * collectedAt, status, data}` with the date at `data.snapshotDate` — and NO
+ * `asOfDate` at either level (Lesson 171 — shape the fixture to the wire).
+ */
+describe('resolveSnapshotDate (#1321)', () => {
+  it('reads the date from a wrapped PerDistrictData envelope', () => {
+    expect(
+      resolveSnapshotDate({
+        districtId: '61',
+        districtName: 'District 61',
+        collectedAt: '2026-07-01T04:12:00Z',
+        status: 'success',
+        data: { districtId: '61', snapshotDate: '2026-06-30', clubs: [] },
+      })
+    ).toBe('2026-06-30')
+  })
+
+  it('reads the date from an unwrapped payload', () => {
+    expect(resolveSnapshotDate({ snapshotDate: '2026-05-01' })).toBe(
+      '2026-05-01'
+    )
+  })
+
+  it('prefers the inner envelope date over a stray top-level one', () => {
+    expect(
+      resolveSnapshotDate({
+        snapshotDate: '2026-07-05',
+        data: { snapshotDate: '2026-06-30' },
+      })
+    ).toBe('2026-06-30')
+  })
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+    ['a non-object', 'nope'],
+    ['an object with no date', { data: { clubs: [] } }],
+    ['a non-string date', { data: { snapshotDate: 20260630 } }],
+    ['an empty-string date', { data: { snapshotDate: '' } }],
+  ])('returns undefined for %s', (_label, input) => {
+    expect(resolveSnapshotDate(input)).toBeUndefined()
   })
 })

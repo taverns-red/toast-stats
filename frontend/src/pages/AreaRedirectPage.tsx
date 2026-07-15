@@ -13,7 +13,10 @@
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
-import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
+import {
+  extractDivisionPerformance,
+  resolveSnapshotDate,
+} from '../utils/extractDivisionPerformance'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
 
@@ -33,12 +36,17 @@ const AreaRedirectPage: React.FC = () => {
   const normalizedAreaId = areaId?.toUpperCase()
   // Resolve BOTH the canonical division id AND the canonical area id from the
   // snapshot (the source of truth), so a mixed-case alias like /area/a1 lands on
-  // a properly-cased canonical URL — the point of a shareable shortcut. Pass the
-  // snapshot's as-of date so historical snapshots gate correctly (R3), matching
-  // AreaPage's own lookup so the alias resolves the same division.
+  // a properly-cased canonical URL — the point of a shareable shortcut.
+  //
+  // This page pins no date of its own (it always reads the latest snapshot), so
+  // it passes the snapshot's OWN date (#1321). The date only gates visit rounds,
+  // which the redirect ignores — but there is no honest wall-clock answer, and
+  // `snapshot.asOfDate` never existed on the wire.
   const target = React.useMemo(() => {
     if (!snapshot || !normalizedAreaId) return undefined
-    const divisions = extractDivisionPerformance(snapshot, snapshot.asOfDate)
+    const snapshotDate = resolveSnapshotDate(snapshot)
+    if (!snapshotDate) return undefined
+    const divisions = extractDivisionPerformance(snapshot, snapshotDate)
     const division = divisions.find(d =>
       d.areas.some(a => a.areaId.toUpperCase() === normalizedAreaId)
     )
@@ -74,8 +82,10 @@ const AreaRedirectPage: React.FC = () => {
   }
 
   // Snapshot loaded but no division owns this area → bad slug → branded 404,
-  // never 404 while loading/errored (data-unavailable ≠ not-found).
-  if (snapshot && !target) {
+  // never 404 while loading/errored (data-unavailable ≠ not-found). A snapshot
+  // that doesn't report its own date is data-unavailable too, not a bad slug —
+  // it would make `target` undefined for a perfectly valid area (#1321).
+  if (snapshot && resolveSnapshotDate(snapshot) && !target) {
     throw new Response(null, { status: 404, statusText: 'Area not found' })
   }
 

@@ -184,15 +184,14 @@ const DistrictActionListPage: React.FC = () => {
       'divisions'
     )
 
+  // The visit-round gate keys on the date this page pinned its snapshot query
+  // to (#1321), never the wall clock.
   const divisionPerformance = useMemo(
     () =>
-      districtStatistics
-        ? extractDivisionPerformance(
-            districtStatistics,
-            districtStatistics.asOfDate
-          )
+      districtStatistics && effectiveEndDate
+        ? extractDivisionPerformance(districtStatistics, effectiveEndDate)
         : [],
-    [districtStatistics]
+    [districtStatistics, effectiveEndDate]
   )
 
   const sections = useMemo<ActionListSections>(() => {
@@ -203,18 +202,11 @@ const DistrictActionListPage: React.FC = () => {
         clubs: analytics?.allClubs ?? [],
         interventionClubs: analytics?.interventionRequiredClubs ?? [],
         divisions: divisionPerformance,
-        snapshotDate: districtStatistics?.asOfDate ?? effectiveEndDate ?? '',
+        snapshotDate: effectiveEndDate ?? '',
       },
       { division, area }
     )
-  }, [
-    analytics,
-    divisionPerformance,
-    districtStatistics?.asOfDate,
-    effectiveEndDate,
-    division,
-    area,
-  ])
+  }, [analytics, divisionPerformance, effectiveEndDate, division, area])
 
   // Scope-select options come from the authoritative division/area structure.
   const scopeOptions = useMemo<ScopeOption>(() => {

@@ -19,8 +19,10 @@ import {
 } from 'react-router-dom'
 import AreaRedirectPage from '../AreaRedirectPage'
 
+// The wire shape: the snapshot reports its own pinned date as `snapshotDate`.
+// It never carried an `asOfDate` — that field was a phantom, deleted in #1321.
 const SNAPSHOT = {
-  asOfDate: '2026-03-15',
+  snapshotDate: '2026-03-15',
   divisionPerformance: [
     {
       Division: 'A',
