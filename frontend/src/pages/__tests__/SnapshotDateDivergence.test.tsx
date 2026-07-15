@@ -194,3 +194,38 @@ describe('snapshot-date divergence — visit deadlines key on the SNAPSHOT (#132
     expect(badge).not.toHaveTextContent(/Provisional/i)
   })
 })
+
+/**
+ * The freshness pill on these pages was bound to the same phantom, so it fell
+ * back to showing the pinned snapshot date and could never show the advancing
+ * as-of date — silently hiding exactly the closing-window divergence it exists
+ * to communicate. It now reads the global as-of date (#1310's shared source).
+ *
+ * Fixtures: district latest = global latest = 2026-08-01 (pinned), as-of =
+ * 2026-08-05 (advanced).
+ */
+describe('freshness pill reads the global as-of date (#1321)', () => {
+  it('DivisionPage shows the as-of date, not the pinned snapshot date, on the latest snapshot', async () => {
+    renderAt(
+      '/district/61/division/A',
+      '/district/:districtId/division/:divId',
+      <DivisionPage />
+    )
+
+    const pill = await screen.findByTestId('freshness-pill')
+    expect(pill).toHaveTextContent('Aug 5, 2026')
+    expect(pill).not.toHaveTextContent('Aug 1, 2026')
+  })
+
+  it('AreaPage shows the as-of date, not the pinned snapshot date, on the latest snapshot', async () => {
+    renderAt(
+      '/district/61/division/A/area/10',
+      '/district/:districtId/division/:divId/area/:areaId',
+      <AreaPage />
+    )
+
+    const pill = await screen.findByTestId('freshness-pill')
+    expect(pill).toHaveTextContent('Aug 5, 2026')
+    expect(pill).not.toHaveTextContent('Aug 1, 2026')
+  })
+})
