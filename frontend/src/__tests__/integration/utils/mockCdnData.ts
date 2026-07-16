@@ -5,10 +5,56 @@ import { queryClient } from '../../../config/queryClient'
 
 const baseUrl = 'https://cdn.taverns.red'
 
+/**
+ * DIVERGENCE-BY-DEFAULT fixture dates (#1322, epic #1319 Sprint 3).
+ *
+ * THE RULE: a per-snapshot CDN file lives under the **snapshot date**, so every
+ * per-snapshot fetch, query key, and date-scoped lookup keys on
+ * `SNAPSHOT_DATE`. The as-of `sourceCsvDate` is display/provenance ONLY and must
+ * never key a fetch.
+ *
+ * These two dates are deliberately NOT equal. Toastmasters' month-end
+ * reconciliation pins the snapshot to the month-end while the dashboard as-of
+ * date advances into the next month — they agree ~340 days a year and diverge
+ * for 1–3 weeks each close. Fixtures that set them equal make the wrong keying
+ * unobservable: that blind spot is why the RegionPage suite missed #1315, the
+ * fourth recurrence of this bug. Every page test therefore runs inside the
+ * closing window by default.
+ *
+ * The +5d offset crosses a month boundary on purpose — that is the real shape
+ * (live 2026-07-06: snapshot 2026-06-30, `sourceCsvDate` 2026-07-05), and it is
+ * what makes `computeFreshness` report `reconciling`. Real year-end lag runs to
+ * ~3 weeks, so +5d is conservative.
+ *
+ * A test asserting equal-date behaviour must opt in EXPLICITLY by overriding
+ * these values in its own mock — never by flattening the default back.
+ *
+ * @see tasks/lessons/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md
+ */
+export const SNAPSHOT_DATE = '2024-12-31'
+export const SOURCE_CSV_DATE = '2025-01-05'
+
+/**
+ * The snapshot dates this fixture CDN actually has files for.
+ *
+ * Every per-snapshot file lives under `/snapshots/{date}/…`, and the real bucket
+ * has nothing under any other date — a request for one 404s. The mock enforces
+ * that, which is what makes the divergence above a GUARD rather than decoration:
+ * a date-blind mock that matches on `path.includes('competitive-awards.json')`
+ * happily serves the same fixture for `snapshots/2025-01-05/…`, rubber-stamping
+ * the exact keying bug the fixture is meant to expose.
+ */
+export const KNOWN_SNAPSHOT_DATES: readonly string[] = [
+  SNAPSHOT_DATE,
+  '2024-11-30',
+  '2024-06-30',
+  '2023-12-31',
+]
+
 // Sample data schemas based on cdn.ts
 export const cdnMocks = {
   latest: {
-    latestSnapshotDate: '2024-12-31',
+    latestSnapshotDate: SNAPSHOT_DATE,
     generatedAt: '2024-12-31T12:00:00Z',
   },
   dates: {
@@ -45,14 +91,15 @@ export const cdnMocks = {
         overallRank: 8,
       },
     ],
-    date: '2024-12-31',
+    // `v1/rankings.json` carries its AS-OF date as a bare `date` (cdn.ts reads
+    // it out as `asOfDate`). There is no pinned snapshot on the latest path.
+    date: SOURCE_CSV_DATE,
     generatedAt: '2024-12-31T12:00:00Z',
   },
   districtSnapshot: {
     districtId: '61',
     districtName: 'District 61',
     region: 'Region 6',
-    asOfDate: '2024-12-31',
     programYear: '2024-2025',
     clubs: [
       {
@@ -235,6 +282,27 @@ export function setupCdnFetchMock() {
         if (url.startsWith(baseUrl)) {
           const path = url.replace(baseUrl, '')
 
+          // Serve per-snapshot files ONLY under a date the bucket really has
+          // (#1322). The route table below matches on `path.includes(filename)`
+          // and is otherwise date-blind, so without this gate a consumer keying
+          // on the as-of `sourceCsvDate` is handed the snapshot's own fixture
+          // and every test passes — the #1315 blind spot, reproduced in the
+          // harness. Live, that fetch 404s: awards → null → blank UI.
+          const requestedSnapshotDate = /^\/snapshots\/([^/]+)\//.exec(
+            path
+          )?.[1]
+          if (
+            requestedSnapshotDate &&
+            !KNOWN_SNAPSHOT_DATES.includes(requestedSnapshotDate)
+          ) {
+            return {
+              ok: false,
+              status: 404,
+              headers: new Headers(),
+              json: async () => ({}),
+            } as Response
+          }
+
           let data = {}
           if (path === '/v1/latest.json') {
             data = cdnMocks.latest
@@ -247,7 +315,10 @@ export function setupCdnFetchMock() {
           } else if (path.includes('all-districts-rankings.json')) {
             data = {
               metadata: {
-                sourceCsvDate: '2024-12-31',
+                // Diverges from the snapshot date this file is stored under —
+                // see SOURCE_CSV_DATE. A consumer that keys a per-snapshot
+                // fetch on this value 404s during the closing window (#1315).
+                sourceCsvDate: SOURCE_CSV_DATE,
                 calculatedAt: '2025-01-01T00:00:00Z',
               },
               rankings: cdnMocks.rankings.rankings,
@@ -260,8 +331,8 @@ export function setupCdnFetchMock() {
             data = cdnMocks.rankHistory
           } else if (path.includes('/district_61/index-metadata.json')) {
             data = {
-              latestSnapshotDate: '2024-12-31',
-              availableSnapshotDates: ['2024-12-31', '2024-11-30'],
+              latestSnapshotDate: SNAPSHOT_DATE,
+              availableSnapshotDates: [SNAPSHOT_DATE, '2024-11-30'],
               programYear: '2024-2025',
             }
           } else if (path.includes('/club_123456/index-metadata.json')) {
