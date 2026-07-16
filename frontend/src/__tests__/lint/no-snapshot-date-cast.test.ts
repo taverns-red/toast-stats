@@ -51,6 +51,42 @@ export function launderTheAsOfDate(data: { asOfDate: string }) {
 }
 `
 
+/** Double-casting through `unknown` is the classic brand-defeat move. */
+const UNKNOWN_DOUBLE_CAST = `import type { SnapshotDate } from '../types/snapshotDate'
+
+export function launderViaUnknown(raw: string) {
+  return raw as unknown as SnapshotDate
+}
+`
+
+/**
+ * The array form. This is the shape the mint module itself uses, so it is the
+ * likeliest to be copied out of it — and a whole INDEX laundered in one cast is
+ * strictly worse than one date.
+ */
+const ARRAY_CAST = `import type { SnapshotDate } from '../types/snapshotDate'
+
+export function launderAWholeIndex(raw: string[]) {
+  return raw as SnapshotDate[]
+}
+`
+
+/** The union form — what you reach for when the value might be absent. */
+const UNION_CAST = `import type { SnapshotDate } from '../types/snapshotDate'
+
+export function launderAnOptionalDate(raw: string | undefined) {
+  return raw as SnapshotDate | undefined
+}
+`
+
+/** The generic form — same laundering, wearing Array<>. */
+const GENERIC_CAST = `import type { SnapshotDate } from '../types/snapshotDate'
+
+export function launderViaGeneric(raw: string[]) {
+  return raw as Array<SnapshotDate>
+}
+`
+
 /** Casting to an unrelated type must stay legal — the rule must be narrow. */
 const UNRELATED_CAST = `export function castToSomethingElse(raw: unknown): string {
   return raw as string
@@ -72,6 +108,10 @@ describe('as-SnapshotDate cast ban (#1323)', () => {
     ['an `as SnapshotDate` cast', AS_CAST],
     ['an angle-bracket `<SnapshotDate>` cast', ANGLE_BRACKET_CAST],
     ['a cast that launders an as-of date', AS_CAST_ON_AS_OF_DATE],
+    ['an `as unknown as SnapshotDate` double cast', UNKNOWN_DOUBLE_CAST],
+    ['an `as SnapshotDate[]` array cast', ARRAY_CAST],
+    ['an `as SnapshotDate | undefined` union cast', UNION_CAST],
+    ['an `as Array<SnapshotDate>` generic cast', GENERIC_CAST],
   ])(
     'flags %s outside the mint module',
     async (_label, source) => {

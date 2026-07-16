@@ -131,12 +131,24 @@ export function isDateInProgramYear(
  * (useProgramYearControls) and `effectiveEndDate` (useDistrictProgramYearControls),
  * which is how the brand reaches the per-snapshot fetches (#1323).
  *
- * ## The null case is unreachable when `programYear` came from these `dates`
+ * ## The null case is unreachable for STRICT-ISO dates from `getAvailableProgramYears`
  *
- * Callers that pass a PY drawn from `getAvailableProgramYears(dates)` can never
- * see `null` back: that derivation admits a PY iff `filterDatesByProgramYear`
- * keeps one of its dates — both use the identical `month >= 7 ? year : year - 1`
- * July-boundary rule. Such callers must NOT add a `|| programYear.endDate`
+ * Callers that pass a PY drawn from `getAvailableProgramYears(dates)` cannot see
+ * `null` back — *provided every element of `dates` is a strict `YYYY-MM-DD`*.
+ * That proviso is load-bearing, and it is NOT free: the two predicates are not
+ * the same code. `getAvailableProgramYears` derives the PY via `calendarParts`,
+ * whose regex is unanchored at the end; `filterDatesByProgramYear` compares
+ * lexicographically against the PY bounds. They agree on strict ISO and diverge
+ * off it — `'2026-06-30T00:00:00Z'` derives PY 2025 but sorts ABOVE the
+ * `'2026-06-30'` bound, so it would be admitted as a year yet filtered out of
+ * it, and this function would return `null` after all.
+ *
+ * What actually guarantees the proviso is the mint: `snapshotDatesFrom`
+ * (`types/snapshotDate.ts`) drops every entry that is not a real strict-ISO
+ * calendar date, so a branded `SnapshotDate[]` cannot contain the divergent
+ * shapes. **If that filter is ever loosened, re-check every caller here.**
+ *
+ * Such callers must NOT "fix" the null case with a `|| programYear.endDate`
  * fallback: `endDate` is a synthesized `${year + 1}-06-30` calendar bound, not a
  * date any snapshot was written under, so feeding it to a `snapshots/{date}/…`
  * fetch is the #1315 laundering bug wearing a plausible disguise. The

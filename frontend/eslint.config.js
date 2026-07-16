@@ -77,17 +77,26 @@ export default [
       // type-aware rules are unavailable. Behaviour (not severity) is asserted
       // by src/__tests__/lint/no-snapshot-date-cast.test.ts — an AST selector is
       // an unchecked string and silently matches nothing if the ESTree shape
-      // drifts (Lesson 82).
+      // drifts (Lesson 82). It shipped doing exactly that: a `>` combinator here
+      // let `as SnapshotDate[]` / `| undefined` / `Array<SnapshotDate>` through
+      // until review caught it, which is why every variant is now pinned.
+      //
+      // Blind spots, stated rather than papered over (L166): this bans the CAST,
+      // not every route to a lie. `toSnapshotDate(data.asOfDate)` mints the
+      // #1315 bug through the front door (format is checked, provenance cannot
+      // be), and `snapshotDatesFrom({ dates: [asOfDate] })` forges the index
+      // shape. The brand raises the cost of the mistake and makes the honest
+      // path the easy one; it is not a proof.
       'no-restricted-syntax': [
         'error',
         {
           selector:
-            'TSAsExpression > TSTypeReference > Identifier[name="SnapshotDate"]',
+            'TSAsExpression TSTypeReference > Identifier[name="SnapshotDate"]',
           message: SNAPSHOT_DATE_CAST_MESSAGE,
         },
         {
           selector:
-            'TSTypeAssertion > TSTypeReference > Identifier[name="SnapshotDate"]',
+            'TSTypeAssertion TSTypeReference > Identifier[name="SnapshotDate"]',
           message: SNAPSHOT_DATE_CAST_MESSAGE,
         },
       ],
