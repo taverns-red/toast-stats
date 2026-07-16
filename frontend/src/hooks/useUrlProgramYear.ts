@@ -17,6 +17,7 @@ import { useProgramYear } from '../contexts/ProgramYearContext'
 import { getProgramYear } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import { useDefaultProgramYear } from './useDefaultProgramYear'
+import { toSnapshotDate, type SnapshotDate } from '../types/snapshotDate'
 
 export function useUrlProgramYear() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -46,9 +47,12 @@ export function useUrlProgramYear() {
     [effectivePyYear]
   )
 
-  // Read date from URL
+  // Read date from URL. `?date=` is untrusted input — a hand-edited or stale
+  // shared link can carry anything — so it is MINTED, not trusted (#1323). A
+  // malformed value resolves to undefined and the caller falls back to the PY's
+  // latest snapshot, rather than keying a fetch on garbage and rendering blank.
   const urlDate = searchParams.get('date')
-  const selectedDate = urlDate || undefined
+  const selectedDate = toSnapshotDate(urlDate)
 
   // Sync program year to context when URL differs
   useEffect(() => {
@@ -89,7 +93,7 @@ export function useUrlProgramYear() {
   )
 
   const setSelectedDate = useCallback(
-    (date: string | undefined) => {
+    (date: SnapshotDate | undefined) => {
       setSearchParams(
         prev => {
           const next = new URLSearchParams(prev)

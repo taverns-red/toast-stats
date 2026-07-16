@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  fetchCdnManifest,
+  fetchLatestSnapshotDate,
   cdnAnalyticsUrl,
   fetchFromCdn,
   fetchCdnDistrictReports,
@@ -14,6 +14,7 @@ import {
   buildDuesRenewalLookup,
   type ClubStatusOverlay,
 } from '../utils/clubStatusOverlay'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 // Re-export for backward compatibility with existing imports
 export type { ClubHealthStatus, ProspectiveClub }
@@ -229,7 +230,7 @@ export interface DistrictPerformanceTargets {
 export const useDistrictAnalytics = (
   districtId: string | null,
   startDate?: string,
-  endDate?: string
+  endDate?: SnapshotDate
 ) => {
   // Validate date range - don't make request if startDate > endDate
   const hasValidDateRange = !startDate || !endDate || startDate <= endDate
@@ -242,8 +243,7 @@ export const useDistrictAnalytics = (
       }
 
       // Use the selected date for CDN URL; fall back to manifest latest
-      const snapshotDate =
-        endDate || (await fetchCdnManifest()).latestSnapshotDate
+      const snapshotDate = endDate || (await fetchLatestSnapshotDate())
       const url = cdnAnalyticsUrl(snapshotDate, districtId, 'analytics')
       // Read-time club-status overlay (epic #1062 Sprint 4 #1069): fetch the
       // base analytics and the daily Dues Renewal report in parallel (they are

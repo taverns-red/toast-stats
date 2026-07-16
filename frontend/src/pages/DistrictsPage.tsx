@@ -37,6 +37,7 @@ import { ProgramYearTitleSuffix } from '../components/ProgramYearTitleSuffix'
 import { DistrictRanking } from '../types/districts'
 import { arrayToCSV, downloadCSV } from '../utils/csvExport'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { snapshotDatesFrom } from '../types/snapshotDate'
 
 // On mobile (<768px) the rankings render only the top slice by default,
 // followed by a "Show all <n>" disclosure. The user landed on `/` to find
@@ -203,9 +204,13 @@ const DistrictsPage: React.FC = () => {
     },
   })
 
-  const allCachedDates: string[] = React.useMemo(
-    () => cachedDatesData?.dates || [],
-    [cachedDatesData?.dates]
+  // The union of every district's snapshot dates, drawn from the pipeline's own
+  // snapshot index — this page's mint for the brand (#1323). It hand-rolls the
+  // PY derivation that useProgramYearControls packages for the other aggregate
+  // pages, so it mints here rather than inheriting one.
+  const allCachedDates = React.useMemo(
+    () => snapshotDatesFrom(cachedDatesData),
+    [cachedDatesData]
   )
 
   // Get available program years from cached dates

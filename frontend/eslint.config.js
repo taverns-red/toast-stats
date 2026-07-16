@@ -5,6 +5,10 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import globals from 'globals'
 
+// Shared by both selectors below (the `as` form and the angle-bracket form).
+const SNAPSHOT_DATE_CAST_MESSAGE =
+  'Do not cast to SnapshotDate — it launders an unvalidated date into a per-snapshot fetch and re-admits the #1315 blank-UI bug. Mint it instead: toSnapshotDate(raw) for URL/API input, or snapshotDatesFrom(index) / snapshotDateFromManifest(manifest) when the CDN index is at hand.'
+
 export default [
   js.configs.recommended,
   {
@@ -62,6 +66,50 @@ export default [
         { allowConstantExport: true },
       ],
       'no-console': 'warn',
+      // Keep the SnapshotDate brand honest (#1323, epic #1319). The brand makes
+      // the #1315 closing-window bug class (as-of date keyed into a
+      // snapshots/{date}/... fetch) unrepresentable — but `raw as SnapshotDate`
+      // re-admits all of it in five characters, and no type-level guard can see
+      // a cast. The mint module below is exempt; everywhere else must go through
+      // toSnapshotDate / snapshotDatesFrom / snapshotDateFromManifest.
+      //
+      // Syntactic by necessity: this config runs tsparser with no `project`, so
+      // type-aware rules are unavailable. Behaviour (not severity) is asserted
+      // by src/__tests__/lint/no-snapshot-date-cast.test.ts — an AST selector is
+      // an unchecked string and silently matches nothing if the ESTree shape
+      // drifts (Lesson 82). It shipped doing exactly that: a `>` combinator here
+      // let `as SnapshotDate[]` / `| undefined` / `Array<SnapshotDate>` through
+      // until review caught it, which is why every variant is now pinned.
+      //
+      // Blind spots, stated rather than papered over (L166): this bans the CAST,
+      // not every route to a lie. `toSnapshotDate(data.asOfDate)` mints the
+      // #1315 bug through the front door (format is checked, provenance cannot
+      // be), and `snapshotDatesFrom({ dates: [asOfDate] })` forges the index
+      // shape. The brand raises the cost of the mistake and makes the honest
+      // path the easy one; it is not a proof.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'TSAsExpression TSTypeReference > Identifier[name="SnapshotDate"]',
+          message: SNAPSHOT_DATE_CAST_MESSAGE,
+        },
+        {
+          selector:
+            'TSTypeAssertion TSTypeReference > Identifier[name="SnapshotDate"]',
+          message: SNAPSHOT_DATE_CAST_MESSAGE,
+        },
+      ],
+    },
+  },
+  {
+    // The mint module is where the brand is CREATED — the casts here are the
+    // one place the nominal type can come into existence, guarded by the
+    // validation in toSnapshotDate. Exempting it is what makes the ban above
+    // enforceable everywhere else rather than impossible to satisfy.
+    files: ['src/types/snapshotDate.ts'],
+    rules: {
+      'no-restricted-syntax': 'off',
     },
   },
   {

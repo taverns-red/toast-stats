@@ -16,17 +16,21 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode } from 'react'
 import { useDistrictStatistics } from '../useMembershipData'
-import { fetchCdnManifest, fetchCdnDistrictSnapshot } from '../../services/cdn'
+import {
+  fetchLatestSnapshotDate,
+  fetchCdnDistrictSnapshot,
+} from '../../services/cdn'
+import { toSnapshotDate } from '../../types/snapshotDate'
 import type { DistrictStatistics } from '../../types/districts'
 
 // Mock the CDN service
 vi.mock('../../services/cdn', () => ({
-  fetchCdnManifest: vi.fn(),
+  fetchLatestSnapshotDate: vi.fn(),
   fetchCdnDistrictSnapshot: vi.fn(),
   fetchCdnDistrictAnalytics: vi.fn(),
 }))
 
-const mockedFetchCdnManifest = vi.mocked(fetchCdnManifest)
+const mockedFetchLatestSnapshotDate = vi.mocked(fetchLatestSnapshotDate)
 const mockedFetchCdnDistrictSnapshot = vi.mocked(fetchCdnDistrictSnapshot)
 
 // Create a mock DistrictStatistics response
@@ -82,11 +86,12 @@ const createWrapper = () => {
 describe('useDistrictStatistics', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Default manifest mock
-    mockedFetchCdnManifest.mockResolvedValue({
-      latestSnapshotDate: '2022-12-05',
-      generatedAt: '2022-12-05T00:00:00Z',
-    })
+    // Default "latest snapshot" mock. The hook no longer reads the raw
+    // manifest — fetchLatestSnapshotDate is the blessed mint that validates it
+    // and hands back a branded SnapshotDate (#1323).
+    mockedFetchLatestSnapshotDate.mockResolvedValue(
+      toSnapshotDate('2022-12-05')!
+    )
   })
 
   afterEach(() => {
@@ -144,8 +149,8 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      // Should use manifest date when no selectedDate
-      expect(mockedFetchCdnManifest).toHaveBeenCalled()
+      // Should use the latest snapshot date when no selectedDate
+      expect(mockedFetchLatestSnapshotDate).toHaveBeenCalled()
       expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalledWith(
         '2022-12-05',
         districtId
@@ -281,7 +286,7 @@ describe('useDistrictStatistics', () => {
       })
 
       // Empty string is falsy, so manifest date should be used
-      expect(mockedFetchCdnManifest).toHaveBeenCalled()
+      expect(mockedFetchLatestSnapshotDate).toHaveBeenCalled()
     })
   })
 
@@ -396,7 +401,7 @@ describe('useDistrictStatistics', () => {
     it('should handle manifest fetch errors', async () => {
       const districtId = 'D101'
 
-      mockedFetchCdnManifest.mockRejectedValue(
+      mockedFetchLatestSnapshotDate.mockRejectedValue(
         new Error('CDN manifest fetch failed: 500')
       )
 

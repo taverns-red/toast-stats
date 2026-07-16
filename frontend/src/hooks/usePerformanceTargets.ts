@@ -12,7 +12,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import {
-  fetchCdnManifest,
+  fetchLatestSnapshotDate,
   cdnAnalyticsUrl,
   fetchFromCdn,
 } from '../services/cdn'
@@ -23,6 +23,7 @@ import type {
   RecognitionTargets,
   RecognitionLevel,
 } from './useDistrictAnalytics'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
  * CDN performance-targets.json shape
@@ -158,7 +159,7 @@ function convertToPerformanceTargets(
  */
 export function usePerformanceTargets(
   districtId: string | null,
-  snapshotDate?: string
+  snapshotDate?: SnapshotDate
 ) {
   return useQuery<DistrictPerformanceTargets, Error>({
     queryKey: ['performanceTargets', districtId, snapshotDate],
@@ -167,7 +168,7 @@ export function usePerformanceTargets(
         throw new Error('District ID is required')
       }
 
-      const date = snapshotDate || (await fetchCdnManifest()).latestSnapshotDate
+      const date = snapshotDate || (await fetchLatestSnapshotDate())
       const url = cdnAnalyticsUrl(date, districtId, 'performance-targets')
       const file = await fetchFromCdn<{
         data: CdnPerformanceTargetsData

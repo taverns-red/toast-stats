@@ -18,6 +18,7 @@ import {
   getProgramYearForDate,
   ProgramYear,
 } from '../utils/programYear'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
  * Multi-year payment data structure for chart rendering
@@ -235,7 +236,7 @@ export function findComparablePayment(
 export function usePaymentsTrend(
   districtId: string | null,
   programYearStartDate?: string,
-  endDate?: string,
+  endDate?: SnapshotDate,
   selectedProgramYear?: ProgramYear,
   performanceTargets?: DistrictPerformanceTargets | null
 ): UsePaymentsTrendResult {
@@ -245,14 +246,17 @@ export function usePaymentsTrend(
   const startDate =
     programYearStartDate ??
     getProgramYear(currentProgramYear.year - 2).startDate
-  const queryEndDate = endDate ?? new Date().toISOString().split('T')[0]
-
-  // Fetch analytics data using existing hook
+  // No wall-clock fallback for endDate (#1323): today's date is never a
+  // snapshot date, so `?? new Date()...` keyed cdnAnalyticsUrl on a path that
+  // cannot exist and always 404'd. It survived only because the sole caller
+  // always passes effectiveEndDate behind a hasValidDates gate. Passing
+  // undefined through is both honest and better: useDistrictAnalytics falls
+  // back to the manifest's latest snapshot, which is a snapshot that exists.
   const {
     data: analyticsData,
     isLoading,
     error,
-  } = useDistrictAnalytics(districtId, startDate, queryEndDate)
+  } = useDistrictAnalytics(districtId, startDate, endDate)
 
   // Transform the data
   const result = useMemo(() => {

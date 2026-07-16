@@ -29,12 +29,16 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankings, fetchCdnManifest } from '../services/cdn'
+import {
+  snapshotDateFromManifest,
+  type SnapshotDate,
+} from '../types/snapshotDate'
 
 export interface LatestAsOfDate {
   /** Global dashboard "as of" date (sourceCsvDate) — undefined until loaded. */
   asOfDate: string | undefined
   /** Global pinned latest-snapshot (month-end) date — undefined until loaded. */
-  latestSnapshotDate: string | undefined
+  latestSnapshotDate: SnapshotDate | undefined
 }
 
 export function useLatestAsOfDate(): LatestAsOfDate {
@@ -53,7 +57,7 @@ export function useLatestAsOfDate(): LatestAsOfDate {
 
   return {
     asOfDate: rankings?.asOfDate,
-    latestSnapshotDate: manifest?.latestSnapshotDate,
+    latestSnapshotDate: snapshotDateFromManifest(manifest),
   }
 }
 
@@ -83,7 +87,7 @@ export interface GlobalFreshness {
  * @param isLatestSnapshot - whether the page is viewing that newest snapshot.
  */
 export function useGlobalFreshness(params: {
-  districtLatestSnapshotDate: string | undefined
+  districtLatestSnapshotDate: SnapshotDate | undefined
   isLatestSnapshot: boolean
 }): GlobalFreshness {
   const { asOfDate, latestSnapshotDate: globalLatestSnapshot } =

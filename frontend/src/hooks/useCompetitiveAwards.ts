@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchCdnCompetitiveAwards,
-  fetchCdnManifest,
+  fetchLatestSnapshotDate,
   type CompetitiveAwardStandings,
 } from '../services/cdn'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
  * React Query hook for fetching competitive award standings (#330).
@@ -16,12 +17,13 @@ import {
  * (Pre-fix the hook returned null for undefined date — the AwardsPage
  * surfaced this as an empty state.)
  */
-export function useCompetitiveAwards(date: string | undefined) {
+export function useCompetitiveAwards(date: SnapshotDate | undefined) {
   return useQuery<CompetitiveAwardStandings | null>({
     queryKey: ['competitive-awards', date ?? 'latest'],
     queryFn: async () => {
-      const resolvedDate = date ?? (await fetchCdnManifest()).latestSnapshotDate
-      return fetchCdnCompetitiveAwards(resolvedDate)
+      return fetchCdnCompetitiveAwards(
+        date ?? (await fetchLatestSnapshotDate())
+      )
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes

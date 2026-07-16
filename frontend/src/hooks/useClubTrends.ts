@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ClubHealthStatus } from '@taverns-red/shared-contracts'
 import {
-  fetchCdnManifest,
+  fetchLatestSnapshotDate,
   cdnAnalyticsUrl,
   fetchFromCdn,
 } from '../services/cdn'
@@ -91,9 +91,8 @@ export const useVulnerableClubs = (
       }
 
       // CDN-only: fetch pre-computed vulnerable-clubs.json (#173)
-      const manifest = await fetchCdnManifest()
       const url = cdnAnalyticsUrl(
-        manifest.latestSnapshotDate,
+        await fetchLatestSnapshotDate(),
         districtId,
         'vulnerable-clubs'
       )

@@ -40,26 +40,27 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
+import type { SnapshotDate } from '../types/snapshotDate'
 
-const EMPTY_DATES: string[] = []
+const EMPTY_DATES: SnapshotDate[] = []
 
 export interface DistrictProgramYearControls {
   selectedProgramYear: ProgramYear
   setSelectedProgramYear: (py: ProgramYear) => void
-  selectedDate: string | undefined
-  setSelectedDate: (date: string | undefined) => void
+  selectedDate: SnapshotDate | undefined
+  setSelectedDate: (date: SnapshotDate | undefined) => void
   /** Program years that actually have snapshots for this district, newest first. */
   availableProgramYears: ProgramYear[]
   /** Snapshot dates within the selected PY — feeds the date chip (which sorts). */
-  availableDates: string[]
+  availableDates: SnapshotDate[]
   /** The selected PY reconciled to one with data (self-heal); null until dates load. */
   effectiveProgramYear: ProgramYear | null
   /** The date the page should fetch: `?date=` when in-PY, else the PY's latest. */
-  effectiveEndDate: string | null
+  effectiveEndDate: SnapshotDate | null
   /** True once a program year AND an end date have resolved. */
   hasValidDates: boolean
   /** The district's overall most-recent snapshot date (for the freshness pill). */
-  latestSnapshotDate: string | undefined
+  latestSnapshotDate: SnapshotDate | undefined
   /** True when the effective end date is the district's newest snapshot — the
    * signal computeFreshness needs to flag month-end reconciliation only on the
    * live snapshot, never a finalized historical date (#1310). */
@@ -137,10 +138,10 @@ export function useDistrictProgramYearControls(
     ) {
       return selectedDate
     }
-    return (
-      getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear) ||
-      effectiveProgramYear.endDate
-    )
+    // null is unreachable here — effectiveProgramYear comes from
+    // getAvailableProgramYears(allCachedDates). See getMostRecentDateInProgramYear
+    // for why, and why a `|| endDate` fallback must not come back (#1323).
+    return getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear)
   }, [selectedDate, effectiveProgramYear, allCachedDates])
 
   const hasValidDates =

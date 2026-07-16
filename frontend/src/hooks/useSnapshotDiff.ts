@@ -7,6 +7,7 @@ import type {
 } from '@taverns-red/shared-contracts'
 import { diffAreaDivisionStatus } from '../utils/diffAreaDivisionStatus'
 import { diffClubStatus } from '../utils/diffClubStatus'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
  * Resolve the default "since the previous recorded date" pair from a district's
@@ -20,9 +21,9 @@ import { diffClubStatus } from '../utils/diffClubStatus'
  *
  * @see docs/design/what-changed-feature.md §5
  */
-export function previousRecordedDate(
-  dates: string[]
-): { from: string; to: string } | null {
+export function previousRecordedDate<T extends string>(
+  dates: readonly T[]
+): { from: T; to: T } | null {
   if (dates.length < 2) return null
   return {
     from: dates[dates.length - 2]!,
@@ -39,8 +40,8 @@ export function previousRecordedDate(
  */
 export function useSnapshotDiff(
   districtId: string | undefined,
-  from: string | undefined,
-  to: string | undefined
+  from: SnapshotDate | undefined,
+  to: SnapshotDate | undefined
 ) {
   return useQuery<SnapshotDiff, Error>({
     queryKey: ['snapshot-diff', districtId, from, to],

@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnManifest, fetchCdnDistrictAnalytics } from '../services/cdn'
+import {
+  fetchLatestSnapshotDate,
+  fetchCdnDistrictAnalytics,
+} from '../services/cdn'
 import type { EducationalAwardsResponse } from '../types/districts'
 
 /**
@@ -16,9 +19,8 @@ export const useEducationalAwards = (
       if (!districtId) {
         throw new Error('District ID is required')
       }
-      const { latestSnapshotDate } = await fetchCdnManifest()
       return fetchCdnDistrictAnalytics<EducationalAwardsResponse>(
-        latestSnapshotDate,
+        await fetchLatestSnapshotDate(),
         districtId,
         'distinguished-analytics'
       )

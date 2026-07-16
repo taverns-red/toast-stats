@@ -1,16 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnSnapshotIndex } from '../services/cdn'
+import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
 
 /**
  * Interface for cached dates response (CDN-compatible shape)
  */
 export interface CachedDatesResponse {
   districtId: string
-  dates: string[]
+  dates: SnapshotDate[]
   count: number
   dateRange: {
-    startDate: string
-    endDate: string
+    startDate: SnapshotDate
+    endDate: SnapshotDate
   } | null
 }
 
@@ -33,8 +34,13 @@ export const useDistrictCachedDates = (
         throw new Error('District ID is required')
       }
 
+      // The per-district snapshot index is the pipeline's own enumeration of the
+      // snapshots it wrote for this district — the district-side mint for the
+      // brand (#1323), the sibling of useProgramYearControls' dates-index mint.
       const index = await fetchCdnSnapshotIndex()
-      const dates = (index[districtId] ?? []).sort()
+      const dates = snapshotDatesFrom({
+        dates: index[districtId] ?? [],
+      }).sort()
 
       return {
         districtId,

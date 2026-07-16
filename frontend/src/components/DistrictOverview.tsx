@@ -6,10 +6,11 @@ import { LoadingSkeleton } from './LoadingSkeleton'
 import { ErrorDisplay, EmptyState } from './ErrorDisplay'
 import DistinguishedCompositionBar from './DistinguishedCompositionBar'
 import PaymentComposition from './PaymentComposition'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 interface DistrictOverviewProps {
   districtId: string
-  selectedDate?: string
+  selectedDate?: SnapshotDate
   programYearStartDate?: string
   /**
    * Pre-fetched performance targets from the usePerformanceTargets hook.

@@ -1,6 +1,10 @@
 import { useState, useCallback } from 'react'
-import { fetchCdnManifest, fetchCdnDistrictSnapshot } from '../services/cdn'
+import {
+  fetchLatestSnapshotDate,
+  fetchCdnDistrictSnapshot,
+} from '../services/cdn'
 import { arrayToCSV, downloadCSV, generateFilename } from '../utils/csvExport'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 interface ExportState {
   isExporting: boolean
@@ -8,7 +12,10 @@ interface ExportState {
 }
 
 interface UseDistrictExportResult extends ExportState {
-  exportToCSV: (startDate?: string, endDate?: string) => Promise<void>
+  exportToCSV: (
+    startDate?: SnapshotDate,
+    endDate?: SnapshotDate
+  ) => Promise<void>
   clearError: () => void
 }
 
@@ -29,7 +36,7 @@ export const useDistrictExport = (
   }, [])
 
   const exportToCSV = useCallback(
-    async (startDate?: string, _endDate?: string) => {
+    async (startDate?: SnapshotDate, _endDate?: SnapshotDate) => {
       if (!districtId) {
         setState(prev => ({
           ...prev,
@@ -42,7 +49,7 @@ export const useDistrictExport = (
 
       try {
         // Determine the date for snapshot lookup
-        const date = startDate || (await fetchCdnManifest()).latestSnapshotDate
+        const date = startDate || (await fetchLatestSnapshotDate())
 
         // Fetch snapshot data from CDN
         const snapshot = await fetchCdnDistrictSnapshot<{

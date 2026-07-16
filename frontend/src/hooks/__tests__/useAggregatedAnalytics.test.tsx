@@ -17,15 +17,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode } from 'react'
 import { useAggregatedAnalytics } from '../useAggregatedAnalytics'
 import {
-  fetchCdnManifest,
+  fetchLatestSnapshotDate,
   cdnAnalyticsUrl,
   fetchFromCdn,
 } from '../../services/cdn'
+import { toSnapshotDate } from '../../types/snapshotDate'
 import type { DistrictAnalytics } from '../useDistrictAnalytics'
 
 // Mock the CDN client — CDN fetch resolves with test data.
 vi.mock('../../services/cdn', () => ({
-  fetchCdnManifest: vi.fn(),
+  fetchLatestSnapshotDate: vi.fn(),
   cdnAnalyticsUrl: vi.fn(),
   fetchFromCdn: vi.fn(),
 }))
@@ -124,10 +125,11 @@ describe('useAggregatedAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Set up CDN mocks for each test
-    vi.mocked(fetchCdnManifest).mockResolvedValue({
-      latestSnapshotDate: '2024-12-15',
-      generatedAt: '2024-12-15T10:00:00Z',
-    })
+    // The hook resolves "latest" via the branded mint helper now, not the raw
+    // manifest (#1323).
+    vi.mocked(fetchLatestSnapshotDate).mockResolvedValue(
+      toSnapshotDate('2024-12-15')!
+    )
     vi.mocked(cdnAnalyticsUrl).mockReturnValue(
       'https://cdn.taverns.red/snapshots/2024-12-15/analytics/district_42_analytics.json'
     )
@@ -222,7 +224,7 @@ describe('useAggregatedAnalytics', () => {
      * Test that hook reports error when CDN fails
      */
     it('should report error when CDN fails', async () => {
-      vi.mocked(fetchCdnManifest).mockRejectedValue(
+      vi.mocked(fetchLatestSnapshotDate).mockRejectedValue(
         new Error('CDN unavailable')
       )
 

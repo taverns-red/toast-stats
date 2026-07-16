@@ -205,7 +205,10 @@ const DistrictClubsPage: React.FC = () => {
       allCachedDates,
       effectiveProgramYear
     )
-    return mostRecent || effectiveProgramYear.endDate
+    // null is unreachable here — effectiveProgramYear comes from
+    // getAvailableProgramYears(allCachedDates). See getMostRecentDateInProgramYear
+    // for why, and why a `|| endDate` fallback must not come back (#1323).
+    return mostRecent
   }, [selectedDate, effectiveProgramYear, allCachedDates])
 
   const hasValidDates =

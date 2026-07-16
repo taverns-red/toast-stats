@@ -65,7 +65,9 @@ export function getProgramYear(year: number): ProgramYear {
 /**
  * Get all available program years from a list of dates
  */
-export function getAvailableProgramYears(dates: string[]): ProgramYear[] {
+export function getAvailableProgramYears(
+  dates: readonly string[]
+): ProgramYear[] {
   if (dates.length === 0) return []
 
   const programYears = new Set<number>()
@@ -85,12 +87,16 @@ export function getAvailableProgramYears(dates: string[]): ProgramYear[] {
 }
 
 /**
- * Filter dates to only include those within a specific program year
+ * Filter dates to only include those within a specific program year.
+ *
+ * Generic in the date type so a branded `SnapshotDate[]` survives the filter —
+ * this is a narrowing of the caller's own list, so every element it returns
+ * already carries whatever provenance went in (#1323).
  */
-export function filterDatesByProgramYear(
-  dates: string[],
+export function filterDatesByProgramYear<T extends string>(
+  dates: readonly T[],
   programYear: ProgramYear
-): string[] {
+): T[] {
   return dates.filter(dateStr => {
     return dateStr >= programYear.startDate && dateStr <= programYear.endDate
   })
@@ -117,12 +123,41 @@ export function isDateInProgramYear(
 }
 
 /**
- * Get the most recent date within a program year from a list of dates
+ * Get the most recent date within a program year from a list of dates.
+ *
+ * Generic for the same reason as `filterDatesByProgramYear`: it returns an
+ * ELEMENT of `dates`, so a branded `SnapshotDate[]` yields a `SnapshotDate`.
+ * This is the hot path — it is the direct source of both `effectiveDate`
+ * (useProgramYearControls) and `effectiveEndDate` (useDistrictProgramYearControls),
+ * which is how the brand reaches the per-snapshot fetches (#1323).
+ *
+ * ## The null case is unreachable for STRICT-ISO dates from `getAvailableProgramYears`
+ *
+ * Callers that pass a PY drawn from `getAvailableProgramYears(dates)` cannot see
+ * `null` back — *provided every element of `dates` is a strict `YYYY-MM-DD`*.
+ * That proviso is load-bearing, and it is NOT free: the two predicates are not
+ * the same code. `getAvailableProgramYears` derives the PY via `calendarParts`,
+ * whose regex is unanchored at the end; `filterDatesByProgramYear` compares
+ * lexicographically against the PY bounds. They agree on strict ISO and diverge
+ * off it — `'2026-06-30T00:00:00Z'` derives PY 2025 but sorts ABOVE the
+ * `'2026-06-30'` bound, so it would be admitted as a year yet filtered out of
+ * it, and this function would return `null` after all.
+ *
+ * What actually guarantees the proviso is the mint: `snapshotDatesFrom`
+ * (`types/snapshotDate.ts`) drops every entry that is not a real strict-ISO
+ * calendar date, so a branded `SnapshotDate[]` cannot contain the divergent
+ * shapes. **If that filter is ever loosened, re-check every caller here.**
+ *
+ * Such callers must NOT "fix" the null case with a `|| programYear.endDate`
+ * fallback: `endDate` is a synthesized `${year + 1}-06-30` calendar bound, not a
+ * date any snapshot was written under, so feeding it to a `snapshots/{date}/…`
+ * fetch is the #1315 laundering bug wearing a plausible disguise. The
+ * `SnapshotDate` brand is what made those eight dead fallbacks visible (#1323).
  */
-export function getMostRecentDateInProgramYear(
-  dates: string[],
+export function getMostRecentDateInProgramYear<T extends string>(
+  dates: readonly T[],
   programYear: ProgramYear
-): string | null {
+): T | null {
   const filteredDates = filterDatesByProgramYear(dates, programYear)
   if (filteredDates.length === 0) return null
 

@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnManifest, fetchCdnDistrictSnapshot } from '../services/cdn'
+import {
+  fetchLatestSnapshotDate,
+  fetchCdnDistrictSnapshot,
+} from '../services/cdn'
 import type { ClubsResponse, DistrictStatistics } from '../types/districts'
 
 /**
@@ -13,9 +16,8 @@ export const useClubs = (districtId: string | null) => {
       if (!districtId) {
         throw new Error('District ID is required')
       }
-      const { latestSnapshotDate } = await fetchCdnManifest()
       const snapshot = await fetchCdnDistrictSnapshot<DistrictStatistics>(
-        latestSnapshotDate,
+        await fetchLatestSnapshotDate(),
         districtId
       )
       return {
