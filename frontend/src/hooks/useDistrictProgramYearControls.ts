@@ -138,13 +138,9 @@ export function useDistrictProgramYearControls(
     ) {
       return selectedDate
     }
-    // No `|| effectiveProgramYear.endDate` fallback: that synthesized bound
-    // (`${year + 1}-06-30`) is a calendar edge, not a snapshot that exists, and
-    // it is also unreachable. effectiveProgramYear is always an element of
-    // availableProgramYears = getAvailableProgramYears(allCachedDates), and that
-    // derivation keeps a PY iff filterDatesByProgramYear keeps one of its dates
-    // (identical July-boundary predicate), so getMostRecentDateInProgramYear
-    // cannot return null here. The brand made the dead branch visible (#1323).
+    // null is unreachable here — effectiveProgramYear comes from
+    // getAvailableProgramYears(allCachedDates). See getMostRecentDateInProgramYear
+    // for why, and why a `|| endDate` fallback must not come back (#1323).
     return getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear)
   }, [selectedDate, effectiveProgramYear, allCachedDates])
 

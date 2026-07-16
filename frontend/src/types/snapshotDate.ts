@@ -57,40 +57,20 @@ interface ManifestLike {
   latestSnapshotDate: string
 }
 
-const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
-
-/**
- * Frozen so callers can use it as a stable hook dependency without a `useMemo`
- * (an array literal would be a fresh reference every render).
- */
-const NO_DATES: readonly SnapshotDate[] = Object.freeze([])
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /**
  * True when `raw` is a well-formed, real calendar date in `YYYY-MM-DD`.
  *
  * Shape alone is not enough: `2026-13-01` and `2026-02-29` match the regex but
- * name no day, so the round-trip through `Date` rejects the overflow that
- * `Date.UTC` would otherwise silently roll forward into March.
+ * name no day. `Date` silently rolls those forward (Feb 29 → Mar 1), so the
+ * round-trip back through `toISOString` is what actually rejects them — if the
+ * date were real it would serialize to the same string it parsed from.
  */
 function isIsoCalendarDate(raw: string): boolean {
-  const match = ISO_DATE.exec(raw)
-  if (!match) return false
-
-  const [, year, month, day] = match as unknown as [
-    string,
-    string,
-    string,
-    string,
-  ]
-  const asDate = new Date(`${year}-${month}-${day}T00:00:00Z`)
-  if (Number.isNaN(asDate.getTime())) return false
-
-  // Reject rolled-over overflows (2026-02-29 → 2026-03-01).
-  return (
-    asDate.getUTCFullYear() === Number(year) &&
-    asDate.getUTCMonth() + 1 === Number(month) &&
-    asDate.getUTCDate() === Number(day)
-  )
+  if (!ISO_DATE.test(raw)) return false
+  const parsed = new Date(`${raw}T00:00:00Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(raw)
 }
 
 /**
@@ -129,10 +109,7 @@ export function toSnapshotDate(
 export function snapshotDatesFrom(
   index: DatesIndexLike | null | undefined
 ): SnapshotDate[] {
-  if (!index?.dates?.length) return NO_DATES as SnapshotDate[]
-
-  const minted = index.dates.filter(isIsoCalendarDate) as SnapshotDate[]
-  return minted.length > 0 ? minted : (NO_DATES as SnapshotDate[])
+  return (index?.dates ?? []).filter(isIsoCalendarDate) as SnapshotDate[]
 }
 
 /**

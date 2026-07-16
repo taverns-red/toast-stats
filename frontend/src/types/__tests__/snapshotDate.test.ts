@@ -81,10 +81,6 @@ describe('snapshotDatesFrom — the mint for the CDN dates index', () => {
   ])('returns an empty array for %s', (_label, index) => {
     expect(snapshotDatesFrom(index)).toEqual([])
   })
-
-  it('returns a stable empty array so it is safe as a hook dep', () => {
-    expect(snapshotDatesFrom(undefined)).toBe(snapshotDatesFrom(undefined))
-  })
 })
 
 describe('snapshotDateFromManifest — the mint for v1/latest.json', () => {

@@ -130,6 +130,17 @@ export function isDateInProgramYear(
  * This is the hot path — it is the direct source of both `effectiveDate`
  * (useProgramYearControls) and `effectiveEndDate` (useDistrictProgramYearControls),
  * which is how the brand reaches the per-snapshot fetches (#1323).
+ *
+ * ## The null case is unreachable when `programYear` came from these `dates`
+ *
+ * Callers that pass a PY drawn from `getAvailableProgramYears(dates)` can never
+ * see `null` back: that derivation admits a PY iff `filterDatesByProgramYear`
+ * keeps one of its dates — both use the identical `month >= 7 ? year : year - 1`
+ * July-boundary rule. Such callers must NOT add a `|| programYear.endDate`
+ * fallback: `endDate` is a synthesized `${year + 1}-06-30` calendar bound, not a
+ * date any snapshot was written under, so feeding it to a `snapshots/{date}/…`
+ * fetch is the #1315 laundering bug wearing a plausible disguise. The
+ * `SnapshotDate` brand is what made those eight dead fallbacks visible (#1323).
  */
 export function getMostRecentDateInProgramYear<T extends string>(
   dates: readonly T[],

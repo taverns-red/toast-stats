@@ -52,7 +52,7 @@ export function useUrlProgramYear() {
   // malformed value resolves to undefined and the caller falls back to the PY's
   // latest snapshot, rather than keying a fetch on garbage and rendering blank.
   const urlDate = searchParams.get('date')
-  const selectedDate = useMemo(() => toSnapshotDate(urlDate), [urlDate])
+  const selectedDate = toSnapshotDate(urlDate)
 
   // Sync program year to context when URL differs
   useEffect(() => {

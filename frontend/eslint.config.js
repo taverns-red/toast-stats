@@ -5,6 +5,10 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import globals from 'globals'
 
+// Shared by both selectors below (the `as` form and the angle-bracket form).
+const SNAPSHOT_DATE_CAST_MESSAGE =
+  'Do not cast to SnapshotDate — it launders an unvalidated date into a per-snapshot fetch and re-admits the #1315 blank-UI bug. Mint it instead: toSnapshotDate(raw) for URL/API input, or snapshotDatesFrom(index) / snapshotDateFromManifest(manifest) when the CDN index is at hand.'
+
 export default [
   js.configs.recommended,
   {
@@ -79,14 +83,12 @@ export default [
         {
           selector:
             'TSAsExpression > TSTypeReference > Identifier[name="SnapshotDate"]',
-          message:
-            'Do not cast to SnapshotDate — it launders an unvalidated date into a per-snapshot fetch and re-admits the #1315 blank-UI bug. Mint it instead: toSnapshotDate(raw) for URL/API input, or snapshotDatesFrom(index) / snapshotDateFromManifest(manifest) when the CDN index is at hand.',
+          message: SNAPSHOT_DATE_CAST_MESSAGE,
         },
         {
           selector:
             'TSTypeAssertion > TSTypeReference > Identifier[name="SnapshotDate"]',
-          message:
-            'Do not cast to SnapshotDate — it launders an unvalidated date into a per-snapshot fetch and re-admits the #1315 blank-UI bug. Mint it instead: toSnapshotDate(raw) for URL/API input, or snapshotDatesFrom(index) / snapshotDateFromManifest(manifest) when the CDN index is at hand.',
+          message: SNAPSHOT_DATE_CAST_MESSAGE,
         },
       ],
     },

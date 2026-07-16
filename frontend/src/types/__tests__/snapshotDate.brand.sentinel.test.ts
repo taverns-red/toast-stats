@@ -167,12 +167,10 @@ function compileSentinels(): Map<string, readonly ts.Diagnostic[]> {
       source,
     ])
   )
-  const isVirtual = (fileName: string) => sources.has(path.resolve(fileName))
-
+  // Only getSourceFile needs overriding: the sentinels are program rootNames and
+  // never import each other, so the host is never asked to resolve or stat them.
   const host = ts.createCompilerHost(options, true)
   const realGetSourceFile = host.getSourceFile.bind(host)
-  const realFileExists = host.fileExists.bind(host)
-  const realReadFile = host.readFile.bind(host)
 
   host.getSourceFile = (fileName, languageVersion, onError, shouldCreate) => {
     const source = sources.get(path.resolve(fileName))
@@ -186,9 +184,6 @@ function compileSentinels(): Map<string, readonly ts.Diagnostic[]> {
           ts.ScriptKind.TS
         )
   }
-  host.fileExists = fileName => isVirtual(fileName) || realFileExists(fileName)
-  host.readFile = fileName =>
-    sources.get(path.resolve(fileName)) ?? realReadFile(fileName)
 
   const program = ts.createProgram([...sources.keys()], options, host)
 

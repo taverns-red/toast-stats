@@ -38,9 +38,9 @@ export const useDistrictCachedDates = (
       // snapshots it wrote for this district — the district-side mint for the
       // brand (#1323), the sibling of useProgramYearControls' dates-index mint.
       const index = await fetchCdnSnapshotIndex()
-      const dates = [
-        ...snapshotDatesFrom({ dates: index[districtId] ?? [] }),
-      ].sort()
+      const dates = snapshotDatesFrom({
+        dates: index[districtId] ?? [],
+      }).sort()
 
       return {
         districtId,
