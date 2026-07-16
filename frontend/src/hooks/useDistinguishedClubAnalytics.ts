@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  fetchCdnManifest,
+  fetchLatestSnapshotDate,
   cdnAnalyticsUrl,
   fetchFromCdn,
 } from '../services/cdn'
@@ -75,9 +75,8 @@ export const useDistinguishedClubAnalytics = (
       }
 
       // Fetch from CDN — pre-computed JSON
-      const manifest = await fetchCdnManifest()
       const url = cdnAnalyticsUrl(
-        manifest.latestSnapshotDate,
+        await fetchLatestSnapshotDate(),
         districtId,
         'distinguished-analytics'
       )

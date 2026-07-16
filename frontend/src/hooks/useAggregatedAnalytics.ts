@@ -32,6 +32,7 @@ import {
   fetchIndividualAnalytics,
   convertToAggregatedFormat,
 } from './aggregatedAnalytics/helpers'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 // ============================================================================
 // Hook Implementation
@@ -52,7 +53,7 @@ import {
  */
 export function useAggregatedAnalytics(
   districtId: string | null,
-  snapshotDate?: string
+  snapshotDate?: SnapshotDate
 ): {
   data: AggregatedAnalyticsResponse | null
   isLoading: boolean

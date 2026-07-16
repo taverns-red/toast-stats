@@ -6,6 +6,7 @@ import type { SnapshotDiff } from '@taverns-red/shared-contracts'
 import { distinguishedTierName } from './distinguishedTier'
 import { toClubHistoryCsvRows, type ClubHistoryRow } from './clubHistory'
 import { logger } from './logger'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
  * Converts a 2D array to CSV string
@@ -500,15 +501,15 @@ export const exportHistoricalRankData = (
  */
 export const exportDistrictAnalytics = async (
   districtId: string,
-  startDate?: string,
-  _endDate?: string
+  startDate?: SnapshotDate,
+  _endDate?: SnapshotDate
 ): Promise<void> => {
   try {
     // Dynamically import CDN services to avoid circular dependencies
-    const { fetchCdnManifest, fetchCdnDistrictSnapshot } =
+    const { fetchLatestSnapshotDate, fetchCdnDistrictSnapshot } =
       await import('../services/cdn')
 
-    const date = startDate || (await fetchCdnManifest()).latestSnapshotDate
+    const date = startDate || (await fetchLatestSnapshotDate())
 
     const snapshot = await fetchCdnDistrictSnapshot<{
       districtId: string

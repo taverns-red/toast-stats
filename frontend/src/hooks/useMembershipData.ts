@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  fetchCdnManifest,
+  fetchLatestSnapshotDate,
   fetchCdnDistrictSnapshot,
   fetchCdnDistrictAnalytics,
 } from '../services/cdn'
@@ -8,6 +8,7 @@ import type {
   DistrictStatistics,
   MembershipHistoryResponse,
 } from '../types/districts'
+import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
  * React Query hook to fetch district statistics from CDN (#173).
@@ -21,7 +22,7 @@ import type {
  */
 export const useDistrictStatistics = (
   districtId: string | null,
-  selectedDate?: string,
+  selectedDate?: SnapshotDate,
   fields?: 'divisions' | 'clubs' | 'all'
 ) => {
   return useQuery<DistrictStatistics, Error>({
@@ -30,7 +31,7 @@ export const useDistrictStatistics = (
       if (!districtId) {
         throw new Error('District ID is required')
       }
-      const date = selectedDate || (await fetchCdnManifest()).latestSnapshotDate
+      const date = selectedDate || (await fetchLatestSnapshotDate())
       return fetchCdnDistrictSnapshot<DistrictStatistics>(date, districtId)
     },
     enabled: !!districtId,
@@ -53,9 +54,8 @@ export const useMembershipHistory = (
       if (!districtId) {
         throw new Error('District ID is required')
       }
-      const { latestSnapshotDate } = await fetchCdnManifest()
       return fetchCdnDistrictAnalytics<MembershipHistoryResponse>(
-        latestSnapshotDate,
+        await fetchLatestSnapshotDate(),
         districtId,
         'membership'
       )

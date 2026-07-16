@@ -93,7 +93,14 @@ const DistrictAnalyticsPage: React.FC = () => {
       allCachedDates,
       effectiveProgramYear
     )
-    return mostRecent || effectiveProgramYear.endDate
+    // No `|| effectiveProgramYear.endDate` fallback: that synthesized bound is a
+    // calendar edge, not a snapshot that exists — and it is unreachable anyway.
+    // effectiveProgramYear is always an element of availableProgramYears =
+    // getAvailableProgramYears(allCachedDates), which keeps a PY iff
+    // filterDatesByProgramYear keeps one of its dates (same July-boundary
+    // predicate), so mostRecent cannot be null here. The brand surfaced the
+    // dead branch (#1323).
+    return mostRecent
   }, [selectedDate, effectiveProgramYear, allCachedDates])
 
   const hasValidDates =

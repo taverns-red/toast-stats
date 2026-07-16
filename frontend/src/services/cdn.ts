@@ -19,6 +19,11 @@ import {
   type DistrictReportsDataset,
 } from '@taverns-red/shared-contracts'
 
+import {
+  snapshotDateFromManifest,
+  type SnapshotDate,
+} from '../types/snapshotDate'
+
 import { recordCdnResponse } from './cdnCacheTracker'
 
 // CDN base URL — set via VITE_CDN_BASE_URL at build time (#316)
@@ -81,6 +86,29 @@ export async function fetchCdnManifest(): Promise<CdnManifest> {
 }
 
 /**
+ * Fetch the pipeline's newest snapshot date, branded (#1323).
+ *
+ * The blessed mint for every "just give me the latest" read. `CdnManifest`
+ * itself stays unbranded — it is a raw remote payload, and branding a field on
+ * arrival would be laundering — so this is where the manifest's claim gets
+ * validated exactly once instead of at each of its ~8 call sites.
+ *
+ * Throws if the manifest carries no usable date: a manifest we cannot trust is
+ * a pipeline failure, and fetching `snapshots/undefined/…` would only turn it
+ * into a confusing 404.
+ */
+export async function fetchLatestSnapshotDate(): Promise<SnapshotDate> {
+  const manifest = await fetchCdnManifest()
+  const latest = snapshotDateFromManifest(manifest)
+  if (!latest) {
+    throw new Error(
+      `CDN manifest has no valid latestSnapshotDate: ${JSON.stringify(manifest.latestSnapshotDate)}`
+    )
+  }
+  return latest
+}
+
+/**
  * Fetch all available snapshot dates from CDN.
  */
 export async function fetchCdnDates(): Promise<CdnDatesIndex> {
@@ -130,7 +158,7 @@ export interface CdnRankingsData {
    * by `fetchCdnRankingsForDate`; `undefined` on the `fetchCdnRankings()` latest
    * path and whenever the per-date file 404s and we fall back to latest.
    */
-  snapshotDate?: string
+  snapshotDate?: SnapshotDate
   generatedAt: string
 }
 
@@ -164,7 +192,7 @@ export async function fetchCdnRankings(): Promise<CdnRankingsData> {
  * Falls back to v1/rankings.json if the per-date file doesn't exist.
  */
 export async function fetchCdnRankingsForDate(
-  date: string
+  date: SnapshotDate
 ): Promise<CdnRankingsData> {
   const url = `${cdnBaseUrl()}/snapshots/${date}/all-districts-rankings.json`
   const res = await fetch(url)
@@ -355,7 +383,7 @@ export interface CompetitiveAwardStandings {
  * Returns null if the file does not exist (legacy snapshots).
  */
 export async function fetchCdnCompetitiveAwards(
-  date: string
+  date: SnapshotDate
 ): Promise<CompetitiveAwardStandings | null> {
   const url = `${cdnBaseUrl()}/snapshots/${date}/competitive-awards.json`
   const res = await fetch(url)
@@ -375,7 +403,7 @@ export async function fetchCdnCompetitiveAwards(
  * @returns Full CDN URL
  */
 export function cdnAnalyticsUrl(
-  date: string,
+  date: SnapshotDate,
   districtId: string,
   type: string
 ): string {
@@ -385,7 +413,7 @@ export function cdnAnalyticsUrl(
 /**
  * Construct a CDN URL for a district snapshot file.
  */
-export function cdnSnapshotUrl(date: string, districtId: string): string {
+export function cdnSnapshotUrl(date: SnapshotDate, districtId: string): string {
   return `${cdnBaseUrl()}/snapshots/${date}/district_${districtId}.json`
 }
 
@@ -416,7 +444,7 @@ export async function fetchFromCdn<T>(url: string): Promise<T> {
  * distinct and the read-time overlay (Sprint 4 #1069) never touches the base.
  */
 export function cdnDistrictReportsUrl(
-  date: string,
+  date: SnapshotDate,
   districtId: string
 ): string {
   return `${cdnBaseUrl()}/snapshots/${date}/district_${districtId}_reports.json`
@@ -430,7 +458,7 @@ export function cdnDistrictReportsUrl(
  * schema-validation failure, or network error; only a valid dataset resolves.
  */
 export async function fetchCdnDistrictReports(
-  date: string,
+  date: SnapshotDate,
   districtId: string
 ): Promise<DistrictReportsDataset | null> {
   try {
@@ -457,7 +485,7 @@ export function resetCdnManifestCache(): void {
  * Returns the full snapshot JSON (DistrictStatistics shape).
  */
 export async function fetchCdnDistrictSnapshot<T>(
-  date: string,
+  date: SnapshotDate,
   districtId: string
 ): Promise<T> {
   return fetchFromCdn<T>(cdnSnapshotUrl(date, districtId))
@@ -470,7 +498,7 @@ export async function fetchCdnDistrictSnapshot<T>(
  *   'leadership-insights', 'year-over-year', 'performance-targets', 'club-trends-index'
  */
 export async function fetchCdnDistrictAnalytics<T>(
-  date: string,
+  date: SnapshotDate,
   districtId: string,
   type: string
 ): Promise<T> {

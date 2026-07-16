@@ -24,9 +24,9 @@ vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
   fetchCdnRankingsForDate: vi.fn(),
   fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(null),
-  fetchCdnManifest: vi
-    .fn()
-    .mockResolvedValue({ latestSnapshotDate: '2026-05-12', generatedAt: 'x' }),
+  // useCompetitiveAwards resolves "latest" through the branded mint helper
+  // rather than reading the raw manifest itself (#1323).
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2026-05-12'),
 }))
 
 const mockedFetchCdnRankings = vi.mocked(fetchCdnRankings)

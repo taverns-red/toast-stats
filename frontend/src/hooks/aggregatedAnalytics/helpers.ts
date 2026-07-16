@@ -7,12 +7,13 @@
  */
 
 import {
-  fetchCdnManifest,
+  fetchLatestSnapshotDate,
   cdnAnalyticsUrl,
   fetchFromCdn,
 } from '../../services/cdn'
 import type { DistrictAnalytics } from '../useDistrictAnalytics'
 import type { AggregatedAnalyticsResponse, TrendData } from './types'
+import type { SnapshotDate } from '../../types/snapshotDate'
 
 /**
  * Fetch district analytics from Cloud CDN.
@@ -23,9 +24,9 @@ import type { AggregatedAnalyticsResponse, TrendData } from './types'
  */
 export async function fetchIndividualAnalytics(
   districtId: string,
-  snapshotDate?: string
+  snapshotDate?: SnapshotDate
 ): Promise<DistrictAnalytics> {
-  const date = snapshotDate || (await fetchCdnManifest()).latestSnapshotDate
+  const date = snapshotDate || (await fetchLatestSnapshotDate())
   const url = cdnAnalyticsUrl(date, districtId, 'analytics')
   const file = await fetchFromCdn<{ data: DistrictAnalytics }>(url)
   return file.data

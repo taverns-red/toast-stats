@@ -24,10 +24,8 @@ vi.mock('../../services/cdn', () => ({
   fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({}),
   fetchCdnRankings: vi.fn(),
   fetchCdnRankingsForDate: vi.fn(),
-  fetchCdnManifest: vi.fn().mockResolvedValue({
-    latestSnapshotDate: '2026-05-18',
-    generatedAt: '2026-05-18T00:00:00Z',
-  }),
+  // The "latest snapshot" seam is the branded mint helper now (#1323).
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2026-05-18'),
   fetchCdnCompetitiveAwards: vi.fn(),
   cdnAnalyticsUrl: vi.fn().mockReturnValue('https://cdn.taverns.red/test'),
   fetchFromCdn: vi.fn(),

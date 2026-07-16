@@ -65,7 +65,9 @@ export function getProgramYear(year: number): ProgramYear {
 /**
  * Get all available program years from a list of dates
  */
-export function getAvailableProgramYears(dates: string[]): ProgramYear[] {
+export function getAvailableProgramYears(
+  dates: readonly string[]
+): ProgramYear[] {
   if (dates.length === 0) return []
 
   const programYears = new Set<number>()
@@ -85,12 +87,16 @@ export function getAvailableProgramYears(dates: string[]): ProgramYear[] {
 }
 
 /**
- * Filter dates to only include those within a specific program year
+ * Filter dates to only include those within a specific program year.
+ *
+ * Generic in the date type so a branded `SnapshotDate[]` survives the filter —
+ * this is a narrowing of the caller's own list, so every element it returns
+ * already carries whatever provenance went in (#1323).
  */
-export function filterDatesByProgramYear(
-  dates: string[],
+export function filterDatesByProgramYear<T extends string>(
+  dates: readonly T[],
   programYear: ProgramYear
-): string[] {
+): T[] {
   return dates.filter(dateStr => {
     return dateStr >= programYear.startDate && dateStr <= programYear.endDate
   })
@@ -117,12 +123,18 @@ export function isDateInProgramYear(
 }
 
 /**
- * Get the most recent date within a program year from a list of dates
+ * Get the most recent date within a program year from a list of dates.
+ *
+ * Generic for the same reason as `filterDatesByProgramYear`: it returns an
+ * ELEMENT of `dates`, so a branded `SnapshotDate[]` yields a `SnapshotDate`.
+ * This is the hot path — it is the direct source of both `effectiveDate`
+ * (useProgramYearControls) and `effectiveEndDate` (useDistrictProgramYearControls),
+ * which is how the brand reaches the per-snapshot fetches (#1323).
  */
-export function getMostRecentDateInProgramYear(
-  dates: string[],
+export function getMostRecentDateInProgramYear<T extends string>(
+  dates: readonly T[],
   programYear: ProgramYear
-): string | null {
+): T | null {
   const filteredDates = filterDatesByProgramYear(dates, programYear)
   if (filteredDates.length === 0) return null
 

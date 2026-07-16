@@ -1,5 +1,6 @@
 import React from 'react'
 import type { ProgramYear } from '../utils/programYear'
+import type { SnapshotDate } from '../types/snapshotDate'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { computeFreshness } from '../utils/dataFreshness'
 
@@ -22,9 +23,9 @@ export interface DataControlsBarProps {
   availableProgramYears: ProgramYear[]
   selectedProgramYear: ProgramYear
   onProgramYearChange: (py: ProgramYear) => void
-  availableDates: string[]
-  selectedDate: string | undefined
-  onDateChange: (date: string | undefined) => void
+  availableDates: SnapshotDate[]
+  selectedDate: SnapshotDate | undefined
+  onDateChange: (date: SnapshotDate | undefined) => void
   /** #922 — true while the query feeding latestSnapshotDate is still in
    * flight. On a cold load the rankings query usually resolves first, so
    * without this the toolbar paints 2-chip and rewraps (one row shorter on
@@ -195,7 +196,7 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
         testId="date-chip"
         ariaLabel="Snapshot date"
         value={selectedDate ?? ''}
-        onChange={v => onDateChange(v === '' ? undefined : v)}
+        onChange={v => onDateChange(sortedDates.find(d => d === v))}
         display={
           selectedDate ? formatDisplayDate(selectedDate) : 'Latest in PY'
         }

@@ -35,20 +35,19 @@ import {
   getMostRecentDateInProgramYear,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
-
-const EMPTY_DATES: string[] = []
+import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
 
 export interface ProgramYearControls {
   selectedProgramYear: ProgramYear
   setSelectedProgramYear: (py: ProgramYear) => void
-  selectedDate: string | undefined
-  setSelectedDate: (date: string | undefined) => void
+  selectedDate: SnapshotDate | undefined
+  setSelectedDate: (date: SnapshotDate | undefined) => void
   /** Program years that actually have snapshots, newest first. */
   availableProgramYears: ProgramYear[]
   /** Snapshot dates within the selected program year. */
-  cachedDates: string[]
+  cachedDates: SnapshotDate[]
   /** The date the page should fetch: `?date=` if set, else the PY's latest. */
-  effectiveDate: string | undefined
+  effectiveDate: SnapshotDate | undefined
   /** True when the selected date is the most recent snapshot in the PY (or no
    * explicit date is chosen). Drives the freshness pill's reconciliation axis
    * (#1296) — memoized here so each consuming page doesn't re-sort per render. */
@@ -74,7 +73,11 @@ export function useProgramYearControls(): ProgramYearControls {
     retry: false,
   })
 
-  const allCachedDates = data?.dates ?? EMPTY_DATES
+  // The dates index is the pipeline's own enumeration of what it wrote, so this
+  // is the primary mint for the brand (#1323). Everything downstream —
+  // cachedDates, effectiveDate, and every per-snapshot fetch keyed on them —
+  // inherits its provenance from this one call.
+  const allCachedDates = useMemo(() => snapshotDatesFrom(data), [data])
 
   const availableProgramYears = useMemo(
     () => getAvailableProgramYears(allCachedDates),

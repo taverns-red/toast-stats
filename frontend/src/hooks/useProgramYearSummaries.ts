@@ -18,6 +18,7 @@ import {
   buildProgramYearSummary,
   type ProgramYearSummary,
 } from '../utils/programYearSummary'
+import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
 
 export const programYearSummariesQueryKey = ['program-year-summaries'] as const
 
@@ -56,10 +57,10 @@ export function useProgramYearSummaries(): UseProgramYearSummariesResult {
   const query = useQuery({
     queryKey: programYearSummariesQueryKey,
     queryFn: async (): Promise<ProgramYearSummary[]> => {
-      const { dates } = await fetchCdnDates()
+      const dates = snapshotDatesFrom(await fetchCdnDates())
 
       // Group snapshot dates by program year, tracking each year's latest date.
-      const latestByYear = new Map<number, string>()
+      const latestByYear = new Map<number, SnapshotDate>()
       for (const d of dates) {
         const sy = startYearOf(d)
         const cur = latestByYear.get(sy)

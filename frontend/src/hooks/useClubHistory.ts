@@ -26,6 +26,7 @@ import {
 import type { PerDistrictData } from '@taverns-red/shared-contracts'
 import { getProgramYearForDate } from '../utils/programYear'
 import { buildClubHistoryRow, type ClubHistoryRow } from '../utils/clubHistory'
+import { snapshotDatesFrom } from '../types/snapshotDate'
 
 export const clubHistoryQueryKey = (
   districtId: string,
@@ -48,9 +49,17 @@ export interface UseClubHistoryResult {
   error: Error | null
 }
 
-/** Latest snapshot date within each program year, for one district. */
-function latestDateByProgramYear(dates: string[]): Map<number, string> {
-  const latestByYear = new Map<number, string>()
+/**
+ * Latest snapshot date within each program year, for one district.
+ *
+ * Generic in the date type so a branded `SnapshotDate[]` yields branded values:
+ * every entry is an ELEMENT of `dates`, so it carries the caller's provenance
+ * straight through to the per-snapshot fetch below (#1323).
+ */
+function latestDateByProgramYear<T extends string>(
+  dates: readonly T[]
+): Map<number, T> {
+  const latestByYear = new Map<number, T>()
   for (const d of dates) {
     // getProgramYearForDate parses the ISO string via calendarParts (regex,
     // timezone-safe) — not new Date() — so the Jul-1 boundary is exact.
@@ -72,7 +81,7 @@ export function useClubHistory(
     enabled,
     queryFn: async (): Promise<ClubHistoryData> => {
       const index = await fetchCdnSnapshotIndex()
-      const dates = index[districtId!] ?? []
+      const dates = snapshotDatesFrom({ dates: index[districtId!] ?? [] })
 
       // Latest date per program year → keep only COMPLETED years, newest first.
       const now = new Date()

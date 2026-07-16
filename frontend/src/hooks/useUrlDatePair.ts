@@ -23,11 +23,13 @@ import { previousRecordedDate } from './useSnapshotDiff'
  * @param dates Ascending list of the district's recorded snapshot dates.
  * @see docs/design/what-changed-feature.md §5, §4
  */
-export function useUrlDatePair(dates: string[]): {
-  from: string | undefined
-  to: string | undefined
-  setFrom: (date: string) => void
-  setTo: (date: string) => void
+export function useUrlDatePair<T extends string>(
+  dates: readonly T[]
+): {
+  from: T | undefined
+  to: T | undefined
+  setFrom: (date: T) => void
+  setTo: (date: T) => void
 } {
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -38,11 +40,11 @@ export function useUrlDatePair(dates: string[]): {
 
   // A URL value wins only if it's a date this district actually recorded;
   // otherwise fall back to the Phase-1 default for that side.
-  const from = urlFrom && dates.includes(urlFrom) ? urlFrom : defaultPair?.from
-  const to = urlTo && dates.includes(urlTo) ? urlTo : defaultPair?.to
+  const from = dates.find(d => d === urlFrom) ?? defaultPair?.from
+  const to = dates.find(d => d === urlTo) ?? defaultPair?.to
 
   const setParam = useCallback(
-    (key: 'from' | 'to', date: string, current: string | undefined) => {
+    (key: 'from' | 'to', date: T, current: T | undefined) => {
       if (date === current) return // no-op — don't churn history (Lesson 070)
       const isDefault = defaultPair
         ? date === (key === 'from' ? defaultPair.from : defaultPair.to)
@@ -61,11 +63,11 @@ export function useUrlDatePair(dates: string[]): {
   )
 
   const setFrom = useCallback(
-    (date: string) => setParam('from', date, from),
+    (date: T) => setParam('from', date, from),
     [setParam, from]
   )
   const setTo = useCallback(
-    (date: string) => setParam('to', date, to),
+    (date: T) => setParam('to', date, to),
     [setParam, to]
   )
 
