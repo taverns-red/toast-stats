@@ -139,11 +139,11 @@ const DistrictDivisionsPage: React.FC = () => {
           <DistrictSubnav districtId={districtId} />
 
           <div className="space-y-4 sm:space-y-6">
-            {districtStatistics ? (
+            {districtStatistics && effectiveEndDate ? (
               <DivisionPerformanceCards
                 districtSnapshot={districtStatistics}
                 isLoading={isLoadingStatistics}
-                snapshotTimestamp={districtStatistics.asOfDate}
+                snapshotTimestamp={effectiveEndDate}
                 districtId={districtId}
               />
             ) : (
@@ -152,11 +152,11 @@ const DistrictDivisionsPage: React.FC = () => {
 
             <DistinguishedProgramCriteriaExplainer />
 
-            {districtStatistics ? (
+            {districtStatistics && effectiveEndDate ? (
               <DivisionAreaRecognitionPanel
                 divisions={extractDivisionPerformance(
                   districtStatistics,
-                  districtStatistics.asOfDate
+                  effectiveEndDate
                 )}
                 isLoading={isLoadingStatistics}
               />

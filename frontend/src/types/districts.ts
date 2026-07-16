@@ -67,7 +67,6 @@ export interface EducationalAwardsResponse {
 
 export interface DistrictStatistics {
   districtId: string
-  asOfDate: string
   membership: MembershipStats
   clubs: ClubStats
   education: EducationStats

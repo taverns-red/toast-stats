@@ -4,6 +4,7 @@ import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
+import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { calculateProgramYearDay } from '../utils/programYear'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { formatDisplayDate } from '../utils/dateFormatting'
@@ -202,6 +203,15 @@ const ClubDetailPage: React.FC = () => {
     latestSnapshotDate,
     isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId, { selfHeal: false })
+
+  // Freshness parity (#1321): the per-district snapshot carries no as-of date —
+  // the old `districtStats.asOfDate` was a phantom, so this pill was permanently
+  // blank. The shared hook owns the "is this really the latest?" rule.
+  const { asOfDate: globalAsOfDate, isLatest: isLatestGlobal } =
+    useGlobalFreshness({
+      districtLatestSnapshotDate: latestSnapshotDate,
+      isLatestSnapshot,
+    })
 
   // Fetch district info
   const { data: districtsData } = useDistricts()
@@ -511,8 +521,8 @@ const ClubDetailPage: React.FC = () => {
               <div className="club-hero__controls">
                 <DataControlsBar
                   latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
-                  asOfDate={districtStats?.asOfDate}
-                  isLatest={isLatestSnapshot}
+                  asOfDate={globalAsOfDate}
+                  isLatest={isLatestGlobal}
                   availableProgramYears={availableProgramYears}
                   // Show the DERIVED (healed) year so the chip is honest even
                   // when `?py=` names a year without data — selfHeal is off here

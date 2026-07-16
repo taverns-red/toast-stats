@@ -60,7 +60,9 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
   // The extractDivisionPerformance function groups clubs by Division and Area
   const mockDistrictStatistics = {
     districtId: 'D1',
-    asOfDate: '2024-01-15T10:30:00Z',
+    // The snapshot's own pinned date (#1321). The old `asOfDate` was a phantom —
+    // never present on the wire — so it fed `undefined` into the visit-round gate.
+    snapshotDate: '2024-01-15',
     membership: {
       total: 5000,
       change: 100,
@@ -162,14 +164,16 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
-          snapshotTimestamp={mockDistrictStatistics.asOfDate}
         />
       )
 
-      // Verify component renders
+      // Verify component renders. The old "Division & Area Performance" panel
+      // was dead code bound to the phantom asOfDate and is gone (#1321) — the
+      // division cards themselves are the render evidence.
       expect(
-        screen.getByText('Division & Area Performance')
+        screen.getByRole('region', { name: 'Division performance cards' })
       ).toBeInTheDocument()
 
       // Verify divisions are rendered
@@ -181,6 +185,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -204,6 +209,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -217,23 +223,26 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       expect(screen.getByText('B1')).toBeInTheDocument()
     })
 
-    it('should display snapshot timestamp', () => {
+    it('renders no snapshot-timestamp panel — the header pill owns the date (#1321)', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
-          snapshotTimestamp={mockDistrictStatistics.asOfDate}
         />
       )
 
-      expect(screen.getByText('Data as of')).toBeInTheDocument()
-      expect(screen.getByText(/Jan 15, 2024/i)).toBeInTheDocument()
+      // The timestamp panel is gone (#1321): the page header's freshness pill
+      // owns the date, and "Data as of" mislabels a pinned snapshot date.
+      expect(screen.queryByText('Data as of')).not.toBeInTheDocument()
+      expect(screen.queryByText(/Jan 15, 2024/i)).not.toBeInTheDocument()
     })
 
     it('should show loading state', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={true}
         />
       )
@@ -245,7 +254,11 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
 
     it('should handle missing data gracefully', () => {
       render(
-        <DivisionPerformanceCards districtSnapshot={null} isLoading={false} />
+        <DivisionPerformanceCards
+          districtSnapshot={null}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
+          isLoading={false}
+        />
       )
 
       expect(screen.getByText('No Data Available')).toBeInTheDocument()
@@ -261,6 +274,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -287,6 +301,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -304,6 +319,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -320,6 +336,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -338,6 +355,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -359,8 +377,8 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       const { container } = render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
-          snapshotTimestamp={mockDistrictStatistics.asOfDate}
         />
       )
 
@@ -373,6 +391,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -390,6 +409,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -409,8 +429,8 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
-          snapshotTimestamp={mockDistrictStatistics.asOfDate}
         />
       )
 
@@ -427,6 +447,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -442,6 +463,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -458,6 +480,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -470,6 +493,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={mockDistrictStatistics}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )
@@ -488,6 +512,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       render(
         <DivisionPerformanceCards
           districtSnapshot={emptySnapshot}
+          snapshotTimestamp={mockDistrictStatistics.snapshotDate}
           isLoading={false}
         />
       )

@@ -18,9 +18,12 @@ import {
   isRouteErrorResponse,
 } from 'react-router-dom'
 import AreaRedirectPage from '../AreaRedirectPage'
+import { useDistrictStatistics } from '../../hooks/useMembershipData'
 
+// The wire shape: the snapshot reports its own pinned date as `snapshotDate`.
+// It never carried an `asOfDate` — that field was a phantom, deleted in #1321.
 const SNAPSHOT = {
-  asOfDate: '2026-03-15',
+  snapshotDate: '2026-03-15',
   divisionPerformance: [
     {
       Division: 'A',
@@ -105,5 +108,27 @@ describe('AreaRedirectPage flat alias (#1017)', () => {
   it('throws a 404 for an area id no division owns', () => {
     renderAt('/district/61/area/99')
     expect(screen.getByTestId('boundary')).toHaveTextContent('404')
+  })
+
+  /**
+   * This page pins no date of its own (it always reads the latest snapshot), so
+   * it takes the date from the snapshot itself (#1321). A snapshot that doesn't
+   * report one is a DATA problem, not a bad URL — it must not 404 (blaming the
+   * user's link) and must not hang on a skeleton. Unreachable against the live
+   * wire, which always carries `data.snapshotDate`; pinned so the degradation
+   * stays honest if that ever changes.
+   */
+  it('shows an unavailable state (not a 404) when the snapshot reports no date', () => {
+    vi.mocked(useDistrictStatistics).mockReturnValueOnce({
+      data: { ...SNAPSHOT, snapshotDate: undefined },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDistrictStatistics>)
+
+    renderAt('/district/61/area/10')
+
+    expect(screen.getByText('Could not load area')).toBeInTheDocument()
+    expect(screen.queryByTestId('boundary')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('area-target')).not.toBeInTheDocument()
   })
 })

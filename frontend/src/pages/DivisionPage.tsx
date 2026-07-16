@@ -19,6 +19,7 @@ import { EmptyState } from '../components/ErrorDisplay'
 import { ClubMiniList } from '../components/ClubMiniList'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
+import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 
 const DivisionPage: React.FC = () => {
@@ -46,6 +47,15 @@ const DivisionPage: React.FC = () => {
     isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId)
 
+  // Freshness parity (#1321): the per-district snapshot carries no as-of date —
+  // the old `snapshot.asOfDate` was a phantom, so this pill was permanently
+  // blank. The shared hook owns the "is this really the latest?" rule.
+  const { asOfDate: globalAsOfDate, isLatest: isLatestGlobal } =
+    useGlobalFreshness({
+      districtLatestSnapshotDate: latestSnapshotDate,
+      isLatestSnapshot,
+    })
+
   const { data, isLoading, error } = useDistrictAnalytics(
     hasValidDates ? (districtId ?? null) : null,
     undefined,
@@ -63,12 +73,17 @@ const DivisionPage: React.FC = () => {
       'divisions'
     )
   const normalizedDivId = divId?.toUpperCase()
+  // Visit rounds/deadlines gate on the date this page PINNED its snapshot query
+  // to (#1321) — never the wall clock. `effectiveEndDate` is the same value fed
+  // to useDistrictStatistics above, so the extraction can't disagree with the
+  // data it describes. It is non-null whenever `snapshot` exists (the query is
+  // disabled unless `hasValidDates`), but guard rather than assert.
   const divisionPerformance = React.useMemo(() => {
-    if (!snapshot || !normalizedDivId) return undefined
-    return extractDivisionPerformance(snapshot, snapshot.asOfDate).find(
+    if (!snapshot || !normalizedDivId || !effectiveEndDate) return undefined
+    return extractDivisionPerformance(snapshot, effectiveEndDate).find(
       d => d.divisionId.toUpperCase() === normalizedDivId
     )
-  }, [snapshot, normalizedDivId])
+  }, [snapshot, normalizedDivId, effectiveEndDate])
 
   // Scoped division-level narrative — the same prose the overview's Division and
   // Area Progress Summary shows, scoped to this division (#1016 S2 refactor).
@@ -159,8 +174,8 @@ const DivisionPage: React.FC = () => {
         <div className="districts-page-header__actions">
           <DataControlsBar
             latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
-            asOfDate={snapshot?.asOfDate}
-            isLatest={isLatestSnapshot}
+            asOfDate={globalAsOfDate}
+            isLatest={isLatestGlobal}
             availableProgramYears={availableProgramYears}
             // Derived (healed) year so the chip value is always in its option
             // list — avoids a transient controlled-select mismatch for an
