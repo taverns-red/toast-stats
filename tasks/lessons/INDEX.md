@@ -3,6 +3,7 @@
 
 ## lessons (manifest-pinned + session-judged)
 - `a-phantom-field-is-a-live-default-every-read-of-it-silently-becomes-the-fallback.md` — A phantom field (typed but never on the wire) doesn't fail — it silently becomes its fallback, so the default is the real code path; grep the primitive, and a `?? today` default hides it forever  (2026-07-15)
+- `divergence-by-default-fixtures-are-inert-unless-the-mock-routes-on-the-same-key-the-wire-does.md` — Divergence-by-default fixtures are inert unless the mock ROUTES on the same key the wire does — a date-blind router serves the right fixture for the wrong key and rubber-stamps the bug the fixture was written to expose  (2026-07-15)
 - `key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md` — During month-end closing the CSV as-of date (sourceCsvDate / data.date) drifts past the pinned snapshot date — key every per-snapshot fetch and date-scoped lookup on the snapshot date, never data.date  (2026-07-06)
 - `renaming-a-typed-field-the-prod-compiler-misses-test-only-typed-fixtures-and-untyped-mocks.md` — When you rename a widely-typed field, the prod `tsc` enumerates prod consumers but is blind to test-only typed fixtures (caught only by non-CI `typecheck:test`) and to untyped mocks (caught by nothing) — sweep both by hand  (2026-07-06)
 - `a-self-heal-hook-that-writes-the-url-on-mount-clobbers-a-consumers-navigation-state.md` — A shared "self-heal" hook that rewrites the URL on mount clobbers a consumer's navigation state; gate the write for pages that receive location.state  (2026-07-04)
