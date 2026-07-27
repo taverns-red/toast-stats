@@ -12,12 +12,7 @@ import { renderWithProviders } from './componentTestUtils'
 // Accessibility violation types for detailed reporting
 interface AccessibilityViolation {
   type:
-    | 'contrast'
-    | 'keyboard'
-    | 'aria'
-    | 'focus'
-    | 'structure'
-    | 'touch-target'
+    'contrast' | 'keyboard' | 'aria' | 'focus' | 'structure' | 'touch-target'
   element: Element
   violation: string
   remediation: string

@@ -38,11 +38,7 @@ export type SortDirection = 'asc' | 'desc'
  * popover, so there's no dead toggle.
  */
 export type ColumnGroup =
-  | 'identity'
-  | 'membership'
-  | 'renewals'
-  | 'recognition'
-  | 'changes'
+  'identity' | 'membership' | 'renewals' | 'recognition' | 'changes'
 
 /** Canonical group ids, in display order. */
 export const COLUMN_GROUP_IDS: readonly ColumnGroup[] = [
@@ -74,11 +70,7 @@ export const STICKY_COLUMN_FIELD: SortField = 'name'
  * Filter operators for different data types
  */
 export type FilterOperator =
-  | 'contains'
-  | 'startsWith'
-  | 'equals'
-  | 'range'
-  | 'in'
+  'contains' | 'startsWith' | 'equals' | 'range' | 'in'
 
 /**
  * Individual column filter configuration

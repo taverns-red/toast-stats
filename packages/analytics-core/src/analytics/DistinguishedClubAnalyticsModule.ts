@@ -678,10 +678,7 @@ export class DistinguishedClubAnalyticsModule {
             clubId,
             clubName,
             level: currentLevel as
-              | 'Smedley'
-              | 'President'
-              | 'Select'
-              | 'Distinguished',
+              'Smedley' | 'President' | 'Select' | 'Distinguished',
             achievedDate: entry.date,
             goalsAchieved: dcpGoals,
           })
@@ -696,10 +693,7 @@ export class DistinguishedClubAnalyticsModule {
             clubId,
             clubName,
             level: currentLevel as
-              | 'Smedley'
-              | 'President'
-              | 'Select'
-              | 'Distinguished',
+              'Smedley' | 'President' | 'Select' | 'Distinguished',
             achievedDate: entry.date,
             goalsAchieved: dcpGoals,
           })

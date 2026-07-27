@@ -61,8 +61,7 @@ const DistrictClubsPage: React.FC = () => {
   // field names line up with ClubsTable's existing SortField union.
   // (No page state since #667 — pagination was removed.)
   const initialSortField = (searchParams.get('sort') ?? undefined) as
-    | SortField
-    | undefined
+    SortField | undefined
   const initialSortDir =
     (searchParams.get('dir') as SortDirection | null) || undefined
 

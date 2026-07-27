@@ -255,8 +255,7 @@ const ClubDetailPage: React.FC = () => {
     const statsData = raw['data'] as Record<string, unknown> | undefined
     const records = (statsData?.['clubPerformance'] ??
       raw['clubPerformance']) as
-      | Array<Record<string, string | number | null>>
-      | undefined
+      Array<Record<string, string | number | null>> | undefined
     if (!records) return null
     return (
       records.find(r => {

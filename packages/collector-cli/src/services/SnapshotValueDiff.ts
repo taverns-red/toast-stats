@@ -26,11 +26,7 @@ import type {
  * re-derivations and excluded from the check.
  */
 export type FieldClass =
-  | 'counter'
-  | 'base'
-  | 'identity'
-  | 'planBoolean'
-  | 'derived'
+  'counter' | 'base' | 'identity' | 'planBoolean' | 'derived'
 
 /**
  * Field-classification registry (decision doc §4 table). Exhaustiveness vs

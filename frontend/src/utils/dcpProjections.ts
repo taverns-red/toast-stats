@@ -21,11 +21,7 @@ import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 // --- Types ---
 
 export type DistinguishedLevel =
-  | 'NotDistinguished'
-  | 'Distinguished'
-  | 'Select'
-  | 'President'
-  | 'Smedley'
+  'NotDistinguished' | 'Distinguished' | 'Select' | 'President' | 'Smedley'
 
 export interface TierGap {
   goals: number

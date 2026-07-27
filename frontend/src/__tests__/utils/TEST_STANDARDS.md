@@ -309,9 +309,7 @@ renderWithProviders(<StaticComponent />, {
 testComponentVariants(MyComponent, [
   {
     name: 'descriptive variant name',
-    props: {
-      /* all required props */
-    },
+    props: {/* all required props */},
     expectedText: 'Expected text content',
     expectedClass: 'expected-css-class',
     expectedAttribute: { name: 'aria-label', value: 'Expected value' },

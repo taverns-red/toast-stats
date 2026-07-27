@@ -245,10 +245,7 @@ export type {
  * Ordered from lowest to highest achievement tier
  */
 export type RecognitionLevel =
-  | 'distinguished'
-  | 'select'
-  | 'presidents'
-  | 'smedley'
+  'distinguished' | 'select' | 'presidents' | 'smedley'
 
 /**
  * Target values for each recognition level

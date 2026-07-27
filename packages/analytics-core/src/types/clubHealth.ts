@@ -34,11 +34,7 @@ export type { ClubHealthStatus } from '@taverns-red/shared-contracts'
  * Based on DCP goals achieved and membership thresholds.
  */
 export type DistinguishedLevel =
-  | 'NotDistinguished'
-  | 'Smedley'
-  | 'President'
-  | 'Select'
-  | 'Distinguished'
+  'NotDistinguished' | 'Smedley' | 'President' | 'Select' | 'Distinguished'
 
 /**
  * DCP goals trend data point.

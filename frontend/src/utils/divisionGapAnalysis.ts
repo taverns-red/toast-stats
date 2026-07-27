@@ -31,10 +31,7 @@ import { percentageTarget } from '@taverns-red/analytics-core'
  * - 'presidents': Meets President's Distinguished Division criteria
  */
 export type DivisionRecognitionLevel =
-  | 'none'
-  | 'distinguished'
-  | 'select'
-  | 'presidents'
+  'none' | 'distinguished' | 'select' | 'presidents'
 
 /**
  * Gap information for achieving a specific recognition level

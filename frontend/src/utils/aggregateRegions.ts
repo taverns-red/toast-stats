@@ -76,9 +76,7 @@ const pct = (num: number, denom: number): number =>
  *  for ties: insertion order within an equal-value group is preserved. */
 function rankBy<
   K extends
-    | 'clubGrowthPercent'
-    | 'paymentGrowthPercent'
-    | 'distinguishedPercent',
+    'clubGrowthPercent' | 'paymentGrowthPercent' | 'distinguishedPercent',
 >(rollups: ReadonlyArray<RegionRollup>, metric: K): Map<string, number> {
   const indexed = rollups.map((r, idx) => ({
     region: r.region,

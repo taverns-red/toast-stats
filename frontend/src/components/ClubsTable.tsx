@@ -179,14 +179,12 @@ interface ClubsTableProps {
   initialSortDirection?: SortDirection | undefined
   /** Callback when sort changes — for URL param sync (#230) */
   onSortChange?:
-    | ((field: SortField, direction: SortDirection) => void)
-    | undefined
+    ((field: SortField, direction: SortDirection) => void) | undefined
   /** Initial filter state from URL params (#272) */
   initialFilterState?: import('./filters/types').FilterState | undefined
   /** Callback when filters change — for URL param sync (#272) */
   onFilterChange?:
-    | ((state: import('./filters/types').FilterState) => void)
-    | undefined
+    ((state: import('./filters/types').FilterState) => void) | undefined
   /** Initial "Close to Distinguished" preset state from URL params (#979) */
   initialPresetActive?: boolean | undefined
   /** Callback when the preset toggles — for URL param sync (#979). */

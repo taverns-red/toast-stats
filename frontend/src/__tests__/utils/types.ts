@@ -152,12 +152,7 @@ export interface AccessibilityResult {
 
 export interface AccessibilityViolation {
   type:
-    | 'wcag'
-    | 'keyboard'
-    | 'contrast'
-    | 'screen-reader'
-    | 'focus'
-    | 'semantic'
+    'wcag' | 'keyboard' | 'contrast' | 'screen-reader' | 'focus' | 'semantic'
   severity: 'error' | 'warning' | 'info'
   message: string
   element?: string

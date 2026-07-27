@@ -17,6 +17,4 @@
  * - 'intervention-required': Club needs immediate attention (membership < 12 AND net growth < 3)
  */
 export type ClubHealthStatus =
-  | 'thriving'
-  | 'vulnerable'
-  | 'intervention-required'
+  'thriving' | 'vulnerable' | 'intervention-required'
