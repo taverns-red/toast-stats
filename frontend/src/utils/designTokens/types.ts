@@ -8,12 +8,7 @@ export interface DesignToken {
   name: string
   value: string
   category:
-    | 'color'
-    | 'typography'
-    | 'spacing'
-    | 'gradient'
-    | 'radius'
-    | 'shadow'
+    'color' | 'typography' | 'spacing' | 'gradient' | 'radius' | 'shadow'
   description: string
   usage: string[]
 }

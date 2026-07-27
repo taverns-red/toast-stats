@@ -32,11 +32,7 @@ export interface ClubTrend {
   currentStatus: ClubHealthStatus
   riskFactors: string[]
   distinguishedLevel:
-    | 'NotDistinguished'
-    | 'Smedley'
-    | 'President'
-    | 'Select'
-    | 'Distinguished'
+    'NotDistinguished' | 'Smedley' | 'President' | 'Select' | 'Distinguished'
   // Membership payment fields
   octoberRenewals?: number
   aprilRenewals?: number
@@ -177,10 +173,7 @@ export interface DistrictAnalytics {
  * Recognition levels for district performance targets
  */
 export type RecognitionLevel =
-  | 'distinguished'
-  | 'select'
-  | 'presidents'
-  | 'smedley'
+  'distinguished' | 'select' | 'presidents' | 'smedley'
 
 /**
  * Target values for each recognition level

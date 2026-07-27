@@ -117,8 +117,7 @@ export async function reportErrorRemote(
     if (enableFlag === 'false') return
 
     const endpoint = import.meta.env['VITE_TELEMETRY_ENDPOINT'] as
-      | string
-      | undefined
+      string | undefined
     if (!endpoint) return
 
     // CSP coupling (#783): this POST is a `connect-src` sink. The endpoint is

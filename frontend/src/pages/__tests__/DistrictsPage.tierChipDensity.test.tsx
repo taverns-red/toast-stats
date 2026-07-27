@@ -97,11 +97,7 @@ const mkRanking = (id: string, region: string, rank: number) => ({
 const mkStatus = (
   id: string,
   tier:
-    | 'NotDistinguished'
-    | 'Distinguished'
-    | 'Select'
-    | 'Presidents'
-    | 'Smedley'
+    'NotDistinguished' | 'Distinguished' | 'Select' | 'Presidents' | 'Smedley'
 ) => ({
   districtId: id,
   currentTier: tier,

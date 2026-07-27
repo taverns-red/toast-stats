@@ -16,11 +16,7 @@ import {
 } from './cdn'
 
 export type SearchEntityType =
-  | 'district'
-  | 'region'
-  | 'club'
-  | 'division'
-  | 'area'
+  'district' | 'region' | 'club' | 'division' | 'area'
 
 export interface SearchEntity {
   type: SearchEntityType

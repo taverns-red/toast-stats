@@ -31,15 +31,10 @@ import {
 
 export type AreaRecognitionLevel = RecognitionLevel
 export type AreaRecognitionStatus =
-  | 'confirmed'
-  | 'provisional'
-  | 'not-distinguished'
+  'confirmed' | 'provisional' | 'not-distinguished'
 
 export type AreaRecognitionFailureReason =
-  | 'net-loss'
-  | 'missed-deadline'
-  | 'insufficient-distinguished'
-  | null
+  'net-loss' | 'missed-deadline' | 'insufficient-distinguished' | null
 
 export interface PendingRound {
   round: 1 | 2

@@ -387,9 +387,7 @@ describe('ClubsTable Integration Tests', () => {
           : i % 3 === 1
             ? 'vulnerable'
             : 'intervention-required') as
-          | 'thriving'
-          | 'vulnerable'
-          | 'intervention-required',
+          'thriving' | 'vulnerable' | 'intervention-required',
         riskFactors: [],
         membershipTrend: [{ date: '2024-01-01', count: 20 + i }],
         dcpGoalsTrend: [{ date: '2024-01-01', goalsAchieved: i % 11 }],

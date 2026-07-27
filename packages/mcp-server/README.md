@@ -113,9 +113,7 @@ Every tool returns a single text content block whose JSON is the standard envelo
   "available": true,
   "sourceUrl": "https://cdn.taverns.red/v1/latest.json", // verify against the live site
   "date": "2026-05-31", // the snapshot date the data is from (or null)
-  "data": {
-    /* the validated CDN fields */
-  },
+  "data": {/* the validated CDN fields */},
 }
 ```
 

@@ -29,10 +29,7 @@
  * - 'presidents': Meets President's Distinguished Area criteria
  */
 export type RecognitionLevel =
-  | 'none'
-  | 'distinguished'
-  | 'select'
-  | 'presidents'
+  'none' | 'distinguished' | 'select' | 'presidents'
 
 /**
  * Gap information for achieving a specific recognition level

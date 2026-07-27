@@ -263,8 +263,7 @@ describe('DistrictsPage - District Search (#91)', () => {
     // The <a> element with role=option carries the link
     const links = within(suggestions).getAllByRole('option')
     const link = links.find(el => el.tagName === 'A') as
-      | HTMLAnchorElement
-      | undefined
+      HTMLAnchorElement | undefined
     expect(link).toBeDefined()
     expect(link!.getAttribute('href')).toMatch(/^\/district\/\d+/)
   })

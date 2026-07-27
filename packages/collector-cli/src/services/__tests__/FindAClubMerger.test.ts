@@ -302,11 +302,9 @@ describe('mergeFacIntoSnapshot', () => {
     )
 
     const dataRecord = result.snapshot.data as
-      | Record<string, unknown>
-      | undefined
+      Record<string, unknown> | undefined
     const prospectiveClubs = dataRecord?.['prospectiveClubs'] as
-      | Array<Record<string, unknown>>
-      | undefined
+      Array<Record<string, unknown>> | undefined
     expect(prospectiveClubs).toHaveLength(1)
     const club = prospectiveClubs?.[0]
     expect(club?.['clubId']).toBe('00088888')

@@ -146,10 +146,7 @@ const DistrictAnalyticsPage: React.FC = () => {
             club.distinguishedLevel
           ) && {
             distinguishedLevel: club.distinguishedLevel as
-              | 'Smedley'
-              | 'President'
-              | 'Select'
-              | 'Distinguished',
+              'Smedley' | 'President' | 'Select' | 'Distinguished',
           }),
       }))
       .sort((a, b) => b.goalsAchieved - a.goalsAchieved)
