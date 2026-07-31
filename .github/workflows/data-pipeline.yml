@@ -76,6 +76,11 @@ on:
         required: false
         type: boolean
         default: false
+      allow_subtractive:
+        description: 'Promote even if staging has FEWER districts/dates than prod (review the count diff first). For TI district consolidations.'
+        required: false
+        type: boolean
+        default: false
 
 # Prevent overlapping pipeline runs
 concurrency:
@@ -1488,6 +1493,8 @@ jobs:
       - name: Diff staging vs production
         id: diff
         if: steps.mode.outputs.mode != 'prune'
+        env:
+          ALLOW_SUBTRACTIVE: ${{ inputs.allow_subtractive }}
         run: |
           echo "Comparing staging vs production buckets..."
 
@@ -1514,13 +1521,32 @@ jobs:
 
           # Determine if promotion is safe (additive-only)
           PROMOTE="true"
+          SUBTRACTIVE="false"
           if [ "$STAGING_RANKINGS" -lt "$PROD_RANKINGS" ] 2>/dev/null; then
             echo "::warning::SUBTRACTIVE: staging has fewer ranked districts than production"
             PROMOTE="false"
+            SUBTRACTIVE="true"
           fi
           if [ "$STAGING_DATES" -lt "$PROD_DATES" ] 2>/dev/null; then
             echo "::warning::SUBTRACTIVE: staging has fewer dates than production"
             PROMOTE="false"
+            SUBTRACTIVE="true"
+          fi
+
+          # Operator override for a REVIEWED subtractive change (#1350).
+          # Toastmasters periodically consolidates districts — PY 2026-2027 cut
+          # the roster 128 → 94 — which is a legitimate reduction the count gate
+          # cannot distinguish from data loss. Mirrors allow_value_changes for
+          # the value gate. Overriding is recorded loudly: it must never be
+          # possible to discover after the fact that a gate was bypassed.
+          if [ "$SUBTRACTIVE" = "true" ] && [ "${ALLOW_SUBTRACTIVE:-false}" = "true" ]; then
+            echo "::warning::Count gate OVERRIDDEN by allow_subtractive — operator asserts this reduction is intended"
+            PROMOTE="true"
+            {
+              echo "- **⚠️ Count gate OVERRIDDEN** (\`allow_subtractive=true\`)"
+              echo "  - Ranked districts: ${PROD_RANKINGS} → ${STAGING_RANKINGS} ($((STAGING_RANKINGS - PROD_RANKINGS)))"
+              echo "  - Dates: ${PROD_DATES} → ${STAGING_DATES} ($((STAGING_DATES - PROD_DATES)))"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
           echo "promote=${PROMOTE}" >> "$GITHUB_OUTPUT"
@@ -1677,6 +1703,7 @@ jobs:
           echo "- Value gate: **${{ steps.valuediff.outputs.value_promote }}**" >> "$GITHUB_STEP_SUMMARY"
           echo "Production data is **unchanged**. Review the diffs above." >> "$GITHUB_STEP_SUMMARY"
           echo "For a reviewed re-derive, re-run with **allow_value_changes = true**." >> "$GITHUB_STEP_SUMMARY"
+          echo "For a reviewed district/date REDUCTION (e.g. a TI consolidation), re-run with **allow_subtractive = true**." >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
       # PROMOTION-HELD ALERT (#1073, epic #1072)
