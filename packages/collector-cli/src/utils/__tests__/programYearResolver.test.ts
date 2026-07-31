@@ -135,17 +135,22 @@ describe('resolveActiveProgramYear', () => {
   // serves whatever year is live, so a response must be rejected when its
   // footer disagrees with the year we asked for (#1342).
   it('rejects content whose footer disagrees with the requested year', async () => {
+    // The prior-year archive probe is answered with CURRENT-year content. That
+    // is exactly what the root path does when handed an archived year, so it
+    // must never be accepted as 2025-2026 — doing so writes this year's numbers
+    // under last year's label.
     const fetchSummary = vi.fn(
-      async (_py: string, pathStyle: 'live' | 'archive') => {
+      async (py: string, pathStyle: 'live' | 'archive') => {
         if (pathStyle === 'live') throw new Error('HTTP 500')
-        return CSV_2026_27 // wrong year for every archive probe below
+        if (py === '2026-2027') return HTML_ERROR
+        return CSV_2026_27 // wrong year for the 2025-2026 probe
       }
     )
-    // Calendar PY here is 2025-2026; the archive probes return 2026-2027 data.
-    const res = await resolveActiveProgramYear('2026-06-15', fetchSummary)
+    const res = await resolveActiveProgramYear('2026-07-28', fetchSummary)
 
+    expect(fetchSummary).toHaveBeenCalledWith('2025-2026', 'archive')
     expect(res.content).toBeUndefined()
-    expect(res.programYear).toBe('2025-2026')
+    expect(res.programYear).toBe('2026-2027')
     expect(res.fellBack).toBe(false)
   })
 

@@ -4,8 +4,13 @@
  * Downloads CSV exports directly via HTTP GET requests to the dashboard's
  * export.aspx endpoint, bypassing the need for Playwright browser automation.
  *
- * URL pattern:
- *   https://dashboards.toastmasters.org/{programYear}/export.aspx?type=CSV&report={reportName}
+ * URL pattern (#1342):
+ *   live PY:      https://dashboards.toastmasters.org/export.aspx?type=CSV&report={reportName}
+ *   archived PY:  https://dashboards.toastmasters.org/{programYear}/export.aspx?type=CSV&report={reportName}
+ *
+ * The live year has no /{programYear}/ path (HTTP 500), and the bare path
+ * ignores the ~{programYear} token and always serves the live year — so the
+ * two are not interchangeable. See BackfillDateSpec.pathStyle.
  *
  * Report name patterns:
  *   - districtsummary~{date}~~{programYear}
@@ -46,7 +51,24 @@ export interface BackfillDateSpec {
    * Without it, the dashboard returns only the latest closing period.
    */
   monthEndDate?: Date
+  /**
+   * Which endpoint shape to use (#1342).
+   *
+   * - `'archive'` (default) — `/{programYear}/export.aspx`, which serves that
+   *   specific, already-archived program year.
+   * - `'live'` — the bare `/export.aspx`, which serves whatever program year is
+   *   currently live. The live year has no archive path (TM returns HTTP 500
+   *   "URL Rewrite Module Error."), so it can ONLY be fetched this way.
+   *
+   * The default must stay `'archive'`: the live endpoint **ignores** the
+   * trailing `~{programYear}` token, so pointing a historical fetch at it
+   * silently returns current-year data under a historical date.
+   */
+  pathStyle?: ExportPathStyle
 }
+
+/** @see BackfillDateSpec.pathStyle (#1342) */
+export type ExportPathStyle = 'live' | 'archive'
 
 export interface HttpCsvDownloaderConfig {
   ratePerSecond: number
@@ -118,7 +140,11 @@ export function buildExportUrl(spec: BackfillDateSpec): string {
     reportName = `${spec.reportType}~${spec.districtId}~${monthEndStr}~${dateStr}~${spec.programYear}`
   }
 
-  return `${BASE_URL}/${spec.programYear}/export.aspx?type=CSV&report=${reportName}`
+  // The live program year lives at the bare /export.aspx; archived years live
+  // under /{programYear}/. Defaults to the archive path (#1342).
+  const prefix = spec.pathStyle === 'live' ? '' : `/${spec.programYear}`
+
+  return `${BASE_URL}${prefix}/export.aspx?type=CSV&report=${reportName}`
 }
 
 /**
