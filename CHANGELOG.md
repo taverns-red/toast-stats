@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.33.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.32.1...toast-stats-v2.33.0) (2026-07-31)
+
+
+### Features
+
+* **pipeline:** allow_subtractive override for a reviewed district consolidation ([#1350](https://github.com/taverns-red/toast-stats/issues/1350)) ([#1351](https://github.com/taverns-red/toast-stats/issues/1351)) ([5f8bc02](https://github.com/taverns-red/toast-stats/commit/5f8bc0279d339d0d06cbe548098f8958d01caa8a))
+
+
+### Bug Fixes
+
+* **analytics:** retire the Region Advisor Visit prerequisite for 2026-27 ([#1344](https://github.com/taverns-red/toast-stats/issues/1344)) ([#1347](https://github.com/taverns-red/toast-stats/issues/1347)) ([76e279c](https://github.com/taverns-red/toast-stats/commit/76e279ca6e87a548a3c66de132e3e9e1e4f59631))
+* **collector:** fetch the live program year from the root export path ([#1342](https://github.com/taverns-red/toast-stats/issues/1342)) ([#1345](https://github.com/taverns-red/toast-stats/issues/1345)) ([58c947c](https://github.com/taverns-red/toast-stats/commit/58c947c25a870f1f8118ad628cd0343f083aac15))
+* **pipeline:** record June 2026's closing date ([#1348](https://github.com/taverns-red/toast-stats/issues/1348)) + surface rollover reasons and alert ([#1343](https://github.com/taverns-red/toast-stats/issues/1343)) ([#1352](https://github.com/taverns-red/toast-stats/issues/1352)) ([0f0b2c2](https://github.com/taverns-red/toast-stats/commit/0f0b2c2d2077df3707e7782a5e8de44ddc512ce1))
+
 ## [2.32.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.32.0...toast-stats-v2.32.1) (2026-07-07)
 
 
