@@ -14,7 +14,11 @@
  * change.
  */
 import { calculateProgramYear, getPriorProgramYear } from './CachePaths.js'
+import { parseFooterDataMonth } from './csvFooterParser.js'
+import type { ExportPathStyle } from '../services/HttpCsvDownloader.js'
 import { logger } from './logger.js'
+
+export type { ExportPathStyle }
 
 /**
  * A districtsummary CSV always starts with a header row containing the
@@ -35,13 +39,75 @@ export function isValidDistrictSummaryCsv(
 export interface ProgramYearResolution {
   /** The program year whose dashboard actually has data for this date. */
   programYear: string
-  /** True when the calendar year was empty and we fell back to the prior year. */
+  /**
+   * Which endpoint shape served `programYear`. Callers MUST thread this into
+   * every subsequent fetch for the same run — the live year is reachable only
+   * at the bare path, archived years only under `/{programYear}/` (#1342).
+   */
+  pathStyle: ExportPathStyle
+  /** True when the resolved year is not the calendar program year. */
   fellBack: boolean
   /**
    * The validated districtsummary CSV body for `programYear`, or undefined when
-   * neither year returned valid data (callers must then fail loudly).
+   * nothing returned valid data (callers must then fail loudly).
    */
   content?: string
+}
+
+/**
+ * Derive the program year a districtsummary CSV actually contains, from its
+ * "Month of X, As of MM/DD/YYYY" footer (#1342).
+ *
+ * This is the only trustworthy year signal. The live `/export.aspx` endpoint
+ * ignores the `~{programYear}` token in the request, so the URL we asked for
+ * says nothing about the year we got back.
+ *
+ * June is the case that matters: "Month of Jun, As of 07/01/2026" is collected
+ * in July but belongs to PY 2025-2026. Keying off the *data* month rather than
+ * the as-of date is what makes the rollover unambiguous.
+ *
+ * @returns The `YYYY-YYYY` program year, or undefined when no footer is present
+ *          (undecided — never a verdict, cf. #1129).
+ */
+export function programYearFromCsvFooter(
+  content: string | undefined | null,
+  collectionDate: string
+): string | undefined {
+  if (!content) return undefined
+
+  const dataMonth = parseFooterDataMonth(content, collectionDate)
+  if (!dataMonth) return undefined
+
+  // The Toastmasters program year runs July 1 - June 30.
+  const startYear = dataMonth.month >= 7 ? dataMonth.year : dataMonth.year - 1
+  return `${startYear}-${startYear + 1}`
+}
+
+/**
+ * Accept content only when it is a valid districtsummary AND its footer does
+ * not contradict the program year we asked for.
+ *
+ * A missing footer is *undecided*, not a failure: some historical exports have
+ * no footer row, and rejecting those would break backfill. We only reject an
+ * explicit disagreement — which is precisely the wrong-year hazard the live
+ * endpoint introduces (#1342).
+ */
+function isValidForProgramYear(
+  content: string | undefined,
+  expectedProgramYear: string,
+  date: string
+): boolean {
+  if (!isValidDistrictSummaryCsv(content)) return false
+
+  const actual = programYearFromCsvFooter(content, date)
+  if (actual && actual !== expectedProgramYear) {
+    logger.warn(
+      'districtsummary content is for a different program year — rejecting (#1342)',
+      { date, expectedProgramYear, actualProgramYear: actual }
+    )
+    return false
+  }
+  return true
 }
 
 /**
@@ -89,27 +155,68 @@ export function parseDistrictIdsFromSummaryCsv(
  */
 export async function resolveActiveProgramYear(
   date: string,
-  fetchSummary: (programYear: string) => Promise<string>
+  fetchSummary: (
+    programYear: string,
+    pathStyle: ExportPathStyle
+  ) => Promise<string>
 ): Promise<ProgramYearResolution> {
   const calendarPY = calculateProgramYear(date)
 
-  const calendarContent = await tryFetch(fetchSummary, calendarPY, date)
-  if (isValidDistrictSummaryCsv(calendarContent)) {
+  // 1. Ask the LIVE endpoint what it has. It is authoritative about the current
+  //    program year, so its footer answers the rollover question outright —
+  //    no calendar guess, and no probing a /{PY}/ path that may not exist yet.
+  const liveContent = await tryFetch(fetchSummary, calendarPY, 'live', date)
+  if (isValidDistrictSummaryCsv(liveContent)) {
+    const livePY = programYearFromCsvFooter(liveContent, date)
+    if (livePY) {
+      if (livePY !== calendarPY) {
+        logger.info(
+          'Live dashboard is still serving the prior program year (rollover window)',
+          { date, calendarPY, programYear: livePY }
+        )
+      }
+      return {
+        programYear: livePY,
+        pathStyle: 'live',
+        fellBack: livePY !== calendarPY,
+        content: liveContent,
+      }
+    }
+    // Valid CSV but no footer: we cannot tell which year it is, and the live
+    // endpoint ignores the year token — so labelling it would be a guess. Fall
+    // through to the archive path, where the URL does pin the year.
+    logger.warn(
+      'Live districtsummary has no "Month of" footer — cannot confirm its program year (#1342)',
+      { date, calendarPY }
+    )
+  }
+
+  // 2. Archive path for the calendar year. Reachable once TM archives it, and
+  //    the only path whose URL actually constrains the year.
+  const calendarContent = await tryFetch(
+    fetchSummary,
+    calendarPY,
+    'archive',
+    date
+  )
+  if (isValidForProgramYear(calendarContent, calendarPY, date)) {
     return {
       programYear: calendarPY,
+      pathStyle: 'archive',
       fellBack: false,
       content: calendarContent,
     }
   }
 
+  // 3. Archive path for the prior year (the original #1284 rollover fallback).
   const priorPY = getPriorProgramYear(calendarPY)
   logger.warn(
     'Calendar program-year dashboard unavailable — trying prior program year (#1284)',
     { date, calendarPY, priorPY }
   )
 
-  const priorContent = await tryFetch(fetchSummary, priorPY, date)
-  if (isValidDistrictSummaryCsv(priorContent)) {
+  const priorContent = await tryFetch(fetchSummary, priorPY, 'archive', date)
+  if (isValidForProgramYear(priorContent, priorPY, date)) {
     logger.info(
       'Resolved active program year to prior year (rollover window)',
       {
@@ -117,25 +224,35 @@ export async function resolveActiveProgramYear(
         programYear: priorPY,
       }
     )
-    return { programYear: priorPY, fellBack: true, content: priorContent }
+    return {
+      programYear: priorPY,
+      pathStyle: 'archive',
+      fellBack: true,
+      content: priorContent,
+    }
   }
 
-  // Neither validated: return the calendar year so downstream fails loudly with
+  // Nothing validated: return the calendar year so downstream fails loudly with
   // the real (calendar-year) error rather than silently ingesting stale data.
-  return { programYear: calendarPY, fellBack: false }
+  return { programYear: calendarPY, pathStyle: 'archive', fellBack: false }
 }
 
 async function tryFetch(
-  fetchSummary: (programYear: string) => Promise<string>,
+  fetchSummary: (
+    programYear: string,
+    pathStyle: ExportPathStyle
+  ) => Promise<string>,
   programYear: string,
+  pathStyle: ExportPathStyle,
   date: string
 ): Promise<string | undefined> {
   try {
-    return await fetchSummary(programYear)
+    return await fetchSummary(programYear, pathStyle)
   } catch (err) {
     logger.warn('districtsummary fetch failed during program-year resolution', {
       date,
       programYear,
+      pathStyle,
       error: err instanceof Error ? err.message : String(err),
     })
     return undefined

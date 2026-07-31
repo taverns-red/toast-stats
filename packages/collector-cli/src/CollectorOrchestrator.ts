@@ -25,6 +25,7 @@ import {
   parseClosingPeriodFromCsv,
   type ReportType as HttpReportType,
   type CsvClosingPeriodInfo,
+  type ExportPathStyle,
 } from './services/HttpCsvDownloader.js'
 import type {
   CollectorOrchestratorConfig,
@@ -278,7 +279,8 @@ export class CollectorOrchestrator {
     downloader: HttpCsvDownloader,
     date: string,
     force: boolean,
-    programYear: string
+    programYear: string,
+    pathStyle: ExportPathStyle
   ): Promise<DistrictScrapeResult> {
     const startTime = Date.now()
     const timestamp = new Date().toISOString()
@@ -312,6 +314,7 @@ export class CollectorOrchestrator {
             programYear,
             reportType: 'districtsummary',
             date: new Date(date + 'T00:00:00'),
+            pathStyle,
           })
 
           const filePath = await this.writeCsvToCache(
@@ -385,7 +388,8 @@ export class CollectorOrchestrator {
     districtId: string,
     date: string,
     force: boolean,
-    programYear: string
+    programYear: string,
+    pathStyle: ExportPathStyle
   ): Promise<DistrictScrapeResult> {
     const startTime = Date.now()
     const timestamp = new Date().toISOString()
@@ -432,6 +436,7 @@ export class CollectorOrchestrator {
               reportType: report,
               districtId,
               date: new Date(date + 'T00:00:00'),
+              pathStyle,
             })
 
             const filePath = await this.writeCsvToCache(
@@ -602,15 +607,19 @@ export class CollectorOrchestrator {
     // June's close is still live under the prior year. Resolving once here and
     // threading it means every fetch (all-districts + per-district) and the
     // stored metadata agree on the year we actually scraped.
-    const { programYear: activeProgramYear, fellBack } =
-      await resolveActiveProgramYear(date, async programYear => {
-        const result = await downloader.downloadCsv({
-          programYear,
-          reportType: 'districtsummary',
-          date: new Date(date + 'T00:00:00'),
-        })
-        return result.content
+    const {
+      programYear: activeProgramYear,
+      pathStyle: activePathStyle,
+      fellBack,
+    } = await resolveActiveProgramYear(date, async (programYear, pathStyle) => {
+      const result = await downloader.downloadCsv({
+        programYear,
+        reportType: 'districtsummary',
+        date: new Date(date + 'T00:00:00'),
+        pathStyle,
       })
+      return result.content
+    })
     if (fellBack) {
       logger.warn(
         'Scraping the prior program year — new program year not yet published (#1284)',
@@ -636,7 +645,8 @@ export class CollectorOrchestrator {
       downloader,
       date,
       force,
-      activeProgramYear
+      activeProgramYear,
+      activePathStyle
     )
     if (allDistrictsResult.success) {
       allCacheLocations.push(...allDistrictsResult.cacheLocations)
@@ -677,7 +687,8 @@ export class CollectorOrchestrator {
               districtId,
               date,
               force,
-              activeProgramYear
+              activeProgramYear,
+              activePathStyle
             ),
           { districtId, date }
         )

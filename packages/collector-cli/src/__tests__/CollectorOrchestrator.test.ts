@@ -28,6 +28,7 @@ let capturedDownloadSpecs: Array<{
   reportType: string
   programYear: string
   districtId?: string
+  pathStyle?: 'live' | 'archive'
 }> = []
 
 vi.mock('../services/HttpCsvDownloader.js', () => {
@@ -89,12 +90,14 @@ vi.mock('../services/HttpCsvDownloader.js', () => {
         districtId?: string
         date: Date
         programYear: string
+        pathStyle?: 'live' | 'archive'
       }) {
         this.requestCount++
         capturedDownloadSpecs.push({
           reportType: spec.reportType,
           programYear: spec.programYear,
           districtId: spec.districtId,
+          pathStyle: spec.pathStyle,
         })
 
         if (spec.districtId && failingDistricts.has(spec.districtId)) {
@@ -288,6 +291,45 @@ describe('CollectorOrchestrator - Partial Failure Resilience (#124)', () => {
     expect(csvFiles['allDistricts']).toBe(true)
     const districts = csvFiles['districts'] as Record<string, unknown>
     expect(districts['09']).toBeDefined()
+  })
+
+  // #1342 — the live program year is reachable ONLY at the bare /export.aspx.
+  // Resolving it is useless unless the resolved pathStyle reaches every
+  // subsequent fetch: an un-threaded pathStyle silently falls back to the
+  // archive path, which 500s for the live year. TypeScript cannot catch that,
+  // so it is pinned here.
+  it('threads the resolved live pathStyle into every per-district fetch (#1342)', async () => {
+    const liveCsv = `"REGION","DISTRICT","Paid Clubs"
+"01","02","192"
+Month of July, As of 07/30/2026`
+    mockCsvByProgramYear = { '2026-2027': liveCsv }
+
+    await createDistrictConfig(['09'])
+    const orchestrator = new CollectorOrchestrator(createConfig())
+    const result = await orchestrator.scrape({
+      date: '2026-07-30',
+      force: true,
+    })
+    await orchestrator.close()
+
+    expect(result.success).toBe(true)
+
+    // One probe resolves the year; everything after it must ride the same path.
+    const realFetches = capturedDownloadSpecs.filter(
+      s => s.reportType !== 'districtsummary' || s.districtId !== undefined
+    )
+    expect(realFetches.length).toBeGreaterThan(0)
+    for (const spec of realFetches) {
+      expect(spec.pathStyle).toBe('live')
+      expect(spec.programYear).toBe('2026-2027')
+    }
+
+    // No fetch may use the archive path for the live year — that is the 500.
+    expect(
+      capturedDownloadSpecs.some(
+        s => s.programYear === '2026-2027' && s.pathStyle === 'archive'
+      )
+    ).toBe(false)
   })
 
   it('scrapes the prior program year at the July rollover when the new year is unpublished (#1284)', async () => {

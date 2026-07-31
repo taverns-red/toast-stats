@@ -375,11 +375,12 @@ export function createCLI(): Command {
       })
       const resolution = await resolveActiveProgramYear(
         targetDate,
-        async programYear => {
+        async (programYear, pathStyle) => {
           const result = await downloader.downloadCsv({
             programYear,
             reportType: 'districtsummary',
             date: new Date(targetDate + 'T00:00:00'),
+            pathStyle,
           })
           return result.content
         }

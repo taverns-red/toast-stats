@@ -27,6 +27,69 @@ describe('HttpCsvDownloader URL Construction (#123)', () => {
       )
     })
 
+    // #1342 — TM moved the live program year to the bare /export.aspx path.
+    // /{PY}/export.aspx now 500s ("URL Rewrite Module Error.") for the live
+    // year and serves ARCHIVED years only. Verified against the dashboard
+    // 2026-07-31; the working URL was captured from the browser's own export.
+    describe('program-year path style (#1342)', () => {
+      it('omits the /{programYear}/ prefix for the LIVE program year', () => {
+        const url = buildExportUrl({
+          programYear: '2026-2027',
+          reportType: 'districtsummary',
+          date: new Date(2026, 6, 30), // July 30, 2026
+          pathStyle: 'live',
+        })
+
+        expect(url).toBe(
+          'https://dashboards.toastmasters.org/export.aspx?type=CSV&report=districtsummary~~7/30/2026~2026-2027'
+        )
+      })
+
+      it('keeps the /{programYear}/ prefix for an ARCHIVED program year', () => {
+        const url = buildExportUrl({
+          programYear: '2025-2026',
+          reportType: 'districtsummary',
+          date: new Date(2026, 5, 30), // June 30, 2026
+          pathStyle: 'archive',
+        })
+
+        expect(url).toBe(
+          'https://dashboards.toastmasters.org/2025-2026/export.aspx?type=CSV&report=districtsummary~~6/30/2026~2025-2026'
+        )
+      })
+
+      // The default MUST stay 'archive': every historical caller
+      // (BackfillOrchestrator, rescrape-historical, backfill-raw-csv-for-dates)
+      // relies on the prefix to pin the year. The root path ignores the
+      // ~{programYear} token and would silently return CURRENT-year data.
+      it('defaults to the archive path when pathStyle is omitted', () => {
+        const url = buildExportUrl({
+          programYear: '2019-2020',
+          reportType: 'clubperformance',
+          districtId: '61',
+          date: new Date(2020, 0, 15),
+        })
+
+        expect(url).toBe(
+          'https://dashboards.toastmasters.org/2019-2020/export.aspx?type=CSV&report=clubperformance~61~~1/15/2020~2019-2020'
+        )
+      })
+
+      it('applies the live path to per-district reports too', () => {
+        const url = buildExportUrl({
+          programYear: '2026-2027',
+          reportType: 'clubperformance',
+          districtId: '61',
+          date: new Date(2026, 6, 30),
+          pathStyle: 'live',
+        })
+
+        expect(url).toBe(
+          'https://dashboards.toastmasters.org/export.aspx?type=CSV&report=clubperformance~61~~7/30/2026~2026-2027'
+        )
+      })
+    })
+
     it('should construct districtsummary URL with monthEndDate (#204)', () => {
       const url = buildExportUrl({
         programYear: '2024-2025',
