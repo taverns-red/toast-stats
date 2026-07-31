@@ -187,6 +187,10 @@ jobs:
           if [ -n "${{ inputs.districts }}" ]; then
             DISTRICTS="${{ inputs.districts }}"
             echo "Using manual district override: ${DISTRICTS}"
+            # Discovery — and therefore program-year resolution — never ran, so
+            # there is no verdict to judge. The rollover monitor skips rather
+            # than alerting on a missing reason (#1343).
+            DISCOVERED_REASON="skipped"
           else
             # Auto-discover districts, resolving the active program year by data
             # (#1284). At the July rollover the new PY has no dashboard yet, so
@@ -204,17 +208,24 @@ jobs:
             DISTRICTS=$(echo "${DISCOVERY_JSON}" | jq -r '.districts')
             DISCOVERED_PY=$(echo "${DISCOVERY_JSON}" | jq -r '.programYear')
             DISCOVERED_FELLBACK=$(echo "${DISCOVERY_JSON}" | jq -r '.fellBack')
+            DISCOVERED_REASON=$(echo "${DISCOVERY_JSON}" | jq -r '.reason // "unknown"')
 
             if [ -z "${DISTRICTS}" ] || [ "${DISTRICTS}" = "null" ]; then
               echo "::error::Failed to discover districts from Toastmasters CSV."
               exit 1
             fi
             DISTRICT_COUNT=$(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')
-            echo "Discovered ${DISTRICT_COUNT} districts for PY ${DISCOVERED_PY} (fellBack=${DISCOVERED_FELLBACK})"
+            echo "Discovered ${DISTRICT_COUNT} districts for PY ${DISCOVERED_PY} (fellBack=${DISCOVERED_FELLBACK}, reason=${DISCOVERED_REASON})"
           fi
 
           echo "districts=${DISTRICTS}" >> "$GITHUB_OUTPUT"
           echo "date=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
+          # Carry the resolver's verdict to the rollover monitor (#1343). A
+          # manual district override skips discovery, so default to 'unknown' —
+          # the monitor alerts on anything it does not recognise rather than
+          # assuming health.
+          echo "program_year=${DISCOVERED_PY:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "rollover_reason=${DISCOVERED_REASON:-unknown}" >> "$GITHUB_OUTPUT"
 
           # Sync raw-csv cache for target date
           mkdir -p "./cache/raw-csv/${TARGET_DATE}"
@@ -503,6 +514,109 @@ jobs:
         # alert step fires.
         continue-on-error: true
         run: npx tsx scripts/closing-registry-check.ts
+
+      # ════════════════════════════════════════════════════════
+      # PROGRAM-YEAR ROLLOVER ALERT (#1343, follows #1342)
+      # The resolver's fallback to the prior program year is correct and
+      # self-healing — and was entirely silent. That silence let #1342 (TI
+      # moving the export URL) run for a month behind a green pipeline. Turn
+      # a persistent fallback, and ANY upstream error, into a loud
+      # self-clearing issue. Decision logic is unit-tested in
+      # scripts/lib/rolloverAlert.ts; these steps are thin glue.
+      # ════════════════════════════════════════════════════════
+      - name: '[daily] Evaluate program-year rollover (#1343)'
+        id: rollover
+        if: steps.mode.outputs.mode == 'daily' && steps.daily-config.outputs.rollover_reason != 'skipped'
+        # Non-blocking: a monitor must never take down the pipeline it watches.
+        # The script itself fails loud (alert=true) rather than silent.
+        continue-on-error: true
+        env:
+          ROLLOVER_REASON: ${{ steps.daily-config.outputs.rollover_reason }}
+          ROLLOVER_PROGRAM_YEAR: ${{ steps.daily-config.outputs.program_year }}
+          TARGET_DATE: ${{ steps.daily-config.outputs.date }}
+        run: npx tsx scripts/rollover-alert.ts
+
+      - name: '[daily] Ensure program-year-rollover-overdue label exists'
+        if: steps.rollover.outputs.alert == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create program-year-rollover-overdue \
+            --color B60205 \
+            --description "Collector is still falling back to the prior program year" \
+            2>/dev/null || echo "Label already exists"
+
+      - name: '[daily] File or refresh program-year-rollover-overdue issue'
+        if: steps.rollover.outputs.alert == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Env indirection: the summary embeds resolver output — never splice
+          # it into shell text via ${{ }}.
+          ALERT_SUMMARY: ${{ steps.rollover.outputs.summary }}
+          ALERT_PY: ${{ steps.daily-config.outputs.program_year }}
+          ALERT_REASON: ${{ steps.daily-config.outputs.rollover_reason }}
+          ALERT_DAYS: ${{ steps.rollover.outputs.days }}
+          ALERT_DATE: ${{ steps.daily-config.outputs.date }}
+        run: |
+          {
+            echo "The collector is **not** scraping the calendar program year."
+            echo
+            echo "${ALERT_SUMMARY}"
+            echo
+            echo "| field | value |"
+            echo "|---|---|"
+            echo "| target date | \`${ALERT_DATE}\` |"
+            echo "| scraping | \`${ALERT_PY}\` |"
+            echo "| reason | \`${ALERT_REASON}\` |"
+            echo "| days into program year | ${ALERT_DAYS} |"
+            echo
+            echo "\`upstream-error\` means the dashboard fetch **threw** — that never"
+            echo "self-heals and needs a human. \`not-published\` past the grace window"
+            echo "means TI's rollover is genuinely late, or our fetch path has moved"
+            echo "again (cf. #1342)."
+            echo
+            echo "Verify directly:"
+            echo '```bash'
+            echo "npx collector-cli discover-districts --date ${ALERT_DATE} --verbose"
+            echo '```'
+            echo
+            echo "This issue self-clears on the next daily run that resolves the"
+            echo "calendar program year (#1343)."
+          } > /tmp/rollover-alert.md
+
+          EXISTING=$(gh issue list --label program-year-rollover-overdue --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "${EXISTING}" ]; then
+            echo "Existing open alert #${EXISTING} — adding a refresh comment."
+            gh issue comment "${EXISTING}" --body-file /tmp/rollover-alert.md
+          else
+            echo "No open alert — creating one."
+            gh issue create \
+              --title "🟥 program year not rolling over — scraping ${ALERT_PY} (${ALERT_REASON})" \
+              --label program-year-rollover-overdue \
+              --body-file /tmp/rollover-alert.md
+          fi
+
+      - name: '[daily] Auto-close program-year-rollover-overdue when resolved'
+        if: steps.rollover.outputs.should_close == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The calendar program year resolved — the rollover completed. The
+          # `concurrency: data-pipeline` group serializes runs, so a resolved
+          # verdict can't race a concurrent falling-back one.
+          OPEN=$(gh issue list --label program-year-rollover-overdue --state open \
+            --json number --jq '.[].number')
+          if [ -z "${OPEN}" ]; then
+            echo "No open rollover alert to close."
+          else
+            for n in ${OPEN}; do
+              echo "Closing rollover alert #${n} — program year resolved."
+              gh issue close "${n}" \
+                --comment "✅ The collector resolved the calendar program year; the rollover completed. Auto-closing (#1343)." \
+                --reason completed
+            done
+          fi
 
       - name: '[daily] Ensure closing-registry-stale label exists'
         if: steps.mode.outputs.mode == 'daily' && steps.registrycheck.outputs.stale == 'true'
