@@ -158,7 +158,10 @@ interface TierThreshold {
  * Prerequisites: exactly DSP + Training (85%, Sep 30) for every year
  * 2016-17..2024-25 (matches the only prerequisite columns in TI's
  * pre-2025-26 all-districts CSVs); 2025-26 adds Market Analysis,
- * Communication Plan, and 2+ Region Advisor meetings (5 gates).
+ * Communication Plan, and 2+ Region Advisor meetings (5 gates); 2026-27
+ * retires Region Advisor Visit and drops its column, leaving 4 gates
+ * (#1344). Tier thresholds are unchanged across the 2025-26/2026-27
+ * boundary — only the prerequisite set moved.
  */
 interface YearRuleset {
   requiredPrerequisites: ReadonlyArray<keyof DistinguishedDistrictPrerequisites>
@@ -196,7 +199,27 @@ const TIER_THRESHOLDS: TierThreshold[] = [
   },
 ]
 
+/**
+ * 2026-27+ (current): Region Advisor Visit retired (#1344).
+ *
+ * TI dropped the "Region Advisor Visit" column from the districtsummary
+ * export for this program year. Leaving it in the required set would be
+ * worse than a no-op: the ranking extractor coerces the absent column to
+ * `false`, so every district would trip `anyRequiredNo` and sit at
+ * NotDistinguished all year. Tier thresholds are unchanged from 2025-26.
+ */
 const CURRENT_RULESET: YearRuleset = {
+  requiredPrerequisites: [
+    'dspSubmitted',
+    'trainingMet',
+    'marketAnalysisSubmitted',
+    'communicationPlanSubmitted',
+  ],
+  tiers: TIER_THRESHOLDS,
+}
+
+/** 2025-26 only: the five-gate era, including 2+ Region Advisor meetings. */
+const ERA_2025_RULESET: YearRuleset = {
   requiredPrerequisites: [
     'dspSubmitted',
     'trainingMet',
@@ -320,7 +343,8 @@ function rulesetForProgramYear(programYear?: string): YearRuleset {
   if (!programYear) return CURRENT_RULESET
   const startYear = Number.parseInt(programYear.slice(0, 4), 10)
   if (Number.isNaN(startYear)) return CURRENT_RULESET
-  if (startYear >= 2025) return CURRENT_RULESET
+  if (startYear >= 2026) return CURRENT_RULESET
+  if (startYear >= 2025) return ERA_2025_RULESET
   if (startYear >= 2022) return ERA_2022_RULESET
   if (startYear >= 2018) return ERA_2018_RULESET
   return ERA_2016_RULESET
