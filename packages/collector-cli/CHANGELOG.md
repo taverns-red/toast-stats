@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.6.0...collector-cli-v1.6.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* **collector:** fetch the live program year from the root export path ([#1342](https://github.com/taverns-red/toast-stats/issues/1342)) ([#1345](https://github.com/taverns-red/toast-stats/issues/1345)) ([58c947c](https://github.com/taverns-red/toast-stats/commit/58c947c25a870f1f8118ad628cd0343f083aac15))
+* **pipeline:** record June 2026's closing date ([#1348](https://github.com/taverns-red/toast-stats/issues/1348)) + surface rollover reasons and alert ([#1343](https://github.com/taverns-red/toast-stats/issues/1343)) ([#1352](https://github.com/taverns-red/toast-stats/issues/1352)) ([0f0b2c2](https://github.com/taverns-red/toast-stats/commit/0f0b2c2d2077df3707e7782a5e8de44ddc512ce1))
+
 ## [1.6.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.5.2...collector-cli-v1.6.0) (2026-07-03)
 
 

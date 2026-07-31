@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.5](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.4...analytics-core-v1.9.5) (2026-07-31)
+
+
+### Bug Fixes
+
+* **analytics:** retire the Region Advisor Visit prerequisite for 2026-27 ([#1344](https://github.com/taverns-red/toast-stats/issues/1344)) ([#1347](https://github.com/taverns-red/toast-stats/issues/1347)) ([76e279c](https://github.com/taverns-red/toast-stats/commit/76e279ca6e87a548a3c66de132e3e9e1e4f59631))
+
 ## [1.9.4](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.3...analytics-core-v1.9.4) (2026-07-03)
 
 
