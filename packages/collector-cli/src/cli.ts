@@ -366,6 +366,8 @@ export function createCLI(): Command {
         await import('./services/HttpCsvDownloader.js')
       const { resolveActiveProgramYear, parseDistrictIdsFromSummaryCsv } =
         await import('./utils/programYearResolver.js')
+      const { buildDiscoveryOutput } =
+        await import('./utils/discoveryOutput.js')
 
       const downloader = new HttpCsvDownloader({
         ratePerSecond: 5,
@@ -403,26 +405,14 @@ export function createCLI(): Command {
             `valid districtsummary data.`
         )
         emitJsonAndExit(
-          {
-            date: targetDate,
-            programYear: resolution.programYear,
-            fellBack: resolution.fellBack,
-            districts: '',
-            count: 0,
-          },
+          buildDiscoveryOutput(targetDate, resolution, []),
           ExitCode.COMPLETE_FAILURE
         )
         return
       }
 
       emitJsonAndExit(
-        {
-          date: targetDate,
-          programYear: resolution.programYear,
-          fellBack: resolution.fellBack,
-          districts: districts.join(','),
-          count: districts.length,
-        },
+        buildDiscoveryOutput(targetDate, resolution, districts),
         ExitCode.SUCCESS
       )
     })

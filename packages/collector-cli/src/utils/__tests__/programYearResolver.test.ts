@@ -154,6 +154,67 @@ describe('resolveActiveProgramYear', () => {
     expect(res.fellBack).toBe(false)
   })
 
+  // #1343 — `fellBack` alone cannot distinguish "TM has not published the new
+  // year yet" (benign, self-healing) from "the fetch is failing" (needs a
+  // human). Conflating them is why #1342 hid for a month behind a green
+  // pipeline, so the reason is now explicit.
+  describe('resolution reason (#1343)', () => {
+    it('reports "resolved" when the live endpoint serves the calendar year', async () => {
+      const res = await resolveActiveProgramYear(
+        '2026-07-30',
+        async () => CSV_2026_27
+      )
+
+      expect(res.reason).toBe('resolved')
+      expect(res.fellBack).toBe(false)
+    })
+
+    it('reports "not-published" when the dashboard answers but has no new-year data', async () => {
+      // 200 responses throughout — TM simply has not rolled over yet.
+      const fetchSummary = vi.fn(
+        async (py: string, pathStyle: 'live' | 'archive') => {
+          if (pathStyle === 'archive' && py === '2025-2026') return REAL_CSV
+          return HTML_ERROR
+        }
+      )
+      const res = await resolveActiveProgramYear('2026-07-05', fetchSummary)
+
+      expect(res.reason).toBe('not-published')
+      expect(res.programYear).toBe('2025-2026')
+      expect(res.fellBack).toBe(true)
+    })
+
+    it('reports "upstream-error" when a fetch throws — the #1342 signature', async () => {
+      const fetchSummary = vi.fn(
+        async (py: string, pathStyle: 'live' | 'archive') => {
+          if (pathStyle === 'live')
+            throw new Error('HTTP 500: URL Rewrite Module Error.')
+          if (py === '2026-2027') return HTML_ERROR
+          return REAL_CSV
+        }
+      )
+      const res = await resolveActiveProgramYear('2026-07-28', fetchSummary)
+
+      expect(res.reason).toBe('upstream-error')
+      expect(res.programYear).toBe('2025-2026')
+      expect(res.fellBack).toBe(true)
+    })
+
+    it('prefers "upstream-error" over "not-published" when both occur', async () => {
+      // A throw anywhere in the chain is the signal that needs a human, even
+      // if a later probe merely returned an unpublished-year page.
+      const fetchSummary = vi.fn(
+        async (_py: string, pathStyle: 'live' | 'archive') => {
+          if (pathStyle === 'live') throw new Error('ETIMEDOUT')
+          return HTML_ERROR
+        }
+      )
+      const res = await resolveActiveProgramYear('2026-07-05', fetchSummary)
+
+      expect(res.reason).toBe('upstream-error')
+    })
+  })
+
   it('returns the calendar year (no false fallback) when nothing validates', async () => {
     const fetchSummary = vi.fn(async () => HTML_ERROR)
     const res = await resolveActiveProgramYear('2026-07-01', fetchSummary)

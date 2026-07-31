@@ -36,9 +36,30 @@ export function isValidDistrictSummaryCsv(
   return headers.includes('DISTRICT')
 }
 
+/**
+ * Why the resolver ended up where it did (#1343).
+ *
+ * `fellBack` alone cannot distinguish a benign rollover from a broken fetch —
+ * both produce `true`. That conflation is why #1342 (the export URL moving)
+ * hid for a month behind a green pipeline: every run logged the same
+ * indistinguishable warning, and nothing escalated.
+ *
+ * - `resolved`       — the calendar program year is live. Nothing to see.
+ * - `not-published`  — the dashboard responded, but the calendar year has no
+ *                      data yet. Expected during the July rollover window;
+ *                      self-heals when TI publishes.
+ * - `upstream-error` — a fetch THREW (HTTP 5xx, timeout, DNS). Never benign:
+ *                      it means we could not ask the question, not that the
+ *                      answer was "not yet".
+ */
+export type ProgramYearResolutionReason =
+  'resolved' | 'not-published' | 'upstream-error'
+
 export interface ProgramYearResolution {
   /** The program year whose dashboard actually has data for this date. */
   programYear: string
+  /** Why this resolution was reached — drives alerting (#1343). */
+  reason: ProgramYearResolutionReason
   /**
    * Which endpoint shape served `programYear`. Callers MUST thread this into
    * every subsequent fetch for the same run — the live year is reachable only
@@ -162,10 +183,16 @@ export async function resolveActiveProgramYear(
 ): Promise<ProgramYearResolution> {
   const calendarPY = calculateProgramYear(date)
 
+  // A throw ANYWHERE in the probe chain makes the outcome an upstream error,
+  // even if a later probe merely returned an unpublished-year page (#1343).
+  let sawThrow = false
+
   // 1. Ask the LIVE endpoint what it has. It is authoritative about the current
   //    program year, so its footer answers the rollover question outright —
   //    no calendar guess, and no probing a /{PY}/ path that may not exist yet.
-  const liveContent = await tryFetch(fetchSummary, calendarPY, 'live', date)
+  const live = await tryFetch(fetchSummary, calendarPY, 'live', date)
+  sawThrow ||= live.threw
+  const liveContent = live.content
   if (isValidDistrictSummaryCsv(liveContent)) {
     const livePY = programYearFromCsvFooter(liveContent, date)
     if (livePY) {
@@ -177,6 +204,7 @@ export async function resolveActiveProgramYear(
       }
       return {
         programYear: livePY,
+        reason: livePY === calendarPY ? 'resolved' : 'not-published',
         pathStyle: 'live',
         fellBack: livePY !== calendarPY,
         content: liveContent,
@@ -193,15 +221,13 @@ export async function resolveActiveProgramYear(
 
   // 2. Archive path for the calendar year. Reachable once TM archives it, and
   //    the only path whose URL actually constrains the year.
-  const calendarContent = await tryFetch(
-    fetchSummary,
-    calendarPY,
-    'archive',
-    date
-  )
+  const calendar = await tryFetch(fetchSummary, calendarPY, 'archive', date)
+  sawThrow ||= calendar.threw
+  const calendarContent = calendar.content
   if (isValidForProgramYear(calendarContent, calendarPY, date)) {
     return {
       programYear: calendarPY,
+      reason: 'resolved',
       pathStyle: 'archive',
       fellBack: false,
       content: calendarContent,
@@ -215,7 +241,9 @@ export async function resolveActiveProgramYear(
     { date, calendarPY, priorPY }
   )
 
-  const priorContent = await tryFetch(fetchSummary, priorPY, 'archive', date)
+  const prior = await tryFetch(fetchSummary, priorPY, 'archive', date)
+  sawThrow ||= prior.threw
+  const priorContent = prior.content
   if (isValidForProgramYear(priorContent, priorPY, date)) {
     logger.info(
       'Resolved active program year to prior year (rollover window)',
@@ -226,6 +254,7 @@ export async function resolveActiveProgramYear(
     )
     return {
       programYear: priorPY,
+      reason: sawThrow ? 'upstream-error' : 'not-published',
       pathStyle: 'archive',
       fellBack: true,
       content: priorContent,
@@ -234,7 +263,22 @@ export async function resolveActiveProgramYear(
 
   // Nothing validated: return the calendar year so downstream fails loudly with
   // the real (calendar-year) error rather than silently ingesting stale data.
-  return { programYear: calendarPY, pathStyle: 'archive', fellBack: false }
+  return {
+    programYear: calendarPY,
+    reason: sawThrow ? 'upstream-error' : 'not-published',
+    pathStyle: 'archive',
+    fellBack: false,
+  }
+}
+
+/**
+ * A probe's outcome. `threw` is tracked separately from "no usable content"
+ * because the two mean very different things: a throw says we could not ask
+ * the question at all, which is never benign (#1343).
+ */
+interface ProbeResult {
+  content?: string
+  threw: boolean
 }
 
 async function tryFetch(
@@ -245,9 +289,9 @@ async function tryFetch(
   programYear: string,
   pathStyle: ExportPathStyle,
   date: string
-): Promise<string | undefined> {
+): Promise<ProbeResult> {
   try {
-    return await fetchSummary(programYear, pathStyle)
+    return { content: await fetchSummary(programYear, pathStyle), threw: false }
   } catch (err) {
     logger.warn('districtsummary fetch failed during program-year resolution', {
       date,
@@ -255,6 +299,6 @@ async function tryFetch(
       pathStyle,
       error: err instanceof Error ? err.message : String(err),
     })
-    return undefined
+    return { threw: true }
   }
 }
