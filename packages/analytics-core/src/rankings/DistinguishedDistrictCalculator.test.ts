@@ -47,16 +47,87 @@ describe('DistinguishedDistrictCalculator', () => {
     calculator = new DistinguishedDistrictCalculator()
   })
 
+  // #1344 — TM retired the Region Advisor Visit requirement for 2026-2027 and
+  // dropped the column from the districtsummary export. The extractor's
+  // parseYesNo(undefined) yields `false`, so without a 2026-27 ruleset EVERY
+  // district trips `anyRequiredNo` and collapses to NotDistinguished for the
+  // whole program year.
+  describe('2026-27 prerequisites (Region Advisor Visit retired, #1344)', () => {
+    const smedleyMetrics = {
+      paidClubs: 110,
+      paidClubBase: 100,
+      clubGrowthPercent: 10,
+      paymentGrowthPercent: 10,
+      distinguishedPercent: 65,
+    }
+
+    it('awards the earned tier when the four surviving prerequisites are met', () => {
+      const ranking = buildRanking({
+        ...smedleyMetrics,
+        regionAdvisorVisitMet: false, // column absent → coerced to false
+      })
+
+      const result = calculator.calculate(ranking, '2026-2027')
+
+      expect(result.currentTier).toBe('Smedley')
+      expect(result.allPrerequisitesMet).toBe(true)
+    })
+
+    it('still gates on the four prerequisites that survive', () => {
+      const ranking = buildRanking({
+        ...smedleyMetrics,
+        communicationPlanSubmitted: false,
+        regionAdvisorVisitMet: false,
+      })
+
+      const result = calculator.calculate(ranking, '2026-2027')
+
+      expect(result.currentTier).toBe('NotDistinguished')
+      expect(result.allPrerequisitesMet).toBe(false)
+    })
+
+    it('keeps the five-gate rule for 2025-2026 (regression)', () => {
+      const ranking = buildRanking({
+        ...smedleyMetrics,
+        regionAdvisorVisitMet: false,
+      })
+
+      const result = calculator.calculate(ranking, '2025-2026')
+
+      expect(result.currentTier).toBe('NotDistinguished')
+      expect(result.allPrerequisitesMet).toBe(false)
+    })
+
+    it('leaves the 2026-27 tier thresholds identical to 2025-26', () => {
+      // Distinguished floor: 1% growth both metrics, 45% distinguished.
+      const ranking = buildRanking({
+        paidClubs: 101,
+        paidClubBase: 100,
+        clubGrowthPercent: 1,
+        paymentGrowthPercent: 1,
+        distinguishedPercent: 45,
+        regionAdvisorVisitMet: false,
+      })
+
+      expect(calculator.calculate(ranking, '2026-2027').currentTier).toBe(
+        'Distinguished'
+      )
+    })
+  })
+
   describe('Prerequisite gating', () => {
     it('should return NotDistinguished when any prerequisite is missing', () => {
-      // District meeting Smedley criteria but missing Region Advisor Visit
+      // District meeting Smedley criteria but missing the Communication Plan.
+      // Uses a prerequisite that survives into the CURRENT ruleset — Region
+      // Advisor Visit was retired for 2026-27 (#1344), so gating on it is now
+      // only meaningful for 2025-26 (covered by its own regression test above).
       const ranking = buildRanking({
         paidClubs: 110,
         paidClubBase: 100,
         clubGrowthPercent: 10,
         paymentGrowthPercent: 10,
         distinguishedPercent: 65,
-        regionAdvisorVisitMet: false,
+        communicationPlanSubmitted: false,
       })
 
       const result = calculator.calculate(ranking)
