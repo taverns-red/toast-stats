@@ -82,3 +82,7 @@ logs.txt
 
 # Data (local-only)
 data/
+
+# Ephemeral per-agent git worktrees (Claude Code `isolation: worktree`).
+# Live scratch checkouts with their own node_modules — never committable.
+.claude/worktrees/
