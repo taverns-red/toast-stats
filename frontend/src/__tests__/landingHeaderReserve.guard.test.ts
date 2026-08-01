@@ -66,6 +66,53 @@ describe('landing header reserve — #1359 gap (a): actions WIDTH', () => {
   })
 })
 
+describe('landing toolbar reserve — #1362 Recognition chip row', () => {
+  const page = readFileSync(
+    join(__dirname, '../pages/DistrictsPage.tsx'),
+    'utf-8'
+  )
+
+  /**
+   * The chip row is part of the LOADED tree, so an unreserved slot hands back
+   * the CLS #1357 and #1367 recovered. Unlike the region row — whose chip
+   * count only becomes knowable when the data lands — this row is the static
+   * registry, so the reserve can be EXACT: the loading shell renders the real
+   * component in `disabled` mode. That the shell renders it at all is proven
+   * behaviourally in `DistrictsPage.recognitionFilter.test.tsx`; what belongs
+   * here is the CSS contract that makes the two boxes the same size.
+   */
+  it('renders the same component in the shell and the loaded toolbar', () => {
+    expect(page.match(/<RecognitionFilterBar\b/g) ?? []).toHaveLength(2)
+    // The shell's copy is the reserve — disabled, so it is not a tab stop.
+    expect(page).toMatch(/<RecognitionFilterBar[\s\S]{0,240}?\bdisabled\s*\/>/)
+  })
+
+  it('floors the chip at the 44px touch target the loaded row inherits', () => {
+    // Reserve STRUCTURALLY (Lesson: a skeleton that omits a button
+    // under-reserves by the touch-target floor, not the visual size). Both
+    // copies are the same element, so the floor applies to both — restated on
+    // the chip so a future `min-width: auto` on the group cannot undercut it.
+    const rule = /\.districts-toolbar__recognition-chip\s*\{([^}]*)\}/.exec(css)
+    expect(
+      rule,
+      '.districts-toolbar__recognition-chip rule not found'
+    ).not.toBeNull()
+    expect(rule![1]).toMatch(/min-width:\s*44px/)
+  })
+
+  it('keeps the reserve visually inert without collapsing its box', () => {
+    // `opacity`, never `display: none` / `visibility: hidden` / a zero height:
+    // a reserve that does not occupy its box is not a reserve.
+    const rule =
+      /\.districts-toolbar__recognition-chip:disabled\s*\{([^}]*)\}/.exec(css)
+    expect(rule, ':disabled rule not found').not.toBeNull()
+    expect(rule![1]).not.toMatch(
+      /display:\s*none|visibility:\s*hidden|height:\s*0/
+    )
+    expect(rule![1]).toMatch(/opacity/)
+  })
+})
+
 describe('landing header reserve — #1359 gap (b): orientation count', () => {
   it('reserves an inline width for the district count', () => {
     const rule = /\.districts-orientation__count\s*\{([^}]*)\}/.exec(css)
