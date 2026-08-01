@@ -47,6 +47,21 @@ const AppMeta: React.FC = () => {
             MCP server
           </Link>
           {' · '}
+          {/* The only contact path in the app (#1356). There is no backend to
+              POST a form to, so this goes to the GitHub issue chooser, whose
+              bug/feature templates live in .github/ISSUE_TEMPLATE/. Same
+              placement reasoning as the /mcp link above: it sits BEFORE the
+              license so the "MIT License · <version>" pairing stays adjacent
+              for the version guard. */}
+          <a
+            href="https://github.com/taverns-red/toast-stats/issues/new/choose"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="app-shell-footer__link"
+          >
+            Report an issue
+          </a>
+          {' · '}
           <a
             href="https://github.com/taverns-red/toast-stats/blob/main/LICENSE"
             target="_blank"
