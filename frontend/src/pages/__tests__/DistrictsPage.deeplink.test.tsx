@@ -6,7 +6,9 @@
  * and shared links preserve it:
  *   - Region filter pills  → ?regions=1,2,3
  *   - Search box           → ?q=
- *   - Pinned comparison    → ?pinned=12,34
+ *
+ * (`?pinned=` was the third; select-to-compare was retired in #1364 and the
+ * param is now silently ignored — see the last describe block.)
  *
  * Each control gets two assertions that together prove the round-trip:
  *   INWARD  — mount at a URL carrying the param ⇒ state is reflected (this is
@@ -176,46 +178,52 @@ describe('DistrictsPage deep-link — search (?q=)', () => {
   })
 })
 
-describe('DistrictsPage deep-link — pinned comparison (?pinned=)', () => {
-  it('INWARD: mounting at ?pinned=1,2 pins those districts (panel shown)', async () => {
+/**
+ * #1364 — select-to-compare is retired, and with it the `?pinned=` sync. The
+ * param has been shared and bookmarked, so the contract for an old link is
+ * *silence*: it loads the rankings page normally and pins nothing. No
+ * redirect, no warning, no leftover inward parse. These replace the three
+ * round-trip tests above, whose behaviour is intentionally gone (R1).
+ */
+describe('DistrictsPage — retired ?pinned= param (#1364)', () => {
+  it('INWARD: an old /?pinned=1,2 link loads normally and pins nothing', async () => {
     setupThreeRegions()
     renderPage('/?pinned=1,2')
 
-    // Both districts read as pinned (unpin affordance), and the comparison
-    // panel renders once 2 are pinned.
+    // The table renders as it would at a bare `/`.
+    await screen.findByText('District 1')
+    expect(screen.getByText('District 2')).toBeInTheDocument()
+
+    // No compare affordance survives: no per-row bookmark button, no panel.
+    expect(screen.queryByRole('button', { name: /^pin district/i })).toBeNull()
     expect(
-      await screen.findByRole('button', { name: /unpin district 1/i })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /unpin district 2/i })
-    ).toBeInTheDocument()
-    await screen.findByText(/Comparing 2 Districts/i)
+      screen.queryByRole('button', { name: /^unpin district/i })
+    ).toBeNull()
+    expect(screen.queryByText(/Comparing \d+ Districts/i)).toBeNull()
   })
 
-  it('INWARD: a hand-edited URL with >3 ids is capped at MAX_PINNED (3)', async () => {
+  it('INWARD: leaves the stale param untouched — no redirect, no rewrite', async () => {
     setupFiveDistricts()
     renderPage('/?pinned=1,2,3,4,5')
 
-    // Only the first 3 should read as pinned; the 4th/5th stay pinnable.
-    expect(
-      await screen.findByRole('button', { name: /unpin district 1/i })
-    ).toBeInTheDocument()
-    const unpinButtons = screen.getAllByRole('button', {
-      name: /unpin district/i,
-    })
-    expect(unpinButtons).toHaveLength(3)
-    expect(
-      screen.getByRole('button', { name: /^pin district 4/i })
-    ).toBeInTheDocument()
+    await screen.findByText('District 1')
+    // Not read, not capped, not stripped. The page simply ignores it.
+    expect(new URLSearchParams(search()).get('pinned')).toBe('1,2,3,4,5')
   })
 
-  it('OUTWARD: clicking pin writes ?pinned=', async () => {
+  it('keeps the Star "my district" feature, which also says "pin" in its copy', async () => {
     setupThreeRegions()
     renderPage('/')
 
     await screen.findByText('District 1')
-
-    fireEvent.click(screen.getByRole('button', { name: /pin district 1/i }))
-    expect(new URLSearchParams(search()).get('pinned')).toBe('1')
+    const star = screen.getByRole('button', {
+      name: /set district 1 as my district/i,
+    })
+    fireEvent.click(star)
+    expect(
+      screen.getByRole('button', {
+        name: /unset district 1 as my district/i,
+      })
+    ).toBeInTheDocument()
   })
 })

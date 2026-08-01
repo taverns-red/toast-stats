@@ -214,15 +214,17 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     expect(headerByText(/^tier$/i).className).toMatch(/__col--desktop/)
   })
 
-  it('gives the row action buttons a ≥44px touch-target class', async () => {
+  it('gives the row action button a ≥44px touch-target class', async () => {
     setupSingleRow()
     renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 7')
 
+    // The Star ("my district", #417) is the only row action left: #1364
+    // retired select-to-compare and its per-row bookmark button in the Rank
+    // cell. Lesson 111's 44px floor still applies to the survivor.
     const star = screen.getByRole('button', { name: /my district/i })
-    const pin = screen.getByRole('button', { name: /pin district 7/i })
     expect(star.className).toMatch(/districts-rankings-table__touch-btn/)
-    expect(pin.className).toMatch(/districts-rankings-table__touch-btn/)
+    expect(screen.queryByRole('button', { name: /pin district 7/i })).toBeNull()
   })
 
   it('exposes the rank badge by a stable testid (not by sticky-ness)', async () => {
