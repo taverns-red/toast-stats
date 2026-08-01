@@ -26,6 +26,7 @@
  */
 import React from 'react'
 import type {
+  CompetitiveAwardsByDistrict,
   CompetitiveAwardStandings,
   DistinguishedDistrictTier,
 } from '../../services/cdn'
@@ -40,9 +41,16 @@ export type TierRecognitionId = Exclude<
 >
 export type RecognitionId = AwardRecognitionId | TierRecognitionId
 
-/** Keys on `CompetitiveAwardsByDistrict` that flag a winner. */
-export type AwardWinnerFlagKey =
-  'extensionIsWinner' | 'twentyPlusIsWinner' | 'retentionIsWinner'
+/**
+ * Keys on `CompetitiveAwardsByDistrict` that flag a winner. Derived from the
+ * ids rather than restated, and intersected with the CDN type — so a renamed
+ * or dropped flag on the wire is a compile error here rather than an award
+ * badge that silently stops rendering.
+ */
+export type AwardWinnerFlagKey = Extract<
+  keyof CompetitiveAwardsByDistrict,
+  `${AwardRecognitionId}IsWinner`
+>
 
 /** Keys on `CompetitiveAwardStandings` holding a top-N standings array. */
 export type AwardStandingsKey = keyof Pick<

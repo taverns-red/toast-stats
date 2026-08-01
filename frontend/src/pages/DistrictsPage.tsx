@@ -312,13 +312,35 @@ const DistrictsPage: React.FC = () => {
 
   // #1107 — derive the orientation count from the same data the table and
   // KPI strip render, never a hardcoded literal (it had drifted to "117"
-  // while the snapshot tracked 128). Drops the number entirely before data
-  // loads (the shared shell renders with zero rankings), so the sentence can
-  // never contradict the rows below it.
-  const districtCountPhrase =
-    kpiTotals.tracked > 0
-      ? `one of the ${kpiTotals.tracked} Toastmasters districts`
-      : 'a Toastmasters district'
+  // while the snapshot tracked 128), so the sentence can never contradict the
+  // rows below it.
+  //
+  // #1359 gap (b) — but a count that lands late REPHRASES the sentence
+  // mid-load ("a Toastmasters district" → "one of the 128 Toastmasters
+  // districts"), and no reserve absorbs a text substitution. While the
+  // rankings query is in flight the same sentence renders with a
+  // width-reserved empty slot, so only the digits appear when the data lands.
+  //
+  // `reserveCount` is true exactly in the loading shell. The TERMINAL error
+  // branch keeps the countless phrasing: a blank slot that never fills reads
+  // as a bug, and no user reaches a loaded page through that branch, so there
+  // is no swap left to protect.
+  const districtCountPhrase = (reserveCount: boolean): React.ReactNode => {
+    const hasCount = kpiTotals.tracked > 0
+    if (!hasCount && !reserveCount) return 'a Toastmasters district'
+    return (
+      <>
+        one of the{' '}
+        <span
+          className="districts-orientation__count"
+          data-testid="districts-orientation-count"
+        >
+          {hasCount ? kpiTotals.tracked : ''}
+        </span>{' '}
+        Toastmasters districts
+      </>
+    )
+  }
 
   // Get district IDs for selected regions
   const selectedDistricts = React.useMemo(() => {
@@ -628,11 +650,11 @@ const DistrictsPage: React.FC = () => {
               className="districts-page-header__orientation"
               data-testid="districts-orientation"
             >
-              Each row below is {districtCountPhrase} worldwide. Click a
-              district to drill into its clubs, divisions, and trends. Use the
-              search bar (or press <kbd>/</kbd>) to jump to a district by number
-              or name. Star (★) a district to keep it pinned at the top across
-              visits.
+              Each row below is {districtCountPhrase(reserveHeroSlots)}{' '}
+              worldwide. Click a district to drill into its clubs, divisions,
+              and trends. Use the search bar (or press <kbd>/</kbd>) to jump to
+              a district by number or name. Star (★) a district to keep it
+              pinned at the top across visits.
             </p>
           </div>
           {/* #922 — reserve the mobile-stacked header-actions slot
@@ -922,7 +944,7 @@ const DistrictsPage: React.FC = () => {
               className="districts-page-header__orientation"
               data-testid="districts-orientation"
             >
-              Each row below is {districtCountPhrase} worldwide. Click a
+              Each row below is {districtCountPhrase(false)} worldwide. Click a
               district to drill into its clubs, divisions, and trends. Use the
               search bar (or press <kbd>/</kbd>) to jump to a district by number
               or name. Star (★) a district to keep it pinned at the top across

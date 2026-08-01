@@ -896,7 +896,7 @@
   }
 
   /* ≥768px — restore the full desktop layout: full KPI strip, search back in
-     source order, no reserved slot. */
+     source order. */
   @media (min-width: 768px) {
     .districts-hero-stack .districts-toolbar__search--hero {
       order: 0;
@@ -910,9 +910,39 @@
        .districts-hero-stack in the loaded tree's position, so at ≥768px it
        reserves the desktop search's 56px in situ. Without it the loaded
        search appeared from nowhere and pushed the rankings table down. */
+
+    /* #1359 gap (a) — the actions skeleton used to be `display: none` here,
+       on #922's premise that the loaded toolbar "lays out inline beside the
+       intro (no vertical shift to reserve)". It does lay out inline — and
+       therefore consumes HORIZONTAL space. Hiding the reserve handed the
+       intro the whole row until the real toolbar arrived and took its share
+       back, at which point every line in the intro rewrapped: eyebrow 17→33,
+       title 32→64, lede 41→81, orientation 59→195, the column 172→398.
+       Invisible at 1350px, where the intro has slack; 0.244 CLS at 900px,
+       where it does not.
+
+       The reserve carries the real `.districts-page-header__actions` class,
+       so the container's inline-flex + wrap + gaps come for free. min-width
+       is the one thing it needs of its own: its children are width-pinned
+       spans, and without a floor a font swap could let the reserve collapse
+       below the loaded toolbar's box and re-open a smaller version of the
+       same shift. 179 (freshness pill) + 109 + 107 + 2×8 gaps ≈ 411 for the
+       chip row, the wider of its two rows. Scoped to ≥768px: below that the
+       header stacks and a 411px floor would overflow a 375px phone. */
     .districts-page-header__actions--skeleton {
-      display: none;
+      min-width: 411px;
     }
+  }
+
+  /* #1359 gap (b) — the district count lands late INSIDE the orientation
+     sentence, and no reserve absorbs a text substitution. The sentence is
+     identical in both states now; this slot holds the number's width.
+     `ch` rather than px so it tracks the type scale, and inline-block because
+     min-width is inert on a pure inline box. 3ch covers every plausible
+     district count (TI has ~128). */
+  .districts-orientation__count {
+    display: inline-block;
+    min-width: 3ch;
   }
 
   /* Methodology callout */
