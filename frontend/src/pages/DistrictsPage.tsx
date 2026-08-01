@@ -519,12 +519,21 @@ const DistrictsPage: React.FC = () => {
     navigate(`/district/${districtId}`)
   }
 
-  const getRankBadgeColor = (rank: number) => {
-    if (rank === 1) return 'bg-yellow-500 text-white'
-    if (rank === 2) return 'bg-gray-400 text-white'
-    if (rank === 3) return 'bg-amber-600 text-white'
-    if (rank <= 10) return 'bg-tm-loyal-blue text-white'
-    return 'bg-gray-200 text-gray-700'
+  // Rank badge weight (#1363). The circle is the PODIUM's, not every row's:
+  // ranks 1–3 keep a 28px filled medal, everyone else is a plain bold
+  // numeral. The old `rank <= 10` blue and `bg-gray-200` fallback fills are
+  // retired — a grey circle on 90% of rows added weight without adding
+  // information the numeral inside it didn't already carry.
+  const MEDAL_FILLS: Record<number, string> = {
+    1: 'bg-yellow-500 text-white',
+    2: 'bg-gray-400 text-white',
+    3: 'bg-amber-600 text-white',
+  }
+  const rankBadgeClassName = (rank: number) => {
+    const medal = MEDAL_FILLS[rank]
+    return medal
+      ? `inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold ${medal}`
+      : 'text-sm font-bold text-gray-900'
   }
 
   const formatNumber = (num: number) => {
@@ -1320,7 +1329,9 @@ const DistrictsPage: React.FC = () => {
                     <th className="districts-rankings-table__sticky-col text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       District
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {/* Right-aligned to match the numerals below it (#1363):
+                        off-podium ranks are plain figures now, not circles. */}
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Rank
                     </th>
                     <th className="districts-rankings-table__col--desktop text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1508,11 +1519,11 @@ const DistrictsPage: React.FC = () => {
                           and inherits the row tint through its transparent bg. */}
                         <td
                           data-testid={`rank-cell-${district.districtId}`}
-                          className="px-6 py-4 whitespace-nowrap"
+                          className="px-6 py-4 whitespace-nowrap text-right"
                         >
                           <span
                             data-testid={`rank-badge-${district.districtId}`}
-                            className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${getRankBadgeColor(rank)}`}
+                            className={rankBadgeClassName(rank)}
                           >
                             {rank}
                           </span>
