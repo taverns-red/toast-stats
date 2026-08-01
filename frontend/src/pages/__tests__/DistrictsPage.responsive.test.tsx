@@ -135,7 +135,12 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     const { container } = renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 7')
 
-    const scroller = screen.getByRole('region', { name: /scroll/i })
+    // Matched on the region's stable name, not on the word "scroll": the
+    // label is now derived from real overflow (#1358), and jsdom has no
+    // layout engine, so scrollWidth/clientWidth are both 0 and nothing
+    // "scrolls" here. The assertion under test is that the region is
+    // focusable and LABELLED, which still holds either way.
+    const scroller = screen.getByRole('region', { name: /district rankings/i })
     expect(scroller).toHaveAttribute('tabindex', '0')
     expect(scroller.className).toMatch(/overflow-x-auto/)
 
@@ -184,13 +189,19 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     // Always-visible (mobile 375): District (sticky), Rank, Score.
     for (const re of [/^rank$/i, /^score$/i]) {
       const th = headerByText(re)
+      expect(th.className).not.toMatch(/__col--compact/)
       expect(th.className).not.toMatch(/__col--tablet/)
       expect(th.className).not.toMatch(/__col--desktop/)
     }
-    // Tablet+ (≥768): the three metric columns.
-    for (const re of [/paid clubs/i, /total payments/i, /distinguished/i]) {
-      expect(headerByText(re).className).toMatch(/__col--tablet/)
+    // Compact+ (≥600): Paid Clubs / Payments. Promoted from the tablet rung
+    // in #1358 — a 360x640 phone is 640px in landscape, so the old 768
+    // threshold left that whole device class with no metric columns at any
+    // orientation.
+    for (const re of [/paid clubs/i, /total payments/i]) {
+      expect(headerByText(re).className).toMatch(/__col--compact/)
     }
+    // Tablet+ (≥768): Distinguished.
+    expect(headerByText(/distinguished/i).className).toMatch(/__col--tablet/)
     // Desktop-only (≥1280): Tier.
     expect(headerByText(/^tier$/i).className).toMatch(/__col--desktop/)
   })

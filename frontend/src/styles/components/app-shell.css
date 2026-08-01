@@ -1276,12 +1276,26 @@
   /* Per-column responsive priority (ADR-006 §3). Mobile-first: low-priority
      columns are hidden by default and revealed at each breakpoint. Always-on
      at 375px: District (sticky), Rank, Score. */
+  .districts-rankings-table__col--compact,
   .districts-rankings-table__col--tablet,
   .districts-rankings-table__col--desktop {
     display: none;
   }
-  /* Tablet (≥768): + the three metric columns (Paid Clubs / Payments /
-     Distinguished). */
+  /* Compact (≥600): + Paid Clubs / Payments (#1358).
+     The 375/768/1280 ladder left a DEAD ZONE that a whole device class lives
+     in: a 360x640 phone is 640px in LANDSCAPE — 70% wider than the 375px
+     design target, yet still under 768 — so it was served the bare
+     District/Rank/Score set, and no orientation or zoom could reveal a metric.
+     Android's Display-size setting shrinks the CSS viewport further. Reported
+     from South Asia, where that device class is common.
+     These two carry most of the Borda score, so they are what a narrow screen
+     needs first; Distinguished stays at 768 to bound the row width. */
+  @media (min-width: 600px) {
+    .districts-rankings-table__col--compact {
+      display: table-cell;
+    }
+  }
+  /* Tablet (≥768): + Distinguished. */
   @media (min-width: 768px) {
     .districts-rankings-table__col--tablet {
       display: table-cell;

@@ -34,6 +34,7 @@ import {
   getMostRecentDateInProgramYear,
 } from '../utils/programYear'
 import { ProgramYearTitleSuffix } from '../components/ProgramYearTitleSuffix'
+import { rankingsScrollLabel } from '../utils/rankingsScrollLabel'
 import { DistrictRanking } from '../types/districts'
 import { arrayToCSV, downloadCSV } from '../utils/csvExport'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -503,6 +504,16 @@ const DistrictsPage: React.FC = () => {
       el.parentElement?.setAttribute(
         'data-scrollable-right',
         String(moreToRight)
+      )
+      // Keep the region's accessible name honest (#1358). Derived from total
+      // overflow, NOT moreToRight: the latter goes false once the user hits
+      // the right edge, which would strip the affordance mid-scroll. Below the
+      // priority breakpoints nothing overflows because the shed columns are
+      // `display: none`, so the label must stop telling people to scroll for
+      // metrics that scrolling cannot reach.
+      el.setAttribute(
+        'aria-label',
+        rankingsScrollLabel(el.scrollWidth - el.clientWidth > 1)
       )
     }
     update()
@@ -1258,16 +1269,20 @@ const DistrictsPage: React.FC = () => {
               scrollable-region-focusable); (2) the District identity column is
               the single sticky key column (no hardcoded second-sticky px seam);
               (3) the right-edge scroll-cue signals more columns. Low-priority
-              columns hide at tablet/mobile via the __col--tablet/--desktop
+              columns hide at mobile via the __col--compact/--tablet/--desktop
               priority classes so a phone shows a sensible set. Don't "fix" this
-              into a card collapse. */}
+              into a card collapse.
+              The --compact rung (≥600px) exists because 375/768/1280 left a
+              dead zone: a 360x640 phone is 640px in LANDSCAPE, so it got the
+              375px treatment and no orientation could reveal a metric
+              (#1358). */}
           <div className="districts-rankings-table__scroll-wrap">
             <div
               ref={rankingsScrollRef}
               className="overflow-x-auto"
               role="region"
               tabIndex={0}
-              aria-label="District rankings — scroll horizontally to see all metrics"
+              aria-label={rankingsScrollLabel(false)}
             >
               <table
                 className="districts-rankings-table"
@@ -1293,7 +1308,7 @@ const DistrictsPage: React.FC = () => {
                       label="Paid Clubs"
                       currentSort={sort}
                       onSort={toggleSort}
-                      thClassName="districts-rankings-table__col--tablet px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      thClassName="districts-rankings-table__col--compact px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                       numeric
                     />
                     <SortableHeader<SortFieldT>
@@ -1301,7 +1316,7 @@ const DistrictsPage: React.FC = () => {
                       label="Total Payments"
                       currentSort={sort}
                       onSort={toggleSort}
-                      thClassName="districts-rankings-table__col--tablet px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      thClassName="districts-rankings-table__col--compact px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                       numeric
                     />
                     <SortableHeader<SortFieldT>
@@ -1534,7 +1549,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           )}
                         </td>
-                        <td className="districts-rankings-table__col--tablet px-6 py-4 whitespace-nowrap text-right">
+                        <td className="districts-rankings-table__col--compact px-6 py-4 whitespace-nowrap text-right">
                           <div className="text-sm font-medium text-gray-900">
                             {formatNumber(district.paidClubs)}
                           </div>
@@ -1556,7 +1571,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="districts-rankings-table__col--tablet px-6 py-4 whitespace-nowrap text-right">
+                        <td className="districts-rankings-table__col--compact px-6 py-4 whitespace-nowrap text-right">
                           <div className="text-sm font-medium text-gray-900">
                             {formatNumber(district.totalPayments)}
                           </div>
