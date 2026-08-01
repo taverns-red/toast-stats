@@ -210,8 +210,11 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     }
     // Tablet+ (≥768): Distinguished.
     expect(headerByText(/distinguished/i).className).toMatch(/__col--tablet/)
-    // Desktop-only (≥1280): Tier.
-    expect(headerByText(/^tier$/i).className).toMatch(/__col--desktop/)
+    // The desktop-only rung used to hold Tier. #1361 pulled that column — it
+    // was `—` for the majority of districts (every district at the start of a
+    // program year) — and moved the tier badge into the District cell. The
+    // ladder's third rung is intentionally unoccupied, not deleted.
+    expect(() => headerByText(/^tier$/i)).toThrow()
   })
 
   it('gives the row action button a ≥44px touch-target class', async () => {
