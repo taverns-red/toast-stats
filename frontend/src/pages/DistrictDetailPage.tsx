@@ -520,6 +520,9 @@ const DistrictDetailPageInner: React.FC = () => {
                 <DistinguishedDistrictTrophyCase
                   status={distinguishedDistrictStatus}
                   isLoading={isLoadingCompetitiveAwards}
+                  {...(effectiveProgramYear && {
+                    programYear: effectiveProgramYear.label,
+                  })}
                   ranking={distinguishedRankingInputs}
                   clubStrengthQualifies={clubStrengthResult?.qualifies}
                   clubStrengthGrowth={clubStrengthResult?.growthPercent}

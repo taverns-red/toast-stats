@@ -222,6 +222,7 @@ export {
   type CompetitiveAwardsByDistrict,
   type CompetitiveAwardStandings,
   DistinguishedDistrictCalculator,
+  requiredPrerequisitesForProgramYear,
   type DistinguishedDistrictTier,
   type DistinguishedDistrictPrerequisites,
   type DistinguishedDistrictGap,
