@@ -473,13 +473,26 @@
    Divider Overrides
    ═══════════════════════════════════════════ */
 
-[data-theme='dark'] .divide-gray-200 > * + * {
+/* Match EVERY child, not `> * + *` (#1370). Tailwind v4's `divide-y` paints
+   its border on `> :not(:last-child)` — the FIRST child included — so an
+   adjacent-sibling override skipped exactly that row, leaving it on the light
+   gray-200 border against a dark surface. `> *` rather than
+   `> *:not(:last-child)`: setting a colour on a child whose border-width is 0
+   is inert, and `> *` stays correct whether the utility paints border-top or
+   border-bottom — and that edge assumption is precisely what broke here. */
+
+[data-theme='dark'] .divide-gray-200 > * {
   border-color: var(--border-default) !important;
 }
 
-[data-theme='dark'] .divide-gray-100 > * + * {
+[data-theme='dark'] .divide-gray-100 > * {
   border-color: var(--border-default) !important;
 }
+
+/* No `.divide-gray-800` override, deliberately: every usage in markup is
+   behind the `theme-dark:` variant, so the class only ever applies in dark
+   mode and is already a dark colour. Pinned by DividerDarkModeParity.test.ts,
+   which goes red if a bare (light-mode-reaching) `divide-gray-800` appears. */
 
 /* ═══════════════════════════════════════════
    Sticky Column Background Override (#122)
