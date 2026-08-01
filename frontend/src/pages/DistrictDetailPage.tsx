@@ -516,13 +516,19 @@ const DistrictDetailPageInner: React.FC = () => {
                   />
                 )}
 
-                {/* Distinguished District Trophy Case (#332) */}
+                {/* Distinguished District Trophy Case (#332).
+                    programYear is REQUIRED (#1354). `effectiveProgramYear` is
+                    null only before any PY data has resolved, and in that
+                    state the panel has no status to render anyway; falling
+                    back to the URL-synced selection keeps the checklist honest
+                    about the year being DISPLAYED rather than reverting to the
+                    legacy five-gate shape by omission. */}
                 <DistinguishedDistrictTrophyCase
                   status={distinguishedDistrictStatus}
                   isLoading={isLoadingCompetitiveAwards}
-                  {...(effectiveProgramYear && {
-                    programYear: effectiveProgramYear.label,
-                  })}
+                  programYear={
+                    (effectiveProgramYear ?? selectedProgramYear).label
+                  }
                   ranking={distinguishedRankingInputs}
                   clubStrengthQualifies={clubStrengthResult?.qualifies}
                   clubStrengthGrowth={clubStrengthResult?.growthPercent}

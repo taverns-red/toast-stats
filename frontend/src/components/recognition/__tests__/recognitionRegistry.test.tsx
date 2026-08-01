@@ -16,6 +16,7 @@ import {
   AWARD_RECOGNITION,
   TIER_RECOGNITION,
   RECOGNITION_ITEMS,
+  TIER_TITLES,
   tierRecognition,
 } from '../recognitionRegistry'
 
@@ -99,6 +100,23 @@ describe('recognition registry (#1361)', () => {
       expect(typeof a.formatValue(1)).toBe('string')
       expect(a.computeProgress(1)).toBeGreaterThanOrEqual(0)
       expect(a.computeProgress(1e6)).toBeLessThanOrEqual(100)
+    }
+  })
+
+  it('publishes the tier titles as a lookup, for consumers that only need the words', () => {
+    // DistinguishedDistrictTrophyCase's TIER_LABELS held the same four
+    // strings verbatim (#1354 review). Its emoji ICONS deliberately stay
+    // local — podium medals in a detail panel are a different visual
+    // language from a rosette badge in a dense table, and it also labels
+    // Unknown / NotDistinguished, which the registry does not model.
+    expect(TIER_TITLES).toEqual({
+      Distinguished: 'Distinguished District',
+      Select: 'Select Distinguished District',
+      Presidents: "President's Distinguished District",
+      Smedley: 'Smedley Distinguished District',
+    })
+    for (const t of TIER_RECOGNITION) {
+      expect(TIER_TITLES[t.id]).toBe(t.title)
     }
   })
 

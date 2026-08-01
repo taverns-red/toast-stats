@@ -4,6 +4,7 @@ import {
   deriveRemainingToTier,
   type RemainingInputs,
 } from '../utils/distinguishedCountdown'
+import { TIER_TITLES } from './recognition/recognitionRegistry'
 
 export type DistinguishedDistrictTier =
   | 'Unknown'
@@ -65,10 +66,16 @@ interface DistinguishedDistrictTrophyCaseProps {
    * prerequisite rows the checklist renders — TI's required gates change
    * by year (e.g. Region Advisor Visit retired for 2026-27, #1344) while
    * `status.prerequisites` deliberately keeps emitting the legacy
-   * 5-boolean shape for every era (#1354). Omitted callers keep the
-   * pre-#1354 behavior of showing all 5 rows.
+   * 5-boolean shape for every era (#1354).
+   *
+   * REQUIRED. It was optional, falling back to every legacy gate, and that
+   * fallback was unreachable in production — the one caller always passes a
+   * year. What it actually bought was the ability to render a per-year
+   * checklist with no year and silently get the 2025-26 shape, which is the
+   * failure class this component exists to prevent. A caller without a
+   * resolved year passes the year it is DISPLAYING rather than omitting.
    */
-  programYear?: string
+  programYear: string
   /** Optional rankings row used to derive the absolute remaining counts
       when the canonical fields are absent or the next tier is above
       Distinguished. Matches the region page's data source. */
@@ -81,13 +88,14 @@ interface DistinguishedDistrictTrophyCaseProps {
   clubGrowthQualifies?: boolean | undefined
 }
 
+/* The four achieved-tier titles come from the shared recognition registry
+   (#1361) — they were duplicated here verbatim. The two non-achieved states
+   stay local: the registry models achieved recognition only (absence is its
+   signal), and this panel is the one place that has to name "not yet". */
 const TIER_LABELS: Record<DistinguishedDistrictTier, string> = {
   Unknown: 'Recognition Unknown',
   NotDistinguished: 'Not Yet Distinguished',
-  Distinguished: 'Distinguished District',
-  Select: 'Select Distinguished District',
-  Presidents: "President's Distinguished District",
-  Smedley: 'Smedley Distinguished District',
+  ...TIER_TITLES,
 }
 
 const TIER_BADGE_STYLES: Record<DistinguishedDistrictTier, string> = {
@@ -120,9 +128,11 @@ const PREREQUISITE_LABELS: Record<
   regionAdvisorVisitMet: '2+ Region Advisor meetings',
 }
 
-const PREREQUISITE_KEYS = Object.keys(PREREQUISITE_LABELS) as Array<
-  keyof DistinguishedDistrictPrerequisites
->
+/* PREREQUISITE_KEYS — the "every legacy gate" fallback list — was deleted
+   with the optional `programYear` prop (#1354). The visible rows come from
+   `requiredPrerequisitesForProgramYear`, which is the only thing that knows
+   which gates a given year actually requires. PREREQUISITE_LABELS above
+   stays: it is the label lookup for whichever keys that returns. */
 
 interface GapTileSpec {
   label: string
@@ -273,11 +283,10 @@ export const DistinguishedDistrictTrophyCase: React.FC<
   // Drive the visible checklist rows from the program year's required
   // gate set (#1354) rather than the fixed PREREQUISITE_LABELS map — so a
   // retired requirement (e.g. Region Advisor Visit for 2026-27, #1344)
-  // stops rendering as a permanently-unmet row. No `programYear` keeps
-  // the pre-#1354 behavior of showing every legacy key.
-  const visibleKeys = programYear
-    ? requiredPrerequisitesForProgramYear(programYear)
-    : PREREQUISITE_KEYS
+  // stops rendering as a permanently-unmet row. Unconditional: `programYear`
+  // is required, so there is no "which era?" question left to answer with a
+  // default.
+  const visibleKeys = requiredPrerequisitesForProgramYear(programYear)
   const metCount = visibleKeys.filter(k => prerequisites[k]).length
   const totalCount = visibleKeys.length
   // Unmet prereqs are the whole point of the panel — never let the user

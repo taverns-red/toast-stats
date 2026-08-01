@@ -19,13 +19,18 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const component = readFileSync(
-  join(__dirname, '../components/DistinguishedDistrictTrophyCase.tsx'),
-  'utf-8'
+/** Comments explain what was REMOVED, so they must not count as usage. */
+const stripComments = (src: string) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
+const component = stripComments(
+  readFileSync(
+    join(__dirname, '../components/DistinguishedDistrictTrophyCase.tsx'),
+    'utf-8'
+  )
 )
-const caller = readFileSync(
-  join(__dirname, '../pages/DistrictDetailPage.tsx'),
-  'utf-8'
+const caller = stripComments(
+  readFileSync(join(__dirname, '../pages/DistrictDetailPage.tsx'), 'utf-8')
 )
 
 describe('trophy-case programYear is required (#1354)', () => {

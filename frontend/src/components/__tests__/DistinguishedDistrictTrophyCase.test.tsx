@@ -58,7 +58,12 @@ const baseRanking: RemainingInputs = {
 describe('DistinguishedDistrictTrophyCase', () => {
   describe('header', () => {
     it('renders the title and the program-item caption', () => {
-      render(<DistinguishedDistrictTrophyCase status={baseStatus} />)
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear={LEGACY_PY}
+        />
+      )
       expect(
         screen.getByRole('heading', { name: /Distinguished District Status/i })
       ).toBeInTheDocument()
@@ -69,7 +74,12 @@ describe('DistinguishedDistrictTrophyCase', () => {
     })
 
     it('renders the status pill with the current tier label', () => {
-      render(<DistinguishedDistrictTrophyCase status={baseStatus} />)
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear={LEGACY_PY}
+        />
+      )
       const pill = screen.getByTestId('distinguished-status-pill')
       expect(pill).toHaveTextContent(/Not Yet Distinguished/i)
     })
@@ -77,7 +87,12 @@ describe('DistinguishedDistrictTrophyCase', () => {
 
   describe('prerequisites — collapsed by default when all met', () => {
     it('collapses to a single summary line when all prerequisites are met', () => {
-      render(<DistinguishedDistrictTrophyCase status={baseStatus} />)
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear={LEGACY_PY}
+        />
+      )
       const toggle = screen.getByRole('button', {
         name: /5 of 5 prerequisites met/i,
       })
@@ -89,7 +104,12 @@ describe('DistinguishedDistrictTrophyCase', () => {
 
     it('expands the prerequisites list when the toggle is clicked', async () => {
       const user = userEvent.setup()
-      render(<DistinguishedDistrictTrophyCase status={baseStatus} />)
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear={LEGACY_PY}
+        />
+      )
       const toggle = screen.getByRole('button', {
         name: /5 of 5 prerequisites met/i,
       })
@@ -114,7 +134,12 @@ describe('DistinguishedDistrictTrophyCase', () => {
           marketAnalysisSubmitted: false,
         },
       }
-      render(<DistinguishedDistrictTrophyCase status={unmet} />)
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={unmet}
+          programYear={LEGACY_PY}
+        />
+      )
       // No toggle button when the list is locked open — the summary is a
       // status, not an interactive control.
       expect(
@@ -206,6 +231,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
         <DistinguishedDistrictTrophyCase
           status={baseStatus}
           ranking={baseRanking}
+          programYear={LEGACY_PY}
         />
       )
       const tiles = screen.getByTestId('distinguished-gap-tiles')
@@ -225,6 +251,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
         <DistinguishedDistrictTrophyCase
           status={baseStatus}
           ranking={baseRanking}
+          programYear={LEGACY_PY}
         />
       )
       const tiles = screen.getByTestId('distinguished-gap-tiles')
@@ -258,6 +285,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
         <DistinguishedDistrictTrophyCase
           status={drifted}
           ranking={baseRanking}
+          programYear={LEGACY_PY}
         />
       )
       const values = screen.getAllByTestId('gap-tile-value')
@@ -279,6 +307,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
         <DistinguishedDistrictTrophyCase
           status={noCanonical}
           ranking={baseRanking}
+          programYear={LEGACY_PY}
         />
       )
       const values = screen.getAllByTestId('gap-tile-value')
@@ -314,6 +343,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
         <DistinguishedDistrictTrophyCase
           status={atDistinguished}
           ranking={baseRanking}
+          programYear={LEGACY_PY}
         />
       )
       const values = screen.getAllByTestId('gap-tile-value')
@@ -329,7 +359,12 @@ describe('DistinguishedDistrictTrophyCase', () => {
         paymentsRemaining: 1,
         distinguishedClubsRemaining: 1,
       }
-      render(<DistinguishedDistrictTrophyCase status={oneEach} />)
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={oneEach}
+          programYear={LEGACY_PY}
+        />
+      )
       const values = screen.getAllByTestId('gap-tile-value')
       expect(values[0]).toHaveTextContent(/^1 club$/)
       expect(values[1]).toHaveTextContent(/^1 payment$/)
@@ -343,7 +378,12 @@ describe('DistinguishedDistrictTrophyCase', () => {
         paymentsRemaining: 0,
         distinguishedClubsRemaining: 0,
       }
-      render(<DistinguishedDistrictTrophyCase status={closed} />)
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={closed}
+          programYear={LEGACY_PY}
+        />
+      )
       const values = screen.getAllByTestId('gap-tile-value')
       values.forEach(v => expect(v).toHaveTextContent('✓'))
       // No sub-item rendered when the gate is met.
@@ -353,7 +393,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
 
   it('renders nothing when status is null', () => {
     const { container } = render(
-      <DistinguishedDistrictTrophyCase status={null} />
+      <DistinguishedDistrictTrophyCase status={null} programYear={LEGACY_PY} />
     )
     expect(container).toBeEmptyDOMElement()
   })
@@ -367,7 +407,13 @@ describe('DistinguishedDistrictTrophyCase', () => {
        height-matched skeleton so the real panel fills the slot in place. */
 
     it('renders a height-matched skeleton while the awards query is loading', () => {
-      render(<DistinguishedDistrictTrophyCase status={null} isLoading />)
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={null}
+          isLoading
+          programYear={LEGACY_PY}
+        />
+      )
       const skeleton = screen.getByTestId('distinguished-trophy-skeleton')
       expect(skeleton).toBeInTheDocument()
       // Reuses the real panel chrome so the loaded content lands in place.
@@ -383,13 +429,23 @@ describe('DistinguishedDistrictTrophyCase', () => {
 
     it('still renders nothing when not loading and status is null', () => {
       const { container } = render(
-        <DistinguishedDistrictTrophyCase status={null} isLoading={false} />
+        <DistinguishedDistrictTrophyCase
+          status={null}
+          isLoading={false}
+          programYear={LEGACY_PY}
+        />
       )
       expect(container).toBeEmptyDOMElement()
     })
 
     it('renders the real panel, not the skeleton, once status resolves even if isLoading is stale', () => {
-      render(<DistinguishedDistrictTrophyCase status={baseStatus} isLoading />)
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          isLoading
+          programYear={LEGACY_PY}
+        />
+      )
       expect(
         screen.queryByTestId('distinguished-trophy-skeleton')
       ).not.toBeInTheDocument()

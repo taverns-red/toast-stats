@@ -273,6 +273,21 @@ export const RECOGNITION_ITEMS: readonly RecognitionItem[] = [
   ...TIER_RECOGNITION,
 ]
 
+/**
+ * Tier titles alone, for a consumer that needs the words but not the badge —
+ * `DistinguishedDistrictTrophyCase`'s `TIER_LABELS` held these four strings
+ * verbatim. Its emoji ICONS deliberately stay local: podium medals in a
+ * detail panel are a different visual language from a rosette badge in a
+ * dense table, and that map also labels `Unknown` / `NotDistinguished`, which
+ * this registry does not model (absence is the signal here).
+ */
+export const TIER_TITLES: Record<TierRecognitionId, string> = {
+  Distinguished: 'Distinguished District',
+  Select: 'Select Distinguished District',
+  Presidents: "President's Distinguished District",
+  Smedley: 'Smedley Distinguished District',
+}
+
 const TIER_BY_ID = new Map<TierRecognitionId, TierRecognition>(
   TIER_RECOGNITION.map(t => [t.id, t])
 )
