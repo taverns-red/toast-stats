@@ -183,7 +183,7 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
 
     // Default (untinted) row: the sticky cell must NOT hardcode bg-white
     // (Lesson 116 — that routes to the lighter dark scale). It carries an
-    // explicit tint hook so isMine/isPinned rows repaint opaquely instead.
+    // explicit tint hook so the my-district row repaints opaquely instead.
     const districtCell = screen.getByTestId('district-cell-7')
     expect(districtCell.className).not.toMatch(/bg-white/)
     expect(districtCell).toHaveAttribute('data-row-tint')

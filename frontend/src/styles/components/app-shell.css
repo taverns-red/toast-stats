@@ -1274,10 +1274,10 @@
   }
 
   /* Keep the sticky cell in sync with the row-hover highlight — but ONLY for
-     untinted rows. A tinted (my-district / pinned) row keeps its tint on hover
-     (its non-sticky cells use Tailwind bg-yellow-50/bg-blue-50, which sit in
-     the utilities layer and outrank the row-hover rule), so the sticky cell
-     must keep its tint too rather than flipping to --surface-2. Targeting
+     untinted rows. A tinted (my-district) row keeps its tint on hover (its
+     non-sticky cells use Tailwind bg-yellow-50, which sits in the utilities
+     layer and outranks the row-hover rule), so the sticky cell must keep its
+     tint too rather than flipping to --surface-2. Targeting
      [data-row-tint='none'] makes light and dark behave identically (avoids the
      lessons 94/95 hover asymmetry). */
   .districts-rankings-table
@@ -1287,15 +1287,13 @@
     background-color: var(--surface-2);
   }
 
-  /* The sticky cell must be OPAQUE or scrolled columns bleed through; a tinted
-     row (my-district / pinned) repaints its tint here so it stays opaque. The
-     literals match Tailwind yellow-50 / blue-50 (the tints the <tr> still
-     carries for its transparent cells); dark variants live in dark-mode.css. */
+  /* The sticky cell must be OPAQUE or scrolled columns bleed through; the
+     my-district row repaints its tint here so it stays opaque. The literal
+     matches Tailwind yellow-50 (the tint the <tr> still carries for its
+     transparent cells); the dark variant lives in dark-mode.css. The
+     'pinned' tint retired with select-to-compare (#1364). */
   .districts-rankings-table__sticky-col[data-row-tint='mine'] {
     background-color: #fefce8;
-  }
-  .districts-rankings-table__sticky-col[data-row-tint='pinned'] {
-    background-color: #eff6ff;
   }
 
   /* ≥44px touch targets for the row action buttons (WCAG 2.5.5, Lesson 111).

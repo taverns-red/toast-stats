@@ -27,7 +27,6 @@ import { useUrlBoolean } from '../hooks/useUrlBoolean'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { useDebounce } from '../hooks/useDebounce'
 import { SortableHeader } from '../components/SortableHeader'
-import { LazyComparisonPanel as ComparisonPanel } from '../components/LazyCharts'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -71,20 +70,15 @@ const ACTIONS_SKELETON_WIDTHS = {
   shareBtn: 85, // "Share" action button
 } as const
 
-// Shared parse/serialize for comma-joined string-list URL params (?regions=,
-// ?pinned=). Module-level so their identity is stable across renders (#978).
+// Shared parse/serialize for the comma-joined string-list URL param
+// (?regions=). Module-level so their identity is stable across renders (#978).
+// (`?pinned=` used the same helpers until select-to-compare was retired in
+// #1364; an old link carrying the param is simply never read.)
 const EMPTY_LIST: string[] = []
 const parseList = (v: string): string[] =>
   v ? v.split(',').filter(Boolean) : []
 const serializeList = (a: string[]): string => a.join(',')
 const LIST_OPTS = { parse: parseList, serialize: serializeList }
-
-// Comparison pins cap (#93). Enforced on the inward parse too, not just on
-// togglePin adds, so a hand-edited / shared `?pinned=1,2,3,4,5` can't seed a
-// 4+-district comparison past the cap.
-const MAX_PINNED = 3
-const parsePinned = (v: string): string[] => parseList(v).slice(0, MAX_PINNED)
-const PINNED_OPTS = { parse: parsePinned, serialize: serializeList }
 
 const DistrictsPage: React.FC = () => {
   const navigate = useNavigate()
@@ -126,14 +120,6 @@ const DistrictsPage: React.FC = () => {
     }
   }, [debouncedSearch, searchQuery, qParam, setQParam])
 
-  // URL-synced comparison pins (?pinned=12,34, #978). Stored as a string list
-  // in the URL; derived into a Set for the existing membership checks.
-  const [pinnedIds, setPinnedIds] = useUrlState<string[]>(
-    'pinned',
-    EMPTY_LIST,
-    PINNED_OPTS
-  )
-  const pinnedDistrictIds = React.useMemo(() => new Set(pinnedIds), [pinnedIds])
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchFocused, setSearchFocused] = useState<boolean>(false)
   const { myDistrictId, setMyDistrict, isMyDistrict } = useMyDistrict()
@@ -532,24 +518,6 @@ const DistrictsPage: React.FC = () => {
   const handleDistrictClick = (districtId: string) => {
     navigate(`/district/${districtId}`)
   }
-
-  // Comparison mode — pin/unpin districts (#93). MAX_PINNED is module-level.
-  const togglePin = (districtId: string) => {
-    setPinnedIds(prev => {
-      if (prev.includes(districtId)) {
-        return prev.filter(id => id !== districtId)
-      }
-      if (prev.length < MAX_PINNED) {
-        return [...prev, districtId]
-      }
-      return prev
-    })
-  }
-
-  const pinnedDistricts = React.useMemo(
-    () => rankings.filter(r => pinnedDistrictIds.has(r.districtId)),
-    [rankings, pinnedDistrictIds]
-  )
 
   const getRankBadgeColor = (rank: number) => {
     if (rank === 1) return 'bg-yellow-500 text-white'
@@ -1299,15 +1267,6 @@ const DistrictsPage: React.FC = () => {
           {/* /.districts-hero-stack (#861) */}
         </div>
 
-        {/* Comparison Panel (#93) */}
-        <ComparisonPanel
-          pinnedDistricts={pinnedDistricts}
-          allRankings={rankings}
-          totalDistricts={rankings.length}
-          onRemove={districtId => togglePin(districtId)}
-          onClearAll={() => setPinnedIds(EMPTY_LIST)}
-        />
-
         {/* Rankings Table */}
         <div className="districts-rankings-table-wrap">
           {/* Methodology affordance — single visible "i" beside a quiet
@@ -1404,9 +1363,6 @@ const DistrictsPage: React.FC = () => {
                 <tbody>
                   {visibleRankings.map(district => {
                     const rank = district.displayRank
-                    const isPinned = pinnedDistrictIds.has(district.districtId)
-                    const pinDisabled =
-                      !isPinned && pinnedDistrictIds.size >= MAX_PINNED
                     const isMine = isMyDistrict(district.districtId)
                     const rawTier =
                       competitiveAwards?.distinguishedDistrict?.[
@@ -1427,9 +1383,7 @@ const DistrictsPage: React.FC = () => {
                         className={`cursor-pointer ${
                           isMine
                             ? 'bg-yellow-50 border-l-4 border-l-tm-loyal-blue'
-                            : isPinned
-                              ? 'bg-blue-50'
-                              : ''
+                            : ''
                         }`}
                       >
                         {/* District cell first (#436) — primary entity, and the
@@ -1438,14 +1392,12 @@ const DistrictsPage: React.FC = () => {
                           interactive. (#417) Star toggles 'my district'.
                           The sticky cell needs an opaque themed background so
                           scrolled columns don't bleed through; data-row-tint
-                          lets the CSS repaint the isMine/isPinned tint (token-
-                          based, dark-safe — replaces the old hardcoded bg-white
-                          that routed to the lighter dark scale, Lesson 116). */}
+                          lets the CSS repaint the isMine tint (token-based,
+                          dark-safe — replaces the old hardcoded bg-white that
+                          routed to the lighter dark scale, Lesson 116). */}
                         <td
                           data-testid={`district-cell-${district.districtId}`}
-                          data-row-tint={
-                            isMine ? 'mine' : isPinned ? 'pinned' : 'none'
-                          }
+                          data-row-tint={isMine ? 'mine' : 'none'}
                           className="districts-rankings-table__sticky-col"
                         >
                           <div className="flex items-center gap-3 flex-wrap">
@@ -1558,47 +1510,12 @@ const DistrictsPage: React.FC = () => {
                           data-testid={`rank-cell-${district.districtId}`}
                           className="px-6 py-4 whitespace-nowrap"
                         >
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={e => {
-                                e.stopPropagation()
-                                togglePin(district.districtId)
-                              }}
-                              disabled={pinDisabled}
-                              aria-label={
-                                isPinned
-                                  ? `Unpin District ${district.districtId}`
-                                  : `Pin District ${district.districtId}`
-                              }
-                              className={`districts-rankings-table__touch-btn flex-shrink-0 flex items-center justify-center rounded transition-colors ${
-                                isPinned
-                                  ? 'text-tm-loyal-blue hover:text-red-500'
-                                  : pinDisabled
-                                    ? 'text-gray-300 cursor-not-allowed'
-                                    : 'text-gray-400 hover:text-tm-loyal-blue'
-                              }`}
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill={isPinned ? 'currentColor' : 'none'}
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                                />
-                              </svg>
-                            </button>
-                            <span
-                              data-testid={`rank-badge-${district.districtId}`}
-                              className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${getRankBadgeColor(rank)}`}
-                            >
-                              {rank}
-                            </span>
-                          </div>
+                          <span
+                            data-testid={`rank-badge-${district.districtId}`}
+                            className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${getRankBadgeColor(rank)}`}
+                          >
+                            {rank}
+                          </span>
                         </td>
                         <td className="districts-rankings-table__col--desktop">
                           {ddpTier ? (
