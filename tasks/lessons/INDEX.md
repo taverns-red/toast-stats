@@ -2,6 +2,8 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-skeleton-that-omits-a-button-under-reserves-by-the-touch-target-floor.md` — A skeleton that omits an interactive element under-reserves by the touch-target floor, not by the element's visual size  (2026-08-01)
+- `bisecting-a-gate-with-no-headroom-finds-variance-not-a-regression.md` — Bisecting a threshold gate that has no headroom identifies variance, not a culprit — measure the baseline before believing the bisect  (2026-08-01)
 - `a-nominal-brand-is-only-as-honest-as-the-mint-and-the-cast-ban-behind-it.md` — A nominal brand's guarantee lives in its mints and its cast-ban selector, not the type — and both fail silently, so pin every laundering variant with a behaviour sentinel and name the premise the proof actually rests on  (2026-07-15)
 - `a-phantom-field-is-a-live-default-every-read-of-it-silently-becomes-the-fallback.md` — A phantom field (typed but never on the wire) doesn't fail — it silently becomes its fallback, so the default is the real code path; grep the primitive, and a `?? today` default hides it forever  (2026-07-15)
 - `divergence-by-default-fixtures-are-inert-unless-the-mock-routes-on-the-same-key-the-wire-does.md` — Divergence-by-default fixtures are inert unless the mock ROUTES on the same key the wire does — a date-blind router serves the right fixture for the wrong key and rubber-stamps the bug the fixture was written to expose  (2026-07-15)
