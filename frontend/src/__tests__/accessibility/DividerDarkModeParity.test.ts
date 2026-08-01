@@ -192,11 +192,21 @@ describe('divide-y dark-mode divider parity (#1370)', () => {
     }).filter(f => /\.tsx?$/.test(f) && !f.includes('__tests__'))
 
     const bare: string[] = []
+    let guarded = 0
     for (const rel of sources) {
       const text = readFileSync(resolve(srcDir, rel), 'utf8')
       for (const m of text.matchAll(/([\w-]*:)?divide-gray-800/g))
-        if (m[1] !== 'theme-dark:') bare.push(`${rel}: ${m[0]}`)
+        if (m[1] === 'theme-dark:') guarded++
+        else bare.push(`${rel}: ${m[0]}`)
     }
+
+    // Non-vacuous: if the class disappears from markup entirely, this test
+    // stops proving anything, so make that state loud rather than green.
+    expect(
+      guarded,
+      'no `theme-dark:divide-gray-800` usage found — if the class is gone, ' +
+        'delete this test and the dark-mode.css comment it guards'
+    ).toBeGreaterThan(0)
 
     expect(
       bare,
