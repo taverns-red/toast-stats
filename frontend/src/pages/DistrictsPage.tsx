@@ -18,6 +18,9 @@ import {
 import { useRankHistory } from '../hooks/useRankHistory'
 import InfoTooltip from '../components/InfoTooltip'
 import DistrictTierChip from '../components/DistrictTierChip'
+import { RecognitionBadge } from '../components/recognition/RecognitionBadge'
+import { RecognitionLegend } from '../components/recognition/RecognitionLegend'
+import { AWARD_RECOGNITION } from '../components/recognition/recognitionRegistry'
 import { DistrictChipAndName } from '../components/DistrictChipAndName'
 import { useMyDistrict } from '../hooks/useMyDistrict'
 import { useLastVisit } from '../hooks/useLastVisit'
@@ -527,18 +530,29 @@ const DistrictsPage: React.FC = () => {
   // Dark ink, not white: white on these fills is 1.9 / 2.5 / 3.2:1 against a
   // 4.5:1 floor (14px bold is not WCAG "large text"). The fills themselves are
   // unchanged. See __tests__/accessibility/RankBadgeContrast.test.ts, and
-  // dark-mode.css for the compound override that keeps gold + bronze dark in
-  // the dark theme (silver's fill IS remapped, so it flips light correctly).
+  // dark-mode.css for the gold/bronze dark-theme ink pin (silver's fill IS
+  // remapped dark, so it flips light correctly on its own).
   const MEDAL_FILLS: Record<number, string> = {
     1: 'bg-yellow-500 text-gray-900',
     2: 'bg-gray-400 text-gray-900',
     3: 'bg-amber-600 text-gray-900',
   }
+  // Semantic hook for that dark-theme pin. Keying the override off the
+  // Tailwind pair (`.bg-yellow-500.text-gray-900`) would ALSO read as a
+  // blanket dark-mode override of `bg-yellow-500` to the #564 unmitigated-
+  // utility guard — marking a utility mitigated everywhere on the strength of
+  // one scoped fix, and quietly discharging real debt (two colour swatches
+  // still use the bare utility).
+  const MEDAL_NAMES: Record<number, string> = {
+    1: 'gold',
+    2: 'silver',
+    3: 'bronze',
+  }
   const rankBadgeClassName = (rank: number) => {
     const medal = MEDAL_FILLS[rank]
     return medal
-      ? `inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold ${medal}`
-      : 'text-sm font-bold text-gray-900'
+      ? `rank-badge inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold ${medal}`
+      : 'rank-badge text-sm font-bold text-gray-900'
   }
 
   const formatNumber = (num: number) => {
@@ -736,6 +750,15 @@ const DistrictsPage: React.FC = () => {
             aria-hidden="true"
           />
         </div>
+        {/* #1361 — the Recognition legend sits between the hero stack and the
+            rankings table in the loaded tree, so the shell must hold that slot
+            or the legend appears on data-load and pushes the table down,
+            handing back part of the CLS #1359 just recovered. It needs no
+            data, so this is the REAL component, not a look-alike: the reserve
+            cannot drift from the thing it reserves for. Gated with the other
+            data-dependent slots because a legend for a table that failed to
+            load explains nothing. */}
+        {reserveHeroSlots && <RecognitionLegend />}
         {body}
       </div>
     </div>
@@ -1281,6 +1304,13 @@ const DistrictsPage: React.FC = () => {
           {/* /.districts-hero-stack (#861) */}
         </div>
 
+        {/* Recognition legend (#1361) — the key for the badges in the
+            District cell. Inline at ≥640px, collapsed behind a disclosure
+            below that so it doesn't eat the mobile fold. Static content, so
+            the loading shell reserves this slot with the SAME component
+            rather than a placeholder that could drift (#1359). */}
+        <RecognitionLegend />
+
         {/* Rankings Table */}
         <div className="districts-rankings-table-wrap">
           {/* Methodology affordance — single visible "i" beside a quiet
@@ -1339,9 +1369,10 @@ const DistrictsPage: React.FC = () => {
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Rank
                     </th>
-                    <th className="districts-rankings-table__col--desktop text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tier
-                    </th>
+                    {/* The Tier column was pulled in #1361: `—` for the
+                        majority of districts, and "Tier" was not the
+                        vocabulary the program uses. The badge lives in the
+                        District cell now, under the Recognition umbrella. */}
                     <SortableHeader<SortFieldT>
                       field="clubs"
                       label="Paid Clubs"
@@ -1463,45 +1494,28 @@ const DistrictsPage: React.FC = () => {
                               nameClassName="text-sm font-medium text-gray-900"
                               ariaHidden
                             />
-                            {/* Competitive award winner badges (#331) */}
-                            {competitiveAwards?.byDistrict?.[
-                              district.districtId
-                            ]?.extensionIsWinner && (
-                              <span
-                                title="President's Extension Award winner"
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
-                              >
-                                <span aria-hidden="true">🏆</span>
-                                <span className="sr-only sm:not-sr-only sm:ml-1">
-                                  Extension
-                                </span>
-                              </span>
-                            )}
-                            {competitiveAwards?.byDistrict?.[
-                              district.districtId
-                            ]?.twentyPlusIsWinner && (
-                              <span
-                                title="President's 20-Plus Award winner"
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
-                              >
-                                <span aria-hidden="true">🏆</span>
-                                <span className="sr-only sm:not-sr-only sm:ml-1">
-                                  20-Plus
-                                </span>
-                              </span>
-                            )}
-                            {competitiveAwards?.byDistrict?.[
-                              district.districtId
-                            ]?.retentionIsWinner && (
-                              <span
-                                title="District Club Retention Award winner"
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
-                              >
-                                <span aria-hidden="true">🏆</span>
-                                <span className="sr-only sm:not-sr-only sm:ml-1">
-                                  Retention
-                                </span>
-                              </span>
+                            {/* Recognition (#1361). The Distinguished tier
+                              badge moved here from its own desktop column,
+                              which was `—` for the majority of districts, and
+                              sits beside the competitive-award badges (#331)
+                              because both answer the same question: what has
+                              this district earned? Driven entirely by the
+                              shared registry, so the glyphs, labels, accents
+                              and CDN keys have one definition. */}
+                            <DistrictTierChip
+                              districtId={district.districtId}
+                              tier={ddpTier}
+                            />
+                            {AWARD_RECOGNITION.map(award =>
+                              competitiveAwards?.byDistrict?.[
+                                district.districtId
+                              ]?.[award.winnerFlagKey] ? (
+                                <RecognitionBadge
+                                  key={award.id}
+                                  item={award}
+                                  testId={`recognition-${award.id}-${district.districtId}`}
+                                />
+                              ) : null
                             )}
                             {/* Region collapses into the District cell as
                               a quiet "· R<n>" suffix (#546) — saves the
@@ -1528,29 +1542,11 @@ const DistrictsPage: React.FC = () => {
                         >
                           <span
                             data-testid={`rank-badge-${district.districtId}`}
+                            data-medal={MEDAL_NAMES[rank]}
                             className={rankBadgeClassName(rank)}
                           >
                             {rank}
                           </span>
-                        </td>
-                        <td className="districts-rankings-table__col--desktop">
-                          {ddpTier ? (
-                            <DistrictTierChip
-                              districtId={district.districtId}
-                              tier={ddpTier}
-                            />
-                          ) : (
-                            // Empty Tier cell: the column header "Tier"
-                            // already provides context; an aria-label here
-                            // would chatter on every NotDistinguished row
-                            // (which is the majority).
-                            <span
-                              className="text-gray-400 text-sm"
-                              aria-hidden="true"
-                            >
-                              —
-                            </span>
-                          )}
                         </td>
                         <td className="districts-rankings-table__col--compact text-right">
                           <div className="text-sm font-medium text-gray-900">

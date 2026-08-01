@@ -90,9 +90,12 @@ describe('rank badge medal circles — contrast (#1363)', () => {
 
   it('pins gold and bronze to dark ink in the dark theme', () => {
     // The override must exist, or the global .text-gray-900 remap wins and
-    // paints #f0ecf5 on #eab308 — 1.9:1.
+    // paints #f0ecf5 on #eab308 — 1.9:1. It is keyed on the badge's semantic
+    // data-medal hook, NOT on the Tailwind pair: the #564 unmitigated-utility
+    // guard reads a `[data-theme='dark'] .bg-yellow-500…` rule as a blanket
+    // override of that utility and marks its remaining debt discharged.
     const override =
-      /\[data-theme='dark'\][^{]*\.bg-yellow-500\.text-gray-900[\s\S]{0,200}?\{([\s\S]*?)\}/.exec(
+      /\[data-theme='dark'\][^{]*\.rank-badge\[data-medal='gold'\][\s\S]{0,200}?\{([\s\S]*?)\}/.exec(
         darkModeCss
       )
     expect(override, 'gold medal dark-mode ink override missing').not.toBeNull()
@@ -107,7 +110,9 @@ describe('rank badge medal circles — contrast (#1363)', () => {
         `${fill} vs ${ink} = ${ratio.toFixed(2)}:1`
       ).toBeGreaterThanOrEqual(AA_NORMAL)
     }
-    expect(darkModeCss).toMatch(/\.bg-amber-600\.text-gray-900/)
+    expect(darkModeCss).toMatch(/\.rank-badge\[data-medal='bronze'\]/)
+    // Silver must NOT be pinned — its fill is remapped dark.
+    expect(darkModeCss).not.toMatch(/\.rank-badge\[data-medal='silver'\]/)
   })
 
   it('leaves silver to the global dark remap, which clears AA', () => {

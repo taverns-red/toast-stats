@@ -1211,6 +1211,150 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* ── Recognition badges + legend (#1361) ────────────────────────────────
+     One badge shape for both recognition families. The TEXT is themed ink on
+     a themed surface (both remap with the theme), so contrast is a property
+     of two tokens rather than of seven accent hues — see
+     __tests__/accessibility/RecognitionBadgeContrast.test.ts. The per-item
+     accent lands on the GLYPH via --recognition-accent, set inline by
+     RecognitionBadge from the registry entry. */
+  .recognition-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background-color: var(--surface-2);
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+    /* The badge stays on ONE line and the CELL wraps around it. The reverse —
+       a badge breaking mid-label — would let the sticky District column set
+       the table's width on a phone (the #1358 finding, and why the sticky col
+       is capped at 55vw below 600px). */
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .recognition-badge__icon {
+    width: 12px;
+    height: 12px;
+    flex: none;
+    color: var(--recognition-accent, currentColor);
+  }
+
+  /* Smedley's rare-tier treatment (#546) — under ten districts a year earn
+     it. box-shadow rather than a border so the ring doesn't change the
+     badge's box and reflow the cell. */
+  .recognition-badge--rare {
+    box-shadow: 0 0 0 2px var(--rt-stats-focus);
+  }
+
+  /* Legend. Inline at ≥640px; below that it collapses behind a disclosure so
+     it can't eat the mobile fold (gap (c) on #1359). Both branches are always
+     mounted — the switch is pure `display`, so nothing is inserted late. */
+  .recognition-legend {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px;
+  }
+
+  .recognition-legend__toggle {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    gap: 6px;
+    /* Real button → WCAG 2.5.5 applies (unlike the rank badge's <span>).
+       Declared here as well as inherited from the base.css floor so the
+       component owns its own target rather than depending on a global. */
+    min-height: 44px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .recognition-legend__caret {
+    color: var(--ink-3);
+  }
+
+  .recognition-legend__items {
+    display: none;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    padding: 8px 4px 10px;
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+
+  .recognition-legend__items[data-open='true'] {
+    display: flex;
+  }
+
+  .recognition-legend__title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .recognition-legend__group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .recognition-legend__group-heading {
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .recognition-legend__group-hint {
+    font-weight: 400;
+    color: var(--ink-3);
+  }
+
+  .recognition-legend__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .recognition-legend__item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .recognition-legend__term {
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .recognition-legend__desc {
+    color: var(--ink-3);
+  }
+
+  @media (min-width: 640px) {
+    .recognition-legend__toggle {
+      display: none;
+    }
+
+    .recognition-legend__items {
+      display: flex;
+    }
+  }
+
   /* Rankings table chrome */
   .districts-rankings-table-wrap {
     position: relative;

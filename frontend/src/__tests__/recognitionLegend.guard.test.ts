@@ -53,8 +53,11 @@ describe('recognition legend responsive contract (#1361)', () => {
     // Up to three labelled award badges plus a tier badge plus the Star and
     // the "· R<n>" suffix share that cell at 375px. Each badge stays on one
     // line and the CELL wraps — the reverse would push the metrics off-screen.
-    expect(css).toMatch(
-      /\.recognition-badge\s*\{[\s\S]{0,500}?white-space:\s*nowrap/
-    )
+    // Scoped by the rule's braces rather than a character window: the block
+    // carries a long explanatory comment, and a fixed window silently stops
+    // covering the declaration as the comment grows.
+    const rule = /\.recognition-badge\s*\{([^}]*)\}/.exec(css)
+    expect(rule, '.recognition-badge rule not found').not.toBeNull()
+    expect(rule![1]).toMatch(/white-space:\s*nowrap/)
   })
 })

@@ -80,6 +80,26 @@
      achieve the blurred glassy look from the handoff. We can't put the
      alpha in the token because rgba() can't mix var() with a literal alpha. */
   --rds-surface-rgb: 255, 255, 255;
+
+  /* ── Recognition accents (#1361) ───────────────────────────────────────
+     One accent per recognition item, drawn from the --rt-* brand palette.
+     They colour the badge GLYPH only — badge text is --ink-2 on --surface-2,
+     which is what makes ≥4.5:1 reachable for all seven at once instead of
+     asking seven hues to each clear it in two themes (the #1360 trap).
+     Every value still clears the 3:1 non-text floor on --surface-2, checked
+     by __tests__/accessibility/RecognitionBadgeContrast.test.ts. Defined in
+     BOTH theme blocks — never inherited — so a dark-mode regression shows up
+     as a missing token rather than as an unreadable glyph.
+     President's routes through --rt-stats-focus, not --rt-stats: the raw
+     brand amber is 2.79:1 on --surface-2 (the same #1106 finding that gave
+     the focus ring its own darkened value). */
+  --recognition-extension: var(--rt-good); /* 3.90:1 */
+  --recognition-twenty-plus: var(--rt-info); /* 4.45:1 */
+  --recognition-retention: var(--rt-red); /* 4.07:1 */
+  --recognition-distinguished: var(--rt-red-dk); /* 8.78:1 */
+  --recognition-select: var(--rt-ink-2); /* 10.89:1 */
+  --recognition-presidents: var(--rt-stats-focus); /* 4.23:1 */
+  --recognition-smedley: var(--rt-eval); /* 5.31:1 */
 }
 
 [data-theme='dark'] {
@@ -123,4 +143,26 @@
   --green-600: #22c55e;
   --red-500: #f87171;
   --red-600: #ef4444;
+
+  /* ── Recognition accents (#1361), dark ─────────────────────────────────
+     Re-declared in full, not inherited, so the light block can never silently
+     become the dark palette. Five carry the same brand token — they already
+     clear the 3:1 non-text floor on the dark --surface-2 (#161f2a). Two do
+     not, and get a dark-only lift:
+       - Distinguished: --rt-red-dk (#8e1b25) is 1.85:1 on the dark surface —
+         a near-invisible glyph. #c96a76 is 4.60:1 and still reads maroon
+         rather than sliding into Retention's brand red.
+       - Select: --rt-ink-2 (#3d3b38) is dark-on-dark; --rt-ink-3 is the
+         palette's light-neutral and lands at 4.81:1.
+     President's flips the other way from light — the raw brand amber already
+     clears the floor here (5.81:1), which is why --rt-stats-focus remaps to
+     it in dark (#1106 / lessons 093-094: a token must remap WITH its
+     surface). */
+  --recognition-extension: var(--rt-good); /* 4.16:1 */
+  --recognition-twenty-plus: var(--rt-info); /* 3.64:1 */
+  --recognition-retention: var(--rt-red); /* 3.99:1 */
+  --recognition-distinguished: #c96a76; /* 4.60:1 */
+  --recognition-select: var(--rt-ink-3); /* 4.81:1 */
+  --recognition-presidents: var(--rt-stats); /* 5.81:1 */
+  --recognition-smedley: var(--rt-eval); /* 3.06:1 */
 }
