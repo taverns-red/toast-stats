@@ -88,13 +88,16 @@ export const AwardsRaceSection: React.FC<AwardsRaceSectionProps> = ({
     return { spec, entries }
   })
 
-  // Settled with data but every award array empty → collapse (same rare path
-  // as the null/legacy-snapshot case above; on populated snapshots all three
-  // arrays carry contenders, so the reserved skeleton fills in place). The
-  // minor collapse shift here is bounded to snapshots that genuinely have no
-  // competitive-award standings.
-  const allEmpty = cardData.every(({ entries }) => entries.length === 0)
-  if (allEmpty) return null
+  // Settled with data but every award array empty → the slot is HELD, not
+  // vacated (#1359). This used to `return null`, described as a rare path
+  // "bounded to snapshots that genuinely have no competitive-award
+  // standings" — but at the start of a program year that is every snapshot,
+  // because no district has contended for anything yet. So the reserved #750
+  // skeleton mounted and then unmounted on every load for the first months
+  // of each year: a measured 196px collapse, CLS 0.083 on the landing page.
+  // `AwardCard` renders its own no-leader state, and that state is
+  // structurally identical to a populated card, so skeleton → empty →
+  // populated are all the same box and no swap shifts the page below.
 
   const updatedAt = (() => {
     const raw = standings.metadata?.calculatedAt
@@ -177,6 +180,13 @@ const AwardCard: React.FC<AwardCardProps> = ({ spec, entries }) => {
   const winners = entries.filter(e => e.isWinner)
   const isAchieved = leader?.isWinner ?? false
 
+  // No contenders yet — the normal state for the first months of a program
+  // year, not an exotic one (#1359). Mirrors the populated card's rows
+  // (leader → progress → status) exactly, so this card occupies the same box
+  // as the #750 skeleton it replaces and as the populated card that replaces
+  // it once standings appear. Matching structurally rather than pinning a
+  // min-height means the reserve holds at every breakpoint and cannot drift
+  // away from the content it is reserving for.
   if (!leader) {
     return (
       <article className="awards-race-card">
@@ -184,7 +194,24 @@ const AwardCard: React.FC<AwardCardProps> = ({ spec, entries }) => {
           <h3 className="awards-race-card__title">{spec.title}</h3>
           <p className="awards-race-card__threshold">{spec.threshold}</p>
         </header>
-        <p className="awards-race-card__empty">No standings yet.</p>
+        <div className="awards-race-card__row">
+          <span
+            className="awards-race-card__leader-placeholder"
+            aria-hidden="true"
+          >
+            —
+          </span>
+          <span className="awards-race-card__leader-value" aria-hidden="true">
+            —
+          </span>
+        </div>
+        {/* Unfilled track, and deliberately no role="progressbar": a bar
+            announcing 0% would imply a measurement nobody has taken yet. */}
+        <div className="awards-race-card__progress-track" />
+        <footer className="awards-race-card__status">
+          <span aria-hidden="true" className="awards-race-card__status-dot" />
+          <span className="awards-race-card__empty">No standings yet.</span>
+        </footer>
       </article>
     )
   }

@@ -2996,6 +2996,16 @@
     text-decoration: underline;
   }
 
+  /* #1359 — stands in for the leader link on a card with no contenders yet,
+     so the row keeps its geometry. Same metrics as the link, muted colour:
+     it is not a destination and must not read as one. */
+  .awards-race-card__leader-placeholder {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink-3);
+  }
+
   .awards-race-card__leader-value {
     font-family: var(--serif);
     font-weight: 800;
