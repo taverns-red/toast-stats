@@ -17,6 +17,7 @@
  * derived newest PY advances to it automatically — no calendar flag day.
  */
 
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnDates } from '../services/cdn'
 import {
@@ -24,6 +25,7 @@ import {
   getCurrentProgramYear,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
+import { snapshotDatesFrom } from '../types/snapshotDate'
 
 export function useDefaultProgramYear(): ProgramYear {
   // Shares the cache with DateSelector's identical dates query.
@@ -34,9 +36,18 @@ export function useDefaultProgramYear(): ProgramYear {
     retry: false,
   })
 
-  const availableProgramYears = data?.dates
-    ? getAvailableProgramYears(data.dates)
-    : []
+  // Mint before deriving (#1353) — the same strict-ISO filter
+  // useProgramYearControls applies to this identical ['available-dates']
+  // query. Without it, a malformed entry in the raw CDN payload (an empty
+  // string, a non-date, a non-ISO-suffixed timestamp) reaches
+  // getAvailableProgramYears unfiltered and can seed the app's default
+  // program year with a NaN year.
+  const mintedDates = useMemo(() => snapshotDatesFrom(data), [data])
+
+  const availableProgramYears = useMemo(
+    () => getAvailableProgramYears(mintedDates),
+    [mintedDates]
+  )
 
   // getAvailableProgramYears sorts newest first; [0] is the latest PY-with-data.
   return availableProgramYears[0] ?? getCurrentProgramYear()

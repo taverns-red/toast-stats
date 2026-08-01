@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { requiredPrerequisitesForProgramYear } from '@taverns-red/analytics-core'
 import {
   deriveRemainingToTier,
   type RemainingInputs,
@@ -59,6 +60,15 @@ interface DistinguishedDistrictTrophyCaseProps {
    * slot in place.
    */
   isLoading?: boolean
+  /**
+   * Program year ("YYYY-YYYY") the status belongs to. Drives which
+   * prerequisite rows the checklist renders — TI's required gates change
+   * by year (e.g. Region Advisor Visit retired for 2026-27, #1344) while
+   * `status.prerequisites` deliberately keeps emitting the legacy
+   * 5-boolean shape for every era (#1354). Omitted callers keep the
+   * pre-#1354 behavior of showing all 5 rows.
+   */
+  programYear?: string
   /** Optional rankings row used to derive the absolute remaining counts
       when the canonical fields are absent or the next tier is above
       Distinguished. Matches the region page's data source. */
@@ -242,6 +252,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
 > = ({
   status,
   isLoading = false,
+  programYear,
   ranking,
   clubStrengthQualifies,
   clubStrengthGrowth,
@@ -259,8 +270,16 @@ export const DistinguishedDistrictTrophyCase: React.FC<
 
   const { currentTier, allPrerequisitesMet, prerequisites, nextTierGap } =
     status
-  const metCount = PREREQUISITE_KEYS.filter(k => prerequisites[k]).length
-  const totalCount = PREREQUISITE_KEYS.length
+  // Drive the visible checklist rows from the program year's required
+  // gate set (#1354) rather than the fixed PREREQUISITE_LABELS map — so a
+  // retired requirement (e.g. Region Advisor Visit for 2026-27, #1344)
+  // stops rendering as a permanently-unmet row. No `programYear` keeps
+  // the pre-#1354 behavior of showing every legacy key.
+  const visibleKeys = programYear
+    ? requiredPrerequisitesForProgramYear(programYear)
+    : PREREQUISITE_KEYS
+  const metCount = visibleKeys.filter(k => prerequisites[k]).length
+  const totalCount = visibleKeys.length
   // Unmet prereqs are the whole point of the panel — never let the user
   // collapse the list when something needs attention.
   const expanded = !allPrerequisitesMet || userExpanded
@@ -353,7 +372,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
             id="prerequisite-list"
             className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1"
           >
-            {PREREQUISITE_KEYS.map(key => {
+            {visibleKeys.map(key => {
               const met = prerequisites[key]
               return (
                 <li

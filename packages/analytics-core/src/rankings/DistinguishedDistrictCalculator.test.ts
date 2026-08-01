@@ -6,7 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { DistinguishedDistrictCalculator } from './DistinguishedDistrictCalculator.js'
+import {
+  DistinguishedDistrictCalculator,
+  requiredPrerequisitesForProgramYear,
+} from './DistinguishedDistrictCalculator.js'
 import type { DistrictRanking } from '@taverns-red/shared-contracts'
 
 function buildRanking(overrides: Partial<DistrictRanking>): DistrictRanking {
@@ -112,6 +115,39 @@ describe('DistinguishedDistrictCalculator', () => {
       expect(calculator.calculate(ranking, '2026-2027').currentTier).toBe(
         'Distinguished'
       )
+    })
+  })
+
+  // #1354 — the checklist UI needs the per-year REQUIRED set (not the
+  // legacy 5-boolean `prerequisites` shape) so it stops rendering a
+  // permanently-false "Region Advisor" row for 2026-27.
+  describe('requiredPrerequisitesForProgramYear (#1354)', () => {
+    it('returns the 4 surviving gates for 2026-27', () => {
+      expect(requiredPrerequisitesForProgramYear('2026-2027')).toEqual([
+        'dspSubmitted',
+        'trainingMet',
+        'marketAnalysisSubmitted',
+        'communicationPlanSubmitted',
+      ])
+    })
+
+    it('returns all 5 gates, including Region Advisor, for 2025-26', () => {
+      expect(requiredPrerequisitesForProgramYear('2025-2026')).toEqual([
+        'dspSubmitted',
+        'trainingMet',
+        'marketAnalysisSubmitted',
+        'communicationPlanSubmitted',
+        'regionAdvisorVisitMet',
+      ])
+    })
+
+    it('defaults to the current (2026-27) ruleset when no year is given', () => {
+      expect(requiredPrerequisitesForProgramYear()).toEqual([
+        'dspSubmitted',
+        'trainingMet',
+        'marketAnalysisSubmitted',
+        'communicationPlanSubmitted',
+      ])
     })
   })
 

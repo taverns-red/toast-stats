@@ -1,0 +1,51 @@
+name: Report a bug
+description: Something on ts.taverns.red is wrong, broken, or showing data you don't expect.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The most useful thing you can give us is the
+        **page URL** — it encodes the program year, the as-of date and any
+        region filters, which is usually enough to reproduce straight away.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect instead?
+      placeholder: |
+        District 61's paid clubs showed 0, but the Toastmasters dashboard
+        shows 147 for the same date.
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: Page URL
+      description: Copy it from the address bar — the query string matters.
+      placeholder: https://ts.taverns.red/?date=2026-07-30&py=2026
+    validations:
+      required: true
+
+  - type: input
+    id: district
+    attributes:
+      label: District (if the problem is specific to one)
+      placeholder: '61'
+
+  - type: textarea
+    id: dashboard
+    attributes:
+      label: What does the Toastmasters dashboard show?
+      description: |
+        Optional, but it settles things fast. If the numbers differ from
+        dashboards.toastmasters.org, say what that shows for the same date —
+        that tells us whether the bug is in our pipeline or upstream.
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser / device
+      placeholder: Chrome 148 on macOS, or Safari on iPhone

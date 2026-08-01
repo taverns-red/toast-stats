@@ -1,0 +1,42 @@
+name: Request a feature
+description: Suggest a metric, view, or capability you'd like Toast Stats to have.
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome. It helps most to hear what you're trying to *find
+        out* — the underlying question often has a better answer than the
+        feature it first suggests.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The question you're trying to answer, or the task you're stuck on.
+      placeholder: |
+        I'm a Division Director and I want to see which of my clubs are at
+        risk of dropping below 12 members before the September renewal.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+      description: Your suggested feature, if you have one in mind.
+
+  - type: input
+    id: role
+    attributes:
+      label: Your Toastmasters role (optional)
+      description: Helps us judge who a feature would serve.
+      placeholder: Area Director, D61
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How do you do this today?
+      description: |
+        Optional. If you're exporting CSV and pivoting it in a spreadsheet,
+        that's useful signal about what's missing.

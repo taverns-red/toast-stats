@@ -117,6 +117,74 @@ describe('DistinguishedDistrictTrophyCase', () => {
     })
   })
 
+  // #1354 — TM retired the Region Advisor Visit requirement for 2026-27
+  // and dropped the column from the export. The calculator still emits
+  // all 5 booleans on `prerequisites` (legacy display shape), so the
+  // checklist must drive its rows from the program year's REQUIRED set
+  // rather than a fixed label map, or a legitimately-Distinguished
+  // 2026-27 district shows a permanently-unmet Region Advisor row.
+  describe('prerequisite checklist — driven by program year ruleset (#1354)', () => {
+    it('renders four rows and no Region Advisor row for 2026-27', async () => {
+      const user = userEvent.setup()
+      const status2026: DistinguishedDistrictStatus = {
+        ...baseStatus,
+        allPrerequisitesMet: true,
+        prerequisites: {
+          dspSubmitted: true,
+          trainingMet: true,
+          marketAnalysisSubmitted: true,
+          communicationPlanSubmitted: true,
+          // Column dropped for 2026-27 — always coerced false, but it must
+          // not render as an unmet row for a district that otherwise
+          // earned its tier.
+          regionAdvisorVisitMet: false,
+        },
+      }
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={status2026}
+          programYear="2026-2027"
+        />
+      )
+      const toggle = screen.getByRole('button', {
+        name: /4 of 4 prerequisites met/i,
+      })
+      await user.click(toggle)
+      expect(
+        screen.getByText(/District Success Plan submitted/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/85% Director training complete/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Market Analysis Plan submitted/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Communication Plan submitted/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText(/2\+ Region Advisor meetings/i)
+      ).not.toBeInTheDocument()
+    })
+
+    it('still renders all five rows, including Region Advisor, for 2025-26', async () => {
+      const user = userEvent.setup()
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear="2025-2026"
+        />
+      )
+      const toggle = screen.getByRole('button', {
+        name: /5 of 5 prerequisites met/i,
+      })
+      await user.click(toggle)
+      expect(
+        screen.getByText(/2\+ Region Advisor meetings/i)
+      ).toBeInTheDocument()
+    })
+  })
+
   describe('gap to next tier — canonical countdown tiles (#840)', () => {
     /* The district tiles must consume the SAME integers the region row's
        "Remaining to Distinguished" cells consume — never a value derived

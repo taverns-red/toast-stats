@@ -34,6 +34,7 @@ import {
   getMostRecentDateInProgramYear,
 } from '../utils/programYear'
 import { ProgramYearTitleSuffix } from '../components/ProgramYearTitleSuffix'
+import { rankingsScrollLabel } from '../utils/rankingsScrollLabel'
 import { DistrictRanking } from '../types/districts'
 import { arrayToCSV, downloadCSV } from '../utils/csvExport'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -504,6 +505,16 @@ const DistrictsPage: React.FC = () => {
         'data-scrollable-right',
         String(moreToRight)
       )
+      // Keep the region's accessible name honest (#1358). Derived from total
+      // overflow, NOT moreToRight: the latter goes false once the user hits
+      // the right edge, which would strip the affordance mid-scroll. Below the
+      // priority breakpoints nothing overflows because the shed columns are
+      // `display: none`, so the label must stop telling people to scroll for
+      // metrics that scrolling cannot reach.
+      el.setAttribute(
+        'aria-label',
+        rankingsScrollLabel(el.scrollWidth - el.clientWidth > 1)
+      )
     }
     update()
     el.addEventListener('scroll', update, { passive: true })
@@ -590,7 +601,15 @@ const DistrictsPage: React.FC = () => {
   // Holding the upper chrome (header text + KPI strip) constant across
   // all three states means only the lower content area transitions —
   // no upper geometry collapse like the 0.198 swap on PR #825.
-  const renderShell = (body: React.ReactNode) => (
+  //
+  // `reserveHeroSlots` (#1359) additionally holds the data-dependent hero
+  // slots — Awards Race, region toolbar, hero search. Loading-only on
+  // purpose: those slots pulse, and a permanently pulsing panel above an
+  // error card reads as broken. The cost is that loading → error now
+  // collapses the reserve, but that transition already swaps a 748px table
+  // pulse for an error card of unrelated height, so it was never shift-free
+  // and no user reaches a *loaded* page through it.
+  const renderShell = (body: React.ReactNode, reserveHeroSlots = false) => (
     <div className="districts-page-root">
       <div className="districts-page">
         <div className="districts-page-header">
@@ -657,28 +676,83 @@ const DistrictsPage: React.FC = () => {
             />
           </div>
         </div>
-        {/* #861 — reserve the mobile-hoisted hero-search slot so the
-            skeleton/error → loaded swap is shift-free (CLS, #826/#488,
-            Lesson 125). Rendered only <768px via CSS. */}
-        <div className="districts-hero-search-skeleton" aria-hidden="true" />
-        <div className="districts-kpi-strip" aria-hidden="true">
-          {[
-            'Paid Clubs · Global',
-            'Total Payments',
-            'Distinguished Clubs',
-            'Districts Tracked',
-          ].map((label, i) => (
-            <div
-              key={label}
-              className={`districts-kpi-card${i > 0 ? ' districts-kpi-card--secondary' : ''}`}
-            >
-              <p className="districts-kpi-card__label">{label}</p>
+        {/* #1359 — the shell's reserved slots now live in a real
+            .districts-hero-stack, in the loaded tree's order, so the stack's
+            own rules (the <768px `order: -1` search hoist, the 640–767px
+            single-column step) apply to the reserve exactly as they apply to
+            the thing reserved for. Previously the shell reserved only the
+            KPI strip and the mobile search, leaving the Awards Race, the
+            toolbar and the desktop search unreserved — a measured 452px jump
+            at 1350px and 328px at 375px when the data landed. */}
+        <div className="districts-hero-stack">
+          <div className="districts-kpi-strip" aria-hidden="true">
+            {[
+              'Paid Clubs · Global',
+              'Total Payments',
+              'Distinguished Clubs',
+              'Districts Tracked',
+            ].map((label, i) => (
               <div
-                className="districts-kpi-card__value animate-pulse bg-gray-200 rounded-sm"
-                style={{ height: 30, width: '60%' }}
-              />
-            </div>
-          ))}
+                key={label}
+                className={`districts-kpi-card${i > 0 ? ' districts-kpi-card--secondary' : ''}`}
+              >
+                <p className="districts-kpi-card__label">
+                  {label}
+                  {/* The loaded label carries an InfoTooltip whose trigger is a
+                    <button>, floored at 44px by styles/layers/base.css — so
+                    the loaded label box is 50px against this one's 17px, and
+                    every card under-reserved by 33px (#1359). */}
+                  <span className="tooltip-reserve" aria-hidden="true" />
+                </p>
+                <div
+                  className="districts-kpi-card__value animate-pulse bg-gray-200 rounded-sm"
+                  style={{ height: 30, width: '60%' }}
+                />
+              </div>
+            ))}
+          </div>
+          {reserveHeroSlots && (
+            <>
+              {/* The section's own #750 skeleton — same component, so the
+                  reserve cannot drift from what it reserves for. Hidden
+                  <768px by .awards-race, where the mobile link takes over. */}
+              <AwardsRaceSection standings={null} isLoading />
+              {/* Static destination, so render the real link rather than a
+                  placeholder: it needs no data and works while loading. */}
+              <Link to="/awards" className="awards-race-mobile-link">
+                See Awards
+                <span aria-hidden="true"> →</span>
+              </Link>
+              {/* Region toolbar. One chip row — exact at ≥768px where the
+                  chips fit on a single line. Below that the loaded row wraps
+                  to as many lines as there are regions, which the shell
+                  cannot know before the data arrives, so this under-reserves
+                  on a phone rather than guessing a region count that would
+                  silently drift. */}
+              <div className="districts-toolbar" aria-hidden="true">
+                <div className="districts-toolbar__row">
+                  <span className="districts-toolbar__label">Regions:</span>
+                  <span
+                    className="districts-actions-skeleton__chip"
+                    style={{ width: 52 }}
+                  />
+                  <span
+                    className="districts-actions-skeleton__chip"
+                    style={{ width: 44 }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+          {/* #861 — hero-search reserve, held in EVERY shell state (loading
+              and both error branches), unlike the data-dependent slots
+              above. Carries the real --hero modifier, so the stack's <768px
+              `order: -1` rule hoists this reserve above the KPI strip
+              exactly as it hoists the loaded search. */}
+          <div
+            className="districts-hero-search-skeleton districts-toolbar__search--hero"
+            aria-hidden="true"
+          />
         </div>
         {body}
       </div>
@@ -699,7 +773,8 @@ const DistrictsPage: React.FC = () => {
             <div key={i} className="h-16 bg-gray-200 rounded-sm" />
           ))}
         </div>
-      </div>
+      </div>,
+      true
     )
   }
 
@@ -1258,16 +1333,20 @@ const DistrictsPage: React.FC = () => {
               scrollable-region-focusable); (2) the District identity column is
               the single sticky key column (no hardcoded second-sticky px seam);
               (3) the right-edge scroll-cue signals more columns. Low-priority
-              columns hide at tablet/mobile via the __col--tablet/--desktop
+              columns hide at mobile via the __col--compact/--tablet/--desktop
               priority classes so a phone shows a sensible set. Don't "fix" this
-              into a card collapse. */}
+              into a card collapse.
+              The --compact rung (≥600px) exists because 375/768/1280 left a
+              dead zone: a 360x640 phone is 640px in LANDSCAPE, so it got the
+              375px treatment and no orientation could reveal a metric
+              (#1358). */}
           <div className="districts-rankings-table__scroll-wrap">
             <div
               ref={rankingsScrollRef}
               className="overflow-x-auto"
               role="region"
               tabIndex={0}
-              aria-label="District rankings — scroll horizontally to see all metrics"
+              aria-label={rankingsScrollLabel(false)}
             >
               <table
                 className="districts-rankings-table"
@@ -1279,13 +1358,13 @@ const DistrictsPage: React.FC = () => {
                 </caption>
                 <thead>
                   <tr>
-                    <th className="districts-rankings-table__sticky-col px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="districts-rankings-table__sticky-col text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       District
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Rank
                     </th>
-                    <th className="districts-rankings-table__col--desktop px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="districts-rankings-table__col--desktop text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Tier
                     </th>
                     <SortableHeader<SortFieldT>
@@ -1293,7 +1372,7 @@ const DistrictsPage: React.FC = () => {
                       label="Paid Clubs"
                       currentSort={sort}
                       onSort={toggleSort}
-                      thClassName="districts-rankings-table__col--tablet px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      thClassName="districts-rankings-table__col--compact text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                       numeric
                     />
                     <SortableHeader<SortFieldT>
@@ -1301,7 +1380,7 @@ const DistrictsPage: React.FC = () => {
                       label="Total Payments"
                       currentSort={sort}
                       onSort={toggleSort}
-                      thClassName="districts-rankings-table__col--tablet px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      thClassName="districts-rankings-table__col--compact text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                       numeric
                     />
                     <SortableHeader<SortFieldT>
@@ -1309,7 +1388,7 @@ const DistrictsPage: React.FC = () => {
                       label="Distinguished"
                       currentSort={sort}
                       onSort={toggleSort}
-                      thClassName="districts-rankings-table__col--tablet px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      thClassName="districts-rankings-table__col--tablet text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                       numeric
                     />
                     <SortableHeader<SortFieldT>
@@ -1367,7 +1446,7 @@ const DistrictsPage: React.FC = () => {
                           data-row-tint={
                             isMine ? 'mine' : isPinned ? 'pinned' : 'none'
                           }
-                          className="districts-rankings-table__sticky-col px-6 py-4 whitespace-nowrap"
+                          className="districts-rankings-table__sticky-col"
                         >
                           <div className="flex items-center gap-3 flex-wrap">
                             <button
@@ -1425,7 +1504,9 @@ const DistrictsPage: React.FC = () => {
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
                               >
                                 <span aria-hidden="true">🏆</span>
-                                <span className="ml-1">Extension</span>
+                                <span className="sr-only sm:not-sr-only sm:ml-1">
+                                  Extension
+                                </span>
                               </span>
                             )}
                             {competitiveAwards?.byDistrict?.[
@@ -1436,7 +1517,9 @@ const DistrictsPage: React.FC = () => {
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
                               >
                                 <span aria-hidden="true">🏆</span>
-                                <span className="ml-1">20-Plus</span>
+                                <span className="sr-only sm:not-sr-only sm:ml-1">
+                                  20-Plus
+                                </span>
                               </span>
                             )}
                             {competitiveAwards?.byDistrict?.[
@@ -1447,7 +1530,9 @@ const DistrictsPage: React.FC = () => {
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
                               >
                                 <span aria-hidden="true">🏆</span>
-                                <span className="ml-1">Retention</span>
+                                <span className="sr-only sm:not-sr-only sm:ml-1">
+                                  Retention
+                                </span>
                               </span>
                             )}
                             {/* Region collapses into the District cell as
@@ -1515,7 +1600,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="districts-rankings-table__col--desktop px-4 py-4 whitespace-nowrap">
+                        <td className="districts-rankings-table__col--desktop">
                           {ddpTier ? (
                             <DistrictTierChip
                               districtId={district.districtId}
@@ -1534,7 +1619,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           )}
                         </td>
-                        <td className="districts-rankings-table__col--tablet px-6 py-4 whitespace-nowrap text-right">
+                        <td className="districts-rankings-table__col--compact text-right">
                           <div className="text-sm font-medium text-gray-900">
                             {formatNumber(district.paidClubs)}
                           </div>
@@ -1556,7 +1641,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="districts-rankings-table__col--tablet px-6 py-4 whitespace-nowrap text-right">
+                        <td className="districts-rankings-table__col--compact text-right">
                           <div className="text-sm font-medium text-gray-900">
                             {formatNumber(district.totalPayments)}
                           </div>
@@ -1578,7 +1663,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="districts-rankings-table__col--tablet px-6 py-4 whitespace-nowrap text-right">
+                        <td className="districts-rankings-table__col--tablet text-right">
                           <div className="text-sm font-medium text-gray-900">
                             {formatNumber(district.distinguishedClubs)}
                           </div>

@@ -350,6 +350,24 @@ function rulesetForProgramYear(programYear?: string): YearRuleset {
   return ERA_2016_RULESET
 }
 
+/**
+ * The prerequisite gates a given program year actually requires (#1354).
+ *
+ * `DistinguishedDistrictStatus.prerequisites` deliberately keeps emitting
+ * all 5 booleans for every era (display breakdown, see `calculate()`), so
+ * a checklist UI that renders every key verbatim shows a permanently-false
+ * "2+ Region Advisor meetings" row for 2026-27 even on districts that
+ * legitimately earned a tier — the column is gone, not unmet. Consumers
+ * that render a per-prerequisite checklist should intersect
+ * `prerequisites` with this set rather than iterating every key, so the
+ * displayed rows track the ruleset instead of the legacy fixed shape.
+ */
+export function requiredPrerequisitesForProgramYear(
+  programYear?: string
+): ReadonlyArray<keyof DistinguishedDistrictPrerequisites> {
+  return rulesetForProgramYear(programYear).requiredPrerequisites
+}
+
 export class DistinguishedDistrictCalculator {
   /**
    * Calculate Distinguished District status for a single district.

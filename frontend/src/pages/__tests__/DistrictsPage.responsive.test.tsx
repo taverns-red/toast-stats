@@ -104,8 +104,16 @@ const expectReservedShell = (container: HTMLElement) => {
   const strip = container.querySelector('.districts-kpi-strip')
   expect(skel).not.toBeNull()
   expect(strip).not.toBeNull()
-  // Hero-search slot precedes the KPI strip in DOM so it sits above on mobile.
-  expect(precedesInDom(skel!, strip!)).toBe(true)
+  // #1359 — the hoist is no longer DOM order. The reserve now sits inside a
+  // real .districts-hero-stack in the LOADED tree's position (after the KPI
+  // strip) and carries the real --hero modifier, so the stack's own
+  // `.districts-hero-stack .districts-toolbar__search--hero { order: -1 }`
+  // rule lifts it above the strip below 768px — the identical mechanism, and
+  // the identical rule, that positions the loaded search. Asserting DOM order
+  // would now assert the OPPOSITE of the loaded page it is reserving for.
+  expect(skel!.closest('.districts-hero-stack')).not.toBeNull()
+  expect(skel!.classList.contains('districts-toolbar__search--hero')).toBe(true)
+  expect(strip!.closest('.districts-hero-stack')).not.toBeNull()
   // 3 secondary KPI cards → the strip's mobile height matches across states.
   expect(
     container.querySelectorAll('.districts-kpi-card--secondary').length
@@ -135,7 +143,12 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     const { container } = renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 7')
 
-    const scroller = screen.getByRole('region', { name: /scroll/i })
+    // Matched on the region's stable name, not on the word "scroll": the
+    // label is now derived from real overflow (#1358), and jsdom has no
+    // layout engine, so scrollWidth/clientWidth are both 0 and nothing
+    // "scrolls" here. The assertion under test is that the region is
+    // focusable and LABELLED, which still holds either way.
+    const scroller = screen.getByRole('region', { name: /district rankings/i })
     expect(scroller).toHaveAttribute('tabindex', '0')
     expect(scroller.className).toMatch(/overflow-x-auto/)
 
@@ -184,13 +197,19 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     // Always-visible (mobile 375): District (sticky), Rank, Score.
     for (const re of [/^rank$/i, /^score$/i]) {
       const th = headerByText(re)
+      expect(th.className).not.toMatch(/__col--compact/)
       expect(th.className).not.toMatch(/__col--tablet/)
       expect(th.className).not.toMatch(/__col--desktop/)
     }
-    // Tablet+ (≥768): the three metric columns.
-    for (const re of [/paid clubs/i, /total payments/i, /distinguished/i]) {
-      expect(headerByText(re).className).toMatch(/__col--tablet/)
+    // Compact+ (≥600): Paid Clubs / Payments. Promoted from the tablet rung
+    // in #1358 — a 360x640 phone is 640px in landscape, so the old 768
+    // threshold left that whole device class with no metric columns at any
+    // orientation.
+    for (const re of [/paid clubs/i, /total payments/i]) {
+      expect(headerByText(re).className).toMatch(/__col--compact/)
     }
+    // Tablet+ (≥768): Distinguished.
+    expect(headerByText(/distinguished/i).className).toMatch(/__col--tablet/)
     // Desktop-only (≥1280): Tier.
     expect(headerByText(/^tier$/i).className).toMatch(/__col--desktop/)
   })
@@ -279,6 +298,48 @@ describe('DistrictsPage landing hero hoist + KPI demotion (#861)', () => {
 
     // Lesson 125: the loading shell reserves the same slot as loaded + error.
     expectReservedShell(container)
+  })
+
+  /**
+   * #1359 — the shell reserved the KPI strip and the mobile search but not the
+   * data-dependent hero slots, so when the rankings landed the Awards Race,
+   * region toolbar and desktop search all appeared at once and pushed the
+   * rankings table down 452px at 1350px (328px at 375px). CLS 0.179 of a 0.1
+   * budget, on the landing page, on every first visit.
+   *
+   * jsdom has no layout engine, so these assert the STRUCTURE that produces
+   * the geometry (Lesson 66) — each reserve is the real element the loaded
+   * tree renders, inside the same stack, so it cannot drift from what it
+   * reserves for. The heights themselves were verified in a real browser
+   * against the committed Lighthouse fixtures.
+   */
+  it('reserves the data-dependent hero slots in the loading shell (#1359)', async () => {
+    mockedFetchCdnRankings.mockReturnValue(new Promise(() => {}) as never)
+    const { container } = renderWithProviders(<DistrictsPage />)
+    await screen.findByRole('status', { name: /loading district rankings/i })
+
+    const stack = container.querySelector('.districts-hero-stack')
+    expect(stack).not.toBeNull()
+    // The Awards Race section's own skeleton — same component the loaded page
+    // renders, not a look-alike placeholder.
+    expect(stack!.querySelector('.awards-race')).not.toBeNull()
+    // Its <768px counterpart, where .awards-race is display:none.
+    expect(stack!.querySelector('.awards-race-mobile-link')).not.toBeNull()
+    // Region toolbar + its chip row.
+    expect(stack!.querySelector('.districts-toolbar')).not.toBeNull()
+    expect(stack!.querySelector('.districts-toolbar__row')).not.toBeNull()
+  })
+
+  it('does not reserve the pulsing slots in a terminal error state (#1359)', async () => {
+    // Those slots animate. A skeleton that pulses forever above an error card
+    // reads as broken, and no user reaches a *loaded* page through this
+    // branch, so there is no swap left to protect.
+    mockedFetchCdnRankings.mockRejectedValue(new Error('CDN boom') as never)
+    const { container } = renderWithProviders(<DistrictsPage />)
+    await screen.findByText(/unable to load|error/i)
+
+    expect(container.querySelector('.awards-race')).toBeNull()
+    expect(container.querySelector('.districts-toolbar')).toBeNull()
   })
 })
 

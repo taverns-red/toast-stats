@@ -79,4 +79,29 @@ describe('useDefaultProgramYear (#1300)', () => {
       expect(result.current.year).toBe(getCurrentProgramYear().year)
     )
   })
+
+  it('never derives a NaN program year from a malformed dates payload (#1353)', async () => {
+    // The raw CDN payload is untrusted: an empty string, a non-date, and a
+    // non-ISO-suffixed timestamp must not reach getAvailableProgramYears
+    // unfiltered — this hook must mint (snapshotDatesFrom) exactly like
+    // useProgramYearControls does, not read `data.dates` raw.
+    //
+    // Deliberately uses a PY (2020-2021) far from the current calendar PY —
+    // the loading-state calendar fallback would coincidentally equal the
+    // target year if this used the current PY, making the assertion pass
+    // vacuously on the pre-resolve render instead of the resolved value.
+    vi.mocked(fetchCdnDates).mockResolvedValue({
+      dates: ['', 'not-a-date', '2020-07-30T00:00:00Z', '2020-07-30'],
+      count: 4,
+      generatedAt: '2020-07-30T00:00:00Z',
+    })
+
+    const { result } = renderHook(() => useDefaultProgramYear(), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.year).toBe(2020))
+    expect(Number.isNaN(result.current.year)).toBe(false)
+    expect(result.current.label).toBe('2020-2021')
+  })
 })

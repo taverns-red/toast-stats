@@ -1,0 +1,14 @@
+# Keep the chooser to the two curated forms (#1356). blank_issues_enabled
+# stays true so maintainers can still open a free-form issue without going
+# through a form — most of this repo's issues are written that way.
+blank_issues_enabled: true
+
+contact_links:
+  - name: How the numbers are calculated
+    url: https://ts.taverns.red/methodology
+    about: >-
+      Distinguished tiers, DCP goals and award formulas are documented
+      here — worth a look before filing a data bug.
+  - name: Toastmasters International dashboards
+    url: https://dashboards.toastmasters.org
+    about: Toast Stats mirrors TI's published data. If a number is wrong at the source, it will be wrong here too.

@@ -171,6 +171,33 @@ describe('AwardsRaceSection — 3-card redesign (#357)', () => {
     expect(container.querySelector('.awards-race-card__leader-link')).toBeNull()
   })
 
+  // #1359 — the loaded section heading carries an InfoTooltip, whose trigger
+  // is a <button>, and styles/layers/base.css floors every button at 44px
+  // (WCAG 2.5.5). That inflates the heading's line box far beyond its text,
+  // so a skeleton heading rendered as a bare bar under-reserves by ~45px and
+  // the swap expands the section — measured as a residual CLS 0.0105 after
+  // the collapse in this same issue was fixed. The reserve is structural
+  // (a .tooltip-reserve box, same 44px floor) rather than a pinned height.
+  it('reserves the heading tooltip the loaded section renders (#1359)', () => {
+    const { container } = renderWithRouter(
+      <AwardsRaceSection standings={null} isLoading />
+    )
+    const heading = container.querySelector('.awards-race__header')
+    expect(heading).not.toBeNull()
+    expect(heading!.querySelector('.tooltip-reserve')).not.toBeNull()
+  })
+
+  it('renders that heading tooltip in the loaded section', () => {
+    // Guards the premise of the reserve above: if the loaded heading ever
+    // stops carrying a tooltip, the reserve becomes an over-reserve and this
+    // test — not a mystery CLS number — is what should fail.
+    const { container } = renderWithRouter(
+      <AwardsRaceSection standings={mockStandings} />
+    )
+    const heading = container.querySelector('.awards-race__header')
+    expect(heading!.querySelector('button')).not.toBeNull()
+  })
+
   it('still renders nothing once the query settles with no data (not loading)', () => {
     const { container } = renderWithRouter(
       <AwardsRaceSection standings={null} isLoading={false} />
@@ -178,17 +205,63 @@ describe('AwardsRaceSection — 3-card redesign (#357)', () => {
     expect(container.querySelector('.awards-race')).toBeNull()
   })
 
-  it('does not render when all award arrays are empty', () => {
+  // #1359 — this used to collapse to null, which the code called a "rare"
+  // path "bounded to snapshots that genuinely have no competitive-award
+  // standings". At the START of a program year that is EVERY snapshot: no
+  // district has contended for anything yet. So the reserved 196px skeleton
+  // mounted and then unmounted on every single load for the first months of
+  // each year — a guaranteed CLS 0.083 collapse, measured on the landing page.
+  // Settled-with-no-contenders now holds the slot instead of vacating it.
+  describe('a program year with no contenders yet (#1359)', () => {
     const empty: CompetitiveAwardStandings = {
       ...mockStandings,
       extensionAward: [],
       twentyPlusAward: [],
       retentionAward: [],
     }
-    const { container } = renderWithRouter(
-      <AwardsRaceSection standings={empty} />
-    )
-    expect(container.querySelector('.awards-race-card')).toBeNull()
+
+    it('holds the slot rather than collapsing it', () => {
+      const { container } = renderWithRouter(
+        <AwardsRaceSection standings={empty} />
+      )
+      expect(container.querySelector('.awards-race')).not.toBeNull()
+      expect(container.querySelectorAll('.awards-race-card').length).toBe(3)
+    })
+
+    // Same box as the skeleton it replaces and as the populated card that
+    // replaces IT later in the year — matched structurally (same rows) rather
+    // than by a hardcoded min-height, so every breakpoint is covered and the
+    // reserve cannot drift from the content.
+    it('keeps the populated card structure so the swap is shift-free', () => {
+      const { container } = renderWithRouter(
+        <AwardsRaceSection standings={empty} />
+      )
+      expect(container.querySelectorAll('.awards-race-card__row').length).toBe(
+        3
+      )
+      expect(
+        container.querySelectorAll('.awards-race-card__progress-track').length
+      ).toBe(3)
+      expect(
+        container.querySelectorAll('.awards-race-card__status').length
+      ).toBe(3)
+    })
+
+    it('says so in words rather than showing a fake leader', () => {
+      renderWithRouter(<AwardsRaceSection standings={empty} />)
+      expect(screen.getAllByText(/no standings yet/i).length).toBe(3)
+      expect(
+        document.querySelector('.awards-race-card__leader-link')
+      ).toBeNull()
+    })
+
+    // The dark-mode contrast sweep enumerates this selector by name.
+    it('keeps the __empty class the contrast sweep enumerates', () => {
+      const { container } = renderWithRouter(
+        <AwardsRaceSection standings={empty} />
+      )
+      expect(container.querySelector('.awards-race-card__empty')).not.toBeNull()
+    })
   })
 
   it('renders a progress bar on each card with a sensible width %', () => {
