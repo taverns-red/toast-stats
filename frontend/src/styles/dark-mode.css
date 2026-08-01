@@ -494,26 +494,19 @@
   background-color: var(--surface-secondary) !important;
 }
 
-/* Pinned row sticky columns */
-[data-theme='dark'] tr.bg-blue-50 td.sticky {
-  background-color: rgba(37, 99, 235, 0.1) !important;
-}
-
 /* Landing rankings table sticky key column (#811). Its default bg is the
-   themed var(--surface) (already dark-safe); only the tinted-row repaints need
-   a dark variant. Match the bg-yellow-50 / bg-blue-50 dark remaps (0.10 alpha)
-   so the opaque sticky cell stays consistent with the rest of the tinted row.
+   themed var(--surface) (already dark-safe); only the tinted-row repaint needs
+   a dark variant. Matches the bg-yellow-50 dark remap (0.10 alpha) so the
+   opaque sticky cell stays consistent with the rest of the tinted row.
    No !important: the cell carries no Tailwind bg utility to override, and
-   !important here would beat the row-hover rule and desync the pinned cell's
-   highlight from its row in dark mode. */
+   !important here would beat the row-hover rule and desync the tinted cell's
+   highlight from its row in dark mode.
+   The 'pinned' variant (and the `tr.bg-blue-50 td.sticky` rule that preceded
+   it) retired with select-to-compare — #1364 removed the only rows that
+   carried a pinned tint. */
 [data-theme='dark']
   .districts-rankings-table__sticky-col[data-row-tint='mine'] {
   background-color: rgba(161, 98, 7, 0.1);
-}
-
-[data-theme='dark']
-  .districts-rankings-table__sticky-col[data-row-tint='pinned'] {
-  background-color: rgba(37, 99, 235, 0.1);
 }
 
 /* Club table sticky key column (#812). Default bg is themed var(--surface)
@@ -723,6 +716,22 @@
 
 [data-theme='dark'] .border-tm-happy-yellow {
   border-color: rgba(247, 209, 100, 0.85) !important;
+}
+
+/* Rank badge medal circles (#1363) — same shape as the #609 fix above.
+   `.bg-yellow-500` and `.bg-amber-600` are NOT remapped for dark, so they stay
+   light fills; the global `.text-gray-900 → var(--text-heading)` rule would
+   put #F0ECF5 on them (1.9:1 / 2.4:1 — the #1360 failure pattern). Pin the ink
+   dark for those two. `data-medal='silver'` is deliberately absent: its
+   `.bg-gray-400` fill IS remapped to a dark surface, so the global rule flips
+   its ink light, correctly.
+   Keyed on the badge's own semantic hook rather than on the Tailwind pair
+   (`.bg-yellow-500.text-gray-900`): the latter reads to the #564 unmitigated-
+   utility guard as a blanket dark override of `bg-yellow-500`, discharging
+   debt that two bare colour swatches still owe. */
+[data-theme='dark'] .rank-badge[data-medal='gold'],
+[data-theme='dark'] .rank-badge[data-medal='bronze'] {
+  color: #111827 !important;
 }
 
 [data-theme='dark'] .border-yellow-500 {

@@ -66,6 +66,16 @@ describe('rankings column priority ladder (#1358)', () => {
     // 1 header + 1 body cell
     expect(cellsWith('districts-rankings-table__col--tablet').length).toBe(2)
   })
+
+  // The desktop rung's only occupant was the Tier column, pulled in #1361 (it
+  // was `—` for the majority of districts — every district at the start of a
+  // program year — and the badge moved into the District cell). The CSS ladder
+  // keeps all three rungs (asserted above); this pins that the MARKUP no
+  // longer claims the third, so a future column has to opt in deliberately
+  // rather than inherit a stale class.
+  it('leaves the desktop rung unoccupied after the Tier column was pulled', () => {
+    expect(cellsWith('districts-rankings-table__col--desktop').length).toBe(0)
+  })
 })
 
 describe('rankings table density (#1358 follow-up)', () => {
@@ -90,13 +100,13 @@ describe('rankings table density (#1358 follow-up)', () => {
     )
   })
 
-  // Award chips were icon + text label. Below the compact breakpoint the label
-  // is visually hidden but kept for assistive tech (sr-only, not display:none)
-  // — a trophy alone is meaningless to a screen reader.
-  it('renders award chip labels icon-only on narrow screens', () => {
-    const srOnlyLabels = page.match(/className="sr-only sm:not-sr-only[^"]*"/g)
-    // Extension, 20-Plus, Retention
-    expect(srOnlyLabels?.length).toBe(3)
+  // Award chips WERE icon-only below the compact breakpoint, with the label
+  // sr-only. #1361 reversed that: all three chips carried the same 🏆, so
+  // hiding the only distinguishing text made two wins indistinguishable on a
+  // phone. Badges are self-describing at every width now — the label always
+  // renders, and the glyphs differ per award instead.
+  it('no longer hides award badge labels on narrow screens', () => {
+    expect(page.match(/className="sr-only sm:not-sr-only[^"]*"/g)).toBeNull()
   })
 
   // The td said `whitespace-nowrap` while its inner flex said `flex-wrap` —

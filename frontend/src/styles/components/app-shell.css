@@ -896,7 +896,7 @@
   }
 
   /* ≥768px — restore the full desktop layout: full KPI strip, search back in
-     source order, no reserved slot. */
+     source order. */
   @media (min-width: 768px) {
     .districts-hero-stack .districts-toolbar__search--hero {
       order: 0;
@@ -910,9 +910,39 @@
        .districts-hero-stack in the loaded tree's position, so at ≥768px it
        reserves the desktop search's 56px in situ. Without it the loaded
        search appeared from nowhere and pushed the rankings table down. */
+
+    /* #1359 gap (a) — the actions skeleton used to be `display: none` here,
+       on #922's premise that the loaded toolbar "lays out inline beside the
+       intro (no vertical shift to reserve)". It does lay out inline — and
+       therefore consumes HORIZONTAL space. Hiding the reserve handed the
+       intro the whole row until the real toolbar arrived and took its share
+       back, at which point every line in the intro rewrapped: eyebrow 17→33,
+       title 32→64, lede 41→81, orientation 59→195, the column 172→398.
+       Invisible at 1350px, where the intro has slack; 0.244 CLS at 900px,
+       where it does not.
+
+       The reserve carries the real `.districts-page-header__actions` class,
+       so the container's inline-flex + wrap + gaps come for free. min-width
+       is the one thing it needs of its own: its children are width-pinned
+       spans, and without a floor a font swap could let the reserve collapse
+       below the loaded toolbar's box and re-open a smaller version of the
+       same shift. 179 (freshness pill) + 109 + 107 + 2×8 gaps ≈ 411 for the
+       chip row, the wider of its two rows. Scoped to ≥768px: below that the
+       header stacks and a 411px floor would overflow a 375px phone. */
     .districts-page-header__actions--skeleton {
-      display: none;
+      min-width: 411px;
     }
+  }
+
+  /* #1359 gap (b) — the district count lands late INSIDE the orientation
+     sentence, and no reserve absorbs a text substitution. The sentence is
+     identical in both states now; this slot holds the number's width.
+     `ch` rather than px so it tracks the type scale, and inline-block because
+     min-width is inert on a pure inline box. 3ch covers every plausible
+     district count (TI has ~128). */
+  .districts-orientation__count {
+    display: inline-block;
+    min-width: 3ch;
   }
 
   /* Methodology callout */
@@ -1211,6 +1241,150 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* ── Recognition badges + legend (#1361) ────────────────────────────────
+     One badge shape for both recognition families. The TEXT is themed ink on
+     a themed surface (both remap with the theme), so contrast is a property
+     of two tokens rather than of seven accent hues — see
+     __tests__/accessibility/RecognitionBadgeContrast.test.ts. The per-item
+     accent lands on the GLYPH via --recognition-accent, set inline by
+     RecognitionBadge from the registry entry. */
+  .recognition-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background-color: var(--surface-2);
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+    /* The badge stays on ONE line and the CELL wraps around it. The reverse —
+       a badge breaking mid-label — would let the sticky District column set
+       the table's width on a phone (the #1358 finding, and why the sticky col
+       is capped at 55vw below 600px). */
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .recognition-badge__icon {
+    width: 12px;
+    height: 12px;
+    flex: none;
+    color: var(--recognition-accent, currentColor);
+  }
+
+  /* Smedley's rare-tier treatment (#546) — under ten districts a year earn
+     it. box-shadow rather than a border so the ring doesn't change the
+     badge's box and reflow the cell. */
+  .recognition-badge--rare {
+    box-shadow: 0 0 0 2px var(--rt-stats-focus);
+  }
+
+  /* Legend. Inline at ≥640px; below that it collapses behind a disclosure so
+     it can't eat the mobile fold (gap (c) on #1359). Both branches are always
+     mounted — the switch is pure `display`, so nothing is inserted late. */
+  .recognition-legend {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px;
+  }
+
+  .recognition-legend__toggle {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    gap: 6px;
+    /* Real button → WCAG 2.5.5 applies (unlike the rank badge's <span>).
+       Declared here as well as inherited from the base.css floor so the
+       component owns its own target rather than depending on a global. */
+    min-height: 44px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .recognition-legend__caret {
+    color: var(--ink-3);
+  }
+
+  .recognition-legend__items {
+    display: none;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    padding: 8px 4px 10px;
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+
+  .recognition-legend__items[data-open='true'] {
+    display: flex;
+  }
+
+  .recognition-legend__title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .recognition-legend__group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .recognition-legend__group-heading {
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .recognition-legend__group-hint {
+    font-weight: 400;
+    color: var(--ink-3);
+  }
+
+  .recognition-legend__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .recognition-legend__item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .recognition-legend__term {
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .recognition-legend__desc {
+    color: var(--ink-3);
+  }
+
+  @media (min-width: 640px) {
+    .recognition-legend__toggle {
+      display: none;
+    }
+
+    .recognition-legend__items {
+      display: flex;
+    }
+  }
+
   /* Rankings table chrome */
   .districts-rankings-table-wrap {
     position: relative;
@@ -1274,10 +1448,10 @@
   }
 
   /* Keep the sticky cell in sync with the row-hover highlight — but ONLY for
-     untinted rows. A tinted (my-district / pinned) row keeps its tint on hover
-     (its non-sticky cells use Tailwind bg-yellow-50/bg-blue-50, which sit in
-     the utilities layer and outrank the row-hover rule), so the sticky cell
-     must keep its tint too rather than flipping to --surface-2. Targeting
+     untinted rows. A tinted (my-district) row keeps its tint on hover (its
+     non-sticky cells use Tailwind bg-yellow-50, which sits in the utilities
+     layer and outranks the row-hover rule), so the sticky cell must keep its
+     tint too rather than flipping to --surface-2. Targeting
      [data-row-tint='none'] makes light and dark behave identically (avoids the
      lessons 94/95 hover asymmetry). */
   .districts-rankings-table
@@ -1287,15 +1461,13 @@
     background-color: var(--surface-2);
   }
 
-  /* The sticky cell must be OPAQUE or scrolled columns bleed through; a tinted
-     row (my-district / pinned) repaints its tint here so it stays opaque. The
-     literals match Tailwind yellow-50 / blue-50 (the tints the <tr> still
-     carries for its transparent cells); dark variants live in dark-mode.css. */
+  /* The sticky cell must be OPAQUE or scrolled columns bleed through; the
+     my-district row repaints its tint here so it stays opaque. The literal
+     matches Tailwind yellow-50 (the tint the <tr> still carries for its
+     transparent cells); the dark variant lives in dark-mode.css. The
+     'pinned' tint retired with select-to-compare (#1364). */
   .districts-rankings-table__sticky-col[data-row-tint='mine'] {
     background-color: #fefce8;
-  }
-  .districts-rankings-table__sticky-col[data-row-tint='pinned'] {
-    background-color: #eff6ff;
   }
 
   /* ≥44px touch targets for the row action buttons (WCAG 2.5.5, Lesson 111).

@@ -1,6 +1,10 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import InfoTooltip from './InfoTooltip'
+import {
+  AWARD_RECOGNITION,
+  type AwardRecognition,
+} from './recognition/recognitionRegistry'
 import type {
   CompetitiveAwardRanking,
   CompetitiveAwardStandings,
@@ -25,53 +29,14 @@ interface AwardsRaceSectionProps {
   isLoading?: boolean
 }
 
-interface AwardCardSpec {
-  title: string
-  /** Threshold sub-line per design (e.g. "15 new charter strength clubs"). */
-  threshold: string
-  /** Format the leader's value for display (e.g. "+14", "94.1%"). */
-  formatValue: (value: number) => string
-  /** Compute progress percentage 0-100 from the leader's value. */
-  computeProgress: (value: number) => number
-}
-
-const AWARD_CARDS: ReadonlyArray<{
-  key: keyof Pick<
-    CompetitiveAwardStandings,
-    'extensionAward' | 'twentyPlusAward' | 'retentionAward'
-  >
-  spec: AwardCardSpec
-}> = [
-  {
-    key: 'extensionAward',
-    spec: {
-      title: "President's Extension Award",
-      threshold: 'Most new paid clubs vs prior year',
-      formatValue: v => (v >= 0 ? `+${v}` : `${v}`),
-      // Winners are flagged separately; non-winners progress against a
-      // soft target of 15 (matches the design's reference threshold).
-      computeProgress: v => Math.min(100, Math.max(0, (v / 15) * 100)),
-    },
-  },
-  {
-    key: 'twentyPlusAward',
-    spec: {
-      title: "President's 20-Plus Award",
-      threshold: '% of paid clubs with 20+ members',
-      formatValue: v => `${v.toFixed(1)}%`,
-      computeProgress: v => Math.min(100, Math.max(0, v)),
-    },
-  },
-  {
-    key: 'retentionAward',
-    spec: {
-      title: 'District Club Retention Award',
-      threshold: '90% retention of last year’s clubs',
-      formatValue: v => `${v.toFixed(1)}%`,
-      computeProgress: v => Math.min(100, Math.max(0, v)),
-    },
-  },
-]
+/**
+ * The card specs used to be a local `AWARD_CARDS` list — one of three
+ * independent descriptions of the same three awards (#1361). Titles,
+ * thresholds, value formatting and progress now come from the shared
+ * recognition registry, so the Awards Race and the rankings badges can no
+ * longer disagree about what an award is called.
+ */
+const AWARD_CARDS: ReadonlyArray<AwardRecognition> = AWARD_RECOGNITION
 
 export const AwardsRaceSection: React.FC<AwardsRaceSectionProps> = ({
   standings,
@@ -83,10 +48,10 @@ export const AwardsRaceSection: React.FC<AwardsRaceSectionProps> = ({
   // legacy-snapshot case — the file predates #330).
   if (!standings) return isLoading ? <AwardsRaceSkeleton /> : null
 
-  const cardData = AWARD_CARDS.map(({ key, spec }) => {
-    const entries = standings[key] ?? []
-    return { spec, entries }
-  })
+  const cardData = AWARD_CARDS.map(spec => ({
+    spec,
+    entries: standings[spec.standingsKey] ?? [],
+  }))
 
   // Settled with data but every award array empty → the slot is HELD, not
   // vacated (#1359). This used to `return null`, described as a rare path
@@ -157,8 +122,8 @@ const AwardsRaceSkeleton: React.FC = () => (
       </span>
     </header>
     <div className="awards-race__grid">
-      {AWARD_CARDS.map(({ key, spec }) => (
-        <article className="awards-race-card" key={key}>
+      {AWARD_CARDS.map(spec => (
+        <article className="awards-race-card" key={spec.id}>
           <header className="awards-race-card__header">
             <h3 className="awards-race-card__title">{spec.title}</h3>
             <p className="awards-race-card__threshold">{spec.threshold}</p>
@@ -179,7 +144,7 @@ const AwardsRaceSkeleton: React.FC = () => (
 )
 
 interface AwardCardProps {
-  spec: AwardCardSpec
+  spec: AwardRecognition
   entries: CompetitiveAwardRanking[]
 }
 

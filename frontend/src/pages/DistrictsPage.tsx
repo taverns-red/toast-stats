@@ -18,6 +18,9 @@ import {
 import { useRankHistory } from '../hooks/useRankHistory'
 import InfoTooltip from '../components/InfoTooltip'
 import DistrictTierChip from '../components/DistrictTierChip'
+import { RecognitionBadge } from '../components/recognition/RecognitionBadge'
+import { RecognitionLegend } from '../components/recognition/RecognitionLegend'
+import { AWARD_RECOGNITION } from '../components/recognition/recognitionRegistry'
 import { DistrictChipAndName } from '../components/DistrictChipAndName'
 import { useMyDistrict } from '../hooks/useMyDistrict'
 import { useLastVisit } from '../hooks/useLastVisit'
@@ -27,7 +30,6 @@ import { useUrlBoolean } from '../hooks/useUrlBoolean'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { useDebounce } from '../hooks/useDebounce'
 import { SortableHeader } from '../components/SortableHeader'
-import { LazyComparisonPanel as ComparisonPanel } from '../components/LazyCharts'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -71,20 +73,15 @@ const ACTIONS_SKELETON_WIDTHS = {
   shareBtn: 85, // "Share" action button
 } as const
 
-// Shared parse/serialize for comma-joined string-list URL params (?regions=,
-// ?pinned=). Module-level so their identity is stable across renders (#978).
+// Shared parse/serialize for the comma-joined string-list URL param
+// (?regions=). Module-level so their identity is stable across renders (#978).
+// (`?pinned=` used the same helpers until select-to-compare was retired in
+// #1364; an old link carrying the param is simply never read.)
 const EMPTY_LIST: string[] = []
 const parseList = (v: string): string[] =>
   v ? v.split(',').filter(Boolean) : []
 const serializeList = (a: string[]): string => a.join(',')
 const LIST_OPTS = { parse: parseList, serialize: serializeList }
-
-// Comparison pins cap (#93). Enforced on the inward parse too, not just on
-// togglePin adds, so a hand-edited / shared `?pinned=1,2,3,4,5` can't seed a
-// 4+-district comparison past the cap.
-const MAX_PINNED = 3
-const parsePinned = (v: string): string[] => parseList(v).slice(0, MAX_PINNED)
-const PINNED_OPTS = { parse: parsePinned, serialize: serializeList }
 
 const DistrictsPage: React.FC = () => {
   const navigate = useNavigate()
@@ -126,14 +123,6 @@ const DistrictsPage: React.FC = () => {
     }
   }, [debouncedSearch, searchQuery, qParam, setQParam])
 
-  // URL-synced comparison pins (?pinned=12,34, #978). Stored as a string list
-  // in the URL; derived into a Set for the existing membership checks.
-  const [pinnedIds, setPinnedIds] = useUrlState<string[]>(
-    'pinned',
-    EMPTY_LIST,
-    PINNED_OPTS
-  )
-  const pinnedDistrictIds = React.useMemo(() => new Set(pinnedIds), [pinnedIds])
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchFocused, setSearchFocused] = useState<boolean>(false)
   const { myDistrictId, setMyDistrict, isMyDistrict } = useMyDistrict()
@@ -323,13 +312,35 @@ const DistrictsPage: React.FC = () => {
 
   // #1107 — derive the orientation count from the same data the table and
   // KPI strip render, never a hardcoded literal (it had drifted to "117"
-  // while the snapshot tracked 128). Drops the number entirely before data
-  // loads (the shared shell renders with zero rankings), so the sentence can
-  // never contradict the rows below it.
-  const districtCountPhrase =
-    kpiTotals.tracked > 0
-      ? `one of the ${kpiTotals.tracked} Toastmasters districts`
-      : 'a Toastmasters district'
+  // while the snapshot tracked 128), so the sentence can never contradict the
+  // rows below it.
+  //
+  // #1359 gap (b) — but a count that lands late REPHRASES the sentence
+  // mid-load ("a Toastmasters district" → "one of the 128 Toastmasters
+  // districts"), and no reserve absorbs a text substitution. While the
+  // rankings query is in flight the same sentence renders with a
+  // width-reserved empty slot, so only the digits appear when the data lands.
+  //
+  // `reserveCount` is true exactly in the loading shell. The TERMINAL error
+  // branch keeps the countless phrasing: a blank slot that never fills reads
+  // as a bug, and no user reaches a loaded page through that branch, so there
+  // is no swap left to protect.
+  const districtCountPhrase = (reserveCount: boolean): React.ReactNode => {
+    const hasCount = kpiTotals.tracked > 0
+    if (!hasCount && !reserveCount) return 'a Toastmasters district'
+    return (
+      <>
+        one of the{' '}
+        <span
+          className="districts-orientation__count"
+          data-testid="districts-orientation-count"
+        >
+          {hasCount ? kpiTotals.tracked : ''}
+        </span>{' '}
+        Toastmasters districts
+      </>
+    )
+  }
 
   // Get district IDs for selected regions
   const selectedDistricts = React.useMemo(() => {
@@ -533,30 +544,37 @@ const DistrictsPage: React.FC = () => {
     navigate(`/district/${districtId}`)
   }
 
-  // Comparison mode — pin/unpin districts (#93). MAX_PINNED is module-level.
-  const togglePin = (districtId: string) => {
-    setPinnedIds(prev => {
-      if (prev.includes(districtId)) {
-        return prev.filter(id => id !== districtId)
-      }
-      if (prev.length < MAX_PINNED) {
-        return [...prev, districtId]
-      }
-      return prev
-    })
+  // Rank badge weight (#1363). The circle is the PODIUM's, not every row's:
+  // ranks 1–3 keep a 28px filled medal, everyone else is a plain bold
+  // numeral. The old `rank <= 10` blue and `bg-gray-200` fallback fills are
+  // retired — a grey circle on 90% of rows added weight without adding
+  // information the numeral inside it didn't already carry.
+  // Dark ink, not white: white on these fills is 1.9 / 2.5 / 3.2:1 against a
+  // 4.5:1 floor (14px bold is not WCAG "large text"). The fills themselves are
+  // unchanged. See __tests__/accessibility/RankBadgeContrast.test.ts, and
+  // dark-mode.css for the gold/bronze dark-theme ink pin (silver's fill IS
+  // remapped dark, so it flips light correctly on its own).
+  const MEDAL_FILLS: Record<number, string> = {
+    1: 'bg-yellow-500 text-gray-900',
+    2: 'bg-gray-400 text-gray-900',
+    3: 'bg-amber-600 text-gray-900',
   }
-
-  const pinnedDistricts = React.useMemo(
-    () => rankings.filter(r => pinnedDistrictIds.has(r.districtId)),
-    [rankings, pinnedDistrictIds]
-  )
-
-  const getRankBadgeColor = (rank: number) => {
-    if (rank === 1) return 'bg-yellow-500 text-white'
-    if (rank === 2) return 'bg-gray-400 text-white'
-    if (rank === 3) return 'bg-amber-600 text-white'
-    if (rank <= 10) return 'bg-tm-loyal-blue text-white'
-    return 'bg-gray-200 text-gray-700'
+  // Semantic hook for that dark-theme pin. Keying the override off the
+  // Tailwind pair (`.bg-yellow-500.text-gray-900`) would ALSO read as a
+  // blanket dark-mode override of `bg-yellow-500` to the #564 unmitigated-
+  // utility guard — marking a utility mitigated everywhere on the strength of
+  // one scoped fix, and quietly discharging real debt (two colour swatches
+  // still use the bare utility).
+  const MEDAL_NAMES: Record<number, string> = {
+    1: 'gold',
+    2: 'silver',
+    3: 'bronze',
+  }
+  const rankBadgeClassName = (rank: number) => {
+    const medal = MEDAL_FILLS[rank]
+    return medal
+      ? `rank-badge inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold ${medal}`
+      : 'rank-badge text-sm font-bold text-gray-900'
   }
 
   const formatNumber = (num: number) => {
@@ -632,11 +650,11 @@ const DistrictsPage: React.FC = () => {
               className="districts-page-header__orientation"
               data-testid="districts-orientation"
             >
-              Each row below is {districtCountPhrase} worldwide. Click a
-              district to drill into its clubs, divisions, and trends. Use the
-              search bar (or press <kbd>/</kbd>) to jump to a district by number
-              or name. Star (★) a district to keep it pinned at the top across
-              visits.
+              Each row below is {districtCountPhrase(reserveHeroSlots)}{' '}
+              worldwide. Click a district to drill into its clubs, divisions,
+              and trends. Use the search bar (or press <kbd>/</kbd>) to jump to
+              a district by number or name. Star (★) a district to keep it
+              pinned at the top across visits.
             </p>
           </div>
           {/* #922 — reserve the mobile-stacked header-actions slot
@@ -754,6 +772,15 @@ const DistrictsPage: React.FC = () => {
             aria-hidden="true"
           />
         </div>
+        {/* #1361 — the Recognition legend sits between the hero stack and the
+            rankings table in the loaded tree, so the shell must hold that slot
+            or the legend appears on data-load and pushes the table down,
+            handing back part of the CLS #1359 just recovered. It needs no
+            data, so this is the REAL component, not a look-alike: the reserve
+            cannot drift from the thing it reserves for. Gated with the other
+            data-dependent slots because a legend for a table that failed to
+            load explains nothing. */}
+        {reserveHeroSlots && <RecognitionLegend />}
         {body}
       </div>
     </div>
@@ -917,7 +944,7 @@ const DistrictsPage: React.FC = () => {
               className="districts-page-header__orientation"
               data-testid="districts-orientation"
             >
-              Each row below is {districtCountPhrase} worldwide. Click a
+              Each row below is {districtCountPhrase(false)} worldwide. Click a
               district to drill into its clubs, divisions, and trends. Use the
               search bar (or press <kbd>/</kbd>) to jump to a district by number
               or name. Star (★) a district to keep it pinned at the top across
@@ -1299,14 +1326,12 @@ const DistrictsPage: React.FC = () => {
           {/* /.districts-hero-stack (#861) */}
         </div>
 
-        {/* Comparison Panel (#93) */}
-        <ComparisonPanel
-          pinnedDistricts={pinnedDistricts}
-          allRankings={rankings}
-          totalDistricts={rankings.length}
-          onRemove={districtId => togglePin(districtId)}
-          onClearAll={() => setPinnedIds(EMPTY_LIST)}
-        />
+        {/* Recognition legend (#1361) — the key for the badges in the
+            District cell. Inline at ≥640px, collapsed behind a disclosure
+            below that so it doesn't eat the mobile fold. Static content, so
+            the loading shell reserves this slot with the SAME component
+            rather than a placeholder that could drift (#1359). */}
+        <RecognitionLegend />
 
         {/* Rankings Table */}
         <div className="districts-rankings-table-wrap">
@@ -1361,12 +1386,15 @@ const DistrictsPage: React.FC = () => {
                     <th className="districts-rankings-table__sticky-col text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       District
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {/* Right-aligned to match the numerals below it (#1363):
+                        off-podium ranks are plain figures now, not circles. */}
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Rank
                     </th>
-                    <th className="districts-rankings-table__col--desktop text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tier
-                    </th>
+                    {/* The Tier column was pulled in #1361: `—` for the
+                        majority of districts, and "Tier" was not the
+                        vocabulary the program uses. The badge lives in the
+                        District cell now, under the Recognition umbrella. */}
                     <SortableHeader<SortFieldT>
                       field="clubs"
                       label="Paid Clubs"
@@ -1404,9 +1432,6 @@ const DistrictsPage: React.FC = () => {
                 <tbody>
                   {visibleRankings.map(district => {
                     const rank = district.displayRank
-                    const isPinned = pinnedDistrictIds.has(district.districtId)
-                    const pinDisabled =
-                      !isPinned && pinnedDistrictIds.size >= MAX_PINNED
                     const isMine = isMyDistrict(district.districtId)
                     const rawTier =
                       competitiveAwards?.distinguishedDistrict?.[
@@ -1427,9 +1452,7 @@ const DistrictsPage: React.FC = () => {
                         className={`cursor-pointer ${
                           isMine
                             ? 'bg-yellow-50 border-l-4 border-l-tm-loyal-blue'
-                            : isPinned
-                              ? 'bg-blue-50'
-                              : ''
+                            : ''
                         }`}
                       >
                         {/* District cell first (#436) — primary entity, and the
@@ -1438,14 +1461,12 @@ const DistrictsPage: React.FC = () => {
                           interactive. (#417) Star toggles 'my district'.
                           The sticky cell needs an opaque themed background so
                           scrolled columns don't bleed through; data-row-tint
-                          lets the CSS repaint the isMine/isPinned tint (token-
-                          based, dark-safe — replaces the old hardcoded bg-white
-                          that routed to the lighter dark scale, Lesson 116). */}
+                          lets the CSS repaint the isMine tint (token-based,
+                          dark-safe — replaces the old hardcoded bg-white that
+                          routed to the lighter dark scale, Lesson 116). */}
                         <td
                           data-testid={`district-cell-${district.districtId}`}
-                          data-row-tint={
-                            isMine ? 'mine' : isPinned ? 'pinned' : 'none'
-                          }
+                          data-row-tint={isMine ? 'mine' : 'none'}
                           className="districts-rankings-table__sticky-col"
                         >
                           <div className="flex items-center gap-3 flex-wrap">
@@ -1495,45 +1516,28 @@ const DistrictsPage: React.FC = () => {
                               nameClassName="text-sm font-medium text-gray-900"
                               ariaHidden
                             />
-                            {/* Competitive award winner badges (#331) */}
-                            {competitiveAwards?.byDistrict?.[
-                              district.districtId
-                            ]?.extensionIsWinner && (
-                              <span
-                                title="President's Extension Award winner"
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
-                              >
-                                <span aria-hidden="true">🏆</span>
-                                <span className="sr-only sm:not-sr-only sm:ml-1">
-                                  Extension
-                                </span>
-                              </span>
-                            )}
-                            {competitiveAwards?.byDistrict?.[
-                              district.districtId
-                            ]?.twentyPlusIsWinner && (
-                              <span
-                                title="President's 20-Plus Award winner"
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
-                              >
-                                <span aria-hidden="true">🏆</span>
-                                <span className="sr-only sm:not-sr-only sm:ml-1">
-                                  20-Plus
-                                </span>
-                              </span>
-                            )}
-                            {competitiveAwards?.byDistrict?.[
-                              district.districtId
-                            ]?.retentionIsWinner && (
-                              <span
-                                title="District Club Retention Award winner"
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
-                              >
-                                <span aria-hidden="true">🏆</span>
-                                <span className="sr-only sm:not-sr-only sm:ml-1">
-                                  Retention
-                                </span>
-                              </span>
+                            {/* Recognition (#1361). The Distinguished tier
+                              badge moved here from its own desktop column,
+                              which was `—` for the majority of districts, and
+                              sits beside the competitive-award badges (#331)
+                              because both answer the same question: what has
+                              this district earned? Driven entirely by the
+                              shared registry, so the glyphs, labels, accents
+                              and CDN keys have one definition. */}
+                            <DistrictTierChip
+                              districtId={district.districtId}
+                              tier={ddpTier}
+                            />
+                            {AWARD_RECOGNITION.map(award =>
+                              competitiveAwards?.byDistrict?.[
+                                district.districtId
+                              ]?.[award.winnerFlagKey] ? (
+                                <RecognitionBadge
+                                  key={award.id}
+                                  item={award}
+                                  testId={`recognition-${award.id}-${district.districtId}`}
+                                />
+                              ) : null
                             )}
                             {/* Region collapses into the District cell as
                               a quiet "· R<n>" suffix (#546) — saves the
@@ -1556,68 +1560,15 @@ const DistrictsPage: React.FC = () => {
                           and inherits the row tint through its transparent bg. */}
                         <td
                           data-testid={`rank-cell-${district.districtId}`}
-                          className="px-6 py-4 whitespace-nowrap"
+                          className="px-6 py-4 whitespace-nowrap text-right"
                         >
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={e => {
-                                e.stopPropagation()
-                                togglePin(district.districtId)
-                              }}
-                              disabled={pinDisabled}
-                              aria-label={
-                                isPinned
-                                  ? `Unpin District ${district.districtId}`
-                                  : `Pin District ${district.districtId}`
-                              }
-                              className={`districts-rankings-table__touch-btn flex-shrink-0 flex items-center justify-center rounded transition-colors ${
-                                isPinned
-                                  ? 'text-tm-loyal-blue hover:text-red-500'
-                                  : pinDisabled
-                                    ? 'text-gray-300 cursor-not-allowed'
-                                    : 'text-gray-400 hover:text-tm-loyal-blue'
-                              }`}
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill={isPinned ? 'currentColor' : 'none'}
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                                />
-                              </svg>
-                            </button>
-                            <span
-                              data-testid={`rank-badge-${district.districtId}`}
-                              className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${getRankBadgeColor(rank)}`}
-                            >
-                              {rank}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="districts-rankings-table__col--desktop">
-                          {ddpTier ? (
-                            <DistrictTierChip
-                              districtId={district.districtId}
-                              tier={ddpTier}
-                            />
-                          ) : (
-                            // Empty Tier cell: the column header "Tier"
-                            // already provides context; an aria-label here
-                            // would chatter on every NotDistinguished row
-                            // (which is the majority).
-                            <span
-                              className="text-gray-400 text-sm"
-                              aria-hidden="true"
-                            >
-                              —
-                            </span>
-                          )}
+                          <span
+                            data-testid={`rank-badge-${district.districtId}`}
+                            data-medal={MEDAL_NAMES[rank]}
+                            className={rankBadgeClassName(rank)}
+                          >
+                            {rank}
+                          </span>
                         </td>
                         <td className="districts-rankings-table__col--compact text-right">
                           <div className="text-sm font-medium text-gray-900">

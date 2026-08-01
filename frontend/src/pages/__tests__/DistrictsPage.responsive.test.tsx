@@ -183,7 +183,7 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
 
     // Default (untinted) row: the sticky cell must NOT hardcode bg-white
     // (Lesson 116 — that routes to the lighter dark scale). It carries an
-    // explicit tint hook so isMine/isPinned rows repaint opaquely instead.
+    // explicit tint hook so the my-district row repaints opaquely instead.
     const districtCell = screen.getByTestId('district-cell-7')
     expect(districtCell.className).not.toMatch(/bg-white/)
     expect(districtCell).toHaveAttribute('data-row-tint')
@@ -210,19 +210,24 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     }
     // Tablet+ (≥768): Distinguished.
     expect(headerByText(/distinguished/i).className).toMatch(/__col--tablet/)
-    // Desktop-only (≥1280): Tier.
-    expect(headerByText(/^tier$/i).className).toMatch(/__col--desktop/)
+    // The desktop-only rung used to hold Tier. #1361 pulled that column — it
+    // was `—` for the majority of districts (every district at the start of a
+    // program year) — and moved the tier badge into the District cell. The
+    // ladder's third rung is intentionally unoccupied, not deleted.
+    expect(() => headerByText(/^tier$/i)).toThrow()
   })
 
-  it('gives the row action buttons a ≥44px touch-target class', async () => {
+  it('gives the row action button a ≥44px touch-target class', async () => {
     setupSingleRow()
     renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 7')
 
+    // The Star ("my district", #417) is the only row action left: #1364
+    // retired select-to-compare and its per-row bookmark button in the Rank
+    // cell. Lesson 111's 44px floor still applies to the survivor.
     const star = screen.getByRole('button', { name: /my district/i })
-    const pin = screen.getByRole('button', { name: /pin district 7/i })
     expect(star.className).toMatch(/districts-rankings-table__touch-btn/)
-    expect(pin.className).toMatch(/districts-rankings-table__touch-btn/)
+    expect(screen.queryByRole('button', { name: /pin district 7/i })).toBeNull()
   })
 
   it('exposes the rank badge by a stable testid (not by sticky-ness)', async () => {
