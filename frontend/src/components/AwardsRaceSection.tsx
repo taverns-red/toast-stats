@@ -146,7 +146,15 @@ const AwardsRaceSkeleton: React.FC = () => (
     data-testid="awards-race-skeleton"
   >
     <header className="awards-race__header">
-      <span className="awards-race-skeleton__bar awards-race-skeleton__bar--heading" />
+      {/* Wrapped in the real __title so the heading's own metrics apply, and
+          carrying a .tooltip-reserve for the InfoTooltip the loaded heading
+          renders — its trigger is a <button>, floored at 44px by
+          styles/layers/base.css, which is 45px more than a bare bar reserves
+          (#1359). */}
+      <span className="awards-race__title">
+        <span className="awards-race-skeleton__bar awards-race-skeleton__bar--heading" />
+        <span className="tooltip-reserve" aria-hidden="true" />
+      </span>
     </header>
     <div className="awards-race__grid">
       {AWARD_CARDS.map(({ key, spec }) => (

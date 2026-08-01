@@ -790,6 +790,24 @@
     color: var(--ink-3);
   }
 
+  /* #1359 — reserves an InfoTooltip trigger's box in a skeleton that renders
+     the label text but not the tooltip. The trigger is a <button>, and
+     styles/layers/base.css floors EVERY button at 44px/44px (WCAG 2.5.5), so
+     a tooltip inflates the line box it sits in to roughly 3x an 11px label:
+     the loaded .districts-kpi-card__label measures 50px against the
+     skeleton's 17px, and the Awards Race heading 45px more than a bare
+     skeleton bar. Both under-reserves shifted the whole page below them.
+     Structural, not a pinned height — it carries the same 44px floor, so if
+     that floor ever moves, the reserve and the thing it reserves for move
+     together. Shared by the KPI skeleton and the Awards Race skeleton. */
+  .tooltip-reserve {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    /* Matches InfoTooltip's own `ml-1`. */
+    margin-left: 4px;
+  }
+
   .districts-kpi-card__value {
     font-family: var(--serif);
     font-weight: 800;
@@ -886,9 +904,12 @@
     .districts-kpi-card--secondary {
       display: block;
     }
-    .districts-hero-search-skeleton {
-      display: none;
-    }
+    /* #1359 — the hero-search reserve stays visible at ≥768px. It used to be
+       mobile-only because the shell rendered it above the KPI strip, where a
+       desktop reserve would have sat in the wrong place; it now lives inside
+       .districts-hero-stack in the loaded tree's position, so at ≥768px it
+       reserves the desktop search's 56px in situ. Without it the loaded
+       search appeared from nowhere and pushed the rankings table down. */
     .districts-page-header__actions--skeleton {
       display: none;
     }
