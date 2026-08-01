@@ -184,9 +184,7 @@ describe('Recognition filter — the chip row (#1362)', () => {
     await awaitLoaded()
 
     const toolbar = container.querySelector('.districts-toolbar')!
-    const rows = Array.from(
-      toolbar.querySelectorAll('.districts-toolbar__row')
-    )
+    const rows = Array.from(toolbar.querySelectorAll('.districts-toolbar__row'))
     const regionRow = rows.find(r => /regions:/i.test(r.textContent ?? ''))
     const recognitionRow = screen.getByTestId('recognition-filter-row')
 
@@ -224,9 +222,7 @@ describe('Recognition filter — award chips (OR within the group)', () => {
     fireEvent.click(screen.getByTestId('recognition-filter-retention'))
     await waitFor(() => expect(visibleIds()).toEqual(['102']))
     fireEvent.click(screen.getByTestId('recognition-filter-retention'))
-    await waitFor(() =>
-      expect(visibleIds()).toEqual(['102', '76', '59', '99'])
-    )
+    await waitFor(() => expect(visibleIds()).toEqual(['102', '76', '59', '99']))
   })
 })
 
@@ -363,9 +359,7 @@ describe('Recognition filter — URL round-trip', () => {
     setup()
     renderPage('/?awards=banana&tier=platinum')
     await awaitLoaded()
-    await waitFor(() =>
-      expect(visibleIds()).toEqual(['102', '76', '59', '99'])
-    )
+    await waitFor(() => expect(visibleIds()).toEqual(['102', '76', '59', '99']))
   })
 })
 
@@ -394,9 +388,7 @@ describe('Recognition filter — empty result set', () => {
     await screen.findByTestId('rankings-empty-state')
 
     fireEvent.click(screen.getByTestId('rankings-empty-state-clear'))
-    await waitFor(() =>
-      expect(visibleIds()).toEqual(['102', '76', '59', '99'])
-    )
+    await waitFor(() => expect(visibleIds()).toEqual(['102', '76', '59', '99']))
     expect(screen.queryByTestId('rankings-empty-state')).toBeNull()
     expect(param('awards')).toBeNull()
     expect(param('tier')).toBeNull()
@@ -425,9 +417,12 @@ describe('Recognition filter — loading-shell reserve (#1359 CLS)', () => {
     renderPage()
     await screen.findByRole('status', { name: /loading district rankings/i })
 
+    // `hidden: true` because the shell's toolbar reserve is `aria-hidden` —
+    // it is a placeholder, not a control, so it is deliberately out of the
+    // accessibility tree while still occupying the box.
     const reserved = within(
       screen.getByTestId('recognition-filter-row')
-    ).getAllByRole('button')
+    ).getAllByRole('button', { hidden: true })
     expect(reserved).toHaveLength(
       AWARD_RECOGNITION.length + TIER_RECOGNITION.length
     )

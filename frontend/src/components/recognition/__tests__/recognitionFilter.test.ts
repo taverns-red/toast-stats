@@ -89,8 +89,7 @@ const match = (
   awards: Parameters<typeof serializeAwardIds>[0],
   tier: Parameters<typeof serializeTierId>[0],
   districtId: string
-) =>
-  districtMatchesRecognition({ awards, tier }, districtId, standings)
+) => districtMatchesRecognition({ awards, tier }, districtId, standings)
 
 describe('recognition filter — the empty filter', () => {
   it('is inactive and admits every district', () => {
@@ -103,9 +102,9 @@ describe('recognition filter — the empty filter', () => {
   })
 
   it('is active as soon as either group has a selection', () => {
-    expect(isRecognitionFilterActive({ awards: ['extension'], tier: null })).toBe(
-      true
-    )
+    expect(
+      isRecognitionFilterActive({ awards: ['extension'], tier: null })
+    ).toBe(true)
     expect(isRecognitionFilterActive({ awards: [], tier: 'Select' })).toBe(true)
   })
 })
@@ -168,10 +167,18 @@ describe('recognition filter — AND across groups', () => {
 describe('recognition filter — missing or partial standings', () => {
   it('matches nothing on an active filter when standings have not arrived', () => {
     expect(
-      districtMatchesRecognition({ awards: ['extension'], tier: null }, '102', null)
+      districtMatchesRecognition(
+        { awards: ['extension'], tier: null },
+        '102',
+        null
+      )
     ).toBe(false)
     expect(
-      districtMatchesRecognition({ awards: [], tier: 'Select' }, '102', undefined)
+      districtMatchesRecognition(
+        { awards: [], tier: 'Select' },
+        '102',
+        undefined
+      )
     ).toBe(false)
   })
 
@@ -184,10 +191,18 @@ describe('recognition filter — missing or partial standings', () => {
   it('tolerates a snapshot with no distinguishedDistrict block', () => {
     const noTiers = { ...standings, distinguishedDistrict: undefined }
     expect(
-      districtMatchesRecognition({ awards: [], tier: 'Distinguished' }, '102', noTiers)
+      districtMatchesRecognition(
+        { awards: [], tier: 'Distinguished' },
+        '102',
+        noTiers
+      )
     ).toBe(false)
     expect(
-      districtMatchesRecognition({ awards: ['extension'], tier: null }, '102', noTiers)
+      districtMatchesRecognition(
+        { awards: ['extension'], tier: null },
+        '102',
+        noTiers
+      )
     ).toBe(true)
   })
 })

@@ -13,10 +13,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { RecognitionFilterBar } from '../RecognitionFilterBar'
-import {
-  AWARD_RECOGNITION,
-  TIER_RECOGNITION,
-} from '../recognitionRegistry'
+import { AWARD_RECOGNITION, TIER_RECOGNITION } from '../recognitionRegistry'
 import { EMPTY_RECOGNITION_FILTER } from '../recognitionFilter'
 
 const topTier = TIER_RECOGNITION.reduce((a, b) => (a.order > b.order ? a : b))
@@ -73,12 +70,8 @@ describe('RecognitionFilterBar — chips come from the registry', () => {
     renderBar()
     // OR within a group, AND across groups — the grouping is the affordance
     // that makes that legible, so it has to reach assistive tech too.
-    expect(
-      screen.getByRole('group', { name: /award/i })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('group', { name: /tier/i })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /award/i })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /tier/i })).toBeInTheDocument()
   })
 })
 

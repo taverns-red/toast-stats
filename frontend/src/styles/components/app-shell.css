@@ -1065,6 +1065,119 @@
     color: #ffffff;
   }
 
+  /* Recognition filter chips (#1362) — the row under Regions.
+     Deliberately the same primitive as .districts-toolbar__region-chip, down
+     to the `--active` fill: two chip rows in one toolbar that looked like two
+     different controls would suggest they behave differently. The differences
+     are only what the content demands — a words-not-digits label (so --sans,
+     not --mono) and a leading registry glyph. */
+  .districts-toolbar__chip-group {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .districts-toolbar__recognition-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background-color: var(--surface);
+    color: var(--ink-2);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition:
+      background-color 150ms,
+      border-color 150ms,
+      color 150ms;
+    /* WCAG 2.5.5 — inherited from the base-layer button floor; restated so a
+       future `min-width: auto` on the group can't quietly undercut it. */
+    min-width: 44px;
+    justify-content: center;
+  }
+
+  .districts-toolbar__recognition-chip-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    /* Inactive: the badge's own accent, which #1361 already pinned at ≥3:1 in
+       both themes (WCAG 1.4.11, non-text). Active: the chip is a solid
+       --loyal-500 fill, so the glyph rides the white label instead. */
+    color: var(--recognition-accent, currentColor);
+  }
+
+  .districts-toolbar__recognition-chip:hover {
+    border-color: var(--loyal-200);
+    /* --link, not raw --loyal-500: --loyal-500 has no dark remap and would
+       render navy-on-dark (~1.6:1). Lesson 093/096. */
+    color: var(--link);
+  }
+
+  .districts-toolbar__recognition-chip--active,
+  .districts-toolbar__recognition-chip--active:hover {
+    background-color: var(--loyal-500);
+    border-color: var(--loyal-500);
+    color: #ffffff;
+  }
+
+  .districts-toolbar__recognition-chip--active
+    .districts-toolbar__recognition-chip-icon {
+    color: currentColor;
+  }
+
+  .districts-toolbar__recognition-chip:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+
+  /* Reserve mode (#1359): the loading shell renders the real component so the
+     slot cannot drift. It must occupy the same box and read as pending, not as
+     a control the user failed to click. */
+  .districts-toolbar__recognition-chip:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  /* Empty result set (#1362) — a filtered table with no rows must say so.
+     Spans the table so the message sits under the headers that produced it. */
+  .districts-rankings-table__empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--ink-2);
+    font-family: var(--sans);
+    font-size: 14px;
+  }
+
+  .districts-rankings-table__empty-hint {
+    display: block;
+    margin-top: 4px;
+    color: var(--ink-3);
+    font-size: 13px;
+  }
+
+  .districts-rankings-table__empty-clear {
+    margin-top: 12px;
+    border: 1px solid var(--line);
+    background-color: var(--surface);
+    color: var(--link);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: var(--rds-radius-sm);
+    cursor: pointer;
+  }
+
+  .districts-rankings-table__empty-clear:hover {
+    border-color: var(--loyal-200);
+    background-color: var(--surface-3);
+  }
+
   /* Region finder (#685) — jump-to-region filter bar on the /regions index.
      Token-driven so contrast remaps in dark mode (Lesson 094); mirrors the
      districts-toolbar region-chip primitive for cross-page consistency. */
