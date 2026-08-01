@@ -84,9 +84,13 @@ render() {
       lessons)   label="lessons (manifest-pinned + session-judged)" ;;
       incidents) label="incidents (ref-only — pull when relevant)" ;;
     esac
-    # tier rows, sorted by date desc (newest first)
+    # Tier rows, date desc (newest first), ties broken on filename (field 3).
+    # `-k3,3` states the tie-break instead of leaning on sort's last-resort
+    # WHOLE-LINE comparison, which reaches the filename only because of the
+    # current field order and would silently switch to the summary if the row
+    # layout ever changed (and vanishes entirely if anyone adds `-s`).
     local body
-    body="$(printf '%s' "$rows" | awk -F'\t' -v t="$tier" '$1==t' | LC_ALL=C sort -t$'\t' -k2,2r)"
+    body="$(printf '%s' "$rows" | awk -F'\t' -v t="$tier" '$1==t' | LC_ALL=C sort -t$'\t' -k2,2r -k3,3)"
     [[ -z "$body" ]] && continue
     printf '\n## %s\n' "$label"
     printf '%s\n' "$body" | while IFS=$'\t' read -r _ d file summ; do
