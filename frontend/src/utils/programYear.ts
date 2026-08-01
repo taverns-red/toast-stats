@@ -77,6 +77,14 @@ export function getAvailableProgramYears(
 
     // Determine which program year this date belongs to
     const programYearStart = month >= 7 ? year : year - 1
+
+    // Defensive at the source (#1353): an unparseable dateStr makes
+    // calendarParts return NaN, which propagates to programYearStart. A
+    // NaN start year must never enter the Set — getProgramYear(NaN) mints a
+    // "NaN-NaN" label that DataControlsBar renders as a selectable option.
+    // Callers SHOULD pass only minted (snapshotDatesFrom) dates so this
+    // never triggers, but this guard holds even if a caller doesn't.
+    if (Number.isNaN(programYearStart)) return
     programYears.add(programYearStart)
   })
 
