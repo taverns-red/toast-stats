@@ -1078,6 +1078,20 @@
     gap: 8px;
   }
 
+  /* Chip scroller (#1359 gap (c)) — wraps the chips of ONE toolbar row.
+     At >=768px it is an ordinary wrapping flex row: the shipped desktop
+     layout, deliberately unchanged. Below 768px it collapses to a single
+     scrolling line (see the max-width: 767px block), which is what makes the
+     row's height independent of the chip count — and therefore exactly
+     reservable by the loading shell. */
+  .districts-toolbar__scroller {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+  }
+
   .districts-toolbar__recognition-chip {
     display: inline-flex;
     align-items: center;
@@ -1141,6 +1155,69 @@
   .districts-toolbar__recognition-chip:disabled {
     cursor: default;
     opacity: 0.55;
+  }
+
+  /* ── #1359 gap (c): one scrolling line per chip row below 768px ──────────
+     Both rows, not just Recognition — the region row is the larger share of
+     the mobile toolbar (it wrapped to four lines at 375px, +130px the shell
+     could not reserve because it cannot know the region count before the data
+     lands). One line is one chip tall at ANY count, so the reserve becomes
+     exact by construction. Desktop (>=768px) keeps the wrapping layout. */
+  @media (max-width: 767px) {
+    /* `nowrap` on the ROW keeps the label on the same line as the scroller;
+       the label must not be swept away by the horizontal scroll, so it sits
+       outside the scroller and holds its width. */
+    .districts-toolbar__row {
+      flex-wrap: nowrap;
+    }
+
+    .districts-toolbar__label {
+      flex: 0 0 auto;
+    }
+
+    .districts-toolbar__scroller {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      /* A horizontal drag must not chain to the page/history; a vertical drag
+         must still scroll the page (touch-action stays `auto` so the browser
+         picks the axis from the gesture). */
+      overscroll-behavior-x: contain;
+      /* The mask fade is the affordance, so the scrollbar itself is noise. */
+      scrollbar-width: none;
+      /* Signals "there is more to the right" without adding an element — an
+         extra node here would be one more thing that can shift. */
+      mask-image: linear-gradient(
+        to right,
+        #000 calc(100% - 28px),
+        transparent
+      );
+      /* Keep a chip scrolled into view clear of that fade. */
+      scroll-padding-inline-end: 32px;
+    }
+
+    .districts-toolbar__scroller::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Without this the chips compress to fit instead of overflowing, and the
+       row silently stops scrolling while every chip drops under the 44px
+       touch-target floor. */
+    .districts-toolbar__scroller > *,
+    .districts-toolbar__scroller .districts-toolbar__chip-group > * {
+      flex: 0 0 auto;
+    }
+
+    .districts-toolbar__scroller .districts-toolbar__chip-group {
+      flex-wrap: nowrap;
+    }
+
+    /* `overflow-x: auto` forces the computed `overflow-y` to `auto` as well —
+       CSS has no one-axis-visible — so an OUTSET focus ring is clipped top and
+       bottom by the scroll box. Drawing it inside the chip keeps it fully
+       visible and keeps the row exactly one chip tall. */
+    .districts-toolbar__scroller :focus-visible {
+      outline-offset: -2px;
+    }
   }
 
   /* Empty result set (#1362) — a filtered table with no rows must say so.

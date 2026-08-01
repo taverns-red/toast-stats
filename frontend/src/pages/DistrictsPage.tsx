@@ -787,23 +787,26 @@ const DistrictsPage: React.FC = () => {
                 See Awards
                 <span aria-hidden="true"> →</span>
               </Link>
-              {/* Region toolbar. One chip row — exact at ≥768px where the
-                  chips fit on a single line. Below that the loaded row wraps
-                  to as many lines as there are regions, which the shell
-                  cannot know before the data arrives, so this under-reserves
-                  on a phone rather than guessing a region count that would
-                  silently drift. */}
+              {/* Region toolbar. One chip row, and since #1359 gap (c) that
+                  is EXACT below 768px too: the loaded row is a single
+                  horizontally-scrolling line whatever the region count, so
+                  its height no longer depends on data the shell doesn't have.
+                  (It was four wrapped lines at 375px — a 130px under-reserve
+                  the shell could only have matched by guessing the count.)
+                  At ≥768px the row still fits on one line, as before. */}
               <div className="districts-toolbar" aria-hidden="true">
                 <div className="districts-toolbar__row">
                   <span className="districts-toolbar__label">Regions:</span>
-                  <span
-                    className="districts-actions-skeleton__chip"
-                    style={{ width: 52 }}
-                  />
-                  <span
-                    className="districts-actions-skeleton__chip"
-                    style={{ width: 44 }}
-                  />
+                  <div className="districts-toolbar__scroller">
+                    <span
+                      className="districts-actions-skeleton__chip"
+                      style={{ width: 52 }}
+                    />
+                    <span
+                      className="districts-actions-skeleton__chip"
+                      style={{ width: 44 }}
+                    />
+                  </div>
                 </div>
                 {/* Recognition row (#1362). Unlike the region row above it,
                     this one reserves EXACTLY: the chip set is the static
@@ -1241,40 +1244,47 @@ const DistrictsPage: React.FC = () => {
               return (
                 <div className="districts-toolbar__row">
                   <span className="districts-toolbar__label">Regions:</span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRegions(regions)}
-                    className={`districts-toolbar__region-chip${isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
-                    aria-pressed={isAllActive}
-                  >
-                    All
-                  </button>
-                  {regions.map(region => {
-                    const isActive = selectedRegions.includes(region)
-                    return (
-                      <button
-                        key={region}
-                        type="button"
-                        onClick={e => handleRegionClick(region, e.shiftKey)}
-                        className={`districts-toolbar__region-chip${isActive && !isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
-                        aria-pressed={isActive && !isAllActive}
-                        aria-label={`Region ${region}`}
-                        title="Click to isolate · shift-click to add"
-                      >
-                        {region}
-                      </button>
-                    )
-                  })}
-                  <span
-                    className="districts-toolbar__region-state"
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--ink-3)',
-                      marginLeft: 4,
-                    }}
-                  >
-                    {stateLabel}
-                  </span>
+                  {/* #1359 gap (c) — one scrolling line below 768px instead of
+                    wrapping to as many lines as there are regions. That wrap
+                    is also why this row could never be reserved exactly: the
+                    shell cannot know the region count before the data lands,
+                    but it can know that one line is one chip tall. */}
+                  <div className="districts-toolbar__scroller">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRegions(regions)}
+                      className={`districts-toolbar__region-chip${isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
+                      aria-pressed={isAllActive}
+                    >
+                      All
+                    </button>
+                    {regions.map(region => {
+                      const isActive = selectedRegions.includes(region)
+                      return (
+                        <button
+                          key={region}
+                          type="button"
+                          onClick={e => handleRegionClick(region, e.shiftKey)}
+                          className={`districts-toolbar__region-chip${isActive && !isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
+                          aria-pressed={isActive && !isAllActive}
+                          aria-label={`Region ${region}`}
+                          title="Click to isolate · shift-click to add"
+                        >
+                          {region}
+                        </button>
+                      )
+                    })}
+                    <span
+                      className="districts-toolbar__region-state"
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--ink-3)',
+                        marginLeft: 4,
+                      }}
+                    >
+                      {stateLabel}
+                    </span>
+                  </div>
                 </div>
               )
             })()}

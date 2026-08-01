@@ -78,76 +78,81 @@ export const RecognitionFilterBar: React.FC<RecognitionFilterBarProps> = ({
     >
       <span className="districts-toolbar__label">Recognition:</span>
 
-      <span
-        className="districts-toolbar__chip-group"
-        role="group"
-        aria-label="Filter by competitive award"
-      >
-        {AWARD_RECOGNITION.map(award => {
-          const active = filter.awards.includes(award.id)
-          const { Icon } = award
-          return (
-            <button
-              key={award.id}
-              type="button"
-              data-testid={`recognition-filter-${award.id}`}
-              className={chipClass(active)}
-              aria-pressed={active}
-              aria-label={award.title}
-              title={award.description}
-              disabled={disabled}
-              onClick={() => toggleAward(award.id)}
-              // The accent matches the badge this chip filters on, so the
-              // control and the thing it selects read as the same object.
-              style={
-                {
-                  '--recognition-accent': `var(${award.accentVar})`,
-                } as React.CSSProperties
-              }
-            >
-              <Icon className="districts-toolbar__recognition-chip-icon" />
-              {award.shortLabel}
-            </button>
-          )
-        })}
-      </span>
+      {/* #1359 gap (c) — below 768px the chips lay out on one scrolling line
+          rather than wrapping. The label stays outside the scroller so it is
+          not swept away by the horizontal scroll. */}
+      <div className="districts-toolbar__scroller">
+        <span
+          className="districts-toolbar__chip-group"
+          role="group"
+          aria-label="Filter by competitive award"
+        >
+          {AWARD_RECOGNITION.map(award => {
+            const active = filter.awards.includes(award.id)
+            const { Icon } = award
+            return (
+              <button
+                key={award.id}
+                type="button"
+                data-testid={`recognition-filter-${award.id}`}
+                className={chipClass(active)}
+                aria-pressed={active}
+                aria-label={award.title}
+                title={award.description}
+                disabled={disabled}
+                onClick={() => toggleAward(award.id)}
+                // The accent matches the badge this chip filters on, so the
+                // control and the thing it selects read as the same object.
+                style={
+                  {
+                    '--recognition-accent': `var(${award.accentVar})`,
+                  } as React.CSSProperties
+                }
+              >
+                <Icon className="districts-toolbar__recognition-chip-icon" />
+                {award.shortLabel}
+              </button>
+            )
+          })}
+        </span>
 
-      <span
-        className="districts-toolbar__chip-group"
-        role="group"
-        aria-label="Filter by Distinguished tier"
-      >
-        {TIER_RECOGNITION.map(tier => {
-          const active = filter.tier === tier.id
-          const isTop = tier.order === TOP_TIER_ORDER
-          const { Icon } = tier
-          return (
-            <button
-              key={tier.id}
-              type="button"
-              data-testid={`recognition-filter-tier-${tier.id}`}
-              className={chipClass(active)}
-              aria-pressed={active}
-              aria-label={isTop ? tier.title : `${tier.title} or higher`}
-              title={
-                isTop
-                  ? `${tier.title} — the top of the ladder`
-                  : `${tier.title} or higher`
-              }
-              disabled={disabled}
-              onClick={() => toggleTier(tier.id)}
-              style={
-                {
-                  '--recognition-accent': `var(${tier.accentVar})`,
-                } as React.CSSProperties
-              }
-            >
-              <Icon className="districts-toolbar__recognition-chip-icon" />
-              {isTop ? tier.shortLabel : `${tier.shortLabel}+`}
-            </button>
-          )
-        })}
-      </span>
+        <span
+          className="districts-toolbar__chip-group"
+          role="group"
+          aria-label="Filter by Distinguished tier"
+        >
+          {TIER_RECOGNITION.map(tier => {
+            const active = filter.tier === tier.id
+            const isTop = tier.order === TOP_TIER_ORDER
+            const { Icon } = tier
+            return (
+              <button
+                key={tier.id}
+                type="button"
+                data-testid={`recognition-filter-tier-${tier.id}`}
+                className={chipClass(active)}
+                aria-pressed={active}
+                aria-label={isTop ? tier.title : `${tier.title} or higher`}
+                title={
+                  isTop
+                    ? `${tier.title} — the top of the ladder`
+                    : `${tier.title} or higher`
+                }
+                disabled={disabled}
+                onClick={() => toggleTier(tier.id)}
+                style={
+                  {
+                    '--recognition-accent': `var(${tier.accentVar})`,
+                  } as React.CSSProperties
+                }
+              >
+                <Icon className="districts-toolbar__recognition-chip-icon" />
+                {isTop ? tier.shortLabel : `${tier.shortLabel}+`}
+              </button>
+            )
+          })}
+        </span>
+      </div>
     </div>
   )
 }
