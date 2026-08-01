@@ -10,6 +10,16 @@ import type { RemainingInputs } from '../../utils/distinguishedCountdown'
 
 afterEach(() => cleanup())
 
+/**
+ * The five-gate era (#1354). Every prerequisite TI has ever required is in
+ * force for 2025-26 and earlier, so this is the year the seven pre-#1354
+ * assertions below were written against. They used to reach that
+ * configuration by OMITTING `programYear` and landing on the component's
+ * fallback; now they ask for it, through the supported API. Same coverage,
+ * no accidental default.
+ */
+const LEGACY_PY = '2025-2026'
+
 const baseStatus: DistinguishedDistrictStatus = {
   districtId: '61',
   currentTier: 'NotDistinguished',
@@ -172,7 +182,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
       render(
         <DistinguishedDistrictTrophyCase
           status={baseStatus}
-          programYear="2025-2026"
+          programYear={LEGACY_PY}
         />
       )
       const toggle = screen.getByRole('button', {
