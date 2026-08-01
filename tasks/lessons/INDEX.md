@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-font-swap-reflow-masquerades-as-a-reserve-error.md` — A web-font swap reflow masquerades as a reserve error — pin both states instead of racing them, and ablate the font before attributing CLS to your diff  (2026-08-01)
 - `a-skeleton-that-omits-a-button-under-reserves-by-the-touch-target-floor.md` — A skeleton that omits an interactive element under-reserves by the touch-target floor, not by the element's visual size  (2026-08-01)
 - `an-override-must-match-the-same-element-set-the-utility-it-overrides-paints.md` — A CSS override must match the same element SET the utility it overrides paints — restate that set by hand and you get a silent off-by-one; derive it from the tool instead  (2026-08-01)
 - `bisecting-a-gate-with-no-headroom-finds-variance-not-a-regression.md` — Bisecting a threshold gate that has no headroom identifies variance, not a culprit — measure the baseline before believing the bisect  (2026-08-01)
