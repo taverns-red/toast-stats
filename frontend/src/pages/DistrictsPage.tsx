@@ -524,10 +524,15 @@ const DistrictsPage: React.FC = () => {
   // numeral. The old `rank <= 10` blue and `bg-gray-200` fallback fills are
   // retired — a grey circle on 90% of rows added weight without adding
   // information the numeral inside it didn't already carry.
+  // Dark ink, not white: white on these fills is 1.9 / 2.5 / 3.2:1 against a
+  // 4.5:1 floor (14px bold is not WCAG "large text"). The fills themselves are
+  // unchanged. See __tests__/accessibility/RankBadgeContrast.test.ts, and
+  // dark-mode.css for the compound override that keeps gold + bronze dark in
+  // the dark theme (silver's fill IS remapped, so it flips light correctly).
   const MEDAL_FILLS: Record<number, string> = {
-    1: 'bg-yellow-500 text-white',
-    2: 'bg-gray-400 text-white',
-    3: 'bg-amber-600 text-white',
+    1: 'bg-yellow-500 text-gray-900',
+    2: 'bg-gray-400 text-gray-900',
+    3: 'bg-amber-600 text-gray-900',
   }
   const rankBadgeClassName = (rank: number) => {
     const medal = MEDAL_FILLS[rank]

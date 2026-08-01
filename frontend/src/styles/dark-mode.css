@@ -718,6 +718,17 @@
   border-color: rgba(247, 209, 100, 0.85) !important;
 }
 
+/* Rank badge medal circles (#1363) — same shape as the #609 fix above.
+   `.bg-yellow-500` and `.bg-amber-600` are NOT remapped for dark, so they stay
+   light fills; the global `.text-gray-900 → var(--text-heading)` rule would
+   put #F0ECF5 on them (1.9:1 / 2.4:1 — the #1360 failure pattern). Pin the ink
+   dark for those two. `.bg-gray-400` (silver) IS remapped to a dark surface,
+   so it is deliberately left to the global rule and flips light correctly. */
+[data-theme='dark'] .bg-yellow-500.text-gray-900,
+[data-theme='dark'] .bg-amber-600.text-gray-900 {
+  color: #111827 !important;
+}
+
 [data-theme='dark'] .border-yellow-500 {
   border-color: rgba(247, 209, 100, 0.65) !important;
 }

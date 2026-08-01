@@ -106,9 +106,12 @@ describe('DistrictsPage rank badge (#1363)', () => {
       expect(el.className).toMatch(/\bh-7\b/)
       expect(el.className).not.toMatch(/\bw-10\b/)
       expect(el.className).not.toMatch(/\bh-10\b/)
-      // Colours unchanged — white on the medal fill (AA in both themes).
+      // Fills unchanged. The INK moved white → gray-900: white on these
+      // fills is 1.9 / 2.5 / 3.2:1, and the issue's own AC requires ≥4.5:1 in
+      // both themes, so "colours unchanged" can only mean the fills.
+      // __tests__/accessibility/RankBadgeContrast.test.ts owns the ratios.
       expect(el.className).toMatch(fill)
-      expect(el.className).toMatch(/text-white/)
+      expect(el.className).toMatch(/text-gray-900/)
     }
   })
 
