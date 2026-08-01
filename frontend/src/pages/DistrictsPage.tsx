@@ -1294,13 +1294,13 @@ const DistrictsPage: React.FC = () => {
                 </caption>
                 <thead>
                   <tr>
-                    <th className="districts-rankings-table__sticky-col px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="districts-rankings-table__sticky-col text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       District
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Rank
                     </th>
-                    <th className="districts-rankings-table__col--desktop px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="districts-rankings-table__col--desktop text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Tier
                     </th>
                     <SortableHeader<SortFieldT>
@@ -1308,7 +1308,7 @@ const DistrictsPage: React.FC = () => {
                       label="Paid Clubs"
                       currentSort={sort}
                       onSort={toggleSort}
-                      thClassName="districts-rankings-table__col--compact px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      thClassName="districts-rankings-table__col--compact text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                       numeric
                     />
                     <SortableHeader<SortFieldT>
@@ -1316,7 +1316,7 @@ const DistrictsPage: React.FC = () => {
                       label="Total Payments"
                       currentSort={sort}
                       onSort={toggleSort}
-                      thClassName="districts-rankings-table__col--compact px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      thClassName="districts-rankings-table__col--compact text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                       numeric
                     />
                     <SortableHeader<SortFieldT>
@@ -1324,7 +1324,7 @@ const DistrictsPage: React.FC = () => {
                       label="Distinguished"
                       currentSort={sort}
                       onSort={toggleSort}
-                      thClassName="districts-rankings-table__col--tablet px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      thClassName="districts-rankings-table__col--tablet text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                       numeric
                     />
                     <SortableHeader<SortFieldT>
@@ -1382,7 +1382,7 @@ const DistrictsPage: React.FC = () => {
                           data-row-tint={
                             isMine ? 'mine' : isPinned ? 'pinned' : 'none'
                           }
-                          className="districts-rankings-table__sticky-col px-6 py-4 whitespace-nowrap"
+                          className="districts-rankings-table__sticky-col"
                         >
                           <div className="flex items-center gap-3 flex-wrap">
                             <button
@@ -1440,7 +1440,9 @@ const DistrictsPage: React.FC = () => {
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
                               >
                                 <span aria-hidden="true">🏆</span>
-                                <span className="ml-1">Extension</span>
+                                <span className="sr-only sm:not-sr-only sm:ml-1">
+                                  Extension
+                                </span>
                               </span>
                             )}
                             {competitiveAwards?.byDistrict?.[
@@ -1451,7 +1453,9 @@ const DistrictsPage: React.FC = () => {
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
                               >
                                 <span aria-hidden="true">🏆</span>
-                                <span className="ml-1">20-Plus</span>
+                                <span className="sr-only sm:not-sr-only sm:ml-1">
+                                  20-Plus
+                                </span>
                               </span>
                             )}
                             {competitiveAwards?.byDistrict?.[
@@ -1462,7 +1466,9 @@ const DistrictsPage: React.FC = () => {
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200"
                               >
                                 <span aria-hidden="true">🏆</span>
-                                <span className="ml-1">Retention</span>
+                                <span className="sr-only sm:not-sr-only sm:ml-1">
+                                  Retention
+                                </span>
                               </span>
                             )}
                             {/* Region collapses into the District cell as
@@ -1530,7 +1536,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="districts-rankings-table__col--desktop px-4 py-4 whitespace-nowrap">
+                        <td className="districts-rankings-table__col--desktop">
                           {ddpTier ? (
                             <DistrictTierChip
                               districtId={district.districtId}
@@ -1549,7 +1555,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           )}
                         </td>
-                        <td className="districts-rankings-table__col--compact px-6 py-4 whitespace-nowrap text-right">
+                        <td className="districts-rankings-table__col--compact text-right">
                           <div className="text-sm font-medium text-gray-900">
                             {formatNumber(district.paidClubs)}
                           </div>
@@ -1571,7 +1577,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="districts-rankings-table__col--compact px-6 py-4 whitespace-nowrap text-right">
+                        <td className="districts-rankings-table__col--compact text-right">
                           <div className="text-sm font-medium text-gray-900">
                             {formatNumber(district.totalPayments)}
                           </div>
@@ -1593,7 +1599,7 @@ const DistrictsPage: React.FC = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="districts-rankings-table__col--tablet px-6 py-4 whitespace-nowrap text-right">
+                        <td className="districts-rankings-table__col--tablet text-right">
                           <div className="text-sm font-medium text-gray-900">
                             {formatNumber(district.distinguishedClubs)}
                           </div>
