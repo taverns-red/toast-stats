@@ -225,7 +225,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
     it('should have no accessibility violations with multiple divisions', async () => {
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       const results = await runAxeSynchronized(container)
@@ -239,7 +242,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
         divisions: [],
       }
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       const results = await runAxeSynchronized(container)
@@ -392,7 +398,12 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
     it('should support keyboard navigation through division cards', async () => {
       const user = userEvent.setup()
       const snapshot = createMockDistrictSnapshot()
-      render(<DivisionPerformanceCards districtSnapshot={snapshot} />)
+      render(
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
+      )
 
       // Tab through the document
       await user.tab()
@@ -420,7 +431,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
     it('should have visible focus indicators on interactive elements', () => {
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       // Check all interactive elements have focus styles
@@ -631,7 +645,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
     it('should use brand colors with proper contrast', () => {
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       // Check that brand-compliant classes are present in the rendered output
@@ -687,7 +704,12 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
   describe('Touch Target Sizes', () => {
     it('should have minimum 44px touch targets for interactive elements', () => {
       const snapshot = createMockDistrictSnapshot()
-      render(<DivisionPerformanceCards districtSnapshot={snapshot} />)
+      render(
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
+      )
 
       // Touch target validation is handled by the component's CSS classes
       // The components use min-h-[44px] and min-w-[44px] Tailwind classes
@@ -704,7 +726,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
 
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       const results = await runAxeSynchronized(container)
@@ -718,7 +743,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
 
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       const results = await runAxeSynchronized(container)
