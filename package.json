@@ -42,6 +42,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "typecheck": "npm run typecheck --workspaces",
     "typecheck:frontend": "npm run typecheck --workspace=frontend",
+    "typecheck:tests": "npm run typecheck:test --workspace=frontend",
     "typecheck:count": "npm run typecheck:count --workspaces",
     "quality:check": "npm run lint && npm run lint:yaml && npm run typecheck && npm run format:check && npm run test",
     "quality:fix": "npm run lint --workspaces -- --fix && npm run format",
