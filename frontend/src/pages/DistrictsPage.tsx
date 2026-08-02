@@ -20,7 +20,14 @@ import InfoTooltip from '../components/InfoTooltip'
 import DistrictTierChip from '../components/DistrictTierChip'
 import { RecognitionBadge } from '../components/recognition/RecognitionBadge'
 import { RecognitionLegend } from '../components/recognition/RecognitionLegend'
+import { RecognitionFilterBar } from '../components/recognition/RecognitionFilterBar'
 import { AWARD_RECOGNITION } from '../components/recognition/recognitionRegistry'
+import {
+  EMPTY_RECOGNITION_FILTER,
+  districtMatchesRecognition,
+  isRecognitionFilterActive,
+} from '../components/recognition/recognitionFilter'
+import { useUrlRecognitionFilter } from '../hooks/useUrlRecognitionFilter'
 import { DistrictChipAndName } from '../components/DistrictChipAndName'
 import { useMyDistrict } from '../hooks/useMyDistrict'
 import { useLastVisit } from '../hooks/useLastVisit'
@@ -52,6 +59,13 @@ import { snapshotDatesFrom } from '../types/snapshotDate'
 // query never hides its own matches.
 const MOBILE_RANKINGS_CAP = 20
 
+// Columns in the rankings table head: District, Rank, Paid Clubs, Total
+// Payments, Distinguished, Score. Only the empty-state row needs the number
+// (as its colSpan), and a stale colSpan is invisible until someone squints at
+// a filtered table — so `rankingsColumnPriority.guard` pins it against the
+// actual `<th>` count rather than trusting this comment.
+const RANKINGS_COLUMN_COUNT = 6
+
 // #922 — pinned widths for the renderShell header-actions skeleton, one per
 // loaded-toolbar item (measured at 390px, both engines). The widths only
 // steer the flex WRAP (pill + PY chip on row 1, date chip wrapping to row 2
@@ -82,6 +96,9 @@ const parseList = (v: string): string[] =>
   v ? v.split(',').filter(Boolean) : []
 const serializeList = (a: string[]): string => a.join(',')
 const LIST_OPTS = { parse: parseList, serialize: serializeList }
+
+/** The loading shell's reserve chips are disabled, so this never fires. */
+const noopRecognitionChange = () => {}
 
 const DistrictsPage: React.FC = () => {
   const navigate = useNavigate()
@@ -161,6 +178,18 @@ const DistrictsPage: React.FC = () => {
     'regions',
     EMPTY_LIST,
     LIST_OPTS
+  )
+
+  // URL-synced Recognition filter (?awards=extension,retention&tier=select,
+  // #1362), following the same convention as ?regions= (#978) so a shared link
+  // reproduces the exact filtered view. Two params, ONE writer: the two facets
+  // change together, and two independent `useUrlState`s would resolve their
+  // functional updates against the same pre-click params and lose one of them
+  // (see the hook's own note).
+  const [recognitionFilter, setRecognitionFilter] = useUrlRecognitionFilter()
+  const clearRecognitionFilter = React.useCallback(
+    () => setRecognitionFilter(EMPTY_RECOGNITION_FILTER),
+    [setRecognitionFilter]
   )
 
   // Use URL-synced program year and date (#272)
@@ -427,16 +456,33 @@ const DistrictsPage: React.FC = () => {
     [sortedRankings]
   )
 
+  // Filter by Recognition (#1362) — a NEW step inserted AFTER ranking, beside
+  // the search filter, not a replacement for one (R11). Placing it here is
+  // what keeps `displayRank` the district's true GLOBAL rank: a table filtered
+  // to the three Extension winners still reads #4, #17, #58, which is the
+  // whole point of asking the question. Filtering before `rankedRankings`
+  // would renumber them 1-2-3 and quietly answer a different question.
+  const recognitionFilteredRankings = React.useMemo(() => {
+    if (!isRecognitionFilterActive(recognitionFilter)) return rankedRankings
+    return rankedRankings.filter(r =>
+      districtMatchesRecognition(
+        recognitionFilter,
+        r.districtId,
+        competitiveAwards
+      )
+    )
+  }, [rankedRankings, recognitionFilter, competitiveAwards])
+
   // Filter by search query (district number or name) — rank is preserved
   const filteredRankingsBySearch = React.useMemo(() => {
-    if (!searchQuery.trim()) return rankedRankings
+    if (!searchQuery.trim()) return recognitionFilteredRankings
     const query = searchQuery.trim().toLowerCase()
-    return rankedRankings.filter(
+    return recognitionFilteredRankings.filter(
       r =>
         r.districtId.toLowerCase().includes(query) ||
         r.districtName.toLowerCase().includes(query)
     )
-  }, [rankedRankings, searchQuery])
+  }, [recognitionFilteredRankings, searchQuery])
 
   // 'What changed since last visit' diff strip (#418). Compares the
   // current snapshot date + my-district rank to the previous-visit
@@ -741,24 +787,38 @@ const DistrictsPage: React.FC = () => {
                 See Awards
                 <span aria-hidden="true"> →</span>
               </Link>
-              {/* Region toolbar. One chip row — exact at ≥768px where the
-                  chips fit on a single line. Below that the loaded row wraps
-                  to as many lines as there are regions, which the shell
-                  cannot know before the data arrives, so this under-reserves
-                  on a phone rather than guessing a region count that would
-                  silently drift. */}
+              {/* Region toolbar. One chip row, and since #1359 gap (c) that
+                  is EXACT below 768px too: the loaded row is a single
+                  horizontally-scrolling line whatever the region count, so
+                  its height no longer depends on data the shell doesn't have.
+                  (It was four wrapped lines at 375px — a 130px under-reserve
+                  the shell could only have matched by guessing the count.)
+                  At ≥768px the row still fits on one line, as before. */}
               <div className="districts-toolbar" aria-hidden="true">
                 <div className="districts-toolbar__row">
                   <span className="districts-toolbar__label">Regions:</span>
-                  <span
-                    className="districts-actions-skeleton__chip"
-                    style={{ width: 52 }}
-                  />
-                  <span
-                    className="districts-actions-skeleton__chip"
-                    style={{ width: 44 }}
-                  />
+                  <div className="districts-toolbar__scroller">
+                    <span
+                      className="districts-actions-skeleton__chip"
+                      style={{ width: 52 }}
+                    />
+                    <span
+                      className="districts-actions-skeleton__chip"
+                      style={{ width: 44 }}
+                    />
+                  </div>
                 </div>
+                {/* Recognition row (#1362). Unlike the region row above it,
+                    this one reserves EXACTLY: the chip set is the static
+                    registry, not a district count that only becomes knowable
+                    when the data lands. So the reserve is the REAL component
+                    in `disabled` mode — same markup, same box, no tab stops —
+                    and it cannot drift from the thing it reserves for. */}
+                <RecognitionFilterBar
+                  filter={EMPTY_RECOGNITION_FILTER}
+                  onChange={noopRecognitionChange}
+                  disabled
+                />
               </div>
             </>
           )}
@@ -1184,43 +1244,58 @@ const DistrictsPage: React.FC = () => {
               return (
                 <div className="districts-toolbar__row">
                   <span className="districts-toolbar__label">Regions:</span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRegions(regions)}
-                    className={`districts-toolbar__region-chip${isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
-                    aria-pressed={isAllActive}
-                  >
-                    All
-                  </button>
-                  {regions.map(region => {
-                    const isActive = selectedRegions.includes(region)
-                    return (
-                      <button
-                        key={region}
-                        type="button"
-                        onClick={e => handleRegionClick(region, e.shiftKey)}
-                        className={`districts-toolbar__region-chip${isActive && !isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
-                        aria-pressed={isActive && !isAllActive}
-                        aria-label={`Region ${region}`}
-                        title="Click to isolate · shift-click to add"
-                      >
-                        {region}
-                      </button>
-                    )
-                  })}
-                  <span
-                    className="districts-toolbar__region-state"
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--ink-3)',
-                      marginLeft: 4,
-                    }}
-                  >
-                    {stateLabel}
-                  </span>
+                  {/* #1359 gap (c) — one scrolling line below 768px instead of
+                    wrapping to as many lines as there are regions. That wrap
+                    is also why this row could never be reserved exactly: the
+                    shell cannot know the region count before the data lands,
+                    but it can know that one line is one chip tall. */}
+                  <div className="districts-toolbar__scroller">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRegions(regions)}
+                      className={`districts-toolbar__region-chip${isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
+                      aria-pressed={isAllActive}
+                    >
+                      All
+                    </button>
+                    {regions.map(region => {
+                      const isActive = selectedRegions.includes(region)
+                      return (
+                        <button
+                          key={region}
+                          type="button"
+                          onClick={e => handleRegionClick(region, e.shiftKey)}
+                          className={`districts-toolbar__region-chip${isActive && !isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
+                          aria-pressed={isActive && !isAllActive}
+                          aria-label={`Region ${region}`}
+                          title="Click to isolate · shift-click to add"
+                        >
+                          {region}
+                        </button>
+                      )
+                    })}
+                    <span
+                      className="districts-toolbar__region-state"
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--ink-3)',
+                        marginLeft: 4,
+                      }}
+                    >
+                      {stateLabel}
+                    </span>
+                  </div>
                 </div>
               )
             })()}
+
+            {/* Recognition filter (#1362) — directly under the Regions row,
+              same pill-bar pattern. Makes the #1361 badges actionable: OR
+              within a group, AND across groups, tier as a `>=` threshold. */}
+            <RecognitionFilterBar
+              filter={recognitionFilter}
+              onChange={setRecognitionFilter}
+            />
           </div>
 
           {/* Search Bar — promoted to hero prominence (#435). Larger input,
@@ -1430,6 +1505,37 @@ const DistrictsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* #1362 — a filter that matches nothing must SAY so. A
+                    table that renders its headers and then nothing reads as a
+                    load failure, and leaves the user no clue that their own
+                    selection caused it. Inside the table so the message sits
+                    under the headers it belongs to, with a way back out. */}
+                  {visibleRankings.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={RANKINGS_COLUMN_COUNT}
+                        data-testid="rankings-empty-state"
+                        className="districts-rankings-table__empty"
+                      >
+                        No districts match the current filters.
+                        <span className="districts-rankings-table__empty-hint">
+                          Try removing a Recognition chip, widening the region
+                          selection, or clearing the search.
+                        </span>
+                        <button
+                          type="button"
+                          data-testid="rankings-empty-state-clear"
+                          className="districts-rankings-table__empty-clear"
+                          onClick={() => {
+                            clearRecognitionFilter()
+                            setSearchQuery('')
+                          }}
+                        >
+                          Clear filters
+                        </button>
+                      </td>
+                    </tr>
+                  )}
                   {visibleRankings.map(district => {
                     const rank = district.displayRank
                     const isMine = isMyDistrict(district.districtId)

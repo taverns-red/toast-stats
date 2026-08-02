@@ -76,6 +76,25 @@ describe('rankings column priority ladder (#1358)', () => {
   it('leaves the desktop rung unoccupied after the Tier column was pulled', () => {
     expect(cellsWith('districts-rankings-table__col--desktop').length).toBe(0)
   })
+
+  // #1362 — the empty-result row spans the table with a `colSpan` constant.
+  // A stale colSpan is invisible until someone squints at a filtered table, so
+  // pin it against the markup's actual header count rather than the comment
+  // above the constant.
+  it('spans the empty-result row across every column', () => {
+    const declared = /const RANKINGS_COLUMN_COUNT = (\d+)/.exec(page)
+    expect(declared, 'RANKINGS_COLUMN_COUNT not found').not.toBeNull()
+
+    // The rankings <thead> is the one containing the sticky District header.
+    const thead = /<thead>([\s\S]*?)<\/thead>/.exec(page)
+    expect(thead, 'rankings <thead> not found').not.toBeNull()
+    const headerCount =
+      (thead![1].match(/<th\b/g) ?? []).length +
+      (thead![1].match(/<SortableHeader\b/g) ?? []).length
+
+    expect(Number(declared![1])).toBe(headerCount)
+    expect(page).toMatch(/colSpan=\{RANKINGS_COLUMN_COUNT\}/)
+  })
 })
 
 describe('rankings table density (#1358 follow-up)', () => {
