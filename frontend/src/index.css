@@ -18,6 +18,9 @@
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/preflight" layer(base);
 @import "tailwindcss/utilities" layer(utilities);
+/* Metric-matched @font-face fallbacks for the display=swap reflow (#1373).
+   Imported before the token files whose stacks name them. */
+@import './styles/tokens/font-fallbacks.css';
 @import './styles/tokens/colors.css';
 @import './styles/tokens/typography.css';
 @import './styles/tokens/spacing.css';

@@ -56,8 +56,11 @@
      brand-token edit (rt-brand-v1.css stays untouched). */
   --rt-stats-focus: #b5651d;
 
-  --serif: 'Montserrat', system-ui, sans-serif;
-  --sans: 'Source Sans 3', system-ui, sans-serif;
+  /* Metric-matched swap fallbacks (#1373) — see tokens/font-fallbacks.css.
+     Must sit between the web font and system-ui. --mono has no fallback
+     face because JetBrains Mono is still not loaded at all (Lesson 81). */
+  --serif: 'Montserrat', 'Montserrat Fallback', system-ui, sans-serif;
+  --sans: 'Source Sans 3', 'Source Sans 3 Fallback', system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --rds-radius-sm: 6px;
