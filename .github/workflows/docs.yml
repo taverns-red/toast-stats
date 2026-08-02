@@ -25,7 +25,7 @@ on:
       - '.gitignore'
       - 'LICENSE'
   pull_request:
-    branches: [main]
+    branches: [main, ci/docs-gate-base]
     paths:
       - '**/*.md'
       - 'tasks/**'

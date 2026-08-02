@@ -19,7 +19,7 @@ on:
       - '.gitignore'
       - 'LICENSE'
   pull_request:
-    branches: [main]
+    branches: [main, ci/docs-gate-base]
     # Keep in sync with .github/workflows/docs.yml -- see the note above.
     paths-ignore:
       - '**/*.md'
