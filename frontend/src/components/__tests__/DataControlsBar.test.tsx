@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { cleanup, render, screen, fireEvent } from '@testing-library/react'
 import { DataControlsBar } from '../DataControlsBar'
 import { getProgramYear } from '../../utils/programYear'
+import { snap } from '../../test-utils/snapshotDate'
 
 afterEach(() => cleanup())
 
@@ -114,7 +115,7 @@ describe('DataControlsBar (#529 #528)', () => {
   })
 
   it('renders the date chip showing the formatted date when selectedDate is set', () => {
-    render(<DataControlsBar {...baseProps} selectedDate="2026-03-15" />)
+    render(<DataControlsBar {...baseProps} selectedDate={snap('2026-03-15')} />)
     expect(screen.getByTestId('date-chip')).toHaveTextContent(/Mar 15, 2026/)
   })
 
@@ -123,7 +124,7 @@ describe('DataControlsBar (#529 #528)', () => {
     render(
       <DataControlsBar
         {...baseProps}
-        selectedDate="2026-03-15"
+        selectedDate={snap('2026-03-15')}
         onDateChange={onDateChange}
       />
     )

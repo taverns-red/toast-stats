@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { DistrictDetailHeader } from '../DistrictDetailHeader'
 import { getProgramYear } from '../../utils/programYear'
 import { useLatestAsOfDate } from '../../hooks/useLatestAsOfDate'
+import { snap } from '../../test-utils/snapshotDate'
 
 // Mock the global freshness source so the presentational header stays testable
 // without a QueryClientProvider. Default: no reconciliation.
@@ -117,7 +118,7 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
   it('shows the month-end reconciliation pill when the global as-of date has advanced past the district month-end', () => {
     mockUseLatestAsOfDate.mockReturnValue({
       asOfDate: '2026-07-02',
-      latestSnapshotDate: '2026-06-30',
+      latestSnapshotDate: snap('2026-06-30'),
     })
     // Viewing the district's latest snapshot (no explicit date), and that latest
     // === the global pinned month-end → reconciliation is live.
@@ -131,7 +132,7 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
   it('does NOT flag reconciliation for a district whose latest snapshot lags the global scrape', () => {
     mockUseLatestAsOfDate.mockReturnValue({
       asOfDate: '2026-07-02',
-      latestSnapshotDate: '2026-06-30',
+      latestSnapshotDate: snap('2026-06-30'),
     })
     // District's newest is May 31 — it lags behind the global June month-end, so
     // the July as-of date must not paint a spurious "May reconciliation".
@@ -145,13 +146,13 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
   it('does NOT flag reconciliation when viewing a finalized historical date', () => {
     mockUseLatestAsOfDate.mockReturnValue({
       asOfDate: '2026-07-02',
-      latestSnapshotDate: '2026-06-30',
+      latestSnapshotDate: snap('2026-06-30'),
     })
     // A specific past date is selected (not the latest) → isLatest false. The
     // pill reflects the VIEWED date, matching DistrictsPage.
     renderHeader({
       selectedDate: '2026-05-31',
-      latestSnapshotDate: '2026-06-30',
+      latestSnapshotDate: snap('2026-06-30'),
     })
     const pill = screen.getByTestId('freshness-pill')
     expect(pill).not.toHaveTextContent(/month-end reconciliation/i)

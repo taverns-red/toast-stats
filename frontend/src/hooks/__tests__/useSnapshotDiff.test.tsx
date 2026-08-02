@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode } from 'react'
 import { useSnapshotDiff, previousRecordedDate } from '../useSnapshotDiff'
 import { fetchCdnDistrictSnapshot } from '../../services/cdn'
+import { snap as snapDate } from '../../test-utils/snapshotDate'
 import type {
   PerDistrictData,
   ClubStatisticsFile,
@@ -98,7 +99,8 @@ describe('useSnapshotDiff', () => {
     )
 
     const { result } = renderHook(
-      () => useSnapshotDiff('61', '2026-05-25', '2026-05-26'),
+      () =>
+        useSnapshotDiff('61', snapDate('2026-05-25'), snapDate('2026-05-26')),
       { wrapper: makeWrapper() }
     )
 
@@ -158,7 +160,8 @@ describe('useSnapshotDiff', () => {
     )
 
     const { result } = renderHook(
-      () => useSnapshotDiff('61', '2026-05-25', '2026-05-26'),
+      () =>
+        useSnapshotDiff('61', snapDate('2026-05-25'), snapDate('2026-05-26')),
       { wrapper: makeWrapper() }
     )
 
@@ -182,7 +185,8 @@ describe('useSnapshotDiff', () => {
     })
 
     const { result } = renderHook(
-      () => useSnapshotDiff('61', '2026-05-25', '2026-05-26'),
+      () =>
+        useSnapshotDiff('61', snapDate('2026-05-25'), snapDate('2026-05-26')),
       { wrapper: makeWrapper() }
     )
 
@@ -198,7 +202,7 @@ describe('useSnapshotDiff', () => {
   })
 
   it('is disabled (does not fetch) when from or to is missing', () => {
-    renderHook(() => useSnapshotDiff('61', undefined, '2026-05-26'), {
+    renderHook(() => useSnapshotDiff('61', undefined, snapDate('2026-05-26')), {
       wrapper: makeWrapper(),
     })
     expect(mockedFetch).not.toHaveBeenCalled()

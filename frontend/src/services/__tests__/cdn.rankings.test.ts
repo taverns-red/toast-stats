@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../cdn'
+import { snap } from '../../test-utils/snapshotDate'
 
 /* Sprint 1 of epic #1319 (snapshot-date guard).
    `CdnRankingsData` must carry an unambiguous `asOfDate` (the advancing
@@ -34,7 +35,7 @@ describe('fetchCdnRankingsForDate — asOfDate vs snapshotDate (#1320)', () => {
       })
     )
 
-    const data = await fetchCdnRankingsForDate('2026-06-30')
+    const data = await fetchCdnRankingsForDate(snap('2026-06-30'))
 
     expect(data.snapshotDate).toBe('2026-06-30')
     expect(data.asOfDate).toBe('2026-07-05')
@@ -49,7 +50,7 @@ describe('fetchCdnRankingsForDate — asOfDate vs snapshotDate (#1320)', () => {
         okResponse({ rankings: [], date: '2026-07-05', generatedAt: 'x' })
       )
 
-    const data = await fetchCdnRankingsForDate('2026-06-30')
+    const data = await fetchCdnRankingsForDate(snap('2026-06-30'))
 
     expect(data.asOfDate).toBe('2026-07-05')
     expect(data.snapshotDate).toBeUndefined()

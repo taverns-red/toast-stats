@@ -21,6 +21,7 @@ import {
   fetchCdnDistrictSnapshot,
 } from '../../services/cdn'
 import { toSnapshotDate } from '../../types/snapshotDate'
+import { snap } from '../../test-utils/snapshotDate'
 import type { DistrictStatistics } from '../../types/districts'
 
 // Mock the CDN service
@@ -33,34 +34,38 @@ vi.mock('../../services/cdn', () => ({
 const mockedFetchLatestSnapshotDate = vi.mocked(fetchLatestSnapshotDate)
 const mockedFetchCdnDistrictSnapshot = vi.mocked(fetchCdnDistrictSnapshot)
 
-// Create a mock DistrictStatistics response
+/**
+ * Build a mock `DistrictStatistics` payload.
+ *
+ * Until #1368 this fixture invented its own shape — `asOfDate` at the top level
+ * plus `membership.totalMembers` / `clubs.totalClubs` /
+ * `education.pathwaysCompletions`, none of which exist on `DistrictStatistics`.
+ * The declared return type said otherwise, but nothing typechecked this file,
+ * so the whole suite ran against a payload the CDN never sends. `asOfDate` in
+ * particular is the phantom #1321 deleted from the snapshot envelope.
+ */
 const createMockDistrictStatistics = (
-  districtId: string,
-  asOfDate: string
+  districtId: string
 ): DistrictStatistics => ({
   districtId,
-  asOfDate,
   membership: {
-    totalMembers: 1000,
-    activeMembers: 950,
-    newMembers: 50,
-    renewedMembers: 100,
-    droppedMembers: 25,
-    membershipGrowth: 2.5,
-    retentionRate: 95.0,
+    total: 1000,
+    change: 50,
+    changePercent: 2.5,
   },
   clubs: {
-    totalClubs: 50,
-    activeClubs: 48,
-    suspendedClubs: 2,
-    newClubs: 3,
-    clubGrowth: 1.5,
+    total: 50,
+    active: 48,
+    suspended: 2,
+    ineligible: 0,
+    low: 5,
+    distinguished: 12,
   },
   education: {
     totalAwards: 200,
-    pathwaysCompletions: 150,
-    traditionalCompletions: 50,
-    educationGrowth: 5.0,
+    byType: [],
+    topClubs: [],
+    byMonth: [],
   },
 })
 
@@ -107,8 +112,8 @@ describe('useDistrictStatistics', () => {
      */
     it('should include selectedDate in query key when provided', async () => {
       const districtId = 'D101'
-      const selectedDate = '2026-01-14'
-      const mockData = createMockDistrictStatistics(districtId, selectedDate)
+      const selectedDate = snap('2026-01-14')
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
@@ -136,7 +141,7 @@ describe('useDistrictStatistics', () => {
      */
     it('should work correctly when selectedDate is undefined', async () => {
       const districtId = 'D101'
-      const mockData = createMockDistrictStatistics(districtId, '2022-12-05')
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
@@ -165,10 +170,10 @@ describe('useDistrictStatistics', () => {
      */
     it('should make separate CDN calls for different dates', async () => {
       const districtId = 'D101'
-      const date1 = '2026-01-14'
-      const date2 = '2026-01-15'
-      const mockData1 = createMockDistrictStatistics(districtId, date1)
-      const mockData2 = createMockDistrictStatistics(districtId, date2)
+      const date1 = snap('2026-01-14')
+      const date2 = snap('2026-01-15')
+      const mockData1 = createMockDistrictStatistics(districtId)
+      const mockData2 = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot
         .mockResolvedValueOnce(mockData1)
@@ -219,8 +224,8 @@ describe('useDistrictStatistics', () => {
      */
     it('should pass selectedDate directly to CDN snapshot fetch', async () => {
       const districtId = 'D101'
-      const selectedDate = '2026-01-14'
-      const mockData = createMockDistrictStatistics(districtId, selectedDate)
+      const selectedDate = snap('2026-01-14')
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
@@ -246,7 +251,7 @@ describe('useDistrictStatistics', () => {
      */
     it('should use manifest date when selectedDate is undefined', async () => {
       const districtId = 'D101'
-      const mockData = createMockDistrictStatistics(districtId, '2022-12-05')
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
@@ -272,12 +277,21 @@ describe('useDistrictStatistics', () => {
      */
     it('should use manifest date when selectedDate is empty string', async () => {
       const districtId = 'D101'
-      const mockData = createMockDistrictStatistics(districtId, '2022-12-05')
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
+      // The hook takes a branded `SnapshotDate`, so a bare `''` can no longer
+      // be handed to it — the mint is the only route in, and it rejects the
+      // empty string outright. That rejection is the first half of the
+      // guarantee; the hook's `selectedDate || manifest` fallback is the
+      // second. (Before #1368 nothing typechecked this file, so it passed `''`
+      // directly — a call production cannot make.)
+      const emptyDate = toSnapshotDate('')
+      expect(emptyDate).toBeUndefined()
+
       const { result } = renderHook(
-        () => useDistrictStatistics(districtId, ''),
+        () => useDistrictStatistics(districtId, emptyDate),
         { wrapper: createWrapper() }
       )
 
@@ -285,7 +299,7 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      // Empty string is falsy, so manifest date should be used
+      // No usable date, so the manifest date should be used
       expect(mockedFetchLatestSnapshotDate).toHaveBeenCalled()
     })
   })
@@ -298,7 +312,7 @@ describe('useDistrictStatistics', () => {
      */
     it('should work when called with only districtId (backward compatible)', async () => {
       const districtId = 'D101'
-      const mockData = createMockDistrictStatistics(districtId, '2022-12-05')
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
@@ -321,7 +335,7 @@ describe('useDistrictStatistics', () => {
     it('should return data successfully when no date is provided', async () => {
       const districtId = 'D101'
       const latestDate = '2022-12-05'
-      const mockData = createMockDistrictStatistics(districtId, latestDate)
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
@@ -333,7 +347,14 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      expect(result.current.data?.asOfDate).toBe(latestDate)
+      // `asOfDate` is not on `DistrictStatistics` — the snapshot envelope
+      // never carried it (#1321). What this test is really about is that the
+      // no-date path resolves the latest snapshot and returns its payload.
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalledWith(
+        latestDate,
+        districtId
+      )
+      expect(result.current.data).toEqual(mockData)
     })
   })
 
@@ -345,7 +366,7 @@ describe('useDistrictStatistics', () => {
      */
     it('should handle CDN errors correctly', async () => {
       const districtId = 'D101'
-      const selectedDate = '2026-01-14'
+      const selectedDate = snap('2026-01-14')
       const errorMessage =
         'CDN fetch failed: 404 for https://cdn.taverns.red/snapshots/2026-01-14/district_D101.json'
 
@@ -373,7 +394,7 @@ describe('useDistrictStatistics', () => {
      */
     it('should handle 404 errors for non-existent districts', async () => {
       const districtId = 'INVALID'
-      const selectedDate = '2026-01-14'
+      const selectedDate = snap('2026-01-14')
 
       const error = new Error('CDN fetch failed: 404')
       mockedFetchCdnDistrictSnapshot.mockRejectedValue(error)
@@ -428,7 +449,7 @@ describe('useDistrictStatistics', () => {
      */
     it('should not fetch when districtId is null', async () => {
       const { result } = renderHook(
-        () => useDistrictStatistics(null, '2026-01-14'),
+        () => useDistrictStatistics(null, snap('2026-01-14')),
         { wrapper: createWrapper() }
       )
 
@@ -444,12 +465,12 @@ describe('useDistrictStatistics', () => {
      */
     it('should fetch when districtId is provided', async () => {
       const districtId = 'D101'
-      const mockData = createMockDistrictStatistics(districtId, '2026-01-14')
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
       const { result } = renderHook(
-        () => useDistrictStatistics(districtId, '2026-01-14'),
+        () => useDistrictStatistics(districtId, snap('2026-01-14')),
         { wrapper: createWrapper() }
       )
 
@@ -469,8 +490,8 @@ describe('useDistrictStatistics', () => {
      */
     it('should return DistrictStatistics data on success', async () => {
       const districtId = 'D101'
-      const selectedDate = '2026-01-14'
-      const mockData = createMockDistrictStatistics(districtId, selectedDate)
+      const selectedDate = snap('2026-01-14')
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot.mockResolvedValueOnce(mockData)
 
@@ -485,7 +506,12 @@ describe('useDistrictStatistics', () => {
 
       expect(result.current.data).toEqual(mockData)
       expect(result.current.data?.districtId).toBe(districtId)
-      expect(result.current.data?.asOfDate).toBe(selectedDate)
+      // See above: no `asOfDate` on the envelope. The date contract this test
+      // cares about is which snapshot was fetched.
+      expect(mockedFetchCdnDistrictSnapshot).toHaveBeenCalledWith(
+        selectedDate,
+        districtId
+      )
     })
   })
 
@@ -496,8 +522,8 @@ describe('useDistrictStatistics', () => {
      */
     it('should include fields in query key for cache differentiation', async () => {
       const districtId = 'D101'
-      const selectedDate = '2026-01-14'
-      const mockData = createMockDistrictStatistics(districtId, selectedDate)
+      const selectedDate = snap('2026-01-14')
+      const mockData = createMockDistrictStatistics(districtId)
 
       mockedFetchCdnDistrictSnapshot
         .mockResolvedValueOnce(mockData)

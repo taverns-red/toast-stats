@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
 import { cdnDistrictReportsUrl, fetchCdnDistrictReports } from '../cdn'
+import { snap } from '../../test-utils/snapshotDate'
 
 const validDataset: DistrictReportsDataset = {
   districtId: '61',
@@ -33,10 +34,10 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('cdnDistrictReportsUrl', () => {
   it('targets the separate reports file (NOT the analytics/ subfolder)', () => {
-    expect(cdnDistrictReportsUrl('2026-06-01', '61')).toContain(
+    expect(cdnDistrictReportsUrl(snap('2026-06-01'), '61')).toContain(
       '/snapshots/2026-06-01/district_61_reports.json'
     )
-    expect(cdnDistrictReportsUrl('2026-06-01', '61')).not.toContain(
+    expect(cdnDistrictReportsUrl(snap('2026-06-01'), '61')).not.toContain(
       '/analytics/'
     )
   })
@@ -53,7 +54,7 @@ describe('fetchCdnDistrictReports (tolerant — never breaks the analytics path)
         json: async () => validDataset,
       })
     )
-    const ds = await fetchCdnDistrictReports('2026-06-01', '61')
+    const ds = await fetchCdnDistrictReports(snap('2026-06-01'), '61')
     expect(ds?.sections.octoberDuesRenewal?.records[0]?.club).toBe('1009147')
   })
 
@@ -62,7 +63,7 @@ describe('fetchCdnDistrictReports (tolerant — never breaks the analytics path)
       'fetch',
       vi.fn().mockResolvedValue({ ok: false, status: 404 })
     )
-    expect(await fetchCdnDistrictReports('2026-06-01', '61')).toBeNull()
+    expect(await fetchCdnDistrictReports(snap('2026-06-01'), '61')).toBeNull()
   })
 
   it('returns null on a malformed payload rather than throwing', async () => {
@@ -75,11 +76,11 @@ describe('fetchCdnDistrictReports (tolerant — never breaks the analytics path)
         json: async () => ({ not: 'a reports dataset' }),
       })
     )
-    expect(await fetchCdnDistrictReports('2026-06-01', '61')).toBeNull()
+    expect(await fetchCdnDistrictReports(snap('2026-06-01'), '61')).toBeNull()
   })
 
   it('returns null when the network rejects', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
-    expect(await fetchCdnDistrictReports('2026-06-01', '61')).toBeNull()
+    expect(await fetchCdnDistrictReports(snap('2026-06-01'), '61')).toBeNull()
   })
 })

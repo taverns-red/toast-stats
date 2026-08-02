@@ -15,6 +15,7 @@ import { resolve } from 'path'
 import { MemoryRouter } from 'react-router-dom'
 import { DistrictDetailHeader } from '../../components/DistrictDetailHeader'
 import type { ProgramYear } from '../../utils/programYear'
+import { snap } from '../../test-utils/snapshotDate'
 
 // The header sources the freshness as-of date from this shared hook (#1310);
 // mock it so the presentational header mounts without a QueryClientProvider.
@@ -43,7 +44,7 @@ const renderHeader = (
     availableProgramYears: [mockProgramYear],
     selectedDate: undefined,
     onDateChange: () => {},
-    availableDates: ['2025-11-22', '2025-10-15'],
+    availableDates: [snap('2025-11-22'), snap('2025-10-15')],
     latestSnapshotDate: '2025-11-22',
     ...overrides,
   }

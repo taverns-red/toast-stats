@@ -42,6 +42,7 @@ vi.mock('../useDefaultProgramYear', () => ({
 
 // Must import after mock
 import { useUrlProgramYear } from '../useUrlProgramYear'
+import { snap } from '../../test-utils/snapshotDate'
 
 // Captures the live URL search string so tests can assert whether ?py= is
 // present after a setter call (the hook result alone can't distinguish
@@ -191,7 +192,7 @@ describe('useUrlProgramYear (#272)', () => {
       })
 
       act(() => {
-        result.current.setSelectedDate('2026-03-15')
+        result.current.setSelectedDate(snap('2026-03-15'))
       })
 
       expect(result.current.selectedDate).toBe('2026-03-15')
