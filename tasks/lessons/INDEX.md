@@ -2,7 +2,9 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-geometry-ablation-overstates-the-reflow-arrival-order-decides-what-counts.md` — A fonts-blocked geometry ablation shows every reflow the swap could cause, not the ones it does — arrival order decides which count, so tune against the real cold load  (2026-08-02)
 - `a-new-workflows-own-path-filter-cannot-be-exercised-by-the-pr-that-adds-it.md` — A path-filtered workflow's own filter can never be exercised by the PR that introduces it — the diff always contains the workflow file, so the filtered case reads as "mixed" until after merge; open the probe PR against a scratch base branch that widens only `pull_request.branches`  (2026-08-02)
+- `an-unscoped-fallback-face-restyles-every-glyph-the-web-font-does-not-ship.md` — A metric-matched fallback @font-face with no unicode-range captures every codepoint the web font does not ship, silently restyling glyphs it was never meant to touch  (2026-08-02)
 - `assert-the-echo-field-that-is-invariant-not-the-one-that-looks-semantic.md` — When an upstream echoes your request back, assert the echo field that is invariant across every response shape — not the one that reads most semantically  (2026-08-02)
 - `firebase-hosting-header-precedence-is-last-match-wins-and-globs-run-before-rewrites.md` — Firebase Hosting resolves each header key from the LAST matching rule (the docs say first) and matches `source` globs against the request path BEFORE rewrites — so an SPA cache rule that reads correctly is usually inverted and blind to every deep route  (2026-08-02)
 - `a-font-swap-reflow-masquerades-as-a-reserve-error.md` — A web-font swap reflow masquerades as a reserve error — pin both states instead of racing them, and ablate the font before attributing CLS to your diff  (2026-08-01)
