@@ -71,7 +71,7 @@ const search = () => screen.getByTestId('loc-search').textContent ?? ''
 const row = (
   i: number,
   region: string
-): import('../../services/cdn').AllDistrictsRanking => ({
+): import('../../services/cdn').CdnRankingsData['rankings'][number] => ({
   districtId: `${i}`,
   districtName: `District ${i}`,
   region,

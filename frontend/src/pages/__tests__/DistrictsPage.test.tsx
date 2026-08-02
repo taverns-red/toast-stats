@@ -674,7 +674,7 @@ describe('DistrictsPage - My District sticky pin (#417)', () => {
   const setupTwoRows = () => {
     const baseRow = (
       i: number
-    ): import('../../services/cdn').AllDistrictsRanking => ({
+    ): import('../../services/cdn').CdnRankingsData['rankings'][number] => ({
       districtId: `${i}`,
       districtName: `District ${i}`,
       region: '1',
@@ -831,7 +831,7 @@ describe('DistrictsPage - Region filter solo-select (#434)', () => {
     const baseRow = (
       i: number,
       region: string
-    ): import('../../services/cdn').AllDistrictsRanking => ({
+    ): import('../../services/cdn').CdnRankingsData['rankings'][number] => ({
       districtId: `D${i}`,
       districtName: `District ${i}`,
       region,

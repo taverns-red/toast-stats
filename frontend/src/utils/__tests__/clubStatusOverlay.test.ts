@@ -6,6 +6,7 @@ import {
   buildDuesRenewalLookup,
   applyDuesRenewalOverlay,
 } from '../clubStatusOverlay'
+import type { OverlayableClub } from '../clubStatusOverlay'
 
 describe('parseVerifiedComplete', () => {
   it('extracts an ISO date from "Verified complete - MM/DD/YYYY"', () => {
@@ -181,7 +182,7 @@ describe('buildDuesRenewalLookup (join key = club number, provenance asOf)', () 
 })
 
 describe('applyDuesRenewalOverlay (join onto clubs at the assembly site)', () => {
-  type C = { clubId: string; clubStatus?: string; statusOverlay?: unknown }
+  type C = OverlayableClub
   const centretownDataset = datasetWith({
     octoberDuesRenewal: duesSection('June 01, 2026', [
       { club: '1009147', renewalStatus: 'Verified complete - 05/31/2026' },

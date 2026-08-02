@@ -331,7 +331,9 @@ describe('ClubDetailPage (#208)', () => {
       },
       isLoading: false,
       error: null,
-    } as ReturnType<typeof useDistrictAnalytics>)
+      // `as unknown as` — UseQueryResult is a 23-field discriminated union
+      // no hand-built mock satisfies; matches the existing cast at l.298 (#1368).
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
 
     renderWithRoute()
 
@@ -373,7 +375,9 @@ describe('Provisional Distinguished Badge — ClubDetailPage', () => {
       },
       isLoading: false,
       error: null,
-    } as ReturnType<typeof useDistrictAnalytics>)
+      // `as unknown as` — UseQueryResult is a 23-field discriminated union
+      // no hand-built mock satisfies; matches the existing cast at l.298 (#1368).
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
   }
 
   it('shows "Provisional" when Distinguished and pre-April with low renewals', () => {
@@ -457,7 +461,9 @@ describe('Close-to-Distinguished call-out — ClubDetailPage', () => {
       },
       isLoading: false,
       error: null,
-    } as ReturnType<typeof useDistrictAnalytics>)
+      // `as unknown as` — UseQueryResult is a 23-field discriminated union
+      // no hand-built mock satisfies; matches the existing cast at l.298 (#1368).
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
   }
 
   it('renders the call-out with redesign chrome class when goals met but members short', () => {
@@ -588,7 +594,9 @@ describe('Membership Trend + DCP Status re-skin (#619)', () => {
       data: { districtId: '61', allClubs: [baseMockClub] },
       isLoading: false,
       error: null,
-    } as ReturnType<typeof useDistrictAnalytics>)
+      // `as unknown as` — UseQueryResult is a 23-field discriminated union
+      // no hand-built mock satisfies; matches the existing cast at l.298 (#1368).
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
   })
 
   afterEach(() => {

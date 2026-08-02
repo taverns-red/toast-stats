@@ -52,8 +52,12 @@ const setupCdn = () => {
     clubs: { '12345': { districtId: '61', clubName: 'Toast of the Town' } },
   } as Awaited<ReturnType<typeof fetchCdnClubIndex>>)
   mockedDivisionsAreas.mockResolvedValue({
+    generatedAt: '2025-11-22T00:00:00Z',
+    snapshotDate: '2025-11-22',
+    totalDivisions: 1,
+    totalAreas: 1,
     districts: { '61': { C: ['23'] } },
-  } as Awaited<ReturnType<typeof fetchCdnDivisionsAreasIndex>>)
+  })
 }
 
 describe('useOmniSearch (#1058)', () => {

@@ -108,6 +108,7 @@ function makeAnalyticsData(
     distinguishedProjection: 0,
     divisionRankings: [],
     topPerformingAreas: [],
+    prospectiveClubs: [],
     performanceTargets,
   }
 }

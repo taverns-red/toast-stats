@@ -115,6 +115,7 @@ function aggregated() {
     summary: {
       totalMembership: 5200,
       membershipChange: 150,
+      memberCountChange: 150,
       clubCounts: {
         total: 120,
         thriving: 85,

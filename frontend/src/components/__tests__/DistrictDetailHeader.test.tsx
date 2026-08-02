@@ -6,6 +6,7 @@ import { DistrictDetailHeader } from '../DistrictDetailHeader'
 import { getProgramYear } from '../../utils/programYear'
 import { useLatestAsOfDate } from '../../hooks/useLatestAsOfDate'
 import { snap } from '../../test-utils/snapshotDate'
+import type { SnapshotDate } from '../../types/snapshotDate'
 
 // Mock the global freshness source so the presentational header stays testable
 // without a QueryClientProvider. Default: no reconciliation.
@@ -27,16 +28,23 @@ beforeEach(() =>
 
 const py2526 = getProgramYear(2025)
 
+/** Typed `undefined` for the optional branded date — an annotation, not a
+ *  cast, so the SnapshotDate cast ban stays intact (#1323/#1368). A function,
+ *  because a `const` of a union initialised to `undefined` gets narrowed to
+ *  `undefined` and `renderHeader`'s `Partial<typeof baseProps>` would then
+ *  reject a real date. */
+const noDate = (): SnapshotDate | undefined => undefined
+
 const baseProps = {
   districtId: '61',
   districtName: 'District 61',
   selectedProgramYear: py2526,
   setSelectedProgramYear: vi.fn(),
   availableProgramYears: [py2526],
-  selectedDate: undefined,
+  selectedDate: noDate(),
   onDateChange: vi.fn(),
-  availableDates: ['2026-04-26'],
-  latestSnapshotDate: '2026-04-26',
+  availableDates: [snap('2026-04-26')],
+  latestSnapshotDate: snap('2026-04-26'),
 }
 
 const renderHeader = (overrides: Partial<typeof baseProps> = {}) =>
@@ -122,7 +130,10 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
     })
     // Viewing the district's latest snapshot (no explicit date), and that latest
     // === the global pinned month-end → reconciliation is live.
-    renderHeader({ selectedDate: undefined, latestSnapshotDate: '2026-06-30' })
+    renderHeader({
+      selectedDate: undefined,
+      latestSnapshotDate: snap('2026-06-30'),
+    })
     const pill = screen.getByTestId('freshness-pill')
     expect(pill).toHaveTextContent(/As of Jul 2, 2026/)
     expect(pill).toHaveTextContent(/month-end reconciliation/i)
@@ -136,7 +147,10 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
     })
     // District's newest is May 31 — it lags behind the global June month-end, so
     // the July as-of date must not paint a spurious "May reconciliation".
-    renderHeader({ selectedDate: undefined, latestSnapshotDate: '2026-05-31' })
+    renderHeader({
+      selectedDate: undefined,
+      latestSnapshotDate: snap('2026-05-31'),
+    })
     const pill = screen.getByTestId('freshness-pill')
     expect(pill).not.toHaveTextContent(/month-end reconciliation/i)
     expect(pill.getAttribute('data-reconciling')).toBeNull()
@@ -151,7 +165,7 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
     // A specific past date is selected (not the latest) → isLatest false. The
     // pill reflects the VIEWED date, matching DistrictsPage.
     renderHeader({
-      selectedDate: '2026-05-31',
+      selectedDate: snap('2026-05-31'),
       latestSnapshotDate: snap('2026-06-30'),
     })
     const pill = screen.getByTestId('freshness-pill')

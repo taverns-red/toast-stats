@@ -58,7 +58,10 @@ function setupDownloadMocks() {
 
   originalBlob = globalThis.Blob
   globalThis.Blob = class MockBlob {
-    constructor(parts?: BlobPart[], options?: BlobPropertyBag) {
+    constructor(
+      parts?: ConstructorParameters<typeof Blob>[0],
+      options?: ConstructorParameters<typeof Blob>[1]
+    ) {
       if (parts && parts.length > 0) {
         capturedCSVContent = parts[0] as string
       }
