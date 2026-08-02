@@ -21,6 +21,17 @@
   --yellow-300: #f9ecaa;
   --yellow-500: #f2df74;
   --yellow-600: #c9b748;
+  /* #1360: gold TEXT. The yellow ramp was tuned for the dark surface family —
+     --yellow-600 is 8.73:1 on the dark --surface but only 2.03:1 on white, so
+     the Awards Race "✓ Achieved" status failed WCAG AA in light mode while the
+     dark-mode audit (#608) stayed green. The mirror of lessons 093/094: a
+     token must remap WITH its surface, and the gold had no light-side
+     counterpart. #5a4a14 is the value already shipped for gold ink on white in
+     this codebase (.club-hero__pill--tier-presidents, #618) — 8.66:1, and it
+     still reads as gold rather than as a neutral. Dark keeps the bright gold,
+     where it already clears AA. Fills and dots stay on --yellow-500/600; this
+     token is for text only. */
+  --gold-ink: #5a4a14;
 
   --green-500: #16a34a;
   --green-600: #15803d;
@@ -146,6 +157,9 @@
   --green-600: #22c55e;
   --red-500: #f87171;
   --red-600: #ef4444;
+  /* #1360: on the dark surfaces the bright gold is already the accessible
+     choice (8.73:1 on --surface), so gold ink remaps back to it here. */
+  --gold-ink: var(--yellow-600);
 
   /* ── Recognition accents (#1361), dark ─────────────────────────────────
      Re-declared in full, not inherited, so the light block can never silently
