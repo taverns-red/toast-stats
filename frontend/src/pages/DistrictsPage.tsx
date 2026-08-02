@@ -545,6 +545,10 @@ const DistrictsPage: React.FC = () => {
     return displayRankings.slice(0, 5)
   }, [displayRankings, searchQuery])
 
+  // One source of truth for "the suggestions listbox is in the DOM" (#1360),
+  // so the input's aria-controls can never reference an id that isn't mounted.
+  const suggestionsOpen = searchFocused && searchSuggestions.length > 0
+
   // Show the right-edge scroll-cue ONLY when the rankings table actually
   // overflows to the right. A permanent fade would wash out the right-aligned
   // Score column on desktop, where the full set fits and nothing scrolls — a
@@ -1350,8 +1354,28 @@ const DistrictsPage: React.FC = () => {
               }}
               placeholder="Search by district number or name… (press /)"
               aria-label="Search districts by number or name"
-              aria-controls="district-search-suggestions"
-              aria-expanded={searchFocused && searchSuggestions.length > 0}
+              /* Gated on the listbox actually being mounted (#1360). It only
+                 renders while focused with matches, and a dangling
+                 aria-controls is its own axe violation
+                 (`aria-valid-attr-value`) — previously masked, because axe
+                 exempts an unresolved target when aria-expanded="false" says
+                 the popup is collapsed. Same form as HeaderSearch.tsx. */
+              aria-controls={
+                suggestionsOpen ? 'district-search-suggestions' : undefined
+              }
+              /* No aria-expanded (#1360). It is not an allowed attribute on a
+                 plain textbox — axe flags it `critical` — and the only role
+                 that permits it here, `combobox`, would be a lie about this
+                 widget. WAI-ARIA's combobox contract is keyboard-owned: Down/Up
+                 move a virtual focus via aria-activedescendant, Enter selects,
+                 Escape dismisses, and the options are NOT in the tab order.
+                 This input has no onKeyDown at all, and its suggestions are
+                 <Link>s — natively focusable anchors the user tabs to. Claiming
+                 the role would promise an interaction model that does not
+                 exist. The app already ships the real thing where the semantics
+                 are earned: AppShell/HeaderSearch.tsx. aria-controls stays —
+                 it is a global attribute, valid on any role, and the
+                 input→suggestions relationship it names is genuine. */
               className="districts-toolbar__search-input"
             />
             {searchQuery && (
@@ -1385,7 +1409,7 @@ const DistrictsPage: React.FC = () => {
                 </svg>
               </button>
             )}
-            {searchFocused && searchSuggestions.length > 0 && (
+            {suggestionsOpen && (
               <ul
                 id="district-search-suggestions"
                 role="listbox"
