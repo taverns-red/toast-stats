@@ -77,6 +77,7 @@ jobs:
           # NOTE: Uses the same tsconfig.json as local development for consistency.
           # Frontend: tsconfig.json (excludes tests, exactOptionalPropertyTypes: true)
           # This ensures CI/CD and local development have identical type checking behavior.
+          # The excluded test tree is gated separately by the next step (#1368).
 
           # Run frontend typecheck
           set +e
@@ -122,6 +123,16 @@ jobs:
           fi
 
           echo "✅ TypeScript compilation passed"
+
+      - name: Typecheck the frontend test tree (#1368)
+        # frontend/tsconfig.json EXCLUDES src/**/__tests__/** and *.test.*, and
+        # Vitest transpiles with esbuild, which strips types rather than
+        # checking them. Without this step nothing typechecks a test file: every
+        # @ts-expect-error is inert and every fixture is free to declare a shape
+        # it does not build. tsconfig.test.json re-includes the tree with four
+        # index-access strictness flags relaxed; production src/ strictness is
+        # unchanged and still enforced by the step above.
+        run: npm run typecheck:tests
 
       - name: Lint and Format Check
         id: lint
