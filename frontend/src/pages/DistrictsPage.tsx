@@ -1211,30 +1211,41 @@ const DistrictsPage: React.FC = () => {
             button row was retired in #851: sort now lives on the table
             column headers (click to toggle, URL-synced). */}
           <div className="districts-toolbar">
-            {/* Region Filter — solo-select pill bar (#434).
-              Plain click = solo that region; click again = back to all.
-              Shift-click = additive toggle. The "All" pill explicitly
-              selects every region and is the active state when no
-              filtering is happening. */}
+            {/* Region Filter — OR multi-select pill bar (#1374, was
+              solo-select #434). A plain click TOGGLES a region, so two
+              regions need no modifier and the row behaves exactly like the
+              Recognition chips directly beneath it. The "All" pill explicitly
+              selects every region and is the active state when no filtering
+              is happening. */}
             {(() => {
               const isAllActive =
                 regions.length > 0 &&
                 (selectedRegions.length === 0 ||
                   selectedRegions.length === regions.length)
-              const handleRegionClick = (region: string, shiftKey: boolean) => {
-                if (shiftKey) {
-                  // Additive toggle against the explicit selection (post-inflate
-                  // this is the full set, so a shift-click removes one region).
-                  setSelectedRegions(
-                    selectedRegions.includes(region)
-                      ? selectedRegions.filter(r => r !== region)
-                      : [...selectedRegions, region]
-                  )
+              const handleRegionClick = (region: string) => {
+                // From the "All" state nothing is individually pressed (the
+                // chips all render aria-pressed=false), so the first click
+                // STARTS a selection rather than subtracting one region from
+                // the full set — otherwise the control would contradict what
+                // it is showing.
+                if (isAllActive) {
+                  setSelectedRegions([region])
                   return
                 }
-                const isSoloActive =
-                  selectedRegions.length === 1 && selectedRegions[0] === region
-                setSelectedRegions(isSoloActive ? regions : [region])
+                const next = selectedRegions.includes(region)
+                  ? selectedRegions.filter(r => r !== region)
+                  : // Rebuild from `regions` so the selection — and therefore
+                    // ?regions= — stays in canonical order no matter which
+                    // chip was clicked first (same move as the Recognition
+                    // bar's award list).
+                    regions.filter(
+                      r => selectedRegions.includes(r) || r === region
+                    )
+                // Deselecting the last region means "no filtering", not an
+                // empty table. Land on the explicit full set, which is the
+                // same state the inflate-on-load effect produces (#978 /
+                // Lesson 145) and what the "All" pill writes.
+                setSelectedRegions(next.length === 0 ? regions : next)
               }
               const stateLabel = isAllActive
                 ? 'Showing all regions'
@@ -1264,11 +1275,17 @@ const DistrictsPage: React.FC = () => {
                         <button
                           key={region}
                           type="button"
-                          onClick={e => handleRegionClick(region, e.shiftKey)}
+                          onClick={() => handleRegionClick(region)}
                           className={`districts-toolbar__region-chip${isActive && !isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
                           aria-pressed={isActive && !isAllActive}
                           aria-label={`Region ${region}`}
-                          title="Click to isolate · shift-click to add"
+                          title={
+                            isAllActive
+                              ? `Filter to region ${region}`
+                              : isActive
+                                ? `Remove region ${region} from the filter`
+                                : `Add region ${region} to the filter`
+                          }
                         >
                           {region}
                         </button>
