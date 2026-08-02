@@ -25,10 +25,12 @@ import { MIN_TOUCH_TARGET_PX } from '../src/utils/touchTargetUtils'
  *  - We measure the TEXT, not the box. The bug is precisely that the anchor's
  *    box and its glyphs disagree — a box-centre assertion passes today. A
  *    `Range` over the element's contents gives the rendered inline text box.
- *  - Grouped by flex LINE, because the `<ol>` is `flex-wrap` and genuinely
- *    wraps at 375px. Parts on different lines must NOT share a centre; parts
- *    on the same line must. Within one flex line `align-items:center` gives
- *    every `<li>` the same centre, so the `<li>` centre identifies the line.
+ *  - Grouped by flex LINE, because the `<ol>` is `flex-wrap`. Parts on
+ *    different lines must NOT share a centre; parts on the same line must.
+ *    Within one flex line `align-items:center` gives every `<li>` the same
+ *    centre, so the `<li>` centre identifies the line. The wrapped layout gets
+ *    its own test, which forces the wrap rather than relying on a viewport
+ *    where the text happens to be wide enough (see the note on that test).
  *  - Both engines (#710) and both themes, at 375 / 768 / 1350 — the floor is
  *    breakpoint-dependent (44px mobile/tablet, 48px desktop), so a fix that
  *    only works at one width would slip through a single-viewport check.
@@ -40,17 +42,13 @@ import { MIN_TOUCH_TARGET_PX } from '../src/utils/touchTargetUtils'
 // crumbs plus two separators, and long enough to wrap at 375px.
 const ROUTE = '/district/61/club/01479548'
 
-/* `wraps` marks the width where the `<ol className="flex-wrap">` genuinely
-   breaks onto a second flex line (measured: 320px → two lines, 360px+ → one).
-   320px is the app's supported floor (`body { min-width: 320px }`). Asserting
-   the line count there keeps the wrap path from silently losing coverage if
-   the sample club's name ever shortens — a vacuous green is worse than a
-   loud red (R20 spirit). */
+/* 320px is the app's supported floor (`body { min-width: 320px }`); 1350px is
+   where the touch-target floor rises from 44px to 48px. */
 const VIEWPORTS = [
-  { label: '320px', width: 320, height: 812, wraps: true },
-  { label: '375px', width: 375, height: 812, wraps: false },
-  { label: '768px', width: 768, height: 1024, wraps: false },
-  { label: '1350px', width: 1350, height: 900, wraps: false },
+  { label: '320px', width: 320, height: 812 },
+  { label: '375px', width: 375, height: 812 },
+  { label: '768px', width: 768, height: 1024 },
+  { label: '1350px', width: 1350, height: 900 },
 ]
 
 const THEMES = ['light', 'dark'] as const
@@ -102,33 +100,63 @@ function describePart(p: Part): string {
   return `${p.tag}("${p.txt}") text-centre ${p.textCentre.toFixed(1)}`
 }
 
+/** Group parts by flex line. `align-items:center` gives every `<li>` on a line
+ *  the same centre, so the `<li>` centre identifies the line; a 2px bucket
+ *  absorbs sub-pixel jitter without merging lines (the shortest is ~21px). */
+function byFlexLine(parts: Part[]): Part[][] {
+  const lines = new Map<number, Part[]>()
+  for (const p of parts) {
+    const key = Math.round(p.lineCentre / 2)
+    const bucket = lines.get(key)
+    if (bucket) bucket.push(p)
+    else lines.set(key, [p])
+  }
+  return [...lines.values()]
+}
+
+function assertOneBaselinePerLine(lines: Part[][], where: string): void {
+  for (const group of lines) {
+    const centres = group.map(p => p.textCentre)
+    const spread = Math.max(...centres) - Math.min(...centres)
+    expect(
+      spread,
+      `${where}: breadcrumb parts on one line disagree by ` +
+        `${spread.toFixed(1)}px — ${group.map(describePart).join('; ')}`
+    ).toBeLessThanOrEqual(TOLERANCE_PX)
+  }
+}
+
+async function loadBreadcrumb(page: Page, theme: string): Promise<void> {
+  // DarkModeContext reads localStorage['theme'] before first paint.
+  await page.addInitScript(t => {
+    window.localStorage.setItem('theme', t)
+  }, theme)
+
+  await page.goto(ROUTE, { waitUntil: 'networkidle', timeout: 60_000 })
+
+  // Content sentinel: the breadcrumb only mounts once the club resolves, so
+  // this is both the ready-gate and the anti-vacuous-green guard.
+  await page
+    .locator('nav[aria-label="Breadcrumb"]')
+    .waitFor({ state: 'visible', timeout: 30_000 })
+  // Display-font reflow settles before we measure text boxes (L134).
+  await page.evaluate(() => document.fonts.ready)
+  await page.waitForTimeout(500)
+
+  expect(
+    await page.getAttribute('html', 'data-theme'),
+    'theme did not apply — measured the wrong appearance'
+  ).toBe(theme)
+}
+
 for (const theme of THEMES) {
-  for (const { label, width, height, wraps } of VIEWPORTS) {
+  for (const { label, width, height } of VIEWPORTS) {
     test(`breadcrumb parts share one baseline — ${label} ${theme}`, async ({
       page,
     }) => {
       test.setTimeout(90_000)
       await page.setViewportSize({ width, height })
-      // DarkModeContext reads localStorage['theme'] before first paint.
-      await page.addInitScript(t => {
-        window.localStorage.setItem('theme', t)
-      }, theme)
-
-      await page.goto(ROUTE, { waitUntil: 'networkidle', timeout: 60_000 })
-
-      // Content sentinel: the breadcrumb only mounts once the club resolves,
-      // so this is both the ready-gate and the anti-vacuous-green guard.
-      await page
-        .locator('nav[aria-label="Breadcrumb"]')
-        .waitFor({ state: 'visible', timeout: 30_000 })
-      // Display-font reflow settles before we measure text boxes (L134).
-      await page.evaluate(() => document.fonts.ready)
-      await page.waitForTimeout(500)
-
-      expect(
-        await page.getAttribute('html', 'data-theme'),
-        `theme did not apply — measured the wrong appearance`
-      ).toBe(theme)
+      await loadBreadcrumb(page, theme)
 
       const parts = await measureBreadcrumb(page)
 
@@ -138,33 +166,7 @@ for (const theme of THEMES) {
         'breadcrumb rendered no measurable parts — page did not render'
       ).toBe(5)
 
-      // Group by flex line. `align-items:center` makes every <li> on a line
-      // share a centre; a 2px bucket absorbs sub-pixel jitter without ever
-      // merging two lines (the smallest line is ~21px tall).
-      const lines = new Map<number, Part[]>()
-      for (const p of parts) {
-        const key = Math.round(p.lineCentre / 2)
-        const bucket = lines.get(key)
-        if (bucket) bucket.push(p)
-        else lines.set(key, [p])
-      }
-
-      expect(
-        lines.size,
-        `${label}/${theme}: expected the breadcrumb to ` +
-          `${wraps ? 'wrap onto 2+ flex lines' : 'fit on a single flex line'}` +
-          `, measured ${lines.size}`
-      ).toBe(wraps ? 2 : 1)
-
-      for (const [, group] of lines) {
-        const centres = group.map(p => p.textCentre)
-        const spread = Math.max(...centres) - Math.min(...centres)
-        expect(
-          spread,
-          `${label}/${theme}: breadcrumb parts on one line disagree by ` +
-            `${spread.toFixed(1)}px — ${group.map(describePart).join('; ')}`
-        ).toBeLessThanOrEqual(TOLERANCE_PX)
-      }
+      assertOneBaselinePerLine(byFlexLine(parts), `${label}/${theme}`)
 
       // The fix must not buy alignment by shrinking the hit area (WCAG 2.5.5,
       // guarded independently by touch-targets.smoke.ts).
@@ -181,4 +183,41 @@ for (const theme of THEMES) {
       ).toEqual([])
     })
   }
+
+  /* The `<ol>` is `flex-wrap`, and a wrapped row is a different layout: two
+     flex lines, each centring its own items. It has to stay aligned there too.
+     Whether it wraps NATURALLY is a function of font metrics, not of the fix —
+     at 320px it wraps in Chromium and in macOS WebKit but NOT in Linux WebKit,
+     where the same string measures narrower. Pinning a viewport to "this one
+     wraps" is therefore a platform-dependent assertion that fails for a reason
+     unrelated to what is under test (it did, on the first CI run).
+     Constraining the nav's width instead makes the wrap unconditional, so the
+     wrapped layout is exercised on every engine, every run. */
+  test(`breadcrumb stays aligned when the row wraps — ${theme}`, async ({
+    page,
+  }) => {
+    test.setTimeout(90_000)
+    await page.setViewportSize({ width: 375, height: 812 })
+    await loadBreadcrumb(page, theme)
+
+    await page.evaluate(() => {
+      const nav = document.querySelector<HTMLElement>(
+        'nav[aria-label="Breadcrumb"]'
+      )
+      if (nav) nav.style.maxWidth = '150px'
+    })
+    await page.waitForTimeout(200)
+
+    const parts = await measureBreadcrumb(page)
+    expect(parts.length, 'breadcrumb did not render').toBe(5)
+
+    const lines = byFlexLine(parts)
+    expect(
+      lines.length,
+      `${theme}: constraining the nav to 150px did not wrap the row — ` +
+        'the wrapped layout was never exercised'
+    ).toBeGreaterThanOrEqual(2)
+
+    assertOneBaselinePerLine(lines, `wrapped/${theme}`)
+  })
 }
