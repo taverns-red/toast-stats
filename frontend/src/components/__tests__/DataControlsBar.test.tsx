@@ -12,11 +12,11 @@ const py2627 = getProgramYear(2026)
 const availableProgramYears = [py2627, py2526, py2425]
 
 const baseProps = {
-  latestSnapshotDate: '2026-04-26',
+  latestSnapshotDate: snap('2026-04-26'),
   availableProgramYears,
   selectedProgramYear: py2526,
   onProgramYearChange: vi.fn(),
-  availableDates: ['2026-04-26', '2026-03-15', '2026-02-01'],
+  availableDates: [snap('2026-04-26'), snap('2026-03-15'), snap('2026-02-01')],
   selectedDate: undefined,
   onDateChange: vi.fn(),
 }

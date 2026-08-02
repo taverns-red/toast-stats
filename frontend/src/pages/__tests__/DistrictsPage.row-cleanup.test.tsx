@@ -39,6 +39,7 @@ const baseRanking = {
   paymentsRank: 1,
   distinguishedRank: 1,
   aggregateScore: 300,
+  overallRank: 1,
 }
 
 describe('DistrictsPage data controls bar (#530 #528)', () => {
@@ -46,6 +47,7 @@ describe('DistrictsPage data controls bar (#530 #528)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
     renderWithProviders(<DistrictsPage />)
 
@@ -58,6 +60,7 @@ describe('DistrictsPage data controls bar (#530 #528)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
     renderWithProviders(<DistrictsPage />)
 
@@ -69,6 +72,7 @@ describe('DistrictsPage data controls bar (#530 #528)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
     renderWithProviders(<DistrictsPage />)
 
@@ -82,6 +86,7 @@ describe('DistrictsPage row cleanup (#519 #520)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -94,6 +99,7 @@ describe('DistrictsPage row cleanup (#519 #520)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [{ ...baseRanking, districtId: '86', districtName: '86' }],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -114,6 +120,7 @@ describe('DistrictsPage row cleanup (#519 #520)', () => {
         },
       ],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
 
     renderWithProviders(<DistrictsPage />)
