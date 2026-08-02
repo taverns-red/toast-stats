@@ -123,11 +123,7 @@ async function discoverDistrictsForDate(
 ): Promise<string[]> {
   const programYear = calculateProgramYear(date)
   const dateObj = new Date(date + 'T00:00:00Z')
-  const summaryPath = buildCsvPathFromReport(
-    '',
-    dateObj,
-    'districtsummary'
-  ).replace(/^\//, '')
+  const summaryPath = buildCsvPathFromReport('', dateObj, 'districtsummary')
 
   if (dryRun) {
     console.log(
@@ -181,7 +177,7 @@ async function downloadDistrictCsvsForDate(
         dateObj,
         reportType,
         districtId
-      ).replace(/^\//, '')
+      )
 
       if (dryRun) {
         console.log(
@@ -228,7 +224,7 @@ async function patchMetadata(
   dryRun: boolean
 ): Promise<void> {
   const dateObj = new Date(date + 'T00:00:00Z')
-  const metaPath = buildMetadataPath('', dateObj).replace(/^\//, '')
+  const metaPath = buildMetadataPath('', dateObj)
 
   if (dryRun) {
     console.log(
