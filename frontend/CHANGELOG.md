@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.17.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.16.1...frontend-v3.17.0) (2026-08-02)
+
+
+### Features
+
+* **frontend:** filter the rankings table by Recognition ([#1362](https://github.com/taverns-red/toast-stats/issues/1362)) ([#1369](https://github.com/taverns-red/toast-stats/issues/1369)) ([9a13e1b](https://github.com/taverns-red/toast-stats/commit/9a13e1bc106a2328d86d2a6aead8435cfef8015c))
+
+
+### Bug Fixes
+
+* **dark-mode:** recolour the first divide-y divider too ([#1370](https://github.com/taverns-red/toast-stats/issues/1370)); pin the lessons-index locale ([#1372](https://github.com/taverns-red/toast-stats/issues/1372)) ([#1371](https://github.com/taverns-red/toast-stats/issues/1371)) ([df9ae67](https://github.com/taverns-red/toast-stats/commit/df9ae6795760f9cfbb4574975fc183ac18e092fe))
+* **frontend:** NaN program year ([#1353](https://github.com/taverns-red/toast-stats/issues/1353)), year-driven DD checklist ([#1354](https://github.com/taverns-red/toast-stats/issues/1354)), contact path ([#1356](https://github.com/taverns-red/toast-stats/issues/1356)), 640px column dead zone ([#1358](https://github.com/taverns-red/toast-stats/issues/1358)), landing CLS 0.265 → 0.004 ([#1359](https://github.com/taverns-red/toast-stats/issues/1359)) ([#1357](https://github.com/taverns-red/toast-stats/issues/1357)) ([50d858f](https://github.com/taverns-red/toast-stats/commit/50d858fdf7a8920715aba286c2f2e2708041151b))
+
 ## [3.16.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.16.0...frontend-v3.16.1) (2026-07-07)
 
 
