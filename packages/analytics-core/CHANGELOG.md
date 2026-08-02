@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.6](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.5...analytics-core-v1.9.6) (2026-08-02)
+
+
+### Bug Fixes
+
+* **frontend:** NaN program year ([#1353](https://github.com/taverns-red/toast-stats/issues/1353)), year-driven DD checklist ([#1354](https://github.com/taverns-red/toast-stats/issues/1354)), contact path ([#1356](https://github.com/taverns-red/toast-stats/issues/1356)), 640px column dead zone ([#1358](https://github.com/taverns-red/toast-stats/issues/1358)), landing CLS 0.265 → 0.004 ([#1359](https://github.com/taverns-red/toast-stats/issues/1359)) ([#1357](https://github.com/taverns-red/toast-stats/issues/1357)) ([50d858f](https://github.com/taverns-red/toast-stats/commit/50d858fdf7a8920715aba286c2f2e2708041151b))
+
 ## [1.9.5](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.4...analytics-core-v1.9.5) (2026-07-31)
 
 
