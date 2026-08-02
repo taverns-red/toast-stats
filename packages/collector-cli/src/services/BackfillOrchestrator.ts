@@ -30,6 +30,7 @@ import {
   buildCsvPathFromReport,
   buildMetadataPath,
   describeStorageDestination,
+  buildRawCsvPrefix,
 } from '../utils/CachePaths.js'
 import {
   isValidDistrictSummaryCsv,
@@ -1022,7 +1023,11 @@ export class BackfillOrchestrator {
       if (this.config.resume && 'warmCache' in this.storage) {
         const gcsStorage = this.storage as GcsBackfillStorage
         logger.info('Warming GCS cache — listing existing objects...')
-        const cachedCount = await gcsStorage.warmCache(this.config.outputDir)
+        // Scope the LIST to the tree this run writes. With no prefix, the
+        // bucket root would enumerate snapshots and analytics too (#1388).
+        const cachedCount = await gcsStorage.warmCache(
+          buildRawCsvPrefix(this.config.outputDir)
+        )
         logger.info('GCS cache warmed', { existingFiles: cachedCount })
       }
 

@@ -17,6 +17,7 @@ import {
   buildCsvPathFromReport,
   normaliseGcsKeyPrefix,
   describeStorageDestination,
+  buildRawCsvPrefix,
 } from '../CachePaths.js'
 
 describe('CachePaths (#126)', () => {
@@ -201,6 +202,25 @@ describe('CachePaths (#126)', () => {
       expect(describeStorageDestination('/data/cache')).toBe(
         '/data/cache/raw-csv/'
       )
+    })
+  })
+
+  describe('buildRawCsvPrefix (#1388)', () => {
+    it('scopes to the tree the run writes, with no empty segment', () => {
+      expect(buildRawCsvPrefix('')).toBe('raw-csv/')
+      expect(buildRawCsvPrefix('/')).toBe('raw-csv/')
+      expect(buildRawCsvPrefix('backfill/')).toBe('backfill/raw-csv/')
+    })
+
+    it('prefixes every key the builders compose', () => {
+      for (const prefix of ['', '/', 'backfill', '/data/cache']) {
+        expect(
+          buildCsvPath(prefix, '2026-07-26', CSVType.ALL_DISTRICTS)
+        ).toContain(buildRawCsvPrefix(prefix))
+        expect(buildMetadataPath(prefix, '2026-07-26')).toContain(
+          buildRawCsvPrefix(prefix)
+        )
+      }
     })
   })
 

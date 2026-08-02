@@ -94,11 +94,22 @@ export function describeStorageDestination(
   bucketName?: string
 ): string {
   if (bucketName) {
-    const key = normaliseGcsKeyPrefix(prefix)
-    return `gs://${bucketName}/${key ? `${key}/` : ''}raw-csv/`
+    return `gs://${bucketName}/${buildRawCsvPrefix(normaliseGcsKeyPrefix(prefix))}`
   }
-  const local = normalisePathPrefix(prefix)
-  return `${local ? `${local}/` : ''}raw-csv/`
+  return buildRawCsvPrefix(prefix)
+}
+
+/**
+ * The key prefix of everything a run writes: `{prefix/}raw-csv/` (#1388).
+ *
+ * Narrows the resume LIST to the tree actually being written — with no prefix
+ * at all, listing from the bucket root would enumerate every snapshot and
+ * analytics object too — and keeps the warmed key set aligned with the keys
+ * `buildCsvPath` composes.
+ */
+export function buildRawCsvPrefix(prefix: string): string {
+  const base = normalisePathPrefix(prefix)
+  return base === '' ? 'raw-csv/' : `${base}/raw-csv/`
 }
 
 /** Join a normalised prefix to a relative key without an empty segment. */
