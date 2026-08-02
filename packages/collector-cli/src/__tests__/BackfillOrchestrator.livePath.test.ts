@@ -188,6 +188,70 @@ describe('BackfillOrchestrator — live program year (#1384)', () => {
     ).toBe(true)
   })
 
+  it('backfills an explicit list of dates — the #1384 recovery set', async () => {
+    const storage = createSpyStorage()
+    const orchestrator = new BackfillOrchestrator(
+      baseConfig({
+        storage,
+        liveProgramYear: SIM_LIVE_PROGRAM_YEAR,
+        dates: ['2026-07-26', '2026-07-27', '2026-07-28', '2026-07-29'].map(
+          d => new Date(`${d}T00:00:00`)
+        ),
+      })
+    )
+    const sim = createSimulatedDownloader()
+    orchestrator.downloader.downloadCsv = sim.downloadCsv
+
+    const result = await orchestrator.runPhase1Discovery()
+
+    // Exactly the four dates, each on the root path, each with the month-end
+    // slot populated — the empty slot is what makes the endpoint serve today.
+    expect(sim.requestedUrls).toEqual([
+      'https://dashboards.toastmasters.org/export.aspx?type=CSV&report=districtsummary~6/30/2026~7/26/2026~2026-2027',
+      'https://dashboards.toastmasters.org/export.aspx?type=CSV&report=districtsummary~6/30/2026~7/27/2026~2026-2027',
+      'https://dashboards.toastmasters.org/export.aspx?type=CSV&report=districtsummary~6/30/2026~7/28/2026~2026-2027',
+      'https://dashboards.toastmasters.org/export.aspx?type=CSV&report=districtsummary~6/30/2026~7/29/2026~2026-2027',
+    ])
+    expect(storage.writes.map(w => w.path)).toEqual([
+      '/data/cache/raw-csv/2026-07-26/all-districts.csv',
+      '/data/cache/raw-csv/2026-07-27/all-districts.csv',
+      '/data/cache/raw-csv/2026-07-28/all-districts.csv',
+      '/data/cache/raw-csv/2026-07-29/all-districts.csv',
+    ])
+    expect(result.emptySkipped).toBe(0)
+    expect(result.mismatches).toBe(0)
+  })
+
+  it('collects per-district reports for an explicit date list', async () => {
+    const storage = createSpyStorage()
+    const orchestrator = new BackfillOrchestrator(
+      baseConfig({
+        storage,
+        liveProgramYear: SIM_LIVE_PROGRAM_YEAR,
+        dates: [new Date('2026-07-26T00:00:00')],
+      })
+    )
+    const sim = createSimulatedDownloader()
+    orchestrator.downloader.downloadCsv = sim.downloadCsv
+
+    const result = await orchestrator.runPhase2Collection({
+      [SIM_LIVE_PROGRAM_YEAR]: ['61'],
+    })
+
+    expect(result.errors).toBe(0)
+    expect(sim.requestedUrls).toEqual([
+      'https://dashboards.toastmasters.org/export.aspx?type=CSV&report=districtperformance~61~6/30/2026~7/26/2026~2026-2027',
+      'https://dashboards.toastmasters.org/export.aspx?type=CSV&report=divisionperformance~61~6/30/2026~7/26/2026~2026-2027',
+      'https://dashboards.toastmasters.org/export.aspx?type=CSV&report=clubperformance~61~6/30/2026~7/26/2026~2026-2027',
+    ])
+    expect(storage.writes.map(w => w.path)).toEqual([
+      '/data/cache/raw-csv/2026-07-26/district-61/district-performance.csv',
+      '/data/cache/raw-csv/2026-07-26/district-61/division-performance.csv',
+      '/data/cache/raw-csv/2026-07-26/district-61/club-performance.csv',
+      '/data/cache/raw-csv/2026-07-26/metadata.json',
+    ])
+  })
+
   it('rejects a response whose footer as-of date is not the date requested', async () => {
     const storage = createSpyStorage()
     const orchestrator = new BackfillOrchestrator(baseConfig({ storage }))

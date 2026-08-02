@@ -169,6 +169,16 @@ export interface BackfillConfig {
    * extra request and its URLs are unchanged.
    */
   liveProgramYear?: string
+  /**
+   * An explicit list of collection dates, replacing the generated
+   * `startYear…endYear × frequency` grid (#1384).
+   *
+   * Recovering a handful of specific days — e.g. the four PY 2026-2027 dates
+   * the #1342 outage skipped — is otherwise impossible: the smallest grid that
+   * contains them is a full year of daily requests. Each date's program year is
+   * derived from the date itself, so a list may span years.
+   */
+  dates?: Date[]
 }
 
 export interface BackfillScope {
@@ -280,6 +290,32 @@ export class BackfillOrchestrator {
   private liveProgramYearResolved = false
   private liveProgramYear: string | undefined
 
+  /**
+   * The program years this run targets — derived from an explicit `dates` list
+   * when one is given, otherwise from the `startYear…endYear` range (#1384).
+   */
+  private targetProgramYears(): string[] {
+    if (this.config.dates) {
+      return [
+        ...new Set(this.config.dates.map(d => calculateProgramYear(d))),
+      ].sort()
+    }
+    return this.downloader.getProgramYearRange(
+      this.config.startYear,
+      this.config.endYear
+    )
+  }
+
+  /** The collection dates belonging to one program year (#1384). */
+  private datesForYear(year: string): Date[] {
+    if (this.config.dates) {
+      return this.config.dates
+        .filter(d => calculateProgramYear(d) === year)
+        .sort((a, b) => a.getTime() - b.getTime())
+    }
+    return this.downloader.generateDateGrid(year, this.config.frequency)
+  }
+
   constructor(config: BackfillConfig) {
     this.config = config
     this.downloader = new HttpCsvDownloader({
@@ -315,10 +351,7 @@ export class BackfillOrchestrator {
     const today = toYYYYMMDD(new Date())
     const calendarPY = calculateProgramYear(today)
     const candidates = new Set([calendarPY, getPriorProgramYear(calendarPY)])
-    const targetYears = this.downloader.getProgramYearRange(
-      this.config.startYear,
-      this.config.endYear
-    )
+    const targetYears = this.targetProgramYears()
     if (!targetYears.some(y => candidates.has(y))) {
       logger.info(
         'Backfill range is entirely historical — every fetch uses /{programYear}/ (#1384)',
@@ -399,10 +432,22 @@ export class BackfillOrchestrator {
    * Calculate the total scope of the backfill operation.
    */
   calculateScope(): BackfillScope {
-    const programYears = this.downloader.getProgramYearRange(
-      this.config.startYear,
-      this.config.endYear
-    )
+    const programYears = this.targetProgramYears()
+
+    if (this.config.dates) {
+      // An explicit date list is not a per-year grid: count the dates directly
+      // so the scope banner does not overstate a 4-date recovery run (#1384).
+      const datesPerYear = Math.max(
+        ...programYears.map(y => this.datesForYear(y).length)
+      )
+      return {
+        programYears,
+        datesPerYear,
+        phase1Requests: this.config.dates.length,
+        requestsPerDistrict: datesPerYear * 3,
+      }
+    }
+
     const dates = this.downloader.generateDateGrid(
       programYears[0]!,
       this.config.frequency
@@ -468,10 +513,7 @@ export class BackfillOrchestrator {
 
       this.progress.currentYear = year
       const pathStyle = resolveExportPathStyle(year, liveProgramYear)
-      const dates = this.downloader.generateDateGrid(
-        year,
-        this.config.frequency
-      )
+      const dates = this.datesForYear(year)
       const discoveredDistricts = new Set<string>()
 
       for (const date of dates) {
@@ -608,10 +650,7 @@ export class BackfillOrchestrator {
     // Calculate total
     let total = 0
     for (const [year, districts] of Object.entries(districtsPerYear)) {
-      const dates = this.downloader.generateDateGrid(
-        year,
-        this.config.frequency
-      )
+      const dates = this.datesForYear(year)
       total += districts.length * reportTypes.length * dates.length
     }
 
@@ -640,10 +679,7 @@ export class BackfillOrchestrator {
 
       this.progress.currentYear = year
       const pathStyle = resolveExportPathStyle(year, liveProgramYear)
-      const dates = this.downloader.generateDateGrid(
-        year,
-        this.config.frequency
-      )
+      const dates = this.datesForYear(year)
 
       for (const districtId of districts) {
         if (this.aborted) break
