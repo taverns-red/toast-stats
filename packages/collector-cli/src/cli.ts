@@ -986,6 +986,10 @@ export function createCLI(): Command {
           .split(',')
           .map(d => d.trim())
           .filter(Boolean)
+        if (dates.length === 0) {
+          console.error('Error: --dates was given but contains no dates.')
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
         for (const d of dates) {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
             console.error(`Error: Invalid date "${d}". Expected YYYY-MM-DD.`)
@@ -1127,8 +1131,24 @@ export function createCLI(): Command {
         )
 
         try {
-          await orchestrator.run()
-          console.error('[DONE] Backfill complete')
+          const summary = await orchestrator.run()
+          console.error(
+            `[DONE] Backfill complete — requests=${summary.requestsMade} ` +
+              `emptySkipped=${summary.emptySkipped} ` +
+              `mismatches=${summary.mismatches} errors=${summary.errors}`
+          )
+
+          // A mismatch means the dashboard handed back a period we did not ask
+          // for. Nothing was ingested, but the run must not look clean: exiting
+          // 0 here is how a silent history rewrite would slip past CI (#1384).
+          if (summary.mismatches > 0) {
+            console.error(
+              `[ERROR] ${summary.mismatches} response(s) were not for the ` +
+                `requested period and were refused — see the logs above.`
+            )
+            process.exit(ExitCode.COMPLETE_FAILURE)
+          }
+
           process.exit(ExitCode.SUCCESS)
         } catch (error) {
           const errorMessage =

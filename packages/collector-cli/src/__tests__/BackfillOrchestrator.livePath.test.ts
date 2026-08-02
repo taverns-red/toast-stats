@@ -22,6 +22,10 @@ import {
   type BackfillStorage,
 } from '../services/BackfillOrchestrator.js'
 import {
+  buildExportUrl,
+  type BackfillDateSpec,
+} from '../services/HttpCsvDownloader.js'
+import {
   createSimulatedDownloader,
   SIM_LIVE_PROGRAM_YEAR,
   SIM_TODAY,
@@ -44,6 +48,21 @@ function createSpyStorage(): BackfillStorage & {
       writes.push({ path, content })
     },
   }
+}
+
+/**
+ * Drop the run's live-year resolution probes, keeping only the requests made
+ * for the dates being backfilled.
+ *
+ * The probes are as-of *today* and are the one place that deliberately asks
+ * for `/{live PY}/export.aspx` — that 500 is how the orchestrator learns the
+ * year has no archive path. No collection date in these tests is today, so the
+ * as-of is an unambiguous discriminator.
+ */
+function collectionUrls(urls: string[]): string[] {
+  const [y, m, d] = SIM_TODAY.split('-')
+  const todayAsOf = `~${parseInt(m!, 10)}/${parseInt(d!, 10)}/${y}~`
+  return urls.filter(u => !u.includes(todayAsOf))
 }
 
 function baseConfig(overrides: Partial<BackfillConfig> = {}): BackfillConfig {
@@ -89,7 +108,7 @@ describe('BackfillOrchestrator — live program year (#1384)', () => {
 
     // Not one districtsummary request may carry the archive prefix for the
     // live year — that URL is the 500.
-    const archivePrefixed = sim.requestedUrls.filter(u =>
+    const archivePrefixed = collectionUrls(sim.requestedUrls).filter(u =>
       u.includes(`/${SIM_LIVE_PROGRAM_YEAR}/export.aspx`)
     )
     expect(archivePrefixed).toEqual([])
@@ -109,7 +128,7 @@ describe('BackfillOrchestrator — live program year (#1384)', () => {
 
     expect(result.errors).toBe(0)
     expect(
-      sim.requestedUrls.filter(u =>
+      collectionUrls(sim.requestedUrls).filter(u =>
         u.includes(`/${SIM_LIVE_PROGRAM_YEAR}/export.aspx`)
       )
     ).toEqual([])
@@ -159,7 +178,7 @@ describe('BackfillOrchestrator — live program year (#1384)', () => {
 
     await orchestrator.runPhase1Discovery()
 
-    for (const url of sim.requestedUrls) {
+    for (const url of collectionUrls(sim.requestedUrls)) {
       const isRoot = /toastmasters\.org\/export\.aspx/.test(url)
       const askedForLiveYear = url.endsWith(SIM_LIVE_PROGRAM_YEAR)
       // Root path ⇔ the live program year. Never one without the other.
@@ -250,6 +269,75 @@ describe('BackfillOrchestrator — live program year (#1384)', () => {
       '/data/cache/raw-csv/2026-07-26/district-61/club-performance.csv',
       '/data/cache/raw-csv/2026-07-26/metadata.json',
     ])
+  })
+
+  it('keeps a year that still HAS an archive path on /{PY}/, even when the root path is serving it', async () => {
+    // The July rollover window: the root path serves the PRIOR program year
+    // because the new one has not published yet, so resolveActiveProgramYear
+    // reports pathStyle:'live' for 2025-2026. That does NOT mean 2025-2026
+    // lost its archive path — and the root path cannot serve historical as-of
+    // dates (it returns zero rows). Routing the whole year there would skip
+    // every date and exit 0, which is the silent-failure direction.
+    const storage = createSpyStorage()
+    const orchestrator = new BackfillOrchestrator(
+      baseConfig({
+        storage,
+        startYear: 2025,
+        endYear: 2025,
+        frequency: 'monthly',
+      })
+    )
+
+    const seen: Array<{ url: string }> = []
+    orchestrator.downloader.downloadCsv = vi
+      .fn()
+      .mockImplementation(async (spec: BackfillDateSpec) => {
+        const url = buildExportUrl(spec)
+        seen.push({ url })
+        const asOf = `${spec.date.getMonth() + 1}/${spec.date.getDate()}/${spec.date.getFullYear()}`
+        // Root serves the prior year's June close (the rollover window).
+        const content =
+          spec.pathStyle === 'live'
+            ? `"REGION","DISTRICT"\n"02","61"\nMonth of Jun, As of ${asOf}`
+            : `"REGION","DISTRICT"\n"02","61"\nMonth of Jun, As of ${asOf}`
+        return { url, content, statusCode: 200, byteSize: content.length }
+      })
+
+    await orchestrator.runPhase1Discovery()
+
+    // /2025-2026/ answers, so the year is NOT root-only and every collection
+    // request must use it.
+    const collectionUrls = seen
+      .map(s => s.url)
+      .filter(u => !u.includes('~8/2/2026~')) // drop the resolution probes
+    expect(collectionUrls.length).toBeGreaterThan(0)
+    for (const url of collectionUrls) {
+      expect(url).toContain('/2025-2026/export.aspx')
+    }
+  })
+
+  it('reports mismatches so the caller can fail the run', async () => {
+    const orchestrator = new BackfillOrchestrator(
+      baseConfig({
+        storage: createSpyStorage(),
+        liveProgramYear: SIM_LIVE_PROGRAM_YEAR,
+        dates: [new Date('2026-07-26T00:00:00')],
+      })
+    )
+    orchestrator.downloader.downloadCsv = vi.fn().mockResolvedValue({
+      url: 'https://dashboards.toastmasters.org/export.aspx',
+      content: '"REGION","DISTRICT"\n"02","61"\nMonth of Aug, As of 08/02/2026',
+      statusCode: 200,
+      byteSize: 80,
+    })
+
+    const result = await orchestrator.runPhase1Discovery()
+
+    expect(result.mismatches).toBe(1)
+    // A run that ingested nothing because everything was wrong must not be
+    // indistinguishable from a clean run.
+    const summary = await orchestrator.run()
+    expect(summary.mismatches).toBeGreaterThan(0)
   })
 
   it('rejects a response whose footer as-of date is not the date requested', async () => {

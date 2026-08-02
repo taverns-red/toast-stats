@@ -30,7 +30,10 @@ import {
   buildCsvPathFromReport,
   buildMetadataPath,
 } from '../utils/CachePaths.js'
-import { resolveActiveProgramYear } from '../utils/programYearResolver.js'
+import {
+  isValidDistrictSummaryCsv,
+  resolveActiveProgramYear,
+} from '../utils/programYearResolver.js'
 import {
   BackfillContentMismatchError,
   resolveExportPathStyle,
@@ -198,6 +201,19 @@ export interface Phase1Result {
   mismatches: number
 }
 
+/** What a completed `run()` actually did (#1384). */
+export interface BackfillRunSummary {
+  requestsMade: number
+  /** Dates the dashboard answered 200 for but had no data on. */
+  emptySkipped: number
+  /**
+   * Responses refused because they were not for the requested period. Any
+   * value above zero means the run is NOT trustworthy — callers must fail.
+   */
+  mismatches: number
+  errors: number
+}
+
 export interface BackfillProgress {
   phase: number
   total: number
@@ -287,8 +303,7 @@ export class BackfillOrchestrator {
     startTime: Date.now(),
   }
 
-  private liveProgramYearResolved = false
-  private liveProgramYear: string | undefined
+  private liveProgramYearPromise: Promise<string | undefined> | undefined
 
   /**
    * The program years this run targets — derived from an explicit `dates` list
@@ -327,25 +342,35 @@ export class BackfillOrchestrator {
   }
 
   /**
-   * Which program year the bare `/export.aspx` currently serves, resolved once
-   * per run and memoised (#1384).
+   * The program year that can ONLY be reached at the bare `/export.aspx`,
+   * resolved once per run and memoised (#1384).
    *
-   * Resolved by asking the dashboard rather than by reading the calendar: TM's
-   * rollover lags July 1, so the live year is a fact about their data, not
-   * about today's date (#1284). Anything we cannot confirm is live stays on
-   * the archive path, whose URL constrains the year — the safe default.
+   * Note what this is *not*: it is not simply "the year the root path is
+   * currently serving". During TM's July rollover the root path serves the
+   * PRIOR program year (its June close is still running) while that year keeps
+   * a perfectly good `/{PY}/` archive path. Routing the whole year to the root
+   * on that basis would be a silent disaster — the root path cannot serve
+   * historical as-of dates, so every date would come back with zero rows, be
+   * skipped, and the run would exit 0 having ingested nothing.
+   *
+   * So a year only counts once we have confirmed it has no archive path, by
+   * asking for one. That is the property that actually forces our hand.
    *
    * A backfill whose range cannot contain the live year skips the probe
    * entirely, so purely historical runs issue exactly the requests they always
    * did.
    */
   private async getLiveProgramYear(): Promise<string | undefined> {
-    if (this.liveProgramYearResolved) return this.liveProgramYear
-    this.liveProgramYearResolved = true
+    // Memoise the PROMISE, not the value: two phases starting concurrently
+    // would otherwise both see "not resolved yet", and the loser would route
+    // the live year to /{PY}/ and take a 500.
+    this.liveProgramYearPromise ??= this.resolveRootOnlyProgramYear()
+    return this.liveProgramYearPromise
+  }
 
+  private async resolveRootOnlyProgramYear(): Promise<string | undefined> {
     if (this.config.liveProgramYear !== undefined) {
-      this.liveProgramYear = this.config.liveProgramYear
-      return this.liveProgramYear
+      return this.config.liveProgramYear
     }
 
     const today = toYYYYMMDD(new Date())
@@ -375,16 +400,60 @@ export class BackfillOrchestrator {
       }
     )
 
-    this.liveProgramYear =
-      resolution.pathStyle === 'live' ? resolution.programYear : undefined
+    if (resolution.pathStyle !== 'live') {
+      logger.info('Resolved the live program year for backfill (#1384)', {
+        today,
+        liveProgramYear: null,
+        reason: resolution.reason,
+      })
+      return undefined
+    }
+
+    // The root path is serving `resolution.programYear` — but that alone does
+    // not mean the year lost its archive path. Ask for it.
+    const hasArchivePath = await this.archivePathExists(
+      resolution.programYear,
+      today
+    )
+    const rootOnly = hasArchivePath ? undefined : resolution.programYear
 
     logger.info('Resolved the live program year for backfill (#1384)', {
       today,
-      liveProgramYear: this.liveProgramYear ?? null,
+      servedAtRoot: resolution.programYear,
+      hasArchivePath,
+      liveProgramYear: rootOnly ?? null,
       reason: resolution.reason,
     })
 
-    return this.liveProgramYear
+    return rootOnly
+  }
+
+  /**
+   * Does `/{programYear}/export.aspx` exist? (#1384)
+   *
+   * TM returns HTTP 500 "URL Rewrite Module Error." for the year that is
+   * currently live and has therefore not been archived yet. A 200 whose body
+   * is a real districtsummary means the archive path is available — even an
+   * out-of-range as-of date answers with a valid header row and no data, which
+   * is enough to prove the path resolves.
+   */
+  private async archivePathExists(
+    programYear: string,
+    date: string
+  ): Promise<boolean> {
+    try {
+      const dateObj = new Date(`${date}T00:00:00`)
+      const result = await this.downloader.downloadCsv({
+        programYear,
+        reportType: 'districtsummary',
+        date: dateObj,
+        monthEndDate: computeMonthEndDate(dateObj),
+        pathStyle: 'archive',
+      })
+      return isValidDistrictSummaryCsv(result.content)
+    } catch {
+      return false
+    }
   }
 
   /**
@@ -798,7 +867,13 @@ export class BackfillOrchestrator {
   /**
    * Run the full backfill pipeline.
    */
-  async run(): Promise<void> {
+  async run(): Promise<BackfillRunSummary> {
+    const summary: BackfillRunSummary = {
+      requestsMade: 0,
+      emptySkipped: 0,
+      mismatches: 0,
+      errors: 0,
+    }
     const scope = this.calculateScope()
     const phase = this.config.phase ?? 'all'
 
@@ -833,6 +908,9 @@ export class BackfillOrchestrator {
 
       // Phase 1: Discovery
       const phase1Result = await this.runPhase1Discovery()
+      summary.requestsMade += phase1Result.requestsMade
+      summary.emptySkipped += phase1Result.emptySkipped
+      summary.mismatches += phase1Result.mismatches
       logger.info('Phase 1 complete', {
         districtsPerYear: Object.fromEntries(
           Object.entries(phase1Result.districtsPerYear).map(([y, d]) => [
@@ -848,18 +926,22 @@ export class BackfillOrchestrator {
 
       if (phase === 'discover') {
         logger.info('Discovery-only mode — stopping after Phase 1')
-        return
+        return summary
       }
 
       if (this.aborted) {
         logger.info('Aborted after Phase 1')
-        return
+        return summary
       }
 
       // Phase 2: Collection
       const phase2Result = await this.runPhase2Collection(
         phase1Result.districtsPerYear
       )
+      summary.requestsMade += phase2Result.requestsMade
+      summary.emptySkipped += phase2Result.emptySkipped
+      summary.mismatches += phase2Result.mismatches
+      summary.errors += phase2Result.errors
       logger.info('Phase 2 complete', {
         requestsMade: phase2Result.requestsMade,
         errors: phase2Result.errors,
@@ -869,13 +951,15 @@ export class BackfillOrchestrator {
 
       if (phase === 'collect' || this.aborted) {
         logger.info('Collection complete — run transform separately')
-        return
+        return summary
       }
 
       // Phase 3: Transform (placeholder — runs existing pipeline)
       logger.info(
         'Phase 3: Transform — run the existing transform pipeline on collected data'
       )
+
+      return summary
     } finally {
       process.removeListener('SIGINT', handler)
     }
