@@ -86,6 +86,41 @@ export function parseFooterDataMonth(
   return undefined
 }
 
+/**
+ * Parse the **"As of" date** from a CSV's `Month of X, As of MM/DD/YYYY` footer.
+ *
+ * This is the single most reliable thing the dashboard tells us about a
+ * response (#1384). Measured across every endpoint shape on 2026-08-02, the
+ * as-of date echoes the date that was requested — with exactly one exception:
+ * when the export URL's month-end slot is left empty, the root `/export.aspx`
+ * ignores the requested as-of and serves *today* instead. Comparing this value
+ * to the date we asked for is therefore what catches a response that is not
+ * for the period we requested, on either the live or the archive path.
+ *
+ * Unlike the "Month of" half of the footer, which tracks the as-of month when
+ * data exists but echoes the requested month-end when the response is empty,
+ * this value is unambiguous.
+ *
+ * @returns `YYYY-MM-DD`, or undefined when no parseable footer is present —
+ *          UNDECIDED, never a verdict (#1129).
+ */
+export function parseFooterAsOfDate(
+  csvContent: string | undefined | null
+): string | undefined {
+  if (!csvContent) return undefined
+
+  const lines = csvContent.split(/\r?\n/).slice(-20)
+  for (const line of lines) {
+    const match = line.match(
+      /^"?Month of\s+[A-Za-z]+,\s*As of\s+([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{4})"?$/i
+    )
+    if (!match) continue
+    return `${match[3]}-${match[1]!.padStart(2, '0')}-${match[2]!.padStart(2, '0')}`
+  }
+
+  return undefined
+}
+
 export function parseClosingPeriodFromCsv(
   csvContent: string,
   requestedDate: string

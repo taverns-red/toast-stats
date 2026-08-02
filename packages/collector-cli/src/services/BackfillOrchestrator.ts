@@ -19,15 +19,26 @@ import {
   HttpCsvDownloader,
   computeMonthEndDate,
   type DateFrequency,
+  type ExportPathStyle,
   type ReportType,
 } from './HttpCsvDownloader.js'
 import { logger } from '../utils/logger.js'
 import {
   toYYYYMMDD,
   calculateProgramYear,
+  getPriorProgramYear,
   buildCsvPathFromReport,
   buildMetadataPath,
 } from '../utils/CachePaths.js'
+import {
+  isValidDistrictSummaryCsv,
+  resolveActiveProgramYear,
+} from '../utils/programYearResolver.js'
+import {
+  BackfillContentMismatchError,
+  resolveExportPathStyle,
+  verifyBackfillCsv,
+} from '../utils/backfillContentGuard.js'
 
 // ── Storage Abstraction ──────────────────────────────────────────────
 
@@ -151,6 +162,26 @@ export interface BackfillConfig {
   phase?: 'discover' | 'collect' | 'all'
   resume?: boolean
   storage?: BackfillStorage
+  /**
+   * The program year currently served by the bare `/export.aspx` (#1384).
+   *
+   * That year has no `/{programYear}/` archive path — requesting one returns
+   * HTTP 500 — so it can only be fetched from the root. When omitted, it is
+   * resolved once per run by asking the dashboard, and only when the backfill
+   * range could actually contain it: a purely historical backfill makes no
+   * extra request and its URLs are unchanged.
+   */
+  liveProgramYear?: string
+  /**
+   * An explicit list of collection dates, replacing the generated
+   * `startYear…endYear × frequency` grid (#1384).
+   *
+   * Recovering a handful of specific days — e.g. the four PY 2026-2027 dates
+   * the #1342 outage skipped — is otherwise impossible: the smallest grid that
+   * contains them is a full year of daily requests. Each date's program year is
+   * derived from the date itself, so a list may span years.
+   */
+  dates?: Date[]
 }
 
 export interface BackfillScope {
@@ -164,6 +195,23 @@ export interface Phase1Result {
   districtsPerYear: Record<string, string[]>
   totalDistricts: number
   requestsMade: number
+  /** Dates the dashboard answered 200 for but had no data on (#1384). */
+  emptySkipped: number
+  /** Responses rejected because they were not for the requested period. */
+  mismatches: number
+}
+
+/** What a completed `run()` actually did (#1384). */
+export interface BackfillRunSummary {
+  requestsMade: number
+  /** Dates the dashboard answered 200 for but had no data on. */
+  emptySkipped: number
+  /**
+   * Responses refused because they were not for the requested period. Any
+   * value above zero means the run is NOT trustworthy — callers must fail.
+   */
+  mismatches: number
+  errors: number
 }
 
 export interface BackfillProgress {
@@ -255,6 +303,34 @@ export class BackfillOrchestrator {
     startTime: Date.now(),
   }
 
+  private liveProgramYearPromise: Promise<string | undefined> | undefined
+
+  /**
+   * The program years this run targets — derived from an explicit `dates` list
+   * when one is given, otherwise from the `startYear…endYear` range (#1384).
+   */
+  private targetProgramYears(): string[] {
+    if (this.config.dates) {
+      return [
+        ...new Set(this.config.dates.map(d => calculateProgramYear(d))),
+      ].sort()
+    }
+    return this.downloader.getProgramYearRange(
+      this.config.startYear,
+      this.config.endYear
+    )
+  }
+
+  /** The collection dates belonging to one program year (#1384). */
+  private datesForYear(year: string): Date[] {
+    if (this.config.dates) {
+      return this.config.dates
+        .filter(d => calculateProgramYear(d) === year)
+        .sort((a, b) => a.getTime() - b.getTime())
+    }
+    return this.downloader.generateDateGrid(year, this.config.frequency)
+  }
+
   constructor(config: BackfillConfig) {
     this.config = config
     this.downloader = new HttpCsvDownloader({
@@ -266,13 +342,181 @@ export class BackfillOrchestrator {
   }
 
   /**
+   * The program year that can ONLY be reached at the bare `/export.aspx`,
+   * resolved once per run and memoised (#1384).
+   *
+   * Note what this is *not*: it is not simply "the year the root path is
+   * currently serving". During TM's July rollover the root path serves the
+   * PRIOR program year (its June close is still running) while that year keeps
+   * a perfectly good `/{PY}/` archive path. Routing the whole year to the root
+   * on that basis would be a silent disaster — the root path cannot serve
+   * historical as-of dates, so every date would come back with zero rows, be
+   * skipped, and the run would exit 0 having ingested nothing.
+   *
+   * So a year only counts once we have confirmed it has no archive path, by
+   * asking for one. That is the property that actually forces our hand.
+   *
+   * A backfill whose range cannot contain the live year skips the probe
+   * entirely, so purely historical runs issue exactly the requests they always
+   * did.
+   */
+  private async getLiveProgramYear(): Promise<string | undefined> {
+    // Memoise the PROMISE, not the value: two phases starting concurrently
+    // would otherwise both see "not resolved yet", and the loser would route
+    // the live year to /{PY}/ and take a 500.
+    this.liveProgramYearPromise ??= this.resolveRootOnlyProgramYear()
+    return this.liveProgramYearPromise
+  }
+
+  private async resolveRootOnlyProgramYear(): Promise<string | undefined> {
+    if (this.config.liveProgramYear !== undefined) {
+      return this.config.liveProgramYear
+    }
+
+    const today = toYYYYMMDD(new Date())
+    const calendarPY = calculateProgramYear(today)
+    const candidates = new Set([calendarPY, getPriorProgramYear(calendarPY)])
+    const targetYears = this.targetProgramYears()
+    if (!targetYears.some(y => candidates.has(y))) {
+      logger.info(
+        'Backfill range is entirely historical — every fetch uses /{programYear}/ (#1384)',
+        { targetYears }
+      )
+      return undefined
+    }
+
+    const resolution = await resolveActiveProgramYear(
+      today,
+      async (programYear, pathStyle) => {
+        const date = new Date(`${today}T00:00:00`)
+        const result = await this.downloader.downloadCsv({
+          programYear,
+          reportType: 'districtsummary',
+          date,
+          monthEndDate: computeMonthEndDate(date),
+          pathStyle,
+        })
+        return result.content
+      }
+    )
+
+    if (resolution.pathStyle !== 'live') {
+      logger.info('Resolved the live program year for backfill (#1384)', {
+        today,
+        liveProgramYear: null,
+        reason: resolution.reason,
+      })
+      return undefined
+    }
+
+    // The root path is serving `resolution.programYear` — but that alone does
+    // not mean the year lost its archive path. Ask for it.
+    const hasArchivePath = await this.archivePathExists(
+      resolution.programYear,
+      today
+    )
+    const rootOnly = hasArchivePath ? undefined : resolution.programYear
+
+    logger.info('Resolved the live program year for backfill (#1384)', {
+      today,
+      servedAtRoot: resolution.programYear,
+      hasArchivePath,
+      liveProgramYear: rootOnly ?? null,
+      reason: resolution.reason,
+    })
+
+    return rootOnly
+  }
+
+  /**
+   * Does `/{programYear}/export.aspx` exist? (#1384)
+   *
+   * TM returns HTTP 500 "URL Rewrite Module Error." for the year that is
+   * currently live and has therefore not been archived yet. A 200 whose body
+   * is a real districtsummary means the archive path is available — even an
+   * out-of-range as-of date answers with a valid header row and no data, which
+   * is enough to prove the path resolves.
+   */
+  private async archivePathExists(
+    programYear: string,
+    date: string
+  ): Promise<boolean> {
+    try {
+      const dateObj = new Date(`${date}T00:00:00`)
+      const result = await this.downloader.downloadCsv({
+        programYear,
+        reportType: 'districtsummary',
+        date: dateObj,
+        monthEndDate: computeMonthEndDate(dateObj),
+        pathStyle: 'archive',
+      })
+      return isValidDistrictSummaryCsv(result.content)
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Verify a downloaded body against the request that produced it, then say
+   * whether it may be stored (#1384).
+   *
+   * A mismatch throws: it means the dashboard gave us a different period than
+   * we asked for, and writing it would put wrong data under a real date.
+   */
+  private acceptDownload(args: {
+    content: string
+    programYear: string
+    date: Date
+    pathStyle: ExportPathStyle
+    url: string
+    context: Record<string, unknown>
+  }): 'store' | 'skip' {
+    const dateStr = toYYYYMMDD(args.date)
+    const verdict = verifyBackfillCsv({
+      content: args.content,
+      programYear: args.programYear,
+      date: dateStr,
+      pathStyle: args.pathStyle,
+    })
+
+    if (verdict.status === 'mismatch') {
+      throw new BackfillContentMismatchError(
+        `Refusing to ingest ${args.url}: ${verdict.reason}`,
+        { programYear: args.programYear, date: dateStr, url: args.url }
+      )
+    }
+
+    if (verdict.status === 'empty') {
+      logger.warn(
+        'Dashboard returned no data for this date — skipping, not ingesting (#1384)',
+        { ...args.context, date: dateStr, reason: verdict.reason }
+      )
+      return 'skip'
+    }
+
+    return 'store'
+  }
+
+  /**
    * Calculate the total scope of the backfill operation.
    */
   calculateScope(): BackfillScope {
-    const programYears = this.downloader.getProgramYearRange(
-      this.config.startYear,
-      this.config.endYear
-    )
+    const programYears = this.targetProgramYears()
+
+    if (this.config.dates) {
+      // An explicit date list is not a per-year grid: count the dates directly
+      // so the scope banner does not overstate a 4-date recovery run (#1384).
+      const datesPerYear = Math.max(
+        ...programYears.map(y => this.datesForYear(y).length)
+      )
+      return {
+        programYears,
+        datesPerYear,
+        phase1Requests: this.config.dates.length,
+        requestsPerDistrict: datesPerYear * 3,
+      }
+    }
+
     const dates = this.downloader.generateDateGrid(
       programYears[0]!,
       this.config.frequency
@@ -313,7 +557,10 @@ export class BackfillOrchestrator {
   async runPhase1Discovery(): Promise<Phase1Result> {
     const scope = this.calculateScope()
     const districtsPerYear: Record<string, string[]> = {}
+    const liveProgramYear = await this.getLiveProgramYear()
     let requestsMade = 0
+    let emptySkipped = 0
+    let mismatches = 0
 
     this.progress = {
       phase: 1,
@@ -334,10 +581,8 @@ export class BackfillOrchestrator {
       if (this.aborted) break
 
       this.progress.currentYear = year
-      const dates = this.downloader.generateDateGrid(
-        year,
-        this.config.frequency
-      )
+      const pathStyle = resolveExportPathStyle(year, liveProgramYear)
+      const dates = this.datesForYear(year)
       const discoveredDistricts = new Set<string>()
 
       for (const date of dates) {
@@ -372,11 +617,25 @@ export class BackfillOrchestrator {
             reportType: 'districtsummary',
             date,
             monthEndDate: computeMonthEndDate(date),
+            pathStyle,
           })
 
           requestsMade++
           this.progress.completed++
           this.progress.requestsMade = requestsMade
+
+          const disposition = this.acceptDownload({
+            content: result.content,
+            programYear: year,
+            date,
+            pathStyle,
+            url: result.url,
+            context: { phase: 1, year },
+          })
+          if (disposition === 'skip') {
+            emptySkipped++
+            continue
+          }
 
           // Save to storage
           await this.storage.write(key, result.content)
@@ -395,6 +654,7 @@ export class BackfillOrchestrator {
             districtsFound: discoveredDistricts.size,
           })
         } catch (error) {
+          if (error instanceof BackfillContentMismatchError) mismatches++
           logger.error('Phase 1: failed to download summary', {
             year,
             date: date.toISOString().split('T')[0],
@@ -425,7 +685,13 @@ export class BackfillOrchestrator {
       0
     )
 
-    return { districtsPerYear, totalDistricts, requestsMade }
+    return {
+      districtsPerYear,
+      totalDistricts,
+      requestsMade,
+      emptySkipped,
+      mismatches,
+    }
   }
 
   /**
@@ -433,22 +699,27 @@ export class BackfillOrchestrator {
    */
   async runPhase2Collection(
     districtsPerYear: Record<string, string[]>
-  ): Promise<{ requestsMade: number; errors: number }> {
+  ): Promise<{
+    requestsMade: number
+    errors: number
+    emptySkipped: number
+    mismatches: number
+  }> {
     const reportTypes: ReportType[] = [
       'districtperformance',
       'divisionperformance',
       'clubperformance',
     ]
+    const liveProgramYear = await this.getLiveProgramYear()
     let requestsMade = 0
     let errors = 0
+    let emptySkipped = 0
+    let mismatches = 0
 
     // Calculate total
     let total = 0
     for (const [year, districts] of Object.entries(districtsPerYear)) {
-      const dates = this.downloader.generateDateGrid(
-        year,
-        this.config.frequency
-      )
+      const dates = this.datesForYear(year)
       total += districts.length * reportTypes.length * dates.length
     }
 
@@ -476,10 +747,8 @@ export class BackfillOrchestrator {
       if (this.aborted) break
 
       this.progress.currentYear = year
-      const dates = this.downloader.generateDateGrid(
-        year,
-        this.config.frequency
-      )
+      const pathStyle = resolveExportPathStyle(year, liveProgramYear)
+      const dates = this.datesForYear(year)
 
       for (const districtId of districts) {
         if (this.aborted) break
@@ -513,11 +782,25 @@ export class BackfillOrchestrator {
                 districtId,
                 date,
                 monthEndDate: computeMonthEndDate(date),
+                pathStyle,
               })
 
               requestsMade++
               this.progress.completed++
               this.progress.requestsMade = requestsMade
+
+              const disposition = this.acceptDownload({
+                content: result.content,
+                programYear: year,
+                date,
+                pathStyle,
+                url: result.url,
+                context: { phase: 2, year, districtId, reportType },
+              })
+              if (disposition === 'skip') {
+                emptySkipped++
+                continue
+              }
 
               await this.storage.write(key, result.content)
 
@@ -543,6 +826,7 @@ export class BackfillOrchestrator {
               }
             } catch (error) {
               errors++
+              if (error instanceof BackfillContentMismatchError) mismatches++
               logger.error('Phase 2: failed to download', {
                 year,
                 districtId,
@@ -577,13 +861,19 @@ export class BackfillOrchestrator {
       }
     }
 
-    return { requestsMade, errors }
+    return { requestsMade, errors, emptySkipped, mismatches }
   }
 
   /**
    * Run the full backfill pipeline.
    */
-  async run(): Promise<void> {
+  async run(): Promise<BackfillRunSummary> {
+    const summary: BackfillRunSummary = {
+      requestsMade: 0,
+      emptySkipped: 0,
+      mismatches: 0,
+      errors: 0,
+    }
     const scope = this.calculateScope()
     const phase = this.config.phase ?? 'all'
 
@@ -618,6 +908,9 @@ export class BackfillOrchestrator {
 
       // Phase 1: Discovery
       const phase1Result = await this.runPhase1Discovery()
+      summary.requestsMade += phase1Result.requestsMade
+      summary.emptySkipped += phase1Result.emptySkipped
+      summary.mismatches += phase1Result.mismatches
       logger.info('Phase 1 complete', {
         districtsPerYear: Object.fromEntries(
           Object.entries(phase1Result.districtsPerYear).map(([y, d]) => [
@@ -627,36 +920,46 @@ export class BackfillOrchestrator {
         ),
         totalDistricts: phase1Result.totalDistricts,
         requestsMade: phase1Result.requestsMade,
+        emptySkipped: phase1Result.emptySkipped,
+        mismatches: phase1Result.mismatches,
       })
 
       if (phase === 'discover') {
         logger.info('Discovery-only mode — stopping after Phase 1')
-        return
+        return summary
       }
 
       if (this.aborted) {
         logger.info('Aborted after Phase 1')
-        return
+        return summary
       }
 
       // Phase 2: Collection
       const phase2Result = await this.runPhase2Collection(
         phase1Result.districtsPerYear
       )
+      summary.requestsMade += phase2Result.requestsMade
+      summary.emptySkipped += phase2Result.emptySkipped
+      summary.mismatches += phase2Result.mismatches
+      summary.errors += phase2Result.errors
       logger.info('Phase 2 complete', {
         requestsMade: phase2Result.requestsMade,
         errors: phase2Result.errors,
+        emptySkipped: phase2Result.emptySkipped,
+        mismatches: phase2Result.mismatches,
       })
 
       if (phase === 'collect' || this.aborted) {
         logger.info('Collection complete — run transform separately')
-        return
+        return summary
       }
 
       // Phase 3: Transform (placeholder — runs existing pipeline)
       logger.info(
         'Phase 3: Transform — run the existing transform pipeline on collected data'
       )
+
+      return summary
     } finally {
       process.removeListener('SIGINT', handler)
     }

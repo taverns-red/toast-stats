@@ -977,6 +977,29 @@ export function createCLI(): Command {
       'biweekly'
     )
     .option(
+      '--dates <list>',
+      'Comma-separated YYYY-MM-DD collection dates to backfill instead of a ' +
+        "year grid. Each date's program year is derived from the date, so a " +
+        'list may span years. Overrides --start-year/--end-year/--frequency.',
+      (value: string) => {
+        const dates = value
+          .split(',')
+          .map(d => d.trim())
+          .filter(Boolean)
+        if (dates.length === 0) {
+          console.error('Error: --dates was given but contains no dates.')
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+        for (const d of dates) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+            console.error(`Error: Invalid date "${d}". Expected YYYY-MM-DD.`)
+            process.exit(ExitCode.COMPLETE_FAILURE)
+          }
+        }
+        return dates
+      }
+    )
+    .option(
       '--rate <number>',
       'Maximum requests per second (default: 2)',
       (value: string) => {
@@ -1020,13 +1043,27 @@ export function createCLI(): Command {
         output?: string
         gcsBucket?: string
         gcsPrefix: string
+        dates?: string[]
       }) => {
         const { BackfillOrchestrator, GcsBackfillStorage } =
           await import('./services/BackfillOrchestrator.js')
         type DateFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly'
 
-        const startYear = options.startYear ?? 2017
-        const endYear = options.endYear ?? new Date().getFullYear()
+        // An explicit --dates list replaces the year grid; the year range is
+        // then derived from the dates so the scope banner stays honest (#1384).
+        const explicitDates = options.dates?.map(d => new Date(`${d}T00:00:00`))
+        const dateYears = explicitDates?.map(d =>
+          d.getMonth() >= 6 ? d.getFullYear() : d.getFullYear() - 1
+        )
+
+        const startYear =
+          dateYears !== undefined
+            ? Math.min(...dateYears)
+            : (options.startYear ?? 2017)
+        const endYear =
+          dateYears !== undefined
+            ? Math.max(...dateYears)
+            : (options.endYear ?? new Date().getFullYear())
         const frequency = options.frequency as DateFrequency
 
         // Determine storage backend
@@ -1071,7 +1108,12 @@ export function createCLI(): Command {
           phase: options.phase as 'discover' | 'collect' | 'all',
           resume: options.resume,
           storage,
+          ...(explicitDates ? { dates: explicitDates } : {}),
         })
+
+        if (explicitDates && options.verbose) {
+          console.error(`[INFO] Dates: ${options.dates?.join(', ')}`)
+        }
 
         // Show scope before starting
         const scope = orchestrator.calculateScope()
@@ -1089,8 +1131,24 @@ export function createCLI(): Command {
         )
 
         try {
-          await orchestrator.run()
-          console.error('[DONE] Backfill complete')
+          const summary = await orchestrator.run()
+          console.error(
+            `[DONE] Backfill complete — requests=${summary.requestsMade} ` +
+              `emptySkipped=${summary.emptySkipped} ` +
+              `mismatches=${summary.mismatches} errors=${summary.errors}`
+          )
+
+          // A mismatch means the dashboard handed back a period we did not ask
+          // for. Nothing was ingested, but the run must not look clean: exiting
+          // 0 here is how a silent history rewrite would slip past CI (#1384).
+          if (summary.mismatches > 0) {
+            console.error(
+              `[ERROR] ${summary.mismatches} response(s) were not for the ` +
+                `requested period and were refused — see the logs above.`
+            )
+            process.exit(ExitCode.COMPLETE_FAILURE)
+          }
+
           process.exit(ExitCode.SUCCESS)
         } catch (error) {
           const errorMessage =
