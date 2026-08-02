@@ -97,7 +97,21 @@
   --color-tm-loyal-blue-100: rgba(0, 65, 101, 1.0);
   --color-tm-loyal-blue-90: rgba(0, 65, 101, 0.9);
   --color-tm-loyal-blue-80: rgba(0, 65, 101, 0.8);
-  --color-tm-loyal-blue-70: rgba(0, 65, 101, 0.7);
+  /* #1360: 0.7 → 0.78. The only consumers of this rung are body paragraphs in
+     the Scoring Methodology callout, whose backdrop is `bg-tm-loyal-blue-10`
+     over white — i.e. #e6ecf0, not #ffffff. Composited there, 0.7 gives
+     #45748f = 4.25:1, just under WCAG AA for 14px text; the minimum alpha that
+     clears 4.5:1 on that tint is ~0.72, and 0.78 (#336784, 5.16:1) takes it
+     with headroom. Fixed on the RUNG rather than with an override rule: R10's
+     warning is that a `-NN` utility can't be fixed by editing the BASE token,
+     and forking a second selector for the same utility is the divergence trap
+     in `an-override-must-match-the-same-element-set-…`. Light-only —
+     dark-mode.css already carries an explicit `!important` remap of
+     `.text-tm-loyal-blue-70` to the dark hue. Raising alpha only ever raises
+     contrast on a light backdrop, so this is monotonic-safe. Note the ramp
+     effectively converges with -80 here: below ~0.75 this hue simply cannot
+     carry small text on its own 10% tint. */
+  --color-tm-loyal-blue-70: rgba(0, 65, 101, 0.78);
   --color-tm-loyal-blue-60: rgba(0, 65, 101, 0.6);
   --color-tm-loyal-blue-50: rgba(0, 65, 101, 0.5);
   --color-tm-loyal-blue-40: rgba(0, 65, 101, 0.4);
