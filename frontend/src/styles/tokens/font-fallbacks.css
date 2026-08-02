@@ -1,0 +1,169 @@
+/* Metric-matched fallback faces for the Google-Fonts `display=swap` reflow
+ * (#1373).
+ *
+ * ── Why ──────────────────────────────────────────────────────────────────
+ * Measured on a deployed preview channel (cold cache, Fast-3G, layout-shift
+ * observer installed pre-navigation), the font swap was the dominant CLS
+ * term at every width and 95% of it at 375px — 0.151 against a 0.1 budget.
+ *
+ * A two-state geometry diff (fonts blocked vs fonts on, both states pinned
+ * fully-loaded) named the mechanism, and it is a WIDTH problem, not a
+ * reserve problem: Source Sans 3 is ~6% narrower than the system-ui
+ * fallback, so district names in the rankings table wrap to two lines in the
+ * fallback and collapse to one when the font arrives — 28px per row, ~560px
+ * of table height, everything below it jumping up.
+ *
+ *   dh=-28  h 162->134  13px/400 Source Sans 3  TD.px-6.py-4
+ *   dh=-28  h 130->102  13px/400 Source Sans 3  TD.px-6.py-4        (×N rows)
+ *   dy=-19                                      DIV.districts-page-header__actions
+ *
+ * Giving each family a fallback whose average advance width and line-box
+ * metrics equal the web font's makes the swap a pure glyph substitution:
+ * nothing rewraps, nothing moves.
+ *
+ * ── Why local(), not self-hosted woff2 ───────────────────────────────────
+ * `src: local(...)` downloads nothing — no new origin, no bytes, and
+ * critically no `font-src` change in firebase.json's CSP. Arial is
+ * metrically stable across Windows/macOS/iOS; fontconfig aliases it to
+ * Liberation Sans on Linux and Android maps it to Roboto, and Liberation
+ * Sans is also named explicitly for hosts that do neither. A face whose
+ * every local() misses is simply skipped, and the stack falls through to
+ * system-ui exactly as it does today — this can degrade, it cannot break.
+ *
+ * ── Where the numbers come from ──────────────────────────────────────────
+ * Measured in Chromium (the engine that renders them) at font-size 1000px:
+ * `xWidthAvg` is the capsize letter-frequency-weighted average advance
+ * width; ascent/descent are canvas `fontBoundingBox*`; line-gap is the
+ * residual of `line-height: normal` minus ascent+descent (0 for all four).
+ *
+ *   size-adjust       = xWidthAvg(webfont) / xWidthAvg(local base)
+ *   ascent-override   = ascent(webfont)  / size-adjust
+ *   descent-override  = descent(webfont) / size-adjust
+ *
+ * Regular buckets are matched against Arial regular, bold buckets against
+ * Arial Bold — a single 400-only face would leave the browser to synthesise
+ * bold, which is both wider than the measured ratio and visibly wrong.
+ *
+ * Raw measurements (per 1em):
+ *   Arial          400  xWidthAvg 0.42736  ascent 0.9050  descent 0.2120
+ *   Arial          700  xWidthAvg 0.46185  ascent 0.9050  descent 0.2120
+ *   Montserrat          ascent 0.9680  descent 0.2510  normal line-height 1.219
+ *   Source Sans 3       ascent 1.0240  descent 0.4000  normal line-height 1.424
+ *
+ * ── Why the unicode-range ────────────────────────────────────────────────
+ * The faces are scoped to the same subsets Google serves for these families
+ * (latin + latin-ext + vietnamese, merged; both declare the same ranges).
+ * A fallback face with no unicode-range swallows every codepoint the web
+ * font does not ship, and those never needed matching in the first place —
+ * U+2192, the "See Awards" arrow, silently moved from system-ui to
+ * size-adjusted Arial. 64 pixels of visual change for no CLS benefit.
+ * Scoping keeps this change provably inert once the fonts have loaded.
+ *
+ * ── Phase 2 (ops#37 / #339) ──────────────────────────────────────────────
+ * The brand pair is loaded but has zero live consumers today (nothing reads
+ * --rt-font-display / --rt-font-body), so it reflows nothing and needs no
+ * fallback yet. `rt-brand-v1.css` is a copy-on-release of upstream and must
+ * not be hand-edited, so wiring these in belongs in the Phase 2 chrome PR.
+ * The measurements are recorded here so that PR does not have to re-derive
+ * them (same method, same engine):
+ *
+ *   Space Grotesk  w400/500 size-adjust 110.81% · w600/700 102.46%
+ *                  ascent 0.9840  descent 0.2920  (normal line-height 1.276)
+ *   Inter          w400/500 size-adjust 107.30% · w600     100.98%
+ *                  ascent 0.9690  descent 0.2410  (normal line-height 1.210)
+ *
+ * See tasks/lessons/lessons/a-font-swap-reflow-masquerades-as-a-reserve-error.md
+ * and Lesson 81 (`phase-gated-deferral-tests-move-with-the-spec.md`).
+ */
+
+/* ── Montserrat (--tm-font-headline, --serif) ─────────────────────────────
+   Loaded at 500;600;700;800;900. The 400-500 bucket is matched against
+   Arial regular (Montserrat 500 is 115.5% of its average width); the
+   600-900 bucket against Arial Bold (Montserrat 700 is 110.8% of it). */
+@font-face {
+  font-family: 'Montserrat Fallback';
+  font-style: normal;
+  font-weight: 100 500;
+  src:
+    local('Arial'),
+    local('ArialMT'),
+    local('Helvetica'),
+    local('Liberation Sans'),
+    local('Arimo');
+  size-adjust: 115.548%;
+  ascent-override: 83.775%;
+  descent-override: 21.723%;
+  line-gap-override: 0%;
+  /* Coverage-scoped — see the unicode-range note in the file header. */
+  unicode-range: U+0000-02CC, U+02CE-02D7, U+02DA, U+02DC-02FF,
+    U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1D00-1DBF,
+    U+1E00-1EFF, U+2000-206F, U+20A0-20C0, U+2113, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Montserrat Fallback';
+  font-style: normal;
+  font-weight: 600 900;
+  src:
+    local('Arial Bold'),
+    local('Arial-BoldMT'),
+    local('Helvetica Bold'),
+    local('Liberation Sans Bold'),
+    local('Arimo Bold');
+  size-adjust: 110.771%;
+  ascent-override: 87.387%;
+  descent-override: 22.659%;
+  line-gap-override: 0%;
+  /* Coverage-scoped — see the unicode-range note in the file header. */
+  unicode-range: U+0000-02CC, U+02CE-02D7, U+02DA, U+02DC-02FF,
+    U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1D00-1DBF,
+    U+1E00-1EFF, U+2000-206F, U+20A0-20C0, U+2113, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+/* ── Source Sans 3 (--tm-font-body, --sans) ───────────────────────────────
+   Loaded at 400;500;600;700. This is the family that drives the 375px
+   number: it is *narrower* than Arial (93.97% at 400), which is why the
+   fallback over-wraps and the page shrinks when the swap lands. */
+@font-face {
+  font-family: 'Source Sans 3 Fallback';
+  font-style: normal;
+  font-weight: 100 500;
+  src:
+    local('Arial'),
+    local('ArialMT'),
+    local('Helvetica'),
+    local('Liberation Sans'),
+    local('Arimo');
+  size-adjust: 93.97%;
+  ascent-override: 108.971%;
+  descent-override: 42.567%;
+  line-gap-override: 0%;
+  /* Coverage-scoped — see the unicode-range note in the file header. */
+  unicode-range: U+0000-02CC, U+02CE-02D7, U+02DA, U+02DC-02FF,
+    U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1D00-1DBF,
+    U+1E00-1EFF, U+2000-206F, U+20A0-20C0, U+2113, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Source Sans 3 Fallback';
+  font-style: normal;
+  font-weight: 600 900;
+  src:
+    local('Arial Bold'),
+    local('Arial-BoldMT'),
+    local('Helvetica Bold'),
+    local('Liberation Sans Bold'),
+    local('Arimo Bold');
+  size-adjust: 91.951%;
+  ascent-override: 111.364%;
+  descent-override: 43.502%;
+  line-gap-override: 0%;
+  /* Coverage-scoped — see the unicode-range note in the file header. */
+  unicode-range: U+0000-02CC, U+02CE-02D7, U+02DA, U+02DC-02FF,
+    U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1D00-1DBF,
+    U+1E00-1EFF, U+2000-206F, U+20A0-20C0, U+2113, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}

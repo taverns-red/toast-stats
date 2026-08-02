@@ -1,9 +1,16 @@
 /* Toastmasters Typography System - Design Tokens */
 
 :root {
-  /* Font Families with Comprehensive Fallbacks */
-  --tm-font-headline: "Montserrat", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --tm-font-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  /* Font Families with Comprehensive Fallbacks.
+     The "* Fallback" entries are metric-matched local faces declared in
+     tokens/font-fallbacks.css (#1373) — same average advance width and line
+     box as the web font, so `display=swap` substitutes glyphs without
+     rewrapping anything. They must stay immediately after the web font and
+     ahead of system-ui: system-ui first would win and reintroduce the
+     0.15 mobile CLS. If no local() resolves, the face is skipped and the
+     stack degrades to system-ui exactly as it did before. */
+  --tm-font-headline: "Montserrat", "Montserrat Fallback", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --tm-font-body: "Source Sans 3", "Source Sans 3 Fallback", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   
   /* Font Weights */
   --tm-font-weight-regular: 400;
