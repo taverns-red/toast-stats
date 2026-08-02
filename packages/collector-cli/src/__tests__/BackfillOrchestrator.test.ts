@@ -246,9 +246,13 @@ describe('BackfillOrchestrator storage paths (#125)', () => {
 
     orchestrator.downloader.downloadCsv = vi.fn().mockResolvedValue({
       url: 'https://test.example.com',
-      content: 'some,csv,data\n',
+      // Needs at least one data row. A header-only body is exactly what the
+      // dashboard returns for a period it has no data for, and #1384 skips
+      // those instead of writing a bogus snapshot. This test is about the
+      // storage path shape, so the fixture has to be a realistic response.
+      content: 'some,csv,data\n1,2,3\n',
       statusCode: 200,
-      byteSize: 14,
+      byteSize: 20,
     })
 
     await orchestrator.runPhase2Collection({
