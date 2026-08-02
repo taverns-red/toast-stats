@@ -6,6 +6,12 @@ on:
     # Skip CI when a push touches only non-code artifacts (lessons, docs,
     # markdown, ignore/license). Runs whenever ANY changed file is outside
     # these globs, so mixed code+docs changes are still fully gated.
+    #
+    # SYNC WARNING: what this list skips, .github/workflows/docs.yml picks up
+    # via an identical `paths:` allowlist (#1375) -- it runs the three gates
+    # that DO apply to markdown (lessons INDEX drift, prettier, yamllint). If
+    # the two lists drift, files fall into a gap covered by neither workflow.
+    # Edit both together.
     paths-ignore:
       - '**/*.md'
       - 'tasks/**'
@@ -14,6 +20,7 @@ on:
       - 'LICENSE'
   pull_request:
     branches: [main]
+    # Keep in sync with .github/workflows/docs.yml -- see the note above.
     paths-ignore:
       - '**/*.md'
       - 'tasks/**'
