@@ -12,7 +12,6 @@ import { render, cleanup } from '@testing-library/react'
 import { axe, toHaveNoViolations } from 'jest-axe'
 import { ClubDCPGoalsPanel } from '../../components/ClubDCPGoalsPanel'
 
-// @ts-expect-error - jest-axe matcher types vs vitest expect
 expect.extend(toHaveNoViolations)
 
 const record = {

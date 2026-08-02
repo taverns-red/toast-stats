@@ -18,7 +18,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import RegionPage from '../../pages/RegionPage'
 
-// @ts-expect-error - jest-axe matcher types vs vitest expect
 expect.extend(toHaveNoViolations)
 
 vi.mock('../../services/cdn', () => {

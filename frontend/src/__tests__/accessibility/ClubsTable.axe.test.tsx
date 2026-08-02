@@ -24,7 +24,6 @@ import { axe, toHaveNoViolations } from 'jest-axe'
 import { ClubsTable } from '../../components/ClubsTable'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
 
-// @ts-expect-error - jest-axe matcher types vs vitest expect
 expect.extend(toHaveNoViolations)
 
 const mockClub = (overrides: Partial<ClubTrend> = {}): ClubTrend => ({
