@@ -29,6 +29,8 @@ import {
   getPriorProgramYear,
   buildCsvPathFromReport,
   buildMetadataPath,
+  describeStorageDestination,
+  buildRawCsvPrefix,
 } from '../utils/CachePaths.js'
 import {
   isValidDistrictSummaryCsv,
@@ -39,6 +41,7 @@ import {
   resolveExportPathStyle,
   verifyBackfillCsv,
 } from '../utils/backfillContentGuard.js'
+import { ExitCode } from '../types/index.js'
 
 // ── Storage Abstraction ──────────────────────────────────────────────
 
@@ -49,10 +52,58 @@ import {
 export interface BackfillStorage {
   /** Check if a file already exists (for resume). */
   exists(filePath: string): Promise<boolean>
+  /**
+   * Check existence against the backing store, bypassing any cache (#1388).
+   *
+   * `exists()` may answer from a warmed key set that `write()` adds to — fine
+   * for resume, useless for verification, because it would only re-read the
+   * run's own optimism. Required, not optional: an implementation that cannot
+   * answer this cannot be verified, and an optional method is an invitation to
+   * verify against the cache by omission.
+   */
+  existsFresh(filePath: string): Promise<boolean>
   /** Read a file's content (for parsing cached summaries). */
   read(filePath: string): Promise<string>
   /** Write content to a file, creating directories as needed. */
   write(filePath: string, content: string): Promise<void>
+}
+
+/**
+ * Read back one sample object per date and report the dates that are missing
+ * (#1388).
+ *
+ * The backfill's every gate inspected the HTTP response; none asked the
+ * destination whether the object had landed. An entire ingest went to
+ * `gs://bucket//raw-csv/…` and reported `mismatches=0 errors=0`, exit 0.
+ *
+ * @param storage     Backend to interrogate
+ * @param samplesByDate `YYYY-MM-DD` → one key written for that date
+ * @returns The dates whose sample key is not present, sorted
+ */
+export async function verifyBackfillWrites(
+  storage: BackfillStorage,
+  samplesByDate: Map<string, string>
+): Promise<string[]> {
+  const missing: string[] = []
+  for (const [date, key] of samplesByDate) {
+    if (!(await storage.existsFresh(key))) missing.push(date)
+  }
+  return missing.sort()
+}
+
+/**
+ * Decide a backfill run's exit code (#1388).
+ *
+ * Two ways a run can look clean and be worthless: it fetched the wrong period
+ * (#1384), or it wrote where nothing reads (#1388). Both exit non-zero. A
+ * failed read-back is NOT a warning — a warning is exactly what an operator
+ * scrolls past on the way to `[DONE] … errors=0`.
+ */
+export function resolveBackfillExitCode(summary: BackfillRunSummary): ExitCode {
+  if (summary.mismatches > 0 || summary.readbackFailures.length > 0) {
+    return ExitCode.COMPLETE_FAILURE
+  }
+  return ExitCode.SUCCESS
 }
 
 /**
@@ -66,6 +117,11 @@ export class LocalBackfillStorage implements BackfillStorage {
     } catch {
       return false
     }
+  }
+
+  /** Local storage never caches, so a fresh check is the same check (#1388). */
+  async existsFresh(filePath: string): Promise<boolean> {
+    return this.exists(filePath)
   }
 
   async read(filePath: string): Promise<string> {
@@ -128,6 +184,16 @@ export class GcsBackfillStorage implements BackfillStorage {
       return this.existingKeys.has(filePath)
     }
     // Fallback to individual check
+    return this.existsFresh(filePath)
+  }
+
+  /**
+   * Ask GCS itself, ignoring the warmed key set (#1388).
+   *
+   * `write()` adds to that set, so `exists()` after a write is guaranteed to
+   * say yes — including when the object went somewhere nothing reads from.
+   */
+  async existsFresh(filePath: string): Promise<boolean> {
     const file = this.bucket.file(filePath)
     const [exists] = await file.exists()
     return exists
@@ -162,6 +228,13 @@ export interface BackfillConfig {
   phase?: 'discover' | 'collect' | 'all'
   resume?: boolean
   storage?: BackfillStorage
+  /**
+   * The GCS bucket `storage` writes to, for logging only (#1388).
+   *
+   * Without it the destination logs name a bare key prefix — the same
+   * ambiguity that let `gs://bucket//raw-csv/` pass unnoticed.
+   */
+  bucketName?: string
   /**
    * The program year currently served by the bare `/export.aspx` (#1384).
    *
@@ -212,6 +285,13 @@ export interface BackfillRunSummary {
    */
   mismatches: number
   errors: number
+  /**
+   * Dates whose written objects could not be read back from storage (#1388).
+   *
+   * Non-empty means the run wrote somewhere other than where it reported —
+   * the `gs://bucket//raw-csv/…` incident. Callers MUST exit non-zero.
+   */
+  readbackFailures: string[]
 }
 
 export interface BackfillProgress {
@@ -304,6 +384,36 @@ export class BackfillOrchestrator {
   }
 
   private liveProgramYearPromise: Promise<string | undefined> | undefined
+
+  /**
+   * One key actually written per date, for the post-run read-back (#1388).
+   * Keyed by `YYYY-MM-DD`; the first write of a date wins.
+   */
+  private readonly writeSamples = new Map<string, string>()
+
+  /** Where this run writes, fully qualified when a bucket is known (#1388). */
+  private destination(): string {
+    return describeStorageDestination(
+      this.config.outputDir,
+      this.config.bucketName
+    )
+  }
+
+  /** Write through storage and remember a sample key for the date (#1388). */
+  private async writeTracked(
+    key: string,
+    content: string,
+    date: Date
+  ): Promise<void> {
+    await this.storage.write(key, content)
+    this.sampleKey(key, date)
+  }
+
+  /** Remember one key per date for the post-run read-back (#1388). */
+  private sampleKey(key: string, date: Date): void {
+    const dateStr = toYYYYMMDD(date)
+    if (!this.writeSamples.has(dateStr)) this.writeSamples.set(dateStr, key)
+  }
 
   /**
    * The program years this run targets — derived from an explicit `dates` list
@@ -599,6 +709,10 @@ export class BackfillOrchestrator {
           const cached = await this.storage.exists(key)
           if (cached) {
             this.progress.completed++
+            // A fully-resumed run writes nothing; sampling only writes would
+            // make the read-back vacuous and `readbackFailures=0` a lie about
+            // what was checked (#1388).
+            this.sampleKey(key, date)
             try {
               const content = await this.storage.read(key)
               const districts =
@@ -638,7 +752,7 @@ export class BackfillOrchestrator {
           }
 
           // Save to storage
-          await this.storage.write(key, result.content)
+          await this.writeTracked(key, result.content, date)
 
           // Parse districts from this summary
           const districts = this.downloader.parseDistrictsFromSummary(
@@ -802,7 +916,7 @@ export class BackfillOrchestrator {
                 continue
               }
 
-              await this.storage.write(key, result.content)
+              await this.writeTracked(key, result.content, date)
 
               // Track this date + district for metadata
               const dateKey = toYYYYMMDD(date)
@@ -848,9 +962,10 @@ export class BackfillOrchestrator {
           date,
           Array.from(districtIds).sort()
         )
-        await this.storage.write(
+        await this.writeTracked(
           metadataPath,
-          JSON.stringify(metadata, null, 2)
+          JSON.stringify(metadata, null, 2),
+          date
         )
         logger.info('Wrote metadata.json', {
           date: dateKey,
@@ -865,7 +980,11 @@ export class BackfillOrchestrator {
   }
 
   /**
-   * Run the full backfill pipeline.
+   * Run the full backfill pipeline, then read back what it wrote (#1388).
+   *
+   * The read-back is not decoration: a run whose every fetch succeeded and
+   * whose every object landed in an unread key space is otherwise
+   * indistinguishable from a good one.
    */
   async run(): Promise<BackfillRunSummary> {
     const summary: BackfillRunSummary = {
@@ -873,7 +992,34 @@ export class BackfillOrchestrator {
       emptySkipped: 0,
       mismatches: 0,
       errors: 0,
+      readbackFailures: [],
     }
+
+    logger.info('Backfill destination', { destination: this.destination() })
+
+    await this.runPhases(summary)
+
+    summary.readbackFailures = await verifyBackfillWrites(
+      this.storage,
+      this.writeSamples
+    )
+    if (summary.readbackFailures.length > 0) {
+      logger.error('Read-back FAILED — written objects are not at the prefix', {
+        destination: this.destination(),
+        missingDates: summary.readbackFailures,
+      })
+    } else if (this.writeSamples.size > 0) {
+      logger.info('Read-back OK — sampled one object per date', {
+        destination: this.destination(),
+        dates: this.writeSamples.size,
+      })
+    }
+
+    return summary
+  }
+
+  /** The phase pipeline itself; `run()` adds the read-back around it. */
+  private async runPhases(summary: BackfillRunSummary): Promise<void> {
     const scope = this.calculateScope()
     const phase = this.config.phase ?? 'all'
 
@@ -902,7 +1048,11 @@ export class BackfillOrchestrator {
       if (this.config.resume && 'warmCache' in this.storage) {
         const gcsStorage = this.storage as GcsBackfillStorage
         logger.info('Warming GCS cache — listing existing objects...')
-        const cachedCount = await gcsStorage.warmCache(this.config.outputDir)
+        // Scope the LIST to the tree this run writes. With no prefix, the
+        // bucket root would enumerate snapshots and analytics too (#1388).
+        const cachedCount = await gcsStorage.warmCache(
+          buildRawCsvPrefix(this.config.outputDir)
+        )
         logger.info('GCS cache warmed', { existingFiles: cachedCount })
       }
 
@@ -926,12 +1076,12 @@ export class BackfillOrchestrator {
 
       if (phase === 'discover') {
         logger.info('Discovery-only mode — stopping after Phase 1')
-        return summary
+        return
       }
 
       if (this.aborted) {
         logger.info('Aborted after Phase 1')
-        return summary
+        return
       }
 
       // Phase 2: Collection
@@ -951,15 +1101,13 @@ export class BackfillOrchestrator {
 
       if (phase === 'collect' || this.aborted) {
         logger.info('Collection complete — run transform separately')
-        return summary
+        return
       }
 
       // Phase 3: Transform (placeholder — runs existing pipeline)
       logger.info(
         'Phase 3: Transform — run the existing transform pipeline on collected data'
       )
-
-      return summary
     } finally {
       process.removeListener('SIGINT', handler)
     }

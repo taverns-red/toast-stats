@@ -15,6 +15,9 @@ import {
   buildChecksumKey,
   REPORT_TYPE_TO_CSV,
   buildCsvPathFromReport,
+  normaliseGcsKeyPrefix,
+  describeStorageDestination,
+  buildRawCsvPrefix,
 } from '../CachePaths.js'
 
 describe('CachePaths (#126)', () => {
@@ -109,6 +112,131 @@ describe('CachePaths (#126)', () => {
       expect(REPORT_TYPE_TO_CSV.districtperformance).toBe(
         CSVType.DISTRICT_PERFORMANCE
       )
+    })
+  })
+
+  // #1388: an empty --gcs-prefix composed `gs://bucket//raw-csv/…` — a legal
+  // GCS key one path segment away from the one anything reads. The run exited
+  // 0 with every footer assertion passing, because the *fetches* were correct.
+  describe('prefix normalisation (#1388)', () => {
+    const date = '2026-07-26'
+
+    it.each([
+      ['empty', ''],
+      ['a lone slash', '/'],
+      ['whitespace only', '  '],
+      ['a double slash', '//'],
+      ['a padded slash', ' / '],
+    ])('treats %s as no prefix at all', (_label, prefix) => {
+      expect(buildCsvPath(prefix, date, CSVType.ALL_DISTRICTS)).toBe(
+        'raw-csv/2026-07-26/all-districts.csv'
+      )
+    })
+
+    it('composes a bucket URI with a single slash when the prefix is empty', () => {
+      const key = buildCsvPath('', date, CSVType.ALL_DISTRICTS)
+      const uri = `gs://toast-stats-data-staging/${key}`
+      expect(uri).toBe(
+        'gs://toast-stats-data-staging/raw-csv/2026-07-26/all-districts.csv'
+      )
+      expect(uri).not.toContain('//raw-csv')
+    })
+
+    it('normalises blank prefixes identically for metadata keys', () => {
+      expect(buildMetadataPath('', date)).toBe(
+        'raw-csv/2026-07-26/metadata.json'
+      )
+      expect(buildMetadataPath('/', date)).toBe(buildMetadataPath('', date))
+    })
+
+    it('does not double-slash at the join for a non-empty prefix', () => {
+      expect(buildCsvPath('backfill/', date, CSVType.ALL_DISTRICTS)).toBe(
+        'backfill/raw-csv/2026-07-26/all-districts.csv'
+      )
+      expect(buildCsvPath('backfill//', date, CSVType.ALL_DISTRICTS)).toBe(
+        'backfill/raw-csv/2026-07-26/all-districts.csv'
+      )
+      expect(buildCsvPath('a//b/', date, CSVType.CLUB_PERFORMANCE, '61')).toBe(
+        'a/b/raw-csv/2026-07-26/district-61/club-performance.csv'
+      )
+    })
+
+    it('preserves an absolute local cache directory', () => {
+      // The same builder serves the daily pipeline's local cacheDir, which is
+      // an absolute path — normalisation must not strip its leading slash.
+      expect(buildCsvPath('/data/cache/', date, CSVType.ALL_DISTRICTS)).toBe(
+        '/data/cache/raw-csv/2026-07-26/all-districts.csv'
+      )
+    })
+  })
+
+  describe('normaliseGcsKeyPrefix (#1388)', () => {
+    it.each(['', '/', '  ', '//', ' / '])(
+      'maps %o to no prefix',
+      (input: string) => {
+        expect(normaliseGcsKeyPrefix(input)).toBe('')
+      }
+    )
+
+    it('strips leading and trailing slashes — a GCS key never starts with /', () => {
+      expect(normaliseGcsKeyPrefix('/backfill/')).toBe('backfill')
+      expect(normaliseGcsKeyPrefix(' backfill ')).toBe('backfill')
+      expect(normaliseGcsKeyPrefix('a//b')).toBe('a/b')
+    })
+  })
+
+  describe('describeStorageDestination (#1388)', () => {
+    it('names the fully-qualified GCS destination for an empty prefix', () => {
+      expect(describeStorageDestination('', 'toast-stats-data-staging')).toBe(
+        'gs://toast-stats-data-staging/raw-csv/'
+      )
+    })
+
+    it('names the fully-qualified GCS destination for a real prefix', () => {
+      expect(
+        describeStorageDestination('backfill', 'toast-stats-data-staging')
+      ).toBe('gs://toast-stats-data-staging/backfill/raw-csv/')
+    })
+
+    it('names the local destination when there is no bucket', () => {
+      expect(describeStorageDestination('/data/cache')).toBe(
+        '/data/cache/raw-csv/'
+      )
+    })
+  })
+
+  describe('prefix misuse (#1388)', () => {
+    it('refuses a full URI as a prefix rather than mangling it', () => {
+      // Collapsing duplicate slashes would turn gs://bucket/x into
+      // gs:/bucket/x — a plausible operator slip becoming a new silent key
+      // space, which is the bug this normalisation exists to prevent.
+      expect(() =>
+        buildCsvPath(
+          'gs://toast-stats-data-staging',
+          '2026-07-26',
+          CSVType.ALL_DISTRICTS
+        )
+      ).toThrow(/prefix must be a key prefix/i)
+      expect(() => normaliseGcsKeyPrefix('gs://bucket/raw-csv')).toThrow()
+    })
+  })
+
+  describe('buildRawCsvPrefix (#1388)', () => {
+    it('scopes to the tree the run writes, with no empty segment', () => {
+      expect(buildRawCsvPrefix('')).toBe('raw-csv/')
+      expect(buildRawCsvPrefix('/')).toBe('raw-csv/')
+      expect(buildRawCsvPrefix('backfill/')).toBe('backfill/raw-csv/')
+    })
+
+    it('prefixes every key the builders compose', () => {
+      for (const prefix of ['', '/', 'backfill', '/data/cache']) {
+        expect(
+          buildCsvPath(prefix, '2026-07-26', CSVType.ALL_DISTRICTS)
+        ).toContain(buildRawCsvPrefix(prefix))
+        expect(buildMetadataPath(prefix, '2026-07-26')).toContain(
+          buildRawCsvPrefix(prefix)
+        )
+      }
     })
   })
 
