@@ -2,13 +2,16 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { AreaPerformanceRow } from '../AreaPerformanceRow'
 import { AreaPerformance } from '../../utils/divisionStatus'
-import { deriveAreaRecognitionState } from '../../utils/areaRecognitionState'
+import { withRecognitionState } from '../../test-utils/areaFixture'
 
 describe('AreaPerformanceRow', () => {
   const createMockArea = (
     overrides: Partial<AreaPerformance> = {}
   ): AreaPerformance => {
-    const base: Omit<AreaPerformance, 'recognitionState'> = {
+    // Was `Omit<AreaPerformance, 'recognitionState'>`, which also requires
+    // the #973 visit fields the fixture never set — invisible until #1368
+    // put the test tree under tsc. `withRecognitionState` defaults them.
+    const base = {
       areaId: 'A1',
       status: 'distinguished',
       clubBase: 10,
@@ -31,20 +34,12 @@ describe('AreaPerformanceRow', () => {
       isQualified: true,
       ...overrides,
     }
+    // Mid-PY snapshot — R1 deadline has passed, R2 has not. An R2-unmet
+    // case yields Provisional (label still contains the tier name), so
+    // pre-gate assertions like `toContain("President's Distinguished")`
+    // remain valid. Visits-met cases are Confirmed regardless of date.
     return {
-      ...base,
-      recognitionState: deriveAreaRecognitionState({
-        clubBase: base.clubBase,
-        paidClubs: base.paidClubs,
-        distinguishedClubs: base.distinguishedClubs,
-        firstRoundVisitMet: base.firstRoundVisits.meetsThreshold,
-        secondRoundVisitMet: base.secondRoundVisits.meetsThreshold,
-        // Mid-PY snapshot — R1 deadline has passed, R2 has not. An R2-unmet
-        // case yields Provisional (label still contains the tier name), so
-        // pre-gate assertions like `toContain("President's Distinguished")`
-        // remain valid. Visits-met cases are Confirmed regardless of date.
-        snapshotDate: '2026-03-15',
-      }),
+      ...withRecognitionState(base, '2026-03-15'),
       ...overrides,
     }
   }

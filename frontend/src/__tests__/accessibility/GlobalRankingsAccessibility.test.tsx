@@ -50,7 +50,6 @@ import type {
 import type { RankHistoryResponse } from '../../types/districts'
 
 // Extend expect with jest-axe matchers
-// @ts-expect-error - jest-axe types are not perfectly compatible with vitest expect
 expect.extend(toHaveNoViolations)
 
 // Axe synchronization to prevent concurrent runs
