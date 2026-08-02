@@ -205,6 +205,22 @@ describe('CachePaths (#126)', () => {
     })
   })
 
+  describe('prefix misuse (#1388)', () => {
+    it('refuses a full URI as a prefix rather than mangling it', () => {
+      // Collapsing duplicate slashes would turn gs://bucket/x into
+      // gs:/bucket/x — a plausible operator slip becoming a new silent key
+      // space, which is the bug this normalisation exists to prevent.
+      expect(() =>
+        buildCsvPath(
+          'gs://toast-stats-data-staging',
+          '2026-07-26',
+          CSVType.ALL_DISTRICTS
+        )
+      ).toThrow(/prefix must be a key prefix/i)
+      expect(() => normaliseGcsKeyPrefix('gs://bucket/raw-csv')).toThrow()
+    })
+  })
+
   describe('buildRawCsvPrefix (#1388)', () => {
     it('scopes to the tree the run writes, with no empty segment', () => {
       expect(buildRawCsvPrefix('')).toBe('raw-csv/')

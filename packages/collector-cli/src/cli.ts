@@ -1125,6 +1125,7 @@ export function createCLI(): Command {
           phase: options.phase as 'discover' | 'collect' | 'all',
           resume: options.resume,
           storage,
+          ...(options.gcsBucket ? { bucketName: options.gcsBucket } : {}),
           ...(explicitDates ? { dates: explicitDates } : {}),
         })
 

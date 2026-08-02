@@ -64,7 +64,16 @@ export function getPriorProgramYear(programYear: string): string {
  * daily pipeline's absolute local `cacheDir`.
  */
 export function normalisePathPrefix(prefix: string): string {
-  const collapsed = prefix.trim().replace(/\/{2,}/g, '/')
+  const trimmed = prefix.trim()
+  // Collapsing slashes would quietly turn `gs://bucket/x` into `gs:/bucket/x`
+  // — another silent key space. A scheme here is an operator slip, not a
+  // prefix; fail closed rather than compose something plausible.
+  if (trimmed.includes('://')) {
+    throw new Error(
+      `Storage prefix must be a key prefix, not a URI: "${prefix}"`
+    )
+  }
+  const collapsed = trimmed.replace(/\/{2,}/g, '/')
   // Slash-only (or blank) input carries no prefix information at all.
   if (collapsed === '' || collapsed === '/') return ''
   return collapsed.replace(/\/+$/, '')

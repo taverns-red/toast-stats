@@ -41,6 +41,9 @@ function createSpyStorage(): BackfillStorage & {
     async exists() {
       return false
     },
+    async existsFresh() {
+      return false
+    },
     async read() {
       return ''
     },

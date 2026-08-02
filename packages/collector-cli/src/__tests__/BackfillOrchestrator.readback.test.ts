@@ -20,6 +20,7 @@ import {
   type BackfillConfig,
   type BackfillStorage,
 } from '../services/BackfillOrchestrator.js'
+import { logger } from '../utils/logger.js'
 import {
   createSimulatedDownloader,
   SIM_LIVE_PROGRAM_YEAR,
@@ -34,6 +35,9 @@ function createMemoryStorage(): BackfillStorage & { keys: string[] } {
       return [...store.keys()]
     },
     async exists(path: string) {
+      return store.has(path)
+    },
+    async existsFresh(path: string) {
       return store.has(path)
     },
     async read(path: string) {
@@ -54,6 +58,9 @@ function createBlackHoleStorage(): BackfillStorage & { written: string[] } {
   return {
     written,
     async exists() {
+      return false
+    },
+    async existsFresh() {
       return false
     },
     async read() {
@@ -195,6 +202,111 @@ describe('BackfillOrchestrator read-back (#1388)', () => {
     expect(summary.mismatches).toBe(0)
     expect(summary.errors).toBe(0)
     expect(storage.written.length).toBeGreaterThan(0)
+    expect(summary.readbackFailures).toEqual(['2026-07-26', '2026-07-27'])
+  })
+})
+
+describe('BackfillOrchestrator destination log (#1388)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(`${SIM_TODAY}T12:00:00Z`))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('names the fully-qualified destination once, before writing anything', async () => {
+    const storage = createMemoryStorage()
+    const infos: Array<{ message: string; data?: unknown }> = []
+    vi.spyOn(logger, 'info').mockImplementation((message, data) => {
+      infos.push({ message, data })
+    })
+
+    const orchestrator = new BackfillOrchestrator(
+      baseConfig({ storage, bucketName: 'toast-stats-data-staging' })
+    )
+    orchestrator.downloader.downloadCsv =
+      createSimulatedDownloader().downloadCsv
+
+    await orchestrator.run()
+
+    const banners = infos.filter(l => l.message === 'Backfill destination')
+    expect(banners).toHaveLength(1)
+    expect(banners[0]!.data).toEqual({
+      destination: 'gs://toast-stats-data-staging/backfill/raw-csv/',
+    })
+    // Before the first write, not after it.
+    expect(infos.indexOf(banners[0]!)).toBeLessThan(
+      infos.findIndex(l => l.message === 'Phase 1: Discovery starting')
+    )
+  })
+
+  it('reports a failed read-back against the qualified destination', async () => {
+    const storage = createBlackHoleStorage()
+    const errors: Array<{ message: string; data?: unknown }> = []
+    vi.spyOn(logger, 'error').mockImplementation((message, data) => {
+      errors.push({ message, data })
+    })
+
+    const orchestrator = new BackfillOrchestrator(
+      baseConfig({ storage, bucketName: 'toast-stats-data-staging' })
+    )
+    orchestrator.downloader.downloadCsv =
+      createSimulatedDownloader().downloadCsv
+
+    await orchestrator.run()
+
+    const failure = errors.find(e => e.message.startsWith('Read-back FAILED'))
+    expect(failure?.data).toMatchObject({
+      destination: 'gs://toast-stats-data-staging/backfill/raw-csv/',
+      missingDates: ['2026-07-26', '2026-07-27'],
+    })
+  })
+})
+
+describe('BackfillOrchestrator read-back under --resume (#1388)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(`${SIM_TODAY}T12:00:00Z`))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('verifies dates it skipped as already-present, not just dates it wrote', async () => {
+    // A fully-resumed run writes nothing. If only writes are sampled, the
+    // read-back is vacuous and `readbackFailures=0` overstates what was
+    // checked — precisely the reassurance the incident ran on.
+    const storage: BackfillStorage & { freshChecks: string[] } = {
+      freshChecks: [],
+      async exists() {
+        return true
+      },
+      async existsFresh(path: string) {
+        storage.freshChecks.push(path)
+        return false
+      },
+      async read() {
+        return '"REGION","DISTRICT"\n"02","61"\nMonth of Jul, As of 07/26/2026'
+      },
+      async write() {},
+    }
+
+    const orchestrator = new BackfillOrchestrator(
+      baseConfig({ storage, resume: true })
+    )
+    orchestrator.downloader.downloadCsv =
+      createSimulatedDownloader().downloadCsv
+
+    const summary = await orchestrator.run()
+
+    expect(storage.freshChecks).toEqual([
+      'backfill/raw-csv/2026-07-26/all-districts.csv',
+      'backfill/raw-csv/2026-07-27/all-districts.csv',
+    ])
     expect(summary.readbackFailures).toEqual(['2026-07-26', '2026-07-27'])
   })
 })

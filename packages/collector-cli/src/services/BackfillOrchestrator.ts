@@ -57,9 +57,11 @@ export interface BackfillStorage {
    *
    * `exists()` may answer from a warmed key set that `write()` adds to — fine
    * for resume, useless for verification, because it would only re-read the
-   * run's own optimism. Implementations that cache MUST override this.
+   * run's own optimism. Required, not optional: an implementation that cannot
+   * answer this cannot be verified, and an optional method is an invitation to
+   * verify against the cache by omission.
    */
-  existsFresh?(filePath: string): Promise<boolean>
+  existsFresh(filePath: string): Promise<boolean>
   /** Read a file's content (for parsing cached summaries). */
   read(filePath: string): Promise<string>
   /** Write content to a file, creating directories as needed. */
@@ -84,10 +86,7 @@ export async function verifyBackfillWrites(
 ): Promise<string[]> {
   const missing: string[] = []
   for (const [date, key] of samplesByDate) {
-    const present = storage.existsFresh
-      ? await storage.existsFresh(key)
-      : await storage.exists(key)
-    if (!present) missing.push(date)
+    if (!(await storage.existsFresh(key))) missing.push(date)
   }
   return missing.sort()
 }
@@ -229,6 +228,13 @@ export interface BackfillConfig {
   phase?: 'discover' | 'collect' | 'all'
   resume?: boolean
   storage?: BackfillStorage
+  /**
+   * The GCS bucket `storage` writes to, for logging only (#1388).
+   *
+   * Without it the destination logs name a bare key prefix — the same
+   * ambiguity that let `gs://bucket//raw-csv/` pass unnoticed.
+   */
+  bucketName?: string
   /**
    * The program year currently served by the bare `/export.aspx` (#1384).
    *
@@ -385,6 +391,14 @@ export class BackfillOrchestrator {
    */
   private readonly writeSamples = new Map<string, string>()
 
+  /** Where this run writes, fully qualified when a bucket is known (#1388). */
+  private destination(): string {
+    return describeStorageDestination(
+      this.config.outputDir,
+      this.config.bucketName
+    )
+  }
+
   /** Write through storage and remember a sample key for the date (#1388). */
   private async writeTracked(
     key: string,
@@ -392,6 +406,11 @@ export class BackfillOrchestrator {
     date: Date
   ): Promise<void> {
     await this.storage.write(key, content)
+    this.sampleKey(key, date)
+  }
+
+  /** Remember one key per date for the post-run read-back (#1388). */
+  private sampleKey(key: string, date: Date): void {
     const dateStr = toYYYYMMDD(date)
     if (!this.writeSamples.has(dateStr)) this.writeSamples.set(dateStr, key)
   }
@@ -690,6 +709,10 @@ export class BackfillOrchestrator {
           const cached = await this.storage.exists(key)
           if (cached) {
             this.progress.completed++
+            // A fully-resumed run writes nothing; sampling only writes would
+            // make the read-back vacuous and `readbackFailures=0` a lie about
+            // what was checked (#1388).
+            this.sampleKey(key, date)
             try {
               const content = await this.storage.read(key)
               const districts =
@@ -972,6 +995,8 @@ export class BackfillOrchestrator {
       readbackFailures: [],
     }
 
+    logger.info('Backfill destination', { destination: this.destination() })
+
     await this.runPhases(summary)
 
     summary.readbackFailures = await verifyBackfillWrites(
@@ -980,12 +1005,12 @@ export class BackfillOrchestrator {
     )
     if (summary.readbackFailures.length > 0) {
       logger.error('Read-back FAILED — written objects are not at the prefix', {
-        destination: describeStorageDestination(this.config.outputDir),
+        destination: this.destination(),
         missingDates: summary.readbackFailures,
       })
     } else if (this.writeSamples.size > 0) {
       logger.info('Read-back OK — sampled one object per date', {
-        destination: describeStorageDestination(this.config.outputDir),
+        destination: this.destination(),
         dates: this.writeSamples.size,
       })
     }
