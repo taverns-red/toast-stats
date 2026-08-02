@@ -67,7 +67,7 @@ describe('DivisionCriteriaExplanation', () => {
       // Check that the note about no club visit requirements is present
       // The text is split across elements due to <strong> tag, so we use a function matcher
       expect(
-        screen.getByText((content, element) => {
+        screen.getByText((_content, element) => {
           const hasText =
             element?.textContent?.includes('have club visit requirements') ??
             false

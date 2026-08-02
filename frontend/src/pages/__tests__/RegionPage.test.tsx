@@ -110,6 +110,7 @@ describe('RegionPage empty & error recovery affordances (#883)', () => {
       // Only region "1" exists; region "99" is empty.
       rankings: [mkRanking({ districtId: '1', region: '1' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegionWithRegionsRoute('99')
 
@@ -128,6 +129,7 @@ describe('RegionPage empty & error recovery affordances (#883)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '1', region: '1' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegionWithRegionsRoute('99')
 
@@ -199,6 +201,7 @@ describe('RegionPage tier column (#517 #513)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(awardsWithTier('NotDistinguished'))
     renderRegion('2')
@@ -220,6 +223,7 @@ describe('RegionPage tier column (#517 #513)', () => {
       mockedFetchCdnRankings.mockResolvedValueOnce({
         rankings: [mkRanking({ districtId: '61', region: '2' })],
         asOfDate: '2026-05-12',
+        generatedAt: '2026-05-12T00:00:00Z',
       })
       mockedFetchCdnAwards.mockResolvedValue(awardsWithTier(tier))
       renderRegion('2')
@@ -235,6 +239,7 @@ describe('RegionPage tier column (#517 #513)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(null)
     renderRegion('2')
@@ -249,6 +254,7 @@ describe('RegionPage tier column (#517 #513)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(awardsWithTier('Distinguished'))
     renderRegion('2')
@@ -318,6 +324,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(awardsFixture())
     renderRegion('2')
@@ -353,6 +360,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(
       awardsFixture({
@@ -419,6 +427,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(
       awardsFixture({
@@ -459,6 +468,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(
       awardsFixture({
@@ -502,6 +512,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(null)
     renderRegion('2')
@@ -535,6 +546,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(awardsFixture())
     renderRegion('2')
@@ -559,6 +571,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(awardsFixture())
     renderRegion('2')
@@ -583,6 +596,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(
       awardsFixture({
@@ -624,6 +638,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(awardsFixture())
     renderRegion('2')
@@ -666,6 +681,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(fixture)
     renderRegion('2')
@@ -703,6 +719,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(null)
     renderRegion('2')
@@ -740,6 +757,7 @@ describe('RegionPage KPI strip — base / current / Δ / ±% (#514 #513)', () =>
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -771,6 +789,7 @@ describe('RegionPage KPI strip — base / current / Δ / ±% (#514 #513)', () =>
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -809,6 +828,7 @@ describe('RegionPage KPI strip — base / current / Δ / ±% (#514 #513)', () =>
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -830,6 +850,7 @@ describe('RegionPage KPI strip — base / current / Δ / ±% (#514 #513)', () =>
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -850,6 +871,7 @@ describe('RegionPage base → current → Δ column model (#687 epic #683)', () 
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -868,6 +890,7 @@ describe('RegionPage base → current → Δ column model (#687 epic #683)', () 
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -896,6 +919,7 @@ describe('RegionPage base → current → Δ column model (#687 epic #683)', () 
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     mockedFetchCdnAwards.mockResolvedValue(null)
     renderRegion('2')
@@ -920,6 +944,7 @@ describe('RegionPage base → current → Δ column model (#687 epic #683)', () 
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -944,6 +969,7 @@ describe('RegionPage base → current → Δ column model (#687 epic #683)', () 
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -960,6 +986,7 @@ describe('RegionPage base → current → Δ column model (#687 epic #683)', () 
         mkRanking({ districtId: '61', region: '2', distinguishedClubs: 48 }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -977,6 +1004,7 @@ describe('RegionPage rank-within-region column (#515 #513)', () => {
         mkRanking({ districtId: '1', region: '1', aggregateScore: 300 }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('1')
     expect(
@@ -1007,6 +1035,7 @@ describe('RegionPage rank-within-region column (#515 #513)', () => {
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('2')
 
@@ -1039,6 +1068,7 @@ describe('RegionPage rank-within-region column (#515 #513)', () => {
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('3')
 
@@ -1063,6 +1093,7 @@ describe('RegionPage rank-within-region column (#515 #513)', () => {
         }),
       ],
       asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
     })
     renderRegion('6')
 

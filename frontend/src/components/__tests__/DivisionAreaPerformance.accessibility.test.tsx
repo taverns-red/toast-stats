@@ -29,31 +29,58 @@ import { DivisionPerformanceCard } from '../DivisionPerformanceCard'
 import DivisionSummary from '../DivisionSummary'
 import { AreaPerformanceTable } from '../AreaPerformanceTable'
 import { AreaPerformanceRow } from '../AreaPerformanceRow'
-import type { DistrictSnapshot } from '../../types/district'
 import type {
   DivisionPerformance,
   AreaPerformance,
-} from '../../types/performance'
-import { deriveAreaRecognitionState } from '../../utils/areaRecognitionState'
+} from '../../utils/divisionStatus'
+import { withRecognitionState } from '../../test-utils/areaFixture'
 
+/**
+ * The shape this file's `createMockDistrictSnapshot` actually builds.
+ *
+ * It used to be imported as `DistrictSnapshot` from `../../types/district`,
+ * alongside `DivisionPerformance` / `AreaPerformance` from
+ * `../../types/performance`. **Neither module exists.** Because the test tree
+ * was excluded from tsc and esbuild strips type-only imports without resolving
+ * them, three broken imports sat here unnoticed (#1368).
+ *
+ * Restated locally rather than pointed at a real type, because it does not
+ * match one: the wire snapshot carries `divisionPerformance[]` /
+ * `clubPerformance[]` (see `extractDivisionPerformance`), not
+ * `divisions[].areas[]`. `DivisionPerformanceCardsProps.districtSnapshot` is
+ * `unknown`, so the mismatch is invisible at the call site — see the note on
+ * `createMockDistrictSnapshot` below.
+ */
+interface MockDistrictSnapshot {
+  district: string
+  timestamp: string
+  divisions: Array<{
+    division: string
+    clubBase: number
+    paidClubs: number
+    distinguishedClubs: number
+    areas: Array<{
+      area: string
+      clubBase: number
+      paidClubs: number
+      distinguishedClubs: number
+      novVisitAward: number
+      mayVisitAward: number
+    }>
+  }>
+}
+
+/**
+ * Delegates to the shared `withRecognitionState` (#1368) — the local copy
+ * demanded the #973 visit fields no fixture here supplies.
+ */
 function withState(
-  fixture: Omit<AreaPerformance, 'recognitionState'>
+  fixture: Parameters<typeof withRecognitionState>[0]
 ): AreaPerformance {
-  return {
-    ...fixture,
-    recognitionState: deriveAreaRecognitionState({
-      clubBase: fixture.clubBase,
-      paidClubs: fixture.paidClubs,
-      distinguishedClubs: fixture.distinguishedClubs,
-      firstRoundVisitMet: fixture.firstRoundVisits.meetsThreshold,
-      secondRoundVisitMet: fixture.secondRoundVisits.meetsThreshold,
-      snapshotDate: '2026-06-15',
-    }),
-  }
+  return withRecognitionState(fixture, '2026-06-15')
 }
 
 // Extend expect with jest-axe matchers
-// @ts-expect-error - jest-axe types are not perfectly compatible with vitest expect
 expect.extend(toHaveNoViolations)
 
 // Axe synchronization to prevent concurrent runs
@@ -85,7 +112,15 @@ const runAxeSynchronized = async (container: Element): Promise<unknown> => {
 }
 
 // Test data generators
-const createMockDistrictSnapshot = (): DistrictSnapshot => ({
+/**
+ * NOTE (#1368): this builds `divisions[].areas[]`, but
+ * `extractDivisionPerformance` reads `divisionPerformance[]`. It therefore
+ * extracts nothing, and the `DivisionPerformanceCards` scans below run against
+ * the component's empty state rather than a populated one. Left as-is here —
+ * repointing the fixture at the real wire shape changes what these axe scans
+ * cover and belongs in its own change, not in a typecheck sweep.
+ */
+const createMockDistrictSnapshot = (): MockDistrictSnapshot => ({
   district: 'D101',
   timestamp: '2024-01-15T10:00:00Z',
   divisions: [
@@ -225,7 +260,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
     it('should have no accessibility violations with multiple divisions', async () => {
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       const results = await runAxeSynchronized(container)
@@ -233,13 +271,16 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
     })
 
     it('should have no accessibility violations with empty divisions', async () => {
-      const snapshot: DistrictSnapshot = {
+      const snapshot: MockDistrictSnapshot = {
         district: 'D101',
         timestamp: '2024-01-15T10:00:00Z',
         divisions: [],
       }
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       const results = await runAxeSynchronized(container)
@@ -392,7 +433,12 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
     it('should support keyboard navigation through division cards', async () => {
       const user = userEvent.setup()
       const snapshot = createMockDistrictSnapshot()
-      render(<DivisionPerformanceCards districtSnapshot={snapshot} />)
+      render(
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
+      )
 
       // Tab through the document
       await user.tab()
@@ -420,7 +466,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
     it('should have visible focus indicators on interactive elements', () => {
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       // Check all interactive elements have focus styles
@@ -631,7 +680,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
     it('should use brand colors with proper contrast', () => {
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       // Check that brand-compliant classes are present in the rendered output
@@ -687,7 +739,12 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
   describe('Touch Target Sizes', () => {
     it('should have minimum 44px touch targets for interactive elements', () => {
       const snapshot = createMockDistrictSnapshot()
-      render(<DivisionPerformanceCards districtSnapshot={snapshot} />)
+      render(
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
+      )
 
       // Touch target validation is handled by the component's CSS classes
       // The components use min-h-[44px] and min-w-[44px] Tailwind classes
@@ -704,7 +761,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
 
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       const results = await runAxeSynchronized(container)
@@ -718,7 +778,10 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
 
       const snapshot = createMockDistrictSnapshot()
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={snapshot} />
+        <DivisionPerformanceCards
+          districtSnapshot={snapshot}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       const results = await runAxeSynchronized(container)

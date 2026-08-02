@@ -891,7 +891,9 @@ describe('ClubsTable', () => {
       expect(container.querySelector('.clubs-preset-bar')).toBeNull()
       // Order within the toolbar: Columns, then the preset directly after it.
       const columnsBtn = screen.getByRole('button', { name: /columns/i })
-      const buttons = Array.from(toolbar!.querySelectorAll('button'))
+      const buttons = Array.from(
+        toolbar!.querySelectorAll<HTMLElement>('button')
+      )
       expect(buttons.indexOf(toggle)).toBeGreaterThan(
         buttons.indexOf(columnsBtn)
       )

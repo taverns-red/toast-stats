@@ -130,9 +130,15 @@ describe('RegionPage — program year selector (#1301)', () => {
     // advanced to 2026-05-20. The countdown/tier columns read from the awards
     // file, which is stored under the SNAPSHOT date — keying it on the advanced
     // sourceCsvDate 404s and blanks those columns.
-    mockedForDate.mockImplementation((date: string) =>
+    // `date` was the key here until #1368 — CdnRankingsData has no such
+    // field, so the "advanced sourceCsvDate" this test is about never
+    // actually reached the component. It is `asOfDate`; `snapshotDate` stays
+    // pinned to the requested date, which is the divergence being asserted.
+    mockedForDate.mockImplementation(date =>
       Promise.resolve({
-        date: date === '2026-05-01' ? '2026-05-20' : date,
+        asOfDate: date === '2026-05-01' ? '2026-05-20' : date,
+        snapshotDate: date,
+        generatedAt: '2026-05-20T00:00:00Z',
         rankings: [mkRanking('57', 350), mkRanking('60', 300)],
       })
     )

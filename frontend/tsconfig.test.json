@@ -1,27 +1,35 @@
 {
+  /*
+   * Typecheck config for the test tree (#1368).
+   *
+   * The base tsconfig.json deliberately EXCLUDES the test tree, and Vitest
+   * transpiles with esbuild (which strips types rather than checking them).
+   * Without this config nothing typechecks a test file — every
+   * `@ts-expect-error` in the suite is inert and every fixture is free to lie
+   * about its shape.
+   *
+   * `exclude: []` re-includes the whole tree. Four strictness flags are relaxed
+   * HERE ONLY — they stay on for production `src/` via tsconfig.json, which is
+   * still checked by `npm run typecheck`. Rationale: index-access strictness
+   * earns its keep in src/ but mostly produces noise against ordinary test
+   * idiom like `result[0].value`, where the index is known to exist (574 of the
+   * 796 baseline errors were TS2532/TS18048 from `noUncheckedIndexedAccess`).
+   *
+   * Follow-up (not done here): tighten these four back on, file by file.
+   */
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    /* Relaxed settings for test files */
-    "exactOptionalPropertyTypes": false,
+    /* Relaxed for tests only — see tsconfig.json for the production settings */
     "noUncheckedIndexedAccess": false,
     "noPropertyAccessFromIndexSignature": false,
+    "exactOptionalPropertyTypes": false,
     "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
-    "strictPropertyInitialization": false,
 
-    /* Keep essential type safety */
-    "strict": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
+    /* Tests run on Node 22, not in the ES2020 bundle target, so modern
+       built-ins such as Array.prototype.at are legitimately available. The
+       production target stays ES2020 via tsconfig.json. */
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
   },
-  "include": [
-    "src/**/__tests__/**/*",
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/*.spec.ts",
-    "src/**/*.spec.tsx"
-  ],
+  "include": ["src"],
   "exclude": []
 }

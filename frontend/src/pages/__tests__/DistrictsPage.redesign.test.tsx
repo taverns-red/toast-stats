@@ -61,6 +61,7 @@ const setupWithData = () => {
         paymentsRank: 1,
         distinguishedRank: 1,
         aggregateScore: 300,
+        overallRank: 1,
       },
       {
         districtId: 'D2',
@@ -81,9 +82,11 @@ const setupWithData = () => {
         paymentsRank: 2,
         distinguishedRank: 2,
         aggregateScore: 250,
+        overallRank: 2,
       },
     ],
     asOfDate: '2025-11-22',
+    generatedAt: '2025-11-22T00:00:00Z',
   })
 }
 

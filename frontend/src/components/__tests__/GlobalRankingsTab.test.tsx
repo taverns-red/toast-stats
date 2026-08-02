@@ -54,6 +54,7 @@ describe('GlobalRankingsTab', () => {
         clubsRank: 15,
         paymentsRank: 20,
         distinguishedRank: 10,
+        totalDistricts: 126,
       },
       {
         date: '2024-08-15',
@@ -61,6 +62,7 @@ describe('GlobalRankingsTab', () => {
         clubsRank: 12,
         paymentsRank: 18,
         distinguishedRank: 8,
+        totalDistricts: 126,
       },
       {
         date: '2024-09-15',
@@ -68,6 +70,7 @@ describe('GlobalRankingsTab', () => {
         clubsRank: 10,
         paymentsRank: 15,
         distinguishedRank: 5,
+        totalDistricts: 126,
       },
     ],
     programYear: {

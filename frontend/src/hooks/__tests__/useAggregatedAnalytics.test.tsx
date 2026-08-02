@@ -99,6 +99,7 @@ const createMockCdnAnalytics = (
     distinguishedChange: 10.5,
     clubHealthChange: 3.1,
   },
+  prospectiveClubs: [],
   ...overrides,
 })
 

@@ -52,6 +52,7 @@ const setupRankingsWithFourTiers = () => {
       mkRanking('99', '1', 5),
     ],
     asOfDate: '2026-05-18',
+    generatedAt: '2025-11-22T00:00:00Z',
   })
   mockedFetchCdnCompetitiveAwards.mockResolvedValue({
     metadata: {
@@ -92,6 +93,7 @@ const mkRanking = (id: string, region: string, rank: number) => ({
   paymentsRank: rank,
   distinguishedRank: rank,
   aggregateScore: 300 - rank * 10,
+  overallRank: rank,
 })
 
 const mkStatus = (
@@ -178,6 +180,7 @@ describe('DistrictsPage — DDP tier chip + density (#546)', () => {
       mockedFetchCdnRankings.mockResolvedValue({
         rankings: [mkRanking('93', '8', 1), mkRanking('110', '11', 2)],
         asOfDate: '2026-05-18',
+        generatedAt: '2025-11-22T00:00:00Z',
       })
       // CDN fetch failure → hook returns null/undefined → page must
       // still render rows with em-dash placeholders, not crash.

@@ -120,6 +120,7 @@ describe('DivisionPerformanceCards', () => {
     it('should display loading indicator when isLoading is true', () => {
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={true}
         />
@@ -133,6 +134,7 @@ describe('DivisionPerformanceCards', () => {
     it('should show spinner animation during loading', () => {
       const { container } = render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={true}
         />
@@ -145,6 +147,7 @@ describe('DivisionPerformanceCards', () => {
     it('should not call extractDivisionPerformance when loading', () => {
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={true}
         />
@@ -157,7 +160,11 @@ describe('DivisionPerformanceCards', () => {
   describe('Error State - Invalid Data', () => {
     it('should display error message when districtSnapshot is null', () => {
       render(
-        <DivisionPerformanceCards districtSnapshot={null} isLoading={false} />
+        <DivisionPerformanceCards
+          districtSnapshot={null}
+          isLoading={false}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       expect(screen.getByText('No Data Available')).toBeInTheDocument()
@@ -169,6 +176,7 @@ describe('DivisionPerformanceCards', () => {
     it('should display error message when districtSnapshot is undefined', () => {
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={undefined}
           isLoading={false}
         />
@@ -179,7 +187,11 @@ describe('DivisionPerformanceCards', () => {
 
     it('should show error icon when data is invalid', () => {
       const { container } = render(
-        <DivisionPerformanceCards districtSnapshot={null} isLoading={false} />
+        <DivisionPerformanceCards
+          districtSnapshot={null}
+          isLoading={false}
+          snapshotTimestamp="2026-06-30"
+        />
       )
 
       const errorIcon = container.querySelector('svg')
@@ -193,6 +205,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -209,6 +222,7 @@ describe('DivisionPerformanceCards', () => {
 
       const { container } = render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -277,6 +291,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -292,6 +307,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -309,6 +325,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -327,17 +344,20 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
       )
 
       // Snapshot date is forwarded so the source-of-truth gate is
-      // snapshot-relative, not wall-clock (#832). Undefined when no
-      // `snapshotTimestamp` prop is provided.
+      // snapshot-relative, not wall-clock (#832). This asserted `undefined`
+      // until #1368: the prop is REQUIRED, but nothing typechecked the test
+      // tree, so the fixture simply omitted it and the assertion was pinned to
+      // a shape production can never produce.
       expect(extractDivisionPerformance).toHaveBeenCalledWith(
         mockSnapshot,
-        undefined
+        '2026-06-30'
       )
       expect(extractDivisionPerformance).toHaveBeenCalledTimes(1)
     })
@@ -350,6 +370,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -392,6 +413,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -426,6 +448,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -445,6 +468,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -460,6 +484,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -486,6 +511,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -506,6 +532,7 @@ describe('DivisionPerformanceCards', () => {
       // Should not throw, should show empty state
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -522,6 +549,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -542,6 +570,7 @@ describe('DivisionPerformanceCards', () => {
 
       render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -576,6 +605,7 @@ describe('DivisionPerformanceCards', () => {
 
       const { rerender } = render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -584,6 +614,7 @@ describe('DivisionPerformanceCards', () => {
       // Rerender with same snapshot
       rerender(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -598,6 +629,7 @@ describe('DivisionPerformanceCards', () => {
 
       const { rerender } = render(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={mockSnapshot}
           isLoading={false}
         />
@@ -607,6 +639,7 @@ describe('DivisionPerformanceCards', () => {
 
       rerender(
         <DivisionPerformanceCards
+          snapshotTimestamp="2026-06-30"
           districtSnapshot={newSnapshot}
           isLoading={false}
         />

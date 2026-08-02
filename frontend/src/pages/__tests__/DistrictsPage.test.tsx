@@ -63,9 +63,11 @@ describe('DistrictsPage - Percentage Formatting', () => {
             paymentsRank: 1,
             distinguishedRank: 1,
             aggregateScore: 300,
+            overallRank: 1,
           },
         ],
         asOfDate: '2025-11-22',
+        generatedAt: '2025-11-22T00:00:00Z',
       })
 
       renderWithProviders(<DistrictsPage />)
@@ -98,9 +100,11 @@ describe('DistrictsPage - Percentage Formatting', () => {
             paymentsRank: 1,
             distinguishedRank: 1,
             aggregateScore: 300,
+            overallRank: 1,
           },
         ],
         asOfDate: '2025-11-22',
+        generatedAt: '2025-11-22T00:00:00Z',
       })
 
       renderWithProviders(<DistrictsPage />)
@@ -133,9 +137,11 @@ describe('DistrictsPage - Percentage Formatting', () => {
             paymentsRank: 1,
             distinguishedRank: 1,
             aggregateScore: 300,
+            overallRank: 1,
           },
         ],
         asOfDate: '2025-11-22',
+        generatedAt: '2025-11-22T00:00:00Z',
       })
 
       renderWithProviders(<DistrictsPage />)
@@ -168,9 +174,11 @@ describe('DistrictsPage - Percentage Formatting', () => {
             paymentsRank: 1,
             distinguishedRank: 1,
             aggregateScore: 300,
+            overallRank: 1,
           },
         ],
         asOfDate: '2025-11-22',
+        generatedAt: '2025-11-22T00:00:00Z',
       })
 
       renderWithProviders(<DistrictsPage />)
@@ -302,9 +310,11 @@ describe('DistrictsPage - Table Cell Rendering', () => {
           paymentsRank: 3,
           distinguishedRank: 1,
           aggregateScore: 300,
+          overallRank: 1,
         },
       ],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -342,9 +352,11 @@ describe('DistrictsPage - Table Cell Rendering', () => {
           paymentsRank: 1,
           distinguishedRank: 1,
           aggregateScore: 300,
+          overallRank: 1,
         },
       ],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -380,9 +392,11 @@ describe('DistrictsPage - Table Cell Rendering', () => {
           paymentsRank: 1,
           distinguishedRank: 1,
           aggregateScore: 300,
+          overallRank: 1,
         },
       ],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
 
     renderWithProviders(<DistrictsPage />)
@@ -419,9 +433,11 @@ describe('DistrictsPage - Table Cell Rendering', () => {
           paymentsRank: 3,
           distinguishedRank: 1,
           aggregateScore: 300,
+          overallRank: 1,
         },
       ],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
 
     const { container } = renderWithProviders(<DistrictsPage />)
@@ -482,9 +498,11 @@ describe('DistrictsPage - Layout Order (#83)', () => {
           paymentsRank: 1,
           distinguishedRank: 1,
           aggregateScore: 300,
+          overallRank: 1,
         },
       ],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
   }
 
@@ -656,7 +674,7 @@ describe('DistrictsPage - My District sticky pin (#417)', () => {
   const setupTwoRows = () => {
     const baseRow = (
       i: number
-    ): import('../../services/cdn').AllDistrictsRanking => ({
+    ): import('../../services/cdn').CdnRankingsData['rankings'][number] => ({
       districtId: `${i}`,
       districtName: `District ${i}`,
       region: '1',
@@ -675,10 +693,12 @@ describe('DistrictsPage - My District sticky pin (#417)', () => {
       paymentsRank: i,
       distinguishedRank: i,
       aggregateScore: 300 - i,
+      overallRank: 1,
     })
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [baseRow(1), baseRow(2)],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
   }
 
@@ -761,9 +781,11 @@ describe('DistrictsPage - Rankings column order (#436)', () => {
           paymentsRank: 1,
           distinguishedRank: 1,
           aggregateScore: 300,
+          overallRank: 1,
         },
       ],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
   }
 
@@ -809,7 +831,7 @@ describe('DistrictsPage - Region filter solo-select (#434)', () => {
     const baseRow = (
       i: number,
       region: string
-    ): import('../../services/cdn').AllDistrictsRanking => ({
+    ): import('../../services/cdn').CdnRankingsData['rankings'][number] => ({
       districtId: `D${i}`,
       districtName: `District ${i}`,
       region,
@@ -828,10 +850,12 @@ describe('DistrictsPage - Region filter solo-select (#434)', () => {
       paymentsRank: i,
       distinguishedRank: i,
       aggregateScore: 300 - i,
+      overallRank: 1,
     })
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [baseRow(1, '1'), baseRow(2, '2'), baseRow(3, '3')],
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
   }
 

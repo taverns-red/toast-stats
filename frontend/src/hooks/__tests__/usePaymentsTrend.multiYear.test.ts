@@ -33,6 +33,7 @@ vi.mock('../useDistrictAnalytics', () => ({
 // Import after mocking so we get the mocked version
 import { useDistrictAnalytics } from '../useDistrictAnalytics'
 import { usePaymentsTrend } from '../usePaymentsTrend'
+import { snap } from '../../test-utils/snapshotDate'
 
 const mockedUseDistrictAnalytics = vi.mocked(useDistrictAnalytics)
 
@@ -107,6 +108,7 @@ function makeAnalyticsData(
     distinguishedProjection: 0,
     divisionRankings: [],
     topPerformingAreas: [],
+    prospectiveClubs: [],
     performanceTargets,
   }
 }
@@ -162,7 +164,7 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       )
 
       const { result } = renderHook(() =>
-        usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
+        usePaymentsTrend('42', undefined, snap('2025-01-15'), selectedYear)
       )
 
       expect(result.current.data).not.toBeNull()
@@ -199,7 +201,7 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       )
 
       const { result } = renderHook(() =>
-        usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
+        usePaymentsTrend('42', undefined, snap('2025-01-15'), selectedYear)
       )
 
       expect(result.current.data).not.toBeNull()
@@ -238,7 +240,7 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       )
 
       const { result } = renderHook(() =>
-        usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
+        usePaymentsTrend('42', undefined, snap('2025-01-15'), selectedYear)
       )
 
       expect(result.current.data).not.toBeNull()
@@ -287,7 +289,7 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       )
 
       const { result } = renderHook(() =>
-        usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
+        usePaymentsTrend('42', undefined, snap('2025-01-15'), selectedYear)
       )
 
       expect(result.current.data).not.toBeNull()
@@ -319,13 +321,13 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       )
 
       const { result: result1 } = renderHook(() =>
-        usePaymentsTrend('42', undefined, '2025-01-15', year2024)
+        usePaymentsTrend('42', undefined, snap('2025-01-15'), year2024)
       )
 
       // Second: select 2022-2023
       const year2022 = getProgramYear(2022)
       const { result: result2 } = renderHook(() =>
-        usePaymentsTrend('42', undefined, '2025-01-15', year2022)
+        usePaymentsTrend('42', undefined, snap('2025-01-15'), year2022)
       )
 
       expect(result1.current.data!.multiYearData!.currentYear.label).toBe(
@@ -363,7 +365,7 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       )
 
       const { result } = renderHook(() =>
-        usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
+        usePaymentsTrend('42', undefined, snap('2025-01-15'), selectedYear)
       )
 
       expect(result.current.data).not.toBeNull()
@@ -399,7 +401,7 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       )
 
       const { result } = renderHook(() =>
-        usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
+        usePaymentsTrend('42', undefined, snap('2025-01-15'), selectedYear)
       )
 
       expect(result.current.data).not.toBeNull()
@@ -421,7 +423,7 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       )
 
       const { result } = renderHook(() =>
-        usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
+        usePaymentsTrend('42', undefined, snap('2025-01-15'), selectedYear)
       )
 
       expect(result.current.data).not.toBeNull()

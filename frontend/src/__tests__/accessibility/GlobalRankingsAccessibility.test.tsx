@@ -50,7 +50,6 @@ import type {
 import type { RankHistoryResponse } from '../../types/districts'
 
 // Extend expect with jest-axe matchers
-// @ts-expect-error - jest-axe types are not perfectly compatible with vitest expect
 expect.extend(toHaveNoViolations)
 
 // Axe synchronization to prevent concurrent runs
@@ -129,6 +128,7 @@ const mockRankHistory: RankHistoryResponse = {
       clubsRank: 15,
       paymentsRank: 20,
       distinguishedRank: 10,
+      totalDistricts: 126,
     },
     {
       date: '2024-08-15',
@@ -136,6 +136,7 @@ const mockRankHistory: RankHistoryResponse = {
       clubsRank: 12,
       paymentsRank: 18,
       distinguishedRank: 8,
+      totalDistricts: 126,
     },
     {
       date: '2024-09-15',
@@ -143,6 +144,7 @@ const mockRankHistory: RankHistoryResponse = {
       clubsRank: 10,
       paymentsRank: 15,
       distinguishedRank: 5,
+      totalDistricts: 126,
     },
   ],
   programYear: {

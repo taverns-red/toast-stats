@@ -10,6 +10,7 @@ import { renderHook, waitFor, cleanup } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useLatestAsOfDate, useGlobalFreshness } from '../useLatestAsOfDate'
+import { snap } from '../../test-utils/snapshotDate'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn().mockResolvedValue({
@@ -59,14 +60,12 @@ describe('useLatestAsOfDate (#1310)', () => {
  * advanced past the pinned month-end 2026-06-30 — the closing window.
  */
 describe('useGlobalFreshness (#1321)', () => {
-  const render = (params: {
-    districtLatestSnapshotDate: string | undefined
-    isLatestSnapshot: boolean
-  }) => renderHook(() => useGlobalFreshness(params), { wrapper })
+  const render = (params: Parameters<typeof useGlobalFreshness>[0]) =>
+    renderHook(() => useGlobalFreshness(params), { wrapper })
 
   it('surfaces the global as-of date when the district latest IS the global latest', async () => {
     const { result } = render({
-      districtLatestSnapshotDate: '2026-06-30',
+      districtLatestSnapshotDate: snap('2026-06-30'),
       isLatestSnapshot: true,
     })
     await waitFor(() => expect(result.current.asOfDate).toBe('2026-07-02'))
@@ -75,7 +74,7 @@ describe('useGlobalFreshness (#1321)', () => {
 
   it('withholds it while viewing a historical snapshot', async () => {
     const { result } = render({
-      districtLatestSnapshotDate: '2026-06-30',
+      districtLatestSnapshotDate: snap('2026-06-30'),
       isLatestSnapshot: false,
     })
     await waitFor(() => expect(result.current.isLatest).toBe(false))
@@ -89,7 +88,7 @@ describe('useGlobalFreshness (#1321)', () => {
     // its data is genuinely older, so it must not claim the global as-of date
     // (nor a month-end reconciliation it isn't part of).
     const { result } = render({
-      districtLatestSnapshotDate: '2026-05-31',
+      districtLatestSnapshotDate: snap('2026-05-31'),
       isLatestSnapshot: true,
     })
     await waitFor(() => expect(result.current.isLatest).toBe(false))

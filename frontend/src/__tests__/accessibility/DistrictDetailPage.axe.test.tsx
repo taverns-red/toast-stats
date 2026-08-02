@@ -27,7 +27,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import DistrictDetailPage from '../../pages/DistrictDetailPage'
 
-// @ts-expect-error - jest-axe matcher types vs vitest expect
 expect.extend(toHaveNoViolations)
 
 // Mount cost is the full DistrictDetailPage with lazy children. Honest
@@ -40,6 +39,9 @@ vi.setConfig({ testTimeout: 15000 })
 class MockIntersectionObserver implements IntersectionObserver {
   readonly root: Element | null = null
   readonly rootMargin: string = ''
+  // Part of the lib.dom IntersectionObserver interface — a mock that omits it
+  // does not implement it (#1368).
+  readonly scrollMargin: string = ''
   readonly thresholds: ReadonlyArray<number> = []
   private readonly callback: (
     entries: IntersectionObserverEntry[],

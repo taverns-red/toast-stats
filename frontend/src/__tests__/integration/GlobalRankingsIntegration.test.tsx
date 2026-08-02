@@ -67,6 +67,7 @@ const mockRankHistory2024 = {
       clubsRank: 20,
       paymentsRank: 25,
       distinguishedRank: 15,
+      totalDistricts: 126,
     },
     {
       date: '2024-08-15',
@@ -74,6 +75,7 @@ const mockRankHistory2024 = {
       clubsRank: 18,
       paymentsRank: 22,
       distinguishedRank: 12,
+      totalDistricts: 126,
     },
     {
       date: '2024-09-15',
@@ -81,6 +83,7 @@ const mockRankHistory2024 = {
       clubsRank: 15,
       paymentsRank: 18,
       distinguishedRank: 10,
+      totalDistricts: 126,
     },
     {
       date: '2024-10-15',
@@ -88,6 +91,7 @@ const mockRankHistory2024 = {
       clubsRank: 12,
       paymentsRank: 15,
       distinguishedRank: 8,
+      totalDistricts: 126,
     },
     {
       date: '2024-11-15',
@@ -95,6 +99,7 @@ const mockRankHistory2024 = {
       clubsRank: 10,
       paymentsRank: 12,
       distinguishedRank: 5,
+      totalDistricts: 126,
     },
   ],
   programYear: {
@@ -115,6 +120,7 @@ const _mockRankHistory2023 = {
       clubsRank: 25,
       paymentsRank: 30,
       distinguishedRank: 20,
+      totalDistricts: 126,
     },
     {
       date: '2023-10-15',
@@ -122,6 +128,7 @@ const _mockRankHistory2023 = {
       clubsRank: 22,
       paymentsRank: 25,
       distinguishedRank: 18,
+      totalDistricts: 126,
     },
     {
       date: '2024-01-15',
@@ -129,6 +136,7 @@ const _mockRankHistory2023 = {
       clubsRank: 18,
       paymentsRank: 20,
       distinguishedRank: 15,
+      totalDistricts: 126,
     },
     {
       date: '2024-06-30',
@@ -136,6 +144,7 @@ const _mockRankHistory2023 = {
       clubsRank: 15,
       paymentsRank: 18,
       distinguishedRank: 12,
+      totalDistricts: 126,
     },
   ],
   programYear: {

@@ -2,27 +2,23 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { AreaPerformanceTable } from '../AreaPerformanceTable'
 import { AreaPerformance } from '../../utils/divisionStatus'
-import { deriveAreaRecognitionState } from '../../utils/areaRecognitionState'
+import { withRecognitionState } from '../../test-utils/areaFixture'
 
 /**
  * Add a derived `recognitionState` to a partially-constructed AreaPerformance
  * fixture. Year-end snapshot keeps legacy "visits met → confirmed" assertions
  * valid; the deadline-aware gate is verified in `areaRecognitionState.test.ts`.
+ *
+ * Delegates to the shared `withRecognitionState` (#1368). The local copy typed
+ * its parameter `Omit<AreaPerformance, 'recognitionState'>`, which also demands
+ * the #973 visit fields (`currentRound`, `clubsMissingCurrentRoundVisit`,
+ * `clubsMissingCurrentRoundVisitIneligible`) that no fixture here supplies —
+ * unnoticed while the test tree sat outside tsc.
  */
 function withState(
-  fixture: Omit<AreaPerformance, 'recognitionState'>
+  fixture: Parameters<typeof withRecognitionState>[0]
 ): AreaPerformance {
-  return {
-    ...fixture,
-    recognitionState: deriveAreaRecognitionState({
-      clubBase: fixture.clubBase,
-      paidClubs: fixture.paidClubs,
-      distinguishedClubs: fixture.distinguishedClubs,
-      firstRoundVisitMet: fixture.firstRoundVisits.meetsThreshold,
-      secondRoundVisitMet: fixture.secondRoundVisits.meetsThreshold,
-      snapshotDate: '2026-06-15',
-    }),
-  }
+  return withRecognitionState(fixture, '2026-06-15')
 }
 
 /**

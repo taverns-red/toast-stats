@@ -27,11 +27,11 @@ function makeClub(
     divisionName: 'Division A',
     areaId: 'A1',
     areaName: 'Area A1',
+    // Default trend when the caller supplies none. (The old fallback read
+    // `overrides.membershipTrend?.[0]?.count` — inside the `??` branch where
+    // that value is by definition undefined, so it was always 20. #1368.)
     membershipTrend: overrides.membershipTrend ?? [
-      {
-        date: '2025-01-01',
-        count: overrides.membershipTrend?.[0]?.count ?? 20,
-      },
+      { date: '2025-01-01', count: 20 },
     ],
     dcpGoalsTrend: overrides.dcpGoalsTrend ?? [
       { date: '2025-01-01', goalsAchieved: 0 },

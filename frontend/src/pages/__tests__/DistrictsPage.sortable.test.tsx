@@ -113,6 +113,7 @@ describe('DistrictsPage — click-header sort (#851)', () => {
     mockedFetchCdnRankings.mockResolvedValue({
       rankings,
       asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
     })
   })
 

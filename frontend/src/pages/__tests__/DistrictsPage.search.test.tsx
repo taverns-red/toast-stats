@@ -105,6 +105,7 @@ const MOCK_RANKINGS = [
     paymentsRank: 3,
     distinguishedRank: 3,
     aggregateScore: 200,
+    overallRank: 3,
   },
 ]
 

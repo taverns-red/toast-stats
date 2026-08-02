@@ -19,6 +19,9 @@ import DistrictDetailPage from '../DistrictDetailPage'
 class MockIntersectionObserver implements IntersectionObserver {
   readonly root: Element | null = null
   readonly rootMargin: string = ''
+  // Part of the lib.dom IntersectionObserver interface — a mock that omits it
+  // does not implement it (#1368).
+  readonly scrollMargin: string = ''
   readonly thresholds: ReadonlyArray<number> = []
 
   private readonly callback: (

@@ -56,8 +56,16 @@ const generateLargeClubDataset = (size: number): ClubTrend[] => {
     divisionName: `Division ${String.fromCharCode(65 + (Math.floor(i / 50) % 26))}`,
     areaId: `area-${Math.floor(i / 10)}`,
     areaName: `Area ${Math.floor(i / 10) + 1}`,
+    // 'NotDistinguished' rather than `undefined`: the field is required on
+    // ClubTrend and the union has no undefined member (#1368).
     distinguishedLevel: (
-      ['Distinguished', 'Select', 'President', 'Smedley', undefined] as const
+      [
+        'Distinguished',
+        'Select',
+        'President',
+        'Smedley',
+        'NotDistinguished',
+      ] as const
     )[i % 5],
     currentStatus: (
       ['thriving', 'vulnerable', 'intervention-required'] as const

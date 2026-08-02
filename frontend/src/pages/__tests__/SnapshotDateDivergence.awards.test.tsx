@@ -35,12 +35,13 @@ import {
   fetchCdnCompetitiveAwards,
   type CompetitiveAwardStandings,
 } from '../../services/cdn'
+import { snap } from '../../test-utils/snapshotDate'
 import DistrictsPage from '../DistrictsPage'
 import AwardsPage from '../AwardsPage'
 import DistrictDetailPage from '../DistrictDetailPage'
 
 /** The pinned snapshot every per-snapshot file is stored under. */
-const SNAPSHOT_DATE = '2026-06-30'
+const SNAPSHOT_DATE = snap('2026-06-30')
 /** The dashboard as-of date, advanced past the snapshot by reconciliation. */
 const AS_OF_DATE = '2026-07-05'
 

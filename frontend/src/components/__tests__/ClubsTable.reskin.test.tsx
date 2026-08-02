@@ -54,7 +54,11 @@ const CLUBS: ClubTrend[] = [
     aprilRenewals: 10,
     newMembers: 5,
     clubStatus: 'Active',
-    yearsChartered: 8,
+    // `yearsChartered` is DERIVED (processClubTrends → getClubAnniversary), not
+    // a ClubTrend field. This fixture set it directly until #1368, so the value
+    // was dropped and the cell rendered its em-dash placeholder — the opposite
+    // of what the comment above intends. Feed the input the derivation reads.
+    charterDate: '2018-05-01',
   }),
   createMockClub({
     clubId: 'c2',

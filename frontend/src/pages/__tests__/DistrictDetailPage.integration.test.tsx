@@ -17,7 +17,6 @@ import { axe, toHaveNoViolations } from 'jest-axe'
 import { DivisionPerformanceCards } from '../../components/DivisionPerformanceCards'
 
 // Extend expect with jest-axe matchers
-// @ts-expect-error - jest-axe types are not perfectly compatible with vitest expect
 expect.extend(toHaveNoViolations)
 
 // Axe synchronization to prevent concurrent runs
