@@ -56,29 +56,46 @@ function catchAllHeaders(targetName: string): HeaderKV[] {
   return rule!.headers
 }
 
-/** Index of the first rule whose `source` matches, or -1. */
+/** Index of the first rule declaring `source`, or -1. */
 function ruleIndex(targetName: string, source: string): number {
   return rulesFor(targetName).findIndex(r => r.source === source)
 }
 
 /**
- * Cache-Control resolved for a `source`, using Firebase's documented
- * precedence: "Hosting applies the header defined by the FIRST rule with a
- * URL pattern that matches the requested path" — per header key. Rules are
- * merged across matches (empirically: a hashed `/assets/*.js` on prod carries
- * BOTH the catch-all's CSP and the js/css rule's Cache-Control), so a later
- * rule can only supply a key no earlier matching rule defined.
+ * Cache-Control that Hosting will actually serve for a request matching
+ * `sources` — the value from the LAST matching rule that declares the key.
+ *
+ * The precedence is LAST-match-wins, not first. The public docs say the
+ * opposite ("Hosting applies the header defined by the first rule with a URL
+ * pattern that matches the requested path"), and that wording is what makes
+ * this the easiest thing in the file to get backwards. Measured against the
+ * Firebase Hosting emulator, which runs superstatic — the same config engine
+ * Hosting itself uses:
+ *
+ *   rules: ** (security) | js/css immutable | img | font | *.html no-cache | ** no-cache
+ *   GET /assets/index-B5NVCpKe.js  ->  cache-control: no-cache      <- immutable LOST
+ *
+ * Moving the bare-`**` no-cache rule ahead of the asset rules restored it:
+ *
+ *   rules: ** (security) | ** no-cache | js/css immutable | img | font | *.html no-cache
+ *   GET /                          ->  no-cache
+ *   GET /districts                 ->  no-cache
+ *   GET /assets/index-B5NVCpKe.js  ->  public, max-age=31536000, immutable
+ *
+ * Rules are merged per key, so the leading security rule's CSP/XFO still
+ * reach every response either way (5/5 security headers on all paths above).
  */
-function firstCacheControlAmong(
+function resolveCacheControl(
   targetName: string,
   sources: string[]
 ): string | undefined {
+  let resolved: string | undefined
   for (const rule of rulesFor(targetName)) {
     if (!sources.includes(rule.source)) continue
     const cc = headerValue(rule.headers, 'Cache-Control')
-    if (cc !== undefined) return cc
+    if (cc !== undefined) resolved = cc
   }
-  return undefined
+  return resolved
 }
 
 function headerValue(headers: HeaderKV[], key: string): string | undefined {
@@ -186,10 +203,11 @@ describe('firebase.json security headers (#783)', () => {
  *    against the REQUEST path, before rewrites are applied. `/` and every SPA
  *    deep route (`/districts`, `/district/61/clubs`) are extensionless, so they
  *    never match `*.html` even though they all serve index.html via the `**`
- *    rewrite. The document default has to be a `**` rule.
- * 2. That `**` rule must come AFTER the hashed-asset rules. Firebase applies
- *    the first matching rule per header key, so a no-cache `**` placed ahead
- *    of them would strip `immutable` off every bundle.
+ *    rewrite. The document default has to be a bare `**` rule.
+ * 2. That `**` rule must come BEFORE the hashed-asset rules — see
+ *    `resolveCacheControl` above for the measurement. Last match wins, so a
+ *    no-cache `**` placed after them strips `immutable` off every bundle and
+ *    turns the whole app into a re-download on each navigation.
  */
 const IMMUTABLE = 'public, max-age=31536000, immutable'
 
@@ -212,32 +230,35 @@ describe('firebase.json cache headers (#1365)', () => {
 
   for (const targetName of ['production', 'staging']) {
     describe(`target: ${targetName}`, () => {
+      // `/`, `/districts`, `/district/61/clubs` — everything the SPA rewrite
+      // turns into index.html — matches only the bare `**` rules.
       it('revalidates the entry document instead of caching it for an hour', () => {
         // `no-cache`, not `no-store`: the response is still stored, but must
-        // be revalidated against the ETag before reuse. Unchanged deploy =>
-        // a cheap 304; changed deploy => the new bundle immediately.
-        expect(firstCacheControlAmong(targetName, ['**'])).toBe('no-cache')
+        // be revalidated against the ETag before reuse. Verified against prod:
+        // a conditional GET with the current ETag returns 304, a stale one 200.
+        expect(resolveCacheControl(targetName, ['**'])).toBe('no-cache')
       })
 
       it('revalidates literal .html paths too', () => {
-        expect(firstCacheControlAmong(targetName, ['**/*.html'])).toBe(
+        expect(resolveCacheControl(targetName, ['**', '**/*.html'])).toBe(
           'no-cache'
         )
       })
 
-      it('declares every hashed-asset rule as immutable', () => {
+      it('keeps every hashed asset immutable despite the no-cache catch-all', () => {
+        // A hashed asset matches BOTH `**` and its own extension rule. This is
+        // the assertion that would have caught the first attempt at this fix.
         for (const source of ASSET_SOURCES) {
           expect(
-            firstCacheControlAmong(targetName, [source]),
-            `${targetName} rule "${source}" must be immutable`
+            resolveCacheControl(targetName, ['**', source]),
+            `${targetName}: a request matching "${source}" must resolve immutable`
           ).toBe(IMMUTABLE)
         }
       })
 
-      it('orders every asset rule ahead of the no-cache document default', () => {
-        // Firebase resolves each header key from the FIRST matching rule.
-        // `**` matches hashed assets too, so if the no-cache catch-all came
-        // first the bundles would lose `immutable` and re-download forever.
+      it('orders the no-cache document default ahead of every asset rule', () => {
+        // The structural invariant behind the assertion above. Stated
+        // separately so a reordering failure names the cause, not a symptom.
         const docDefault = rulesFor(targetName).findIndex(
           r =>
             r.source === '**' &&
@@ -245,7 +266,7 @@ describe('firebase.json cache headers (#1365)', () => {
         )
         expect(
           docDefault,
-          'a `**` rule carrying Cache-Control must exist'
+          'a bare `**` rule carrying Cache-Control must exist'
         ).toBeGreaterThan(-1)
 
         for (const source of ASSET_SOURCES) {
@@ -256,15 +277,15 @@ describe('firebase.json cache headers (#1365)', () => {
           ).toBeGreaterThan(-1)
           expect(
             assetIdx,
-            `"${source}" must precede the no-cache "**" rule`
-          ).toBeLessThan(docDefault)
+            `"${source}" must come AFTER the no-cache "**" rule to win`
+          ).toBeGreaterThan(docDefault)
         }
       })
 
-      it('keeps the security catch-all free of Cache-Control', () => {
-        // The security `**` rule is FIRST, so any Cache-Control added to it
-        // would win over the asset rules for every request. Cache policy
-        // belongs to the trailing `**` rule only.
+      it('keeps cache policy out of the security catch-all rule', () => {
+        // The #783 helper resolves the security headers via the FIRST `**`
+        // rule. Keeping Cache-Control in its own sibling rule means neither
+        // contract can be broken by an edit aimed at the other.
         const securityRule = rulesFor(targetName).find(
           r => r.source === '**' && headerValue(r.headers, 'X-Frame-Options')
         )

@@ -37,6 +37,15 @@
           ]
         },
         {
+          "source": "**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
           "source": "**/*.@(js|css)",
           "headers": [
             {
@@ -65,15 +74,6 @@
         },
         {
           "source": "**/*.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache"
-            }
-          ]
-        },
-        {
-          "source": "**",
           "headers": [
             {
               "key": "Cache-Control",
@@ -120,6 +120,15 @@
           ]
         },
         {
+          "source": "**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
           "source": "**/*.@(js|css)",
           "headers": [
             {
@@ -148,15 +157,6 @@
         },
         {
           "source": "**/*.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache"
-            }
-          ]
-        },
-        {
-          "source": "**",
           "headers": [
             {
               "key": "Cache-Control",
