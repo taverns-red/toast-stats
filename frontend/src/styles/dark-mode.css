@@ -608,8 +608,14 @@
   color: rgba(93, 173, 226, 0.85) !important;
 }
 
+/* #1360: 0.75 → 0.83. Dark twin of the light-side fix in index.css. This
+   rung's only consumers are the Scoring Methodology paragraphs, whose backdrop
+   is `bg-tm-loyal-blue-10` over the dark `--surface-card` — #212635, not the
+   card. Composited there, 0.75 gives #4e8bb7 = 4.09:1, under WCAG AA for 14px;
+   0.83 gives #5396c5 = 4.69:1 and stays below the -80 rung above (0.85), so
+   the ramp keeps its order. */
 [data-theme='dark'] .text-tm-loyal-blue-70 {
-  color: rgba(93, 173, 226, 0.75) !important;
+  color: rgba(93, 173, 226, 0.83) !important;
 }
 
 [data-theme='dark'] .text-tm-true-maroon {

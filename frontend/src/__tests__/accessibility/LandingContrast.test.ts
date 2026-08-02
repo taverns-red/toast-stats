@@ -231,21 +231,35 @@ describe('Landing page contrast, both themes (#1360)', () => {
   })
 
   describe('Rankings table growth delta (13px, on the white table surface)', () => {
-    // `text-green-600` marks a positive club/payment growth percentage. In dark
-    // an explicit rule in dark-mode.css remaps it; in light it resolves straight
-    // to the Tailwind palette token — a FILL green used as small ink, the same
-    // shape as the Awards gold.
+    // `text-green-600` marks a positive club/payment growth percentage.
+    //
+    // Read the RULE that paints it, not the scale token. Neither theme takes
+    // its colour from `--color-green-600` any more: dark-mode.css has always
+    // remapped this utility with an `!important` rule, and light now carries an
+    // equivalent unlayered override, because green-600 is a fill green that is
+    // 3.30:1 on white — illegal as small ink. The Tailwind scale block stays
+    // stock so `bg-green-600` / `border-green-600` keep the real value, which
+    // is exactly why asserting the token here would measure a colour nothing
+    // paints. Deleting either rule makes `declFor` throw rather than pass.
     it.each([['light'], ['dark']] as Array<[Theme]>)(
       '%s: text-green-600 clears WCAG AA',
       theme => {
         const surface =
           theme === 'dark' ? resolveVar('var(--surface)', theme) : '#ffffff'
-        const fg =
-          theme === 'dark'
-            ? declFor(darkModeCss, '.text-green-600', 'color')
-            : resolveVar('var(--color-green-600)', theme)
+        const fg = declFor(
+          theme === 'dark' ? darkModeCss : indexCss,
+          '.text-green-600',
+          'color'
+        )
         expectAA(`${theme} text-green-600`, flatten(fg, surface), surface)
       }
     )
+
+    // The scale token itself must stay stock Tailwind — the fix is a rule, not
+    // a palette edit. This is what makes the override necessary rather than
+    // redundant, and it fails if someone "simplifies" by mutating the scale.
+    it('leaves the Tailwind green-600 scale token untouched', () => {
+      expect(resolveVar('var(--color-green-600)', 'light')).toBe('#16a34a')
+    })
   })
 })
