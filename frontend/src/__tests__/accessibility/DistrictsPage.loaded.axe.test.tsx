@@ -27,7 +27,6 @@ import DistrictsPage from '../../pages/DistrictsPage'
 import { fetchCdnRankings, fetchCdnCompetitiveAwards } from '../../services/cdn'
 import { renderWithProviders } from '../test-utils'
 
-// @ts-expect-error - jest-axe matcher types vs vitest expect
 expect.extend(toHaveNoViolations)
 
 // A full-page mount plus a whole-tree axe walk. Same honest categorization as
