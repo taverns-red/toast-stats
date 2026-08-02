@@ -3431,7 +3431,10 @@
   }
 
   .awards-race-card__status--won {
-    color: var(--yellow-600);
+    /* Theme-remapping gold ink (#1360) — --yellow-600 is 2.03:1 on the light
+       --surface, 8.73:1 on the dark one. The card's gold FILL (progress bar +
+       status dot) is unchanged; only the ink moved. */
+    color: var(--gold-ink);
   }
 
   .awards-race-card__status-dot {
