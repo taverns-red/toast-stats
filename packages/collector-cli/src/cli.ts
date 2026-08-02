@@ -1028,8 +1028,10 @@ export function createCLI(): Command {
     )
     .option(
       '--gcs-prefix <prefix>',
-      'GCS object key prefix (default: backfill)',
-      'backfill'
+      // Default is no prefix: the pipeline reads gs://{bucket}/raw-csv/, so
+      // anything else is a parallel key space nothing consumes (#1388).
+      'GCS object key prefix (default: none — writes to raw-csv/{date}/)',
+      ''
     )
     .action(
       async (options: {
@@ -1045,8 +1047,13 @@ export function createCLI(): Command {
         gcsPrefix: string
         dates?: string[]
       }) => {
-        const { BackfillOrchestrator, GcsBackfillStorage } =
-          await import('./services/BackfillOrchestrator.js')
+        const {
+          BackfillOrchestrator,
+          GcsBackfillStorage,
+          resolveBackfillExitCode,
+        } = await import('./services/BackfillOrchestrator.js')
+        const { normaliseGcsKeyPrefix, describeStorageDestination } =
+          await import('./utils/CachePaths.js')
         type DateFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly'
 
         // An explicit --dates list replaces the year grid; the year range is
@@ -1073,17 +1080,27 @@ export function createCLI(): Command {
         let outputDir: string
 
         if (options.gcsBucket) {
-          console.error(
-            `[INFO] Using GCS storage: gs://${options.gcsBucket}/${options.gcsPrefix}/`
-          )
           storage = await GcsBackfillStorage.create(
             options.gcsBucket,
             process.env['GCP_PROJECT_ID']
           )
-          outputDir = options.gcsPrefix
+          // An unnormalised '' composed the key `/raw-csv/…`, i.e.
+          // gs://bucket//raw-csv/… — legal, silent, and read by nothing
+          // (#1388).
+          outputDir = normaliseGcsKeyPrefix(options.gcsPrefix)
         } else {
           outputDir = options.output ?? resolveConfiguration({}).cacheDir
         }
+
+        // Say where this run writes, before it writes anything. The ingest
+        // that landed in gs://…//raw-csv/ named its destination in no log
+        // line at all, which is why nobody could see it (#1388).
+        console.error(
+          `[DEST] Writing to ${describeStorageDestination(
+            outputDir,
+            options.gcsBucket
+          )}`
+        )
 
         if (options.verbose) {
           console.error(`[INFO] Starting backfill`)
@@ -1135,7 +1152,8 @@ export function createCLI(): Command {
           console.error(
             `[DONE] Backfill complete — requests=${summary.requestsMade} ` +
               `emptySkipped=${summary.emptySkipped} ` +
-              `mismatches=${summary.mismatches} errors=${summary.errors}`
+              `mismatches=${summary.mismatches} errors=${summary.errors} ` +
+              `readbackFailures=${summary.readbackFailures.length}`
           )
 
           // A mismatch means the dashboard handed back a period we did not ask
@@ -1146,10 +1164,23 @@ export function createCLI(): Command {
               `[ERROR] ${summary.mismatches} response(s) were not for the ` +
                 `requested period and were refused — see the logs above.`
             )
-            process.exit(ExitCode.COMPLETE_FAILURE)
           }
 
-          process.exit(ExitCode.SUCCESS)
+          // The fetches can all be correct and the objects still be somewhere
+          // nothing reads. Absence at the destination is a failure, never a
+          // warning (#1388).
+          if (summary.readbackFailures.length > 0) {
+            console.error(
+              `[ERROR] Read-back failed for ${summary.readbackFailures.length} ` +
+                `date(s) at ${describeStorageDestination(
+                  outputDir,
+                  options.gcsBucket
+                )} — ${summary.readbackFailures.join(', ')}. ` +
+                `The run wrote, but nothing is there.`
+            )
+          }
+
+          process.exit(resolveBackfillExitCode(summary))
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error'

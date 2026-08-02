@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createCLI } from '../cli.js'
-import { ExitCode } from '../types/collector.js'
+import { ExitCode } from '../types/index.js'
 import {
   resolveBackfillExitCode,
   type BackfillRunSummary,

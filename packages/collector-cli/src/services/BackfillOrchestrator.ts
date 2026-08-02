@@ -40,6 +40,7 @@ import {
   resolveExportPathStyle,
   verifyBackfillCsv,
 } from '../utils/backfillContentGuard.js'
+import { ExitCode } from '../types/index.js'
 
 // ── Storage Abstraction ──────────────────────────────────────────────
 
@@ -88,6 +89,21 @@ export async function verifyBackfillWrites(
     if (!present) missing.push(date)
   }
   return missing.sort()
+}
+
+/**
+ * Decide a backfill run's exit code (#1388).
+ *
+ * Two ways a run can look clean and be worthless: it fetched the wrong period
+ * (#1384), or it wrote where nothing reads (#1388). Both exit non-zero. A
+ * failed read-back is NOT a warning — a warning is exactly what an operator
+ * scrolls past on the way to `[DONE] … errors=0`.
+ */
+export function resolveBackfillExitCode(summary: BackfillRunSummary): ExitCode {
+  if (summary.mismatches > 0 || summary.readbackFailures.length > 0) {
+    return ExitCode.COMPLETE_FAILURE
+  }
+  return ExitCode.SUCCESS
 }
 
 /**
