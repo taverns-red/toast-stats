@@ -47,6 +47,66 @@ export function getPriorProgramYear(programYear: string): string {
   return `${startYear - 1}-${startYear}`
 }
 
+// ── Prefix Normalisation (#1388) ─────────────────────────────────────
+
+/**
+ * Normalise a storage prefix so composing `{prefix}/raw-csv/…` can never
+ * produce an empty path segment (#1388).
+ *
+ * A blank prefix means *no prefix* — not a leading `/`. Interpolating an empty
+ * string yielded the key `/raw-csv/{date}/…`, which reads as
+ * `gs://bucket//raw-csv/…`: legal in GCS, and a silent parallel key space that
+ * nothing downstream reads from. The whole 07-26 → 07-29 ingest landed there
+ * and still exited 0, because every *fetch* was correct.
+ *
+ * Whitespace is trimmed, duplicate slashes collapse, trailing slashes are
+ * dropped. A single leading slash is preserved: the same builder serves the
+ * daily pipeline's absolute local `cacheDir`.
+ */
+export function normalisePathPrefix(prefix: string): string {
+  const collapsed = prefix.trim().replace(/\/{2,}/g, '/')
+  // Slash-only (or blank) input carries no prefix information at all.
+  if (collapsed === '' || collapsed === '/') return ''
+  return collapsed.replace(/\/+$/, '')
+}
+
+/**
+ * Normalise a GCS object-key prefix (#1388).
+ *
+ * As {@link normalisePathPrefix}, but also strips leading slashes — a GCS key
+ * must never begin with `/`, since the bucket URI already supplies the
+ * separator.
+ */
+export function normaliseGcsKeyPrefix(prefix: string): string {
+  return normalisePathPrefix(prefix).replace(/^\/+/, '')
+}
+
+/**
+ * Describe where a run will actually write, fully qualified (#1388).
+ *
+ * The backfill run printed its destination nowhere, which is exactly why an
+ * entire ingest into `gs://bucket//raw-csv/` looked clean. Log this once at
+ * startup so the destination is in the transcript before any object is
+ * written.
+ */
+export function describeStorageDestination(
+  prefix: string,
+  bucketName?: string
+): string {
+  if (bucketName) {
+    const key = normaliseGcsKeyPrefix(prefix)
+    return `gs://${bucketName}/${key ? `${key}/` : ''}raw-csv/`
+  }
+  const local = normalisePathPrefix(prefix)
+  return `${local ? `${local}/` : ''}raw-csv/`
+}
+
+/** Join a normalised prefix to a relative key without an empty segment. */
+function joinPrefix(prefix: string, rest: string): string {
+  const base = normalisePathPrefix(prefix)
+  return base === '' ? rest : `${base}/${rest}`
+}
+
 // ── Path Building ────────────────────────────────────────────────────
 
 /**
@@ -70,13 +130,16 @@ export function buildCsvPath(
   const dateStr = typeof date === 'string' ? date : toYYYYMMDD(date)
 
   if (csvType === CSVType.ALL_DISTRICTS) {
-    return `${prefix}/raw-csv/${dateStr}/${csvType}.csv`
+    return joinPrefix(prefix, `raw-csv/${dateStr}/${csvType}.csv`)
   }
 
   if (!districtId) {
     throw new Error(`districtId is required for CSV type: ${csvType}`)
   }
-  return `${prefix}/raw-csv/${dateStr}/district-${districtId}/${csvType}.csv`
+  return joinPrefix(
+    prefix,
+    `raw-csv/${dateStr}/district-${districtId}/${csvType}.csv`
+  )
 }
 
 /**
@@ -87,7 +150,7 @@ export function buildCsvPath(
  */
 export function buildMetadataPath(prefix: string, date: string | Date): string {
   const dateStr = typeof date === 'string' ? date : toYYYYMMDD(date)
-  return `${prefix}/raw-csv/${dateStr}/metadata.json`
+  return joinPrefix(prefix, `raw-csv/${dateStr}/metadata.json`)
 }
 
 /**
