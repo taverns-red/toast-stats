@@ -188,3 +188,18 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/landing-mobile-cls.smoke.ts
+
+      # 375px CLS budget under real throttling (#1373). The guard above proves
+      # loading→loaded geometry; this one measures the Core Web Vital itself,
+      # which no existing gate can see: lighthouserc.js runs `preset: desktop`
+      # (mobile is never sampled) against localhost:4173, and Chromium does not
+      # throttle loopback — so a `display=swap` font reflow worth 0.151 at
+      # 375px on main read ~0.00 everywhere and shipped. Cold cache + CDP
+      # Fast-3G + a pre-navigation layout-shift observer, on the deployed
+      # channel. Chromium-only by design: the webkit project skips itself,
+      # because layout-shift and CDP throttling are both Chromium-only.
+      - name: Mobile font-swap CLS budget against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/landing-font-swap-cls.smoke.ts

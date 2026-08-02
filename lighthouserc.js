@@ -35,6 +35,22 @@ module.exports = {
         // Core Web Vitals
         'largest-contentful-paint': ['error', { maxNumericValue: 2500 }],
         'max-potential-fid': ['error', { maxNumericValue: 100 }],
+        // NOTE (#1373): this assertion is DESKTOP-ONLY and effectively
+        // UNTHROTTLED, and it has already let a 0.151 mobile CLS through
+        // while staying green. Two independent blind spots, neither of them
+        // a bug in #915:
+        //   1. `preset: 'desktop'` above — 375px, the worst case, is never
+        //      sampled. At 1350px the real number genuinely is under budget,
+        //      so this gate is not lying, just narrow.
+        //   2. The fixtures are served from localhost:4173 and Chromium does
+        //      not throttle loopback, so the late `display=swap` font reflow
+        //      that dominates a real cold mobile load barely occurs. A clean
+        //      local table is NOT evidence — known-bad builds also read ~0.00
+        //      at every width.
+        // Mobile is covered by frontend/e2e/landing-font-swap-cls.smoke.ts,
+        // run against the deployed preview channel by pr-preview.yml and
+        // wired-in by scripts/lib/__tests__/mobileClsGate.test.ts. Keep both:
+        // this one still catches desktop regressions cheaply and pre-deploy.
         'cumulative-layout-shift': ['error', { maxNumericValue: 0.1 }],
 
         // Performance score
