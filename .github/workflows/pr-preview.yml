@@ -178,6 +178,23 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/touch-targets.smoke.ts
 
+      # Breadcrumb baseline-alignment tripwire (#1387). The step above proves
+      # the 44px floor is MET; this one proves the box it inflates does not
+      # wreck the layout inside it. The crumb <a> is a flex item, so the floor
+      # makes it a 48px box whose text painted at the TOP while the floor-free
+      # `›` spans centred — a row on two visual baselines that no existing gate
+      # could see (not a shift, not a contrast failure, not a sub-44 target).
+      # Both engines: Chromium and WebKit resolve the text line box differently
+      # (0.5px vs 0.0px residue), so only a cross-engine run proves the fix
+      # holds in each.
+      - name: Cross-engine breadcrumb alignment tripwire against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: >-
+          npx playwright test --config playwright.config.ts
+          e2e/breadcrumb-alignment.smoke.ts
+
       # Mobile loading/error→loaded CLS guard (#922). The Lighthouse CLS gate
       # runs the desktop preset, where the landing header actions lay out
       # inline — it is blind to the mobile-only stack that pushed the KPI

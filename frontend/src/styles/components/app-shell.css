@@ -3521,6 +3521,15 @@
     padding: 24px 24px 32px;
   }
 
+  /* UNUSED since #442 (May 2026) — DistrictDetailHeader's own breadcrumb was
+     deleted there because it stacked under AppShell's "Districts" nav; only
+     this rule set survived. Nothing in the app emits these class names, so it
+     is NOT a second instance of the #1387 two-baseline bug — it renders
+     nothing to misalign. It would inherit the defect the day it is revived:
+     `align-items: center` here centres floor-free spans in a flex line that
+     the 44/48px `a[href]` touch-target floor has inflated, while the anchor
+     itself does not centre its own text. Give the link
+     `display: inline-flex; align-items: center` if you bring this back. */
   .district-detail-breadcrumbs {
     display: flex;
     align-items: center;
