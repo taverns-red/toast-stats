@@ -128,18 +128,27 @@ describe('DistrictsPage deep-link — region filter (?regions=)', () => {
     )
   })
 
-  it('OUTWARD: clicking a region pill writes the solo region to ?regions=, clicking again returns to all', async () => {
+  it('OUTWARD: region pills accumulate into ?regions=, and clearing the last returns to all', async () => {
     setupThreeRegions()
     renderPage('/')
 
     await screen.findByText('District 1')
 
-    // Solo a region → only that region in the param + table.
+    // Filter to one region → only that region in the param + table.
     fireEvent.click(screen.getByRole('button', { name: 'Region 2' }))
     expect(new URLSearchParams(search()).get('regions')).toBe('2')
     expect(screen.queryByText('District 1')).not.toBeInTheDocument()
 
-    // Click the active solo pill again → back to the full (inflated) set.
+    // A second plain click ADDS to the param rather than replacing it
+    // (#1374 — the multi-select the ?regions= list contract always allowed).
+    fireEvent.click(screen.getByRole('button', { name: 'Region 3' }))
+    expect(new URLSearchParams(search()).get('regions')).toBe('2,3')
+    expect(screen.getByText('District 3')).toBeInTheDocument()
+    expect(screen.queryByText('District 1')).not.toBeInTheDocument()
+
+    // Emptying the selection one chip at a time → back to the full (inflated)
+    // set, not an empty table.
+    fireEvent.click(screen.getByRole('button', { name: 'Region 3' }))
     fireEvent.click(screen.getByRole('button', { name: 'Region 2' }))
     expect(screen.getByText('District 1')).toBeInTheDocument()
     expect(screen.getByText('District 3')).toBeInTheDocument()

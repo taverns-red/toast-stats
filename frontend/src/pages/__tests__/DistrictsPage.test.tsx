@@ -818,15 +818,20 @@ describe('DistrictsPage - Rankings column order (#436)', () => {
 })
 
 // ============================================================
-// Region filter — solo-select pattern (#434)
+// Region filter — OR multi-select (#1374, was solo-select #434)
 // ============================================================
-describe('DistrictsPage - Region filter solo-select (#434)', () => {
+// The solo/shift model is intentionally gone: a plain click now toggles a
+// region in or out of the selection, which is the only model reachable on a
+// touch device. The deeper spec (OR semantics, composition, URL round-trip)
+// lives in DistrictsPage.regionFilter.test.tsx; these are the toolbar-level
+// cases that were already here, restated against the new behaviour.
+describe('DistrictsPage - Region filter multi-select (#1374)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   // Multi-region fixture — three districts in three different regions so we
-  // can verify solo-isolation actually filters the table.
+  // can verify the chips actually filter the table.
   const setupThreeRegions = () => {
     const baseRow = (
       i: number,
@@ -859,7 +864,7 @@ describe('DistrictsPage - Region filter solo-select (#434)', () => {
     })
   }
 
-  it('clicking a region pill enters solo mode — only that region remains', async () => {
+  it('clicking a region pill from the All state filters to that region', async () => {
     const { fireEvent } = await import('@testing-library/react')
     setupThreeRegions()
     renderWithProviders(<DistrictsPage />)
@@ -880,7 +885,7 @@ describe('DistrictsPage - Region filter solo-select (#434)', () => {
     expect(region2Pill).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('clicking the active solo pill returns to all regions', async () => {
+  it('clicking the last remaining active pill returns to all regions', async () => {
     const { fireEvent } = await import('@testing-library/react')
     setupThreeRegions()
     renderWithProviders(<DistrictsPage />)
@@ -888,18 +893,18 @@ describe('DistrictsPage - Region filter solo-select (#434)', () => {
     await screen.findByText('District 1')
     const region2Pill = screen.getByRole('button', { name: 'Region 2' })
 
-    // Solo Region 2
+    // Filter to Region 2
     fireEvent.click(region2Pill)
     expect(screen.queryByText('District 1')).not.toBeInTheDocument()
 
-    // Click again — back to all
+    // Click again — the selection empties, which means "no filtering"
     fireEvent.click(region2Pill)
     expect(screen.getByText('District 1')).toBeInTheDocument()
     expect(screen.getByText('District 2')).toBeInTheDocument()
     expect(screen.getByText('District 3')).toBeInTheDocument()
   })
 
-  it('shift-click adds a region to the current solo selection (additive)', async () => {
+  it('a plain click adds a second region (no modifier — #1374)', async () => {
     const { fireEvent } = await import('@testing-library/react')
     setupThreeRegions()
     renderWithProviders(<DistrictsPage />)
@@ -909,10 +914,9 @@ describe('DistrictsPage - Region filter solo-select (#434)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Region 2' }))
     expect(screen.queryByText('District 3')).not.toBeInTheDocument()
 
-    // Shift-click Region 3 — add without removing Region 2
-    fireEvent.click(screen.getByRole('button', { name: 'Region 3' }), {
-      shiftKey: true,
-    })
+    // Plain click Region 3 — adds it without removing Region 2. This used to
+    // need Shift, which no touch device can produce.
+    fireEvent.click(screen.getByRole('button', { name: 'Region 3' }))
     expect(screen.getByText('District 2')).toBeInTheDocument()
     expect(screen.getByText('District 3')).toBeInTheDocument()
     expect(screen.queryByText('District 1')).not.toBeInTheDocument()
@@ -928,14 +932,12 @@ describe('DistrictsPage - Region filter solo-select (#434)', () => {
     // Default: showing all regions
     expect(screen.getByText(/showing all regions/i)).toBeInTheDocument()
 
-    // Solo Region 2
+    // Filter to Region 2
     fireEvent.click(screen.getByRole('button', { name: 'Region 2' }))
     expect(screen.getByText(/showing region 2 only/i)).toBeInTheDocument()
 
-    // Shift-click Region 3 → 2 of 3 selected
-    fireEvent.click(screen.getByRole('button', { name: 'Region 3' }), {
-      shiftKey: true,
-    })
+    // Add Region 3 → 2 of 3 selected
+    fireEvent.click(screen.getByRole('button', { name: 'Region 3' }))
     expect(screen.getByText(/showing 2 of 3 regions/i)).toBeInTheDocument()
   })
 })
