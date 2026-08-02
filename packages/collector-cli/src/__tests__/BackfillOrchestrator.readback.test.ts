@@ -140,7 +140,10 @@ describe('GcsBackfillStorage.existsFresh (#1388)', () => {
       getFiles: vi
         .fn()
         .mockResolvedValue([[{ name: 'backfill/raw-csv/2026-07-26/x.csv' }]]),
-      file: vi.fn().mockReturnValue({ exists: fileExists }),
+      file: vi.fn().mockReturnValue({
+        exists: fileExists,
+        save: vi.fn().mockResolvedValue(undefined),
+      }),
     } as unknown as import('@google-cloud/storage').Bucket
     const storage = new GcsBackfillStorage(bucket)
 
