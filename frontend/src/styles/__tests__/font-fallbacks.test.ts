@@ -112,6 +112,23 @@ describe('metric-matched font fallbacks (#1373)', () => {
       }
     })
 
+    it('is scoped to the web font’s own subsets, so unmatched glyphs pass through', () => {
+      // A face with no unicode-range swallows every codepoint the web font
+      // does not ship. Those glyphs never needed metric-matching and moving
+      // them is pure visual change: U+2192 (the "See Awards" arrow) jumped
+      // from system-ui to size-adjusted Arial.
+      expect(block).toMatch(/unicode-range:/)
+      // latin + latin-ext + vietnamese must be in…
+      expect(block).toMatch(/U\+0000-02CC/)
+      expect(block).toMatch(/U\+1E00-1EFF/)
+      expect(block).toMatch(/U\+2000-206F/)
+      // …and the arrow must be out. U+2191/U+2193 are inside Google's latin
+      // subset and U+2192 is not, so an over-broad range shows up here.
+      expect(block).toMatch(/U\+2191/)
+      expect(block).not.toMatch(/U\+2192/)
+      expect(block).not.toMatch(/U\+2190-/)
+    })
+
     it('declares a bold bucket that resolves to a real bold local face', () => {
       // A single 400-only face would make the browser synthesise bold, which
       // is both wider than the measured ratio and visibly wrong mid-swap.
