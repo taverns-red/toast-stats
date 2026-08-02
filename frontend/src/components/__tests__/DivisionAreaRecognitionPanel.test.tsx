@@ -221,7 +221,7 @@ describe('DivisionAreaRecognitionPanel', () => {
       })
 
       // Get their positions in the DOM
-      const allButtons = container.querySelectorAll('button')
+      const allButtons = container.querySelectorAll<HTMLElement>('button')
       const buttonArray = Array.from(allButtons)
       const ddpIndex = buttonArray.indexOf(ddpButton)
       const dapIndex = buttonArray.indexOf(dapButton)

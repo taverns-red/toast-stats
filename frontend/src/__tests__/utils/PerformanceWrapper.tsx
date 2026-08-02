@@ -27,6 +27,9 @@ export const PerformanceWrapper = ({
         }
       }
     }
+    // Explicit: an effect callback must return a cleanup or nothing on every
+    // path (noImplicitReturns) (#1368).
+    return undefined
   }, [testName, enableMonitoring])
 
   return <>{children}</>

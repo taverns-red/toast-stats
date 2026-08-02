@@ -15,13 +15,15 @@ beforeEach(() => {
   // Capture the blob text + filename without touching the real DOM download.
   global.URL.createObjectURL = vi.fn(() => 'blob:mock')
   global.URL.revokeObjectURL = vi.fn()
-  vi.spyOn(document.body, 'appendChild').mockImplementation((node: never) => {
-    const el = node as unknown as HTMLAnchorElement
-    capturedFilename = el.getAttribute?.('download') ?? ''
-    return node
-  })
+  vi.spyOn(document.body, 'appendChild').mockImplementation(
+    <T extends Node>(node: T) => {
+      const el = node as unknown as HTMLAnchorElement
+      capturedFilename = el.getAttribute?.('download') ?? ''
+      return node
+    }
+  )
   vi.spyOn(document.body, 'removeChild').mockImplementation(
-    (node: never) => node
+    <T extends Node>(node: T) => node
   )
   // Intercept Blob construction to read the CSV string synchronously, without
   // naming the DOM lib types (eslint no-undef doesn't know them in this env).

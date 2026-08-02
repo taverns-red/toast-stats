@@ -57,10 +57,7 @@ describe('CSV Export - Club Status Column', () => {
     // Capture the Blob content using a class mock (must be a class to work with 'new')
     originalBlob = globalThis.Blob
     globalThis.Blob = class MockBlob {
-      constructor(
-        parts?: (string | Blob | ArrayBuffer | ArrayBufferView)[],
-        options?: { type?: string; endings?: 'transparent' | 'native' }
-      ) {
+      constructor(parts?: BlobPart[], options?: BlobPropertyBag) {
         if (parts && parts.length > 0) {
           capturedCSVContent = parts[0] as string
         }
