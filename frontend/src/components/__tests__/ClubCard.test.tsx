@@ -38,6 +38,8 @@ const mockClub: ProcessedClubTrend = {
   latestMembership: 20,
   latestDcpGoals: 7,
   distinguishedOrder: 0,
+  membersNeeded: 0,
+  yearsChartered: 12,
 }
 
 describe('ClubCard (#217)', () => {

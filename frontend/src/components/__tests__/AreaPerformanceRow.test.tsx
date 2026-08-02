@@ -11,7 +11,7 @@ describe('AreaPerformanceRow', () => {
     // Was `Omit<AreaPerformance, 'recognitionState'>`, which also requires
     // the #973 visit fields the fixture never set — invisible until #1368
     // put the test tree under tsc. `withRecognitionState` defaults them.
-    const base = {
+    const base: Parameters<typeof withRecognitionState>[0] = {
       areaId: 'A1',
       status: 'distinguished',
       clubBase: 10,

@@ -128,7 +128,7 @@ const CLUB: ClubTrend = {
   divisionName: 'Division A',
   areaId: '10',
   areaName: 'Area 10',
-  distinguishedLevel: 'Select Distinguished',
+  distinguishedLevel: 'Select',
   currentStatus: 'thriving',
   riskFactors: [],
   membershipTrend: [{ date: '2026-03-15', count: 25 }],
