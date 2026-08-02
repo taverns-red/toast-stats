@@ -1,5 +1,17 @@
 declare module 'jest-axe' {
-  export function axe(element: Element | Document): Promise<unknown>
+  /**
+   * `axe(container, options)` — the second parameter is axe-core's run
+   * options, which call sites use to scope a scan to specific rules
+   * (`{ runOnly: { type: 'rule', values: ['aria-allowed-attr'] } }`, #1360).
+   *
+   * It was declared with a single parameter until #1389. The test tree was
+   * excluded from tsc, so the arity was never checked against a real call —
+   * the same blind spot that hid the `toHaveNoViolations` shape below.
+   */
+  export function axe(
+    element: Element | Document,
+    options?: Record<string, unknown>
+  ): Promise<unknown>
 
   /**
    * jest-axe's export is a matchers OBJECT — `{ toHaveNoViolations }` — which
