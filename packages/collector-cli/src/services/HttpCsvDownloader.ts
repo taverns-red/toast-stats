@@ -101,8 +101,17 @@ function formatDateForUrl(date: Date): string {
  * data collected on date D belongs to the PREVIOUS month's closing period.
  * e.g., data collected on 9/8/2025 is the August 2025 closing → month-end = 8/31/2025.
  *
- * Special case: if the collection date is in the same month as the program year start
- * (July), the month-end is 7/31 of the start year.
+ * NOTE (#1384): only the *presence* of this value in the export URL matters,
+ * not the value itself. Measured against the live dashboard, requesting
+ * `districtsummary~6/30/2026~7/26/2026~…` and `districtsummary~7/31/2026~…`
+ * returns byte-identical bodies — the served period is derived from the as-of
+ * date. What is NOT interchangeable is leaving the slot empty: the root
+ * `/export.aspx` then ignores the as-of date and serves today instead. So keep
+ * passing this, but do not read meaning into which month-end comes out.
+ *
+ * (An earlier version of this docstring claimed a July special case returning
+ * 7/31 of the start year. No such branch was ever implemented, and per the
+ * above it would have made no difference.)
  *
  * @param collectionDate - The date data was collected/scraped
  * @returns The last day of the previous month
