@@ -32,8 +32,14 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
     error,
   } = useDistrictAnalytics(districtId, programYearStartDate, selectedDate)
 
-  // District-level fields not carried in per-club analytics (payment breakdowns).
-  const { ranking: districtRanking } = useDistrictRanking(districtId)
+  // District-level fields not carried in per-club analytics (payment
+  // breakdowns). Scoped to the SAME snapshot the analytics above use — an
+  // unscoped read here showed the current year's Payment Composition under a
+  // past program year (#1396 / R3).
+  const { ranking: districtRanking } = useDistrictRanking(
+    districtId,
+    selectedDate
+  )
 
   const clubCount = analytics?.allClubs.length ?? 0
   const avgMembersPerClub =

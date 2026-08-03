@@ -115,6 +115,7 @@ function row(v: {
   }
 }
 
+/** No `snapshotDate` — the shape `v1/rankings.json` (the latest path) returns. */
 const CURRENT: CdnRankingsData = {
   rankings: [
     row({
@@ -127,6 +128,12 @@ const CURRENT: CdnRankingsData = {
   ],
   asOfDate: '2026-06-30',
   generatedAt: '2026-06-30T00:00:00Z',
+}
+
+/** The same row served as a real per-date hit for the current year. */
+const CURRENT_PINNED: CdnRankingsData = {
+  ...CURRENT,
+  snapshotDate: snap('2026-06-30'),
 }
 
 const PAST: CdnRankingsData = {
@@ -260,7 +267,7 @@ beforeEach(() => {
   localStorageMock.getItem.mockReturnValue(null)
   mockedLatest.mockResolvedValue(CURRENT)
   mockedForDate.mockImplementation((date: SnapshotDate) =>
-    Promise.resolve(date === '2025-06-30' ? PAST : CURRENT)
+    Promise.resolve(date === '2025-06-30' ? PAST : CURRENT_PINNED)
   )
 })
 afterEach(() => cleanup())

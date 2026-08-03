@@ -90,7 +90,13 @@ function row(
   }
 }
 
-/** The observed current-year row: 73 + 587 + 941 + 1 + 0 = 1602 events. */
+/**
+ * The observed current-year row: 73 + 587 + 941 + 1 + 0 = 1602 events.
+ *
+ * No `snapshotDate` — that is what `v1/rankings.json` (the `fetchCdnRankings`
+ * latest path) returns, and it is also how `fetchCdnRankingsForDate` marks its
+ * silent fallback. Per-date HITS below pin it.
+ */
 const CURRENT: CdnRankingsData = {
   rankings: [
     row({
@@ -103,6 +109,12 @@ const CURRENT: CdnRankingsData = {
   ],
   asOfDate: '2026-07-31',
   generatedAt: '2026-07-31T00:00:00Z',
+}
+
+/** The same row served as a real per-date hit for the current year. */
+const CURRENT_PINNED: CdnRankingsData = {
+  ...CURRENT,
+  snapshotDate: snap('2026-07-31'),
 }
 
 /** The 2024-2025 year-end row: 40 + 300 + 500 + 2 + 1 = 843 events. */
@@ -125,7 +137,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockedLatest.mockResolvedValue(CURRENT)
   mockedForDate.mockImplementation((date: SnapshotDate) =>
-    Promise.resolve(date === '2025-06-30' ? PAST : CURRENT)
+    Promise.resolve(date === '2025-06-30' ? PAST : CURRENT_PINNED)
   )
 })
 afterEach(() => cleanup())
