@@ -3,6 +3,7 @@
 
 ## lessons (manifest-pinned + session-judged)
 - `a-deliberately-shared-query-key-is-a-coupling-with-no-compiler.md` — Two hooks sharing a React Query key to avoid a duplicate fetch are coupled with nothing but a comment — narrowing one hook's key silently re-scopes or breaks the other, so decide explicitly and pay the fetch  (2026-08-03)
+- `a-query-scoped-by-an-async-value-runs-unscoped-first.md` — A query keyed on a value that itself arrives asynchronously runs UNSCOPED on first render, so any gate reading its result must wait for the scoping value — not just for the result  (2026-08-03)
 - `a-geometry-ablation-overstates-the-reflow-arrival-order-decides-what-counts.md` — A fonts-blocked geometry ablation shows every reflow the swap could cause, not the ones it does — arrival order decides which count, so tune against the real cold load  (2026-08-02)
 - `a-new-workflows-own-path-filter-cannot-be-exercised-by-the-pr-that-adds-it.md` — A path-filtered workflow's own filter can never be exercised by the PR that introduces it — the diff always contains the workflow file, so the filtered case reads as "mixed" until after merge; open the probe PR against a scratch base branch that widens only `pull_request.branches`  (2026-08-02)
 - `a-sampled-scanner-report-mis-attributes-the-nodes-it-truncated.md` — A scanner harness that prints the first N nodes of a violation silently re-attributes the rest to the first cause — count by distinct fingerprint, not by the sample  (2026-08-02)
