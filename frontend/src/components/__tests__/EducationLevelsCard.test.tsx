@@ -1,5 +1,12 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
+import {
+  render,
+  screen,
+  cleanup,
+  within,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react'
 import '@testing-library/jest-dom'
 import type { ReactElement } from 'react'
 import { EducationLevelsCard } from '../EducationLevelsCard'
@@ -59,6 +66,45 @@ describe('EducationLevelsCard (#426)', () => {
       'aria-busy',
       'true'
     )
+  })
+
+  /**
+   * #1399: for PY 2026-27 TI counts Online Meeting Mastery completions in
+   * the same column as Level 2 awards, with no split. The card's Level 2
+   * number is therefore a combined count, and the copy is the only place
+   * that can say so.
+   */
+  describe('Online Meeting Mastery disclosure (#1399)', () => {
+    const totals: EducationLevelsTotals = {
+      level1: 4,
+      level2: 14,
+      level3: 3,
+      level4PathDtm: 1,
+      total: 22,
+      contributingClubs: 13,
+      totalClubs: 161,
+    }
+
+    // The tooltip trigger is the div wrapping the (aria-hidden) info icon.
+    const openTooltipIn = async (scope: HTMLElement) => {
+      fireEvent.mouseEnter(scope.querySelector('svg')!.parentElement!)
+      return waitFor(() => screen.getByRole('tooltip'))
+    }
+
+    it('says so in the Level 2 row tooltip', async () => {
+      renderCard(<EducationLevelsCard totals={totals} />)
+      const level2Label = screen.getByText(/level 2$/i)
+      const tip = await openTooltipIn(level2Label)
+      expect(tip).toHaveTextContent(/online meeting mastery/i)
+    })
+
+    it('says so in the card tooltip, with the real column name', async () => {
+      renderCard(<EducationLevelsCard totals={totals} />)
+      const heading = screen.getByRole('heading', { name: /education levels/i })
+      const tip = await openTooltipIn(heading)
+      expect(tip).toHaveTextContent(/level 2s or eom/i)
+      expect(tip).toHaveTextContent(/online meeting mastery/i)
+    })
   })
 
   it('computes per-row percentages from total', () => {

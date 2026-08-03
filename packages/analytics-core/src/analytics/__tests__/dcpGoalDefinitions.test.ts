@@ -30,6 +30,26 @@ describe('DCP_GOAL_DEFINITIONS', () => {
     ])
   })
 
+  /**
+   * #1399: TI's column is a single combined count with no split between a
+   * Level 2 award and an Online Meeting Mastery completion, so the label is
+   * the only place the distinction can be communicated. "14 Level 2 awards"
+   * would otherwise be read as 14 actual Level 2s.
+   */
+  describe('goals 2-3 name the Online Meeting Mastery route (#1399)', () => {
+    for (const goalNumber of [2, 3]) {
+      it(`goal ${goalNumber}'s name and column label say so`, () => {
+        const definition = goal(goalNumber)
+        expect(definition.name).toMatch(/online meeting mastery/i)
+        for (const requirement of definition.requirements) {
+          for (const column of requirement.anyOf) {
+            expect(column.label).toMatch(/online meeting mastery/i)
+          }
+        }
+      })
+    }
+  })
+
   describe('official thresholds at the boundary', () => {
     const CASES: Array<{
       goalNumber: number
