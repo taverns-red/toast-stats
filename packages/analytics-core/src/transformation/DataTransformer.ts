@@ -25,6 +25,7 @@ import type { ScrapedRecord } from '@taverns-red/shared-contracts'
 import {
   computeDcpGoalsAchieved,
   hasDcpGoalColumns,
+  missingDcpGoalHeaders,
 } from '../analytics/dcpGoalDefinitions.js'
 import { classifyDistinguishedTier } from '../analytics/ClubEligibilityUtils.js'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
@@ -224,6 +225,23 @@ export class DataTransformer implements IDataTransformer {
   }
 
   /**
+   * Warn when a club-performance export carries goal headers we do not
+   * recognise (#1399). dcpGoalsAchieved is omitted for those records, which
+   * is the correct degradation — but it must not also be a quiet one.
+   *
+   * @param sample - First record of the export; headers are uniform
+   */
+  private warnOnUnknownGoalHeaders(sample: ParsedRecord | undefined): void {
+    if (!sample) return
+    const missing = missingDcpGoalHeaders(sample)
+    if (missing.length === 0) return
+    this.logger.warn(
+      'Club performance export carries no recognised header for some DCP goals — dcpGoalsAchieved omitted',
+      { missingGoals: missing, headers: Object.keys(sample) }
+    )
+  }
+
+  /**
    * Extracts club statistics from club performance records.
    *
    * @param clubPerformance - Array of club performance records
@@ -237,6 +255,12 @@ export class DataTransformer implements IDataTransformer {
 
     // Build lookup map from districtPerformance records keyed by normalized club ID
     const dpLookup = this.buildDistrictPerformanceLookup(districtPerformance)
+
+    // Say it out loud when the export's goal headers stop matching ours
+    // (#1399): dcpGoalsAchieved is then omitted for every club, and a silent
+    // omission is exactly how the PY 2026-27 rename went unnoticed. Sampled
+    // from the first record — the header is uniform across the export.
+    this.warnOnUnknownGoalHeaders(clubPerformance[0])
 
     for (const record of clubPerformance) {
       const clubId = this.extractString(record, 'Club Number', 'ClubId', 'Club')
