@@ -105,15 +105,30 @@ const OmniSearchResults: React.FC<OmniSearchResultsProps> = ({
 
 // District results reuse the chip+name treatment (and its #522 no-duplicate
 // guard); regions and clubs render their label plus disambiguation context.
+//
+// A district that no longer exists (#1403) adds the SAME muted context slot
+// the other types already use, saying when its data stops. Deliberately not
+// new chrome — no badge, no colour, no icon, no new CSS class. The union makes
+// 68 historical districts findable; this note is what keeps "no longer exists"
+// from reading as "exists", so nobody is surprised that D27 ends at
+// 2026-06-30. It is real text inside the option, so it is announced with the
+// row rather than hidden behind a visual-only cue.
 function renderEntity(entity: SearchEntity) {
   if (entity.type === 'district') {
     return (
-      <DistrictChipAndName
-        districtId={entity.id}
-        name={entity.label}
-        chipClassName="command-palette__result-num"
-        nameClassName="command-palette__result-name"
-      />
+      <>
+        <DistrictChipAndName
+          districtId={entity.id}
+          name={entity.label}
+          chipClassName="command-palette__result-num"
+          nameClassName="command-palette__result-name"
+        />
+        {entity.inactive && entity.context && (
+          <span className="command-palette__result-region">
+            {entity.context}
+          </span>
+        )}
+      </>
     )
   }
   return (

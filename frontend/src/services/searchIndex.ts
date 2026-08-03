@@ -13,7 +13,9 @@ import {
   fetchCdnRankings,
   fetchCdnClubIndex,
   fetchCdnDivisionsAreasIndex,
+  fetchCdnSnapshotIndex,
 } from './cdn'
+import { getProgramYearForDate } from '../utils/programYear'
 
 export type SearchEntityType =
   'district' | 'region' | 'club' | 'division' | 'area'
@@ -34,6 +36,13 @@ export interface SearchEntity {
       never by prefix/substring, so partial queries like "61" don't flood
       with every division/area of that district (#1135). */
   exactTerms?: string[]
+  /** Districts only: the entity exists in the historical union but NOT in the
+      current roster — it has been consolidated/realigned away (#1403). Set
+      only when true, never to `false` (exactOptionalPropertyTypes). */
+  inactive?: true
+  /** Districts only: the most recent snapshot date this entity has data for.
+      Present iff `inactive` — a live district's data is "now". */
+  lastSnapshotDate?: string
 }
 
 export interface SearchIndex {
@@ -83,27 +92,86 @@ const TYPE_RANK: Record<SearchEntityType, number> = {
   area: 0,
 }
 
+// A district that no longer exists ranks BELOW clubs and above divisions/areas
+// (#1403). Match strength is compared first, so an exact/prefix id query
+// ("27") still puts it on top — only weak partial queries ("2") demote it.
+// This is what keeps current-year search unchanged: adding 68 historical
+// districts cannot displace a live district, or evict a club from the cap.
+const INACTIVE_DISTRICT_RANK = 1.5
+
+function entityRank(entity: SearchEntity): number {
+  if (entity.type === 'district' && entity.inactive) {
+    return INACTIVE_DISTRICT_RANK
+  }
+  return TYPE_RANK[entity.type]
+}
+
 /**
  * Build the unified search index from already-loaded data. Pure — no network,
- * no React. Districts + regions come from the rankings file; clubs from the
- * global club index.
+ * no React. Districts come from the UNION of the current roster (rankings) and
+ * every district that has ever had a snapshot; regions from the rankings file;
+ * clubs from the global club index.
  */
 export function buildSearchIndex(
   rankings: ReadonlyArray<RankingRow>,
   clubs: Readonly<Record<string, ClubIndexEntry>>,
   /** districtId → divisionId → areaIds, from config/divisions-areas-index.json (#1134). */
-  divisionsAreas: Readonly<Record<string, Record<string, string[]>>> = {}
+  divisionsAreas: Readonly<Record<string, Record<string, string[]>>> = {},
+  /** districtId → chronological snapshot dates, from
+      config/district-snapshot-index.json. The historical union: 162 districts
+      have ever existed against a current roster of 94, so 42% of everything
+      searchable is reachable only through this map (#1403). */
+  snapshotIndex: Readonly<Record<string, string[]>> = {}
 ): SearchIndex {
   const entities: SearchEntity[] = []
 
-  // Districts — one per ranking row.
+  // Districts — one per ranking row. This is the current roster and its output
+  // is byte-identical to the pre-#1403 index: plain route, no context, no
+  // flag. The common case must not move.
+  const liveDistrictIds = new Set<string>()
   for (const r of rankings) {
+    liveDistrictIds.add(r.districtId)
     entities.push({
       type: 'district',
       id: r.districtId,
       label: r.districtName,
       route: `/district/${r.districtId}`,
       terms: dedupeTerms([r.districtId, r.districtName]),
+    })
+  }
+
+  // Districts that exist only in history (#1403). "Never existed" and "no
+  // longer exists" must not look identical — a district leader searching a
+  // consolidated district is usually doing so *because* they remember it.
+  //
+  // The union carries no names (the rankings file is the only name source, and
+  // it is current-roster-only), so the id is the label — which is what the
+  // rankings file itself carries in production (`districtName === districtId`)
+  // and what `DistrictChipAndName` already renders as the "D27" chip.
+  //
+  // The route lands on the district's MOST RECENT snapshot — the last element
+  // of its chronological array — so the result opens a page with real data
+  // instead of an empty current-year view. `?py=` and `?date=` are BOTH set:
+  // `useUrlProgramYear` reads them independently, and a `?date=` outside the
+  // selected program year would leave the page self-inconsistent.
+  //
+  // Values are unvalidated CDN JSON: a non-array or empty array contributes
+  // nothing rather than producing an entity with no date to land on.
+  for (const [districtId, dates] of Object.entries(snapshotIndex)) {
+    if (liveDistrictIds.has(districtId)) continue
+    if (!Array.isArray(dates) || dates.length === 0) continue
+    const lastDate = dates[dates.length - 1]
+    if (typeof lastDate !== 'string' || lastDate === '') continue
+    const py = getProgramYearForDate(lastDate)
+    entities.push({
+      type: 'district',
+      id: districtId,
+      label: districtId,
+      context: `Last active ${lastDate}`,
+      route: `/district/${districtId}?py=${py.year}&date=${lastDate}`,
+      terms: dedupeTerms([districtId]),
+      inactive: true,
+      lastSnapshotDate: lastDate,
     })
   }
 
@@ -224,9 +292,10 @@ export function searchEntities(
     .sort((a, b) => {
       // 1) stronger match first
       if (a.level !== b.level) return b.level - a.level
-      // 2) districts/regions above clubs
-      const at = TYPE_RANK[a.entity.type]
-      const bt = TYPE_RANK[b.entity.type]
+      // 2) districts/regions above clubs; districts that no longer exist
+      //    below clubs (#1403)
+      const at = entityRank(a.entity)
+      const bt = entityRank(b.entity)
       if (at !== bt) return bt - at
       // 3) shorter label first
       if (a.entity.label.length !== b.entity.label.length) {
@@ -248,18 +317,41 @@ export function searchEntities(
 /**
  * Load and build the unified index from the CDN. The club index (~1MB) is only
  * fetched here — never at import — so it does not regress cold app-load.
+ *
+ * ATOMIC ON PURPOSE (#1403, learning from #1398/#1401): every source resolves
+ * in one `Promise.all` and the index is published once. There is deliberately
+ * NO window in which search answers from the current roster and then silently
+ * changes its answer as the historical union lands. Search is a typeahead —
+ * results reordering or appearing under a moving cursor is worse than the
+ * existing "Searching…" state, and a user who typed `27`, saw nothing, and
+ * gave up would never see the late correction. The pre-resolution behaviour is
+ * therefore unchanged from before this issue: the palette shows "Searching…"
+ * until the whole index is ready.
  */
 export async function loadSearchIndex(): Promise<SearchIndex> {
-  const [rankings, clubIndex, divisionsAreas] = await Promise.all([
-    fetchCdnRankings(),
-    fetchCdnClubIndex(),
-    // Fail-soft (#1135): the divisions/areas artifact only lands via the
-    // scheduled pipeline (#1134) — a missing, failed, or malformed index
-    // must not take district/region/club search down with it.
-    fetchCdnDivisionsAreasIndex().then(
-      idx => idx.districts ?? {},
-      () => ({})
-    ),
-  ])
-  return buildSearchIndex(rankings.rankings, clubIndex.clubs, divisionsAreas)
+  const [rankings, clubIndex, divisionsAreas, snapshotIndex] =
+    await Promise.all([
+      fetchCdnRankings(),
+      fetchCdnClubIndex(),
+      // Fail-soft (#1135): the divisions/areas artifact only lands via the
+      // scheduled pipeline (#1134) — a missing, failed, or malformed index
+      // must not take district/region/club search down with it.
+      fetchCdnDivisionsAreasIndex().then(
+        idx => idx.districts ?? {},
+        () => ({})
+      ),
+      // Fail-soft on the same principle: losing the historical union degrades
+      // search to the current roster (the pre-#1403 behaviour), it does not
+      // break it.
+      fetchCdnSnapshotIndex().then(
+        idx => (idx && typeof idx === 'object' ? idx : {}),
+        () => ({})
+      ),
+    ])
+  return buildSearchIndex(
+    rankings.rankings,
+    clubIndex.clubs,
+    divisionsAreas,
+    snapshotIndex
+  )
 }

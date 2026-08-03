@@ -301,3 +301,160 @@ describe('searchEntities — division/area query shapes (#1135)', () => {
     expect(types.indexOf('club')).toBeLessThan(types.indexOf('area'))
   })
 })
+
+// --- Union of all rosters: past-only districts (#1403) ---
+//
+// The index used to be built from the CURRENT roster only, so a district that
+// has been consolidated away (D27: 151 snapshots, last 2026-06-30, absent from
+// today's 94-district rankings) was unfindable at any year. The union comes
+// from `config/district-snapshot-index.json` — districtId → chronological
+// snapshot dates — which the app already fetches.
+
+// districtId → chronological snapshot dates. '27' is past-only (its last
+// snapshot predates the current program year); the rest are live.
+const SNAPSHOT_INDEX: Record<string, string[]> = {
+  '61': ['2025-06-30', '2026-06-30', '2026-07-31'],
+  '6': ['2026-07-31'],
+  '57': ['2026-07-31'],
+  F: ['2026-07-31'],
+  '27': ['2024-07-15', '2025-06-30', '2026-06-30'],
+  '113': ['2019-05-31', '2020-06-30'],
+  // Alphabetically ahead of live D57 on a '5' query — the tiebreak trap.
+  '50': ['2018-06-30'],
+}
+
+describe('buildSearchIndex — union of all rosters (#1403)', () => {
+  let index: SearchIndex
+  beforeEach(() => {
+    index = buildSearchIndex(RANKINGS, CLUBS, DIVISIONS_AREAS, SNAPSHOT_INDEX)
+  })
+
+  it('indexes a district that exists only in the snapshot index', () => {
+    const d27 = index.entities.find(e => e.type === 'district' && e.id === '27')
+    expect(d27).toBeDefined()
+    expect(d27!.terms).toContain('27')
+  })
+
+  it('lands a past-only district on its MOST RECENT snapshot date and that date’s program year', () => {
+    const d27 = index.entities.find(
+      e => e.type === 'district' && e.id === '27'
+    )!
+    // 2026-06-30 is the last element of D27's chronological array, and June
+    // 2026 belongs to the 2025-26 program year.
+    expect(d27.route).toBe('/district/27?py=2025&date=2026-06-30')
+    expect(d27.inactive).toBe(true)
+    expect(d27.lastSnapshotDate).toBe('2026-06-30')
+  })
+
+  it('marks past-only districts inactive with a last-active context', () => {
+    const d113 = index.entities.find(
+      e => e.type === 'district' && e.id === '113'
+    )!
+    expect(d113.inactive).toBe(true)
+    expect(d113.route).toBe('/district/113?py=2019&date=2020-06-30')
+    expect(d113.context).toBe('Last active 2020-06-30')
+  })
+
+  it('leaves live districts byte-identical — plain route, not inactive, no context', () => {
+    const d61 = index.entities.find(
+      e => e.type === 'district' && e.id === '61'
+    )!
+    expect(d61.route).toBe('/district/61')
+    expect(d61.inactive).toBeFalsy()
+    expect(d61.context).toBeUndefined()
+    // ...and the district entities from the current roster are still emitted
+    // in rankings order, ahead of any past-only ones.
+    const districtIds = index.entities
+      .filter(e => e.type === 'district')
+      .map(e => e.id)
+    expect(districtIds.slice(0, RANKINGS.length)).toEqual(
+      RANKINGS.map(r => r.districtId)
+    )
+  })
+
+  it('omitting the snapshot index reproduces the pre-#1403 index exactly', () => {
+    const legacy = buildSearchIndex(RANKINGS, CLUBS, DIVISIONS_AREAS)
+    expect(
+      legacy.entities.filter(e => e.type === 'district').map(e => e.id)
+    ).toEqual(RANKINGS.map(r => r.districtId))
+  })
+
+  it('contributes nothing for malformed or empty snapshot-index values', () => {
+    const malformed = buildSearchIndex(RANKINGS, CLUBS, DIVISIONS_AREAS, {
+      '27': [],
+      '113': 'junk' as unknown as string[],
+      '999': null as unknown as string[],
+    })
+    const ids = malformed.entities
+      .filter(e => e.type === 'district')
+      .map(e => e.id)
+    expect(ids).toEqual(RANKINGS.map(r => r.districtId))
+  })
+})
+
+describe('searchEntities — past-only districts (#1403)', () => {
+  let index: SearchIndex
+  beforeEach(() => {
+    index = buildSearchIndex(RANKINGS, CLUBS, DIVISIONS_AREAS, SNAPSHOT_INDEX)
+  })
+
+  it('finds District 27 — the load-bearing case: it returns nothing today', () => {
+    const flat = flatten(searchEntities('27', index))
+    expect(flat.some(e => e.type === 'district' && e.id === '27')).toBe(true)
+  })
+
+  it('still yields a clean empty state for a district that never existed', () => {
+    // '999' is in neither roster, so no DISTRICT entity is produced for it
+    // (the fixture club id 00009999 still substring-matches — that is the
+    // pre-existing behaviour, unrelated to the union), and a query matching
+    // nothing at all still returns no groups at all.
+    const nineNineNine = flatten(searchEntities('999', index))
+    expect(nineNineNine.some(e => e.type === 'district')).toBe(false)
+    expect(searchEntities('8842', index)).toEqual([])
+    // ...which is what makes "exists but not this year" distinguishable from
+    // "never existed": D27 answers, D999 does not.
+    expect(searchEntities('27', index)).not.toEqual([])
+  })
+
+  it('ranks live districts above past-only ones at the same match level', () => {
+    // '5' prefix-matches live D57 and past-only D50, both at level 2. The
+    // shorter-label / alphabetical tiebreaks would put '50' FIRST, so this
+    // fails without the inactive demotion — the current-year common case
+    // must not be pushed down by history.
+    const flat = flatten(searchEntities('5', index))
+    const live = flat.findIndex(e => e.type === 'district' && e.id === '57')
+    const past = flat.findIndex(e => e.type === 'district' && e.id === '50')
+    expect(live).not.toBe(-1)
+    expect(past).not.toBe(-1)
+    expect(live).toBeLessThan(past)
+  })
+
+  it('does not let a past-only district evict a club from the result cap', () => {
+    // Both prefix-match '12': the club by name, the district by id — same
+    // match level, so the type weight decides who survives the cap (the cap
+    // is applied to the SCORED list, before grouping). Without the inactive
+    // demotion TYPE_RANK puts every district above every club, and 68
+    // historical districts would start pushing clubs out of the results.
+    const mini = buildSearchIndex(
+      [ranking('61', 'District 61', '07')],
+      { '00001111': { districtId: '61', clubName: '12 Angry Speakers' } },
+      {},
+      { '120': ['2019-06-30'] }
+    )
+    const capped = flatten(searchEntities('12', mini, { cap: 1 }))
+    expect(capped).toHaveLength(1)
+    expect(capped[0]!.type).toBe('club')
+    // Uncapped, both are returned — the district in its own (leading) group,
+    // which is display order, not rank.
+    const all = flatten(searchEntities('12', mini))
+    expect(all.map(e => `${e.type}:${e.id}`)).toEqual([
+      'district:120',
+      'club:00001111',
+    ])
+  })
+
+  it('keeps an exact id match on top regardless of the demotion', () => {
+    const flat = flatten(searchEntities('27', index))
+    expect(flat[0]).toMatchObject({ type: 'district', id: '27' })
+  })
+})

@@ -16,12 +16,16 @@ import CommandPalette from '../CommandPalette'
 const fetchCdnRankings = vi.fn()
 const fetchCdnClubIndex = vi.fn()
 const fetchCdnDivisionsAreasIndex = vi.fn()
+// #1403 — districts come from the union of the current roster and the
+// historical snapshot index; a harness that omits this stub breaks the loader.
+const fetchCdnSnapshotIndex = vi.fn()
 
 vi.mock('../../../services/cdn', () => ({
   fetchCdnRankings: (...args: unknown[]) => fetchCdnRankings(...args),
   fetchCdnClubIndex: (...args: unknown[]) => fetchCdnClubIndex(...args),
   fetchCdnDivisionsAreasIndex: (...args: unknown[]) =>
     fetchCdnDivisionsAreasIndex(...args),
+  fetchCdnSnapshotIndex: (...args: unknown[]) => fetchCdnSnapshotIndex(...args),
 }))
 
 const rankingRow = (
@@ -35,8 +39,12 @@ const setupCdn = (
     rankings?: Array<ReturnType<typeof rankingRow>>
     clubs?: Record<string, { districtId: string; clubName: string }>
     divisionsAreas?: Record<string, Record<string, string[]>>
+    snapshotIndex?: Record<string, string[]>
   } = {}
 ) => {
+  fetchCdnSnapshotIndex.mockResolvedValue(
+    opts.snapshotIndex ?? { '57': ['2025-11-22'], '61': ['2025-11-22'] }
+  )
   fetchCdnRankings.mockResolvedValue({
     rankings: opts.rankings ?? [
       rankingRow('57', 'District 57', '7'),
@@ -112,6 +120,53 @@ describe('CommandPalette omni-search (#1057)', () => {
     const districts = within(listbox).getByRole('group', { name: /districts/i })
     const link = within(districts).getByRole('link')
     expect(link).toHaveTextContent(/District 61/)
+    expect(link.getAttribute('href')).toBe('/district/61')
+  })
+
+  // --- districts that no longer exist (#1403) ---
+
+  it('finds a consolidated district and lands it on its last snapshot, flagged as no longer active', async () => {
+    // D27 is absent from the current roster but has 151 snapshots ending
+    // 2026-06-30 — searching it must not look the same as searching D999.
+    setupCdn({
+      rankings: [rankingRow('61', 'District 61', '7')],
+      snapshotIndex: {
+        '61': ['2026-07-31'],
+        '27': ['2025-06-30', '2026-06-30'],
+      },
+    })
+    renderPalette(true)
+    const input = screen.getByLabelText(/universal search input/i)
+    fireEvent.change(input, { target: { value: '27' } })
+
+    const listbox = await screen.findByRole('listbox', {
+      name: /search results/i,
+    })
+    const districts = await within(listbox).findByRole('group', {
+      name: /districts/i,
+    })
+    const link = within(districts).getByRole('link')
+    expect(link).toHaveTextContent(/D27/)
+    // The treatment: the muted context slot clubs/regions already use, saying
+    // when the district's data stops. No new chrome.
+    expect(link).toHaveTextContent(/Last active 2026-06-30/)
+    // ...and the link lands on a page with real data, not an empty current year.
+    expect(link.getAttribute('href')).toBe(
+      '/district/27?py=2025&date=2026-06-30'
+    )
+  })
+
+  it('leaves a live district row untouched — no last-active note', async () => {
+    renderPalette(true)
+    const input = screen.getByLabelText(/universal search input/i)
+    fireEvent.change(input, { target: { value: '61' } })
+
+    const listbox = await screen.findByRole('listbox', {
+      name: /search results/i,
+    })
+    const districts = within(listbox).getByRole('group', { name: /districts/i })
+    const link = within(districts).getByRole('link')
+    expect(link).not.toHaveTextContent(/last active/i)
     expect(link.getAttribute('href')).toBe('/district/61')
   })
 
