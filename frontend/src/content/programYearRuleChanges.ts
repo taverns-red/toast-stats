@@ -141,6 +141,10 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'frontend/src/utils/extractDivisionPerformance.ts',
     ],
   },
+  // The "known limitation" sentence below is tracked by #1406: unlike the
+  // district side (#1116 item 5), club recognition has no per-year ruleset, so
+  // the Smedley rung is applied to years before it existed. Remove the sentence
+  // when that lands — the entry is otherwise unaffected.
   {
     id: 'py-2025-2026-smedley-distinguished-club',
     programYear: '2025-2026',
