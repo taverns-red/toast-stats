@@ -57,7 +57,15 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
     requirements: [
       {
         anyOf: [
-          { aliases: ['Level 2s'], label: 'Level 2 awards', required: 2 },
+          {
+            // PY 2026-27 renamed this column when TI made Online Meeting
+            // Mastery ("EOM") completions an alternative route to the goal
+            // (#1399). Historical snapshots carry 'Level 2s'; first match
+            // wins, so a record carrying both is read once, not summed.
+            aliases: ['Level 2s or EOM', 'Level 2s'],
+            label: 'Level 2 awards',
+            required: 2,
+          },
         ],
       },
     ],
@@ -70,7 +78,8 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
       {
         anyOf: [
           {
-            aliases: ['Add. Level 2s', 'Add Level 2s'],
+            // See goal 2 — same PY 2026-27 rename (#1399).
+            aliases: ['Add. Level 2s or EOM', 'Add. Level 2s', 'Add Level 2s'],
             label: 'More Level 2 awards',
             required: 2,
           },

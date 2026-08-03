@@ -49,9 +49,13 @@ const LEVEL_DEFS = {
     primary: ['Level 1s'],
     additional: [],
   },
+  /* PY 2026-27 renamed both level-2 columns when TI made Online Meeting
+     Mastery ("EOM") completions an alternative route to DCP goals 2 and 3
+     (#1399). Same first-match-wins treatment as every other rename: the
+     new name leads, historical snapshots fall through to the old one. */
   level2: {
-    primary: ['Level 2s'],
-    additional: ['Add. Level 2s', 'Add Level 2s'],
+    primary: ['Level 2s or EOM', 'Level 2s'],
+    additional: ['Add. Level 2s or EOM', 'Add. Level 2s', 'Add Level 2s'],
   },
   level3: {
     primary: ['Level 3s'],
