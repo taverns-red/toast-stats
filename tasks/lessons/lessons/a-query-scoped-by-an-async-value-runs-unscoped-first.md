@@ -72,6 +72,10 @@ state.
 - **Measure the race rather than reasoning about it.** Two `curl -w
   %{size_download}` calls turned "there is a theoretical flash" into "the wrong
   answer wins by 4.4×." That flipped this from a nit to a required guard.
+- Grep the key literal across `__tests__/` too, not just `src/`. #1396's lesson
+  says "a key that appears in two files is an undeclared contract" — the second
+  file here was a test harness seeding `setQueryData(['districts'], …)`, which
+  simply stopped matching and silently degraded the assertion's subject.
 - Pin it with a test that holds the scoping query in its loading state for the
   whole test (`mockReturnValue`, not `mockReturnValueOnce`) and asserts the gate
   stays shut. Re-apply the loaded default in `beforeEach` — `vi.clearAllMocks()`
