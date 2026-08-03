@@ -37,12 +37,17 @@ function Throw404(): React.JSX.Element {
 }
 
 /**
- * Build a QueryClient with the `['districts']` cache pre-seeded so
+ * Build a QueryClient with the `['districts', 'latest']` cache pre-seeded so
  * `useDistricts()` (which ErrorPage now calls for route-aware recovery)
  * resolves synchronously with NO network. `staleTime: Infinity` stops a
  * background refetch (default staleTime 0 would otherwise hit the real CDN and
  * make these tests network-flaky); we always seed, so the queryFn never runs.
  * An empty array models the "districts unresolved" path deterministically.
+ *
+ * The `'latest'` suffix is the hook's undated key (#1398): `useDistricts` now
+ * takes an optional snapshot date so past-year districts stay reachable, and
+ * ErrorPage deliberately stays undated — a 404's recovery links should point at
+ * districts that exist NOW. Seeding the bare `['districts']` silently misses.
  */
 function makeClient(districts: DistrictsResponse['districts']) {
   const client = new QueryClient({
@@ -50,7 +55,7 @@ function makeClient(districts: DistrictsResponse['districts']) {
       queries: { retry: false, staleTime: Infinity, gcTime: Infinity },
     },
   })
-  client.setQueryData<DistrictsResponse>(['districts'], { districts })
+  client.setQueryData<DistrictsResponse>(['districts', 'latest'], { districts })
   return client
 }
 
