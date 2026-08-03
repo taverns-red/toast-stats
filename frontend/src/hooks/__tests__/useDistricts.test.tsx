@@ -119,7 +119,7 @@ const idsOf = (data: { districts: { id: string }[] } | undefined) =>
   data?.districts.map(d => d.id) ?? []
 
 describe('useDistricts — the list follows the displayed snapshot (#1398)', () => {
-  it("includes a district that existed in the SELECTED year but not today", async () => {
+  it('includes a district that existed in the SELECTED year but not today', async () => {
     const { result } = renderDistricts(snap('2025-06-30'))
 
     await waitFor(() => expect(result.current.data).toBeDefined())
