@@ -20,6 +20,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import DistrictDetailPage from '../DistrictDetailPage'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../../services/cdn'
+import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import type { CdnRankingsData } from '../../services/cdn'
 import { snap } from '../../test-utils/snapshotDate'
 import type { SnapshotDate } from '../../types/snapshotDate'
@@ -150,13 +151,22 @@ vi.mock('../../hooks/useLatestAsOfDate', () => ({
 }))
 
 vi.mock('../../hooks/useDistrictData', () => ({
-  useDistrictCachedDates: vi.fn(() => ({
-    // PY2024 → 2025-06-30 · PY2025 → 2026-06-30
-    data: { dates: ['2026-06-30', '2025-06-30'] },
-    isLoading: false,
-    error: null,
-  })),
+  useDistrictCachedDates: vi.fn(),
 }))
+
+/** PY2024 → 2025-06-30 · PY2025 → 2026-06-30. Re-applied every test, because a
+    `mockReturnValue` set inside one would otherwise leak into the next. */
+const DATES_LOADED = {
+  data: { dates: ['2026-06-30', '2025-06-30'] },
+  isLoading: false,
+  error: null,
+} as unknown as ReturnType<typeof useDistrictCachedDates>
+
+const DATES_LOADING = {
+  data: undefined,
+  isLoading: true,
+  error: null,
+} as unknown as ReturnType<typeof useDistrictCachedDates>
 
 vi.mock('../../hooks/useDistrictAnalytics', () => ({
   useDistrictAnalytics: vi.fn(() => ({
@@ -204,6 +214,7 @@ const mockedForDate = vi.mocked(fetchCdnRankingsForDate)
 beforeEach(() => {
   vi.clearAllMocks()
   localStorageMock.getItem.mockReturnValue(null)
+  vi.mocked(useDistrictCachedDates).mockReturnValue(DATES_LOADED)
   mockedLatest.mockResolvedValue(CURRENT)
   mockedForDate.mockImplementation((date: SnapshotDate) =>
     Promise.resolve(date === '2025-06-30' ? PY_2024 : CURRENT_PINNED)
@@ -270,6 +281,19 @@ describe('DistrictDetailPage — past-year districts are reachable (#1398)', () 
     await waitFor(() =>
       expect(screen.getByTestId('district-detail-lede')).toBeInTheDocument()
     )
+    expect(screen.queryByText(LIMITED)).not.toBeInTheDocument()
+  })
+
+  it('does not flash the fallback while the snapshot index is still loading', async () => {
+    // The 388KB per-district date index routinely loses the race to the 88KB
+    // rankings.json, so there is a real window where the roster is loaded but
+    // still the UNDATED one. Firing the gate in that window would flash the
+    // "limited data" page at every past-year district before its real page.
+    vi.mocked(useDistrictCachedDates).mockReturnValue(DATES_LOADING)
+
+    const client = renderAt('/district/27?py=2024&date=2025-06-30')
+    await districtListLanded(client)
+
     expect(screen.queryByText(LIMITED)).not.toBeInTheDocument()
   })
 

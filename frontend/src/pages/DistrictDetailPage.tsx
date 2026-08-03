@@ -69,12 +69,6 @@ const DistrictDetailPageInner: React.FC = () => {
     setSelectedDate,
   } = useUrlProgramYear()
 
-  // Fetch district info
-  const { data: districtsData } = useDistricts()
-  const selectedDistrict = districtsData?.districts?.find(
-    d => d.id === districtId
-  )
-
   // Fetch cached dates for date selector
   const { data: cachedDatesData } = useDistrictCachedDates(districtId || '')
 
@@ -145,6 +139,17 @@ const DistrictDetailPageInner: React.FC = () => {
     // for why, and why a `|| endDate` fallback must not come back (#1323).
     return mostRecent
   }, [selectedDate, effectiveProgramYear, allCachedDates])
+
+  // Fetch district info. Scoped to the snapshot this page is DISPLAYING: the
+  // roster below is an existence gate (see the `!selectedDistrict` branch), and
+  // the current year's roster does not contain the districts realigned away
+  // since — so a past-year URL for one of them fell through to the limited
+  // Global-Rankings page (#1398). Declared after `effectiveEndDate` because it
+  // consumes it; the gate itself is far below.
+  const { data: districtsData } = useDistricts(effectiveEndDate ?? undefined)
+  const selectedDistrict = districtsData?.districts?.find(
+    d => d.id === districtId
+  )
 
   // Determine if we have valid dates for API calls
   const hasValidDates =
@@ -367,7 +372,15 @@ const DistrictDetailPageInner: React.FC = () => {
   // If districts data has loaded but this district isn't in the tracked list,
   // show a limited page with Global Rankings (available for all districts)
   // instead of blank data. Only 6 districts have detailed per-district analytics.
-  if (districtsData && !selectedDistrict && districtId) {
+  //
+  // `cachedDatesData` gates the gate (#1398): the roster is only authoritative
+  // once we know WHICH snapshot to read it from. Until the per-district date
+  // index lands, `effectiveEndDate` is null and `useDistricts` is still on the
+  // undated current-year entry — the roster that omits past-year districts. And
+  // it loses that race routinely: the index is 388KB against rankings.json's
+  // 88KB, so without this the past-year district page would flash the "limited
+  // data" fallback before the dated roster arrived.
+  if (cachedDatesData && districtsData && !selectedDistrict && districtId) {
     return (
       <ErrorBoundary>
         <div className="district-detail-page-root">
