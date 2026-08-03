@@ -9,8 +9,12 @@ import {
   OPEN_SECTIONS_PARAM,
   parseOpenSections,
   serializeOpenSections,
-  sectionFromHash,
+  resolveHashTarget,
 } from '../utils/methodologyUrl'
+import {
+  PROGRAM_YEAR_RULE_CHANGES,
+  ruleChangesByProgramYear,
+} from '../content/programYearRuleChanges'
 
 /* Methodology page (#368). Authored fresh from analytics-core as the
    source of truth — Borda formula, DCP thresholds, club health
@@ -36,8 +40,20 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
   },
   { id: 'glossary', num: '08', title: 'Glossary' },
   { id: 'caveats', num: '09', title: 'Caveats & known issues' },
-  { id: 'changelog', num: '10', title: 'Changelog' },
+  {
+    id: 'program-year-rule-changes',
+    num: '10',
+    title: 'Program-year rule changes',
+  },
+  { id: 'changelog', num: '11', title: 'Changelog' },
 ]
+
+// Every rule-change entry is its own deep-link target (#1400), owned by §10.
+// Module-scope so the map identity is stable across renders.
+const RULE_CHANGE_ANCHORS: ReadonlyMap<string, string> = new Map(
+  PROGRAM_YEAR_RULE_CHANGES.map(c => [c.id, 'program-year-rule-changes'])
+)
+const RULE_CHANGE_GROUPS = ruleChangesByProgramYear()
 
 // Module-scope so the codec's parse/serialize identity is stable — keeps
 // useUrlState's memoised value and setter stable across renders.
@@ -87,15 +103,19 @@ const MethodologyPage: React.FC = () => {
   )
 
   // Fragment as an on-mount directive: a shared `/methodology#borda-count` link
-  // expands that section and scrolls to it. The whitelist in sectionFromHash
-  // means an unknown `#bogus` is a no-op. setOpenSections is this page's only
-  // URL writer, so there's no same-batch sibling to race (Lesson 070 N/A here).
-  // Keyed on the hash so a deep-link mount fires exactly once per fragment.
+  // expands that section and scrolls to it. A rule-change entry anchor
+  // (`#py-2026-2027-…`, #1400) expands its owning section and scrolls to the
+  // entry — expanding is what makes it reachable, since the section is
+  // collapsed on mobile. The whitelist in resolveHashTarget means an unknown
+  // `#bogus` is a no-op. setOpenSections is this page's only URL writer, so
+  // there's no same-batch sibling to race (Lesson 070 N/A here). Keyed on the
+  // hash so a deep-link mount fires exactly once per fragment.
   const { hash } = useLocation()
   useEffect(() => {
-    const id = sectionFromHash(hash, SECTION_ID_SET)
-    if (!id) return
-    expand(id)
+    const target = resolveHashTarget(hash, SECTION_ID_SET, RULE_CHANGE_ANCHORS)
+    if (!target) return
+    const { sectionId, scrollToId: id } = target
+    expand(sectionId)
     // Scroll after the expand paints. scrollIntoView (unlike the native locked
     // hash scroll) honours scroll-margin-top on .methodology-section, so the
     // heading clears the sticky chip bar (Lessons 138/139). Double rAF lets the
@@ -112,7 +132,7 @@ const MethodologyPage: React.FC = () => {
   return (
     <div className="methodology-page">
       <header className="methodology-page__header">
-        <p className="placeholder-page__eyebrow">Reference · Updated 2026-05</p>
+        <p className="placeholder-page__eyebrow">Reference · Updated 2026-08</p>
         <h1 className="placeholder-page__title">Methodology</h1>
         {/* "What does this page answer?" lede (#879). One scannable sentence
             above the section list so a (mobile) reader can decide whether to
@@ -324,6 +344,26 @@ const MethodologyPage: React.FC = () => {
           </li>
         </ul>
         <p>
+          Two of these rules moved recently: goals 2 and 3 gained an{' '}
+          <a
+            href="#py-2026-2027-dcp-goals-2-3-eom"
+            className="methodology-link"
+            onClick={() => expand('program-year-rule-changes')}
+          >
+            alternative completion route in 2026-27
+          </a>
+          , and the Smedley club rung{' '}
+          <a
+            href="#py-2025-2026-smedley-distinguished-club"
+            className="methodology-link"
+            onClick={() => expand('program-year-rule-changes')}
+          >
+            did not exist before 2025-26
+          </a>
+          . Both make year-over-year comparisons something other than
+          like-for-like — see §10.
+        </p>
+        <p>
           The 10 DCP goals are <strong>independent</strong>, not sequential — a
           club can achieve goals in any order. Toast Stats reads the raw
           per-goal columns from <code>club-performance.csv</code> rather than
@@ -368,7 +408,16 @@ const MethodologyPage: React.FC = () => {
                 20+ paid members OR net growth ≥ 3 since program-year base
               </li>
               <li>On track for the program-month DCP checkpoint</li>
-              <li>Club Success Plan (CSP) submitted (2025-26 onward)</li>
+              <li>
+                Club Success Plan (CSP) submitted —{' '}
+                <a
+                  href="#py-2025-2026-club-success-plan-required"
+                  className="methodology-link"
+                  onClick={() => expand('program-year-rule-changes')}
+                >
+                  2025-26 onward
+                </a>
+              </li>
             </ul>
           </li>
           <li>
@@ -522,9 +571,73 @@ const MethodologyPage: React.FC = () => {
         </ul>
       </CollapsibleSection>
 
+      {/* Program-year rule changes (#1400). Toastmasters moves the recognition
+          rules between years; without this a reader comparing two years has no
+          way to know the numbers were not measured the same way. Entries are
+          rendered from `content/programYearRuleChanges.ts`, which a guard test
+          holds against the year-conditional code — see that module's header. */}
+      <CollapsibleSection
+        id="program-year-rule-changes"
+        num="10"
+        title="Program-year rule changes"
+        collapsible={isMobile}
+        open={openIds.has('program-year-rule-changes')}
+        onToggle={toggle}
+      >
+        <p>
+          Toastmasters changes the recognition rules between program years, so
+          two years are not always measuring the same thing. Toast Stats scores
+          each program year against <em>that year&apos;s</em> rules and never
+          restates history — these are the changes that make a year-over-year
+          comparison something other than like-for-like. Newest first; every
+          entry has its own link you can share.
+        </p>
+        {RULE_CHANGE_GROUPS.map(group => (
+          <section key={group.programYear} className="rule-change-year">
+            <h3 className="rule-change-year__title">
+              Program year {group.programYear}
+            </h3>
+            <ul className="rule-change-list">
+              {group.changes.map(change => (
+                <li key={change.id} id={change.id} className="rule-change">
+                  <h4 className="rule-change__title">
+                    <a
+                      href={`#${change.id}`}
+                      className="rule-change__permalink"
+                      onClick={() => expand('program-year-rule-changes')}
+                    >
+                      {change.title}
+                    </a>
+                  </h4>
+                  <p className="rule-change__affects">
+                    <span className="rule-change__label">Affects</span>
+                    {change.affects}
+                  </p>
+                  <p>{change.whatChanged}</p>
+                  <p className="rule-change__impact">
+                    <span className="rule-change__label">
+                      Comparing across the boundary
+                    </span>
+                    {change.comparability}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+        <p className="methodology-source">
+          Sourced from{' '}
+          <code>frontend/src/content/programYearRuleChanges.ts</code>, which
+          names the code implementing each change; a guard test fails the build
+          when the code gains a program-year rule branch this log does not know
+          about. Underlying rules:{' '}
+          <code>docs/toastmasters-rules-reference.md</code> §3.3, §10.2, §13.
+        </p>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="10"
+        num="11"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}

@@ -45,14 +45,33 @@ export const serializeOpenSections = (ids: ReadonlyArray<string>): string =>
   ids.join(',')
 
 /**
- * Resolve a location hash (`#borda-count`) to a known section id, or null when
- * the fragment is empty / unknown. Whitelisted for the same reason as parse —
- * a shared `#bogus` must not drive an expand/scroll.
+ * What a valid fragment resolves to: the section to expand, and the element to
+ * scroll to. They differ when the fragment names an anchor *inside* a section
+ * — a program-year rule-change entry (#1400).
  */
-export const sectionFromHash = (
+export interface MethodologyHashTarget {
+  sectionId: string
+  scrollToId: string
+}
+
+/**
+ * Resolve a location hash to its expand + scroll target, or null when the
+ * fragment is empty / unknown. Both accepted shapes are whitelisted for the
+ * same reason as parse — a shared `#bogus` must not drive an expand/scroll:
+ *
+ *   - `#borda-count` — a section id; expand and scroll to it.
+ *   - `#py-2026-2027-…` — a rule-change entry inside a section. Expanding its
+ *     owner is what makes the entry reachable at all: on mobile the section is
+ *     collapsed, so scrolling to a hidden entry lands the reader on nothing.
+ */
+export const resolveHashTarget = (
   hash: string,
-  validIds: ReadonlySet<string>
-): string | null => {
+  validSectionIds: ReadonlySet<string>,
+  anchorOwners: ReadonlyMap<string, string> = new Map()
+): MethodologyHashTarget | null => {
   const id = hash.replace(/^#/, '').trim()
-  return id && validIds.has(id) ? id : null
+  if (!id) return null
+  if (validSectionIds.has(id)) return { sectionId: id, scrollToId: id }
+  const owner = anchorOwners.get(id)
+  return owner ? { sectionId: owner, scrollToId: id } : null
 }

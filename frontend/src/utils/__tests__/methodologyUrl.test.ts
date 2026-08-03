@@ -8,11 +8,18 @@ import {
   OPEN_SECTIONS_PARAM,
   parseOpenSections,
   serializeOpenSections,
-  sectionFromHash,
+  resolveHashTarget,
 } from '../methodologyUrl'
 
 const VALID = new Set(['borda-count', 'glossary', 'caveats'])
 const parse = parseOpenSections(VALID)
+
+// Deep-linkable anchors *inside* a section (#1400 rule-change entries): the
+// fragment names the entry, but the section is what has to be expanded.
+const ANCHORS = new Map([
+  ['py-2026-2027-dcp-goals-2-3-eom', 'caveats'],
+  ['py-2025-2026-club-success-plan-required', 'caveats'],
+])
 
 describe('methodologyUrl — parseOpenSections', () => {
   it('keeps only whitelisted section ids', () => {
@@ -62,21 +69,49 @@ describe('methodologyUrl — serializeOpenSections', () => {
   })
 })
 
-describe('methodologyUrl — sectionFromHash', () => {
-  it('resolves a leading-# fragment to a known id', () => {
-    expect(sectionFromHash('#borda-count', VALID)).toBe('borda-count')
+describe('methodologyUrl — resolveHashTarget', () => {
+  it('resolves a leading-# section fragment to itself', () => {
+    expect(resolveHashTarget('#borda-count', VALID, ANCHORS)).toEqual({
+      sectionId: 'borda-count',
+      scrollToId: 'borda-count',
+    })
   })
 
   it('resolves a bare id too', () => {
-    expect(sectionFromHash('glossary', VALID)).toBe('glossary')
+    expect(resolveHashTarget('glossary', VALID, ANCHORS)).toEqual({
+      sectionId: 'glossary',
+      scrollToId: 'glossary',
+    })
+  })
+
+  it('resolves an in-section anchor to its owning section (#1400)', () => {
+    expect(
+      resolveHashTarget('#py-2026-2027-dcp-goals-2-3-eom', VALID, ANCHORS)
+    ).toEqual({
+      sectionId: 'caveats',
+      scrollToId: 'py-2026-2027-dcp-goals-2-3-eom',
+    })
   })
 
   it('returns null for an unknown fragment', () => {
-    expect(sectionFromHash('#bogus', VALID)).toBeNull()
+    expect(resolveHashTarget('#bogus', VALID, ANCHORS)).toBeNull()
+  })
+
+  it('returns null for an unknown anchor that merely looks like one', () => {
+    expect(
+      resolveHashTarget('#py-9999-0000-invented', VALID, ANCHORS)
+    ).toBeNull()
   })
 
   it('returns null for an empty hash', () => {
-    expect(sectionFromHash('', VALID)).toBeNull()
+    expect(resolveHashTarget('', VALID, ANCHORS)).toBeNull()
+  })
+
+  it('treats the anchor map as optional (sections still resolve)', () => {
+    expect(resolveHashTarget('#caveats', VALID)).toEqual({
+      sectionId: 'caveats',
+      scrollToId: 'caveats',
+    })
   })
 })
 
