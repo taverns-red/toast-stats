@@ -319,6 +319,8 @@ const SNAPSHOT_INDEX: Record<string, string[]> = {
   F: ['2026-07-31'],
   '27': ['2024-07-15', '2025-06-30', '2026-06-30'],
   '113': ['2019-05-31', '2020-06-30'],
+  // Alphabetically ahead of live D57 on a '5' query — the tiebreak trap.
+  '50': ['2018-06-30'],
 }
 
 describe('buildSearchIndex — union of all rosters (#1403)', () => {
@@ -414,22 +416,41 @@ describe('searchEntities — past-only districts (#1403)', () => {
     expect(searchEntities('27', index)).not.toEqual([])
   })
 
-  it('ranks live districts above past-only ones for a partial query', () => {
-    const flat = flatten(searchEntities('6', index))
-    const live = flat.findIndex(e => e.type === 'district' && e.id === '6')
-    const past = flat.findIndex(e => e.type === 'district' && e.id === '27')
-    expect(live).toBeGreaterThanOrEqual(0)
-    if (past !== -1) expect(live).toBeLessThan(past)
+  it('ranks live districts above past-only ones at the same match level', () => {
+    // '5' prefix-matches live D57 and past-only D50, both at level 2. The
+    // shorter-label / alphabetical tiebreaks would put '50' FIRST, so this
+    // fails without the inactive demotion — the current-year common case
+    // must not be pushed down by history.
+    const flat = flatten(searchEntities('5', index))
+    const live = flat.findIndex(e => e.type === 'district' && e.id === '57')
+    const past = flat.findIndex(e => e.type === 'district' && e.id === '50')
+    expect(live).not.toBe(-1)
+    expect(past).not.toBe(-1)
+    expect(live).toBeLessThan(past)
   })
 
-  it('does not evict clubs from the cap — past-only districts rank below them', () => {
-    // "2" substring-matches club 00001234 and prefix-matches past-only D27.
-    const flat = flatten(searchEntities('2', index, { cap: 8 }))
-    const firstClub = flat.findIndex(e => e.type === 'club')
-    const d27 = flat.findIndex(e => e.type === 'district' && e.id === '27')
-    expect(firstClub).not.toBe(-1)
-    expect(d27).not.toBe(-1)
-    expect(firstClub).toBeLessThan(d27)
+  it('does not let a past-only district evict a club from the result cap', () => {
+    // Both prefix-match '12': the club by name, the district by id — same
+    // match level, so the type weight decides who survives the cap (the cap
+    // is applied to the SCORED list, before grouping). Without the inactive
+    // demotion TYPE_RANK puts every district above every club, and 68
+    // historical districts would start pushing clubs out of the results.
+    const mini = buildSearchIndex(
+      [ranking('61', 'District 61', '07')],
+      { '00001111': { districtId: '61', clubName: '12 Angry Speakers' } },
+      {},
+      { '120': ['2019-06-30'] }
+    )
+    const capped = flatten(searchEntities('12', mini, { cap: 1 }))
+    expect(capped).toHaveLength(1)
+    expect(capped[0]!.type).toBe('club')
+    // Uncapped, both are returned — the district in its own (leading) group,
+    // which is display order, not rank.
+    const all = flatten(searchEntities('12', mini))
+    expect(all.map(e => `${e.type}:${e.id}`)).toEqual([
+      'district:120',
+      'club:00001111',
+    ])
   })
 
   it('keeps an exact id match on top regardless of the demotion', () => {
