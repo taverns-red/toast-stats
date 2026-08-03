@@ -145,6 +145,46 @@ describe('DCP_GOAL_DEFINITIONS', () => {
       const column = goal(5).requirements[0]!.anyOf[0]!
       expect(readDcpGoalColumn(record, column)).toBe(0)
     })
+
+    /**
+     * PY 2026-27 renamed goals 2 and 3 when TI made Online Meeting Mastery
+     * ("EOM") completions an alternative route to them (#1399). Historical
+     * snapshots carry the old names, new ones the new — both must resolve.
+     */
+    describe('goals 2-3: "or EOM" rename (#1399)', () => {
+      it('reads the PY 2026-27 headers', () => {
+        expect(isDcpGoalAchieved({ 'Level 2s or EOM': '2' }, goal(2))).toBe(true)
+        expect(isDcpGoalAchieved({ 'Level 2s or EOM': '1' }, goal(2))).toBe(
+          false
+        )
+        expect(
+          isDcpGoalAchieved({ 'Add. Level 2s or EOM': '2' }, goal(3))
+        ).toBe(true)
+        expect(
+          isDcpGoalAchieved({ 'Add. Level 2s or EOM': '1' }, goal(3))
+        ).toBe(false)
+      })
+
+      it('still reads the historical headers', () => {
+        expect(isDcpGoalAchieved({ 'Level 2s': '2' }, goal(2))).toBe(true)
+        expect(isDcpGoalAchieved({ 'Add. Level 2s': '2' }, goal(3))).toBe(true)
+      })
+
+      it('does not double-count a record carrying both names (#486 M1)', () => {
+        const record: ScrapedRecord = {
+          'Level 2s or EOM': '3',
+          'Level 2s': '9',
+          'Add. Level 2s or EOM': '2',
+          'Add. Level 2s': '5',
+        }
+        expect(readDcpGoalColumn(record, goal(2).requirements[0]!.anyOf[0]!))
+          // first match wins — never 3 + 9
+          .toBe(3)
+        expect(
+          readDcpGoalColumn(record, goal(3).requirements[0]!.anyOf[0]!)
+        ).toBe(2)
+      })
+    })
   })
 
   describe('readDcpGoalColumn value handling', () => {
