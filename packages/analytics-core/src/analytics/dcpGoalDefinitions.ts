@@ -52,7 +52,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
   },
   {
     goal: 2,
-    name: 'Level 2 awards',
+    name: 'Level 2 or Online Meeting Mastery awards',
     category: 'Education',
     requirements: [
       {
@@ -63,7 +63,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
             // (#1399). Historical snapshots carry 'Level 2s'; first match
             // wins, so a record carrying both is read once, not summed.
             aliases: ['Level 2s or EOM', 'Level 2s'],
-            label: 'Level 2 awards',
+            label: 'Level 2 or Online Meeting Mastery awards',
             required: 2,
           },
         ],
@@ -72,7 +72,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
   },
   {
     goal: 3,
-    name: 'More Level 2 awards',
+    name: 'More Level 2 or Online Meeting Mastery awards',
     category: 'Education',
     requirements: [
       {
@@ -80,7 +80,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
           {
             // See goal 2 — same PY 2026-27 rename (#1399).
             aliases: ['Add. Level 2s or EOM', 'Add. Level 2s', 'Add Level 2s'],
-            label: 'More Level 2 awards',
+            label: 'More Level 2 or Online Meeting Mastery awards',
             required: 2,
           },
         ],

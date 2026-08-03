@@ -58,8 +58,10 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
 
   const dcpGoalNames: { [key: number]: string } = {
     1: 'Level 1 awards (4 required)',
-    2: 'Level 2 awards (2 required)',
-    3: 'More Level 2 awards (2 required)',
+    // #1399: an Online Meeting Mastery completion also satisfies goals 2-3
+    // from PY 2026-27; TI reports it in the same combined column.
+    2: 'Level 2 or Online Meeting Mastery awards (2 required)',
+    3: 'More Level 2 or Online Meeting Mastery awards (2 required)',
     4: 'Level 3 awards (2 required)',
     5: 'Level 4, Path Completion, or DTM award (1 required)',
     6: 'One more Level 4, Path Completion, or DTM award (1 required)',

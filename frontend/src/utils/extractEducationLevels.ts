@@ -4,7 +4,8 @@
    four reportable buckets that Toastmasters publishes:
 
    - Level 1s
-   - Level 2s
+   - Level 2s (or, from PY 2026-27, "Level 2s or EOM" — the same column,
+     now also counting Online Meeting Mastery completions)
    - Level 3s
    - Level 4s, Path Completions, or DTM Awards
 

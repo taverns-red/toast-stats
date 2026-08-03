@@ -54,7 +54,8 @@ export interface ClubSuccessPlanRow {
  *
  * NOT DCP credit (#1080): DCP education credit counts DISTINCT MEMBERS per
  * award tier (a member's repeat achievements in a tier count once), and is
- * sourced from the main dashboard's `clubPerformance` "Level 1s"/"Level 2s"/…
+ * sourced from the main dashboard's `clubPerformance` "Level 1s"/"Level 2s or
+ * EOM"/…
  * fields — see `frontend/src/utils/dcpGoals.ts`. This raw count cannot apply
  * that dedup (`Member` is dropped before aggregation, by design) and must never
  * be conflated with it. Its value is raw activity volume + path/level breakdown.

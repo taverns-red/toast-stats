@@ -60,8 +60,8 @@ The DCP consists of **10 goals** that clubs work toward during the program year:
 | Goal | Description                            | Requirement                         |
 | ---- | -------------------------------------- | ----------------------------------- |
 | 1    | Level 1 Awards                         | 4 or more                           |
-| 2    | Level 2 Awards                         | 2 or more                           |
-| 3    | Additional Level 2 Awards              | 2 additional (4 total)              |
+| 2    | Level 2 or Online Meeting Mastery      | 2 or more                           |
+| 3    | Additional Level 2 or Online Mtg Mast. | 2 additional (4 total)              |
 | 4    | Level 3 Awards                         | 2 or more                           |
 | 5    | Level 4/Path Completion/DTM Awards     | 1 or more                           |
 | 6    | Additional Level 4/Path Completion/DTM | 1 additional (2 total)              |
@@ -323,8 +323,8 @@ This section documents differences between legacy report assumptions and current
 | Goal | Field Name                                                                 | Threshold             |
 | ---- | -------------------------------------------------------------------------- | --------------------- |
 | 1    | `Level 1s`                                                                 | ≥ 4                   |
-| 2    | `Level 2s`                                                                 | ≥ 2                   |
-| 3    | `Add. Level 2s`                                                            | ≥ 2 (with Goal 2 met) |
+| 2    | `Level 2s or EOM` (was `Level 2s`)                                         | ≥ 2                   |
+| 3    | `Add. Level 2s or EOM` (was `Add. Level 2s`)                               | ≥ 2 (with Goal 2 met) |
 | 4    | `Level 3s`                                                                 | ≥ 2                   |
 | 5    | `Level 4s, Path Completions, or DTM Awards`                                | ≥ 1                   |
 | 6    | `Add. Level 4s, Path Completions, or DTM award`                            | ≥ 1 (with Goal 5 met) |
@@ -332,6 +332,14 @@ This section documents differences between legacy report assumptions and current
 | 8    | `Add. New Members`                                                         | ≥ 4 (with Goal 7 met) |
 | 9    | `Off. Trained Round 1` + `Off. Trained Round 2`                            | ≥ 4 each              |
 | 10   | `Off. List On Time` + (`Mem. dues on time Oct` OR `Mem. dues on time Apr`) | ≥ 1 each              |
+
+**Goals 2-3, PY 2026-27 onward (#1399):** TI added Online Meeting Mastery
+("EOM") completions as an alternative way to satisfy these goals and renamed
+both columns accordingly. The column is a **single combined count** — TI does
+not split Level 2 awards from EOM completions — so neither can we. Both the old
+and new header names resolve as first-match-wins aliases in
+`packages/analytics-core/src/analytics/dcpGoalDefinitions.ts`, since historical
+snapshots keep the old names.
 
 ---
 
