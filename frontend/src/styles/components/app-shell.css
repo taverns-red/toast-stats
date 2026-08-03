@@ -5062,6 +5062,12 @@
     padding: 1px 6px;
     border-radius: 3px;
     color: var(--ink-2);
+    /* Inline code here is mostly repo paths — single unbreakable tokens far
+       wider than a 375px column, which paint straight out of the card (an
+       `.methodology-source` path measured 45px past its container at 375px,
+       #1400). `anywhere` is the one value that also lets the token shrink the
+       line box, so the paragraph wraps instead of overflowing. */
+    overflow-wrap: anywhere;
   }
 
   .methodology-section__title {
