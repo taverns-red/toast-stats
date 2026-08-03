@@ -13,17 +13,22 @@ import {
   fetchCdnRankings,
   fetchCdnClubIndex,
   fetchCdnDivisionsAreasIndex,
+  fetchCdnSnapshotIndex,
 } from '../../services/cdn'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
   fetchCdnClubIndex: vi.fn(),
   fetchCdnDivisionsAreasIndex: vi.fn(),
+  // The index is built from the UNION of all rosters (#1403) — a harness that
+  // does not stub this leaves loadSearchIndex calling undefined.
+  fetchCdnSnapshotIndex: vi.fn(),
 }))
 
 const mockedRankings = vi.mocked(fetchCdnRankings)
 const mockedClubIndex = vi.mocked(fetchCdnClubIndex)
 const mockedDivisionsAreas = vi.mocked(fetchCdnDivisionsAreasIndex)
+const mockedSnapshotIndex = vi.mocked(fetchCdnSnapshotIndex)
 
 const wrapper = ({ children }: { children: ReactNode }) => {
   const client = new QueryClient({
@@ -51,6 +56,10 @@ const setupCdn = () => {
   mockedClubIndex.mockResolvedValue({
     clubs: { '12345': { districtId: '61', clubName: 'Toast of the Town' } },
   } as Awaited<ReturnType<typeof fetchCdnClubIndex>>)
+  mockedSnapshotIndex.mockResolvedValue({
+    '57': ['2025-11-22'],
+    '61': ['2025-11-22'],
+  })
   mockedDivisionsAreas.mockResolvedValue({
     generatedAt: '2025-11-22T00:00:00Z',
     snapshotDate: '2025-11-22',

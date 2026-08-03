@@ -16,12 +16,16 @@ import CommandPalette from '../CommandPalette'
 const fetchCdnRankings = vi.fn()
 const fetchCdnClubIndex = vi.fn()
 const fetchCdnDivisionsAreasIndex = vi.fn()
+// #1403 — districts come from the union of the current roster and the
+// historical snapshot index; a harness that omits this stub breaks the loader.
+const fetchCdnSnapshotIndex = vi.fn()
 
 vi.mock('../../../services/cdn', () => ({
   fetchCdnRankings: (...args: unknown[]) => fetchCdnRankings(...args),
   fetchCdnClubIndex: (...args: unknown[]) => fetchCdnClubIndex(...args),
   fetchCdnDivisionsAreasIndex: (...args: unknown[]) =>
     fetchCdnDivisionsAreasIndex(...args),
+  fetchCdnSnapshotIndex: (...args: unknown[]) => fetchCdnSnapshotIndex(...args),
 }))
 
 const rankingRow = (
@@ -35,8 +39,12 @@ const setupCdn = (
     rankings?: Array<ReturnType<typeof rankingRow>>
     clubs?: Record<string, { districtId: string; clubName: string }>
     divisionsAreas?: Record<string, Record<string, string[]>>
+    snapshotIndex?: Record<string, string[]>
   } = {}
 ) => {
+  fetchCdnSnapshotIndex.mockResolvedValue(
+    opts.snapshotIndex ?? { '57': ['2025-11-22'], '61': ['2025-11-22'] }
+  )
   fetchCdnRankings.mockResolvedValue({
     rankings: opts.rankings ?? [
       rankingRow('57', 'District 57', '7'),

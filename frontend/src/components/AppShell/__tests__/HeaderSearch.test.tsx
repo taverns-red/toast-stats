@@ -15,12 +15,16 @@ import { useIsMobile } from '../../../hooks/useIsMobile'
 const fetchCdnRankings = vi.fn()
 const fetchCdnClubIndex = vi.fn()
 const fetchCdnDivisionsAreasIndex = vi.fn()
+// #1403 — districts come from the union of the current roster and the
+// historical snapshot index; a harness that omits this stub breaks the loader.
+const fetchCdnSnapshotIndex = vi.fn()
 
 vi.mock('../../../services/cdn', () => ({
   fetchCdnRankings: (...args: unknown[]) => fetchCdnRankings(...args),
   fetchCdnClubIndex: (...args: unknown[]) => fetchCdnClubIndex(...args),
   fetchCdnDivisionsAreasIndex: (...args: unknown[]) =>
     fetchCdnDivisionsAreasIndex(...args),
+  fetchCdnSnapshotIndex: (...args: unknown[]) => fetchCdnSnapshotIndex(...args),
 }))
 
 vi.mock('../../../hooks/useIsMobile', () => ({
@@ -40,6 +44,10 @@ const setupCdn = () => {
   })
   fetchCdnDivisionsAreasIndex.mockResolvedValue({
     districts: { '61': { C: ['23'] } },
+  })
+  fetchCdnSnapshotIndex.mockResolvedValue({
+    '57': ['2025-11-22'],
+    '61': ['2025-11-22'],
   })
 }
 
