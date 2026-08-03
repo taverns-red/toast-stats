@@ -11,6 +11,7 @@ import type { ScrapedRecord } from '@taverns-red/shared-contracts'
 import {
   DCP_GOAL_DEFINITIONS,
   hasDcpGoalColumns,
+  missingDcpGoalHeaders,
   readDcpGoalColumn,
   isDcpGoalAchieved,
   computeDcpGoalsAchieved,
@@ -202,10 +203,51 @@ describe('DCP_GOAL_DEFINITIONS', () => {
     })
   })
 
+  /**
+   * The sentinel spans ALL ten goals, not goal 1 alone (#1399).
+   *
+   * The old sentinel keyed on goal 1's header. When TI renamed goals 2-3
+   * for PY 2026-27, 'Level 1s' was untouched, so the detector said "we have
+   * goal data", consumers trusted it, and the pipeline published confident
+   * zeros for two goals instead of degrading to the documented fallback.
+   * A rename we do not know about must now fail the check.
+   */
   describe('hasDcpGoalColumns', () => {
-    it('detects records that carry the per-goal columns', () => {
-      expect(hasDcpGoalColumns({ 'Level 1s': '0' })).toBe(true)
-      expect(hasDcpGoalColumns({ 'Level 1s': 3 })).toBe(true)
+    const complete = (overrides: ScrapedRecord = {}): ScrapedRecord => ({
+      'Level 1s': '0',
+      'Level 2s or EOM': '0',
+      'Add. Level 2s or EOM': '0',
+      'Level 3s': '0',
+      'Level 4s, Path Completions, or DTM Awards': '0',
+      'Add. Level 4s, Path Completions, or DTM award': '0',
+      'New Members': '0',
+      'Add. New Members': '0',
+      'Off. Trained Round 1': '0',
+      'Off. Trained Round 2': '0',
+      'Mem. dues on time Oct': '0',
+      'Mem. dues on time Apr': '0',
+      'Off. List On Time': '0',
+      ...overrides,
+    })
+
+    it('detects records that carry every per-goal column', () => {
+      expect(hasDcpGoalColumns(complete())).toBe(true)
+      expect(hasDcpGoalColumns(complete({ 'Level 1s': 3 }))).toBe(true)
+    })
+
+    it('accepts the historical headers too', () => {
+      const historical = complete()
+      delete historical['Level 2s or EOM']
+      delete historical['Add. Level 2s or EOM']
+      historical['Level 2s'] = '0'
+      historical['Add. Level 2s'] = '0'
+      expect(hasDcpGoalColumns(historical)).toBe(true)
+    })
+
+    it('accepts goal 10 with only one of the two dues columns (§10.2)', () => {
+      const octOnly = complete()
+      delete octOnly['Mem. dues on time Apr']
+      expect(hasDcpGoalColumns(octOnly)).toBe(true)
     })
 
     it('rejects records without them (legacy data falls back)', () => {
@@ -213,6 +255,22 @@ describe('DCP_GOAL_DEFINITIONS', () => {
       expect(hasDcpGoalColumns({ 'Level 1s': '' })).toBe(false)
       expect(hasDcpGoalColumns({ 'Level 1s': null })).toBe(false)
       expect(hasDcpGoalColumns({ 'Goals Met': '5' })).toBe(false)
+      expect(hasDcpGoalColumns({ 'Level 1s': '4' })).toBe(false)
+    })
+
+    it('rejects a record whose non-goal-1 headers were renamed (#1399)', () => {
+      const renamed = complete()
+      delete renamed['Level 2s or EOM']
+      renamed['Level 2s or Whatever TI Adds Next'] = '2'
+      expect(hasDcpGoalColumns(renamed)).toBe(false)
+    })
+
+    it('names the goals whose headers it could not resolve', () => {
+      const renamed = complete()
+      delete renamed['Level 2s or EOM']
+      delete renamed['Off. Trained Round 2']
+      expect(missingDcpGoalHeaders(renamed)).toEqual([2, 9])
+      expect(missingDcpGoalHeaders(complete())).toEqual([])
     })
   })
 
