@@ -18,10 +18,26 @@
    sharing `['district-rankings', 'latest']` + `fetchCdnRankings` with
    `useLatestAsOfDate` (#1321), which genuinely wants the latest as-of date.
    A page that passes a date no longer shares that entry, so it pays for a
-   second rankings fetch — the honest price of showing the year it claims to
-   show. (The durable fix for the duplication is #1321's follow-up: carry
-   `sourceCsvDate` on the 152-byte `v1/latest.json` manifest so
-   `useLatestAsOfDate` stops reading rankings.json at all.) */
+   second rankings fetch. That is cheap: the per-date
+   `snapshots/{date}/all-districts-rankings.json` measures ~11KB against
+   `v1/rankings.json`'s ~87KB (both served uncompressed), so the dated page
+   adds ~11KB rather than doubling the ~87KB. The durable fix for the
+   duplication is still #1321's follow-up — carry `sourceCsvDate` on the
+   152-byte `v1/latest.json` manifest so `useLatestAsOfDate` stops reading
+   rankings.json at all.
+
+   Two deliberate non-choices:
+   - No `placeholderData: prev => prev`, unlike the sibling rankings queries on
+     DistrictsPage/RegionPage. Keeping the previous entry across a year switch
+     means rendering the OLD year's numbers under the NEW year's heading until
+     the fetch lands — a transient copy of the bug this hook was fixed for. A
+     brief empty card is the correct answer to "we don't have that year yet".
+   - A fallback miss reports plain `null`, which consumers render as an empty
+     card rather than distinguishing it from "no data". That is the right
+     PIXEL — the wrong year's row is never an acceptable substitute — but it is
+     silent. It is also unreachable today: all 157 per-date rankings files
+     exist, and every per-district snapshot date appears in the global dates
+     index, so a miss means a pipeline gap. */
 
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'

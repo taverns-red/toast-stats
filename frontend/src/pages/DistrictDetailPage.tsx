@@ -514,9 +514,11 @@ const DistrictDetailPageInner: React.FC = () => {
                 {hasValidDates && effectiveProgramYear && (
                   <DistrictOverview
                     districtId={districtId}
-                    {...(effectiveEndDate && {
-                      selectedDate: effectiveEndDate,
-                    })}
+                    /* Unconditional: `hasValidDates` above already means
+                       `effectiveEndDate !== null`, and the old conditional
+                       spread left an undated path open — the one that showed
+                       the wrong year's payments (#1396). */
+                    selectedDate={effectiveEndDate ?? undefined}
                     programYearStartDate={effectiveProgramYear.startDate}
                     performanceTargets={performanceTargets ?? undefined}
                   />

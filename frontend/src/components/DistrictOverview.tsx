@@ -10,7 +10,13 @@ import type { SnapshotDate } from '../types/snapshotDate'
 
 interface DistrictOverviewProps {
   districtId: string
-  selectedDate?: SnapshotDate
+  /**
+   * The snapshot being displayed. Explicitly `| undefined` so the parent can
+   * pass it unconditionally: a `{...(date && { selectedDate })}` spread would
+   * advertise an undated render path, and undated is how the payment card came
+   * to show the wrong program year (#1396).
+   */
+  selectedDate?: SnapshotDate | undefined
   programYearStartDate?: string
   /**
    * Pre-fetched performance targets from the usePerformanceTargets hook.
