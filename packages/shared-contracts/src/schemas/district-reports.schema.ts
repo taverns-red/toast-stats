@@ -79,7 +79,8 @@ export const ClubSuccessPlanRecordSchema = z.object({
  * Education Achievements — de-identified to per-(club, award) RAW activity
  * counts. `achievementCount` is a RAW achievement-row count, NOT DCP credit
  * (#1080): DCP education credit counts DISTINCT MEMBERS per award tier and is
- * sourced from `clubPerformance` "Level 1s"/"Level 2s"/… (see dcpGoals.ts).
+ * sourced from `clubPerformance` "Level 1s"/"Level 2s or EOM"/… (see
+ * dcpGoals.ts).
  * Member-dedup is unrecoverable here — the personal `Member` column is dropped
  * at parse time, before aggregation. Never conflate the two metrics.
  */

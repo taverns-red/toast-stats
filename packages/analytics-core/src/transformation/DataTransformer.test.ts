@@ -8,7 +8,7 @@
  * Requirements: 2.2, 1.1
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { DataTransformer } from './DataTransformer.js'
 import type { RawCSVData, DistrictStatistics } from '../interfaces.js'
 
@@ -1861,6 +1861,73 @@ describe('DataTransformer', () => {
       ])
       expect(achieved?.[9]).toBe(true)
       expect(achieved?.slice(0, 9)).toEqual(Array(9).fill(false))
+    })
+
+    /**
+     * #1399: TI renamed goals 2-3 for PY 2026-27 ('Level 2s or EOM'). The
+     * old detector keyed on goal 1's unchanged header, so the transformer
+     * published dcpGoalsAchieved with two goals stuck at false. An export
+     * whose headers we cannot resolve must omit the field — and say so.
+     */
+    describe('unknown goal headers (#1399)', () => {
+      const transformWith = async (header: string[]) => {
+        const logger = {
+          info: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+          debug: vi.fn(),
+        }
+        const result = await new DataTransformer({ logger }).transformRawCSV(
+          '2026-08-01',
+          '61',
+          {
+            clubPerformance: [
+              header,
+              [
+                '1234',
+                'Header Drift Club',
+                'A',
+                '1',
+                '20',
+                '0',
+                'Active',
+                '20',
+                ...(Array(header.length - 8).fill('4') as string[]),
+              ],
+            ],
+            divisionPerformance: [],
+            districtPerformance: [],
+          }
+        )
+        return { club: result.clubs[0], logger }
+      }
+
+      const PY_2026_27_HEADER = GOAL_HEADER.map(column =>
+        column === 'Level 2s'
+          ? 'Level 2s or EOM'
+          : column === 'Add. Level 2s'
+            ? 'Add. Level 2s or EOM'
+            : column
+      )
+
+      it('publishes goals for the PY 2026-27 header, silently', async () => {
+        const { club, logger } = await transformWith(PY_2026_27_HEADER)
+        expect(club?.dcpGoalsAchieved).toEqual(Array(10).fill(true))
+        expect(logger.warn).not.toHaveBeenCalled()
+      })
+
+      it('omits dcpGoalsAchieved and warns when a header is unrecognised', async () => {
+        const drifted = PY_2026_27_HEADER.map(column =>
+          column === 'Level 2s or EOM' ? 'Level 2s or Whatever TI Adds' : column
+        )
+        const { club, logger } = await transformWith(drifted)
+
+        expect(club?.dcpGoalsAchieved).toBeUndefined()
+        expect(logger.warn).toHaveBeenCalledWith(
+          expect.stringContaining('no recognised header for some DCP goals'),
+          expect.objectContaining({ missingGoals: [2] })
+        )
+      })
     })
   })
 })

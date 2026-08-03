@@ -35,7 +35,7 @@ const LEVELS: ReadonlyArray<{
     key: 'level2',
     label: 'Level 2',
     description:
-      'Learning Your Style — two speech projects + Add. Level 2 awards.',
+      'Learning Your Style — two speech projects, plus Add. Level 2 awards. From PY 2026-27 this count also includes Online Meeting Mastery completions: TI reports both in one combined column ("Level 2s or EOM") with no split, so they cannot be told apart here.',
   },
   {
     key: 'level3',
@@ -86,7 +86,7 @@ export const EducationLevelsCard: React.FC<EducationLevelsCardProps> = ({
           className="flex items-center gap-1 text-sm font-semibold text-gray-800"
         >
           Education Levels
-          <Tooltip content="Total education awards earned this program year, summed across all clubs. Source: clubPerformance.csv columns Level 1s, Level 2s, Level 3s, and the bundled Level 4 / Path Completion / DTM column. TI does not publish per-Pathway breakdowns in the district dashboard.">
+          <Tooltip content="Total education awards earned this program year, summed across all clubs. Source: clubPerformance.csv columns Level 1s, Level 2s or EOM, Level 3s, and the bundled Level 4 / Path Completion / DTM column. From PY 2026-27 the Level 2 column also counts Online Meeting Mastery completions — TI combines them with no split. TI does not publish per-Pathway breakdowns in the district dashboard.">
             <InfoIcon />
           </Tooltip>
         </h3>

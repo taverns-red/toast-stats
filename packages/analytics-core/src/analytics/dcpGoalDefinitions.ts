@@ -52,26 +52,35 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
   },
   {
     goal: 2,
-    name: 'Level 2 awards',
+    name: 'Level 2 or Online Meeting Mastery awards',
     category: 'Education',
     requirements: [
       {
         anyOf: [
-          { aliases: ['Level 2s'], label: 'Level 2 awards', required: 2 },
+          {
+            // PY 2026-27 renamed this column when TI made Online Meeting
+            // Mastery ("EOM") completions an alternative route to the goal
+            // (#1399). Historical snapshots carry 'Level 2s'; first match
+            // wins, so a record carrying both is read once, not summed.
+            aliases: ['Level 2s or EOM', 'Level 2s'],
+            label: 'Level 2 or Online Meeting Mastery awards',
+            required: 2,
+          },
         ],
       },
     ],
   },
   {
     goal: 3,
-    name: 'More Level 2 awards',
+    name: 'More Level 2 or Online Meeting Mastery awards',
     category: 'Education',
     requirements: [
       {
         anyOf: [
           {
-            aliases: ['Add. Level 2s', 'Add Level 2s'],
-            label: 'More Level 2 awards',
+            // See goal 2 — same PY 2026-27 rename (#1399).
+            aliases: ['Add. Level 2s or EOM', 'Add. Level 2s', 'Add Level 2s'],
+            label: 'More Level 2 or Online Meeting Mastery awards',
             required: 2,
           },
         ],
@@ -215,20 +224,57 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
   },
 ]
 
-/**
- * Whether a raw club-performance record carries the per-goal CSV columns.
- * Keyed on goal 1's header (aliases included). Consumers without goal
- * columns fall back: DataTransformer omits dcpGoalsAchieved, the analytics
- * module uses its sequential approximation.
- */
-export function hasDcpGoalColumns(record: ScrapedRecord): boolean {
-  const goalOneColumns = DCP_GOAL_DEFINITIONS[0]!.requirements[0]!.anyOf
-  return goalOneColumns.some(column =>
+const requirementIsPresent = (
+  record: ScrapedRecord,
+  requirement: { anyOf: readonly DcpGoalColumn[] }
+): boolean =>
+  requirement.anyOf.some(column =>
     column.aliases.some(key => {
       const value = record[key]
       return value !== null && value !== undefined && value !== ''
     })
   )
+
+/**
+ * Goal numbers for which the record carries no recognised header — i.e. at
+ * least one of the goal's requirements resolved none of its aliases.
+ *
+ * Empty for a well-formed club-performance record. A non-empty result means
+ * either legacy data without the per-goal columns, or a dashboard header we
+ * do not know about yet (#1399); callers with a logger should say so.
+ */
+export function missingDcpGoalHeaders(record: ScrapedRecord): number[] {
+  return DCP_GOAL_DEFINITIONS.filter(
+    definition =>
+      !definition.requirements.every(requirement =>
+        requirementIsPresent(record, requirement)
+      )
+  ).map(definition => definition.goal)
+}
+
+/**
+ * Whether a raw club-performance record carries the per-goal CSV columns.
+ * Consumers without goal columns fall back: DataTransformer omits
+ * dcpGoalsAchieved, the analytics module uses its sequential approximation.
+ *
+ * DELIBERATE (#1399): this spans ALL ten goals, not goal 1 as a sentinel.
+ * The single-column sentinel is what made the PY 2026-27 rename silent —
+ * TI renamed goals 2-3 to '… or EOM' and left 'Level 1s' alone, so the
+ * detector kept answering "yes, good goal data" while two goals read 0 for
+ * every club in every district. A sentinel keyed on the one column that did
+ * not change cannot detect the change. Requiring every goal to resolve a
+ * known header means the next rename we have not seen degrades to the
+ * documented fallback (visibly, and logged by DataTransformer) instead of
+ * publishing confident zeros.
+ *
+ * Granularity is per requirement, not per column, because columns inside a
+ * requirement are alternatives: goal 10 passes on Oct dues alone (§10.2).
+ * Real exports carry every goal column for every club (pinned against the
+ * captured D61 2026-06-09 and 2026-08-01 pairs), so this is not stricter
+ * than production data.
+ */
+export function hasDcpGoalColumns(record: ScrapedRecord): boolean {
+  return missingDcpGoalHeaders(record).length === 0
 }
 
 /**

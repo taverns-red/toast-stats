@@ -92,6 +92,60 @@ describe('extractEducationLevels (#426)', () => {
     expect(result.level2).toBe(3)
   })
 
+  // #1399: PY 2026-27 renamed the level-2 columns when TI made Online
+  // Meeting Mastery ("EOM") completions an alternative route to DCP goals
+  // 2 and 3. The rollup read the old exact names only, so every PY 2026-27
+  // snapshot reported level2 = 0.
+  describe('PY 2026-27 "or EOM" column rename (#1399)', () => {
+    it('counts the renamed level-2 columns', () => {
+      const snapshot = {
+        data: {
+          clubPerformance: [
+            {
+              'Club Name': 'A',
+              'Level 1s': 1,
+              'Level 2s or EOM': 2,
+              'Add. Level 2s or EOM': 1,
+            },
+          ],
+        },
+      }
+      const result = extractEducationLevels(snapshot)
+      expect(result.level2).toBe(3)
+      expect(result.total).toBe(4)
+      expect(result.contributingClubs).toBe(1)
+    })
+
+    it('does not double-count a club carrying both the new and old names (#486 M1)', () => {
+      const snapshot = {
+        data: {
+          clubPerformance: [
+            {
+              'Club Name': 'A',
+              'Level 2s or EOM': 2,
+              'Level 2s': 2, // historical name for the same value
+              'Add. Level 2s or EOM': 1,
+              'Add. Level 2s': 1, // historical name
+            },
+          ],
+        },
+      }
+      // primary=2 (not 2+2), additional=1 (not 1+1)
+      expect(extractEducationLevels(snapshot).level2).toBe(3)
+    })
+
+    it('still counts historical snapshots that carry the old names', () => {
+      const snapshot = {
+        data: {
+          clubPerformance: [
+            { 'Club Name': 'A', 'Level 2s': 2, 'Add. Level 2s': 1 },
+          ],
+        },
+      }
+      expect(extractEducationLevels(snapshot).level2).toBe(3)
+    })
+  })
+
   it('includes Add. Level columns and the bundled Level 4 column', () => {
     const snapshot = {
       data: {

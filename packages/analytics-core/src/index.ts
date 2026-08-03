@@ -24,6 +24,7 @@ export { diffSnapshots } from './analytics/diffSnapshots.js'
 export {
   DCP_GOAL_DEFINITIONS,
   hasDcpGoalColumns,
+  missingDcpGoalHeaders,
   readDcpGoalColumn,
   isDcpGoalAchieved,
   computeDcpGoalsAchieved,
