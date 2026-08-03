@@ -174,7 +174,9 @@ describe('DCP_GOAL_DEFINITIONS', () => {
      */
     describe('goals 2-3: "or EOM" rename (#1399)', () => {
       it('reads the PY 2026-27 headers', () => {
-        expect(isDcpGoalAchieved({ 'Level 2s or EOM': '2' }, goal(2))).toBe(true)
+        expect(isDcpGoalAchieved({ 'Level 2s or EOM': '2' }, goal(2))).toBe(
+          true
+        )
         expect(isDcpGoalAchieved({ 'Level 2s or EOM': '1' }, goal(2))).toBe(
           false
         )
