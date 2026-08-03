@@ -3,6 +3,7 @@
 
 ## lessons (manifest-pinned + session-judged)
 - `a-deliberately-shared-query-key-is-a-coupling-with-no-compiler.md` — Two hooks sharing a React Query key to avoid a duplicate fetch are coupled with nothing but a comment — narrowing one hook's key silently re-scopes or breaks the other, so decide explicitly and pay the fetch  (2026-08-03)
+- `a-docs-page-that-restates-the-code-needs-a-census-not-a-generator.md` — A docs page that restates behaviour spread across many mechanisms cannot be generated from any one of them — couple it with a census that fails when unclaimed code appears, and prove the census fires against a synthetic case the repo can never produce  (2026-08-03)
 - `a-query-scoped-by-an-async-value-runs-unscoped-first.md` — A query keyed on a value that itself arrives asynchronously runs UNSCOPED on first render, so any gate reading its result must wait for the scoping value — not just for the result  (2026-08-03)
 - `a-sentinel-keyed-on-one-field-cannot-detect-a-rename-of-any-other.md` — A "do we have good data?" sentinel keyed on one field can only detect that field changing — key it on every field the consumer will actually read, or it certifies the exact drift it was meant to catch  (2026-08-03)
 - `fetching-a-derived-value-alongside-its-consumers-removes-the-unscoped-window.md` — The unscoped-first window is a property of SPLITTING a fetch across two query boundaries, not of the data — when a derived value and its consumers can resolve in one promise, the race stops existing instead of needing a guard  (2026-08-03)
