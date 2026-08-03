@@ -5333,6 +5333,114 @@
     color: var(--ink-2);
   }
 
+  /* Program-year rule-change log (#1400) — §10 of /methodology.
+
+     Static content inside an already-static section: no async data, no
+     conditional slot, so it reserves its own height at first paint and adds
+     nothing to CLS. Deliberately no fixed heights or truncation — an entry is
+     two to four sentences and must wrap freely at 375px. */
+  .rule-change-year {
+    margin: 0 0 24px;
+  }
+
+  .rule-change-year__title {
+    margin: 0 0 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    /* Sticky-header clearance, matching .methodology-section — the year
+       heading must not hide under the top bar when the reader scrolls back up
+       from a deep-linked entry. */
+    scroll-margin-top: 80px;
+  }
+
+  .methodology-section ul.rule-change-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .methodology-section .rule-change {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--rt-stats, var(--link));
+    border-radius: var(--rds-radius-md);
+    /* Clears the 56px top bar (plus the mobile Jump-to chip, via the <768px
+       override below) so a shared entry link lands with its heading visible. */
+    scroll-margin-top: 80px;
+  }
+
+  .rule-change__title {
+    margin: 0 0 8px;
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--ink);
+  }
+
+  /* The whole title is the permalink — a bigger, more obvious target than a
+     hover-only "#" affordance, and it reads correctly to a screen reader with
+     no extra visually-hidden text. */
+  .rule-change__permalink {
+    color: inherit;
+    text-decoration: none;
+    /* `a[href]` is floored at 44px min-height by base.css and blockifies as a
+       flex/grid item; inline-flex makes it centre its own text so the title
+       cannot paint at the top of an inflated box (the touch-target floor
+       inflates the box but not the text). */
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .rule-change__permalink:hover,
+  .rule-change__permalink:focus-visible {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .methodology-section .rule-change p {
+    margin: 0 0 8px;
+  }
+
+  .methodology-section .rule-change p:last-child {
+    margin-bottom: 0;
+  }
+
+  .rule-change__affects {
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+
+  .rule-change__impact {
+    color: var(--ink);
+  }
+
+  /* The label sits above its sentence rather than inline: at 375px an inline
+     eyebrow steals the first line and leaves a one-word orphan. */
+  .rule-change__label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  @media (max-width: 767px) {
+    .methodology-section .rule-change,
+    .rule-change-year__title {
+      scroll-margin-top: 124px;
+    }
+  }
+
   /* MCP Server page (#1165) — block install snippets. Inline `code` inherits
      the .methodology-section treatment; the block form needs its own box and
      horizontal scroll so a one-liner never wraps mid-command on mobile. */
