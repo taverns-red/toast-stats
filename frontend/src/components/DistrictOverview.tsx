@@ -10,7 +10,13 @@ import type { SnapshotDate } from '../types/snapshotDate'
 
 interface DistrictOverviewProps {
   districtId: string
-  selectedDate?: SnapshotDate
+  /**
+   * The snapshot being displayed. Explicitly `| undefined` so the parent can
+   * pass it unconditionally: a `{...(date && { selectedDate })}` spread would
+   * advertise an undated render path, and undated is how the payment card came
+   * to show the wrong program year (#1396).
+   */
+  selectedDate?: SnapshotDate | undefined
   programYearStartDate?: string
   /**
    * Pre-fetched performance targets from the usePerformanceTargets hook.
@@ -32,8 +38,14 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
     error,
   } = useDistrictAnalytics(districtId, programYearStartDate, selectedDate)
 
-  // District-level fields not carried in per-club analytics (payment breakdowns).
-  const { ranking: districtRanking } = useDistrictRanking(districtId)
+  // District-level fields not carried in per-club analytics (payment
+  // breakdowns). Scoped to the SAME snapshot the analytics above use — an
+  // unscoped read here showed the current year's Payment Composition under a
+  // past program year (#1396 / R3).
+  const { ranking: districtRanking } = useDistrictRanking(
+    districtId,
+    selectedDate
+  )
 
   const clubCount = analytics?.allClubs.length ?? 0
   const avgMembersPerClub =

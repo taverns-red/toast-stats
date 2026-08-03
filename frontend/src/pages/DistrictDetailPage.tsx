@@ -259,8 +259,14 @@ const DistrictDetailPageInner: React.FC = () => {
 
   // Rankings row supplies the raw integer counts used to derive the
   // trophy-case tile integers when the canonical `*Remaining` fields
-  // are absent or the target tier is above Distinguished (#840).
-  const { ranking: districtRanking } = useDistrictRanking(districtId)
+  // are absent or the target tier is above Distinguished (#840). Scoped to
+  // `effectiveEndDate` like `useCompetitiveAwards` above — counting a past
+  // year's `nextTierGap` down against the CURRENT year's paidClubs/payments
+  // is the second half of #1396.
+  const { ranking: districtRanking } = useDistrictRanking(
+    districtId,
+    effectiveEndDate ?? undefined
+  )
   const distinguishedRankingInputs = React.useMemo(() => {
     if (!districtRanking) return null
     return {
@@ -508,9 +514,11 @@ const DistrictDetailPageInner: React.FC = () => {
                 {hasValidDates && effectiveProgramYear && (
                   <DistrictOverview
                     districtId={districtId}
-                    {...(effectiveEndDate && {
-                      selectedDate: effectiveEndDate,
-                    })}
+                    /* Unconditional: `hasValidDates` above already means
+                       `effectiveEndDate !== null`, and the old conditional
+                       spread left an undated path open — the one that showed
+                       the wrong year's payments (#1396). */
+                    selectedDate={effectiveEndDate ?? undefined}
                     programYearStartDate={effectiveProgramYear.startDate}
                     performanceTargets={performanceTargets ?? undefined}
                   />
