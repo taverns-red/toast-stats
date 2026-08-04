@@ -265,11 +265,16 @@ const ClubDetailPage: React.FC = () => {
     )
   }, [districtStats, clubId])
 
+  // The program year the page is showing — the authority for which
+  // recognition rungs existed (#1406). Resolved before the projection memo
+  // because that memo now depends on it.
+  const programYear = effectiveProgramYear ?? selectedProgramYear
+
   // Compute DCP projection
   const projection: ClubDCPProjection | null = useMemo(() => {
     if (!club) return null
-    return calculateClubProjection(club)
-  }, [club])
+    return calculateClubProjection(club, programYear.label)
+  }, [club, programYear])
 
   // Close-to-Distinguished banner gate (#620, #903). Uses the ONE shared
   // canonical predicate (closeToDistinguished.ts) — NotDistinguished, members
@@ -298,9 +303,7 @@ const ClubDetailPage: React.FC = () => {
       : 'On track for Distinguished — finish strong!'
   }, [projection])
 
-  // Filter trends by program year
-  const programYear = effectiveProgramYear ?? selectedProgramYear
-
+  // Filter trends by program year (resolved above, with the projection).
   const filteredMembershipTrend = useMemo(() => {
     if (!club) return []
     return club.membershipTrend.filter(
@@ -584,7 +587,7 @@ const ClubDetailPage: React.FC = () => {
                     }
                     title={
                       isProvisionallyDistinguished(club)
-                        ? getProvisionalTooltip(club)
+                        ? getProvisionalTooltip(club, programYear.label)
                         : undefined
                     }
                   >
@@ -593,7 +596,10 @@ const ClubDetailPage: React.FC = () => {
                       : club.distinguishedLevel}
                     {isProvisionallyDistinguished(club) &&
                       (() => {
-                        const confirmed = getConfirmedLevel(club)
+                        const confirmed = getConfirmedLevel(
+                          club,
+                          programYear.label
+                        )
                         return confirmed === 'NotDistinguished'
                           ? ' (provisional)'
                           : ' (provisional)'
@@ -886,7 +892,7 @@ const ClubDetailPage: React.FC = () => {
                 projection={projection}
                 healthStatus={club.currentStatus}
                 isProvisional={isProvisionallyDistinguished(club)}
-                confirmedLevel={getConfirmedLevel(club)}
+                confirmedLevel={getConfirmedLevel(club, programYear.label)}
               />
             )}
           </div>

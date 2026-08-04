@@ -66,8 +66,10 @@ export {
   GROWTH_PERCENTAGES,
   DISTINGUISHED_PERCENTAGES,
   // Club eligibility utilities
+  determineDistinguishedLevel,
   getConfirmedDistinguishedLevel,
   getCSPStatus,
+  isClubSmedleyAvailable,
   isDistinguishedProvisional,
 } from './analytics/index.js'
 

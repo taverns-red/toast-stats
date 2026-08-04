@@ -956,8 +956,12 @@ export class TransformService {
             const renewals = this.parseNumber(club['Mem. dues on time Apr'])
             const base = this.parseNumber(club['Mem. Base'])
             if (
-              getConfirmedDistinguishedLevel(goals, renewals, base) !==
-              'NotDistinguished'
+              getConfirmedDistinguishedLevel(
+                goals,
+                renewals,
+                base,
+                calculateProgramYear(date)
+              ) !== 'NotDistinguished'
             )
               confirmed++
           }

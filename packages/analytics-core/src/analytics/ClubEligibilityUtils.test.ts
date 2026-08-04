@@ -14,6 +14,7 @@ import {
   determineDistinguishedLevel,
   getCSPStatus,
   getConfirmedDistinguishedLevel,
+  isClubSmedleyAvailable,
   isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
 import type { ClubStatistics } from '../interfaces.js'
@@ -172,6 +173,90 @@ describe('determineDistinguishedLevel', () => {
   it('should return President over Select when both qualify', () => {
     // 9 goals, 20 members qualifies for President, Select, Distinguished
     expect(determineDistinguishedLevel(9, 20, 10)).toBe('President')
+  })
+})
+
+// ============================================================
+// Per-program-year club ruleset (#1406)
+//
+// The club Smedley rung was introduced for PY 2025-2026. Before that
+// year the ladder topped out at President's Distinguished, so a club
+// with 10 goals and 25+ members earned President's — not a tier that
+// did not exist. Sibling of the district-side rulesetForProgramYear
+// (#1116 item 5).
+// ============================================================
+
+describe('determineDistinguishedLevel — per program year (#1406)', () => {
+  const smedleyQualifying = { goals: 10, members: 25, netGrowth: 10 }
+
+  it.each([['2019-2020'], ['2022-2023'], ['2024-2025']])(
+    'awards President (not Smedley) in %s — the rung did not exist yet',
+    programYear => {
+      expect(
+        determineDistinguishedLevel(
+          smedleyQualifying.goals,
+          smedleyQualifying.members,
+          smedleyQualifying.netGrowth,
+          programYear
+        )
+      ).toBe('President')
+    }
+  )
+
+  it.each([['2025-2026'], ['2026-2027'], ['2030-2031']])(
+    'awards Smedley in %s — the rung exists from 2025-26 onward',
+    programYear => {
+      expect(
+        determineDistinguishedLevel(
+          smedleyQualifying.goals,
+          smedleyQualifying.members,
+          smedleyQualifying.netGrowth,
+          programYear
+        )
+      ).toBe('Smedley')
+    }
+  )
+
+  it('leaves the lower rungs unchanged before 2025-26', () => {
+    expect(determineDistinguishedLevel(9, 20, 0, '2024-2025')).toBe('President')
+    expect(determineDistinguishedLevel(7, 15, 5, '2024-2025')).toBe('Select')
+    expect(determineDistinguishedLevel(5, 15, 3, '2024-2025')).toBe(
+      'Distinguished'
+    )
+    expect(determineDistinguishedLevel(4, 25, 10, '2024-2025')).toBe(
+      'NotDistinguished'
+    )
+  })
+
+  it('falls back to current rules when the program year is omitted', () => {
+    expect(determineDistinguishedLevel(10, 25, 0)).toBe('Smedley')
+  })
+
+  it('falls back to current rules for an unparseable program year', () => {
+    expect(determineDistinguishedLevel(10, 25, 0, 'not-a-year')).toBe('Smedley')
+  })
+
+  it('reports Smedley availability per program year', () => {
+    expect(isClubSmedleyAvailable('2024-2025')).toBe(false)
+    expect(isClubSmedleyAvailable('2025-2026')).toBe(true)
+    expect(isClubSmedleyAvailable('2026-2027')).toBe(true)
+    // Omitted / unparseable → current rules, matching the district side.
+    expect(isClubSmedleyAvailable()).toBe(true)
+    expect(isClubSmedleyAvailable('not-a-year')).toBe(true)
+  })
+})
+
+describe('getConfirmedDistinguishedLevel — per program year (#1406)', () => {
+  it('confirms President, not Smedley, before 2025-26', () => {
+    expect(getConfirmedDistinguishedLevel(10, 25, 20, '2024-2025')).toBe(
+      'President'
+    )
+  })
+
+  it('confirms Smedley from 2025-26 onward', () => {
+    expect(getConfirmedDistinguishedLevel(10, 25, 20, '2025-2026')).toBe(
+      'Smedley'
+    )
   })
 })
 

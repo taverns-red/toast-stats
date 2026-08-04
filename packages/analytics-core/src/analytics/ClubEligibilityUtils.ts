@@ -190,18 +190,95 @@ export function calculateNetGrowth(club: ClubStatistics): number {
   return currentMembers - membershipBase
 }
 
+// ========== Per-program-year club recognition ruleset (#1406) ==========
+
+/**
+ * One rung of the Distinguished Club Program ladder.
+ *
+ * `netGrowthAlternative` is the net-membership-growth figure that
+ * substitutes for the absolute member minimum on the two lower rungs.
+ * The top two rungs have no alternative — membership is absolute there.
+ */
+interface ClubTierThreshold {
+  level: Exclude<DistinguishedLevel, 'NotDistinguished'>
+  dcpGoals: number
+  members: number
+  netGrowthAlternative?: number
+}
+
+/**
+ * The DCP ladder from PY 2025-2026 onward (current): five rungs, with
+ * Smedley Distinguished at the top (§3.2).
+ */
+const CLUB_TIERS_2025: readonly ClubTierThreshold[] = [
+  { level: 'Smedley', dcpGoals: 10, members: 25 },
+  { level: 'President', dcpGoals: 9, members: 20 },
+  { level: 'Select', dcpGoals: 7, members: 20, netGrowthAlternative: 5 },
+  { level: 'Distinguished', dcpGoals: 5, members: 20, netGrowthAlternative: 3 },
+]
+
+/**
+ * Before PY 2025-2026: four rungs. President's Distinguished was the top
+ * of the club ladder — a club with all 10 goals and 25 members earned
+ * President's, because Smedley did not exist at club level yet.
+ *
+ * Derived from the current ladder rather than restated, so the shared
+ * rungs (which TI has not moved) cannot drift between the two eras.
+ */
+const CLUB_TIERS_PRE_2025: readonly ClubTierThreshold[] =
+  CLUB_TIERS_2025.filter(tier => tier.level !== 'Smedley')
+
+/**
+ * Resolve the club recognition ladder for a program year ("YYYY-YYYY").
+ *
+ * Sibling of the district side's `rulesetForProgramYear` (#1116 item 5)
+ * in `DistinguishedDistrictCalculator`: unknown or missing input falls
+ * back to the current rules, which is the behaviour every caller had
+ * before this function existed.
+ *
+ * Only one club-level boundary is encoded, because only one is
+ * researched: Smedley Distinguished was added as a club tier for
+ * 2025-2026 (#329). The four rungs below it are unchanged across every
+ * program year Toast Stats holds.
+ */
+function clubTiersForProgramYear(
+  programYear?: string
+): readonly ClubTierThreshold[] {
+  if (!programYear) return CLUB_TIERS_2025
+  const startYear = Number.parseInt(programYear.slice(0, 4), 10)
+  if (Number.isNaN(startYear)) return CLUB_TIERS_2025
+  return startYear >= 2025 ? CLUB_TIERS_2025 : CLUB_TIERS_PRE_2025
+}
+
+/**
+ * Whether the club Smedley Distinguished rung existed in a program year.
+ *
+ * Exported so surfaces that present the ladder itself — a tier legend, a
+ * "gap to the next tier" projection — can hide a rung that was not
+ * reachable, rather than each re-deriving the boundary year.
+ *
+ * @param programYear - "YYYY-YYYY"; omitted → current rules
+ */
+export function isClubSmedleyAvailable(programYear?: string): boolean {
+  return clubTiersForProgramYear(programYear).some(t => t.level === 'Smedley')
+}
+
 /**
  * Determine the distinguished level for a club based on DCP goals,
  * membership, and net growth.
  *
- * Per Toastmasters Distinguished Club Program (§3.2):
+ * Per Toastmasters Distinguished Club Program (§3.2), from 2025-2026:
  * - Smedley Distinguished:     10 goals + 25 members
  * - President's Distinguished:  9 goals + 20 members
  * - Select Distinguished:       7 goals + (20 members OR net growth >= 5)
  * - Distinguished:              5 goals + (20 members OR net growth >= 3)
  *
- * Returns the HIGHEST applicable level. Levels are evaluated top-down
- * so Smedley (most restrictive) is checked first.
+ * Before 2025-2026 the Smedley rung did not exist and President's was the
+ * top of the ladder (#1406) — pass `programYear` so a historical club is
+ * classified under the rules that applied to it.
+ *
+ * Returns the HIGHEST applicable level. Rungs are evaluated top-down
+ * so the most restrictive is checked first.
  *
  * Returns values matching the DistinguishedLevel type:
  * 'Smedley' | 'President' | 'Select' | 'Distinguished' | 'NotDistinguished'
@@ -212,28 +289,23 @@ export function calculateNetGrowth(club: ClubStatistics): number {
  * @param dcpGoals - Number of DCP goals achieved
  * @param membership - Current membership count
  * @param netGrowth - Net membership growth (current - base)
+ * @param programYear - Program year the data belongs to ("YYYY-YYYY").
+ *   Omitted → current rules, matching pre-#1406 behaviour.
  * @returns Distinguished level classification
  */
 export function determineDistinguishedLevel(
   dcpGoals: number,
   membership: number,
-  netGrowth: number
+  netGrowth: number,
+  programYear?: string
 ): DistinguishedLevel {
-  // Smedley Distinguished: 10 goals + 25 members
-  if (dcpGoals >= 10 && membership >= 25) {
-    return 'Smedley'
-  }
-  // President's Distinguished: 9 goals + 20 members
-  if (dcpGoals >= 9 && membership >= 20) {
-    return 'President'
-  }
-  // Select Distinguished: 7 goals + (20 members OR net growth of 5+)
-  if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) {
-    return 'Select'
-  }
-  // Distinguished: 5 goals + (20 members OR net growth of 3+)
-  if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) {
-    return 'Distinguished'
+  for (const tier of clubTiersForProgramYear(programYear)) {
+    if (dcpGoals < tier.dcpGoals) continue
+    const membershipMet =
+      membership >= tier.members ||
+      (tier.netGrowthAlternative !== undefined &&
+        netGrowth >= tier.netGrowthAlternative)
+    if (membershipMet) return tier.level
   }
 
   return 'NotDistinguished'
@@ -328,17 +400,22 @@ export function isDistinguishedProvisional(
  * @param dcpGoals - Number of DCP goals achieved
  * @param aprilRenewals - Number of members who paid April dues
  * @param membershipBase - Membership base from start of program year
+ * @param programYear - Program year the data belongs to ("YYYY-YYYY"),
+ *   so a pre-2025-26 club is not confirmed at a rung that did not exist
+ *   (#1406). Omitted → current rules.
  * @returns The highest Distinguished level achievable with confirmed renewals
  */
 export function getConfirmedDistinguishedLevel(
   dcpGoals: number,
   aprilRenewals: number,
-  membershipBase: number
+  membershipBase: number,
+  programYear?: string
 ): DistinguishedLevel {
   const confirmedNetGrowth = aprilRenewals - membershipBase
   return determineDistinguishedLevel(
     dcpGoals,
     aprilRenewals,
-    confirmedNetGrowth
+    confirmedNetGrowth,
+    programYear
   )
 }

@@ -130,3 +130,29 @@ describe('getConfirmedLevel CSP gate (#1139)', () => {
     expect(getConfirmedLevel(club)).toBe('Distinguished')
   })
 })
+
+// #1406 — the club Smedley rung was introduced for PY 2025-26. The confirmed
+// level must be resolved under the rules of the year being shown, so a
+// historical club is never confirmed at a tier that did not exist.
+describe('getConfirmedLevel per program year (#1406)', () => {
+  const smedleyOnRenewals = {
+    dcpGoalsTrend: [{ date: '2024-02-15', goalsAchieved: 10 }],
+    aprilRenewals: 25,
+    membershipBase: 20,
+  }
+
+  it('confirms President, not Smedley, before 2025-26', () => {
+    const club = makeClub(smedleyOnRenewals)
+    expect(getConfirmedLevel(club, '2023-2024')).toBe('President')
+  })
+
+  it('confirms Smedley from 2025-26 onward', () => {
+    const club = makeClub(smedleyOnRenewals)
+    expect(getConfirmedLevel(club, '2025-2026')).toBe('Smedley')
+    expect(getConfirmedLevel(club, '2026-2027')).toBe('Smedley')
+  })
+
+  it('keeps the current ladder when no program year is passed', () => {
+    expect(getConfirmedLevel(makeClub(smedleyOnRenewals))).toBe('Smedley')
+  })
+})

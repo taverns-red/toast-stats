@@ -52,8 +52,11 @@ export function getDistinguishedOrder(club: ClubTrend): number {
 /**
  * Get members needed to become distinguished (0 if none or already distinguished)
  */
-export function getMembersNeeded(club: ClubTrend): number {
-  const projection = calculateClubProjection(club)
+export function getMembersNeeded(
+  club: ClubTrend,
+  programYear?: string
+): number {
+  const projection = calculateClubProjection(club, programYear)
   const goalContext = deriveGoalContext(club)
   const result = computeMembersToDistinguished(projection, goalContext)
   return result?.membersNeeded ?? 0
@@ -64,14 +67,15 @@ export function getMembersNeeded(club: ClubTrend): number {
  */
 export function processClubs(
   clubs: ClubTrend[],
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  programYear?: string
 ): ProcessedClubTrend[] {
   return clubs.map(club => ({
     ...club,
     latestMembership: getLatestMembership(club),
     latestDcpGoals: getLatestDcpGoals(club),
     distinguishedOrder: getDistinguishedOrder(club),
-    membersNeeded: getMembersNeeded(club),
+    membersNeeded: getMembersNeeded(club, programYear),
     // #448 — Years Chartered column. null when charterDate is absent
     // or invalid, which the table renders as em-dash and sorts to end.
     yearsChartered: club.charterDate

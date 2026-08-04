@@ -619,4 +619,76 @@ describe('BordaCountRankingCalculator', () => {
       expect(result[0]!.ranking!.distinguishedPercent).toBe(0)
     })
   })
+
+  describe('DRP prerequisites are tri-state, not defaulted to No (#1406)', () => {
+    /* An ABSENT prerequisite column is unknowable, not an explicit "N".
+       Only the tri-state form can produce the `Unknown` tier
+       (DistinguishedDistrictCalculator, #1116 item 5 / rules-reference
+       §12.5); coercing absent → false makes every pre-2025-26 district
+       trip `anyRequiredNo` and render NotDistinguished. TransformService
+       already parses these tri-state — this pins the two in agreement. */
+    function mkDistrict(
+      districtPerformance: Record<string, string>
+    ): RankingDistrictStatistics {
+      return {
+        districtId: '61',
+        asOfDate: '2024-05-14',
+        membership: { total: 1000, change: 0, changePercent: 0, byClub: [] },
+        clubs: {
+          total: 70,
+          active: 70,
+          suspended: 0,
+          ineligible: 0,
+          low: 0,
+          distinguished: 35,
+        },
+        education: { totalAwards: 0, byType: [], topClubs: [] },
+        districtPerformance: [
+          {
+            DISTRICT: '61',
+            REGION: '14',
+            'Paid Clubs': '70',
+            'Paid Club Base': '69',
+            'Total YTD Payments': '2818',
+            'Payment Base': '2500',
+            'Active Clubs': '70',
+            'Total Distinguished Clubs': '35',
+            ...districtPerformance,
+          },
+        ],
+      }
+    }
+
+    it('reports an absent prerequisite column as undefined, not false', async () => {
+      // A pre-2025-26 export: DSP and Training exist, the three columns
+      // added for 2025-26 do not.
+      const district = mkDistrict({ DSP: 'Y', Training: 'Y' })
+      const ranking = (await calculator.calculateRankings([district]))[0]!
+        .ranking!
+
+      expect(ranking.dspSubmitted).toBe(true)
+      expect(ranking.trainingMet).toBe(true)
+      expect(ranking.marketAnalysisSubmitted).toBeUndefined()
+      expect(ranking.communicationPlanSubmitted).toBeUndefined()
+      expect(ranking.regionAdvisorVisitMet).toBeUndefined()
+    })
+
+    it('still reports a present-but-negative column as false', async () => {
+      const district = mkDistrict({
+        DSP: 'Y',
+        Training: 'N',
+        'Market Analysis': '',
+        'Communication Plan': 'n',
+        'Region Advisor Visit': 'Y',
+      })
+      const ranking = (await calculator.calculateRankings([district]))[0]!
+        .ranking!
+
+      expect(ranking.dspSubmitted).toBe(true)
+      expect(ranking.trainingMet).toBe(false)
+      expect(ranking.marketAnalysisSubmitted).toBe(false)
+      expect(ranking.communicationPlanSubmitted).toBe(false)
+      expect(ranking.regionAdvisorVisitMet).toBe(true)
+    })
+  })
 })

@@ -19,6 +19,7 @@
 
 import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type { AreaRecognition } from '../types.js'
+import { programYearForDate } from './AnalyticsUtils.js'
 import {
   calculateNetGrowth,
   determineDistinguishedLevel,
@@ -68,30 +69,39 @@ export class AreaDivisionRecognitionModule {
       areaMap.get(areaId)!.clubs.push(club)
     }
 
+    // The club recognition ladder is per program year (#1406) — resolve it
+    // once from the snapshot's own date and thread it down.
+    const programYear = programYearForDate(snapshot.snapshotDate)
+
     // Calculate counts for each area
     return Array.from(areaMap.values()).map(area =>
       this.calculateSingleAreaRecognition(
         area.areaId,
         area.areaName,
         area.divisionId,
-        area.clubs
+        area.clubs,
+        programYear
       )
     )
   }
 
   /**
    * Calculate club counts for a single area.
+   *
+   * @param programYear - Program year the snapshot belongs to (#1406)
    */
   private calculateSingleAreaRecognition(
     areaId: string,
     areaName: string,
     divisionId: string,
-    clubs: ClubStatistics[]
+    clubs: ClubStatistics[],
+    programYear: string
   ): AreaRecognition {
     const totalClubs = clubs.length
     const paidClubs = clubs.filter(club => this.isClubPaid(club)).length
     const distinguishedClubs = clubs.filter(
-      club => this.isClubPaid(club) && this.isClubDistinguished(club)
+      club =>
+        this.isClubPaid(club) && this.isClubDistinguished(club, programYear)
     ).length
 
     return {
@@ -122,14 +132,22 @@ export class AreaDivisionRecognitionModule {
     return false
   }
 
-  private isClubDistinguished(club: ClubStatistics): boolean {
+  /**
+   * @param programYear - Program year the snapshot belongs to, so the
+   *   ladder matches the rules of that year (#1406).
+   */
+  private isClubDistinguished(
+    club: ClubStatistics,
+    programYear: string
+  ): boolean {
     // CSP required for Distinguished (2025-2026+) (#311)
     if (!getCSPStatus(club)) return false
     const netGrowth = calculateNetGrowth(club)
     const level = determineDistinguishedLevel(
       club.dcpGoals,
       club.membershipCount,
-      netGrowth
+      netGrowth,
+      programYear
     )
     return level !== 'NotDistinguished'
   }

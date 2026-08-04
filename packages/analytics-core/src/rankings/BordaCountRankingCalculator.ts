@@ -18,6 +18,7 @@ import type {
 } from '@taverns-red/shared-contracts'
 
 import { getConfirmedDistinguishedLevel } from '../analytics/ClubEligibilityUtils.js'
+import { programYearForDate } from '../analytics/AnalyticsUtils.js'
 import { calculateDistinguishedPercent } from './distinguishedPercent.js'
 import {
   calculateCategoryRanking,
@@ -134,12 +135,16 @@ export interface DistrictRankingData {
   smedleyDistinguished: number
 
   // District Recognition Program prerequisites (#329)
-  // All five must be true for a district to qualify for any Distinguished tier
-  dspSubmitted: boolean
-  trainingMet: boolean
-  marketAnalysisSubmitted: boolean
-  communicationPlanSubmitted: boolean
-  regionAdvisorVisitMet: boolean
+  // WHICH of these a district must satisfy is per program year, not fixed —
+  // the era ladder in `DistinguishedDistrictCalculator` is the authority
+  // (`requiredPrerequisitesForProgramYear`), and "all five" was true for
+  // exactly one year. `undefined` means the column was absent from that
+  // year's export: unknowable, NOT an implicit No (#1406).
+  dspSubmitted: boolean | undefined
+  trainingMet: boolean | undefined
+  marketAnalysisSubmitted: boolean | undefined
+  communicationPlanSubmitted: boolean | undefined
+  regionAdvisorVisitMet: boolean | undefined
 
   // Count of clubs with 20+ paid members — for President's 20-Plus Award (#330)
   clubsWith20PlusMembers: number
@@ -246,12 +251,13 @@ interface RankingMetrics {
   presidentsDistinguished: number
   // Smedley Distinguished Clubs count — new tier for 2025-2026 (#329)
   smedleyDistinguished: number
-  // District Recognition Program prerequisites (#329)
-  dspSubmitted: boolean
-  trainingMet: boolean
-  marketAnalysisSubmitted: boolean
-  communicationPlanSubmitted: boolean
-  regionAdvisorVisitMet: boolean
+  // District Recognition Program prerequisites (#329). Tri-state: absent
+  // column → undefined (unknowable), not an implicit No (#1406).
+  dspSubmitted: boolean | undefined
+  trainingMet: boolean | undefined
+  marketAnalysisSubmitted: boolean | undefined
+  communicationPlanSubmitted: boolean | undefined
+  regionAdvisorVisitMet: boolean | undefined
   // Count of clubs with 20+ paid members — for President's 20-Plus Award (#330)
   clubsWith20PlusMembers: number
   // Count of paid clubs chartered in the current program year (#336)
@@ -637,7 +643,8 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           district.clubPerformance.length > 0
         ) {
           const confirmedCount = this.countConfirmedDistinguished(
-            district.clubPerformance
+            district.clubPerformance,
+            district.asOfDate
           )
           if (confirmedCount > 0) {
             metric.distinguishedClubs = confirmedCount
@@ -672,10 +679,18 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
   /**
    * Count clubs whose confirmed Distinguished level (using April renewals)
    * is not NotDistinguished. Used pre-April when TI reports 0. (#304)
+   *
+   * @param asOfDate - The export's as-of date, so the club ladder is the one
+   *   that applied in that program year (#1406). The count itself is
+   *   tier-insensitive (it only asks "distinguished at all?"), but the
+   *   ladder is threaded rather than defaulted so this stays correct if a
+   *   future era changes a lower rung, not just the Smedley one.
    */
   private countConfirmedDistinguished(
-    clubPerformance: Array<Record<string, string | number | null>>
+    clubPerformance: Array<Record<string, string | number | null>>,
+    asOfDate?: string
   ): number {
+    const programYear = asOfDate ? programYearForDate(asOfDate) : undefined
     let count = 0
     for (const club of clubPerformance) {
       const goals = this.parseNumber(club['Goals Met'])
@@ -685,7 +700,8 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
       const level = getConfirmedDistinguishedLevel(
         goals,
         aprilRenewals,
-        membershipBase
+        membershipBase,
+        programYear
       )
       if (level !== 'NotDistinguished') count++
     }
@@ -852,16 +868,29 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
   }
 
   /**
-   * Parse Y/N string into boolean (#329)
+   * Parse a DRP prerequisite column into a TRI-STATE boolean (#329, #1406).
    *
    * Used for District Recognition Program prerequisite columns:
    * DSP, Training, Market Analysis, Communication Plan, Region Advisor Visit.
    *
-   * Defaults to false when the column is missing (legacy CSVs) or contains
-   * any value other than "Y" (case-insensitive).
+   * Absent column → `undefined` (unknowable). Pre-2025-26 exports carry only
+   * DSP and Training, and 2026-27 dropped Region Advisor Visit (#1344), so
+   * "column not in this year's export" is a routine state — not an implicit
+   * "N". Only the tri-state form can produce the `Unknown` tier
+   * (`DistinguishedDistrictCalculator`, #1116 item 5 / rules-reference
+   * §12.5); coercing absent → false made every historical district trip
+   * `anyRequiredNo` and render NotDistinguished.
+   *
+   * Present-but-empty → `false` (an explicit non-Y). Deliberately identical
+   * to `TransformService.parseYesNo`, which parses the same columns on the
+   * pipeline path — the two diverged, and only one was right.
    */
-  private parseYesNo(value: string | number | null | undefined): boolean {
+  private parseYesNo(
+    value: string | number | null | undefined
+  ): boolean | undefined {
+    if (value === undefined) return undefined
     if (typeof value !== 'string') return false
+    if (!value) return false
     return value.trim().toUpperCase() === 'Y'
   }
 }

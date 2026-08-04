@@ -206,10 +206,20 @@ const DistrictActionListPage: React.FC = () => {
         interventionClubs: analytics?.interventionRequiredClubs ?? [],
         divisions: divisionPerformance,
         snapshotDate: effectiveEndDate ?? '',
+        // #1406 — the page owns the program-year selection; the recognition
+        // ladder must not be re-derived downstream (R3).
+        programYear: effectiveProgramYear?.label,
       },
       { division, area }
     )
-  }, [analytics, divisionPerformance, effectiveEndDate, division, area])
+  }, [
+    analytics,
+    divisionPerformance,
+    effectiveEndDate,
+    effectiveProgramYear,
+    division,
+    area,
+  ])
 
   // Scope-select options come from the authoritative division/area structure.
   const scopeOptions = useMemo<ScopeOption>(() => {

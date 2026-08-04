@@ -75,6 +75,11 @@ export interface ActionListInput {
   divisions: DivisionPerformance[]
   /** Snapshot/as-of date (`YYYY-MM-DD`) for the visit-round deadline. */
   snapshotDate: string
+  /**
+   * Program year being shown ("YYYY-YYYY"), from the page that owns the
+   * selection. Decides which recognition rungs existed (#1406).
+   */
+  programYear?: string | undefined
 }
 
 function inScope(
@@ -91,13 +96,17 @@ export function buildActionList(
   input: ActionListInput,
   scope: ActionListScope = {}
 ): ActionListSections {
-  const { clubs, interventionClubs, divisions, snapshotDate } = input
+  const { clubs, interventionClubs, divisions, snapshotDate, programYear } =
+    input
 
   const closeToDistinguished: CloseToDistinguishedItem[] = clubs
     .filter(club => inScope(club.divisionId, club.areaId, scope))
     // Project once per club, then filter+map off that single projection — the
     // projection is the most expensive call in this file (four gap passes).
-    .map(club => ({ club, projection: calculateClubProjection(club) }))
+    .map(club => ({
+      club,
+      projection: calculateClubProjection(club, programYear),
+    }))
     .filter(({ club, projection }) =>
       isCloseToDistinguished({ projection, cspSubmitted: club.cspSubmitted })
     )
