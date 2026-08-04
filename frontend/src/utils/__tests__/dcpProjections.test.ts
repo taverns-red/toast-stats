@@ -434,9 +434,9 @@ describe('DCP Projections Utility (#6)', () => {
         dcpGoalsTrend: [{ date: '2024-01-15', goalsAchieved: 10 }],
         membershipBase: 24,
       })
-      expect(calculateClubProjection(nearly, '2023-2024').closestTierAbove).toBe(
-        null
-      )
+      expect(
+        calculateClubProjection(nearly, '2023-2024').closestTierAbove
+      ).toBe(null)
       expect(
         calculateClubProjection(nearly, '2025-2026').closestTierAbove
       ).toContain('Smedley')
@@ -444,12 +444,12 @@ describe('DCP Projections Utility (#6)', () => {
 
     it('threads the program year through the batch helper', () => {
       const clubs = [makeClub({ clubId: 'a', ...smedleyShape })]
-      expect(calculateClubProjections(clubs, '2023-2024')[0]!.currentLevel).toBe(
-        'President'
-      )
-      expect(calculateClubProjections(clubs, '2025-2026')[0]!.currentLevel).toBe(
-        'Smedley'
-      )
+      expect(
+        calculateClubProjections(clubs, '2023-2024')[0]!.currentLevel
+      ).toBe('President')
+      expect(
+        calculateClubProjections(clubs, '2025-2026')[0]!.currentLevel
+      ).toBe('Smedley')
     })
   })
 })

@@ -596,7 +596,10 @@ const ClubDetailPage: React.FC = () => {
                       : club.distinguishedLevel}
                     {isProvisionallyDistinguished(club) &&
                       (() => {
-                        const confirmed = getConfirmedLevel(club, programYear.label)
+                        const confirmed = getConfirmedLevel(
+                          club,
+                          programYear.label
+                        )
                         return confirmed === 'NotDistinguished'
                           ? ' (provisional)'
                           : ' (provisional)'

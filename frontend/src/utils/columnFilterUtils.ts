@@ -52,7 +52,10 @@ export function getDistinguishedOrder(club: ClubTrend): number {
 /**
  * Get members needed to become distinguished (0 if none or already distinguished)
  */
-export function getMembersNeeded(club: ClubTrend, programYear?: string): number {
+export function getMembersNeeded(
+  club: ClubTrend,
+  programYear?: string
+): number {
   const projection = calculateClubProjection(club, programYear)
   const goalContext = deriveGoalContext(club)
   const result = computeMembersToDistinguished(projection, goalContext)

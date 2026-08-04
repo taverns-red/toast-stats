@@ -189,11 +189,7 @@ describe('determineDistinguishedLevel', () => {
 describe('determineDistinguishedLevel — per program year (#1406)', () => {
   const smedleyQualifying = { goals: 10, members: 25, netGrowth: 10 }
 
-  it.each([
-    ['2019-2020'],
-    ['2022-2023'],
-    ['2024-2025'],
-  ])(
+  it.each([['2019-2020'], ['2022-2023'], ['2024-2025']])(
     'awards President (not Smedley) in %s — the rung did not exist yet',
     programYear => {
       expect(

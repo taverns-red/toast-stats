@@ -100,7 +100,8 @@ export class AreaDivisionRecognitionModule {
     const totalClubs = clubs.length
     const paidClubs = clubs.filter(club => this.isClubPaid(club)).length
     const distinguishedClubs = clubs.filter(
-      club => this.isClubPaid(club) && this.isClubDistinguished(club, programYear)
+      club =>
+        this.isClubPaid(club) && this.isClubDistinguished(club, programYear)
     ).length
 
     return {
