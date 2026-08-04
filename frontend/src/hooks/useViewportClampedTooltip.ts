@@ -44,12 +44,12 @@ export function useViewportClampedTooltip<T extends HTMLElement>(
   const appliedShift = useRef(0)
 
   useLayoutEffect(() => {
-    if (!isOpen) {
-      appliedShift.current = 0
-      setShift(0)
-      setArrowShift(0)
-      return
-    }
+    // Nothing to measure while the panel is unmounted. The last shift stays in
+    // state deliberately: `appliedShift` still describes what the next render
+    // will apply, so the re-open measurement recovers the same unshifted
+    // extent. Resetting would only add a render, and `useLayoutEffect` re-runs
+    // before paint anyway, so a stale shift is never painted.
+    if (!isOpen) return
 
     const measure = () => {
       const panel = panelRef.current
