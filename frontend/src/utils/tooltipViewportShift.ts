@@ -36,10 +36,16 @@ export function computeTooltipShift(
   viewportWidth: number,
   margin: number = TOOLTIP_VIEWPORT_MARGIN_PX
 ): number {
-  // RED (#1405) — not implemented yet.
-  void extent
-  void viewportWidth
-  void margin
+  const overflowLeft = margin - extent.left
+  const overflowRight = extent.right - (viewportWidth - margin)
+
+  // Both edges overflow: the panel is wider than the space it has, so no shift
+  // can satisfy them. Pin the LEFT edge — the opening words matter more than
+  // the closing ones, and `.tooltip-panel`'s max-width normally prevents this.
+  if (overflowLeft > 0 && overflowRight > 0) return overflowLeft
+
+  if (overflowLeft > 0) return overflowLeft
+  if (overflowRight > 0) return -overflowRight
   return 0
 }
 
@@ -49,8 +55,8 @@ export function computeTooltipShift(
  * it can never detach from the panel it belongs to.
  */
 export function computeArrowShift(shift: number, panelWidth: number): number {
-  // RED (#1405) — not implemented yet.
-  void shift
-  void panelWidth
-  return 0
+  const room = Math.max(0, panelWidth / 2 - TOOLTIP_ARROW_EDGE_INSET_PX)
+  const clamped = Math.max(-room, Math.min(room, -shift))
+  // `Math.max(-0, -50)` is -0, which reads as a negative offset downstream.
+  return clamped === 0 ? 0 : clamped
 }

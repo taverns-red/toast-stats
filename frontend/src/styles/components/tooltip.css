@@ -1,0 +1,50 @@
+/* Shared tooltip panel geometry (#1405).
+ *
+ * `Tooltip` and `InfoTooltip` both centre a fixed-width panel on their
+ * trigger. Centred means `centre − width/2`, which is off-screen for a trigger
+ * in a card's leftmost column (the Education Levels rows opened at left −67)
+ * and past the right edge for one in the rightmost (the landing table-header
+ * tooltip ran to right 432 at 375px). Neither is a per-card problem, so the
+ * collision handling lives here, once, for every consumer of either component
+ * (R10) — with `useViewportClampedTooltip` supplying the two measured
+ * distances and nothing else.
+ *
+ * Why the placement moved out of Tailwind utilities: `-translate-x-1/2`
+ * compiles to the `translate` property in v4, so a JS-applied shift and the
+ * utility would fight over the same declaration. Owning `left` + `translate`
+ * here lets the shift compose into the centring instead of replacing it.
+ */
+
+@layer components {
+  .tooltip-panel {
+    /* Overwritten inline with the measured distances while the panel is open. */
+    --tooltip-shift: 0px;
+    --tooltip-arrow-shift: 0px;
+    /* A panel can never be wider than the viewport it has to fit inside; below
+       ~336px the w-80 width would otherwise overflow whatever we shift it to. */
+    max-width: calc(100vw - 1rem);
+  }
+
+  /* Horizontally centred placement (position="top" / "bottom"). */
+  .tooltip-panel--centered {
+    left: 50%;
+    translate: calc(-50% + var(--tooltip-shift)) 0;
+  }
+
+  /* The panel moved, so the arrow moves back by the same amount and keeps
+     pointing at the trigger. Clamped by the hook so it stays on the panel. */
+  .tooltip-arrow--centered {
+    left: 50%;
+    translate: calc(-50% + var(--tooltip-arrow-shift)) 0;
+  }
+
+  /* Side placement (position="left" / "right") is vertically centred instead,
+     so the shift composes with a -50% on the Y axis rather than the X. */
+  .tooltip-panel--side {
+    translate: var(--tooltip-shift) -50%;
+  }
+
+  .tooltip-arrow--side {
+    translate: var(--tooltip-arrow-shift) -50%;
+  }
+}

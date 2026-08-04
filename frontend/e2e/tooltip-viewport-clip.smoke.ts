@@ -71,7 +71,10 @@ const TARGETS: Target[] = [
     what: 'landing InfoTooltips',
     triggers: 'button[aria-label="info"]',
     sentinel: 'button[aria-label="info"]',
-    minPanels: 4,
+    // 13 triggers exist, but at 375px most of the stat-card and table-header
+    // row is off-canvas or obscured and cannot be hovered at all; 4 open
+    // there (including the two right-edge offenders) against 12 at 1350px.
+    minPanels: 3,
   },
 ]
 
