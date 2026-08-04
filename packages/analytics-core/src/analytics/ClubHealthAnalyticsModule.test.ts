@@ -81,7 +81,7 @@ describe('ClubHealthAnalyticsModule', () => {
         areaId: 'B2',
         areaName: 'Area B2',
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -99,7 +99,7 @@ describe('ClubHealthAnalyticsModule', () => {
         divisionId: '',
         divisionName: '',
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -115,7 +115,7 @@ describe('ClubHealthAnalyticsModule', () => {
         areaId: '',
         areaName: '',
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -134,7 +134,7 @@ describe('ClubHealthAnalyticsModule', () => {
         areaId: undefined as unknown as string,
         areaName: undefined as unknown as string,
       }
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -150,14 +150,14 @@ describe('ClubHealthAnalyticsModule', () => {
     it('should build membership trend array with single snapshot', () => {
       const module = new ClubHealthAnalyticsModule()
       const club = createMockClub({ clubId: '1', membershipCount: 25 })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
       expect(result.allClubs).toHaveLength(1)
       expect(result.allClubs[0]?.membershipTrend).toHaveLength(1)
       expect(result.allClubs[0]?.membershipTrend[0]).toEqual({
-        date: '2024-01-15',
+        date: '2026-01-15',
         count: 25,
       })
     })
@@ -165,24 +165,24 @@ describe('ClubHealthAnalyticsModule', () => {
     it('should build DCP goals trend array with single snapshot', () => {
       const module = new ClubHealthAnalyticsModule()
       const club = createMockClub({ clubId: '1', dcpGoals: 7 })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
       expect(result.allClubs).toHaveLength(1)
       expect(result.allClubs[0]?.dcpGoalsTrend).toHaveLength(1)
       expect(result.allClubs[0]?.dcpGoalsTrend[0]).toEqual({
-        date: '2024-01-15',
+        date: '2026-01-15',
         goalsAchieved: 7,
       })
     })
 
     it('should build membership trend array with multiple snapshots', () => {
       const module = new ClubHealthAnalyticsModule()
-      const snapshot1 = createMockSnapshot('2024-01-01', [
+      const snapshot1 = createMockSnapshot('2026-01-01', [
         createMockClub({ clubId: '1', membershipCount: 20 }),
       ])
-      const snapshot2 = createMockSnapshot('2024-02-01', [
+      const snapshot2 = createMockSnapshot('2026-02-01', [
         createMockClub({ clubId: '1', membershipCount: 22 }),
       ])
       const snapshot3 = createMockSnapshot('2024-03-01', [
@@ -198,18 +198,18 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(result.allClubs).toHaveLength(1)
       expect(result.allClubs[0]?.membershipTrend).toHaveLength(3)
       expect(result.allClubs[0]?.membershipTrend).toEqual([
-        { date: '2024-01-01', count: 20 },
-        { date: '2024-02-01', count: 22 },
+        { date: '2026-01-01', count: 20 },
+        { date: '2026-02-01', count: 22 },
         { date: '2024-03-01', count: 25 },
       ])
     })
 
     it('should build DCP goals trend array with multiple snapshots', () => {
       const module = new ClubHealthAnalyticsModule()
-      const snapshot1 = createMockSnapshot('2024-01-01', [
+      const snapshot1 = createMockSnapshot('2026-01-01', [
         createMockClub({ clubId: '1', dcpGoals: 3 }),
       ])
-      const snapshot2 = createMockSnapshot('2024-02-01', [
+      const snapshot2 = createMockSnapshot('2026-02-01', [
         createMockClub({ clubId: '1', dcpGoals: 5 }),
       ])
       const snapshot3 = createMockSnapshot('2024-03-01', [
@@ -225,8 +225,8 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(result.allClubs).toHaveLength(1)
       expect(result.allClubs[0]?.dcpGoalsTrend).toHaveLength(3)
       expect(result.allClubs[0]?.dcpGoalsTrend).toEqual([
-        { date: '2024-01-01', goalsAchieved: 3 },
-        { date: '2024-02-01', goalsAchieved: 5 },
+        { date: '2026-01-01', goalsAchieved: 3 },
+        { date: '2026-02-01', goalsAchieved: 5 },
         { date: '2024-03-01', goalsAchieved: 7 },
       ])
     })
@@ -234,10 +234,10 @@ describe('ClubHealthAnalyticsModule', () => {
     it('should handle club appearing in only some snapshots', () => {
       const module = new ClubHealthAnalyticsModule()
       // Club 1 appears in all snapshots, Club 2 only in later snapshots
-      const snapshot1 = createMockSnapshot('2024-01-01', [
+      const snapshot1 = createMockSnapshot('2026-01-01', [
         createMockClub({ clubId: '1', membershipCount: 20 }),
       ])
-      const snapshot2 = createMockSnapshot('2024-02-01', [
+      const snapshot2 = createMockSnapshot('2026-02-01', [
         createMockClub({ clubId: '1', membershipCount: 22 }),
         createMockClub({ clubId: '2', membershipCount: 15 }),
       ])
@@ -260,7 +260,7 @@ describe('ClubHealthAnalyticsModule', () => {
       const club2 = result.allClubs.find(c => c.clubId === '2')
       expect(club2?.membershipTrend).toHaveLength(2)
       expect(club2?.membershipTrend).toEqual([
-        { date: '2024-02-01', count: 15 },
+        { date: '2026-02-01', count: 15 },
         { date: '2024-03-01', count: 18 },
       ])
     })
@@ -284,7 +284,7 @@ describe('ClubHealthAnalyticsModule', () => {
         paymentsCount: 25,
         dcpGoals: 5,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -300,7 +300,7 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 0,
         membershipBase: 10, // No net growth
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -315,7 +315,7 @@ describe('ClubHealthAnalyticsModule', () => {
     it('should include membership threshold risk factor when membership decreases below threshold', () => {
       const module = new ClubHealthAnalyticsModule()
       // Club with membership below 20 and no net growth - should be vulnerable
-      const snapshot = createMockSnapshot('2024-02-01', [
+      const snapshot = createMockSnapshot('2026-02-01', [
         createMockClub({
           clubId: '1',
           membershipCount: 15,
@@ -344,7 +344,7 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 0, // No DCP goals
         membershipBase: 20,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -359,7 +359,7 @@ describe('ClubHealthAnalyticsModule', () => {
     it('should include multiple risk factors when applicable', () => {
       const module = new ClubHealthAnalyticsModule()
       // Club with membership below threshold and no DCP goals
-      const snapshot = createMockSnapshot('2024-02-01', [
+      const snapshot = createMockSnapshot('2026-02-01', [
         createMockClub({
           clubId: '1',
           membershipCount: 15,
@@ -402,11 +402,57 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 10,
         membershipCount: 25,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
       expect(result.allClubs[0]?.distinguishedLevel).toBe('Smedley')
+    })
+
+    // #1406 — the club Smedley rung was introduced for PY 2025-26. The
+    // snapshot's own date decides which ladder applies, so the identical
+    // club classifies differently either side of the boundary.
+    it('should classify the same club as President in a pre-2025-26 snapshot', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const club = createMockClub({
+        clubId: '1',
+        dcpGoals: 10,
+        membershipCount: 25,
+      })
+      // 2024-01-15 → PY 2023-2024, before the rung existed.
+      const snapshot = createMockSnapshot('2024-01-15', [club])
+
+      const result = module.generateClubHealthData([snapshot])
+
+      expect(result.allClubs[0]?.distinguishedLevel).toBe('President')
+    })
+
+    it('should reach Smedley on the first day of PY 2025-26', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const club = createMockClub({
+        clubId: '1',
+        dcpGoals: 10,
+        membershipCount: 25,
+      })
+      const snapshot = createMockSnapshot('2025-07-01', [club])
+
+      const result = module.generateClubHealthData([snapshot])
+
+      expect(result.allClubs[0]?.distinguishedLevel).toBe('Smedley')
+    })
+
+    it('should not reach Smedley on the last day of PY 2024-25', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const club = createMockClub({
+        clubId: '1',
+        dcpGoals: 10,
+        membershipCount: 25,
+      })
+      const snapshot = createMockSnapshot('2025-06-30', [club])
+
+      const result = module.generateClubHealthData([snapshot])
+
+      expect(result.allClubs[0]?.distinguishedLevel).toBe('President')
     })
 
     it('should classify as President with 9 goals and 25 members (not Smedley)', () => {
@@ -416,7 +462,7 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 9,
         membershipCount: 25,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -430,7 +476,7 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 9,
         membershipCount: 19,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -444,7 +490,7 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 7,
         membershipCount: 20,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -461,7 +507,7 @@ describe('ClubHealthAnalyticsModule', () => {
         membershipCount: 15,
         membershipBase: 10, // Net growth = 15 - 10 = 5
       })
-      const snapshot = createMockSnapshot('2024-02-01', [club])
+      const snapshot = createMockSnapshot('2026-02-01', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -476,7 +522,7 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 5,
         membershipCount: 20,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -490,7 +536,7 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 4,
         membershipCount: 25,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -507,7 +553,7 @@ describe('ClubHealthAnalyticsModule', () => {
         membershipCount: 15,
         membershipBase: 12, // Net growth = 15 - 12 = 3
       })
-      const snapshot = createMockSnapshot('2024-02-01', [club])
+      const snapshot = createMockSnapshot('2026-02-01', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -518,10 +564,10 @@ describe('ClubHealthAnalyticsModule', () => {
     it('should classify as NotDistinguished with 5 goals, 15 members, and only 2 net growth', () => {
       const module = new ClubHealthAnalyticsModule()
       // Create snapshots showing net growth of only 2
-      const snapshot1 = createMockSnapshot('2024-01-01', [
+      const snapshot1 = createMockSnapshot('2026-01-01', [
         createMockClub({ clubId: '1', dcpGoals: 3, membershipCount: 13 }),
       ])
-      const snapshot2 = createMockSnapshot('2024-02-01', [
+      const snapshot2 = createMockSnapshot('2026-02-01', [
         createMockClub({ clubId: '1', dcpGoals: 5, membershipCount: 15 }),
       ])
 
@@ -538,7 +584,7 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 10,
         membershipCount: 25,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -552,7 +598,7 @@ describe('ClubHealthAnalyticsModule', () => {
         dcpGoals: 10,
         membershipCount: 24,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -574,7 +620,7 @@ describe('ClubHealthAnalyticsModule', () => {
         ...createMockClub({ clubId: '1' }),
         charterDate: '1987-02-15',
       }
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -603,7 +649,7 @@ describe('ClubHealthAnalyticsModule', () => {
         allowsVirtualAttendance: false,
         isProspective: false,
       }
-      const snapshot = createMockSnapshot('2024-01-15', [enriched])
+      const snapshot = createMockSnapshot('2026-01-15', [enriched])
 
       const result = module.generateClubHealthData([snapshot])
       const out = result.allClubs[0]
@@ -624,7 +670,7 @@ describe('ClubHealthAnalyticsModule', () => {
     it('leaves FAC fields undefined when ClubStatistics has none (graceful absence)', () => {
       const module = new ClubHealthAnalyticsModule()
       const bare = createMockClub({ clubId: '1' })
-      const snapshot = createMockSnapshot('2024-01-15', [bare])
+      const snapshot = createMockSnapshot('2026-01-15', [bare])
 
       const result = module.generateClubHealthData([snapshot])
       const out = result.allClubs[0]
@@ -644,7 +690,7 @@ describe('ClubHealthAnalyticsModule', () => {
         aprilRenewals: 8,
         newMembers: 5,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -662,7 +708,7 @@ describe('ClubHealthAnalyticsModule', () => {
         aprilRenewals: undefined as unknown as number,
         newMembers: undefined as unknown as number,
       }
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -679,7 +725,7 @@ describe('ClubHealthAnalyticsModule', () => {
         aprilRenewals: 0,
         newMembers: 0,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -696,7 +742,7 @@ describe('ClubHealthAnalyticsModule', () => {
         aprilRenewals: undefined as unknown as number,
         newMembers: 3,
       }
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -712,7 +758,7 @@ describe('ClubHealthAnalyticsModule', () => {
       const club = createMockClub({ clubId: '1' })
       // Ensure cspSubmitted is undefined (pre-2025 data)
       delete (club as Record<string, unknown>)['cspSubmitted']
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -753,7 +799,7 @@ describe('ClubHealthAnalyticsModule', () => {
         clubId: '1',
         clubStatus: 'Active',
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -766,7 +812,7 @@ describe('ClubHealthAnalyticsModule', () => {
         clubId: '1',
         clubStatus: 'Suspended',
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -779,7 +825,7 @@ describe('ClubHealthAnalyticsModule', () => {
         clubId: '1',
         clubStatus: 'Low',
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -792,7 +838,7 @@ describe('ClubHealthAnalyticsModule', () => {
         clubId: '1',
         clubStatus: 'Ineligible',
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -805,7 +851,7 @@ describe('ClubHealthAnalyticsModule', () => {
         clubId: '1',
         clubStatus: undefined,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -818,7 +864,7 @@ describe('ClubHealthAnalyticsModule', () => {
         clubId: '1',
         clubStatus: 'UnknownStatus',
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -836,7 +882,7 @@ describe('ClubHealthAnalyticsModule', () => {
         paymentsCount: 25,
         dcpGoals: 5,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -853,7 +899,7 @@ describe('ClubHealthAnalyticsModule', () => {
         membershipCount: 10, // < 12
         dcpGoals: 0,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -869,7 +915,7 @@ describe('ClubHealthAnalyticsModule', () => {
         membershipCount: 15, // >= 12 but < 20
         dcpGoals: 0,
       })
-      const snapshot = createMockSnapshot('2024-01-15', [club])
+      const snapshot = createMockSnapshot('2026-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -884,7 +930,7 @@ describe('ClubHealthAnalyticsModule', () => {
         createMockClub({ clubId: '2', membershipCount: 15, dcpGoals: 0 }),
         createMockClub({ clubId: '3', membershipCount: 10, dcpGoals: 0 }),
       ]
-      const snapshot = createMockSnapshot('2024-01-15', clubs)
+      const snapshot = createMockSnapshot('2026-01-15', clubs)
 
       const result = module.generateClubHealthData([snapshot])
 
@@ -1124,7 +1170,7 @@ describe('ClubHealthAnalyticsModule', () => {
       const module = new ClubHealthAnalyticsModule()
 
       // Create snapshots showing progression over time
-      const snapshot1 = createMockSnapshot('2024-01-15', [
+      const snapshot1 = createMockSnapshot('2026-01-15', [
         createMockClub({
           clubId: '2001',
           clubName: 'Growing Club',
@@ -1161,7 +1207,7 @@ describe('ClubHealthAnalyticsModule', () => {
       // Verify membership trend has entries for all snapshots
       expect(clubTrend.membershipTrend).toHaveLength(3)
       expect(clubTrend.membershipTrend[0]).toEqual({
-        date: '2024-01-15',
+        date: '2026-01-15',
         count: 18,
       })
       expect(clubTrend.membershipTrend[1]).toEqual({
@@ -1176,7 +1222,7 @@ describe('ClubHealthAnalyticsModule', () => {
       // Verify DCP goals trend has entries for all snapshots
       expect(clubTrend.dcpGoalsTrend).toHaveLength(3)
       expect(clubTrend.dcpGoalsTrend[0]).toEqual({
-        date: '2024-01-15',
+        date: '2026-01-15',
         goalsAchieved: 3,
       })
       expect(clubTrend.dcpGoalsTrend[1]).toEqual({
@@ -1557,7 +1603,7 @@ describe('ClubHealthAnalyticsModule', () => {
       const module = new ClubHealthAnalyticsModule()
 
       // Create snapshots showing progression over time
-      const snapshot1 = createMockSnapshot('2024-01-15', [
+      const snapshot1 = createMockSnapshot('2026-01-15', [
         createMockClub({
           clubId: 'trend-club',
           clubName: 'Trend Club',
@@ -1598,12 +1644,12 @@ describe('ClubHealthAnalyticsModule', () => {
 
       // Verify trend data is correct
       expect(club.membershipTrend).toEqual([
-        { date: '2024-01-15', count: 18 },
+        { date: '2026-01-15', count: 18 },
         { date: '2024-02-15', count: 22 },
         { date: '2024-03-15', count: 25 },
       ])
       expect(club.dcpGoalsTrend).toEqual([
-        { date: '2024-01-15', goalsAchieved: 3 },
+        { date: '2026-01-15', goalsAchieved: 3 },
         { date: '2024-02-15', goalsAchieved: 5 },
         { date: '2024-03-15', goalsAchieved: 7 },
       ])

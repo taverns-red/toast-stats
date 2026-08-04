@@ -51,7 +51,7 @@ function createMockSnapshot(clubs: ClubStatistics[]): DistrictStatistics {
 
   return {
     districtId: 'D101',
-    snapshotDate: '2024-01-15',
+    snapshotDate: '2026-01-15',
     clubs,
     divisions: [],
     areas: [],
@@ -356,13 +356,13 @@ describe('DistinguishedClubAnalyticsModule', () => {
         // First snapshot: club has 5 goals (distinguished)
         const snapshot1: DistrictStatistics = {
           ...createMockSnapshot([createMockClub('1', 5, 20)]),
-          snapshotDate: '2024-01-01',
+          snapshotDate: '2026-01-01',
         }
 
         // Second snapshot: club has 10 goals and 25 members (smedley)
         const snapshot2: DistrictStatistics = {
           ...createMockSnapshot([createMockClub('1', 10, 25)]),
-          snapshotDate: '2024-02-01',
+          snapshotDate: '2026-02-01',
         }
 
         const summaries = module.generateDistinguishedClubSummaries([

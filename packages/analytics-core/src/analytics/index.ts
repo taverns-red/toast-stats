@@ -24,6 +24,7 @@ export {
   determineDistinguishedLevel,
   getConfirmedDistinguishedLevel,
   getCSPStatus,
+  isClubSmedleyAvailable,
   isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
 export type { DistinguishedTierCode } from './ClubEligibilityUtils.js'

@@ -222,6 +222,25 @@ export function getProgramYearStartYear(dateString: string): number {
 }
 
 /**
+ * The program year a snapshot date belongs to, as the canonical
+ * "YYYY-YYYY" label the year-conditional rulesets take (#1406).
+ *
+ * A snapshot date is the identity of the data it labels, so deriving the
+ * program year from it is not calendar guessing: it is the same move the
+ * pipeline already makes for the district ruleset
+ * (`calculateProgramYear(snapshotDate)` in `TransformService`). The live
+ * rollover hazard the collector guards against (#1284) is about which
+ * program year to *fetch*; classifying a date already in hand is exact.
+ *
+ * @param dateString - Date in YYYY-MM-DD format
+ * @returns Program year label, e.g. "2025-2026"
+ */
+export function programYearForDate(dateString: string): string {
+  const start = getProgramYearStartYear(dateString)
+  return `${start}-${start + 1}`
+}
+
+/**
  * Select the snapshot that best represents the same point in the PREVIOUS
  * program year.
  *

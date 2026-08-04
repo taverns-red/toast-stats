@@ -38,6 +38,7 @@ import {
 import {
   ensureString,
   findPreviousProgramYearDate,
+  programYearForDate,
   selectPreviousProgramYearSnapshot,
 } from './AnalyticsUtils.js'
 import {
@@ -227,6 +228,9 @@ export class DistinguishedClubAnalyticsModule {
 
     const summaries: DistinguishedClubSummary[] = []
 
+    // Recognition rules of the program year this snapshot belongs to (#1406).
+    const programYear = programYearForDate(latestSnapshot.snapshotDate)
+
     for (const club of latestSnapshot.clubs) {
       // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
       const cspSubmitted = getCSPStatus(club)
@@ -238,7 +242,12 @@ export class DistinguishedClubAnalyticsModule {
       const membership = club.membershipCount
       const netGrowth = calculateNetGrowth(club)
 
-      const level = determineDistinguishedLevel(dcpGoals, membership, netGrowth)
+      const level = determineDistinguishedLevel(
+        dcpGoals,
+        membership,
+        netGrowth,
+        programYear
+      )
 
       // Only include clubs that have achieved some distinguished level
       if (level !== 'NotDistinguished') {
@@ -450,6 +459,9 @@ export class DistinguishedClubAnalyticsModule {
     let select = 0
     let distinguished = 0
 
+    // Recognition rules of the program year this entry belongs to (#1406).
+    const programYear = programYearForDate(entry.date)
+
     for (const club of entry.clubPerformance) {
       // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
       const cspSubmitted = getCSPStatus(club)
@@ -467,7 +479,8 @@ export class DistinguishedClubAnalyticsModule {
       const calculatedLevel = determineDistinguishedLevel(
         dcpGoals,
         membership,
-        netGrowth
+        netGrowth,
+        programYear
       )
 
       // Count clubs by distinguished level (Requirements: 4.1, 4.2)
@@ -663,7 +676,8 @@ export class DistinguishedClubAnalyticsModule {
           ? determineDistinguishedLevel(
               dcpGoals,
               club.membershipCount,
-              calculateNetGrowth(club)
+              calculateNetGrowth(club),
+              programYearForDate(entry.date)
             )
           : 'NotDistinguished'
         const currentLevel: string | undefined =

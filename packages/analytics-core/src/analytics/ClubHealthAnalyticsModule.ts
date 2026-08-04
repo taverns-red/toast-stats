@@ -19,7 +19,11 @@
 
 import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type { ClubTrend, ClubHealthData } from '../types.js'
-import { getCurrentProgramMonth, getMonthName } from './AnalyticsUtils.js'
+import {
+  getCurrentProgramMonth,
+  getMonthName,
+  programYearForDate,
+} from './AnalyticsUtils.js'
 import {
   calculateNetGrowth,
   classifyClubHealth,
@@ -545,11 +549,14 @@ export class ClubHealthAnalyticsModule {
     // Calculate net growth from club data
     const netGrowth = calculateNetGrowth(club)
 
-    // Use the shared distinguished level determination logic
+    // Use the shared distinguished level determination logic, under the
+    // rules of the program year this snapshot belongs to (#1406) — the
+    // Smedley rung did not exist at club level before 2025-26.
     clubTrend.distinguishedLevel = determineDistinguishedLevel(
       currentDcpGoals,
       currentMembership,
-      netGrowth
+      netGrowth,
+      programYearForDate(snapshotDate)
     )
 
     // Determine if Distinguished status is provisional (#287)

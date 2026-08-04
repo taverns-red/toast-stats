@@ -18,6 +18,7 @@ import type {
 } from '@taverns-red/shared-contracts'
 
 import { getConfirmedDistinguishedLevel } from '../analytics/ClubEligibilityUtils.js'
+import { programYearForDate } from '../analytics/AnalyticsUtils.js'
 import { calculateDistinguishedPercent } from './distinguishedPercent.js'
 import {
   calculateCategoryRanking,
@@ -637,7 +638,8 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           district.clubPerformance.length > 0
         ) {
           const confirmedCount = this.countConfirmedDistinguished(
-            district.clubPerformance
+            district.clubPerformance,
+            district.asOfDate
           )
           if (confirmedCount > 0) {
             metric.distinguishedClubs = confirmedCount
@@ -672,10 +674,18 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
   /**
    * Count clubs whose confirmed Distinguished level (using April renewals)
    * is not NotDistinguished. Used pre-April when TI reports 0. (#304)
+   *
+   * @param asOfDate - The export's as-of date, so the club ladder is the one
+   *   that applied in that program year (#1406). The count itself is
+   *   tier-insensitive (it only asks "distinguished at all?"), but the
+   *   ladder is threaded rather than defaulted so this stays correct if a
+   *   future era changes a lower rung, not just the Smedley one.
    */
   private countConfirmedDistinguished(
-    clubPerformance: Array<Record<string, string | number | null>>
+    clubPerformance: Array<Record<string, string | number | null>>,
+    asOfDate?: string
   ): number {
+    const programYear = asOfDate ? programYearForDate(asOfDate) : undefined
     let count = 0
     for (const club of clubPerformance) {
       const goals = this.parseNumber(club['Goals Met'])
@@ -685,7 +695,8 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
       const level = getConfirmedDistinguishedLevel(
         goals,
         aprilRenewals,
-        membershipBase
+        membershipBase,
+        programYear
       )
       if (level !== 'NotDistinguished') count++
     }
