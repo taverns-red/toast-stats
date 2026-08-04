@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useViewportClampedTooltip } from '../hooks/useViewportClampedTooltip'
 
 interface InfoTooltipProps {
   /** The tooltip text to display on hover/focus */
@@ -11,6 +12,10 @@ interface InfoTooltipProps {
  */
 const InfoTooltip: React.FC<InfoTooltipProps> = ({ text }) => {
   const [isVisible, setIsVisible] = useState(false)
+  // Keeps the panel inside the viewport when the trigger sits near an edge
+  // (#1405) — the rightmost table-header tooltip overflowed at every width.
+  const { panelRef, style: clampStyle } =
+    useViewportClampedTooltip<HTMLSpanElement>(isVisible)
 
   return (
     <span className="relative inline-flex items-center ml-1">
@@ -39,10 +44,12 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ text }) => {
       {isVisible && (
         <span
           role="tooltip"
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs font-normal normal-case tracking-normal text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal w-56 z-50 leading-relaxed"
+          ref={panelRef}
+          style={clampStyle}
+          className="absolute bottom-full tooltip-panel tooltip-panel--centered mb-2 px-3 py-2 text-xs font-normal normal-case tracking-normal text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal w-56 z-50 leading-relaxed"
         >
           {text}
-          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+          <span className="absolute top-full tooltip-arrow--centered border-4 border-transparent border-t-gray-900" />
         </span>
       )}
     </span>

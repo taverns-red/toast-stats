@@ -52,6 +52,7 @@
 @import './styles/components/club-history.css';
 @import './styles/components/club-grid.css';
 @import './styles/components/action-list.css';
+@import './styles/components/tooltip.css';
 @import './styles/responsive.css';
 @import './styles/dark-mode.css';
 @import './styles/print.css';

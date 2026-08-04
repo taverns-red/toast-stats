@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { useViewportClampedTooltip } from '../hooks/useViewportClampedTooltip'
 
 /**
  * Props for the Tooltip component
@@ -49,6 +50,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
     () => `tooltip-${Math.random().toString(36).substr(2, 9)}`
   )
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Keeps the panel inside the viewport when the trigger sits near an edge.
+  const { panelRef, style: clampStyle } =
+    useViewportClampedTooltip<HTMLDivElement>(isVisible)
 
   const showTooltip = () => {
     if (timeoutRef.current) {
@@ -74,33 +78,35 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
   }, [])
 
+  /* Placement. The horizontal centring (and the viewport-collision shift that
+     composes into it) lives in `styles/components/tooltip.css` — see #1405:
+     Tailwind v4's `-translate-x-1/2` compiles to the `translate` property, so
+     the utility and the measured shift cannot both own that declaration. */
   const getPositionClasses = () => {
     switch (position) {
-      case 'top':
-        return 'bottom-full left-1/2 -translate-x-1/2 mb-2'
       case 'bottom':
-        return 'top-full left-1/2 -translate-x-1/2 mt-2'
+        return 'top-full tooltip-panel--centered mt-2'
       case 'left':
-        return 'right-full top-1/2 -translate-y-1/2 mr-2'
+        return 'right-full top-1/2 tooltip-panel--side mr-2'
       case 'right':
-        return 'left-full top-1/2 -translate-y-1/2 ml-2'
+        return 'left-full top-1/2 tooltip-panel--side ml-2'
+      case 'top':
       default:
-        return 'bottom-full left-1/2 -translate-x-1/2 mb-2'
+        return 'bottom-full tooltip-panel--centered mb-2'
     }
   }
 
   const getArrowClasses = () => {
     switch (position) {
-      case 'top':
-        return 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent'
       case 'bottom':
-        return 'bottom-full left-1/2 -translate-x-1/2 border-b-gray-900 border-l-transparent border-r-transparent border-t-transparent'
+        return 'bottom-full tooltip-arrow--centered border-b-gray-900 border-l-transparent border-r-transparent border-t-transparent'
       case 'left':
-        return 'left-full top-1/2 -translate-y-1/2 border-l-gray-900 border-t-transparent border-b-transparent border-r-transparent'
+        return 'left-full top-1/2 tooltip-arrow--side border-l-gray-900 border-t-transparent border-b-transparent border-r-transparent'
       case 'right':
-        return 'right-full top-1/2 -translate-y-1/2 border-r-gray-900 border-t-transparent border-b-transparent border-l-transparent'
+        return 'right-full top-1/2 tooltip-arrow--side border-r-gray-900 border-t-transparent border-b-transparent border-l-transparent'
+      case 'top':
       default:
-        return 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent'
+        return 'top-full tooltip-arrow--centered border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent'
     }
   }
 
@@ -121,7 +127,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
         <div
           id={tooltipId}
           role="tooltip"
-          className={`absolute z-50 px-4 py-3 text-sm text-white bg-gray-900 rounded-lg shadow-lg w-80 ${getPositionClasses()} ${className} animate-fade-in`}
+          ref={panelRef}
+          style={clampStyle}
+          className={`absolute z-50 px-4 py-3 text-sm text-white bg-gray-900 rounded-lg shadow-lg w-80 tooltip-panel ${getPositionClasses()} ${className} animate-fade-in`}
         >
           {content}
           <div

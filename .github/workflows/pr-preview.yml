@@ -195,6 +195,23 @@ jobs:
           npx playwright test --config playwright.config.ts
           e2e/breadcrumb-alignment.smoke.ts
 
+      # Tooltip viewport-collision tripwire (#1405). The two shared tooltip
+      # components centre a fixed-width panel on their trigger with no
+      # collision handling, so a trigger in a card's leftmost column opened the
+      # panel at left −67 and the landing page's rightmost table header ran to
+      # right 1407 in a 1350px viewport. Nothing existing could see it: the
+      # panel is visible, contrasty, above 44px and causes no shift — it is
+      # simply half off-screen. Real geometry at 375/768/1350 in light and
+      # dark, both engines, and the 44px trigger floor re-asserted so the
+      # shrink-the-control "fix" cannot turn this green.
+      - name: Cross-engine tooltip viewport-clip tripwire against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: >-
+          npx playwright test --config playwright.config.ts
+          e2e/tooltip-viewport-clip.smoke.ts
+
       # Mobile loading/error→loaded CLS guard (#922). The Lighthouse CLS gate
       # runs the desktop preset, where the landing header actions lay out
       # inline — it is blind to the mobile-only stack that pushed the KPI
