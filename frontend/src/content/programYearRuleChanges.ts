@@ -141,10 +141,6 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'frontend/src/utils/extractDivisionPerformance.ts',
     ],
   },
-  // The "known limitation" sentence below is tracked by #1406: unlike the
-  // district side (#1116 item 5), club recognition has no per-year ruleset, so
-  // the Smedley rung is applied to years before it existed. Remove the sentence
-  // when that lands — the entry is otherwise unaffected.
   {
     id: 'py-2025-2026-smedley-distinguished-club',
     programYear: '2025-2026',
@@ -153,9 +149,10 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
     whatChanged:
       'A fifth club rung — all 10 DCP goals and 25+ paid members, with no growth alternative — was added above President’s Distinguished, and the district export gained a Smedley Distinguished Clubs count. At district level Smedley is not new: that tier has existed since 2018-19 (see below).',
     comparability:
-      'No club could be Smedley before 2025-26, so the top rung appearing at this boundary is the new tier, not clubs suddenly performing better — those clubs were counted as President’s Distinguished before. Totals of “Distinguished or better” clubs are unaffected. Known limitation: Toast Stats applies the club Smedley rung to every program year it holds, so a pre-2025-26 club with 10 goals and 25 members is shown as Smedley even though the tier did not exist that year.',
-    issues: [329],
+      'No club could be Smedley before 2025-26, so the top rung appearing at this boundary is the new tier, not clubs suddenly performing better — those clubs were counted as President’s Distinguished before. Totals of “Distinguished or better” clubs are unaffected. Toast Stats resolves the club ladder per program year, so a pre-2025-26 club with 10 goals and 25 members is shown as President’s Distinguished — the tier it held at the time.',
+    issues: [329, 1406],
     sources: [
+      'packages/analytics-core/src/analytics/ClubEligibilityUtils.ts',
       'packages/analytics-core/src/rankings/BordaCountRankingCalculator.ts',
       'packages/shared-contracts/src/types/all-districts-rankings.ts',
       'packages/shared-contracts/src/schemas/all-districts-rankings.schema.ts',

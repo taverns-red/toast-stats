@@ -373,9 +373,11 @@ export class DistinguishedDistrictCalculator {
    * Calculate Distinguished District status for a single district.
    *
    * @param ranking - the district's metrics for the snapshot date
-   * @param _programYear - the program year the snapshot belongs to
+   * @param programYear - the program year the snapshot belongs to
    *   ("YYYY-YYYY"). Determines which year's ruleset applies (#1116
-   *   item 5). Omitted → current (2025-26) rules.
+   *   item 5). Omitted → `CURRENT_RULESET`, which is the 2026-27
+   *   four-gate set since #1344 — not a fixed year. Pass the program
+   *   year explicitly on any historical path.
    */
   calculate(
     ranking: DistrictRanking,
