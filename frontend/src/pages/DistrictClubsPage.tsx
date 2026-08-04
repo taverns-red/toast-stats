@@ -329,6 +329,7 @@ const DistrictClubsPage: React.FC = () => {
                   initialPresetActive={initialPresetActive}
                   onPresetChange={handlePresetChange}
                   snapshotDiff={snapshotDiff}
+                  programYear={effectiveProgramYear?.label}
                 />
                 <ProspectiveClubsPanel clubs={analytics?.prospectiveClubs} />
               </>

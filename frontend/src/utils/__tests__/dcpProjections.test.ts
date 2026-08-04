@@ -391,4 +391,65 @@ describe('DCP Projections Utility (#6)', () => {
       expect(projection.currentLevel).toBe('Distinguished')
     })
   })
+
+  describe('per-program-year recognition ladder (#1406)', () => {
+    // 10 of 10 goals and 25 members — Smedley from 2025-26, President's before.
+    const smedleyShape = {
+      membershipTrend: [{ date: '2024-01-15', count: 25 }],
+      dcpGoalsTrend: [{ date: '2024-01-15', goalsAchieved: 10 }],
+      membershipBase: 25,
+    }
+
+    it('projects President, not Smedley, for a pre-2025-26 program year', () => {
+      const club = makeClub({ clubId: 'pre', ...smedleyShape })
+      const projection = calculateClubProjection(club, '2023-2024')
+      expect(projection.currentLevel).toBe('President')
+      expect(projection.projectedLevel).toBe('President')
+    })
+
+    it('projects Smedley from 2025-26 onward', () => {
+      const club = makeClub({ clubId: 'post', ...smedleyShape })
+      expect(calculateClubProjection(club, '2025-2026').currentLevel).toBe(
+        'Smedley'
+      )
+      expect(calculateClubProjection(club, '2026-2027').currentLevel).toBe(
+        'Smedley'
+      )
+    })
+
+    it('keeps the current ladder when no program year is passed', () => {
+      const club = makeClub({ clubId: 'default', ...smedleyShape })
+      expect(calculateClubProjection(club).currentLevel).toBe('Smedley')
+    })
+
+    it('offers no tier above President in a year without the Smedley rung', () => {
+      const club = makeClub({ clubId: 'top', ...smedleyShape })
+      expect(calculateClubProjection(club, '2023-2024').closestTierAbove).toBe(
+        null
+      )
+      // A club 1 member short of Smedley must not be told to chase it.
+      const nearly = makeClub({
+        clubId: 'nearly',
+        membershipTrend: [{ date: '2024-01-15', count: 24 }],
+        dcpGoalsTrend: [{ date: '2024-01-15', goalsAchieved: 10 }],
+        membershipBase: 24,
+      })
+      expect(calculateClubProjection(nearly, '2023-2024').closestTierAbove).toBe(
+        null
+      )
+      expect(
+        calculateClubProjection(nearly, '2025-2026').closestTierAbove
+      ).toContain('Smedley')
+    })
+
+    it('threads the program year through the batch helper', () => {
+      const clubs = [makeClub({ clubId: 'a', ...smedleyShape })]
+      expect(calculateClubProjections(clubs, '2023-2024')[0]!.currentLevel).toBe(
+        'President'
+      )
+      expect(calculateClubProjections(clubs, '2025-2026')[0]!.currentLevel).toBe(
+        'Smedley'
+      )
+    })
+  })
 })

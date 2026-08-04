@@ -3039,6 +3039,30 @@ describe('determineDistinguishedLevel', () => {
       expect(determineDistinguishedLevel(club)).toBe('Presidents')
     })
 
+    // #1406 — the club Smedley rung was added for PY 2025-26. The same club
+    // is Presidents in an earlier year, because the rung did not exist.
+    it('should return Presidents for a Smedley-shaped club in a pre-2025-26 year', () => {
+      const club = {
+        'Goals Met': '10',
+        'Active Members': '25',
+        'Mem. Base': '20',
+      }
+      expect(determineDistinguishedLevel(club, '2023-2024')).toBe('Presidents')
+      expect(determineDistinguishedLevel(club, '2025-2026')).toBe('Smedley')
+    })
+
+    // The status column is TI's own verdict — if a historical export ever
+    // said "Smedley" we report what TI said, rather than second-guessing it.
+    // The per-year ladder governs the CALCULATED path only.
+    it('should still honour an explicit Smedley status column in any year', () => {
+      const club = {
+        'Club Distinguished Status': 'Smedley Distinguished',
+        'Goals Met': '10',
+        'Active Members': '25',
+      }
+      expect(determineDistinguishedLevel(club, '2023-2024')).toBe('Smedley')
+    })
+
     it('should return Presidents at 10 goals + 20 members (not Smedley)', () => {
       const club = {
         'Goals Met': '10',

@@ -27,6 +27,8 @@ import {
   deriveAreaRecognitionState,
   getCurrentVisitRound,
 } from './areaRecognitionState.js'
+import { determineDistinguishedLevel as coreDetermineDistinguishedLevel } from '@taverns-red/analytics-core'
+import { getProgramYearForDate } from './programYear'
 import { logger } from './logger'
 
 /**
@@ -128,10 +130,15 @@ export function resolveSnapshotDate(
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
  *
  * @param club - Raw club data record from CSV
+ * @param programYear - Program year the snapshot belongs to ("YYYY-YYYY"),
+ *   threaded from the caller's pinned snapshot date. Decides which rungs
+ *   exist: Smedley was added at club level for 2025-26 (#1406). Omitted →
+ *   current rules.
  * @returns Distinguished level or null if not distinguished
  */
 export function determineDistinguishedLevel(
-  club: Record<string, unknown>
+  club: Record<string, unknown>,
+  programYear?: string
 ): 'Smedley' | 'Presidents' | 'Select' | 'Distinguished' | null {
   // Requirement 3.5: CSP requirement for 2025-2026+
   // Check if CSP field exists and if so, require it to be submitted
@@ -162,7 +169,8 @@ export function determineDistinguishedLevel(
   return calculateDistinguishedLevelFromCriteria(
     dcpGoals,
     membership,
-    netGrowth
+    netGrowth,
+    programYear
   )
 }
 
@@ -211,43 +219,32 @@ function extractDistinguishedLevelFromStatus(
 /**
  * Calculates distinguished level based on DCP goals, membership, and net growth
  *
- * Distinguished Level Criteria (from Toastmasters DCP):
- * - Smedley Distinguished: 10 goals + 25 members
- * - President's Distinguished: 9 goals + 20 members
- * - Select Distinguished: 7 goals + (20 members OR net growth of 5)
- * - Distinguished: 5 goals + (20 members OR net growth of 3)
+ * Delegates to analytics-core's `determineDistinguishedLevel` (#1406) rather
+ * than restating the ladder, so the rungs — and which of them existed in a
+ * given program year — have one definition. The only difference kept here is
+ * the shape this module's callers expect: "Presidents" rather than the
+ * canonical "President", and `null` rather than "NotDistinguished".
  *
  * @param dcpGoals - Number of DCP goals achieved
  * @param membership - Current active membership count
  * @param netGrowth - Net membership growth (current - base)
+ * @param programYear - Program year the data belongs to ("YYYY-YYYY")
  * @returns Distinguished level or null if not distinguished
  */
 function calculateDistinguishedLevelFromCriteria(
   dcpGoals: number,
   membership: number,
-  netGrowth: number
+  netGrowth: number,
+  programYear?: string
 ): 'Smedley' | 'Presidents' | 'Select' | 'Distinguished' | null {
-  // Smedley Distinguished: 10 goals + 25 members
-  if (dcpGoals >= 10 && membership >= 25) {
-    return 'Smedley'
-  }
-
-  // President's Distinguished: 9 goals + 20 members
-  if (dcpGoals >= 9 && membership >= 20) {
-    return 'Presidents'
-  }
-
-  // Select Distinguished: 7 goals + (20 members OR net growth of 5)
-  if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) {
-    return 'Select'
-  }
-
-  // Distinguished: 5 goals + (20 members OR net growth of 3)
-  if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) {
-    return 'Distinguished'
-  }
-
-  return null
+  const level = coreDetermineDistinguishedLevel(
+    dcpGoals,
+    membership,
+    netGrowth,
+    programYear
+  )
+  if (level === 'NotDistinguished') return null
+  return level === 'President' ? 'Presidents' : level
 }
 
 /**
@@ -439,6 +436,11 @@ export function extractDivisionPerformance(
     return []
   }
 
+  // The club recognition ladder is per program year (#1406) — derive it from
+  // the snapshot date the CALLER pinned (a required arg, deliberately no
+  // wall-clock default, #1321), not from anything inside the payload.
+  const programYear = getProgramYearForDate(snapshotDate).label
+
   // Create a map of club performance data by club identifier for quick lookup
   const clubPerformanceMap = new Map<string, Record<string, unknown>>()
   if (Array.isArray(clubPerformanceRaw)) {
@@ -550,14 +552,20 @@ export function extractDivisionPerformance(
         // for each club to count distinguished clubs consistently with analytics engine
         // IMPORTANT: Use clubPerf (from clubPerformance) which has "Club Distinguished Status"
         // field, not clubData (from divisionPerformance) which doesn't have this field
-        const distinguishedLevel = determineDistinguishedLevel(clubPerf)
+        const distinguishedLevel = determineDistinguishedLevel(
+          clubPerf,
+          programYear
+        )
         if (distinguishedLevel !== null) {
           distinguishedClubs++
         }
       } else {
         // Fallback: try to determine distinguished status from divisionPerformance data
         // This may not have "Club Distinguished Status" field, so it will use DCP calculation
-        const distinguishedLevel = determineDistinguishedLevel(clubData)
+        const distinguishedLevel = determineDistinguishedLevel(
+          clubData,
+          programYear
+        )
         if (distinguishedLevel !== null) {
           distinguishedClubs++
         }
@@ -619,6 +627,9 @@ function extractAreasForDivision(
   clubPerformanceMap: Map<string, Record<string, unknown>>,
   snapshotDate: string
 ): AreaPerformance[] {
+  // Per-program-year club ladder (#1406), from the caller's pinned date.
+  const programYear = getProgramYearForDate(snapshotDate).label
+
   // Group clubs by area
   const areaMap = new Map<string, unknown[]>()
 
@@ -738,14 +749,20 @@ function extractAreasForDivision(
         // for each club to count distinguished clubs consistently with analytics engine
         // IMPORTANT: Use clubPerf (from clubPerformance) which has "Club Distinguished Status"
         // field, not club (from divisionPerformance) which doesn't have this field
-        const distinguishedLevel = determineDistinguishedLevel(clubPerf)
+        const distinguishedLevel = determineDistinguishedLevel(
+          clubPerf,
+          programYear
+        )
         if (distinguishedLevel !== null) {
           distinguishedClubs++
         }
       } else {
         // Fallback: try to determine distinguished status from divisionPerformance data
         // This may not have "Club Distinguished Status" field, so it will use DCP calculation
-        const distinguishedLevel = determineDistinguishedLevel(club)
+        const distinguishedLevel = determineDistinguishedLevel(
+          club,
+          programYear
+        )
         if (distinguishedLevel !== null) {
           distinguishedClubs++
         }

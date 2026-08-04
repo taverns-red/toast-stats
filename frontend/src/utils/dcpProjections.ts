@@ -15,7 +15,11 @@
  * It provides additive projections for district leaders (issue #6 constraint).
  */
 
-import { getCSPStatus } from '@taverns-red/analytics-core'
+import {
+  determineDistinguishedLevel,
+  getCSPStatus,
+  isClubSmedleyAvailable,
+} from '@taverns-red/analytics-core'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 
 // --- Types ---
@@ -51,8 +55,11 @@ export interface ClubDCPProjection {
 
 /**
  * Determine distinguished level from goals + membership.
- * Mirrors ClubEligibilityUtils.determineDistinguishedLevel but operates
- * on raw numbers without needing ClubStatistics.
+ *
+ * Delegates the ladder to analytics-core's `determineDistinguishedLevel`
+ * (#1406) rather than restating it, so the rungs — and which of them existed
+ * in `programYear` — have one definition. The club Smedley rung was added for
+ * 2025-26; before that the ladder topped out at President's.
  *
  * CSP gate (#1139): from 2025-2026 a club without a submitted Club Success
  * Plan cannot reach any distinguished level. `cspSubmitted` is the value the
@@ -64,14 +71,11 @@ function determineLevel(
   goals: number,
   members: number,
   netGrowth: number,
-  cspSubmitted: boolean
+  cspSubmitted: boolean,
+  programYear?: string
 ): DistinguishedLevel {
   if (!cspSubmitted) return 'NotDistinguished'
-  if (goals >= 10 && members >= 25) return 'Smedley'
-  if (goals >= 9 && members >= 20) return 'President'
-  if (goals >= 7 && (members >= 20 || netGrowth >= 5)) return 'Select'
-  if (goals >= 5 && (members >= 20 || netGrowth >= 3)) return 'Distinguished'
-  return 'NotDistinguished'
+  return determineDistinguishedLevel(goals, members, netGrowth, programYear)
 }
 
 /**
@@ -128,8 +132,17 @@ function latestMembership(
 
 /**
  * Calculate DCP projection for a single club.
+ *
+ * @param club - Club trend data
+ * @param programYear - Program year the trend belongs to ("YYYY-YYYY"),
+ *   threaded from the page that owns the program-year selection (#1406).
+ *   Decides which rungs the club could reach and which tier gaps are worth
+ *   showing. Omitted → current rules.
  */
-export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
+export function calculateClubProjection(
+  club: ClubTrend,
+  programYear?: string
+): ClubDCPProjection {
   const currentGoals = latestGoals(club.dcpGoalsTrend)
   const currentMembers = latestMembership(club.membershipTrend)
   const aprilRenewals =
@@ -162,7 +175,8 @@ export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
     currentGoals,
     currentMembers,
     netGrowth,
-    cspSubmitted
+    cspSubmitted,
+    programYear
   )
   // projectedMembers === currentMembers (no April-renewal inflation, #1116
   // item 3), so the projected level is identical to the current level.
@@ -185,7 +199,13 @@ export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
     5
   )
   const gapToPresident = computeGap(currentGoals, currentMembers, 9, 20)
-  const gapToSmedley = computeGap(currentGoals, currentMembers, 10, 25)
+  // A gap to a rung that did not exist that year is not a goal anyone could
+  // have chased (#1406) — report it as already-closed so no surface offers
+  // "2 members from Smedley" for a 2023-24 club.
+  const smedleyReachable = isClubSmedleyAvailable(programYear)
+  const gapToSmedley = smedleyReachable
+    ? computeGap(currentGoals, currentMembers, 10, 25)
+    : { goals: 0, members: 0 }
 
   const projection: ClubDCPProjection = {
     clubId: club.clubId,
@@ -206,7 +226,9 @@ export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
     closestTierAbove: null, // filled below
   }
 
-  projection.closestTierAbove = getClosestTierLabel(projection)
+  projection.closestTierAbove = getClosestTierLabel(projection, {
+    smedleyReachable,
+  })
 
   return projection
 }
@@ -216,8 +238,10 @@ export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
  * Returns null if the club is already at the highest tier (Smedley).
  */
 export function getClosestTierLabel(
-  projection: ClubDCPProjection
+  projection: ClubDCPProjection,
+  options: { smedleyReachable?: boolean } = {}
 ): string | null {
+  const { smedleyReachable = true } = options
   const tierOrder: DistinguishedLevel[] = [
     'NotDistinguished',
     'Distinguished',
@@ -235,7 +259,10 @@ export function getClosestTierLabel(
     { tier: 'Distinguished', gap: projection.gapToDistinguished },
     { tier: 'Select', gap: projection.gapToSelect },
     { tier: "President's", gap: projection.gapToPresident },
-    { tier: 'Smedley', gap: projection.gapToSmedley },
+    // Smedley is only a tier to aim at in a year that had it (#1406).
+    ...(smedleyReachable
+      ? [{ tier: 'Smedley', gap: projection.gapToSmedley }]
+      : []),
   ]
 
   // Find the first tier above current that has a non-zero gap
@@ -266,7 +293,8 @@ export function getClosestTierLabel(
  * Calculate DCP projections for a batch of clubs.
  */
 export function calculateClubProjections(
-  clubs: ClubTrend[]
+  clubs: ClubTrend[],
+  programYear?: string
 ): ClubDCPProjection[] {
-  return clubs.map(calculateClubProjection)
+  return clubs.map(club => calculateClubProjection(club, programYear))
 }

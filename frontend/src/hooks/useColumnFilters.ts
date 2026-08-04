@@ -28,7 +28,10 @@ export {
 export const useColumnFilters = (
   clubs: ClubTrend[],
   initialFilterState?: FilterState,
-  referenceDate?: Date
+  referenceDate?: Date,
+  /** Program year being shown ("YYYY-YYYY") — the recognition ladder the
+   *  members-needed gap is measured against (#1406). */
+  programYear?: string
 ) => {
   const [filterState, setFilterState] = useState<FilterState>(
     initialFilterState ?? {}
@@ -38,8 +41,8 @@ export const useColumnFilters = (
    * Process clubs with computed properties for filtering
    */
   const processedClubs = useMemo((): ProcessedClubTrend[] => {
-    return processClubs(clubs, referenceDate)
-  }, [clubs, referenceDate])
+    return processClubs(clubs, referenceDate, programYear)
+  }, [clubs, referenceDate, programYear])
 
   /**
    * Apply a single filter to the club data

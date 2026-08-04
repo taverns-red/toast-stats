@@ -94,11 +94,19 @@ const TierBadge: React.FC<{ level: DistinguishedLevel }> = ({ level }) => {
 interface DCPProjectionsTableProps {
   clubs: ClubTrend[]
   isLoading?: boolean
+  /**
+   * Program year being shown ("YYYY-YYYY"), from the parent that owns the
+   * selection. Threaded to `calculateClubProjections`, which resolves the
+   * recognition ladder for that year (#1406) — the ladder itself lives in
+   * `ClubEligibilityUtils`, not here. Omitted → the ladder's default.
+   */
+  programYear?: string | undefined
 }
 
 export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
   clubs,
   isLoading = false,
+  programYear,
 }) => {
   const [sortField, setSortField] = useState<SortField>('gapToNext')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -107,7 +115,10 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
   const [showCloseOnly, setShowCloseOnly] = useState(false)
 
   // Compute projections
-  const projections = useMemo(() => calculateClubProjections(clubs), [clubs])
+  const projections = useMemo(
+    () => calculateClubProjections(clubs, programYear),
+    [clubs, programYear]
+  )
 
   // Get unique divisions for filter
   const divisions = useMemo(() => {

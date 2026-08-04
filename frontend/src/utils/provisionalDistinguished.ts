@@ -16,7 +16,10 @@
  *   All Distinguished = confirmed.
  */
 
-import { getCSPStatus } from '@taverns-red/analytics-core'
+import {
+  getConfirmedDistinguishedLevel,
+  getCSPStatus,
+} from '@taverns-red/analytics-core'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { DistinguishedLevel } from '@taverns-red/analytics-core'
 
@@ -95,8 +98,17 @@ const LEVEL_THRESHOLDS: Record<string, { members: number; growth?: number }> = {
  * Get the confirmed Distinguished level using only April renewals
  * as the membership count. Returns the highest level achievable
  * with confirmed renewals.
+ *
+ * @param club - Club trend data from CDN
+ * @param programYear - Program year the trend belongs to ("YYYY-YYYY"),
+ *   threaded from the page that owns the program-year selection. The club
+ *   Smedley rung did not exist before 2025-26 (#1406). Omitted → current
+ *   rules.
  */
-export function getConfirmedLevel(club: ClubTrend): DistinguishedLevel {
+export function getConfirmedLevel(
+  club: ClubTrend,
+  programYear?: string
+): DistinguishedLevel {
   // CSP gate (#1139): a club without a submitted Club Success Plan cannot be
   // confirmed Distinguished (2025-2026+). Source the rule from analytics-core
   // (undefined → submitted for pre-2025-26 historical data).
@@ -107,26 +119,26 @@ export function getConfirmedLevel(club: ClubTrend): DistinguishedLevel {
   const trend = club.dcpGoalsTrend
   const lastEntry = trend.length > 0 ? trend[trend.length - 1] : undefined
   const goals = lastEntry?.goalsAchieved ?? 0
-  const netGrowth = renewals - base
 
-  if (goals >= 10 && renewals >= 25) return 'Smedley'
-  if (goals >= 9 && renewals >= 20) return 'President'
-  if (goals >= 7 && (renewals >= 20 || netGrowth >= 5)) return 'Select'
-  if (goals >= 5 && (renewals >= 20 || netGrowth >= 3)) return 'Distinguished'
-  return 'NotDistinguished'
+  // The ladder itself lives in analytics-core so the rungs, and which of
+  // them the program year had, have one definition (#1406).
+  return getConfirmedDistinguishedLevel(goals, renewals, base, programYear)
 }
 
 /**
  * Get a human-readable description of what's needed to confirm
  * the club's current Distinguished level.
  */
-export function getProvisionalTooltip(club: ClubTrend): string {
+export function getProvisionalTooltip(
+  club: ClubTrend,
+  programYear?: string
+): string {
   const level = club.distinguishedLevel ?? 'NotDistinguished'
   const thresholds = LEVEL_THRESHOLDS[level]
   if (!thresholds) return ''
 
   const renewals = club.aprilRenewals ?? 0
-  const confirmedLevel = getConfirmedLevel(club)
+  const confirmedLevel = getConfirmedLevel(club, programYear)
   const confirmedLabel =
     confirmedLevel === 'NotDistinguished'
       ? 'no Distinguished status'

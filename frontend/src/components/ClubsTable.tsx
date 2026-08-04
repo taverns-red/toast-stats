@@ -200,6 +200,14 @@ interface ClubsTableProps {
    * table is byte-identical to its pre-#795 self.
    */
   snapshotDiff?: SnapshotDiff | undefined
+  /**
+   * Program year being shown ("YYYY-YYYY"), from the page that owns the
+   * selection. The club recognition ladder varies by program year; this
+   * component only threads the value to `ClubEligibilityUtils`, which holds
+   * the ladder itself (#1406). Never re-derive it here (R3).
+   * Omitted → the ladder's default.
+   */
+  programYear?: string | undefined
 }
 
 /**
@@ -250,6 +258,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   onPresetChange,
   referenceDate,
   snapshotDiff,
+  programYear,
 }) => {
   const [sortField, setSortField] = useState<SortField>(
     initialSortField ?? 'name'
@@ -285,7 +294,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     getFilter,
     hasActiveFilters,
     activeFilterCount,
-  } = useColumnFilters(clubs, initialFilterState, referenceDate)
+  } = useColumnFilters(clubs, initialFilterState, referenceDate, programYear)
 
   // Wrap setFilter to notify parent of changes for URL sync
   const setFilter = useCallback(
@@ -365,11 +374,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     if (!presetActive) return filteredClubs
     return filteredClubs.filter(club =>
       isCloseToDistinguished({
-        projection: calculateClubProjection(club),
+        projection: calculateClubProjection(club, programYear),
         cspSubmitted: club.cspSubmitted,
       })
     )
-  }, [filteredClubs, presetActive])
+  }, [filteredClubs, presetActive, programYear])
 
   const nameSortedClubs = useMemo(
     () =>
