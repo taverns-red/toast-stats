@@ -1,6 +1,6 @@
 # CEO Report "Numeric Snapshots" — Toast Stats data-coverage audit (#1426)
 
-**Status:** Evaluation · awaiting operator ruling on scope
+**Status:** Evaluation complete · operator ruling recorded 2026-08-19 (see §7)
 **Source analysed:** `ceo-report-august-2026.pdf` (20 pp.), TI CEO Report archive
 (<https://www.toastmasters.org/about/world-headquarters/ceo-reports>)
 **Date:** 2026-08-19
@@ -24,6 +24,16 @@ per-district** — `snapshots/{date}/district_{id}.json`,
 `snapshots/{date}/all-districts-rankings.json`, `time-series/district_{id}/…`.
 There is no worldwide rollup and no global time series. The CEO Report is
 entirely global-with-5-year-history. That rollup is the build.
+
+> **Unverified prerequisite — archive coverage.** This audit assumed the CEO
+> Report's 2021-22 → 2025-26 window sits inside our snapshot archive, on the
+> strength of #1147's "2017→now full rerun". Two frontend signals disagree:
+> `frontend/src/pages/HistoryPage.tsx:16` calls 2021-22 "the COVID gap" and
+> expects it absent, and that page's own callout states pre-2019 data "aren't on
+> file here". The audit session could not settle it — CDN egress to
+> `cdn.taverns.red` was blocked by the network policy. **Check `v1/dates.json`
+> before scoping the rollup**: if 2021-22 is genuinely missing, the 5-year series
+> has a hole exactly where TI's window starts.
 
 ---
 
@@ -88,6 +98,9 @@ undistricted (`U`) bucket. The collector can fetch `U`
 (`fetch-find-a-club --include-undistricted`, and `U` appears in the All Districts
 summary), but confirm it is in the district set for any date we roll up.
 
+**Ruled (2026-08-19):** include `U` in global sums, and label the district count
+separately so "93 districts" does not silently become 94.
+
 ### ✅ Membership payments — 5-year trend
 
 Sum `rankings[].totalPayments` from `snapshots/{date}/all-districts-rankings.json`
@@ -109,6 +122,9 @@ Membership ÷ paid clubs at the PY-end snapshot. Note the CEO Report's basis is
 basis before publishing a number labelled the same way TI labels it.
 `DistrictAwardsHistoryStore.avgClubSize` already stores a per-district per-PY
 value — check its basis matches before reusing it for a global figure.
+
+**Ruled (2026-08-19):** publish June-30 membership ÷ paid clubs, stated on the
+methodology page. We do not chase 18.1; landing near it is validation.
 
 ### ✅ Distinguished clubs by tier + % of paid clubs — 5-year trend
 
@@ -150,6 +166,10 @@ paid** at the snapshot date. TI counts clubs _organized_ during the year,
 including ones since suspended — so our number will run low. The New Clubs daily
 report (`ac6df5db…`) is the cleaner source, and is already parsed
 (`NewClubRecord` with `charterDate` + `status`) — but see the pipeline gap below.
+
+**Ruled (2026-08-19):** source new clubs from the New Clubs report, which makes
+this metric depend on #1428. If #1428 stalls, ship `newCharteredClubs` under a
+distinct label ("new clubs still active") — never as "new clubs".
 
 ### ⚠️ Suspended clubs — parser gap
 
@@ -231,8 +251,10 @@ matched `clubPerformance` rows and onto `ClubStatisticsFile.address.country`
 - **Education awards by country** — the daily report is club-keyed, so this is a
   proxy of a proxy, and TI additionally normalises by the country's membership.
 
-Shippable with an explicit, prominent methodology note — or not at all. Operator
-call.
+**Ruled (2026-08-19): ship clubs-by-country only.** A methodology footnote does
+not travel with a screenshot, and members-by-country is the map most likely to be
+lifted out of context. One map we can compute honestly beats three we have to
+qualify.
 
 ### ✅ District reformations
 
@@ -281,21 +303,47 @@ close match to the CEO Report as _validation_, not as a target to fit. Tuning a
 definition until a number matches a PDF is how a silent wrong-basis metric gets
 shipped.
 
-## 6. Recommended sequencing
+## 6. Sequencing (as ruled)
 
-1. **Unblock the daily-reports pipeline gap** (#1428) — it is a live defect
-   affecting a shipped feature, independent of this evaluation.
+0. **Validate the calculators against the CEO Report's five published years**
+   (#1429) — the report publishes exactly the totals our calculators produce, so
+   it is a free external oracle for per-era rulesets that have never been checked
+   against a published number. Confirmations de-risk everything below;
+   mismatches are bugs in figures users already see. Also verify `v1/dates.json`
+   coverage here (see §1).
+1. **Unblock the daily-reports pipeline gap** (#1428, as a parallel job) — a live
+   defect affecting a shipped feature, independent of this evaluation.
 2. **`Susp` parser branch** — smallest, unblocks a whole CEO-report series from
    data already on disk.
 3. **Global rollup artifact** (`global-totals.json` + `global-history.json`) —
    the one build that lights up all six ✅ rows at once.
-4. **Global page / section** consuming it, 5-year trends, methodology note.
+4. **Extend `/history`** with the global trend series + methodology note. Not a
+   new page: `HistoryPage` already answers "how each completed program year
+   finished" from year-end all-districts rankings, which is the CEO Report's
+   frame. A parallel `/global` route would split one question across two surfaces.
 5. **Education-awards series** — after #1070 runs, once historical PYs exist.
-6. **Country maps** — only if the club-country proxy is acceptable, with the
-   caveat surfaced in the UI, not buried in docs.
+6. **Clubs-by-country map** — with an explicit "unknown" bucket for clubs Find-A-Club
+   did not match.
 7. **Membership-building awards** — parked until a source is found.
 
-## 7. Sources consulted
+## 7. Operator ruling — 2026-08-19
+
+Recorded on #1426. Seven questions, seven answers:
+
+| #   | Question                 | Ruling                                   |
+| --- | ------------------------ | ---------------------------------------- |
+| 1   | Where does it live?      | Extend `/history`; no new global page    |
+| 2   | Country maps?            | Clubs-by-country only                    |
+| 3   | Average club size basis? | June-30 membership ÷ paid clubs, stated  |
+| 4   | Undistricted (`U`)?      | Include; label district count separately |
+| 5   | New clubs definition?    | New Clubs report (depends on #1428)      |
+| 6   | #1428's ~24 min?         | Parallel job — not absorbed, not trimmed |
+| 7   | Run #1070 backfill?      | Yes, after #1428                         |
+
+Plus: validate against the CEO Report's published figures first (#1429), ahead of
+the rollup build.
+
+## 8. Sources consulted
 
 - `ceo-report-august-2026.pdf`, pp. 1–14 (text + rendered chart labels)
 - `packages/shared-contracts/src/types/district-statistics-file.ts` (`DistrictTotalsFile`, `ClubStatisticsFile`)
@@ -306,4 +354,4 @@ shipped.
 - `packages/collector-cli/src/services/{DailyReportFetcher,DistrictReportsBuilder,EducationArchiveBackfill,DistrictAwardsHistoryStore,FindAClubService}.ts`
 - `.github/workflows/data-pipeline.yml` (the invoked `collector-cli` command set)
 - `docs/investigations/1063-daily-reports-ingest-spike.md` (the 12 report GUIDs + keep/EXCLUDE map)
-- Issues #1062, #1069, #1070, #1080, #1147, #336, #1124, #1125, #1132, #1428
+- Issues #1062, #1069, #1070, #1080, #1147, #336, #1124, #1125, #1132, #1428, #1429
