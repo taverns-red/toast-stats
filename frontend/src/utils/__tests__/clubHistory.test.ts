@@ -68,6 +68,34 @@ describe('buildClubHistoryRow', () => {
     expect(row.tierLabel).toBe('Smedley Distinguished')
   })
 
+  it('renders P for a historical "Presidents Distinguished" year (#1431)', () => {
+    // Integration-level criterion, satisfied at the view-model level rather
+    // than by a page mount (R22). `buildClubHistoryRow` is what the per-club
+    // history table renders from, and historical snapshots carry the
+    // apostrophe-less dashboard word form
+    // (TOASTMASTERS_DASHBOARD_KNOWLEDGE.md:521). This used to fall through to
+    // null → an em-dash, silently understating the club's history.
+    const row = buildClubHistoryRow(
+      2019,
+      '2020-06-30',
+      makeClub({ distinguishedStatus: 'Presidents Distinguished' })
+    )
+    expect(row.hasData).toBe(true)
+    expect(row.tierCode).toBe('P')
+    expect(row.tierLabel).toBe("President's Distinguished")
+    expect(row.tierLabel).not.toBe('—')
+  })
+
+  it('exports the historical word-form tier to CSV as its display name (#1431)', () => {
+    const row = buildClubHistoryRow(
+      2019,
+      '2020-06-30',
+      makeClub({ distinguishedStatus: 'Presidents Distinguished' })
+    )
+    const csv = toClubHistoryCsvRows([row])
+    expect(csv[1]?.[2]).toBe("President's Distinguished")
+  })
+
   it('treats an absent club (missing year) as a no-data row, not a crash', () => {
     const row = buildClubHistoryRow(2021, '2022-06-30', undefined)
     expect(row.hasData).toBe(false)
