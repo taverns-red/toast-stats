@@ -187,8 +187,9 @@ Two things block it:
    `snapshots/{date}/district_{id}_reports.json` is not being produced on a
    schedule, even though the frontend reads it (`fetchCdnDistrictReports`,
    `clubStatusOverlay` — the shipped #1069 closing-period club-status overlay).
-   This is a standalone bug well beyond this audit's scope; it needs its own
-   issue.
+   This is a standalone bug well beyond this audit's scope — filed as **#1428**,
+   which also documents a filename-collision landmine that makes naive wiring
+   fail the publish gate.
 2. **Prior program years need the archive backfill.** The current-PY report is
    live; historical PYs come from the Educational Achievement Archive
    (`a30b93f3…`, empty for the current PY, populated per `?year=`). The backfill
@@ -282,7 +283,7 @@ shipped.
 
 ## 6. Recommended sequencing
 
-1. **Unblock the daily-reports pipeline gap** (own issue) — it is a live defect
+1. **Unblock the daily-reports pipeline gap** (#1428) — it is a live defect
    affecting a shipped feature, independent of this evaluation.
 2. **`Susp` parser branch** — smallest, unblocks a whole CEO-report series from
    data already on disk.
@@ -305,4 +306,4 @@ shipped.
 - `packages/collector-cli/src/services/{DailyReportFetcher,DistrictReportsBuilder,EducationArchiveBackfill,DistrictAwardsHistoryStore,FindAClubService}.ts`
 - `.github/workflows/data-pipeline.yml` (the invoked `collector-cli` command set)
 - `docs/investigations/1063-daily-reports-ingest-spike.md` (the 12 report GUIDs + keep/EXCLUDE map)
-- Issues #1062, #1069, #1070, #1080, #1147, #336, #1124, #1132
+- Issues #1062, #1069, #1070, #1080, #1147, #336, #1124, #1125, #1132, #1428
