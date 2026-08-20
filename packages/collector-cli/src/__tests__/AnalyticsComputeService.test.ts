@@ -1034,6 +1034,53 @@ describe('AnalyticsComputeService', () => {
 
       expect(districts).toEqual(['1'])
     })
+
+    /**
+     * #1428: `fetch-daily-reports` writes
+     * `snapshots/{date}/district_{id}_reports.json` into the SAME directory
+     * discovery scans. `/^district_(.+)\.json$/` captured `61_reports` as a
+     * district id, so a `compute-analytics` run without `--districts` (i.e.
+     * scripts/rebuild-analytics.ts or a manual invocation — the daily
+     * pipeline always passes --districts) fabricated a district that does
+     * not exist and failed the run computing it.
+     */
+    it('ignores the district_{id}_reports.json daily-reports sidecar', async () => {
+      const date = '2024-01-15'
+      const snapshotDir = path.join(testCache.path, 'snapshots', date)
+
+      await writeDistrictSnapshot(
+        testCache.path,
+        date,
+        '61',
+        createSampleDistrictStatistics('61', date)
+      )
+      await writeDistrictSnapshot(
+        testCache.path,
+        date,
+        'F',
+        createSampleDistrictStatistics('F', date)
+      )
+      await fs.writeFile(
+        path.join(snapshotDir, 'district_61_reports.json'),
+        JSON.stringify({
+          districtId: '61',
+          programYear: '2025-2026',
+          generatedAt: '2026-08-20T06:12:00.000Z',
+          sections: {},
+        })
+      )
+      // Any future sidecar must be excluded too — the pattern is the fix.
+      await fs.writeFile(
+        path.join(snapshotDir, 'district_61_foo.json'),
+        JSON.stringify({ districtId: '61' })
+      )
+
+      const districts =
+        await analyticsComputeService.discoverAvailableDistricts(date)
+
+      expect(districts).toEqual(['61', 'F'])
+      expect(districts).not.toContain('61_reports')
+    })
   })
 
   describe('computeDistrictAnalytics', () => {
