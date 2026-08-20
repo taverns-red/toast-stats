@@ -19,6 +19,14 @@
 
 import { PerDistrictDataSchema } from '@taverns-red/shared-contracts'
 import { summarizeZodIssues } from './zodIssueSummary.js'
+import {
+  districtIdFromSnapshotFileName,
+  isDistrictSnapshotFile,
+} from './snapshotFileNames.js'
+
+// The canonical matcher lives in ./snapshotFileNames.ts (#1428) — re-exported
+// here so scripts/validate-snapshots.ts keeps its single import site.
+export { isDistrictSnapshotFile }
 
 export interface SnapshotFileInput {
   /** Base file name, e.g. `district_61.json`. */
@@ -44,16 +52,6 @@ export interface SnapshotGateResult {
   reason: string
 }
 
-const DISTRICT_FILE_PATTERN = /^district_(.+)\.json$/
-
-export function isDistrictSnapshotFile(fileName: string): boolean {
-  return DISTRICT_FILE_PATTERN.test(fileName)
-}
-
-function districtIdFromFileName(fileName: string): string | null {
-  return DISTRICT_FILE_PATTERN.exec(fileName)?.[1] ?? null
-}
-
 function validateDistrictFile(
   file: SnapshotFileInput
 ): SnapshotGateFailure | null {
@@ -64,7 +62,7 @@ function validateDistrictFile(
     const message = err instanceof Error ? err.message : String(err)
     return {
       fileName: file.fileName,
-      districtId: districtIdFromFileName(file.fileName),
+      districtId: districtIdFromSnapshotFileName(file.fileName),
       snapshotDate: null,
       reason: `invalid JSON: ${message}`,
     }
@@ -80,7 +78,7 @@ function validateDistrictFile(
   const districtId =
     typeof record?.districtId === 'string'
       ? record.districtId
-      : districtIdFromFileName(file.fileName)
+      : districtIdFromSnapshotFileName(file.fileName)
   const snapshotDate =
     typeof record?.data?.snapshotDate === 'string'
       ? record.data.snapshotDate
