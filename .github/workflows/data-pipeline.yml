@@ -104,6 +104,29 @@ jobs:
     # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
     timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape' || inputs.mode == 'rescrape-historical') && 240 || 30 }}
 
+    # ── Job outputs (#1428) ──────────────────────────────────
+    # The file's first job-level outputs block. It exists for one consumer:
+    # the `place-reports` job below, which puts the daily-reports sidecars
+    # into the snapshot directory THIS job just published.
+    #
+    # `snapshot_date` is the load-bearing one. It is PARSED out of the scraped
+    # CSV's "As of" footer by ClosingPeriodDetector (post closing-period remap,
+    # #309), so no sibling job can derive it without scraping — which is
+    # exactly why `daily-reports` fetches into a raw-date-keyed staging prefix
+    # and a trailing job does the placement. It is the empty string for every
+    # non-daily mode, because the `[daily] Scrape & Transform` step never ran;
+    # `place-reports` keys its whole existence off that.
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+      raw_date: ${{ steps.daily-scrape.outputs.date }}
+      snapshot_date: ${{ steps.daily-scrape.outputs.snapshot_date }}
+      # Literally the string 'unknown' when a manual `districts` override
+      # skipped discovery (#1343) — `place-reports` guards for it.
+      program_year: ${{ steps.daily-config.outputs.program_year }}
+      # Both promotion gates open ⇒ this run already rsynced staging → prod,
+      # BEFORE the sidecars landed. `place-reports` mirrors them explicitly.
+      promoted: ${{ steps.diff.outputs.promote == 'true' && steps.valuediff.outputs.value_promote == 'true' }}
+
     steps:
       # ── Setup ────────────────────────────────────────────────
       - name: Checkout code
