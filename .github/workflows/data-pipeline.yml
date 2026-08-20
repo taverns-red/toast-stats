@@ -1392,6 +1392,13 @@ jobs:
               const index = {};
               // Parse GCS paths: gs://bucket/snapshots/YYYY-MM-DD/district_XX.json
               for (const line of lines) {
+                // The /^[A-Z0-9]+$/i guard is load-bearing, not decorative: `\w`
+                // includes `_`, so without it the daily-reports sidecar
+                // `district_61_reports.json` enters the index as a phantom
+                // district `61_reports` (#1428). Equivalent to
+                // DISTRICT_SNAPSHOT_OBJECT_PATTERN in
+                // @taverns-red/shared-contracts src/naming/snapshotFileNames.ts,
+                // which inline JS in YAML cannot import. Do not drop it.
                 const match = line.match(/snapshots\/(\d{4}-\d{2}-\d{2})\/district_(\w+)\.json$/);
                 if (match && match[1] && match[2] && /^[A-Z0-9]+$/i.test(match[2])) {
                   const [, date, id] = match;
@@ -1454,10 +1461,18 @@ jobs:
           fi
           echo "Building club-index from snapshots/${LATEST_DATE}/..."
 
-          # Download all district snapshot files for the latest date
+          # Download all district snapshot files for the latest date.
+          # `district_*.json` also matches the daily-reports sidecar
+          # `district_{id}_reports.json` (#1428), which doubles the download
+          # volume and the parse count for nothing. `gsutil cp` has no
+          # exclude flag (-x is rsync-only), so list first, filter, and feed
+          # the survivors back with `cp -I` (source URLs on stdin).
           mkdir -p /tmp/club-index-src
-          gsutil -m cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
-            /tmp/club-index-src/ 2>/dev/null || true
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" 2>/dev/null \
+            | grep -v '_reports\.json$' > /tmp/club-index-srcs.txt || true
+          if [ -s /tmp/club-index-srcs.txt ]; then
+            gsutil -m cp -I /tmp/club-index-src/ < /tmp/club-index-srcs.txt 2>/dev/null || true
+          fi
 
           node -e "
             const fs = require('fs');
@@ -1465,12 +1480,17 @@ jobs:
             const srcDir = '/tmp/club-index-src';
             const clubs = {};
             let total = 0;
-            const files = fs.readdirSync(srcDir).filter(f => f.startsWith('district_') && f.endsWith('.json'));
+            // Inline JS in YAML cannot import the shared matcher, so this is a
+            // hand copy of DISTRICT_SNAPSHOT_FILE_PATTERN from
+            // @taverns-red/shared-contracts src/naming/snapshotFileNames.ts
+            // (re-exported as scripts/lib/snapshotFileNames.ts) — a district id
+            // never contains '_' or '.', which excludes every sidecar (#1428).
+            const files = fs.readdirSync(srcDir).filter(f => /^district_[^_.]+\.json$/.test(f));
             for (const file of files) {
               try {
                 const raw = JSON.parse(fs.readFileSync(path.join(srcDir, file), 'utf-8'));
                 const data = raw.data || raw;
-                const districtId = data.districtId || file.match(/district_(\w+)\.json/)?.[1];
+                const districtId = data.districtId || file.match(/^district_([^_.]+)\.json$/)?.[1];
                 const clubList = data.clubs || [];
                 for (const club of clubList) {
                   if (club.clubId) {
@@ -1517,10 +1537,16 @@ jobs:
           fi
           echo "Building divisions-areas index from snapshots/${LATEST_DATE}/..."
 
-          # R2: explicitly sync the district files this step reads
+          # R2: explicitly sync the district files this step reads.
+          # Same sidecar exclusion as club-index above (#1428) — this glob is
+          # what fed `district_{id}_reports.json` to the index builder and
+          # produced its `Skipping corrupt file:` noise on every run.
           mkdir -p /tmp/divisions-areas-src
-          gsutil -m cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
-            /tmp/divisions-areas-src/ 2>/dev/null || true
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" 2>/dev/null \
+            | grep -v '_reports\.json$' > /tmp/divisions-areas-srcs.txt || true
+          if [ -s /tmp/divisions-areas-srcs.txt ]; then
+            gsutil -m cp -I /tmp/divisions-areas-src/ < /tmp/divisions-areas-srcs.txt 2>/dev/null || true
+          fi
 
           # Fails the step when no district files were synced — an empty
           # index must never overwrite a populated one.
