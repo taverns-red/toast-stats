@@ -20,6 +20,7 @@
 
 import * as fs from 'fs'
 import * as path from 'path'
+import { isDistrictSnapshotFile } from './lib/snapshotFileNames.js'
 
 // Types for snapshot data
 interface DistrictStatistics {
@@ -128,7 +129,9 @@ function readSnapshotDistricts(snapshotDir: string): DistrictStatistics[] {
 
   const files = fs.readdirSync(snapshotDir)
   for (const file of files) {
-    if (file.startsWith('district_') && file.endsWith('.json')) {
+    // district_<id>.json only — never the district_<id>_reports.json
+    // daily-reports sidecar that shares the directory (#1428).
+    if (isDistrictSnapshotFile(file)) {
       try {
         const filePath = path.join(snapshotDir, file)
         const content = fs.readFileSync(filePath, 'utf-8')

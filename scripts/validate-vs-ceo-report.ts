@@ -64,9 +64,9 @@ import {
   type ComputedProgramYearTotals,
   type DistrictTierCounts,
 } from './lib/ceoReportOracle.js'
+import { isDistrictSnapshotFile } from './lib/snapshotFileNames.js'
 
 const DATE_DIR_PATTERN = /^\d{4}-\d{2}-\d{2}$/
-const DISTRICT_FILE_PATTERN = /^district_(.+)\.json$/
 
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)
@@ -143,12 +143,10 @@ function readJson<T>(path: string): T {
 }
 
 function districtFilesIn(snapshotDir: string): string[] {
-  return readdirSync(snapshotDir)
-    .filter(
-      name =>
-        DISTRICT_FILE_PATTERN.test(name) && !name.endsWith('_reports.json')
-    )
-    .sort()
+  // The local `!name.endsWith('_reports.json')` workaround this used to carry
+  // is now the shared matcher's job — the pattern excludes every sidecar,
+  // not just that one suffix (#1428).
+  return readdirSync(snapshotDir).filter(isDistrictSnapshotFile).sort()
 }
 
 interface ClubTierTally {

@@ -28,6 +28,7 @@ import {
   buildDivisionsAreasIndex,
   parseDistrictFile,
 } from './lib/divisionsAreasIndex.js'
+import { isDistrictSnapshotFile } from './lib/snapshotFileNames.js'
 
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)
@@ -47,9 +48,11 @@ const srcDir = arg('src')
 const outFile = arg('out')
 const snapshotDate = arg('snapshot-date')
 
-const fileNames = readdirSync(srcDir)
-  .filter(f => f.startsWith('district_') && f.endsWith('.json'))
-  .sort()
+// district_<id>.json only. The daily-reports sidecar
+// district_<id>_reports.json shares the directory and is a
+// DistrictReportsDataset — a bare payload carrying districtId, which the
+// builder would register as a division-less phantom district (#1428).
+const fileNames = readdirSync(srcDir).filter(isDistrictSnapshotFile).sort()
 
 const payloads: unknown[] = []
 for (const name of fileNames) {

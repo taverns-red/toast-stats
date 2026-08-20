@@ -3,16 +3,20 @@
  *
  * `collector-cli fetch-daily-reports` writes
  * `snapshots/{date}/district_{id}_reports.json` alongside the base snapshot.
- * Four call sites each carried their own copy of "what a district file looks
+ * Five call sites each carried their own copy of "what a district file looks
  * like", and every copy matched that sidecar:
  *
- *   - scripts/lib/snapshotPublishGate.ts  /^district_(.+)\.json$/  → gate FAILS
- *   - scripts/backfill-snapshot-index.ts  district_(\w+)          → phantom id
- *   - scripts/build-divisions-areas-index.ts  startsWith          → noisy log
- *   - scripts/detect-snapshot-anomalies.ts    startsWith          → silent skip
+ *   - scripts/lib/snapshotPublishGate.ts       → gate FAILS the daily run
+ *   - scripts/backfill-snapshot-index.ts       → phantom district id
+ *   - scripts/build-divisions-areas-index.ts   → phantom empty district
+ *   - scripts/detect-snapshot-anomalies.ts     → silent skip
+ *   - AnalyticsComputeService (collector-cli)  → fabricated district
  *
- * These tests pin the shared matcher AND the four call sites to it, so the
- * pattern (not a `_reports` special case) is what stays correct.
+ * These tests pin the shared matcher AND its call sites to it, so the pattern
+ * (not a `_reports` special case) is what stays correct. The implementation
+ * lives in @taverns-red/shared-contracts — the one package both `scripts/`
+ * and `packages/collector-cli` depend on — so there is a single definition
+ * rather than two regexes that must agree.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
@@ -32,6 +36,7 @@ import {
   isDistrictSnapshotFile,
   parseDistrictSnapshotObjectName,
 } from '../snapshotFileNames.js'
+import { isDistrictSnapshotFile as contractMatcher } from '@taverns-red/shared-contracts'
 
 const ROOT = process.cwd()
 
@@ -39,6 +44,10 @@ const ROOT = process.cwd()
 const REAL_DISTRICT_IDS = ['61', '1', '01', '107', 'F', 'U', '203', '231']
 
 describe('isDistrictSnapshotFile / districtIdFromSnapshotFileName', () => {
+  it('is the SAME function collector-cli imports, not a second copy', () => {
+    expect(isDistrictSnapshotFile).toBe(contractMatcher)
+  })
+
   it('matches every real district id shape, numeric and lettered', () => {
     for (const id of REAL_DISTRICT_IDS) {
       const fileName = `district_${id}.json`
@@ -139,14 +148,18 @@ describe('indexDistrictSnapshotObjects (#1428 phantom district)', () => {
 })
 
 /**
- * Static guard across the four call sites (#1428). Each must source the
- * matcher from ./snapshotFileNames, not re-derive it — a re-introduced
+ * Static guard across the scripts-side call sites (#1428). Each must source
+ * the matcher from ./snapshotFileNames, not re-derive it — a re-introduced
  * `startsWith('district_')` or `district_(\w+)` silently resurrects the bug.
  *
- * Scoped to the four owned call sites on purpose: `data-pipeline.yml` carries
- * a fifth copy owned by a concurrent change, and
- * `scripts/validate-vs-ceo-report.ts` reads a local cache tree that never
- * holds sidecars — both are tracked separately on #1428.
+ * `validate-vs-ceo-report.ts` is in the list because it had already hit this
+ * and worked around it locally (`&& !name.endsWith('_reports.json')`) — the
+ * clearest evidence the pattern needed centralising.
+ *
+ * `packages/collector-cli`'s copy (AnalyticsComputeService) is not a second
+ * definition to keep in sync: it imports the SAME function from
+ * @taverns-red/shared-contracts, which is where this module now lives.
+ * `.github/workflows/data-pipeline.yml` is out of scope here.
  */
 describe('call sites use the shared matcher', () => {
   const CALL_SITES = [
@@ -154,6 +167,7 @@ describe('call sites use the shared matcher', () => {
     'scripts/backfill-snapshot-index.ts',
     'scripts/build-divisions-areas-index.ts',
     'scripts/detect-snapshot-anomalies.ts',
+    'scripts/validate-vs-ceo-report.ts',
   ]
 
   /** Strip block + line comments so prose about the old bug doesn't trip us. */
