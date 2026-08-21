@@ -31,6 +31,7 @@ import type {
   ScrapedRecord,
 } from '@taverns-red/analytics-core'
 import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
+import { districtIdFromSnapshotFileName } from '@taverns-red/shared-contracts'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
 import { validateDistrictId } from '../utils/validateDistrictId.js'
@@ -645,10 +646,11 @@ export class AnalyticsComputeService {
       const entries = await fs.readdir(snapshotDir)
 
       for (const entry of entries) {
-        // Match district_*.json files
-        const match = entry.match(/^district_(.+)\.json$/)
-        if (match?.[1]) {
-          districts.push(match[1])
+        // Match district_<id>.json — and NOT the daily-reports sidecar
+        // district_<id>_reports.json that shares the directory (#1428).
+        const districtId = districtIdFromSnapshotFileName(entry)
+        if (districtId !== null) {
+          districts.push(districtId)
         }
       }
 

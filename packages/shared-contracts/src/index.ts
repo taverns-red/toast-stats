@@ -167,3 +167,17 @@ export {
   validateProgramYearSummary,
   type ValidationResult,
 } from './validation/validators.js'
+
+// Canonical snapshot file naming (#1428) — the one matcher that decides what
+// `district_<id>.json` means, shared by scripts/ and collector-cli so the
+// daily-reports sidecar cannot be mistaken for a district snapshot.
+export {
+  DISTRICT_SNAPSHOT_FILE_PATTERN,
+  DISTRICT_SNAPSHOT_OBJECT_PATTERN,
+  isDistrictSnapshotFile,
+  districtIdFromSnapshotFileName,
+  parseDistrictSnapshotObjectName,
+  indexDistrictSnapshotObjects,
+  type DistrictSnapshotObject,
+  type DistrictSnapshotDateIndex,
+} from './naming/snapshotFileNames.js'

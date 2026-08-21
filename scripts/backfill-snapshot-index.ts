@@ -14,6 +14,7 @@
  */
 
 import { Storage } from '@google-cloud/storage'
+import { indexDistrictSnapshotObjects } from './lib/snapshotFileNames.js'
 
 interface DistrictSnapshotIndex {
   generatedAt: string
@@ -34,34 +35,18 @@ async function main(): Promise<void> {
   console.error(`[INFO] Scanning bucket: ${bucketName}`)
   console.error(`[INFO] Listing snapshot prefixes under snapshots/...`)
 
-  // List all objects matching snapshots/{date}/district_{id}.json
-  const districtFilePattern =
-    /^snapshots\/(\d{4}-\d{2}-\d{2})\/district_(\w+)\.json$/
-  const districts: Record<string, Set<string>> = {}
-  let fileCount = 0
-
   const [files] = await bucket.getFiles({
     prefix: 'snapshots/',
     delimiter: undefined,
   })
 
-  for (const file of files) {
-    const match = districtFilePattern.exec(file.name)
-    if (match) {
-      const date = match[1]!
-      const districtId = match[2]!
-      const existing = districts[districtId] ?? new Set<string>()
-      existing.add(date)
-      districts[districtId] = existing
-      fileCount++
-    }
-  }
-
-  // Convert sets to sorted arrays
-  const districtArrays: Record<string, string[]> = {}
-  for (const [districtId, dates] of Object.entries(districts)) {
-    districtArrays[districtId] = [...dates].sort()
-  }
+  // Only snapshots/{date}/district_{id}.json counts. The daily-reports
+  // sidecar district_{id}_reports.json used to slip through the old
+  // `district_(\w+)` capture — `\w` includes `_` — and published a phantom
+  // district the frontend then fetched (#1428).
+  const { districts: districtArrays, fileCount } = indexDistrictSnapshotObjects(
+    files.map(file => file.name)
+  )
 
   const index: DistrictSnapshotIndex = {
     generatedAt: new Date().toISOString(),

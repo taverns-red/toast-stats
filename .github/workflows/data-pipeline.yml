@@ -104,6 +104,29 @@ jobs:
     # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
     timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape' || inputs.mode == 'rescrape-historical') && 240 || 30 }}
 
+    # ── Job outputs (#1428) ──────────────────────────────────
+    # The file's first job-level outputs block. It exists for one consumer:
+    # the `place-reports` job below, which puts the daily-reports sidecars
+    # into the snapshot directory THIS job just published.
+    #
+    # `snapshot_date` is the load-bearing one. It is PARSED out of the scraped
+    # CSV's "As of" footer by ClosingPeriodDetector (post closing-period remap,
+    # #309), so no sibling job can derive it without scraping — which is
+    # exactly why `daily-reports` fetches into a raw-date-keyed staging prefix
+    # and a trailing job does the placement. It is the empty string for every
+    # non-daily mode, because the `[daily] Scrape & Transform` step never ran;
+    # `place-reports` keys its whole existence off that.
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+      raw_date: ${{ steps.daily-scrape.outputs.date }}
+      snapshot_date: ${{ steps.daily-scrape.outputs.snapshot_date }}
+      # Literally the string 'unknown' when a manual `districts` override
+      # skipped discovery (#1343) — `place-reports` guards for it.
+      program_year: ${{ steps.daily-config.outputs.program_year }}
+      # Both promotion gates open ⇒ this run already rsynced staging → prod,
+      # BEFORE the sidecars landed. `place-reports` mirrors them explicitly.
+      promoted: ${{ steps.diff.outputs.promote == 'true' && steps.valuediff.outputs.value_promote == 'true' }}
+
     steps:
       # ── Setup ────────────────────────────────────────────────
       - name: Checkout code
@@ -1392,6 +1415,13 @@ jobs:
               const index = {};
               // Parse GCS paths: gs://bucket/snapshots/YYYY-MM-DD/district_XX.json
               for (const line of lines) {
+                // The /^[A-Z0-9]+$/i guard is load-bearing, not decorative: `\w`
+                // includes `_`, so without it the daily-reports sidecar
+                // `district_61_reports.json` enters the index as a phantom
+                // district `61_reports` (#1428). Equivalent to
+                // DISTRICT_SNAPSHOT_OBJECT_PATTERN in
+                // @taverns-red/shared-contracts src/naming/snapshotFileNames.ts,
+                // which inline JS in YAML cannot import. Do not drop it.
                 const match = line.match(/snapshots\/(\d{4}-\d{2}-\d{2})\/district_(\w+)\.json$/);
                 if (match && match[1] && match[2] && /^[A-Z0-9]+$/i.test(match[2])) {
                   const [, date, id] = match;
@@ -1454,10 +1484,18 @@ jobs:
           fi
           echo "Building club-index from snapshots/${LATEST_DATE}/..."
 
-          # Download all district snapshot files for the latest date
+          # Download all district snapshot files for the latest date.
+          # `district_*.json` also matches the daily-reports sidecar
+          # `district_{id}_reports.json` (#1428), which doubles the download
+          # volume and the parse count for nothing. `gsutil cp` has no
+          # exclude flag (-x is rsync-only), so list first, filter, and feed
+          # the survivors back with `cp -I` (source URLs on stdin).
           mkdir -p /tmp/club-index-src
-          gsutil -m cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
-            /tmp/club-index-src/ 2>/dev/null || true
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" 2>/dev/null \
+            | grep -v '_reports\.json$' > /tmp/club-index-srcs.txt || true
+          if [ -s /tmp/club-index-srcs.txt ]; then
+            gsutil -m cp -I /tmp/club-index-src/ < /tmp/club-index-srcs.txt 2>/dev/null || true
+          fi
 
           node -e "
             const fs = require('fs');
@@ -1465,12 +1503,17 @@ jobs:
             const srcDir = '/tmp/club-index-src';
             const clubs = {};
             let total = 0;
-            const files = fs.readdirSync(srcDir).filter(f => f.startsWith('district_') && f.endsWith('.json'));
+            // Inline JS in YAML cannot import the shared matcher, so this is a
+            // hand copy of DISTRICT_SNAPSHOT_FILE_PATTERN from
+            // @taverns-red/shared-contracts src/naming/snapshotFileNames.ts
+            // (re-exported as scripts/lib/snapshotFileNames.ts) — a district id
+            // never contains '_' or '.', which excludes every sidecar (#1428).
+            const files = fs.readdirSync(srcDir).filter(f => /^district_[^_.]+\.json$/.test(f));
             for (const file of files) {
               try {
                 const raw = JSON.parse(fs.readFileSync(path.join(srcDir, file), 'utf-8'));
                 const data = raw.data || raw;
-                const districtId = data.districtId || file.match(/district_(\w+)\.json/)?.[1];
+                const districtId = data.districtId || file.match(/^district_([^_.]+)\.json$/)?.[1];
                 const clubList = data.clubs || [];
                 for (const club of clubList) {
                   if (club.clubId) {
@@ -1517,10 +1560,16 @@ jobs:
           fi
           echo "Building divisions-areas index from snapshots/${LATEST_DATE}/..."
 
-          # R2: explicitly sync the district files this step reads
+          # R2: explicitly sync the district files this step reads.
+          # Same sidecar exclusion as club-index above (#1428) — this glob is
+          # what fed `district_{id}_reports.json` to the index builder and
+          # produced its `Skipping corrupt file:` noise on every run.
           mkdir -p /tmp/divisions-areas-src
-          gsutil -m cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
-            /tmp/divisions-areas-src/ 2>/dev/null || true
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" 2>/dev/null \
+            | grep -v '_reports\.json$' > /tmp/divisions-areas-srcs.txt || true
+          if [ -s /tmp/divisions-areas-srcs.txt ]; then
+            gsutil -m cp -I /tmp/divisions-areas-src/ < /tmp/divisions-areas-srcs.txt 2>/dev/null || true
+          fi
 
           # Fails the step when no district files were synced — an empty
           # index must never overwrite a populated one.
@@ -1898,3 +1947,450 @@ jobs:
           MODE="${{ steps.mode.outputs.mode }}"
           TIMESTAMP=$(date -u +%H:%M' UTC')
           echo "🏁 **${MODE}** pipeline completed at ${TIMESTAMP}" >> "$GITHUB_STEP_SUMMARY"
+
+  # ══════════════════════════════════════════════════════════
+  # DAILY DISTRICT REPORTS — PARALLEL FETCH (#1428, epic #1062)
+  #
+  # `collector-cli fetch-daily-reports` writes the de-identified
+  # `snapshots/{date}/district_{id}_reports.json` dataset that the #1069
+  # closing-period club-status overlay reads. Nothing called it, so a shipped
+  # feature had no data and failed silently (the overlay's null path is
+  # indistinguishable from "no club needed promoting").
+  #
+  # It is ~10 reports × ~130 districts at a 1100 ms floor ≈ 24 minutes of
+  # anonymous HTTP against a rate-sensitive TI endpoint. The `pipeline` job
+  # has `timeout-minutes: 30` and recent daily runs land at 15–22 min (one was
+  # cancelled at 30.4), so an inline step is a guaranteed timeout kill mid-run.
+  # Operator ruling 2026-08-19: run it as a parallel job, and do NOT trim
+  # IN_SCOPE_REPORT_GUIDS to make it fit.
+  #
+  # Deliberately NO `needs:` — this job starts at t = 0 alongside `pipeline`
+  # and the two never block each other. A total TI reports outage leaves THIS
+  # job red while the snapshot publish proceeds, unaware. That is strictly
+  # stronger than a `continue-on-error` inline step, which would still burn 24
+  # of the pipeline's 30 available minutes before failing.
+  #
+  # The pivot that makes independence possible: the SLOW part is
+  # date-independent. The fetch is keyed by the raw collection date (knowable
+  # up front) and lands in a run-scoped `incoming/` prefix; only the cheap
+  # placement needs the snapshot date, and that is what `place-reports` does.
+  # ══════════════════════════════════════════════════════════
+  daily-reports:
+    name: 'daily district reports fetch'
+    runs-on: ubuntu-latest
+    # Mirrors the daily gate on the Playwright step, minus the quarterly-prune
+    # cron (#1148), which is the one scheduled event that is NOT a daily run.
+    # R17: every value of `mode` has an explicit outcome — daily/'' → run,
+    # rebuild/rescrape/rescrape-historical/prune → skip.
+    if: >-
+      (inputs.mode == 'daily' || inputs.mode == '' || github.event_name == 'schedule')
+      && github.event.schedule != '0 6 25 2,5,8,11 *'
+    # 24 min is the NO-RETRY floor. DailyReportFetcher retries with backoff
+    # (maxRetries: 2), which pushes a flaky TI day past 30. 45 is the budget.
+    timeout-minutes: 45
+
+    outputs:
+      raw_date: ${{ steps.reports-config.outputs.raw_date }}
+      program_year: ${{ steps.reports-config.outputs.program_year }}
+      districts: ${{ steps.reports-config.outputs.districts }}
+      succeeded: ${{ steps.reports-fetch.outputs.succeeded }}
+      failed: ${{ steps.reports-fetch.outputs.failed }}
+      staged: ${{ steps.reports-stage.outputs.staged }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # collector-cli's own `tsc` resolves @taverns-red/shared-contracts and
+      # @taverns-red/analytics-core from their built `dist/`, which is
+      # gitignored and never auto-rebuilt (R16 / Lesson 92) — so all three,
+      # same as `pipeline`.
+      - name: Build packages
+        run: |
+          npm run build --workspace=@taverns-red/shared-contracts
+          npm run build --workspace=@taverns-red/analytics-core
+          npm run build --workspace=@taverns-red/collector-cli
+
+      # NO `npx playwright install` here, deliberately. DailyReportFetcher is
+      # plain anonymous HTTP against TI's report endpoints — no browser, no
+      # dashboard login, no scrape state. Skipping it saves ~1-2 min and a
+      # large apt install on every daily run.
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+
+      # ── Reports Step 1: raw date + districts + program year ──
+      - name: '[reports] Resolve date, districts and program year'
+        id: reports-config
+        run: |
+          # Same expression as the pipeline's own daily steps — the raw
+          # COLLECTION date. TI's dashboard is always one day behind. This is
+          # knowable without scraping, which is the whole point: it keys the
+          # staging prefix. The SNAPSHOT date (post closing-period remap, #309)
+          # is not knowable here and is never guessed.
+          RAW_DATE="${{ inputs.date || '' }}"
+          if [ -z "${RAW_DATE}" ]; then
+            RAW_DATE=$(date -u -d '1 day ago' +%Y-%m-%d)
+          fi
+          echo "Raw collection date: ${RAW_DATE}"
+          echo "raw_date=${RAW_DATE}" >> "$GITHUB_OUTPUT"
+
+          # #1284: the active program year is resolved BY DATA, never by the
+          # calendar. This job has no `needs:`, so it cannot read
+          # `steps.daily-config.outputs.program_year` from `pipeline` and must
+          # run the resolver a second time — which is exactly the "two
+          # resolutions can disagree at the July boundary" hazard #1284 exists
+          # to prevent. The mitigation is downstream and mandatory:
+          # `place-reports` asserts this value equals the pipeline's before it
+          # places anything, and refuses loudly if they differ.
+          #
+          # Discovery runs even when `districts` is overridden manually,
+          # because the PROGRAM YEAR is not optional here (see the fetch step);
+          # only the district LIST honours the override.
+          echo "Discovering districts for ${RAW_DATE}..."
+          set +e
+          DISCOVERY_JSON=$(npx collector-cli discover-districts --date "${RAW_DATE}" --verbose)
+          DISCOVERY_STATUS=$?
+          set -e
+          if [ ${DISCOVERY_STATUS} -ne 0 ]; then
+            echo "::error::[reports] discover-districts failed (exit ${DISCOVERY_STATUS}) — refusing to fetch."
+            echo "${DISCOVERY_JSON}"
+            exit 1
+          fi
+
+          PROGRAM_YEAR=$(echo "${DISCOVERY_JSON}" | jq -r '.programYear')
+          FELL_BACK=$(echo "${DISCOVERY_JSON}" | jq -r '.fellBack')
+          if [ -z "${PROGRAM_YEAR}" ] || [ "${PROGRAM_YEAR}" = "null" ] || [ "${PROGRAM_YEAR}" = "unknown" ]; then
+            echo "::error::[reports] discover-districts returned no program year — refusing to fetch (#1284)."
+            exit 1
+          fi
+
+          if [ -n "${{ inputs.districts }}" ]; then
+            DISTRICTS="${{ inputs.districts }}"
+            echo "Using manual district override: ${DISTRICTS}"
+          else
+            DISTRICTS=$(echo "${DISCOVERY_JSON}" | jq -r '.districts')
+          fi
+          if [ -z "${DISTRICTS}" ] || [ "${DISTRICTS}" = "null" ]; then
+            echo "::error::[reports] No districts to fetch reports for — refusing to fetch."
+            exit 1
+          fi
+
+          echo "program_year=${PROGRAM_YEAR}" >> "$GITHUB_OUTPUT"
+          echo "districts=${DISTRICTS}" >> "$GITHUB_OUTPUT"
+
+          DISTRICT_COUNT=$(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')
+          {
+            echo "## 📄 District Daily Reports — Config (#1428)"
+            echo "- **Raw collection date**: ${RAW_DATE}"
+            echo "- **Program year (resolved by data)**: ${PROGRAM_YEAR} (fellBack=${FELL_BACK})"
+            echo "- **Districts**: ${DISTRICT_COUNT}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Reports Step 2: the ~24-minute fetch ──
+      - name: '[reports] Fetch district daily reports'
+        id: reports-fetch
+        # REQUIRED. The command exits 1 on partial failure and 2 on total
+        # failure per district (both are normal weather for an unauth'd TI
+        # endpoint). Without this the job goes red on a single bad district
+        # and `place-reports` would then discard a perfectly good 129/130.
+        continue-on-error: true
+        env:
+          # `fetch-daily-reports` has NO --cache-dir flag. CACHE_DIR is the
+          # only way to steer where it writes; resolveConfiguration() reads it.
+          CACHE_DIR: ./cache
+        run: |
+          RAW_DATE="${{ steps.reports-config.outputs.raw_date }}"
+          PROGRAM_YEAR="${{ steps.reports-config.outputs.program_year }}"
+          DISTRICT_LIST="${{ steps.reports-config.outputs.districts }}"
+
+          # --districts is mandatory IN PRACTICE: without it the command reads
+          # {CACHE_DIR}/config/districts.json, which does not exist on a fresh
+          # runner and is synced by nothing (R2).
+          #
+          # --program-year is mandatory for CORRECTNESS: the CLI default is
+          # calculateProgramYear(targetDate) (cli.ts), pure calendar
+          # arithmetic that returns 2026-2027 on 2026-07-01 while the data
+          # resolver returns 2025-2026 (#1284). Falling back to it would
+          # request a program year with no data and write ~130 empty datasets.
+          #
+          # stdout is the structured JSON summary (R4); --verbose logs go to
+          # stderr, so they stream live through the 24-minute wait.
+          set +e
+          npx collector-cli fetch-daily-reports \
+            --date "${RAW_DATE}" \
+            --districts "${DISTRICT_LIST}" \
+            --program-year "${PROGRAM_YEAR}" \
+            --verbose > /tmp/daily-reports-output.json
+          FETCH_STATUS=$?
+          set -e
+          echo "fetch-daily-reports exited ${FETCH_STATUS} (0=all, 1=partial, 2=total failure)"
+
+          SUCCEEDED=$(jq -r '.succeeded // 0' /tmp/daily-reports-output.json 2>/dev/null || echo 0)
+          FAILED=$(jq -r '.failed // 0' /tmp/daily-reports-output.json 2>/dev/null || echo 0)
+          echo "succeeded=${SUCCEEDED}" >> "$GITHUB_OUTPUT"
+          echo "failed=${FAILED}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## 📄 District Daily Reports — Fetch (#1428)"
+            echo "- **Districts succeeded**: ${SUCCEEDED}"
+            echo "- **Districts failed**: ${FAILED}"
+            echo "- **Exit code**: ${FETCH_STATUS}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          jq -r '.results[]? | select(.ok == false) | "  - district \(.districtId): \(.error)"' \
+            /tmp/daily-reports-output.json >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+          # Surface the real verdict. `continue-on-error` absorbs it into a
+          # red STEP inside a green JOB, so `place-reports` still gets its
+          # chance at the partial result.
+          exit ${FETCH_STATUS}
+
+      # ── Reports Step 3: stage into the run-scoped incoming prefix ──
+      - name: '[reports] Stage datasets to the incoming prefix'
+        id: reports-stage
+        run: |
+          RAW_DATE="${{ steps.reports-config.outputs.raw_date }}"
+          SRC_DIR="./cache/snapshots/${RAW_DATE}"
+          INCOMING="gs://${GCS_BUCKET}/incoming/daily-reports/${RAW_DATE}"
+
+          COUNT=$(find "${SRC_DIR}" -maxdepth 1 -name 'district_*_reports.json' 2>/dev/null \
+            | wc -l | tr -d ' ')
+          echo "staged=${COUNT}" >> "$GITHUB_OUTPUT"
+
+          if [ "${COUNT}" -eq 0 ]; then
+            echo "::warning::[reports] No district_*_reports.json produced —" \
+              "nothing to stage. The snapshot publishes without the #1069 overlay."
+            echo "- **Staged to \`incoming/\`**: 0 (nothing to place)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Clear leftovers first so a re-run for the same raw date can never
+          # mix two runs' datasets in one prefix.
+          gsutil -m rm -r "${INCOMING}/" 2>/dev/null || true
+
+          # Internal hand-off only: plain objects, NO CDN headers and NO -Z.
+          # `place-reports` re-uploads with the snapshot headers once it knows
+          # the snapshot date, so the CDN-facing object is produced by exactly
+          # the same command shape as the pipeline's own upload step.
+          gsutil -m cp "${SRC_DIR}"/district_*_reports.json "${INCOMING}/"
+
+          {
+            echo "- **Staged to \`incoming/daily-reports/${RAW_DATE}/\`**: ${COUNT} datasets"
+            echo "- Awaiting \`place-reports\` for the authoritative snapshot date."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ══════════════════════════════════════════════════════════
+  # PLACE DAILY REPORTS INTO THE SNAPSHOT (#1428)
+  #
+  # The cheap, date-dependent half. ~1 minute: assert the two program-year
+  # resolutions agree, copy the staged datasets into
+  # `snapshots/<pipeline.snapshot_date>/`, mirror to prod if this run
+  # promoted, drop the incoming prefix.
+  #
+  # `if: always()` because `pipeline` can finish with red steps (a blocked
+  # promotion, a failed FAC merge) and still have published a perfectly good
+  # snapshot — and because `daily-reports` may be red. The real scope guard is
+  # `snapshot_date != ''`, which is only ever non-empty on a daily run whose
+  # scrape parsed a date.
+  # ══════════════════════════════════════════════════════════
+  place-reports:
+    name: 'place daily reports into the snapshot'
+    runs-on: ubuntu-latest
+    needs: [pipeline, daily-reports]
+    if: always() && needs.pipeline.outputs.snapshot_date != ''
+    timeout-minutes: 15
+
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+
+      # ── The #1284 cross-job assertion ──
+      # `daily-reports` had to resolve the active program year a second time
+      # (no `needs:` ⇒ no access to the pipeline's). Two independent
+      # resolutions of the same thing is precisely what #1284 forbids leaving
+      # unchecked, so they are compared here before a single byte is placed.
+      # Every case is explicit (R17):
+      #   pipeline not successful           → skip, warn      (no trustworthy snapshot)
+      #   daily-reports not successful      → skip, warn      (no data to place)
+      #   reports PY empty/unknown          → skip, ERROR     (should be impossible)
+      #   pipeline PY empty/'unknown'       → skip, warn      (#1343 override)
+      #   PYs differ                        → skip, ERROR     (the #1284 bug)
+      #   PYs equal                         → place
+      - name: '[reports] Assert both program-year resolutions agree (#1284)'
+        id: py-assert
+        run: |
+          PIPELINE_PY="${{ needs.pipeline.outputs.program_year }}"
+          REPORTS_PY="${{ needs.daily-reports.outputs.program_year }}"
+          REPORTS_RESULT="${{ needs.daily-reports.result }}"
+          PIPELINE_RESULT="${{ needs.pipeline.result }}"
+          echo "pipeline  program_year = '${PIPELINE_PY}'  (job result: ${PIPELINE_RESULT})"
+          echo "reports   program_year = '${REPORTS_PY}'  (job result: ${REPORTS_RESULT})"
+          echo "place=false" >> "$GITHUB_OUTPUT"
+
+          echo "## 🧷 Daily Reports Placement (#1428)" >> "$GITHUB_STEP_SUMMARY"
+
+          # A red `pipeline` means the snapshot publish itself is not
+          # trustworthy (the validate gate, the upload, the scrape). Dropping
+          # sidecars into a directory whose district_*.json never landed
+          # creates exactly the orphan `_reports`-only state this issue is
+          # cleaning up after. Note a merely HELD promotion does not fail the
+          # job — the "Promotion blocked" step only annotates — so this is
+          # specifically "the run broke", not "the gates said no".
+          if [ "${PIPELINE_RESULT}" != "success" ]; then
+            echo "::warning::[reports] pipeline finished '${PIPELINE_RESULT}' —" \
+              "the snapshot publish is not trustworthy, so nothing is placed."
+            echo "- ⚠️ \`pipeline\` result: **${PIPELINE_RESULT}** — nothing placed." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ "${REPORTS_RESULT}" != "success" ]; then
+            echo "::warning::[reports] daily-reports finished '${REPORTS_RESULT}' —" \
+              "nothing to place. The snapshot publishes without the #1069" \
+              "closing-period overlay."
+            echo "- ⚠️ \`daily-reports\` result: **${REPORTS_RESULT}** — nothing placed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ -z "${REPORTS_PY}" ] || [ "${REPORTS_PY}" = "unknown" ]; then
+            echo "::error::[reports] daily-reports emitted no resolved program year — refusing to place (#1284)."
+            echo "- ❌ reports program year missing — **refusing to place**." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          if [ -z "${PIPELINE_PY}" ] || [ "${PIPELINE_PY}" = "unknown" ]; then
+            # A manual `districts` override skips the pipeline's discovery, so
+            # its program_year is literally 'unknown' (#1343) and there is
+            # nothing to assert against. Fail CLOSED: an unverified sidecar
+            # written under the wrong program year is the silent-404 failure
+            # mode this issue exists to fix. Re-run without the override to
+            # get the overlay.
+            echo "::warning::[reports] pipeline program year is '${PIPELINE_PY}'" \
+              "(discovery skipped by a manual districts override, #1343) —" \
+              "cannot assert agreement, refusing to place."
+            echo "- ⚠️ pipeline program year **${PIPELINE_PY:-<empty>}** —" \
+              "cannot assert, nothing placed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ "${PIPELINE_PY}" != "${REPORTS_PY}" ]; then
+            echo "::error::[reports] PROGRAM-YEAR MISMATCH (#1284): pipeline" \
+              "resolved '${PIPELINE_PY}' but the reports fetch resolved" \
+              "'${REPORTS_PY}'. The two resolvers disagree — refusing to place." \
+              "Snapshot publish is unaffected."
+            {
+              echo "- ❌ **PROGRAM-YEAR MISMATCH (#1284)** — nothing placed."
+              echo "  - pipeline: \`${PIPELINE_PY}\`"
+              echo "  - reports:  \`${REPORTS_PY}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "place=true" >> "$GITHUB_OUTPUT"
+          echo "- ✅ Program year agreed: \`${PIPELINE_PY}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: '[reports] Place datasets into the snapshot directory'
+        id: place
+        if: steps.py-assert.outputs.place == 'true'
+        run: |
+          SNAPSHOT_DATE="${{ needs.pipeline.outputs.snapshot_date }}"
+          RAW_DATE="${{ needs.daily-reports.outputs.raw_date }}"
+          STAGED="${{ needs.daily-reports.outputs.staged }}"
+          INCOMING="gs://${GCS_BUCKET}/incoming/daily-reports/${RAW_DATE}"
+
+          if [ "${STAGED:-0}" -eq 0 ] 2>/dev/null; then
+            echo "::warning::[reports] daily-reports staged 0 datasets — nothing to place."
+            echo "- ⚠️ 0 datasets staged — nothing placed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ "${RAW_DATE}" != "${SNAPSHOT_DATE}" ]; then
+            echo "Closing period: reports collected on ${RAW_DATE} → snapshot ${SNAPSHOT_DATE} (#309)"
+          fi
+
+          # Down-then-up rather than a GCS→GCS rewrite, deliberately: the
+          # CDN-facing object must be byte-for-byte the same shape the
+          # pipeline's own `[daily] Upload to GCS` step produces (gzipped via
+          # -Z with the same two headers), and `cp -Z` is an UPLOAD-side flag.
+          rm -rf /tmp/daily-reports && mkdir -p /tmp/daily-reports
+          gsutil -m cp "${INCOMING}/district_*_reports.json" /tmp/daily-reports/
+          COUNT=$(find /tmp/daily-reports -maxdepth 1 -name 'district_*_reports.json' \
+            | wc -l | tr -d ' ')
+          if [ "${COUNT}" -eq 0 ]; then
+            echo "::warning::[reports] incoming prefix ${INCOMING}/ is empty — nothing placed."
+            echo "- ⚠️ incoming prefix empty — nothing placed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Same headers as the pipeline's snapshot upload.
+          gsutil -m \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=3600, must-revalidate" \
+            cp -Z \
+            /tmp/daily-reports/*.json \
+            "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/"
+
+          {
+            echo "- ✅ Placed **${COUNT}** datasets into \`staging:snapshots/${SNAPSHOT_DATE}/\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # ── PROD PATH — explicit mirror, chosen over the next-day rsync ──
+          # This job runs AFTER `pipeline` has already promoted, so the
+          # sidecars miss that run's `gsutil -m rsync -r snapshots/`. The
+          # alternative — let tomorrow's promotion sweep them up — means the
+          # frontend reads a day-old overlay, a miniature repeat of the silent
+          # staleness this issue exists to fix. So mirror explicitly, gated on
+          # the same two gates that let `pipeline` promote.
+          if [ "${{ needs.pipeline.outputs.promoted }}" = "true" ]; then
+            gsutil -m \
+              -h "Content-Type:application/json" \
+              -h "Cache-Control:public, max-age=3600, must-revalidate" \
+              cp -Z \
+              /tmp/daily-reports/*.json \
+              "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"
+            echo "- ✅ Mirrored to \`prod:snapshots/${SNAPSHOT_DATE}/\` (this run promoted)" \
+              >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::[reports] This run did not promote, so the reports" \
+              "stay staging-only. They reach prod with the next promoting run's" \
+              "snapshots/ rsync."
+            echo "- ⏸️ Promotion was held — reports are staging-only until the next promoting run." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Best-effort teardown of the run-scoped hand-off prefix so `incoming/`
+      # never accumulates. Runs on every path, including a refused placement:
+      # the datasets are cheap to regenerate and a wrong-program-year set has
+      # no forensic value.
+      - name: '[reports] Clean up the incoming prefix'
+        if: always()
+        run: |
+          RAW_DATE="${{ needs.daily-reports.outputs.raw_date }}"
+          if [ -z "${RAW_DATE}" ]; then
+            echo "No raw date from daily-reports — nothing to clean up."
+            exit 0
+          fi
+          gsutil -m rm -r "gs://${GCS_BUCKET}/incoming/daily-reports/${RAW_DATE}/" 2>/dev/null \
+            || echo "Nothing to clean up at incoming/daily-reports/${RAW_DATE}/"
