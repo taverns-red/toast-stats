@@ -1,0 +1,258 @@
+# CEO Report oracle — run the validator from CI (#1435, epic #1426)
+#
+# `scripts/validate-vs-ceo-report.ts` (#1429/#1432) diffs what our calculators
+# produce for five completed program years against the totals the TI CEO Report
+# publishes. Running it needs the year-end snapshot archive, which no desk and
+# no agent session can reach. CI already authenticates to GCS on every pipeline
+# run, so this workflow gives the validator its feed.
+#
+# ON-DEMAND ONLY, ON PURPOSE. There is no `schedule:`, no `push:` and no
+# `pull_request:` trigger here, so this can never perturb the daily pipeline.
+# It stays that way until it has been dispatched successfully at least once.
+#
+# What it does NOT do: it never writes to GCS, and it touches no bucket path
+# other than the five snapshot prefixes it resolves. Reading only.
+#
+# Prerequisites are the pipeline's: GCP_WORKLOAD_IDENTITY_PROVIDER and
+# GCP_SERVICE_ACCOUNT (see scripts/setup-wif.sh).
+
+name: Validate vs CEO Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      bucket:
+        description: 'Bucket holding the snapshot archive'
+        required: true
+        type: choice
+        options:
+          - toast-stats-data-ca
+          - toast-stats-data-staging
+        default: toast-stats-data-ca
+      comment_issue:
+        description: 'Issue to post the per-year table to (blank = do not comment)'
+        required: false
+        type: string
+        default: '1429'
+
+# Read-only against GCS; `issues: write` is only for the result comment.
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation
+  issues: write # post the per-year table to the tracking issue
+
+concurrency:
+  group: validate-vs-ceo-report
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: CEO Report oracle
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      # ── Setup (mirrors data-pipeline.yml's "Checkout code" /
+      #    "Setup Node.js" / "Install dependencies" steps) ──────────
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Mirrors data-pipeline.yml's "Build packages" step, minus collector-cli
+      # (not imported here). NOT optional: validate-vs-ceo-report.ts imports
+      # analytics-core SOURCE, and analytics-core resolves shared-contracts
+      # from its gitignored dist/. Skip this and the run dies on import
+      # (R16 / Lesson 92 — the trap #1428 hit).
+      - name: Build packages
+        run: |
+          npm run build --workspace=@taverns-red/shared-contracts
+          npm run build --workspace=@taverns-red/analytics-core
+
+      # ── GCS access (copied verbatim from data-pipeline.yml's
+      #    "Authenticate to GCP" and "Set up Cloud SDK" steps) ──────
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+
+      # ── Which dates? Ask the rule, do not guess ─────────────────
+      # The PY-end date is NOT reliably `YYYY-06-30`: a closing period can
+      # push the settled snapshot into a differently dated directory. So list
+      # the bucket and apply the SAME rule validate-vs-ceo-report.ts applies
+      # (last snapshot whose own date falls in the program year — never
+      # `sourceCsvDate`, which lands in July, Lesson 139). That rule lives in
+      # scripts/lib/ceoReportSnapshotDates.ts and is reached here through its
+      # stdin CLI, so there is exactly one copy of it.
+      - name: Resolve PY-end snapshot dates
+        id: resolve
+        env:
+          BUCKET: ${{ inputs.bucket }}
+        run: |
+          set -uo pipefail
+          # GitHub runs `run:` as `bash -e {0}`; clear -e so a non-zero exit
+          # can be CAPTURED and reported instead of aborting the step.
+          set +e
+          echo "Listing gs://${BUCKET}/snapshots/ ..."
+          if ! gsutil ls "gs://${BUCKET}/snapshots/" > /tmp/snapshot-prefixes.txt; then
+            echo "::error::could not list gs://${BUCKET}/snapshots/"
+            exit 1
+          fi
+          echo "Prefixes listed: $(wc -l < /tmp/snapshot-prefixes.txt)"
+
+          npx tsx scripts/lib/ceoReportSnapshotDates.ts \
+            < /tmp/snapshot-prefixes.txt \
+            > /tmp/ceo-report-dates.json \
+            2> /tmp/ceo-report-census.txt
+          RESOLVE_EXIT=$?
+
+          # Coverage census (#1435 AC) — printed whether or not resolution
+          # succeeded, because "which years are absent" IS the finding that
+          # settles docs/investigations/1426-ceo-report-data-coverage.md §1.
+          echo "── Coverage census ──"
+          cat /tmp/ceo-report-census.txt
+          {
+            echo "## Coverage census (\`${BUCKET}\`)"
+            echo
+            echo '```'
+            cat /tmp/ceo-report-census.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$RESOLVE_EXIT" -ne 0 ]; then
+            echo "::error::no CEO Report program year has a snapshot in gs://${BUCKET}/snapshots/"
+            exit 1
+          fi
+
+          DATES=$(jq -r '.dates | join(" ")' /tmp/ceo-report-dates.json)
+          if [ -z "${DATES}" ]; then
+            echo "::error::resolver returned no dates"
+            exit 1
+          fi
+          echo "Resolved dates: ${DATES}"
+          echo "dates=${DATES}" >> "$GITHUB_OUTPUT"
+
+      # ── Targeted sync: the resolved prefixes, not the bucket ────
+      # R2 — the runner starts empty. Only these five prefixes are pulled,
+      # and `analytics/` under each is excluded because the oracle reads only
+      # all-districts-rankings.json and district_*.json.
+      - name: Sync the resolved snapshot prefixes
+        env:
+          BUCKET: ${{ inputs.bucket }}
+          DATES: ${{ steps.resolve.outputs.dates }}
+        run: |
+          set -euo pipefail
+          # R17 — the "nothing resolved" case is explicit, not implicit. The
+          # resolve step already fails on it; syncing zero prefixes would
+          # otherwise reach the oracle as a confusing exit-2 setup error.
+          if [ -z "${DATES// /}" ]; then
+            echo "::error::no snapshot dates were resolved — nothing to sync"
+            exit 1
+          fi
+          mkdir -p ./cache/snapshots
+          for DATE in ${DATES}; do
+            case "${DATE}" in
+              [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+              *)
+                echo "::error::refusing to sync unexpected date '${DATE}'"
+                exit 1
+                ;;
+            esac
+            echo "::group::sync ${DATE}"
+            mkdir -p "./cache/snapshots/${DATE}"
+            gsutil -m rsync -r -x '^analytics/.*$' \
+              "gs://${BUCKET}/snapshots/${DATE}/" \
+              "./cache/snapshots/${DATE}/"
+            echo "::endgroup::"
+          done
+          echo "── Pulled ──"
+          du -sh ./cache/snapshots/* | sort
+          du -sh ./cache/snapshots
+
+      # ── The run itself ──────────────────────────────────────────
+      # The exit code is captured rather than propagated so the result still
+      # gets reported; the last step re-raises it.
+      - name: Run the CEO Report oracle
+        id: oracle
+        run: |
+          set -uo pipefail
+          set +e  # capture the oracle's exit code (see the resolve step)
+          npx tsx scripts/validate-vs-ceo-report.ts --cache-dir ./cache --json \
+            > /tmp/ceo-report-comparison.json \
+            2> /tmp/ceo-report-output.txt
+          ORACLE_EXIT=$?
+          cat /tmp/ceo-report-output.txt
+          echo "exit_code=${ORACLE_EXIT}" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Oracle result (exit ${ORACLE_EXIT})"
+            echo
+            echo '```'
+            cat /tmp/ceo-report-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Report ──────────────────────────────────────────────────
+      - name: Post the result to the tracking issue
+        if: ${{ always() && steps.oracle.outcome == 'success' && inputs.comment_issue != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ inputs.comment_issue }}
+          BUCKET: ${{ inputs.bucket }}
+          ORACLE_EXIT: ${{ steps.oracle.outputs.exit_code }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          case "${ISSUE}" in
+            '' | *[!0-9]*)
+              echo "::error::comment_issue must be an issue number, got '${ISSUE}'"
+              exit 1
+              ;;
+          esac
+
+          case "${ORACLE_EXIT}" in
+            0) VERDICT='✅ every published figure reproduced' ;;
+            1) VERDICT='❌ findings — at least one published figure did not reproduce' ;;
+            *) VERDICT="⚠️ setup error (exit ${ORACLE_EXIT}) — nothing was compared" ;;
+          esac
+
+          {
+            echo "## CEO Report oracle — CI run"
+            echo
+            echo "**Verdict:** ${VERDICT}"
+            echo "**Bucket:** \`gs://${BUCKET}/snapshots/\` · **Run:** ${RUN_URL}"
+            echo
+            echo "### Coverage census"
+            echo
+            echo '```'
+            cat /tmp/ceo-report-census.txt
+            echo '```'
+            echo
+            echo "### Per-year comparison"
+            echo
+            echo '```'
+            cat /tmp/ceo-report-output.txt
+            echo '```'
+          } > /tmp/ceo-report-comment.md
+
+          gh issue comment "${ISSUE}" --body-file /tmp/ceo-report-comment.md
+
+      # Red in the Actions list, not merely informative (#1435 AC).
+      - name: Fail the run on any mismatch
+        if: ${{ steps.oracle.outputs.exit_code != '0' }}
+        env:
+          ORACLE_EXIT: ${{ steps.oracle.outputs.exit_code }}
+        run: |
+          echo "::error::validate-vs-ceo-report.ts exited ${ORACLE_EXIT} — see the job summary"
+          exit 1

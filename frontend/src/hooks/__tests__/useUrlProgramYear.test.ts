@@ -42,6 +42,7 @@ vi.mock('../useDefaultProgramYear', () => ({
 
 // Must import after mock
 import { useUrlProgramYear } from '../useUrlProgramYear'
+import { getProgramYear } from '../../utils/programYear'
 import { snap } from '../../test-utils/snapshotDate'
 
 // Captures the live URL search string so tests can assert whether ?py= is
@@ -227,6 +228,88 @@ describe('useUrlProgramYear (#272)', () => {
 
       expect(result.current.selectedProgramYear.year).toBe(2024)
       expect(result.current.selectedDate).toBe('2025-01-15')
+    })
+  })
+
+  /**
+   * #1436 — `?py=` and `?date=` are read INDEPENDENTLY (see the reads above), so
+   * a `?date=` outside the selected program year leaves the page
+   * self-inconsistent. `searchIndex.ts` documents the same hazard and sets both
+   * together for exactly this reason.
+   *
+   * Two separate setter calls in one handler cannot do that: react-router's
+   * `setSearchParams` functional updater is handed the RENDER-TIME
+   * `searchParams` (react-router 7 `useSearchParams`), not the pending value —
+   * so the second call is computed from a stale base and silently discards the
+   * first call's key. Hence one setter that writes both keys in one navigation.
+   */
+  describe('setProgramYearAndDate (#1436)', () => {
+    it('writes both params in a single navigation', () => {
+      const { result } = renderHook(() => useUrlProgramYear(), {
+        wrapper: createWrapper(['/?py=2025&date=2026-06-30']),
+      })
+
+      act(() => {
+        result.current.setProgramYearAndDate(
+          getProgramYear(2024),
+          snap('2025-06-30')
+        )
+      })
+
+      expect(result.current.selectedProgramYear.year).toBe(2024)
+      expect(result.current.selectedDate).toBe('2025-06-30')
+      expect(location.search).toContain('py=2024')
+      expect(location.search).toContain('date=2025-06-30')
+    })
+
+    it('keeps ?py= when the date is cleared — the stale-base regression', () => {
+      // The naive `setSelectedProgramYear(py); setSelectedDate(undefined)`
+      // sequence loses `py=2024` here, because the second call rebuilds the
+      // query string from the pre-click params.
+      const { result } = renderHook(() => useUrlProgramYear(), {
+        wrapper: createWrapper(['/?py=2025&date=2026-06-30']),
+      })
+
+      act(() => {
+        result.current.setProgramYearAndDate(getProgramYear(2024), undefined)
+      })
+
+      expect(location.search).toContain('py=2024')
+      expect(location.search).not.toContain('date=')
+      expect(result.current.selectedDate).toBeUndefined()
+    })
+
+    it('never emits a ?date= outside the selected program year', () => {
+      const { result } = renderHook(() => useUrlProgramYear(), {
+        wrapper: createWrapper(['/?py=2025&date=2026-06-30']),
+      })
+
+      act(() => {
+        // 2026-06-30 belongs to PY 2025-2026, not to PY 2024-2025.
+        result.current.setProgramYearAndDate(
+          getProgramYear(2024),
+          snap('2026-06-30')
+        )
+      })
+
+      expect(location.search).toContain('py=2024')
+      expect(location.search).not.toContain('date=')
+    })
+
+    it('omits ?py= when the target year is the data-driven default', () => {
+      const { result } = renderHook(() => useUrlProgramYear(), {
+        wrapper: createWrapper(['/?py=2024&date=2025-06-30']),
+      })
+
+      act(() => {
+        result.current.setProgramYearAndDate(
+          getProgramYear(2025),
+          snap('2026-06-30')
+        )
+      })
+
+      expect(location.search).not.toContain('py=')
+      expect(location.search).toContain('date=2026-06-30')
     })
   })
 })
