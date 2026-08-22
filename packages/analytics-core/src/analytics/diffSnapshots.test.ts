@@ -251,3 +251,221 @@ describe('diffSnapshots', () => {
     expect(diff.clubs.bothPresent[0]!.distinguishedChanged).toBe(false)
   })
 })
+
+/* District-composition discontinuity (#1443).
+
+   The 2026-07-01 reformation merged and split districts and moved clubs
+   between them. A default diff for a surviving district straddles that
+   boundary (last June vs first July) and used to render every transferred
+   club as "X (Active) joined the roster" / "left the roster" — dozens of
+   them. Those clubs did not join or leave; the district's boundaries moved.
+
+   The regression risk these tests exist to guard: a NORMAL within-year diff
+   must be unchanged. That is pinned first, on the whole event list. */
+describe('diffSnapshots — district-composition discontinuity (#1443)', () => {
+  /** N clubs with sequential ids, `prefix` distinguishing the cohort. */
+  function clubs(prefix: string, count: number): ClubStatisticsFile[] {
+    return Array.from({ length: count }, (_, i) =>
+      club({ clubId: `${prefix}${String(i + 1).padStart(3, '0')}` })
+    )
+  }
+
+  it('leaves a normal within-year diff completely unchanged', () => {
+    const from = snapshot({
+      date: '2026-05-25',
+      clubs: [...clubs('s', 40), club({ clubId: 'gone' })],
+    })
+    const to = snapshot({
+      date: '2026-05-26',
+      clubs: [...clubs('s', 40), club({ clubId: 'new' })],
+    })
+    const diff = diffSnapshots(from, to)
+
+    expect(diff.rosterDiscontinuity).toBeUndefined()
+    expect(diff.events).toEqual([
+      {
+        category: 'club-removed',
+        clubId: 'gone',
+        clubName: 'Club gone',
+        label: 'Club gone (Active) left the roster',
+        magnitude: -1,
+      },
+      {
+        category: 'club-added',
+        clubId: 'new',
+        clubName: 'Club new',
+        label: 'Club new (Active) joined the roster',
+        magnitude: 1,
+      },
+    ])
+    expect(diff.clubs.onlyInFrom).toEqual([
+      {
+        clubId: 'gone',
+        clubName: 'Club gone',
+        divisionId: 'A',
+        areaId: '01',
+        clubStatus: 'Active',
+      },
+    ])
+    expect(diff.clubs.onlyInTo[0]).not.toHaveProperty('transferred')
+  })
+
+  /** Last June → first July, with a reformation-sized roster exchange. */
+  function reformationPair(over?: {
+    extraFrom?: ClubStatisticsFile[]
+    extraTo?: ClubStatisticsFile[]
+  }) {
+    return {
+      from: snapshot({
+        date: '2026-06-30',
+        clubs: [
+          ...clubs('stay', 30),
+          ...clubs('out', 10),
+          ...(over?.extraFrom ?? []),
+        ],
+      }),
+      to: snapshot({
+        date: '2026-07-01',
+        clubs: [
+          ...clubs('stay', 30),
+          ...clubs('in', 12),
+          ...(over?.extraTo ?? []),
+        ],
+      }),
+    }
+  }
+
+  it('reports the discontinuity when the pair straddles a program-year boundary with a reformation-sized roster exchange', () => {
+    const { from, to } = reformationPair()
+    const diff = diffSnapshots(from, to)
+
+    expect(diff.rosterDiscontinuity).toEqual({
+      kind: 'program-year-boundary',
+      fromProgramYear: '2025-2026',
+      toProgramYear: '2026-2027',
+      clubsMovedIn: 12,
+      clubsMovedOut: 10,
+    })
+  })
+
+  it('classifies transferred clubs as transfers, not as joining or leaving the roster', () => {
+    const { from, to } = reformationPair()
+    const events = diffSnapshots(from, to).events
+
+    const movedIn = events.filter(e => e.category === 'club-transferred-in')
+    const movedOut = events.filter(e => e.category === 'club-transferred-out')
+    expect(movedIn).toHaveLength(12)
+    expect(movedOut).toHaveLength(10)
+    expect(events.some(e => e.category === 'club-added')).toBe(false)
+    expect(events.some(e => e.category === 'club-removed')).toBe(false)
+
+    // No transferred club is described as having joined or left the roster.
+    for (const e of [...movedIn, ...movedOut]) {
+      expect(e.label).not.toContain('the roster')
+      expect(e.label.startsWith(e.clubName)).toBe(true)
+      expect(e.label).toContain('realignment')
+    }
+    expect(movedIn[0]!.label).toBe(
+      'Club in001 (Active) moved into the district in the 2026 district realignment'
+    )
+    expect(movedOut[0]!.label).toBe(
+      'Club out001 (Active) moved to another district in the 2026 district realignment'
+    )
+  })
+
+  it('marks transferred clubs on the presence lists', () => {
+    const { from, to } = reformationPair()
+    const diff = diffSnapshots(from, to)
+    expect(diff.clubs.onlyInTo.every(c => c.transferred === true)).toBe(true)
+    expect(diff.clubs.onlyInFrom.every(c => c.transferred === true)).toBe(true)
+  })
+
+  it('keeps a genuine new charter visible as a roster join, not a transfer', () => {
+    const { from, to } = reformationPair({
+      extraTo: [club({ clubId: 'brandnew', charterDate: '2026-07-01' })],
+    })
+    const diff = diffSnapshots(from, to)
+
+    const added = diff.events.filter(e => e.category === 'club-added')
+    expect(added).toHaveLength(1)
+    expect(added[0]!.clubId).toBe('brandnew')
+    expect(added[0]!.label).toBe('Club brandnew (Active) joined the roster')
+    expect(
+      diff.clubs.onlyInTo.find(c => c.clubId === 'brandnew')
+    ).not.toHaveProperty('transferred')
+    // A club chartered long before the window is still a transfer.
+    expect(
+      diff.events.filter(e => e.category === 'club-transferred-in')
+    ).toHaveLength(12)
+  })
+
+  it('keeps a genuine closure visible as a roster departure, not a transfer', () => {
+    const { from, to } = reformationPair({
+      extraFrom: [club({ clubId: 'closed', clubStatus: 'Suspended' })],
+    })
+    const diff = diffSnapshots(from, to)
+
+    const removed = diff.events.filter(e => e.category === 'club-removed')
+    expect(removed).toHaveLength(1)
+    expect(removed[0]!.clubId).toBe('closed')
+    expect(removed[0]!.label).toBe('Club closed (Suspended) left the roster')
+    expect(
+      diff.events.filter(e => e.category === 'club-transferred-out')
+    ).toHaveLength(10)
+  })
+
+  it('does not fire on ordinary July-rollover churn (too few clubs moved)', () => {
+    const from = snapshot({
+      date: '2026-06-30',
+      clubs: [...clubs('stay', 40), ...clubs('out', 3)],
+    })
+    const to = snapshot({
+      date: '2026-07-01',
+      clubs: [...clubs('stay', 40), ...clubs('in', 1)],
+    })
+    const diff = diffSnapshots(from, to)
+
+    expect(diff.rosterDiscontinuity).toBeUndefined()
+    expect(diff.events.filter(e => e.category === 'club-removed')).toHaveLength(
+      3
+    )
+    expect(diff.events.filter(e => e.category === 'club-added')).toHaveLength(1)
+  })
+
+  it('does not fire on a wide date range that merely happens to span July 1', () => {
+    const from = snapshot({
+      date: '2026-01-15',
+      clubs: [...clubs('stay', 30), ...clubs('out', 10)],
+    })
+    const to = snapshot({
+      date: '2026-12-15',
+      clubs: [...clubs('stay', 30), ...clubs('in', 12)],
+    })
+    const diff = diffSnapshots(from, to)
+
+    expect(diff.rosterDiscontinuity).toBeUndefined()
+    expect(diff.events.filter(e => e.category === 'club-added')).toHaveLength(
+      12
+    )
+  })
+
+  it('does not fire within a program year however large the roster exchange', () => {
+    const from = snapshot({
+      date: '2026-05-25',
+      clubs: [...clubs('stay', 30), ...clubs('out', 10)],
+    })
+    const to = snapshot({
+      date: '2026-05-26',
+      clubs: [...clubs('stay', 30), ...clubs('in', 12)],
+    })
+    const diff = diffSnapshots(from, to)
+
+    expect(diff.rosterDiscontinuity).toBeUndefined()
+    expect(diff.events.filter(e => e.category === 'club-added')).toHaveLength(
+      12
+    )
+    expect(diff.events.filter(e => e.category === 'club-removed')).toHaveLength(
+      10
+    )
+  })
+})
