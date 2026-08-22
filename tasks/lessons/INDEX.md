@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-query-that-just-became-enabled-is-idle-not-fetching.md` — A TanStack Query that just became `enabled` reports idle, not fetching — gate deferred copy on "unresolved", not on isFetching  (2026-08-22)
 - `coupled-url-params-need-one-setter-not-two-calls.md` — Two setSearchParams calls in one handler silently drop the first key — coupled URL params need a single combined setter  (2026-08-22)
 - `read-time-normalization-is-free-write-time-canonicalization-reshapes-every-derived-key.md` — Read-time normalization only ever widens what matches, but write-time canonicalization changes the bytes every derived index is keyed on — so the write half of an identity fix needs a census of everything derived from that field, and the read half needs none  (2026-08-22)
 - `a-centred-fixed-width-overlay-is-a-viewport-collision-bug-in-every-edge-column.md` — A fixed-width overlay centred on its trigger is off-screen wherever the trigger sits near a viewport edge — it is a property of the shared component, never of the card that reported it, and the measured correction cannot live in a Tailwind v4 translate utility  (2026-08-03)
