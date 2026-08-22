@@ -141,3 +141,50 @@ describe('exportSnapshotDiff (#795)', () => {
     expect(capturedFilename).toMatch(/\.csv$/)
   })
 })
+
+/* The exported CSV carries the same roster claim the view does, so it needs
+   the same correction (#1443): a club the district realignment moved is not a
+   club that joined or left. Genuine roster moves keep their wording. */
+describe('exportSnapshotDiff — district realignment (#1443)', () => {
+  it('labels transferred clubs as moved, not joined/left', () => {
+    exportSnapshotDiff(
+      makeDiff({
+        bothPresent: [],
+        onlyInTo: [
+          {
+            clubId: 'p1',
+            clubName: 'Annexed Co',
+            divisionId: 'B',
+            areaId: '2',
+            clubStatus: 'Active',
+            transferred: true,
+          },
+          {
+            clubId: 'p3',
+            clubName: 'Brand New Co',
+            divisionId: 'B',
+            areaId: '2',
+            clubStatus: 'Active',
+          },
+        ],
+        onlyInFrom: [
+          {
+            clubId: 'p2',
+            clubName: 'Departed Co',
+            divisionId: 'C',
+            areaId: '3',
+            clubStatus: 'Active',
+            transferred: true,
+          },
+        ],
+      })
+    )
+    const row = (id: string) =>
+      captured.split('\n').find(l => l.startsWith(`${id},`)) ?? ''
+    expect(row('p1')).toContain('Moved in (district realignment)')
+    expect(row('p2')).toContain('Moved out (district realignment)')
+    // A genuine charter in the same export keeps the roster wording.
+    expect(row('p3')).toContain('Joined')
+    expect(row('p3')).not.toContain('realignment')
+  })
+})
