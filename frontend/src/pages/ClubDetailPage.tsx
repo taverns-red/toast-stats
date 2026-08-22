@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { fetchCdnClubIndex } from '../services/cdn'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
@@ -247,6 +249,45 @@ const ClubDetailPage: React.FC = () => {
     return analytics.allClubs.find(c => c.clubId === clubId) ?? null
   }, [analytics, clubId])
 
+  // ── Moved-club lookup (#1441) ─────────────────────────────────────────────
+  // The 2026-07-01 reformation moved clubs between districts, so every link
+  // made before July points at a club's OLD district. `config/club-index.json`
+  // maps every club to its CURRENT district and is rebuilt wholesale each
+  // pipeline run; `ClubRedirectPage` already consumes it through this same
+  // `fetchCdnClubIndex` helper and query key, so a warm cache is reused rather
+  // than refetched. `enabled` keeps the happy path (club present in this
+  // district) free of any extra CDN request.
+  const { data: clubIndex, isError: isClubIndexError } = useQuery({
+    queryKey: ['club-index'],
+    queryFn: fetchCdnClubIndex,
+    staleTime: 15 * 60 * 1000,
+    enabled: !!clubId && !club && !isLoading && !isError,
+  })
+
+  // Where the index says this club lives now — null unless the index both
+  // knows the club AND places it in a DIFFERENT district than the URL claims.
+  // Anything less (absent from the index, same district, fetch failed) stays
+  // null so the cautious "may have been removed" copy survives: we only assert
+  // a move the index actually substantiates.
+  const movedTo = useMemo(() => {
+    if (club || !clubId || !clubIndex) return null
+    // Same exact-key lookup form ClubRedirectPage uses. #1440 is replacing the
+    // club-id comparisons on this page with a shared normalizer — this is
+    // deliberately a single expression so that swap is a one-line change.
+    const entry = clubIndex.clubs[clubId]
+    if (!entry?.districtId || entry.districtId === districtId) return null
+    return entry
+  }, [club, clubId, clubIndex, districtId])
+
+  const movedToName = useMemo(() => {
+    if (!movedTo) return ''
+    const match = districtsData?.districts?.find(
+      d => d.id === movedTo.districtId
+    )
+    const raw = match?.name || movedTo.districtId
+    return /^\d+$/.test(raw) ? `District ${raw}` : raw
+  }, [movedTo, districtsData])
+
   // Find matching raw CSV record for per-goal progress (#242)
   const clubRawRecord = useMemo(() => {
     if (!districtStats || !clubId) return null
@@ -433,7 +474,54 @@ const ClubDetailPage: React.FC = () => {
     )
   }
 
-  // ── Club not found ───────────────────────────────────────────────────────
+  // ── Club absent from this district ───────────────────────────────────────
+  // #1441 — three distinct outcomes, and the copy must not overreach past what
+  // the club index actually substantiates:
+  //   1. index still in flight  → say nothing yet (a "removed" flash would be
+  //      a claim we are about to contradict)
+  //   2. index places the club elsewhere → it MOVED; name the district and
+  //      offer the link
+  //   3. anything else (absent from the index, index unreachable, index agrees
+  //      with this district) → the pre-existing cautious copy
+
+  // Unresolved = enabled, but neither settled to data nor to an error yet.
+  // Deliberately NOT `isFetching`: on the render where `enabled` flips true the
+  // query is still 'idle', which would leak one frame of "may have been
+  // removed" before the lookup even starts.
+  const isClubIndexUnresolved = !!clubId && !clubIndex && !isClubIndexError
+
+  if (!club && isClubIndexUnresolved) {
+    return (
+      <div className="min-h-screen">
+        <div className="container mx-auto px-4 py-8">
+          <LoadingSkeleton variant="card" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!club && movedTo) {
+    // The index is a CURRENT mapping, so the destination link deliberately
+    // drops the `?py=` this URL may carry: the club was genuinely in this
+    // district for older program years, and forwarding that year would land
+    // the visitor on a second dead end.
+    return (
+      <div className="min-h-screen">
+        <div className="container mx-auto px-4 py-8">
+          <EmptyState
+            title="Club Moved Districts"
+            message={`${movedTo.clubName || `Club ${clubId}`} is no longer in ${districtName} — it is now in ${movedToName}.`}
+            icon="search"
+            action={{
+              label: `View this club in ${movedToName}`,
+              onClick: () =>
+                navigate(`/district/${movedTo.districtId}/club/${clubId}`),
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
 
   if (!club) {
     return (
