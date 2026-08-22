@@ -49,18 +49,22 @@ function signedNet(value: number | null): string {
 export interface ClubHistoryTableProps {
   rows: ClubHistoryRow[]
   clubName: string
-  /** When both are provided (#1302), each year label becomes a deep link to
+  /** When provided (#1302), each year label becomes a deep link to
    *  ClubDetailPage focused on that program year (`?py=<startYear>`), so a user
    *  reading the multi-year table can jump into a single year. Omitted → plain
-   *  text (keeps the component usable outside a Router). */
-  districtId?: string | undefined
+   *  text (keeps the component usable outside a Router).
+   *
+   *  #1441 — the link is the district-agnostic `/club/:clubId` route, which
+   *  resolves the club's district from the club index. A row knows its program
+   *  year but not its district: districts were reformed on 2026-07-01 and
+   *  clubs moved between them, so the page's current district is not a fact
+   *  about the club's 2022 row. No `districtId` prop, by design. */
   clubId?: string | undefined
 }
 
 export function ClubHistoryTable({
   rows,
   clubName,
-  districtId,
   clubId,
 }: ClubHistoryTableProps) {
   const [sortField, setSortField] = useState<SortField>('year')
@@ -168,9 +172,9 @@ export function ClubHistoryTable({
           {sortedRows.map(row => (
             <tr key={row.startYear}>
               <th scope="row" className="club-history-td club-history-td--year">
-                {districtId && clubId ? (
+                {clubId ? (
                   <Link
-                    to={`/district/${districtId}/club/${clubId}?py=${row.startYear}`}
+                    to={`/club/${clubId}?py=${row.startYear}`}
                     className="club-history-year-link"
                   >
                     {row.label}
