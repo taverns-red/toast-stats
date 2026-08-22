@@ -15,13 +15,16 @@ import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
 import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
+import { useDistrictRankHistoryYears } from '../hooks/useDistrictRankHistoryYears'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
   isDateInProgramYear,
 } from '../utils/programYear'
+import type { ProgramYear } from '../utils/programYear'
 import { DistrictOverview } from '../components/DistrictOverview'
 import { NotableDatesSection } from '../components/NotableDatesSection'
 import { LongestServingClubsLeaderboard } from '../components/LongestServingClubsLeaderboard'
@@ -67,6 +70,7 @@ const DistrictDetailPageInner: React.FC = () => {
     setSelectedProgramYear,
     selectedDate,
     setSelectedDate,
+    setProgramYearAndDate,
   } = useUrlProgramYear()
 
   // Fetch cached dates for date selector
@@ -82,6 +86,24 @@ const DistrictDetailPageInner: React.FC = () => {
   const availableProgramYears = React.useMemo(() => {
     return getAvailableProgramYears(allCachedDates)
   }, [allCachedDates])
+
+  // #1436 — the degraded "limited data" view's year source.
+  //
+  // `availableProgramYears` above is already per-district (it reads
+  // `district-snapshot-index.json`), which is precisely why it cannot feed the
+  // degraded selector: the branch below requires `!selectedDistrict`, and a
+  // district WITH an index entry self-heals to its newest data year via the
+  // effect that follows (#1398) and never degrades. The branch is reachable
+  // only when the index has no entry — `index[id] ?? []` empty — so a selector
+  // fed from it would render with nothing in it.
+  //
+  // The district's rank history is where it does appear. Gated on the index
+  // having RESOLVED empty, so the happy path issues no extra request.
+  const needsRankHistoryYears = !!cachedDatesData && allCachedDates.length === 0
+  const {
+    programYears: rankHistoryProgramYears,
+    isLoading: isLoadingRankHistoryYears,
+  } = useDistrictRankHistoryYears(districtId, needsRankHistoryYears)
 
   // Auto-select a valid program year if current selection is not in available list
   React.useEffect(() => {
@@ -369,6 +391,53 @@ const DistrictDetailPageInner: React.FC = () => {
     }
   }, [analytics, performanceTargets])
 
+  // ── Degraded "limited data" view: program-year controls (#1436) ────────────
+  //
+  // Snapshot years when the district has them, rank-history years when it does
+  // not. Declared unconditionally, above the early return — these are hooks.
+
+  const degradedDataYears =
+    availableProgramYears.length > 0
+      ? availableProgramYears
+      : rankHistoryProgramYears
+
+  // The selected year is offered alongside the data years even when it has
+  // none: a <select> whose value is absent from its options renders blank, and
+  // the user has to be able to see where they currently are. It is the ONLY
+  // year added — everything else in the list is a year this district really
+  // appears in.
+  const degradedYearOptions = React.useMemo(() => {
+    const hasSelected = degradedDataYears.some(
+      py => py.year === selectedProgramYear.year
+    )
+    const merged = hasSelected
+      ? degradedDataYears
+      : [...degradedDataYears, selectedProgramYear]
+    return [...merged].sort((a, b) => b.year - a.year)
+  }, [degradedDataYears, selectedProgramYear])
+
+  // The most recent year with data OTHER than the one being viewed — what the
+  // banner names so the user is not left guessing which year to try.
+  const degradedSuggestedYear = React.useMemo(
+    () =>
+      degradedDataYears.find(py => py.year !== selectedProgramYear.year) ??
+      null,
+    [degradedDataYears, selectedProgramYear]
+  )
+
+  // Move BOTH `?py=` and `?date=` in one navigation. `useUrlProgramYear` reads
+  // them independently, so a `?date=` left over from the previous year would
+  // leave the page self-inconsistent — the hazard `searchIndex.ts` documents.
+  // A district with no snapshots has no in-year date to offer, so the date is
+  // dropped rather than carried across.
+  const handleDegradedProgramYearChange = React.useCallback(
+    (py: ProgramYear) => {
+      const dateInYear = getMostRecentDateInProgramYear(allCachedDates, py)
+      setProgramYearAndDate(py, dateInYear ?? undefined)
+    },
+    [allCachedDates, setProgramYearAndDate]
+  )
+
   // If districts data has loaded but this district isn't in the tracked list,
   // show a limited page with Global Rankings (available for all districts)
   // instead of blank data. Only 6 districts have detailed per-district analytics.
@@ -414,7 +483,10 @@ const DistrictDetailPageInner: React.FC = () => {
             </div>
 
             {/* Limited data banner */}
-            <div className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow rounded-lg p-4 mb-6 flex items-start gap-3">
+            <div
+              data-testid="limited-data-banner"
+              className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow rounded-lg p-4 mb-6 flex items-start gap-3"
+            >
               <svg
                 className="w-5 h-5 text-tm-loyal-blue mt-0.5 flex-shrink-0"
                 fill="none"
@@ -432,13 +504,47 @@ const DistrictDetailPageInner: React.FC = () => {
                 <p className="text-sm font-medium text-tm-black">
                   This district has limited data available.
                 </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  Detailed analytics (clubs, divisions, trends) are not yet
-                  tracked for this district. Global rankings are available
-                  below.
-                </p>
+                {/* #1436 — "not tracked in THIS year" and "not tracked at all"
+                    are different situations and must not read identically. The
+                    first names a year that does have data, so the user is not
+                    left guessing which year to try. */}
+                {degradedSuggestedYear ? (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Detailed analytics (clubs, divisions, trends) are not
+                    tracked for this district in {selectedProgramYear.label}. It
+                    does appear in {degradedSuggestedYear.label} — switch
+                    program year below.
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Detailed analytics (clubs, divisions, trends) are not yet
+                    tracked for this district. Global rankings are available
+                    below.
+                  </p>
+                )}
               </div>
             </div>
+
+            {/* #1436 — the way out. This branch returns before
+                DistrictDetailHeader, which was the page's only year control, so
+                a district viewable in another year was unreachable from its own
+                page. Rendered only when there IS another year to reach — but
+                the slot is reserved while the rank-history query is in flight,
+                so the selector does not late-insert and push the rankings
+                below it down (the Lesson 107 shape). */}
+            {(isLoadingRankHistoryYears || degradedSuggestedYear) && (
+              <div
+                data-testid="degraded-program-year-selector"
+                className="mb-6 max-w-xs"
+              >
+                <ProgramYearSelector
+                  availableProgramYears={degradedYearOptions}
+                  selectedProgramYear={selectedProgramYear}
+                  onProgramYearChange={handleDegradedProgramYearChange}
+                  isLoading={isLoadingRankHistoryYears}
+                />
+              </div>
+            )}
 
             {/* Global Rankings tab for untracked districts */}
             <GlobalRankingsTab
