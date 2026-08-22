@@ -66,6 +66,19 @@ Per-aggregate delta is `{ from, to, delta }` (`delta = to − from`, signed).
   Categories: `membership`, `dcp-goals`, `distinguished`, `club-added`,
   `club-removed`. (Payments is an aggregate KPI only; per-club payment churn
   would double the membership noise in v1.)
+- `rosterDiscontinuity?` (#1443) — set when the two dates straddle a
+  **district-composition change**: a realignment (2026-07-01 merged and split
+  districts) moves clubs between districts at the program-year boundary, and
+  the default "previous → latest" pair straddles it. When set, the roster
+  moves it caused are emitted as `club-transferred-in` / `club-transferred-out`
+  and marked `transferred` on the presence lists, so they read as a map change
+  rather than as clubs joining and leaving. Genuine charters (chartered inside
+  the window) and closures (suspended/ineligible on the way out) keep the
+  roster categories so they stay visible. Detection needs all of: different
+  program years, ≤120 days apart, and ≥8 clubs moved AND ≥20% of the smaller
+  roster — deliberately conservative, since a false positive mislabels honest
+  club behaviour. The **default date pair is unchanged**: whether the view
+  should skip across such a boundary is a product call.
 
 `ClubDiff` carries `membership`/`payments`/`dcpGoals` deltas plus
 `distinguishedFrom`/`distinguishedTo`/`distinguishedChanged`. DCP signals come
