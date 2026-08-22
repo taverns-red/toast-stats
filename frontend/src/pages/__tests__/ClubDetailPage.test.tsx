@@ -88,6 +88,14 @@ const baseMockClub = {
   newMembers: 2,
 }
 
+// #1441 — the not-found branch now consults the club index before concluding
+// a club is gone. Only that one export is stubbed (partial mock): the page's
+// other CDN reads keep their existing behaviour in this file.
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnClubIndex: vi.fn().mockResolvedValue({ clubs: {} }),
+}))
+
 vi.mock('../../hooks/useDistrictAnalytics', () => ({
   useDistrictAnalytics: vi.fn(() => ({
     data: {
@@ -278,10 +286,13 @@ describe('ClubDetailPage (#208)', () => {
     expect(screen.getAllByText('-5').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders not found state for invalid club ID', () => {
+  // #1441 — now async: the page waits for the club index to settle before it
+  // will claim a club is gone, so an unknown id resolves to "Club Not Found"
+  // only once the index comes back without it.
+  it('renders not found state for invalid club ID', async () => {
     renderWithRoute('99999999')
 
-    expect(screen.getByText('Club Not Found')).toBeInTheDocument()
+    expect(await screen.findByText('Club Not Found')).toBeInTheDocument()
   })
 
   // #1104 — a transient CDN fetch reject must surface a distinct, retryable
