@@ -117,6 +117,7 @@ export {
   DiffEventSchema,
   SnapshotDiffSideSchema,
   SnapshotDiffTotalsSchema,
+  RosterDiscontinuitySchema,
   SnapshotDiffSchema,
   type AggregateDelta,
   type DiffEventCategory,
@@ -125,6 +126,7 @@ export {
   type DiffEvent,
   type SnapshotDiffSide,
   type SnapshotDiffTotals,
+  type RosterDiscontinuity,
   type SnapshotDiff,
 } from './schemas/snapshot-diff.schema.js'
 
