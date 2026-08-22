@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-new-event-category-is-dropped-not-errored-by-an-explicit-display-list.md` — A feed that renders from an explicit ordered list of categories drops any category the list does not name — a new enum value is silently invisible, never an error, so the reclassification that produced it reads as data loss  (2026-08-22)
 - `coupled-url-params-need-one-setter-not-two-calls.md` — Two setSearchParams calls in one handler silently drop the first key — coupled URL params need a single combined setter  (2026-08-22)
 - `a-centred-fixed-width-overlay-is-a-viewport-collision-bug-in-every-edge-column.md` — A fixed-width overlay centred on its trigger is off-screen wherever the trigger sits near a viewport edge — it is a property of the shared component, never of the card that reported it, and the measured correction cannot live in a Tailwind v4 translate utility  (2026-08-03)
 - `a-deliberately-shared-query-key-is-a-coupling-with-no-compiler.md` — Two hooks sharing a React Query key to avoid a duplicate fetch are coupled with nothing but a comment — narrowing one hook's key silently re-scopes or breaks the other, so decide explicitly and pay the fetch  (2026-08-03)
