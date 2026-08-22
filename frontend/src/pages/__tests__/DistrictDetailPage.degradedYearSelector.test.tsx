@@ -340,6 +340,20 @@ function assertNoInconsistentUrl() {
   }
 }
 
+/**
+ * The selector's slot is reserved with a skeleton while the rank-history query
+ * is in flight (no late insert above GlobalRankingsTab), so the testid lands
+ * before the <select> does — wait for the control itself, not the wrapper.
+ */
+async function findYearSelect() {
+  return waitFor(() =>
+    within(screen.getByTestId('degraded-program-year-selector')).getByRole(
+      'combobox',
+      { name: /program year/i }
+    )
+  )
+}
+
 const LIMITED = /This district has limited data available/i
 
 describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
@@ -353,9 +367,7 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
     expect(selector).toBeInTheDocument()
 
     // D44's rank history covers PY 2024-2025 only.
-    const select = within(selector).getByRole('combobox', {
-      name: /program year/i,
-    })
+    const select = await findYearSelect()
     expect(
       within(select).getByRole('option', { name: /2024-2025/ })
     ).toBeInTheDocument()
@@ -377,11 +389,7 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
     const client = renderAt('/district/44?py=2025&date=2026-06-30')
     await districtListLanded(client)
 
-    const selector = await screen.findByTestId('degraded-program-year-selector')
-    await user.selectOptions(
-      within(selector).getByRole('combobox', { name: /program year/i }),
-      '2024'
-    )
+    await user.selectOptions(await findYearSelect(), '2024')
 
     // D44 has no snapshot in ANY year, so there is no in-year date to offer —
     // `?date=` must be dropped, never left pointing at the old year.
@@ -403,11 +411,7 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
 
     await waitFor(() => expect(screen.getByText(LIMITED)).toBeInTheDocument())
 
-    const selector = await screen.findByTestId('degraded-program-year-selector')
-    await user.selectOptions(
-      within(selector).getByRole('combobox', { name: /program year/i }),
-      '2024'
-    )
+    await user.selectOptions(await findYearSelect(), '2024')
 
     await waitFor(() =>
       expect(screen.getByTestId('district-detail-lede')).toBeInTheDocument()

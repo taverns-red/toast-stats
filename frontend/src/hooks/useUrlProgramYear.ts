@@ -14,7 +14,7 @@
 import { useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useProgramYear } from '../contexts/ProgramYearContext'
-import { getProgramYear } from '../utils/programYear'
+import { getProgramYear, isDateInProgramYear } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import { useDefaultProgramYear } from './useDefaultProgramYear'
 import { toSnapshotDate, type SnapshotDate } from '../types/snapshotDate'
@@ -111,10 +111,53 @@ export function useUrlProgramYear() {
     [setSearchParams, setContextDate]
   )
 
+  /**
+   * Move the program year and the snapshot date TOGETHER, in one navigation
+   * (#1436).
+   *
+   * `?py=` and `?date=` are read independently above, so a `?date=` outside the
+   * selected program year leaves the page self-inconsistent — the hazard
+   * `searchIndex.ts` documents and sets both params to avoid. Calling
+   * `setSelectedProgramYear` and then `setSelectedDate` cannot avoid it:
+   * react-router's `setSearchParams` hands the functional updater the
+   * RENDER-TIME `searchParams`, not the pending value, so the second call is
+   * computed from a stale base and silently discards the first call's key.
+   *
+   * A `date` outside `py` is dropped rather than written — the inconsistent
+   * pair must not be reachable through this setter even by a caller mistake.
+   */
+  const setProgramYearAndDate = useCallback(
+    (py: ProgramYear, date: SnapshotDate | undefined) => {
+      const dateInYear =
+        date && isDateInProgramYear(date, py) ? date : undefined
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          if (py.year === defaultPY.year) {
+            next.delete('py')
+          } else {
+            next.set('py', py.year.toString())
+          }
+          if (!dateInYear) {
+            next.delete('date')
+          } else {
+            next.set('date', dateInYear)
+          }
+          return next
+        },
+        { replace: true }
+      )
+      setContextPY(py)
+      setContextDate(dateInYear)
+    },
+    [setSearchParams, setContextPY, setContextDate, defaultPY.year]
+  )
+
   return {
     selectedProgramYear,
     setSelectedProgramYear,
     selectedDate,
     setSelectedDate,
+    setProgramYearAndDate,
   }
 }
