@@ -445,7 +445,9 @@ describe('mergeFacIntoSnapshot', () => {
       Record<string, unknown>
     >
     expect(prospectiveClubs).toHaveLength(1)
-    expect(prospectiveClubs[0]?.['clubName']).toBe('Club 00077777')
+    // The synthetic label uses the canonical club id, same as the stored
+    // clubId next to it (#1440).
+    expect(prospectiveClubs[0]?.['clubName']).toBe('Club 77777')
   })
 
   it('is idempotent — merging twice produces the same enriched output', () => {

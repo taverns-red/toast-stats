@@ -123,7 +123,9 @@ describe('CdnClient — discovery reads', () => {
     )
     expect(fromPadded.available).toBe(true)
     if (!fromPadded.available) return
-    expect(fromPadded.data.districtId).toBe(res.data.clubs[bareKeyed]!.districtId)
+    expect(fromPadded.data.districtId).toBe(
+      res.data.clubs[bareKeyed]!.districtId
+    )
   })
 
   it('returns not-available for an unknown club id (never guesses)', async () => {
@@ -137,7 +139,8 @@ describe('CdnClient — discovery reads', () => {
     // A bare `clubs[clubId]` lookup resolves inherited Object.prototype
     // members ('constructor', '__proto__', …) to truthy values, returning
     // available:true with an undefined district — verified live in the
-    // 2026-06-09 audit (§9a). The lookup must use Object.hasOwn.
+    // 2026-06-09 audit (§9a). The shared findClubEntry (#1440) is
+    // own-keys-only, which keeps this closed.
     for (const clubId of ['constructor', '__proto__', 'toString']) {
       const resolved = await client().resolveClubDistrict(clubId)
       expect(resolved.available).toBe(false)

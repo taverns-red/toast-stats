@@ -70,9 +70,12 @@ vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(),
 }))
 
-vi.mock('../../services/cdn', () => ({
-  fetchCdnClubIndex: vi.fn(),
-}))
+// Only the club-index fetch is stubbed — the rest of the CDN service stays
+// real (ProgramYearProvider reaches for fetchCdnDates through it).
+vi.mock('../../services/cdn', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../services/cdn')>()
+  return { ...actual, fetchCdnClubIndex: vi.fn() }
+})
 
 const CLUB_NAME = 'Leading Zero Toastmasters'
 
@@ -151,7 +154,8 @@ describe('ClubDetailPage club-id normalization (#1440)', () => {
 
       renderClubDetail(url)
 
-      expect(await screen.findByText(CLUB_NAME)).toBeInTheDocument()
+      // The name renders twice — breadcrumb and hero title.
+      expect((await screen.findAllByText(CLUB_NAME)).length).toBeGreaterThan(0)
       expect(screen.queryByText(/Club Not Found/i)).not.toBeInTheDocument()
     }
   )

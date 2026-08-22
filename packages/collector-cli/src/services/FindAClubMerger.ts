@@ -6,7 +6,8 @@
  * Semantics (#429 follow-up):
  *
  *   - Snapshot is the spine. For every club in \`clubPerformance\`,
- *     look up the FAC record by \`Club Number\` (8-char zero-padded).
+ *     look up the FAC record by \`Club Number\`, canonicalized through
+ *     the shared \`normalizeClubId\` (#1440) on both sides of the join.
  *   - Matched: copy charterDate / coordinates / address / email / etc.
  *   - Snapshot-only: leave as-is. The FAC fields are all optional, so
  *     a missing match is a no-op. The ~410-1000 'missing from FAC'
@@ -27,6 +28,11 @@
  */
 
 import type { ProspectiveClub } from '@taverns-red/shared-contracts'
+// One definition of "the same club" (#1440). This file used to own a THIRD
+// convention — 8-char zero-padded — applied to the raw clubPerformance rows
+// but not to the parsed clubs[] ids, so a form mismatch silently demoted a
+// matched club to "snapshot-only".
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 import {
   TI_CLUB_NUMBER_KEY,
   type FacRawResponse,
@@ -35,18 +41,6 @@ import {
   type MergeResult,
 } from '../types/findAClub.js'
 import { normaliseTiClub, type ClubEnrichment } from './FindAClubService.js'
-
-/** 8-char zero-pad a club number from anywhere (CSV row, FAC payload). */
-export function normaliseClubNumber(raw: unknown): string | null {
-  if (raw == null) return null
-  const s = typeof raw === 'number' ? String(raw) : String(raw).trim()
-  if (!s) return null
-  // Strip non-digits; clubPerformance rows occasionally have stray
-  // whitespace, leading apostrophes from CSV import quirks, etc.
-  const digits = s.replace(/\D/g, '')
-  if (!digits) return null
-  return digits.padStart(8, '0')
-}
 
 /**
  * Merge a FAC fetch result into a district snapshot.
@@ -71,7 +65,7 @@ export function mergeFacIntoSnapshot(
     }
   }
 
-  // Build the FAC lookup keyed by 8-char club number.
+  // Build the FAC lookup keyed by the canonical club id (#1440).
   const facByClubId = new Map<string, ReturnType<typeof normaliseTiClub>>()
   const facClubs = Array.isArray(fac?.Clubs) ? fac.Clubs : []
   for (const raw of facClubs) {
@@ -83,8 +77,9 @@ export function mergeFacIntoSnapshot(
     const enriched = normaliseTiClub(
       raw as Parameters<typeof normaliseTiClub>[0]
     )
-    if (enriched && enriched.clubId) {
-      facByClubId.set(enriched.clubId, enriched)
+    const facClubId = normalizeClubId(enriched?.clubId)
+    if (enriched && facClubId) {
+      facByClubId.set(facClubId, enriched)
     }
   }
 
@@ -129,7 +124,7 @@ export function mergeFacIntoSnapshot(
       return rawRow as EnrichedClub
     }
     const row = rawRow as Record<string, unknown>
-    const clubId = normaliseClubNumber(row[TI_CLUB_NUMBER_KEY])
+    const clubId = normalizeClubId(row[TI_CLUB_NUMBER_KEY])
     if (!clubId) {
       snapshotOnly += 1
       return rawRow as EnrichedClub
@@ -160,8 +155,10 @@ export function mergeFacIntoSnapshot(
     enrichedParsedClubs = parsedClubsRaw.map(raw => {
       if (typeof raw !== 'object' || raw === null) return raw
       const parsed = raw as Record<string, unknown>
-      const clubId =
-        typeof parsed['clubId'] === 'string' ? parsed['clubId'] : null
+      // Canonicalized (#1440): the enrichment map is keyed canonically, and
+      // the parsed clubs[] id is not guaranteed to be in the same lexical
+      // form as the FAC id. A raw key here missed silently.
+      const clubId = normalizeClubId(parsed['clubId'])
       if (!clubId) return raw
       const enrichment = enrichmentByClubId.get(clubId)
       return enrichment ? { ...parsed, ...enrichment } : raw
@@ -221,8 +218,9 @@ function projectProspectiveClub(enriched: ClubEnrichment): ProspectiveClub {
   // so the schema's clubName invariant stays meaningful and the UI
   // doesn't need a parallel fallback.
   const club: ProspectiveClub = {
-    clubId: enriched.clubId,
-    clubName: enriched.clubName ?? `Club ${enriched.clubId}`,
+    // Canonical form — this id is WRITTEN into the snapshot (#1440).
+    clubId: normalizeClubId(enriched.clubId),
+    clubName: enriched.clubName ?? `Club ${normalizeClubId(enriched.clubId)}`,
   }
   if (enriched.charterDate) club.charterDate = enriched.charterDate
   if (enriched.address?.city) club.city = enriched.address.city

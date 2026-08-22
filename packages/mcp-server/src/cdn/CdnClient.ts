@@ -14,6 +14,7 @@ import {
   type AllDistrictsRankingsData,
   PerDistrictDataSchema,
   ProgramYearIndexFileSchema,
+  findClubEntry,
 } from '@taverns-red/shared-contracts'
 import {
   LatestManifestSchema,
@@ -121,11 +122,12 @@ export class CdnClient {
   ): Promise<CdnReadResult<ResolvedClub>> {
     const index = await this.getClubIndex()
     if (!index.available) return index
-    // Object.hasOwn: a bare lookup resolves Object.prototype members
-    // ('constructor', '__proto__', …) to phantom truthy hits (#1112).
-    const entry = Object.hasOwn(index.data.clubs, clubId)
-      ? index.data.clubs[clubId]
-      : undefined
+    // findClubEntry (#1440): the index is keyed by whatever club-id form the
+    // snapshot that generated it used, which is not necessarily the form the
+    // caller has. It is own-keys-only, so a bare lookup can't resolve
+    // Object.prototype members ('constructor', '__proto__', …) to phantom
+    // truthy hits (#1112).
+    const entry = findClubEntry(index.data.clubs, clubId)
     if (!entry) {
       return notAvailable(
         index.sourceUrl,

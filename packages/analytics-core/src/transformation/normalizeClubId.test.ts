@@ -67,26 +67,46 @@ describe('write-time club-id canonicalization (#1440)', () => {
   })
 
   it('stores the canonical (bare) club id when the export is zero-padded', async () => {
-    const result = await transformer.transformRawCSV('2026-01-15', '61', csv('00009905'))
+    const result = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('00009905')
+    )
 
     expect(result.clubs[0]!.clubId).toBe('9905')
   })
 
   it('stores the same canonical id when the export is already bare', async () => {
-    const result = await transformer.transformRawCSV('2026-01-15', '61', csv('9905'))
+    const result = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('9905')
+    )
 
     expect(result.clubs[0]!.clubId).toBe('9905')
   })
 
   it('produces an identical stored id from either export form', async () => {
-    const padded = await transformer.transformRawCSV('2026-01-15', '61', csv('00009905'))
-    const bare = await transformer.transformRawCSV('2026-01-15', '61', csv('9905'))
+    const padded = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('00009905')
+    )
+    const bare = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('9905')
+    )
 
     expect(padded.clubs[0]!.clubId).toBe(bare.clubs[0]!.clubId)
   })
 
   it('agrees with the shared normalizer (no second definition)', async () => {
-    const result = await transformer.transformRawCSV('2026-01-15', '61', csv('0000180'))
+    const result = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('0000180')
+    )
 
     expect(result.clubs[0]!.clubId).toBe(normalizeClubId('0000180'))
   })

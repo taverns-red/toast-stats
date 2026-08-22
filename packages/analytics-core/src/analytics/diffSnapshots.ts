@@ -27,6 +27,7 @@ import type {
   DiffEvent,
   SnapshotDiff,
 } from '@taverns-red/shared-contracts'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 
 function aggregate(from: number, to: number): AggregateDelta {
   return { from, to, delta: to - from }
@@ -46,7 +47,9 @@ function distinguishedByClub(
 ): Map<string, string> {
   const map = new Map<string, string>()
   for (const row of snapshot.clubPerformance) {
-    const clubId = String(row['Club Number'] ?? '')
+    // Keyed canonically (#1440) so it joins the club maps below, whichever
+    // padding the export used.
+    const clubId = normalizeClubId(row['Club Number'])
     if (!clubId) continue
     const raw = row['Club Distinguished Status']
     map.set(clubId, raw == null ? '' : String(raw))
@@ -107,8 +110,12 @@ export function diffSnapshots(
   const fromDist = distinguishedByClub(from)
   const toDist = distinguishedByClub(to)
 
-  const fromClubs = new Map(from.clubs.map(c => [c.clubId, c]))
-  const toClubs = new Map(to.clubs.map(c => [c.clubId, c]))
+  // Keyed on the CANONICAL club id (#1440). Keying on the raw id meant two
+  // dates written from differently-padded TI exports diffed as every club
+  // removed and re-added — a district-wide roster replacement that never
+  // happened. The events below still carry each club's own stored id.
+  const fromClubs = new Map(from.clubs.map(c => [normalizeClubId(c.clubId), c]))
+  const toClubs = new Map(to.clubs.map(c => [normalizeClubId(c.clubId), c]))
 
   const distinguishedCount = (m: Map<string, string>): number =>
     [...m.values()].filter(s => s !== '').length
@@ -118,8 +125,11 @@ export function diffSnapshots(
   const onlyInTo: ClubPresence[] = []
   const events: DiffEvent[] = []
 
-  for (const [clubId, fromClub] of fromClubs) {
-    const toClub = toClubs.get(clubId)
+  for (const [key, fromClub] of fromClubs) {
+    const toClub = toClubs.get(key)
+    // Identity for the OUTPUT stays the club's own stored id; `key` is the
+    // canonical join key only (#1440).
+    const clubId = fromClub.clubId
     if (!toClub) {
       onlyInFrom.push(presence(fromClub))
       events.push({
@@ -132,8 +142,8 @@ export function diffSnapshots(
       continue
     }
 
-    const distFrom = fromDist.get(clubId) ?? ''
-    const distTo = toDist.get(clubId) ?? ''
+    const distFrom = fromDist.get(key) ?? ''
+    const distTo = toDist.get(key) ?? ''
     const membership = aggregate(
       fromClub.membershipCount,
       toClub.membershipCount
@@ -185,8 +195,9 @@ export function diffSnapshots(
     }
   }
 
-  for (const [clubId, toClub] of toClubs) {
-    if (fromClubs.has(clubId)) continue
+  for (const [key, toClub] of toClubs) {
+    if (fromClubs.has(key)) continue
+    const clubId = toClub.clubId
     onlyInTo.push(presence(toClub))
     events.push({
       category: 'club-added',

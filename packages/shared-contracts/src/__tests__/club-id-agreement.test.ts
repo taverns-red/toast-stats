@@ -81,9 +81,7 @@ const SITES: Site[] = [
 
 /** Strip // line comments and block comments so prose can't trip the scan. */
 function stripComments(src: string): string {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1')
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
 }
 
 /** Identity decisions that must never be made locally again. */
@@ -102,7 +100,7 @@ const FORBIDDEN: Array<{ re: RegExp; why: string }> = [
   },
   {
     re: /padStart\(\s*8\s*,/,
-    why: "local 8-char padding — the third convention; use normalizeClubId()",
+    why: 'local 8-char padding — the third convention; use normalizeClubId()',
   },
   {
     re: /replace\(\s*\/\^0\+\//,
@@ -132,9 +130,7 @@ describe('club-id agreement (#1440)', () => {
   })
 
   describe.each(active)('$file', site => {
-    const src = stripComments(
-      readFileSync(join(repoRoot, site.file), 'utf8')
-    )
+    const src = stripComments(readFileSync(join(repoRoot, site.file), 'utf8'))
 
     it(`routes club identity through shared-contracts (${site.what})`, () => {
       expect(
@@ -163,7 +159,9 @@ describe('club-id agreement (#1440)', () => {
     site => {
       expect(site.deferredTo).toBeTruthy()
       // The file must still exist; a rename must come back through this table.
-      expect(() => readFileSync(join(repoRoot, site.file), 'utf8')).not.toThrow()
+      expect(() =>
+        readFileSync(join(repoRoot, site.file), 'utf8')
+      ).not.toThrow()
     }
   )
 })

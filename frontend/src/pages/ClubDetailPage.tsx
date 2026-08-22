@@ -1,5 +1,8 @@
 import React, { useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
+// One shared definition of "the same club" (#1440) — this file used to hold
+// two comparisons that disagreed with each other sixteen lines apart.
+import { clubIdsMatch } from '@taverns-red/shared-contracts'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
@@ -244,7 +247,7 @@ const ClubDetailPage: React.FC = () => {
   // Find the club
   const club: ClubTrend | null = useMemo(() => {
     if (!analytics || !clubId) return null
-    return analytics.allClubs.find(c => c.clubId === clubId) ?? null
+    return analytics.allClubs.find(c => clubIdsMatch(c.clubId, clubId)) ?? null
   }, [analytics, clubId])
 
   // Find matching raw CSV record for per-goal progress (#242)
@@ -257,12 +260,7 @@ const ClubDetailPage: React.FC = () => {
       raw['clubPerformance']) as
       Array<Record<string, string | number | null>> | undefined
     if (!records) return null
-    return (
-      records.find(r => {
-        const num = String(r['Club Number'] ?? '')
-        return num === clubId || num.padStart(8, '0') === clubId
-      }) ?? null
-    )
+    return records.find(r => clubIdsMatch(r['Club Number'], clubId)) ?? null
   }, [districtStats, clubId])
 
   // The program year the page is showing — the authority for which
