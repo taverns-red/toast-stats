@@ -50,6 +50,10 @@ vi.mock('../../hooks/useDistrictData', () => ({
 }))
 
 vi.mock('../../services/cdn', () => ({
+  // #1441 — the page's moved-club lookup imports this even when it never runs
+  // (it is `enabled` only while the club is absent); a module mock must still
+  // define the export or the import resolves to undefined and useQuery throws.
+  fetchCdnClubIndex: vi.fn().mockResolvedValue({ clubs: {} }),
   fetchCdnDates: vi.fn().mockResolvedValue({
     dates: ['2025-08-01', '2026-05-01', '2026-08-01'],
     count: 3,

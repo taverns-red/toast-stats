@@ -111,27 +111,26 @@ describe('ClubHistoryTable (#1229)', () => {
   })
 })
 
-describe('ClubHistoryTable — per-year focus links (#1302)', () => {
-  it('links each program-year row to that year on the club detail page', () => {
+describe('ClubHistoryTable — per-year focus links (#1302, #1441)', () => {
+  it('links each program-year row to that year without asserting a district', () => {
     render(
       <MemoryRouter>
-        <ClubHistoryTable
-          rows={rows}
-          clubName="Test Club"
-          districtId="61"
-          clubId="00000606"
-        />
+        <ClubHistoryTable rows={rows} clubName="Test Club" clubId="00000606" />
       </MemoryRouter>
     )
-    // The year label becomes a deep link to ClubDetailPage focused on that PY,
-    // so a user reading the multi-year table can jump into a single year.
+    // The year label is a deep link to ClubDetailPage focused on that PY, so a
+    // user reading the multi-year table can jump into a single year (#1302).
+    // #1441: the route is district-agnostic. Districts were reformed on
+    // 2026-07-01 and clubs moved, so a row's program year and the page's
+    // district are independent facts — stamping today's district onto a 2022
+    // row asserts something the row does not know.
     const link = screen.getByRole('link', { name: '2023-2024' })
-    expect(link).toHaveAttribute('href', '/district/61/club/00000606?py=2023')
+    expect(link).toHaveAttribute('href', '/club/00000606?py=2023')
     const older = screen.getByRole('link', { name: '2022-2023' })
-    expect(older).toHaveAttribute('href', '/district/61/club/00000606?py=2022')
+    expect(older).toHaveAttribute('href', '/club/00000606?py=2022')
   })
 
-  it('renders plain year labels (no links) when district/club are absent', () => {
+  it('renders plain year labels (no links) when the club id is absent', () => {
     render(<ClubHistoryTable rows={rows} clubName="Test Club" />)
     expect(screen.queryByRole('link', { name: '2023-2024' })).toBeNull()
     expect(screen.getByText('2023-2024')).toBeInTheDocument()

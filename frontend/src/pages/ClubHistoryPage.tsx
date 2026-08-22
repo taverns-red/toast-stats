@@ -97,12 +97,11 @@ export default function ClubHistoryPage() {
         />
       ) : (
         <>
-          <ClubHistoryTable
-            rows={rows}
-            clubName={heading}
-            districtId={districtId}
-            clubId={clubId}
-          />
+          {/* No `districtId` prop, by design (#1441): a row's year label deep-
+              links to the district-agnostic `/club/:clubId` route, because the
+              page's current district is not a fact about the club's 2022 row.
+              That is the same invariant #1437 is about, one level up. */}
+          <ClubHistoryTable rows={rows} clubName={heading} clubId={clubId} />
           {gapNote && (
             <p className="club-history-page__gaps" role="note">
               {gapNote}
