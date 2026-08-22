@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-query-that-just-became-enabled-is-idle-not-fetching.md` — A TanStack Query that just became `enabled` reports idle, not fetching — gate deferred copy on "unresolved", not on isFetching  (2026-08-22)
 - `coupled-url-params-need-one-setter-not-two-calls.md` — Two setSearchParams calls in one handler silently drop the first key — coupled URL params need a single combined setter  (2026-08-22)
 - `n-sites-computing-one-judgement-share-the-predicate-not-the-code-path.md` — When several call sites reach the same judgement over different data sources there is no chokepoint to consolidate — the shareable unit is the predicate, not the code path, and it belongs in the lowest package all of them already depend on  (2026-08-22)
 - `a-centred-fixed-width-overlay-is-a-viewport-collision-bug-in-every-edge-column.md` — A fixed-width overlay centred on its trigger is off-screen wherever the trigger sits near a viewport edge — it is a property of the shared component, never of the card that reported it, and the measured correction cannot live in a Tailwind v4 translate utility  (2026-08-03)
