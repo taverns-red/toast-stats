@@ -181,3 +181,23 @@ export {
   type DistrictSnapshotObject,
   type DistrictSnapshotDateIndex,
 } from './naming/snapshotFileNames.js'
+
+// 2026 district reformation (#1442) — the one signal that decides whether a
+// year-over-year comparison straddling 2026-07-01 compares the same district
+// on both sides. Consumed by analytics-core, collector-cli and the frontend's
+// year-over-year hooks; #1443 ("What Changed" reformation context) adopts the
+// same helper rather than re-deriving it.
+export {
+  DISTRICT_REFORMATION_DATE,
+  DISTRICT_REFORMATION_PROGRAM_YEAR,
+  DISTRICT_REFORMATION_NOTICE,
+  REFORMATION_RELATIVE_THRESHOLD,
+  REFORMATION_MIN_ABSOLUTE_CHANGE,
+  spansDistrictReformation,
+  programYearStartDate,
+  programYearStartYear,
+  detectReformationDiscontinuity,
+  type ReformationDiscontinuity,
+  type ReformationDiscontinuityInput,
+  type ReformationDiscontinuityReason,
+} from './reformation/districtReformation.js'
