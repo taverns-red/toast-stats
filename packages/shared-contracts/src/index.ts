@@ -168,6 +168,17 @@ export {
   type ValidationResult,
 } from './validation/validators.js'
 
+// Canonical club identity (#1440) — the ONE definition of "the same club",
+// shared by the transformer (write time), the diff engine, the collector's FAC
+// merge, the MCP reader and the frontend pages (read time). Three private
+// conventions used to coexist here; every disagreement degraded to an empty
+// state rather than an error.
+export {
+  normalizeClubId,
+  clubIdsMatch,
+  findClubEntry,
+} from './identity/clubId.js'
+
 // Canonical snapshot file naming (#1428) — the one matcher that decides what
 // `district_<id>.json` means, shared by scripts/ and collector-cli so the
 // daily-reports sidecar cannot be mistaken for a district snapshot.

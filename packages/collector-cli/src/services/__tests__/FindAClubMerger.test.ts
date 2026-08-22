@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  mergeFacIntoSnapshot,
-  normaliseClubNumber,
-} from '../FindAClubMerger.js'
+import { mergeFacIntoSnapshot } from '../FindAClubMerger.js'
 
 /* Fixtures based on the real shapes — TI Find-A-Club response and a
    district snapshot's clubPerformance row. Kept minimal — only the
@@ -60,29 +57,101 @@ const prospectiveFacOnlyClub = {
   IsProspective: true,
 }
 
-describe('normaliseClubNumber', () => {
-  it('zero-pads numeric strings to 8 chars', () => {
-    expect(normaliseClubNumber('180')).toBe('00000180')
-    expect(normaliseClubNumber('1399')).toBe('00001399')
-    expect(normaliseClubNumber('12345678')).toBe('12345678')
+/**
+ * #1440 — the merger used to own a THIRD club-id convention (8-char
+ * zero-padded, `normaliseClubNumber`), applied to the raw clubPerformance
+ * rows but NOT to the parsed `.clubs[]` ids, which were used as raw keys.
+ * Every mismatch degraded to "snapshot-only" — indistinguishable from the
+ * ~410-1000 clubs TI legitimately hides from the public registry. The join
+ * now goes through the one shared `normalizeClubId`, on every side.
+ */
+describe('mergeFacIntoSnapshot — club-id form independence (#1440)', () => {
+  function snapshotWith(clubNumber: string, parsedClubId: string) {
+    return {
+      districtId: '61',
+      data: {
+        clubPerformance: [{ ...ottawaSnapshotRow, 'Club Number': clubNumber }],
+        clubs: [
+          {
+            clubId: parsedClubId,
+            clubName: 'Causeurs Ottawa Speakers Club',
+            divisionId: 'A',
+            divisionName: 'Division A',
+            areaId: 'A1',
+            areaName: 'Area A1',
+            membershipCount: 23,
+            membershipBase: 20,
+            paymentsCount: 5,
+            dcpGoals: 5,
+            status: 'Distinguished',
+            octoberRenewals: 3,
+            aprilRenewals: 2,
+            newMembers: 1,
+            clubStatus: 'Active',
+          },
+        ],
+      },
+    }
+  }
+
+  const facBare = {
+    ...ottawaFacClub,
+    Identification: { Id: { Value: '180' } },
+  }
+
+  it.each([
+    ['snapshot padded, FAC padded', '00000180', '00000180', ottawaFacClub],
+    ['snapshot bare, FAC padded', '180', '180', ottawaFacClub],
+    ['snapshot padded, FAC bare', '00000180', '00000180', facBare],
+    ['snapshot bare, FAC bare', '180', '180', facBare],
+    ['mixed within the snapshot itself', '00000180', '180', ottawaFacClub],
+    ['CSV import debris on the club number', "'180", '180', ottawaFacClub],
+  ])('matches: %s', (_label, clubNumber, parsedClubId, facClub) => {
+    const result = mergeFacIntoSnapshot(
+      snapshotWith(clubNumber, parsedClubId),
+      { Clubs: [facClub] }
+    )
+
+    expect(result.matched).toBe(1)
+    expect(result.snapshotOnly).toBe(0)
+    expect(result.facOnly).toBe(0)
+
+    const rows = (result.snapshot.data?.['clubPerformance'] ?? []) as Array<
+      Record<string, unknown>
+    >
+    expect(rows[0]?.['charterDate']).toBe('1976-04-01')
+
+    const parsedClubs = (result.snapshot.data?.['clubs'] ?? []) as Array<
+      Record<string, unknown>
+    >
+    expect(parsedClubs[0]?.['charterDate']).toBe('1976-04-01')
+    expect(parsedClubs[0]?.['meetingDay']).toBe('Tuesday')
   })
 
-  it('zero-pads numeric inputs', () => {
-    expect(normaliseClubNumber(180)).toBe('00000180')
+  it('treats a row with no usable club number as snapshot-only', () => {
+    const result = mergeFacIntoSnapshot(
+      {
+        districtId: '61',
+        data: {
+          clubPerformance: [{ ...ottawaSnapshotRow, 'Club Number': '   ' }],
+        },
+      },
+      { Clubs: [ottawaFacClub] }
+    )
+
+    expect(result.matched).toBe(0)
+    expect(result.snapshotOnly).toBe(1)
   })
 
-  it('strips non-digits before padding (handles CSV quirks)', () => {
-    expect(normaliseClubNumber("'180")).toBe('00000180')
-    expect(normaliseClubNumber('Club 180')).toBe('00000180')
-    expect(normaliseClubNumber('  00000180  ')).toBe('00000180')
-  })
+  it('writes the canonical club id onto the prospective (FAC-only) clubs', () => {
+    const result = mergeFacIntoSnapshot(
+      { districtId: '61', data: { clubPerformance: [] } },
+      { Clubs: [prospectiveFacOnlyClub] }
+    )
 
-  it('returns null for inputs without digits', () => {
-    expect(normaliseClubNumber('')).toBeNull()
-    expect(normaliseClubNumber('   ')).toBeNull()
-    expect(normaliseClubNumber(null)).toBeNull()
-    expect(normaliseClubNumber(undefined)).toBeNull()
-    expect(normaliseClubNumber('abc')).toBeNull()
+    const prospective = (result.snapshot.data?.['prospectiveClubs'] ??
+      []) as Array<Record<string, unknown>>
+    expect(prospective[0]?.['clubId']).toBe('88888')
   })
 })
 
@@ -307,7 +376,9 @@ describe('mergeFacIntoSnapshot', () => {
       Array<Record<string, unknown>> | undefined
     expect(prospectiveClubs).toHaveLength(1)
     const club = prospectiveClubs?.[0]
-    expect(club?.['clubId']).toBe('00088888')
+    // Canonical (bare) club id — this is a WRITE into the snapshot, so it
+    // uses the same form as every other id we write (#1440).
+    expect(club?.['clubId']).toBe('88888')
     expect(club?.['clubName']).toBe('New ATO Toastmasters')
     expect(club?.['city']).toBe('Toronto')
     expect(club?.['region']).toBe('ON')

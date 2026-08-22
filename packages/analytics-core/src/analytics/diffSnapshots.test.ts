@@ -250,4 +250,75 @@ describe('diffSnapshots', () => {
     expect(diff.totals.distinguished).toEqual({ from: 0, to: 0, delta: 0 })
     expect(diff.clubs.bothPresent[0]!.distinguishedChanged).toBe(false)
   })
+
+  /**
+   * #1440 — the worst case in the audit. The diff keyed BOTH snapshots on the
+   * raw `clubId`, so two dates written from differently-padded TI exports made
+   * every club in the district read as removed-and-re-added: a total roster
+   * replacement that never happened, rendered as fact in "What Changed".
+   */
+  describe('club-id padding (#1440)', () => {
+    it('produces an EMPTY diff for two snapshots that differ only in padding', () => {
+      const from = snapshot({
+        date: '2026-05-25',
+        clubs: [
+          club({ clubId: '00009905', membershipCount: 20 }),
+          club({ clubId: '00000180', membershipCount: 31 }),
+        ],
+        perf: [perf('00009905', 'D'), perf('00000180', '')],
+      })
+      const to = snapshot({
+        date: '2026-05-26',
+        clubs: [
+          club({ clubId: '9905', membershipCount: 20 }),
+          club({ clubId: '180', membershipCount: 31 }),
+        ],
+        perf: [perf('9905', 'D'), perf('180', '')],
+      })
+
+      const diff = diffSnapshots(from, to)
+
+      expect(diff.clubs.onlyInFrom).toEqual([])
+      expect(diff.clubs.onlyInTo).toEqual([])
+      expect(diff.clubs.bothPresent).toHaveLength(2)
+      expect(diff.events).toEqual([])
+      expect(diff.totals.distinguished).toEqual({ from: 1, to: 1, delta: 0 })
+    })
+
+    it('still reports a real change across a padding difference', () => {
+      const from = snapshot({
+        date: '2026-05-25',
+        clubs: [club({ clubId: '00009905', membershipCount: 20 })],
+        perf: [perf('00009905', '')],
+      })
+      const to = snapshot({
+        date: '2026-05-26',
+        clubs: [club({ clubId: '9905', membershipCount: 26 })],
+        perf: [perf('9905', '')],
+      })
+
+      const diff = diffSnapshots(from, to)
+
+      expect(diff.clubs.onlyInFrom).toEqual([])
+      expect(diff.clubs.onlyInTo).toEqual([])
+      expect(diff.events.map(e => e.category)).toEqual(['membership'])
+      expect(diff.events[0]!.magnitude).toBe(6)
+    })
+
+    it('still reports a genuine departure and arrival', () => {
+      const from = snapshot({
+        date: '2026-05-25',
+        clubs: [club({ clubId: '00009905' }), club({ clubId: '0000777' })],
+      })
+      const to = snapshot({
+        date: '2026-05-26',
+        clubs: [club({ clubId: '9905' }), club({ clubId: '888' })],
+      })
+
+      const diff = diffSnapshots(from, to)
+
+      expect(diff.clubs.onlyInFrom.map(c => c.clubId)).toEqual(['0000777'])
+      expect(diff.clubs.onlyInTo.map(c => c.clubId)).toEqual(['888'])
+    })
+  })
 })

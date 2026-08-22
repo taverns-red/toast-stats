@@ -94,6 +94,38 @@ describe('CdnClient — discovery reads', () => {
     expect(resolved.data.clubId).toBe(clubId)
   })
 
+  /**
+   * #1440 — the club index is keyed by whatever form the snapshot that fed it
+   * used. The recorded fixture (live CDN, 2026-06-09) is 8-char padded; a
+   * snapshot written from a bare export keys it bare. An exact-key lookup
+   * turns that difference into "club X is not in the club index", which is
+   * indistinguishable from a genuinely unknown club.
+   */
+  it('resolves a padded-keyed club from a bare club id, and vice versa (#1440)', async () => {
+    const res = await client().getClubIndex()
+    expect(res.available).toBe(true)
+    if (!res.available) return
+
+    // '00003045' in the fixture — the padded key form.
+    const padded = Object.keys(res.data.clubs).find(k => k.startsWith('0'))!
+    const bare = padded.replace(/^0+/, '')
+    expect(bare).not.toBe(padded)
+
+    const fromBare = await client().resolveClubDistrict(bare)
+    expect(fromBare.available).toBe(true)
+    if (!fromBare.available) return
+    expect(fromBare.data.districtId).toBe(res.data.clubs[padded]!.districtId)
+
+    // …and the other direction: a bare-keyed index found by a padded id.
+    const bareKeyed = Object.keys(res.data.clubs).find(k => !k.startsWith('0'))!
+    const fromPadded = await client().resolveClubDistrict(
+      bareKeyed.padStart(bareKeyed.length + 3, '0')
+    )
+    expect(fromPadded.available).toBe(true)
+    if (!fromPadded.available) return
+    expect(fromPadded.data.districtId).toBe(res.data.clubs[bareKeyed]!.districtId)
+  })
+
   it('returns not-available for an unknown club id (never guesses)', async () => {
     const resolved = await client().resolveClubDistrict('00000000')
     expect(resolved.available).toBe(false)
