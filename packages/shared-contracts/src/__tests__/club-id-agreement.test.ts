@@ -73,8 +73,11 @@ const SITES: Site[] = [
   {
     file: 'frontend/src/hooks/useClubHistory.ts',
     what: 'matches the URL club id against each year-end snapshot',
-    // #1437 is rewriting this file in a concurrent sprint. Editing it here
-    // would collide; it adopts the shared helper on rebase.
+    // #1437 (PR #1446) is rewriting this file in a concurrent sprint and
+    // already wires it to clubIdsMatch — editing it here would collide.
+    // Verified against that branch: it satisfies every check below, so the
+    // moment #1446 lands this line can simply be deleted and the site joins
+    // the guard.
     deferredTo: '#1437',
   },
 ]
