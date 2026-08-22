@@ -119,10 +119,19 @@ function programYearsInIndex(
   index: Record<string, string[] | undefined>
 ): Set<number> {
   const years = new Set<number>()
+  // The index is every district × every date it holds — tens of thousands of
+  // strings. A program year is a function of the year-month alone, so dedupe
+  // on `YYYY-MM` first: ~one call per calendar month in the archive instead of
+  // one per date. `getProgramYearForDate` stays the single source of the Jul-1
+  // boundary — re-deriving it inline here is exactly the drift to avoid.
+  const seenMonths = new Set<string>()
   for (const dates of Object.values(index)) {
     if (!Array.isArray(dates)) continue
     for (const d of dates) {
       if (typeof d !== 'string' || !ISO_DATE_PREFIX.test(d)) continue
+      const month = d.slice(0, 7)
+      if (seenMonths.has(month)) continue
+      seenMonths.add(month)
       years.add(getProgramYearForDate(d).year)
     }
   }
@@ -214,18 +223,20 @@ export function useClubHistory(
         })
       )
 
-      // `completedYears` is newest-first, so both lists inherit that order and
-      // the first resolved name is the most recent one on record.
-      const resolved = outcomes.filter(
-        (o): o is { row: ClubHistoryRow; clubName: string } => 'row' in o
-      )
-      return {
-        rows: resolved.map(r => r.row),
-        gaps: outcomes
-          .filter((o): o is { gap: ClubHistoryGap } => 'gap' in o)
-          .map(o => o.gap),
-        clubName: resolved[0]?.clubName ?? null,
+      // `completedYears` is newest-first, so both lists inherit that order —
+      // which makes the FIRST row's name the most recent one on record.
+      const rows: ClubHistoryRow[] = []
+      const gaps: ClubHistoryGap[] = []
+      let clubName: string | null = null
+      for (const outcome of outcomes) {
+        if ('gap' in outcome) {
+          gaps.push(outcome.gap)
+          continue
+        }
+        rows.push(outcome.row)
+        clubName ??= outcome.clubName
       }
+      return { rows, gaps, clubName }
     },
     staleTime: 15 * 60 * 1000, // archived years are immutable
     gcTime: 30 * 60 * 1000,
