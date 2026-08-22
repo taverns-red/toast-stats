@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `read-time-normalization-is-free-write-time-canonicalization-reshapes-every-derived-key.md` — Read-time normalization only ever widens what matches, but write-time canonicalization changes the bytes every derived index is keyed on — so the write half of an identity fix needs a census of everything derived from that field, and the read half needs none  (2026-08-22)
 - `a-centred-fixed-width-overlay-is-a-viewport-collision-bug-in-every-edge-column.md` — A fixed-width overlay centred on its trigger is off-screen wherever the trigger sits near a viewport edge — it is a property of the shared component, never of the card that reported it, and the measured correction cannot live in a Tailwind v4 translate utility  (2026-08-03)
 - `a-deliberately-shared-query-key-is-a-coupling-with-no-compiler.md` — Two hooks sharing a React Query key to avoid a duplicate fetch are coupled with nothing but a comment — narrowing one hook's key silently re-scopes or breaks the other, so decide explicitly and pay the fetch  (2026-08-03)
 - `a-docs-page-that-restates-the-code-needs-a-census-not-a-generator.md` — A docs page that restates behaviour spread across many mechanisms cannot be generated from any one of them — couple it with a census that fails when unclaimed code appears, and prove the census fires against a synthetic case the repo can never produce  (2026-08-03)
