@@ -16,7 +16,7 @@ import {
   normalizeClubId,
   clubIdsMatch,
   findClubEntry,
-} from '../identity/clubId.js'
+} from '../naming/clubId.js'
 
 describe('normalizeClubId', () => {
   it('strips leading zeros', () => {
@@ -36,11 +36,11 @@ describe('normalizeClubId', () => {
     expect(normalizeClubId(normalizeClubId('00000180'))).toBe('180')
   })
 
-  it('collapses an all-zeros id to a single canonical zero, never empty', () => {
-    // Requirement 2.4 of the original transformer helper was "never produce
-    // an empty string". A single canonical '0' honours that AND keeps the
-    // padded/bare round-trip invariant, which preserving '0000' would break.
-    expect(normalizeClubId('0000')).toBe('0')
+  it('preserves an all-zeros id rather than producing an empty string', () => {
+    // Requirement 2.4 of the original transformer helper, kept as #1437
+    // promoted it: an empty key would collide every malformed row into one
+    // bucket. An all-zeros club number is degenerate data, not an identity.
+    expect(normalizeClubId('0000')).toBe('0000')
     expect(normalizeClubId('0')).toBe('0')
   })
 

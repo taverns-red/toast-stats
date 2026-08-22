@@ -131,12 +131,12 @@ describe('write-time club-id canonicalization (#1440)', () => {
       expect(lookup.has('00009905')).toBe(false)
     })
 
-    it('keys an all-zeros club id to the canonical zero, never empty', () => {
+    it('preserves an all-zeros club id as a lookup key, never empty', () => {
       const lookup = access.buildDistrictPerformanceLookup([
         { Club: '0000', 'Oct. Ren.': '1' },
       ])
 
-      expect(lookup.has('0')).toBe(true)
+      expect(lookup.has('0000')).toBe(true)
       expect(lookup.has('')).toBe(false)
     })
 
