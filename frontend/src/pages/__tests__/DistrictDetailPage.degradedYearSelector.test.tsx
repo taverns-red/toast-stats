@@ -326,16 +326,26 @@ function programYearBounds(year: number) {
   return [`${year}-07-01`, `${year + 1}-06-30`] as const
 }
 
+/**
+ * `?py=` is OMITTED when it equals the data-driven default (useUrlProgramYear),
+ * so an absent `py` is not "unasserted" — it means the default year, which for
+ * this harness's dates index (2025-06-30, 2026-06-30) is 2025-2026. Resolving it
+ * here rather than skipping keeps the check total.
+ */
+const HARNESS_DEFAULT_PY = 2025
+
 function assertNoInconsistentUrl() {
   for (const search of seenSearches) {
     const params = new URLSearchParams(search)
     const py = params.get('py')
     const date = params.get('date')
-    if (py === null || date === null) continue
-    const [start, end] = programYearBounds(parseInt(py, 10))
+    if (date === null) continue
+    const [start, end] = programYearBounds(
+      py === null ? HARNESS_DEFAULT_PY : parseInt(py, 10)
+    )
     expect(
       date >= start && date <= end,
-      `?date=${date} is outside ?py=${py} (${start}..${end}) in "${search}"`
+      `?date=${date} is outside ?py=${py ?? HARNESS_DEFAULT_PY} (${start}..${end}) in "${search}"`
     ).toBe(true)
   }
 }
