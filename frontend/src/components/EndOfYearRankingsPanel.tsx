@@ -15,6 +15,12 @@ export interface EndOfYearRankingsPanelProps {
   programYear: ProgramYear
   /** Previous year's rankings for year-over-year comparison (optional) */
   previousYearRankings?: EndOfYearRankings | null
+  /**
+   * Why the previous-year rank comparison is deliberately absent, when it is
+   * (#1442). Rendered as a note beside the program year; null means the
+   * comparison is either shown or simply has no prior year to draw on.
+   */
+  comparisonUnavailableNote?: string | null
 }
 
 /**
@@ -110,6 +116,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
   isLoading,
   programYear,
   previousYearRankings,
+  comparisonUnavailableNote = null,
 }) => {
   // Format the as-of date for display
   // Uses UTC to ensure consistent display regardless of timezone
@@ -174,6 +181,14 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
       <p className="text-sm text-gray-600 font-tm-body mb-4">
         {programYear.label} Program Year
       </p>
+
+      {/* #1442: the previous-year rank delta is deliberately absent here.
+          Say why, rather than silently dropping the comparison. */}
+      {comparisonUnavailableNote && (
+        <p className="text-sm text-gray-600 font-tm-body mb-4" role="note">
+          {comparisonUnavailableNote}
+        </p>
+      )}
 
       {/* Rankings Grid - 4 columns on large screens, 2 on medium, 1 on mobile */}
       <div

@@ -45,6 +45,7 @@ const baseStatistics: PaymentStatistics = {
   paymentBase: 1800,
   yearOverYearChange: 150,
   trendDirection: 'up',
+  yearOverYearUnavailableReason: null,
 }
 
 const statisticsWithNullBase: PaymentStatistics = {
@@ -52,6 +53,7 @@ const statisticsWithNullBase: PaymentStatistics = {
   paymentBase: null,
   yearOverYearChange: null,
   trendDirection: null,
+  yearOverYearUnavailableReason: null,
 }
 
 const statisticsWithDownTrend: PaymentStatistics = {
@@ -59,6 +61,7 @@ const statisticsWithDownTrend: PaymentStatistics = {
   paymentBase: 1500,
   yearOverYearChange: -300,
   trendDirection: 'down',
+  yearOverYearUnavailableReason: null,
 }
 
 const statisticsWithStableTrend: PaymentStatistics = {
@@ -66,6 +69,7 @@ const statisticsWithStableTrend: PaymentStatistics = {
   paymentBase: 1500,
   yearOverYearChange: 0,
   trendDirection: 'stable',
+  yearOverYearUnavailableReason: null,
 }
 
 const multiYearData: MultiYearPaymentData = {

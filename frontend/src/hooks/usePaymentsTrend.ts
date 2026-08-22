@@ -19,6 +19,7 @@ import {
   ProgramYear,
 } from '../utils/programYear'
 import type { SnapshotDate } from '../types/snapshotDate'
+import type { ReformationDiscontinuity } from '@taverns-red/shared-contracts'
 
 /**
  * Multi-year payment data structure for chart rendering
@@ -42,6 +43,13 @@ export interface PaymentStatistics {
   paymentBase: number | null
   yearOverYearChange: number | null
   trendDirection: 'up' | 'down' | 'stable' | null
+  /**
+   * Why the year-over-year figure is deliberately absent, when it is (#1442).
+   * Null when there simply was no prior-year data — the consumer keeps its
+   * existing "N/A" for that case. Non-null means we HAVE both numbers and are
+   * choosing not to present their difference, so say so instead of "N/A".
+   */
+  yearOverYearUnavailableReason: string | null
 }
 
 /**
@@ -229,6 +237,12 @@ export function findComparablePayment(
  * @param programYearStartDate - Optional start date (defaults to current program year)
  * @param endDate - Optional end date
  * @param selectedProgramYear - Optional program year to use as the current year for grouping and statistics
+ * @param performanceTargets - Optional performance targets from the CDN hook
+ * @param rosterDiscontinuity - Optional 2026-reformation verdict from the
+ *   parent (#1442). `paymentsTrend` carries dates and payments but no club
+ *   counts, so this hook cannot detect the discontinuity itself; the page
+ *   already holds the time series that can, and passes the verdict down (R3).
+ *   Omitted or non-discontinuous leaves the year-over-year figure untouched.
  * @returns UsePaymentsTrendResult with payment trend data, loading, and error states
  *
  * Requirements: 2.1, 2.4, 6.2
@@ -238,7 +252,8 @@ export function usePaymentsTrend(
   programYearStartDate?: string,
   endDate?: SnapshotDate,
   selectedProgramYear?: ProgramYear,
-  performanceTargets?: DistrictPerformanceTargets | null
+  performanceTargets?: DistrictPerformanceTargets | null,
+  rosterDiscontinuity?: ReformationDiscontinuity | null
 ): UsePaymentsTrendResult {
   const currentProgramYear = selectedProgramYear ?? getCurrentProgramYear()
 
@@ -318,17 +333,32 @@ export function usePaymentsTrend(
       previousPayments
     )
 
+    // #1442: across the 2026 district reformation a surviving id that absorbed
+    // (or shed) another district's clubs is not the district that held that id
+    // last year, so the difference between the two payment figures is not a
+    // trend. Suppress it and carry the reason so the chart can explain the
+    // gap instead of showing a bare "N/A".
+    const suppressed = rosterDiscontinuity?.isDiscontinuous === true
+
     return {
       currentYearTrend,
       multiYearData,
       statistics: {
         currentPayments,
         paymentBase,
-        yearOverYearChange: change,
-        trendDirection: direction,
+        yearOverYearChange: suppressed ? null : change,
+        trendDirection: suppressed ? null : direction,
+        yearOverYearUnavailableReason: suppressed
+          ? (rosterDiscontinuity?.message ?? null)
+          : null,
       },
     }
-  }, [analyticsData, currentProgramYear, performanceTargets])
+  }, [
+    analyticsData,
+    currentProgramYear,
+    performanceTargets,
+    rosterDiscontinuity,
+  ])
 
   return {
     data: result,

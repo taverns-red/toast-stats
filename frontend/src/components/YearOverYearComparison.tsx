@@ -26,6 +26,12 @@ interface YearOverYearComparisonProps {
     totalClubs: number
   }
   isLoading?: boolean
+  /**
+   * Why the comparison is deliberately absent, when it is (#1442). Distinct
+   * from "no historical data": here both years exist, and we are choosing not
+   * to divide one by the other because they describe different districts.
+   */
+  unavailableReason?: string | null
 }
 
 interface ComparisonDataItem {
@@ -97,9 +103,22 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
   yearOverYear,
   currentYear,
   isLoading = false,
+  unavailableReason = null,
 }) => {
   if (isLoading) {
     return <LoadingSkeleton variant="chart" />
+  }
+
+  // #1442: an explicit reason outranks both the "no data" and the "all zeroes"
+  // empty states — it is the only one of the three that is actually true.
+  if (unavailableReason) {
+    return (
+      <EmptyState
+        title="Comparison Unavailable"
+        message={unavailableReason}
+        icon="data"
+      />
+    )
   }
 
   if (!yearOverYear) {

@@ -390,6 +390,13 @@ export const MembershipPaymentsChart: React.FC<
                 direction={statistics.trendDirection}
               />
             </div>
+          ) : statistics.yearOverYearUnavailableReason ? (
+            // #1442: we have both years' numbers and are deliberately not
+            // presenting their difference. Say that, rather than "N/A" —
+            // which would read as missing data.
+            <p className="text-sm text-gray-600 font-tm-body">
+              {statistics.yearOverYearUnavailableReason}
+            </p>
           ) : (
             <p className="text-lg text-gray-500 font-tm-body">N/A</p>
           )}
