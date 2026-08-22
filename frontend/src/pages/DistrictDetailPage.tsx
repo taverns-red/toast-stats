@@ -525,9 +525,9 @@ const DistrictDetailPageInner: React.FC = () => {
               </div>
             </div>
 
-            {/* #1436 — the way out. Without this the branch below returns
-                before DistrictDetailHeader, the page's only year control, so a
-                district viewable in another year was unreachable from its own
+            {/* #1436 — the way out. This branch returns before
+                DistrictDetailHeader, which was the page's only year control, so
+                a district viewable in another year was unreachable from its own
                 page. Rendered only when there IS another year to reach — but
                 the slot is reserved while the rank-history query is in flight,
                 so the selector does not late-insert and push the rankings
