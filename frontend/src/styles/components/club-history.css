@@ -61,6 +61,20 @@
   box-shadow: 0 0 0 2px var(--rt-stats-focus);
 }
 
+/* Which completed program years produced no row, and why (#1437). Sits under
+   the table so a partial history states its own gaps instead of implying the
+   club simply has no earlier record. Token-driven (R10) — no per-theme rule. */
+.club-history-page__gaps {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid var(--rt-stats);
+  border-radius: 0 4px 4px 0;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .club-history-page__back {
   margin: 1.25rem 0 0;
   font-size: 0.9rem;

@@ -18,6 +18,7 @@ import { ClubHistoryTable } from '../components/ClubHistoryTable'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState, ErrorDisplay } from '../components/ErrorDisplay'
 import { exportClubHistory } from '../utils/csvExport'
+import { summarizeClubHistoryGaps } from '../utils/clubHistory'
 
 export default function ClubHistoryPage() {
   const { districtId, clubId } = useParams<{
@@ -32,9 +33,17 @@ export default function ClubHistoryPage() {
   }, [districtsData, districtId])
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
 
-  const { rows, clubName, isLoading, isError } = useClubHistory(
+  const { rows, gaps, clubName, isLoading, isError } = useClubHistory(
     districtId,
     clubId
+  )
+
+  // Which completed years produced no row, and why (#1437). Without this,
+  // "this club moved districts", "that snapshot is missing" and "this club has
+  // no history" are the same empty table.
+  const gapNote = useMemo(
+    () => summarizeClubHistoryGaps(gaps, { districtLabel: districtName }),
+    [gaps, districtName]
   )
 
   const heading = clubName || `Club ${clubId}`
@@ -80,15 +89,26 @@ export default function ClubHistoryPage() {
         <ErrorDisplay error="Could not load this club's history. Please try again." />
       ) : rows.length === 0 ? (
         <EmptyState
-          message={`No completed program years on file yet for ${heading}. History appears once a program year closes (June 30).`}
+          message={
+            gapNote
+              ? `No completed program years on file for ${heading} under ${districtName}. ${gapNote}`
+              : `No completed program years on file yet for ${heading}. History appears once a program year closes (June 30).`
+          }
         />
       ) : (
-        <ClubHistoryTable
-          rows={rows}
-          clubName={heading}
-          districtId={districtId}
-          clubId={clubId}
-        />
+        <>
+          <ClubHistoryTable
+            rows={rows}
+            clubName={heading}
+            districtId={districtId}
+            clubId={clubId}
+          />
+          {gapNote && (
+            <p className="club-history-page__gaps" role="note">
+              {gapNote}
+            </p>
+          )}
+        </>
       )}
 
       <p className="club-history-page__back">

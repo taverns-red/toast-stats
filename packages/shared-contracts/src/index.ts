@@ -181,3 +181,8 @@ export {
   type DistrictSnapshotObject,
   type DistrictSnapshotDateIndex,
 } from './naming/snapshotFileNames.js'
+
+// Canonical club-id comparison (#1437) — Toastmasters emits both `00009905`
+// and `9905`, so identity is the normalized form, never a strict `===`.
+// #1440 adopts this at the remaining call sites.
+export { normalizeClubId, clubIdsMatch } from './naming/clubId.js'

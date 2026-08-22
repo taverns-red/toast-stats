@@ -184,10 +184,12 @@ describe('ClubHistoryPage gap reporting (#1437)', () => {
       error: null,
     })
     renderPage()
-    const empty = screen.getByText(/2023-2024/)
-    expect(empty).toBeInTheDocument()
-    expect(screen.getByText(/District 61/)).toBeInTheDocument()
-    expect(screen.getByText(/another district/i)).toBeInTheDocument()
+    // Bounded query — "District 61" also appears in the breadcrumb.
+    const empty = screen.getByText(/no snapshot for/i)
+    expect(empty).toHaveTextContent('District 61')
+    expect(empty).toHaveTextContent('2023-2024')
+    expect(empty).toHaveTextContent('2022-2023')
+    expect(empty).toHaveTextContent(/another district/i)
   })
 
   it('says a year could not be loaded rather than implying no history', () => {
