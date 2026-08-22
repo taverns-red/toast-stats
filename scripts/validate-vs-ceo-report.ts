@@ -65,8 +65,11 @@ import {
   type DistrictTierCounts,
 } from './lib/ceoReportOracle.js'
 import { isDistrictSnapshotFile } from './lib/snapshotFileNames.js'
-
-const DATE_DIR_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+import {
+  programYearForSnapshotDate,
+  selectYearEndSnapshot,
+  SNAPSHOT_DATE_DIR_PATTERN,
+} from './lib/ceoReportSnapshotDates.js'
 
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)
@@ -99,43 +102,16 @@ function parseArgs(argv: string[]): Args {
   return { cacheDir, json }
 }
 
-/**
- * Program year ("YYYY-YYYY") a snapshot DATE belongs to. Calendar-pure and
- * local on purpose: the snapshot's directory date is the collection date, so
- * July 1 starts the new program year. Never call this on
- * `metadata.sourceCsvDate` — see constraint 1 in the file header.
- */
-function programYearForSnapshotDate(date: string): string {
-  const year = Number.parseInt(date.slice(0, 4), 10)
-  const month = Number.parseInt(date.slice(5, 7), 10)
-  return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`
-}
-
 /** Every `YYYY-MM-DD` snapshot directory in the cache, oldest first. */
 function listSnapshotDates(cacheDir: string): string[] {
   const snapshotsDir = join(cacheDir, 'snapshots')
   if (!existsSync(snapshotsDir)) return []
   return readdirSync(snapshotsDir, { withFileTypes: true })
-    .filter(entry => entry.isDirectory() && DATE_DIR_PATTERN.test(entry.name))
+    .filter(
+      entry => entry.isDirectory() && SNAPSHOT_DATE_DIR_PATTERN.test(entry.name)
+    )
     .map(entry => entry.name)
     .sort()
-}
-
-/**
- * The last snapshot belonging to a program year — its year-end freeze.
- *
- * Selection is by the snapshot's own date, NOT by `sourceCsvDate`: the
- * June-30 freeze is published ~3 weeks later, so a program-year-equality
- * guard on the source date drops every completed year (Lesson 139).
- */
-function selectYearEndSnapshot(
-  dates: string[],
-  programYear: string
-): string | undefined {
-  const inYear = dates.filter(
-    date => programYearForSnapshotDate(date) === programYear
-  )
-  return inYear[inYear.length - 1]
 }
 
 function readJson<T>(path: string): T {
