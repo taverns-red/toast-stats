@@ -131,3 +131,65 @@ describe('findClubEntry', () => {
     expect(findClubEntry(bareKeyed, 'toString')).toBeUndefined()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Preserved verbatim from #1437's clubId.test.ts (PR #1446), which created this
+// helper first. Kept on merge so the #1440 superset cannot silently drop the
+// guarantees #1437 shipped. Describe names carry their issue tag to stay distinct.
+// ---------------------------------------------------------------------------
+describe('normalizeClubId (#1437)', () => {
+  it('strips leading zeros to the canonical bare form', () => {
+    expect(normalizeClubId('00009905')).toBe('9905')
+    expect(normalizeClubId('9905')).toBe('9905')
+    expect(normalizeClubId('00002274')).toBe('2274')
+  })
+
+  it('preserves an all-zeros id rather than returning an empty string', () => {
+    expect(normalizeClubId('0000')).toBe('0000')
+    expect(normalizeClubId('0')).toBe('0')
+  })
+
+  it('tolerates surrounding whitespace from a CSV cell', () => {
+    expect(normalizeClubId(' 00009905 ')).toBe('9905')
+  })
+
+  // Amended on merge, by operator decision (2026-08-22). #1437 originally
+  // asserted `'00A12' → 'A12'` — leading zeros stripped, everything else
+  // preserved. #1440's rule strips EVERY non-digit so that CSV import debris
+  // (`'180`, `Club 180`) normalizes onto the real id, which means a MIXED
+  // alphanumeric id collapses onto a pure-numeric one: `'00A12' → '12'`.
+  //
+  // The two rules genuinely disagree, and #1440's is the one that shipped.
+  // The collision it admits is tracked separately — it matters because write-
+  // time canonicalization keys `config/club-index.json` on this output, so two
+  // ids that normalize together would silently occupy one entry. Whether any
+  // real club id is alphanumeric is unverified (CDN egress was blocked).
+  //
+  // Pinned rather than deleted: the case still has one defined answer, and an
+  // unintended change to it should fail here.
+  it('collapses a mixed alphanumeric id onto its digits (#1440 rule)', () => {
+    expect(normalizeClubId('00A12')).toBe('12')
+    expect(normalizeClubId('')).toBe('')
+  })
+})
+
+describe('clubIdsMatch (#1437)', () => {
+  it('matches across padding in BOTH directions', () => {
+    expect(clubIdsMatch('00009905', '9905')).toBe(true)
+    expect(clubIdsMatch('9905', '00009905')).toBe(true)
+    expect(clubIdsMatch('00009905', '00009905')).toBe(true)
+    expect(clubIdsMatch('9905', '9905')).toBe(true)
+  })
+
+  it('does not conflate different clubs', () => {
+    expect(clubIdsMatch('00009905', '9906')).toBe(false)
+    expect(clubIdsMatch('9905', '99050')).toBe(false)
+  })
+
+  it('is false when either side is missing', () => {
+    expect(clubIdsMatch(null, '9905')).toBe(false)
+    expect(clubIdsMatch('9905', undefined)).toBe(false)
+    expect(clubIdsMatch(undefined, null)).toBe(false)
+    expect(clubIdsMatch('', '')).toBe(false)
+  })
+})
