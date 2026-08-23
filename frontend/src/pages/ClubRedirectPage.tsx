@@ -7,6 +7,7 @@
 import React from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { findClubEntry } from '@taverns-red/shared-contracts'
 import { fetchCdnClubIndex } from '../services/cdn'
 
 const ClubRedirectPage: React.FC = () => {
@@ -23,7 +24,10 @@ const ClubRedirectPage: React.FC = () => {
   React.useEffect(() => {
     if (!data || !clubId) return
 
-    const club = data.clubs[clubId]
+    // The index is keyed by whatever club-id form the snapshot that generated
+    // it used; the URL carries whatever the user (or an old link) has. An
+    // exact-key lookup turned that difference into "Club Not Found" (#1440).
+    const club = findClubEntry(data.clubs, clubId)
     if (club) {
       const params = searchParams.toString()
       const url = `/district/${club.districtId}/club/${clubId}${params ? `?${params}` : ''}`
@@ -43,7 +47,11 @@ const ClubRedirectPage: React.FC = () => {
     )
   }
 
-  if (isError || !data || (data && clubId && !data.clubs[clubId])) {
+  if (
+    isError ||
+    !data ||
+    (data && clubId && !findClubEntry(data.clubs, clubId))
+  ) {
     return (
       <div className="tm-container p-8">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-lg mx-auto text-center">

@@ -22,6 +22,7 @@ import type {
   SnapshotMetadata,
 } from '../interfaces.js'
 import type { ScrapedRecord } from '@taverns-red/shared-contracts'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 import {
   computeDcpGoalsAchieved,
   hasDcpGoalColumns,
@@ -263,7 +264,15 @@ export class DataTransformer implements IDataTransformer {
     this.warnOnUnknownGoalHeaders(clubPerformance[0])
 
     for (const record of clubPerformance) {
-      const clubId = this.extractString(record, 'Club Number', 'ClubId', 'Club')
+      // Write-time canonicalization (#1440): TI exports the same club as
+      // '00009905' in one file and '9905' in another, so the RAW form is
+      // whatever arrived that day. Everything downstream — the club index,
+      // the diff engine, every frontend lookup — inherits the form we store
+      // here, so store the canonical one. Read-time normalization still
+      // covers the snapshots already written in the other form.
+      const clubId = normalizeClubId(
+        this.extractString(record, 'Club Number', 'ClubId', 'Club')
+      )
       const clubName = this.extractString(
         record,
         'Club Name',
@@ -284,9 +293,9 @@ export class DataTransformer implements IDataTransformer {
       const areaRaw = this.extractString(record, 'Area') ?? ''
       const { id: areaId, name: areaName } = this.parseArea(areaRaw)
 
-      // Look up matching districtPerformance record by normalized club ID
-      const normalizedId = this.normalizeClubId(clubId)
-      const dpRecord = dpLookup.get(normalizedId)
+      // Look up matching districtPerformance record by canonical club ID
+      // (clubId is already canonical — the lookup is keyed the same way).
+      const dpRecord = dpLookup.get(clubId)
 
       // Source payment/renewal fields from districtPerformance when available,
       // falling back to clubPerformance record
@@ -381,18 +390,10 @@ export class DataTransformer implements IDataTransformer {
     return clubs
   }
 
-  /**
-   * Normalizes a club ID by stripping leading zeros.
-   * If the result would be empty (all-zeros input like "0000"),
-   * preserves the original value.
-   *
-   * @param clubId - The raw club ID string
-   * @returns The normalized club ID
-   */
-  private normalizeClubId(clubId: string): string {
-    const stripped = clubId.replace(/^0+/, '')
-    return stripped === '' ? clubId : stripped
-  }
+  // The private normalizeClubId that used to live here was promoted to
+  // `normalizeClubId` in @taverns-red/shared-contracts (#1440). It was the
+  // repo's only correct definition, but it was private and used for exactly
+  // one join while seven other sites each invented their own.
 
   /**
    * Builds a lookup map from districtPerformance records keyed by normalized club ID.
@@ -418,8 +419,7 @@ export class DataTransformer implements IDataTransformer {
         continue
       }
 
-      const normalizedId = this.normalizeClubId(rawClubId)
-      lookup.set(normalizedId, record)
+      lookup.set(normalizeClubId(rawClubId), record)
     }
 
     return lookup

@@ -827,8 +827,11 @@ describe('DataTransformer', () => {
         expect(club?.newMembers).toBe(2)
         expect(club?.paymentsCount).toBe(16)
 
-        // Non-payment fields MUST still come from clubPerformance
-        expect(club?.clubId).toBe('00009905')
+        // Non-payment fields MUST still come from clubPerformance. The id
+        // itself is stored in the CANONICAL form (#1440) — the transformer
+        // no longer preserves whichever padding that day's export happened
+        // to use, because every downstream key inherits it.
+        expect(club?.clubId).toBe('9905')
         expect(club?.clubName).toBe('Regression Test Club')
         expect(club?.divisionId).toBe('C')
         expect(club?.areaId).toBe('7')
