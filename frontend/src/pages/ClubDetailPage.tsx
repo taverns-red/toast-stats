@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+// One shared definition of "the same club" (#1440) — this file used to hold
+// two comparisons that disagreed with each other sixteen lines apart.
+import { clubIdsMatch, findClubEntry } from '@taverns-red/shared-contracts'
 import { fetchCdnClubIndex } from '../services/cdn'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useDistricts } from '../hooks/useDistricts'
@@ -246,7 +249,7 @@ const ClubDetailPage: React.FC = () => {
   // Find the club
   const club: ClubTrend | null = useMemo(() => {
     if (!analytics || !clubId) return null
-    return analytics.allClubs.find(c => c.clubId === clubId) ?? null
+    return analytics.allClubs.find(c => clubIdsMatch(c.clubId, clubId)) ?? null
   }, [analytics, clubId])
 
   // ── Moved-club lookup (#1441) ─────────────────────────────────────────────
@@ -271,10 +274,12 @@ const ClubDetailPage: React.FC = () => {
   // a move the index actually substantiates.
   const movedTo = useMemo(() => {
     if (club || !clubId || !clubIndex) return null
-    // Same exact-key lookup form ClubRedirectPage uses. #1440 is replacing the
-    // club-id comparisons on this page with a shared normalizer — this is
-    // deliberately a single expression so that swap is a one-line change.
-    const entry = clubIndex.clubs[clubId]
+    // Same lookup form ClubRedirectPage uses — now the shared, padding-
+    // tolerant one (#1440, taking the one-line swap #1441 staged here). The
+    // index is keyed by whichever club-id form the snapshot that generated it
+    // stored, so an exact-key lookup would report "may have been removed" for
+    // a club that did move and IS in the index, just under the other form.
+    const entry = findClubEntry(clubIndex.clubs, clubId)
     if (!entry?.districtId || entry.districtId === districtId) return null
     return entry
   }, [club, clubId, clubIndex, districtId])
@@ -298,12 +303,7 @@ const ClubDetailPage: React.FC = () => {
       raw['clubPerformance']) as
       Array<Record<string, string | number | null>> | undefined
     if (!records) return null
-    return (
-      records.find(r => {
-        const num = String(r['Club Number'] ?? '')
-        return num === clubId || num.padStart(8, '0') === clubId
-      }) ?? null
-    )
+    return records.find(r => clubIdsMatch(r['Club Number'], clubId)) ?? null
   }, [districtStats, clubId])
 
   // The program year the page is showing — the authority for which

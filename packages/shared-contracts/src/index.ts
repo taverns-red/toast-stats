@@ -184,5 +184,11 @@ export {
 
 // Canonical club-id comparison (#1437) — Toastmasters emits both `00009905`
 // and `9905`, so identity is the normalized form, never a strict `===`.
-// #1440 adopts this at the remaining call sites.
-export { normalizeClubId, clubIdsMatch } from './naming/clubId.js'
+// #1440 adopts this at the remaining call sites and adds `findClubEntry`, the
+// same rule for object keys (the club index is keyed by whichever form the
+// snapshot that generated it stored).
+export {
+  normalizeClubId,
+  clubIdsMatch,
+  findClubEntry,
+} from './naming/clubId.js'

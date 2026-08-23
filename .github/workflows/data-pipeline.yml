@@ -1516,8 +1516,17 @@ jobs:
                 const districtId = data.districtId || file.match(/^district_([^_.]+)\.json$/)?.[1];
                 const clubList = data.clubs || [];
                 for (const club of clubList) {
-                  if (club.clubId) {
-                    clubs[club.clubId] = {
+                  // Inline JS in YAML cannot import the shared helper, so this
+                  // is a hand copy of normalizeClubId from
+                  // @taverns-red/shared-contracts src/identity/clubId.ts
+                  // (#1440). The transformer now writes the canonical form, so
+                  // this only matters while the latest snapshots predate that
+                  // change — the index must never mix key forms.
+                  const text = String(club.clubId ?? '').trim();
+                  const digits = text.replace(/\D/g, '');
+                  const clubId = digits === '' ? text : (digits.replace(/^0+/, '') || '0');
+                  if (clubId) {
+                    clubs[clubId] = {
                       districtId: districtId || '',
                       clubName: club.clubName || '',
                     };
