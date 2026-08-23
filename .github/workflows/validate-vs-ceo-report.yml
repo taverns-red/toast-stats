@@ -13,6 +13,11 @@
 # What it does NOT do: it never writes to GCS, and it touches no bucket path
 # other than the five snapshot prefixes it resolves. Reading only.
 #
+# It also carries a SECOND, independent question (#1450): does any real club
+# id contain a non-digit, and do two distinct raw ids canonicalize onto one
+# key? Same synced feed, different question — so the census is reported
+# alongside the oracle's verdict and never becomes it. See the census step.
+#
 # Prerequisites are the pipeline's: GCP_WORKLOAD_IDENTITY_PROVIDER and
 # GCP_SERVICE_ACCOUNT (see scripts/setup-wif.sh).
 
@@ -30,7 +35,7 @@ on:
           - toast-stats-data-staging
         default: toast-stats-data-ca
       comment_issue:
-        description: 'Issue to post the per-year table to (blank = do not comment)'
+        description: 'Issue to post the per-year table + club-id census to (blank = do not comment)'
         required: false
         type: string
         default: '1429'
@@ -180,6 +185,55 @@ jobs:
           du -sh ./cache/snapshots/* | sort
           du -sh ./cache/snapshots
 
+      # ── Club-id census (#1450) — a second question, same feed ───
+      # `normalizeClubId` strips EVERY non-digit before stripping leading
+      # zeros, so `00A12` and `0012` both canonicalize to `12` — and #1440
+      # keys the public `config/club-index.json` on that output, which would
+      # put two distinct clubs in one entry with the later write winning.
+      # Whether any real Toastmasters club id contains a non-digit has never
+      # been checked: CDN egress is blocked from every desk and agent session,
+      # and CI is the only place the archive is reachable.
+      #
+      # It runs HERE, after the sync, because it needs the FILES. The resolve
+      # step above sees only a bucket listing and cannot see a club id at all.
+      #
+      # It does NOT own the run's verdict. The oracle's exit code does
+      # (0 reproduced / 1 findings / 2 setup error), and a club-id finding is
+      # a different question from a CEO-report mismatch — conflating them
+      # makes each unreadable through the other. So the census is reported
+      # loudly (job summary + issue comment + a warning annotation) and never
+      # flips the run red on its own.
+      - name: Census club ids (non-digit + canonical collisions)
+        id: census
+        run: |
+          set -uo pipefail
+          set +e  # capture the exit code (see the resolve step)
+          : > /tmp/club-id-census.txt
+          npx tsx scripts/lib/clubIdCensus.ts --cache-dir ./cache --json \
+            > /tmp/club-id-census.json \
+            2> /tmp/club-id-census.txt
+          CENSUS_EXIT=$?
+          echo "── Club-id census (#1450) ──"
+          cat /tmp/club-id-census.txt
+          echo "exit_code=${CENSUS_EXIT}" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Club-id census (exit ${CENSUS_EXIT}) — #1450"
+            echo
+            echo '```'
+            cat /tmp/club-id-census.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # R17 — every case is stated. Non-zero means the question is still
+          # UNANSWERED, which must not read as "nothing was found".
+          if [ "${CENSUS_EXIT}" -ne 0 ]; then
+            echo "::warning::club-id census exited ${CENSUS_EXIT} — #1450 is UNANSWERED by this run"
+          elif grep -q 'FINDING' /tmp/club-id-census.txt; then
+            echo "::warning::club-id census (#1450) found non-digit ids and/or collisions — see the job summary"
+          else
+            echo "Census clean: no non-digit club id, no canonical collision."
+          fi
+
       # ── The run itself ──────────────────────────────────────────
       # The exit code is captured rather than propagated so the result still
       # gets reported; the last step re-raises it.
@@ -243,6 +297,16 @@ jobs:
             echo
             echo '```'
             cat /tmp/ceo-report-output.txt
+            echo '```'
+            echo
+            echo "### Club-id census (#1450)"
+            echo
+            echo "Non-digit club ids and canonical collisions across the same"
+            echo "synced snapshots. Independent of the verdict above."
+            echo
+            echo '```'
+            cat /tmp/club-id-census.txt 2>/dev/null ||
+              echo '(census not produced — see the run)'
             echo '```'
           } > /tmp/ceo-report-comment.md
 
