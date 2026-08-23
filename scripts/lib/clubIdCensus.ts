@@ -204,7 +204,17 @@ export function collectClubIdOccurrences(
   return occurrences
 }
 
-/** Leading zeros only — the difference that does NOT make two ids distinct. */
+/**
+ * Leading zeros only — the difference that does NOT make two ids distinct.
+ *
+ * This is NOT a fourth club-id convention and this file is deliberately not a
+ * site in the #1440 agreement guard: it resolves no club and joins no rows. It
+ * MEASURES the shipped rule, so it needs one thing the shipped rule cannot
+ * give it — a way to ask "do these two raw ids differ by more than padding?"
+ * after `normalizeClubId` has already declared them equal. Reaching for the
+ * shared helper here would make every group benign by construction and the
+ * census would report nothing, ever.
+ */
 function stripLeadingZeros(id: string): string {
   const stripped = id.replace(/^0+/, '')
   return stripped === '' ? id : stripped
