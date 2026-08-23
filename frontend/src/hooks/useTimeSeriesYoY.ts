@@ -6,7 +6,12 @@
  * changes for membership, distinguished clubs, and club health.
  */
 
-import type { ProgramYearIndexFile } from '@taverns-red/shared-contracts'
+import type {
+  ProgramYearIndexFile,
+  TimeSeriesDataPoint,
+  ReformationDiscontinuity,
+} from '@taverns-red/shared-contracts'
+import { detectReformationDiscontinuity } from '@taverns-red/shared-contracts'
 import type { TimeSeriesData } from './useTimeSeries'
 
 /**
@@ -67,6 +72,77 @@ function percentChange(current: number, previous: number): number {
 }
 
 /**
+ * The two points every year-over-year figure on this page is derived from:
+ * the latest point of the current program year, and the closest-day point of
+ * the most recent prior program year.
+ *
+ * Extracted so the membership comparison, the payment comparison and the
+ * #1442 reformation check all reason about the SAME pair. A discontinuity
+ * detected against a different pair than the one being divided is worthless.
+ */
+interface YearOverYearPair {
+  currentLatest: TimeSeriesDataPoint
+  priorPoint: TimeSeriesDataPoint
+}
+
+function resolveYearOverYearPair(
+  timeSeries: TimeSeriesData | null
+): YearOverYearPair | null {
+  if (!timeSeries) return null
+
+  const currentProgramYear = timeSeries.currentProgramYear
+  const currentYearData = timeSeries.years[currentProgramYear]
+  if (!currentYearData || currentYearData.dataPoints.length === 0) return null
+
+  const currentLatest =
+    currentYearData.dataPoints[currentYearData.dataPoints.length - 1]!
+
+  // Use the most recent prior year
+  const priorYears = timeSeries.availableYears.filter(
+    y => y !== currentProgramYear
+  )
+  if (priorYears.length === 0) return null
+
+  const priorYearData = timeSeries.years[priorYears[0]!]
+  if (!priorYearData || priorYearData.dataPoints.length === 0) return null
+
+  const priorPoint = findClosestPriorYearPoint(
+    priorYearData,
+    currentLatest.date
+  )
+  if (!priorPoint) return null
+
+  return { currentLatest, priorPoint }
+}
+
+/**
+ * Whether the time-series year-over-year pair straddles the 2026 district
+ * reformation with a roster that changed discontinuously (#1442).
+ *
+ * A district id that survived 2026-07-01 while absorbing (or shedding)
+ * another district's clubs is not the district that held that id a year ago.
+ * Both year-over-year functions below consult this before returning a figure;
+ * the page also reads it directly so it can explain the absence instead of
+ * showing a bare "N/A".
+ *
+ * Returns null when there is no comparable pair at all (the caller already
+ * renders "no historical data" in that case).
+ */
+export function detectTimeSeriesReformationDiscontinuity(
+  timeSeries: TimeSeriesData | null
+): ReformationDiscontinuity | null {
+  const pair = resolveYearOverYearPair(timeSeries)
+  if (!pair) return null
+
+  return detectReformationDiscontinuity({
+    previousDate: pair.priorPoint.date,
+    currentDate: pair.currentLatest.date,
+    previousCount: pair.priorPoint.clubCounts.total,
+    currentCount: pair.currentLatest.clubCounts.total,
+  })
+}
+
+/**
  * Compute YoY comparison data from time-series hook output.
  *
  * @returns YoY data or null if prior year data is unavailable
@@ -74,34 +150,17 @@ function percentChange(current: number, previous: number): number {
 export function computeYearOverYear(
   timeSeries: TimeSeriesData | null
 ): YearOverYearData | null {
-  if (!timeSeries) return null
+  const pair = resolveYearOverYearPair(timeSeries)
+  if (!pair) return null
 
-  const currentProgramYear = timeSeries.currentProgramYear
-  const currentYearData = timeSeries.years[currentProgramYear]
+  const { currentLatest, priorPoint } = pair
 
-  if (!currentYearData || currentYearData.dataPoints.length === 0) return null
-
-  // Find latest data point of current year
-  const currentLatest =
-    currentYearData.dataPoints[currentYearData.dataPoints.length - 1]!
-
-  // Find prior year
-  const priorYears = timeSeries.availableYears.filter(
-    y => y !== currentProgramYear
-  )
-  if (priorYears.length === 0) return null
-
-  // Use the most recent prior year
-  const priorProgramYear = priorYears[0]!
-  const priorYearData = timeSeries.years[priorProgramYear]
-  if (!priorYearData || priorYearData.dataPoints.length === 0) return null
-
-  // Find closest matching data point in prior year
-  const priorPoint = findClosestPriorYearPoint(
-    priorYearData,
-    currentLatest.date
-  )
-  if (!priorPoint) return null
+  // #1442: across the 2026 reformation a merged/split district would read as
+  // enormous organic growth it never had. A wrong number is worse than an
+  // absent one — suppress, and let the page explain why.
+  if (detectTimeSeriesReformationDiscontinuity(timeSeries)?.isDiscontinuous) {
+    return null
+  }
 
   // Compute percentage changes
   const membershipChange = percentChange(
@@ -154,34 +213,16 @@ export interface PaymentYoYResult {
 export function computePaymentYoYFromTimeSeries(
   timeSeries: TimeSeriesData | null
 ): PaymentYoYResult | null {
-  if (!timeSeries) return null
+  const pair = resolveYearOverYearPair(timeSeries)
+  if (!pair) return null
 
-  const currentProgramYear = timeSeries.currentProgramYear
-  const currentYearData = timeSeries.years[currentProgramYear]
+  const { currentLatest, priorPoint } = pair
 
-  if (!currentYearData || currentYearData.dataPoints.length === 0) return null
-
-  // Find latest data point of current year
-  const currentLatest =
-    currentYearData.dataPoints[currentYearData.dataPoints.length - 1]!
-
-  // Find prior year
-  const priorYears = timeSeries.availableYears.filter(
-    y => y !== currentProgramYear
-  )
-  if (priorYears.length === 0) return null
-
-  // Use the most recent prior year
-  const priorProgramYear = priorYears[0]!
-  const priorYearData = timeSeries.years[priorProgramYear]
-  if (!priorYearData || priorYearData.dataPoints.length === 0) return null
-
-  // Find closest matching data point in prior year
-  const priorPoint = findClosestPriorYearPoint(
-    priorYearData,
-    currentLatest.date
-  )
-  if (!priorPoint) return null
+  // #1442: same suppression as the membership comparison above — a district
+  // that annexed another district's clubs did not take those payments in.
+  if (detectTimeSeriesReformationDiscontinuity(timeSeries)?.isDiscontinuous) {
+    return null
+  }
 
   // Compute absolute change (not percentage — consistent with usePaymentsTrend)
   const change = currentLatest.payments - priorPoint.payments

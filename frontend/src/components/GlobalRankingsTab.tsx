@@ -23,6 +23,10 @@ import MultiYearComparisonTable from './MultiYearComparisonTable'
 import { useGlobalRankings } from '../hooks/useGlobalRankings'
 import type { ProgramYear } from '../utils/programYear'
 import { formatLongDate } from '../utils/dateFormatting'
+import {
+  detectReformationDiscontinuity,
+  programYearStartDate,
+} from '@taverns-red/shared-contracts'
 
 /**
  * Props for the GlobalRankingsTab component
@@ -293,9 +297,42 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
     return undefined
   }, [selectedProgramYear, availableProgramYears])
 
+  // #1442: a rank is a position in a field, and the 2026-07-01 reformation
+  // shrank that field by 25+ districts. Across that boundary "rank 15 of 101"
+  // and "rank 20 of 126" are not two points on one trend, so the delta
+  // between them must not be rendered as an improvement or a decline. The
+  // ranked field's own size is the population this comparison is measured
+  // against, so that is what the shared detector is fed.
+  const rankFieldDiscontinuity = useMemo(() => {
+    if (!effectiveSelectedYear || yearlyRankings.length < 2) return null
+
+    const currentYearIndex = yearlyRankings.findIndex(
+      yr => yr.programYear === effectiveSelectedYear.label
+    )
+    if (currentYearIndex < 0 || currentYearIndex >= yearlyRankings.length - 1) {
+      return null
+    }
+
+    const current = yearlyRankings[currentYearIndex]
+    const previous = yearlyRankings[currentYearIndex + 1]
+    if (!current || !previous) return null
+
+    return detectReformationDiscontinuity({
+      previousDate: programYearStartDate(previous.programYear),
+      currentDate: programYearStartDate(current.programYear),
+      previousCount: previous.totalDistricts,
+      currentCount: current.totalDistricts,
+    })
+  }, [effectiveSelectedYear, yearlyRankings])
+
+  const rankComparisonUnavailableNote = rankFieldDiscontinuity?.isDiscontinuous
+    ? rankFieldDiscontinuity.message
+    : null
+
   // Get previous year's rankings for year-over-year comparison
   const previousYearRankings = useMemo(() => {
     if (!effectiveSelectedYear || yearlyRankings.length < 2) return null
+    if (rankFieldDiscontinuity?.isDiscontinuous) return null
 
     // Find the index of the current year
     const currentYearIndex = yearlyRankings.findIndex(
@@ -334,7 +371,7 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
       }
     }
     return null
-  }, [effectiveSelectedYear, yearlyRankings])
+  }, [effectiveSelectedYear, yearlyRankings, rankFieldDiscontinuity])
 
   // Get the data freshness timestamp from the most recent ranking data
   const lastUpdatedTimestamp = useMemo(() => {
@@ -381,6 +418,7 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
         isLoading={false}
         programYear={effectiveSelectedYear}
         previousYearRankings={previousYearRankings}
+        comparisonUnavailableNote={rankComparisonUnavailableNote}
       />
 
       {/* Full Year Ranking Chart — loads progressively */}

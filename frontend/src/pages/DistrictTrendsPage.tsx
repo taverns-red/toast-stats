@@ -12,6 +12,7 @@ import {
   computeYearOverYear,
   computePaymentYoYFromTimeSeries,
   getLatestPayments,
+  detectTimeSeriesReformationDiscontinuity,
 } from '../hooks/useTimeSeriesYoY'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import {
@@ -132,13 +133,29 @@ const DistrictTrendsPage: React.FC = () => {
     effectiveEndDate ?? undefined
   )
 
+  // #1442: the 2026-07-01 reformation merged and split districts. A surviving
+  // id that absorbed another one is not the district that held that id last
+  // year, so every year-over-year figure on this page must be suppressed
+  // rather than presented as growth. The time series is the only source here
+  // that carries club counts for BOTH years, so the verdict is resolved once
+  // at this level and passed down (R3) — usePaymentsTrend's own paymentsTrend
+  // has no club counts and could not derive it.
+  const rosterDiscontinuity = useMemo(
+    () => detectTimeSeriesReformationDiscontinuity(timeSeries ?? null),
+    [timeSeries]
+  )
+  const yoyUnavailableReason = rosterDiscontinuity?.isDiscontinuous
+    ? rosterDiscontinuity.message
+    : null
+
   const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
     usePaymentsTrend(
       hasValidDates ? districtId || null : null,
       undefined,
       effectiveEndDate ?? undefined,
       effectiveProgramYear ?? undefined,
-      performanceTargets ?? null
+      performanceTargets ?? null,
+      rosterDiscontinuity
     )
 
   // #875 (epic #876, CC-3): the membership/payments charts are multi-series
@@ -353,6 +370,7 @@ const DistrictTrendsPage: React.FC = () => {
                   {...(computeYearOverYear(timeSeries ?? null) && {
                     yearOverYear: computeYearOverYear(timeSeries ?? null)!,
                   })}
+                  unavailableReason={yoyUnavailableReason}
                   currentYear={{
                     // Use time-series membership when available (#319) to match
                     // the membership chart above.

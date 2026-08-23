@@ -37,6 +37,7 @@ import type {
   MetricRankings,
 } from '../types.js'
 import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
+import { detectReformationDiscontinuity } from '@taverns-red/shared-contracts'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
 import { MetricRankingsCalculator } from '../rankings/MetricRankingsCalculator.js'
 import { MembershipAnalyticsModule } from './MembershipAnalyticsModule.js'
@@ -1181,6 +1182,30 @@ export class AnalyticsComputer implements IAnalyticsComputer {
         dataAvailable: false,
         message:
           'Insufficient historical data for year-over-year comparison. Previous year data not available.',
+      }
+    }
+
+    // #1442: a district id that survived the 2026-07-01 reformation but
+    // absorbed (or shed) another district's clubs is not the district that
+    // held that id a year ago. Comparing it against its own pre-merge self
+    // reads as huge organic growth that never happened, so suppress the
+    // comparison and say why rather than publish a number that is wrong.
+    // Renumbered districts never reach here — their prior-year file 404s and
+    // the `!previousSnapshot` branch above already returns dataAvailable=false.
+    const discontinuity = detectReformationDiscontinuity({
+      previousDate: previousSnapshot.snapshotDate,
+      currentDate: currentSnapshot.snapshotDate,
+      previousCount: previousSnapshot.clubs.length,
+      currentCount: currentSnapshot.clubs.length,
+    })
+
+    if (discontinuity.isDiscontinuous) {
+      return {
+        districtId,
+        currentDate,
+        previousYearDate,
+        dataAvailable: false,
+        message: discontinuity.message ?? undefined,
       }
     }
 
