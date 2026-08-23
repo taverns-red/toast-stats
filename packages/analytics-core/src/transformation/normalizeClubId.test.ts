@@ -1,18 +1,24 @@
 /**
- * Unit tests for normalizeClubId edge cases.
+ * Club-id canonicalization in the transformer (#1440).
  *
- * Since normalizeClubId is a private method on DataTransformer, these tests
- * exercise it indirectly through buildDistrictPerformanceLookup. The lookup
- * map keys reflect the normalized club IDs, so we can verify normalization
- * behavior by inspecting the map keys returned from the lookup builder.
+ * The transformer is the WRITE end of club identity: whatever form it stores
+ * is the form every downstream reader (club index, diff engine, frontend
+ * pages, MCP server) has to cope with. Before #1440 it stored the raw CSV
+ * form — so a program year exported with `00009905` and one exported with
+ * `9905` produced snapshots that no strict comparison could join.
  *
- * Requirements: 2.1, 2.4
- * - 2.1: Normalize club IDs by stripping leading zeros
- * - 2.4: Preserve original value when club ID consists entirely of zeros
+ * The normalizer itself now lives in `@taverns-red/shared-contracts`
+ * (`normalizeClubId`) and is unit-tested there. These tests pin the
+ * transformer's use of it: the canonical form on the way IN, and the
+ * clubPerformance↔districtPerformance join that has always depended on it.
+ *
+ * Requirements: 2.1, 2.4 (leading zeros stripped; never an empty id)
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 import { DataTransformer } from './DataTransformer.js'
+import type { RawCSVData } from '../interfaces.js'
 
 /**
  * Type-safe accessor for private methods in tests.
@@ -20,7 +26,6 @@ import { DataTransformer } from './DataTransformer.js'
  * so this accessor is scoped to test code only.
  */
 interface DataTransformerTestAccess {
-  normalizeClubId(clubId: string): string
   buildDistrictPerformanceLookup(
     districtPerformance: Record<string, string | number | null>[]
   ): Map<string, Record<string, string | number | null>>
@@ -32,138 +37,115 @@ function getTestAccess(
   return transformer as unknown as DataTransformerTestAccess
 }
 
-describe('normalizeClubId edge cases', () => {
+const CP_HEADER = [
+  'Club Number',
+  'Club Name',
+  'Division',
+  'Area',
+  'Active Members',
+  'Goals Met',
+  'Club Status',
+  'Mem. Base',
+]
+
+function csv(clubNumber: string): RawCSVData {
+  return {
+    clubPerformance: [
+      CP_HEADER,
+      [clubNumber, 'Leading Zero Club', 'A', '1', '25', '5', 'Active', '20'],
+    ],
+    divisionPerformance: [],
+    districtPerformance: [],
+  }
+}
+
+describe('write-time club-id canonicalization (#1440)', () => {
   let transformer: DataTransformer
-  let access: DataTransformerTestAccess
 
   beforeEach(() => {
     transformer = new DataTransformer()
-    access = getTestAccess(transformer)
+  })
+
+  it('stores the canonical (bare) club id when the export is zero-padded', async () => {
+    const result = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('00009905')
+    )
+
+    expect(result.clubs[0]!.clubId).toBe('9905')
+  })
+
+  it('stores the same canonical id when the export is already bare', async () => {
+    const result = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('9905')
+    )
+
+    expect(result.clubs[0]!.clubId).toBe('9905')
+  })
+
+  it('produces an identical stored id from either export form', async () => {
+    const padded = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('00009905')
+    )
+    const bare = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('9905')
+    )
+
+    expect(padded.clubs[0]!.clubId).toBe(bare.clubs[0]!.clubId)
+  })
+
+  it('agrees with the shared normalizer (no second definition)', async () => {
+    const result = await transformer.transformRawCSV(
+      '2026-01-15',
+      '61',
+      csv('0000180')
+    )
+
+    expect(result.clubs[0]!.clubId).toBe(normalizeClubId('0000180'))
   })
 
   /**
-   * Requirement 2.4: All-zeros club ID preservation
-   *
-   * WHEN a club ID consists entirely of zeros,
-   * THE DataTransformer SHALL preserve the original value
-   * rather than producing an empty string.
+   * The clubPerformance↔districtPerformance join has always used the
+   * normalized form. It still does — via the shared helper.
    */
-  it('should preserve all-zeros club ID "0000" rather than producing empty string', () => {
-    const result = access.normalizeClubId('0000')
+  describe('districtPerformance lookup keying', () => {
+    let access: DataTransformerTestAccess
 
-    expect(result).toBe('0000')
-  })
+    beforeEach(() => {
+      access = getTestAccess(transformer)
+    })
 
-  /**
-   * Requirement 2.4: Single zero preservation
-   *
-   * A single "0" is also entirely zeros and must be preserved.
-   */
-  it('should preserve single zero "0" rather than producing empty string', () => {
-    const result = access.normalizeClubId('0')
-
-    expect(result).toBe('0')
-  })
-
-  /**
-   * Requirement 2.1: Empty string input
-   *
-   * An empty string has no leading zeros to strip,
-   * so it should be returned as-is.
-   */
-  it('should return empty string unchanged when input is empty', () => {
-    const result = access.normalizeClubId('')
-
-    expect(result).toBe('')
-  })
-
-  /**
-   * Requirement 2.1: No leading zeros
-   *
-   * A club ID with no leading zeros should be returned unchanged.
-   */
-  it('should return club ID unchanged when there are no leading zeros', () => {
-    const result = access.normalizeClubId('9905')
-
-    expect(result).toBe('9905')
-  })
-
-  /**
-   * Requirement 2.1: Leading zeros stripped
-   *
-   * Leading zeros should be removed, leaving only the significant digits.
-   */
-  it('should strip leading zeros from club ID "00009905"', () => {
-    const result = access.normalizeClubId('00009905')
-
-    expect(result).toBe('9905')
-  })
-
-  /**
-   * Requirement 2.1: Mixed — leading zeros with embedded zero
-   *
-   * Only leading zeros are stripped; zeros within the number are preserved.
-   */
-  it('should strip only leading zeros from "0100", preserving trailing zero', () => {
-    const result = access.normalizeClubId('0100')
-
-    expect(result).toBe('100')
-  })
-
-  /**
-   * Requirement 2.1: Single leading zero
-   *
-   * Even a single leading zero should be stripped.
-   */
-  it('should strip single leading zero from "01234"', () => {
-    const result = access.normalizeClubId('01234')
-
-    expect(result).toBe('1234')
-  })
-
-  /**
-   * Verify normalization integrates correctly with buildDistrictPerformanceLookup.
-   *
-   * Requirements 2.1, 2.4: The lookup map keys should reflect normalized club IDs,
-   * enabling cross-CSV matching regardless of leading-zero formatting.
-   */
-  describe('integration with buildDistrictPerformanceLookup', () => {
-    it('should key lookup map by normalized club ID (leading zeros stripped)', () => {
-      const districtPerformance = [
+    it('keys the lookup map by the canonical club id', () => {
+      const lookup = access.buildDistrictPerformanceLookup([
         { Club: '00009905', 'Oct. Ren.': '9', 'Apr. Ren.': '4' },
-      ]
-
-      const lookup = access.buildDistrictPerformanceLookup(districtPerformance)
+      ])
 
       expect(lookup.has('9905')).toBe(true)
       expect(lookup.has('00009905')).toBe(false)
     })
 
-    it('should preserve all-zeros club ID as lookup key', () => {
-      const districtPerformance = [{ Club: '0000', 'Oct. Ren.': '1' }]
-
-      const lookup = access.buildDistrictPerformanceLookup(districtPerformance)
+    it('preserves an all-zeros club id as a lookup key, never empty', () => {
+      const lookup = access.buildDistrictPerformanceLookup([
+        { Club: '0000', 'Oct. Ren.': '1' },
+      ])
 
       expect(lookup.has('0000')).toBe(true)
       expect(lookup.has('')).toBe(false)
     })
 
-    it('should handle club IDs with no leading zeros in lookup', () => {
-      const districtPerformance = [{ Club: '9905', 'Oct. Ren.': '5' }]
-
-      const lookup = access.buildDistrictPerformanceLookup(districtPerformance)
-
-      expect(lookup.has('9905')).toBe(true)
-    })
-
-    it('should handle mixed club ID formats in same lookup', () => {
-      const districtPerformance = [
+    it('collapses mixed club-id formats onto one key each', () => {
+      const lookup = access.buildDistrictPerformanceLookup([
         { Club: '00001234', 'Oct. Ren.': '3' },
         { Club: '5678', 'Oct. Ren.': '7' },
         { Club: '0100', 'Oct. Ren.': '2' },
-      ]
-
-      const lookup = access.buildDistrictPerformanceLookup(districtPerformance)
+      ])
 
       expect(lookup.has('1234')).toBe(true)
       expect(lookup.has('5678')).toBe(true)
