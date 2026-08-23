@@ -1,0 +1,195 @@
+/**
+ * Canonical club identity (#1440).
+ *
+ * Club numbers reach us in more than one lexical form — zero-padded
+ * `00009905` from one TI export, bare `9905` from another, and occasionally
+ * with CSV import debris (a leading apostrophe, stray whitespace). Before
+ * #1440 three conventions coexisted across eight call sites with no shared
+ * definition, and every mismatch degraded to an empty state rather than an
+ * error (the Lesson 47 silent-lookup signature).
+ *
+ * These tests pin the ONE canonical form the whole monorepo uses.
+ */
+
+import { describe, it, expect } from 'vitest'
+import {
+  normalizeClubId,
+  clubIdsMatch,
+  findClubEntry,
+} from '../naming/clubId.js'
+
+describe('normalizeClubId', () => {
+  it('strips leading zeros', () => {
+    expect(normalizeClubId('00009905')).toBe('9905')
+    expect(normalizeClubId('01234')).toBe('1234')
+  })
+
+  it('leaves an already-bare id unchanged', () => {
+    expect(normalizeClubId('9905')).toBe('9905')
+  })
+
+  it('strips only LEADING zeros', () => {
+    expect(normalizeClubId('0100')).toBe('100')
+  })
+
+  it('is idempotent', () => {
+    expect(normalizeClubId(normalizeClubId('00000180'))).toBe('180')
+  })
+
+  it('preserves an all-zeros id rather than producing an empty string', () => {
+    // Requirement 2.4 of the original transformer helper, kept as #1437
+    // promoted it: an empty key would collide every malformed row into one
+    // bucket. An all-zeros club number is degenerate data, not an identity.
+    expect(normalizeClubId('0000')).toBe('0000')
+    expect(normalizeClubId('0')).toBe('0')
+  })
+
+  it('accepts a number', () => {
+    expect(normalizeClubId(180)).toBe('180')
+  })
+
+  it('tolerates CSV import debris around the digits', () => {
+    expect(normalizeClubId("'180")).toBe('180')
+    expect(normalizeClubId('  00000180  ')).toBe('180')
+    expect(normalizeClubId('Club 180')).toBe('180')
+  })
+
+  it('returns empty string for nullish or blank input', () => {
+    expect(normalizeClubId(null)).toBe('')
+    expect(normalizeClubId(undefined)).toBe('')
+    expect(normalizeClubId('')).toBe('')
+    expect(normalizeClubId('   ')).toBe('')
+  })
+
+  it('preserves a digit-free id rather than collapsing it', () => {
+    // Two distinct non-numeric ids must not normalize onto the same key.
+    expect(normalizeClubId('abc')).toBe('abc')
+    expect(normalizeClubId('  abc  ')).toBe('abc')
+    expect(normalizeClubId('abc')).not.toBe(normalizeClubId('xyz'))
+  })
+
+  it('normalizes a padded and a bare form of the same club to one key', () => {
+    expect(normalizeClubId('00009905')).toBe(normalizeClubId('9905'))
+  })
+})
+
+describe('clubIdsMatch', () => {
+  it('matches in BOTH directions across padding', () => {
+    // stored bare, looked up padded
+    expect(clubIdsMatch('9905', '00009905')).toBe(true)
+    // stored padded, looked up bare — the direction ClubDetailPage:263 missed
+    expect(clubIdsMatch('00009905', '9905')).toBe(true)
+  })
+
+  it('matches identical forms', () => {
+    expect(clubIdsMatch('9905', '9905')).toBe(true)
+    expect(clubIdsMatch('00009905', '00009905')).toBe(true)
+  })
+
+  it('does not match different clubs', () => {
+    expect(clubIdsMatch('9905', '9906')).toBe(false)
+    expect(clubIdsMatch('00009905', '0000990')).toBe(false)
+  })
+
+  it('never matches on an empty/absent id', () => {
+    expect(clubIdsMatch('', '')).toBe(false)
+    expect(clubIdsMatch(null, undefined)).toBe(false)
+    expect(clubIdsMatch('9905', '')).toBe(false)
+  })
+})
+
+describe('findClubEntry', () => {
+  const bareKeyed = { '9905': { districtId: '7' } }
+  const paddedKeyed = { '00009905': { districtId: '7' } }
+
+  it('finds a bare-keyed entry from a padded id', () => {
+    expect(findClubEntry(bareKeyed, '00009905')).toEqual({ districtId: '7' })
+  })
+
+  it('finds a padded-keyed entry from a bare id', () => {
+    expect(findClubEntry(paddedKeyed, '9905')).toEqual({ districtId: '7' })
+  })
+
+  it('finds an exactly-keyed entry', () => {
+    expect(findClubEntry(bareKeyed, '9905')).toEqual({ districtId: '7' })
+    expect(findClubEntry(paddedKeyed, '00009905')).toEqual({ districtId: '7' })
+  })
+
+  it('returns undefined for an unknown club', () => {
+    expect(findClubEntry(bareKeyed, '1234')).toBeUndefined()
+  })
+
+  it('returns undefined for a missing map or blank id', () => {
+    expect(findClubEntry(undefined, '9905')).toBeUndefined()
+    expect(findClubEntry(null, '9905')).toBeUndefined()
+    expect(findClubEntry(bareKeyed, '')).toBeUndefined()
+  })
+
+  it('never resolves an Object.prototype member to a phantom hit (#1112)', () => {
+    expect(findClubEntry(bareKeyed, 'constructor')).toBeUndefined()
+    expect(findClubEntry(bareKeyed, '__proto__')).toBeUndefined()
+    expect(findClubEntry(bareKeyed, 'toString')).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Preserved verbatim from #1437's clubId.test.ts (PR #1446), which created this
+// helper first. Kept on merge so the #1440 superset cannot silently drop the
+// guarantees #1437 shipped. Describe names carry their issue tag to stay distinct.
+// ---------------------------------------------------------------------------
+describe('normalizeClubId (#1437)', () => {
+  it('strips leading zeros to the canonical bare form', () => {
+    expect(normalizeClubId('00009905')).toBe('9905')
+    expect(normalizeClubId('9905')).toBe('9905')
+    expect(normalizeClubId('00002274')).toBe('2274')
+  })
+
+  it('preserves an all-zeros id rather than returning an empty string', () => {
+    expect(normalizeClubId('0000')).toBe('0000')
+    expect(normalizeClubId('0')).toBe('0')
+  })
+
+  it('tolerates surrounding whitespace from a CSV cell', () => {
+    expect(normalizeClubId(' 00009905 ')).toBe('9905')
+  })
+
+  // Amended on merge, by operator decision (2026-08-22). #1437 originally
+  // asserted `'00A12' → 'A12'` — leading zeros stripped, everything else
+  // preserved. #1440's rule strips EVERY non-digit so that CSV import debris
+  // (`'180`, `Club 180`) normalizes onto the real id, which means a MIXED
+  // alphanumeric id collapses onto a pure-numeric one: `'00A12' → '12'`.
+  //
+  // The two rules genuinely disagree, and #1440's is the one that shipped.
+  // The collision it admits is tracked separately — it matters because write-
+  // time canonicalization keys `config/club-index.json` on this output, so two
+  // ids that normalize together would silently occupy one entry. Whether any
+  // real club id is alphanumeric is unverified (CDN egress was blocked).
+  //
+  // Pinned rather than deleted: the case still has one defined answer, and an
+  // unintended change to it should fail here.
+  it('collapses a mixed alphanumeric id onto its digits (#1440 rule)', () => {
+    expect(normalizeClubId('00A12')).toBe('12')
+    expect(normalizeClubId('')).toBe('')
+  })
+})
+
+describe('clubIdsMatch (#1437)', () => {
+  it('matches across padding in BOTH directions', () => {
+    expect(clubIdsMatch('00009905', '9905')).toBe(true)
+    expect(clubIdsMatch('9905', '00009905')).toBe(true)
+    expect(clubIdsMatch('00009905', '00009905')).toBe(true)
+    expect(clubIdsMatch('9905', '9905')).toBe(true)
+  })
+
+  it('does not conflate different clubs', () => {
+    expect(clubIdsMatch('00009905', '9906')).toBe(false)
+    expect(clubIdsMatch('9905', '99050')).toBe(false)
+  })
+
+  it('is false when either side is missing', () => {
+    expect(clubIdsMatch(null, '9905')).toBe(false)
+    expect(clubIdsMatch('9905', undefined)).toBe(false)
+    expect(clubIdsMatch(undefined, null)).toBe(false)
+    expect(clubIdsMatch('', '')).toBe(false)
+  })
+})

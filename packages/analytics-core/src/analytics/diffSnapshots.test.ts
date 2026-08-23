@@ -250,6 +250,77 @@ describe('diffSnapshots', () => {
     expect(diff.totals.distinguished).toEqual({ from: 0, to: 0, delta: 0 })
     expect(diff.clubs.bothPresent[0]!.distinguishedChanged).toBe(false)
   })
+
+  /**
+   * #1440 — the worst case in the audit. The diff keyed BOTH snapshots on the
+   * raw `clubId`, so two dates written from differently-padded TI exports made
+   * every club in the district read as removed-and-re-added: a total roster
+   * replacement that never happened, rendered as fact in "What Changed".
+   */
+  describe('club-id padding (#1440)', () => {
+    it('produces an EMPTY diff for two snapshots that differ only in padding', () => {
+      const from = snapshot({
+        date: '2026-05-25',
+        clubs: [
+          club({ clubId: '00009905', membershipCount: 20 }),
+          club({ clubId: '00000180', membershipCount: 31 }),
+        ],
+        perf: [perf('00009905', 'D'), perf('00000180', '')],
+      })
+      const to = snapshot({
+        date: '2026-05-26',
+        clubs: [
+          club({ clubId: '9905', membershipCount: 20 }),
+          club({ clubId: '180', membershipCount: 31 }),
+        ],
+        perf: [perf('9905', 'D'), perf('180', '')],
+      })
+
+      const diff = diffSnapshots(from, to)
+
+      expect(diff.clubs.onlyInFrom).toEqual([])
+      expect(diff.clubs.onlyInTo).toEqual([])
+      expect(diff.clubs.bothPresent).toHaveLength(2)
+      expect(diff.events).toEqual([])
+      expect(diff.totals.distinguished).toEqual({ from: 1, to: 1, delta: 0 })
+    })
+
+    it('still reports a real change across a padding difference', () => {
+      const from = snapshot({
+        date: '2026-05-25',
+        clubs: [club({ clubId: '00009905', membershipCount: 20 })],
+        perf: [perf('00009905', '')],
+      })
+      const to = snapshot({
+        date: '2026-05-26',
+        clubs: [club({ clubId: '9905', membershipCount: 26 })],
+        perf: [perf('9905', '')],
+      })
+
+      const diff = diffSnapshots(from, to)
+
+      expect(diff.clubs.onlyInFrom).toEqual([])
+      expect(diff.clubs.onlyInTo).toEqual([])
+      expect(diff.events.map(e => e.category)).toEqual(['membership'])
+      expect(diff.events[0]!.magnitude).toBe(6)
+    })
+
+    it('still reports a genuine departure and arrival', () => {
+      const from = snapshot({
+        date: '2026-05-25',
+        clubs: [club({ clubId: '00009905' }), club({ clubId: '0000777' })],
+      })
+      const to = snapshot({
+        date: '2026-05-26',
+        clubs: [club({ clubId: '9905' }), club({ clubId: '888' })],
+      })
+
+      const diff = diffSnapshots(from, to)
+
+      expect(diff.clubs.onlyInFrom.map(c => c.clubId)).toEqual(['0000777'])
+      expect(diff.clubs.onlyInTo.map(c => c.clubId)).toEqual(['888'])
+    })
+  })
 })
 
 /* District-composition discontinuity (#1443).
@@ -263,10 +334,39 @@ describe('diffSnapshots', () => {
    The regression risk these tests exist to guard: a NORMAL within-year diff
    must be unchanged. That is pinned first, on the whole event list. */
 describe('diffSnapshots — district-composition discontinuity (#1443)', () => {
+  /* Cohort markers must be NUMERIC and distinct.
+   *
+   * `normalizeClubId` (#1440) strips every non-digit before stripping leading
+   * zeros, so a LETTER prefix collapses every cohort onto the same canonical
+   * ids: `out001`, `in001`, `stay001` and `s001` all become `1`. The two
+   * snapshots then see one club present on both sides, no club reads as moved,
+   * and the discontinuity these tests exist to check can never fire — the
+   * suite would fail for a reason that has nothing to do with the behaviour
+   * under test.
+   *
+   * Distinct numeric blocks keep each cohort a distinct club under the shipped
+   * identity rule. Unknown prefixes throw rather than silently colliding: a
+   * future cohort added without a block would otherwise reintroduce exactly
+   * the collapse described above, invisibly. (That collapse is the collision
+   * tracked in #1450.)
+   */
+  const COHORT_BLOCK: Record<string, number> = {
+    s: 100,
+    stay: 101,
+    in: 102,
+    out: 103,
+  }
+
   /** N clubs with sequential ids, `prefix` distinguishing the cohort. */
   function clubs(prefix: string, count: number): ClubStatisticsFile[] {
+    const block = COHORT_BLOCK[prefix]
+    if (block === undefined) {
+      throw new Error(
+        `no COHORT_BLOCK for prefix '${prefix}' — add one, or cohorts collide under normalizeClubId (#1450)`
+      )
+    }
     return Array.from({ length: count }, (_, i) =>
-      club({ clubId: `${prefix}${String(i + 1).padStart(3, '0')}` })
+      club({ clubId: `${block}${String(i + 1).padStart(3, '0')}` })
     )
   }
 
@@ -366,10 +466,10 @@ describe('diffSnapshots — district-composition discontinuity (#1443)', () => {
       expect(e.label).toContain('realignment')
     }
     expect(movedIn[0]!.label).toBe(
-      'Club in001 (Active) moved into the district in the 2026 district realignment'
+      'Club 102001 (Active) moved into the district in the 2026 district realignment'
     )
     expect(movedOut[0]!.label).toBe(
-      'Club out001 (Active) moved to another district in the 2026 district realignment'
+      'Club 103001 (Active) moved to another district in the 2026 district realignment'
     )
   })
 

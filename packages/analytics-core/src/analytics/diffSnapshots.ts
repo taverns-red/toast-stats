@@ -34,6 +34,7 @@ import {
   getProgramYearStartYear,
   programYearForDate,
 } from './AnalyticsUtils.js'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 
 function aggregate(from: number, to: number): AggregateDelta {
   return { from, to, delta: to - from }
@@ -53,7 +54,9 @@ function distinguishedByClub(
 ): Map<string, string> {
   const map = new Map<string, string>()
   for (const row of snapshot.clubPerformance) {
-    const clubId = String(row['Club Number'] ?? '')
+    // Keyed canonically (#1440) so it joins the club maps below, whichever
+    // padding the export used.
+    const clubId = normalizeClubId(row['Club Number'])
     if (!clubId) continue
     const raw = row['Club Distinguished Status']
     map.set(clubId, raw == null ? '' : String(raw))
@@ -233,8 +236,12 @@ export function diffSnapshots(
   const fromDist = distinguishedByClub(from)
   const toDist = distinguishedByClub(to)
 
-  const fromClubs = new Map(from.clubs.map(c => [c.clubId, c]))
-  const toClubs = new Map(to.clubs.map(c => [c.clubId, c]))
+  // Keyed on the CANONICAL club id (#1440). Keying on the raw id meant two
+  // dates written from differently-padded TI exports diffed as every club
+  // removed and re-added — a district-wide roster replacement that never
+  // happened. The events below still carry each club's own stored id.
+  const fromClubs = new Map(from.clubs.map(c => [normalizeClubId(c.clubId), c]))
+  const toClubs = new Map(to.clubs.map(c => [normalizeClubId(c.clubId), c]))
 
   const distinguishedCount = (m: Map<string, string>): number =>
     [...m.values()].filter(s => s !== '').length
@@ -249,11 +256,19 @@ export function diffSnapshots(
   // and event insertion order (the sort's final tie-break is insertion order).
   // A club leaving/arriving is a boundary transfer unless it is a genuine
   // closure/charter; with no discontinuity every move stays a roster event.
+  //
+  // Membership tests go through the CANONICAL key (#1440) because that is what
+  // fromClubs/toClubs are keyed on — testing with the club's own stored id
+  // would miss whenever the two dates were written from differently-padded TI
+  // exports, which is the exact defect #1440 exists to remove. The SET itself
+  // holds stored ids, because the loops below match against a club's own id.
   const movedOutClubs = [...fromClubs.values()].filter(
-    c => !toClubs.has(c.clubId) && !isClosure(c)
+    c => !toClubs.has(normalizeClubId(c.clubId)) && !isClosure(c)
   )
   const movedInClubs = [...toClubs.values()].filter(
-    c => !fromClubs.has(c.clubId) && !isNewCharter(c, from.snapshotDate)
+    c =>
+      !fromClubs.has(normalizeClubId(c.clubId)) &&
+      !isNewCharter(c, from.snapshotDate)
   )
   const rosterDiscontinuity = detectRosterDiscontinuity({
     fromDate: from.snapshotDate,
@@ -272,8 +287,11 @@ export function diffSnapshots(
     ? getProgramYearStartYear(to.snapshotDate)
     : 0
 
-  for (const [clubId, fromClub] of fromClubs) {
-    const toClub = toClubs.get(clubId)
+  for (const [key, fromClub] of fromClubs) {
+    const toClub = toClubs.get(key)
+    // Identity for the OUTPUT stays the club's own stored id; `key` is the
+    // canonical join key only (#1440).
+    const clubId = fromClub.clubId
     if (!toClub) {
       const transferred = transferredIds.has(clubId)
       onlyInFrom.push(presence(fromClub, transferred))
@@ -289,8 +307,8 @@ export function diffSnapshots(
       continue
     }
 
-    const distFrom = fromDist.get(clubId) ?? ''
-    const distTo = toDist.get(clubId) ?? ''
+    const distFrom = fromDist.get(key) ?? ''
+    const distTo = toDist.get(key) ?? ''
     const membership = aggregate(
       fromClub.membershipCount,
       toClub.membershipCount
@@ -342,8 +360,9 @@ export function diffSnapshots(
     }
   }
 
-  for (const [clubId, toClub] of toClubs) {
-    if (fromClubs.has(clubId)) continue
+  for (const [key, toClub] of toClubs) {
+    if (fromClubs.has(key)) continue
+    const clubId = toClub.clubId
     const transferred = transferredIds.has(clubId)
     onlyInTo.push(presence(toClub, transferred))
     events.push({

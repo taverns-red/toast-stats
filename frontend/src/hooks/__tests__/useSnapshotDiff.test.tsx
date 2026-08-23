@@ -219,10 +219,28 @@ describe('useSnapshotDiff — realignment context passes through the merge (#144
   it('keeps rosterDiscontinuity and the transfer events after merging', async () => {
     // Last June vs first July with a reformation-sized roster exchange: 30
     // clubs stay, 10 are only in June, 12 only in July.
-    const roster = (prefix: string, count: number) =>
-      Array.from({ length: count }, (_, i) =>
-        club(`${prefix}${String(i + 1).padStart(3, '0')}`, 20)
+    // Cohort markers must be NUMERIC and distinct. normalizeClubId (#1440)
+    // strips every non-digit, so letter prefixes would collapse `stay001`,
+    // `in001` and `out001` all onto `1` — both snapshots would then see one
+    // club on both sides, nothing would read as moved, and the discontinuity
+    // under test could never fire. Unknown prefixes throw rather than silently
+    // colliding. (That collapse is the collision tracked in #1450.)
+    const COHORT_BLOCK: Record<string, number> = {
+      stay: 201,
+      in: 202,
+      out: 203,
+    }
+    const roster = (prefix: string, count: number) => {
+      const block = COHORT_BLOCK[prefix]
+      if (block === undefined) {
+        throw new Error(
+          `no COHORT_BLOCK for prefix '${prefix}' — add one, or cohorts collide under normalizeClubId (#1450)`
+        )
+      }
+      return Array.from({ length: count }, (_, i) =>
+        club(`${block}${String(i + 1).padStart(3, '0')}`, 20)
       )
+    }
     mockedFetch.mockImplementation((date: string) => {
       const snap = wrapper(date, 20)
       const clubs =
