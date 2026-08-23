@@ -1,5 +1,49 @@
 # Changelog
 
+## [2.35.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.34.0...toast-stats-v2.35.0) (2026-08-23)
+
+
+### Features
+
+* **frontend:** omni-search finds every district that has ever existed, landing each on its most recent year ([#1403](https://github.com/taverns-red/toast-stats/issues/1403)) ([#1404](https://github.com/taverns-red/toast-stats/issues/1404)) ([7e4b268](https://github.com/taverns-red/toast-stats/commit/7e4b268b3fdac5233f32b0b1ec1b4618e17fa61c))
+* **frontend:** OR multi-select the region filter — plain click toggles ([#1374](https://github.com/taverns-red/toast-stats/issues/1374)) ([#1379](https://github.com/taverns-red/toast-stats/issues/1379)) ([1152d49](https://github.com/taverns-red/toast-stats/commit/1152d491a70b9db3fdb1adbd6ed835bf7596e905))
+* **methodology:** a tracked log of program-year rule changes ([#1400](https://github.com/taverns-red/toast-stats/issues/1400)) ([#1407](https://github.com/taverns-red/toast-stats/issues/1407)) ([75606ed](https://github.com/taverns-red/toast-stats/commit/75606ed953b89480399d85e1c8fe87dfe9d567ed))
+* **pipeline:** fetch district daily reports in a parallel job, and fix the district_*.json collision ([#1428](https://github.com/taverns-red/toast-stats/issues/1428)) ([#1434](https://github.com/taverns-red/toast-stats/issues/1434)) ([c86c866](https://github.com/taverns-red/toast-stats/commit/c86c8661c765c2fbb98861d836a49b50e76d7a21))
+* **scripts:** validate the distinguished calculators against the CEO Report's published years ([#1429](https://github.com/taverns-red/toast-stats/issues/1429)) ([#1432](https://github.com/taverns-red/toast-stats/issues/1432)) ([556b1e4](https://github.com/taverns-red/toast-stats/commit/556b1e4895e495dda92c3c93c746a3b3be565128))
+
+
+### Bug Fixes
+
+* **a11y:** clear every axe violation on the landing page ([#1360](https://github.com/taverns-red/toast-stats/issues/1360)) ([#1382](https://github.com/taverns-red/toast-stats/issues/1382)) ([ec97c30](https://github.com/taverns-red/toast-stats/commit/ec97c30d2681e15dc5b3d14ae5b9ef7545932513))
+* **analytics:** DCP goals 2-3 read 0 for PY 2026-27 — resolve TI's 'or EOM' column rename ([#1399](https://github.com/taverns-red/toast-stats/issues/1399)) ([#1402](https://github.com/taverns-red/toast-stats/issues/1402)) ([f7ac01e](https://github.com/taverns-red/toast-stats/commit/f7ac01eeb0bfe7e18d34bce9363206294daaea8a))
+* **analytics:** resolve club recognition tiers per program year — Smedley is unreachable before PY 2025-26 ([#1406](https://github.com/taverns-red/toast-stats/issues/1406)) ([#1409](https://github.com/taverns-red/toast-stats/issues/1409)) ([d77c9db](https://github.com/taverns-red/toast-stats/commit/d77c9dbdf0f9a2e357313b1a5b63896d0197b6cb))
+* **collector:** --gcs-prefix '' wrote to a double-slash key space; normalise it, log the destination, and read back what was written ([#1388](https://github.com/taverns-red/toast-stats/issues/1388)) ([#1391](https://github.com/taverns-red/toast-stats/issues/1391)) ([1a7007f](https://github.com/taverns-red/toast-stats/commit/1a7007f6a3eac57799b6220c2628c05500a2b7c2))
+* **collector:** reach the live program year from backfill, and verify every body against its request ([#1384](https://github.com/taverns-red/toast-stats/issues/1384)) ([#1385](https://github.com/taverns-red/toast-stats/issues/1385)) ([12c7cde](https://github.com/taverns-red/toast-stats/commit/12c7cde838dff8f3afcce13f8dfaecd3525df98a))
+* **frontend:** a club that moved districts no longer dead-ends on its old-district URL ([#1441](https://github.com/taverns-red/toast-stats/issues/1441)) ([#1445](https://github.com/taverns-red/toast-stats/issues/1445)) ([0a7d009](https://github.com/taverns-red/toast-stats/commit/0a7d009ea0b9789d6da56b6333c11836bdd9c271))
+* **frontend:** classify distinguished word forms by substring ([#1431](https://github.com/taverns-red/toast-stats/issues/1431)) ([#1433](https://github.com/taverns-red/toast-stats/issues/1433)) ([cec5e54](https://github.com/taverns-red/toast-stats/commit/cec5e5429b395bb844a812fb949714ba2940af10))
+* **frontend:** club history is keyed on the club number, and every skipped year says why ([#1437](https://github.com/taverns-red/toast-stats/issues/1437)) ([#1446](https://github.com/taverns-red/toast-stats/issues/1446)) ([4c30e85](https://github.com/taverns-red/toast-stats/commit/4c30e8590c7ddb262fb996b995899d0671b097be))
+* **frontend:** give the degraded district view a program-year selector ([#1436](https://github.com/taverns-red/toast-stats/issues/1436)) ([#1444](https://github.com/taverns-red/toast-stats/issues/1444)) ([e2160d5](https://github.com/taverns-red/toast-stats/commit/e2160d5abc2523654a2bb9c8a01bd6c052896844))
+* **frontend:** Payment Composition + trophy-case integers follow the selected program year ([#1396](https://github.com/taverns-red/toast-stats/issues/1396)) ([#1397](https://github.com/taverns-red/toast-stats/issues/1397)) ([5e032ca](https://github.com/taverns-red/toast-stats/commit/5e032caf02185ae8aa4d1720460f662a8894c613))
+* **frontend:** the browsable district list follows the displayed program year ([#1398](https://github.com/taverns-red/toast-stats/issues/1398)) ([#1401](https://github.com/taverns-red/toast-stats/issues/1401)) ([8c9d10a](https://github.com/taverns-red/toast-stats/commit/8c9d10a29929327dfbfee96706e1bd06b30cfcc4))
+* **hosting:** revalidate the entry document instead of caching it for an hour ([#1365](https://github.com/taverns-red/toast-stats/issues/1365)) ([#1380](https://github.com/taverns-red/toast-stats/issues/1380)) ([d2ef95b](https://github.com/taverns-red/toast-stats/commit/d2ef95b4a8fd46c999ffc8e6209b0974d1226dd0))
+* one canonical club id across the eight identity sites ([#1440](https://github.com/taverns-red/toast-stats/issues/1440)) ([#1447](https://github.com/taverns-red/toast-stats/issues/1447)) ([2577eaa](https://github.com/taverns-red/toast-stats/commit/2577eaac146fc04d49d6002ebaa91c141d844721))
+* say when a district realignment moved the boundary instead of calling transfers roster churn ([#1443](https://github.com/taverns-red/toast-stats/issues/1443)) ([#1448](https://github.com/taverns-red/toast-stats/issues/1448)) ([9914555](https://github.com/taverns-red/toast-stats/commit/99145553883f9c56e8a47735e7664679b7a49a69))
+* suppress district year-over-year across the 2026 reformation boundary ([#1442](https://github.com/taverns-red/toast-stats/issues/1442)) ([#1449](https://github.com/taverns-red/toast-stats/issues/1449)) ([09b36a5](https://github.com/taverns-red/toast-stats/commit/09b36a5f018ffde63bdb7d0b199c3dbec0c82383))
+* **test-infra:** type the jest-axe shim's axe() options parameter ([#1389](https://github.com/taverns-red/toast-stats/issues/1389)) ([#1392](https://github.com/taverns-red/toast-stats/issues/1392)) ([430641a](https://github.com/taverns-red/toast-stats/commit/430641ab25a52c805574c58485696a8bc28da11a))
+* **ui:** centre breadcrumb links inside their touch-target box — one baseline again ([#1387](https://github.com/taverns-red/toast-stats/issues/1387)) ([#1390](https://github.com/taverns-red/toast-stats/issues/1390)) ([0625428](https://github.com/taverns-red/toast-stats/commit/06254286fec94dec442d4c7bbabd21ed168d87fb))
+* **ui:** clamp shared tooltip panels inside the viewport ([#1405](https://github.com/taverns-red/toast-stats/issues/1405)) ([#1410](https://github.com/taverns-red/toast-stats/issues/1410)) ([c00e09a](https://github.com/taverns-red/toast-stats/commit/c00e09ab23fd16b359864ffd9f2490a2e484e57c))
+
+
+### Performance
+
+* **fonts:** metric-matched swap fallbacks take 375px CLS 0.141 -&gt; 0.002, plus a gate that can see mobile ([#1373](https://github.com/taverns-red/toast-stats/issues/1373)) ([#1381](https://github.com/taverns-red/toast-stats/issues/1381)) ([ab797f9](https://github.com/taverns-red/toast-stats/commit/ab797f9a2cb7df3a78db141699c6be788aad8555))
+
+
+### Documentation
+
+* CEO Report numeric-snapshots data-coverage audit ([#1426](https://github.com/taverns-red/toast-stats/issues/1426)) ([#1427](https://github.com/taverns-red/toast-stats/issues/1427)) ([ca55a92](https://github.com/taverns-red/toast-stats/commit/ca55a920c59a06278c3f965bdb4c583984ada4c9))
+* record the CEO-report scope ruling and flag unverified archive coverage ([#1426](https://github.com/taverns-red/toast-stats/issues/1426)) ([#1430](https://github.com/taverns-red/toast-stats/issues/1430)) ([9799a54](https://github.com/taverns-red/toast-stats/commit/9799a54279c223cb034edbdabf1b79afc5917c60))
+
 ## [2.34.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.33.0...toast-stats-v2.34.0) (2026-08-02)
 
 

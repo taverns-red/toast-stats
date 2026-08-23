@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.7.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.6.1...collector-cli-v1.7.0) (2026-08-23)
+
+
+### Features
+
+* **pipeline:** fetch district daily reports in a parallel job, and fix the district_*.json collision ([#1428](https://github.com/taverns-red/toast-stats/issues/1428)) ([#1434](https://github.com/taverns-red/toast-stats/issues/1434)) ([c86c866](https://github.com/taverns-red/toast-stats/commit/c86c8661c765c2fbb98861d836a49b50e76d7a21))
+
+
+### Bug Fixes
+
+* **analytics:** DCP goals 2-3 read 0 for PY 2026-27 — resolve TI's 'or EOM' column rename ([#1399](https://github.com/taverns-red/toast-stats/issues/1399)) ([#1402](https://github.com/taverns-red/toast-stats/issues/1402)) ([f7ac01e](https://github.com/taverns-red/toast-stats/commit/f7ac01eeb0bfe7e18d34bce9363206294daaea8a))
+* **analytics:** resolve club recognition tiers per program year — Smedley is unreachable before PY 2025-26 ([#1406](https://github.com/taverns-red/toast-stats/issues/1406)) ([#1409](https://github.com/taverns-red/toast-stats/issues/1409)) ([d77c9db](https://github.com/taverns-red/toast-stats/commit/d77c9dbdf0f9a2e357313b1a5b63896d0197b6cb))
+* **collector:** --gcs-prefix '' wrote to a double-slash key space; normalise it, log the destination, and read back what was written ([#1388](https://github.com/taverns-red/toast-stats/issues/1388)) ([#1391](https://github.com/taverns-red/toast-stats/issues/1391)) ([1a7007f](https://github.com/taverns-red/toast-stats/commit/1a7007f6a3eac57799b6220c2628c05500a2b7c2))
+* **collector:** reach the live program year from backfill, and verify every body against its request ([#1384](https://github.com/taverns-red/toast-stats/issues/1384)) ([#1385](https://github.com/taverns-red/toast-stats/issues/1385)) ([12c7cde](https://github.com/taverns-red/toast-stats/commit/12c7cde838dff8f3afcce13f8dfaecd3525df98a))
+* one canonical club id across the eight identity sites ([#1440](https://github.com/taverns-red/toast-stats/issues/1440)) ([#1447](https://github.com/taverns-red/toast-stats/issues/1447)) ([2577eaa](https://github.com/taverns-red/toast-stats/commit/2577eaac146fc04d49d6002ebaa91c141d844721))
+
 ## [1.6.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.6.0...collector-cli-v1.6.1) (2026-07-31)
 
 

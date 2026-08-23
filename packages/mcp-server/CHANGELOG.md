@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.3...toast-stats-mcp-v0.1.4) (2026-08-23)
+
+
+### Bug Fixes
+
+* one canonical club id across the eight identity sites ([#1440](https://github.com/taverns-red/toast-stats/issues/1440)) ([#1447](https://github.com/taverns-red/toast-stats/issues/1447)) ([2577eaa](https://github.com/taverns-red/toast-stats/commit/2577eaac146fc04d49d6002ebaa91c141d844721))
+
 ## [0.1.3](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.2...toast-stats-mcp-v0.1.3) (2026-07-03)
 
 
