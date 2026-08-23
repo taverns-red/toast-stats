@@ -13,6 +13,8 @@
  *   - Roster appear/disappear is a visibility/status signal, classified by
  *     `clubStatus`, never an error (Lesson 118).
  *   - DCP signals use the raw `dcpGoals` count, never inferred Goals 1-N order.
+ *   - A roster move across a district REALIGNMENT is not a club joining or
+ *     leaving (#1443) — see `detectRosterDiscontinuity` below.
  *
  * @module diffSnapshots
  * @see docs/design/what-changed-feature.md §3-§4
@@ -25,8 +27,13 @@ import type {
   ClubDiff,
   ClubPresence,
   DiffEvent,
+  RosterDiscontinuity,
   SnapshotDiff,
 } from '@taverns-red/shared-contracts'
+import {
+  getProgramYearStartYear,
+  programYearForDate,
+} from './AnalyticsUtils.js'
 import { normalizeClubId } from '@taverns-red/shared-contracts'
 
 function aggregate(from: number, to: number): AggregateDelta {
@@ -88,19 +95,138 @@ function distinguishedLabel(name: string, from: string, to: string): string {
   return `${name} moved to ${tierName(to)}`
 }
 
-function presence(club: ClubStatisticsFile): ClubPresence {
-  return {
+function presence(club: ClubStatisticsFile, transferred = false): ClubPresence {
+  const base: ClubPresence = {
     clubId: club.clubId,
     clubName: club.clubName,
     divisionId: club.divisionId,
     areaId: club.areaId,
     clubStatus: club.clubStatus ?? club.status,
   }
+  // Only ever ADD the flag — an ordinary presence entry keeps its exact
+  // previous shape (pinned by the within-year regression test).
+  return transferred ? { ...base, transferred: true } : base
 }
 
 function rosterLabel(verb: string, club: ClubStatisticsFile): string {
   const status = club.clubStatus ?? club.status
   return `${club.clubName} (${status}) ${verb} the roster`
+}
+
+/* ── District-composition discontinuity (#1443) ────────────────────────────
+ *
+ * Toastmasters realigns district boundaries at a program-year boundary: the
+ * 2026-07-01 reformation merged and split districts and moved clubs between
+ * them. For a district that survived, the default "previous recorded date →
+ * latest" pair straddles that boundary, so every transferred club used to
+ * render as "X (Active) joined the roster" / "left the roster" — dozens of
+ * them. Those clubs did not join or leave; the district moved under them.
+ *
+ * Detection is deliberately conservative — a false positive mislabels honest
+ * club behaviour as a map change, while a false negative merely leaves today's
+ * behaviour in place. All three conditions must hold:
+ *
+ *   1. the two dates fall in DIFFERENT program years (realignments take effect
+ *      July 1 — a within-year pair can never be one, however large its churn),
+ *   2. the pair is TIGHT around that boundary (a year-wide range accumulates
+ *      ordinary charters and closures that are not a realignment),
+ *   3. the roster exchange is REFORMATION-SIZED, both absolutely and relative
+ *      to the district — the July renewal deadline drops a handful of clubs
+ *      off every roster and that must not read as a boundary change.
+ */
+
+/** Minimum clubs present in only one snapshot before the case is considered. */
+const DISCONTINUITY_MIN_MOVED_CLUBS = 8
+/** …and as a share of the smaller roster (a small district moves fewer). */
+const DISCONTINUITY_MIN_MOVED_RATIO = 0.2
+/** Widest pair still read as "around" the boundary (May → August). */
+const DISCONTINUITY_MAX_WINDOW_DAYS = 120
+
+/** The inputs the predicate needs — dates and roster cardinalities only. */
+interface DiscontinuityInput {
+  fromDate: string
+  toDate: string
+  fromClubCount: number
+  toClubCount: number
+  movedInCount: number
+  movedOutCount: number
+}
+
+/**
+ * SEAM (#1442) — the single predicate deciding "these two dates straddle a
+ * district-composition discontinuity". #1442 owns the shared discontinuity
+ * helper for the YoY sites; when it lands, this body becomes a call into it
+ * (or this function becomes an import alias) and nothing else in this file
+ * changes. Keep the decision here, and only here.
+ */
+function detectRosterDiscontinuity(
+  input: DiscontinuityInput
+): RosterDiscontinuity | undefined {
+  const {
+    fromDate,
+    toDate,
+    fromClubCount,
+    toClubCount,
+    movedInCount,
+    movedOutCount,
+  } = input
+
+  const fromPyStart = getProgramYearStartYear(fromDate)
+  const toPyStart = getProgramYearStartYear(toDate)
+  if (fromPyStart === toPyStart) return undefined
+  if (dayCountBetween(fromDate, toDate) > DISCONTINUITY_MAX_WINDOW_DAYS) {
+    return undefined
+  }
+
+  const moved = movedInCount + movedOutCount
+  if (moved < DISCONTINUITY_MIN_MOVED_CLUBS) return undefined
+  const baseline = Math.max(1, Math.min(fromClubCount, toClubCount))
+  if (moved / baseline < DISCONTINUITY_MIN_MOVED_RATIO) return undefined
+
+  return {
+    kind: 'program-year-boundary',
+    fromProgramYear: programYearForDate(fromDate),
+    toProgramYear: programYearForDate(toDate),
+    clubsMovedIn: movedInCount,
+    clubsMovedOut: movedOutCount,
+  }
+}
+
+/**
+ * A club that appears in `to` having chartered on or after the `from` date is
+ * a GENUINE new charter, not a boundary transfer — keep it in the roster
+ * group so a real new club is not buried among thirty transfers.
+ *
+ * `charterDate` is an optional enrichment field (Find-a-Club), so this can
+ * only ever promote a club out of the transfer group, never demote one into
+ * it: an unparseable or missing date leaves the transfer classification.
+ */
+function isNewCharter(club: ClubStatisticsFile, fromDate: string): boolean {
+  if (!club.charterDate) return false
+  const chartered = Date.parse(club.charterDate)
+  if (Number.isNaN(chartered)) return false
+  return chartered >= Date.parse(`${fromDate}T00:00:00Z`)
+}
+
+/**
+ * A club that disappears while suspended or ineligible left by CLOSURE, not
+ * by transfer — Toastmasters suspends a club before it goes away, and a
+ * realignment moves clubs in good standing. Keeps genuine closures visible.
+ */
+function isClosure(club: ClubStatisticsFile): boolean {
+  const status = (club.clubStatus ?? club.status ?? '').toLowerCase()
+  return status === 'suspended' || status === 'ineligible'
+}
+
+function transferLabel(
+  direction: 'in' | 'out',
+  club: ClubStatisticsFile,
+  realignmentYear: number
+): string {
+  const status = club.clubStatus ?? club.status
+  const where =
+    direction === 'in' ? 'moved into the district' : 'moved to another district'
+  return `${club.clubName} (${status}) ${where} in the ${realignmentYear} district realignment`
 }
 
 export function diffSnapshots(
@@ -125,18 +251,57 @@ export function diffSnapshots(
   const onlyInTo: ClubPresence[] = []
   const events: DiffEvent[] = []
 
+  // Roster-move classification (#1443). Resolved BEFORE the main loop from the
+  // two club-id sets alone, so the loop below keeps its exact previous shape
+  // and event insertion order (the sort's final tie-break is insertion order).
+  // A club leaving/arriving is a boundary transfer unless it is a genuine
+  // closure/charter; with no discontinuity every move stays a roster event.
+  //
+  // Membership tests go through the CANONICAL key (#1440) because that is what
+  // fromClubs/toClubs are keyed on — testing with the club's own stored id
+  // would miss whenever the two dates were written from differently-padded TI
+  // exports, which is the exact defect #1440 exists to remove. The SET itself
+  // holds stored ids, because the loops below match against a club's own id.
+  const movedOutClubs = [...fromClubs.values()].filter(
+    c => !toClubs.has(normalizeClubId(c.clubId)) && !isClosure(c)
+  )
+  const movedInClubs = [...toClubs.values()].filter(
+    c =>
+      !fromClubs.has(normalizeClubId(c.clubId)) &&
+      !isNewCharter(c, from.snapshotDate)
+  )
+  const rosterDiscontinuity = detectRosterDiscontinuity({
+    fromDate: from.snapshotDate,
+    toDate: to.snapshotDate,
+    fromClubCount: fromClubs.size,
+    toClubCount: toClubs.size,
+    movedInCount: movedInClubs.length,
+    movedOutCount: movedOutClubs.length,
+  })
+  const transferredIds = new Set(
+    rosterDiscontinuity
+      ? [...movedOutClubs, ...movedInClubs].map(c => c.clubId)
+      : []
+  )
+  const realignmentYear = rosterDiscontinuity
+    ? getProgramYearStartYear(to.snapshotDate)
+    : 0
+
   for (const [key, fromClub] of fromClubs) {
     const toClub = toClubs.get(key)
     // Identity for the OUTPUT stays the club's own stored id; `key` is the
     // canonical join key only (#1440).
     const clubId = fromClub.clubId
     if (!toClub) {
-      onlyInFrom.push(presence(fromClub))
+      const transferred = transferredIds.has(clubId)
+      onlyInFrom.push(presence(fromClub, transferred))
       events.push({
-        category: 'club-removed',
+        category: transferred ? 'club-transferred-out' : 'club-removed',
         clubId,
         clubName: fromClub.clubName,
-        label: rosterLabel('left', fromClub),
+        label: transferred
+          ? transferLabel('out', fromClub, realignmentYear)
+          : rosterLabel('left', fromClub),
         magnitude: -1,
       })
       continue
@@ -198,12 +363,15 @@ export function diffSnapshots(
   for (const [key, toClub] of toClubs) {
     if (fromClubs.has(key)) continue
     const clubId = toClub.clubId
-    onlyInTo.push(presence(toClub))
+    const transferred = transferredIds.has(clubId)
+    onlyInTo.push(presence(toClub, transferred))
     events.push({
-      category: 'club-added',
+      category: transferred ? 'club-transferred-in' : 'club-added',
       clubId,
       clubName: toClub.clubName,
-      label: rosterLabel('joined', toClub),
+      label: transferred
+        ? transferLabel('in', toClub, realignmentYear)
+        : rosterLabel('joined', toClub),
       magnitude: 1,
     })
   }
@@ -235,5 +403,8 @@ export function diffSnapshots(
     },
     clubs: { bothPresent, onlyInFrom, onlyInTo },
     events,
+    // Omitted entirely for an ordinary diff — never `undefined`-valued, so the
+    // serialized shape of a normal diff is byte-identical to before (#1443).
+    ...(rosterDiscontinuity ? { rosterDiscontinuity } : {}),
   }
 }

@@ -39,6 +39,14 @@ export type AggregateDelta = z.infer<typeof AggregateDeltaSchema>
  * recognition tier. Like the area/division transitions it is derived in the
  * frontend (`diffClubStatus`), comparing the `clubStatus` already present on
  * both snapshots; it is club-scoped (sets `clubId`/`clubName`).
+ *
+ * `club-transferred-in` / `club-transferred-out` (#1443) carry roster moves
+ * caused by a DISTRICT-COMPOSITION change rather than by club behaviour — a
+ * district realignment moved the boundary, not the club. They are emitted by
+ * `diffSnapshots` in place of `club-added` / `club-removed` only when the diff
+ * pair straddles a detected discontinuity (`SnapshotDiff.rosterDiscontinuity`);
+ * genuine charters and closures keep the roster categories so they stay
+ * visible instead of being buried among the transfers.
  */
 export const DiffEventCategorySchema = z.enum([
   'membership',
@@ -46,6 +54,8 @@ export const DiffEventCategorySchema = z.enum([
   'distinguished',
   'club-added',
   'club-removed',
+  'club-transferred-in',
+  'club-transferred-out',
   'club-status',
   'area-status',
   'division-status',
@@ -83,6 +93,13 @@ export const ClubPresenceSchema = z.object({
   divisionId: z.string(),
   areaId: z.string(),
   clubStatus: z.string().optional(),
+  /**
+   * The club is in only one snapshot because the DISTRICT's composition
+   * changed under it (#1443), not because it chartered or closed. Set only
+   * when `SnapshotDiff.rosterDiscontinuity` is present, and absent otherwise —
+   * a normal within-year presence entry is unchanged.
+   */
+  transferred: z.boolean().optional(),
 })
 export type ClubPresence = z.infer<typeof ClubPresenceSchema>
 
@@ -127,6 +144,32 @@ export const SnapshotDiffTotalsSchema = z.object({
 })
 export type SnapshotDiffTotals = z.infer<typeof SnapshotDiffTotalsSchema>
 
+/**
+ * A district-composition discontinuity between the two diffed dates (#1443).
+ *
+ * Toastmasters realigns district boundaries at a program-year boundary (the
+ * 2026-07-01 reformation merged and split districts, moving clubs between
+ * them). For a surviving district the default "previous → latest" pair
+ * straddles that boundary, and the clubs that moved are NOT clubs that joined
+ * or left — presenting them that way tells the reader something untrue.
+ *
+ * Present only when the diff engine detected the case; absent (and therefore
+ * inert) for every ordinary diff.
+ */
+export const RosterDiscontinuitySchema = z.object({
+  /** The only kind detected today: the pair straddles a July-1 boundary. */
+  kind: z.literal('program-year-boundary'),
+  /** Program year of `from.date`, e.g. "2025-2026". */
+  fromProgramYear: z.string(),
+  /** Program year of `to.date`, e.g. "2026-2027". */
+  toProgramYear: z.string(),
+  /** Clubs present only in `to` that were classified as transfers in. */
+  clubsMovedIn: z.number(),
+  /** Clubs present only in `from` that were classified as transfers out. */
+  clubsMovedOut: z.number(),
+})
+export type RosterDiscontinuity = z.infer<typeof RosterDiscontinuitySchema>
+
 /** The complete diff between two dated district snapshots. */
 export const SnapshotDiffSchema = z.object({
   districtId: z.string(),
@@ -141,5 +184,7 @@ export const SnapshotDiffSchema = z.object({
     onlyInTo: z.array(ClubPresenceSchema),
   }),
   events: z.array(DiffEventSchema),
+  /** Set when the two dates straddle a district-composition change (#1443). */
+  rosterDiscontinuity: RosterDiscontinuitySchema.optional(),
 })
 export type SnapshotDiff = z.infer<typeof SnapshotDiffSchema>

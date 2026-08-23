@@ -19,6 +19,12 @@ import type { SnapshotDate } from '../types/snapshotDate'
  * is stored that way. The page owns this pair and passes it to useSnapshotDiff
  * as props (R3 — never re-derive from response data).
  *
+ * NOT changed for #1443, deliberately: across a district realignment this
+ * default pair straddles the boundary (last June vs first July), which is what
+ * makes the diff hard to read. Whether the default should skip such a pair is
+ * a product call, not an engine one — so the diff now LABELS the boundary
+ * (`SnapshotDiff.rosterDiscontinuity`) and the default stays as it is.
+ *
  * @see docs/design/what-changed-feature.md §5
  */
 export function previousRecordedDate<T extends string>(
@@ -57,6 +63,11 @@ export function useSnapshotDiff(
       const diff = diffSnapshots(fromSnap.data, toSnap.data)
       const areaDivision = diffAreaDivisionStatus(fromSnap.data, toSnap.data)
       const clubStatus = diffClubStatus(fromSnap.data, toSnap.data)
+      // Spread the engine's diff, override ONLY `events`. Everything else the
+      // engine decided rides through untouched — including
+      // `rosterDiscontinuity` (#1443), the district-realignment context the
+      // page keys its explanatory note off. Adding another merged stream must
+      // keep that spread, not rebuild the object field by field.
       return {
         ...diff,
         events: [...diff.events, ...areaDivision, ...clubStatus],

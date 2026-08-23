@@ -35,6 +35,11 @@ function fmtDate(iso: string): string {
   })
 }
 
+/** "12 clubs" / "1 club" — the count is the point, so it leads. */
+function clubCountPhrase(count: number): string {
+  return `${count} ${count === 1 ? 'club' : 'clubs'}`
+}
+
 /* Display order + headings for the grouped change list. Roster moves first
    (most material), then club / division / area recognition, then the per-club
    metric churn. Club operational-status changes (#1247) sit adjacent to the
@@ -45,6 +50,19 @@ const CATEGORY_GROUPS: { category: DiffEventCategory; heading: string }[] = [
   { category: 'club-added', heading: 'Clubs that joined' },
   { category: 'club-status', heading: 'Club status changes' },
   { category: 'club-removed', heading: 'Clubs that left' },
+  // Realignment transfers (#1443) sit AFTER the genuine roster groups: a real
+  // new club stays at the top of the feed instead of being buried among the
+  // dozens of clubs a boundary change moved. Both groups render empty-safe
+  // (ChangeGroup returns null for an empty list), so an ordinary diff is
+  // unaffected by their presence in this list.
+  {
+    category: 'club-transferred-in',
+    heading: 'Clubs moved in (district realignment)',
+  },
+  {
+    category: 'club-transferred-out',
+    heading: 'Clubs moved out (district realignment)',
+  },
   { category: 'distinguished', heading: 'Distinguished status changes' },
   { category: 'division-status', heading: 'Division status changes' },
   { category: 'area-status', heading: 'Area status changes' },
@@ -188,6 +206,22 @@ const DistrictChangesPage: React.FC = () => {
                   {diff.dayCount > 0 &&
                     ` · ${diff.dayCount} day${diff.dayCount === 1 ? '' : 's'}`}
                 </p>
+
+                {diff.rosterDiscontinuity && (
+                  <p
+                    className="district-changes__notice"
+                    data-testid="changes-realignment"
+                  >
+                    The district’s boundaries changed between these dates.{' '}
+                    {clubCountPhrase(diff.rosterDiscontinuity.clubsMovedIn)}{' '}
+                    moved in and{' '}
+                    {clubCountPhrase(diff.rosterDiscontinuity.clubsMovedOut)}{' '}
+                    moved out in the {diff.rosterDiscontinuity.toProgramYear}{' '}
+                    district realignment. Those clubs did not join or leave on
+                    their own, and the totals above compare two differently
+                    composed districts.
+                  </p>
+                )}
 
                 <div className="district-changes__kpis">
                   <KpiDeltaCard

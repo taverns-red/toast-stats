@@ -721,13 +721,17 @@ export const exportSnapshotDiff = (diff: SnapshotDiff): void => {
       'Roster Change',
       'Club Status',
     ])
+    // A club a district realignment moved did not join or leave (#1443) — the
+    // export makes the same distinction the view does. `transferred` is set by
+    // the diff engine only across a detected discontinuity, so an ordinary
+    // export is unchanged.
     diff.clubs.onlyInTo.forEach(c => {
       csvData.push([
         c.clubId,
         c.clubName,
         c.divisionId,
         c.areaId,
-        'Joined',
+        c.transferred ? 'Moved in (district realignment)' : 'Joined',
         c.clubStatus ?? '',
       ])
     })
@@ -737,7 +741,7 @@ export const exportSnapshotDiff = (diff: SnapshotDiff): void => {
         c.clubName,
         c.divisionId,
         c.areaId,
-        'Left',
+        c.transferred ? 'Moved out (district realignment)' : 'Left',
         c.clubStatus ?? '',
       ])
     })

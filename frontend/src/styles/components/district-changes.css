@@ -57,6 +57,21 @@
   padding: 1rem;
 }
 
+/* District-realignment context (#1443). Reads as a caveat on the numbers
+   below it, so it borrows the empty-state card shape with the product accent
+   as a leading rule. Token-only (Lessons 093/094) — light/dark remap together
+   with no component-level dark override. */
+.district-changes__notice {
+  font-family: var(--sans);
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--rt-stats, var(--line));
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  line-height: 1.5;
+}
+
 .district-changes__list {
   display: flex;
   flex-direction: column;

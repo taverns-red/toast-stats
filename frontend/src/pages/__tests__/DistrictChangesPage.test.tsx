@@ -359,3 +359,108 @@ describe('DistrictChangesPage — deep-linked group collapse (#980)', () => {
     expect(new URLSearchParams(location).has('expandChanges')).toBe(false)
   })
 })
+
+/* District-realignment context (#1443). When the diffed pair straddles a
+   district-composition discontinuity the page must SAY so — otherwise dozens
+   of transferred clubs read as a dramatic month of roster churn — and the
+   transfers must sit in their own groups so a genuine new club is not buried
+   among them. */
+describe('DistrictChangesPage — district realignment (#1443)', () => {
+  const realignmentDiff = () =>
+    diffFixture({
+      from: { date: '2026-06-30' },
+      to: { date: '2026-07-01' },
+      rosterDiscontinuity: {
+        kind: 'program-year-boundary',
+        fromProgramYear: '2025-2026',
+        toProgramYear: '2026-2027',
+        clubsMovedIn: 12,
+        clubsMovedOut: 10,
+      },
+      events: [
+        {
+          category: 'club-added',
+          clubId: '111',
+          clubName: 'Brand New Toastmasters',
+          label: 'Brand New Toastmasters (Active) joined the roster',
+          magnitude: 1,
+        },
+        {
+          category: 'club-transferred-in',
+          clubId: '222',
+          clubName: 'Annexed Toastmasters',
+          label:
+            'Annexed Toastmasters (Active) moved into the district in the 2026 district realignment',
+          magnitude: 1,
+        },
+        {
+          category: 'club-transferred-out',
+          clubId: '333',
+          clubName: 'Departed Toastmasters',
+          label:
+            'Departed Toastmasters (Active) moved to another district in the 2026 district realignment',
+          magnitude: -1,
+        },
+      ],
+    })
+
+  beforeEach(() => {
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-06-30', '2026-07-01'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+  })
+
+  it('explains that the district boundaries changed, with the moved counts', () => {
+    mockedDiff.mockReturnValue({
+      data: realignmentDiff(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    const note = screen.getByTestId('changes-realignment')
+    expect(note).toHaveTextContent(/boundaries changed/i)
+    expect(note).toHaveTextContent(/12/)
+    expect(note).toHaveTextContent(/10/)
+    expect(note).toHaveTextContent(/2026-2027/)
+  })
+
+  it('groups transfers separately so a genuine new club is not buried in them', () => {
+    mockedDiff.mockReturnValue({
+      data: realignmentDiff(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    expect(screen.getByText(/Clubs moved in/)).toBeInTheDocument()
+    expect(screen.getByText(/Clubs moved out/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Annexed Toastmasters' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Departed Toastmasters' })
+    ).toBeInTheDocument()
+    // The genuine charter keeps its own group and its roster wording.
+    expect(screen.getByText(/Clubs that joined/)).toBeInTheDocument()
+    expect(screen.getByText(/\(Active\) joined the roster/)).toBeInTheDocument()
+  })
+
+  it('says nothing about a realignment for an ordinary diff', () => {
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-05-25', '2026-05-26'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    mockedDiff.mockReturnValue({
+      data: diffFixture(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    expect(screen.queryByTestId('changes-realignment')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Clubs moved in/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Clubs moved out/)).not.toBeInTheDocument()
+  })
+})
