@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.35.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.35.0...toast-stats-v2.35.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* **pipeline:** club-index and divisions-areas covered 2 of 94 districts — gsutil cp -I silently truncates its stdin source list ([#1469](https://github.com/taverns-red/toast-stats/issues/1469)) ([#1472](https://github.com/taverns-red/toast-stats/issues/1472)) ([22fae8f](https://github.com/taverns-red/toast-stats/commit/22fae8f688d4dee02be41da371525aa7b72dc641))
+
+
+### Documentation
+
+* PY 2021-22 archive coverage is proven, not an unverified prerequisite ([#1456](https://github.com/taverns-red/toast-stats/issues/1456)) ([#1457](https://github.com/taverns-red/toast-stats/issues/1457)) ([0863a4b](https://github.com/taverns-red/toast-stats/commit/0863a4bfbc627303be9a37d692a3819faad1be53))
+
 ## [2.35.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.34.0...toast-stats-v2.35.0) (2026-08-23)
 
 
