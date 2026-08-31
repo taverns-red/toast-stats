@@ -9,6 +9,7 @@ import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { DatePairPicker } from '../components/DatePairPicker'
+import { DatePairPresetChips } from '../components/DatePairPresetChips'
 import { KpiDeltaCard } from '../components/KpiDeltaCard'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -85,7 +86,7 @@ const DistrictChangesPage: React.FC = () => {
     districtId || ''
   )
   const dates = useMemo(() => cachedDates?.dates ?? [], [cachedDates?.dates])
-  const { from, to, setFrom, setTo } = useUrlDatePair(dates)
+  const { from, to, setFrom, setTo, setPair } = useUrlDatePair(dates)
 
   // Change-groups are open by default; ?expandChanges lists the categories the
   // user has COLLAPSED (so an all-default page keeps a clean URL). The page owns
@@ -142,6 +143,16 @@ const DistrictChangesPage: React.FC = () => {
           <section aria-label="What changed" className="district-changes">
             {enoughHistory && (
               <div className="district-changes__controls">
+                {/* Time-window presets (#1462) lead: they answer the common
+                    questions in one tap, and the raw pickers below stay for the
+                    arbitrary pair. Presets write BOTH ends through setPair —
+                    one navigation, so no half-pair URL is ever rendered. */}
+                <DatePairPresetChips
+                  dates={dates}
+                  from={from}
+                  to={to}
+                  onSelect={setPair}
+                />
                 <DatePairPicker
                   dates={dates}
                   from={from}

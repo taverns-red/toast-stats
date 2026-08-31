@@ -17,11 +17,18 @@
   gap: 1rem;
 }
 
+/* Two control groups stacked: the time-window preset chips (#1462) above the
+   raw from/to pickers. A column — not a wrapping row — because a single row of
+   both groups breaks mid-group at 375px, orphaning "Program year" onto the
+   pickers' line. Each group wraps internally, so nothing overflows the
+   viewport at any width; align-items:flex-start keeps the groups their natural
+   width instead of stretching. */
 .district-changes__controls {
   display: flex;
+  flex-direction: column;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
+  gap: 0.75rem;
+  align-items: flex-start;
 }
 
 .district-changes__headline {
