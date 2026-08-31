@@ -61,12 +61,21 @@ export function reconcileDistrictsForDate(
 ): DistrictSetReconciliation {
   const existing = parseDistrictIdsFromSummaryCsv(summaryContent)
   if (existing.length === 0) {
-    throw new Error(
-      `reconcileDistrictsForDate is not implemented yet (#1465): ` +
-        `${requested.length} requested, ${existing.length} in the summary`
-    )
+    return { districts: [...requested], skipped: [], applied: false }
   }
-  throw new Error('reconcileDistrictsForDate is not implemented yet (#1465)')
+
+  const existingKeys = new Set(existing.map(canonicalDistrictKey))
+  const districts: string[] = []
+  const skipped: string[] = []
+  for (const districtId of requested) {
+    if (existingKeys.has(canonicalDistrictKey(districtId))) {
+      districts.push(districtId)
+    } else {
+      skipped.push(districtId)
+    }
+  }
+
+  return { districts, skipped, applied: true }
 }
 
 export { canonicalDistrictKey }
