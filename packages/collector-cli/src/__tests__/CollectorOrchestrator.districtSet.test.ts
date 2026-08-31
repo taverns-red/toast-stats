@@ -135,4 +135,20 @@ describe('CollectorOrchestrator — district set belongs to the date (#1465)', (
     expect(result.districtsSkipped).toEqual([])
     expect(result.success).toBe(true)
   })
+
+  // R17 — the "every district was dropped" case is stated, not implied. A run
+  // whose whole district set is wrong for the date must say so, rather than
+  // reporting a quiet zero-district success.
+  it('fails loudly when the date’s district list excludes every requested district', async () => {
+    const result = await scrapeWith(['201', '231'])
+
+    expect(result.success).toBe(false)
+    expect(result.districtsProcessed).toEqual([])
+    expect(result.districtsSkipped).toEqual(['201', '231'])
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]?.error).toMatch(/did not exist on 2026-06-30/)
+    expect(
+      capturedDownloadSpecs.some(spec => spec.districtId !== undefined)
+    ).toBe(false)
+  })
 })
