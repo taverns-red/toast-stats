@@ -2,9 +2,13 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "CommonJS",
-    "moduleResolution": "node",
+    // TS7 removed node10, and node16/nodenext would derive the emit format from
+    // the SOURCE package.json ("type": "module") — silently writing ESM into
+    // dist/cjs. "bundler" is the resolution mode TypeScript added for exactly
+    // this case (microsoft/TypeScript#62320); "module": "CommonJS" pins the emit.
+    // Verified by output, not exit code: scripts/check-dual-build-emit.sh.
+    "moduleResolution": "bundler",
     "outDir": "./dist/cjs",
-    "declaration": false,
-    "ignoreDeprecations": "6.0"
+    "declaration": false
   }
 }
