@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-dated-write-must-take-its-entity-set-from-that-date.md` — A write dated in the past must take its entity set from that date's own source — a successful fetch is not evidence the entity existed then  (2026-08-31)
 - `gsutil-cp-dash-i-silently-truncates-its-stdin-source-list.md` — '`gsutil cp -I` copies only the first two stdin sources and exits 0 — use `gcloud storage cp`'  (2026-08-31)
 - `a-new-event-category-is-dropped-not-errored-by-an-explicit-display-list.md` — A feed that renders from an explicit ordered list of categories drops any category the list does not name — a new enum value is silently invisible, never an error, so the reclassification that produced it reads as data loss  (2026-08-22)
 - `a-query-that-just-became-enabled-is-idle-not-fetching.md` — A TanStack Query that just became `enabled` reports idle, not fetching — gate deferred copy on "unresolved", not on isFetching  (2026-08-22)
