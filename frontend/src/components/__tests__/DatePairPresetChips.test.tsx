@@ -148,6 +148,21 @@ describe('DatePairPresetChips', () => {
     expect(week).toHaveTextContent(/nearest recorded date/i)
   })
 
+  it('takes its colour from CSS, never a theme-intercepted gray utility', () => {
+    // Regression guard, caught live in dark mode (#1462): dark-mode.css
+    // intercepts the common Tailwind utilities with `!important`
+    // (`[data-theme='dark'] .bg-gray-100 { … !important }`), so a pressed chip
+    // built from `theme-dark:bg-gray-100` kept its flipped border and text but
+    // lost its fill — dark-on-dark and unreadable. Colour therefore lives in
+    // `.date-preset-chip`, whose redesign tokens remap with the theme (R10).
+    renderChips({})
+    for (const button of screen.getAllByRole('button')) {
+      expect(button.className).toContain('date-preset-chip')
+      expect(button.className).not.toMatch(/\bbg-(gray|white|black)/)
+      expect(button.className).not.toMatch(/\btext-(gray|white|black)/)
+    }
+  })
+
   it('holds the 44px touch-target floor on every chip', () => {
     renderChips({})
     for (const button of screen.getAllByRole('button')) {

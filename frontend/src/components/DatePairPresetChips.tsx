@@ -37,17 +37,15 @@ export interface DatePairPresetChipsProps<T extends string = string> {
   onSelect: (from: T, to: T) => void
 }
 
-/** Pressed: an inverted chip. High contrast in both themes without leaning on
- *  an opacity-variant token (those bake in hardcoded rgba and need their own
- *  dark override — R10). */
-const CHIP_PRESSED =
-  'bg-gray-900 border-gray-900 text-white theme-dark:bg-gray-100 theme-dark:border-gray-100 theme-dark:text-gray-900'
-
-const CHIP_RESTING =
-  'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 theme-dark:bg-gray-800 theme-dark:border-gray-700 theme-dark:text-gray-200 theme-dark:hover:bg-gray-700'
-
-const CHIP_DISABLED =
-  'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed theme-dark:bg-gray-900 theme-dark:border-gray-800 theme-dark:text-gray-600'
+/* Colour lives in `.date-preset-chip` (district-changes.css), NOT in Tailwind
+   gray utilities — R10, and this one was caught live rather than reasoned about.
+   dark-mode.css intercepts the common utilities with `!important`
+   (`[data-theme='dark'] .bg-gray-100 { background-color: #1e1b27 !important }`),
+   so a `theme-dark:bg-gray-100` pressed chip lost its background in dark mode
+   and rendered dark-on-dark: its border and text flipped, its fill did not.
+   The redesign tokens remap light/dark together by design (Lessons 093/094), so
+   one declaration — `background: var(--ink); color: var(--surface)` — is an
+   inverted chip in BOTH themes, with nothing to keep in sync. */
 
 export function DatePairPresetChips<T extends string>({
   dates,
@@ -87,12 +85,8 @@ export function DatePairPresetChips<T extends string>({
             }
             className={cn(
               CHIP_LAYOUT,
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue focus-visible:ring-offset-1',
-              pair === null
-                ? CHIP_DISABLED
-                : pressed
-                  ? CHIP_PRESSED
-                  : CHIP_RESTING
+              'date-preset-chip',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue focus-visible:ring-offset-1'
             )}
             onClick={() => {
               if (pair) onSelect(pair.from, pair.to)

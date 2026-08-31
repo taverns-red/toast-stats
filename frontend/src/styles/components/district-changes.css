@@ -31,6 +31,40 @@
   align-items: flex-start;
 }
 
+/* Time-window preset chips (#1462). Colour lives here, not in Tailwind gray
+   utilities: dark-mode.css intercepts those with `!important`
+   (`[data-theme='dark'] .bg-gray-100 { … !important }`), which silently ate the
+   pressed chip's fill and left it dark-on-dark — border and text flipped, the
+   background did not (caught in a live dark-mode pass, R10). The redesign
+   tokens remap light/dark together (Lessons 093/094), so each rule below is
+   correct in both themes with nothing to keep in sync. Shape, size and the
+   44px touch-target floor stay in CHIP_LAYOUT on the component. */
+.date-preset-chip {
+  background-color: var(--surface);
+  color: var(--ink-2);
+  border-color: var(--line);
+}
+
+.date-preset-chip:hover:not(:disabled) {
+  background-color: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Pressed reads as an inverted chip — near-black on white in light, near-white
+   on the dark card in dark. Both directions clear WCAG AA comfortably. */
+.date-preset-chip[aria-pressed='true'] {
+  background-color: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+
+.date-preset-chip:disabled {
+  background-color: var(--surface-2);
+  color: var(--ink-4);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+
 .district-changes__headline {
   font-family: var(--sans);
   font-size: 1rem;
