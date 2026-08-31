@@ -4,6 +4,7 @@
 ## lessons (manifest-pinned + session-judged)
 - `classify-alerts-by-who-can-remediate-them-not-just-by-severity.md` — A detect-only monitor for a machine-derivable condition re-fires forever; classify staleness by who can remediate it, not just by whether it is stale  (2026-08-31)
 - `gsutil-cp-dash-i-silently-truncates-its-stdin-source-list.md` — '`gsutil cp -I` copies only the first two stdin sources and exits 0 — use `gcloud storage cp`'  (2026-08-31)
+- `parallel-agents-in-one-checkout-commit-onto-each-others-branches.md` — Two agents working in the SAME checkout silently stack commits onto each other's branches — `git add -A` sweeps the other's files and a foreign `git checkout` moves your HEAD mid-task, so the isolation has to be a worktree, not a branch  (2026-08-31)
 - `a-new-event-category-is-dropped-not-errored-by-an-explicit-display-list.md` — A feed that renders from an explicit ordered list of categories drops any category the list does not name — a new enum value is silently invisible, never an error, so the reclassification that produced it reads as data loss  (2026-08-22)
 - `a-query-that-just-became-enabled-is-idle-not-fetching.md` — A TanStack Query that just became `enabled` reports idle, not fetching — gate deferred copy on "unresolved", not on isFetching  (2026-08-22)
 - `coupled-url-params-need-one-setter-not-two-calls.md` — Two setSearchParams calls in one handler silently drop the first key — coupled URL params need a single combined setter  (2026-08-22)

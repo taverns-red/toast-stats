@@ -144,6 +144,30 @@ export interface CdnRankingsData {
     distinguishedRank: number
     aggregateScore: number
     overallRank: number
+    /**
+     * Clubs this district chartered since July 1 of the program year the file
+     * belongs to — cumulative, and the input to the District Club Growth
+     * Achievement (#1473). Published on every rankings row since #336
+     * (`all-districts-rankings.schema.ts`) and populated on 94/94 live rows,
+     * but undeclared here until #1475 — the wire had it, the type didn't.
+     *
+     * Optional because a pre-#336 archived file can omit it, and because
+     * "absent" must stay distinguishable from `0`: a missing field is *not
+     * available*, never *chartered nothing*.
+     *
+     * **Not monotonic per district.** Clubs chartered this program year MOVE
+     * between districts, and the count follows them (9 decreases in PY
+     * 2025-26; the global sum is strictly monotonic). So a checkpoint verdict
+     * must be read from that checkpoint's own file — see
+     * `fetchCdnRankingsForDateExact` and `useClubGrowthMilestones`.
+     *
+     * Other fields the wire carries and this type still omits (R7 inventory,
+     * 2026-08-31): `smedleyDistinguished`, `dspSubmitted`, `trainingMet`,
+     * `marketAnalysisSubmitted`, `communicationPlanSubmitted`,
+     * `regionAdvisorVisitMet`, `clubsWith20PlusMembers`, `newPayments`,
+     * `aprilPayments`, `octoberPayments`, `latePayments`, `charterPayments`.
+     */
+    newCharteredClubs?: number
   }>
   /**
    * The dashboard **as-of** date (`metadata.sourceCsvDate`). This advances past
@@ -188,17 +212,23 @@ export async function fetchCdnRankings(): Promise<CdnRankingsData> {
 }
 
 /**
- * Fetch district rankings for a specific snapshot date.
- * Falls back to v1/rankings.json if the per-date file doesn't exist.
+ * Fetch district rankings for a specific snapshot date — **exactly**, with no
+ * substitution (#1475).
+ *
+ * A missing per-date file returns `null`, which the caller must render as "not
+ * available". This is the variant every *historical verdict* has to use: the
+ * falling-back sibling below would answer a September 30 question with today's
+ * cumulative numbers, which reads as a milestone earned on a day it wasn't.
+ * (`newCharteredClubs` is not per-district monotonic — clubs chartered this
+ * program year move districts — so "today's number" is not even a safe upper
+ * bound for a past date.)
  */
-export async function fetchCdnRankingsForDate(
+export async function fetchCdnRankingsForDateExact(
   date: SnapshotDate
-): Promise<CdnRankingsData> {
+): Promise<CdnRankingsData | null> {
   const url = `${cdnBaseUrl()}/snapshots/${date}/all-districts-rankings.json`
   const res = await fetch(url)
-  if (!res.ok) {
-    return fetchCdnRankings()
-  }
+  if (!res.ok) return null
   recordCdnResponse(res)
   const raw = (await res.json()) as {
     metadata?: { sourceCsvDate?: string; calculatedAt?: string }
@@ -208,10 +238,29 @@ export async function fetchCdnRankingsForDate(
     rankings: raw.rankings,
     // The file lives under `date` (the pinned snapshot); its `sourceCsvDate` is
     // the advancing as-of date. During closing these DIVERGE — keep them apart.
+    // Live checkpoint files show it plainly: `snapshots/2025-09-30/` carries
+    // sourceCsvDate 2025-10-10, `snapshots/2026-03-31/` carries 2026-04-07.
     snapshotDate: date,
     asOfDate: raw.metadata?.sourceCsvDate || date,
     generatedAt: raw.metadata?.calculatedAt || new Date().toISOString(),
   }
+}
+
+/**
+ * Fetch district rankings for a specific snapshot date.
+ * Falls back to v1/rankings.json if the per-date file doesn't exist.
+ *
+ * That fallback is deliberate for "show the page something" reads, and is a
+ * hazard for anything that draws a conclusion about a specific date — it
+ * signals itself only by leaving `snapshotDate` unset (see
+ * `useDistrictRanking`). Prefer {@link fetchCdnRankingsForDateExact} whenever
+ * the wrong date's numbers would be worse than no numbers.
+ */
+export async function fetchCdnRankingsForDate(
+  date: SnapshotDate
+): Promise<CdnRankingsData> {
+  const exact = await fetchCdnRankingsForDateExact(date)
+  return exact ?? fetchCdnRankings()
 }
 
 /**
