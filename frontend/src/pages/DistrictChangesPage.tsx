@@ -67,6 +67,12 @@ const CATEGORY_GROUPS: { category: DiffEventCategory; heading: string }[] = [
   { category: 'division-status', heading: 'Division status changes' },
   { category: 'area-status', heading: 'Area status changes' },
   { category: 'membership', heading: 'Membership changes' },
+  // Payments (#1459) sits with membership as the other per-club money/people
+  // metric — renewal season is read alongside net growth, not after DCP. A
+  // category absent from THIS list is dropped silently by the display loop
+  // below (no error, no fallback group), so a new engine category is only
+  // half-shipped until it is named here.
+  { category: 'payments', heading: 'Payment changes' },
   { category: 'dcp-goals', heading: 'DCP goal changes' },
 ]
 
