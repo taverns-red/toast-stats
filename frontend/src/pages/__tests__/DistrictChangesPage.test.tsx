@@ -464,3 +464,69 @@ describe('DistrictChangesPage — district realignment (#1443)', () => {
     expect(screen.queryByText(/Clubs moved out/)).not.toBeInTheDocument()
   })
 })
+
+/* Payment changes group (#1459, epic #1458 Sprint 1).
+
+   CATEGORY_GROUPS is an explicit display list: a category it does not name is
+   dropped SILENTLY — no error, no fallback group, the events simply never
+   render. So a new engine category is only half-shipped until this list names
+   it, and that half is exactly the half a test catches. */
+describe('DistrictChangesPage — payment changes (#1459)', () => {
+  beforeEach(() => {
+    mockedDistricts.mockReturnValue({
+      data: { districts: [{ id: '61', name: '61' }] },
+    } as unknown as ReturnType<typeof useDistricts>)
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-07-31', '2026-08-30'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+  })
+
+  it('renders a Payment changes group with the type breakdown', () => {
+    mockedDiff.mockReturnValue({
+      data: diffFixture({
+        events: [
+          {
+            category: 'payments',
+            clubId: '00003045',
+            clubName: 'Limestone City Club',
+            label:
+              'Limestone City Club recorded 4 new payments ' +
+              '(2 October renewals, 1 new member, 1 other)',
+            magnitude: 4,
+          },
+        ],
+      }),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    const { container } = renderPage()
+
+    expect(screen.getByText(/Payment changes/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/recorded 4 new payments \(2 October renewals/)
+    ).toBeInTheDocument()
+    // The club name links to its scoped route, like every other club event.
+    expect(
+      screen.getByRole('link', { name: 'Limestone City Club' })
+    ).toHaveAttribute('href', '/district/61/club/00003045')
+
+    // Payments sits with the per-club metric churn, directly after membership.
+    const headings = Array.from(
+      container.querySelectorAll('details summary')
+    ).map(s => s.textContent ?? '')
+    expect(headings.some(h => /Payment changes/.test(h))).toBe(true)
+  })
+
+  it('renders no Payment changes group when there are no payments events', () => {
+    mockedDiff.mockReturnValue({
+      data: diffFixture(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    expect(screen.queryByText(/Payment changes/)).not.toBeInTheDocument()
+  })
+})
