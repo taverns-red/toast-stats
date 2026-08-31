@@ -14,6 +14,7 @@ describe('DiffEventCategorySchema (#1014)', () => {
   it.each([
     'membership',
     'payments',
+    'csp',
     'dcp-goals',
     'distinguished',
     'club-added',
