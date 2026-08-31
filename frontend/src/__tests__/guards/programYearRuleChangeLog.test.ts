@@ -70,6 +70,8 @@ const ACKNOWLEDGED_SITES: Record<string, string> = {
     'program-year ↔ date arithmetic and file naming; no rule differs by year',
   'packages/shared-contracts/src/types/time-series.ts':
     'a storage-path example in a type comment',
+  'packages/collector-cli/src/utils/districtSetForDate.ts':
+    'names the PY 2026-27 district renumbering as the DATA defect it guards against (#1465); no recognition rule differs by year here',
 }
 
 /**

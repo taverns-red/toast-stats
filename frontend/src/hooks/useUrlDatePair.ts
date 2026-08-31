@@ -30,6 +30,7 @@ export function useUrlDatePair<T extends string>(
   to: T | undefined
   setFrom: (date: T) => void
   setTo: (date: T) => void
+  setPair: (from: T, to: T) => void
 } {
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -43,23 +44,32 @@ export function useUrlDatePair<T extends string>(
   const from = dates.find(d => d === urlFrom) ?? defaultPair?.from
   const to = dates.find(d => d === urlTo) ?? defaultPair?.to
 
-  const setParam = useCallback(
-    (key: 'from' | 'to', date: T, current: T | undefined) => {
-      if (date === current) return // no-op — don't churn history (Lesson 070)
+  // One key's worth of the write policy, applied to a params object the caller
+  // owns — so a single navigation can apply it to BOTH keys (see setPair).
+  const applyKey = useCallback(
+    (params: URLSearchParams, key: 'from' | 'to', date: T) => {
       const isDefault = defaultPair
         ? date === (key === 'from' ? defaultPair.from : defaultPair.to)
         : false
+      if (isDefault) params.delete(key)
+      else params.set(key, date)
+    },
+    [defaultPair]
+  )
+
+  const setParam = useCallback(
+    (key: 'from' | 'to', date: T, current: T | undefined) => {
+      if (date === current) return // no-op — don't churn history (Lesson 070)
       setSearchParams(
         prev => {
           const next = new URLSearchParams(prev)
-          if (isDefault) next.delete(key)
-          else next.set(key, date)
+          applyKey(next, key, date)
           return next
         },
         { replace: true }
       )
     },
-    [setSearchParams, defaultPair]
+    [setSearchParams, applyKey]
   )
 
   const setFrom = useCallback(
@@ -71,5 +81,35 @@ export function useUrlDatePair<T extends string>(
     [setParam, to]
   )
 
-  return { from, to, setFrom, setTo }
+  /**
+   * Set BOTH ends of the pair in a single navigation (#1462).
+   *
+   * The time-window preset chips move both dates at once, and that cannot be
+   * composed out of `setFrom` + `setTo`: react-router hands a functional
+   * updater the `searchParams` of the CURRENT render, not a queued previous
+   * update, so two calls in one handler are both computed from the same
+   * pre-click base and the second navigation discards the first key. The hook's
+   * return value still looks right (it reflects the new location) while the URL
+   * — the thing users share — is missing a key.
+   *
+   * @see tasks/lessons/lessons/coupled-url-params-need-one-setter-not-two-calls.md
+   * @see tasks/lessons/lessons/two-url-state-hooks-in-one-handler-lose-a-facet.md
+   */
+  const setPair = useCallback(
+    (nextFrom: T, nextTo: T) => {
+      if (nextFrom === from && nextTo === to) return // no-op (Lesson 070)
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          applyKey(next, 'from', nextFrom)
+          applyKey(next, 'to', nextTo)
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams, applyKey, from, to]
+  )
+
+  return { from, to, setFrom, setTo, setPair }
 }

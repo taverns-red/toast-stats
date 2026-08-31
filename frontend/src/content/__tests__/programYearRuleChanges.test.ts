@@ -68,6 +68,7 @@ describe('programYearRuleChanges — the verified inventory (#1400)', () => {
   const byId = (id: string) => PROGRAM_YEAR_RULE_CHANGES.find(c => c.id === id)
 
   it.each([
+    ['py-2026-2027-district-club-growth-achievement', '2026-2027'],
     ['py-2026-2027-dcp-goals-2-3-eom', '2026-2027'],
     ['py-2026-2027-region-advisor-prerequisite-retired', '2026-2027'],
     ['py-2025-2026-district-tier-thresholds-raised', '2025-2026'],
@@ -86,6 +87,18 @@ describe('programYearRuleChanges — the verified inventory (#1400)', () => {
     const change = byId('py-2026-2027-dcp-goals-2-3-eom')
     expect(change?.whatChanged).toMatch(/online meeting mastery/i)
     expect(change?.comparability).toMatch(/like-for-like|comparable/i)
+  })
+
+  it('claims the Club Growth Achievement predicate and says the blank years are a rules artefact', () => {
+    const change = byId('py-2026-2027-district-club-growth-achievement')
+    // The `sources` claim is what pacifies the drift guard — a PY-gated file
+    // with no entry claiming it fails the build (#1400).
+    expect(change?.sources).toContain(
+      'frontend/src/utils/clubGrowthAchievement.ts'
+    )
+    expect(change?.whatChanged).toMatch(/september 30/i)
+    expect(change?.whatChanged).toMatch(/march 31/i)
+    expect(change?.comparability).toMatch(/did not exist before/i)
   })
 
   it('says the pre-2025-26 CSP default is "assume submitted", not "failed"', () => {

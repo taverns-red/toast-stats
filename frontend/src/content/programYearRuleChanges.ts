@@ -47,6 +47,21 @@ export interface ProgramYearRuleChange {
 export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
   // ───────────────────────────── PY 2026-2027 ─────────────────────────────
   {
+    id: 'py-2026-2027-district-club-growth-achievement',
+    programYear: '2026-2027',
+    title: 'New District Club Growth Achievement for early club chartering',
+    affects: 'District recognition · new-club charter counts',
+    whatChanged:
+      'Toastmasters introduced the District Club Growth Achievement, recognising districts that reach club-charter milestones early: charter 3 or 5 new clubs by September 30, and 3, 5 or 10 new clubs by March 31. The count runs cumulatively from July 1, so the March total includes the clubs already counted in September, and a district holds the highest milestone it reached at each checkpoint.',
+    comparability:
+      'The achievement did not exist before 2026-27, so earlier program years show nothing for it — that blank is a rules artefact, not a district failing to earn it. Each checkpoint is judged on the charter count as it stood on that date, because a district’s count can fall later in the year without any charter being revoked: a club chartered this year that moves to another district takes its charter credit with it.',
+    issues: [1473, 1474, 1476],
+    sources: [
+      'frontend/src/utils/clubGrowthAchievement.ts',
+      'frontend/src/components/ClubGrowthAchievementCard.tsx',
+    ],
+  },
+  {
     id: 'py-2026-2027-dcp-goals-2-3-eom',
     programYear: '2026-2027',
     title: 'DCP goals 2 and 3 can be met by Online Meeting Mastery',

@@ -14,3 +14,7 @@ package-lock.json
 # Learning artifacts are prose/notes, not code — formatting them just creates
 # inherited format-gate reds on unrelated PRs (e.g. lesson 173 blocked #1256)
 tasks/lessons/
+
+# Frozen archive captures — reformatting a byte-frozen fixture triples its
+# size and buries any real diff (#1466)
+scripts/lib/__tests__/fixtures/global-rollup/*.json
