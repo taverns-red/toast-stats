@@ -38,6 +38,7 @@ import {
   evaluateRegistryFreshness,
   buildRegistryStaleTitle,
   buildRegistryStaleBody,
+  classifyRegistryRemediation,
 } from './lib/registryFreshness.js'
 import { retryAsync } from './lib/retry.js'
 
@@ -92,12 +93,26 @@ async function main(): Promise<void> {
   }
 
   const result = evaluateRegistryFreshness(registryMonths, entries)
+  const remediation = classifyRegistryRemediation(result)
   log(
     `verdict: fresh=${result.fresh} checked=[${result.checkedMonths.join(', ')}] ` +
-      `missing=${result.missing.length} mismatched=${result.mismatched.length} emptyFeed=${result.emptyFeed}`
+      `missing=${result.missing.length} mismatched=${result.mismatched.length} ` +
+      `emptyFeed=${result.emptyFeed} remediation=${remediation}`
   )
 
   emitOutput('stale', result.fresh ? 'false' : 'true')
+
+  // `remediation` is what the workflow branches on (#1419). `stale` is kept
+  // for the unchanged auto-close step (and any other consumer): a fresh
+  // verdict still closes the open alert.
+  //
+  //   auto   → the derivation proved the entries; the pipeline opens the
+  //            registry PR itself. Filing a red issue for work the machine
+  //            just did is what made #1419 re-fire daily for 19 days.
+  //   manual → the monitor is blind or crashed. File/refresh the red issue
+  //            exactly as before — fail-closed is untouched (L107).
+  emitOutput('remediation', remediation)
+
   if (!result.fresh) {
     writeFileSync(BODY_FILE, buildRegistryStaleBody(result), 'utf8')
     emitOutput('title', buildRegistryStaleTitle(result))
@@ -121,6 +136,8 @@ main().catch(err => {
     'utf8'
   )
   emitOutput('stale', 'true')
+  // A crash is never auto-remediable — there is no derivation to trust.
+  emitOutput('remediation', 'manual')
   emitOutput('title', '🟥 closing-date registry check crashed')
   emitOutput('body_file', BODY_FILE)
 })
