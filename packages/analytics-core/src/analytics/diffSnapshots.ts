@@ -1,4 +1,3 @@
-// CI re-trigger touch (#1459)
 /**
  * Pure snapshot-to-snapshot diff engine ("What Changed", epic #797 Sprint 1).
  *
