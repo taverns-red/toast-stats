@@ -64,6 +64,150 @@ function distinguishedByClub(
   return map
 }
 
+/* ── Per-club payment-type attribution (#1459) ─────────────────────────────
+ *
+ * A club's payments total moves for five distinct reasons, and a district
+ * leader campaigns on each differently: an October renewal is a retention win,
+ * a new member is growth, a charter payment is a brand-new club. The engine
+ * already diffed the total and threw the composition away.
+ *
+ * Sources (live-verified against the 2026-08-30 D61 snapshot, 2026-08-31):
+ *   - October/April renewals and new members are TYPED, required fields on
+ *     `clubs[]` — present in every snapshot.
+ *   - Late renewals and charter payments exist ONLY in the raw
+ *     `districtPerformance` rows (columns `Late Ren.` / `Total Chart`, keyed by
+ *     the padded `Club` column). They are untyped, so they are also OPTIONAL:
+ *     a snapshot without those rows leaves them `undefined` and their share
+ *     surfaces as the `N other` residual. Never default them to 0 — a faked
+ *     zero would silently report "no late renewals" where the truth is
+ *     "we cannot see late renewals", the Lesson-115 failure mode.
+ */
+
+/** One club's payments split by type. `late`/`charter` absent = unavailable. */
+interface PaymentTypes {
+  oct: number
+  apr: number
+  new: number
+  late?: number
+  charter?: number
+}
+
+/**
+ * A raw CSV cell as a payment count, or undefined when it is absent or
+ * unreadable. A payment count is a NON-NEGATIVE INTEGER: a negative or
+ * fractional cell is corrupt, not a small number, and reading it as one would
+ * feed a fabricated delta straight into the label.
+ */
+function rawCount(value: unknown): number | undefined {
+  if (value === null || value === undefined || typeof value === 'boolean') {
+    return undefined
+  }
+  const text = String(value).trim().replace(/,/g, '')
+  if (text === '') return undefined
+  const n = Number(text)
+  return Number.isInteger(n) && n >= 0 ? n : undefined
+}
+
+/** Payment-type counts keyed canonically by clubId (#1440), like distinguishedByClub. */
+function paymentTypesByClub(
+  snapshot: DistrictStatisticsFile
+): Map<string, PaymentTypes> {
+  const map = new Map<string, PaymentTypes>()
+  for (const club of snapshot.clubs) {
+    const key = normalizeClubId(club.clubId)
+    if (!key) continue
+    map.set(key, {
+      oct: club.octoberRenewals,
+      apr: club.aprilRenewals,
+      new: club.newMembers,
+    })
+  }
+  for (const row of snapshot.districtPerformance) {
+    const key = normalizeClubId(row['Club'])
+    const entry = key ? map.get(key) : undefined
+    if (!entry) continue
+    // FIRST row wins: two raw rows can normalize onto one club (padded and
+    // bare `Club` values in the same export). Overwriting would make the value
+    // depend on row order, silently.
+    const late = rawCount(row['Late Ren.'])
+    const charter = rawCount(row['Total Chart'])
+    if (late !== undefined && entry.late === undefined) entry.late = late
+    if (charter !== undefined && entry.charter === undefined) {
+      entry.charter = charter
+    }
+  }
+  return map
+}
+
+/** Display nouns per payment type, singular/plural. */
+const PAYMENT_TYPE_NOUNS: {
+  key: keyof PaymentTypes
+  one: string
+  many: string
+}[] = [
+  { key: 'oct', one: 'October renewal', many: 'October renewals' },
+  { key: 'apr', one: 'April renewal', many: 'April renewals' },
+  { key: 'new', one: 'new member', many: 'new members' },
+  { key: 'late', one: 'late renewal', many: 'late renewals' },
+  { key: 'charter', one: 'charter payment', many: 'charter payments' },
+]
+
+/**
+ * "Club X recorded 4 new payments (2 October renewals, 1 new member, 1 other)".
+ *
+ * Only types whose delta is POSITIVE are named, and the unexplained remainder
+ * is reported as `N other`, so the parts always sum to EXACTLY the total. When
+ * the named types already overshoot the total the breakdown is dropped
+ * entirely — see the clamp below. A DECREASE gets no
+ * breakdown at all: a payments total only falls through a TI-side correction,
+ * and attributing that by type would narrate a story the numbers do not
+ * support.
+ */
+function paymentsLabel(
+  name: string,
+  delta: number,
+  from: PaymentTypes | undefined,
+  to: PaymentTypes | undefined
+): string {
+  const n = Math.abs(delta)
+  const noun = n === 1 ? 'payment' : 'payments'
+  if (delta < 0) return `${name} recorded ${n} fewer ${noun}`
+
+  // Only types that GREW are named — a type that shrank inside a growing total
+  // is a correction, not a story. `claimed` therefore sums the POSITIVE deltas
+  // only: it must equal what the parenthetical actually says, or the residual
+  // computed from it would not close the gap it claims to close.
+  const parts: string[] = []
+  let claimed = 0
+  if (from && to) {
+    for (const { key, one, many } of PAYMENT_TYPE_NOUNS) {
+      const a = from[key]
+      const b = to[key]
+      // Unavailable on EITHER side is unavailable for the delta.
+      if (a === undefined || b === undefined) continue
+      const d = b - a
+      if (d > 0) {
+        claimed += d
+        parts.push(`${d} ${d === 1 ? one : many}`)
+      }
+    }
+  }
+
+  // The per-type counts and the total come from different columns and can
+  // disagree — most reachably when a type's source column is absent on one
+  // side and DataTransformer's fallback reports 0 (a 0→45 October jump against
+  // a +3 total). When the named parts overshoot the total, the breakdown is
+  // not a decomposition of it; print the total alone rather than a
+  // parenthetical the headline contradicts.
+  if (claimed > delta) return `${name} recorded ${n} new ${noun}`
+
+  const residual = delta - claimed
+  if (residual > 0) parts.push(`${residual} other`)
+
+  const breakdown = parts.length > 0 ? ` (${parts.join(', ')})` : ''
+  return `${name} recorded ${n} new ${noun}${breakdown}`
+}
+
 const TIER_NAMES: Record<string, string> = {
   D: 'Distinguished',
   S: 'Select Distinguished',
@@ -235,6 +379,8 @@ export function diffSnapshots(
 ): SnapshotDiff {
   const fromDist = distinguishedByClub(from)
   const toDist = distinguishedByClub(to)
+  const fromPayTypes = paymentTypesByClub(from)
+  const toPayTypes = paymentTypesByClub(to)
 
   // Keyed on the CANONICAL club id (#1440). Keying on the raw id meant two
   // dates written from differently-padded TI exports diffed as every club
@@ -336,6 +482,20 @@ export function diffSnapshots(
         clubName: toClub.clubName,
         label: membershipLabel(toClub.clubName, membership.delta),
         magnitude: membership.delta,
+      })
+    }
+    if (payments.delta !== 0) {
+      events.push({
+        category: 'payments',
+        clubId,
+        clubName: toClub.clubName,
+        label: paymentsLabel(
+          toClub.clubName,
+          payments.delta,
+          fromPayTypes.get(key),
+          toPayTypes.get(key)
+        ),
+        magnitude: payments.delta,
       })
     }
     if (dcpGoals.delta !== 0) {

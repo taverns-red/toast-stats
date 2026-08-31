@@ -39,6 +39,8 @@ function snapshot(opts: {
   date: string
   clubs: ClubStatisticsFile[]
   perf?: ScrapedRecord[]
+  /** Raw District.aspx rows — the only home of `Late Ren.`/`Total Chart` (#1459). */
+  districtPerf?: ScrapedRecord[]
 }): DistrictStatisticsFile {
   const { clubs } = opts
   return {
@@ -59,7 +61,7 @@ function snapshot(opts: {
     },
     divisionPerformance: [],
     clubPerformance: opts.perf ?? clubs.map(c => perf(c.clubId, '')),
-    districtPerformance: [],
+    districtPerformance: opts.districtPerf ?? [],
   }
 }
 
@@ -567,5 +569,339 @@ describe('diffSnapshots — district-composition discontinuity (#1443)', () => {
     expect(diff.events.filter(e => e.category === 'club-removed')).toHaveLength(
       10
     )
+  })
+})
+
+/* Per-club payment events with payment-type attribution (#1459, epic #1458
+   Sprint 1). The engine already computed each club's `payments` delta and
+   dropped it on the floor — renewal season, the most campaign-relevant signal
+   a district leader has, was invisible in the feed.
+
+   Attribution sources (live-verified against
+   https://cdn.taverns.red/snapshots/2026-08-30/district_61.json on 2026-08-31):
+     - October/April renewals and new members are TYPED, required club fields.
+     - Late renewals and charter payments live only in the raw
+       `districtPerformance` rows (columns `Late Ren.` / `Total Chart`, keyed by
+       `Club`), which every snapshot retains and the CDN read path hands over
+       unparsed. When those rows are absent the two types are UNAVAILABLE, never
+       faked as 0 — their contribution surfaces as the `N other` residual. */
+describe('diffSnapshots — payments events (#1459)', () => {
+  /** A raw districtPerformance row. Omit a column to make it unavailable. */
+  function dperf(
+    clubId: string,
+    over: Record<string, string> = {}
+  ): ScrapedRecord {
+    return { Club: clubId, ...over }
+  }
+
+  function paymentsEvents(
+    from: DistrictStatisticsFile,
+    to: DistrictStatisticsFile
+  ) {
+    return diffSnapshots(from, to).events.filter(e => e.category === 'payments')
+  }
+
+  it('emits a payments event attributed from the typed club fields', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 20,
+          octoberRenewals: 5,
+          aprilRenewals: 3,
+          newMembers: 2,
+        }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 24,
+          octoberRenewals: 7,
+          aprilRenewals: 4,
+          newMembers: 3,
+        }),
+      ],
+    })
+
+    const events = paymentsEvents(from, to)
+    expect(events).toHaveLength(1)
+    expect(events[0]).toEqual({
+      category: 'payments',
+      clubId: '3045',
+      clubName: 'Club 3045',
+      label:
+        'Club 3045 recorded 4 new payments ' +
+        '(2 October renewals, 1 April renewal, 1 new member)',
+      magnitude: 4,
+    })
+  })
+
+  it('attributes late renewals and charter payments from the raw districtPerformance rows', () => {
+    const base = {
+      paymentsCount: 20,
+      octoberRenewals: 5,
+      aprilRenewals: 3,
+      newMembers: 2,
+    }
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', ...base })],
+      districtPerf: [
+        dperf('00003045', { 'Late Ren.': '0', 'Total Chart': '0' }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', ...base, paymentsCount: 23 })],
+      // Padded `Club` key on one side only — the join is canonical (#1440).
+      districtPerf: [dperf('3045', { 'Late Ren.': '2', 'Total Chart': '1' })],
+    })
+
+    const events = paymentsEvents(from, to)
+    expect(events).toHaveLength(1)
+    expect(events[0]!.magnitude).toBe(3)
+    expect(events[0]!.label).toBe(
+      'Club 3045 recorded 3 new payments (2 late renewals, 1 charter payment)'
+    )
+  })
+
+  it('falls back to an "other" residual when late/charter columns are unavailable', () => {
+    // No districtPerformance rows at all: 1 of the 5 payments is explained by
+    // the typed October field, the other 4 must be reported as unattributed —
+    // never silently dropped, never 0-faked into a named type.
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 20,
+          octoberRenewals: 5,
+          aprilRenewals: 3,
+          newMembers: 2,
+        }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 25,
+          octoberRenewals: 6,
+          aprilRenewals: 3,
+          newMembers: 2,
+        }),
+      ],
+    })
+
+    const events = paymentsEvents(from, to)
+    expect(events[0]!.label).toBe(
+      'Club 3045 recorded 5 new payments (1 October renewal, 4 other)'
+    )
+    expect(events[0]!.label).not.toContain('NaN')
+  })
+
+  it('treats an unparseable raw column as unavailable, not as zero', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 20 })],
+      districtPerf: [dperf('3045', { 'Late Ren.': '', 'Total Chart': '' })],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 22 })],
+      districtPerf: [dperf('3045', { 'Late Ren.': 'n/a', 'Total Chart': '—' })],
+    })
+
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 2 new payments (2 other)'
+    )
+  })
+
+  it('emits nothing when the payments delta is zero, even if the type mix shifted', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 20,
+          octoberRenewals: 5,
+          newMembers: 2,
+        }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 20,
+          octoberRenewals: 6,
+          newMembers: 1,
+        }),
+      ],
+    })
+    expect(paymentsEvents(from, to)).toEqual([])
+  })
+
+  it('reports a negative delta as a plain correction, with no type breakdown', () => {
+    // A drop is a data correction at TI, not five clubs un-paying a renewal;
+    // attributing it by type would narrate a story the numbers do not support.
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 22, octoberRenewals: 5 })],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 21, octoberRenewals: 4 })],
+    })
+
+    const events = paymentsEvents(from, to)
+    expect(events[0]!.magnitude).toBe(-1)
+    expect(events[0]!.label).toBe('Club 3045 recorded 1 fewer payment')
+    expect(events[0]!.label).not.toContain('(')
+  })
+
+  /* The breakdown must never claim MORE than the total it decomposes.
+     Per-type counts and the total can disagree: DataTransformer sources
+     octoberRenewals from districtPerformance with a clubPerformance fallback
+     that yields 0 when the columns are absent, so a pair straddling that skew
+     shows a huge type delta against a small total delta. Printing the parts
+     anyway narrates a number the headline contradicts one clause earlier. */
+  it('suppresses the breakdown when the type deltas exceed the total', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 20, octoberRenewals: 0 })],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 23, octoberRenewals: 45 })],
+    })
+
+    // NOT "3 new payments (45 October renewals)".
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 3 new payments'
+    )
+  })
+
+  it('suppresses the breakdown when a negative type delta makes the parts overshoot', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 20,
+          octoberRenewals: 0,
+          newMembers: 2,
+        }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 24,
+          octoberRenewals: 6,
+          newMembers: 0,
+        }),
+      ],
+    })
+
+    // oct +6 alone overshoots the +4 total, so no parts are named.
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 4 new payments'
+    )
+  })
+
+  it('never lets the residual exceed the total', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 20, octoberRenewals: 3 })],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 25, octoberRenewals: 0 })],
+    })
+
+    // A NET-summed residual would read "8 other" against a 5-payment total.
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 5 new payments (5 other)'
+    )
+  })
+
+  it('ignores a negative or fractional raw count rather than trusting it', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 20 })],
+      districtPerf: [
+        dperf('3045', { 'Late Ren.': '-3', 'Total Chart': '2.5' }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 22 })],
+      districtPerf: [
+        dperf('3045', { 'Late Ren.': '1,000', 'Total Chart': '2.5' }),
+      ],
+    })
+
+    // A payment count is a non-negative integer; anything else is unreadable,
+    // so both types stay unavailable and the delta reports as residual.
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 2 new payments (2 other)'
+    )
+  })
+
+  it('takes the FIRST raw row when duplicates normalize to one club', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 20 })],
+      districtPerf: [dperf('3045', { 'Late Ren.': '0', 'Total Chart': '0' })],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 22 })],
+      districtPerf: [
+        dperf('3045', { 'Late Ren.': '2', 'Total Chart': '0' }),
+        // Same club, padded — must NOT silently overwrite the row above.
+        dperf('00003045', { 'Late Ren.': '9', 'Total Chart': '0' }),
+      ],
+    })
+
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 2 new payments (2 late renewals)'
+    )
+  })
+
+  it('joins the sorted feed by absolute magnitude like every other category', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [
+        club({ clubId: '101', membershipCount: 20, paymentsCount: 20 }),
+        club({ clubId: '102', membershipCount: 20, paymentsCount: 20 }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [
+        // Club 101: +2 members, +9 payments (9 outranks everything below).
+        club({
+          clubId: '101',
+          membershipCount: 22,
+          paymentsCount: 29,
+          newMembers: 9,
+        }),
+        club({ clubId: '102', membershipCount: 20, paymentsCount: 20 }),
+      ],
+    })
+
+    const events = diffSnapshots(from, to).events
+    expect(events.map(e => e.category)).toEqual(['payments', 'membership'])
+    expect(events[0]!.magnitude).toBe(9)
   })
 })

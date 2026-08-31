@@ -13,6 +13,7 @@ import {
 describe('DiffEventCategorySchema (#1014)', () => {
   it.each([
     'membership',
+    'payments',
     'dcp-goals',
     'distinguished',
     'club-added',

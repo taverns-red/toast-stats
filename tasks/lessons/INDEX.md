@@ -3,6 +3,7 @@
 
 ## lessons (manifest-pinned + session-judged)
 - `a-dated-write-must-take-its-entity-set-from-that-date.md` — A write dated in the past must take its entity set from that date's own source — a successful fetch is not evidence the entity existed then  (2026-08-31)
+- `an-attribution-breakdown-over-mixed-availability-sources-needs-a-residual-not-a-zero-fill.md` — An attribution breakdown assembled from sources of differing availability needs an explicit residual term; zero-filling the unavailable ones turns "we cannot see it" into the confident claim "there was none"  (2026-08-31)
 - `classify-alerts-by-who-can-remediate-them-not-just-by-severity.md` — A detect-only monitor for a machine-derivable condition re-fires forever; classify staleness by who can remediate it, not just by whether it is stale  (2026-08-31)
 - `dark-mode-css-intercepts-tailwind-utilities-with-important-beating-theme-dark-variants.md` — dark-mode.css intercepts common Tailwind utilities with !important, so a component's own `theme-dark:` colour variant loses — and only for the properties that happen to be intercepted, which is why the break looks half-applied  (2026-08-31)
 - `gsutil-cp-dash-i-silently-truncates-its-stdin-source-list.md` — '`gsutil cp -I` copies only the first two stdin sources and exits 0 — use `gcloud storage cp`'  (2026-08-31)

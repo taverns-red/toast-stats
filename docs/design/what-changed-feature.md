@@ -85,6 +85,19 @@ Per-aggregate delta is `{ from, to, delta }` (`delta = to − from`, signed).
 from raw `clubPerformance` goal fields, never inferred Goals 1–N order
 (tripwire).
 
+- **`payments` events (#1459)** — the per-club payments delta, with the payment
+  TYPE attribution carried in the label text (no structured `breakdown` field
+  until a consumer needs to compute over one). October/April renewals and new
+  members come from the typed `clubs[]` fields; late renewals and charter
+  payments come from the raw `districtPerformance` rows (`Late Ren.` /
+  `Total Chart`), which are untyped and therefore **optional** — absent or
+  unreadable leaves the type `undefined`, never 0, and its share surfaces as an
+  `N other` residual. The named parts always sum to exactly the total; when the
+  per-type counts overshoot it (their source columns can skew independently of
+  the total) the breakdown is dropped rather than contradicting the headline. A
+  DECREASE gets no breakdown at all — a falling payments total is a TI-side
+  correction, not clubs un-paying a renewal.
+
 ## §5. Phase 1 frontend
 
 - `useSnapshotDiff(districtId, from, to)` — React Query keyed by the date pair,

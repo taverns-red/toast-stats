@@ -465,6 +465,94 @@ describe('DistrictChangesPage — district realignment (#1443)', () => {
   })
 })
 
+/* Payment changes group (#1459, epic #1458 Sprint 1).
+
+   CATEGORY_GROUPS is an explicit display list: a category it does not name is
+   dropped SILENTLY — no error, no fallback group, the events simply never
+   render. So a new engine category is only half-shipped until this list names
+   it, and that half is exactly the half a test catches. */
+describe('DistrictChangesPage — payment changes (#1459)', () => {
+  beforeEach(() => {
+    mockedDistricts.mockReturnValue({
+      data: { districts: [{ id: '61', name: '61' }] },
+    } as unknown as ReturnType<typeof useDistricts>)
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-07-31', '2026-08-30'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+  })
+
+  it('renders a Payment changes group with the type breakdown', () => {
+    mockedDiff.mockReturnValue({
+      data: diffFixture({
+        events: [
+          {
+            category: 'payments',
+            clubId: '00003045',
+            clubName: 'Limestone City Club',
+            label:
+              'Limestone City Club recorded 4 new payments ' +
+              '(2 October renewals, 1 new member, 1 other)',
+            magnitude: 4,
+          },
+          // Neighbours on both sides, so the ordering assertion below has
+          // something to be ordered against (an empty group renders nothing).
+          {
+            category: 'membership',
+            clubId: '00002959',
+            clubName: 'Bytown Club',
+            label: 'Bytown Club gained 3 members',
+            magnitude: 3,
+          },
+          {
+            category: 'dcp-goals',
+            clubId: '00002960',
+            clubName: 'Rideau Club',
+            label: 'Rideau Club met 1 more DCP goal',
+            magnitude: 1,
+          },
+        ],
+      }),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    const { container } = renderPage()
+
+    expect(screen.getByText(/Payment changes/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/recorded 4 new payments \(2 October renewals/)
+    ).toBeInTheDocument()
+    // The club name links to its scoped route, like every other club event.
+    expect(
+      screen.getByRole('link', { name: 'Limestone City Club' })
+    ).toHaveAttribute('href', '/district/61/club/00003045')
+
+    // Payments sits with the per-club metric churn, between membership and
+    // DCP — asserted as ORDER, not mere presence.
+    const headings = Array.from(
+      container.querySelectorAll('details summary')
+    ).map(s => s.textContent ?? '')
+    const membership = headings.findIndex(h => /Membership changes/.test(h))
+    const payments = headings.findIndex(h => /Payment changes/.test(h))
+    const dcp = headings.findIndex(h => /DCP goal changes/.test(h))
+    expect(membership).toBeGreaterThanOrEqual(0)
+    expect(payments).toBe(membership + 1)
+    expect(dcp).toBe(payments + 1)
+  })
+
+  it('renders no Payment changes group when there are no payments events', () => {
+    mockedDiff.mockReturnValue({
+      data: diffFixture(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    expect(screen.queryByText(/Payment changes/)).not.toBeInTheDocument()
+  })
+})
+
 /* #1462 (epic #1458 Sprint 4) — time-window preset chips.
 
    "What changed last week / last month / since July 1" used to mean scrolling a
