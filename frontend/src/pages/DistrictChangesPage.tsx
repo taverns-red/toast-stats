@@ -14,6 +14,8 @@ import { KpiDeltaCard } from '../components/KpiDeltaCard'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ChangeGroup } from '../components/ChangeGroup'
+import { ExportButton } from '../components/ExportButton'
+import { exportSnapshotDiff } from '../utils/csvExport'
 import type {
   DiffEvent,
   DiffEventCategory,
@@ -214,15 +216,31 @@ const DistrictChangesPage: React.FC = () => {
 
             {!invalidPair && diff && (
               <>
-                <p
-                  className="district-changes__headline"
-                  data-testid="changes-headline"
-                >
-                  Changes for {districtName} from {fmtDate(diff.from.date)} to{' '}
-                  {fmtDate(diff.to.date)}
-                  {diff.dayCount > 0 &&
-                    ` · ${diff.dayCount} day${diff.dayCount === 1 ? '' : 's'}`}
-                </p>
+                {/* Export parity (#1461). The headline names the date pair and
+                    the button beside it exports exactly that pair — same diff
+                    object, so the CSV can never disagree with what is on
+                    screen. Reuses the app-wide ExportButton + the existing
+                    exportSnapshotDiff (already wired into ClubsTable); no
+                    second exporter, no bespoke button variant. Rendered only
+                    inside this `!invalidPair && diff` branch, so the loading,
+                    error, single-snapshot and invalid-pair states have no
+                    export affordance — and it stands down when the diff is
+                    genuinely empty, where the CSV would carry only headers. */}
+                <div className="district-changes__headline-row">
+                  <p
+                    className="district-changes__headline"
+                    data-testid="changes-headline"
+                  >
+                    Changes for {districtName} from {fmtDate(diff.from.date)} to{' '}
+                    {fmtDate(diff.to.date)}
+                    {diff.dayCount > 0 &&
+                      ` · ${diff.dayCount} day${diff.dayCount === 1 ? '' : 's'}`}
+                  </p>
+                  {(diff.events.length > 0 ||
+                    diff.clubs.bothPresent.length > 0) && (
+                    <ExportButton onExport={() => exportSnapshotDiff(diff)} />
+                  )}
+                </div>
 
                 {diff.rosterDiscontinuity && (
                   <p
