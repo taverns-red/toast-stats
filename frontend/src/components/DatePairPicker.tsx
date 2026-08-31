@@ -37,8 +37,9 @@ export interface DatePairPickerProps<T extends string = string> {
 export const CHIP_LAYOUT =
   'inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-full text-xs font-medium border'
 
-/** The resting surface a picker chip wears. */
-export const CHIP_SURFACE =
+/** The resting surface a picker chip wears. Local — the preset chips take
+ *  their colour from CSS tokens, not from this string (see #1462). */
+const CHIP_SURFACE =
   'bg-white border-gray-200 text-gray-700 theme-dark:bg-gray-800 theme-dark:border-gray-700 theme-dark:text-gray-200'
 
 const CHIP_BASE = `${CHIP_LAYOUT} ${CHIP_SURFACE}`

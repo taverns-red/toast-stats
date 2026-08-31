@@ -26,7 +26,6 @@
 .district-changes__controls {
   display: flex;
   flex-direction: column;
-  flex-wrap: wrap;
   gap: 0.75rem;
   align-items: flex-start;
 }
@@ -45,7 +44,7 @@
   border-color: var(--line);
 }
 
-.date-preset-chip:hover:not(:disabled) {
+.date-preset-chip:hover:not([aria-disabled='true']) {
   background-color: var(--surface-2);
   color: var(--ink);
 }
@@ -58,9 +57,12 @@
   border-color: var(--ink);
 }
 
-.date-preset-chip:disabled {
+.date-preset-chip[aria-disabled='true'] {
   background-color: var(--surface-2);
-  color: var(--ink-4);
+  /* --ink-3, not the dimmer --ink-4: at text-xs, --ink-4 lands ~3.3:1 on
+     --surface-2. Disabled controls are WCAG-exempt, but the chip still has to
+     be READ to explain why the window is unavailable. */
+  color: var(--ink-3);
   border-color: var(--line);
   cursor: not-allowed;
 }

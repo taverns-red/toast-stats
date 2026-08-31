@@ -31,6 +31,8 @@
  * through the existing URL state, so deep links stay plain date pairs.
  */
 
+import { getProgramYearForDate } from './programYear'
+
 /** The window a preset chip selects. */
 export type DatePairPresetId =
   'last-snapshot' | 'week' | 'month' | 'program-year'
@@ -98,18 +100,6 @@ function shiftMonths(iso: string, months: number): string {
   return `${targetYear}-${pad(targetMonth + 1)}-${pad(Math.min(day, lastDay))}`
 }
 
-/**
- * The July 1 that opened the Toastmasters program year containing `iso`.
- * A date in July belongs to the year that just started; June belongs to the one
- * that began the previous July. String-sliced, not `Date`-parsed — the same
- * UTC-safety reason as `areaRecognitionState.programYearStartYear`.
- */
-export function programYearStartBoundary(iso: string): string {
-  const year = Number(iso.slice(0, 4))
-  const month = Number(iso.slice(5, 7))
-  return `${month >= 7 ? year : year - 1}-07-01`
-}
-
 /** Latest date at or before `target`, or undefined if the history starts later. */
 function latestAtOrBefore<T extends string>(
   ascending: readonly T[],
@@ -146,7 +136,10 @@ export function resolveDatePairPreset<T extends string>(
   dates: readonly T[]
 ): { from: T; to: T } | null {
   if (dates.length < 2) return null
-  const ascending = [...dates].sort((a, b) => a.localeCompare(b))
+  // Plain `<`, not localeCompare: ISO YYYY-MM-DD sorts chronologically as
+  // bytes, and a locale collator is both slower and (in principle) locale-
+  // dependent for a value that must never be.
+  const ascending = [...dates].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
   const to = ascending[ascending.length - 1]!
 
   let from: T | undefined
@@ -161,7 +154,10 @@ export function resolveDatePairPreset<T extends string>(
       from = latestAtOrBefore(ascending, shiftMonths(to, -1))
       break
     case 'program-year':
-      from = earliestAtOrAfter(ascending, programYearStartBoundary(to))
+      // The July-1 rule already lives in programYear.ts, timezone-hardened and
+      // covered by programYear.timezone.test.ts — reuse it rather than adding a
+      // fourth copy of the boundary arithmetic to this directory (R7).
+      from = earliestAtOrAfter(ascending, getProgramYearForDate(to).startDate)
       break
   }
 

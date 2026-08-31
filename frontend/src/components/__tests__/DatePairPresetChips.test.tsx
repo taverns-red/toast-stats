@@ -76,8 +76,10 @@ describe('DatePairPresetChips', () => {
     expect(onSelect).toHaveBeenCalledWith('2025-07-10', '2026-05-26')
   })
 
-  it('marks the chip matching the current pair as pressed, and only that one', () => {
+  it('marks the chip matching the current pair as pressed', () => {
     // The default pair (previous → latest) IS the "Last snapshot" window.
+    // Exactly one chip is pressed *for this history* — with a sparser history
+    // two windows can legitimately resolve to the same pair and both press.
     renderChips({})
     expect(screen.getByTestId('changes-preset-last-snapshot')).toHaveAttribute(
       'aria-pressed',
@@ -117,13 +119,25 @@ describe('DatePairPresetChips', () => {
       to: '2026-05-26',
     })
     const week = screen.getByTestId('changes-preset-week')
-    expect(week).toBeDisabled()
-    expect(screen.getByTestId('changes-preset-month')).toBeDisabled()
-    expect(screen.getByTestId('changes-preset-last-snapshot')).toBeEnabled()
+    expect(week).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByTestId('changes-preset-month')).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    )
+    expect(screen.getByTestId('changes-preset-last-snapshot')).toHaveAttribute(
+      'aria-disabled',
+      'false'
+    )
     // Both dates fall inside PY 2025-26, so "Program year" honestly resolves to
     // the same pair — two windows describing one comparison, both true.
-    expect(screen.getByTestId('changes-preset-program-year')).toBeEnabled()
+    expect(screen.getByTestId('changes-preset-program-year')).toHaveAttribute(
+      'aria-disabled',
+      'false'
+    )
 
+    // aria-disabled keeps the chip focusable so its reason can be read; the
+    // click handler is what actually makes it inert.
+    expect(week).not.toHaveAttribute('disabled')
     await user.click(week)
     expect(onSelect).not.toHaveBeenCalled()
   })
@@ -146,6 +160,11 @@ describe('DatePairPresetChips', () => {
     const week = screen.getByTestId('changes-preset-week')
     expect(week.textContent).toMatch(/^~1 week/)
     expect(week).toHaveTextContent(/nearest recorded date/i)
+    // ...and the label must not run into the description. JSX strips
+    // whitespace-only lines between elements, so without an explicit space the
+    // name concatenates to "~1 weekCompare the latest…" and is spoken as mush.
+    expect(week.textContent).toMatch(/^~1 week\s/)
+    expect(week.textContent).not.toMatch(/weekCompare/)
   })
 
   it('takes its colour from CSS, never a theme-intercepted gray utility', () => {

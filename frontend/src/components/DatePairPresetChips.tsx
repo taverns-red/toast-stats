@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { cn } from '../utils/cn'
 import { CHIP_LAYOUT } from './DatePairPicker'
 import {
@@ -54,10 +55,16 @@ export function DatePairPresetChips<T extends string>({
   to,
   onSelect,
 }: DatePairPresetChipsProps<T>) {
-  const chips = DATE_PAIR_PRESETS.map(preset => ({
-    ...preset,
-    pair: resolveDatePairPreset(preset.id, dates),
-  }))
+  // Each resolution copies + sorts `dates` (100+ entries for a mature
+  // district), so keep it off every unrelated re-render of the page.
+  const chips = useMemo(
+    () =>
+      DATE_PAIR_PRESETS.map(preset => ({
+        ...preset,
+        pair: resolveDatePairPreset(preset.id, dates),
+      })),
+    [dates]
+  )
 
   // Nothing to offer at all (a single recorded date) — the page already
   // explains that case in prose, so don't render an empty control group.
@@ -78,7 +85,12 @@ export function DatePairPresetChips<T extends string>({
             type="button"
             data-testid={`changes-preset-${id}`}
             aria-pressed={pressed}
-            disabled={pair === null}
+            // aria-disabled, NOT the native `disabled` attribute: a natively
+            // disabled button leaves the tab order, which would make the one
+            // thing a keyboard or screen-reader user needs here — WHY this
+            // window is unavailable — unreachable. The chip stays focusable and
+            // announces "dimmed"; the click handler below is the actual guard.
+            aria-disabled={pair === null}
             title={
               pair === null
                 ? `${description} — not enough recorded history`
@@ -97,11 +109,16 @@ export function DatePairPresetChips<T extends string>({
             {/* The visible label ("~1 week") is too terse to stand alone as an
                 accessible name, but must still START the name so voice control
                 ("click ~1 week") keeps working — WCAG 2.5.3. So the label leads
-                and the explanation follows, in the same button. */}
+                and the explanation follows, in the same button.
+
+                The leading space is load-bearing: JSX strips whitespace-only
+                lines between elements and .sr-only stays display:inline, so
+                without it the accessible name concatenates to
+                "~1 weekCompare the latest…" and is spoken as mush. */}
             <span className="sr-only">
               {pair === null
-                ? `${description} — not enough recorded history`
-                : description}
+                ? ` ${description} — not enough recorded history`
+                : ` ${description}`}
             </span>
           </button>
         )
