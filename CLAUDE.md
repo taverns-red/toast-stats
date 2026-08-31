@@ -93,13 +93,6 @@ DISCIPLINE (quarantine/R1) guards below contain those root causes, so they stay.
 - **Unit tests must not full-page-mount (R22).** `npm run test:no-page-mounts:check` fails if a unit-project test imports a `pages/*Page` / `<App>`. Page mounts → `src/pages/__tests__/` or `src/__tests__/integration/`.
 - **Quarantine ≠ skip (R1).** `frontend/test-quarantine.json` is empty; an entry needs a reason + tracking issue and is loudly reported by `npm run test:quarantine:check`. Don't bump `testTimeout` to mask contention — root-cause it.
 
-### Sprint-runner stuck-session liveness (epic #933 — don't unknowingly break)
-
-- **The runner reaps stuck sessions; a STALL probe must keep its feed.** Each tick fuses three probes (`scripts/lib/sprint-runner-probes.sh` + `…-liveness.sh`): **commit-age** (no commit 45 min → STALL), **process** (`claude` gone + screen alive → **HUSK**, conclusive; present but CPU ~0 → STALL), **log** (per-session screen logfile is 45-min stale OR its tail collapsed to a repeating loop — the #871 signature → STALL). Fusion: **HUSK alone → reap now**; **≥2 STALL → STUCK** (corroborated); **exactly 1 STALL → SUSPECT** (logged, _never_ reaped — the false-positive guard); else HEALTHY. UNKNOWN is never STALL.
-- **The log probe's feed is `RUNNER_LOG_DIR/session-<issue>.log`, written at launch — don't sever it.** `launch_sprint_session` wires it via a per-session screenrc (`logfile` + `deflog on`, launched `-c <rc> -L`; macOS screen 4.00.03 has no `-Logfile`). Without that logfile the log probe is permanently UNKNOWN and the **#871 alive-but-looping zombie becomes undetectable** (commit STALL + process OK + log UNKNOWN = 1 soft signal = SUSPECT, never reaped). The `-dmS <name>` token stays **first** in the screen call so `pgrep -f "SCREEN -dmS <name>"` and the hermetic tests still match. The logfile is deleted on reap + GC (truth-tied lifetime), so a relaunch never reads a dead session's stale loop.
-- **Capped relaunch + escalation.** STUCK/HUSK → reap + relaunch fresh, capped at `LIVENESS_MAX_ATTEMPTS` (3); the L086 ship-check skips relaunch if the work already merged. At the cap the runner adds `runner-stuck`, comments, notifies, and frees the slot without relaunching. **To re-arm a session the runner gave up on: remove the `runner-stuck` label.** `--status` prints each session's verdict + probe breakdown + `attempts N/3`.
-- **The runner shell tests are macOS-local, not in ubuntu CI.** `scripts/tests/sprint-runner-*.test.sh` use `ps -o lstart` / `stat -f` / `date -v` (the runner is a macOS launchd job) — run them directly (`bash scripts/tests/sprint-runner-zombie-verify.test.sh`) on the runner host. CI green ≠ these ran; verify liveness changes locally.
-
 ## Learning Artifacts
 
 - `tasks/lessons/` — Per-file lessons (one discovery each, tagged frontmatter). `tasks/lessons/INDEX.md` is the always-loadable tag index (regenerate with `npm run lessons:index`).
@@ -108,7 +101,7 @@ DISCIPLINE (quarantine/R1) guards below contain those root causes, so they stay.
 
 ### Per-sprint relevant-lessons manifest (#650)
 
-A sprint sub-issue body **SHOULD** include a `## Relevant lessons` section when there are specific lessons the spawned session must read. The bootstrap prompt (step 1) loads these in full — operator curation wins over the loader's tag inference. Format (one bullet per lesson; the trailing reason is optional but recommended):
+A sprint issue body **SHOULD** include a `## Relevant lessons` section naming the lessons whoever picks the work up must read first. Operator curation beats tag inference, so an explicit list wins. Format (one bullet per lesson; the trailing reason is optional but recommended):
 
 ```markdown
 ## Relevant lessons
@@ -117,7 +110,7 @@ A sprint sub-issue body **SHOULD** include a `## Relevant lessons` section when 
 - [Lesson 092](tasks/lessons/092-workspace-package-dist-is-gitignored-and-not-auto-rebuilt.md) — rebuild workspace dist before tests
 ```
 
-Only the strict `- [text](path)` (or `* [text](path)`) bullet form is recognized — a colon separator or a space before `(` is silently skipped. Dry-run what a session would load with `scripts/relevant-lessons.sh <issue#>` (or `--stdin`): it prints each resolved path and exits non-zero if a listed lesson file is missing.
+Only the strict `- [text](path)` (or `* [text](path)`) bullet form is recognized — a colon separator or a space before `(` is silently skipped. Validate a manifest with `scripts/relevant-lessons.sh <issue#>` (or `--stdin`): it prints each resolved path and exits non-zero if a listed lesson file is missing.
 
 ## Key Conventions
 
