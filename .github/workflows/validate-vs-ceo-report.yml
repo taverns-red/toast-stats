@@ -35,7 +35,7 @@ on:
           - toast-stats-data-staging
         default: toast-stats-data-ca
       comment_issue:
-        description: 'Issue to post the per-year table + club-id census to (blank = do not comment)'
+        description: 'Issue to post the per-year table + census to (blank = do not comment)'
         required: false
         type: string
         default: '1429'
@@ -185,7 +185,9 @@ jobs:
           du -sh ./cache/snapshots/* | sort
           du -sh ./cache/snapshots
 
-      # ── Club-id census (#1450) — a second question, same feed ───
+      # ── Census (#1450 club ids, #1464 archive vintage) ─────────
+      # Two questions the same synced feed can answer, neither of which is
+      # the oracle's.
       # `normalizeClubId` strips EVERY non-digit before stripping leading
       # zeros, so `00A12` and `0012` both canonicalize to `12` — and #1440
       # keys the public `config/club-index.json` on that output, which would
@@ -203,7 +205,17 @@ jobs:
       # makes each unreadable through the other. So the census is reported
       # loudly (job summary + issue comment + a warning annotation) and never
       # flips the run red on its own.
-      - name: Census club ids (non-digit + canonical collisions)
+      #
+      # #1464 rides the same step: per program year it also prints the
+      # archive's VINTAGE — `metadata.sourceCsvDate` and `metadata.calculatedAt`
+      # from that date's all-districts-rankings.json, plus the distinct
+      # `collectedAt` stamps across its district files. The oracle's remaining
+      # mismatches were hypothesised to be pre-final year-end captures;
+      # refuting that took a bespoke investigation reading exactly these three
+      # fields by hand. One line of the census's own output now answers it on
+      # every run — reported alongside the verdict, never as it, and it does
+      # not touch the exit code either.
+      - name: Census club ids and archive vintage
         id: census
         run: |
           set -uo pipefail
@@ -213,11 +225,11 @@ jobs:
             > /tmp/club-id-census.json \
             2> /tmp/club-id-census.txt
           CENSUS_EXIT=$?
-          echo "── Club-id census (#1450) ──"
+          echo "── Census: club ids (#1450) + archive vintage (#1464) ──"
           cat /tmp/club-id-census.txt
           echo "exit_code=${CENSUS_EXIT}" >> "$GITHUB_OUTPUT"
           {
-            echo "## Club-id census (exit ${CENSUS_EXIT}) — #1450"
+            echo "## Census (exit ${CENSUS_EXIT}) — club ids #1450 · vintage #1464"
             echo
             echo '```'
             cat /tmp/club-id-census.txt
@@ -227,11 +239,12 @@ jobs:
           # R17 — every case is stated. Non-zero means the question is still
           # UNANSWERED, which must not read as "nothing was found".
           if [ "${CENSUS_EXIT}" -ne 0 ]; then
-            echo "::warning::club-id census exited ${CENSUS_EXIT} — #1450 is UNANSWERED by this run"
+            echo "::warning::census exited ${CENSUS_EXIT} — #1450 and the #1464 archive vintage are both UNANSWERED by this run"
           elif grep -q 'FINDING' /tmp/club-id-census.txt; then
             echo "::warning::club-id census (#1450) found non-digit ids and/or collisions — see the job summary"
           else
             echo "Census clean: no non-digit club id, no canonical collision."
+            echo "(The #1464 archive vintage is printed above either way.)"
           fi
 
       # ── The run itself ──────────────────────────────────────────
@@ -299,10 +312,12 @@ jobs:
             cat /tmp/ceo-report-output.txt
             echo '```'
             echo
-            echo "### Club-id census (#1450)"
+            echo "### Census — club ids (#1450) · archive vintage (#1464)"
             echo
-            echo "Non-digit club ids and canonical collisions across the same"
-            echo "synced snapshots. Independent of the verdict above."
+            echo "Non-digit club ids, canonical collisions, and the"
+            echo "\`sourceCsvDate\` / \`calculatedAt\` / \`collectedAt\` each"
+            echo "program year's snapshot carries — across the same synced"
+            echo "snapshots. Independent of the verdict above."
             echo
             echo '```'
             cat /tmp/club-id-census.txt 2>/dev/null ||

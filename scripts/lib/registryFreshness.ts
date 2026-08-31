@@ -246,6 +246,49 @@ export function planRegistryUpdates(
   return plan
 }
 
+/**
+ * Who can fix this staleness? (#1419)
+ *
+ * The freshness check was DETECT-ONLY: it derived the correct registry entry
+ * from GCS metadata on every daily run, discarded it, and filed a red issue
+ * asking a human to run the same derivation locally and commit. A true
+ * positive therefore re-fired daily until someone noticed — 19 days for
+ * 2026-07 (#1419), and the identical loop for 2026-06 (#1348) and 2026-05.
+ *
+ * This is NOT the #1266 cry-wolf (a benign empty feed alerting vacuously);
+ * that case is already handled and stays fail-closed here. The split is by
+ * remediation owner:
+ *
+ * - `'none'`   — registry is fresh. No action.
+ * - `'auto'`   — the feed was readable and the derivation PROVED the missing
+ *                or mismatched entries. The pipeline holds the answer, so it
+ *                opens the registry PR itself; no red alert for work a
+ *                machine can do. A human still reviews and merges the PR.
+ * - `'manual'` — the monitor could not see (empty feed, or reads degraded to
+ *                zero derivable months) or crashed. Stay exactly as loud as
+ *                before: "cannot tell" must alert, never pass (L107).
+ *
+ * Blindness dominates: an unreadable feed can "prove" anything, so a result
+ * that is both blind and shows gaps is `'manual'`, never a silent auto-fix.
+ *
+ * This is an alert/automation path only. The destructive-prune closing-guard
+ * verifies its window independently at runtime and is untouched by this
+ * classification (#1133) — do not "restore" fail-closed behaviour here by
+ * collapsing `'auto'` back into `'manual'`.
+ */
+export type RegistryRemediation = 'none' | 'auto' | 'manual'
+
+export function classifyRegistryRemediation(
+  result: RegistryFreshnessResult
+): RegistryRemediation {
+  if (result.fresh) return 'none'
+  if (result.emptyFeed || result.noDerivableMonths) return 'manual'
+  if (result.missing.length > 0 || result.mismatched.length > 0) return 'auto'
+  // Not fresh, feed readable, nothing recorded: an unmodelled verdict. Fall
+  // back to the loud path rather than inventing a silent auto-fix.
+  return 'manual'
+}
+
 export function buildRegistryStaleTitle(
   result: RegistryFreshnessResult
 ): string {

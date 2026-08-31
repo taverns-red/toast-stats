@@ -19,7 +19,9 @@ import {
   buildClubIdCensus,
   collectClubIdOccurrences,
   formatClubIdCensus,
+  readSnapshotVintage,
   type ClubIdOccurrence,
+  type SnapshotVintage,
 } from '../clubIdCensus.js'
 
 /** A per-district snapshot file body, in the shape the archive stores. */
@@ -342,5 +344,145 @@ describe('formatClubIdCensus', () => {
 
   it('names the years scanned even when none of them had a snapshot', () => {
     expect(formatClubIdCensus([])).toMatch(/no snapshot/i)
+  })
+})
+
+/* ── Archive vintage (#1464) ────────────────────────────────────────────────
+   The oracle's 11 remaining mismatches were hypothesised to be pre-final
+   year-end captures. Refuting that took a bespoke investigation reading
+   sourceCsvDate / calculatedAt / collectedAt out of the archive by hand. It
+   should have been one line of the census's own output — reported ALONGSIDE
+   the oracle's verdict, never as it. */
+
+describe('readSnapshotVintage (#1464)', () => {
+  it('takes sourceCsvDate and calculatedAt from the date’s rankings metadata', () => {
+    const vintage = readSnapshotVintage({
+      rankings: {
+        metadata: {
+          sourceCsvDate: '2022-07-25',
+          calculatedAt: '2026-06-11T11:12:42.977Z',
+        },
+      },
+      districtFiles: [],
+    })
+
+    expect(vintage.sourceCsvDate).toBe('2022-07-25')
+    expect(vintage.calculatedAt).toBe('2026-06-11T11:12:42.977Z')
+  })
+
+  it('collects the distinct collectedAt stamps across district files', () => {
+    const vintage = readSnapshotVintage({
+      rankings: undefined,
+      districtFiles: [
+        { collectedAt: '2026-06-11T11:12:41.779Z' },
+        { collectedAt: '2026-06-11T11:12:41.779Z' },
+        { collectedAt: '2026-06-11T11:13:02.001Z' },
+        {},
+      ],
+    })
+
+    expect(vintage.collectedAt).toEqual([
+      '2026-06-11T11:12:41.779Z',
+      '2026-06-11T11:13:02.001Z',
+    ])
+    expect(vintage.districtFilesWithCollectedAt).toBe(3)
+  })
+
+  it('leaves an absent field absent rather than inventing one', () => {
+    const vintage = readSnapshotVintage({
+      rankings: { metadata: {} },
+      districtFiles: [{}],
+    })
+
+    expect(vintage.sourceCsvDate).toBeUndefined()
+    expect(vintage.calculatedAt).toBeUndefined()
+    expect(vintage.collectedAt).toEqual([])
+  })
+})
+
+describe('formatClubIdCensus — archive vintage (#1464)', () => {
+  const yearWith = (vintage: SnapshotVintage) => ({
+    programYear: '2021-2022',
+    snapshotDate: '2022-06-30',
+    districtFiles: 106,
+    census: buildClubIdCensus([occ('1234')]),
+    vintage,
+  })
+
+  it('reports all three vintage fields for the program year', () => {
+    const text = formatClubIdCensus([
+      yearWith({
+        sourceCsvDate: '2022-07-25',
+        calculatedAt: '2026-06-11T11:12:42.977Z',
+        collectedAt: ['2026-06-11T11:12:41.779Z'],
+        districtFilesWithCollectedAt: 106,
+      }),
+    ])
+
+    expect(text).toContain('sourceCsvDate 2022-07-25')
+    expect(text).toContain('calculatedAt 2026-06-11T11:12:42.977Z')
+    expect(text).toContain('collectedAt 2026-06-11T11:12:41.779Z')
+  })
+
+  it('shows the range when district files were collected at different times', () => {
+    const text = formatClubIdCensus([
+      yearWith({
+        sourceCsvDate: '2026-07-30',
+        calculatedAt: '2026-07-31T14:53:11.996Z',
+        collectedAt: [
+          '2026-07-31T14:53:10.478Z',
+          '2026-07-31T14:53:11.080Z',
+          '2026-07-31T14:53:11.400Z',
+        ],
+        districtFilesWithCollectedAt: 94,
+      }),
+    ])
+
+    expect(text).toContain('2026-07-31T14:53:10.478Z')
+    expect(text).toContain('2026-07-31T14:53:11.400Z')
+    expect(text).toMatch(/3 distinct/)
+  })
+
+  it('says a field is absent rather than printing a blank', () => {
+    const text = formatClubIdCensus([
+      yearWith({
+        sourceCsvDate: undefined,
+        calculatedAt: undefined,
+        collectedAt: [],
+        districtFilesWithCollectedAt: 0,
+      }),
+    ])
+
+    expect(text).toMatch(/sourceCsvDate absent/)
+    expect(text).toMatch(/collectedAt absent/)
+  })
+
+  it('reports the vintage alongside the club-id verdict, never as it', () => {
+    const text = formatClubIdCensus([
+      yearWith({
+        sourceCsvDate: '2022-07-25',
+        calculatedAt: '2026-06-11T11:12:42.977Z',
+        collectedAt: ['2026-06-11T11:12:41.779Z'],
+        districtFilesWithCollectedAt: 106,
+      }),
+    ])
+
+    // The verdict line still speaks only about club ids.
+    const verdict = text.split('\n')[1]!
+    expect(verdict).toMatch(/^VERDICT:/)
+    expect(verdict).not.toMatch(/sourceCsvDate|collectedAt|calculatedAt/)
+  })
+
+  it('still formats a census that carries no vintage at all', () => {
+    const text = formatClubIdCensus([
+      {
+        programYear: '2021-2022',
+        snapshotDate: '2022-06-30',
+        districtFiles: 106,
+        census: buildClubIdCensus([occ('1234')]),
+      },
+    ])
+
+    expect(text).toContain('2021-2022')
   })
 })
