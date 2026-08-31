@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.7.0...collector-cli-v1.7.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* **pipeline:** a snapshot directory holds only the districts that existed on its own date ([#1465](https://github.com/taverns-red/toast-stats/issues/1465)) ([#1480](https://github.com/taverns-red/toast-stats/issues/1480)) ([fcb05aa](https://github.com/taverns-red/toast-stats/commit/fcb05aa39165ef22a27de8997439a47e8cb2b75d))
+
 ## [1.7.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.6.1...collector-cli-v1.7.0) (2026-08-23)
 
 
