@@ -141,9 +141,14 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'From 2025-26 a club must have submitted a Club Success Plan to earn any Distinguished level, however many DCP goals it met, and TI began publishing the CSP column. Toast Stats also makes CSP submission one of the three conditions for its own Thriving club-health label.',
     comparability:
       'Program years before 2025-26 have no CSP column at all, so Toast Stats treats those clubs as having submitted rather than retroactively failing them. Distinguished-club counts and Thriving counts either side of this boundary are measured against different bars: a drop in 2025-26 can be paperwork rather than performance.',
-    issues: [288, 311, 1121, 1139],
+    issues: [288, 311, 1121, 1139, 1460],
     sources: [
       'packages/analytics-core/src/analytics/ClubEligibilityUtils.ts',
+      // The "What Changed" CSP event (#1460) is conditioned on this same
+      // boundary — the column's ABSENCE before 2025-26 is why a flip is
+      // emitted only when both snapshots carry a real boolean.
+      'packages/analytics-core/src/analytics/diffSnapshots.ts',
+      'packages/shared-contracts/src/schemas/snapshot-diff.schema.ts',
       'packages/analytics-core/src/analytics/ClubHealthAnalyticsModule.ts',
       'packages/analytics-core/src/analytics/DistinguishedClubAnalyticsModule.ts',
       'packages/analytics-core/src/analytics/AreaDivisionRecognitionModule.ts',
