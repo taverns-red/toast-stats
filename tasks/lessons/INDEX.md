@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-dated-write-must-take-its-entity-set-from-that-date.md` — A write dated in the past must take its entity set from that date's own source — a successful fetch is not evidence the entity existed then  (2026-08-31)
 - `classify-alerts-by-who-can-remediate-them-not-just-by-severity.md` — A detect-only monitor for a machine-derivable condition re-fires forever; classify staleness by who can remediate it, not just by whether it is stale  (2026-08-31)
 - `gsutil-cp-dash-i-silently-truncates-its-stdin-source-list.md` — '`gsutil cp -I` copies only the first two stdin sources and exits 0 — use `gcloud storage cp`'  (2026-08-31)
 - `parallel-agents-in-one-checkout-commit-onto-each-others-branches.md` — Two agents working in the SAME checkout silently stack commits onto each other's branches — `git add -A` sweeps the other's files and a foreign `git checkout` moves your HEAD mid-task, so the isolation has to be a worktree, not a branch  (2026-08-31)

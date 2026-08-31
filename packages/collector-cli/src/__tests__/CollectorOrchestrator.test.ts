@@ -304,7 +304,9 @@ describe('CollectorOrchestrator - Partial Failure Resilience (#124)', () => {
 Month of July, As of 07/30/2026`
     mockCsvByProgramYear = { '2026-2027': liveCsv }
 
-    await createDistrictConfig(['09'])
+    // District 02 is the one the CSV above lists — a district the date's own
+    // districtsummary does not name is not scraped for that date (#1465).
+    await createDistrictConfig(['02'])
     const orchestrator = new CollectorOrchestrator(createConfig())
     const result = await orchestrator.scrape({
       date: '2026-07-30',
@@ -346,7 +348,8 @@ Month of June, As of 07/01/2026`
       '2025-2026': priorCsv,
     }
 
-    await createDistrictConfig(['09'])
+    // District 02 is the one priorCsv lists (#1465 — see above).
+    await createDistrictConfig(['02'])
     const orchestrator = new CollectorOrchestrator(createConfig())
     const result = await orchestrator.scrape({
       date: '2026-07-01',
