@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `gsutil-cp-dash-i-silently-truncates-its-stdin-source-list.md` — '`gsutil cp -I` copies only the first two stdin sources and exits 0 — use `gcloud storage cp`'  (2026-08-31)
 - `a-new-event-category-is-dropped-not-errored-by-an-explicit-display-list.md` — A feed that renders from an explicit ordered list of categories drops any category the list does not name — a new enum value is silently invisible, never an error, so the reclassification that produced it reads as data loss  (2026-08-22)
 - `a-query-that-just-became-enabled-is-idle-not-fetching.md` — A TanStack Query that just became `enabled` reports idle, not fetching — gate deferred copy on "unresolved", not on isFetching  (2026-08-22)
 - `coupled-url-params-need-one-setter-not-two-calls.md` — Two setSearchParams calls in one handler silently drop the first key — coupled URL params need a single combined setter  (2026-08-22)
