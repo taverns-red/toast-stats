@@ -92,7 +92,12 @@ interface PaymentTypes {
   charter?: number
 }
 
-/** A raw CSV cell as a count, or undefined when it is absent/unparseable. */
+/**
+ * A raw CSV cell as a payment count, or undefined when it is absent or
+ * unreadable. A payment count is a NON-NEGATIVE INTEGER: a negative or
+ * fractional cell is corrupt, not a small number, and reading it as one would
+ * feed a fabricated delta straight into the label.
+ */
 function rawCount(value: unknown): number | undefined {
   if (value === null || value === undefined || typeof value === 'boolean') {
     return undefined
@@ -100,7 +105,7 @@ function rawCount(value: unknown): number | undefined {
   const text = String(value).trim().replace(/,/g, '')
   if (text === '') return undefined
   const n = Number(text)
-  return Number.isFinite(n) ? n : undefined
+  return Number.isInteger(n) && n >= 0 ? n : undefined
 }
 
 /** Payment-type counts keyed canonically by clubId (#1440), like distinguishedByClub. */
@@ -121,10 +126,15 @@ function paymentTypesByClub(
     const key = normalizeClubId(row['Club'])
     const entry = key ? map.get(key) : undefined
     if (!entry) continue
+    // FIRST row wins: two raw rows can normalize onto one club (padded and
+    // bare `Club` values in the same export). Overwriting would make the value
+    // depend on row order, silently.
     const late = rawCount(row['Late Ren.'])
     const charter = rawCount(row['Total Chart'])
-    if (late !== undefined) entry.late = late
-    if (charter !== undefined) entry.charter = charter
+    if (late !== undefined && entry.late === undefined) entry.late = late
+    if (charter !== undefined && entry.charter === undefined) {
+      entry.charter = charter
+    }
   }
   return map
 }
@@ -145,9 +155,10 @@ const PAYMENT_TYPE_NOUNS: {
 /**
  * "Club X recorded 4 new payments (2 October renewals, 1 new member, 1 other)".
  *
- * Only types whose delta is POSITIVE are named; the residual (total minus every
- * delta we could compute, including negative ones) is reported as `N other` so
- * the parts never claim to explain more than the total. A DECREASE gets no
+ * Only types whose delta is POSITIVE are named, and the unexplained remainder
+ * is reported as `N other`, so the parts always sum to EXACTLY the total. When
+ * the named types already overshoot the total the breakdown is dropped
+ * entirely — see the clamp below. A DECREASE gets no
  * breakdown at all: a payments total only falls through a TI-side correction,
  * and attributing that by type would narrate a story the numbers do not
  * support.
@@ -162,8 +173,12 @@ function paymentsLabel(
   const noun = n === 1 ? 'payment' : 'payments'
   if (delta < 0) return `${name} recorded ${n} fewer ${noun}`
 
+  // Only types that GREW are named — a type that shrank inside a growing total
+  // is a correction, not a story. `claimed` therefore sums the POSITIVE deltas
+  // only: it must equal what the parenthetical actually says, or the residual
+  // computed from it would not close the gap it claims to close.
   const parts: string[] = []
-  let explained = 0
+  let claimed = 0
   if (from && to) {
     for (const { key, one, many } of PAYMENT_TYPE_NOUNS) {
       const a = from[key]
@@ -171,11 +186,22 @@ function paymentsLabel(
       // Unavailable on EITHER side is unavailable for the delta.
       if (a === undefined || b === undefined) continue
       const d = b - a
-      explained += d
-      if (d > 0) parts.push(`${d} ${d === 1 ? one : many}`)
+      if (d > 0) {
+        claimed += d
+        parts.push(`${d} ${d === 1 ? one : many}`)
+      }
     }
   }
-  const residual = delta - explained
+
+  // The per-type counts and the total come from different columns and can
+  // disagree — most reachably when a type's source column is absent on one
+  // side and DataTransformer's fallback reports 0 (a 0→45 October jump against
+  // a +3 total). When the named parts overshoot the total, the breakdown is
+  // not a decomposition of it; print the total alone rather than a
+  // parenthetical the headline contradicts.
+  if (claimed > delta) return `${name} recorded ${n} new ${noun}`
+
+  const residual = delta - claimed
   if (residual > 0) parts.push(`${residual} other`)
 
   const breakdown = parts.length > 0 ? ` (${parts.join(', ')})` : ''
