@@ -25,15 +25,13 @@ per-district** — `snapshots/{date}/district_{id}.json`,
 There is no worldwide rollup and no global time series. The CEO Report is
 entirely global-with-5-year-history. That rollup is the build.
 
-> **Unverified prerequisite — archive coverage.** This audit assumed the CEO
-> Report's 2021-22 → 2025-26 window sits inside our snapshot archive, on the
-> strength of #1147's "2017→now full rerun". Two frontend signals disagree:
-> `frontend/src/pages/HistoryPage.tsx:16` calls 2021-22 "the COVID gap" and
-> expects it absent, and that page's own callout states pre-2019 data "aren't on
-> file here". The audit session could not settle it — CDN egress to
-> `cdn.taverns.red` was blocked by the network policy. **Check `v1/dates.json`
-> before scoping the rollup**: if 2021-22 is genuinely missing, the 5-year series
-> has a hole exactly where TI's window starts.
+> **Resolved — archive coverage confirmed (#1456).** This audit originally
+> flagged the CEO Report's 2021-22 → 2025-26 window as an unverified
+> prerequisite, because the audit session could not reach `cdn.taverns.red` to
+> check it. The CEO Report oracle (#1429, landed by PR #1438) has since settled
+> it: **5/5 program-year coverage, with the 2022-06-30 year-end snapshot
+> present.** The 5-year series has no hole where TI's window starts, and the
+> rollup can be scoped against the full range.
 
 ---
 
