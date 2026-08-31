@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.18.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.18.0...frontend-v3.18.1) (2026-08-31)
+
+
+### Documentation
+
+* PY 2021-22 archive coverage is proven, not an unverified prerequisite ([#1456](https://github.com/taverns-red/toast-stats/issues/1456)) ([#1457](https://github.com/taverns-red/toast-stats/issues/1457)) ([0863a4b](https://github.com/taverns-red/toast-stats/commit/0863a4bfbc627303be9a37d692a3819faad1be53))
+
 ## [3.18.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.17.0...frontend-v3.18.0) (2026-08-23)
 
 
