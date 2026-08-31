@@ -46,10 +46,10 @@ export const CLUB_GROWTH_ACHIEVEMENT_FIRST_PROGRAM_YEAR = '2026-2027'
 const FIRST_START_YEAR = 2026
 
 /** Milestones TI lists for the September 30 checkpoint, ascending. */
-export const SEPTEMBER_30_MILESTONES: readonly number[] = [3, 5]
+const SEPTEMBER_30_MILESTONES: readonly number[] = [3, 5]
 
 /** Milestones TI lists for the March 31 checkpoint, ascending. */
-export const MARCH_31_MILESTONES: readonly number[] = [3, 5, 10]
+const MARCH_31_MILESTONES: readonly number[] = [3, 5, 10]
 
 export type ClubGrowthCheckpointId = 'september30' | 'march31'
 
