@@ -4,7 +4,7 @@
 **Applies to:** All Toastmasters reporting and analytics calculations  
 **Audience:** Developers, Analytics Engine, Reporting Systems  
 **Owner:** Development Team  
-**Last Updated:** June 2026 (v1.6 — see §14 Version History)
+**Last Updated:** August 2026 (v1.7 — see §14 Version History)
 
 ---
 
@@ -436,6 +436,31 @@ A prerequisite required by a year's rules but unknowable from the data yields ti
 - **Excellence in Education & Training Award:** Awarded to PQD in districts that train 85% of Directors and meet Distinguished goals in Distinguished clubs
 - **Excellence in Club Growth Award:** Awarded to CGD in districts that meet Distinguished goals in club and membership payments growth
 
+### 13.7 District Club Growth Achievement (2026-2027 and later)
+
+A twelfth district award type, announced by Toastmasters International in August 2026. The announcement is the entire published spec; everything TI states is quoted here verbatim:
+
+> To recognize Districts that reach important club-growth milestones early, Toastmasters International is introducing the **District Club Growth Achievement**.
+> This new achievement celebrates Districts that reach key club charter milestones by **September 30** and **March 31**.
+> **How to Qualify**
+> **September 30 Milestones** — Charter 3 or 5 new clubs
+> **March 31 Milestones** — Charter 3, 5, or 10 new clubs
+
+**Assumptions (operator rulings, #1473 — NOT stated by TI):**
+
+| Ref | Assumption                                                                                                                                                                    | Falsified by                                                                     |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| A1  | Effective **PY 2026-2027**; first checkpoint 2026-09-30. Earlier program years are **not applicable**, never "not earned"                                                     | Any TI publication dating the program differently, or listing 2025-26 recipients |
+| A2  | Counts are **cumulative from July 1**; the March 31 count **includes** the clubs already counted on September 30                                                              | TI counting Oct 1 – Mar 31 as a separate window                                  |
+| A3  | 3 / 5 / 10 are **tiers** within a checkpoint — a district holds the **highest** one reached                                                                                   | TI describing them as separate badges or one combined award                      |
+| A4  | A club that charters and is later suspended still counts. Inert in practice: suspension requires more payment periods than a single program year contains, so it cannot occur | TI publishing a recipient list that excludes such a club                         |
+
+**Data source:** `newCharteredClubs` on each district's rankings row — clubs whose `Charter Date/Suspend Date` charter date falls on or after July 1 of the program year (`TransformService`, `parseCharterDateFromStatusField`).
+
+**Checkpoint semantics.** A checkpoint verdict is read from **that date's own rankings snapshot**, never recomputed from current data. A district's charter count can **fall** mid-year without any charter being revoked: the global total across all districts is strictly monotonic (measured over PY 2025-26: 81 → 638, never decreasing), while individual districts decrease when a club chartered this year **moves between districts** and its charter credit follows it. Recomputing from today's numbers would let an April transfer erase a September 30 achievement.
+
+**Implementation:** `frontend/src/utils/clubGrowthAchievement.ts` (#1474).
+
 ---
 
 ## 14. Version History
@@ -449,6 +474,7 @@ A prerequisite required by a year's rules but unknowable from the data yields ti
 | 1.4     | June 2026     | §5.3 corrected to the canonical (implemented) checkpoint table — October 2 (was 1), December 3 (was 2) — per operator ruling on #1122: no official TI monthly pacing exists; the implementation matched the original club-health spec and empirically discriminates, the doc's earlier values did not (audit 2026-06-09, H1)                                                                                          |
 | 1.5     | June 2026     | Added §13.3 historical DRP requirements (2016-17→2024-25, per-era, dashboard-verified — investigation 1116); corrected §13.2 (Smedley exists at district level since 2018-19, not new in 2025-26); renumbered §13.4-13.6 (#1116 item 5)                                                                                                                                                                               |
 | 1.6     | June 2026     | Aligned §11 (Calculation Precedence), §12 (Implementation Requirements), and §15 (Final Rules) with the v1.3 #799 correction — DAP/DDP recognition counts distinguished **clubs** against the **club base**, not "paid units"; clarified that the separate district-ranking % Distinguished metric still uses the paid club base (§9, Lesson 60). Removes the self-contradiction the 2026-06-09 audit flagged (#1108) |
+| 1.7     | August 2026   | Added §13.7 District Club Growth Achievement — TI's new Sep 30 / Mar 31 club-charter milestones, effective PY 2026-27 (announcement quoted verbatim; assumptions A1–A4 labelled as operator rulings, #1473/#1474); records that a district's charter count can fall mid-year through inter-district club moves, so each checkpoint is judged on that date's own snapshot                                              |
 
 ---
 
