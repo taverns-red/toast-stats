@@ -126,6 +126,9 @@ jobs:
       # Both promotion gates open ⇒ this run already rsynced staging → prod,
       # BEFORE the sidecars landed. `place-reports` mirrors them explicitly.
       promoted: ${{ steps.diff.outputs.promote == 'true' && steps.valuediff.outputs.value_promote == 'true' }}
+      # #1419: 'none' | 'auto' | 'manual'. The `closing-registry-pr` job below
+      # keys off 'auto'; the red-alert steps in this job key off 'manual'.
+      registry_remediation: ${{ steps.registrycheck.outputs.remediation }}
 
     steps:
       # ── Setup ────────────────────────────────────────────────
@@ -641,8 +644,12 @@ jobs:
             done
           fi
 
+      # #1419: gated on remediation == 'manual', NOT on stale == 'true'.
+      # A stale-but-derivable registry is fixed by the `closing-registry-pr`
+      # job instead of nagging a human daily. The blind/crashed cases still
+      # land here and are exactly as loud as before (L107).
       - name: '[daily] Ensure closing-registry-stale label exists'
-        if: steps.mode.outputs.mode == 'daily' && steps.registrycheck.outputs.stale == 'true'
+        if: steps.mode.outputs.mode == 'daily' && steps.registrycheck.outputs.remediation == 'manual'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -652,7 +659,7 @@ jobs:
             2>/dev/null || echo "Label already exists"
 
       - name: '[daily] File or refresh closing-registry-stale issue'
-        if: steps.mode.outputs.mode == 'daily' && steps.registrycheck.outputs.stale == 'true'
+        if: steps.mode.outputs.mode == 'daily' && steps.registrycheck.outputs.remediation == 'manual'
         env:
           GH_TOKEN: ${{ github.token }}
           # Env indirection: the title embeds dataMonth strings read from GCS
@@ -1963,6 +1970,125 @@ jobs:
   # up front) and lands in a run-scoped `incoming/` prefix; only the cheap
   # placement needs the snapshot date, and that is what `place-reports` does.
   # ══════════════════════════════════════════════════════════
+  # ══════════════════════════════════════════════════════════
+  # CLOSING-REGISTRY AUTO-REMEDIATION (#1419)
+  # ══════════════════════════════════════════════════════════
+  # Why this job exists: the freshness check (#1128) was DETECT-ONLY. Every
+  # daily run derived the correct registry entry from GCS metadata, threw it
+  # away, and filed a red issue asking a human to run the same derivation
+  # locally and commit it. A TRUE positive therefore re-fired daily until
+  # someone noticed — 19 days for 2026-07 (#1419), and the identical loop for
+  # 2026-06 (#1348) and 2026-05. A monitor that nags daily about work a
+  # machine can do trains everyone to ignore it.
+  #
+  # This is NOT the #1266 cry-wolf fix (a benign empty feed alerting
+  # vacuously) and it does NOT relax fail-closed behaviour: `remediation` is
+  # 'auto' only when the feed was READ SUCCESSFULLY and the derivation PROVED
+  # the missing/mismatched months. Blind or crashed verdicts are 'manual' and
+  # still file the red issue from the `pipeline` job (L107).
+  #
+  # It opens a PR — it never pushes to main. A human still reviews and merges;
+  # the merge is what makes the next daily verdict fresh, which auto-closes
+  # any open alert through the existing step.
+  #
+  # Least privilege: `contents: write` + `pull-requests: write` live HERE and
+  # nowhere else. The `pipeline` job that runs Playwright against TI keeps
+  # `contents: read`. Job-level permissions are the only granularity GitHub
+  # offers, which is why this is a separate job rather than a step.
+  closing-registry-pr:
+    name: 'closing-registry auto-PR'
+    runs-on: ubuntu-latest
+    needs: pipeline
+    # R17 — every value has an explicit outcome: 'auto' → run;
+    # 'none' / 'manual' / '' (non-daily mode, or a crashed check step whose
+    # outputs are unset) → skip.
+    if: needs.pipeline.outputs.registry_remediation == 'auto'
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write # Workload Identity Federation for the GCS re-derive
+
+    env:
+      REGISTRY_BRANCH: bot/closing-registry-update
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ClosingDateRegistry imports Logger from analytics-core. That import is
+      # type-only (erased by tsx), but building keeps this job immune to it
+      # becoming a value import later — R16 / Lesson 92.
+      - name: Build packages
+        run: |
+          npm run build --workspace=@taverns-red/shared-contracts
+          npm run build --workspace=@taverns-red/analytics-core
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+
+      # The same writer the operator runbook prescribes — derived entries only
+      # (no --set). planRegistryUpdates still refuses to regress a later manual
+      # outage entry, so this cannot silently undo hand-curated history.
+      - name: Regenerate the closing-date registry from GCS metadata
+        run: npx tsx scripts/update-closing-date-registry.ts
+
+      - name: Open or update the registry PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- docs/month-end-closing-dates.json; then
+            echo "Registry regenerated to an identical file — nothing to PR."
+            echo "The check said 'auto' but the writer planned no change, so"
+            echo "derive and plan disagree. Failing loudly rather than masking:"
+            git status --porcelain
+            exit 1
+          fi
+
+          echo "Registry diff to propose:"
+          git --no-pager diff -- docs/month-end-closing-dates.json
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git checkout -B "${REGISTRY_BRANCH}"
+          git add docs/month-end-closing-dates.json
+          git commit -m 'chore(data): record closing dates derived from raw-csv metadata (#1419)'
+          git push --force-with-lease origin "${REGISTRY_BRANCH}"
+
+          # One open PR at a time; the force-push above already refreshed it.
+          EXISTING=$(gh pr list --head "${REGISTRY_BRANCH}" --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "${EXISTING}" ]; then
+            echo "Refreshed existing registry PR #${EXISTING}."
+          else
+            # Plain #1419 — never `Closes`/`Fixes`. The alert issue is closed by
+            # the pipeline's own auto-close step once the merge makes the next
+            # daily verdict fresh, not by this PR merging.
+            gh pr create \
+              --head "${REGISTRY_BRANCH}" \
+              --base main \
+              --title 'chore(data): update closing-date registry from raw-csv metadata' \
+              --body-file .github/registry-pr-body.md
+          fi
+
   daily-reports:
     name: 'daily district reports fetch'
     runs-on: ubuntu-latest
