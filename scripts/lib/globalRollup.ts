@@ -103,11 +103,65 @@ export function canonicalDistrictId(districtId: string): string {
 }
 
 export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
-  throw new Error(
-    `rollUpGlobal is not implemented yet (#1466): ` +
-      `${input.districts.length} district files, ` +
-      `${input.rankingsDistrictIds.length} districts in scope`
+  // R17 — an unscoped rollup is refused, never guessed at. Falling back to
+  // "every file in the directory" is precisely the bug this module exists to
+  // prevent, and it would produce a plausible number rather than an error.
+  if (input.rankingsDistrictIds.length === 0) {
+    throw new Error(
+      'refusing to roll up without the date’s district set: pass the ids ' +
+        'all-districts-rankings.json lists for that date (#1466)'
+    )
+  }
+
+  const scope = new Set(input.rankingsDistrictIds.map(canonicalDistrictId))
+  const excludedDistricts: string[] = []
+  const seenDistricts = new Set<string>()
+
+  /** Canonical club id → the districts it was seen in, in input order. */
+  const clubDistricts = new Map<string, string[]>()
+  let clubCount = 0
+  let totalPayments = 0
+
+  for (const district of input.districts) {
+    const key = canonicalDistrictId(district.districtId)
+    if (!scope.has(key)) {
+      excludedDistricts.push(district.districtId)
+      continue
+    }
+    seenDistricts.add(key)
+
+    for (const club of district.clubs) {
+      const clubId = normalizeClubId(club.clubId)
+      const seenIn = clubDistricts.get(clubId)
+      if (seenIn) {
+        // Counted already. Record where else it appeared and move on — the
+        // first row wins, and the duplicate is reported rather than summed.
+        seenIn.push(district.districtId)
+        continue
+      }
+      clubDistricts.set(clubId, [district.districtId])
+      clubCount += 1
+      totalPayments += club.payments
+    }
+  }
+
+  const duplicateClubs: DuplicateClub[] = []
+  for (const [clubId, districtIds] of clubDistricts) {
+    if (districtIds.length > 1) duplicateClubs.push({ clubId, districtIds })
+  }
+
+  const missingDistricts = input.rankingsDistrictIds.filter(
+    districtId => !seenDistricts.has(canonicalDistrictId(districtId))
   )
+
+  return {
+    districtCount: seenDistricts.size,
+    clubCount,
+    totalPayments,
+    excludedDistricts,
+    missingDistricts,
+    duplicateClubs,
+  }
 }
 
 /**
@@ -119,9 +173,34 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
 export function readSnapshotRollupInput(
   snapshotDir: string
 ): GlobalRollupInput {
-  throw new Error(
-    `readSnapshotRollupInput is not implemented yet (#1466): ${snapshotDir}`
-  )
+  const rankingsRaw = JSON.parse(
+    readFileSync(join(snapshotDir, 'all-districts-rankings.json'), 'utf-8')
+  ) as { rankings?: Array<{ districtId?: unknown }> }
+  const rankingsDistrictIds = (rankingsRaw.rankings ?? [])
+    .map(row => (typeof row.districtId === 'string' ? row.districtId : ''))
+    .filter(districtId => districtId !== '')
+
+  const districts: DistrictClubPayments[] = []
+  for (const fileName of readdirSync(snapshotDir).sort()) {
+    if (!isDistrictSnapshotFile(fileName)) continue
+    const districtId = districtIdFromSnapshotFileName(fileName)
+    if (!districtId) continue
+
+    const parsed = JSON.parse(
+      readFileSync(join(snapshotDir, fileName), 'utf-8')
+    ) as {
+      data?: { districtPerformance?: Array<Record<string, unknown>> }
+    }
+    const clubs: ClubPaymentRow[] = []
+    for (const row of parsed.data?.districtPerformance ?? []) {
+      const clubId = String(row['Club'] ?? '').trim()
+      if (clubId === '') continue
+      clubs.push({ clubId, payments: Number(row['Total to Date'] ?? 0) || 0 })
+    }
+    districts.push({ districtId, clubs })
+  }
+
+  return { districts, rankingsDistrictIds }
 }
 
 /** Re-exported so callers use one canonical rule, not a fourth copy. */
