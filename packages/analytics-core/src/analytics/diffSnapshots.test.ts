@@ -766,6 +766,118 @@ describe('diffSnapshots — payments events (#1459)', () => {
     expect(events[0]!.label).not.toContain('(')
   })
 
+  /* The breakdown must never claim MORE than the total it decomposes.
+     Per-type counts and the total can disagree: DataTransformer sources
+     octoberRenewals from districtPerformance with a clubPerformance fallback
+     that yields 0 when the columns are absent, so a pair straddling that skew
+     shows a huge type delta against a small total delta. Printing the parts
+     anyway narrates a number the headline contradicts one clause earlier. */
+  it('suppresses the breakdown when the type deltas exceed the total', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 20, octoberRenewals: 0 })],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 23, octoberRenewals: 45 })],
+    })
+
+    // NOT "3 new payments (45 October renewals)".
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 3 new payments'
+    )
+  })
+
+  it('suppresses the breakdown when a negative type delta makes the parts overshoot', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 20,
+          octoberRenewals: 0,
+          newMembers: 2,
+        }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [
+        club({
+          clubId: '3045',
+          paymentsCount: 24,
+          octoberRenewals: 6,
+          newMembers: 0,
+        }),
+      ],
+    })
+
+    // oct +6 alone overshoots the +4 total, so no parts are named.
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 4 new payments'
+    )
+  })
+
+  it('never lets the residual exceed the total', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 20, octoberRenewals: 3 })],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 25, octoberRenewals: 0 })],
+    })
+
+    // A NET-summed residual would read "8 other" against a 5-payment total.
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 5 new payments (5 other)'
+    )
+  })
+
+  it('ignores a negative or fractional raw count rather than trusting it', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 20 })],
+      districtPerf: [
+        dperf('3045', { 'Late Ren.': '-3', 'Total Chart': '2.5' }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 22 })],
+      districtPerf: [
+        dperf('3045', { 'Late Ren.': '1,000', 'Total Chart': '2.5' }),
+      ],
+    })
+
+    // A payment count is a non-negative integer; anything else is unreadable,
+    // so both types stay unavailable and the delta reports as residual.
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 2 new payments (2 other)'
+    )
+  })
+
+  it('takes the FIRST raw row when duplicates normalize to one club', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [club({ clubId: '3045', paymentsCount: 20 })],
+      districtPerf: [dperf('3045', { 'Late Ren.': '0', 'Total Chart': '0' })],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [club({ clubId: '3045', paymentsCount: 22 })],
+      districtPerf: [
+        dperf('3045', { 'Late Ren.': '2', 'Total Chart': '0' }),
+        // Same club, padded — must NOT silently overwrite the row above.
+        dperf('00003045', { 'Late Ren.': '9', 'Total Chart': '0' }),
+      ],
+    })
+
+    expect(paymentsEvents(from, to)[0]!.label).toBe(
+      'Club 3045 recorded 2 new payments (2 late renewals)'
+    )
+  })
+
   it('joins the sorted feed by absolute magnitude like every other category', () => {
     const from = snapshot({
       date: '2026-07-31',
