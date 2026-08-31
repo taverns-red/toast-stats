@@ -24,8 +24,18 @@ export const AggregateDeltaSchema = z.object({
 export type AggregateDelta = z.infer<typeof AggregateDeltaSchema>
 
 /**
- * Category of a single change event. Payments is intentionally aggregate-only
- * in Phase 1 (per-club payment churn would double the membership noise).
+ * Category of a single change event.
+ *
+ * `payments` (#1459) carries a club's total payments delta with the payment
+ * TYPE attribution folded into `label` text — October/April renewals and new
+ * members from the typed club fields, late renewals and charter payments from
+ * the raw `districtPerformance` rows, and an `N other` residual for whatever
+ * the available types do not explain. The breakdown is deliberately NOT a
+ * structured field: no consumer needs to compute over it yet, and the label is
+ * what the feed, the export, and a screen reader all render. It supersedes the
+ * Phase-1 decision to keep payments aggregate-only — per-club payments is the
+ * renewal-season signal a district leader actually campaigns on, and the
+ * magnitude sort keeps the ±1 churn below the material rows.
  *
  * `area-status` / `division-status` (#1014) carry recognition-tier transitions
  * for areas/divisions instead of clubs — derived in the frontend from the
@@ -50,6 +60,7 @@ export type AggregateDelta = z.infer<typeof AggregateDeltaSchema>
  */
 export const DiffEventCategorySchema = z.enum([
   'membership',
+  'payments',
   'dcp-goals',
   'distinguished',
   'club-added',
