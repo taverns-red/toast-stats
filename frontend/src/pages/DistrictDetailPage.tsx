@@ -32,6 +32,8 @@ import { MobileDisclosure } from '../components/MobileDisclosure'
 import { DistinguishedDistrictTrophyCase } from '../components/DistinguishedDistrictTrophyCase'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
+import { ClubGrowthAchievementCard } from '../components/ClubGrowthAchievementCard'
+import { useClubGrowthMilestones } from '../hooks/useClubGrowthMilestones'
 
 import {
   DistrictKpiStrip,
@@ -304,6 +306,19 @@ const DistrictDetailPageInner: React.FC = () => {
       distinguishedClubs: districtRanking.distinguishedClubs,
     }
   }, [districtRanking])
+
+  // District Club Growth Achievement (#1476, epic #1473). Yet another
+  // separately-resolving query — it reads each checkpoint's OWN dated rankings
+  // file, because a district's charter count can fall mid-year without any
+  // charter being revoked (clubs chartered this year move districts and take
+  // the credit with them), so recomputing a September verdict from today's
+  // numbers would silently rewrite history. Program year and as-of date are
+  // passed down as props (R3); the card owns the PY-2026-2027 gate.
+  const { checkpoints: clubGrowthCheckpoints, isLoading: isLoadingClubGrowth } =
+    useClubGrowthMilestones(
+      districtId,
+      effectiveProgramYear ?? selectedProgramYear
+    )
 
   // Extract threshold + officer award results for this district (#333)
   const clubStrengthResult = React.useMemo(() => {
@@ -671,6 +686,24 @@ const DistrictDetailPageInner: React.FC = () => {
                   clubGrowthQualifies={
                     officerAwardsResult?.clubGrowth?.qualifies
                   }
+                />
+
+                {/* District Club Growth Achievement (#1476). The card owns the
+                    effective-year gate — `clubGrowthAchievement.ts` holds the
+                    one copy of it, and the log entry it belongs to is the
+                    source of truth — so an out-of-scope year renders nothing
+                    here rather than an empty or zeroed shell. The live running
+                    total comes from the rankings row already fetched above;
+                    each settled checkpoint comes from its own dated snapshot
+                    via the hook. */}
+                <ClubGrowthAchievementCard
+                  programYear={
+                    (effectiveProgramYear ?? selectedProgramYear).label
+                  }
+                  asOfDate={effectiveEndDate ?? undefined}
+                  checkpointReads={clubGrowthCheckpoints}
+                  isLoading={isLoadingClubGrowth}
+                  toDateCount={districtRanking?.newCharteredClubs ?? null}
                 />
 
                 {/* Notable dates (#551) */}
