@@ -42,6 +42,7 @@ import {
   calculateProgramYear,
 } from './utils/CachePaths.js'
 import { resolveActiveProgramYear } from './utils/programYearResolver.js'
+import { reconcileDistrictsForDate } from './utils/districtSetForDate.js'
 /**
  * District configuration file structure
  * Matches the backend's DistrictConfigurationService format
@@ -611,6 +612,7 @@ export class CollectorOrchestrator {
       programYear: activeProgramYear,
       pathStyle: activePathStyle,
       fellBack,
+      content: districtSummaryCsv,
     } = await resolveActiveProgramYear(date, async (programYear, pathStyle) => {
       const result = await downloader.downloadCsv({
         programYear,
@@ -629,6 +631,62 @@ export class CollectorOrchestrator {
           activeProgramYear,
         }
       )
+    }
+
+    // The district set belongs to the DATE being written, not to today (#1465).
+    // A rewrite of a past date that is handed the current discovery set fetches
+    // districts that did not exist then — and because the export endpoint
+    // ignores the program-year token (#1342), those fetches succeed and return
+    // CURRENT-year data. That is how 30 renumbered PY 2026-27 districts landed
+    // in snapshots/2026-06-30/. The districtsummary the resolver just validated
+    // is that date's own district list, so reconcile against it here — no extra
+    // fetch, and no second program-year computation.
+    const districtSet = reconcileDistrictsForDate(
+      districtsToScrape,
+      districtSummaryCsv
+    )
+    if (districtSet.skipped.length > 0) {
+      logger.warn(
+        'Skipping districts that did not exist on the scraped date (#1465)',
+        {
+          date,
+          activeProgramYear,
+          skipped: districtSet.skipped,
+          scraping: districtSet.districts.length,
+        }
+      )
+    }
+    districtsToScrape = districtSet.districts
+
+    // R17 — the "nothing survived the reconciliation" case is explicit. A run
+    // whose entire district set is wrong for the date must say so, not report
+    // a quiet zero-district success.
+    if (districtSet.applied && districtsToScrape.length === 0) {
+      logger.error(
+        'No requested district existed on the scraped date (#1465)',
+        { date, activeProgramYear, skipped: districtSet.skipped }
+      )
+      await this.close()
+      return {
+        success: false,
+        date,
+        districtsProcessed: [],
+        districtsSucceeded: [],
+        districtsFailed: [],
+        districtsSkipped: districtSet.skipped,
+        cacheLocations: [],
+        errors: [
+          {
+            districtId: 'N/A',
+            error:
+              `Every requested district did not exist on ${date} ` +
+              `(program year ${activeProgramYear}): ` +
+              districtSet.skipped.join(', '),
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        duration_ms: Date.now() - startTime,
+      }
     }
 
     // Process districts sequentially with error isolation
@@ -864,6 +922,9 @@ export class CollectorOrchestrator {
       districtsProcessed,
       districtsSucceeded,
       districtsFailed,
+      // Reported only when the date's own district list was readable —
+      // an unreadable summary leaves this undecided, not empty (#1465).
+      ...(districtSet.applied ? { districtsSkipped: districtSet.skipped } : {}),
       cacheLocations: allCacheLocations,
       errors,
       duration_ms,

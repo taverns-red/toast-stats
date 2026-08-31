@@ -18,6 +18,7 @@ import {
   buildRegistryStaleBody,
   parseManualEntryArg,
   planRegistryUpdates,
+  classifyRegistryRemediation,
 } from '../registryFreshness.js'
 
 /** Shorthand for a raw-csv metadata entry. */
@@ -321,5 +322,86 @@ describe('parseManualEntryArg', () => {
       dataMonth: '2022-04',
       closingDate: '2022-04-30',
     })
+  })
+})
+
+/**
+ * #1419 — the monitor was DETECT-ONLY, so a true positive re-fired forever.
+ *
+ * Not a recurrence of the #1266 empty-feed cry-wolf: the 2026-07 alert was
+ * CORRECT (staging metadata proves the July window ran 2026-08-01..08-10 and
+ * the registry genuinely lacked the entry). It re-commented daily for 19 days
+ * because the pipeline derives the right answer from GCS on every run, throws
+ * it away, and asks a human to re-run the same derivation locally. Same loop
+ * ran for 2026-06 (#1348) and 2026-05.
+ *
+ * The fix is to split staleness by WHO CAN FIX IT:
+ *   - 'auto'   — the derivation already proved the entry; the pipeline can
+ *                open the registry PR itself. No red alert.
+ *   - 'manual' — the monitor cannot see (empty feed / degraded reads). Keep
+ *                the fail-closed red alert (L107); a human must look.
+ * Widening a threshold or muting the alert is NOT the fix — 'manual' stays
+ * exactly as loud as it was.
+ */
+describe('classifyRegistryRemediation (#1419)', () => {
+  const registryWithMay = [{ dataMonth: '2026-05', closingDate: '2026-06-05' }]
+
+  it('returns "none" when the registry is fresh', () => {
+    const result = evaluateRegistryFreshness(registryWithMay, MAY_2026_WINDOW)
+    expect(result.fresh).toBe(true)
+    expect(classifyRegistryRemediation(result)).toBe('none')
+  })
+
+  it('returns "auto" for a derivable MISSING month — the #1419 case', () => {
+    // The exact shape of #1419: readable feed, one completed closing month
+    // proven by metadata, absent from the committed registry. The pipeline
+    // holds the answer, so it must fix it, not file a red issue.
+    const result = evaluateRegistryFreshness([], MAY_2026_WINDOW)
+    expect(result.missing).toEqual([
+      { dataMonth: '2026-05', closingDate: '2026-06-05' },
+    ])
+    expect(classifyRegistryRemediation(result)).toBe('auto')
+  })
+
+  it('returns "auto" for a MISMATCHED month (reality moved past the entry)', () => {
+    const result = evaluateRegistryFreshness(
+      [{ dataMonth: '2026-05', closingDate: '2026-06-02' }],
+      MAY_2026_WINDOW
+    )
+    expect(result.mismatched).toHaveLength(1)
+    expect(classifyRegistryRemediation(result)).toBe('auto')
+  })
+
+  it('returns "manual" on an empty feed — fail-closed stays loud (L107)', () => {
+    const result = evaluateRegistryFreshness(registryWithMay, [])
+    expect(result.emptyFeed).toBe(true)
+    expect(classifyRegistryRemediation(result)).toBe('manual')
+  })
+
+  it('returns "manual" when reads degraded to zero derivable months', () => {
+    const allNonClosing = Array.from({ length: 130 }, (_, i) =>
+      entry(
+        `2026-0${1 + Math.floor(i / 28)}-${String((i % 28) + 1).padStart(2, '0')}`,
+        false
+      )
+    )
+    const result = evaluateRegistryFreshness(registryWithMay, allNonClosing)
+    expect(result.noDerivableMonths).toBe(true)
+    expect(classifyRegistryRemediation(result)).toBe('manual')
+  })
+
+  it('prefers "manual" when a blind feed coincides with recorded gaps', () => {
+    // A monitor that cannot see must never be downgraded to a silent
+    // auto-fix: unreadable metadata could "prove" anything.
+    expect(
+      classifyRegistryRemediation({
+        fresh: false,
+        missing: [{ dataMonth: '2026-05', closingDate: '2026-06-05' }],
+        mismatched: [],
+        emptyFeed: true,
+        noDerivableMonths: false,
+        checkedMonths: [],
+      })
+    ).toBe('manual')
   })
 })

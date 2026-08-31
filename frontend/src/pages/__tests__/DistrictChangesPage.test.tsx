@@ -552,3 +552,133 @@ describe('DistrictChangesPage — payment changes (#1459)', () => {
     expect(screen.queryByText(/Payment changes/)).not.toBeInTheDocument()
   })
 })
+
+/* #1462 (epic #1458 Sprint 4) — time-window preset chips.
+
+   "What changed last week / last month / since July 1" used to mean scrolling a
+   100+ entry dropdown twice. The chips resolve those windows against the dates
+   the district actually RECORDED and write the resolved pair through the same
+   ?from=&to= state, in ONE navigation — so a preset produces a shareable plain
+   date-pair link and the back button still behaves. */
+describe('DistrictChangesPage — time-window preset chips (#1462)', () => {
+  // 05-26 latest; a week back lands on 05-19 exactly; a month back targets
+  // 04-26 → nearest recorded at or before is 04-20; PY 2025-26 opens 2025-07-10.
+  const HISTORY = [
+    '2025-07-10',
+    '2026-04-20',
+    '2026-05-19',
+    '2026-05-25',
+    '2026-05-26',
+  ]
+
+  let location = ''
+  const LocationProbe: React.FC = () => {
+    location = useLocation().search
+    return null
+  }
+
+  function renderWithHistory(
+    initialEntry = '/district/61/changes',
+    dates: string[] = HISTORY
+  ) {
+    mockedDates.mockReturnValue({
+      data: { dates },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    // Echo the requested pair back, so the headline reflects the real selection
+    // rather than a frozen fixture.
+    mockedDiff.mockImplementation(
+      (_districtId, from, to) =>
+        ({
+          data:
+            from && to
+              ? diffFixture({ from: { date: from }, to: { date: to } })
+              : undefined,
+          isLoading: false,
+          isError: false,
+        }) as unknown as ReturnType<typeof useSnapshotDiff>
+    )
+    return render(
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <Routes>
+          <Route
+            path="/district/:districtId/changes"
+            element={
+              <>
+                <LocationProbe />
+                <DistrictChangesPage />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    )
+  }
+
+  it('renders the preset chips alongside the date-pair picker', () => {
+    renderWithHistory()
+    expect(screen.getByTestId('changes-preset-chips')).toBeInTheDocument()
+    expect(screen.getByTestId('changes-date-pair-picker')).toBeInTheDocument()
+    expect(screen.getByTestId('changes-preset-week')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('changes-preset-program-year')
+    ).toBeInTheDocument()
+  })
+
+  it('clicking "~1 month" resolves to recorded dates and re-renders the headline', () => {
+    renderWithHistory()
+    fireEvent.click(screen.getByTestId('changes-preset-month'))
+
+    expect(location).toContain('from=2026-04-20')
+    expect(screen.getByTestId('changes-headline')).toHaveTextContent(
+      /from Apr 20, 2026 to May 26, 2026/
+    )
+  })
+
+  it('clears a stale to= in the same navigation that writes from=', () => {
+    // The failure shape this guards: writing only `from` would leave the old
+    // `to=2026-05-19` in place and silently produce a pair nobody asked for.
+    renderWithHistory('/district/61/changes?from=2025-07-10&to=2026-05-19')
+    fireEvent.click(screen.getByTestId('changes-preset-month'))
+
+    expect(location).toContain('from=2026-04-20')
+    expect(location).not.toContain('to=2026-05-19')
+    expect(screen.getByTestId('changes-headline')).toHaveTextContent(
+      /from Apr 20, 2026 to May 26, 2026/
+    )
+  })
+
+  it('deep-links as a plain date pair — no new URL param', () => {
+    renderWithHistory()
+    fireEvent.click(screen.getByTestId('changes-preset-program-year'))
+
+    const params = new URLSearchParams(location)
+    expect([...params.keys()].sort()).toEqual(['from'])
+    expect(params.get('from')).toBe('2025-07-10')
+  })
+
+  it('keeps an unrelated deep-link param intact across a preset click', () => {
+    renderWithHistory('/district/61/changes?expandChanges=membership')
+    fireEvent.click(screen.getByTestId('changes-preset-week'))
+
+    const params = new URLSearchParams(location)
+    expect(params.get('expandChanges')).toBe('membership')
+    expect(params.get('from')).toBe('2026-05-19')
+  })
+
+  it('never lands the page in an invalid pair state via a preset', () => {
+    renderWithHistory()
+    for (const id of ['week', 'month', 'program-year', 'last-snapshot']) {
+      fireEvent.click(screen.getByTestId(`changes-preset-${id}`))
+      expect(screen.queryByTestId('changes-same-date')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('changes-reversed')).not.toBeInTheDocument()
+      expect(screen.getByTestId('changes-headline')).toBeInTheDocument()
+    }
+  })
+
+  it('offers no chips when only one snapshot exists', () => {
+    renderWithHistory('/district/61/changes', ['2026-05-26'])
+    expect(screen.queryByTestId('changes-preset-chips')).not.toBeInTheDocument()
+    expect(screen.getByTestId('changes-single')).toBeInTheDocument()
+  })
+})

@@ -64,6 +64,12 @@ export interface ScrapeResult {
   districtsSucceeded: string[]
   /** Districts that failed to scrape */
   districtsFailed: string[]
+  /**
+   * Requested districts that did not exist on the scraped date, and were
+   * therefore never fetched (#1465). Absent when the date's districtsummary
+   * could not be read as a district list — undecided, not "none skipped".
+   */
+  districtsSkipped?: string[]
   /** Paths to created cache files */
   cacheLocations: string[]
   /** Detailed error information for failed districts */

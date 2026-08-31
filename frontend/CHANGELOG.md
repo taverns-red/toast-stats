@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.19.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.18.1...frontend-v3.19.0) (2026-08-31)
+
+
+### Features
+
+* **frontend:** surface newCharteredClubs + a checkpoint-count resolution hook for Club Growth Achievement ([#1475](https://github.com/taverns-red/toast-stats/issues/1475)) () ([abc0af6](https://github.com/taverns-red/toast-stats/commit/abc0af67183af0e7a7099046e1bcdaf499499afd))
+* **recognition:** Club Growth Achievement predicate (PY-gated) + program-year rule-change log entry ([#1474](https://github.com/taverns-red/toast-stats/issues/1474)) () ([e1489b7](https://github.com/taverns-red/toast-stats/commit/e1489b7198ff63081d5a0c30b866b967d817652a))
+* **ui:** Club Growth Achievement card on the District Overview ([#1476](https://github.com/taverns-red/toast-stats/issues/1476)) ([#1487](https://github.com/taverns-red/toast-stats/issues/1487)) ([186255a](https://github.com/taverns-red/toast-stats/commit/186255aaa78598e8c42f306fa456a87a4f8c69f8))
+* **whats-changed:** time-window preset chips for the date pair picker ([#1462](https://github.com/taverns-red/toast-stats/issues/1462)) ([#1486](https://github.com/taverns-red/toast-stats/issues/1486)) ([a7a7a87](https://github.com/taverns-red/toast-stats/commit/a7a7a87c3363d87ae7bec60270f1fe88676266f3))
+
+
+### Bug Fixes
+
+* **pipeline:** a snapshot directory holds only the districts that existed on its own date ([#1465](https://github.com/taverns-red/toast-stats/issues/1465)) ([#1480](https://github.com/taverns-red/toast-stats/issues/1480)) ([fcb05aa](https://github.com/taverns-red/toast-stats/commit/fcb05aa39165ef22a27de8997439a47e8cb2b75d))
+
 ## [3.18.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.18.0...frontend-v3.18.1) (2026-08-31)
 
 
