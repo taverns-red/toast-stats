@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.8.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.7.1...shared-contracts-v1.8.0) (2026-08-23)
+
+
+### Features
+
+* **pipeline:** fetch district daily reports in a parallel job, and fix the district_*.json collision ([#1428](https://github.com/taverns-red/toast-stats/issues/1428)) ([#1434](https://github.com/taverns-red/toast-stats/issues/1434)) ([c86c866](https://github.com/taverns-red/toast-stats/commit/c86c8661c765c2fbb98861d836a49b50e76d7a21))
+
+
+### Bug Fixes
+
+* **analytics:** DCP goals 2-3 read 0 for PY 2026-27 — resolve TI's 'or EOM' column rename ([#1399](https://github.com/taverns-red/toast-stats/issues/1399)) ([#1402](https://github.com/taverns-red/toast-stats/issues/1402)) ([f7ac01e](https://github.com/taverns-red/toast-stats/commit/f7ac01eeb0bfe7e18d34bce9363206294daaea8a))
+* **frontend:** club history is keyed on the club number, and every skipped year says why ([#1437](https://github.com/taverns-red/toast-stats/issues/1437)) ([#1446](https://github.com/taverns-red/toast-stats/issues/1446)) ([4c30e85](https://github.com/taverns-red/toast-stats/commit/4c30e8590c7ddb262fb996b995899d0671b097be))
+* one canonical club id across the eight identity sites ([#1440](https://github.com/taverns-red/toast-stats/issues/1440)) ([#1447](https://github.com/taverns-red/toast-stats/issues/1447)) ([2577eaa](https://github.com/taverns-red/toast-stats/commit/2577eaac146fc04d49d6002ebaa91c141d844721))
+* say when a district realignment moved the boundary instead of calling transfers roster churn ([#1443](https://github.com/taverns-red/toast-stats/issues/1443)) ([#1448](https://github.com/taverns-red/toast-stats/issues/1448)) ([9914555](https://github.com/taverns-red/toast-stats/commit/99145553883f9c56e8a47735e7664679b7a49a69))
+* suppress district year-over-year across the 2026 reformation boundary ([#1442](https://github.com/taverns-red/toast-stats/issues/1442)) ([#1449](https://github.com/taverns-red/toast-stats/issues/1449)) ([09b36a5](https://github.com/taverns-red/toast-stats/commit/09b36a5f018ffde63bdb7d0b199c3dbec0c82383))
+
 ## [1.7.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.7.0...shared-contracts-v1.7.1) (2026-07-03)
 
 

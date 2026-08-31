@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.9.7](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.6...analytics-core-v1.9.7) (2026-08-23)
+
+
+### Bug Fixes
+
+* **analytics:** DCP goals 2-3 read 0 for PY 2026-27 — resolve TI's 'or EOM' column rename ([#1399](https://github.com/taverns-red/toast-stats/issues/1399)) ([#1402](https://github.com/taverns-red/toast-stats/issues/1402)) ([f7ac01e](https://github.com/taverns-red/toast-stats/commit/f7ac01eeb0bfe7e18d34bce9363206294daaea8a))
+* **analytics:** resolve club recognition tiers per program year — Smedley is unreachable before PY 2025-26 ([#1406](https://github.com/taverns-red/toast-stats/issues/1406)) ([#1409](https://github.com/taverns-red/toast-stats/issues/1409)) ([d77c9db](https://github.com/taverns-red/toast-stats/commit/d77c9dbdf0f9a2e357313b1a5b63896d0197b6cb))
+* one canonical club id across the eight identity sites ([#1440](https://github.com/taverns-red/toast-stats/issues/1440)) ([#1447](https://github.com/taverns-red/toast-stats/issues/1447)) ([2577eaa](https://github.com/taverns-red/toast-stats/commit/2577eaac146fc04d49d6002ebaa91c141d844721))
+* say when a district realignment moved the boundary instead of calling transfers roster churn ([#1443](https://github.com/taverns-red/toast-stats/issues/1443)) ([#1448](https://github.com/taverns-red/toast-stats/issues/1448)) ([9914555](https://github.com/taverns-red/toast-stats/commit/99145553883f9c56e8a47735e7664679b7a49a69))
+* suppress district year-over-year across the 2026 reformation boundary ([#1442](https://github.com/taverns-red/toast-stats/issues/1442)) ([#1449](https://github.com/taverns-red/toast-stats/issues/1449)) ([09b36a5](https://github.com/taverns-red/toast-stats/commit/09b36a5f018ffde63bdb7d0b199c3dbec0c82383))
+
 ## [1.9.6](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.5...analytics-core-v1.9.6) (2026-08-02)
 
 
