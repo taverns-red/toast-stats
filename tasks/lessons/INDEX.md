@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `an-attribution-breakdown-over-mixed-availability-sources-needs-a-residual-not-a-zero-fill.md` — An attribution breakdown assembled from sources of differing availability needs an explicit residual term; zero-filling the unavailable ones turns "we cannot see it" into the confident claim "there was none"  (2026-08-31)
 - `gsutil-cp-dash-i-silently-truncates-its-stdin-source-list.md` — '`gsutil cp -I` copies only the first two stdin sources and exits 0 — use `gcloud storage cp`'  (2026-08-31)
 - `a-new-event-category-is-dropped-not-errored-by-an-explicit-display-list.md` — A feed that renders from an explicit ordered list of categories drops any category the list does not name — a new enum value is silently invisible, never an error, so the reclassification that produced it reads as data loss  (2026-08-22)
 - `a-query-that-just-became-enabled-is-idle-not-fetching.md` — A TanStack Query that just became `enabled` reports idle, not fetching — gate deferred copy on "unresolved", not on isFetching  (2026-08-22)
