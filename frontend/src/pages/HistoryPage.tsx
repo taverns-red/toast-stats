@@ -13,7 +13,9 @@ import {
    Each card links into the landing page filtered to that program year.
 
    The year strip and card list are data-driven, so years with no snapshot data
-   (e.g. the 2021-22 COVID gap) are correctly absent rather than hardcoded. */
+   are correctly absent rather than hardcoded — nothing here enumerates which
+   years exist. (This comment used to cite 2021-22 as a missing "COVID gap"; the
+   CEO Report oracle showed that year IS archived — see #1456.) */
 
 const HistoryPage: React.FC = () => {
   useDocumentTitle('Program Year History')
