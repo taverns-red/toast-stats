@@ -151,9 +151,56 @@ export interface ProgramYearCensus {
 export function readSnapshotVintage(
   sources: SnapshotVintageSources
 ): SnapshotVintage {
-  throw new Error(
-    `readSnapshotVintage is not implemented yet (#1464): ` +
-      `${sources.districtFiles.length} district files`
+  const metadata = asRecord(asRecord(sources.rankings)?.['metadata'])
+
+  const collectedAt = new Set<string>()
+  let districtFilesWithCollectedAt = 0
+  for (const file of sources.districtFiles) {
+    const stamp = asString(asRecord(file)?.['collectedAt'])
+    if (stamp === undefined) continue
+    districtFilesWithCollectedAt += 1
+    collectedAt.add(stamp)
+  }
+
+  return {
+    sourceCsvDate: asString(metadata?.['sourceCsvDate']),
+    calculatedAt: asString(metadata?.['calculatedAt']),
+    collectedAt: [...collectedAt].sort(byCodepoint),
+    districtFilesWithCollectedAt,
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined
+}
+
+/** A non-empty string, or undefined — an empty stamp is absent, not a value. */
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() !== ''
+    ? value.trim()
+    : undefined
+}
+
+/**
+ * One line per program year: what the archive is dated, and when we made it.
+ * An absent field says `absent` — printing a blank would read as a value.
+ */
+export function formatSnapshotVintage(vintage: SnapshotVintage): string {
+  const collected =
+    vintage.collectedAt.length === 0
+      ? 'collectedAt absent'
+      : vintage.collectedAt.length === 1
+        ? `collectedAt ${vintage.collectedAt[0]}`
+        : `collectedAt ${vintage.collectedAt[0]} .. ` +
+          `${vintage.collectedAt[vintage.collectedAt.length - 1]} ` +
+          `(${vintage.collectedAt.length} distinct across ` +
+          `${vintage.districtFilesWithCollectedAt} files)`
+
+  return (
+    `  vintage — sourceCsvDate ${vintage.sourceCsvDate ?? 'absent'} · ` +
+    `calculatedAt ${vintage.calculatedAt ?? 'absent'} · ${collected}`
   )
 }
 
@@ -491,6 +538,9 @@ export function formatClubIdCensus(
         `${year.census.totalIds} club ids ` +
         `(${year.census.distinctRawIds} distinct)`
     )
+    // #1464 — the archive's vintage, reported alongside the club-id findings
+    // and never folded into the verdict above.
+    if (year.vintage) lines.push(formatSnapshotVintage(year.vintage))
     lines.push(...formatNonDigit(year.census.nonDigit, limit))
     lines.push(...formatCollisions(year.census.collisions, limit))
   }
@@ -548,18 +598,28 @@ function censusSnapshot(
   const fileNames = readdirSync(dir).filter(isDistrictSnapshotFile).sort()
 
   const occurrences: ClubIdOccurrence[] = []
+  const districtBodies: unknown[] = []
   for (const fileName of fileNames) {
     const parsed: unknown = JSON.parse(
       readFileSync(join(dir, fileName), 'utf-8')
     )
+    districtBodies.push(parsed)
     occurrences.push(...collectClubIdOccurrences(fileName, parsed))
   }
+
+  // #1464 — the rankings file carries the archive's own dating. A missing one
+  // is undecided, not a failure: the vintage's fields then read `absent`.
+  const rankingsPath = join(dir, 'all-districts-rankings.json')
+  const rankings: unknown = existsSync(rankingsPath)
+    ? JSON.parse(readFileSync(rankingsPath, 'utf-8'))
+    : undefined
 
   return {
     programYear: programYearForSnapshotDate(snapshotDate),
     snapshotDate,
     districtFiles: fileNames.length,
     census: buildClubIdCensus(occurrences),
+    vintage: readSnapshotVintage({ rankings, districtFiles: districtBodies }),
   }
 }
 
