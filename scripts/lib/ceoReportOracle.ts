@@ -143,6 +143,27 @@ export const CEO_REPORT_METRICS = [
 
 export type CeoReportMetric = (typeof CEO_REPORT_METRICS)[number]
 
+/**
+ * Membership payments as of June 30, as published in the report's Numeric
+ * Snapshots table. Transcribed from the same August 2026 edition as
+ * `CEO_REPORT_FIGURES` — see `CEO_REPORT_SOURCE_URL`.
+ *
+ * Deliberately NOT part of `CeoReportFigures`: the oracle compares what
+ * `DistinguishedDistrictCalculator` and the rankings produce, and payments are
+ * not one of those metrics — adding a row here must not widen the oracle's
+ * verdict. It exists so the worldwide rollup (#1426) has an EXTERNAL expected
+ * value: #1466's guard asserts against TI's published figure, never against
+ * our own output.
+ */
+export const CEO_REPORT_MEMBERSHIP_PAYMENTS: Readonly<Record<string, number>> =
+  Object.freeze({
+    '2021-2022': 563443,
+    '2022-2023': 549636,
+    '2023-2024': 557370,
+    '2024-2025': 549007,
+    '2025-2026': 548483,
+  })
+
 /** The per-tier club metrics that must add up to the total. */
 const CLUB_TIER_METRICS = [
   'distinguishedClubs',
