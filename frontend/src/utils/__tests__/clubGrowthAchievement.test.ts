@@ -181,6 +181,33 @@ describe('settled March 31 checkpoint — cumulative from July 1 (A2)', () => {
   it('an unknown March count is unknown even when September settled', () => {
     expect(settledMarch(undefined).status).toBe('unknown')
   })
+
+  it('does not fall back to the live count once March 31 has passed', () => {
+    // The running total kept climbing after the deadline (2 → 12). The March
+    // verdict is what stood on March 31, not what stands today.
+    const state = march(
+      resolveClubGrowthAchievement({
+        programYear: '2026-2027',
+        asOfDate: '2027-04-30',
+        mar31Count: 2,
+        toDateCount: 12,
+      })
+    )
+    expect(state.status).toBe('settled')
+    expect(state.status === 'settled' && state.count).toBe(2)
+    expect(state.status === 'settled' && state.milestoneReached).toBeNull()
+  })
+
+  it('is unknown, not the live count, when the March data is missing', () => {
+    const state = march(
+      resolveClubGrowthAchievement({
+        programYear: '2026-2027',
+        asOfDate: '2027-04-30',
+        toDateCount: 12,
+      })
+    )
+    expect(state.status).toBe('unknown')
+  })
 })
 
 describe('pending checkpoint — countdown to the same gate it settles on', () => {
@@ -300,6 +327,34 @@ describe('as-of date hygiene', () => {
       'unknown',
       'unknown',
     ])
+  })
+
+  it.each(['2026-13-01', '2026-02-30', '2026-99-99', '0000-00-00'])(
+    'rejects %s — an ISO-shaped impossible date must not settle a checkpoint',
+    asOfDate => {
+      // Shape-only validation would let these sort lexically past a deadline
+      // and silently settle both checkpoints on data that has no date.
+      const result = resolveClubGrowthAchievement({
+        programYear: '2026-2027',
+        asOfDate,
+        sep30Count: 5,
+        toDateCount: 5,
+      })
+      expect(
+        result.applicable && result.checkpoints.map(c => c.status)
+      ).toEqual(['unknown', 'unknown'])
+    }
+  )
+
+  it('accepts a real leap day', () => {
+    const state = march(
+      resolveClubGrowthAchievement({
+        programYear: '2027-2028',
+        asOfDate: '2028-02-29',
+        toDateCount: 4,
+      })
+    )
+    expect(state.status).toBe('pending')
   })
 
   it('tolerates a full ISO timestamp on the deadline day (no timezone flip)', () => {

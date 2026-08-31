@@ -46,10 +46,10 @@ export const CLUB_GROWTH_ACHIEVEMENT_FIRST_PROGRAM_YEAR = '2026-2027'
 const FIRST_START_YEAR = 2026
 
 /** Milestones TI lists for the September 30 checkpoint, ascending. */
-const SEPTEMBER_30_MILESTONES: readonly number[] = [3, 5]
+const SEPTEMBER_30_MILESTONES: readonly number[] = Object.freeze([3, 5])
 
 /** Milestones TI lists for the March 31 checkpoint, ascending. */
-const MARCH_31_MILESTONES: readonly number[] = [3, 5, 10]
+const MARCH_31_MILESTONES: readonly number[] = Object.freeze([3, 5, 10])
 
 export type ClubGrowthCheckpointId = 'september30' | 'march31'
 
@@ -146,10 +146,29 @@ const programYearStartYear = (programYear: string): number | null => {
   return end === start + 1 ? start : null
 }
 
-/** ISO `YYYY-MM-DD` prefix of a date string, or `null` if it is not one. */
+/**
+ * ISO `YYYY-MM-DD` prefix of a date string, or `null` when it is not a real
+ * calendar date.
+ *
+ * The calendar check is not pedantry: the caller compares the result
+ * lexically against a deadline, and an ISO-SHAPED impossible date
+ * (`'2026-13-01'`) sorts after every real date in September — it would settle
+ * a checkpoint on data that has no date. Round-tripping through `Date.UTC`
+ * (never the timezone-sensitive `new Date('YYYY-MM-DD')` local parse) rejects
+ * both out-of-range months and overflowing days like Feb 30.
+ */
 const toIsoDate = (value: string): string | null => {
   const iso = value.slice(0, 10)
-  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null
+  const year = Number.parseInt(iso.slice(0, 4), 10)
+  const month = Number.parseInt(iso.slice(5, 7), 10)
+  const day = Number.parseInt(iso.slice(8, 10), 10)
+  const utc = new Date(Date.UTC(year, month - 1, day))
+  const roundTrips =
+    utc.getUTCFullYear() === year &&
+    utc.getUTCMonth() === month - 1 &&
+    utc.getUTCDate() === day
+  return roundTrips ? iso : null
 }
 
 /**
