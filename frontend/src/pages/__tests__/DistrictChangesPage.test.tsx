@@ -495,6 +495,22 @@ describe('DistrictChangesPage — payment changes (#1459)', () => {
               '(2 October renewals, 1 new member, 1 other)',
             magnitude: 4,
           },
+          // Neighbours on both sides, so the ordering assertion below has
+          // something to be ordered against (an empty group renders nothing).
+          {
+            category: 'membership',
+            clubId: '00002959',
+            clubName: 'Bytown Club',
+            label: 'Bytown Club gained 3 members',
+            magnitude: 3,
+          },
+          {
+            category: 'dcp-goals',
+            clubId: '00002960',
+            clubName: 'Rideau Club',
+            label: 'Rideau Club met 1 more DCP goal',
+            magnitude: 1,
+          },
         ],
       }),
       isLoading: false,
@@ -512,11 +528,17 @@ describe('DistrictChangesPage — payment changes (#1459)', () => {
       screen.getByRole('link', { name: 'Limestone City Club' })
     ).toHaveAttribute('href', '/district/61/club/00003045')
 
-    // Payments sits with the per-club metric churn, directly after membership.
+    // Payments sits with the per-club metric churn, between membership and
+    // DCP — asserted as ORDER, not mere presence.
     const headings = Array.from(
       container.querySelectorAll('details summary')
     ).map(s => s.textContent ?? '')
-    expect(headings.some(h => /Payment changes/.test(h))).toBe(true)
+    const membership = headings.findIndex(h => /Membership changes/.test(h))
+    const payments = headings.findIndex(h => /Payment changes/.test(h))
+    const dcp = headings.findIndex(h => /DCP goal changes/.test(h))
+    expect(membership).toBeGreaterThanOrEqual(0)
+    expect(payments).toBe(membership + 1)
+    expect(dcp).toBe(payments + 1)
   })
 
   it('renders no Payment changes group when there are no payments events', () => {

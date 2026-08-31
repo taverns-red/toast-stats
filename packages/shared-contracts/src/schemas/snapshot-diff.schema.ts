@@ -34,8 +34,11 @@ export type AggregateDelta = z.infer<typeof AggregateDeltaSchema>
  * structured field: no consumer needs to compute over it yet, and the label is
  * what the feed, the export, and a screen reader all render. It supersedes the
  * Phase-1 decision to keep payments aggregate-only — per-club payments is the
- * renewal-season signal a district leader actually campaigns on, and the
- * magnitude sort keeps the ±1 churn below the material rows.
+ * renewal-season signal a district leader actually campaigns on. Note the
+ * volume: 96 of D61's 161 clubs moved over one month, and the magnitude sort
+ * is GLOBAL while the render is grouped, so the ±1 churn still sits inside the
+ * payments group. Trimming that group is the epic's Sprint 5 (signed net in
+ * the heading), not this category's job.
  *
  * `area-status` / `division-status` (#1014) carry recognition-tier transitions
  * for areas/divisions instead of clubs — derived in the frontend from the
