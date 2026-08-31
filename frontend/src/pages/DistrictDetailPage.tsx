@@ -688,12 +688,14 @@ const DistrictDetailPageInner: React.FC = () => {
                   }
                 />
 
-                {/* District Club Growth Achievement (#1476). Renders only
-                    from PY 2026-2027 — the card's own gate returns null for
-                    earlier years rather than an empty or zeroed shell. The
-                    live running total comes from the rankings row already
-                    fetched above; each settled checkpoint comes from its own
-                    dated snapshot via the hook. */}
+                {/* District Club Growth Achievement (#1476). The card owns the
+                    effective-year gate — `clubGrowthAchievement.ts` holds the
+                    one copy of it, and the log entry it belongs to is the
+                    source of truth — so an out-of-scope year renders nothing
+                    here rather than an empty or zeroed shell. The live running
+                    total comes from the rankings row already fetched above;
+                    each settled checkpoint comes from its own dated snapshot
+                    via the hook. */}
                 <ClubGrowthAchievementCard
                   programYear={
                     (effectiveProgramYear ?? selectedProgramYear).label

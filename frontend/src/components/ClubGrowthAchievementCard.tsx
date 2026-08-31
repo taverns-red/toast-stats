@@ -170,8 +170,10 @@ const provenanceText = (
 /* ── Chip styling ────────────────────────────────────────────────────────────
    Every utility used here already has a symmetric `[data-theme='dark']`
    override in `styles/dark-mode.css` — background AND foreground remap
-   together, which is the failure mode Lesson 094 is about. No `dark:` variant,
-   no opacity-variant utility (those bake hardcoded rgba, R10 tripwire). */
+   together, which is the failure mode Lesson 094 is about. No raw
+   prefers-color-scheme variant (#715 — it misfires when the OS prefers dark
+   but the app shows light), and no opacity-variant utility (those bake
+   hardcoded rgba, R10 tripwire). */
 
 const STATUS_CHIP: Record<string, string> = {
   earned: 'bg-tm-true-maroon text-white border-tm-true-maroon',
@@ -344,7 +346,7 @@ const CheckpointBlock: React.FC<{
       {provenance && (
         <p
           data-testid={`${base}-provenance`}
-          className="mt-2 text-[11px] text-gray-500 font-tm-body"
+          className="mt-2 text-[11px] text-gray-600 font-tm-body"
         >
           {provenance}
         </p>
