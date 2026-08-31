@@ -64,6 +64,14 @@ jobs:
           npm run build:collector-cli
           npm run build:mcp-server
 
+      - name: Verify dual ESM/CJS emit (#1489)
+        # tsc exiting 0 does NOT prove dist/cjs is CommonJS: node16/nodenext
+        # derive the emit format from the source package.json ("type": "module"),
+        # so a careless moduleResolution change writes ESM into dist/cjs and
+        # still exits 0. dist/ is gitignored (R16), so the break would surface
+        # as a consumer error, not a red build. Check the emitted bytes.
+        run: npm run build:verify-emit
+
       - name: Typecheck collector-cli (#1109)
         # collector-cli is never built/typechecked in PR CI otherwise — its
         # type errors first surface in the scheduled data pipeline. Gate it
