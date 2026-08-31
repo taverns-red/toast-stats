@@ -71,6 +71,52 @@ const ChangeLabel: React.FC<{ event: DiffEvent; districtId: string }> = ({
   )
 }
 
+/* #1463 (epic #1458 Sprint 5) — the categories whose `magnitude` is a real
+   signed QUANTITY, and so can be summed into a meaningful net.
+
+   `diffSnapshots` emits `magnitude: membership.delta` / `payments.delta` /
+   `dcpGoals.delta` for these three. Every other category carries a ±1
+   direction FLAG instead (`club-added` is always +1, `club-removed` always −1,
+   `distinguished` is +1 gained / −1 lost / 0 for a tier move). Summing flags
+   would produce a number that looks like a quantity and isn't — so those
+   groups keep the honest count-only heading (Lesson: a clamped/derived figure
+   must never be rendered under a label that promises a signed delta). A new
+   category is count-only by default: it has to be named here to grow a net. */
+const NET_BEARING_CATEGORIES: ReadonlySet<DiffEventCategory> =
+  new Set<DiffEventCategory>(['membership', 'payments', 'dcp-goals'])
+
+/** The signed net for a group, or null when a net would be meaningless.
+    Derived from the SAME events the group renders — never a parallel sum
+    computed upstream, which could drift from the rows on screen. */
+function netFor(
+  category: DiffEventCategory,
+  events: DiffEvent[]
+): number | null {
+  if (!NET_BEARING_CATEGORIES.has(category)) return null
+  return events.reduce((sum, e) => sum + e.magnitude, 0)
+}
+
+/** Signed display for a net. Positives take '+', negatives U+2212 MINUS SIGN
+    (never a hyphen, which reads as a dash mid-heading and is easy to lose next
+    to the count separator) — matching ChangeIndicator's convention. Zero is
+    rendered BARE: a signed '+0'/'−0' would be indistinguishable at a glance
+    from a real ±1 movement, and "net 0" across a non-empty group is itself the
+    answer the reader came for, not something to hide. */
+function formatNet(net: number): string {
+  if (net > 0) return `+${net.toLocaleString()}`
+  if (net < 0) return `\u2212${Math.abs(net).toLocaleString()}`
+  return '0'
+}
+
+/** Direction as a word for assistive tech — direction is never carried by
+    colour alone (WCAG 1.4.1); the sign carries it visually, this carries it
+    for a screen reader. */
+function netDirectionWord(net: number): string {
+  if (net > 0) return 'increase'
+  if (net < 0) return 'decrease'
+  return 'no net change'
+}
+
 export const ChangeGroup: React.FC<{
   category: DiffEventCategory
   heading: string
@@ -82,6 +128,7 @@ export const ChangeGroup: React.FC<{
   onToggle: (category: DiffEventCategory, open: boolean) => void
 }> = ({ category, heading, events, districtId, collapsed, onToggle }) => {
   if (events.length === 0) return null
+  const net = netFor(category, events)
   return (
     <details
       className="changes-group"
@@ -90,7 +137,27 @@ export const ChangeGroup: React.FC<{
     >
       <summary className="changes-group__summary">
         {heading}{' '}
-        <span className="changes-group__count">({events.length})</span>
+        <span
+          className="changes-group__count"
+          data-testid="changes-group-count"
+        >
+          ({events.length}
+          {net !== null && (
+            <>
+              {' \u00b7 '}
+              <span
+                className={`changes-group__net changes-group__net--${
+                  net > 0 ? 'up' : net < 0 ? 'down' : 'flat'
+                }`}
+                data-testid="changes-group-net"
+              >
+                net {formatNet(net)}
+                <span className="sr-only"> {netDirectionWord(net)}</span>
+              </span>
+            </>
+          )}
+          )
+        </span>
       </summary>
       <ul className="changes-group__list">
         {events.map(e => (
