@@ -42,7 +42,8 @@ export interface DatePairPresetChipsProps<T extends string = string> {
    dark-mode.css intercepts the common utilities with `!important`
    (`[data-theme='dark'] .bg-gray-100 { background-color: #1e1b27 !important }`),
    so a `theme-dark:bg-gray-100` pressed chip lost its background in dark mode
-   and rendered dark-on-dark: its border and text flipped, its fill did not.
+   and rendered dark ink on a dark fill — its border and text flipped, its
+   background did not.
    The redesign tokens remap light/dark together by design (Lessons 093/094), so
    one declaration — `background: var(--ink); color: var(--surface)` — is an
    inverted chip in BOTH themes, with nothing to keep in sync. */
