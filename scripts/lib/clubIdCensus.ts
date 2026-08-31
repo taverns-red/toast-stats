@@ -98,12 +98,63 @@ export interface ClubIdCensus {
   readonly collisions: readonly CanonicalCollision[]
 }
 
+/**
+ * How old the data in one snapshot directory is, and when it was produced
+ * (#1464).
+ *
+ * The oracle's remaining mismatches were hypothesised to be pre-final year-end
+ * captures; refuting that meant reading these three fields out of the archive
+ * by hand, in a bespoke investigation. It should have been one line of the
+ * census's own output — so it is, now. Like every other census finding it is
+ * reported ALONGSIDE the oracle's verdict and never becomes it.
+ *
+ * Every field is optional by absence: a snapshot that does not carry one is
+ * reported as `absent`, never as a zero, an empty string, or today's date.
+ */
+export interface SnapshotVintage {
+  /** `all-districts-rankings.json` → `metadata.sourceCsvDate`. */
+  readonly sourceCsvDate?: string
+  /** `all-districts-rankings.json` → `metadata.calculatedAt`. */
+  readonly calculatedAt?: string
+  /**
+   * The distinct `collectedAt` stamps across the district files, sorted. A
+   * range rather than one value: the files of one run are written seconds
+   * apart, and a directory assembled from two runs shows it here.
+   */
+  readonly collectedAt: readonly string[]
+  /** How many district files carried a `collectedAt` at all. */
+  readonly districtFilesWithCollectedAt: number
+}
+
+/** The parsed bodies one snapshot directory's vintage is read from. */
+export interface SnapshotVintageSources {
+  /** Parsed `all-districts-rankings.json`, or undefined when absent. */
+  readonly rankings: unknown
+  /** Parsed `district_*.json` bodies. */
+  readonly districtFiles: readonly unknown[]
+}
+
 /** One snapshot's census, labelled with the program year it closes. */
 export interface ProgramYearCensus {
   readonly programYear: string
   readonly snapshotDate: string
   readonly districtFiles: number
   readonly census: ClubIdCensus
+  /** Absent when the directory supplied nothing to read it from (#1464). */
+  readonly vintage?: SnapshotVintage
+}
+
+/**
+ * Read one snapshot's vintage from the bodies already parsed for the census —
+ * no second pass over the directory.
+ */
+export function readSnapshotVintage(
+  sources: SnapshotVintageSources
+): SnapshotVintage {
+  throw new Error(
+    `readSnapshotVintage is not implemented yet (#1464): ` +
+      `${sources.districtFiles.length} district files`
+  )
 }
 
 /**
