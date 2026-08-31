@@ -40,6 +40,21 @@ export type AggregateDelta = z.infer<typeof AggregateDeltaSchema>
  * payments group. Trimming that group is the epic's Sprint 5 (signed net in
  * the heading), not this category's job.
  *
+ * `csp` (#1460) carries a club's Club Success Plan SUBMISSION flip — club-
+ * scoped like `membership`, magnitude +1 for a submission and -1 for the rare
+ * un-submission (a data correction, kept visible rather than hidden). It is a
+ * boolean transition, not a delta, so the magnitude is a direction only.
+ * `clubs[].cspSubmitted` is OPTIONAL: real from PY 2025-26 onward and ABSENT
+ * (never `false`) before it, so the engine emits only when BOTH sides are real
+ * booleans that differ — an absent side is silence, always. Note this category
+ * deliberately does NOT go through `getCSPStatus`, whose `?? true` default is
+ * correct for distinguished ELIGIBILITY (pre-2025-26 clubs are not penalised
+ * for a column that did not exist) and catastrophic here: it would turn every
+ * diff across the PY 2025-26 boundary into a district-wide phantom flip.
+ * Per-club submission DATES (`district_{id}_reports.json`) are out of scope —
+ * they need a second fetch in `useSnapshotDiff` and the flip answers "who
+ * submitted since last time" on its own.
+ *
  * `area-status` / `division-status` (#1014) carry recognition-tier transitions
  * for areas/divisions instead of clubs — derived in the frontend from the
  * verified recognition source-of-truth (`extractDivisionPerformance`), NOT the
@@ -64,6 +79,7 @@ export type AggregateDelta = z.infer<typeof AggregateDeltaSchema>
 export const DiffEventCategorySchema = z.enum([
   'membership',
   'payments',
+  'csp',
   'dcp-goals',
   'distinguished',
   'club-added',
