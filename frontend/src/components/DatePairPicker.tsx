@@ -26,8 +26,23 @@ export interface DatePairPickerProps<T extends string = string> {
 // #888 Sprint 2). The label is the touch target (an inset-0 opacity-0 <select>
 // overlays it), so lifting the label to 44px lifts the real target in both
 // engines (L111 family) — audit #885 measured these chips at 34px.
-const CHIP_BASE =
-  'inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-full text-xs font-medium border bg-white border-gray-200 text-gray-700 theme-dark:bg-gray-800 theme-dark:border-gray-700 theme-dark:text-gray-200'
+/**
+ * Shape + size only, deliberately colourless — the sibling time-window preset
+ * chips (#1462) reuse this and supply their own state colours. Keeping colour
+ * out of the layout string is what makes that safe: Tailwind resolves
+ * conflicting utilities by CSS source order, not by string order, so
+ * `${CHIP_LAYOUT} bg-gray-900` cannot be silently beaten by a `bg-white`
+ * sitting further left in the same string.
+ */
+export const CHIP_LAYOUT =
+  'inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-full text-xs font-medium border'
+
+/** The resting surface a picker chip wears. Local — the preset chips take
+ *  their colour from CSS tokens, not from this string (see #1462). */
+const CHIP_SURFACE =
+  'bg-white border-gray-200 text-gray-700 theme-dark:bg-gray-800 theme-dark:border-gray-700 theme-dark:text-gray-200'
+
+const CHIP_BASE = `${CHIP_LAYOUT} ${CHIP_SURFACE}`
 
 function DateChipSelect<T extends string>({
   testId,

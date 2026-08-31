@@ -17,11 +17,54 @@
   gap: 1rem;
 }
 
+/* Two control groups stacked: the time-window preset chips (#1462) above the
+   raw from/to pickers. A column — not a wrapping row — because a single row of
+   both groups breaks mid-group at 375px, orphaning "Program year" onto the
+   pickers' line. Each group wraps internally, so nothing overflows the
+   viewport at any width; align-items:flex-start keeps the groups their natural
+   width instead of stretching. */
 .district-changes__controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+/* Time-window preset chips (#1462). Colour lives here, not in Tailwind gray
+   utilities: dark-mode.css intercepts those with `!important`
+   (`[data-theme='dark'] .bg-gray-100 { … !important }`), which silently ate the
+   pressed chip's fill and left it dark-on-dark — border and text flipped, the
+   background did not (caught in a live dark-mode pass, R10). The redesign
+   tokens remap light/dark together (Lessons 093/094), so each rule below is
+   correct in both themes with nothing to keep in sync. Shape, size and the
+   44px touch-target floor stay in CHIP_LAYOUT on the component. */
+.date-preset-chip {
+  background-color: var(--surface);
+  color: var(--ink-2);
+  border-color: var(--line);
+}
+
+.date-preset-chip:hover:not([aria-disabled='true']) {
+  background-color: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Pressed reads as an inverted chip — near-black on white in light, near-white
+   on the dark card in dark. Both directions clear WCAG AA comfortably. */
+.date-preset-chip[aria-pressed='true'] {
+  background-color: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+
+.date-preset-chip[aria-disabled='true'] {
+  background-color: var(--surface-2);
+  /* --ink-3, not the dimmer --ink-4: at text-xs, --ink-4 lands ~3.3:1 on
+     --surface-2. Disabled controls are WCAG-exempt, but the chip still has to
+     be READ to explain why the window is unavailable. */
+  color: var(--ink-3);
+  border-color: var(--line);
+  cursor: not-allowed;
 }
 
 .district-changes__headline {
