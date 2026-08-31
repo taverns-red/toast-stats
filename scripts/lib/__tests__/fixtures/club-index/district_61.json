@@ -1,0 +1,25 @@
+{
+  "data": {
+    "districtId": "61",
+    "clubs": [
+      {
+        "clubId": "3045",
+        "clubName": "Limestone City Club",
+        "divisionId": "A",
+        "areaId": "01"
+      },
+      {
+        "clubId": "9560",
+        "clubName": "CFB Kingston Toastmasters",
+        "divisionId": "A",
+        "areaId": "01"
+      },
+      {
+        "clubId": "1849755",
+        "clubName": "Toastmasters At St. Lawrence College",
+        "divisionId": "A",
+        "areaId": "01"
+      }
+    ]
+  }
+}
