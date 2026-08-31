@@ -1,0 +1,25 @@
+{
+  "data": {
+    "districtId": "02",
+    "clubs": [
+      {
+        "clubId": "3708",
+        "clubName": "Advancing Alaska Toastmasters",
+        "divisionId": "A",
+        "areaId": "11"
+      },
+      {
+        "clubId": "4194",
+        "clubName": "Valley Toastmasters Club",
+        "divisionId": "A",
+        "areaId": "11"
+      },
+      {
+        "clubId": "5263",
+        "clubName": "Tundra Talkers Toastmasters Club",
+        "divisionId": "A",
+        "areaId": "11"
+      }
+    ]
+  }
+}

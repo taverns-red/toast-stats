@@ -1472,10 +1472,15 @@ jobs:
           DISTRICT_COUNT=$(jq '.districts | keys | length' /tmp/district-snapshot-index.json)
           echo "- **Districts in index**: ${DISTRICT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Shared: Generate club-index.json (#320) ──
+      # ── Shared: Generate club-index.json (#320, rebuilt #1469) ──
+      # Built by the unit-tested scripts/lib/clubIndex.ts (thin-glue step,
+      # Lesson 107). This was inline `node -e` until #1469, which is why it
+      # could carry a hand copy of normalizeClubId and ship an index covering
+      # 2 of 94 districts unnoticed. Promotion rsyncs config/ wholesale.
       - name: Generate club-index
         if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
+          set -o pipefail
           LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
             | jq -r '.latestSnapshotDate' || echo "")
           if [ -z "${LATEST_DATE}" ]; then
@@ -1484,66 +1489,31 @@ jobs:
           fi
           echo "Building club-index from snapshots/${LATEST_DATE}/..."
 
-          # Download all district snapshot files for the latest date.
-          # `district_*.json` also matches the daily-reports sidecar
-          # `district_{id}_reports.json` (#1428), which doubles the download
-          # volume and the parse count for nothing. `gsutil cp` has no
-          # exclude flag (-x is rsync-only), so list first, filter, and feed
-          # the survivors back with `cp -I` (source URLs on stdin).
+          # R2: explicitly sync the district files this step reads. The
+          # sidecar district_{id}_reports.json shares the prefix (#1428) and
+          # `gsutil cp` has no exclude flag, so list first, then filter.
           mkdir -p /tmp/club-index-src
-          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" 2>/dev/null \
-            | grep -v '_reports\.json$' > /tmp/club-index-srcs.txt || true
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
+            | grep -v '_reports\.json$' > /tmp/club-index-srcs.txt
+          EXPECTED=$(wc -l < /tmp/club-index-srcs.txt | tr -d ' ')
+          echo "Listed ${EXPECTED} district files"
+
+          # `gcloud storage cp`, NOT `gsutil cp -I` (#1469): gsutil silently
+          # consumes only the first two stdin source URLs and exits 0, which
+          # is how this index ran at 2 of 94 districts. Errors are NOT
+          # discarded here — that suppression is what hid the defect.
           if [ -s /tmp/club-index-srcs.txt ]; then
-            gsutil -m cp -I /tmp/club-index-src/ < /tmp/club-index-srcs.txt 2>/dev/null || true
+            gcloud storage cp -I /tmp/club-index-src/ < /tmp/club-index-srcs.txt
           fi
 
-          node -e "
-            const fs = require('fs');
-            const path = require('path');
-            const srcDir = '/tmp/club-index-src';
-            const clubs = {};
-            let total = 0;
-            // Inline JS in YAML cannot import the shared matcher, so this is a
-            // hand copy of DISTRICT_SNAPSHOT_FILE_PATTERN from
-            // @taverns-red/shared-contracts src/naming/snapshotFileNames.ts
-            // (re-exported as scripts/lib/snapshotFileNames.ts) — a district id
-            // never contains '_' or '.', which excludes every sidecar (#1428).
-            const files = fs.readdirSync(srcDir).filter(f => /^district_[^_.]+\.json$/.test(f));
-            for (const file of files) {
-              try {
-                const raw = JSON.parse(fs.readFileSync(path.join(srcDir, file), 'utf-8'));
-                const data = raw.data || raw;
-                const districtId = data.districtId || file.match(/^district_([^_.]+)\.json$/)?.[1];
-                const clubList = data.clubs || [];
-                for (const club of clubList) {
-                  // Inline JS in YAML cannot import the shared helper, so this
-                  // is a hand copy of normalizeClubId from
-                  // @taverns-red/shared-contracts src/identity/clubId.ts
-                  // (#1440). The transformer now writes the canonical form, so
-                  // this only matters while the latest snapshots predate that
-                  // change — the index must never mix key forms.
-                  const text = String(club.clubId ?? '').trim();
-                  const digits = text.replace(/\D/g, '');
-                  const clubId = digits === '' ? text : (digits.replace(/^0+/, '') || '0');
-                  if (clubId) {
-                    clubs[clubId] = {
-                      districtId: districtId || '',
-                      clubName: club.clubName || '',
-                    };
-                    total++;
-                  }
-                }
-              } catch (e) { /* skip corrupt files */ }
-            }
-            const index = {
-              generatedAt: new Date().toISOString(),
-              snapshotDate: '${LATEST_DATE}',
-              totalClubs: total,
-              clubs,
-            };
-            fs.writeFileSync('/tmp/club-index.json', JSON.stringify(index));
-            console.log('Generated club-index: ' + total + ' clubs from ' + files.length + ' districts');
-          "
+          # Fails the step when nothing synced, or when fewer files arrived
+          # than were listed — a partial index must never overwrite a
+          # complete one.
+          npx tsx scripts/build-club-index.ts \
+            --src /tmp/club-index-src \
+            --out /tmp/club-index.json \
+            --snapshot-date "${LATEST_DATE}" \
+            --expect "${EXPECTED}"
 
           gsutil \
             -h "Content-Type:application/json" \
@@ -1551,8 +1521,8 @@ jobs:
             cp /tmp/club-index.json "gs://${GCS_BUCKET}/config/club-index.json"
 
           echo "## 📋 Club Index" >> "$GITHUB_STEP_SUMMARY"
-          CLUB_COUNT=$(jq '.totalClubs' /tmp/club-index.json)
-          echo "- **Clubs indexed**: ${CLUB_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"- **Clubs indexed**: \(.totalClubs)"' /tmp/club-index.json \
+            >> "$GITHUB_STEP_SUMMARY"
 
       # ── Shared: Generate divisions-areas-index.json (#1134, epic #1101) ──
       # Mirror of club-index for divisions/areas, built by the unit-tested
@@ -1561,6 +1531,7 @@ jobs:
       - name: Generate divisions-areas index
         if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
+          set -o pipefail
           LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
             | jq -r '.latestSnapshotDate' || echo "")
           if [ -z "${LATEST_DATE}" ]; then
@@ -1574,18 +1545,26 @@ jobs:
           # what fed `district_{id}_reports.json` to the index builder and
           # produced its `Skipping corrupt file:` noise on every run.
           mkdir -p /tmp/divisions-areas-src
-          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" 2>/dev/null \
-            | grep -v '_reports\.json$' > /tmp/divisions-areas-srcs.txt || true
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
+            | grep -v '_reports\.json$' > /tmp/divisions-areas-srcs.txt
+          EXPECTED=$(wc -l < /tmp/divisions-areas-srcs.txt | tr -d ' ')
+          echo "Listed ${EXPECTED} district files"
+
+          # `gcloud storage cp`, NOT `gsutil cp -I` (#1469) — see the
+          # club-index step above. This index shipped at 2 of 94 districts
+          # for the same reason, silently degrading omni-search.
           if [ -s /tmp/divisions-areas-srcs.txt ]; then
-            gsutil -m cp -I /tmp/divisions-areas-src/ < /tmp/divisions-areas-srcs.txt 2>/dev/null || true
+            gcloud storage cp -I /tmp/divisions-areas-src/ < /tmp/divisions-areas-srcs.txt
           fi
 
-          # Fails the step when no district files were synced — an empty
-          # index must never overwrite a populated one.
+          # Fails the step when no district files were synced, or when fewer
+          # arrived than were listed — a partial index must never overwrite a
+          # complete one.
           npx tsx scripts/build-divisions-areas-index.ts \
             --src /tmp/divisions-areas-src \
             --out /tmp/divisions-areas-index.json \
-            --snapshot-date "${LATEST_DATE}"
+            --snapshot-date "${LATEST_DATE}" \
+            --expect "${EXPECTED}"
 
           gsutil \
             -h "Content-Type:application/json" \

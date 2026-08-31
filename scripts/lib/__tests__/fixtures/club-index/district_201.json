@@ -1,0 +1,25 @@
+{
+  "data": {
+    "districtId": "201",
+    "clubs": [
+      {
+        "clubId": "21",
+        "clubName": "Santa Monica Club 21",
+        "divisionId": "A",
+        "areaId": "01"
+      },
+      {
+        "clubId": "141",
+        "clubName": "Club 141",
+        "divisionId": "A",
+        "areaId": "01"
+      },
+      {
+        "clubId": "5983",
+        "clubName": "Sand & Sea Speakers Club",
+        "divisionId": "A",
+        "areaId": "01"
+      }
+    ]
+  }
+}
