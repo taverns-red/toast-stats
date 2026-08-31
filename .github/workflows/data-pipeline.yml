@@ -2008,6 +2008,7 @@ jobs:
       contents: write
       pull-requests: write
       id-token: write # Workload Identity Federation for the GCS re-derive
+      issues: write # Link the open alert to the PR, and the failure fallback
 
     env:
       REGISTRY_BRANCH: bot/closing-registry-update
@@ -2049,6 +2050,7 @@ jobs:
         run: npx tsx scripts/update-closing-date-registry.ts
 
       - name: Open or update the registry PR
+        id: registry-pr
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -2069,15 +2071,31 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
           git checkout -B "${REGISTRY_BRANCH}"
+
+          # Format before staging so husky's lint-staged prettier pass is a
+          # no-op. The hook runs normally — we never pass --no-verify (R1).
+          npx prettier --write docs/month-end-closing-dates.json
+
           git add docs/month-end-closing-dates.json
           git commit -m 'chore(data): record closing dates derived from raw-csv metadata (#1419)'
-          git push --force-with-lease origin "${REGISTRY_BRANCH}"
+
+          # NOT --force-with-lease. actions/checkout fetches single-branch, so
+          # `origin/$REGISTRY_BRANCH` never exists as a remote-tracking ref and
+          # the lease is evaluated against a missing ref — every run after the
+          # first is rejected with "stale info", turning the pipeline red while
+          # the 'auto' verdict also suppresses the issue refresh. This job is
+          # the only writer of this branch and always regenerates it from
+          # scratch off main, so a plain force to the explicit refspec is both
+          # correct and the only thing that works here.
+          git push --force origin "HEAD:refs/heads/${REGISTRY_BRANCH}"
 
           # One open PR at a time; the force-push above already refreshed it.
           EXISTING=$(gh pr list --head "${REGISTRY_BRANCH}" --state open \
             --json number --jq '.[0].number // empty')
           if [ -n "${EXISTING}" ]; then
             echo "Refreshed existing registry PR #${EXISTING}."
+            echo "pr_number=${EXISTING}" >> "$GITHUB_OUTPUT"
+            echo "pr_created=false" >> "$GITHUB_OUTPUT"
           else
             # Plain #1419 — never `Closes`/`Fixes`. The alert issue is closed by
             # the pipeline's own auto-close step once the merge makes the next
@@ -2087,6 +2105,72 @@ jobs:
               --base main \
               --title 'chore(data): update closing-date registry from raw-csv metadata' \
               --body-file .github/registry-pr-body.md
+            CREATED=$(gh pr list --head "${REGISTRY_BRANCH}" --state open \
+              --json number --jq '.[0].number // empty')
+            echo "Opened registry PR #${CREATED}."
+            echo "pr_number=${CREATED}" >> "$GITHUB_OUTPUT"
+            echo "pr_created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # An open alert issue must never go silent while 'auto' suppresses its
+      # daily refresh: point it at the PR that resolves it. Gated on
+      # pr_created so this is ONE comment per PR, not a new daily nag.
+      - name: Link the open alert issue to the registry PR
+        if: steps.registry-pr.outputs.pr_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.registry-pr.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          OPEN=$(gh issue list --label closing-registry-stale --state open \
+            --json number --jq '.[].number')
+          if [ -z "${OPEN}" ]; then
+            echo "No open closing-registry-stale issue to link."
+          else
+            for n in ${OPEN}; do
+              gh issue comment "${n}" --body \
+                "🤖 The pipeline derived these entries itself and opened #${PR_NUMBER}. Review and merge it; the next daily run then finds the registry fresh and auto-closes this issue. No local run needed (#1419)."
+            done
+          fi
+
+      # Fail-closed escape hatch. The whole premise of #1419 is that the
+      # monitor must not go blind — so if this remediation path itself breaks
+      # (GCS auth, push rejected, gh outage), fall back to the loud human
+      # alert rather than leaving a red run nobody reads.
+      - name: Fall back to the human alert when auto-remediation fails
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh label create closing-registry-stale \
+            --color B60205 \
+            --description "docs/month-end-closing-dates.json is behind raw-csv metadata" \
+            2>/dev/null || echo "Label already exists"
+
+          BODY=$(printf '%s\n' \
+            'The closing-date registry is stale in a way the pipeline believed it could fix itself, but the **auto-remediation job failed**.' \
+            '' \
+            "Run: ${RUN_URL}" \
+            '' \
+            'Falling back to manual remediation (L107 — a monitor that cannot complete its own fix must say so):' \
+            '' \
+            '```bash' \
+            'npx tsx scripts/update-closing-date-registry.ts' \
+            '```' \
+            'then commit the updated `docs/month-end-closing-dates.json`.' \
+            'This issue self-clears on the next daily run that finds the registry fresh (#1419).')
+
+          EXISTING=$(gh issue list --label closing-registry-stale --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "${EXISTING}" ]; then
+            gh issue comment "${EXISTING}" --body "${BODY}"
+          else
+            gh issue create \
+              --title '🟥 closing-date registry auto-remediation failed' \
+              --label closing-registry-stale \
+              --body "${BODY}"
           fi
 
   daily-reports:
