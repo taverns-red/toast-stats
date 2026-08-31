@@ -67,6 +67,11 @@ const CATEGORY_GROUPS: { category: DiffEventCategory; heading: string }[] = [
     heading: 'Clubs moved out (district realignment)',
   },
   { category: 'distinguished', heading: 'Distinguished status changes' },
+  // Club Success Plan submissions (#1460) join the recognition band: a CSP is
+  // a distinguished PREREQUISITE, so it reads next to the club tier changes,
+  // ahead of the division/area rollups. Same silent-drop rule as the payments
+  // note below — a category not named here never renders.
+  { category: 'csp', heading: 'Club Success Plan submissions' },
   { category: 'division-status', heading: 'Division status changes' },
   { category: 'area-status', heading: 'Area status changes' },
   { category: 'membership', heading: 'Membership changes' },

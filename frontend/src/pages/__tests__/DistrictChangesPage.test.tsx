@@ -6,12 +6,12 @@ import DistrictChangesPage from '../DistrictChangesPage'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import { useSnapshotDiff } from '../../hooks/useSnapshotDiff'
 import { useDistricts } from '../../hooks/useDistricts'
-import { exportSnapshotDiff } from '../../utils/csvExport'
 import type { SnapshotDiff } from '@taverns-red/shared-contracts'
+import { exportSnapshotDiff } from '../../utils/csvExport'
 
+vi.mock('../../utils/csvExport', () => ({ exportSnapshotDiff: vi.fn() }))
 vi.mock('../../hooks/useDistrictData')
 vi.mock('../../hooks/useDistricts')
-vi.mock('../../utils/csvExport', () => ({ exportSnapshotDiff: vi.fn() }))
 vi.mock('../../hooks/useSnapshotDiff', async () => {
   const actual = await vi.importActual<
     typeof import('../../hooks/useSnapshotDiff')
@@ -682,6 +682,101 @@ describe('DistrictChangesPage — time-window preset chips (#1462)', () => {
     renderWithHistory('/district/61/changes', ['2026-05-26'])
     expect(screen.queryByTestId('changes-preset-chips')).not.toBeInTheDocument()
     expect(screen.getByTestId('changes-single')).toBeInTheDocument()
+  })
+})
+
+/* Club Success Plan submissions group (#1460, epic #1458 Sprint 2).
+
+   CATEGORY_GROUPS is an explicit ordered display list, and a category it does
+   not name is dropped SILENTLY — no error, no fallback bucket, the events just
+   never reach the DOM. The engine half of a new category can therefore be
+   fully green while the feature ships invisible; this is the test that catches
+   the missing half. */
+describe('DistrictChangesPage — Club Success Plan submissions (#1460)', () => {
+  beforeEach(() => {
+    mockedDistricts.mockReturnValue({
+      data: { districts: [{ id: '61', name: '61' }] },
+    } as unknown as ReturnType<typeof useDistricts>)
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-07-31', '2026-08-30'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+  })
+
+  it('renders a Club Success Plan submissions group in the recognition band', () => {
+    mockedDiff.mockReturnValue({
+      data: diffFixture({
+        events: [
+          {
+            category: 'csp',
+            clubId: '00003045',
+            clubName: 'Limestone City Club',
+            label: 'Limestone City Club submitted its Club Success Plan',
+            magnitude: 1,
+          },
+          // Neighbours on both sides so the ordering assertion has something to
+          // be ordered against (an empty group renders nothing).
+          {
+            category: 'distinguished',
+            clubId: '00002959',
+            clubName: 'Bytown Club',
+            label: 'Bytown Club became Distinguished',
+            magnitude: 1,
+          },
+          {
+            category: 'division-status',
+            clubId: '',
+            clubName: '',
+            divisionId: 'G',
+            entityName: 'Division G',
+            label: 'Division G moved to Select Distinguished',
+            magnitude: 1,
+          },
+        ],
+      }),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    const { container } = renderPage()
+
+    expect(
+      screen.getByText(/Club Success Plan submissions/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/submitted its Club Success Plan/)
+    ).toBeInTheDocument()
+    // The club name links to its scoped route, like every other club event.
+    expect(
+      screen.getByRole('link', { name: 'Limestone City Club' })
+    ).toHaveAttribute('href', '/district/61/club/00003045')
+
+    // CSP sits in the recognition band: after club distinguished, before the
+    // division/area status groups — asserted as ORDER, not mere presence.
+    const headings = Array.from(
+      container.querySelectorAll('details summary')
+    ).map(s => s.textContent ?? '')
+    const distinguished = headings.findIndex(h =>
+      /Distinguished status changes/.test(h)
+    )
+    const csp = headings.findIndex(h => /Club Success Plan submissions/.test(h))
+    const division = headings.findIndex(h => /Division status changes/.test(h))
+    expect(distinguished).toBeGreaterThanOrEqual(0)
+    expect(csp).toBe(distinguished + 1)
+    expect(division).toBe(csp + 1)
+  })
+
+  it('renders no Club Success Plan group when there are no csp events', () => {
+    mockedDiff.mockReturnValue({
+      data: diffFixture(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    expect(
+      screen.queryByText(/Club Success Plan submissions/)
+    ).not.toBeInTheDocument()
   })
 })
 

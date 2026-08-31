@@ -233,6 +233,41 @@ function dcpLabel(name: string, delta: number): string {
     : `${name} dropped ${n} DCP ${noun}`
 }
 
+/**
+ * Club Success Plan submission flip (#1460).
+ *
+ * `cspSubmitted` is an OPTIONAL field: a real boolean from PY 2025-26 onward,
+ * and ABSENT — never `false` — on every earlier snapshot. Reading an absent
+ * field through a default is the phantom-field failure: `?? false` would make
+ * a pre-2025-26 club "did not submit", and `getCSPStatus`'s `?? true` (correct
+ * for distinguished eligibility, where a club must not be penalised for a
+ * column that did not exist) would make it "submitted" — either way a diff
+ * spanning the boundary invents a flip for every club in the district. So the
+ * comparison is on real booleans only: `undefined` on EITHER side is not a
+ * value, and produces no event, ever.
+ *
+ * Returns `undefined` when there is no event to emit.
+ */
+function cspTransition(
+  from: boolean | undefined,
+  to: boolean | undefined
+): { label: (name: string) => string; magnitude: 1 | -1 } | undefined {
+  if (typeof from !== 'boolean' || typeof to !== 'boolean') return undefined
+  if (from === to) return undefined
+  return to
+    ? {
+        label: name => `${name} submitted its Club Success Plan`,
+        magnitude: 1,
+      }
+    : {
+        // A club does not normally un-submit; this is a data correction at TI.
+        // Reported honestly rather than hidden — a silently dropped negative
+        // makes the feed's submitted count disagree with the club page.
+        label: name => `${name} no longer shows a submitted Club Success Plan`,
+        magnitude: -1,
+      }
+}
+
 function distinguishedLabel(name: string, from: string, to: string): string {
   if (!from && to) return `${name} became ${tierName(to)}`
   if (from && !to) return `${name} lost Distinguished status`
@@ -516,6 +551,20 @@ export function diffSnapshots(
         clubName: toClub.clubName,
         label: distinguishedLabel(toClub.clubName, distFrom, distTo),
         magnitude: gained ? 1 : lost ? -1 : 0,
+      })
+    }
+    // CSP submission flip (#1460). Emitted next to the distinguished event
+    // because that is the band it renders in — a Club Success Plan is a
+    // recognition prerequisite, not a metric delta. Silent whenever either
+    // side lacks the field (pre-PY-2025-26 data); see cspTransition.
+    const csp = cspTransition(fromClub.cspSubmitted, toClub.cspSubmitted)
+    if (csp) {
+      events.push({
+        category: 'csp',
+        clubId,
+        clubName: toClub.clubName,
+        label: csp.label(toClub.clubName),
+        magnitude: csp.magnitude,
       })
     }
   }

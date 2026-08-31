@@ -98,6 +98,23 @@ from raw `clubPerformance` goal fields, never inferred Goals 1–N order
   DECREASE gets no breakdown at all — a falling payments total is a TI-side
   correction, not clubs un-paying a renewal.
 
+- **`csp` events (#1460)** — a club's Club Success Plan submission flip, shown
+  in a **Club Success Plan submissions** group in the recognition band (a CSP
+  is a Distinguished prerequisite, so it reads beside the club tier changes).
+  Magnitude is a direction, not a delta: `+1` for a submission, `-1` for the
+  rare un-submission, which is reported rather than hidden so the feed cannot
+  silently disagree with the club page. `clubs[].cspSubmitted` is **optional**
+  — a real boolean from PY 2025-26 onward, and **absent (never `false`)**
+  before it — so an event is emitted only when both sides are real booleans
+  that differ. An absent side is silence, always. In particular this path
+  deliberately does **not** use `getCSPStatus`: its `?? true` default is right
+  for distinguished eligibility (a club must not be penalised for a column that
+  did not exist) and wrong here, where it would turn any diff spanning the
+  PY 2025-26 boundary into a district-wide phantom flip. Per-club submission
+  **dates** (the `clubSuccessPlan` section of `district_{id}_reports.json`) are
+  out of scope — they need a second fetch in `useSnapshotDiff`, and the flip
+  already answers "who submitted since last time".
+
 ## §5. Phase 1 frontend
 
 - `useSnapshotDiff(districtId, from, to)` — React Query keyed by the date pair,

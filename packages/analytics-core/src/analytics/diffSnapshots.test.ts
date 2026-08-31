@@ -905,3 +905,116 @@ describe('diffSnapshots — payments events (#1459)', () => {
     expect(events[0]!.magnitude).toBe(9)
   })
 })
+
+/* Club Success Plan submission events (#1460, epic #1458 Sprint 2).
+
+   `cspSubmitted` is an OPTIONAL boolean: present (true|false) from PY 2025-26
+   onward, and **absent** — not false — on every earlier snapshot. The whole
+   risk of this category is the phantom-field failure: reading an absent field
+   through a `?? false` (or through `getCSPStatus`, which defaults the OTHER
+   way, `?? true`) turns "this program year had no CSP column" into a value,
+   and a diff across the 2025-26 boundary then invents a submission flip for
+   every club in the district. So the engine emits ONLY when both sides are
+   real booleans that differ; either side absent is silence, always. */
+describe('diffSnapshots — Club Success Plan events (#1460)', () => {
+  const cspPair = (
+    fromCsp: boolean | undefined,
+    toCsp: boolean | undefined
+  ) => {
+    const mk = (date: string, csp: boolean | undefined) =>
+      snapshot({
+        date,
+        clubs: [
+          club({
+            clubId: '001',
+            clubName: 'Limestone City Club',
+            ...(csp === undefined ? {} : { cspSubmitted: csp }),
+          }),
+        ],
+      })
+    return diffSnapshots(mk('2026-07-31', fromCsp), mk('2026-08-30', toCsp))
+  }
+
+  it('emits one csp event when a club flips false → true', () => {
+    const events = cspPair(false, true).events.filter(e => e.category === 'csp')
+    expect(events).toHaveLength(1)
+    expect(events[0]).toEqual({
+      category: 'csp',
+      clubId: '001',
+      clubName: 'Limestone City Club',
+      label: 'Limestone City Club submitted its Club Success Plan',
+      magnitude: 1,
+    })
+  })
+
+  it('emits the negative form when a club flips true → false', () => {
+    const events = cspPair(true, false).events.filter(e => e.category === 'csp')
+    expect(events).toHaveLength(1)
+    expect(events[0]!.magnitude).toBe(-1)
+    expect(events[0]!.label).toBe(
+      'Limestone City Club no longer shows a submitted Club Success Plan'
+    )
+  })
+
+  it('emits nothing when the value is unchanged (false → false, true → true)', () => {
+    expect(cspPair(false, false).events).toEqual([])
+    expect(cspPair(true, true).events).toEqual([])
+  })
+
+  it.each([
+    ['absent → true (pre-2025-26 "from" snapshot)', undefined, true],
+    ['absent → false', undefined, false],
+    ['true → absent', true, undefined],
+    ['false → absent', false, undefined],
+    ['absent → absent (both pre-2025-26)', undefined, undefined],
+  ] as const)('emits nothing for %s', (_name, fromCsp, toCsp) => {
+    expect(cspPair(fromCsp, toCsp).events).toEqual([])
+  })
+
+  it('emits per club, leaving unflipped and CSP-less clubs alone', () => {
+    const mk = (date: string, a: boolean, b: boolean) =>
+      snapshot({
+        date,
+        clubs: [
+          club({ clubId: '001', clubName: 'Alpha', cspSubmitted: a }),
+          club({ clubId: '002', clubName: 'Beta', cspSubmitted: b }),
+          // No cspSubmitted at all on either side — never an event.
+          club({ clubId: '003', clubName: 'Gamma' }),
+        ],
+      })
+    const diff = diffSnapshots(
+      mk('2026-07-31', false, true),
+      mk('2026-08-30', true, true)
+    )
+    const csp = diff.events.filter(e => e.category === 'csp')
+    expect(csp.map(e => e.clubName)).toEqual(['Alpha'])
+  })
+
+  it('does not disturb the other per-club events for the same club', () => {
+    const from = snapshot({
+      date: '2026-07-31',
+      clubs: [
+        club({
+          clubId: '001',
+          clubName: 'Limestone City Club',
+          membershipCount: 20,
+          cspSubmitted: false,
+        }),
+      ],
+    })
+    const to = snapshot({
+      date: '2026-08-30',
+      clubs: [
+        club({
+          clubId: '001',
+          clubName: 'Limestone City Club',
+          membershipCount: 23,
+          cspSubmitted: true,
+        }),
+      ],
+    })
+    const events = diffSnapshots(from, to).events
+    // Sorted by |magnitude|: the membership +3 outranks the csp +1.
+    expect(events.map(e => e.category)).toEqual(['membership', 'csp'])
+  })
+})
