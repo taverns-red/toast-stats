@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.36.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.35.1...toast-stats-v2.36.0) (2026-08-31)
+
+
+### Features
+
+* **analytics:** the worldwide rollup counts each club once, scoped to the date's district set ([#1466](https://github.com/taverns-red/toast-stats/issues/1466)) ([#1481](https://github.com/taverns-red/toast-stats/issues/1481)) ([fe8ac18](https://github.com/taverns-red/toast-stats/commit/fe8ac18e4113f790f832a1b375f3a72fd2db1cae))
+* **frontend:** surface newCharteredClubs + a checkpoint-count resolution hook for Club Growth Achievement ([#1475](https://github.com/taverns-red/toast-stats/issues/1475)) () ([abc0af6](https://github.com/taverns-red/toast-stats/commit/abc0af67183af0e7a7099046e1bcdaf499499afd))
+* **recognition:** Club Growth Achievement predicate (PY-gated) + program-year rule-change log entry ([#1474](https://github.com/taverns-red/toast-stats/issues/1474)) () ([e1489b7](https://github.com/taverns-red/toast-stats/commit/e1489b7198ff63081d5a0c30b866b967d817652a))
+* **ui:** Club Growth Achievement card on the District Overview ([#1476](https://github.com/taverns-red/toast-stats/issues/1476)) ([#1487](https://github.com/taverns-red/toast-stats/issues/1487)) ([186255a](https://github.com/taverns-red/toast-stats/commit/186255aaa78598e8c42f306fa456a87a4f8c69f8))
+* **whats-changed:** time-window preset chips for the date pair picker ([#1462](https://github.com/taverns-red/toast-stats/issues/1462)) ([#1486](https://github.com/taverns-red/toast-stats/issues/1486)) ([a7a7a87](https://github.com/taverns-red/toast-stats/commit/a7a7a87c3363d87ae7bec60270f1fe88676266f3))
+
+
+### Bug Fixes
+
+* **monitor:** auto-remediate a derivable closing-registry gap instead of nagging daily ([#1419](https://github.com/taverns-red/toast-stats/issues/1419)) () ([1dd7f3d](https://github.com/taverns-red/toast-stats/commit/1dd7f3d97723d66f91cb65ebe910c123357e4e1f))
+* **pipeline:** a snapshot directory holds only the districts that existed on its own date ([#1465](https://github.com/taverns-red/toast-stats/issues/1465)) ([#1480](https://github.com/taverns-red/toast-stats/issues/1480)) ([fcb05aa](https://github.com/taverns-red/toast-stats/commit/fcb05aa39165ef22a27de8997439a47e8cb2b75d))
+
 ## [2.35.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.35.0...toast-stats-v2.35.1) (2026-08-31)
 
 
