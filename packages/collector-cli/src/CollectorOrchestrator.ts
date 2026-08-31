@@ -658,6 +658,37 @@ export class CollectorOrchestrator {
     }
     districtsToScrape = districtSet.districts
 
+    // R17 — the "nothing survived the reconciliation" case is explicit. A run
+    // whose entire district set is wrong for the date must say so, not report
+    // a quiet zero-district success.
+    if (districtSet.applied && districtsToScrape.length === 0) {
+      logger.error(
+        'No requested district existed on the scraped date (#1465)',
+        { date, activeProgramYear, skipped: districtSet.skipped }
+      )
+      await this.close()
+      return {
+        success: false,
+        date,
+        districtsProcessed: [],
+        districtsSucceeded: [],
+        districtsFailed: [],
+        districtsSkipped: districtSet.skipped,
+        cacheLocations: [],
+        errors: [
+          {
+            districtId: 'N/A',
+            error:
+              `Every requested district did not exist on ${date} ` +
+              `(program year ${activeProgramYear}): ` +
+              districtSet.skipped.join(', '),
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        duration_ms: Date.now() - startTime,
+      }
+    }
+
     // Process districts sequentially with error isolation
     const results: DistrictScrapeResult[] = []
     const errors: Array<{
