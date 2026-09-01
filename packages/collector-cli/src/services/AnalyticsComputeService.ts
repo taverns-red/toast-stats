@@ -18,8 +18,11 @@ import * as path from 'node:path'
 import * as crypto from 'node:crypto'
 import {
   AnalyticsComputer,
+  buildGlobalTotals,
   findPreviousProgramYearDate,
   getCSPStatus,
+  readSnapshotRankings,
+  readSnapshotRollupInput,
   type Logger,
   type DistrictStatistics,
   type AnalyticsManifestEntry,
@@ -31,7 +34,10 @@ import type {
   ScrapedRecord,
 } from '@taverns-red/analytics-core'
 import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
-import { districtIdFromSnapshotFileName } from '@taverns-red/shared-contracts'
+import {
+  districtIdFromSnapshotFileName,
+  GLOBAL_TOTALS_FILE_NAME,
+} from '@taverns-red/shared-contracts'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
 import { validateDistrictId } from '../utils/validateDistrictId.js'
@@ -118,6 +124,13 @@ export interface ComputeOperationResult {
   districtsFailed: string[]
   districtsSkipped: string[]
   analyticsLocations: string[]
+  /**
+   * Path to the worldwide rollup written for this date (#1498), or undefined
+   * when the date carried no `all-districts-rankings.json` — without that
+   * file there is no authoritative district set, and an unscoped rollup is
+   * refused rather than guessed at (#1466).
+   */
+  globalTotalsPath?: string
   errors: Array<{
     districtId: string
     error: string
@@ -1364,6 +1377,11 @@ export class AnalyticsComputeService {
       }
     }
 
+    // Write the worldwide rollup for this date (#1498, epic #1496). It reads
+    // the SNAPSHOT files on disk rather than the per-district analytics above,
+    // so it is independent of whether any single district's compute failed.
+    const globalTotalsPath = await this.writeGlobalTotals(snapshotDate, errors)
+
     // Calculate result statistics
     const districtsProcessed = districtsToCompute
     const districtsSucceeded = results
@@ -1406,8 +1424,89 @@ export class AnalyticsComputeService {
       districtsFailed,
       districtsSkipped,
       analyticsLocations,
+      globalTotalsPath,
       errors,
       duration_ms: Date.now() - startTime,
+    }
+  }
+
+  /**
+   * Write `snapshots/{date}/global-totals.json` — the worldwide rollup for
+   * one snapshot date (#1498, epic #1496, ruled on #1426).
+   *
+   * This step is where it belongs because it is the only point in the
+   * pipeline that already holds the whole date on disk: every district file
+   * plus that date's own `all-districts-rankings.json`. The upload step then
+   * copies `snapshots/${DATE}/*.json` wholesale, so no upload wiring is
+   * needed, and the #1125 schema gate validates the file before it goes.
+   *
+   * Two failure modes, deliberately different:
+   *
+   * - **No rankings file** → skip, quietly. Without it there is no
+   *   authoritative district set for the date, and `rollUpGlobal` refuses an
+   *   unscoped rollup rather than emitting a plausible wrong number (#1466).
+   *   That is a legitimate state for historical dates, not an error.
+   * - **Anything else** → recorded in `errors`, which fails the run. A rollup
+   *   that throws on a directory that HAS a district set means the directory
+   *   is broken, and a broken worldwide number must not be published quietly.
+   *
+   * @returns the path written, or undefined when the rollup was skipped.
+   */
+  private async writeGlobalTotals(
+    snapshotDate: string,
+    errors: Array<{ districtId: string; error: string; timestamp: string }>
+  ): Promise<string | undefined> {
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    const rankingsPath = path.join(snapshotDir, 'all-districts-rankings.json')
+
+    try {
+      await fs.access(rankingsPath)
+    } catch {
+      this.logger.warn(
+        'No all-districts-rankings.json for this date — skipping the worldwide rollup',
+        { snapshotDate }
+      )
+      return undefined
+    }
+
+    try {
+      const rankings = readSnapshotRankings(snapshotDir)
+      const input = readSnapshotRollupInput(snapshotDir, snapshotDate)
+      const totals = buildGlobalTotals({
+        snapshotDate,
+        districts: input.districts,
+        rankings,
+      })
+
+      const outputPath = path.join(snapshotDir, GLOBAL_TOTALS_FILE_NAME)
+      await fs.writeFile(
+        outputPath,
+        JSON.stringify(totals, null, 2) + '\n',
+        'utf-8'
+      )
+
+      this.logger.info('Wrote worldwide rollup', {
+        snapshotDate,
+        path: outputPath,
+        districts: totals.districts.total,
+        clubs: totals.membership.clubsCounted,
+        // Contamination stays visible in the log as well as in the file.
+        excludedDistricts: totals.districts.excludedDistricts.length,
+        duplicateClubs: totals.districts.duplicateClubs.length,
+      })
+      return outputPath
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      this.logger.error('Failed to write worldwide rollup', {
+        snapshotDate,
+        error: message,
+      })
+      errors.push({
+        districtId: 'N/A',
+        error: `Failed to write ${GLOBAL_TOTALS_FILE_NAME}: ${message}`,
+        timestamp: new Date().toISOString(),
+      })
+      return undefined
     }
   }
 
