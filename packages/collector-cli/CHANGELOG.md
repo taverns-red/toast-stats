@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.7.1...collector-cli-v1.8.0) (2026-09-01)
+
+
+### Features
+
+* **analytics:** parse the Susp branch of Charter Date/Suspend Date — per-district suspendedClubs ([#1497](https://github.com/taverns-red/toast-stats/issues/1497)) ([#1504](https://github.com/taverns-red/toast-stats/issues/1504)) ([39d7016](https://github.com/taverns-red/toast-stats/commit/39d7016ccf1234e506b632e977f93c0f9ed16ed9))
+* **pipeline:** snapshots/{date}/global-totals.json — the per-date worldwide rollup ([#1498](https://github.com/taverns-red/toast-stats/issues/1498)) ([#1509](https://github.com/taverns-red/toast-stats/issues/1509)) ([b7fdeb3](https://github.com/taverns-red/toast-stats/commit/b7fdeb3ab99a406a6a7e37687d1eb2a829712941))
+
 ## [1.7.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.7.0...collector-cli-v1.7.1) (2026-08-31)
 
 

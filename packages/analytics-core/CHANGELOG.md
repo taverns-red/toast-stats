@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.11.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.10.0...analytics-core-v1.11.0) (2026-09-01)
+
+
+### Features
+
+* **analytics:** parse the Susp branch of Charter Date/Suspend Date — per-district suspendedClubs ([#1497](https://github.com/taverns-red/toast-stats/issues/1497)) ([#1504](https://github.com/taverns-red/toast-stats/issues/1504)) ([39d7016](https://github.com/taverns-red/toast-stats/commit/39d7016ccf1234e506b632e977f93c0f9ed16ed9))
+* **pipeline:** snapshots/{date}/global-totals.json — the per-date worldwide rollup ([#1498](https://github.com/taverns-red/toast-stats/issues/1498)) ([#1509](https://github.com/taverns-red/toast-stats/issues/1509)) ([b7fdeb3](https://github.com/taverns-red/toast-stats/commit/b7fdeb3ab99a406a6a7e37687d1eb2a829712941))
+
+
+### Bug Fixes
+
+* **analytics:** a known reformation boundary is the evidence a realignment happened, not the roster's size ([#1470](https://github.com/taverns-red/toast-stats/issues/1470)) ([#1507](https://github.com/taverns-red/toast-stats/issues/1507)) ([2e552d0](https://github.com/taverns-red/toast-stats/commit/2e552d04f2130a13b1d30ce02560b13ce23442e4))
+
 ## [1.10.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.7...analytics-core-v1.10.0) (2026-09-01)
 
 
