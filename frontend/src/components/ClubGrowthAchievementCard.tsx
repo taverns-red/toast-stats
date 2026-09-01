@@ -120,7 +120,8 @@ const READ_ID: Record<PredicateCheckpointId, ClubGrowthCheckpointRead['id']> = {
 /**
  * Why a checkpoint has no count, in a sentence. Each hook reason keeps its own
  * wording so the reader can tell a missing file from a missing district from a
- * file too old to carry the field — three different things to go fix.
+ * file too old to carry the field from one whose charter counts were never
+ * populated (#1501) — four different things to go fix.
  */
 const unavailableDetail = (
   read: ClubGrowthCheckpointRead | undefined
@@ -133,6 +134,8 @@ const unavailableDetail = (
         return 'this district does not appear in the checkpoint’s data.'
       case 'count-absent':
         return 'the checkpoint’s data predates new-club charter counts.'
+      case 'count-not-collected':
+        return 'charter counts were not collected for this checkpoint’s snapshot.'
       default:
         break
     }

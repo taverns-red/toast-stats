@@ -34,9 +34,10 @@
  *   `useDistrictRanking` row, not from here.
  * - `resolved` — a count, plus the snapshot date it came from.
  * - `unavailable` — the checkpoint is settled but its count cannot be read
- *   (no file, district absent from that file, or a pre-#336 file that omits
- *   the field). Deliberately NOT `0`: "we cannot say" is a different claim
- *   from "chartered nothing".
+ *   (no file, district absent from that file, a pre-#336 file that omits the
+ *   field, or a file whose charter counts were never collected — see
+ *   `isUncollectedCharterCount`, #1501). Deliberately NOT `0`: "we cannot say"
+ *   is a different claim from "chartered nothing".
  *
  * `loading` is the fourth state and covers the window before the availability
  * set has landed — a status published from an empty archive would be an
@@ -68,6 +69,12 @@ export type ClubGrowthUnavailableReason =
   | 'district-absent'
   /** The row exists but predates #336 and omits `newCharteredClubs`. */
   | 'count-absent'
+  /**
+   * The field is present and zero on EVERY district in the file — the
+   * signature of a snapshot rebuilt without its raw CSVs (#1501). Present,
+   * but never populated: "not collected", not "chartered nothing".
+   */
+  | 'count-not-collected'
 
 export interface ClubGrowthCheckpoint {
   id: ClubGrowthCheckpointId
@@ -166,6 +173,52 @@ function baseCheckpoint(
   }
 }
 
+/**
+ * How many rows carrying the field make a file a *district census*, i.e. big
+ * enough for its global total to be evidence about the world.
+ *
+ * Live all-districts rankings files carry 94–132 rows. Fifty is comfortably
+ * below the smallest of those and comfortably above any partial or truncated
+ * file (#1469 class), whose all-zero total says nothing about ~94 districts.
+ * Below the floor the count is reported exactly as the file gives it — a
+ * suppressed real zero would be the mirror-image of the bug being fixed.
+ */
+export const CENSUS_ROW_FLOOR = 50
+
+/**
+ * True when a checkpoint file's charter counts were never populated (#1501).
+ *
+ * ## The signal, and why this one
+ *
+ * `newCharteredClubs` is derived upstream from the raw
+ * `district-performance.csv` charter dates. A rankings file rebuilt WITHOUT
+ * those CSVs — the ordinary state of an ephemeral runner (R2) — still writes
+ * the field, defaulted to `0`, on every row. All five program-year-end files
+ * in the live archive are exactly this: field present on 125–132 rows, global
+ * sum 0. A normal month-end alongside them carries 638.
+ *
+ * So the distinguishing tell is a **district-wide all-zero total**, not a
+ * per-district zero. A single district chartering nothing by September 30 is
+ * ordinary; the whole world chartering nothing is not. Across ~94 districts
+ * the global total has never been zero at any month-end — the lowest observed
+ * is 81, and it climbs monotonically through the year (81 → 638 in PY
+ * 2025-26). A checkpoint falls in September or March, by which point the
+ * total is far above its July floor, so a genuine global zero at a checkpoint
+ * is not a case that occurs.
+ *
+ * Deliberately conservative in both directions: it needs a census-sized file
+ * (`CENSUS_ROW_FLOOR`) AND not one positive count anywhere in it.
+ */
+export function isUncollectedCharterCount(data: CdnRankingsData): boolean {
+  let present = 0
+  for (const r of data.rankings) {
+    if (typeof r.newCharteredClubs !== 'number') continue
+    if (r.newCharteredClubs > 0) return false
+    present += 1
+  }
+  return present >= CENSUS_ROW_FLOOR
+}
+
 /** Read one district's count out of a checkpoint file, keeping each miss distinct. */
 function readCount(
   data: CdnRankingsData,
@@ -177,6 +230,10 @@ function readCount(
   if (!row) return { reason: 'district-absent' }
   if (typeof row.newCharteredClubs !== 'number') {
     return { reason: 'count-absent' }
+  }
+  // A present-but-unpopulated field must not become an earned-nothing verdict.
+  if (isUncollectedCharterCount(data)) {
+    return { reason: 'count-not-collected' }
   }
   return { count: row.newCharteredClubs }
 }
