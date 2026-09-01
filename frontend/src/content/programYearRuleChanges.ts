@@ -47,6 +47,24 @@ export interface ProgramYearRuleChange {
 export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
   // ───────────────────────────── PY 2026-2027 ─────────────────────────────
   {
+    id: 'py-2026-2027-district-boundaries-redrawn',
+    programYear: '2026-2027',
+    title:
+      'District boundaries were redrawn — clubs changed districts on July 1',
+    affects:
+      'District club counts · membership and payments year-over-year · district rankings · “What Changed” roster events',
+    whatChanged:
+      'Toastmasters redrew the district map effective 1 July 2026, merging and splitting districts — 25 fewer than the year before, with several renumbered into a new 201–231 range. Clubs moved between districts without joining or leaving Toastmasters: a district that absorbed part of a neighbour keeps its number and its history but is a different set of clubs on either side of that date.',
+    comparability:
+      'A district’s 2026-27 figures are measured over a different set of clubs than its 2025-26 figures, so a year-over-year rise can be annexation rather than growth — Toast Stats suppresses those comparisons across the boundary rather than printing a number that is wrong. In “What Changed”, a diff that straddles 1 July 2026 says the boundaries moved and lists those clubs as moved in / moved out instead of joined / left, from 5 moved clubs upward: on a boundary where a reformation is a known fact, the boundary is the evidence a realignment happened and the size of the exchange only has to clear ordinary export churn. On any other program-year rollover that same wording needs a far larger exchange — at least 8 clubs and a fifth of the roster — because there the size is the only evidence there is.',
+    issues: [1442, 1443, 1470],
+    sources: [
+      'packages/shared-contracts/src/reformation/districtReformation.ts',
+      'packages/analytics-core/src/analytics/diffSnapshots.ts',
+      'frontend/src/pages/DistrictChangesPage.tsx',
+    ],
+  },
+  {
     id: 'py-2026-2027-district-club-growth-achievement',
     programYear: '2026-2027',
     title: 'New District Club Growth Achievement for early club chartering',

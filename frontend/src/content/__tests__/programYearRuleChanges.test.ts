@@ -68,6 +68,7 @@ describe('programYearRuleChanges — the verified inventory (#1400)', () => {
   const byId = (id: string) => PROGRAM_YEAR_RULE_CHANGES.find(c => c.id === id)
 
   it.each([
+    ['py-2026-2027-district-boundaries-redrawn', '2026-2027'],
     ['py-2026-2027-district-club-growth-achievement', '2026-2027'],
     ['py-2026-2027-dcp-goals-2-3-eom', '2026-2027'],
     ['py-2026-2027-region-advisor-prerequisite-retired', '2026-2027'],
@@ -99,6 +100,19 @@ describe('programYearRuleChanges — the verified inventory (#1400)', () => {
     expect(change?.whatChanged).toMatch(/september 30/i)
     expect(change?.whatChanged).toMatch(/march 31/i)
     expect(change?.comparability).toMatch(/did not exist before/i)
+  })
+
+  it('states BOTH realignment thresholds, so a reader can tell which one applied (#1470)', () => {
+    const change = byId('py-2026-2027-district-boundaries-redrawn')
+    // The relaxed floor at the known 2026 boundary…
+    expect(change?.comparability).toMatch(/5 moved clubs/i)
+    // …and the magnitude test that still governs every other rollover, so the
+    // log cannot describe the exception as if it were the rule.
+    expect(change?.comparability).toMatch(/8 clubs/i)
+    expect(change?.comparability).toMatch(/fifth of the roster/i)
+    expect(change?.sources).toContain(
+      'packages/shared-contracts/src/reformation/districtReformation.ts'
+    )
   })
 
   it('says the pre-2025-26 CSP default is "assume submitted", not "failed"', () => {
