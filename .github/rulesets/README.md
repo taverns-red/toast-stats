@@ -58,6 +58,31 @@ each expected check to be present _and_ successful.
 Absence is only ever forgiven when the _diff_ says the workflow was supposed to
 be absent. Nothing is inferred from the checks themselves.
 
+### The gate fails closed at two layers, not one
+
+The table above is the script's layer. There is a second, and it covers the
+case the script cannot: **what if `CI Gate` itself never runs?**
+
+This reproduced live while building #1216. A push made the PR conflict with
+`main`; GitHub cannot compute a merge commit for a conflicting PR, so it
+scheduled **zero** `pull_request` workflows — not `CI`, not `Docs`, not the
+gate. Every check vanished at once:
+
+```
+$ gh api "repos/.../commits/6f4677dc/check-runs?filter=latest" --jq .total_count
+0
+```
+
+No script can catch that from inside, because the script is one of the things
+that did not run. The ruleset is what catches it: a required context that
+reports nothing stays **Expected**, and Expected blocks the merge. That is why
+`CI Gate` is required rather than merely present, and why it must be the one
+check that cannot be path-filtered away — an unconditional workflow's absence
+is always a real fault, never a legitimate skip.
+
+So: the ruleset makes "the gate did not run" unmergeable, and the gate makes
+"the gate ran but the real jobs did not" unmergeable.
+
 The expectation set is `Quality Gates` + `Test Suite` + `Build Applications`
 (the `ci.yml` jobs) for any diff that touches code, plus `Docs Gate` for any
 diff that touches a `paths:`-matched file. A mixed PR expects all four.
