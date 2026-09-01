@@ -383,9 +383,13 @@ shipped.
    did not match.
 7. **Membership-building awards** — parked until a source is found.
 
-## 7. Operator ruling — 2026-08-19
+## 7. Operator rulings (recorded on #1426)
 
-Recorded on #1426. Seven questions, seven answers:
+Two rulings, both settled — do not re-litigate either.
+
+### 7.1 — 2026-08-19 (surface, definitions, sequencing)
+
+Seven questions, seven answers:
 
 | #   | Question                 | Ruling                                   |
 | --- | ------------------------ | ---------------------------------------- |
@@ -400,13 +404,13 @@ Recorded on #1426. Seven questions, seven answers:
 Plus: validate against the CEO Report's published figures first (#1429), ahead of
 the rollup build.
 
-## 7b. Operator ruling — 2026-08-31 (scope)
+### 7.2 — 2026-08-31 (scope)
 
-Recorded on #1426. The seven rulings of 2026-08-19 stand unchanged; this one
+The seven rulings of 2026-08-19 stand unchanged; this one
 closed the last open acceptance criterion once three of the four prerequisite
 gaps had closed (see the table in §1).
 
-### 1. Scope — build **every reproducible row**
+#### 1. Scope — build **every reproducible row**
 
 All ten, not a subset:
 
@@ -421,7 +425,7 @@ All ten, not a subset:
 - **Clubs by country** stays as ruled on Aug 19: clubs-by-country only, no
   member- or award-level country.
 
-### 2. Divergence from TI's published figures — **publish ours, state our definitions**
+#### 2. Divergence from TI's published figures — **publish ours, state our definitions**
 
 This confirms and extends the Aug 19 definition-parity ruling in light of what
 the oracle found: 11 unexplained mismatches, all club counts, deltas −8..+1,
@@ -433,7 +437,7 @@ years, and **no pinning of the oracle's deltas** — the capture-date hypothesis
 was refuted on 2026-08-31 (#1464) and the cause remains unproven, so the oracle
 stays an honest independent check that is allowed to be red.
 
-### 3. Sequencing — **one epic, one sprint per artifact**
+#### 3. Sequencing — **one epic, one sprint per artifact**
 
 Each sprint independently shippable:
 
