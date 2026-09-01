@@ -104,3 +104,69 @@ distinguished-district calculator can be exercised on real inputs:
 `clubs[].address.country` — three arrays inside one district file, joined on
 the canonical club id. Frozen for the same reason as its sibling: do not
 regenerate it from the live bucket.
+
+---
+
+# `suspension-column-census.json` — what ten year-ends carry in the Susp branch
+
+A frozen capture of the `Charter Date/Suspend Date` column across **every**
+in-scope district of **all ten** published program-year ends
+(2017-06-30 → 2026-06-30), read from `https://cdn.taverns.red/snapshots/{date}/`
+on 2026-09-01.
+
+**Why it exists.** `v1/global-history.json` published `suspendedClubs: 0` for
+eight of its ten years while `newClubsStillActive` stayed healthy in all ten
+(#1514). This census settled which defect that was:
+
+| year-end   | club rows | `Susp` rows | `Charter` rows | published `suspendedClubs` |
+| ---------- | --------- | ----------- | -------------- | -------------------------- |
+| 2026-06-30 | 15,016    | **716**     | 932            | 716                        |
+| 2025-06-30 | 15,261    | **0**       | 951            | 0 ← absence                |
+| 2024-06-30 | 15,679    | **0**       | 958            | 0 ← absence                |
+| 2023-06-30 | 16,203    | **0**       | 817            | 0 ← absence                |
+| 2022-06-30 | 17,033    | **1,018**   | 697            | 1,014                      |
+| 2021-06-30 | 18,798    | **0**       | 1,224          | 0 ← absence                |
+| 2020-06-30 | 18,337    | **0**       | 1,236          | 0 ← absence                |
+| 2019-06-30 | 18,402    | **0**       | 1,496          | 0 ← absence                |
+| 2018-06-30 | 18,125    | **0**       | 1,481          | 0 ← absence                |
+| 2017-06-30 | 17,690    | **0**       | 1,539          | 0 ← absence                |
+
+Every row on every date is exactly one of empty, `Charter …` or `Susp …` —
+there is no third encoding anywhere, so the parse (#1497) was never the
+problem. The eight zero years simply carry no suspension datum, while the
+charter branch of the same column is populated on all ten. Absence, not zero.
+
+The two populated dates also show why the presence signal must be
+window-independent: 2022-06-30's 1,018 `Susp` rows include four stamped **July
+2022**, after its own snapshot date (the later-rewrite shape of #1465). They
+prove the branch was collected without being counted — which is what makes
+that date's 1,014 a measurement.
+
+**Frozen on purpose.** If TI ever backfills the missing years the artifact
+should change and this fixture must not: a guard whose expected values move
+with the archive is not a guard. Do not regenerate it from the live CDN.
+
+**Shape.** Reduced to the column under test — rows with an EMPTY status field
+are elided, because an empty field cannot carry a suspension date and keeping
+15,000 `""` per date would quadruple the file for no assertion:
+
+```jsonc
+{
+  "capturedAt": "2026-09-01",
+  "source": "https://cdn.taverns.red/snapshots/{date}/ read 2026-09-01",
+  "dates": [
+    {
+      "date": "2026-06-30",
+      "rankingsDistrictIds": ["130", "109", ...], // all-districts-rankings.json
+      "clubRowsInFiles": 15016,                   // BEFORE the elision
+      "districtsMissingFiles": [],                // empty on all ten dates
+      "districts": [
+        // [club id VERBATIM, Charter Date/Suspend Date VERBATIM]
+        { "districtId": "01", "clubs": [["00000977", " Susp 03/31/26"], ...] }
+      ]
+    }
+  ]
+}
+```
+
+Asserted by `scripts/lib/__tests__/globalRollupSuspensionColumn.test.ts`.

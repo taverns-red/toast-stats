@@ -121,6 +121,17 @@ function main(): void {
         `${totals.membership.totalPayments} payments, ` +
         `${totals.membership.totalMembership} members`
     )
+    // An uncollected column is reported, never swallowed (#1514). Eight of the
+    // ten published year-ends carry no `Susp` value on any in-scope row, so
+    // the rollup refuses to call that a measured zero — the operator needs to
+    // see which dates went out as "unknown" rather than discovering it in the
+    // published artifact.
+    if (totals.clubMovement.suspendedClubs === null) {
+      log(
+        `  ::warning::${date}: not one in-scope club row carries a Susp value — ` +
+          `suspendedClubs published as null (unknown), not 0 (#1514)`
+      )
+    }
     // Contamination is reported, never swallowed — a non-empty list means the
     // directory holds districts the date never had (#1465).
     if (totals.districts.excludedDistricts.length > 0) {
