@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `gcloud-storage-rejects-the-bundled-short-flags-gsutil-accepted.md` — '`gcloud storage cp -rZ` exits 2 — gcloud has no short-flag bundling, so a gsutil rewrite must split every combined flag'  (2026-09-01)
 - `a-dated-write-must-take-its-entity-set-from-that-date.md` — A write dated in the past must take its entity set from that date's own source — a successful fetch is not evidence the entity existed then  (2026-08-31)
 - `a-defaulted-field-is-only-detectable-at-the-population-level-not-the-row.md` — A field defaulted to zero because its source was missing is indistinguishable from a real zero at the row level; the tell is at the population level  (2026-08-31)
 - `a-dep-bump-that-reds-a-test-may-be-fixing-a-false-positive-you-pinned.md` — A dependency bump that reds a test may have fixed a false positive the test had pinned — diff the reported violations, don't pin or ignore the dep  (2026-08-31)
