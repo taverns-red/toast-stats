@@ -19,6 +19,24 @@
  */
 
 /**
+ * The glob set this module implements, in the exact spelling the workflows
+ * use. This is the DECLARATION; {@link isNonCodeFile} is the implementation.
+ *
+ * It exists so one drift guard can assert a single fact about three artifacts
+ * (#1216): this list, `ci.yml`'s `paths-ignore:`, and `docs.yml`'s `paths:`
+ * must be identical. If they drift, either a file falls into a gap covered by
+ * neither workflow, or the `CI Gate` aggregator expects a check that was
+ * legitimately never scheduled and blocks that PR forever.
+ */
+export const NON_CODE_GLOBS = [
+  '**/*.md',
+  'tasks/**',
+  'docs/**',
+  '.gitignore',
+  'LICENSE',
+] as const
+
+/**
  * True if a single repo-relative path is a "non-code" file per the #704
  * paths-ignore set. ALL-not-ANY semantics live in {@link isDocsOnly}.
  */
