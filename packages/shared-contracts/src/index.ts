@@ -184,6 +184,32 @@ export {
   type GlobalTotalsClubsByCountry,
 } from './schemas/global-totals.schema.js'
 
+// Worldwide program-year series — v1/global-history.json (#1499)
+export {
+  GlobalHistorySchema,
+  GlobalHistoryFormatSchema,
+  GlobalHistoryDistrictsSchema,
+  GlobalHistoryMembershipSchema,
+  GlobalHistoryDistinguishedClubsSchema,
+  GlobalHistoryDistinguishedDistrictsSchema,
+  GlobalHistoryClubMovementSchema,
+  GlobalHistoryEducationSchema,
+  GlobalHistoryYearSchema,
+  GlobalHistoryOmittedYearSchema,
+  GLOBAL_HISTORY_FORMAT,
+  GLOBAL_HISTORY_OBJECT_PATH,
+  type GlobalHistory,
+  type GlobalHistoryFormat,
+  type GlobalHistoryDistricts,
+  type GlobalHistoryMembership,
+  type GlobalHistoryDistinguishedClubs,
+  type GlobalHistoryDistinguishedDistricts,
+  type GlobalHistoryClubMovement,
+  type GlobalHistoryEducation,
+  type GlobalHistoryYear,
+  type GlobalHistoryOmittedYear,
+} from './schemas/global-history.schema.js'
+
 // Validation helpers
 export {
   validatePerDistrictData,
