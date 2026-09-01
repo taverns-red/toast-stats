@@ -884,3 +884,69 @@ describe('DistrictChangesPage — CSV export (#1461)', () => {
     expect(exportButton()).not.toBeInTheDocument()
   })
 })
+
+/* #1463 (epic #1458 Sprint 5) — the net reaches the real page, not just the
+   isolated component. The page already hands ChangeGroup both the category and
+   the events, so the net is derived from the rows actually on screen; this
+   proves the wiring end-to-end and pins the category gate at page level. */
+describe('DistrictChangesPage net-delta headings (#1463)', () => {
+  const withEvents = (events: SnapshotDiff['events']) => {
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-05-25', '2026-05-26'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    mockedDiff.mockReturnValue({
+      data: diffFixture({ events }),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+    renderPage()
+  }
+
+  it('shows the membership net summed from the events the group renders', () => {
+    withEvents([
+      {
+        category: 'membership',
+        clubId: '1',
+        clubName: 'Alpha Club',
+        label: 'Alpha Club gained 9 members',
+        magnitude: 9,
+      },
+      {
+        category: 'membership',
+        clubId: '2',
+        clubName: 'Beta Club',
+        label: 'Beta Club lost 4 members',
+        magnitude: -4,
+      },
+    ])
+
+    const nets = screen.getAllByTestId('changes-group-net')
+    expect(nets).toHaveLength(1)
+    expect(nets[0]).toHaveTextContent(/net \+5\b/)
+    expect(nets[0]).toHaveTextContent(/increase/)
+  })
+
+  it('gives a distinguished group a count but no net — its magnitude is a flag', () => {
+    withEvents([
+      {
+        category: 'distinguished',
+        clubId: '1',
+        clubName: 'Alpha Club',
+        label: 'Alpha Club became Distinguished',
+        magnitude: 1,
+      },
+      {
+        category: 'distinguished',
+        clubId: '2',
+        clubName: 'Beta Club',
+        label: 'Beta Club lost Distinguished status',
+        magnitude: -1,
+      },
+    ])
+
+    expect(screen.getByText(/Distinguished status changes/)).toBeInTheDocument()
+    expect(screen.queryByTestId('changes-group-net')).not.toBeInTheDocument()
+    expect(screen.getByTestId('changes-group-count')).toHaveTextContent('(2)')
+  })
+})

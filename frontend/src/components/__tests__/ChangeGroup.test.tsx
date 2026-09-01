@@ -170,3 +170,183 @@ describe('ChangeGroup area/division links (#1014)', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 })
+
+/* #1463 (epic #1458 Sprint 5) — signed net-delta in the group heading.
+
+   21 of D61's 38 membership events over a month are ±1 rows, so a bare count
+   forces the reader to sum the whole group to answer "are we up or down?".
+   The net is derived from the SAME events the group renders (never a parallel
+   computation), and only for the categories whose `magnitude` is a real signed
+   quantity — membership, payments, dcp-goals. For the roster/recognition
+   categories `magnitude` is a ±1 direction FLAG, so a "net" there would be a
+   fabricated statistic; those headings keep the count alone. */
+
+const renderCategory = (
+  category: DiffEvent['category'],
+  heading: string,
+  events: DiffEvent[]
+) =>
+  render(
+    <MemoryRouter>
+      <ChangeGroup
+        category={category}
+        heading={heading}
+        events={events}
+        districtId="61"
+        collapsed={false}
+        onToggle={() => {}}
+      />
+    </MemoryRouter>
+  )
+
+describe('ChangeGroup net delta (#1463)', () => {
+  it('renders a signed positive net for the membership group', () => {
+    renderCategory('membership', 'Membership changes', [
+      event({
+        clubId: '1',
+        clubName: 'A',
+        label: 'A gained 5 members',
+        magnitude: 5,
+      }),
+      event({
+        clubId: '2',
+        clubName: 'B',
+        label: 'B gained 14 members',
+        magnitude: 14,
+      }),
+      event({
+        clubId: '3',
+        clubName: 'C',
+        label: 'C lost 2 members',
+        magnitude: -2,
+      }),
+    ])
+
+    const net = screen.getByTestId('changes-group-net')
+    expect(net).toHaveTextContent(/net \+17\b/)
+    // Direction is never colour alone (WCAG 1.4.1): sign + a screen-reader word.
+    expect(net).toHaveTextContent(/increase/)
+    // The count is still there, unchanged.
+    expect(screen.getByTestId('changes-group-count')).toHaveTextContent('3')
+  })
+
+  it('renders a negative net with a U+2212 minus, never a hyphen', () => {
+    renderCategory('membership', 'Membership changes', [
+      event({
+        clubId: '1',
+        clubName: 'A',
+        label: 'A lost 6 members',
+        magnitude: -6,
+      }),
+      event({
+        clubId: '2',
+        clubName: 'B',
+        label: 'B gained 2 members',
+        magnitude: 2,
+      }),
+    ])
+
+    const net = screen.getByTestId('changes-group-net')
+    expect(net.textContent).toContain('net −4')
+    expect(net.textContent).not.toContain('-4')
+    expect(net).toHaveTextContent(/decrease/)
+  })
+
+  it('renders an explicit unsigned "net 0" for a non-empty group that nets out', () => {
+    renderCategory('membership', 'Membership changes', [
+      event({
+        clubId: '1',
+        clubName: 'A',
+        label: 'A gained 3 members',
+        magnitude: 3,
+      }),
+      event({
+        clubId: '2',
+        clubName: 'B',
+        label: 'B lost 3 members',
+        magnitude: -3,
+      }),
+    ])
+
+    const net = screen.getByTestId('changes-group-net')
+    // A zero net is a real answer, not something to hide — and it must never
+    // be signed, so "+0"/"−0" can't be confused with a tiny real movement.
+    expect(net.textContent).toMatch(/net 0(?!\d)/)
+    expect(net.textContent).not.toContain('+0')
+    expect(net.textContent).not.toContain('−0')
+    expect(net.textContent).not.toContain('-0')
+  })
+
+  it('renders a net for the payments group (#1459)', () => {
+    renderCategory('payments', 'Payment changes', [
+      event({
+        category: 'payments',
+        clubId: '1',
+        clubName: 'A',
+        label: 'A added 7 payments',
+        magnitude: 7,
+      }),
+      event({
+        category: 'payments',
+        clubId: '2',
+        clubName: 'B',
+        label: 'B added 3 payments',
+        magnitude: 3,
+      }),
+    ])
+
+    expect(screen.getByTestId('changes-group-net')).toHaveTextContent(
+      /net \+10\b/
+    )
+  })
+
+  it('renders a net for the dcp-goals group', () => {
+    renderCategory('dcp-goals', 'DCP goal changes', [
+      event({
+        category: 'dcp-goals',
+        clubId: '1',
+        clubName: 'A',
+        label: 'A gained 2 DCP goals',
+        magnitude: 2,
+      }),
+    ])
+
+    expect(screen.getByTestId('changes-group-net')).toHaveTextContent(
+      /net \+2\b/
+    )
+  })
+
+  it.each([
+    ['club-added', 'Clubs that joined'],
+    ['club-removed', 'Clubs that left'],
+    ['club-transferred-in', 'Clubs moved in (district realignment)'],
+    ['club-transferred-out', 'Clubs moved out (district realignment)'],
+    ['club-status', 'Club status changes'],
+    ['distinguished', 'Distinguished status changes'],
+    ['division-status', 'Division status changes'],
+    ['area-status', 'Area status changes'],
+  ] as const)(
+    'omits the net for %s — its magnitude is a direction flag, not a quantity',
+    (category, heading) => {
+      renderCategory(category, heading, [
+        event({
+          category,
+          clubId: '1',
+          clubName: 'A',
+          label: 'A changed',
+          magnitude: 1,
+        }),
+        event({
+          category,
+          clubId: '2',
+          clubName: 'B',
+          label: 'B changed',
+          magnitude: -1,
+        }),
+      ])
+
+      expect(screen.queryByTestId('changes-group-net')).not.toBeInTheDocument()
+      expect(screen.getByTestId('changes-group-count')).toHaveTextContent('(2)')
+    }
+  )
+})

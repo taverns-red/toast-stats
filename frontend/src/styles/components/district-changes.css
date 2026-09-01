@@ -169,6 +169,34 @@
   font-weight: 400;
 }
 
+/* #1463 (epic #1458 Sprint 5) — signed net beside the count in the heading.
+   Token-only: --green-600 / --red-600 are re-declared under [data-theme='dark']
+   in tokens/redesign.css, so dark mode needs no rule here and no Tailwind
+   utility is involved (dark-mode.css intercepts several of those with
+   !important, which silently strips a component's own theme-dark variant).
+   Colour is a reinforcement, never the carrier: the +/U+2212 sign is visible
+   and an sr-only word states the direction. */
+.changes-group__net {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  /* "net +17" must never break across lines in a wrapped 375px heading. */
+  white-space: nowrap;
+}
+
+.changes-group__net--up {
+  color: var(--green-600);
+}
+
+.changes-group__net--down {
+  color: var(--red-600);
+}
+
+/* A net of exactly zero over a non-empty group is a real answer, so it is
+   stated plainly — neutral ink, no sign, no direction colour. */
+.changes-group__net--flat {
+  color: var(--ink-2);
+}
+
 .changes-group__list {
   list-style: none;
   margin: 0;
