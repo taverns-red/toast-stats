@@ -137,6 +137,28 @@
   line-height: 1.5;
 }
 
+/* The "how a realignment is detected" link inside the notice (#1470).
+   Inherits the notice's own ink rather than taking the amber accent: the
+   accent is legible as a 3px rule but not as body text on --surface-2, and an
+   inherited colour cannot drift out of contrast when either theme retunes.
+   The underline, not a colour, is what marks it as a link. */
+.district-changes__notice-link {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.district-changes__notice-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.district-changes__notice-link:focus-visible {
+  outline: 2px solid var(--rt-stats, currentColor);
+  outline-offset: 2px;
+  border-radius: 0.125rem;
+}
+
 .district-changes__list {
   display: flex;
   flex-direction: column;

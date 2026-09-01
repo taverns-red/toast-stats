@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import React from 'react'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import DistrictChangesPage from '../DistrictChangesPage'
@@ -426,6 +426,27 @@ describe('DistrictChangesPage — district realignment (#1443)', () => {
     expect(note).toHaveTextContent(/12/)
     expect(note).toHaveTextContent(/10/)
     expect(note).toHaveTextContent(/2026-2027/)
+  })
+
+  /* The notice asserts something about the district's boundaries that the
+     reader cannot check from the page. #1470 widened when it fires, so it now
+     has to say where the rule is written down (#1400 rule-change log). */
+  it('points at the rule-change log entry that says how a realignment is detected', () => {
+    mockedDiff.mockReturnValue({
+      data: realignmentDiff(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    const link = within(screen.getByTestId('changes-realignment')).getByRole(
+      'link',
+      { name: /how a realignment is detected/i }
+    )
+    expect(link).toHaveAttribute(
+      'href',
+      '/methodology#py-2026-2027-district-boundaries-redrawn'
+    )
   })
 
   it('groups transfers separately so a genuine new club is not buried in them', () => {

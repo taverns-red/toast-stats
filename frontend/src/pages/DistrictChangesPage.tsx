@@ -43,6 +43,14 @@ function clubCountPhrase(count: number): string {
   return `${count} ${count === 1 ? 'club' : 'clubs'}`
 }
 
+/**
+ * The rule-change log entry documenting the 2026 reformation and the two
+ * thresholds that decide this notice (#1400 / #1470). The notice asserts the
+ * district's boundaries moved; this is where a reader checks how we know.
+ */
+const REALIGNMENT_METHODOLOGY_HREF =
+  '/methodology#py-2026-2027-district-boundaries-redrawn'
+
 /* Display order + headings for the grouped change list. Roster moves first
    (most material), then club / division / area recognition, then the per-club
    metric churn. Club operational-status changes (#1247) sit adjacent to the
@@ -259,7 +267,13 @@ const DistrictChangesPage: React.FC = () => {
                     moved out in the {diff.rosterDiscontinuity.toProgramYear}{' '}
                     district realignment. Those clubs did not join or leave on
                     their own, and the totals above compare two differently
-                    composed districts.
+                    composed districts.{' '}
+                    <a
+                      className="district-changes__notice-link"
+                      href={REALIGNMENT_METHODOLOGY_HREF}
+                    >
+                      How a realignment is detected
+                    </a>
                   </p>
                 )}
 
