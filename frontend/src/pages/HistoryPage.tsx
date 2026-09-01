@@ -22,6 +22,16 @@ import {
    years exist. (This comment used to cite 2021-22 as a missing "COVID gap"; the
    CEO Report oracle showed that year IS archived — see #1456.) */
 
+/**
+ * Earliest program year (start year) with a year-end snapshot on file —
+ * `v1/dates.json` begins at 2017-01-31, so PY 2016-2017 is the first year that
+ * can be carded. Used ONLY to size the card grid's loading skeleton so it
+ * reserves the height the loaded grid will occupy (#1500). The card list
+ * itself stays entirely data-driven: a stale constant here costs a little
+ * reserved whitespace, never a wrong or missing card.
+ */
+const EARLIEST_ARCHIVED_PROGRAM_YEAR = 2016
+
 const HistoryPage: React.FC = () => {
   useDocumentTitle('Program Year History')
   const { summaries, isLoading, isError } = useProgramYearSummaries()
@@ -89,6 +99,7 @@ const HistoryPage: React.FC = () => {
         summaries={summaries}
         isLoading={isLoading}
         isError={isError}
+        expectedCount={currentPY.year - EARLIEST_ARCHIVED_PROGRAM_YEAR}
       />
 
       <WorldwideScoreboard
