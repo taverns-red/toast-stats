@@ -16,7 +16,13 @@
 
 import {
   DistrictReportsDatasetSchema,
+  GlobalHistorySchema,
+  GlobalTotalsSchema,
+  GLOBAL_HISTORY_OBJECT_PATH,
+  GLOBAL_TOTALS_FILE_NAME,
   type DistrictReportsDataset,
+  type GlobalHistory,
+  type GlobalTotals,
 } from '@taverns-red/shared-contracts'
 
 import {
@@ -515,6 +521,56 @@ export async function fetchCdnDistrictReports(
     if (!res.ok) return null
     recordCdnResponse(res)
     const parsed = DistrictReportsDatasetSchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The worldwide program-year series — `v1/global-history.json` (#1499),
+ * consumed by the `/history` worldwide scoreboard (#1500).
+ *
+ * ONE fetch for the whole five-to-ten-year scoreboard: the artifact is
+ * pre-assembled by the pipeline, so nothing is re-derived here.
+ *
+ * Returns `null` — never throws — when the artifact is absent (the pipeline
+ * has not run since #1499 merged) or fails its contract. The page renders a
+ * fixed-height "not yet published" placeholder for that case, which is a
+ * different thing from an empty world.
+ */
+export async function fetchCdnGlobalHistory(): Promise<GlobalHistory | null> {
+  try {
+    const res = await fetch(`${cdnBaseUrl()}/${GLOBAL_HISTORY_OBJECT_PATH}`)
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = GlobalHistorySchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * A date's worldwide rollup — `snapshots/{date}/global-totals.json` (#1498).
+ *
+ * The `/history` scoreboard reads it for clubs-by-country ONLY, and only for
+ * the latest snapshot: country enrichment collapses on historical year-ends
+ * (45% unknown at 2026-06-30 vs ~2% at 2026-08-30), so a per-year country
+ * series would describe our coverage rather than Toastmasters.
+ *
+ * Tolerant like the reports reader — absent is `null`, not a thrown error.
+ */
+export async function fetchCdnGlobalTotals(
+  date: SnapshotDate
+): Promise<GlobalTotals | null> {
+  try {
+    const res = await fetch(
+      `${cdnBaseUrl()}/snapshots/${date}/${GLOBAL_TOTALS_FILE_NAME}`
+    )
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = GlobalTotalsSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null

@@ -1,7 +1,12 @@
 import React from 'react'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useProgramYearSummaries } from '../hooks/useProgramYearSummaries'
+import {
+  useGlobalHistory,
+  useGlobalClubsByCountry,
+} from '../hooks/useGlobalHistory'
 import { ProgramYearSummaryCards } from '../components/ProgramYearSummaryCards'
+import { WorldwideScoreboard } from '../components/WorldwideScoreboard'
 import {
   getCurrentProgramYear,
   formatProgramYearShort,
@@ -21,6 +26,22 @@ const HistoryPage: React.FC = () => {
   useDocumentTitle('Program Year History')
   const { summaries, isLoading, isError } = useProgramYearSummaries()
   const currentPY = getCurrentProgramYear()
+
+  // The worldwide scoreboard (#1500, epic #1496 Sprint 4) — a separately
+  // resolving query, so its slot is reserved by the component itself rather
+  // than rendered null-until-data (the AwardsRaceSection CLS tripwire).
+  const {
+    history: globalHistory,
+    isLoading: globalLoading,
+    isError: globalError,
+  } = useGlobalHistory()
+  const {
+    clubsByCountry,
+    clubsCounted,
+    snapshotDate: countrySnapshotDate,
+    isLoading: countryLoading,
+    isError: countryError,
+  } = useGlobalClubsByCountry()
 
   return (
     <div className="placeholder-page">
@@ -68,6 +89,17 @@ const HistoryPage: React.FC = () => {
         summaries={summaries}
         isLoading={isLoading}
         isError={isError}
+      />
+
+      <WorldwideScoreboard
+        history={globalHistory}
+        historyLoading={globalLoading}
+        historyError={globalError}
+        clubsByCountry={clubsByCountry}
+        clubsCounted={clubsCounted}
+        countrySnapshotDate={countrySnapshotDate}
+        countryLoading={countryLoading}
+        countryError={countryError}
       />
 
       <div className="districts-methodology-callout" style={{ marginTop: 32 }}>
