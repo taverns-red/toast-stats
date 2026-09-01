@@ -156,6 +156,34 @@ export {
   type DistrictReportsDataset,
 } from './schemas/district-reports.schema.js'
 
+// Worldwide rollup artifact — snapshots/{date}/global-totals.json (#1498)
+export {
+  GlobalTotalsSchema,
+  GlobalTotalsFormatSchema,
+  GlobalTotalsDuplicateClubSchema,
+  GlobalTotalsDistrictsSchema,
+  GlobalTotalsMembershipSchema,
+  GlobalTotalsDistinguishedClubsSchema,
+  GlobalTotalsDistrictTiersSchema,
+  GlobalTotalsDistinguishedDistrictsSchema,
+  GlobalTotalsClubMovementSchema,
+  GlobalTotalsCountrySchema,
+  GlobalTotalsClubsByCountrySchema,
+  GLOBAL_TOTALS_FORMAT,
+  GLOBAL_TOTALS_FILE_NAME,
+  type GlobalTotals,
+  type GlobalTotalsFormat,
+  type GlobalTotalsDuplicateClub,
+  type GlobalTotalsDistricts,
+  type GlobalTotalsMembership,
+  type GlobalTotalsDistinguishedClubs,
+  type GlobalTotalsDistrictTiers,
+  type GlobalTotalsDistinguishedDistricts,
+  type GlobalTotalsClubMovement,
+  type GlobalTotalsCountry,
+  type GlobalTotalsClubsByCountry,
+} from './schemas/global-totals.schema.js'
+
 // Validation helpers
 export {
   validatePerDistrictData,

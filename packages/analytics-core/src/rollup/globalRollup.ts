@@ -52,6 +52,22 @@ export interface ClubPaymentRow {
   readonly clubId: string
   /** Membership payments to date for the snapshot's program year. */
   readonly payments: number
+  /**
+   * `clubPerformance`'s "Active Members" for the same club (#1498). Optional
+   * because the #1466 payments-only callers predate it; absent counts as 0.
+   */
+  readonly activeMembers?: number
+  /**
+   * The raw `Charter Date/Suspend Date` value, VERBATIM (#1498). One column
+   * carries both branches — `Charter MM/DD/YY` and (with a leading space)
+   * ` Susp MM/DD/YY` — and parsing stays in the rollup, not the reader.
+   */
+  readonly clubStatusField?: string
+  /**
+   * Find-A-Club's country for the club, when it matched one (#1498). Absent
+   * means unmatched, which is a fact of its own — never folded into a zero.
+   */
+  readonly country?: string
 }
 
 /** One district file's contribution to the rollup. */
@@ -68,6 +84,18 @@ export interface GlobalRollupInput {
    * authoritative district set for that date.
    */
   readonly rankingsDistrictIds: readonly string[]
+  /**
+   * The snapshot's own date (YYYY-MM-DD), which supplies the program-year
+   * window charter/suspension counting runs in (#1498). Absent → the
+   * movement counts are reported as `null` (unknown), never as 0.
+   */
+  readonly snapshotDate?: string
+}
+
+/** One country's club count in the rollup's breakdown. */
+export interface CountryClubCount {
+  readonly country: string
+  readonly clubs: number
 }
 
 /** A club id that resolved to a district outside the date's district set. */
@@ -85,6 +113,30 @@ export interface GlobalRollup {
   readonly clubCount: number
   /** Payments summed over the counted clubs. */
   readonly totalPayments: number
+  /**
+   * "Active Members" summed over the counted clubs — ALL clubs listed, not
+   * only paid or active ones (#1498). At a year-end close suspended clubs
+   * still carry rows, so this basis must be stated wherever it is published.
+   */
+  readonly totalMembership: number
+  /**
+   * Clubs chartered inside the snapshot date's program year that still have
+   * a row at that date. `null` when no `snapshotDate` was supplied — unknown
+   * is not zero. NEVER labelled plain "new clubs" (#1426 ruling 5).
+   */
+  readonly newClubsStillActive: number | null
+  /**
+   * Clubs suspended inside the snapshot date's program year (#1497).
+   * `null` when no `snapshotDate` was supplied.
+   */
+  readonly suspendedClubs: number | null
+  /** Clubs by country, descending, ties broken by country name. */
+  readonly clubsByCountry: readonly CountryClubCount[]
+  /**
+   * Counted clubs Find-A-Club never matched to a country. Reported so the
+   * breakdown is always a share of a stated whole (epic #1496 finding F2).
+   */
+  readonly clubsWithUnknownCountry: number
   /** District files present in the directory but not in the date's set. */
   readonly excludedDistricts: readonly string[]
   /** Districts the date's set lists but no file supplied. */
@@ -163,6 +215,13 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
     districtCount: seenDistricts.size,
     clubCount,
     totalPayments,
+    // STUB (#1498) — the failing tests in ./globalRollup.test.ts pin what
+    // these must become. Implemented in the next commit.
+    totalMembership: 0,
+    newClubsStillActive: null,
+    suspendedClubs: null,
+    clubsByCountry: [],
+    clubsWithUnknownCountry: 0,
     excludedDistricts,
     missingDistricts,
     duplicateClubs,

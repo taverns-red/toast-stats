@@ -263,4 +263,11 @@ export {
   type GlobalRollupInput,
   type GlobalRollup,
   type DuplicateClub,
+  type CountryClubCount,
 } from './rollup/globalRollup.js'
+
+export {
+  buildGlobalTotals,
+  programYearForSnapshotDate,
+  type GlobalTotalsInput,
+} from './rollup/globalTotals.js'
