@@ -269,8 +269,13 @@ describe('Accessibility Testing Utilities - Examples', () => {
     it('should run comprehensive accessibility tests on accessible form', () => {
       const report = runAccessibilityTestSuite(<AccessibleForm />)
 
-      // The form may have minor violations but should still be accessible
-      expect(report.wcagLevel).toBe('A')
+      // The form is fully accessible: labelled inputs, aria-required on the
+      // required ones, and an aria-describedby target that exists.
+      //
+      // This previously expected 'A', pinned to a false positive — the suite
+      // leaked five renders, duplicating `id="email-help"`, so the scoped
+      // lookup for it failed and reported the description as missing (#1503).
+      expect(report.wcagLevel).toBe('AA')
       expect(
         report.violations.filter(v => v.severity === 'critical').length
       ).toBe(0)

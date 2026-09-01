@@ -4,6 +4,18 @@
  * Provides reusable functions for testing WCAG AA compliance
  * and accessibility features across components.
  * Enhanced with comprehensive WCAG AA validation and detailed reporting.
+ *
+ * Render isolation (#1503): every `expect*` helper below renders the component
+ * itself and MUST unmount before returning. `runAccessibilityTestSuite` calls
+ * five of them in a row; if they leak, five copies of the same tree coexist in
+ * one document and every `id` in the component is duplicated. A scoped
+ * `container.querySelector('#some-id')` then resolves via the selector
+ * engine's document-level id fast-path to the *first* match in the document —
+ * an element belonging to an earlier container — and reports a target that
+ * plainly exists as missing. That produced a false "aria-describedby
+ * references non-existent element" violation under jsdom 29, silently
+ * downgrading genuinely-accessible components from 'AA' to 'A'. Keep the
+ * `unmountRender()` call at the end of each helper.
  */
 
 import { ReactElement } from 'react'
@@ -39,7 +51,7 @@ interface AccessibilityReport {
 export const expectWCAGCompliance = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check for proper heading hierarchy
@@ -177,6 +189,7 @@ export const expectWCAGCompliance = (
     }
   })
 
+  unmountRender()
   return violations
 }
 
@@ -186,7 +199,7 @@ export const expectWCAGCompliance = (
 export const expectKeyboardNavigation = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check that interactive elements are focusable
@@ -270,6 +283,7 @@ export const expectKeyboardNavigation = (
     }
   })
 
+  unmountRender()
   return violations
 }
 
@@ -279,7 +293,7 @@ export const expectKeyboardNavigation = (
 export const expectColorContrast = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check text elements for proper contrast
@@ -346,6 +360,7 @@ export const expectColorContrast = (
     }
   })
 
+  unmountRender()
   return violations
 }
 
@@ -355,7 +370,7 @@ export const expectColorContrast = (
 export const expectScreenReaderCompatibility = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check for proper ARIA landmarks
@@ -483,6 +498,7 @@ export const expectScreenReaderCompatibility = (
     }
   })
 
+  unmountRender()
   return violations
 }
 
@@ -492,7 +508,7 @@ export const expectScreenReaderCompatibility = (
 export const expectFocusManagement = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check for focus trapping in modals
@@ -582,6 +598,7 @@ export const expectFocusManagement = (
     }
   })
 
+  unmountRender()
   return violations
 }
 
