@@ -18,7 +18,10 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { axe, toHaveNoViolations } from 'jest-axe'
-import { WorldwideScoreboard } from '../../components/WorldwideScoreboard'
+import {
+  WorldwideScoreboard,
+  type WorldwideScoreboardProps,
+} from '../../components/WorldwideScoreboard'
 import {
   globalHistoryFixture,
   globalTotalsFixture,
@@ -28,7 +31,7 @@ expect.extend(toHaveNoViolations)
 
 afterEach(cleanup)
 
-const loaded = {
+const loaded: WorldwideScoreboardProps = {
   history: globalHistoryFixture,
   historyLoading: false,
   historyError: false,
@@ -39,7 +42,7 @@ const loaded = {
   countryError: false,
 }
 
-const renderBoard = (props: Partial<typeof loaded> = {}) =>
+const renderBoard = (props: Partial<WorldwideScoreboardProps> = {}) =>
   render(
     <MemoryRouter>
       <WorldwideScoreboard {...loaded} {...props} />

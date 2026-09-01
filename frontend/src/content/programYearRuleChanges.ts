@@ -191,7 +191,7 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'A fifth club rung — all 10 DCP goals and 25+ paid members, with no growth alternative — was added above President’s Distinguished, and the district export gained a Smedley Distinguished Clubs count. At district level Smedley is not new: that tier has existed since 2018-19 (see below).',
     comparability:
       'No club could be Smedley before 2025-26, so the top rung appearing at this boundary is the new tier, not clubs suddenly performing better — those clubs were counted as President’s Distinguished before. Totals of “Distinguished or better” clubs are unaffected. Toast Stats resolves the club ladder per program year, so a pre-2025-26 club with 10 goals and 25 members is shown as President’s Distinguished — the tier it held at the time.',
-    issues: [329, 1406, 1498],
+    issues: [329, 1406, 1498, 1500],
     sources: [
       'packages/analytics-core/src/analytics/ClubEligibilityUtils.ts',
       'packages/analytics-core/src/rankings/BordaCountRankingCalculator.ts',
@@ -199,6 +199,7 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'packages/shared-contracts/src/types/all-districts-rankings.ts',
       'packages/shared-contracts/src/schemas/all-districts-rankings.schema.ts',
       'packages/collector-cli/src/types/collector.ts',
+      'frontend/src/utils/globalHistoryView.ts',
     ],
   },
 

@@ -199,7 +199,6 @@ export const globalTotalsFixture: GlobalTotals = {
   },
   membership: {
     totalMembership: 275404,
-    totalMembershipMarch31: null,
     totalPayments: 189505,
     paidClubs: 13866,
     activeClubs: 14358,
