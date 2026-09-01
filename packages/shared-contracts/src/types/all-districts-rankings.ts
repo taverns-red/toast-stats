@@ -94,6 +94,14 @@ export interface DistrictRanking {
    * so retention only reflects base-club survival, not new charters.
    */
   newCharteredClubs?: number
+  /**
+   * Count of clubs suspended during the current program year (#1497).
+   * Parsed from the `Susp MM/DD/YY` branch of the same
+   * `Charter Date/Suspend Date` column that feeds `newCharteredClubs`.
+   * Optional and forward-looking — historical rankings files carry no
+   * suspension count.
+   */
+  suspendedClubs?: number
   /** Payment breakdown from All Districts CSV (#327) */
   newPayments?: number
   aprilPayments?: number
