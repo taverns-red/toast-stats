@@ -372,3 +372,100 @@ describe('useClubGrowthMilestones — query keys and the unscoped-first window (
     expect(mockedExact).not.toHaveBeenCalledWith('2026-09-28')
   })
 })
+
+/**
+ * The phantom-zero guard (#1501).
+ *
+ * `newCharteredClubs` is present and **zero** on every row of all five
+ * program-year-end rankings files in the live archive, while a normal
+ * month-end carries real values:
+ *
+ *   2022-06-30 rows=125 present=125 sum=0
+ *   2023-06-30 rows=128 present=128 sum=0
+ *   2024-06-30 rows=130 present=130 sum=0
+ *   2025-06-30 rows=132 present=132 sum=0
+ *   2026-06-30 rows=128 present=128 sum=0
+ *   2026-05-31 rows=128 present=128 sum=638   ← normal
+ *
+ * Those files were rebuilt WITHOUT raw CSVs (R2 — runners start empty), so
+ * `TransformService` had no `district-performance.csv` to derive the count
+ * from and it defaulted to 0 instead of being omitted. A phantom zero IS a
+ * number, so the `count-absent` guard above waves it through and the card
+ * renders a confident "no milestone reached" for every district — including
+ * the five already sitting at 3 charters.
+ *
+ * Sibling of the hazard #1475 closed: that one was SUBSTITUTION (a missing
+ * checkpoint must never render as today's numbers); this one is a
+ * present-but-unpopulated field rendering as an earned-nothing verdict.
+ */
+describe('useClubGrowthMilestones — the phantom-zero guard (#1501)', () => {
+  /** A district-census-sized file where every row carries a zero count. */
+  const zeroedCensus = (date: string, size = 128): CdnRankingsData =>
+    file(
+      date,
+      Array.from({ length: size }, (_, i) => row(String(i + 1), 0))
+    )
+
+  it('reports a district-wide all-zero charter count as not collected, not as zero charters', async () => {
+    // The exact shape of the five rebuilt year-end files: field present on
+    // every row, global sum 0. A true global zero across ~94-132 districts
+    // does not occur — the lowest observed month-end total is 81.
+    mockedExact.mockImplementation(async (date: SnapshotDate) =>
+      date === '2026-09-28' ? zeroedCensus('2026-09-28') : (FILES[date] ?? null)
+    )
+
+    const { result } = renderMilestones()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const sep = septemberOf(result.current)
+    expect(sep.status).toBe('unavailable')
+    // Distinct from `count-absent` (the field is present) and from
+    // `snapshot-missing` (the file is there) — three separable causes.
+    expect(sep.unavailableReason).toBe('count-not-collected')
+    expect(sep.newCharteredClubs).toBeNull()
+    // Provenance survives: the reader is told which file could not answer.
+    expect(sep.resolvedFromDate).toBe('2026-09-28')
+    // The unaffected checkpoint still resolves — one bad file is not an outage.
+    expect(marchOf(result.current).newCharteredClubs).toBe(11)
+  })
+
+  it('still reports a genuine single-district zero as a real zero', async () => {
+    // District 61 chartered nothing by September 30 while the rest of the
+    // world did. That is a fact about district 61, not a collection gap, and
+    // suppressing it would be the mirror-image lie.
+    mockedExact.mockImplementation(async (date: SnapshotDate) =>
+      date === '2026-09-28'
+        ? file('2026-09-28', [
+            row('61', 0),
+            ...Array.from({ length: 127 }, (_, i) => row(String(i + 100), 5)),
+          ])
+        : (FILES[date] ?? null)
+    )
+
+    const { result } = renderMilestones()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const sep = septemberOf(result.current)
+    expect(sep.status).toBe('resolved')
+    expect(sep.newCharteredClubs).toBe(0)
+    expect(sep.unavailableReason).toBeNull()
+  })
+
+  it('does not read a global zero out of a file too small to be a district census', async () => {
+    // Two rows is not evidence about ~94-132 districts. A truncated file is a
+    // different pathology (#1469) and must not be laundered into a charter
+    // verdict either way — the count is reported as the file gives it.
+    mockedExact.mockImplementation(async (date: SnapshotDate) =>
+      date === '2026-09-28'
+        ? file('2026-09-28', [row('61', 0), row('42', 0)])
+        : (FILES[date] ?? null)
+    )
+
+    const { result } = renderMilestones()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const sep = septemberOf(result.current)
+    expect(sep.status).toBe('resolved')
+    expect(sep.newCharteredClubs).toBe(0)
+  })
+})

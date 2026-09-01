@@ -306,6 +306,10 @@ describe('ClubGrowthAchievementCard', () => {
       ['snapshot-missing', /no snapshot/i],
       ['district-absent', /does not appear/i],
       ['count-absent', /predates/i],
+      // #1501: the field is present and zero across the whole district set —
+      // a snapshot rebuilt without its raw CSVs. Its own wording, because
+      // "not collected" is a different thing to go fix than the other three.
+      ['count-not-collected', /not collected/i],
     ] as const)(
       'renders an explicit unavailable state for %s',
       (reason, detail) => {
