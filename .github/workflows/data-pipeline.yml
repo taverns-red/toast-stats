@@ -16,6 +16,22 @@
 #
 # The collector uses Playwright (chromium) to scrape Toastmasters dashboards.
 # Data is processed locally and uploaded to GCS for the frontend to consume.
+#
+# GCS CLI — `gcloud storage`, with `rsync` deliberately still on `gsutil` (#1412):
+#   Google drops the bundled `gsutil` from the Cloud SDK in March 2027, and this
+#   workflow never installs it explicitly (setup-gcloud@v3 gives us the default
+#   bundle), so every call would break at once. `cp`/`ls`/`cat`/`rm` are migrated;
+#   equivalence was verified command-by-command against the real staging bucket.
+#   Two things a mechanical rewrite gets wrong:
+#     * `-m` has NO equivalent — parallelism is the default in `gcloud storage`.
+#     * BUNDLED SHORT FLAGS DO NOT PARSE. `gcloud storage cp -rZ` exits 2 with a
+#       usage error; it must be written `-r -Z`. gsutil accepts both.
+#   `rsync` is deliberately NOT migrated. `gcloud storage rsync` exists, but its
+#   object-comparison defaults and `-x` exclude anchoring are not established as
+#   byte-identical to gsutil's, and the destructive call sites (the `-x` keep-only
+#   skeleton sync at prune time, and staging→prod promotion) are exactly where a
+#   near-miss deletes retained data. Those move in their own PR with per-call-site
+#   dry-run evidence — see #1412.
 
 name: Data Pipeline
 
@@ -105,7 +121,7 @@ permissions:
 
 jobs:
   pipeline:
-    name: '${{ inputs.mode || ''daily'' }} pipeline'
+    name: "${{ inputs.mode || 'daily' }} pipeline"
     runs-on: ubuntu-latest
     # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
     timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape' || inputs.mode == 'rescrape-historical') && 240 || (inputs.mode == 'backfill-global-totals' && 120 || 30) }}
@@ -328,14 +344,14 @@ jobs:
 
           # District awards history store (~5 KB) (#333)
           echo "Syncing district-awards-history..."
-          gsutil cp "gs://${GCS_BUCKET}/district-awards-history.json" \
+          gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
             "./cache/district-awards-history.json" 2>/dev/null || true
 
           # Previous year snapshots for YoY comparison
           PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
           echo "Syncing previous year snapshots (${PREV_YEAR})..."
           mkdir -p "./cache/snapshots/${PREV_YEAR}"
-          gsutil -m cp "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR}/district_*.json" \
+          gcloud storage cp "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR}/district_*.json" \
             "./cache/snapshots/${PREV_YEAR}/" 2>/dev/null || true
 
           echo "## ⏬ Store Sync" >> "$GITHUB_STEP_SUMMARY"
@@ -491,31 +507,33 @@ jobs:
 
           # District awards history (#333)
           if [ -f "./cache/district-awards-history.json" ]; then
-            gsutil cp "./cache/district-awards-history.json" "gs://${GCS_BUCKET}/district-awards-history.json"
+            gcloud storage cp "./cache/district-awards-history.json" \
+              "gs://${GCS_BUCKET}/district-awards-history.json"
           fi
 
           # Time-series: CDN-served overlay (mutable, short cache)
-          # rsync above keeps internal state; -m cp -rZ adds CDN headers + gzip in parallel
-          gsutil -m \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=3600" \
-            cp -rZ ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
+          # rsync above keeps internal state; `cp -r -Z` adds CDN headers + gzip
+          # (parallelism is the default in `gcloud storage`, so `-m` has no equivalent).
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=3600" \
+            -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
 
           # CDN-served: snapshots + analytics (immutable, gzipped)
           # Use SNAPSHOT_DATE for the actual snapshot directory (#309)
-          gsutil -m \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=3600, must-revalidate" \
-            cp -Z \
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=3600, must-revalidate" \
+            -Z \
             "./cache/snapshots/${SNAPSHOT_DATE}"/*.json \
             "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/"
 
           # Analytics subdirectory
           if [ -d "./cache/snapshots/${SNAPSHOT_DATE}/analytics" ]; then
-            gsutil -m \
-              -h "Content-Type:application/json" \
-              -h "Cache-Control:public, max-age=3600, must-revalidate" \
-              cp -Z \
+            gcloud storage cp \
+              --content-type="application/json" \
+              --cache-control="public, max-age=3600, must-revalidate" \
+              -Z \
               "./cache/snapshots/${SNAPSHOT_DATE}/analytics"/*.json \
               "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/analytics/"
           fi
@@ -731,7 +749,7 @@ jobs:
 
           # District awards history store (#333)
           echo "Syncing district-awards-history..."
-          gsutil cp "gs://${GCS_BUCKET}/district-awards-history.json" \
+          gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
             "./cache/district-awards-history.json" 2>/dev/null || true
 
           echo "## ⏬ Store Sync (rebuild)" >> "$GITHUB_STEP_SUMMARY"
@@ -750,7 +768,7 @@ jobs:
             echo "Rebuilding specific dates: ${{ inputs.dates }}"
           else
             # Discover all dates from GCS raw-csv/
-            DATES=$(gsutil ls "gs://${GCS_BUCKET}/raw-csv/" | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u)
+            DATES=$(gcloud storage ls "gs://${GCS_BUCKET}/raw-csv/" | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u)
             echo "Discovered dates from GCS raw-csv/"
           fi
 
@@ -780,7 +798,7 @@ jobs:
             PREV_YEAR_DATE=$(date -d "${DATE} - 1 year" +%Y-%m-%d 2>/dev/null || echo "")
             if [ -n "${PREV_YEAR_DATE}" ] && [ ! -d "./cache/snapshots/${PREV_YEAR_DATE}" ]; then
               mkdir -p "./cache/snapshots/${PREV_YEAR_DATE}"
-              gsutil -m cp \
+              gcloud storage cp \
                 "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR_DATE}/district_*.json" \
                 "./cache/snapshots/${PREV_YEAR_DATE}/" 2>/dev/null || true
             fi
@@ -821,18 +839,18 @@ jobs:
             if [ -d "${SNAPSHOT_DIR}" ]; then
               FILE_COUNT=$(find "${SNAPSHOT_DIR}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
               echo "Uploading snapshots/${ACTUAL_DATE}/ (${FILE_COUNT} files)..."
-              gsutil -m \
-                -h "Content-Type:application/json" \
-                -h "Cache-Control:public, max-age=3600, must-revalidate" \
-                cp -Z \
+              gcloud storage cp \
+                --content-type="application/json" \
+                --cache-control="public, max-age=3600, must-revalidate" \
+                -Z \
                 "${SNAPSHOT_DIR}"/*.json \
                 "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"
 
               if [ -d "${SNAPSHOT_DIR}/analytics" ]; then
-                gsutil -m \
-                  -h "Content-Type:application/json" \
-                  -h "Cache-Control:public, max-age=3600, must-revalidate" \
-                  cp -Z \
+                gcloud storage cp \
+                  --content-type="application/json" \
+                  --cache-control="public, max-age=3600, must-revalidate" \
+                  -Z \
                   "${SNAPSHOT_DIR}/analytics"/*.json \
                   "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/analytics/"
               fi
@@ -861,15 +879,16 @@ jobs:
           # District awards history (#333)
           if [ -f "./cache/district-awards-history.json" ]; then
             echo "Syncing district-awards-history back to GCS..."
-            gsutil cp "./cache/district-awards-history.json" "gs://${GCS_BUCKET}/district-awards-history.json"
+            gcloud storage cp "./cache/district-awards-history.json" \
+              "gs://${GCS_BUCKET}/district-awards-history.json"
           fi
 
           # Time-series: CDN-served overlay (mutable, short cache)
           echo "Uploading time-series with CDN headers..."
-          gsutil -m \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=3600" \
-            cp -rZ ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=3600" \
+            -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
 
           echo "- **Dates succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
@@ -928,10 +947,10 @@ jobs:
 
             # R2: the runner starts empty. Pull exactly what the rollup reads
             # — the district files and the date's OWN district set.
-            gsutil -m cp \
+            gcloud storage cp \
               "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${DATE}/all-districts-rankings.json" \
               "${SNAPSHOT_DIR}/" 2>/dev/null || true
-            gsutil -m cp \
+            gcloud storage cp \
               "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${DATE}/district_*.json" \
               "${SNAPSHOT_DIR}/" 2>/dev/null || true
 
@@ -947,10 +966,10 @@ jobs:
                  --snapshot-dir "${SNAPSHOT_DIR}" --date "${DATE}" \
                  > /tmp/global-totals-summary.json; then
               # Same CDN headers as every other published snapshot object.
-              gsutil \
-                -h "Content-Type:application/json" \
-                -h "Cache-Control:public, max-age=3600, must-revalidate" \
-                cp -Z \
+              gcloud storage cp \
+                --content-type="application/json" \
+                --cache-control="public, max-age=3600, must-revalidate" \
+                -Z \
                 "${SNAPSHOT_DIR}/global-totals.json" \
                 "gs://${GCS_BUCKET}/snapshots/${DATE}/global-totals.json"
 
@@ -998,7 +1017,7 @@ jobs:
           # when absent) clobbers the accumulated multi-PY GCS store with a
           # single-PY partial. Mirrors the daily/rebuild sync steps.
           echo "Syncing district-awards-history..."
-          gsutil cp "gs://${GCS_BUCKET}/district-awards-history.json" \
+          gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
             "./cache/district-awards-history.json" 2>/dev/null || true
 
           echo "## ⏬ Store Sync (rescrape)" >> "$GITHUB_STEP_SUMMARY"
@@ -1113,18 +1132,18 @@ jobs:
             if [ -d "${SNAPSHOT_DIR}" ]; then
               FILE_COUNT=$(find "${SNAPSHOT_DIR}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
               echo "Uploading snapshots/${ACTUAL_DATE}/ (${FILE_COUNT} files)..."
-              gsutil -m \
-                -h "Content-Type:application/json" \
-                -h "Cache-Control:public, max-age=3600, must-revalidate" \
-                cp -Z \
+              gcloud storage cp \
+                --content-type="application/json" \
+                --cache-control="public, max-age=3600, must-revalidate" \
+                -Z \
                 "${SNAPSHOT_DIR}"/*.json \
                 "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"
 
               if [ -d "${SNAPSHOT_DIR}/analytics" ]; then
-                gsutil -m \
-                  -h "Content-Type:application/json" \
-                  -h "Cache-Control:public, max-age=3600, must-revalidate" \
-                  cp -Z \
+                gcloud storage cp \
+                  --content-type="application/json" \
+                  --cache-control="public, max-age=3600, must-revalidate" \
+                  -Z \
                   "${SNAPSHOT_DIR}/analytics"/*.json \
                   "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/analytics/"
               fi
@@ -1157,14 +1176,15 @@ jobs:
           # District awards history (#333)
           if [ -f "./cache/district-awards-history.json" ]; then
             echo "Syncing district-awards-history back to GCS..."
-            gsutil cp "./cache/district-awards-history.json" "gs://${GCS_BUCKET}/district-awards-history.json"
+            gcloud storage cp "./cache/district-awards-history.json" \
+              "gs://${GCS_BUCKET}/district-awards-history.json"
           fi
           # Time-series: CDN-served overlay (mutable, short cache)
           echo "Uploading time-series with CDN headers..."
-          gsutil -m \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=3600" \
-            cp -rZ ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=3600" \
+            -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
 
           echo "- **Dates succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
@@ -1217,11 +1237,11 @@ jobs:
         run: |
           echo "## 🗑️ GCS Cleanup (pre-upload, full rescrape only)" >> "$GITHUB_STEP_SUMMARY"
           echo "Deleting stale time-series from GCS..."
-          gsutil -m rm -r "gs://${GCS_BUCKET}/time-series/" 2>&1 || echo "(no time-series to delete)"
+          gcloud storage rm -r "gs://${GCS_BUCKET}/time-series/" 2>&1 || echo "(no time-series to delete)"
           echo "Deleting stale snapshots from GCS..."
-          gsutil -m rm -r "gs://${GCS_BUCKET}/snapshots/" 2>&1 || echo "(no snapshots to delete)"
+          gcloud storage rm -r "gs://${GCS_BUCKET}/snapshots/" 2>&1 || echo "(no snapshots to delete)"
           echo "Deleting stale club-trends from GCS..."
-          gsutil -m rm -r "gs://${GCS_BUCKET}/club-trends/" 2>&1 || echo "(no club-trends to delete)"
+          gcloud storage rm -r "gs://${GCS_BUCKET}/club-trends/" 2>&1 || echo "(no club-trends to delete)"
           echo "- **Stale GCS data deleted** ✓" >> "$GITHUB_STEP_SUMMARY"
 
       - name: '[rescrape-historical] Upload rebuilt data to GCS'
@@ -1231,24 +1251,24 @@ jobs:
 
           # Upload snapshots with immutable CDN headers
           echo "Uploading snapshots..."
-          gsutil -m \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=3600, must-revalidate" \
-            cp -rZ ./cache/snapshots/* "gs://${GCS_BUCKET}/snapshots/"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=3600, must-revalidate" \
+            -r -Z ./cache/snapshots/* "gs://${GCS_BUCKET}/snapshots/"
 
           # Upload time-series with short cache
           echo "Uploading time-series..."
-          gsutil -m \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=3600" \
-            cp -rZ ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=3600" \
+            -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
 
           # Upload club-trends
           echo "Uploading club-trends..."
-          gsutil -m \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=3600" \
-            cp -rZ ./cache/club-trends/* "gs://${GCS_BUCKET}/club-trends/"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=3600" \
+            -r -Z ./cache/club-trends/* "gs://${GCS_BUCKET}/club-trends/"
 
           # Upload raw-csv
           echo "Uploading raw-csv..."
@@ -1276,8 +1296,8 @@ jobs:
           echo "Skeleton sync from GCS for pruning (listings + metadata.json only)..."
           mkdir -p ./cache/raw-csv ./cache/snapshots
 
-          gsutil ls "gs://${GCS_BUCKET}/raw-csv/" > /tmp/prune-raw-listing.txt
-          gsutil ls "gs://${GCS_BUCKET}/snapshots/" > /tmp/prune-snapshot-listing.txt
+          gcloud storage ls "gs://${GCS_BUCKET}/raw-csv/" > /tmp/prune-raw-listing.txt
+          gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" > /tmp/prune-snapshot-listing.txt
 
           # Materialize ALL date dirs (fails closed on a zero-date raw-csv
           # listing — classifying an empty cache would silently prune nothing)
@@ -1289,6 +1309,11 @@ jobs:
           # Overlay metadata.json files only (exclude regex is single-sourced
           # from the tested scripts/lib constant; rsync never downloads CSVs)
           EXCLUDE_REGEX=$(npx tsx scripts/prune-skeleton-sync.ts --print-exclude-regex)
+          # STILL gsutil, deliberately (#1412). This is a KEEP-ONLY exclude: a
+          # regex that anchors differently under `gcloud storage rsync --exclude`
+          # silently drops metadata.json files, and the prune classifier then
+          # deletes the dates it could not see. Migrate only with a proven-
+          # equivalent match set per lesson `a-keep-only-rsync-exclude-...`.
           gsutil -m rsync -r -x "${EXCLUDE_REGEX}" \
             "gs://${GCS_BUCKET}/raw-csv/" "./cache/raw-csv/"
 
@@ -1333,13 +1358,13 @@ jobs:
           # previous local-vs-GCS snapshot-date diff orphaned remapped
           # raw-csv dirs (collection date ≠ snapshot date) forever. The
           # script fails closed: malformed output fails this step before
-          # any gsutil rm runs.
+          # any `gcloud storage rm` runs.
           npx tsx scripts/prune-gcs-deletions.ts /tmp/prune-output.json > /tmp/prune-gcs-paths.txt
 
           DELETED=0
           while IFS= read -r PREFIX; do
             echo "Deleting gs://${GCS_BUCKET}/${PREFIX}/..."
-            gsutil -m rm -r "gs://${GCS_BUCKET}/${PREFIX}/" || true
+            gcloud storage rm -r "gs://${GCS_BUCKET}/${PREFIX}/" || true
             DELETED=$((DELETED + 1))
           done < /tmp/prune-gcs-paths.txt
 
@@ -1377,7 +1402,7 @@ jobs:
             | sort | tail -1)
           if [ -z "${LATEST_DATE}" ]; then
             echo "Local snapshot cache empty — checking GCS for latest date..."
-            LATEST_DATE=$(gsutil ls "gs://${GCS_BUCKET}/snapshots/" \
+            LATEST_DATE=$(gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" \
               | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u | tail -1)
           fi
           if [ -z "${LATEST_DATE}" ]; then
@@ -1397,13 +1422,13 @@ jobs:
             fs.writeFileSync('/tmp/latest.json', JSON.stringify(manifest, null, 2));
             console.log('Generated v1/latest.json for ${LATEST_DATE}');
           "
-          gsutil \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=300" \
-            cp /tmp/latest.json "gs://${GCS_BUCKET}/v1/latest.json"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=300" \
+            /tmp/latest.json "gs://${GCS_BUCKET}/v1/latest.json"
 
           # v1/dates.json (medium TTL, 15 min)
-          gsutil ls "gs://${GCS_BUCKET}/snapshots/" | \
+          gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" | \
             grep -oP '\d{4}-\d{2}-\d{2}' | sort -u > /tmp/all-dates.txt
           node -e "
             const fs = require('fs');
@@ -1417,17 +1442,17 @@ jobs:
             fs.writeFileSync('/tmp/dates.json', JSON.stringify(data, null, 2));
             console.log('Generated v1/dates.json with ' + dates.length + ' dates');
           "
-          gsutil \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=900" \
-            cp /tmp/dates.json "gs://${GCS_BUCKET}/v1/dates.json"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=900" \
+            /tmp/dates.json "gs://${GCS_BUCKET}/v1/dates.json"
 
           # v1/rankings.json (short TTL, 5 min)
           # In rebuild mode, local snapshots are cleaned per-date — fetch from GCS
           RANKINGS_SRC="./cache/snapshots/${LATEST_DATE}/all-districts-rankings.json"
           if [ ! -f "${RANKINGS_SRC}" ]; then
             mkdir -p "./cache/snapshots/${LATEST_DATE}"
-            gsutil cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/all-districts-rankings.json" \
+            gcloud storage cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/all-districts-rankings.json" \
               "${RANKINGS_SRC}" 2>/dev/null || true
           fi
           if [ -f "${RANKINGS_SRC}" ]; then
@@ -1443,10 +1468,10 @@ jobs:
               fs.writeFileSync('/tmp/rankings.json', JSON.stringify(data, null, 2));
               console.log('Generated v1/rankings.json with ' + src.rankings.length + ' districts');
             "
-            gsutil \
-              -h "Content-Type:application/json" \
-              -h "Cache-Control:public, max-age=300" \
-              cp /tmp/rankings.json "gs://${GCS_BUCKET}/v1/rankings.json"
+            gcloud storage cp \
+              --content-type="application/json" \
+              --cache-control="public, max-age=300" \
+              /tmp/rankings.json "gs://${GCS_BUCKET}/v1/rankings.json"
           else
             echo "::warning::all-districts-rankings.json not found, skipping v1/rankings.json"
           fi
@@ -1456,11 +1481,11 @@ jobs:
           # to avoid overwriting (all files are named all-districts-rankings.json)
           echo "Building per-district rank history..."
           mkdir -p /tmp/rank-history-src /tmp/rank-history-out
-          gsutil ls "gs://${GCS_BUCKET}/snapshots/*/all-districts-rankings.json" \
+          gcloud storage ls "gs://${GCS_BUCKET}/snapshots/*/all-districts-rankings.json" \
             2>/dev/null | while IFS= read -r gcs_path; do
             DATE_DIR=$(echo "${gcs_path}" | grep -oP '\d{4}-\d{2}-\d{2}')
             if [ -n "${DATE_DIR}" ]; then
-              gsutil -q cp "${gcs_path}" \
+              gcloud storage cp "${gcs_path}" \
                 "/tmp/rank-history-src/${DATE_DIR}.json" 2>/dev/null || true
             fi
           done
@@ -1508,10 +1533,10 @@ jobs:
               }
               console.log('Generated rank history for ' + index.size + ' districts (' + totalPoints + ' total points)');
             "
-            gsutil -m \
-              -h "Content-Type:application/json" \
-              -h "Cache-Control:public, max-age=300" \
-              cp -r "/tmp/rank-history-out/*.json" \
+            gcloud storage cp \
+              --content-type="application/json" \
+              --cache-control="public, max-age=300" \
+              -r "/tmp/rank-history-out/*.json" \
               "gs://${GCS_BUCKET}/v1/rank-history/"
           fi
 
@@ -1536,7 +1561,8 @@ jobs:
             # would write the stale index back unchanged and keep advertising
             # the just-deleted dates → change-digest 404s (#1279).
             echo "Generating snapshot index from GCS..."
-            gsutil ls "gs://${GCS_BUCKET}/snapshots/*/district_*.json" > /tmp/snapshot-files.txt 2>/dev/null || true
+            gcloud storage ls "gs://${GCS_BUCKET}/snapshots/*/district_*.json" \
+              > /tmp/snapshot-files.txt 2>/dev/null || true
             node -e "
               const fs = require('fs');
               const lines = fs.readFileSync('/tmp/snapshot-files.txt', 'utf-8').trim().split('\n').filter(Boolean);
@@ -1569,7 +1595,7 @@ jobs:
             DATE="${{ steps.daily-scrape.outputs.snapshot_date || steps.daily-scrape.outputs.date || steps.daily-config.outputs.date }}"
             DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
 
-            gsutil cp "${INDEX_PATH}" /tmp/district-snapshot-index.json 2>/dev/null || \
+            gcloud storage cp "${INDEX_PATH}" /tmp/district-snapshot-index.json 2>/dev/null || \
               echo '{"generatedAt":"","districts":{}}' > /tmp/district-snapshot-index.json
 
             node -e "
@@ -1591,10 +1617,10 @@ jobs:
             "
           fi
 
-          gsutil \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=300" \
-            cp /tmp/district-snapshot-index.json "${INDEX_PATH}"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=300" \
+            /tmp/district-snapshot-index.json "${INDEX_PATH}"
 
           echo "## 📋 District Snapshot Index" >> "$GITHUB_STEP_SUMMARY"
           DISTRICT_COUNT=$(jq '.districts | keys | length' /tmp/district-snapshot-index.json)
@@ -1611,7 +1637,7 @@ jobs:
           && steps.mode.outputs.mode != 'backfill-global-totals'
         run: |
           set -o pipefail
-          LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
+          LATEST_DATE=$(gcloud storage cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
             | jq -r '.latestSnapshotDate' || echo "")
           if [ -z "${LATEST_DATE}" ]; then
             echo "::warning::No latest date found, skipping club-index"
@@ -1621,9 +1647,9 @@ jobs:
 
           # R2: explicitly sync the district files this step reads. The
           # sidecar district_{id}_reports.json shares the prefix (#1428) and
-          # `gsutil cp` has no exclude flag, so list first, then filter.
+          # `gcloud storage cp` has no exclude flag, so list first, then filter.
           mkdir -p /tmp/club-index-src
-          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
+          gcloud storage ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
             | grep -v '_reports\.json$' > /tmp/club-index-srcs.txt
           EXPECTED=$(wc -l < /tmp/club-index-srcs.txt | tr -d ' ')
           echo "Listed ${EXPECTED} district files"
@@ -1645,10 +1671,10 @@ jobs:
             --snapshot-date "${LATEST_DATE}" \
             --expect "${EXPECTED}"
 
-          gsutil \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=300" \
-            cp /tmp/club-index.json "gs://${GCS_BUCKET}/config/club-index.json"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=300" \
+            /tmp/club-index.json "gs://${GCS_BUCKET}/config/club-index.json"
 
           echo "## 📋 Club Index" >> "$GITHUB_STEP_SUMMARY"
           jq -r '"- **Clubs indexed**: \(.totalClubs)"' /tmp/club-index.json \
@@ -1662,7 +1688,7 @@ jobs:
         if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
         run: |
           set -o pipefail
-          LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
+          LATEST_DATE=$(gcloud storage cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
             | jq -r '.latestSnapshotDate' || echo "")
           if [ -z "${LATEST_DATE}" ]; then
             echo "::warning::No latest date found, skipping divisions-areas index"
@@ -1675,7 +1701,7 @@ jobs:
           # what fed `district_{id}_reports.json` to the index builder and
           # produced its `Skipping corrupt file:` noise on every run.
           mkdir -p /tmp/divisions-areas-src
-          gsutil ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
+          gcloud storage ls "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/district_*.json" \
             | grep -v '_reports\.json$' > /tmp/divisions-areas-srcs.txt
           EXPECTED=$(wc -l < /tmp/divisions-areas-srcs.txt | tr -d ' ')
           echo "Listed ${EXPECTED} district files"
@@ -1696,10 +1722,10 @@ jobs:
             --snapshot-date "${LATEST_DATE}" \
             --expect "${EXPECTED}"
 
-          gsutil \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=300" \
-            cp /tmp/divisions-areas-index.json "gs://${GCS_BUCKET}/config/divisions-areas-index.json"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=300" \
+            /tmp/divisions-areas-index.json "gs://${GCS_BUCKET}/config/divisions-areas-index.json"
 
           echo "## 🗺️ Divisions/Areas Index" >> "$GITHUB_STEP_SUMMARY"
           jq -r '"- **Divisions indexed**: \(.totalDivisions)\n- **Areas indexed**: \(.totalAreas)"' \
@@ -1722,11 +1748,11 @@ jobs:
         if: steps.mode.outputs.mode == 'prune' && steps.mode.outputs.reconcile_prod == 'true'
         run: |
           set -o pipefail
-          gsutil ls "gs://${GCS_BUCKET}/snapshots/" > /tmp/ls-staging-snapshots.txt
-          gsutil ls "gs://${GCS_BUCKET}/raw-csv/" > /tmp/ls-staging-rawcsv.txt
-          gsutil ls "gs://${GCS_BUCKET_PRODUCTION}/snapshots/" > /tmp/ls-prod-snapshots.txt
+          gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" > /tmp/ls-staging-snapshots.txt
+          gcloud storage ls "gs://${GCS_BUCKET}/raw-csv/" > /tmp/ls-staging-rawcsv.txt
+          gcloud storage ls "gs://${GCS_BUCKET_PRODUCTION}/snapshots/" > /tmp/ls-prod-snapshots.txt
           # Promotion never syncs raw-csv, so prod may legitimately lack it.
-          gsutil ls "gs://${GCS_BUCKET_PRODUCTION}/raw-csv/" > /tmp/ls-prod-rawcsv.txt \
+          gcloud storage ls "gs://${GCS_BUCKET_PRODUCTION}/raw-csv/" > /tmp/ls-prod-rawcsv.txt \
             || : > /tmp/ls-prod-rawcsv.txt
 
           # In a dry run staging is untouched: the prune output's pending
@@ -1753,7 +1779,7 @@ jobs:
           DELETED=0
           while IFS= read -r PREFIX; do
             echo "Deleting gs://${GCS_BUCKET_PRODUCTION}/${PREFIX}/..."
-            gsutil -m rm -r "gs://${GCS_BUCKET_PRODUCTION}/${PREFIX}/" || true
+            gcloud storage rm -r "gs://${GCS_BUCKET_PRODUCTION}/${PREFIX}/" || true
             DELETED=$((DELETED + 1))
           done < /tmp/prod-reconcile-paths.txt
 
@@ -1780,17 +1806,19 @@ jobs:
           echo "Comparing staging vs production buckets..."
 
           # Count files in each bucket's key directories
-          STAGING_SNAPSHOTS=$(gsutil ls "gs://${GCS_BUCKET}/snapshots/" 2>/dev/null | grep -c '/$' || echo 0)
-          PROD_SNAPSHOTS=$(gsutil ls "gs://${GCS_BUCKET_PRODUCTION}/snapshots/" 2>/dev/null | grep -c '/$' || echo 0)
+          STAGING_SNAPSHOTS=$(gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" 2>/dev/null | grep -c '/$' || echo 0)
+          PROD_SNAPSHOTS=$(gcloud storage ls "gs://${GCS_BUCKET_PRODUCTION}/snapshots/" 2>/dev/null \
+            | grep -c '/$' || echo 0)
 
-          STAGING_LATEST=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null | jq -r '.latestSnapshotDate' || echo "unknown")
-          PROD_LATEST=$(gsutil cat "gs://${GCS_BUCKET_PRODUCTION}/v1/latest.json" 2>/dev/null | jq -r '.latestSnapshotDate' || echo "unknown")
+          STAGING_LATEST=$(gcloud storage cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null | jq -r '.latestSnapshotDate' || echo "unknown")
+          PROD_LATEST=$(gcloud storage cat "gs://${GCS_BUCKET_PRODUCTION}/v1/latest.json" 2>/dev/null | jq -r '.latestSnapshotDate' || echo "unknown")
 
-          STAGING_DATES=$(gsutil cat "gs://${GCS_BUCKET}/v1/dates.json" 2>/dev/null | jq '.count' || echo 0)
-          PROD_DATES=$(gsutil cat "gs://${GCS_BUCKET_PRODUCTION}/v1/dates.json" 2>/dev/null | jq '.count' || echo 0)
+          STAGING_DATES=$(gcloud storage cat "gs://${GCS_BUCKET}/v1/dates.json" 2>/dev/null | jq '.count' || echo 0)
+          PROD_DATES=$(gcloud storage cat "gs://${GCS_BUCKET_PRODUCTION}/v1/dates.json" 2>/dev/null \
+            | jq '.count' || echo 0)
 
-          STAGING_RANKINGS=$(gsutil cat "gs://${GCS_BUCKET}/v1/rankings.json" 2>/dev/null | jq '.rankings | length' || echo 0)
-          PROD_RANKINGS=$(gsutil cat "gs://${GCS_BUCKET_PRODUCTION}/v1/rankings.json" 2>/dev/null | jq '.rankings | length' || echo 0)
+          STAGING_RANKINGS=$(gcloud storage cat "gs://${GCS_BUCKET}/v1/rankings.json" 2>/dev/null | jq '.rankings | length' || echo 0)
+          PROD_RANKINGS=$(gcloud storage cat "gs://${GCS_BUCKET_PRODUCTION}/v1/rankings.json" 2>/dev/null | jq '.rankings | length' || echo 0)
 
           echo "## 🔍 Staging vs Production Diff" >> "$GITHUB_STEP_SUMMARY"
           echo "| Metric | Staging | Production | Delta |" >> "$GITHUB_STEP_SUMMARY"
@@ -1848,9 +1876,9 @@ jobs:
           VALUE_PROMOTE="false"
 
           # Overlap = dates present in BOTH staging and prod indexes.
-          gsutil cat "gs://${GCS_BUCKET}/v1/dates.json" 2>/dev/null \
+          gcloud storage cat "gs://${GCS_BUCKET}/v1/dates.json" 2>/dev/null \
             | jq -r '.dates[]?' | sort > /tmp/staging-dates.txt || true
-          gsutil cat "gs://${GCS_BUCKET_PRODUCTION}/v1/dates.json" 2>/dev/null \
+          gcloud storage cat "gs://${GCS_BUCKET_PRODUCTION}/v1/dates.json" 2>/dev/null \
             | jq -r '.dates[]?' | sort > /tmp/prod-dates.txt || true
           comm -12 /tmp/staging-dates.txt /tmp/prod-dates.txt > /tmp/overlap-dates.txt || true
           OVERLAP_COUNT=$(wc -l < /tmp/overlap-dates.txt | tr -d ' ')
@@ -1858,16 +1886,16 @@ jobs:
 
           # Pull each overlap date's all-districts-rankings.json from both buckets.
           # Parallelized (xargs -P): ~2 cp/date sequentially over ~100 dates is
-          # ~200 round-trips dominated by gsutil startup; running them concurrently
+          # ~200 round-trips dominated by CLI startup; running them concurrently
           # cuts wall time markedly. Each cp is fail-soft (a missing file just drops
           # that date from the compare — loadDateDigests skips dirs without the file).
           rm -rf /tmp/vd && mkdir -p /tmp/vd/staging /tmp/vd/prod
           xargs -P 16 -I {} bash -c '
             d="$1"; sb="$2"; pb="$3"
             mkdir -p "/tmp/vd/staging/${d}" "/tmp/vd/prod/${d}"
-            gsutil -q cp "gs://${sb}/snapshots/${d}/all-districts-rankings.json" \
+            gcloud storage cp "gs://${sb}/snapshots/${d}/all-districts-rankings.json" \
               "/tmp/vd/staging/${d}/all-districts-rankings.json" 2>/dev/null || true
-            gsutil -q cp "gs://${pb}/snapshots/${d}/all-districts-rankings.json" \
+            gcloud storage cp "gs://${pb}/snapshots/${d}/all-districts-rankings.json" \
               "/tmp/vd/prod/${d}/all-districts-rankings.json" 2>/dev/null || true
           ' _ {} "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" < /tmp/overlap-dates.txt
 
@@ -1934,6 +1962,11 @@ jobs:
         if: steps.diff.outputs.promote == 'true' && steps.valuediff.outputs.value_promote == 'true' && steps.mode.outputs.mode != 'prune'
         run: |
           echo "Promoting staging → production..."
+
+          # STILL gsutil, deliberately (#1412): these five writes ARE production.
+          # `gcloud storage rsync`'s object-comparison defaults are not proven
+          # byte-identical to gsutil's here, and a difference shows up as data
+          # that silently did or did not promote. Migrate with a dry-run diff.
 
           # Sync manifests (v1/)
           gsutil -m rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"
@@ -2503,13 +2536,13 @@ jobs:
 
           # Clear leftovers first so a re-run for the same raw date can never
           # mix two runs' datasets in one prefix.
-          gsutil -m rm -r "${INCOMING}/" 2>/dev/null || true
+          gcloud storage rm -r "${INCOMING}/" 2>/dev/null || true
 
           # Internal hand-off only: plain objects, NO CDN headers and NO -Z.
           # `place-reports` re-uploads with the snapshot headers once it knows
           # the snapshot date, so the CDN-facing object is produced by exactly
           # the same command shape as the pipeline's own upload step.
-          gsutil -m cp "${SRC_DIR}"/district_*_reports.json "${INCOMING}/"
+          gcloud storage cp "${SRC_DIR}"/district_*_reports.json "${INCOMING}/"
 
           {
             echo "- **Staged to \`incoming/daily-reports/${RAW_DATE}/\`**: ${COUNT} datasets"
@@ -2656,7 +2689,7 @@ jobs:
           # pipeline's own `[daily] Upload to GCS` step produces (gzipped via
           # -Z with the same two headers), and `cp -Z` is an UPLOAD-side flag.
           rm -rf /tmp/daily-reports && mkdir -p /tmp/daily-reports
-          gsutil -m cp "${INCOMING}/district_*_reports.json" /tmp/daily-reports/
+          gcloud storage cp "${INCOMING}/district_*_reports.json" /tmp/daily-reports/
           COUNT=$(find /tmp/daily-reports -maxdepth 1 -name 'district_*_reports.json' \
             | wc -l | tr -d ' ')
           if [ "${COUNT}" -eq 0 ]; then
@@ -2666,10 +2699,10 @@ jobs:
           fi
 
           # Same headers as the pipeline's snapshot upload.
-          gsutil -m \
-            -h "Content-Type:application/json" \
-            -h "Cache-Control:public, max-age=3600, must-revalidate" \
-            cp -Z \
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=3600, must-revalidate" \
+            -Z \
             /tmp/daily-reports/*.json \
             "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/"
 
@@ -2685,10 +2718,10 @@ jobs:
           # staleness this issue exists to fix. So mirror explicitly, gated on
           # the same two gates that let `pipeline` promote.
           if [ "${{ needs.pipeline.outputs.promoted }}" = "true" ]; then
-            gsutil -m \
-              -h "Content-Type:application/json" \
-              -h "Cache-Control:public, max-age=3600, must-revalidate" \
-              cp -Z \
+            gcloud storage cp \
+              --content-type="application/json" \
+              --cache-control="public, max-age=3600, must-revalidate" \
+              -Z \
               /tmp/daily-reports/*.json \
               "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"
             echo "- ✅ Mirrored to \`prod:snapshots/${SNAPSHOT_DATE}/\` (this run promoted)" \
@@ -2713,5 +2746,5 @@ jobs:
             echo "No raw date from daily-reports — nothing to clean up."
             exit 0
           fi
-          gsutil -m rm -r "gs://${GCS_BUCKET}/incoming/daily-reports/${RAW_DATE}/" 2>/dev/null \
+          gcloud storage rm -r "gs://${GCS_BUCKET}/incoming/daily-reports/${RAW_DATE}/" 2>/dev/null \
             || echo "Nothing to clean up at incoming/daily-reports/${RAW_DATE}/"

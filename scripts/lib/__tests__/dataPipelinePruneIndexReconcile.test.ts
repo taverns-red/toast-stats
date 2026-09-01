@@ -52,7 +52,7 @@ function indexUpdateStep(): Step {
 
 /**
  * The regenerate-from-GCS branch is the one whose body lists the actual
- * snapshot files (`gsutil ls ... snapshots/*\/district_*.json`). Find the
+ * snapshot files (`gcloud storage ls ... snapshots/*\/district_*.json`). Find the
  * `if [ ... ]; then` condition that gates it and return the set of MODE values
  * it matches via `"${MODE}" = "X"` comparisons.
  */
@@ -61,10 +61,12 @@ function modesReachingRegenerateBranch(run: string): Set<string> {
   // The gating condition is the `if`/`elif` line that immediately precedes the
   // branch containing the GCS-listing regeneration.
   const lsIdx = lines.findIndex(l =>
-    /gsutil ls .*snapshots\/\*\/district_\*\.json/.test(l)
+    /gcloud storage ls .*snapshots\/\*\/district_\*\.json/.test(l)
   )
   if (lsIdx === -1) {
-    throw new Error('regenerate-from-GCS listing (gsutil ls) not found in step')
+    throw new Error(
+      'regenerate-from-GCS listing (gcloud storage ls) not found in step'
+    )
   }
   // Walk back to the nearest `if`/`elif [ ... ]; then` gating that branch.
   let condLine: string | undefined
@@ -103,7 +105,7 @@ describe('data-pipeline.yml prune reconciles district-snapshot-index (#1279)', (
     // …and the merge path it falls through to must still download the existing
     // index before merging today's date (only the merge branch does this).
     expect(
-      /gsutil cp "\$\{INDEX_PATH\}" \/tmp\/district-snapshot-index\.json/.test(
+      /gcloud storage cp "\$\{INDEX_PATH\}" \/tmp\/district-snapshot-index\.json/.test(
         step.run!
       )
     ).toBe(true)
