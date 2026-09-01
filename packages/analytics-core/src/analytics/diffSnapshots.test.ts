@@ -570,6 +570,94 @@ describe('diffSnapshots — district-composition discontinuity (#1443)', () => {
       10
     )
   })
+
+  /* Small-but-real realignments at a KNOWN reformation boundary (#1470).
+
+     The magnitude test above is blind to a small district's real realignment.
+     Across 2026-06-30 → first-July, only 19 of the 94 districts holding data
+     on both sides cleared "≥8 clubs moved AND ≥20% of the roster". District 03
+     received six clubs from district 05 — a district with no July snapshot at
+     all, because it was dissolved — and still read "Clubs that joined".
+
+     A ratio cannot see that, but the codebase already holds the fact that a
+     reformation took effect on 2026-07-01 (`spansDistrictReformation`, #1442).
+     At that boundary the magnitude test relaxes to a small absolute floor;
+     away from it nothing changes. The floor is calibrated against three
+     ORDINARY July rollovers on the live CDN (2023/2024/2025-06-30 → 07-31, 386
+     district observations): 1–3 non-closure moves are ordinary background
+     (~25% / ~9% / ~4% of districts per year) and only 2 of 386 reached 5. */
+  describe('known reformation boundary (#1470)', () => {
+    /** District 03's live shape: 6 clubs in from dissolved D05, 1 club out. */
+    function smallRealignment(fromDate: string, toDate: string) {
+      return diffSnapshots(
+        snapshot({
+          date: fromDate,
+          clubs: [...clubs('stay', 135), ...clubs('out', 1)],
+        }),
+        snapshot({
+          date: toDate,
+          clubs: [...clubs('stay', 135), ...clubs('in', 6)],
+        })
+      )
+    }
+
+    it('reports a realignment too small for the ratio when the pair straddles the 2026 reformation', () => {
+      const diff = smallRealignment('2026-06-30', '2026-07-26')
+
+      expect(diff.rosterDiscontinuity).toEqual({
+        kind: 'program-year-boundary',
+        fromProgramYear: '2025-2026',
+        toProgramYear: '2026-2027',
+        clubsMovedIn: 6,
+        clubsMovedOut: 1,
+      })
+    })
+
+    it('classifies those six clubs as transfers, not as joining the roster', () => {
+      const diff = smallRealignment('2026-06-30', '2026-07-26')
+
+      expect(
+        diff.events.filter(e => e.category === 'club-transferred-in')
+      ).toHaveLength(6)
+      expect(
+        diff.events.filter(e => e.category === 'club-transferred-out')
+      ).toHaveLength(1)
+      expect(diff.events.some(e => e.category === 'club-added')).toBe(false)
+      expect(diff.events.some(e => e.category === 'club-removed')).toBe(false)
+      expect(diff.clubs.onlyInTo.every(c => c.transferred === true)).toBe(true)
+    })
+
+    it('leaves the same exchange as ordinary churn at a program-year boundary with no reformation', () => {
+      const diff = smallRealignment('2025-06-30', '2025-07-31')
+
+      expect(diff.rosterDiscontinuity).toBeUndefined()
+      expect(diff.events.filter(e => e.category === 'club-added')).toHaveLength(
+        6
+      )
+      expect(
+        diff.events.filter(e => e.category === 'club-removed')
+      ).toHaveLength(1)
+      expect(diff.clubs.onlyInTo[0]).not.toHaveProperty('transferred')
+    })
+
+    it('still ignores a handful of moves at the reformation boundary (ordinary-year background)', () => {
+      const diff = diffSnapshots(
+        snapshot({
+          date: '2026-06-30',
+          clubs: [...clubs('stay', 140), ...clubs('out', 1)],
+        }),
+        snapshot({
+          date: '2026-07-26',
+          clubs: [...clubs('stay', 140), ...clubs('in', 2)],
+        })
+      )
+
+      expect(diff.rosterDiscontinuity).toBeUndefined()
+      expect(diff.events.filter(e => e.category === 'club-added')).toHaveLength(
+        2
+      )
+    })
+  })
 })
 
 /* Per-club payment events with payment-type attribution (#1459, epic #1458
