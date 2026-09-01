@@ -1545,6 +1545,86 @@ jobs:
           DATE_COUNT=$(wc -l < /tmp/all-dates.txt | tr -d ' ')
           echo "- **v1/dates.json**: ${DATE_COUNT} dates" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Shared: Generate v1/global-history.json (#1499, epic #1496) ──
+      # One worldwide row per COMPLETED program year, so /history renders the
+      # five-year scoreboard from one fetch. Thin glue around the unit-tested
+      # scripts/lib/globalHistory.ts (Lesson 107 pattern). `v1/` is
+      # prune-exempt by location and the staging→prod `v1/` rsync below
+      # promotes whatever lands here.
+      - name: Generate global-history manifest
+        if: >-
+          (steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true')
+          && steps.mode.outputs.mode != 'backfill-global-totals'
+        run: |
+          # No `set -o pipefail` here: `gsutil ls | grep -oP` legitimately
+          # exits non-zero on an empty bucket and would abort the step before
+          # the emptiness check below can report it (R14).
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/" 2>/dev/null \
+            | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u > /tmp/gh-all-dates.txt
+          if [ ! -s /tmp/gh-all-dates.txt ]; then
+            echo "::warning::No snapshot dates in GCS, skipping v1/global-history.json"
+            exit 0
+          fi
+
+          # Pass 1 — which dates does the series need, and what for? The
+          # object set is derived from the dates listing, so it cannot be
+          # hardcoded without going stale at the next program-year close.
+          mkdir -p /tmp/gh-src
+          npx tsx scripts/build-global-history.ts --plan \
+            --dates-file /tmp/gh-all-dates.txt > /tmp/gh-plan.txt
+
+          # R2: the runner starts empty — every input is explicitly synced.
+          # Per-object `gcloud storage cp`, NEVER `gsutil cp -I` (#1469): the
+          # latter silently truncates its stdin source list to two entries and
+          # exits 0, which shipped two wrong production indexes. #1412 prefers
+          # `gcloud storage` for new code regardless.
+          # Fail-soft PER OBJECT on purpose: a date whose rollup was never
+          # backfilled is a row the assembler omits loudly, not a reason to
+          # take v1/latest.json and v1/dates.json down with it.
+          while IFS=$'\t' read -r GH_DATE GH_ROLE; do
+            [ -n "${GH_DATE}" ] || continue
+            mkdir -p "/tmp/gh-src/${GH_DATE}"
+            gcloud storage cp \
+              "gs://${GCS_BUCKET}/snapshots/${GH_DATE}/global-totals.json" \
+              "/tmp/gh-src/${GH_DATE}/" 2>/dev/null \
+              || echo "::warning::${GH_DATE} (${GH_ROLE}): no global-totals.json — backfill-global-totals it"
+            if [ "${GH_ROLE}" = "year-end" ]; then
+              # The date's OWN district set. Education is scoped to it and is
+              # refused rather than summed over a directory that can hold
+              # districts the date never had (#1465/#1466).
+              gcloud storage cp \
+                "gs://${GCS_BUCKET}/snapshots/${GH_DATE}/all-districts-rankings.json" \
+                "/tmp/gh-src/${GH_DATE}/" 2>/dev/null \
+                || echo "::warning::no all-districts-rankings.json at ${GH_DATE} — education left null"
+              gcloud storage cp \
+                "gs://${GCS_BUCKET}/snapshots/${GH_DATE}/district_*_reports.json" \
+                "/tmp/gh-src/${GH_DATE}/" 2>/dev/null \
+                || echo "::notice::no district_*_reports.json at ${GH_DATE} — education published as null, not zero"
+            fi
+          done < /tmp/gh-plan.txt
+
+          # Pass 2 — assemble from what actually arrived.
+          npx tsx scripts/build-global-history.ts \
+            --dates-file /tmp/gh-all-dates.txt \
+            --source-dir /tmp/gh-src \
+            --out /tmp/global-history.json > /tmp/gh-summary.json
+
+          # Same TTL class as v1/rankings.json above.
+          gcloud storage cp \
+            --content-type=application/json \
+            --cache-control="public, max-age=300" \
+            /tmp/global-history.json "gs://${GCS_BUCKET}/v1/global-history.json"
+
+          echo "## 🌍 Global History (#1499)" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"- **Program years**: \(.years) — \(.programYears | join(", "))"' \
+            /tmp/gh-summary.json >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"- **Years omitted (missing rollup)**: \(.omitted)"' \
+            /tmp/gh-summary.json >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"- **Years with education data**: " +
+                 (if (.educationYears | length) == 0 then "none"
+                  else (.educationYears | join(", ")) end)' \
+            /tmp/gh-summary.json >> "$GITHUB_STEP_SUMMARY"
+
       # ── Shared: Update district-snapshot-index ──
       - name: Update district-snapshot-index
         if: >-
