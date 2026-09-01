@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.7...analytics-core-v1.10.0) (2026-09-01)
+
+
+### Features
+
+* **whats-changed:** Club Success Plan submission events in the change feed ([#1460](https://github.com/taverns-red/toast-stats/issues/1460)) ([#1494](https://github.com/taverns-red/toast-stats/issues/1494)) ([8e339e5](https://github.com/taverns-red/toast-stats/commit/8e339e5d25e023eef60c2755440c1fc15aebee78))
+* **whats-changed:** per-club payment events with payment-type attribution ([#1459](https://github.com/taverns-red/toast-stats/issues/1459)) ([#1485](https://github.com/taverns-red/toast-stats/issues/1485)) ([b4a029f](https://github.com/taverns-red/toast-stats/commit/b4a029f2b4fdd14b0362c25b3a170bbd96f716ce))
+
 ## [1.9.7](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.9.6...analytics-core-v1.9.7) (2026-08-23)
 
 

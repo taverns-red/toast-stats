@@ -1,6 +1,6 @@
 {
   "name": "@taverns-red/analytics-core",
-  "version": "1.9.7",
+  "version": "1.10.0",
   "license": "MIT",
   "private": true,
   "type": "module",
