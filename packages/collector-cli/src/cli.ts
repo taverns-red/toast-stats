@@ -667,6 +667,8 @@ export function createCLI(): Command {
         districtsFailed: computeResult.districtsFailed,
         districtsSkipped: computeResult.districtsSkipped,
         analyticsLocations: computeResult.analyticsLocations,
+        globalTotalsPath: computeResult.globalTotalsPath,
+        globalTotalsFailed: computeResult.globalTotalsFailed,
         errors: computeResult.errors,
         duration_ms: computeResult.duration_ms,
       }

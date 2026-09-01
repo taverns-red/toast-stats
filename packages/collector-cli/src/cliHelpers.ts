@@ -241,6 +241,19 @@ export function determineComputeAnalyticsExitCode(
     return ExitCode.COMPLETE_FAILURE
   }
 
+  // A worldwide-rollup failure is publish-blocking even when every district
+  // computed cleanly (#1498). It is checked BEFORE the all-succeeded branch
+  // because it is orthogonal to the per-district tallies: the rollup runs over
+  // the snapshot files, not the analytics, and its error is recorded against
+  // districtId 'N/A', which never reaches `districtsFailed`. Without this the
+  // step exits 0 and the pipeline publishes a date whose worldwide numbers
+  // silently did not build.
+  if (result.globalTotalsFailed === true) {
+    return failed > 0 && succeeded === 0
+      ? ExitCode.COMPLETE_FAILURE
+      : ExitCode.PARTIAL_FAILURE
+  }
+
   // All succeeded (including skipped) = success
   if (failed === 0 && succeeded > 0) {
     return ExitCode.SUCCESS

@@ -6,6 +6,9 @@
 #   rescrape — re-collect CSVs from the dashboard for specific dates or a program year
 #   prune    — remove non-month-end dates from local cache and GCS staging;
 #              with reconcile_prod=true, also reconcile production (#1133)
+#   backfill-global-totals
+#            — build snapshots/{date}/global-totals.json for already-published
+#              historical dates, one date at a time (#1498)
 #
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
@@ -39,13 +42,16 @@ on:
           - rescrape
           - rescrape-historical
           - prune
+          - backfill-global-totals
         default: daily
       date:
         description: 'Target date (YYYY-MM-DD). Daily: scrape date. Rebuild: ignored unless dates specified.'
         required: false
         type: string
       dates:
-        description: 'Rebuild/rescrape: comma-separated dates (default: all in raw-csv/ for rebuild)'
+        description: >-
+          Rebuild/rescrape: comma-separated dates (default: all in raw-csv/ for rebuild).
+          backfill-global-totals: comma-separated dates (default: the five PY-ends + five Mar-31s).
         required: false
         type: string
       program_year:
@@ -102,7 +108,7 @@ jobs:
     name: '${{ inputs.mode || ''daily'' }} pipeline'
     runs-on: ubuntu-latest
     # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
-    timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape' || inputs.mode == 'rescrape-historical') && 240 || 30 }}
+    timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape' || inputs.mode == 'rescrape-historical') && 240 || (inputs.mode == 'backfill-global-totals' && 120 || 30) }}
 
     # ── Job outputs (#1428) ──────────────────────────────────
     # The file's first job-level outputs block. It exists for one consumer:
@@ -873,6 +879,106 @@ jobs:
           fi
 
       # ════════════════════════════════════════════════════════
+      # BACKFILL GLOBAL TOTALS MODE (#1498, epic #1496)
+      # ════════════════════════════════════════════════════════
+      # The daily `compute-analytics` step writes global-totals.json
+      # from now on. Historical dates will never be recomputed, so
+      # this dispatch builds the same artifact for the dates the
+      # 5-year worldwide history (Sprint 3) reads.
+      #
+      # Streams ONE date at a time and deletes each after upload:
+      # a year-end snapshot directory is ~500 MB and the runner has
+      # ~14 GB free (the same constraint the rebuild mode streams for).
+      #
+      # Source is PRODUCTION — that is where the archive lives; staging
+      # only carries recent dates. Output goes to STAGING with the same
+      # CDN headers the snapshots get, and reaches production through
+      # the ordinary gated promotion at the end of this job. The value
+      # gate reads all-districts-rankings.json only, which this mode
+      # never writes, so an additive file cannot trip it.
+      - name: '[backfill] Build global-totals.json one date at a time'
+        if: steps.mode.outputs.mode == 'backfill-global-totals'
+        run: |
+          set -uo pipefail
+
+          # The required minimum set (#1498): five program-year ends, which
+          # the year-over-year history needs, plus five March 31s, which are
+          # the TI-comparable membership dates.
+          DEFAULT_DATES="2022-06-30 2023-06-30 2024-06-30 2025-06-30 2026-06-30 2022-03-31 2023-03-31 2024-03-31 2025-03-31 2026-03-31"
+          if [ -n "${{ inputs.dates }}" ]; then
+            DATES=$(echo "${{ inputs.dates }}" | tr ',' '\n' | tr -d ' ' | sort -u)
+          else
+            DATES=$(echo "${DEFAULT_DATES}" | tr ' ' '\n' | sort -u)
+          fi
+
+          DATE_COUNT=$(echo "${DATES}" | grep -c . || echo 0)
+          echo "## 🌍 Worldwide rollup backfill (#1498)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Dates to build**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Date | Districts | Clubs | Payments | Members | Excluded | Dup clubs |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- | --- | --- | --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+
+          SUCCEEDED=0
+          FAILED=0
+
+          for DATE in ${DATES}; do
+            echo "═══ ${DATE} ═══"
+            SNAPSHOT_DIR="./cache/snapshots/${DATE}"
+            mkdir -p "${SNAPSHOT_DIR}"
+
+            # R2: the runner starts empty. Pull exactly what the rollup reads
+            # — the district files and the date's OWN district set.
+            gsutil -m cp \
+              "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${DATE}/all-districts-rankings.json" \
+              "${SNAPSHOT_DIR}/" 2>/dev/null || true
+            gsutil -m cp \
+              "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${DATE}/district_*.json" \
+              "${SNAPSHOT_DIR}/" 2>/dev/null || true
+
+            if [ ! -f "${SNAPSHOT_DIR}/all-districts-rankings.json" ]; then
+              echo "::warning::${DATE} has no all-districts-rankings.json — skipping (no district set to scope to)"
+              echo "| ${DATE} | — | — | — | — | — | skipped: no rankings file |" >> "$GITHUB_STEP_SUMMARY"
+              FAILED=$((FAILED + 1))
+              rm -rf "${SNAPSHOT_DIR}"
+              continue
+            fi
+
+            if npx tsx scripts/build-global-totals.ts \
+                 --snapshot-dir "${SNAPSHOT_DIR}" --date "${DATE}" \
+                 > /tmp/global-totals-summary.json; then
+              # Same CDN headers as every other published snapshot object.
+              gsutil \
+                -h "Content-Type:application/json" \
+                -h "Cache-Control:public, max-age=3600, must-revalidate" \
+                cp -Z \
+                "${SNAPSHOT_DIR}/global-totals.json" \
+                "gs://${GCS_BUCKET}/snapshots/${DATE}/global-totals.json"
+
+              ROW=$(jq -r '"| \(.date) | \(.districts) | \(.clubs) | \(.payments) | \(.membership) | \(.excludedDistricts) | \(.duplicateClubs) |"' \
+                    /tmp/global-totals-summary.json)
+              echo "${ROW}" >> "$GITHUB_STEP_SUMMARY"
+              SUCCEEDED=$((SUCCEEDED + 1))
+            else
+              echo "::warning::Rollup build failed for ${DATE}"
+              echo "| ${DATE} | — | — | — | — | — | build failed |" >> "$GITHUB_STEP_SUMMARY"
+              FAILED=$((FAILED + 1))
+            fi
+
+            # Free the ~500 MB before the next date.
+            rm -rf "${SNAPSHOT_DIR}"
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Dates succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Uploaded to \`${GCS_BUCKET}\`; the promotion step below carries it to production." >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${SUCCEEDED}" -eq 0 ]; then
+            echo "::error::No dates were backfilled"
+            exit 1
+          fi
+
+      # ════════════════════════════════════════════════════════
       # RESCRAPE MODE
       # ════════════════════════════════════════════════════════
       # Re-collects CSVs from the Toastmasters dashboard for
@@ -1244,8 +1350,21 @@ jobs:
       # SHARED: CDN Manifests (daily + rebuild)
       # ════════════════════════════════════════════════════════
 
+      # `backfill-global-totals` is excluded from all three shared manifest
+      # steps below (#1498). Every one of them is derived from district
+      # snapshots — v1/latest.json + v1/dates.json from the bucket's snapshot
+      # listing, district-snapshot-index and club-index from district_*.json —
+      # and that mode publishes exactly one ADDITIVE file per date and no
+      # district snapshot at all. Leaving it in was not merely wasteful: the
+      # index step's `else` is the DAILY merge branch, so it ran with an empty
+      # DATE and DISTRICT_LIST and wrote a phantom `"": [""]` entry straight
+      # into config/district-snapshot-index.json, which promotion rsyncs to
+      # production wholesale. R17 — every conditional needs an explicit case
+      # for every value, including the mode you just added.
       - name: Generate CDN manifests
-        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
+        if: >-
+          (steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true')
+          && steps.mode.outputs.mode != 'backfill-global-totals'
         run: |
           # Determine the latest date from local snapshots (falls back to GCS
           # listing when local cache is empty, e.g. after a rebuild that deletes
@@ -1403,7 +1522,9 @@ jobs:
 
       # ── Shared: Update district-snapshot-index ──
       - name: Update district-snapshot-index
-        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
+        if: >-
+          (steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true')
+          && steps.mode.outputs.mode != 'backfill-global-totals'
         run: |
           MODE="${{ steps.mode.outputs.mode }}"
           INDEX_PATH="gs://${GCS_BUCKET}/config/district-snapshot-index.json"
@@ -1485,7 +1606,9 @@ jobs:
       # could carry a hand copy of normalizeClubId and ship an index covering
       # 2 of 94 districts unnoticed. Promotion rsyncs config/ wholesale.
       - name: Generate club-index
-        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
+        if: >-
+          (steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true')
+          && steps.mode.outputs.mode != 'backfill-global-totals'
         run: |
           set -o pipefail
           LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \

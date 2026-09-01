@@ -347,6 +347,16 @@ export interface ComputeAnalyticsResult {
   districtsSkipped: string[]
   /** Paths to created analytics files */
   analyticsLocations: string[]
+  /** Path to the worldwide rollup written for this date (#1498), if any. */
+  globalTotalsPath?: string
+  /**
+   * True when the worldwide rollup THREW on a date that had a district set
+   * (#1498). Distinct from simply having no rollup: a date with no
+   * `all-districts-rankings.json` is skipped, which is legitimate. This flag
+   * is what makes the exit code non-zero — the `errors` array alone never
+   * reaches `districtsFailed`, so a broken rollup would otherwise exit 0.
+   */
+  globalTotalsFailed?: boolean
   /** Detailed error information for failed districts */
   errors: Array<{
     districtId: string

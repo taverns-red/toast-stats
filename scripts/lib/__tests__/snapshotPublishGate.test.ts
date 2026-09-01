@@ -244,3 +244,106 @@ describe('buildGateSummary', () => {
     expect(summary).toMatch(/fail/i)
   })
 })
+
+describe('global-totals.json in the gate (#1498)', () => {
+  /** The minimum a valid worldwide rollup must carry. */
+  const validGlobalTotals = () => ({
+    _format: { version: '1.0.0', type: 'global-totals' },
+    date: '2026-06-30',
+    programYear: '2025-2026',
+    generatedAt: '2026-08-31T00:00:00.000Z',
+    districts: {
+      total: 128,
+      numbered: 127,
+      includesUndistricted: true,
+      excludedDistricts: [],
+      missingDistricts: [],
+      duplicateClubs: [],
+    },
+    membership: {
+      totalMembership: 257398,
+      totalPayments: 548483,
+      paidClubs: 13708,
+      activeClubs: 14282,
+      clubsCounted: 15016,
+      avgClubSize: 18.777,
+    },
+    distinguishedClubs: {
+      distinguishedOrBetter: 6587,
+      select: 1037,
+      presidents: 1289,
+      smedley: 1912,
+      base: 2349,
+      percentOfPaidClubs: 48.05,
+    },
+    distinguishedDistricts: {
+      distinguishedOrBetter: 42,
+      byTier: {
+        Distinguished: 21,
+        Select: 5,
+        Presidents: 5,
+        Smedley: 11,
+        NotDistinguished: 86,
+        Unknown: 0,
+      },
+      undefinedVerdictDistricts: [],
+    },
+    clubMovement: { newClubsStillActive: 913, suspendedClubs: 716 },
+    clubsByCountry: {
+      countries: [{ country: 'United States', clubs: 2085 }],
+      unknown: 6786,
+    },
+  })
+
+  const totalsFile = (
+    mutate: (t: ReturnType<typeof validGlobalTotals>) => void = () => {}
+  ) => {
+    const totals = validGlobalTotals()
+    mutate(totals)
+    return { fileName: 'global-totals.json', content: JSON.stringify(totals) }
+  }
+
+  it('passes the additive artifact alongside the district files', () => {
+    const result = evaluateSnapshotFiles([validFile('61'), totalsFile()])
+    expect(result.ok).toBe(true)
+    // District files remain the gate's own count; the rollup is extra.
+    expect(result.checked).toBe(1)
+    expect(result.failures).toEqual([])
+  })
+
+  it('fails a contract-violating rollup rather than uploading it', () => {
+    const result = evaluateSnapshotFiles([
+      validFile('61'),
+      totalsFile(t => {
+        // Smedley must be a number or null — never a string.
+        ;(t.distinguishedClubs as unknown as Record<string, unknown>).smedley =
+          'lots'
+      }),
+    ])
+
+    expect(result.ok).toBe(false)
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0]!.fileName).toBe('global-totals.json')
+    expect(result.failures[0]!.snapshotDate).toBe('2026-06-30')
+  })
+
+  it('accepts a pre-2025-26 rollup with Smedley absent', () => {
+    const result = evaluateSnapshotFiles([
+      validFile('61'),
+      totalsFile(t => {
+        t.date = '2024-06-30'
+        t.programYear = '2023-2024'
+        t.distinguishedClubs.smedley = null as unknown as number
+      }),
+    ])
+
+    expect(result.ok).toBe(true)
+  })
+
+  it('still fails a directory with no district files at all', () => {
+    // A rollup on its own certifies nothing (Lesson 107).
+    const result = evaluateSnapshotFiles([totalsFile()])
+    expect(result.ok).toBe(false)
+    expect(result.checked).toBe(0)
+  })
+})
