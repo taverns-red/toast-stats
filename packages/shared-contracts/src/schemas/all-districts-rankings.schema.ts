@@ -104,6 +104,15 @@ export const DistrictRankingSchema = z.object({
    */
   newCharteredClubs: z.number().optional(),
 
+  /**
+   * Count of clubs suspended during the current program year (#1497).
+   * Parsed from the `Susp MM/DD/YY` branch of the same
+   * `Charter Date/Suspend Date` column that feeds `newCharteredClubs`.
+   * Optional and forward-looking: historical rankings files were rebuilt
+   * without raw CSVs (R2) and carry no suspension count at all.
+   */
+  suspendedClubs: z.number().optional(),
+
   /** Payment breakdown from All Districts CSV (#327) */
   newPayments: z.number().optional(),
   aprilPayments: z.number().optional(),

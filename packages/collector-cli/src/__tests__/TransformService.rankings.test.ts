@@ -621,6 +621,64 @@ U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
       expect(d93.newCharteredClubs).toBe(3)
     })
 
+    it('should count clubs suspended this program year from district-performance.csv (#1497)', async () => {
+      // The same 'Charter Date/Suspend Date' column carries the Susp branch.
+      // Values below are the LITERAL live forms captured 2026-08-31 from
+      // cdn.taverns.red/snapshots/2026-06-30/district_61.json — suspensions
+      // arrive with a LEADING SPACE (' Susp 03/31/26'), charters without one.
+      // Snapshot date 2026-04-25 → PY start 2025-07-01.
+      const date = '2026-04-25'
+      const rawCsvDir = path.join(tempDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      const csvContent = `DISTRICT,REGION,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs
+93,Region 9,73,69,5.8%,2895,2737,5.77%,73,3,1,0`
+
+      await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
+
+      const districtDir = path.join(rawCsvDir, `district-93`)
+      await fs.mkdir(districtDir, { recursive: true })
+
+      await fs.writeFile(
+        path.join(districtDir, 'club-performance.csv'),
+        `Club Number,Club Name,Division,Area,Active Members,Goals Met
+1001,Club A,A,1,22,3
+1002,Club B,B,2,21,2
+1003,Club C,C,3,18,1`
+      )
+
+      // 3 suspensions inside PY 2025-26 (two live leading-space forms plus the
+      // 07/01/25 boundary, which IS counted), 1 dated 06/30/25 which belongs to
+      // PY 2024-25 and is NOT counted, plus a charter and a blank.
+      await fs.writeFile(
+        path.join(districtDir, 'district-performance.csv'),
+        `District,Division,Area,Club,Club Name,New,Late Ren.,Oct. Ren.,Apr. Ren.,Total Ren.,Total Chart,Total to Date,Distinguished Status,Charter Date/Suspend Date
+93,A,1,1001,Susp Live A,0,0,0,0,0,0,0,, Susp 03/31/26
+93,B,2,1002,Susp Live B,0,0,0,0,0,0,0,, Susp 03/31/26
+93,C,3,1003,Susp On Boundary,0,0,0,0,0,0,0,,Susp 07/01/25
+93,D,4,1004,Susp Prior PY,0,0,0,0,0,0,0,,Susp 06/30/25
+93,E,5,1005,New Charter,0,0,0,0,0,20,20,,Charter 05/22/26
+93,F,6,1006,Unremarkable Club,0,0,5,3,8,0,8,,`
+      )
+
+      await transformService.transform({ date, force: true })
+
+      const rankingsPath = path.join(
+        tempDir,
+        'snapshots',
+        date,
+        'all-districts-rankings.json'
+      )
+      const rankings = JSON.parse(await fs.readFile(rankingsPath, 'utf-8'))
+      const d93 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '93'
+      )
+
+      expect(d93.suspendedClubs).toBe(3)
+      // The charter branch is unaffected by the new count.
+      expect(d93.newCharteredClubs).toBe(1)
+    })
+
     it('should default missing prerequisite columns to false (legacy CSVs)', async () => {
       const date = '2024-01-15'
       const rawCsvDir = path.join(tempDir, 'raw-csv', date)

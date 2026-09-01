@@ -63,6 +63,7 @@ describe('FIELD_CLASSIFICATION registry (#1086)', () => {
         'smedleyDistinguished',
         'clubsWith20PlusMembers',
         'newCharteredClubs',
+        'suspendedClubs',
       ].sort()
     )
     expect(byClass('base')).toEqual(['paidClubBase', 'paymentBase'])

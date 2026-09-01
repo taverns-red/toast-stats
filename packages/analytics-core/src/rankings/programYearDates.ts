@@ -74,3 +74,23 @@ export function parseCharterDateFromStatusField(value: unknown): Date | null {
   if (!match) return null
   return parseDateFlexible(match[1]!)
 }
+
+/**
+ * Extract a suspension date from a `Charter Date/Suspend Date` field value
+ * (#1497) — the sibling branch `parseCharterDateFromStatusField` deliberately
+ * drops.
+ *
+ * The column carries one value per club row: `Charter MM/DD/YY` for a new
+ * charter or `Susp MM/DD/YY` for a suspension. Live stored rows put a **leading
+ * space** on the suspension form (`' Susp 03/31/26'`, verified 2026-08-31 in
+ * `snapshots/2026-06-30/district_61.json`), which the trim absorbs. Returns
+ * null if the field is empty, prefixed `Charter`, or unparseable.
+ */
+export function parseSuspendDateFromStatusField(value: unknown): Date | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (trimmed === '') return null
+  const match = trimmed.match(/^Susp\s+(.+)$/i)
+  if (!match) return null
+  return parseDateFlexible(match[1]!)
+}

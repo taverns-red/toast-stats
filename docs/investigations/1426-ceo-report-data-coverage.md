@@ -1,6 +1,7 @@
 # CEO Report "Numeric Snapshots" — Toast Stats data-coverage audit (#1426)
 
-**Status:** Evaluation complete · operator ruling recorded 2026-08-19 (see §7)
+**Status:** Evaluation complete · operator rulings recorded 2026-08-19 and
+2026-08-31 (see §7) · build tracked on epic **#1496** (sprints #1497 → #1500)
 **Source analysed:** `ceo-report-august-2026.pdf` (20 pp.), TI CEO Report archive
 (<https://www.toastmasters.org/about/world-headquarters/ceo-reports>)
 **Date:** 2026-08-19
@@ -24,6 +25,20 @@ per-district** — `snapshots/{date}/district_{id}.json`,
 `snapshots/{date}/all-districts-rankings.json`, `time-series/district_{id}/…`.
 There is no worldwide rollup and no global time series. The CEO Report is
 entirely global-with-5-year-history. That rollup is the build.
+
+> **Resolved — every prerequisite this audit named is now closed
+> (as of 2026-08-31).** The paragraph above says "two need a small
+> parser/pipeline fix each" and "there is no worldwide rollup"; neither is true
+> any more:
+>
+> | Prerequisite named by this audit          | Status                                                                                                             |
+> | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+> | No global rollup artifact                 | `rollUpGlobal` landed with **#1466** (`fe8ac18e`) — reproduces TI's published 548,483 payments for 2025-26 exactly |
+> | `fetch-daily-reports` not in the pipeline | **#1428 closed** — `educationAchievements` and `newClubs` verified live in `district_*_reports.json`               |
+> | Prior-PY education backfill               | **#1070 closed**                                                                                                   |
+> | `Susp` branch never parsed                | **#1497** — `parseSuspendDateFromStatusField` + per-district `suspendedClubs`                                      |
+>
+> What remains is the rollup build itself, scoped as epic **#1496**.
 
 > **Resolved — archive coverage confirmed (#1456).** This audit originally
 > flagged the CEO Report's 2021-22 → 2025-26 window as an unverified
@@ -169,6 +184,18 @@ report (`ac6df5db…`) is the cleaner source, and is already parsed
 this metric depend on #1428. If #1428 stalls, ship `newCharteredClubs` under a
 distinct label ("new clubs still active") — never as "new clubs".
 
+**Status (2026-08-31): #1428 is closed** and the `newClubs` section is verified
+live in `district_*_reports.json`. But the backfilled historical report files
+carry **only** `educationAchievements` — no `newClubs` section — so the
+report-basis definition is **forward-only from PY 2026-27**. The historical
+5-year series therefore ships on the still-active basis under the distinct label
+the ruling names. Separately, **rankings-level charter counts do not exist
+historically**: `newCharteredClubs` sums to **0 on all five live PY-end rankings
+files** (verified 2026-08-31; 638 at 2026-05-31), because those files were
+rebuilt on the runner without raw CSVs (R2) and the count defaulted to 0. The
+rollup derives charter and suspension counts from the stored
+`districtPerformance` rows in the district snapshot JSONs instead.
+
 ### ⚠️ Suspended clubs — parser gap
 
 Same column, other prefix: `Susp MM/DD/YY`. We store the raw column but never
@@ -185,6 +212,17 @@ _Discipline (Lesson 47, R7):_ this exact column produced a silent
 test against a real fixture carrying the literal column name, and is verified
 against live data — not unit tests alone.
 
+**Status (2026-08-31): closed by #1497.** `parseSuspendDateFromStatusField` is
+the sibling parser; `TransformService`'s existing per-district metric loop now
+writes `DistrictRanking.suspendedClubs` alongside `newCharteredClubs`. Live
+values carry a **leading space** (`' Susp 03/31/26'`), which the parser's trim
+absorbs. Verified against real stored rows, not fixtures alone: counting Susp
+dates inside PY 2025-26 across the `2026-06-30` snapshot, scoped to that date's
+own rankings district set (128 districts, 15,016 rows), gives **716 suspended**
+and **913 new-still-active** against TI's published **733** and **932**. Our
+basis — clubs still listed at year-end — runs low, and that is the expected
+shape, not a defect to tune away (see §5 and §7 ruling 2).
+
 ### ⚠️ Education awards by level + DTM — pipeline gap
 
 The Education Achievements daily report (`c757d313…`) is _precisely_ this data
@@ -196,7 +234,8 @@ column dropped at parse time. Summing across districts and mapping award code �
 level gives the CEO Report's L1–L5 bars; DTM needs its award code confirmed
 present in the report (the D61 fixtures are too small to contain one).
 
-Two things block it:
+Two things blocked it; **both are now closed (2026-08-31)** — see the status
+note after this list:
 
 1. **`fetch-daily-reports` is not wired into `data-pipeline.yml`.** The nightly
    workflow calls `discover-districts`, `scrape`, `fetch-find-a-club`,
@@ -215,6 +254,15 @@ Two things block it:
    `docs/runbooks/education-archive-backfill.md`) but **#1070 is still open and
    operator-gated** — so the 3-year comparison the CEO Report draws is not
    available until that runs.
+
+**Status (2026-08-31):** **#1428 closed** (the pipeline gap — `fetch-daily-reports`
+now runs as a parallel job per ruling 6) and **#1070 closed** (the archive
+backfill ran). One hole remains and is folded into epic #1496's Sprint 3:
+`snapshots/2026-06-30/district_*_reports.json` is **404**, because the #1070
+backfill predates the PY close and #1428's wiring postdates it — one
+`backfill-education-archive` dispatch for year `2025-2026` fills it. `DTM` is
+confirmed present live (`DTMDistinguished Toastmaster`); non-level codes (e.g.
+Pathways Mentor Program) need a published `other` bucket.
 
 _Semantics (#1080):_ our count is **raw achievement activity**, not DCP credit
 (DCP counts distinct members per tier; the dedup is unrecoverable after the
@@ -274,7 +322,18 @@ them.
 ## 4. The actual prerequisite: a global rollup
 
 Every ✅ above is "sum a field we already have across districts, at a PY-end
-snapshot" — and nothing in the pipeline does that. Concretely what is missing:
+snapshot" — and when this audit was written, nothing in the pipeline did that.
+
+> **Status (2026-08-31): the rollup primitive has landed.** `rollUpGlobal`
+> (`scripts/lib/globalRollup.ts`, **#1466** / `fe8ac18e`) scopes each date to
+> that date's own rankings district set — a snapshot directory can legitimately
+> contain districts that did not exist on its date (**#1465**), so a directory
+> listing is never the district set — and counts each club once on its canonical
+> id, reporting duplicates. It reproduces TI's published 548,483 payments for
+> 2025-26 exactly. What is still missing is the two published artifacts below,
+> which epic **#1496** builds on top of it.
+
+Concretely what is missing:
 
 - `snapshots/{date}/global-totals.json` — one object per snapshot date:
   membership, payments, paid clubs, active clubs, avg club size, the four
@@ -324,9 +383,13 @@ shipped.
    did not match.
 7. **Membership-building awards** — parked until a source is found.
 
-## 7. Operator ruling — 2026-08-19
+## 7. Operator rulings (recorded on #1426)
 
-Recorded on #1426. Seven questions, seven answers:
+Two rulings, both settled — do not re-litigate either.
+
+### 7.1 — 2026-08-19 (surface, definitions, sequencing)
+
+Seven questions, seven answers:
 
 | #   | Question                 | Ruling                                   |
 | --- | ------------------------ | ---------------------------------------- |
@@ -341,6 +404,51 @@ Recorded on #1426. Seven questions, seven answers:
 Plus: validate against the CEO Report's published figures first (#1429), ahead of
 the rollup build.
 
+### 7.2 — 2026-08-31 (scope)
+
+The seven rulings of 2026-08-19 stand unchanged; this one
+closed the last open acceptance criterion once three of the four prerequisite
+gaps had closed (see the table in §1).
+
+#### 1. Scope — build **every reproducible row**
+
+All ten, not a subset:
+
+- **The six needing no new work:** total membership, membership payments, paid
+  clubs, average club size (June-30 membership ÷ paid clubs, per the Aug 19
+  basis ruling), distinguished clubs by tier, distinguished districts.
+- **New clubs (5-yr)** — from the New Clubs report section, now live.
+- **Suspended clubs (5-yr)** — requires closing the last parser gap.
+  `Susp MM/DD/YY` shares the `Charter Date/Suspend Date` column already stored
+  raw; `parseCharterDateFromStatusField` deliberately drops it.
+- **Education awards by level (3-yr)** — Level 1–5 + DTM, now unblocked.
+- **Clubs by country** stays as ruled on Aug 19: clubs-by-country only, no
+  member- or award-level country.
+
+#### 2. Divergence from TI's published figures — **publish ours, state our definitions**
+
+This confirms and extends the Aug 19 definition-parity ruling in light of what
+the oracle found: 11 unexplained mismatches, all club counts, deltas −8..+1,
+worst in 2021-22 and zero from 2023-24 onward.
+
+We publish **our** numbers with **our** basis stated. A CEO-report match is a
+validation signal, not a target to fit. No per-year fudge factors, no suppressed
+years, and **no pinning of the oracle's deltas** — the capture-date hypothesis
+was refuted on 2026-08-31 (#1464) and the cause remains unproven, so the oracle
+stays an honest independent check that is allowed to be red.
+
+#### 3. Sequencing — **one epic, one sprint per artifact**
+
+Each sprint independently shippable:
+
+1. the `Susp` parser gap (unblocks suspended clubs) — **#1497**
+2. `snapshots/{date}/global-totals.json` — **#1498**
+3. `v1/global-history.json` (one row per PY-end) — **#1499**
+4. the `/history` page extension (no new global page — Aug 19 ruling #1) — **#1500**
+
+Filed as epic **#1496**. This ruling supersedes §6's ordering where the two
+disagree; §6 predates the three prerequisite closures.
+
 ## 8. Sources consulted
 
 - `ceo-report-august-2026.pdf`, pp. 1–14 (text + rendered chart labels)
@@ -352,4 +460,8 @@ the rollup build.
 - `packages/collector-cli/src/services/{DailyReportFetcher,DistrictReportsBuilder,EducationArchiveBackfill,DistrictAwardsHistoryStore,FindAClubService}.ts`
 - `.github/workflows/data-pipeline.yml` (the invoked `collector-cli` command set)
 - `docs/investigations/1063-daily-reports-ingest-spike.md` (the 12 report GUIDs + keep/EXCLUDE map)
+- `scripts/lib/globalRollup.ts` (`rollUpGlobal`, #1466)
+- Live CDN verification 2026-08-31 (`cdn.taverns.red`): `snapshots/2026-06-30/`
+  district JSONs + `all-districts-rankings.json`, `v1/dates.json`
 - Issues #1062, #1069, #1070, #1080, #1147, #336, #1124, #1125, #1132, #1428, #1429
+- Issues #1456, #1464, #1465, #1466, #1496, #1497, #1498, #1499, #1500
