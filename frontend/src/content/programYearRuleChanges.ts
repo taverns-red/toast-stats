@@ -61,6 +61,7 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
     sources: [
       'packages/shared-contracts/src/reformation/districtReformation.ts',
       'packages/analytics-core/src/analytics/diffSnapshots.ts',
+      'frontend/src/pages/DistrictChangesPage.tsx',
     ],
   },
   {
