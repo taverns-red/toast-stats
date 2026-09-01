@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-merge-gate-must-derive-its-expectation-from-the-diff.md` — A gate that only inspects the checks that are present cannot tell "all passed" from "none ran" — derive the expected set from the diff  (2026-09-01)
 - `a-dated-write-must-take-its-entity-set-from-that-date.md` — A write dated in the past must take its entity set from that date's own source — a successful fetch is not evidence the entity existed then  (2026-08-31)
 - `a-defaulted-field-is-only-detectable-at-the-population-level-not-the-row.md` — A field defaulted to zero because its source was missing is indistinguishable from a real zero at the row level; the tell is at the population level  (2026-08-31)
 - `a-dep-bump-that-reds-a-test-may-be-fixing-a-false-positive-you-pinned.md` — A dependency bump that reds a test may have fixed a false positive the test had pinned — diff the reported violations, don't pin or ignore the dep  (2026-08-31)
