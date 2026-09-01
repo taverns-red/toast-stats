@@ -325,7 +325,7 @@ Every ✅ above is "sum a field we already have across districts, at a PY-end
 snapshot" — and when this audit was written, nothing in the pipeline did that.
 
 > **Status (2026-08-31): the rollup primitive has landed.** `rollUpGlobal`
-> (`scripts/lib/globalRollup.ts`, **#1466** / `fe8ac18e`) scopes each date to
+> (`packages/analytics-core/src/rollup/globalRollup.ts`, **#1466** / `fe8ac18e`) scopes each date to
 > that date's own rankings district set — a snapshot directory can legitimately
 > contain districts that did not exist on its date (**#1465**), so a directory
 > listing is never the district set — and counts each club once on its canonical
@@ -460,7 +460,7 @@ disagree; §6 predates the three prerequisite closures.
 - `packages/collector-cli/src/services/{DailyReportFetcher,DistrictReportsBuilder,EducationArchiveBackfill,DistrictAwardsHistoryStore,FindAClubService}.ts`
 - `.github/workflows/data-pipeline.yml` (the invoked `collector-cli` command set)
 - `docs/investigations/1063-daily-reports-ingest-spike.md` (the 12 report GUIDs + keep/EXCLUDE map)
-- `scripts/lib/globalRollup.ts` (`rollUpGlobal`, #1466)
+- `packages/analytics-core/src/rollup/globalRollup.ts` (`rollUpGlobal`, #1466 — promoted from `scripts/lib/` by #1498)
 - Live CDN verification 2026-08-31 (`cdn.taverns.red`): `snapshots/2026-06-30/`
   district JSONs + `all-districts-rankings.json`, `v1/dates.json`
 - Issues #1062, #1069, #1070, #1080, #1147, #336, #1124, #1125, #1132, #1428, #1429

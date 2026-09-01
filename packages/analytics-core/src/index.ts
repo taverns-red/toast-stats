@@ -252,3 +252,15 @@ export {
   parseCharterDateFromStatusField,
   parseSuspendDateFromStatusField,
 } from './rankings/index.js'
+
+// Worldwide rollup (#1466, promoted here by #1498, epic #1496)
+export {
+  rollUpGlobal,
+  readSnapshotRollupInput,
+  canonicalDistrictId,
+  type ClubPaymentRow,
+  type DistrictClubPayments,
+  type GlobalRollupInput,
+  type GlobalRollup,
+  type DuplicateClub,
+} from './rollup/globalRollup.js'

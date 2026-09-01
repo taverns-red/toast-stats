@@ -20,7 +20,7 @@ import {
   rollUpGlobal,
   readSnapshotRollupInput,
   type GlobalRollupInput,
-} from '../globalRollup'
+} from '../../../packages/analytics-core/src/rollup/globalRollup.js'
 import { CEO_REPORT_MEMBERSHIP_PAYMENTS } from '../ceoReportOracle'
 
 const FIXTURE = join(

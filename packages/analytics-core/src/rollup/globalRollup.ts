@@ -31,6 +31,11 @@
  *
  * Purity: every computation exported here is pure. `readSnapshotRollupInput`
  * at the bottom is the only function that touches the filesystem.
+ *
+ * Promoted from `scripts/lib/` into analytics-core by #1498 so the collector
+ * pipeline can consume it. ONE canonical module — no second copy.
+ *
+ * @module @taverns-red/analytics-core/rollup
  */
 
 import { readdirSync, readFileSync } from 'node:fs'
