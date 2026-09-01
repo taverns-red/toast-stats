@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.37.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.36.0...toast-stats-v2.37.0) (2026-09-01)
+
+
+### Features
+
+* **whats-changed:** Club Success Plan submission events in the change feed ([#1460](https://github.com/taverns-red/toast-stats/issues/1460)) ([#1494](https://github.com/taverns-red/toast-stats/issues/1494)) ([8e339e5](https://github.com/taverns-red/toast-stats/commit/8e339e5d25e023eef60c2755440c1fc15aebee78))
+* **whats-changed:** CSV export on the What's Changed page, with a change-events section ([#1461](https://github.com/taverns-red/toast-stats/issues/1461)) ([#1492](https://github.com/taverns-red/toast-stats/issues/1492)) ([0d27d71](https://github.com/taverns-red/toast-stats/commit/0d27d71921802572f4a9ab262da95c5c769e82a7))
+* **whats-changed:** per-club payment events with payment-type attribution ([#1459](https://github.com/taverns-red/toast-stats/issues/1459)) ([#1485](https://github.com/taverns-red/toast-stats/issues/1485)) ([b4a029f](https://github.com/taverns-red/toast-stats/commit/b4a029f2b4fdd14b0362c25b3a170bbd96f716ce))
+* **whats-changed:** signed net-delta summaries in change-group headings ([#1463](https://github.com/taverns-red/toast-stats/issues/1463)) ([#1493](https://github.com/taverns-red/toast-stats/issues/1493)) ([d28e289](https://github.com/taverns-red/toast-stats/commit/d28e289e5b191fea748056a889e530d5787f8f7b))
+
 ## [2.36.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.35.1...toast-stats-v2.36.0) (2026-08-31)
 
 
