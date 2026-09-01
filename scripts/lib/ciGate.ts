@@ -174,15 +174,29 @@ export function isDeadlineFailure(
   )
 }
 
-/** One-line human summary for the job log / step summary. */
-export function describeVerdict(verdict: GateVerdict): string {
+/**
+ * One-line human summary for the job log / step summary.
+ *
+ * `missing` is labelled by what it MEANS at this point in the poll, not by the
+ * field name. Mid-poll, an absent check is usually a job GitHub has not created
+ * a check run for yet (`Build Applications` is blocked on
+ * `needs: [quality-gates, test]` for most of a run) — calling that
+ * "NOT SCHEDULED" every 20 seconds trains the reader to ignore the words that
+ * matter. Pass `terminal` on the last line, where the absence IS the diagnosis.
+ */
+export function describeVerdict(
+  verdict: GateVerdict,
+  terminal = false
+): string {
   const parts = [`state=${verdict.state}`]
   if (verdict.satisfied.length)
     parts.push(`ok=[${verdict.satisfied.join(', ')}]`)
   if (verdict.pending.length)
     parts.push(`running=[${verdict.pending.join(', ')}]`)
-  if (verdict.missing.length)
-    parts.push(`NOT SCHEDULED=[${verdict.missing.join(', ')}]`)
+  if (verdict.missing.length) {
+    const label = terminal ? 'NOT SCHEDULED' : 'not-yet-reported'
+    parts.push(`${label}=[${verdict.missing.join(', ')}]`)
+  }
   if (verdict.failed.length)
     parts.push(
       `failed=[${verdict.failed.map(f => `${f.name}:${f.conclusion}`).join(', ')}]`

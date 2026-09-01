@@ -158,10 +158,13 @@ describe('evaluateChecks — fail closed on absence (#1484)', () => {
     expect(v.state).toBe('pass')
   })
 
-  it('summarises a never-scheduled verdict distinguishably', () => {
-    expect(describeVerdict(evaluateChecks([...CI_CHECKS], []))).toContain(
-      'NOT SCHEDULED'
-    )
+  it('only shouts NOT SCHEDULED on the terminal line, not every poll', () => {
+    // Mid-poll a `needs:`-blocked job is legitimately absent; shouting about it
+    // every 20s trains the reader to ignore the one line that matters.
+    const v = evaluateChecks([...CI_CHECKS], [])
+    expect(describeVerdict(v)).toContain('not-yet-reported')
+    expect(describeVerdict(v)).not.toContain('NOT SCHEDULED')
+    expect(describeVerdict(v, true)).toContain('NOT SCHEDULED')
   })
 })
 

@@ -167,7 +167,7 @@ async function main(): Promise<void> {
   console.log(JSON.stringify({ headSha, expected, verdict }, null, 2))
 
   if (!passed) {
-    console.error(`❌ ${GATE_CHECK} failed: ${describeVerdict(verdict)}`)
+    console.error(`❌ ${GATE_CHECK} failed: ${describeVerdict(verdict, true)}`)
     if (verdict.missing.length > 0) {
       console.error(
         'Expected checks were NEVER SCHEDULED. This is not "nothing to run" —' +
