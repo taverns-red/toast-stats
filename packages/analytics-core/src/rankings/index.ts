@@ -72,4 +72,5 @@ export {
   parseDateFlexible,
   getProgramYearStartDate,
   parseCharterDateFromStatusField,
+  parseSuspendDateFromStatusField,
 } from './programYearDates.js'
