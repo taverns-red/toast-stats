@@ -54,11 +54,14 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
     whatChanged:
       'Toastmasters introduced the District Club Growth Achievement, recognising districts that reach club-charter milestones early: charter 3 or 5 new clubs by September 30, and 3, 5 or 10 new clubs by March 31. The count runs cumulatively from July 1, so the March total includes the clubs already counted in September, and a district holds the highest milestone it reached at each checkpoint.',
     comparability:
-      'The achievement did not exist before 2026-27, so earlier program years show nothing for it — that blank is a rules artefact, not a district failing to earn it. Each checkpoint is judged on the charter count as it stood on that date, because a district’s count can fall later in the year without any charter being revoked: a club chartered this year that moves to another district takes its charter credit with it.',
-    issues: [1473, 1474, 1476],
+      'The achievement did not exist before 2026-27, so earlier program years show nothing for it — that blank is a rules artefact, not a district failing to earn it. Each checkpoint is judged on the charter count as it stood on that date, because a district’s count can fall later in the year without any charter being revoked: a club chartered this year that moves to another district takes its charter credit with it. One caveat about the underlying data: a new-club charter count of zero does not always mean no club was chartered. The count is derived from the raw district performance export, and a snapshot rebuilt without that export still carries the field, defaulted to zero — which is why every program-year-end file in the archive reads zero for every district. Toast Stats detects that pattern (a whole district set at zero, which does not otherwise happen) and reports the checkpoint as not collected rather than as a milestone missed.',
+    issues: [1473, 1474, 1476, 1501],
     sources: [
       'frontend/src/utils/clubGrowthAchievement.ts',
       'frontend/src/components/ClubGrowthAchievementCard.tsx',
+      // #1501: the "not collected" reading of a zeroed charter count — the
+      // rule that keeps a rebuild artefact from being rendered as a verdict.
+      'frontend/src/hooks/useClubGrowthMilestones.ts',
     ],
   },
   {
