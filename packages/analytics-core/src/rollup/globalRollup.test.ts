@@ -198,3 +198,86 @@ describe('readSnapshotRollupInput — extended read (#1498)', () => {
     }
   })
 })
+
+describe('rollUpGlobal — an unpopulated Susp column is unknown, not zero (#1514)', () => {
+  const roll = (statuses: string[], snapshotDate?: string) =>
+    rollUpGlobal({
+      snapshotDate,
+      rankingsDistrictIds: ['61'],
+      districts: [
+        district(
+          '61',
+          statuses.map((clubStatusField, i) =>
+            club(String(i + 1), { clubStatusField })
+          )
+        ),
+      ],
+    })
+
+  it('reports suspensions as null when not one in-scope row carries a Susp value', () => {
+    // The live shape of eight of the ten published year-ends: the
+    // `Charter Date/Suspend Date` column exists and its CHARTER branch is
+    // populated, while its Susp branch is empty across every district.
+    const rollup = roll(
+      ['Charter 03/26/26', '', 'Charter 08/01/25', ''],
+      '2026-06-30'
+    )
+
+    expect(rollup.suspendedClubs).toBeNull()
+    expect(rollup.clubsWithSuspensionDate).toBe(0)
+    // The charter branch is collected, so it keeps its measured count.
+    expect(rollup.newClubsStillActive).toBe(2)
+  })
+
+  it('publishes a measured zero when the column IS populated but nothing lands in the window', () => {
+    // 2025-06-30 closes PY 2024-25, so a March 2026 suspension is a LATER
+    // year's event. The column is populated, so the count is a real zero.
+    const rollup = roll(['Charter 08/01/24', ' Susp 03/31/26'], '2025-06-30')
+
+    expect(rollup.suspendedClubs).toBe(0)
+    expect(rollup.clubsWithSuspensionDate).toBe(1)
+  })
+
+  it('does not accept an unparseable Susp value as evidence the column is populated', () => {
+    const rollup = roll(['Susp not-a-date', 'Charter 03/26/26'], '2026-06-30')
+
+    expect(rollup.suspendedClubs).toBeNull()
+    expect(rollup.clubsWithSuspensionDate).toBe(0)
+  })
+
+  it('takes the signal from in-scope districts only', () => {
+    const rollup = rollUpGlobal({
+      snapshotDate: '2026-06-30',
+      rankingsDistrictIds: ['61'],
+      districts: [
+        district('61', [club('1', { clubStatusField: 'Charter 03/26/26' })]),
+        district('201', [club('9', { clubStatusField: ' Susp 03/31/26' })]),
+      ],
+    })
+
+    expect(rollup.suspendedClubs).toBeNull()
+    expect(rollup.clubsWithSuspensionDate).toBe(0)
+  })
+
+  it('counts a double-filed suspended club once in the signal', () => {
+    const rollup = rollUpGlobal({
+      snapshotDate: '2026-06-30',
+      rankingsDistrictIds: ['61', '62'],
+      districts: [
+        district('61', [
+          club('00000003', { clubStatusField: ' Susp 03/31/26' }),
+        ]),
+        district('62', [club('3', { clubStatusField: ' Susp 03/31/26' })]),
+      ],
+    })
+
+    expect(rollup.clubsWithSuspensionDate).toBe(1)
+    expect(rollup.suspendedClubs).toBe(1)
+  })
+
+  it('still reports null when the movement window itself is unknown', () => {
+    const rollup = roll([' Susp 03/31/26'])
+
+    expect(rollup.suspendedClubs).toBeNull()
+  })
+})
