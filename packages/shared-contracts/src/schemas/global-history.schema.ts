@@ -148,7 +148,13 @@ export const GlobalHistoryClubMovementSchema = z.object({
   newClubsStillActive: z.number().int().nullable(),
   /**
    * Clubs whose `Charter Date/Suspend Date` carries a `Susp` date inside the
-   * program year (#1497).
+   * program year (#1497), carried whole from the year-end `global-totals`.
+   *
+   * `null` for a year whose stored `districtPerformance` rows carry no `Susp`
+   * value at all — eight of the ten published years (#1514). That is a
+   * collection gap in TI's archived dashboard, not a year without
+   * suspensions, and the two must not share a rendering: `null` is "not on
+   * file", `0` is a measured zero on a date whose column IS populated.
    */
   suspendedClubs: z.number().int().nullable(),
   /**

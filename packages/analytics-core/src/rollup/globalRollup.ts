@@ -134,9 +134,30 @@ export interface GlobalRollup {
   readonly newClubsStillActive: number | null
   /**
    * Clubs suspended inside the snapshot date's program year (#1497).
-   * `null` when no `snapshotDate` was supplied.
+   *
+   * `null` when no `snapshotDate` was supplied, and `null` when not one
+   * in-scope club row carries a parseable `Susp` value at all — see
+   * `clubsWithSuspensionDate` (#1514). A populated column with nothing falling
+   * in the window still publishes a measured `0`.
    */
   readonly suspendedClubs: number | null
+  /**
+   * Counted clubs whose `Charter Date/Suspend Date` carries a parseable
+   * `Susp` date — **any** date, inside the window or not (#1514).
+   *
+   * The population-level tell that the column's suspension branch was
+   * COLLECTED for this date, and the thing that separates "no suspensions in
+   * the window" from "no suspension data at all". Deliberately
+   * window-independent: 2022-06-30 carries four `Susp` rows stamped July 2022,
+   * after its own snapshot date (the later-rewrite shape of #1465), and those
+   * rows still prove the branch is populated — so that date's in-window count
+   * is a measurement rather than a silence.
+   *
+   * Reported rather than only consumed, so a date that goes from full
+   * coverage to partial is visible in the build log instead of quietly
+   * shrinking.
+   */
+  readonly clubsWithSuspensionDate: number
   /** Clubs by country, descending, ties broken by country name. */
   readonly clubsByCountry: readonly CountryClubCount[]
   /**
@@ -227,6 +248,7 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
   let totalMembership = 0
   let newClubsStillActive = 0
   let suspendedClubs = 0
+  let clubsWithSuspensionDate = 0
   let clubsWithUnknownCountry = 0
 
   for (const district of input.districts) {
@@ -251,9 +273,19 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
       totalPayments += club.payments
       totalMembership += club.activeMembers ?? 0
 
+      // One column, two branches. Each parser rejects the other's prefix, so
+      // a Susp row can never be counted as a charter (#1497).
+      //
+      // The suspension date is parsed OUTSIDE the window check because its
+      // mere presence is a fact of its own (#1514): it says the branch was
+      // collected for this date. Counting it only inside the window would
+      // leave "no suspensions this year" and "no suspension data at all"
+      // indistinguishable, which is how eight of the ten published year-ends
+      // came to report a literal 0.
+      const suspendedOn = parseSuspendDateFromStatusField(club.clubStatusField)
+      if (suspendedOn) clubsWithSuspensionDate += 1
+
       if (window) {
-        // One column, two branches. Each parser rejects the other's prefix,
-        // so a Susp row can never be counted as a charter (#1497).
         if (
           withinWindow(
             parseCharterDateFromStatusField(club.clubStatusField),
@@ -262,12 +294,7 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
         ) {
           newClubsStillActive += 1
         }
-        if (
-          withinWindow(
-            parseSuspendDateFromStatusField(club.clubStatusField),
-            window
-          )
-        ) {
+        if (withinWindow(suspendedOn, window)) {
           suspendedClubs += 1
         }
       }
@@ -299,7 +326,13 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
     totalPayments,
     totalMembership,
     newClubsStillActive: window ? newClubsStillActive : null,
-    suspendedClubs: window ? suspendedClubs : null,
+    // Absence is never zero (#1514). A date whose in-scope rows carry no
+    // parseable suspension window ANYWHERE is unknown, which is what the
+    // contract's `number | null` already means; a populated column that
+    // happens to sum to zero keeps its measured 0.
+    suspendedClubs:
+      window && clubsWithSuspensionDate > 0 ? suspendedClubs : null,
+    clubsWithSuspensionDate,
     clubsByCountry,
     clubsWithUnknownCountry,
     excludedDistricts,

@@ -181,7 +181,18 @@ export const GlobalTotalsClubMovementSchema = z.object({
   newClubsStillActive: z.number().int().nullable(),
   /**
    * Clubs whose `Charter Date/Suspend Date` carries a `Susp` date inside the
-   * snapshot date's program year (#1497). `null` when the window is unknown.
+   * snapshot date's program year (#1497).
+   *
+   * `null` when the window is unknown, AND `null` when the column's suspension
+   * branch was never collected for the date — not one in-scope club row
+   * carries a parseable `Susp` value (#1514). Eight of the ten published
+   * year-ends are exactly that shape, and emitting `0` for them made an
+   * absence indistinguishable from "no club was suspended worldwide all year".
+   *
+   * A date whose column IS populated keeps its measured `0`: the presence
+   * signal is window-independent, so a `Susp` value dated outside the window
+   * still proves the branch was collected. Readers render `null` as "not on
+   * file", never as zero.
    */
   suspendedClubs: z.number().int().nullable(),
 })
