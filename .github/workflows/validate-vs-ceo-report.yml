@@ -110,7 +110,7 @@ jobs:
           # can be CAPTURED and reported instead of aborting the step.
           set +e
           echo "Listing gs://${BUCKET}/snapshots/ ..."
-          if ! gsutil ls "gs://${BUCKET}/snapshots/" > /tmp/snapshot-prefixes.txt; then
+          if ! gcloud storage ls "gs://${BUCKET}/snapshots/" > /tmp/snapshot-prefixes.txt; then
             echo "::error::could not list gs://${BUCKET}/snapshots/"
             exit 1
           fi
@@ -176,6 +176,9 @@ jobs:
             esac
             echo "::group::sync ${DATE}"
             mkdir -p "./cache/snapshots/${DATE}"
+            # STILL gsutil, deliberately (#1412): `-x` exclude anchoring under
+            # `gcloud storage rsync` is not established as identical, and a
+            # wrong match set here silently changes what the oracle compares.
             gsutil -m rsync -r -x '^analytics/.*$' \
               "gs://${BUCKET}/snapshots/${DATE}/" \
               "./cache/snapshots/${DATE}/"

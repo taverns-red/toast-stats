@@ -128,9 +128,9 @@ jobs:
           }
           METRICS_EOF
 
-          gsutil \
-            -h "Content-Type:application/json" \
-            cp /tmp/deploy-metrics.json \
+          gcloud storage cp \
+            --content-type="application/json" \
+            /tmp/deploy-metrics.json \
             "gs://${{ env.GCS_BUCKET }}/metrics/deploys/$(date -u +%Y-%m-%d_%H%M%S).json"
 
           echo "## 📊 DORA Metrics" >> "$GITHUB_STEP_SUMMARY"

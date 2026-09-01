@@ -98,10 +98,12 @@ describe('data-pipeline.yml worldwide-rollup backfill (#1498)', () => {
     expect(run()).toContain(
       '"gs://${GCS_BUCKET}/snapshots/${DATE}/global-totals.json"'
     )
+    // Flag spelling moved with the gsutil → `gcloud storage` migration
+    // (#1412); the header contract #1380 established is unchanged.
     expect(run()).toContain(
-      '-h "Cache-Control:public, max-age=3600, must-revalidate"'
+      '--cache-control="public, max-age=3600, must-revalidate"'
     )
-    expect(run()).toContain('-h "Content-Type:application/json"')
+    expect(run()).toContain('--content-type="application/json"')
     // Never written straight to production — promotion is gated for a reason.
     // (The production bucket appears only on the READ side, above.)
     expect(run()).not.toContain(
@@ -129,7 +131,7 @@ describe('data-pipeline.yml worldwide-rollup backfill (#1498)', () => {
     // override flag is never passed by default.
     expect(run()).not.toContain('--allow-missing-districts')
     expect(run()).toMatch(
-      /if npx tsx scripts\/build-global-totals\.ts[\s\S]*?; then[\s\S]*?gsutil/
+      /if npx tsx scripts\/build-global-totals\.ts[\s\S]*?; then[\s\S]*?gcloud storage/
     )
   })
 
