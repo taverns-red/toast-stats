@@ -211,8 +211,9 @@ describe('selectProgramYearEnds', () => {
     // which walks the year-end into the previous program year.
     const selected = selectProgramYearEnds(
       ['2025-06-30', '2025-07-01'],
-      '2026-09-01'
+      '2025-08-01'
     )
+    // June 30 closes 2024-2025; July 1 opens the still-running 2025-2026.
     expect(selected).toEqual([
       { programYear: '2024-2025', yearEndDate: '2025-06-30', marchDate: null },
     ])
