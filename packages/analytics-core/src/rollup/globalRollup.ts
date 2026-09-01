@@ -45,6 +45,13 @@ import {
   isDistrictSnapshotFile,
   normalizeClubId,
 } from '@taverns-red/shared-contracts'
+import type { DistrictRanking } from '@taverns-red/shared-contracts'
+import {
+  getProgramYearStartDate,
+  parseCharterDateFromStatusField,
+  parseDateFlexible,
+  parseSuspendDateFromStatusField,
+} from '../rankings/programYearDates.js'
 
 /** One club's payment row, as read from a district snapshot. */
 export interface ClubPaymentRow {
@@ -159,6 +166,39 @@ export function canonicalDistrictId(districtId: string): string {
   return /^\d+$/.test(trimmed) ? String(parseInt(trimmed, 10)) : trimmed
 }
 
+/** Half-open-at-neither-end program-year window, in epoch milliseconds. */
+interface ProgramYearWindow {
+  readonly startMs: number
+  readonly endMs: number
+}
+
+/**
+ * The program year the SNAPSHOT DATE falls in, as a date window: July 1
+ * through the snapshot date itself.
+ *
+ * The upper bound is the snapshot date, not the following June 30, because a
+ * mid-year snapshot must not count a charter or suspension dated after it —
+ * and because a year-end directory can legitimately carry rows stamped by a
+ * later rewrite (#1465). Keyed on the snapshot date, never on
+ * `metadata.sourceCsvDate`, which falls in July for a year-end file and would
+ * land the window one program year late (Lesson 139).
+ */
+function programYearWindow(
+  snapshotDate: string | undefined
+): ProgramYearWindow | null {
+  if (!snapshotDate) return null
+  const start = getProgramYearStartDate(snapshotDate)
+  const end = parseDateFlexible(snapshotDate)
+  if (!start || !end) return null
+  return { startMs: start.getTime(), endMs: end.getTime() }
+}
+
+function withinWindow(date: Date | null, window: ProgramYearWindow): boolean {
+  if (!date) return false
+  const ms = date.getTime()
+  return ms >= window.startMs && ms <= window.endMs
+}
+
 export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
   // R17 — an unscoped rollup is refused, never guessed at. Falling back to
   // "every file in the directory" is precisely the bug this module exists to
@@ -174,10 +214,20 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
   const excludedDistricts: string[] = []
   const seenDistricts = new Set<string>()
 
+  // The program-year window charter/suspension counting runs in. Absent when
+  // the caller supplied no snapshot date, in which case both counts stay
+  // `null` — unknown, which is not the same fact as zero.
+  const window = programYearWindow(input.snapshotDate)
+
   /** Canonical club id → the districts it was seen in, in input order. */
   const clubDistricts = new Map<string, string[]>()
+  const countryCounts = new Map<string, number>()
   let clubCount = 0
   let totalPayments = 0
+  let totalMembership = 0
+  let newClubsStillActive = 0
+  let suspendedClubs = 0
+  let clubsWithUnknownCountry = 0
 
   for (const district of input.districts) {
     const key = canonicalDistrictId(district.districtId)
@@ -199,8 +249,40 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
       clubDistricts.set(clubId, [district.districtId])
       clubCount += 1
       totalPayments += club.payments
+      totalMembership += club.activeMembers ?? 0
+
+      if (window) {
+        // One column, two branches. Each parser rejects the other's prefix,
+        // so a Susp row can never be counted as a charter (#1497).
+        if (
+          withinWindow(
+            parseCharterDateFromStatusField(club.clubStatusField),
+            window
+          )
+        ) {
+          newClubsStillActive += 1
+        }
+        if (
+          withinWindow(
+            parseSuspendDateFromStatusField(club.clubStatusField),
+            window
+          )
+        ) {
+          suspendedClubs += 1
+        }
+      }
+
+      const country = club.country?.trim()
+      if (country)
+        countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1)
+      else clubsWithUnknownCountry += 1
     }
   }
+
+  // Descending, ties broken by name so the published order is deterministic.
+  const clubsByCountry: CountryClubCount[] = [...countryCounts]
+    .map(([country, clubs]) => ({ country, clubs }))
+    .sort((a, b) => b.clubs - a.clubs || a.country.localeCompare(b.country))
 
   const duplicateClubs: DuplicateClub[] = []
   for (const [clubId, districtIds] of clubDistricts) {
@@ -215,17 +297,29 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
     districtCount: seenDistricts.size,
     clubCount,
     totalPayments,
-    // STUB (#1498) — the failing tests in ./globalRollup.test.ts pin what
-    // these must become. Implemented in the next commit.
-    totalMembership: 0,
-    newClubsStillActive: null,
-    suspendedClubs: null,
-    clubsByCountry: [],
-    clubsWithUnknownCountry: 0,
+    totalMembership,
+    newClubsStillActive: window ? newClubsStillActive : null,
+    suspendedClubs: window ? suspendedClubs : null,
+    clubsByCountry,
+    clubsWithUnknownCountry,
     excludedDistricts,
     missingDistricts,
     duplicateClubs,
   }
+}
+
+/**
+ * The date's own `all-districts-rankings.json` rows — the authoritative
+ * district set, and the only surface whose tier fields are
+ * distinguished-or-better plus subsets (#1124).
+ */
+export function readSnapshotRankings(snapshotDir: string): DistrictRanking[] {
+  const raw = JSON.parse(
+    readFileSync(join(snapshotDir, 'all-districts-rankings.json'), 'utf-8')
+  ) as { rankings?: DistrictRanking[] }
+  return (raw.rankings ?? []).filter(
+    row => typeof row?.districtId === 'string' && row.districtId !== ''
+  )
 }
 
 /**
@@ -235,14 +329,12 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
  * directory listing is not the district set.
  */
 export function readSnapshotRollupInput(
-  snapshotDir: string
+  snapshotDir: string,
+  snapshotDate?: string
 ): GlobalRollupInput {
-  const rankingsRaw = JSON.parse(
-    readFileSync(join(snapshotDir, 'all-districts-rankings.json'), 'utf-8')
-  ) as { rankings?: Array<{ districtId?: unknown }> }
-  const rankingsDistrictIds = (rankingsRaw.rankings ?? [])
-    .map(row => (typeof row.districtId === 'string' ? row.districtId : ''))
-    .filter(districtId => districtId !== '')
+  const rankingsDistrictIds = readSnapshotRankings(snapshotDir).map(
+    row => row.districtId
+  )
 
   const districts: DistrictClubPayments[] = []
   for (const fileName of readdirSync(snapshotDir).sort()) {
@@ -253,18 +345,52 @@ export function readSnapshotRollupInput(
     const parsed = JSON.parse(
       readFileSync(join(snapshotDir, fileName), 'utf-8')
     ) as {
-      data?: { districtPerformance?: Array<Record<string, unknown>> }
+      data?: {
+        districtPerformance?: Array<Record<string, unknown>>
+        clubPerformance?: Array<Record<string, unknown>>
+        clubs?: Array<{ clubId?: unknown; address?: { country?: unknown } }>
+      }
     }
+
+    // Three arrays inside one file, joined on the canonical club id: payments
+    // and club status live on `districtPerformance`, "Active Members" on
+    // `clubPerformance`, and the Find-A-Club country on `clubs[].address`.
+    // The join happens once, here, so the rollup itself stays pure.
+    const membership = new Map<string, number>()
+    for (const row of parsed.data?.clubPerformance ?? []) {
+      const clubId = String(row['Club Number'] ?? '').trim()
+      if (clubId === '') continue
+      membership.set(
+        normalizeClubId(clubId),
+        Number(row['Active Members'] ?? 0) || 0
+      )
+    }
+    const country = new Map<string, string>()
+    for (const club of parsed.data?.clubs ?? []) {
+      const clubId = String(club?.clubId ?? '').trim()
+      const name = club?.address?.country
+      if (clubId === '' || typeof name !== 'string' || name.trim() === '')
+        continue
+      country.set(normalizeClubId(clubId), name.trim())
+    }
+
     const clubs: ClubPaymentRow[] = []
     for (const row of parsed.data?.districtPerformance ?? []) {
       const clubId = String(row['Club'] ?? '').trim()
       if (clubId === '') continue
-      clubs.push({ clubId, payments: Number(row['Total to Date'] ?? 0) || 0 })
+      const key = normalizeClubId(clubId)
+      clubs.push({
+        clubId,
+        payments: Number(row['Total to Date'] ?? 0) || 0,
+        activeMembers: membership.get(key) ?? 0,
+        clubStatusField: String(row['Charter Date/Suspend Date'] ?? ''),
+        country: country.get(key),
+      })
     }
     districts.push({ districtId, clubs })
   }
 
-  return { districts, rankingsDistrictIds }
+  return { districts, rankingsDistrictIds, snapshotDate }
 }
 
 /** Re-exported so callers use one canonical rule, not a fourth copy. */
