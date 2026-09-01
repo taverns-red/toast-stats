@@ -64,6 +64,9 @@ export function programYearForSnapshotDate(snapshotDate: string): string {
 /** The undistricted bucket's ranking id — a row, but not a district. */
 const UNDISTRICTED_ID = 'U'
 
+const isUndistricted = (row: DistrictRanking): boolean =>
+  row.districtId.trim().toUpperCase() === UNDISTRICTED_ID
+
 const DISTINGUISHED_OR_BETTER: readonly DistinguishedDistrictTier[] = [
   'Distinguished',
   'Select',
@@ -80,6 +83,39 @@ const sumField = (
 /** `numerator / denominator`, or null rather than a divide-by-zero. */
 const ratio = (numerator: number, denominator: number): number | null =>
   denominator === 0 ? null : numerator / denominator
+
+/**
+ * The base rung, by subtraction: or-better minus the three named rungs above
+ * it (Smedley contributing 0 in the years it did not exist).
+ *
+ * THROWS on a negative result rather than publishing one. A negative base can
+ * only mean the subtrahends are not subsets of `distinguishedClubs` — i.e.
+ * that this rankings file's `distinguishedClubs` is a per-tier count, the
+ * disjoint semantics `district_{id}.json` `totals` uses (#1124). That is the
+ * exact surface confusion this artifact is built to avoid, and it would be
+ * invisible in the output: a plausible negative, or a wrong positive on some
+ * other date. Fail loudly at the one place the contradiction is detectable.
+ */
+function derivedBaseTier(
+  distinguishedOrBetter: number,
+  select: number,
+  presidents: number,
+  smedley: number | null
+): number {
+  const base = distinguishedOrBetter - select - presidents - (smedley ?? 0)
+  if (base < 0) {
+    throw new Error(
+      `derived base tier is negative (${base}): distinguishedClubs ` +
+        `(${distinguishedOrBetter}) is smaller than its own subsets ` +
+        `(select ${select} + presidents ${presidents} + smedley ${smedley ?? 0}). ` +
+        'The rankings surface treats distinguishedClubs as ' +
+        'distinguished-OR-BETTER; a smaller value means this file uses the ' +
+        'disjoint per-tier semantics instead (#1124) and must not be summed ' +
+        'as if it did not.'
+    )
+  }
+  return base
+}
 
 export function buildGlobalTotals(input: GlobalTotalsInput): GlobalTotals {
   const { snapshotDate, rankings } = input
@@ -102,16 +138,29 @@ export function buildGlobalTotals(input: GlobalTotalsInput): GlobalTotals {
   const distinguishedOrBetter = sumField(rankings, 'distinguishedClubs')
   const select = sumField(rankings, 'selectDistinguished')
   const presidents = sumField(rankings, 'presidentsDistinguished')
-  // Absent, not 0, before the rung existed — archived files store a literal 0.
-  const smedley = isClubSmedleyAvailable(programYear)
-    ? sumField(rankings, 'smedleyDistinguished')
-    : null
+  // Absent, not 0, on two different grounds:
+  //   · the rung did not exist before PY 2025-26 (archived rankings store a
+  //     literal 0 back to 2022, which must not be echoed), and
+  //   · an era that HAS the rung but whose rows carry no such field tells us
+  //     nothing, and summing absent fields to 0 would assert that it did.
+  const smedley =
+    isClubSmedleyAvailable(programYear) &&
+    rankings.some(row => row.smedleyDistinguished !== undefined)
+      ? sumField(rankings, 'smedleyDistinguished')
+      : null
 
+  // Districts only. The undistricted `U` row is a bucket of clubs that belong
+  // to no district — it cannot earn Distinguished District recognition, and
+  // scoring it would put a second district basis in the artifact: `byTier`
+  // summing to 128 while `districts.numbered` said 127. Excluding it keeps
+  // the two consistent, and it is the only row excluded — lettered districts
+  // such as `F` are districts and are scored.
+  const scorableDistricts = rankings.filter(row => !isUndistricted(row))
   const statuses = new DistinguishedDistrictCalculator().calculateAll(
     // `programYear` is ALWAYS passed. Omitting it falls back to the CURRENT
     // ruleset, which scores a historical year under rules whose prerequisite
     // columns its export never carried — flipping every district to Unknown.
-    rankings as DistrictRanking[],
+    scorableDistricts as DistrictRanking[],
     programYear
   )
   const byTier: GlobalTotalsDistrictTiers = {
@@ -134,9 +183,7 @@ export function buildGlobalTotals(input: GlobalTotalsInput): GlobalTotals {
     0
   )
 
-  const includesUndistricted = rankings.some(
-    row => row.districtId.trim().toUpperCase() === UNDISTRICTED_ID
-  )
+  const includesUndistricted = rankings.some(isUndistricted)
 
   return {
     _format: GLOBAL_TOTALS_FORMAT,
@@ -167,7 +214,7 @@ export function buildGlobalTotals(input: GlobalTotalsInput): GlobalTotals {
       select,
       presidents,
       smedley,
-      base: distinguishedOrBetter - select - presidents - (smedley ?? 0),
+      base: derivedBaseTier(distinguishedOrBetter, select, presidents, smedley),
       percentOfPaidClubs: ratio(distinguishedOrBetter * 100, paidClubs),
     },
     distinguishedDistricts: {

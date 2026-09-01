@@ -59,7 +59,12 @@ const doc = parse(fs.readFileSync(WORKFLOW_PATH, 'utf-8')) as {
 }
 
 const steps = Object.values(doc.jobs).flatMap(job => job.steps ?? [])
-const backfillSteps = steps.filter(step => step.if?.includes(MODE))
+/** Steps that RUN in this mode (as opposed to steps that exclude it). */
+const backfillSteps = steps.filter(
+  step => step.if?.includes(MODE) && !step.if.includes(`!= '${MODE}'`)
+)
+/** Steps that explicitly opt OUT of this mode. */
+const excludingSteps = steps.filter(step => step.if?.includes(`!= '${MODE}'`))
 
 describe('data-pipeline.yml worldwide-rollup backfill (#1498)', () => {
   it('exposes the mode as a dispatch option', () => {
@@ -114,6 +119,33 @@ describe('data-pipeline.yml worldwide-rollup backfill (#1498)', () => {
 
   it('streams one date at a time, freeing each directory after upload', () => {
     expect(run()).toContain('rm -rf "${SNAPSHOT_DIR}"')
+  })
+
+  it('refuses a date whose district files did not all arrive', () => {
+    // The sync is fail-soft (`|| true`, R2). If it half-fails, the club and
+    // payment sums come out understated while the rankings-derived counts stay
+    // whole — plausible, and wrong. The builder exits non-zero; the mode must
+    // not paper over it, so the upload is inside the success branch and the
+    // override flag is never passed by default.
+    expect(run()).not.toContain('--allow-missing-districts')
+    expect(run()).toMatch(
+      /if npx tsx scripts\/build-global-totals\.ts[\s\S]*?; then[\s\S]*?gsutil/
+    )
+  })
+
+  it('is excluded from every district-derived shared manifest step', () => {
+    // R17: this mode publishes no district_*.json, so nothing derived from
+    // district snapshots may be regenerated from it. The index step's `else`
+    // is the DAILY merge branch — left in, it wrote a phantom `"": [""]`
+    // entry that promotion then rsynced to production.
+    const excluded = excludingSteps.map(step => step.name)
+    expect(excluded).toEqual(
+      expect.arrayContaining([
+        'Generate CDN manifests',
+        'Update district-snapshot-index',
+        'Generate club-index',
+      ])
+    )
   })
 
   it('runs the tested builder rather than reimplementing the rollup', () => {

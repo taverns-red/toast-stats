@@ -23,7 +23,18 @@
  * Usage:
  *   npx tsx scripts/build-global-totals.ts --snapshot-dir ./cache/snapshots/2026-06-30 --date 2026-06-30
  *
- * Exit codes: 0 = written · 1 = build failed · 2 = usage or setup error.
+ * INCOMPLETE INPUT IS REFUSED. If the date's district set lists a district
+ * whose file did not arrive, the rollup's club, payment and membership sums
+ * are understated while `paidClubs` and the tier counts — which come from the
+ * rankings rows — stay whole. That is the silent-failure shape this epic
+ * exists to avoid: a plausible worldwide number that is wrong. The GCS sync
+ * that feeds this is fail-soft (`|| true`, R2), so "the download half-failed"
+ * is a real and quiet possibility; the artifact is not written unless every
+ * listed district supplied a file. `--allow-missing-districts` overrides for a
+ * date an operator has REVIEWED, and says so loudly in the log.
+ *
+ * Exit codes: 0 = written · 1 = build failed or input incomplete ·
+ * 2 = usage or setup error.
  */
 
 import { existsSync, writeFileSync } from 'node:fs'
@@ -72,6 +83,7 @@ function main(): void {
   }
 
   const outPath = readFlag('out') ?? join(snapshotDir, GLOBAL_TOTALS_FILE_NAME)
+  const allowMissing = process.argv.includes('--allow-missing-districts')
 
   try {
     const rankings = readSnapshotRankings(snapshotDir)
@@ -81,6 +93,25 @@ function main(): void {
       districts: input.districts,
       rankings,
     })
+
+    const missing = totals.districts.missingDistricts
+    if (missing.length > 0 && !allowMissing) {
+      log(
+        `::error::${date}: ${missing.length} of ${totals.districts.total} listed ` +
+          `district(s) supplied no file — refusing to publish an understated ` +
+          `rollup. Missing: ${missing.join(', ')}. ` +
+          `Re-run the sync, or pass --allow-missing-districts if this date is ` +
+          `known to be incomplete.`
+      )
+      process.exit(1)
+    }
+    if (missing.length > 0) {
+      log(
+        `::warning::${date}: OVERRIDDEN by --allow-missing-districts — ` +
+          `${missing.length} district(s) had no file, so club, payment and ` +
+          `membership sums are understated: ${missing.join(', ')}`
+      )
+    }
 
     writeFileSync(outPath, JSON.stringify(totals, null, 2) + '\n', 'utf-8')
 
@@ -96,12 +127,6 @@ function main(): void {
       log(
         `  excluded ${totals.districts.excludedDistricts.length} out-of-set district file(s): ` +
           totals.districts.excludedDistricts.join(', ')
-      )
-    }
-    if (totals.districts.missingDistricts.length > 0) {
-      log(
-        `  ::warning::${totals.districts.missingDistricts.length} district(s) in the set had no file: ` +
-          totals.districts.missingDistricts.join(', ')
       )
     }
     if (totals.districts.duplicateClubs.length > 0) {

@@ -21,8 +21,31 @@ import {
   type AllDistrictsRankingsData,
 } from '@taverns-red/shared-contracts'
 import { AnalyticsComputeService } from '../services/AnalyticsComputeService.js'
+import { determineComputeAnalyticsExitCode } from '../cliHelpers.js'
+import { ExitCode } from '../types/index.js'
+import type { ComputeAnalyticsResult } from '../types/index.js'
 
 const DATE = '2026-06-30'
+
+/** The subset of the CLI result shape the exit-code helper reads. */
+function asCliResult(
+  partial: Partial<ComputeAnalyticsResult>
+): ComputeAnalyticsResult {
+  return {
+    success: true,
+    date: DATE,
+    requestedDate: DATE,
+    isClosingPeriod: false,
+    districtsProcessed: [],
+    districtsSucceeded: [],
+    districtsFailed: [],
+    districtsSkipped: [],
+    analyticsLocations: [],
+    errors: [],
+    duration_ms: 0,
+    ...partial,
+  }
+}
 
 /** A `district_{id}.json` in the shape the transform actually writes. */
 function districtSnapshot(districtId: string) {
@@ -213,8 +236,65 @@ describe('AnalyticsComputeService — global-totals.json (#1498)', () => {
     await expect(
       fs.access(path.join(snapshotDir(), GLOBAL_TOTALS_FILE_NAME))
     ).rejects.toThrow()
-    expect(result.errors.map(e => e.error)).not.toContain(
-      expect.stringContaining('global-totals')
+    // A skip is not a failure — and `not.toContain` with an asymmetric matcher
+    // would be vacuous here (toContain uses identity), so assert on the strings.
+    expect(
+      result.errors.filter(e => e.error.includes(GLOBAL_TOTALS_FILE_NAME))
+    ).toEqual([])
+    expect(result.globalTotalsFailed).toBe(false)
+    expect(determineComputeAnalyticsExitCode(asCliResult(result))).toBe(
+      ExitCode.SUCCESS
     )
+  })
+
+  it('fails the run when the rollup throws on a date that HAS a district set', async () => {
+    // A directory with a district set but an unreadable district file is
+    // broken, not merely rollup-less. It must not exit 0 and publish a date
+    // whose worldwide numbers silently did not build.
+    await fs.writeFile(
+      path.join(snapshotDir(), 'all-districts-rankings.json'),
+      JSON.stringify(rankingsFile(['61']))
+    )
+    await fs.writeFile(
+      path.join(snapshotDir(), 'district_61.json'),
+      '{ this is not json'
+    )
+
+    const result = await service.compute({ date: DATE, districts: ['61'] })
+
+    expect(result.globalTotalsFailed).toBe(true)
+    expect(result.globalTotalsPath).toBeUndefined()
+    expect(
+      result.errors.some(e => e.error.includes(GLOBAL_TOTALS_FILE_NAME))
+    ).toBe(true)
+    // The load-bearing half: the flag has to reach the process exit code.
+    expect(determineComputeAnalyticsExitCode(asCliResult(result))).not.toBe(
+      ExitCode.SUCCESS
+    )
+  })
+
+  it('exits non-zero on a rollup failure even when every district succeeded', () => {
+    // The exact silent-success shape: districtsFailed is empty because the
+    // rollup's error is recorded against 'N/A' and never lands there.
+    const allDistrictsFine = {
+      ...asCliResult({
+        districtsProcessed: ['61'],
+        districtsSucceeded: ['61'],
+        districtsFailed: [],
+        districtsSkipped: [],
+        errors: [],
+      }),
+      globalTotalsFailed: true,
+    }
+
+    expect(determineComputeAnalyticsExitCode(allDistrictsFine)).toBe(
+      ExitCode.PARTIAL_FAILURE
+    )
+    expect(
+      determineComputeAnalyticsExitCode({
+        ...allDistrictsFine,
+        globalTotalsFailed: false,
+      })
+    ).toBe(ExitCode.SUCCESS)
   })
 })

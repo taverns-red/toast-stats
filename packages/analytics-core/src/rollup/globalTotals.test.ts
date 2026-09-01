@@ -68,10 +68,28 @@ describe('buildGlobalTotals — Smedley is absent before PY 2025-26 (#1498)', ()
     const totals = buildGlobalTotals({
       snapshotDate: '2026-06-30',
       districts: [{ districtId: '61', clubs: [] }],
-      rankings: [ranking('61', { smedleyDistinguished: 7 })],
+      // Coherent or-better + subsets: 20 at Distinguished-or-better, of which
+      // 7 reached Smedley.
+      rankings: [
+        ranking('61', { distinguishedClubs: 20, smedleyDistinguished: 7 }),
+      ],
     })
 
     expect(totals.distinguishedClubs.smedley).toBe(7)
+    expect(totals.distinguishedClubs.base).toBe(13)
+  })
+
+  it('reports null when the era has the rung but no row carries the field', () => {
+    // "The field is absent" and "the field is 0" are different facts, and
+    // summing absent fields to 0 asserts the second.
+    const totals = buildGlobalTotals({
+      snapshotDate: '2026-06-30',
+      districts: [{ districtId: '61', clubs: [] }],
+      rankings: [ranking('61', { distinguishedClubs: 20 })],
+    })
+
+    expect(totals.distinguishedClubs.smedley).toBeNull()
+    expect(totals.distinguishedClubs.base).toBe(20)
   })
 
   it('derives the base tier without the absent Smedley rung', () => {
@@ -89,6 +107,29 @@ describe('buildGlobalTotals — Smedley is absent before PY 2025-26 (#1498)', ()
     })
 
     expect(totals.distinguishedClubs.base).toBe(5)
+  })
+})
+
+describe('buildGlobalTotals — the derived base tier (#1498)', () => {
+  it('refuses a negative base rather than publishing one', () => {
+    // A negative base can only mean `distinguishedClubs` is NOT or-better on
+    // this surface — i.e. the disjoint per-tier semantics of
+    // `district_{id}.json` `totals` (#1124). Summing those as if they were
+    // or-better produces a wrong number on every other field too, so fail at
+    // the one place the contradiction is visible.
+    expect(() =>
+      buildGlobalTotals({
+        snapshotDate: '2026-06-30',
+        districts: [{ districtId: '61', clubs: [] }],
+        rankings: [
+          ranking('61', {
+            distinguishedClubs: 10,
+            selectDistinguished: 6,
+            presidentsDistinguished: 6,
+          }),
+        ],
+      })
+    ).toThrow(/negative/i)
   })
 })
 
@@ -156,6 +197,42 @@ describe('buildGlobalTotals — the district set is the rankings set (#1498)', (
     expect(totals.districts.total).toBe(2)
     expect(totals.districts.numbered).toBe(1)
     expect(totals.districts.includesUndistricted).toBe(true)
+  })
+
+  it('does not score the undistricted bucket as a district', () => {
+    // `U` is clubs belonging to no district; it cannot earn Distinguished
+    // District recognition. If it were scored, `byTier` would total one more
+    // than `districts.numbered` — two district bases in one artifact.
+    const totals = buildGlobalTotals({
+      snapshotDate: '2026-06-30',
+      districts: [
+        { districtId: '61', clubs: [] },
+        { districtId: 'U', clubs: [] },
+      ],
+      rankings: [ranking('61'), ranking('U')],
+    })
+
+    const scored = Object.values(totals.distinguishedDistricts.byTier).reduce(
+      (sum, n) => sum + n,
+      0
+    )
+    expect(scored).toBe(totals.districts.numbered)
+  })
+
+  it('still scores lettered districts such as F', () => {
+    const totals = buildGlobalTotals({
+      snapshotDate: '2026-06-30',
+      districts: [{ districtId: 'F', clubs: [] }],
+      rankings: [ranking('F')],
+    })
+
+    expect(totals.districts.numbered).toBe(1)
+    expect(
+      Object.values(totals.distinguishedDistricts.byTier).reduce(
+        (sum, n) => sum + n,
+        0
+      )
+    ).toBe(1)
   })
 
   it('records includesUndistricted false when the date has no U row', () => {

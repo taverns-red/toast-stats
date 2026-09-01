@@ -1350,8 +1350,21 @@ jobs:
       # SHARED: CDN Manifests (daily + rebuild)
       # ════════════════════════════════════════════════════════
 
+      # `backfill-global-totals` is excluded from all three shared manifest
+      # steps below (#1498). Every one of them is derived from district
+      # snapshots — v1/latest.json + v1/dates.json from the bucket's snapshot
+      # listing, district-snapshot-index and club-index from district_*.json —
+      # and that mode publishes exactly one ADDITIVE file per date and no
+      # district snapshot at all. Leaving it in was not merely wasteful: the
+      # index step's `else` is the DAILY merge branch, so it ran with an empty
+      # DATE and DISTRICT_LIST and wrote a phantom `"": [""]` entry straight
+      # into config/district-snapshot-index.json, which promotion rsyncs to
+      # production wholesale. R17 — every conditional needs an explicit case
+      # for every value, including the mode you just added.
       - name: Generate CDN manifests
-        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
+        if: >-
+          (steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true')
+          && steps.mode.outputs.mode != 'backfill-global-totals'
         run: |
           # Determine the latest date from local snapshots (falls back to GCS
           # listing when local cache is empty, e.g. after a rebuild that deletes
@@ -1509,7 +1522,9 @@ jobs:
 
       # ── Shared: Update district-snapshot-index ──
       - name: Update district-snapshot-index
-        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
+        if: >-
+          (steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true')
+          && steps.mode.outputs.mode != 'backfill-global-totals'
         run: |
           MODE="${{ steps.mode.outputs.mode }}"
           INDEX_PATH="gs://${GCS_BUCKET}/config/district-snapshot-index.json"
@@ -1591,7 +1606,9 @@ jobs:
       # could carry a hand copy of normalizeClubId and ship an index covering
       # 2 of 94 districts unnoticed. Promotion rsyncs config/ wholesale.
       - name: Generate club-index
-        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
+        if: >-
+          (steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true')
+          && steps.mode.outputs.mode != 'backfill-global-totals'
         run: |
           set -o pipefail
           LATEST_DATE=$(gsutil cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \

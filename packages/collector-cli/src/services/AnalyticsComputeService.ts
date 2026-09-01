@@ -131,6 +131,14 @@ export interface ComputeOperationResult {
    * refused rather than guessed at (#1466).
    */
   globalTotalsPath?: string
+  /**
+   * True when the rollup THREW on a date that HAD a district set (#1498).
+   * Distinct from `globalTotalsPath === undefined`, which is also the state
+   * of a date legitimately skipped for having no rankings file. The CLI's
+   * exit code keys on this: an error recorded against districtId 'N/A' never
+   * reaches `districtsFailed`, so without the flag a broken rollup exits 0.
+   */
+  globalTotalsFailed: boolean
   errors: Array<{
     districtId: string
     error: string
@@ -1159,6 +1167,8 @@ export class AnalyticsComputeService {
         districtsFailed: [],
         districtsSkipped: [],
         analyticsLocations: [],
+        // The rollup never ran; "did not run" is not "failed".
+        globalTotalsFailed: false,
         errors: [
           {
             districtId: 'N/A',
@@ -1198,6 +1208,8 @@ export class AnalyticsComputeService {
         districtsFailed: [],
         districtsSkipped: [],
         analyticsLocations: [],
+        // The rollup never ran; "did not run" is not "failed".
+        globalTotalsFailed: false,
         errors: [
           {
             districtId: 'N/A',
@@ -1380,7 +1392,7 @@ export class AnalyticsComputeService {
     // Write the worldwide rollup for this date (#1498, epic #1496). It reads
     // the SNAPSHOT files on disk rather than the per-district analytics above,
     // so it is independent of whether any single district's compute failed.
-    const globalTotalsPath = await this.writeGlobalTotals(snapshotDate, errors)
+    const globalTotals = await this.writeGlobalTotals(snapshotDate, errors)
 
     // Calculate result statistics
     const districtsProcessed = districtsToCompute
@@ -1424,7 +1436,8 @@ export class AnalyticsComputeService {
       districtsFailed,
       districtsSkipped,
       analyticsLocations,
-      globalTotalsPath,
+      globalTotalsPath: globalTotals.path,
+      globalTotalsFailed: globalTotals.failed,
       errors,
       duration_ms: Date.now() - startTime,
     }
@@ -1450,12 +1463,16 @@ export class AnalyticsComputeService {
    *   that throws on a directory that HAS a district set means the directory
    *   is broken, and a broken worldwide number must not be published quietly.
    *
-   * @returns the path written, or undefined when the rollup was skipped.
+   * The two are reported SEPARATELY — `path: undefined, failed: false` for a
+   * skip, `failed: true` for a throw — because "no rollup" and "broken rollup"
+   * must not collapse into one indistinguishable state at the exit code.
+   *
+   * @returns the path written (undefined if none) and whether it failed.
    */
   private async writeGlobalTotals(
     snapshotDate: string,
     errors: Array<{ districtId: string; error: string; timestamp: string }>
-  ): Promise<string | undefined> {
+  ): Promise<{ path?: string; failed: boolean }> {
     const snapshotDir = this.getSnapshotDir(snapshotDate)
     const rankingsPath = path.join(snapshotDir, 'all-districts-rankings.json')
 
@@ -1466,7 +1483,7 @@ export class AnalyticsComputeService {
         'No all-districts-rankings.json for this date — skipping the worldwide rollup',
         { snapshotDate }
       )
-      return undefined
+      return { failed: false }
     }
 
     try {
@@ -1494,7 +1511,7 @@ export class AnalyticsComputeService {
         excludedDistricts: totals.districts.excludedDistricts.length,
         duplicateClubs: totals.districts.duplicateClubs.length,
       })
-      return outputPath
+      return { path: outputPath, failed: false }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       this.logger.error('Failed to write worldwide rollup', {
@@ -1506,7 +1523,7 @@ export class AnalyticsComputeService {
         error: `Failed to write ${GLOBAL_TOTALS_FILE_NAME}: ${message}`,
         timestamp: new Date().toISOString(),
       })
-      return undefined
+      return { failed: true }
     }
   }
 

@@ -119,10 +119,20 @@ describe('buildGlobalTotals — 2026-06-30 (#1498)', () => {
       Select: 5,
       Presidents: 5,
       Smedley: 11,
-      NotDistinguished: 86,
+      // 85, not 86: the undistricted `U` row is a bucket of clubs belonging to
+      // no district and cannot earn Distinguished District recognition, so it
+      // is not scored. It IS counted in every club-level sum above.
+      NotDistinguished: 85,
       Unknown: 0,
     })
     expect(totals().distinguishedDistricts.distinguishedOrBetter).toBe(42)
+    // One district basis, not two: every scored row is a numbered district.
+    const scored = Object.values(totals().distinguishedDistricts.byTier).reduce(
+      (sum, n) => sum + n,
+      0
+    )
+    expect(scored).toBe(totals().districts.numbered)
+    expect(scored).toBe(127)
     // #1116 item 5 — an undefined verdict is its own bucket, never a failure.
     expect(totals().distinguishedDistricts.undefinedVerdictDistricts).toEqual(
       []

@@ -76,6 +76,12 @@ export const GlobalTotalsMembershipSchema = z.object({
    * in-scope district files, each club counted once. NOT restricted to paid
    * or active clubs: at a year-end close, suspended clubs still carry rows
    * (15,016 rows vs 14,282 active clubs at 2026-06-30).
+   *
+   * The club set is `districtPerformance`'s — the same rows `totalPayments`
+   * sums — with "Active Members" joined on the canonical club id. On
+   * 2026-06-30 the two arrays hold the identical 15,016 clubs. A club present
+   * in `clubPerformance` alone would contribute no membership; `clubsCounted`
+   * is the honest denominator for this figure.
    */
   totalMembership: z.number().int(),
   /** Sum of `districtPerformance` "Total to Date", each club counted once. */
@@ -100,6 +106,12 @@ export const GlobalTotalsDistinguishedClubsSchema = z.object({
    * distinguished-**or better** (#1124, epic finding F4). The similarly named
    * `totals.*` fields inside `district_{id}.json` are disjoint per-tier counts
    * — the two surfaces must never be mixed.
+   *
+   * MID-YEAR DATES REPORT 0 ACROSS EVERY TIER. Toastmasters does not confirm
+   * club recognition until the year-end reconciliation, so every March-31
+   * rankings file on record (2022→2026, verified 2026-09-01) carries zeros in
+   * all four tier fields. That is "not yet determined", not "no club
+   * qualified" — read the tier block only on a year-end date.
    */
   distinguishedOrBetter: z.number().int(),
   /** Sum of the rankings rows' `selectDistinguished` — a subset of the above. */
@@ -113,9 +125,12 @@ export const GlobalTotalsDistinguishedClubsSchema = z.object({
   smedley: z.number().int().nullable(),
   /**
    * Derived base rung: `distinguishedOrBetter − select − presidents − smedley`
-   * (Smedley contributing 0 in the years it did not exist).
+   * (Smedley contributing 0 in the years it did not exist). Never negative —
+   * the writer THROWS rather than publish one, because a negative can only
+   * mean the source treats `distinguishedClubs` as a disjoint per-tier count
+   * (#1124) and every other tier number would be wrong too.
    */
-  base: z.number().int(),
+  base: z.number().int().nonnegative(),
   /** `distinguishedOrBetter ÷ paidClubs × 100`; null when paidClubs is 0. */
   percentOfPaidClubs: z.number().nullable(),
 })
@@ -138,7 +153,14 @@ export const GlobalTotalsDistinguishedDistrictsSchema = z.object({
    * defaulted, or a historical year is scored under current rules.
    */
   distinguishedOrBetter: z.number().int(),
-  /** Every district's verdict, tallied by tier. */
+  /**
+   * Every district's verdict, tallied by tier. The tiers sum to
+   * `districts.numbered`, NOT to `districts.total`: the undistricted `U`
+   * bucket is clubs belonging to no district and cannot earn Distinguished
+   * District recognition, so it is not scored. It is still counted in every
+   * `membership` figure — that is the ruled global-sum basis (#1426, ruling
+   * 4). Lettered districts such as `F` ARE scored.
+   */
   byTier: GlobalTotalsDistrictTiersSchema,
   /**
    * Districts whose verdict is `Unknown` — the metrics earn a tier but a
