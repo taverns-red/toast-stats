@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.38.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.37.0...toast-stats-v2.38.0) (2026-09-01)
+
+
+### Features
+
+* **analytics:** parse the Susp branch of Charter Date/Suspend Date — per-district suspendedClubs ([#1497](https://github.com/taverns-red/toast-stats/issues/1497)) ([#1504](https://github.com/taverns-red/toast-stats/issues/1504)) ([39d7016](https://github.com/taverns-red/toast-stats/commit/39d7016ccf1234e506b632e977f93c0f9ed16ed9))
+* **frontend:** the worldwide scoreboard extends /history + methodology definitions ([#1500](https://github.com/taverns-red/toast-stats/issues/1500)) ([#1513](https://github.com/taverns-red/toast-stats/issues/1513)) ([b24c3b5](https://github.com/taverns-red/toast-stats/commit/b24c3b56927aae51606c3e2dcf15f7df85231bae))
+* **pipeline:** snapshots/{date}/global-totals.json — the per-date worldwide rollup ([#1498](https://github.com/taverns-red/toast-stats/issues/1498)) ([#1509](https://github.com/taverns-red/toast-stats/issues/1509)) ([b7fdeb3](https://github.com/taverns-red/toast-stats/commit/b7fdeb3ab99a406a6a7e37687d1eb2a829712941))
+* **pipeline:** v1/global-history.json — one worldwide row per program-year end ([#1499](https://github.com/taverns-red/toast-stats/issues/1499)) ([#1511](https://github.com/taverns-red/toast-stats/issues/1511)) ([3c680e9](https://github.com/taverns-red/toast-stats/commit/3c680e97324cdab429e77c79d0b2f16b36dd0bb0))
+
+
+### Bug Fixes
+
+* **analytics:** a known reformation boundary is the evidence a realignment happened, not the roster's size ([#1470](https://github.com/taverns-red/toast-stats/issues/1470)) ([#1507](https://github.com/taverns-red/toast-stats/issues/1507)) ([2e552d0](https://github.com/taverns-red/toast-stats/commit/2e552d04f2130a13b1d30ce02560b13ce23442e4))
+* **recognition:** a district-wide zeroed charter count is 'not collected', not 'no milestone reached' ([#1501](https://github.com/taverns-red/toast-stats/issues/1501)) ([#1505](https://github.com/taverns-red/toast-stats/issues/1505)) ([53bd75e](https://github.com/taverns-red/toast-stats/commit/53bd75ef6c2ab2dbd37d59c0693a164e6a784132))
+* **test-utils:** unmount each accessibility check's render so ids stay unique ([#1503](https://github.com/taverns-red/toast-stats/issues/1503)) ([#1506](https://github.com/taverns-red/toast-stats/issues/1506)) ([d147c54](https://github.com/taverns-red/toast-stats/commit/d147c549cce85ad3416dd0b3c7e5226528ce4f0d))
+
+
+### Refactors
+
+* **pipeline:** migrate cp/ls/cat/rm from gsutil to gcloud storage — rsync deliberately left behind ([#1412](https://github.com/taverns-red/toast-stats/issues/1412)) ([#1512](https://github.com/taverns-red/toast-stats/issues/1512)) ([6cdad3e](https://github.com/taverns-red/toast-stats/commit/6cdad3eee22da72f9cea12f3733bc3dc5d4d9c16))
+
 ## [2.37.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.36.0...toast-stats-v2.37.0) (2026-09-01)
 
 

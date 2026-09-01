@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.10.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.9.0...shared-contracts-v1.10.0) (2026-09-01)
+
+
+### Features
+
+* **analytics:** parse the Susp branch of Charter Date/Suspend Date — per-district suspendedClubs ([#1497](https://github.com/taverns-red/toast-stats/issues/1497)) ([#1504](https://github.com/taverns-red/toast-stats/issues/1504)) ([39d7016](https://github.com/taverns-red/toast-stats/commit/39d7016ccf1234e506b632e977f93c0f9ed16ed9))
+* **pipeline:** snapshots/{date}/global-totals.json — the per-date worldwide rollup ([#1498](https://github.com/taverns-red/toast-stats/issues/1498)) ([#1509](https://github.com/taverns-red/toast-stats/issues/1509)) ([b7fdeb3](https://github.com/taverns-red/toast-stats/commit/b7fdeb3ab99a406a6a7e37687d1eb2a829712941))
+* **pipeline:** v1/global-history.json — one worldwide row per program-year end ([#1499](https://github.com/taverns-red/toast-stats/issues/1499)) ([#1511](https://github.com/taverns-red/toast-stats/issues/1511)) ([3c680e9](https://github.com/taverns-red/toast-stats/commit/3c680e97324cdab429e77c79d0b2f16b36dd0bb0))
+
 ## [1.9.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.8.0...shared-contracts-v1.9.0) (2026-09-01)
 
 
