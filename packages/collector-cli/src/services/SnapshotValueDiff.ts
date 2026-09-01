@@ -54,6 +54,7 @@ export const FIELD_CLASSIFICATION: Record<string, FieldClass> = {
   smedleyDistinguished: 'counter',
   clubsWith20PlusMembers: 'counter',
   newCharteredClubs: 'counter',
+  suspendedClubs: 'counter',
   // Bases — reconcile during the closing window (the only time CPAA runs);
   // base value moves are allowed as provenance, any magnitude (#1289).
   paidClubBase: 'base',

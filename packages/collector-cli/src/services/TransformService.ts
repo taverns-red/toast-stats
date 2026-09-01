@@ -37,6 +37,7 @@ import {
   calculateAggregateRankings,
   getProgramYearStartDate,
   parseCharterDateFromStatusField,
+  parseSuspendDateFromStatusField,
   type Logger,
   type RawCSVData,
 } from '@taverns-red/analytics-core'
@@ -103,6 +104,9 @@ interface RankingMetrics {
   // Paid clubs chartered in the current program year (#336) — used to compute
   // the District Club Retention Award on base-club survival alone.
   newCharteredClubs: number
+  // Clubs suspended in the current program year (#1497) — the Susp branch of
+  // the same `Charter Date/Suspend Date` column, for the worldwide rollup.
+  suspendedClubs: number
   // Payment breakdown (#327)
   newPayments: number
   aprilPayments: number
@@ -740,6 +744,8 @@ export class TransformService {
           clubsWith20PlusMembers: 0,
           // Default 0; populated later from per-district club-performance.csv (#336)
           newCharteredClubs: 0,
+          // Default 0; populated later from per-district district-performance.csv (#1497)
+          suspendedClubs: 0,
           // Payment breakdown (#327)
           newPayments: this.parseNumber(record['New Payments']),
           aprilPayments: this.parseNumber(record['April Payments']),
@@ -897,6 +903,7 @@ export class TransformService {
     // Aggregate per-district club data from per-district CSVs:
     // - clubsWith20PlusMembers (#330) — from club-performance.csv
     // - newCharteredClubs (#336) — from district-performance.csv (status column)
+    // - suspendedClubs (#1497) — the Susp branch of that same status column
     // - confirmed Distinguished count (#304) — only when all districts report 0
     const allZeroDistinguished = metrics.every(m => m.distinguishedClubs === 0)
     const programYearStart = getProgramYearStartDate(date)
@@ -923,10 +930,12 @@ export class TransformService {
         }
         metric.clubsWith20PlusMembers = twentyPlus
 
-        // Count newly chartered clubs from district-performance.csv (#336).
-        // The 'Charter Date/Suspend Date' column carries values like
-        // 'Charter 04/15/26' (new charter) or 'Susp 09/30/25' (suspension);
-        // we count only Charter entries whose date falls in the current PY.
+        // Count newly chartered and newly suspended clubs from
+        // district-performance.csv (#336, #1497). The
+        // 'Charter Date/Suspend Date' column carries one value per club row:
+        // 'Charter 04/15/26' (new charter) or ' Susp 03/31/26' (suspension —
+        // live values carry a leading space). Both branches are counted, each
+        // scoped to dates falling in the current PY.
         if (programYearStart) {
           const districtPerfPath = path.join(
             districtDir,
@@ -938,13 +947,16 @@ export class TransformService {
           if (districtContent) {
             const rows = this.parseCSVToRecords(districtContent)
             let newCharters = 0
+            let suspended = 0
             for (const row of rows) {
-              const chartered = parseCharterDateFromStatusField(
-                row['Charter Date/Suspend Date']
-              )
+              const status = row['Charter Date/Suspend Date']
+              const chartered = parseCharterDateFromStatusField(status)
               if (chartered && chartered >= programYearStart) newCharters++
+              const suspendedOn = parseSuspendDateFromStatusField(status)
+              if (suspendedOn && suspendedOn >= programYearStart) suspended++
             }
             metric.newCharteredClubs = newCharters
+            metric.suspendedClubs = suspended
           }
         }
 
@@ -1051,6 +1063,8 @@ export class TransformService {
         clubsWith20PlusMembers: metric.clubsWith20PlusMembers,
         // Paid clubs chartered this program year for District Club Retention Award (#336)
         newCharteredClubs: metric.newCharteredClubs,
+        // Clubs suspended this program year, for the worldwide rollup (#1497)
+        suspendedClubs: metric.suspendedClubs,
         // Payment breakdown (#327)
         newPayments: metric.newPayments,
         aprilPayments: metric.aprilPayments,
