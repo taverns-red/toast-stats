@@ -106,6 +106,21 @@
   box-shadow: 0 0 0 2px var(--rt-stats-focus);
 }
 
+/* Right-edge fade cue — "there's more →" when the table overflows, matching
+   `.club-history-scroll` (Lesson 105). Ten program-year columns overflow every
+   viewport, so the cue is always earned here. */
+.wws__scroll::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface));
+  opacity: 0.9;
+}
+
 .wws__table {
   width: 100%;
   border-collapse: collapse;
@@ -116,9 +131,6 @@
 
 .wws__metric-head,
 .wws__year-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   background: var(--surface);
   border-bottom: 2px solid var(--line);
   font-size: 0.8rem;
@@ -126,6 +138,20 @@
   color: var(--ink-2);
   padding: 10px 14px;
   white-space: nowrap;
+}
+
+/* Freeze the metric column. The scroll axis here is HORIZONTAL (the container
+   grows to the table's full height, so there is no vertical scroll box to
+   stick a header row to) — and a year cell scrolled away from its row label is
+   just a number with no name, which at 375px is most of the table. Needs an
+   opaque background or the scrolling cells show through. */
+.wws__metric-head,
+.wws__metric {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
 }
 
 .wws__metric-head {
