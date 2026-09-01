@@ -7,7 +7,9 @@ import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import { useSnapshotDiff } from '../../hooks/useSnapshotDiff'
 import { useDistricts } from '../../hooks/useDistricts'
 import type { SnapshotDiff } from '@taverns-red/shared-contracts'
+import { exportSnapshotDiff } from '../../utils/csvExport'
 
+vi.mock('../../utils/csvExport', () => ({ exportSnapshotDiff: vi.fn() }))
 vi.mock('../../hooks/useDistrictData')
 vi.mock('../../hooks/useDistricts')
 vi.mock('../../hooks/useSnapshotDiff', async () => {
@@ -775,5 +777,110 @@ describe('DistrictChangesPage — Club Success Plan submissions (#1460)', () => 
     expect(
       screen.queryByText(/Club Success Plan submissions/)
     ).not.toBeInTheDocument()
+  })
+})
+
+/* #1461 (epic #1458 Sprint 3) — export parity. Every other data-heavy surface
+   offers CSV; this page had no affordance at all. The exporter already exists
+   (`exportSnapshotDiff`, wired into ClubsTable) — this mounts the existing
+   ExportButton onto it rather than growing a second one. */
+describe('DistrictChangesPage — CSV export (#1461)', () => {
+  const mockedExport = vi.mocked(exportSnapshotDiff)
+
+  const twoDates = () =>
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-05-25', '2026-05-26'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+
+  const exportButton = () =>
+    screen.queryByRole('button', { name: /Export CSV/i })
+
+  it('offers an export button once a diff is loaded, and exports that diff', () => {
+    twoDates()
+    const diff = diffFixture()
+    mockedDiff.mockReturnValue({
+      data: diff,
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    const button = exportButton()
+    expect(button).toBeInTheDocument()
+    fireEvent.click(button!)
+    // The loaded diff itself — so the CSV covers the SAME date pair the
+    // headline names, not a re-derived one (R3).
+    expect(mockedExport).toHaveBeenCalledWith(diff)
+  })
+
+  it('offers no export while the diff is loading', () => {
+    twoDates()
+    mockedDiff.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    expect(exportButton()).not.toBeInTheDocument()
+  })
+
+  it('offers no export when the diff failed to load', () => {
+    twoDates()
+    mockedDiff.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    expect(screen.getByTestId('changes-error')).toBeInTheDocument()
+    expect(exportButton()).not.toBeInTheDocument()
+  })
+
+  it('offers no export when only one snapshot has been recorded', () => {
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-05-26'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    mockedDiff.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    expect(screen.getByTestId('changes-single')).toBeInTheDocument()
+    expect(exportButton()).not.toBeInTheDocument()
+  })
+
+  it('offers no export for an invalid pair, even with a stale diff cached', () => {
+    twoDates()
+    mockedDiff.mockReturnValue({
+      data: diffFixture(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage('/district/61/changes?from=2026-05-26&to=2026-05-26')
+    expect(screen.getByTestId('changes-same-date')).toBeInTheDocument()
+    expect(exportButton()).not.toBeInTheDocument()
+  })
+
+  it('offers no export when there is nothing to export', () => {
+    twoDates()
+    mockedDiff.mockReturnValue({
+      data: diffFixture({
+        events: [],
+        clubs: { bothPresent: [], onlyInFrom: [], onlyInTo: [] },
+      }),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    renderPage()
+    expect(screen.getByTestId('changes-none')).toBeInTheDocument()
+    expect(exportButton()).not.toBeInTheDocument()
   })
 })

@@ -2,7 +2,7 @@
  * Utility functions for exporting data to CSV format
  */
 
-import type { SnapshotDiff } from '@taverns-red/shared-contracts'
+import type { DiffEvent, SnapshotDiff } from '@taverns-red/shared-contracts'
 import { distinguishedTierName } from './distinguishedTier'
 import { toClubHistoryCsvRows, type ClubHistoryRow } from './clubHistory'
 import { logger } from './logger'
@@ -649,6 +649,19 @@ export const exportClubPerformance = (
 }
 
 /**
+ * The identifier for a change event's subject (#1461).
+ *
+ * A `DiffEvent`'s `clubId` is empty for the area/division recognition
+ * transitions the frontend merges into the same flat list (#1014) — the field's
+ * name does not promise it is populated for every category. Those rows fall
+ * back to their entity refs, joined so the area keeps its division context
+ * (`B-2` = Division B, Area 2); a division event carries the division alone,
+ * and anything else yields an empty cell rather than a misleading one.
+ */
+const eventEntityId = (e: DiffEvent): string =>
+  e.clubId || [e.divisionId, e.areaId].filter(Boolean).join('-')
+
+/**
  * #795 (epic #821 Sprint 3) — export a snapshot-to-snapshot diff to CSV.
  *
  * A sibling of `exportClubPerformance` (current-snapshot fields), NOT an
@@ -743,6 +756,34 @@ export const exportSnapshotDiff = (diff: SnapshotDiff): void => {
         c.areaId,
         c.transferred ? 'Moved out (district realignment)' : 'Left',
         c.clubStatus ?? '',
+      ])
+    })
+  }
+
+  // Change events (#1461) — the narrative feed the page actually renders. The
+  // per-club section above only covers `clubs.bothPresent`, so without this the
+  // export silently dropped payment-type attribution (#1459) and every club /
+  // area / division status transition.
+  //
+  // Driven by the FLAT `events` list, deliberately: any per-category mapping
+  // here would rot the day the contract gains a category (the page's
+  // CATEGORY_GROUPS carries exactly that hazard, and a category missing from it
+  // is dropped silently). `category` is emitted as its raw contract value for
+  // the same reason — a display-name table would duplicate the page headings
+  // and drift from them.
+  if (diff.events.length > 0) {
+    csvData.push([])
+    csvData.push(['Change events'])
+    csvData.push(['Category', 'Club ID', 'Club Name', 'Label', 'Magnitude'])
+    diff.events.forEach(e => {
+      csvData.push([
+        e.category,
+        eventEntityId(e),
+        e.clubName || e.entityName || '',
+        e.label,
+        // Already signed (the feed's sort key) — kept a number so a spreadsheet
+        // can sort and total the column.
+        e.magnitude,
       ])
     })
   }
