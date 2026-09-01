@@ -1556,10 +1556,12 @@ jobs:
           (steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true')
           && steps.mode.outputs.mode != 'backfill-global-totals'
         run: |
-          # No `set -o pipefail` here: `gsutil ls | grep -oP` legitimately
-          # exits non-zero on an empty bucket and would abort the step before
-          # the emptiness check below can report it (R14).
-          gsutil ls "gs://${GCS_BUCKET}/snapshots/" 2>/dev/null \
+          # No `set -o pipefail` here: `ls | grep -oP` legitimately exits
+          # non-zero on an empty bucket and would abort the step before the
+          # emptiness check below can report it (R14). Migrated off gsutil
+          # with the rest of the pipeline (#1412) — same listing shape, and
+          # the emptiness branch below is what actually reports the failure.
+          gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" 2>/dev/null \
             | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u > /tmp/gh-all-dates.txt
           if [ ! -s /tmp/gh-all-dates.txt ]; then
             echo "::warning::No snapshot dates in GCS, skipping v1/global-history.json"
