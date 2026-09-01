@@ -17,7 +17,11 @@
  * promotionAlert pattern.
  */
 
-import { PerDistrictDataSchema } from '@taverns-red/shared-contracts'
+import {
+  GLOBAL_TOTALS_FILE_NAME,
+  GlobalTotalsSchema,
+  PerDistrictDataSchema,
+} from '@taverns-red/shared-contracts'
 import { summarizeZodIssues } from './zodIssueSummary.js'
 import {
   districtIdFromSnapshotFileName,
@@ -93,10 +97,46 @@ function validateDistrictFile(
 }
 
 /**
+ * Validate the additive worldwide rollup (#1498) when the directory carries
+ * one. It is optional — historical directories predate it and dates whose
+ * rankings file is missing legitimately have none — but a rollup that IS
+ * present and violates its contract must not be uploaded, for the same
+ * reason the district files are gated: the next writer to touch the file
+ * does not re-validate it.
+ */
+function validateGlobalTotalsFile(
+  file: SnapshotFileInput
+): SnapshotGateFailure | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(file.content)
+  } catch (error) {
+    return {
+      fileName: file.fileName,
+      districtId: null,
+      snapshotDate: null,
+      reason: `invalid JSON: ${error instanceof Error ? error.message : 'parse error'}`,
+    }
+  }
+
+  const result = GlobalTotalsSchema.safeParse(parsed)
+  if (result.success) return null
+
+  const date = (parsed as { date?: unknown } | null)?.date
+  return {
+    fileName: file.fileName,
+    districtId: null,
+    snapshotDate: typeof date === 'string' ? date : null,
+    reason: summarizeZodIssues(result.error.issues),
+  }
+}
+
+/**
  * Validate every `district_*.json` in the given file set against
- * `PerDistrictDataSchema`. Zero district files is a FAILURE — a gate that
- * validates nothing must not pass vacuously (Lesson 107: "can't tell" is
- * an alert, not a pass).
+ * `PerDistrictDataSchema`, plus `global-totals.json` when present. Zero
+ * district files is a FAILURE — a gate that validates nothing must not pass
+ * vacuously (Lesson 107: "can't tell" is an alert, not a pass), and the
+ * rollup alone certifies nothing about the per-district payloads.
  */
 export function evaluateSnapshotFiles(
   files: SnapshotFileInput[]
@@ -117,14 +157,24 @@ export function evaluateSnapshotFiles(
     .map(validateDistrictFile)
     .filter((f): f is SnapshotGateFailure => f !== null)
 
+  const globalTotals = files.find(f => f.fileName === GLOBAL_TOTALS_FILE_NAME)
+  const globalTotalsFailure = globalTotals
+    ? validateGlobalTotalsFile(globalTotals)
+    : null
+  if (globalTotalsFailure) failures.push(globalTotalsFailure)
+
   return {
     ok: failures.length === 0,
     checked: districtFiles.length,
     failures,
     reason:
       failures.length === 0
-        ? `all ${districtFiles.length} district snapshot(s) match the shared contract`
-        : `${failures.length} of ${districtFiles.length} district snapshot(s) violate the shared contract`,
+        ? `all ${districtFiles.length} district snapshot(s)` +
+          `${globalTotals ? ' and the worldwide rollup' : ''}` +
+          ' match the shared contract'
+        : `${failures.length} file(s) of ${districtFiles.length} district snapshot(s)` +
+          `${globalTotals ? ' + the worldwide rollup' : ''}` +
+          ' violate the shared contract',
   }
 }
 

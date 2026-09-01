@@ -17,6 +17,7 @@
 
 import { appendFileSync, existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { GLOBAL_TOTALS_FILE_NAME } from '@taverns-red/shared-contracts'
 import {
   evaluateSnapshotFiles,
   buildGateSummary,
@@ -45,8 +46,13 @@ function validateDir(dir: string): SnapshotGateResult {
     }
   }
 
+  // The additive worldwide rollup (#1498) rides along when the date has one:
+  // optional, but gated when present so no writer can drift it unnoticed.
   const files = readdirSync(dir)
-    .filter(isDistrictSnapshotFile)
+    .filter(
+      fileName =>
+        isDistrictSnapshotFile(fileName) || fileName === GLOBAL_TOTALS_FILE_NAME
+    )
     .sort()
     .map(fileName => ({
       fileName,
