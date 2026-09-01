@@ -51,7 +51,7 @@ interface AccessibilityReport {
 export const expectWCAGCompliance = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container, cleanup: unmountRender } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check for proper heading hierarchy
@@ -199,7 +199,7 @@ export const expectWCAGCompliance = (
 export const expectKeyboardNavigation = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container, cleanup: unmountRender } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check that interactive elements are focusable
@@ -293,7 +293,7 @@ export const expectKeyboardNavigation = (
 export const expectColorContrast = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container, cleanup: unmountRender } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check text elements for proper contrast
@@ -370,7 +370,7 @@ export const expectColorContrast = (
 export const expectScreenReaderCompatibility = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container, cleanup: unmountRender } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check for proper ARIA landmarks
@@ -508,7 +508,7 @@ export const expectScreenReaderCompatibility = (
 export const expectFocusManagement = (
   component: ReactElement
 ): AccessibilityViolation[] => {
-  const { container, cleanup: unmountRender } = renderWithProviders(component)
+  const { container, unmount: unmountRender } = renderWithProviders(component)
   const violations: AccessibilityViolation[] = []
 
   // Check for focus trapping in modals
