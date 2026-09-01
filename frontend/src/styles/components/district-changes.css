@@ -73,6 +73,28 @@
   color: var(--ink-2);
 }
 
+/* Headline + CSV export (#1461). The export sits on the headline row because
+   the headline is what names the exported date pair. Stacked below 640px (the
+   breakpoint the KPI grid already uses) rather than squeezed beside the prose,
+   so the button keeps its full 44px touch target at 375px. Layout only — the
+   button's colour comes from the shared ExportButton/Button primary variant,
+   which dark-mode.css already remaps, so there is nothing duplicated here to
+   keep in sync (R10). */
+.district-changes__headline-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .district-changes__headline-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
 .district-changes__kpis {
   display: grid;
   grid-template-columns: 1fr;

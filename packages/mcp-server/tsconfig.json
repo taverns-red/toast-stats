@@ -4,10 +4,6 @@
     "lib": ["ES2022"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    // node10 (formerly "node") is deprecated in TS6, removed in TS7 (#612).
-    // This package is ESM-only and uses bundler resolution, but keep the staging
-    // flag for parity with the other workspaces' shared tsconfig stance (#597).
-    "ignoreDeprecations": "6.0",
     "rootDir": "./src",
     "outDir": "./dist",
     "declaration": true,

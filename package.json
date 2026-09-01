@@ -21,6 +21,7 @@
     "build:analytics-core": "npm run build --workspace=@taverns-red/analytics-core",
     "build:shared-contracts": "npm run build --workspace=@taverns-red/shared-contracts",
     "build:mcp-server": "npm run build --workspace=@taverns-red/toast-stats-mcp",
+    "build:verify-emit": "bash scripts/check-dual-build-emit.sh",
     "collector-cli": "npm run start --workspace=@taverns-red/collector-cli --",
     "test:frontend": "npm run test --workspace=frontend",
     "test:collector-cli": "npm run test --workspace=@taverns-red/collector-cli",

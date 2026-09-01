@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
+    // Real Node ESM program (`node dist/index.js`), so model Node's own
+    // resolver rather than a bundler's. Emit is byte-identical to the previous
+    // ESNext/node10 pair; NodeNext additionally enforces the explicit relative
+    // extensions Node requires at runtime.
+    "module": "NodeNext",
     "lib": ["ES2020", "DOM", "es2022.error"],
-    "moduleResolution": "node",
-    // node10 (formerly "node") is deprecated in TS6, removed in TS7 (#612).
-    // Migrating resolution to node16/bundler is its own task; tracked in #597.
-    "ignoreDeprecations": "6.0",
+    "moduleResolution": "NodeNext",
     "rootDir": "./src",
     "outDir": "./dist",
     // TypeScript Steering Document Requirements - Strict Mode

@@ -86,3 +86,11 @@ data/
 # Ephemeral per-agent git worktrees (Claude Code `isolation: worktree`).
 # Live scratch checkouts with their own node_modules — never committable.
 .claude/worktrees/
+
+# Type-sentinel scratch (#1489). snapshotDate.brand.sentinel.test.ts writes
+# known-bad snippets into a uniquely-named dir under frontend/src (so their
+# relative imports hit the real modules) plus a throwaway tsconfig, runs the
+# real tsc over them, and deletes both. A crashed run must not leave anything
+# committable behind.
+frontend/src/__sentinel__*/
+frontend/tsconfig.sentinel.*.json

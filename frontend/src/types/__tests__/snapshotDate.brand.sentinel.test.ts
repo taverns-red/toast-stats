@@ -24,10 +24,20 @@
  * Every negative case is paired with a POSITIVE CONTROL (a minted date compiles
  * clean). Without it a sentinel can false-pass on an unrelated compile error —
  * "an error fired" is not the same claim as "the brand fired".
+ *
+ * Driven through the `tsc` BINARY rather than the JS compiler API (#1489):
+ * TypeScript 7 is the native port, and its npm package no longer exports the
+ * old `ts.sys` / `ts.createProgram` surface at all (`typescript`'s "." export
+ * is now just `lib/version.cjs`; the compiler is reachable only via the `tsc`
+ * binary or an `unstable/*` LSP-style API). Shelling out is also the stronger
+ * claim: it is the same compiler, same tsconfig, and same invocation shape the
+ * `typecheck` gate uses, rather than a hand-built in-memory program that could
+ * drift from it.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest'
-import ts from 'typescript'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { execFileSync } from 'node:child_process'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -39,9 +49,12 @@ const frontendDir = path.resolve(
   '../../..'
 )
 
-/** Virtual directory — these paths never exist on disk. Imports resolve
- *  relative to them, so `../types/snapshotDate` hits the real module. */
-const SENTINEL_DIR = path.join(frontendDir, 'src/__sentinel__')
+/** One diagnostic as the `tsc` CLI reports it, folded back into the shape the
+ *  assertions below want. */
+interface SentinelDiagnostic {
+  readonly code: number
+  readonly message: string
+}
 
 const MINT = `import { toSnapshotDate } from '../types/snapshotDate'
 const minted = toSnapshotDate('2026-06-30')!
@@ -137,88 +150,140 @@ const SENTINELS: Record<string, string> = {
 /** TS2345: Argument of type 'X' is not assignable to parameter of type 'Y'. */
 const ARGUMENT_NOT_ASSIGNABLE = 2345
 
-const virtualPath = (name: string) => path.join(SENTINEL_DIR, name)
+/** `src/foo.ts(12,34): error TS2345: message` */
+const DIAGNOSTIC_LINE = /^(.+?)\((\d+),(\d+)\): error TS(\d+): (.*)$/
 
-let diagnosticsByFile: Map<string, readonly ts.Diagnostic[]>
-
-/**
- * One program over every sentinel at once — the lib/node_modules type graph is
- * loaded once rather than per-case, which is the whole cost here.
- */
-function compileSentinels(): Map<string, readonly ts.Diagnostic[]> {
-  const configPath = path.join(frontendDir, 'tsconfig.json')
-  const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile)
-  if (error)
-    throw new Error(ts.flattenDiagnosticMessageText(error.messageText, '\n'))
-
-  const parsed = ts.parseJsonConfigFileContent(config, ts.sys, frontendDir)
-  const options: ts.CompilerOptions = {
-    ...parsed.options,
-    noEmit: true,
-    skipLibCheck: true,
-    // The sentinels are deliberately un-referenced by the real program.
-    noUnusedLocals: false,
-    noUnusedParameters: false,
-  }
-
-  const sources = new Map(
-    Object.entries(SENTINELS).map(([name, source]) => [
-      virtualPath(name),
-      source,
-    ])
-  )
-  // Only getSourceFile needs overriding: the sentinels are program rootNames and
-  // never import each other, so the host is never asked to resolve or stat them.
-  const host = ts.createCompilerHost(options, true)
-  const realGetSourceFile = host.getSourceFile.bind(host)
-
-  host.getSourceFile = (fileName, languageVersion, onError, shouldCreate) => {
-    const source = sources.get(path.resolve(fileName))
-    return source === undefined
-      ? realGetSourceFile(fileName, languageVersion, onError, shouldCreate)
-      : ts.createSourceFile(
-          fileName,
-          source,
-          languageVersion,
-          true,
-          ts.ScriptKind.TS
-        )
-  }
-
-  const program = ts.createProgram([...sources.keys()], options, host)
-
-  return new Map(
-    [...sources.keys()].map(filePath => {
-      const sourceFile = program.getSourceFile(filePath)
-      if (!sourceFile) throw new Error(`sentinel not in program: ${filePath}`)
-      return [
-        filePath,
-        [
-          ...program.getSyntacticDiagnostics(sourceFile),
-          ...program.getSemanticDiagnostics(sourceFile),
-        ],
-      ]
-    })
-  )
+/** Where the tsc binary lives — workspace first, hoisted root as fallback. */
+function resolveTscBin(): string {
+  const candidates = [
+    path.join(frontendDir, 'node_modules/.bin/tsc'),
+    path.join(frontendDir, '../node_modules/.bin/tsc'),
+  ]
+  const found = candidates.find(c => fs.existsSync(c))
+  if (!found)
+    throw new Error(
+      `tsc binary not found; looked in:\n${candidates.join('\n')}`
+    )
+  return found
 }
 
-const diagnosticsFor = (name: string): readonly ts.Diagnostic[] => {
-  const found = diagnosticsByFile.get(virtualPath(name))
+let diagnosticsByFile: Map<string, readonly SentinelDiagnostic[]>
+let sentinelDir: string | undefined
+let sentinelConfig: string | undefined
+
+/**
+ * One `tsc` run over every sentinel at once — the lib/node_modules type graph
+ * is loaded once rather than per-case, which is the whole cost here.
+ *
+ * The sentinels are written into a real, uniquely-named directory under `src/`
+ * (so `../types/snapshotDate` resolves to the real module, and tsconfig's
+ * `"include": ["src"]` picks them up with no include surgery), compiled through
+ * a throwaway config that only relaxes the rules a deliberately dead file would
+ * trip, and deleted again in afterAll.
+ */
+function compileSentinels(): Map<string, readonly SentinelDiagnostic[]> {
+  sentinelDir = fs.mkdtempSync(path.join(frontendDir, 'src', '__sentinel__'))
+  sentinelConfig = path.join(
+    frontendDir,
+    `tsconfig.sentinel.${path.basename(sentinelDir)}.json`
+  )
+
+  for (const [name, source] of Object.entries(SENTINELS)) {
+    fs.writeFileSync(path.join(sentinelDir, name), source, 'utf8')
+  }
+
+  fs.writeFileSync(
+    sentinelConfig,
+    JSON.stringify({
+      extends: './tsconfig.json',
+      compilerOptions: {
+        noEmit: true,
+        skipLibCheck: true,
+        // The sentinels are deliberately un-referenced by the real program.
+        noUnusedLocals: false,
+        noUnusedParameters: false,
+      },
+    }),
+    'utf8'
+  )
+
+  // tsc exits non-zero whenever it reports an error, which is the expected
+  // outcome here — the diagnostics are the payload, so read them off either way.
+  let output: string
+  try {
+    output = execFileSync(
+      resolveTscBin(),
+      ['-p', path.basename(sentinelConfig), '--pretty', 'false'],
+      { cwd: frontendDir, encoding: 'utf8', stdio: 'pipe' }
+    )
+  } catch (err) {
+    const e = err as { stdout?: string; stderr?: string; message?: string }
+    output = e.stdout ?? ''
+    if (!output.trim()) {
+      throw new Error(
+        `tsc produced no diagnostics but failed:\n${e.stderr ?? e.message ?? ''}`,
+        { cause: err }
+      )
+    }
+  }
+
+  const byFile = new Map<string, SentinelDiagnostic[]>(
+    Object.keys(SENTINELS).map(name => [name, []])
+  )
+
+  // Continuation lines ("  Type 'string' is not assignable to …") are indented
+  // and belong to the diagnostic above them; fold them in so the elaboration
+  // naming the brand is not lost.
+  let current: { file: string; parts: string[] } | undefined
+  const flush = () => {
+    if (!current) return
+    const [head, ...rest] = current.parts
+    const code = Number(head)
+    byFile
+      .get(current.file)
+      ?.push({ code, message: rest.join(' ').replace(/\s+/g, ' ').trim() })
+    current = undefined
+  }
+
+  for (const line of output.split(/\r?\n/)) {
+    const match = DIAGNOSTIC_LINE.exec(line)
+    if (match) {
+      flush()
+      const [, file, , , code, message] = match
+      const name = path.basename(file ?? '')
+      // Diagnostics from the rest of the real program are not this test's
+      // business — only the sentinel files are asserted on.
+      if (byFile.has(name)) current = { file: name, parts: [code!, message!] }
+      continue
+    }
+    if (current && /^\s+\S/.test(line)) current.parts.push(line.trim())
+    else flush()
+  }
+  flush()
+
+  return byFile
+}
+
+const diagnosticsFor = (name: string): readonly SentinelDiagnostic[] => {
+  const found = diagnosticsByFile.get(name)
   if (!found) throw new Error(`no diagnostics captured for ${name}`)
   return found
 }
 
-const describeDiagnostics = (diagnostics: readonly ts.Diagnostic[]): string =>
-  diagnostics
-    .map(
-      d => `TS${d.code}: ${ts.flattenDiagnosticMessageText(d.messageText, ' ')}`
-    )
-    .join('\n') || '(none)'
+const describeDiagnostics = (
+  diagnostics: readonly SentinelDiagnostic[]
+): string =>
+  diagnostics.map(d => `TS${d.code}: ${d.message}`).join('\n') || '(none)'
 
 describe('SnapshotDate brand enforcement (#1323)', () => {
   beforeAll(() => {
     diagnosticsByFile = compileSentinels()
   }, 120000)
+
+  afterAll(() => {
+    if (sentinelDir) fs.rmSync(sentinelDir, { recursive: true, force: true })
+    if (sentinelConfig) fs.rmSync(sentinelConfig, { force: true })
+  })
 
   it('POSITIVE CONTROL: a minted date is accepted by all seven entry points', () => {
     const diagnostics = diagnosticsFor('positiveControl.ts')
@@ -252,10 +317,6 @@ describe('SnapshotDate brand enforcement (#1323)', () => {
     ).toBeGreaterThan(0)
 
     // Assert it is the BRAND rejecting it, not some incidental mismatch.
-    expect(
-      brandErrors
-        .map(d => ts.flattenDiagnosticMessageText(d.messageText, ' '))
-        .join('\n')
-    ).toContain('SnapshotDate')
+    expect(brandErrors.map(d => d.message).join('\n')).toContain('SnapshotDate')
   })
 })
