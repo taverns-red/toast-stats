@@ -15,9 +15,9 @@
  */
 @layer base, brand, utilities;
 
-@import "tailwindcss/theme" layer(theme);
-@import "tailwindcss/preflight" layer(base);
-@import "tailwindcss/utilities" layer(utilities);
+@import 'tailwindcss/theme' layer(theme);
+@import 'tailwindcss/preflight' layer(base);
+@import 'tailwindcss/utilities' layer(utilities);
 /* Metric-matched @font-face fallbacks for the display=swap reflow (#1373).
    Imported before the token files whose stacks name them. */
 @import './styles/tokens/font-fallbacks.css';
@@ -53,6 +53,7 @@
 @import './styles/components/club-grid.css';
 @import './styles/components/action-list.css';
 @import './styles/components/tooltip.css';
+@import './styles/components/worldwide-scoreboard.css';
 @import './styles/responsive.css';
 @import './styles/dark-mode.css';
 @import './styles/print.css';
@@ -95,7 +96,7 @@
 
   /* TM Loyal Blue (#004165) - Primary brand color */
   --color-tm-loyal-blue: #004165;
-  --color-tm-loyal-blue-100: rgba(0, 65, 101, 1.0);
+  --color-tm-loyal-blue-100: rgba(0, 65, 101, 1);
   --color-tm-loyal-blue-90: rgba(0, 65, 101, 0.9);
   --color-tm-loyal-blue-80: rgba(0, 65, 101, 0.8);
   /* #1360: 0.7 → 0.78. The only consumers of this rung are body paragraphs in
@@ -122,7 +123,7 @@
 
   /* TM True Maroon (#772432) - Secondary brand color */
   --color-tm-true-maroon: #772432;
-  --color-tm-true-maroon-100: rgba(119, 36, 50, 1.0);
+  --color-tm-true-maroon-100: rgba(119, 36, 50, 1);
   --color-tm-true-maroon-90: rgba(119, 36, 50, 0.9);
   --color-tm-true-maroon-80: rgba(119, 36, 50, 0.8);
   --color-tm-true-maroon-70: rgba(119, 36, 50, 0.7);
@@ -134,8 +135,8 @@
   --color-tm-true-maroon-10: rgba(119, 36, 50, 0.1);
 
   /* TM Cool Gray (#A9B2B1) - Background/panel color */
-  --color-tm-cool-gray: #A9B2B1;
-  --color-tm-cool-gray-100: rgba(169, 178, 177, 1.0);
+  --color-tm-cool-gray: #a9b2b1;
+  --color-tm-cool-gray-100: rgba(169, 178, 177, 1);
   --color-tm-cool-gray-90: rgba(169, 178, 177, 0.9);
   --color-tm-cool-gray-80: rgba(169, 178, 177, 0.8);
   --color-tm-cool-gray-70: rgba(169, 178, 177, 0.7);
@@ -147,8 +148,8 @@
   --color-tm-cool-gray-10: rgba(169, 178, 177, 0.1);
 
   /* TM Happy Yellow (#F2DF74) - Accent color */
-  --color-tm-happy-yellow: #F2DF74;
-  --color-tm-happy-yellow-100: rgba(242, 223, 116, 1.0);
+  --color-tm-happy-yellow: #f2df74;
+  --color-tm-happy-yellow-100: rgba(242, 223, 116, 1);
   --color-tm-happy-yellow-90: rgba(242, 223, 116, 0.9);
   --color-tm-happy-yellow-80: rgba(242, 223, 116, 0.8);
   --color-tm-happy-yellow-70: rgba(242, 223, 116, 0.7);
@@ -161,7 +162,7 @@
 
   /* TM Black (#000000) - Primary text color */
   --color-tm-black: #000000;
-  --color-tm-black-100: rgba(0, 0, 0, 1.0);
+  --color-tm-black-100: rgba(0, 0, 0, 1);
   --color-tm-black-90: rgba(0, 0, 0, 0.9);
   --color-tm-black-80: rgba(0, 0, 0, 0.8);
   --color-tm-black-70: rgba(0, 0, 0, 0.7);
@@ -173,8 +174,8 @@
   --color-tm-black-10: rgba(0, 0, 0, 0.1);
 
   /* TM White (#FFFFFF) - Background/text on dark color */
-  --color-tm-white: #FFFFFF;
-  --color-tm-white-100: rgba(255, 255, 255, 1.0);
+  --color-tm-white: #ffffff;
+  --color-tm-white-100: rgba(255, 255, 255, 1);
   --color-tm-white-90: rgba(255, 255, 255, 0.9);
   --color-tm-white-80: rgba(255, 255, 255, 0.8);
   --color-tm-white-70: rgba(255, 255, 255, 0.7);
@@ -277,8 +278,14 @@
    * ======================================== */
 
   /* Font Families */
-  --font-family-tm-headline: 'Montserrat', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  --font-family-tm-body: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-family-tm-headline:
+    'Montserrat', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-family-tm-body:
+    'Source Sans 3', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
 
   /* Font Sizes with Line Heights
    * Tailwind v4 format: --text-{name}: {size}; generates text-{name} utility
@@ -366,10 +373,10 @@
   /* Gradient Stop Colors - for custom gradient construction */
   --color-tm-loyal-blue-start: #004165;
   --color-tm-loyal-blue-end: #006094;
-  --color-tm-true-maroon-start: #3B0104;
+  --color-tm-true-maroon-start: #3b0104;
   --color-tm-true-maroon-end: #781327;
-  --color-tm-cool-gray-start: #A9B2B1;
-  --color-tm-cool-gray-end: #F5F5F5;
+  --color-tm-cool-gray-start: #a9b2b1;
+  --color-tm-cool-gray-end: #f5f5f5;
 }
 
 /* ========================================
@@ -381,33 +388,93 @@
 :root {
   /* Primary Brand Gradients (135deg diagonal) */
   --gradient-tm-loyal-blue: linear-gradient(135deg, #004165 0%, #006094 100%);
-  --gradient-tm-true-maroon: linear-gradient(135deg, #3B0104 0%, #781327 100%);
-  --gradient-tm-cool-gray: linear-gradient(135deg, #A9B2B1 0%, #F5F5F5 100%);
+  --gradient-tm-true-maroon: linear-gradient(135deg, #3b0104 0%, #781327 100%);
+  --gradient-tm-cool-gray: linear-gradient(135deg, #a9b2b1 0%, #f5f5f5 100%);
 
   /* Radial Gradient Variants */
-  --gradient-tm-loyal-blue-radial: radial-gradient(circle, #004165 0%, #006094 100%);
-  --gradient-tm-true-maroon-radial: radial-gradient(circle, #3B0104 0%, #781327 100%);
-  --gradient-tm-cool-gray-radial: radial-gradient(circle, #A9B2B1 0%, #F5F5F5 100%);
+  --gradient-tm-loyal-blue-radial: radial-gradient(
+    circle,
+    #004165 0%,
+    #006094 100%
+  );
+  --gradient-tm-true-maroon-radial: radial-gradient(
+    circle,
+    #3b0104 0%,
+    #781327 100%
+  );
+  --gradient-tm-cool-gray-radial: radial-gradient(
+    circle,
+    #a9b2b1 0%,
+    #f5f5f5 100%
+  );
 
   /* Vertical Gradient Variants (180deg) */
-  --gradient-tm-loyal-blue-vertical: linear-gradient(180deg, #004165 0%, #006094 100%);
-  --gradient-tm-true-maroon-vertical: linear-gradient(180deg, #3B0104 0%, #781327 100%);
-  --gradient-tm-cool-gray-vertical: linear-gradient(180deg, #A9B2B1 0%, #F5F5F5 100%);
+  --gradient-tm-loyal-blue-vertical: linear-gradient(
+    180deg,
+    #004165 0%,
+    #006094 100%
+  );
+  --gradient-tm-true-maroon-vertical: linear-gradient(
+    180deg,
+    #3b0104 0%,
+    #781327 100%
+  );
+  --gradient-tm-cool-gray-vertical: linear-gradient(
+    180deg,
+    #a9b2b1 0%,
+    #f5f5f5 100%
+  );
 
   /* Horizontal Gradient Variants (90deg) */
-  --gradient-tm-loyal-blue-horizontal: linear-gradient(90deg, #004165 0%, #006094 100%);
-  --gradient-tm-true-maroon-horizontal: linear-gradient(90deg, #3B0104 0%, #781327 100%);
-  --gradient-tm-cool-gray-horizontal: linear-gradient(90deg, #A9B2B1 0%, #F5F5F5 100%);
+  --gradient-tm-loyal-blue-horizontal: linear-gradient(
+    90deg,
+    #004165 0%,
+    #006094 100%
+  );
+  --gradient-tm-true-maroon-horizontal: linear-gradient(
+    90deg,
+    #3b0104 0%,
+    #781327 100%
+  );
+  --gradient-tm-cool-gray-horizontal: linear-gradient(
+    90deg,
+    #a9b2b1 0%,
+    #f5f5f5 100%
+  );
 
   /* Cool Gray Opacity Variations (20% increments per brand guidelines) */
-  --gradient-tm-cool-gray-80: linear-gradient(135deg, rgba(169, 178, 177, 0.8) 0%, rgba(245, 245, 245, 0.8) 100%);
-  --gradient-tm-cool-gray-60: linear-gradient(135deg, rgba(169, 178, 177, 0.6) 0%, rgba(245, 245, 245, 0.6) 100%);
-  --gradient-tm-cool-gray-40: linear-gradient(135deg, rgba(169, 178, 177, 0.4) 0%, rgba(245, 245, 245, 0.4) 100%);
-  --gradient-tm-cool-gray-20: linear-gradient(135deg, rgba(169, 178, 177, 0.2) 0%, rgba(245, 245, 245, 0.2) 100%);
+  --gradient-tm-cool-gray-80: linear-gradient(
+    135deg,
+    rgba(169, 178, 177, 0.8) 0%,
+    rgba(245, 245, 245, 0.8) 100%
+  );
+  --gradient-tm-cool-gray-60: linear-gradient(
+    135deg,
+    rgba(169, 178, 177, 0.6) 0%,
+    rgba(245, 245, 245, 0.6) 100%
+  );
+  --gradient-tm-cool-gray-40: linear-gradient(
+    135deg,
+    rgba(169, 178, 177, 0.4) 0%,
+    rgba(245, 245, 245, 0.4) 100%
+  );
+  --gradient-tm-cool-gray-20: linear-gradient(
+    135deg,
+    rgba(169, 178, 177, 0.2) 0%,
+    rgba(245, 245, 245, 0.2) 100%
+  );
 
   /* Overlay Gradients for Text Contrast */
-  --gradient-overlay-dark: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 100%);
-  --gradient-overlay-light: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
+  --gradient-overlay-dark: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.6) 0%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  --gradient-overlay-light: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
 }
 
 /* ========================================
@@ -561,7 +628,6 @@ body {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {
@@ -630,7 +696,7 @@ html {
   position: relative;
 }
 
-.tab-scroll-fade[data-scrollable-right="true"]::after {
+.tab-scroll-fade[data-scrollable-right='true']::after {
   content: '';
   position: absolute;
   top: 0;
@@ -666,7 +732,6 @@ html {
 
 /* Loading skeleton pulse animation */
 @keyframes skeleton-pulse {
-
   0%,
   100% {
     opacity: 1;

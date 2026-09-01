@@ -7,11 +7,25 @@ export interface ProgramYearSummaryCardsProps {
   summaries: ProgramYearSummary[]
   isLoading: boolean
   isError: boolean
+  /**
+   * How many cards the page expects to render, so the loading skeleton
+   * reserves the grid height the loaded list will occupy. Passed from the page
+   * (R3) — a presentational component must not re-derive the program year.
+   */
+  expectedCount?: number
 }
 
-/** Number of skeleton cards rendered while loading — reserves height so the
- *  real cards don't shift the page down on arrival (CLS — Lessons 79/125). */
-const SKELETON_COUNT = 3
+/**
+ * Fallback skeleton count when the page gives no expectation.
+ *
+ * This used to be a hardcoded 3 that the loaded list had long outgrown. Once
+ * the epic #1496 backfill took the archive to ten completed program years, the
+ * grid went from one skeleton row to three real rows on load and pushed
+ * everything below it down ~800px — page CLS at 1280 measured 0.210 against
+ * prod's 0.085 (#1500). Reserve one skeleton per card you will actually render
+ * (Lessons 79/107/125); the count is a prop, and this is only the floor.
+ */
+const FALLBACK_SKELETON_COUNT = 3
 
 const formatNumber = (n: number): string => n.toLocaleString('en-US')
 
@@ -40,11 +54,17 @@ const METRICS: Array<{
  */
 export const ProgramYearSummaryCards: React.FC<
   ProgramYearSummaryCardsProps
-> = ({ summaries, isLoading, isError }) => {
+> = ({ summaries, isLoading, isError, expectedCount }) => {
   if (isLoading) {
+    const skeletonCount = Math.max(
+      1,
+      expectedCount && expectedCount > 0
+        ? expectedCount
+        : FALLBACK_SKELETON_COUNT
+    )
     return (
       <div className="history-year-cards" data-testid="history-year-cards">
-        {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+        {Array.from({ length: skeletonCount }).map((_, i) => (
           <div
             key={i}
             className="history-year-card history-year-card--skeleton"

@@ -1,0 +1,327 @@
+/* Worldwide scoreboard on /history (#1500, epic #1496 Sprint 4).
+ *
+ * Colour is expressed ONLY through the redesign tokens (--ink, --ink-2,
+ * --ink-3, --surface, --surface-2, --line), which remap light↔dark together
+ * by design. Tailwind gray utilities are deliberately not used here:
+ * `dark-mode.css` intercepts several of them with `!important`, which beats a
+ * `theme-dark:` variant and leaves a half-applied palette (Lesson: dark-mode
+ * interception, 2026-08-31). Nothing in this file needs a dark override.
+ *
+ * The table is wide by construction — one column per program year, five today
+ * and ten once the 2016-17 → 2020-21 backfill lands. It scrolls inside
+ * `.wws__scroll`; the page body must never scroll horizontally at 375px.
+ */
+
+.wws {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.wws__heading {
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
+.wws__subheading {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 28px 0 6px;
+}
+
+.wws__lede,
+.wws__note,
+.wws__methodology {
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 70ch;
+  margin: 0 0 12px;
+}
+
+.wws__link {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Height-reserving slots. A section fed by a separately resolving query must
+   never render null-until-data, or everything below it jumps (Lesson 79/107).
+   These heights are matched to the loaded table's first screen. */
+.wws__reserve {
+  min-height: 620px;
+}
+
+.wws__country-reserve {
+  min-height: 320px;
+}
+
+.wws__skeleton {
+  border: 1px solid var(--line);
+  border-radius: var(--rds-radius-md);
+  background: linear-gradient(
+    var(--surface-2),
+    var(--surface-2) 40px,
+    var(--surface) 40px
+  );
+}
+
+.wws__placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: var(--rds-radius-md);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.wws__placeholder strong {
+  color: var(--ink);
+}
+
+/* ── The scroll container ─────────────────────────────────────────────── */
+
+.wws__scroll {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--rds-radius-md);
+  background: var(--surface);
+}
+
+.wws__scroll:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--rt-stats-focus);
+}
+
+/* Right-edge fade cue — "there's more →" when the table overflows, matching
+   `.club-history-scroll` (Lesson 105). Ten program-year columns overflow every
+   viewport, so the cue is always earned here. */
+.wws__scroll::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface));
+  opacity: 0.9;
+}
+
+.wws__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.wws__metric-head,
+.wws__year-head {
+  background: var(--surface);
+  border-bottom: 2px solid var(--line);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
+/* Freeze the metric column. The scroll axis here is HORIZONTAL (the container
+   grows to the table's full height, so there is no vertical scroll box to
+   stick a header row to) — and a year cell scrolled away from its row label is
+   just a number with no name, which at 375px is most of the table. Needs an
+   opaque background or the scrolling cells show through. */
+.wws__metric-head,
+.wws__metric {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+
+.wws__metric-head {
+  text-align: left;
+  min-width: 190px;
+}
+
+.wws__year-head {
+  text-align: right;
+  min-width: 104px;
+}
+
+.wws__group-row th {
+  text-align: left;
+  padding: 14px 14px 6px;
+  background: var(--surface-2);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.wws__group-title {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.wws__group-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ink-3);
+  max-width: 68ch;
+  white-space: normal;
+}
+
+.wws__row {
+  border-bottom: 1px solid var(--line-2);
+}
+
+.wws__metric {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 14px;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 190px;
+  max-width: 300px;
+}
+
+.wws__row--sub .wws__metric {
+  padding-left: 30px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.wws__metric-label {
+  display: block;
+}
+
+.wws__basis {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink-3);
+  white-space: normal;
+}
+
+.wws__cell,
+.wws__num {
+  text-align: right;
+  vertical-align: top;
+  padding: 10px 14px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* An absent value is a fact, not a blank. It is rendered in the muted ink so
+   it never reads as a measured number, but it stays above the 4.5:1 body-text
+   contrast bar in both themes (--ink-3 on --surface). */
+.wws__cell--absent .wws__cell-text {
+  color: var(--ink-3);
+  font-style: italic;
+  font-size: 0.82rem;
+  border-bottom: 1px dotted var(--ink-4);
+  cursor: help;
+}
+
+/* ── Marker legend ───────────────────────────────────────────────────── */
+
+.wws__legend {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--rds-radius-md);
+  background: var(--surface-2);
+}
+
+.wws__legend-item {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  padding: 3px 0;
+}
+
+.wws__legend-marker {
+  flex: 0 0 auto;
+  min-width: 92px;
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+/* ── Clubs by country ────────────────────────────────────────────────── */
+
+.wws__country {
+  margin-top: 8px;
+}
+
+.wws__table--country .wws__metric {
+  min-width: 160px;
+}
+
+.wws__row--unknown .wws__metric-label,
+.wws__row--unknown .wws__cell {
+  color: var(--ink-2);
+  font-style: italic;
+}
+
+.wws__row--total th,
+.wws__row--total td {
+  border-top: 2px solid var(--line);
+  font-weight: 700;
+  color: var(--ink);
+  padding: 10px 14px;
+  text-align: right;
+}
+
+.wws__row--total th {
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .wws__heading {
+    font-size: 1.2rem;
+  }
+
+  .wws__table {
+    font-size: 0.85rem;
+  }
+
+  .wws__metric,
+  .wws__metric-head {
+    min-width: 160px;
+    max-width: 220px;
+  }
+
+  .wws__legend-item {
+    flex-direction: column;
+    gap: 2px;
+  }
+}

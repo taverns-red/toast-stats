@@ -22,6 +22,20 @@ vi.mock('../../hooks/useProgramYearSummaries', () => ({
   }),
 }))
 
+// The page also mounts the worldwide scoreboard (#1500). Stub its queries so
+// this header/strip test stays synchronous; the artifact-absent state renders
+// the reserved placeholder, keeping the year strip the sole role="list".
+vi.mock('../../hooks/useGlobalHistory', () => ({
+  useGlobalHistory: () => ({ history: null, isLoading: false, isError: false }),
+  useGlobalClubsByCountry: () => ({
+    clubsByCountry: null,
+    clubsCounted: null,
+    snapshotDate: null,
+    isLoading: false,
+    isError: false,
+  }),
+}))
+
 const renderPage = () =>
   render(
     <MemoryRouter>

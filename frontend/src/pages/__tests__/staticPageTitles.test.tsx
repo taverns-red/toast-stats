@@ -20,6 +20,20 @@ vi.mock('../../hooks/useProgramYearSummaries', () => ({
   }),
 }))
 
+// The page also mounts the worldwide scoreboard (#1500). Stub its queries so
+// the scaffold assertions stay synchronous and network-free; the
+// artifact-absent state keeps the year strip the page's only role="list".
+vi.mock('../../hooks/useGlobalHistory', () => ({
+  useGlobalHistory: () => ({ history: null, isLoading: false, isError: false }),
+  useGlobalClubsByCountry: () => ({
+    clubsByCountry: null,
+    clubsCounted: null,
+    snapshotDate: null,
+    isLoading: false,
+    isError: false,
+  }),
+}))
+
 afterEach(() => cleanup())
 
 describe('static page document titles (#780)', () => {

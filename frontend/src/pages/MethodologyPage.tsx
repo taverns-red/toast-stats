@@ -45,7 +45,8 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
     num: '10',
     title: 'Program-year rule changes',
   },
-  { id: 'changelog', num: '11', title: 'Changelog' },
+  { id: 'worldwide-rollup', num: '11', title: 'Worldwide rollup' },
+  { id: 'changelog', num: '12', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -635,9 +636,144 @@ const MethodologyPage: React.FC = () => {
         </p>
       </CollapsibleSection>
 
+      {/* Worldwide rollup (#1500, epic #1496 Sprint 4). The /history
+          scoreboard links here; this section is where its bases are stated.
+          The operator ruling of 2026-08-31 is "publish our numbers with our
+          definitions stated", which only works if the definitions are
+          actually on the page — so the ruled wording below is asserted by
+          MethodologyPage.worldwideRollup.test.tsx and should not be
+          paraphrased without re-reading #1426. */}
+      <CollapsibleSection
+        id="worldwide-rollup"
+        num="11"
+        title="Worldwide rollup"
+        collapsible={isMobile}
+        open={openIds.has('worldwide-rollup')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-worldwide-rollup">
+          <p>
+            The worldwide scoreboard on{' '}
+            <Link to="/history" className="methodology-link">
+              Program Year History
+            </Link>{' '}
+            rolls every district up into one row per completed program year.
+            These are <strong>our</strong> numbers computed to{' '}
+            <strong>our</strong> stated definitions. Toastmasters International
+            publishes its own worldwide figures in the CEO Report; where ours
+            line up with those, we treat it as{' '}
+            <strong>validation, never a target</strong> — we do not fit a
+            definition to make a published number reproduce.
+          </p>
+
+          <h3>What is counted</h3>
+          <p>
+            Each program year is rolled up at its own year-end snapshot, over
+            the{' '}
+            <strong>district set that date's own rankings file lists</strong> —
+            a snapshot folder can legitimately hold districts that did not exist
+            on that date, and those are excluded. Every club is counted{' '}
+            <strong>once</strong>, on its canonical club id.
+          </p>
+          <p>
+            <strong>Undistricted clubs (district “U”) are included</strong> in
+            every membership, payment and club figure — they are real clubs with
+            real members. They are not a district, so the district count is
+            stated separately as “N + undistricted” rather than folded in. That
+            is why our district count can read one lower than the row count of
+            the underlying file.
+          </p>
+
+          <h3>Membership</h3>
+          <p>
+            Our primary membership basis is the <strong>June 30</strong> sum of
+            active members across every in-scope club. Toastmasters
+            International publishes its “total membership” on a{' '}
+            <strong>March 31</strong> basis, so we carry that figure alongside
+            in its own row and label both. Neither is ever substituted for the
+            other. A program year with no March-31 rollup on file shows a marked
+            gap, not a zero.
+          </p>
+          <p>
+            <strong>Average club size = June-30 membership ÷ paid clubs</strong>
+            , both taken at June 30. This is a ruled basis: TI's own published
+            average is not its published membership divided by its published
+            club count, so the divisor it uses differs from the one it prints.
+            We state ours rather than reverse-engineering theirs.
+          </p>
+
+          <h3>Recognition</h3>
+          <p>
+            Club tiers are summed from each year-end rankings file, where
+            “Distinguished clubs” means <em>distinguished or better</em>;
+            Select, President's and Smedley are subsets of it, and the plain
+            Distinguished rung is the remainder. District recognition is scored
+            under the ruleset of the program year the snapshot date belongs to,
+            never under current rules, and “U” is not scored because
+            undistricted clubs belong to no district.
+          </p>
+          <p>
+            <strong>
+              Smedley Distinguished did not exist before program year 2025-2026
+            </strong>
+            . Earlier years show it as not applicable. Archived files store a
+            literal 0 for those years, and echoing that would claim no club
+            reached a rung that was not on the ladder — so it is rendered as an
+            absence. It is <strong>not zero clubs</strong>.
+          </p>
+
+          <h3>New clubs — two different metrics</h3>
+          <p>
+            <strong>New clubs still active at year end</strong> is our own
+            basis: clubs chartered during the program year that still had a
+            roster row at June 30. It undercounts charters that lapsed before
+            the close, and it diverges most in a bad year, which is exactly why
+            it never carries the bare name “new clubs”.
+          </p>
+          <p>
+            <strong>New clubs (report basis)</strong> is Toastmasters' own
+            count, taken from the New Clubs report. Our pipeline only carries
+            that report from program year <strong>2026-2027</strong> onward, so
+            earlier years have no report-basis figure at all. The two rows are
+            different metrics and are never substituted for one another.
+          </p>
+
+          <h3>Education awards</h3>
+          <p>
+            Education counts <strong>raw achievement activity</strong> for the
+            year — Levels 1-5, DTM, and a published “other” bucket for award
+            codes that are neither — summed from the education reports. It is{' '}
+            <strong>not DCP credit</strong>: DCP education credit counts
+            distinct members per award tier, and member identity is dropped at
+            parse time, so the two can never be reconciled here. A year whose
+            report set is not on file is marked as such and never zero-filled.
+          </p>
+
+          <h3>Clubs by country</h3>
+          <p>
+            Published from the <strong>latest snapshot only</strong>, never as a
+            five-year series: club-to-country enrichment thins out sharply on
+            historical year-end files, so a country trend would describe our own
+            coverage rather than Toastmasters. Clubs with no country match are
+            published as an explicit <strong>Unknown</strong> row, so every
+            share is a share of a stated whole. Country is a club-level fact; we
+            deliberately publish no members-by-country or awards-by-country,
+            which would be proxies rather than measurements.
+          </p>
+
+          <p className="methodology-source">
+            Sources: <code>v1/global-history.json</code> (one row per completed
+            program year) and{' '}
+            <code>snapshots/&#123;date&#125;/global-totals.json</code> (one
+            date's worldwide rollup). Both are public artifacts on the same CDN
+            as every other file this site reads.
+          </p>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="11"
+        num="12"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}
