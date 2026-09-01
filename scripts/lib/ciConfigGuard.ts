@@ -13,6 +13,9 @@
  *   - Node is pinned ONCE: every `setup-node` reads `node-version-file:`,
  *     never a literal `node-version:` ('22' or an env expression) (AC4).
  *   - Every workspace lint script carries a `--max-warnings` cap (AC5).
+ *   - The path filters `ci.yml` and `docs.yml` are declared to mirror actually
+ *     do, and the `CI Gate` aggregator carries no path filter of its own so it
+ *     can never be the thing that goes missing (#1216).
  */
 
 /** A location in a workflow file (1-based line + trimmed text). */
@@ -64,4 +67,56 @@ export function parseLintMaxWarnings(lintScript: string): number | null {
  */
 export function nvmrcMajor(nvmrcContent: string): string {
   return nvmrcContent.trim().replace(/^v/, '').split('.')[0]
+}
+
+/**
+ * Every `paths:` / `paths-ignore:` block in a workflow, as one glob array per
+ * occurrence (a workflow declares them once per trigger, so `ci.yml` yields
+ * two identical arrays — for `push` and `pull_request`).
+ *
+ * Line-scanned rather than YAML-parsed, matching the rest of this module and
+ * avoiding a new runtime dependency. A block is the key line followed by
+ * `- <glob>` items at deeper indentation; comments and blank lines inside the
+ * block are skipped, and the first non-item, non-comment line ends it.
+ */
+export function findPathFilterGlobs(
+  yamlSource: string,
+  key: 'paths' | 'paths-ignore'
+): string[][] {
+  const lines = yamlSource.split('\n')
+  const blocks: string[][] = []
+  const keyRe = new RegExp(`^(\\s*)${key}:\\s*(#.*)?$`)
+
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(keyRe)
+    if (!m) continue
+    const keyIndent = m[1].length
+    const globs: string[] = []
+    for (let j = i + 1; j < lines.length; j++) {
+      const line = lines[j]
+      if (line.trim() === '' || line.trim().startsWith('#')) continue
+      const item = line.match(/^(\s*)-\s+(.*)$/)
+      if (!item || item[1].length <= keyIndent) break
+      globs.push(item[2].trim().replace(/^['"]|['"]$/g, ''))
+    }
+    blocks.push(globs)
+  }
+  return blocks
+}
+
+/**
+ * The `name:` of every job in a workflow — the strings GitHub reports as check
+ * run names, and therefore the only strings a ruleset's required-check
+ * contexts or the `CI Gate` aggregator may reference.
+ *
+ * Job-level `name:` sits at exactly four spaces in this repo's workflows; a
+ * step name is `      - name:` (six spaces and a dash), so it cannot match.
+ */
+export function findJobNames(yamlSource: string): string[] {
+  const out: string[] = []
+  for (const line of yamlSource.split('\n')) {
+    const m = line.match(/^ {4}name:\s*(.+?)\s*$/)
+    if (m) out.push(m[1].replace(/^['"]|['"]$/g, ''))
+  }
+  return out
 }
