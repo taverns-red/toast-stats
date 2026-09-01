@@ -3,6 +3,7 @@
 
 ## lessons (manifest-pinned + session-judged)
 - `an-aggregate-published-from-a-shared-step-must-degrade-per-row-not-per-step.md` — An aggregate assembled in a step shared with other artifacts must omit the row it cannot build, not fail the step — otherwise one un-backfilled input takes unrelated manifests down with it  (2026-09-01)
+- `the-cls-victim-is-not-the-culprit-attribute-the-shift-to-its-source-node-against-prod.md` — A new section can carry a big CLS number without causing any of it — attribute each layout-shift entry to its source node and measure the same page on prod before touching your own code  (2026-09-01)
 - `a-dated-write-must-take-its-entity-set-from-that-date.md` — A write dated in the past must take its entity set from that date's own source — a successful fetch is not evidence the entity existed then  (2026-08-31)
 - `a-defaulted-field-is-only-detectable-at-the-population-level-not-the-row.md` — A field defaulted to zero because its source was missing is indistinguishable from a real zero at the row level; the tell is at the population level  (2026-08-31)
 - `a-dep-bump-that-reds-a-test-may-be-fixing-a-false-positive-you-pinned.md` — A dependency bump that reds a test may have fixed a false positive the test had pinned — diff the reported violations, don't pin or ignore the dep  (2026-08-31)
