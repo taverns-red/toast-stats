@@ -104,14 +104,20 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
     [history]
   )
 
-  const countryRows = useMemo(
+  // Rows and their stated whole travel together: a country share is only
+  // meaningful against the club count it was taken from, so neither renders
+  // without the other and the footer never has to invent a placeholder total.
+  const countryView = useMemo(
     () =>
       clubsByCountry && clubsCounted !== null
-        ? buildCountryRows(
-            clubsByCountry.countries,
-            clubsByCountry.unknown,
-            clubsCounted
-          )
+        ? {
+            rows: buildCountryRows(
+              clubsByCountry.countries,
+              clubsByCountry.unknown,
+              clubsCounted
+            ),
+            clubsCounted,
+          }
         : null,
     [clubsByCountry, clubsCounted]
   )
@@ -296,7 +302,7 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
             />
           )}
 
-          {!countryLoading && (countryError || !countryRows) && (
+          {!countryLoading && (countryError || !countryView) && (
             <div
               className="wws__country-reserve wws__placeholder"
               data-testid="wws-country-placeholder"
@@ -307,7 +313,7 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
             </div>
           )}
 
-          {!countryLoading && !countryError && countryRows && (
+          {!countryLoading && !countryError && countryView && (
             <div
               className="wws__scroll wws__country-reserve"
               role="region"
@@ -331,7 +337,7 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {countryRows.map(row => (
+                  {countryView.rows.map(row => (
                     <tr
                       key={row.key}
                       data-testid={`wws-country-row-${row.key}`}
@@ -361,7 +367,7 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
                       className="wws__cell wws__num"
                       data-testid="wws-country-total"
                     >
-                      {clubsCounted === null ? '—' : NUM.format(clubsCounted)}
+                      {NUM.format(countryView.clubsCounted)}
                     </td>
                     <td className="wws__cell wws__num">100%</td>
                   </tr>
