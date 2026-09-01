@@ -34,7 +34,10 @@ import {
   getProgramYearStartYear,
   programYearForDate,
 } from './AnalyticsUtils.js'
-import { normalizeClubId } from '@taverns-red/shared-contracts'
+import {
+  normalizeClubId,
+  spansDistrictReformation,
+} from '@taverns-red/shared-contracts'
 
 function aggregate(from: number, to: number): AggregateDelta {
   return { from, to, delta: to - from }
@@ -309,15 +312,52 @@ function rosterLabel(verb: string, club: ClubStatisticsFile): string {
  *      July 1 — a within-year pair can never be one, however large its churn),
  *   2. the pair is TIGHT around that boundary (a year-wide range accumulates
  *      ordinary charters and closures that are not a realignment),
- *   3. the roster exchange is REFORMATION-SIZED, both absolutely and relative
- *      to the district — the July renewal deadline drops a handful of clubs
- *      off every roster and that must not read as a boundary change.
+ *   3. the roster exchange is realignment-sized — the July renewal deadline
+ *      drops a handful of clubs off every roster and that must not read as a
+ *      boundary change. HOW BIG "realignment-sized" is depends on whether a
+ *      reformation is KNOWN to have happened on that boundary (see below).
+ *
+ * ── The size test, and why it has two settings (#1470) ─────────────────────
+ *
+ * A pure ratio cannot see a small district's real realignment. Measured across
+ * the live CDN's 2026-06-30 → first-July pair, "≥8 clubs moved AND ≥20% of the
+ * roster" fired for only 19 of the 94 districts holding data on both sides.
+ * District 03 took six clubs from district 05 — a district with no July
+ * snapshot at all, because it was dissolved — and still read "Clubs that
+ * joined": 7 moved, 5% of the roster.
+ *
+ * The fix is not a lower ratio. It is that on a boundary where a reformation
+ * is a KNOWN FACT (`spansDistrictReformation`, #1442), magnitude is not the
+ * evidence that a realignment happened — the boundary is. Size is then only
+ * needed to separate a transfer from the handful of clubs that appear or
+ * vanish from an export for unrelated reasons, so the test relaxes to a small
+ * absolute floor with no ratio at all.
+ *
+ * That floor is calibrated against what an ORDINARY July rollover looks like,
+ * measured on three non-reformation boundaries (2023/2024/2025-06-30 →
+ * 07-31 — 386 district observations): 1 non-closure move is background in
+ * ~25% of districts, 2 in ~9%, 3 in ~4%, and only 2 of the 386 reached 5.
+ * A floor of 5 therefore sits above essentially all ordinary churn while
+ * clearing the motivating case with margin. It takes the reformation-boundary
+ * notice from 19 of 94 districts to 26 — every added district has at least 5
+ * clubs it neither chartered nor closed.
+ *
+ * Away from a known reformation the original ≥8-and-≥20% test is unchanged, so
+ * an ordinary program-year rollover cannot start claiming a realignment: only
+ * an exchange far larger than any measured background still fires there.
  */
 
 /** Minimum clubs present in only one snapshot before the case is considered. */
 const DISCONTINUITY_MIN_MOVED_CLUBS = 8
 /** …and as a share of the smaller roster (a small district moves fewer). */
 const DISCONTINUITY_MIN_MOVED_RATIO = 0.2
+/**
+ * Floor that replaces both of the above when the pair straddles a boundary a
+ * reformation is KNOWN to have taken effect on. Above the measured background
+ * of an ordinary July rollover; no ratio, because a small district's
+ * realignment is small by definition (#1470).
+ */
+const REFORMATION_MIN_MOVED_CLUBS = 5
 /** Widest pair still read as "around" the boundary (May → August). */
 const DISCONTINUITY_MAX_WINDOW_DAYS = 120
 
@@ -332,11 +372,13 @@ interface DiscontinuityInput {
 }
 
 /**
- * SEAM (#1442) — the single predicate deciding "these two dates straddle a
- * district-composition discontinuity". #1442 owns the shared discontinuity
- * helper for the YoY sites; when it lands, this body becomes a call into it
- * (or this function becomes an import alias) and nothing else in this file
- * changes. Keep the decision here, and only here.
+ * SEAM — the single predicate deciding "these two dates straddle a
+ * district-composition discontinuity". Keep the decision here, and only here.
+ *
+ * The known-boundary half of it belongs to #1442's shared module and is read
+ * from there (`spansDistrictReformation`), never re-derived: when TI reforms
+ * the map again, adding that date to `districtReformation.ts` moves this gate
+ * and the year-over-year gates together, in one edit.
  */
 function detectRosterDiscontinuity(
   input: DiscontinuityInput
@@ -358,9 +400,18 @@ function detectRosterDiscontinuity(
   }
 
   const moved = movedInCount + movedOutCount
-  if (moved < DISCONTINUITY_MIN_MOVED_CLUBS) return undefined
-  const baseline = Math.max(1, Math.min(fromClubCount, toClubCount))
-  if (moved / baseline < DISCONTINUITY_MIN_MOVED_RATIO) return undefined
+
+  // On a boundary a reformation is KNOWN to have taken effect on, the
+  // boundary itself is the evidence and size only has to clear ordinary
+  // export churn (#1470). Everywhere else, magnitude IS the evidence, so both
+  // of the #1443 thresholds still have to be cleared.
+  if (spansDistrictReformation(fromDate, toDate)) {
+    if (moved < REFORMATION_MIN_MOVED_CLUBS) return undefined
+  } else {
+    if (moved < DISCONTINUITY_MIN_MOVED_CLUBS) return undefined
+    const baseline = Math.max(1, Math.min(fromClubCount, toClubCount))
+    if (moved / baseline < DISCONTINUITY_MIN_MOVED_RATIO) return undefined
+  }
 
   return {
     kind: 'program-year-boundary',
