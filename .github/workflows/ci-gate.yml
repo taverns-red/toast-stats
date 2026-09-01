@@ -1,0 +1,85 @@
+name: CI Gate
+
+# The SINGLE required status check on `main` (#1216).
+#
+# Why an aggregator instead of just requiring `Test Suite`:
+#   ci.yml is path-filtered (`paths-ignore:` markdown/tasks/docs/...) and
+#   docs.yml is its mirror image. A required check that can be skipped by its
+#   own path filter sits "Expected" forever on every PR outside those paths --
+#   requiring `Test Suite` deadlocks every docs-only PR, and requiring
+#   `Docs Gate` deadlocks every code PR. So this workflow carries NO path
+#   filter at all (asserted by a drift guard in scripts/lib/__tests__/
+#   ciGate.test.ts) and DECIDES rather than being skipped.
+#
+# What it decides:
+#   It derives the EXPECTED check names from the PR's own changed files, using
+#   the same classifier the git hooks use (scripts/lib/changedFilesGate.ts),
+#   then requires each of those to be present AND successful. Absence is a
+#   failure. That is the point: on 2026-08-31 PR #1484 registered zero
+#   check-suites -- no workflow ever scheduled -- and still reported
+#   mergeState CLEAN. A gate that only inspects the checks that are present
+#   cannot distinguish "all passed" from "none ran".
+#
+#   legitimately skipped  -> not in the expected set -> absence is fine
+#   never scheduled       -> in the expected set, absent -> FAIL
+#   present but skipped   -> in the expected set, conclusion != success -> FAIL
+
+# `pull_request` only, and deliberately no `merge_group:` -- no merge queue is
+# enabled on this repo, and the script reads github.event.pull_request.*, which
+# a merge_group event does not carry. Enabling a merge queue later means
+# teaching scripts/ci-gate.ts to resolve the PR from the merge-group ref first.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  checks: read
+  pull-requests: read
+
+concurrency:
+  # Supersede an in-flight gate when the PR is pushed again. The superseded run
+  # reports `cancelled`, which is not `success`, so the ruleset keeps blocking
+  # until the newer run reports green -- cancelling never opens the gate.
+  group: ci-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    # This string is the required-check context in .github/rulesets/main.json.
+    # Renaming it silently un-protects `main` (the ruleset would require a
+    # context nothing reports -- which blocks, not opens -- so the failure is
+    # loud, but fix both together). Guarded by ciGate.test.ts.
+    name: CI Gate
+    runs-on: ubuntu-latest
+    # The poll must outlast the slowest real gate (Test Suite ~15 min, then
+    # Build Applications) plus queue time, with headroom. The script's own
+    # deadline (below) fires first and produces a readable verdict; this is
+    # only the backstop.
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      # tsx is fetched standalone rather than via `npm ci` (~1 package vs the
+      # full monorepo), the same trick docs.yml uses for prettier. It keeps the
+      # gate's own liveness independent of a monorepo install -- which is
+      # itself one of the things being gated. The range is read from
+      # package.json so it can never drift from the pinned dev dependency.
+      - name: Wait for the required checks and decide (#1216)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GATE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GATE_DEADLINE_MINUTES: '40'
+          GATE_POLL_SECONDS: '20'
+        run: |
+          version="$(node -p "require('./package.json').devDependencies.tsx")"
+          echo "Using tsx@${version}" >&2
+          npx --yes "tsx@${version}" scripts/ci-gate.ts
