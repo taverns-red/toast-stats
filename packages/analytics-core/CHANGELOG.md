@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.11.0...analytics-core-v1.11.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* **pipeline:** an uncollected Susp column is unknown, not zero — global-history's eight phantom zeros ([#1514](https://github.com/taverns-red/toast-stats/issues/1514)) ([#1515](https://github.com/taverns-red/toast-stats/issues/1515)) ([1273ca3](https://github.com/taverns-red/toast-stats/commit/1273ca3f890ce82f372daf4d1eb38fe674a96756))
+
 ## [1.11.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.10.0...analytics-core-v1.11.0) (2026-09-01)
 
 

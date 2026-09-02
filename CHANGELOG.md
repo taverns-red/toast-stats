@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.38.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.38.0...toast-stats-v2.38.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* **pipeline:** an uncollected Susp column is unknown, not zero — global-history's eight phantom zeros ([#1514](https://github.com/taverns-red/toast-stats/issues/1514)) ([#1515](https://github.com/taverns-red/toast-stats/issues/1515)) ([1273ca3](https://github.com/taverns-red/toast-stats/commit/1273ca3f890ce82f372daf4d1eb38fe674a96756))
+* **ui:** lift KPI tier thresholds off the bullet bar into a flow legend ([#1517](https://github.com/taverns-red/toast-stats/issues/1517)) ([#1518](https://github.com/taverns-red/toast-stats/issues/1518)) ([8786e9e](https://github.com/taverns-red/toast-stats/commit/8786e9e842b3672a7cf5f55f1735d93129fa32b6))
+
 ## [2.38.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.37.0...toast-stats-v2.38.0) (2026-09-01)
 
 
