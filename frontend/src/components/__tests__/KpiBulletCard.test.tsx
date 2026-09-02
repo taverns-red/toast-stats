@@ -1,5 +1,12 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import { KpiBulletCard } from '../KpiBulletCard'
@@ -155,7 +162,7 @@ describe('KpiBulletCard', () => {
       expect(distinguishedTick.parentElement).toBe(bar)
     })
 
-    it('renders four tier ticks with short labels D, S, P, Sm', () => {
+    it('renders four tier readouts with short labels D, S, P, Sm', () => {
       renderWithRouter(
         <KpiBulletCard
           title="Paid Clubs"
@@ -164,20 +171,22 @@ describe('KpiBulletCard', () => {
           rankings={standardRankings}
         />
       )
-      const bar = screen.getByRole('progressbar')
+      const legend = screen.getByTestId('tier-legend')
       expect(
-        within(bar).getByTestId('tier-tick-distinguished')
+        within(legend).getByTestId('tier-legend-distinguished')
       ).toHaveTextContent('D')
-      expect(within(bar).getByTestId('tier-tick-select')).toHaveTextContent('S')
-      expect(within(bar).getByTestId('tier-tick-presidents')).toHaveTextContent(
-        'P'
-      )
-      expect(within(bar).getByTestId('tier-tick-smedley')).toHaveTextContent(
-        'Sm'
-      )
+      expect(
+        within(legend).getByTestId('tier-legend-select')
+      ).toHaveTextContent('S')
+      expect(
+        within(legend).getByTestId('tier-legend-presidents')
+      ).toHaveTextContent('P')
+      expect(
+        within(legend).getByTestId('tier-legend-smedley')
+      ).toHaveTextContent('Sm')
     })
 
-    it('renders each tier threshold value next to its tick', () => {
+    it('renders each tier threshold value in its tier readout', () => {
       renderWithRouter(
         <KpiBulletCard
           title="Paid Clubs"
@@ -186,19 +195,19 @@ describe('KpiBulletCard', () => {
           rankings={standardRankings}
         />
       )
-      const bar = screen.getByRole('progressbar')
+      const legend = screen.getByTestId('tier-legend')
       expect(
-        within(bar).getByTestId('tier-tick-distinguished')
+        within(legend).getByTestId('tier-legend-distinguished')
       ).toHaveTextContent('158')
-      expect(within(bar).getByTestId('tier-tick-select')).toHaveTextContent(
-        '161'
-      )
-      expect(within(bar).getByTestId('tier-tick-presidents')).toHaveTextContent(
-        '164'
-      )
-      expect(within(bar).getByTestId('tier-tick-smedley')).toHaveTextContent(
-        '169'
-      )
+      expect(
+        within(legend).getByTestId('tier-legend-select')
+      ).toHaveTextContent('161')
+      expect(
+        within(legend).getByTestId('tier-legend-presidents')
+      ).toHaveTextContent('164')
+      expect(
+        within(legend).getByTestId('tier-legend-smedley')
+      ).toHaveTextContent('169')
     })
 
     it('positions the marker on a zoom-scale focused on the tier band', () => {
@@ -347,6 +356,142 @@ describe('KpiBulletCard', () => {
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
       // Fallback message lives in a testable element
       expect(screen.getByTestId('targets-unavailable')).toBeInTheDocument()
+    })
+  })
+
+  /* #1517 — the tier scale was unreadable in every district: `DSPSm` and
+     overlapping values under the bar.
+     The geometric proof lives in `e2e/kpi-tier-labels.smoke.ts`, which
+     measures getBoundingClientRect() in a real engine — JSDOM has no layout,
+     so nothing here can see the pixels. What these tests pin is the STRUCTURAL
+     invariant the fix rests on, computed from live D61 numbers: the tier
+     positions are demonstrably too crowded to carry text, therefore no text
+     may be positioned by them. That is falsifiable in JSDOM and it is what
+     stops the layout from regressing into per-tick absolute stacks again. */
+  describe('tier scale layout (#1517)', () => {
+    // D61 Membership Payments, live snapshot 2026-08-31 (CDN
+    // snapshots/2026-08-31/analytics/district_61_performance-targets.json).
+    // The reported card: #22 of 94, 23rd percentile, current 2,274.
+    const d61Payments: RecognitionTargets = {
+      distinguished: 5945,
+      select: 6063,
+      presidents: 6181,
+      smedley: 6357,
+    }
+    const D61_PAYMENTS_CURRENT = 2274
+
+    const tickPercent = (key: string): number => {
+      const tick = screen.getByTestId(`tier-tick-${key}`)
+      return Number.parseFloat(tick.style.left)
+    }
+
+    const renderD61Payments = () =>
+      renderWithRouter(
+        <KpiBulletCard
+          title="Membership Payments"
+          current={D61_PAYMENTS_CURRENT}
+          targets={d61Payments}
+          rankings={standardRankings}
+        />
+      )
+
+    it('leaves the four tiers crowded into a sliver of the bar — the premise', () => {
+      // Not a bug to fix by widening: #558's zoom scale must also reach down
+      // to `current`, and a district far below Distinguished drags minScale
+      // to itself. D→Sm spans ~9.4% of the bar, which on the 2-column mobile
+      // card grid is ~12px for four ~30px labels. This test exists so the
+      // premise of the fix is asserted, not assumed.
+      renderD61Payments()
+      const span = tickPercent('smedley') - tickPercent('distinguished')
+      expect(span).toBeLessThan(10)
+      expect(span).toBeGreaterThan(0)
+    })
+
+    it('positions no text on that crowded scale', () => {
+      // The defect in one sentence: text was centred on a coordinate with no
+      // width budget. Every element the bar positions by percentage must now
+      // be a bare mark.
+      renderD61Payments()
+      const bar = screen.getByRole('progressbar')
+      const positioned = Array.from(
+        bar.querySelectorAll<HTMLElement>('[style*="left"]')
+      ).filter(el => el.dataset['testid'] !== 'current-marker')
+      expect(positioned.length).toBeGreaterThan(0)
+      for (const el of positioned) {
+        expect(
+          el.textContent?.trim(),
+          `${el.dataset['testid'] ?? el.className} carries text on the tier scale`
+        ).toBe('')
+      }
+    })
+
+    it('lays the tier readouts out in normal flow, outside the bar', () => {
+      // Flow layout is what makes overlap impossible by construction at every
+      // width and for every data shape — no width budget to tune, no scale to
+      // re-zoom. Anything absolutely positioned in here reopens the bug.
+      renderD61Payments()
+      const legend = screen.getByTestId('tier-legend')
+      expect(screen.getByRole('progressbar').contains(legend)).toBe(false)
+      expect(legend.querySelectorAll('[style*="left"]')).toHaveLength(0)
+      expect(legend.querySelectorAll('[style*="translateX"]')).toHaveLength(0)
+      expect(legend.className).toContain('flex-wrap')
+    })
+
+    it('keeps every threshold value visible without interaction', () => {
+      renderD61Payments()
+      const legend = screen.getByTestId('tier-legend')
+      for (const value of ['5,945', '6,063', '6,181', '6,357']) {
+        expect(legend).toHaveTextContent(value)
+      }
+    })
+
+    it('names each tier in full for assistive tech, with no hover required', () => {
+      renderD61Payments()
+      const smedley = screen.getByTestId('tier-legend-smedley')
+      // `Sm` is aria-hidden; the full name is in the accessible text.
+      expect(smedley).toHaveTextContent('Smedley Distinguished')
+    })
+
+    it('reaches the full tier label and value by keyboard', async () => {
+      renderD61Payments()
+      const trigger = within(
+        screen.getByTestId('tier-legend-select')
+      ).getByTestId('tier-readout-select')
+      expect(trigger).toHaveAttribute('tabindex', '0')
+      fireEvent.focus(trigger)
+      await waitFor(() => {
+        expect(screen.getByRole('tooltip')).toHaveTextContent(
+          /Select Distinguished — 6,063/
+        )
+      })
+    })
+
+    it('renders the same flow legend when every tier is achieved', () => {
+      // D122 at the close of PY 2025-26 — paid clubs over Smedley, so
+      // allAchieved collapses maxScale onto current and the marker pins to
+      // 100%. The tier ticks bunch at the far left; the readouts must not.
+      renderWithRouter(
+        <KpiBulletCard
+          title="Paid Clubs"
+          current={51}
+          targets={{
+            distinguished: 47,
+            select: 48,
+            presidents: 49,
+            smedley: 50,
+          }}
+          rankings={standardRankings}
+        />
+      )
+      expect(screen.getByTestId('current-marker')).toHaveAttribute(
+        'data-all-achieved',
+        'true'
+      )
+      const legend = screen.getByTestId('tier-legend')
+      for (const value of ['47', '48', '49', '50']) {
+        expect(legend).toHaveTextContent(value)
+      }
+      expect(legend.querySelectorAll('[style*="left"]')).toHaveLength(0)
     })
   })
 
