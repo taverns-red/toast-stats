@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-scale-cannot-buy-room-for-labels-only-flow-layout-can.md` — A scale can't buy room for labels — only flow layout can  (2026-09-02)
 - `a-merge-gate-must-derive-its-expectation-from-the-diff.md` — A gate that only inspects the checks that are present cannot tell "all passed" from "none ran" — derive the expected set from the diff  (2026-09-01)
 - `an-aggregate-published-from-a-shared-step-must-degrade-per-row-not-per-step.md` — An aggregate assembled in a step shared with other artifacts must omit the row it cannot build, not fail the step — otherwise one un-backfilled input takes unrelated manifests down with it  (2026-09-01)
 - `gcloud-storage-rejects-the-bundled-short-flags-gsutil-accepted.md` — '`gcloud storage cp -rZ` exits 2 — gcloud has no short-flag bundling, so a gsutil rewrite must split every combined flag'  (2026-09-01)
