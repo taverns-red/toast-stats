@@ -79,3 +79,8 @@ nothing was lost.
 - `frontend/e2e/kpi-tier-labels.smoke.ts` — the geometric guard
 - Lesson 65 (#558) — the zoom scale, whose "tiers spread across the rest
   of the bar" prediction this corrects
+- `jsdom-style-assertions-do-not-catch-positioning-bugs.md` (#559) — the
+  same component, the same blind spot one layer up: JSDOM confirmed the
+  inline `left` was right while the browser resolved it against the wrong
+  containing block. That lesson said "audit the live site"; this one says
+  what to assert there, and puts it in a test
