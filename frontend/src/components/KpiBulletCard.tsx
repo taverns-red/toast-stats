@@ -84,75 +84,93 @@ const BulletBar: React.FC<BulletBarProps> = ({
   const tiers: TierTick[] = TIERS.map(t => ({ ...t, value: targets[t.key] }))
 
   return (
-    <div
-      className="relative mt-8 pb-12"
-      role="progressbar"
-      aria-valuenow={current}
-      aria-valuemin={0}
-      aria-valuemax={targets.smedley}
-      aria-label={
-        ariaLabel ??
-        `${title} — current ${current.toLocaleString()} of ${targets.smedley.toLocaleString()} (Smedley tier)`
-      }
-    >
+    <>
       <div
-        data-testid="current-marker"
-        data-all-achieved={allAchieved ? 'true' : 'false'}
-        className="absolute -top-7 flex flex-col items-center"
-        style={{ left: formatPct(markerPct), transform: 'translateX(-50%)' }}
+        className="relative mt-8 pb-5"
+        role="progressbar"
+        aria-valuenow={current}
+        aria-valuemin={0}
+        aria-valuemax={targets.smedley}
+        aria-label={
+          ariaLabel ??
+          `${title} — current ${current.toLocaleString()} of ${targets.smedley.toLocaleString()} (Smedley tier)`
+        }
       >
-        <span className="text-xs font-semibold leading-none text-gray-900">
-          {current.toLocaleString()}
-        </span>
-        <span
-          aria-hidden="true"
-          className="text-xs leading-none text-tm-loyal-blue"
-        >
-          ▼
-        </span>
-      </div>
-
-      <div className="relative h-2 rounded-full bg-gray-200">
         <div
-          className="absolute inset-y-0 left-0 rounded-full bg-tm-loyal-blue"
-          style={{ width: formatPct(markerPct) }}
-        />
-      </div>
+          data-testid="current-marker"
+          data-all-achieved={allAchieved ? 'true' : 'false'}
+          className="absolute -top-7 flex flex-col items-center"
+          style={{ left: formatPct(markerPct), transform: 'translateX(-50%)' }}
+        >
+          <span className="text-xs font-semibold leading-none text-gray-900">
+            {current.toLocaleString()}
+          </span>
+          <span
+            aria-hidden="true"
+            className="text-xs leading-none text-tm-loyal-blue"
+          >
+            ▼
+          </span>
+        </div>
 
-      {tiers.map(t => {
-        const pos = positionAt(t.value)
-        const achieved = current >= t.value
-        // Position the outer wrapper, NOT the Tooltip's child. Tooltip
-        // wraps its child in `relative inline-block`, which would
-        // otherwise become the absolute-positioning context and
-        // collapse all four ticks to ~left:0 of zero-width boxes.
-        return (
+        <div className="relative h-2 rounded-full bg-gray-200">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-tm-loyal-blue"
+            style={{ width: formatPct(markerPct) }}
+          />
+        </div>
+
+        {/* Bare marks. The bar positions a tier by its value, and on a scale
+          that also has to reach down to `current` the four tiers can land
+          inside a few percent of each other — 9.4% for D61's payments,
+          ~12px on the 2-column mobile card grid. That is enough room for a
+          1px rule and for nothing else, so no text rides these coordinates
+          (#1517). Kept as a direct child of the bar so the % offset resolves
+          in the bar's coordinate space, not a Tooltip wrapper's (#559). */}
+        {tiers.map(t => (
           <div
             key={t.key}
             data-testid={`tier-tick-${t.key}`}
-            className="absolute top-3"
-            style={{ left: formatPct(pos), transform: 'translateX(-50%)' }}
-          >
-            <Tooltip
-              content={`${t.fullLabel} — ${t.value.toLocaleString()} (${title.toLowerCase()})`}
-            >
-              <div className="flex flex-col items-center text-xs">
-                <div
-                  aria-hidden="true"
-                  className={`h-2 w-px ${
-                    achieved ? 'bg-tm-loyal-blue' : 'bg-gray-400'
-                  }`}
-                />
-                <div className="mt-1 font-medium text-gray-700">
-                  {t.shortLabel}
-                </div>
-                <div className="text-gray-500">{t.value.toLocaleString()}</div>
-              </div>
-            </Tooltip>
-          </div>
-        )
-      })}
-    </div>
+            aria-hidden="true"
+            className={`absolute top-3 h-2 w-px ${
+              current >= t.value ? 'bg-tm-loyal-blue' : 'bg-gray-400'
+            }`}
+            style={{
+              left: formatPct(positionAt(t.value)),
+              transform: 'translateX(-50%)',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* The thresholds themselves, in normal flow. Flex + wrap means the
+          browser guarantees the separation — there is no width budget to
+          tune and no scale to re-zoom, so this holds at every viewport for
+          every district, including one that has already passed Smedley.
+
+          No tooltip and no focus stop here, deliberately. The old tick
+          Tooltip carried the full tier name and value, but it hung off a 1px
+          box that was unhittable by touch and — with no focusable child —
+          unreachable by keyboard, so the value was hover-only in practice.
+          Printing the value in the flow and the full name in an sr-only span
+          makes both unconditional: no hover, no focus, no interaction. A
+          focusable readout would also mint four sub-44px tap targets per
+          card, which `e2e/touch-targets.smoke.ts` rightly reds. */}
+      <ul
+        data-testid="tier-legend"
+        className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs leading-tight"
+      >
+        {tiers.map(t => (
+          <li key={t.key} data-testid={`tier-legend-${t.key}`}>
+            <span aria-hidden="true" className="font-medium text-gray-700">
+              {t.shortLabel}
+            </span>
+            <span className="sr-only">{t.fullLabel}</span>{' '}
+            <span className="text-gray-500">{t.value.toLocaleString()}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
 
