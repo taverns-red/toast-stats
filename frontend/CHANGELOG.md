@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.21.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.21.0...frontend-v3.21.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* **ui:** lift KPI tier thresholds off the bullet bar into a flow legend ([#1517](https://github.com/taverns-red/toast-stats/issues/1517)) ([#1518](https://github.com/taverns-red/toast-stats/issues/1518)) ([8786e9e](https://github.com/taverns-red/toast-stats/commit/8786e9e842b3672a7cf5f55f1735d93129fa32b6))
+
 ## [3.21.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.20.0...frontend-v3.21.0) (2026-09-01)
 
 
