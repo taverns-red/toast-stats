@@ -50,8 +50,11 @@ const VIEWPORTS = [
 const THEMES = ['light', 'dark'] as const
 
 const KPI_CARD = '[data-testid="kpi-bullet-card"]'
-/** Matches the tick marks AND any tier readout, on either side of the fix. */
-const TIER_EL = '[data-testid^="tier-"]'
+/* Matches the per-tier elements on either side of the fix: the four
+   `tier-tick-<key>` marks the bar positions, and the four `tier-legend-<key>`
+   readouts. Deliberately NOT `[data-testid^="tier-"]`, which also catches the
+   `tier-legend` container and turns "four readouts" into five. */
+const TIER_EL = '[data-testid^="tier-tick-"], [data-testid^="tier-legend-"]'
 
 /** Cards carrying a bullet bar: Paid Clubs, Membership Payments, Dist. Clubs. */
 const BULLET_CARDS = 3
