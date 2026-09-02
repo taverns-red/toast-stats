@@ -1,12 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import { KpiBulletCard } from '../KpiBulletCard'
@@ -452,18 +445,20 @@ describe('KpiBulletCard', () => {
       expect(smedley).toHaveTextContent('Smedley Distinguished')
     })
 
-    it('reaches the full tier label and value by keyboard', async () => {
+    it('needs no hover, focus or pointer to reach a threshold', () => {
+      // The old ticks hung a Tooltip off a 1px box with no focusable child:
+      // unhittable by touch, unreachable by keyboard, so the value was
+      // hover-only. Flow text is reachable by every input method at once.
+      // A focusable readout would be a REGRESSION here, not an improvement —
+      // four sub-44px tap targets per card, which e2e/touch-targets.smoke.ts
+      // (and the 44px floor in styles/layers/base.css) rightly reds.
       renderD61Payments()
-      const trigger = within(
-        screen.getByTestId('tier-legend-select')
-      ).getByTestId('tier-readout-select')
-      expect(trigger).toHaveAttribute('tabindex', '0')
-      fireEvent.focus(trigger)
-      await waitFor(() => {
-        expect(screen.getByRole('tooltip')).toHaveTextContent(
-          /Select Distinguished — 6,063/
-        )
-      })
+      const legend = screen.getByTestId('tier-legend')
+      expect(
+        legend.querySelectorAll('[tabindex]:not([tabindex="-1"])')
+      ).toHaveLength(0)
+      expect(within(legend).queryByRole('button')).not.toBeInTheDocument()
+      expect(legend).toHaveTextContent("President's Distinguished 6,181")
     })
 
     it('renders the same flow legend when every tier is achieved', () => {
