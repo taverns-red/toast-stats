@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T17:27:57.189Z",
+  "generatedAt": "2026-09-06T09:16:08.089Z",
   "description": "Month-end closing dates derived from raw-csv metadata. Each entry maps a Toastmasters data month (YYYY-MM) to the last closing-period collection date in raw-csv/.",
   "note": "2022-04 and 2026-02 had no closing-period raw-csv metadata (collection outages); their closing dates were established from TI's own dashboard as-of lists (dashboards.toastmasters.org month dropdown, verified 2026-06-10 against 6 known months, #1128). 2022-04 closes IN-month (2022-04-30): TI never archived a May-2022 reconciliation (TI outage; 2022-05 closed late, 06-17). 2026-01 corrected 2026-02-13 -> 2026-02-05: TI's Jan-2026 as-of list ends 02-05; the stray raw-csv/2026-02-13 is a FEBRUARY daily scrape (it appears in TI's Feb-2026 as-of list), not a Jan closing collection.",
   "months": [
@@ -462,6 +462,10 @@
     {
       "dataMonth": "2026-07",
       "closingDate": "2026-08-10"
+    },
+    {
+      "dataMonth": "2026-08",
+      "closingDate": "2026-09-03"
     }
   ]
 }
