@@ -22,12 +22,18 @@ export {
   calculateNetGrowth,
   classifyDistinguishedTier,
   determineDistinguishedLevel,
+  determineDistinguishedLevelAtSnapshot,
+  distinguishedMembershipBasis,
   getConfirmedDistinguishedLevel,
   getCSPStatus,
   isClubSmedleyAvailable,
   isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
-export type { DistinguishedTierCode } from './ClubEligibilityUtils.js'
+export type {
+  DistinguishedLevelAtSnapshotInput,
+  DistinguishedMembershipBasis,
+  DistinguishedTierCode,
+} from './ClubEligibilityUtils.js'
 
 // Utility functions
 export {
