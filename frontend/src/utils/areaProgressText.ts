@@ -10,6 +10,7 @@
  * - What's needed to reach the next achievable level
  * - Incremental differences for higher levels (building on previous requirements)
  * - Club visit status when available
+ * - Club Success Plan completion, 2025-26 onward (#1555)
  *
  * Requirements: 5.1, 5.2, 5.3, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
  */
@@ -208,6 +209,62 @@ function generateCurrentRoundVisitText(area: AreaWithDivision): string {
   const clause = generateMissingVisitClause(area)
   const impact = generateVisitRecognitionImpact(area)
   return impact ? `${clause} ${impact}` : clause
+}
+
+/**
+ * Describe the area's Club Success Plan completion (#1555, spec §6.1): how many
+ * clubs have submitted, which ACTIVE clubs still need to, and the consequence
+ * (no club can be Distinguished without a plan, 2025-26 onward). Reads the
+ * snapshot-derived `cspTracked` / `clubsMissingCsp` / `clubsMissingCspIneligible`
+ * / `cspSubmittedCount` fields — the year gate is NOT re-derived here (R3).
+ *
+ * Returns `''` when not tracked (pre-2025-26, or column absent) or the area
+ * has no clubs — never "0 of N" for a year with no requirement.
+ *
+ * The "N of M" denominator is submitted + active-missing, so the sentence's
+ * own arithmetic always adds up; suspended/ineligible clubs are flagged in a
+ * trailing parenthetical exactly like the visit clause.
+ */
+function generateCspClause(area: AreaWithDivision): string {
+  if (!area.cspTracked || area.clubBase === 0) {
+    return ''
+  }
+
+  const submitted = area.cspSubmittedCount
+  const missing = area.clubsMissingCsp
+  const ineligible = area.clubsMissingCspIneligible
+  const total = submitted + missing.length
+
+  let clause: string
+  if (missing.length === 0) {
+    const clubWord = total === 1 ? 'club has' : 'clubs have'
+    clause = `Club Success Plans: all ${total} ${clubWord} submitted.`
+  } else if (submitted === 0 && total > 1) {
+    clause =
+      `Club Success Plans: none of the ${total} clubs has submitted — ` +
+      `${formatMissingClubNames(missing)}.`
+  } else {
+    const clubWord = missing.length === 1 ? 'active club' : 'active clubs'
+    const verb = missing.length === 1 ? 'needs' : 'need'
+    clause =
+      `Club Success Plans: ${submitted} of ${total} submitted — ` +
+      `${missing.length} ${clubWord} still ${verb} to submit: ${formatMissingClubNames(missing)}.`
+  }
+
+  if (ineligible.length > 0) {
+    const clubWord = ineligible.length === 1 ? 'club' : 'clubs'
+    clause += ` (${ineligible.length} suspended/ineligible ${clubWord} excluded.)`
+  }
+
+  if (missing.length === 0) {
+    return clause
+  }
+  if (submitted === 0 && total > 1) {
+    return `${clause} No club in this area can be Distinguished until plans are in.`
+  }
+  return missing.length === 1
+    ? `${clause} It cannot be Distinguished until its plan is in.`
+    : `${clause} No club can be Distinguished until its plan is in.`
 }
 
 /**
@@ -491,6 +548,10 @@ export function generateAreaProgressText(
   else {
     progressText = `${areaLabel} ${generateNotDistinguishedText(area, gapAnalysis)}`
   }
+
+  // Club Success Plan completion follows the visit text in every branch
+  // (#1555). Empty when not tracked, so pre-2025-26 prose is unchanged.
+  progressText = `${progressText} ${generateCspClause(area)}`
 
   // Clean up any double spaces
   progressText = progressText.replace(/\s+/g, ' ').trim()
