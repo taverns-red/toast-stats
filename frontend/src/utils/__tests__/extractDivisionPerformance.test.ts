@@ -13,6 +13,7 @@ import {
   determineDistinguishedLevel,
   countVisitCompletions,
   resolveSnapshotDate,
+  isIneligibleStatus,
 } from '../extractDivisionPerformance.js'
 
 /**
@@ -3899,5 +3900,146 @@ describe('resolveSnapshotDate (#1321)', () => {
     ['an empty-string date', { data: { snapshotDate: '' } }],
   ])('returns undefined for %s', (_label, input) => {
     expect(resolveSnapshotDate(input)).toBeUndefined()
+  })
+})
+
+/**
+ * Club Success Plan completion per area/division (#1555).
+ *
+ * The raw `CSP` column (`Y`/`N`) exists only from PY 2025-26 on. `cspTracked`
+ * is gated on the program year derived from the CALLER's pinned snapshot date
+ * (R3) AND on the column actually being present, so a pre-2025-26 year never
+ * renders "0 of N submitted" and a malformed 2026 snapshot never renders
+ * "none submitted". The active/ineligible split reuses the same
+ * `isIneligibleStatus` predicate as the visit-gap lists (Lesson 052).
+ */
+describe('AreaPerformance / DivisionPerformance — Club Success Plan completion (#1555)', () => {
+  function cspSnapshot(
+    clubs: Array<{
+      number: string
+      name: string
+      status: string
+      area?: string
+      /** Omit to leave the CSP column off the row entirely. */
+      csp?: 'Y' | 'N'
+    }>
+  ) {
+    return {
+      divisionPerformance: clubs.map(c => ({
+        Division: 'A',
+        Area: c.area ?? '01',
+        'Area Club Base': String(
+          clubs.filter(x => (x.area ?? '01') === (c.area ?? '01')).length
+        ),
+        'Division Club Base': String(clubs.length),
+        'Club Number': c.number,
+        'Club Name': c.name,
+        'Nov Visit award': '1',
+      })),
+      clubPerformance: clubs.map(c => ({
+        'Club Number': c.number,
+        'Club Name': c.name,
+        'Club Status': c.status,
+        'Club Distinguished Status': '',
+        ...(c.csp !== undefined ? { CSP: c.csp } : {}),
+      })),
+    }
+  }
+
+  // PY 2026-27 — CSP has been required since 2025-26.
+  const TRACKED_DATE = '2026-09-11'
+
+  it('lists ACTIVE clubs without a submitted CSP, sorted by club number, and counts submitters', () => {
+    const snapshot = cspSnapshot([
+      { number: '3', name: 'Charlie', status: 'Active', csp: 'N' },
+      { number: '1', name: 'Alpha', status: 'Active', csp: 'Y' },
+      { number: '2', name: 'Bravo', status: 'Active', csp: 'N' },
+      { number: '4', name: 'Delta', status: 'Low', csp: 'Y' }, // Low is not ineligible
+    ])
+    const area = extractDivisionPerformance(snapshot, TRACKED_DATE)[0].areas[0]
+    expect(area.cspTracked).toBe(true)
+    expect(area.clubsMissingCsp).toEqual([
+      { clubNumber: '2', clubName: 'Bravo' },
+      { clubNumber: '3', clubName: 'Charlie' },
+    ])
+    expect(area.clubsMissingCspIneligible).toEqual([])
+    expect(area.cspSubmittedCount).toBe(2)
+  })
+
+  it('flags suspended/ineligible clubs without a CSP separately (same predicate as visit gaps)', () => {
+    const snapshot = cspSnapshot([
+      { number: '1', name: 'Alpha', status: 'Active', csp: 'N' },
+      { number: '2', name: 'Bravo', status: 'Suspended', csp: 'N' },
+      { number: '3', name: 'Charlie', status: 'Ineligible', csp: 'N' },
+      { number: '4', name: 'Delta', status: 'Ineligible', csp: 'Y' },
+    ])
+    const area = extractDivisionPerformance(snapshot, TRACKED_DATE)[0].areas[0]
+    expect(area.clubsMissingCsp).toEqual([
+      { clubNumber: '1', clubName: 'Alpha' },
+    ])
+    expect(area.clubsMissingCspIneligible).toEqual([
+      { clubNumber: '2', clubName: 'Bravo', status: 'Suspended' },
+      { clubNumber: '3', clubName: 'Charlie', status: 'Ineligible' },
+    ])
+    // Submitted counts any status (Delta is Ineligible but has a plan).
+    expect(area.cspSubmittedCount).toBe(1)
+  })
+
+  it('is not tracked when the CSP column is absent, even on a tracked-year date', () => {
+    const snapshot = cspSnapshot([
+      { number: '1', name: 'Alpha', status: 'Active' },
+      { number: '2', name: 'Bravo', status: 'Active' },
+    ])
+    const [division] = extractDivisionPerformance(snapshot, TRACKED_DATE)
+    const area = division.areas[0]
+    expect(area.cspTracked).toBe(false)
+    expect(area.clubsMissingCsp).toEqual([])
+    expect(area.clubsMissingCspIneligible).toEqual([])
+    expect(area.cspSubmittedCount).toBe(0)
+    expect(division.cspTracked).toBe(false)
+  })
+
+  it('is not tracked for a pre-2025-26 snapshot date — the page-owned year gate wins over a stray column', () => {
+    const snapshot = cspSnapshot([
+      { number: '1', name: 'Alpha', status: 'Active', csp: 'N' },
+      { number: '2', name: 'Bravo', status: 'Active', csp: 'Y' },
+    ])
+    // 2025-05-31 is PY 2024-25: the CSP requirement did not exist.
+    const [division] = extractDivisionPerformance(snapshot, '2025-05-31')
+    const area = division.areas[0]
+    expect(area.cspTracked).toBe(false)
+    expect(area.clubsMissingCsp).toEqual([])
+    expect(area.cspSubmittedCount).toBe(0)
+    expect(division.cspTracked).toBe(false)
+    expect(division.clubsMissingCspCount).toBe(0)
+    expect(division.cspSubmittedCount).toBe(0)
+  })
+
+  it('rolls the division up as the sum of its areas (active-only missing count)', () => {
+    const snapshot = cspSnapshot([
+      { number: '1', name: 'Alpha', status: 'Active', area: '01', csp: 'Y' },
+      { number: '2', name: 'Bravo', status: 'Active', area: '01', csp: 'N' },
+      { number: '3', name: 'Charlie', status: 'Active', area: '02', csp: 'N' },
+      { number: '4', name: 'Delta', status: 'Suspended', area: '02', csp: 'N' },
+      { number: '5', name: 'Echo', status: 'Active', area: '02', csp: 'Y' },
+    ])
+    const [division] = extractDivisionPerformance(snapshot, TRACKED_DATE)
+    expect(division.cspTracked).toBe(true)
+    expect(division.cspSubmittedCount).toBe(2)
+    // Bravo + Charlie; Delta is flagged as ineligible, not counted.
+    expect(division.clubsMissingCspCount).toBe(2)
+    expect(division.areas.map(a => a.clubsMissingCsp.length)).toEqual([1, 1])
+    expect(division.areas.map(a => a.clubsMissingCspIneligible.length)).toEqual(
+      [0, 1]
+    )
+  })
+
+  it('exports the shared isIneligibleStatus predicate so the analytics path can reuse it', () => {
+    expect(isIneligibleStatus('Suspended')).toBe(true)
+    expect(isIneligibleStatus('Ineligible')).toBe(true)
+    expect(isIneligibleStatus('Closed')).toBe(true)
+    expect(isIneligibleStatus('Active')).toBe(false)
+    expect(isIneligibleStatus('Low')).toBe(false)
+    expect(isIneligibleStatus('')).toBe(false)
   })
 })
