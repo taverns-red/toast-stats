@@ -19,7 +19,7 @@ Prune deletes only from **staging**. Promotion (`gsutil rsync` without
 
 Reconciliation = bringing prod's deletable layers (`raw-csv/`,
 `snapshots/`) and manifests back in line with staging. Derived layers
-(`time-series/`, `club-trends/`, `v1/rank-history`) are retained by design
+(`time-series/`, `club-trends/`, `club-race/`, `v1/rank-history`) are retained by design
 on both buckets (#1132) and are never part of reconciliation.
 
 ## Safety interlocks (all fail closed)

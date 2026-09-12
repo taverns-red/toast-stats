@@ -10,10 +10,10 @@ Complete data flow from Toastmasters dashboard scraping through GCS to Cloud CDN
 
 ```
 1. Scrape        → raw-csv/{date}/district-{id}/*.csv
-2. Sync stores   ← time-series/, club-trends/ from GCS
+2. Sync stores   ← time-series/, club-trends/, club-race/ from GCS
 3. Transform     → snapshots/{date}/district_{id}.json + manifest + rankings
 4. Compute       → snapshots/{date}/analytics/district_{id}_{type}.json (10 types)
-                   + updates time-series + club-trends stores
+                   + updates time-series + club-trends + club-race stores
 5. Upload        → GCS (raw-csv, snapshots, analytics, stores)
 6. CDN manifests → v1/latest.json, v1/dates.json, v1/rankings.json
 ```
@@ -76,6 +76,9 @@ toast-stats-data-{staging|ca}/
 ├── club-trends/{YYYY-YYYY}/              # Incremental club trends (per PY)
 │   └── district_{id}.json                # All clubs for that district
 │
+├── club-race/{YYYY-YYYY}/                # Crossing-date store (#1556, per PY)
+│   └── first-reached.json                # First snapshot date each club met each tier
+│
 ├── v1/                                    # CDN manifests (short TTL)
 │   ├── latest.json                        # Latest snapshot date (5 min cache)
 │   ├── dates.json                         # All available dates (15 min cache)
@@ -91,7 +94,7 @@ toast-stats-data-{staging|ca}/
 
 Production is never written directly. Each run processes into **staging**; a two-gate promotion
 step then decides whether to `rsync` staging → prod (`v1/`, `snapshots/`, `time-series/`,
-`club-trends/`, `config/` — additive, no `-d`):
+`club-trends/`, `club-race/`, `config/` — additive, no `-d`):
 
 1. **Count gate (#316)** — blocks if staging has _fewer_ ranked districts or _fewer_ dates than
    prod (a subtractive change). Catches accidental data loss.
@@ -164,19 +167,29 @@ The CSV footer reads e.g., `"Month of Mar, As of 04/01/2026"`.
 
 ## Incremental Stores
 
-Time-series and club-trends are NOT regenerated each run — they accumulate data points.
+Time-series, club-trends and club-race are NOT regenerated each run — they accumulate data points.
 
 **Pattern:** Sync from GCS → upsert today's data → save → push back to GCS.
 
 This means a rebuild for a single date **adds** to the store rather than replacing it.
 To reset a store, delete the GCS file before rebuilding.
 
+**Club-race crossing store (#1556)** — `club-race/{PY}/first-reached.json` records the
+first snapshot date each club met each Distinguished tier's requirements (plus the
+observed date before it). Crossings are **sticky** (a later drop never revises them) and
+the upsert keeps the **earlier** of stored/observed per crossing, so a rebuild walking
+dates in any order is idempotent. Because the prune policy keeps only ~two snapshots a
+month, this store is the only place a daily crossing date survives — do **not** reset it
+to rebuild from surviving snapshots; that degrades every crossing to monthly resolution.
+The tier held at a snapshot is `determineDistinguishedLevelAtSnapshot` (analytics-core):
+confirmed April renewals for data months Jul–Mar, active members for Apr–Jun.
+
 ---
 
 ## Prune Retention Asymmetry (#1132)
 
 Prune deletes **only** under `raw-csv/` and `snapshots/` (strictly dated
-dirs). The derived layers — `time-series/`, `club-trends/`,
+dirs). The derived layers — `time-series/`, `club-trends/`, `club-race/`,
 `v1/rank-history/` — are **retained at full daily resolution by design**
 (operator ruling, 2026-06-10): the trend surfaces are the product, and
 thinning them to month-ends would be a visible regression for trivial
