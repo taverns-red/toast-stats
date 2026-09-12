@@ -93,6 +93,33 @@ function clubNameOf(club: Record<string, unknown>): string {
 }
 
 /**
+ * File a club that is missing something (a visit report, a Club Success
+ * Plan) into the active list or the flagged suspended/ineligible list — the
+ * ONE place the "active only, flag others" split is applied, so the visit-gap
+ * and CSP lists (#973, #1555) cannot drift apart. Identity comes from the
+ * divisionPerformance `club` row; `Club Status` from the clubPerformance row
+ * that carries it.
+ */
+function pushByEligibility(
+  club: Record<string, unknown>,
+  clubPerf: Record<string, unknown> | undefined,
+  active: MissingVisitClub[],
+  ineligible: IneligibleMissingVisitClub[]
+): void {
+  const clubStatus =
+    clubPerf && typeof clubPerf['Club Status'] === 'string'
+      ? (clubPerf['Club Status'] as string)
+      : ''
+  const clubNumber = clubNumberOf(club)
+  const clubName = clubNameOf(club)
+  if (isIneligibleStatus(clubStatus)) {
+    ineligible.push({ clubNumber, clubName, status: clubStatus })
+  } else {
+    active.push({ clubNumber, clubName })
+  }
+}
+
+/**
  * Unwrap a district snapshot to its payload — the single place that knows a
  * dated CDN snapshot is a `PerDistrictData` envelope.
  *
@@ -848,21 +875,12 @@ function extractAreasForDivision(
       // fields live on the divisionPerformance `club` row; `Club Status` is
       // cross-referenced from clubPerformance (the row that carries it).
       if (!hasCompletedRoundVisit(club, visitFields)) {
-        const clubStatus =
-          clubPerf && typeof clubPerf['Club Status'] === 'string'
-            ? (clubPerf['Club Status'] as string)
-            : ''
-        const clubNumber = clubNumberOf(club)
-        const clubName = clubNameOf(club)
-        if (isIneligibleStatus(clubStatus)) {
-          clubsMissingCurrentRoundVisitIneligible.push({
-            clubNumber,
-            clubName,
-            status: clubStatus,
-          })
-        } else {
-          clubsMissingCurrentRoundVisit.push({ clubNumber, clubName })
-        }
+        pushByEligibility(
+          club,
+          clubPerf,
+          clubsMissingCurrentRoundVisit,
+          clubsMissingCurrentRoundVisitIneligible
+        )
       }
 
       // #1555: the CSP cell lives on the clubPerformance row (fall back to the
@@ -872,21 +890,12 @@ function extractAreasForDivision(
         if (cspSubmitted === true) {
           cspSubmittedCount++
         } else if (cspSubmitted === false) {
-          const clubStatus =
-            clubPerf && typeof clubPerf['Club Status'] === 'string'
-              ? (clubPerf['Club Status'] as string)
-              : ''
-          const clubNumber = clubNumberOf(club)
-          const clubName = clubNameOf(club)
-          if (isIneligibleStatus(clubStatus)) {
-            clubsMissingCspIneligible.push({
-              clubNumber,
-              clubName,
-              status: clubStatus,
-            })
-          } else {
-            clubsMissingCsp.push({ clubNumber, clubName })
-          }
+          pushByEligibility(
+            club,
+            clubPerf,
+            clubsMissingCsp,
+            clubsMissingCspIneligible
+          )
         }
       }
     }
