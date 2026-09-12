@@ -63,6 +63,10 @@ const createArea = (
     currentRound: 2,
     clubsMissingCurrentRoundVisit: [],
     clubsMissingCurrentRoundVisitIneligible: [],
+    cspTracked: false,
+    clubsMissingCsp: [],
+    clubsMissingCspIneligible: [],
+    cspSubmittedCount: 0,
     status: 'distinguished',
     isQualified: true,
     ...overrides,
@@ -135,6 +139,9 @@ function buildDivisions(
       distinguishedClubs,
       requiredDistinguishedClubs,
       areas: divAreas,
+      cspTracked: false,
+      cspSubmittedCount: 0,
+      clubsMissingCspCount: 0,
     }
   })
 }

@@ -125,6 +125,30 @@ export interface AreaPerformance {
    * number (#973).
    */
   clubsMissingCurrentRoundVisitIneligible: IneligibleMissingVisitClub[]
+  /**
+   * Whether Club Success Plan completion is meaningful for this row (#1555):
+   * `false` when the page-owned program year predates the 2025-26 CSP
+   * requirement (`isCspRequired`) OR the snapshot rows carry no `CSP` column.
+   * Consumers render nothing when false — never "0 of N submitted" for a year
+   * with no requirement, and never "all submitted" from an absent column.
+   */
+  cspTracked: boolean
+  /**
+   * Active clubs (per `isIneligibleStatus`) without a submitted Club Success
+   * Plan. Sorted by club number. Empty when `cspTracked` is false.
+   */
+  clubsMissingCsp: MissingVisitClub[]
+  /**
+   * Suspended / ineligible clubs without a Club Success Plan, flagged
+   * separately (operator rule: "active only, flag others"). Sorted by club
+   * number. Empty when `cspTracked` is false.
+   */
+  clubsMissingCspIneligible: IneligibleMissingVisitClub[]
+  /**
+   * Clubs with a submitted Club Success Plan, any status — the numerator for
+   * "N of M submitted". Zero when `cspTracked` is false.
+   */
+  cspSubmittedCount: number
 }
 
 /**
@@ -157,6 +181,12 @@ export interface DivisionPerformance {
   requiredDistinguishedClubs: number
   /** Array of all areas within this division */
   areas: AreaPerformance[]
+  /** Same gate as the areas' `cspTracked` (#1555). */
+  cspTracked: boolean
+  /** Sum of the areas' `cspSubmittedCount`. Zero when not tracked. */
+  cspSubmittedCount: number
+  /** Sum of the areas' `clubsMissingCsp.length` (active only). Zero when not tracked. */
+  clubsMissingCspCount: number
 }
 
 /**

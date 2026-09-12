@@ -80,6 +80,9 @@ const createDivision = (
   netGrowth: 0,
   requiredDistinguishedClubs: 2,
   status: 'distinguished',
+  cspTracked: false,
+  cspSubmittedCount: 0,
+  clubsMissingCspCount: 0,
   ...overrides,
 })
 
@@ -121,6 +124,9 @@ const createDivisionWithAreas = (
   netGrowth: 0,
   requiredDistinguishedClubs: 2 * areaIds.length,
   status: 'distinguished',
+  cspTracked: false,
+  cspSubmittedCount: 0,
+  clubsMissingCspCount: 0,
 })
 
 describe('DivisionAreaRecognitionPanel', () => {

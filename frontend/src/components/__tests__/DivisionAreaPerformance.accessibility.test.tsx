@@ -183,6 +183,9 @@ const createMockDivisionPerformance = (): DivisionPerformance => ({
   netGrowth: 1,
   distinguishedClubs: 6,
   requiredDistinguishedClubs: 5,
+  cspTracked: false,
+  cspSubmittedCount: 0,
+  clubsMissingCspCount: 0,
   areas: [
     withState({
       areaId: 'A1',
