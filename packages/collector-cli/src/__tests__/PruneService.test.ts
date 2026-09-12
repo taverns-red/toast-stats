@@ -324,14 +324,19 @@ describe('PruneService', () => {
 
       const expectedScope = {
         pruned: ['raw-csv', 'snapshots'],
-        retained: ['time-series', 'club-trends', 'v1/rank-history'],
+        retained: [
+          'time-series',
+          'club-trends',
+          'club-race',
+          'v1/rank-history',
+        ],
         note: 'Derived layers retained by design (#1132) — trend surfaces keep full daily resolution',
       }
       expect(dryRun.layerScope).toEqual(expectedScope)
       expect(execute.layerScope).toEqual(expectedScope)
     })
 
-    it('never deletes under time-series/, club-trends/, or v1/rank-history/ (#1132 guard)', async () => {
+    it('never deletes under time-series/, club-trends/, club-race/, or v1/rank-history/ (#1132 guard)', async () => {
       // A prunable interior date — January must be closed (#1178), so its
       // month-end is present, plus the first-of-month keeper (#1280), so
       // 01-20 is the genuine interior non-keeper.
@@ -346,6 +351,9 @@ describe('PruneService', () => {
       const derivedFiles = [
         'time-series/d61/2026-01-20.json',
         'club-trends/2026-01-20/district_61.json',
+        // The crossing store (#1556) is the whole point of retention: a
+        // pruned daily snapshot's reachedOn survives only here.
+        'club-race/2025-2026/first-reached.json',
         'v1/rank-history/61.json',
       ]
       for (const rel of derivedFiles) {

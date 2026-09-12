@@ -95,6 +95,7 @@ describe('assertPruneDeletionScope (#1132)', () => {
   it.each([
     'time-series/d61/2026-01-15.json',
     'club-trends/2026-01-15',
+    'club-race/2025-2026/first-reached.json',
     'v1/rank-history/61.json',
   ])('rejects retained derived-layer path %s (#1132 ruling)', path => {
     expect(() => assertPruneDeletionScope([path])).toThrow(/#1132/)
@@ -129,7 +130,9 @@ describe('assertPruneDeletionScope (#1132)', () => {
   it('formats one shared layer-scope note naming both layer sets (#1132)', () => {
     const note = formatPruneLayerScopeNote()
     expect(note).toContain('raw-csv, snapshots')
-    expect(note).toContain('time-series, club-trends, v1/rank-history')
+    expect(note).toContain(
+      'time-series, club-trends, club-race, v1/rank-history'
+    )
     expect(note).toContain('retained by design')
   })
 
@@ -138,6 +141,7 @@ describe('assertPruneDeletionScope (#1132)', () => {
     expect(PRUNE_RETAINED_LAYERS).toEqual([
       'time-series',
       'club-trends',
+      'club-race',
       'v1/rank-history',
     ])
   })
