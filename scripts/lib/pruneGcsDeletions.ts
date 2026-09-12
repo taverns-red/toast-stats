@@ -32,6 +32,9 @@ export const PRUNE_DELETABLE_LAYERS = ['raw-csv', 'snapshots'] as const
 export const PRUNE_RETAINED_LAYERS = [
   'time-series',
   'club-trends',
+  // The club-race crossing store (#1556): a pruned daily snapshot's
+  // reachedOn survives ONLY here, so it is the retention rule's reason.
+  'club-race',
   'v1/rank-history',
 ] as const
 
