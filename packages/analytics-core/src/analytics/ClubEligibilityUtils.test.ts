@@ -12,6 +12,8 @@ import {
   calculateNetGrowth,
   classifyClubHealth,
   determineDistinguishedLevel,
+  determineDistinguishedLevelAtSnapshot,
+  distinguishedMembershipBasis,
   getCSPStatus,
   getConfirmedDistinguishedLevel,
   isClubSmedleyAvailable,
@@ -489,5 +491,141 @@ describe('classifyClubHealth', () => {
     )
     expect(result.status).toBe('vulnerable')
     expect(result.membershipRequirementMet).toBe(false)
+  })
+})
+
+// ── Snapshot-basis level for the worldwide club race (#1556 ruling R-A) ──────
+
+describe('distinguishedMembershipBasis (#1556 R-A)', () => {
+  it('reads confirmed April renewals for data months July through March', () => {
+    for (const month of [7, 8, 9, 10, 11, 12, 1, 2, 3]) {
+      expect(distinguishedMembershipBasis(month)).toBe('confirmed-renewals')
+    }
+  })
+
+  it('reads active members for data months April through June', () => {
+    for (const month of [4, 5, 6]) {
+      expect(distinguishedMembershipBasis(month)).toBe('active-members')
+    }
+  })
+})
+
+describe('determineDistinguishedLevelAtSnapshot (#1556 R-A)', () => {
+  const PY = '2026-2027'
+
+  it('before April 1 qualifies on confirmed renewals (Pointe Claire, 2026-09-11)', () => {
+    // 5 goals, 49 active / 43 base, 36 confirmed renewals: confirmed ≥ 20.
+    expect(
+      determineDistinguishedLevelAtSnapshot(
+        {
+          dcpGoals: 5,
+          membershipCount: 49,
+          membershipBase: 43,
+          aprilRenewals: 36,
+          cspSubmitted: true,
+        },
+        '2026-09-11',
+        PY
+      )
+    ).toBe('Distinguished')
+  })
+
+  it('before April 1 a club whose ACTIVE members qualify but whose renewals do not is NotDistinguished', () => {
+    expect(
+      determineDistinguishedLevelAtSnapshot(
+        {
+          dcpGoals: 5,
+          membershipCount: 25,
+          membershipBase: 20,
+          aprilRenewals: 15,
+          cspSubmitted: true,
+        },
+        '2026-09-11',
+        PY
+      )
+    ).toBe('NotDistinguished')
+  })
+
+  it('before April 1 the net-growth alternative is per tier, on the confirmed basis', () => {
+    const club = (dcpGoals: number, aprilRenewals: number) => ({
+      dcpGoals,
+      membershipCount: 30,
+      membershipBase: 15,
+      aprilRenewals,
+      cspSubmitted: true,
+    })
+    // +3 confirmed growth reaches Distinguished ...
+    expect(
+      determineDistinguishedLevelAtSnapshot(club(5, 18), '2026-11-30', PY)
+    ).toBe('Distinguished')
+    // ... but Select needs +5, so 7 goals at +3 is still only Distinguished.
+    expect(
+      determineDistinguishedLevelAtSnapshot(club(7, 18), '2026-11-30', PY)
+    ).toBe('Distinguished')
+    expect(
+      determineDistinguishedLevelAtSnapshot(club(7, 20), '2026-11-30', PY)
+    ).toBe('Select')
+  })
+
+  it('on/after April 1 qualifies on active members', () => {
+    const club = {
+      dcpGoals: 5,
+      membershipCount: 25,
+      membershipBase: 20,
+      aprilRenewals: 15,
+      cspSubmitted: true,
+    }
+    expect(determineDistinguishedLevelAtSnapshot(club, '2027-04-30', PY)).toBe(
+      'Distinguished'
+    )
+    expect(determineDistinguishedLevelAtSnapshot(club, '2027-06-30', PY)).toBe(
+      'Distinguished'
+    )
+    // The last pre-April data month is still on the confirmed basis.
+    expect(determineDistinguishedLevelAtSnapshot(club, '2027-03-31', PY)).toBe(
+      'NotDistinguished'
+    )
+  })
+
+  it('applies the CSP gate in both periods, and treats an absent CSP field as submitted', () => {
+    const club = {
+      dcpGoals: 9,
+      membershipCount: 30,
+      membershipBase: 20,
+      aprilRenewals: 30,
+    }
+    expect(
+      determineDistinguishedLevelAtSnapshot(
+        { ...club, cspSubmitted: false },
+        '2026-09-11',
+        PY
+      )
+    ).toBe('NotDistinguished')
+    expect(
+      determineDistinguishedLevelAtSnapshot(
+        { ...club, cspSubmitted: false },
+        '2027-05-31',
+        PY
+      )
+    ).toBe('NotDistinguished')
+    expect(
+      determineDistinguishedLevelAtSnapshot(club, '2025-05-31', '2024-2025')
+    ).toBe('President')
+  })
+
+  it('threads the program year so the Smedley rung is absent before 2025-26 (#1406)', () => {
+    const club = {
+      dcpGoals: 10,
+      membershipCount: 30,
+      membershipBase: 20,
+      aprilRenewals: 30,
+      cspSubmitted: true,
+    }
+    expect(
+      determineDistinguishedLevelAtSnapshot(club, '2025-05-31', '2024-2025')
+    ).toBe('President')
+    expect(
+      determineDistinguishedLevelAtSnapshot(club, '2026-05-31', '2025-2026')
+    ).toBe('Smedley')
   })
 })
