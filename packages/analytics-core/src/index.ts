@@ -68,6 +68,7 @@ export {
   GROWTH_PERCENTAGES,
   DISTINGUISHED_PERCENTAGES,
   // Club eligibility utilities
+  classifyDistinguishedTier,
   determineDistinguishedLevel,
   determineDistinguishedLevelAtSnapshot,
   distinguishedMembershipBasis,
@@ -80,6 +81,7 @@ export {
 export type {
   DistinguishedLevelAtSnapshotInput,
   DistinguishedMembershipBasis,
+  DistinguishedTierCode,
   MultiYearTrendDirection,
 } from './analytics/index.js'
 
