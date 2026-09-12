@@ -339,6 +339,31 @@ export function getCSPStatus(
 }
 
 /**
+ * First program year in which a submitted Club Success Plan became a
+ * prerequisite for ANY club Distinguished level (#1555).
+ */
+export const CSP_REQUIRED_FROM_PROGRAM_YEAR = '2025-2026'
+
+/**
+ * Was a Club Success Plan required in this program year?
+ *
+ * The per-club `cspSubmitted` boolean cannot answer this: pre-2025-26 data has
+ * no CSP column and `getCSPStatus` normalises the absent field to `true`, so
+ * "submitted" and "not tracked that year" are indistinguishable from the club
+ * row alone. Presentation surfaces that say "N of M clubs have not submitted"
+ * must gate on the program year the page owns (R3) and render nothing when
+ * this returns false — never "all submitted" for a year with no requirement.
+ *
+ * @param programYear - "YYYY-YYYY" label. Omitted → current rules (`true`),
+ *   mirroring how `getConfirmedDistinguishedLevel` treats an omitted year.
+ *   The label format is fixed-width, so a lexical compare is exact.
+ */
+export function isCspRequired(programYear?: string): boolean {
+  if (programYear === undefined) return true
+  return programYear >= CSP_REQUIRED_FROM_PROGRAM_YEAR
+}
+
+/**
  * Determines if a Distinguished club's status is provisional (unconfirmed
  * by April renewals) or confirmed.
  *

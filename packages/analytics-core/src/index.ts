@@ -72,6 +72,8 @@ export {
   getConfirmedDistinguishedLevel,
   getCSPStatus,
   isClubSmedleyAvailable,
+  isCspRequired,
+  CSP_REQUIRED_FROM_PROGRAM_YEAR,
   isDistinguishedProvisional,
 } from './analytics/index.js'
 
