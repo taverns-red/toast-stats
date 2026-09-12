@@ -19,11 +19,14 @@ import * as crypto from 'node:crypto'
 import {
   AnalyticsComputer,
   buildGlobalTotals,
+  canonicalDistrictId,
   findPreviousProgramYearDate,
   getCSPStatus,
+  programYearForSnapshotDate,
   readSnapshotRankings,
   readSnapshotRollupInput,
   type Logger,
+  type ClubStatistics,
   type DistrictStatistics,
   type AnalyticsManifestEntry,
   type PreComputedAnalyticsFile,
@@ -36,9 +39,15 @@ import type {
 import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
 import {
   districtIdFromSnapshotFileName,
+  isDistrictSnapshotFile,
   GLOBAL_TOTALS_FILE_NAME,
 } from '@taverns-red/shared-contracts'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
+import {
+  ClubRaceStore,
+  updateClubRaceStore,
+  type ClubRaceDistrictObservation,
+} from './ClubRaceStore.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
 import { validateDistrictId } from '../utils/validateDistrictId.js'
 import type { CacheMetadata } from '../types/collector.js'
@@ -139,6 +148,20 @@ export interface ComputeOperationResult {
    * reaches `districtsFailed`, so without the flag a broken rollup exits 0.
    */
   globalTotalsFailed: boolean
+  /**
+   * Path of the club-race crossing store this date was folded into (#1556),
+   * or undefined when the date had no `all-districts-rankings.json` to
+   * scope the district set by (same skip rule as the rollup).
+   */
+  clubRaceStorePath?: string
+  /**
+   * True when folding the date into the crossing store THREW (#1556).
+   * Reported in `errors` and here, but deliberately NOT publish-blocking:
+   * the store publishes nothing itself, and a missed capture must not stop
+   * the day's snapshot — which the next daily run would never recompute —
+   * from being uploaded.
+   */
+  clubRaceStoreFailed: boolean
   errors: Array<{
     districtId: string
     error: string
@@ -1169,6 +1192,7 @@ export class AnalyticsComputeService {
         analyticsLocations: [],
         // The rollup never ran; "did not run" is not "failed".
         globalTotalsFailed: false,
+        clubRaceStoreFailed: false,
         errors: [
           {
             districtId: 'N/A',
@@ -1210,6 +1234,7 @@ export class AnalyticsComputeService {
         analyticsLocations: [],
         // The rollup never ran; "did not run" is not "failed".
         globalTotalsFailed: false,
+        clubRaceStoreFailed: false,
         errors: [
           {
             districtId: 'N/A',
@@ -1394,6 +1419,11 @@ export class AnalyticsComputeService {
     // so it is independent of whether any single district's compute failed.
     const globalTotals = await this.writeGlobalTotals(snapshotDate, errors)
 
+    // Fold the date into the club-race crossing store (#1556). Same input
+    // surface as the rollup — the snapshot files scoped by the date's own
+    // rankings — and the same independence from per-district compute.
+    const clubRace = await this.writeClubRaceStore(snapshotDate, errors)
+
     // Calculate result statistics
     const districtsProcessed = districtsToCompute
     const districtsSucceeded = results
@@ -1438,6 +1468,8 @@ export class AnalyticsComputeService {
       analyticsLocations,
       globalTotalsPath: globalTotals.path,
       globalTotalsFailed: globalTotals.failed,
+      clubRaceStorePath: clubRace.path,
+      clubRaceStoreFailed: clubRace.failed,
       errors,
       duration_ms: Date.now() - startTime,
     }
@@ -1521,6 +1553,101 @@ export class AnalyticsComputeService {
       errors.push({
         districtId: 'N/A',
         error: `Failed to write ${GLOBAL_TOTALS_FILE_NAME}: ${message}`,
+        timestamp: new Date().toISOString(),
+      })
+      return { failed: true }
+    }
+  }
+
+  /**
+   * Fold this date into `club-race/{PY}/first-reached.json` — the crossing
+   * store behind the worldwide race to Distinguished (#1556, R9).
+   *
+   * Why here: the prune policy keeps two snapshots a month, so the day a
+   * club first met a tier's requirements survives only if it is captured at
+   * collection time. The compute step already holds every district file for
+   * the date; the pipeline syncs `club-race/` from GCS before it and pushes
+   * the store back after, exactly like `club-trends/`.
+   *
+   * Scope is the date's own `all-districts-rankings.json` district set
+   * (#1465) — a stray district file in the directory is not read, and a
+   * listed district whose file is missing simply leaves its clubs untouched
+   * (the store never records an absence). No rankings file → skipped quietly,
+   * like the rollup.
+   *
+   * The program year is resolved ONCE here from the (closing-period
+   * remapped) snapshot date and threaded into the store; the store refuses a
+   * date that does not belong to it.
+   *
+   * Failure is loud — logged, in `errors`, flagged on the result — but NOT
+   * publish-blocking (see `clubRaceStoreFailed`): the store publishes
+   * nothing, and blocking the upload would lose the whole day, not one
+   * crossing date.
+   */
+  private async writeClubRaceStore(
+    snapshotDate: string,
+    errors: Array<{ districtId: string; error: string; timestamp: string }>
+  ): Promise<{ path?: string; failed: boolean }> {
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    const rankingsPath = path.join(snapshotDir, 'all-districts-rankings.json')
+
+    try {
+      await fs.access(rankingsPath)
+    } catch {
+      this.logger.warn(
+        'No all-districts-rankings.json for this date — skipping the club-race store',
+        { snapshotDate }
+      )
+      return { failed: false }
+    }
+
+    try {
+      const inScope = new Set(
+        readSnapshotRankings(snapshotDir).map(row =>
+          canonicalDistrictId(row.districtId)
+        )
+      )
+      const districts: ClubRaceDistrictObservation[] = []
+      for (const fileName of (await fs.readdir(snapshotDir)).sort()) {
+        if (!isDistrictSnapshotFile(fileName)) continue
+        const districtId = districtIdFromSnapshotFileName(fileName)
+        if (!districtId || !inScope.has(canonicalDistrictId(districtId))) {
+          continue
+        }
+        const parsed = JSON.parse(
+          await fs.readFile(path.join(snapshotDir, fileName), 'utf-8')
+        ) as { data?: { clubs?: ClubStatistics[] } }
+        districts.push({ districtId, clubs: parsed.data?.clubs ?? [] })
+      }
+
+      const programYear = programYearForSnapshotDate(snapshotDate)
+      const { store, summary } = await updateClubRaceStore(
+        this.cacheDir,
+        snapshotDate,
+        programYear,
+        districts
+      )
+      const storePath = ClubRaceStore.getPath(this.cacheDir, programYear)
+
+      this.logger.info('Updated club-race crossing store', {
+        snapshotDate,
+        programYear,
+        path: storePath,
+        districts: districts.length,
+        clubsObserved: summary.clubsObserved,
+        newCrossings: summary.newCrossings,
+        observedDates: store.observedDates.length,
+      })
+      return { path: storePath, failed: false }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      this.logger.error('Failed to update club-race crossing store', {
+        snapshotDate,
+        error: message,
+      })
+      errors.push({
+        districtId: 'N/A',
+        error: `Failed to update club-race/first-reached.json: ${message}`,
         timestamp: new Date().toISOString(),
       })
       return { failed: true }
