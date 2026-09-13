@@ -21,12 +21,15 @@ import type { SnapshotDate } from '../types/snapshotDate'
  * year are excluded from both numbers and named in a suffix (spec E2).
  * Returns null when nothing can be said.
  */
-function cspLine(clubs: Parameters<typeof summarizeCspCompletion>[0]): {
+function cspLine(
+  clubs: Parameters<typeof summarizeCspCompletion>[0],
+  asOf: Parameters<typeof summarizeCspCompletion>[1]
+): {
   text: string
   showLink: boolean
   footnote: string | null
 } | null {
-  const csp = summarizeCspCompletion(clubs)
+  const csp = summarizeCspCompletion(clubs, asOf)
   const notSubmitted = csp.notSubmitted.length
   const known = csp.submittedCount - csp.submittedIneligibleCount + notSubmitted
   if (known === 0) return null
@@ -116,9 +119,13 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   // #1555: rendered inside the same `analytics && clubCount > 0` block as the
   // subtitle, so it cannot add a late layout shift beyond the one that block
   // already reserves (Lesson 107 shape). Year gate first — never the rows.
+  // #1565: the per-club deadline is judged against the PINNED date the page
+  // fetched under (R3). Without one nothing correct can be said about
+  // deadlines, so the line is omitted rather than guessed from the clock —
+  // the page always passes it (`hasValidDates` ⇒ `effectiveEndDate`).
   const csp =
-    analytics && clubCount > 0 && isCspRequired(programYear)
-      ? cspLine(analytics.allClubs)
+    analytics && clubCount > 0 && isCspRequired(programYear) && selectedDate
+      ? cspLine(analytics.allClubs, { programYear, snapshotDate: selectedDate })
       : null
 
   return (

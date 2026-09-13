@@ -25,7 +25,11 @@
 import { describe, it, expect } from 'vitest'
 import { generateDivisionProgressText } from '../divisionProgressText'
 import { calculateDivisionGapAnalysis } from '../divisionGapAnalysis'
-import { DivisionPerformance, DistinguishedStatus } from '../divisionStatus'
+import {
+  DivisionPerformance,
+  DistinguishedStatus,
+  MissingCspClub,
+} from '../divisionStatus'
 
 /**
  * Helper function to create a DivisionPerformance object for testing
@@ -54,7 +58,7 @@ function createDivision(
     areas: [],
     cspTracked: false,
     cspSubmittedCount: 0,
-    clubsMissingCspCount: 0,
+    clubsMissingCsp: [],
   }
 }
 
@@ -643,6 +647,21 @@ describe('generateDivisionProgressText', () => {
  * big to name clubs. Appended in every branch; nothing when not tracked.
  */
 describe('generateDivisionProgressText — Club Success Plan clause (#1555)', () => {
+  /** N active clubs without a plan, all existing clubs still inside the 30 September window. */
+  function missingClubs(
+    n: number,
+    deadline: Pick<MissingCspClub, 'cspDueDate' | 'cspOverdue'> = {
+      cspDueDate: '2026-09-30',
+      cspOverdue: false,
+    }
+  ): MissingCspClub[] {
+    return Array.from({ length: n }, (_, i) => ({
+      clubNumber: String(i + 1),
+      clubName: `Club ${i + 1}`,
+      ...deadline,
+    }))
+  }
+
   function divisionWithCsp(
     clubBase: number,
     paidClubs: number,
@@ -650,7 +669,7 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
     csp: Partial<
       Pick<
         DivisionPerformance,
-        'cspTracked' | 'cspSubmittedCount' | 'clubsMissingCspCount'
+        'cspTracked' | 'cspSubmittedCount' | 'clubsMissingCsp'
       >
     >
   ): DivisionPerformance {
@@ -674,7 +693,7 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
     const text = textFor(
       divisionWithCsp(18, 18, 0, {
         cspSubmittedCount: 5,
-        clubsMissingCspCount: 13,
+        clubsMissingCsp: missingClubs(13),
       })
     )
     expect(text).toContain('is not yet distinguished')
@@ -687,7 +706,7 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
     const text = textFor(
       divisionWithCsp(18, 18, 0, {
         cspSubmittedCount: 17,
-        clubsMissingCspCount: 1,
+        clubsMissingCsp: missingClubs(1),
       })
     )
     expect(text).toContain(
@@ -699,7 +718,7 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
     const text = textFor(
       divisionWithCsp(18, 18, 0, {
         cspSubmittedCount: 1,
-        clubsMissingCspCount: 17,
+        clubsMissingCsp: missingClubs(17),
       })
     )
     expect(text).toContain(
@@ -711,7 +730,7 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
     const text = textFor(
       divisionWithCsp(18, 18, 0, {
         cspSubmittedCount: 18,
-        clubsMissingCspCount: 0,
+        clubsMissingCsp: [],
       })
     )
     expect(text).toContain('Club Success Plans: all 18 clubs have submitted.')
@@ -723,7 +742,7 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
         divisionWithCsp(18, 18, 0, {
           cspTracked: false,
           cspSubmittedCount: 0,
-          clubsMissingCspCount: 13,
+          clubsMissingCsp: missingClubs(13),
         })
       )
     ).not.toContain('Club Success Plan')
@@ -731,14 +750,14 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
       textFor(
         divisionWithCsp(0, 0, 0, {
           cspSubmittedCount: 0,
-          clubsMissingCspCount: 0,
+          clubsMissingCsp: [],
         })
       )
     ).not.toContain('Club Success Plan')
   })
 
   it('appears in the net-loss and achieved branches too, at the end', () => {
-    const csp = { cspSubmittedCount: 5, clubsMissingCspCount: 13 }
+    const csp = { cspSubmittedCount: 5, clubsMissingCsp: missingClubs(13) }
     const clause =
       'Club Success Plans: 5 of 18 clubs have submitted; 13 have not and cannot be Distinguished until they do.'
 

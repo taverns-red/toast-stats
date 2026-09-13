@@ -26,6 +26,7 @@ import {
   calculateVisitStatus,
   MissingVisitClub,
   IneligibleMissingVisitClub,
+  MissingCspClub,
 } from '../divisionStatus'
 import {
   deriveAreaRecognitionState,
@@ -938,6 +939,16 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
     }
   }
 
+  /** An existing club without a plan, still inside its 30 September window. */
+  function pending(clubNumber: string, clubName: string): MissingCspClub {
+    return {
+      clubNumber,
+      clubName,
+      cspDueDate: '2026-09-30',
+      cspOverdue: false,
+    }
+  }
+
   function textFor(area: AreaWithDivision): string {
     const gapAnalysis = calculateAreaGapAnalysis({
       clubBase: area.clubBase,
@@ -952,9 +963,9 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
       areaWithCsp(5, {
         cspSubmittedCount: 2,
         clubsMissingCsp: [
-          { clubNumber: '3045', clubName: 'Limestone City Club' },
-          { clubNumber: '4321', clubName: 'CFB Kingston Toastmasters' },
-          { clubNumber: '5678', clubName: 'KEYS Toastmasters Club' },
+          pending('3045', 'Limestone City Club'),
+          pending('4321', 'CFB Kingston Toastmasters'),
+          pending('5678', 'KEYS Toastmasters Club'),
         ],
       })
     )
@@ -969,9 +980,7 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
     const text = textFor(
       areaWithCsp(5, {
         cspSubmittedCount: 4,
-        clubsMissingCsp: [
-          { clubNumber: '5678', clubName: 'KEYS Toastmasters Club' },
-        ],
+        clubsMissingCsp: [pending('5678', 'KEYS Toastmasters Club')],
       })
     )
     expect(text).toContain(
@@ -991,11 +1000,11 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
       areaWithCsp(5, {
         cspSubmittedCount: 0,
         clubsMissingCsp: [
-          { clubNumber: '1', clubName: 'CFB Kingston Toastmasters' },
-          { clubNumber: '2', clubName: 'KEYS Toastmasters Club' },
-          { clubNumber: '3', clubName: 'Limestone City Club' },
-          { clubNumber: '4', clubName: "Toastmasters At Queen's" },
-          { clubNumber: '5', clubName: 'Toastmasters At St. Lawrence College' },
+          pending('1', 'CFB Kingston Toastmasters'),
+          pending('2', 'KEYS Toastmasters Club'),
+          pending('3', 'Limestone City Club'),
+          pending('4', "Toastmasters At Queen's"),
+          pending('5', 'Toastmasters At St. Lawrence College'),
         ],
       })
     )
@@ -1010,10 +1019,7 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
     const text = textFor(
       areaWithCsp(5, {
         cspSubmittedCount: 2,
-        clubsMissingCsp: [
-          { clubNumber: '1', clubName: 'Alpha' },
-          { clubNumber: '2', clubName: 'Bravo' },
-        ],
+        clubsMissingCsp: [pending('1', 'Alpha'), pending('2', 'Bravo')],
         clubsMissingCspIneligible: [
           { clubNumber: '9', clubName: 'Suspended Club', status: 'Suspended' },
         ],
@@ -1031,7 +1037,7 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
       areaWithCsp(5, {
         cspTracked: false,
         cspSubmittedCount: 0,
-        clubsMissingCsp: [{ clubNumber: '1', clubName: 'Alpha' }],
+        clubsMissingCsp: [pending('1', 'Alpha')],
       })
     )
     expect(text).not.toContain('Club Success Plan')
@@ -1045,7 +1051,7 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
   it('appears after the visit text in the net-loss and achieved branches too', () => {
     const csp: Partial<CspOpts> = {
       cspSubmittedCount: 3,
-      clubsMissingCsp: [{ clubNumber: '1', clubName: 'Alpha' }],
+      clubsMissingCsp: [pending('1', 'Alpha')],
     }
     const expected =
       'Club Success Plans: 3 of 4 submitted — 1 active club still needs to submit: Alpha. ' +

@@ -141,7 +141,7 @@ function buildDivisions(
       areas: divAreas,
       cspTracked: false,
       cspSubmittedCount: 0,
-      clubsMissingCspCount: 0,
+      clubsMissingCsp: [],
     }
   })
 }

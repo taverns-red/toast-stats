@@ -12,6 +12,7 @@ import type {
   DivisionPerformance,
   AreaPerformance,
   MissingVisitClub,
+  MissingCspClub,
   IneligibleMissingVisitClub,
 } from './divisionStatus.js'
 import {
@@ -29,6 +30,8 @@ import {
 } from './areaRecognitionState.js'
 import {
   determineDistinguishedLevel as coreDetermineDistinguishedLevel,
+  cspDueDate,
+  isCspOverdue,
   isCspRequired,
 } from '@taverns-red/analytics-core'
 import { getProgramYearForDate } from './programYear'
@@ -93,18 +96,32 @@ function clubNameOf(club: Record<string, unknown>): string {
 }
 
 /**
+ * How a missing club is filed by `pushByEligibility` once its status has
+ * passed the ineligible check: either as an active entry (with whatever extra
+ * fields the list carries — the CSP list's per-club deadline, #1565), or
+ * flagged for a reason other than status (a club chartered after 1 April has
+ * automatic credit for its Club Success Plan and is never held to a date).
+ */
+type MissingClubFiling<T extends MissingVisitClub> =
+  | { active: Omit<T, keyof MissingVisitClub> }
+  | { exclusion: NonNullable<IneligibleMissingVisitClub['exclusion']> }
+
+/**
  * File a club that is missing something (a visit report, a Club Success
- * Plan) into the active list or the flagged suspended/ineligible list — the
- * ONE place the "active only, flag others" split is applied, so the visit-gap
- * and CSP lists (#973, #1555) cannot drift apart. Identity comes from the
+ * Plan) into the active list or the flagged list — the ONE place the "active
+ * only, flag others" split is applied, so the visit-gap and CSP lists (#973,
+ * #1555) cannot drift apart. Status is checked first; a non-status exclusion
+ * (`filing.exclusion`, #1565) goes through this same flagged list, tagged so
+ * the footnote can name the reason. Identity comes from the
  * divisionPerformance `club` row; `Club Status` from the clubPerformance row
  * that carries it.
  */
-function pushByEligibility(
+function pushByEligibility<T extends MissingVisitClub>(
   club: Record<string, unknown>,
   clubPerf: Record<string, unknown> | undefined,
-  active: MissingVisitClub[],
-  ineligible: IneligibleMissingVisitClub[]
+  active: T[],
+  ineligible: IneligibleMissingVisitClub[],
+  filing: MissingClubFiling<T>
 ): void {
   const clubStatus =
     clubPerf && typeof clubPerf['Club Status'] === 'string'
@@ -114,9 +131,24 @@ function pushByEligibility(
   const clubName = clubNameOf(club)
   if (isIneligibleStatus(clubStatus)) {
     ineligible.push({ clubNumber, clubName, status: clubStatus })
+  } else if ('exclusion' in filing) {
+    ineligible.push({
+      clubNumber,
+      clubName,
+      status: clubStatus,
+      exclusion: filing.exclusion,
+    })
   } else {
-    active.push({ clubNumber, clubName })
+    active.push({ clubNumber, clubName, ...filing.active } as T)
   }
+}
+
+/** The charter date on a clubPerformance row (Find-A-Club enrichment), if any. */
+function charterDateOf(
+  club: Record<string, unknown> | undefined
+): string | undefined {
+  const value = club?.['charterDate']
+  return typeof value === 'string' ? value : undefined
 }
 
 /**
@@ -673,16 +705,15 @@ export function extractDivisionPerformance(
       cspTracked
     )
 
-    // #1555: division roll-ups are the sum of the areas — one derivation,
-    // one source of truth for the count-only division narrative.
+    // #1555: division roll-ups are derived from the areas — one derivation,
+    // one source of truth for the division narrative. The missing clubs are
+    // carried as rows (not a sum) so the narrative can group by due date
+    // (#1565); area order is already sorted.
     const cspSubmittedCount = areas.reduce(
       (sum, area) => sum + area.cspSubmittedCount,
       0
     )
-    const clubsMissingCspCount = areas.reduce(
-      (sum, area) => sum + area.clubsMissingCsp.length,
-      0
-    )
+    const clubsMissingCsp = areas.flatMap(area => area.clubsMissingCsp)
 
     // Add division to results
     divisions.push({
@@ -696,7 +727,7 @@ export function extractDivisionPerformance(
       areas,
       cspTracked,
       cspSubmittedCount,
-      clubsMissingCspCount,
+      clubsMissingCsp,
     })
   }
 
@@ -815,8 +846,10 @@ function extractAreasForDivision(
     const clubsMissingCurrentRoundVisitIneligible: IneligibleMissingVisitClub[] =
       []
 
-    // #1555: Club Success Plan completion, same active/ineligible split.
-    const clubsMissingCsp: MissingVisitClub[] = []
+    // #1555: Club Success Plan completion, same active/ineligible split;
+    // #1565: each active entry carries its due date, judged against the
+    // caller's pinned snapshot date here — once — so no narrative needs a clock.
+    const clubsMissingCsp: MissingCspClub[] = []
     const clubsMissingCspIneligible: IneligibleMissingVisitClub[] = []
     let cspSubmittedCount = 0
 
@@ -879,7 +912,8 @@ function extractAreasForDivision(
           club,
           clubPerf,
           clubsMissingCurrentRoundVisit,
-          clubsMissingCurrentRoundVisitIneligible
+          clubsMissingCurrentRoundVisitIneligible,
+          { active: {} }
         )
       }
 
@@ -887,15 +921,32 @@ function extractAreasForDivision(
       // divisionPerformance row, as the Distinguished gate above does).
       if (cspTracked) {
         const cspSubmitted = readCspSubmitted(clubPerf ?? club)
-        if (cspSubmitted === true) {
-          cspSubmittedCount++
-        } else if (cspSubmitted === false) {
-          pushByEligibility(
-            club,
-            clubPerf,
-            clubsMissingCsp,
-            clubsMissingCspIneligible
+        if (cspSubmitted !== undefined) {
+          // #1565: per-club due date — null is automatic credit (chartered
+          // after 1 April): such a club is never held to a date, so it is
+          // neither a submitter nor a missing club for the "N of M" ratio.
+          const dueDate = cspDueDate(
+            { charterDate: charterDateOf(clubPerf ?? club) },
+            programYear
           )
+          if (cspSubmitted) {
+            if (dueDate !== null) cspSubmittedCount++
+          } else {
+            pushByEligibility(
+              club,
+              clubPerf,
+              clubsMissingCsp,
+              clubsMissingCspIneligible,
+              dueDate === null
+                ? { exclusion: 'auto-credit' }
+                : {
+                    active: {
+                      cspDueDate: dueDate,
+                      cspOverdue: isCspOverdue(dueDate, snapshotDate),
+                    },
+                  }
+            )
+          }
         }
       }
     }

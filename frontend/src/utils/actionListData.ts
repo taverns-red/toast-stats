@@ -29,6 +29,7 @@ import { isCloseToDistinguished } from './closeToDistinguished'
 import { getAreaVisitDeadlines } from './areaRecognitionState'
 import { summarizeCspCompletion } from './cspCompletion'
 import { getClubHealthStatusLabel } from './clubHealthStatus'
+import { getProgramYearForDate } from './programYear'
 import type { ClubHealthStatus, ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { DivisionPerformance, MissingVisitClub } from './divisionStatus'
 
@@ -182,12 +183,21 @@ export function buildActionList(
   const cspTracked = isCspRequired(programYear)
   const csp = cspTracked
     ? summarizeCspCompletion(
-        clubs.filter(club => inScope(club.divisionId, club.areaId, scope))
+        clubs.filter(club => inScope(club.divisionId, club.areaId, scope)),
+        {
+          // #1565: the per-club deadline is judged against the page's pinned
+          // date. The year is the page's too; when the page did not pass one
+          // it is derived from that same pinned date (as the raw path does),
+          // never from the rows or the clock.
+          programYear: programYear ?? getProgramYearForDate(snapshotDate).label,
+          snapshotDate,
+        }
       )
     : {
         submittedCount: 0,
         notSubmitted: [],
         notSubmittedIneligible: [],
+        notSubmittedAutoCredit: [],
         unknownCount: 0,
       }
   const cspNotSubmitted: CspNotSubmittedItem[] = csp.notSubmitted

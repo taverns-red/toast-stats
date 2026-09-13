@@ -82,7 +82,7 @@ const createDivision = (
   status: 'distinguished',
   cspTracked: false,
   cspSubmittedCount: 0,
-  clubsMissingCspCount: 0,
+  clubsMissingCsp: [],
   ...overrides,
 })
 
@@ -126,7 +126,7 @@ const createDivisionWithAreas = (
   status: 'distinguished',
   cspTracked: false,
   cspSubmittedCount: 0,
-  clubsMissingCspCount: 0,
+  clubsMissingCsp: [],
 })
 
 describe('DivisionAreaRecognitionPanel', () => {

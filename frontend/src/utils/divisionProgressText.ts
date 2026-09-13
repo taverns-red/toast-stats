@@ -90,7 +90,7 @@ function generateCspClause(division: DivisionPerformance): string {
     return ''
   }
   const submitted = division.cspSubmittedCount
-  const missing = division.clubsMissingCspCount
+  const missing = division.clubsMissingCsp.length
   const total = submitted + missing
   if (total === 0) {
     return ''
