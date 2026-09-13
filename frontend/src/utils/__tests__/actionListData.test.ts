@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildActionList,
+  describeActionSections,
   formatCloseGap,
   formatCspRow,
   formatVisitGap,
+  orderActionSections,
 } from '../actionListData'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import type { AreaPerformance, DivisionPerformance } from '../divisionStatus'
@@ -608,5 +610,143 @@ describe('formatCspRow (shared list + CSV string)', () => {
         currentStatus: 'vulnerable',
       })
     ).toBe('CSP due 13 November 2026 · Vulnerable')
+  })
+})
+
+/**
+ * Section order (#1569). The Club Success Plan section leads while a plan can
+ * still earn credit and trails once every deadline has passed — judged by the
+ * page-owned program year and pinned snapshot date (R3), never a clock, so
+ * every branch below is proven with a plain date argument.
+ */
+describe('buildActionList — cspActionable + orderActionSections (#1569)', () => {
+  const oneGoal = [{ date: '2026-06-01', goalsAchieved: 1 }]
+  const planless = makeClub({
+    clubId: 'csp-x',
+    clubName: 'Planless Club',
+    cspSubmitted: false,
+    currentStatus: 'vulnerable',
+    dcpGoalsTrend: oneGoal,
+  })
+  const base = {
+    interventionClubs: [],
+    divisions: [],
+    clubs: [planless],
+  }
+
+  it('is actionable before the deadline, and pins the CSP section first', () => {
+    const result = buildActionList({
+      ...base,
+      snapshotDate: '2026-09-11',
+      programYear: '2026-2027',
+    })
+    expect(result.cspActionable).toBe(true)
+    expect(orderActionSections(result)).toEqual([
+      'action-csp',
+      'action-close',
+      'action-visits',
+      'action-intervention',
+    ])
+  })
+
+  it('stays actionable on the due date itself — a plan filed that day counts', () => {
+    const result = buildActionList({
+      ...base,
+      snapshotDate: '2026-09-30',
+      programYear: '2026-2027',
+    })
+    expect(result.cspActionable).toBe(true)
+  })
+
+  it('drops the CSP section last once the deadline has passed', () => {
+    const result = buildActionList({
+      ...base,
+      snapshotDate: '2026-10-01',
+      programYear: '2026-2027',
+    })
+    expect(result.cspActionable).toBe(false)
+    expect(orderActionSections(result)).toEqual([
+      'action-close',
+      'action-visits',
+      'action-intervention',
+      'action-csp',
+    ])
+  })
+
+  it('keeps it first past 30 September while a newly chartered club can still file', () => {
+    const newborn = makeClub({
+      clubId: 'csp-new',
+      clubName: 'Newborn Club',
+      cspSubmitted: false,
+      charterDate: '2026-08-15',
+      dcpGoalsTrend: oneGoal,
+    })
+    const result = buildActionList({
+      interventionClubs: [],
+      divisions: [],
+      clubs: [newborn],
+      snapshotDate: '2026-10-05',
+      programYear: '2026-2027',
+    })
+    expect(result.cspActionable).toBe(true)
+    expect(orderActionSections(result)[0]).toBe('action-csp')
+  })
+
+  it('omits the CSP section entirely for a pre-2025-26 program year', () => {
+    const result = buildActionList({
+      ...base,
+      snapshotDate: '2025-05-15',
+      programYear: '2024-2025',
+    })
+    expect(result.cspTracked).toBe(false)
+    expect(result.cspActionable).toBe(false)
+    expect(orderActionSections(result)).toEqual([
+      'action-close',
+      'action-visits',
+      'action-intervention',
+    ])
+  })
+})
+
+describe('describeActionSections (#1569 intro copy)', () => {
+  it('names four sections in render order, with an Oxford "and"', () => {
+    expect(
+      describeActionSections([
+        'action-csp',
+        'action-close',
+        'action-visits',
+        'action-intervention',
+      ])
+    ).toBe(
+      'clubs without a Club Success Plan, clubs within reach of Distinguished, ' +
+        'areas with outstanding club visits, and clubs that need intervention'
+    )
+  })
+
+  it('names three when the program year has no Club Success Plan requirement', () => {
+    expect(
+      describeActionSections([
+        'action-close',
+        'action-visits',
+        'action-intervention',
+      ])
+    ).toBe(
+      'clubs within reach of Distinguished, areas with outstanding club visits, ' +
+        'and clubs that need intervention'
+    )
+  })
+
+  it('tracks the post-deadline order too', () => {
+    expect(
+      describeActionSections([
+        'action-close',
+        'action-visits',
+        'action-intervention',
+        'action-csp',
+      ])
+    ).toBe(
+      'clubs within reach of Distinguished, areas with outstanding club visits, ' +
+        'clubs that need intervention, and clubs without a Club Success Plan'
+    )
   })
 })

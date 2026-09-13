@@ -92,6 +92,12 @@ export interface ActionListSections {
    * intro clause, because "0 of N" would be a lie for a year with no rule.
    */
   cspTracked: boolean
+  /**
+   * Whether filing a plan can still earn credit as of the pinned date (#1569).
+   * Drives the seasonal section order: a to-do while true, a record of who
+   * missed once false. Always false when `cspTracked` is false.
+   */
+  cspActionable: boolean
   /** Active clubs without a submitted CSP, sorted division → area → name. */
   cspNotSubmitted: CspNotSubmittedItem[]
   /** Suspended/ineligible clubs without a CSP in scope — footnoted, not listed. */
@@ -234,11 +240,35 @@ export function buildActionList(
     visitGaps,
     interventionRequired,
     cspTracked,
+    // #1569 red step — the deadline resolution lands with the green commit.
+    cspActionable: false,
     cspNotSubmitted,
     cspNotSubmittedIneligibleCount: csp.notSubmittedIneligible.length,
     cspNotSubmittedAutoCreditCount: csp.notSubmittedAutoCredit.length,
     cspUnknownCount: csp.unknownCount,
   }
+}
+
+/**
+ * The four action sections, identified by the DOM id each has always carried
+ * — `#action-csp` is a published deep link from the district overview, so the
+ * id is the section's identity, not an implementation detail (#1569).
+ */
+export type ActionSectionId =
+  'action-close' | 'action-visits' | 'action-intervention' | 'action-csp'
+
+/** Render order for the sections (#1569) — the green commit implements it. */
+export function orderActionSections(
+  _sections: Pick<ActionListSections, 'cspTracked' | 'cspActionable'>
+): ActionSectionId[] {
+  return ['action-close', 'action-visits', 'action-intervention']
+}
+
+/** Intro-copy clause list, in render order (#1569) — green commit. */
+export function describeActionSections(
+  _order: readonly ActionSectionId[]
+): string {
+  return ''
 }
 
 function plural(n: number, noun: string): string {
