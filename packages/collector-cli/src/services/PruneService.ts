@@ -86,7 +86,7 @@ export interface PruneLayerScope {
  */
 export const PRUNE_LAYER_SCOPE: PruneLayerScope = {
   pruned: ['raw-csv', 'snapshots'],
-  retained: ['time-series', 'club-trends', 'v1/rank-history'],
+  retained: ['time-series', 'club-trends', 'club-race', 'v1/rank-history'],
   note: 'Derived layers retained by design (#1132) — trend surfaces keep full daily resolution',
 }
 

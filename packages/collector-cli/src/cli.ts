@@ -669,6 +669,8 @@ export function createCLI(): Command {
         analyticsLocations: computeResult.analyticsLocations,
         globalTotalsPath: computeResult.globalTotalsPath,
         globalTotalsFailed: computeResult.globalTotalsFailed,
+        clubRaceStorePath: computeResult.clubRaceStorePath,
+        clubRaceStoreFailed: computeResult.clubRaceStoreFailed,
         errors: computeResult.errors,
         duration_ms: computeResult.duration_ms,
       }

@@ -357,6 +357,14 @@ export interface ComputeAnalyticsResult {
    * reaches `districtsFailed`, so a broken rollup would otherwise exit 0.
    */
   globalTotalsFailed?: boolean
+  /** Path of the club-race crossing store the date was folded into (#1556). */
+  clubRaceStorePath?: string
+  /**
+   * True when the club-race store update THREW (#1556). Reported, never
+   * publish-blocking: the store publishes nothing, and a missed capture must
+   * not stop the day's snapshot from uploading.
+   */
+  clubRaceStoreFailed?: boolean
   /** Detailed error information for failed districts */
   errors: Array<{
     districtId: string

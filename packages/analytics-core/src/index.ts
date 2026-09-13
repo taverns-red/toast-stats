@@ -68,7 +68,10 @@ export {
   GROWTH_PERCENTAGES,
   DISTINGUISHED_PERCENTAGES,
   // Club eligibility utilities
+  classifyDistinguishedTier,
   determineDistinguishedLevel,
+  determineDistinguishedLevelAtSnapshot,
+  distinguishedMembershipBasis,
   getConfirmedDistinguishedLevel,
   getCSPStatus,
   isClubSmedleyAvailable,
@@ -77,7 +80,12 @@ export {
   isDistinguishedProvisional,
 } from './analytics/index.js'
 
-export type { MultiYearTrendDirection } from './analytics/index.js'
+export type {
+  DistinguishedLevelAtSnapshotInput,
+  DistinguishedMembershipBasis,
+  DistinguishedTierCode,
+  MultiYearTrendDirection,
+} from './analytics/index.js'
 
 // Goal Achievement Timeline primitive (#621)
 export {

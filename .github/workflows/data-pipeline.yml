@@ -342,6 +342,14 @@ jobs:
           mkdir -p ./cache/club-trends
           gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
 
+          # Club-race crossing store (#1556): one file per PY. MUST be pulled
+          # before compute — the store starts empty when absent, and the push
+          # back below would clobber every accumulated crossing date with
+          # today's alone (the awards-history lesson, #1111).
+          echo "Syncing club-race..."
+          mkdir -p ./cache/club-race
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
+
           # District awards history store (~5 KB) (#333)
           echo "Syncing district-awards-history..."
           gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
@@ -357,9 +365,11 @@ jobs:
           echo "## ⏬ Store Sync" >> "$GITHUB_STEP_SUMMARY"
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           CT_COUNT=$(find ./cache/club-trends -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          CR_COUNT=$(find ./cache/club-race -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           PREV_COUNT=$(find "./cache/snapshots/${PREV_YEAR}" -name 'district_*.json' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Club-trends files**: ${CT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Club-race store files**: ${CR_COUNT}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Prev-year snapshots**: ${PREV_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Daily Step 3b: Find-A-Club enrichment fetch (#430) ──
@@ -504,6 +514,8 @@ jobs:
           gsutil -m rsync -r "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
           gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+          # Club-race crossing store (#1556) — the dir exists from the sync step
+          gsutil -m rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
           # District awards history (#333)
           if [ -f "./cache/district-awards-history.json" ]; then
@@ -735,7 +747,7 @@ jobs:
       # Time-series + club-trends persist across iterations (small).
 
       # ── Rebuild Step 1: Sync small stores from GCS ──
-      - name: '[rebuild] Sync time-series and club-trends from GCS'
+      - name: '[rebuild] Sync time-series, club-trends, club-race from GCS'
         if: steps.mode.outputs.mode == 'rebuild'
         run: |
           # These are small (~344 KB + ~50 KB/district) and persist across dates
@@ -747,6 +759,14 @@ jobs:
           mkdir -p ./cache/club-trends
           gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
 
+          # Club-race crossing store (#1556). A rebuild walks dates in any
+          # order; the store keeps the EARLIER of stored/observed per crossing,
+          # so pulling first means a rebuild can only sharpen a date, never
+          # replace daily resolution with the surviving month-ends.
+          echo "Syncing club-race..."
+          mkdir -p ./cache/club-race
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
+
           # District awards history store (#333)
           echo "Syncing district-awards-history..."
           gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
@@ -755,8 +775,10 @@ jobs:
           echo "## ⏬ Store Sync (rebuild)" >> "$GITHUB_STEP_SUMMARY"
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           CT_COUNT=$(find ./cache/club-trends -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          CR_COUNT=$(find ./cache/club-race -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Club-trends files**: ${CT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Club-race store files**: ${CR_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Rebuild Step 2: Discover dates, then stream one-at-a-time ──
       - name: '[rebuild] Stream rebuild — one date at a time'
@@ -872,9 +894,10 @@ jobs:
           done
 
           # Sync accumulated stores back to GCS
-          echo "Syncing time-series and club-trends back to GCS..."
+          echo "Syncing time-series, club-trends and club-race back to GCS..."
           gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+          gsutil -m rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
           # District awards history (#333)
           if [ -f "./cache/district-awards-history.json" ]; then
@@ -1005,12 +1028,14 @@ jobs:
       # program year). Then transforms, computes, and uploads.
 
       # ── Rescrape Step 1: Sync small stores from GCS ──
-      - name: '[rescrape] Sync time-series and club-trends from GCS'
+      - name: '[rescrape] Sync time-series, club-trends, club-race from GCS'
         if: steps.mode.outputs.mode == 'rescrape'
         run: |
-          mkdir -p ./cache/time-series ./cache/club-trends
+          mkdir -p ./cache/time-series ./cache/club-trends ./cache/club-race
           gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
           gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
+          # Club-race crossing store (#1556): pull before push, min-on-rebuild.
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
 
           # District awards history store (~5 KB) (#1111): pull before push, or
           # the end-of-run push back (DistrictAwardsHistoryStore starts empty
@@ -1168,9 +1193,10 @@ jobs:
           done
 
           # Sync accumulated stores back to GCS
-          echo "Syncing time-series and club-trends back to GCS..."
+          echo "Syncing time-series, club-trends and club-race back to GCS..."
           gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+          gsutil -m rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
 
           # District awards history (#333)
@@ -1229,6 +1255,14 @@ jobs:
       - name: '[rescrape-historical] Rebuild from fresh CSVs'
         if: steps.mode.outputs.mode == 'rescrape-historical'
         run: |
+          # Club-race crossing store (#1556) is pulled BEFORE the rebuild and
+          # is deliberately NOT nuked below: the historical dashboard only
+          # yields month-ends, and the store's min-on-rebuild upsert keeps the
+          # daily-resolution crossings the live pipeline already captured.
+          echo "Syncing club-race..."
+          mkdir -p ./cache/club-race
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
+
           echo "Rebuilding all derived data from fresh CSVs..."
           npx collector-cli rebuild --verbose
 
@@ -1269,6 +1303,10 @@ jobs:
             --content-type="application/json" \
             --cache-control="public, max-age=3600" \
             -r -Z ./cache/club-trends/* "gs://${GCS_BUCKET}/club-trends/"
+
+          # Club-race crossing store (#1556): internal state, rsync back
+          echo "Syncing club-race back to GCS..."
+          gsutil -m rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
           # Upload raw-csv
           echo "Uploading raw-csv..."
@@ -2051,7 +2089,7 @@ jobs:
         run: |
           echo "Promoting staging → production..."
 
-          # STILL gsutil, deliberately (#1412): these five writes ARE production.
+          # STILL gsutil, deliberately (#1412): these six writes ARE production.
           # `gcloud storage rsync`'s object-comparison defaults are not proven
           # byte-identical to gsutil's here, and a difference shows up as data
           # that silently did or did not promote. Migrate with a dry-run diff.
@@ -2067,6 +2105,9 @@ jobs:
 
           # Sync club-trends
           gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "gs://${GCS_BUCKET_PRODUCTION}/club-trends/"
+
+          # Sync club-race crossing store (#1556)
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "gs://${GCS_BUCKET_PRODUCTION}/club-race/"
 
           # Sync config (snapshot index)
           gsutil -m rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"

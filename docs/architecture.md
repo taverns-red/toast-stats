@@ -88,6 +88,7 @@ gs://toast-stats-data-{staging|ca}/
 │       └── district_{id}_performance-targets.json
 ├── time-series/district_{id}/{year}.json
 ├── club-trends/district_{id}.json
+├── club-race/{YYYY-YYYY}/first-reached.json   (crossing-date store, #1556)
 └── v1/
     ├── latest.json        (5-min cache)
     ├── dates.json         (15-min cache)
@@ -98,7 +99,7 @@ gs://toast-stats-data-{staging|ca}/
 
 The pipeline never writes production directly. After a run finishes processing into **staging**,
 two gates decide whether staging is promoted to production (`gsutil rsync` of `v1/`, `snapshots/`,
-`time-series/`, `club-trends/`, `config/` — additive, no `-d`):
+`time-series/`, `club-trends/`, `club-race/`, `config/` — additive, no `-d`):
 
 1. **Count gate (#316)** — additive guard. Blocks promotion if staging has _fewer_ ranked
    districts or _fewer_ dates than production (a subtractive change).

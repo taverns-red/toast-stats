@@ -389,7 +389,7 @@ export function isDistinguishedProvisional(
   if (distinguishedLevel === 'NotDistinguished') return false
 
   // Post-April data (Apr=4, May=5, Jun=6): membership count is confirmed
-  if (dataMonth >= 4 && dataMonth <= 6) return false
+  if (distinguishedMembershipBasis(dataMonth) === 'active-members') return false
 
   // Pre-April (Jul=7 through Mar=3): check if aprilRenewals alone qualify
   // Each level has different membership requirements (#296)
@@ -441,6 +441,85 @@ export function getConfirmedDistinguishedLevel(
     dcpGoals,
     aprilRenewals,
     confirmedNetGrowth,
+    programYear
+  )
+}
+
+/**
+ * Which membership figure the Distinguished ladder is read against for a
+ * data month (#1556 ruling R-A).
+ *
+ * Before April dues land, "Active Members" still counts members who may not
+ * renew, so only the confirmed April renewals are trusted (data months
+ * Jul–Mar). From April the active count is real (Apr–Jun). Same boundary
+ * `isDistinguishedProvisional` draws; stated once here so the two cannot
+ * drift.
+ */
+export type DistinguishedMembershipBasis =
+  'confirmed-renewals' | 'active-members'
+
+export function distinguishedMembershipBasis(
+  dataMonth: number
+): DistinguishedMembershipBasis {
+  return dataMonth >= 4 && dataMonth <= 6
+    ? 'active-members'
+    : 'confirmed-renewals'
+}
+
+/** The fields the snapshot-basis rule reads — every `ClubStatistics` has them. */
+export type DistinguishedLevelAtSnapshotInput = Pick<
+  ClubStatistics,
+  | 'dcpGoals'
+  | 'membershipCount'
+  | 'membershipBase'
+  | 'aprilRenewals'
+  | 'cspSubmitted'
+>
+
+/**
+ * The Distinguished level a club holds AT a snapshot date, under the
+ * membership basis that applies to that date's data month (#1556 R-A):
+ *
+ * | Data month | Function                          | Membership input  |
+ * | ---------- | --------------------------------- | ----------------- |
+ * | Jul–Mar    | `getConfirmedDistinguishedLevel`  | `aprilRenewals`   |
+ * | Apr–Jun    | `determineDistinguishedLevel`     | `membershipCount` |
+ *
+ * Composes the existing ladder — it adds no second copy of the tier table
+ * (lessons 61/76) — and layers the same CSP gate `getCSPStatus` gives every
+ * other caller. The program year is REQUIRED so the Smedley rung is absent
+ * where it did not exist (#1406), and threaded rather than re-derived per
+ * call site (#1284).
+ *
+ * This is the signal the worldwide club race records crossings on. It is
+ * deliberately stricter than the per-district `distinguishedLevel` published
+ * on `ClubTrend` before April, which reads active members and flags the
+ * unconfirmed cases via `isProvisionallyDistinguished`.
+ *
+ * @param club - The club's goals, membership, base, renewals and CSP flag
+ * @param snapshotDate - The snapshot date (YYYY-MM-DD) whose data month picks the basis
+ * @param programYear - Program year the snapshot belongs to ("YYYY-YYYY")
+ */
+export function determineDistinguishedLevelAtSnapshot(
+  club: DistinguishedLevelAtSnapshotInput,
+  snapshotDate: string,
+  programYear: string
+): DistinguishedLevel {
+  if (!getCSPStatus(club)) return 'NotDistinguished'
+
+  const dataMonth = Number.parseInt(snapshotDate.slice(5, 7), 10)
+  if (distinguishedMembershipBasis(dataMonth) === 'confirmed-renewals') {
+    return getConfirmedDistinguishedLevel(
+      club.dcpGoals,
+      club.aprilRenewals,
+      club.membershipBase,
+      programYear
+    )
+  }
+  return determineDistinguishedLevel(
+    club.dcpGoals,
+    club.membershipCount,
+    club.membershipCount - club.membershipBase,
     programYear
   )
 }
