@@ -261,7 +261,9 @@ Real example, Division A, D61 2026-09-11 — 18 clubs, 13 without a plan, but on
 
 ### 6.3 District overview (one line under the "N clubs · avg …" header, `DistrictOverview.tsx`)
 
-> **{116} of {161} clubs ({72}%) have not submitted a Club Success Plan** — required for any Distinguished level this year. [See which clubs →](/district/{id}/action-list#action-csp)
+> **{113} of {158} active clubs ({72}%) have not submitted a Club Success Plan** — required for any Distinguished level this year. [See which clubs →](/district/{id}/action-list#action-csp) {3} suspended/ineligible clubs without a plan are not counted.
+
+Decision (#1561 review, verified against the live analytics file — `Active|false 113 · Ineligible|false 3 · Active|true 44 · Low|true 1`): the overview counts **active clubs only**, numerator and denominator, so the number a user clicks equals the badge on the action-list section it lands on; the ineligible clubs are named in the action list's own footnote voice. The earlier draft's "116 of 161" was the raw column count and would have linked a 116 to a list of 113. Denominator = non-ineligible clubs with a known value (an ineligible club that _has_ filed is excluded too). The trailing sentence is omitted when no ineligible club is missing a plan.
 
 All submitted:
 
@@ -277,7 +279,7 @@ Intro paragraph (extend, don't replace):
 
 Section (fourth, after "Clubs needing intervention"):
 
-- Heading: **Clubs without a Club Success Plan** · count badge `{116}`
+- Heading: **Clubs without a Club Success Plan** · count badge `{113}` (active clubs only — the 3 ineligible non-submitters are footnoted, not counted; verified on the #1561 preview)
 - Row: `{Limestone City Club}` (link to `/district/{id}/club/{clubId}`) · meta `{A}/{01} · CSP not submitted · {vulnerable}`
 - Empty text: "Every active club in this scope has submitted its Club Success Plan."
 - Not tracked (pre-2025-26 year selected): **section not rendered** (`section-csp` absent), and the intro sentence's CSP clause is dropped too. See Open Question 3.
@@ -363,7 +365,7 @@ All new logic is pure and lands in the **unit** project; page-level assertions g
 
 **Phase 4 — district overview** 16. `test(frontend): DistrictOverview CSP line follows the page's program year (#N)` — red 17. `feat(frontend): CSP completion line + programYear prop on DistrictOverview (#N)` — green (page passes the label it already has)
 
-**Phase 5 — docs, verification, close** 18. `docs: product-spec rows for CSP completion tracking; Methodology CSP paragraph notes the July reset and #1284 exposure (#N)` 19. Preview-channel verification on D61 (PY 2026-27 shows the section with ~116 rows; switch PY to 2024-25 → section and sentences disappear; Area A01 narrative matches §6.1 real example; dark mode + 375px). Prune stale preview channels if the deploy 429s (memory: preview-channel quota). 20. Lesson only if something transferable surfaced (candidate: "a pipeline field normalized with `?? true` for one rule cannot be reused as a presence signal for another — gate on the year the page owns"). If that is already covered by Lesson/rule text, file nothing.
+**Phase 5 — docs, verification, close** 18. `docs: product-spec rows for CSP completion tracking; Methodology CSP paragraph notes the July reset and #1284 exposure (#N)` 19. Preview-channel verification on D61 (PY 2026-27 shows the section with 113 rows and the "3 suspended/ineligible clubs … not listed" footnote, and the overview line "113 of 158 active clubs (72%)"; switch PY to 2024-25 → section, sentences and overview line disappear; Area A01 narrative matches §6.1 real example; dark mode + 375px). Prune stale preview channels if the deploy 429s (memory: preview-channel quota). 20. Lesson only if something transferable surfaced (candidate: "a pipeline field normalized with `?? true` for one rule cannot be reused as a presence signal for another — gate on the year the page owns"). If that is already covered by Lesson/rule text, file nothing.
 
 Estimated blast radius: `packages/analytics-core` (1 file + test), `frontend/src/utils` (4 files), `frontend/src/components` (2), `frontend/src/pages` (2), tests. Two workspaces touched — within the ≤3-unrelated-modules threshold; no refactor gate triggered.
 
