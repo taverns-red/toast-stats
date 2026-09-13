@@ -30,14 +30,14 @@ describe('MethodologyPage — mobile collapsed sections', () => {
 
   it('renders every H2 section as a disclosure button, collapsed by default', () => {
     renderPage()
-    // 12 sections → 12 toggle buttons, all collapsed. (§10 Program-year rule
+    // 13 sections → 13 toggle buttons, all collapsed. (§10 Program-year rule
     // changes was added in #1400 — the rule-change entries inside it are
     // anchors, not disclosures, so they add no toggles; §11 Worldwide rollup
-    // was added in #1500.)
+    // was added in #1500; §12 Worldwide club race in #1556.)
     const toggles = screen
       .getAllByRole('button')
       .filter(b => b.getAttribute('aria-expanded') !== null)
-    expect(toggles).toHaveLength(12)
+    expect(toggles).toHaveLength(13)
     expect(
       toggles.every(b => b.getAttribute('aria-expanded') === 'false')
     ).toBe(true)
