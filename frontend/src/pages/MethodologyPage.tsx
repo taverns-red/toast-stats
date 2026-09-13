@@ -433,6 +433,20 @@ const MethodologyPage: React.FC = () => {
             criteria.
           </li>
         </ul>
+        <p>
+          <strong>Club Success Plan completion.</strong> From 2025-26 the
+          Divisions, Division and Area narratives state how many clubs have
+          submitted a plan and name the active clubs that have not, because no
+          club can be Distinguished without one. Two caveats when reading those
+          counts: the dashboard&apos;s CSP column resets to &ldquo;not
+          submitted&rdquo; for nearly every club on July 1, so early-year
+          figures are low by construction, not a regression; and because
+          Toastmasters&apos; program-year rollover lags July 1, a July snapshot
+          can still reflect the prior year&apos;s June close. Years before
+          2025-26 have no CSP column and show no completion sentence at all
+          &mdash; never &ldquo;0 of N submitted&rdquo; for a year with no
+          requirement.
+        </p>
         <p className="methodology-source">
           Source:{' '}
           <code>
