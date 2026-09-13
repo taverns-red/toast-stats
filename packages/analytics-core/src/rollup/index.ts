@@ -23,3 +23,9 @@ export {
   programYearForSnapshotDate,
   type GlobalTotalsInput,
 } from './globalTotals.js'
+
+export {
+  buildGlobalClubRace,
+  type GlobalClubRaceInput,
+  type GlobalClubRaceDistrictInput,
+} from './globalClubRace.js'

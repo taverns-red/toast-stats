@@ -284,3 +284,10 @@ export {
   programYearForSnapshotDate,
   type GlobalTotalsInput,
 } from './rollup/globalTotals.js'
+
+// Worldwide club race projection — snapshots/{date}/global-club-race.json (#1556)
+export {
+  buildGlobalClubRace,
+  type GlobalClubRaceInput,
+  type GlobalClubRaceDistrictInput,
+} from './rollup/globalClubRace.js'
