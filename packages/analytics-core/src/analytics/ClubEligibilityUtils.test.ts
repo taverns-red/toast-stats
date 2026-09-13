@@ -18,6 +18,8 @@ import {
   getConfirmedDistinguishedLevel,
   isClubSmedleyAvailable,
   isCspRequired,
+  cspDueDate,
+  isCspOverdue,
   isDistinguishedProvisional,
   CSP_REQUIRED_FROM_PROGRAM_YEAR,
 } from './ClubEligibilityUtils.js'
@@ -334,6 +336,126 @@ describe('isCspRequired', () => {
   it('treats an omitted year as current rules (mirrors getConfirmedDistinguishedLevel)', () => {
     expect(isCspRequired(undefined)).toBe(true)
     expect(isCspRequired()).toBe(true)
+  })
+})
+
+// ============================================================
+// cspDueDate / isCspOverdue (#1565)
+// ============================================================
+
+/**
+ * Per-club Club Success Plan due date, from the Distinguished Club Program
+ * (Item 1111, Rev. 06/2026, pp. 5 and 11):
+ *
+ * | Club                    | CSP due                 | Not filed by then                 |
+ * | ----------------------- | ----------------------- | --------------------------------- |
+ * | Existing                | 30 September            | Cannot earn Distinguished this PY |
+ * | Chartered in-year       | charter date + 90 days  | Cannot earn Distinguished this PY |
+ * | Chartered after 1 April | n/a — automatic credit  | (never listed)                    |
+ *
+ * The program year is the caller's (R3); the club's `charterDate` is the only
+ * row field read. `null` means automatic credit.
+ */
+describe('cspDueDate (#1565)', () => {
+  it('is 30 September of the program year for an existing club', () => {
+    expect(cspDueDate({ charterDate: '2000-06-01' }, '2026-2027')).toBe(
+      '2026-09-30'
+    )
+    expect(cspDueDate({ charterDate: '2000-06-01' }, '2025-2026')).toBe(
+      '2025-09-30'
+    )
+  })
+
+  it('treats a club with no charter date as existing (30 September)', () => {
+    expect(cspDueDate({}, '2026-2027')).toBe('2026-09-30')
+    expect(cspDueDate({ charterDate: undefined }, '2026-2027')).toBe(
+      '2026-09-30'
+    )
+  })
+
+  it('treats an unparseable charter date as existing rather than guessing', () => {
+    expect(cspDueDate({ charterDate: 'unknown' }, '2026-2027')).toBe(
+      '2026-09-30'
+    )
+    expect(cspDueDate({ charterDate: '' }, '2026-2027')).toBe('2026-09-30')
+  })
+
+  it('is charter date + 90 days for a club chartered during the program year', () => {
+    // 2026-12-01 + 90 days = 2027-03-01 (30 + 31 + 28 = 89 → 1 March)
+    expect(cspDueDate({ charterDate: '2026-12-01' }, '2026-2027')).toBe(
+      '2027-03-01'
+    )
+    // TENE Toastmasters, D61: chartered 2025-12-01 → due 2026-03-01
+    expect(cspDueDate({ charterDate: '2025-12-01' }, '2025-2026')).toBe(
+      '2026-03-01'
+    )
+  })
+
+  it('applies +90 days even when that lands before 30 September (the rule is literal)', () => {
+    // Chartered on the first day of the year: 1 July + 90 days = 29 September.
+    expect(cspDueDate({ charterDate: '2026-07-01' }, '2026-2027')).toBe(
+      '2026-09-29'
+    )
+  })
+
+  it('adds 90 calendar days across a leap day', () => {
+    // 2028 is a leap year: 2028-01-15 + 90 = 2028-04-14 (16 + 29 + 31 + 14)
+    expect(cspDueDate({ charterDate: '2028-01-15' }, '2027-2028')).toBe(
+      '2028-04-14'
+    )
+  })
+
+  it('is null (automatic credit) for a club chartered after 1 April of the program year', () => {
+    expect(cspDueDate({ charterDate: '2027-04-02' }, '2026-2027')).toBeNull()
+    expect(cspDueDate({ charterDate: '2027-05-22' }, '2026-2027')).toBeNull()
+    expect(cspDueDate({ charterDate: '2027-06-30' }, '2026-2027')).toBeNull()
+  })
+
+  it('boundary: chartered ON 1 April is not "after" it — due 30 June (+90 days)', () => {
+    expect(cspDueDate({ charterDate: '2027-04-01' }, '2026-2027')).toBe(
+      '2027-06-30'
+    )
+  })
+
+  it('boundary: chartered 31 March is in-year, +90 days = 29 June', () => {
+    expect(cspDueDate({ charterDate: '2027-03-31' }, '2026-2027')).toBe(
+      '2027-06-29'
+    )
+  })
+
+  it('a club chartered after 1 April of the PRIOR year is an existing club this year', () => {
+    // Club Toastmasters de Drummondville (D61): chartered 2026-04-17 —
+    // automatic credit for 2025-26, but held to 30 September for 2026-27.
+    expect(cspDueDate({ charterDate: '2026-04-17' }, '2025-2026')).toBeNull()
+    expect(cspDueDate({ charterDate: '2026-04-17' }, '2026-2027')).toBe(
+      '2026-09-30'
+    )
+  })
+
+  it('boundary: chartered 30 June (last day of the prior year) is existing; 1 July is in-year', () => {
+    expect(cspDueDate({ charterDate: '2026-06-30' }, '2026-2027')).toBe(
+      '2026-09-30'
+    )
+    expect(cspDueDate({ charterDate: '2026-07-01' }, '2026-2027')).toBe(
+      '2026-09-29'
+    )
+  })
+})
+
+/**
+ * "On and after the day following" the due date the plan is late: the club
+ * has lost Distinguished eligibility for the year. Both inputs are ISO dates
+ * so the compare is lexical and needs no clock (R3).
+ */
+describe('isCspOverdue (#1565)', () => {
+  it('is false on or before the due date', () => {
+    expect(isCspOverdue('2026-09-30', '2026-09-11')).toBe(false)
+    expect(isCspOverdue('2026-09-30', '2026-09-30')).toBe(false)
+  })
+
+  it('is true from the day after the due date', () => {
+    expect(isCspOverdue('2026-09-30', '2026-10-01')).toBe(true)
+    expect(isCspOverdue('2026-09-30', '2027-06-30')).toBe(true)
   })
 })
 
