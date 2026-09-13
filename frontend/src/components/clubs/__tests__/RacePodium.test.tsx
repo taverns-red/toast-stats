@@ -55,9 +55,11 @@ describe('RacePodium (#1556)', () => {
     // Rank 1 is one entry holding three clubs.
     expect(ranks[0]).toHaveTextContent('1st')
     expect(ranks[0]).toHaveTextContent('3 clubs')
+    // The club links specifically — each club also carries a district chip
+    // link, which is not a club and must not be counted as one.
     expect(
       within(ranks[0]!)
-        .getAllByRole('link')
+        .getAllByTestId('race-podium-club')
         .map(l => l.textContent)
     ).toEqual(['Alpha', 'Bravo', 'Charlie'])
     // The next rank skips to 4th (competition ranking), then 5th.
