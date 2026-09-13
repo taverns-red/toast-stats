@@ -188,6 +188,12 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       // boundary, so pre-2025-26 prose is unchanged.
       'frontend/src/utils/areaProgressText.ts',
       'frontend/src/utils/divisionProgressText.ts',
+      // The action list's "Clubs without a Club Success Plan" section and
+      // the shared reducer behind it — the section is gated on this boundary
+      // via `isCspRequired` and absent before it.
+      'frontend/src/utils/cspCompletion.ts',
+      'frontend/src/utils/actionListData.ts',
+      'frontend/src/pages/DistrictActionListPage.tsx',
     ],
   },
   {
