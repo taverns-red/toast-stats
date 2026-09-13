@@ -1,6 +1,5 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import type { ClubRaceTier } from '@taverns-red/shared-contracts'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import { useGlobalClubRace } from '../hooks/useGlobalClubRace'
@@ -14,6 +13,7 @@ import {
   raceTierTitle,
   raceTierUrl,
 } from '../utils/raceTierRoute'
+import { exclusiveTierCounts, totalRecognised } from '../utils/clubRaceCounts'
 
 /* /clubs (#1556, phase 3) — the worldwide "race to Distinguished" hub:
    KPI strip (one tile per tier), podium per tier, cumulative race chart, and
@@ -49,20 +49,29 @@ export const RaceBasisBlock: React.FC<{
   </aside>
 )
 
+/* The total line is part of the reserved slot: it lands with the tiles, and
+   an unreserved one-line paragraph is exactly the late expansion that cost
+   ~0.2 CLS on the landing page (Lesson 107). */
 const KpiSkeleton: React.FC = () => (
-  <div
-    className="clubs-kpis"
-    data-testid="clubs-kpis-skeleton"
-    aria-busy="true"
-    aria-label="Loading race"
-  >
-    {RACE_TIER_ROUTES.map(({ tier }) => (
-      <div key={tier} className="clubs-kpi" aria-hidden="true">
-        <span className="clubs-kpi__label">{raceTierTitle(tier)}</span>
-        <span className="clubs-kpi__value">&nbsp;</span>
-      </div>
-    ))}
-  </div>
+  <>
+    <div
+      className="clubs-kpis"
+      data-testid="clubs-kpis-skeleton"
+      aria-busy="true"
+      aria-label="Loading race"
+    >
+      {RACE_TIER_ROUTES.map(({ tier }) => (
+        <div key={tier} className="clubs-kpi" aria-hidden="true">
+          <span className="clubs-kpi__label">{raceTierTitle(tier)}</span>
+          <span className="clubs-kpi__value">&nbsp;</span>
+          <span className="clubs-kpi__note">&nbsp;</span>
+        </div>
+      ))}
+    </div>
+    <p className="clubs-kpis__total" aria-hidden="true">
+      &nbsp;
+    </p>
+  </>
 )
 
 const ClubsWorldPage: React.FC = () => {
@@ -80,20 +89,16 @@ const ClubsWorldPage: React.FC = () => {
   const { asOfDate: globalAsOfDate } = useLatestAsOfDate()
   const { race, snapshotDate, isLoading } = useGlobalClubRace(effectiveDate)
 
-  const latest = race?.timeline[race.timeline.length - 1]
-  const previous =
-    race && race.timeline.length > 1
-      ? race.timeline[race.timeline.length - 2]
-      : undefined
-  // The timeline's last point is the artifact's own cumulative count (and
-  // what the delta is read against); rows are the fallback for a store with
-  // no observed dates yet.
-  const countFor = (tier: ClubRaceTier): number =>
-    latest
-      ? latest[tier]
-      : race
-        ? race.reached.filter(r => r.tiers[tier]).length
-        : 0
+  /* #1570 — each club counted ONCE, at the level it holds now. The
+     artifact's timeline is CUMULATIVE (a President's club also sits in the
+     Select and Distinguished points), which is right for "at or past this
+     line" and wrong for a tile: it triple-counted Ang Mo Kio C.C. Mandarin.
+     The lists below are unchanged — a club still appears under every tier it
+     reached, with its crossing date and rank (R-A2) — so the tile reads 31
+     above a 35-row Distinguished list, and the sub-label plus the total line
+     say why in place. */
+  const counts = exclusiveTierCounts(race?.reached ?? [])
+  const recognised = totalRecognised(counts)
 
   return (
     <div className="clubs-page">
@@ -145,32 +150,23 @@ const ClubsWorldPage: React.FC = () => {
       {race && (
         <>
           <div className="clubs-kpis">
-            {RACE_TIER_ROUTES.map(({ tier }) => {
-              const count = countFor(tier)
-              const delta =
-                latest && previous ? latest[tier] - previous[tier] : null
-              return (
-                <Link
-                  key={tier}
-                  to={raceTierUrl(tier)}
-                  className="clubs-kpi"
-                  data-testid="clubs-kpi"
-                >
-                  <span className="clubs-kpi__label">
-                    {raceTierTitle(tier)}
-                  </span>
-                  <span className="clubs-kpi__value">{count}</span>
-                  <span className="clubs-kpi__delta">
-                    {delta === null
-                      ? 'clubs reached'
-                      : delta > 0
-                        ? `+${delta} since previous snapshot`
-                        : 'no change since previous snapshot'}
-                  </span>
-                </Link>
-              )
-            })}
+            {RACE_TIER_ROUTES.map(({ tier }) => (
+              <Link
+                key={tier}
+                to={raceTierUrl(tier)}
+                className="clubs-kpi"
+                data-testid="clubs-kpi"
+              >
+                <span className="clubs-kpi__label">{raceTierTitle(tier)}</span>
+                <span className="clubs-kpi__value">{counts[tier]}</span>
+                <span className="clubs-kpi__note">at this level now</span>
+              </Link>
+            ))}
           </div>
+          <p className="clubs-kpis__total" data-testid="clubs-kpis-total">
+            {recognised} clubs recognised worldwide — each counted once, at its
+            top level.
+          </p>
 
           <section className="clubs-section" aria-labelledby="clubs-podiums">
             <h2 id="clubs-podiums" className="clubs-section__title">
@@ -197,6 +193,7 @@ const ClubsWorldPage: React.FC = () => {
             <RaceChart
               timeline={race.timeline}
               smedleyAvailable={race.ruleset.smedleyAvailable}
+              currentCounts={counts}
             />
           </section>
 

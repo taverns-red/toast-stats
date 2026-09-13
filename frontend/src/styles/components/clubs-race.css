@@ -35,9 +35,18 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 0.75rem;
-    margin: 1rem 0 1.5rem;
+    margin: 1rem 0 0.5rem;
     /* Reserve the strip while the query resolves (Lesson 107). */
     min-height: 96px;
+  }
+
+  /* The counting rule, stated once under the strip (#1570). Height is
+     reserved by the skeleton's matching paragraph. */
+  .clubs-kpis__total {
+    margin: 0 0 1.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--rt-ink-2);
   }
 
   .clubs-kpi {
@@ -69,7 +78,7 @@
     line-height: 1.1;
   }
 
-  .clubs-kpi__delta {
+  .clubs-kpi__note {
     display: block;
     font-size: 0.75rem;
     color: var(--rt-ink-3);
@@ -375,6 +384,7 @@
     color: var(--rt-ink-on-dk);
   }
 
+  [data-theme='dark'] .clubs-kpis__total,
   [data-theme='dark'] .clubs-kpi__label,
   [data-theme='dark'] .race-podium__tie,
   [data-theme='dark'] .race-podium__district,

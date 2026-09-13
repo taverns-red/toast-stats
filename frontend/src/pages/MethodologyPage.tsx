@@ -855,6 +855,23 @@ const MethodologyPage: React.FC = () => {
             date of a program year ties at first.
           </p>
 
+          <h3>How clubs are counted</h3>
+          <p>
+            The lists and the counts answer different questions, so they do not
+            match — deliberately. A club appears in{' '}
+            <strong>every tier it has reached</strong>, because reaching
+            President's Distinguished does not undo reaching Distinguished. In
+            the tiles at the top of <Link to="/clubs">Clubs worldwide</Link>,
+            each club is <strong>counted once</strong>, at the{' '}
+            <strong>level it holds now</strong> — so a club at President's is
+            not also counted under Select and Distinguished, and the four tiles
+            add up to the number of clubs recognised. A club that falls back
+            below a tier moves to the tile for its current level and{' '}
+            <strong>keeps its crossing date and rank</strong> in the higher
+            tier's list. The chart under the tiles bands the same clubs the same
+            way.
+          </p>
+
           <h3>What is never shown</h3>
           <p>
             There is <strong>no global list with a bottom</strong>. Every list
