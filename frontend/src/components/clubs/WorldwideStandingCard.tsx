@@ -30,9 +30,7 @@ export interface WorldwideStandingCardProps {
   reached: GlobalClubRaceReached | null
 }
 
-function highestReached(
-  reached: GlobalClubRaceReached
-): {
+function highestReached(reached: GlobalClubRaceReached): {
   tier: ClubRaceTier
   rank: number
   reachedOn: string
