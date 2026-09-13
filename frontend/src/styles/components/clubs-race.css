@@ -9,6 +9,19 @@
    rosette text). */
 
 @layer components {
+  /* ── Page container (same gutter as the other top-level pages) ──────── */
+  .clubs-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+  }
+
+  @media (max-width: 639px) {
+    .clubs-page {
+      padding: 20px 16px 40px;
+    }
+  }
+
   /* ── Hub ────────────────────────────────────────────────────────────── */
   .clubs-page__eyebrow {
     font-family: var(--rt-font-mono);
