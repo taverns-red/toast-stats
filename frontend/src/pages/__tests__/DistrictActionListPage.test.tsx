@@ -19,7 +19,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@testing-library/jest-dom'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
-import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
+import {
+  useDistrictAnalytics,
+  type ClubTrend,
+} from '../../hooks/useDistrictAnalytics'
 import type {
   AreaPerformance,
   DivisionPerformance,
@@ -89,6 +92,18 @@ const noCspSuspendedClub = makeClub({
   areaId: 'B2',
   cspSubmitted: false,
   clubStatus: 'Suspended',
+  dcpGoalsTrend: [{ date: '2025-07-15', goalsAchieved: 1 }],
+})
+// #1565: chartered after 1 April of PY 2025-26 — automatic credit for its
+// Club Success Plan, so it is footnoted, never listed, whatever its CSP cell.
+const springCharterClub = makeClub({
+  clubId: 'csp-3',
+  clubName: 'Spring Charter Club',
+  divisionId: 'B',
+  areaId: 'B2',
+  cspSubmitted: false,
+  charterDate: '2026-04-15',
+  currentStatus: 'vulnerable',
   dcpGoalsTrend: [{ date: '2025-07-15', goalsAchieved: 1 }],
 })
 
@@ -162,6 +177,15 @@ const DATES_2024_25 = {
   data: {
     dates: ['2025-05-15', '2025-05-01'],
     dateRange: { startDate: '2025-05-01', endDate: '2025-05-15' },
+  },
+  isLoading: false,
+}
+// #1565: the same program year, pinned after the 30 September deadline and
+// after the April charter above, so both rules are live on one snapshot.
+const DATES_2025_26_MAY = {
+  data: {
+    dates: ['2026-05-15', '2026-05-01'],
+    dateRange: { startDate: '2026-05-01', endDate: '2026-05-15' },
   },
   isLoading: false,
 }
@@ -320,7 +344,17 @@ describe('DistrictActionListPage — Clubs without a Club Success Plan (#1555)',
       DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
     )
   })
-  afterEach(() => cleanup())
+  afterEach(() => {
+    cleanup()
+    // The May-snapshot tests below add the spring-charter club; put the
+    // default roster back so the other tests keep their badge counts.
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: analyticsData,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+  })
 
   it('renders the section after intervention, with a count badge, club link and meta', async () => {
     renderAt('/district/61/action-list')
@@ -333,7 +367,10 @@ describe('DistrictActionListPage — Clubs without a Club Success Plan (#1555)',
     ).toHaveTextContent('1')
     const link = screen.getByRole('link', { name: 'Unplanned Club' })
     expect(link).toHaveAttribute('href', '/district/61/club/csp-1')
-    expect(section).toHaveTextContent('A/A1 · CSP not submitted · Vulnerable')
+    // #1565: pinned 2025-07-15, an existing club → due 30 September 2025.
+    expect(section).toHaveTextContent(
+      'A/A1 · CSP due 30 September 2025 · Vulnerable'
+    )
     // Section order: close → visits → intervention → csp.
     const ids = Array.from(
       document.querySelectorAll('.action-list-section')
@@ -362,7 +399,7 @@ describe('DistrictActionListPage — Clubs without a Club Success Plan (#1555)',
     await screen.findByTestId('action-list-page')
     expect(
       screen.getByText(
-        /clubs that need intervention, and clubs that still need to submit a Club Success Plan\./
+        /clubs that need intervention, and clubs without a Club Success Plan\./
       )
     ).toBeInTheDocument()
   })
@@ -389,10 +426,55 @@ describe('DistrictActionListPage — Clubs without a Club Success Plan (#1555)',
     await waitFor(() => expect(downloadCSV).toHaveBeenCalledTimes(1))
     const csv = vi.mocked(downloadCSV).mock.calls[0]![0]
     expect(csv).toContain(
-      'Club Success Plan not submitted,A,A1,Unplanned Club,CSP not submitted · Vulnerable'
+      'Club Success Plan not submitted,A,A1,Unplanned Club,CSP due 30 September 2025 · Vulnerable'
     )
     // The footnoted suspended club is not exported.
     expect(csv).not.toContain('Dormant Club')
+  })
+
+  it('after the due date the row states the lost eligibility — judged by the pinned date (#1565)', async () => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26_MAY as ReturnType<typeof useDistrictCachedDates>
+    )
+    renderAt('/district/61/action-list')
+    const section = await screen.findByTestId('section-csp')
+    expect(section).toHaveTextContent(
+      'A/A1 · CSP not filed by 30 September 2025 — cannot be Distinguished this program year · Vulnerable'
+    )
+    expect(section).not.toHaveTextContent(/until/)
+    // The CSV carries the same terminal wording.
+    screen.getByRole('button', { name: 'Export CSV' }).click()
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(downloadCSV).mock.calls[0]![0]).toContain(
+      'Club Success Plan not submitted,A,A1,Unplanned Club,CSP not filed by 30 September 2025 — cannot be Distinguished this program year · Vulnerable'
+    )
+  })
+
+  it('footnotes a club chartered after 1 April as automatic credit instead of listing it (#1565)', async () => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26_MAY as ReturnType<typeof useDistrictCachedDates>
+    )
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: {
+        ...analyticsData,
+        allClubs: [...analyticsData.allClubs, springCharterClub],
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    renderAt('/district/61/action-list?area=B2')
+    const section = await screen.findByTestId('section-csp')
+    expect(
+      screen.queryByRole('link', { name: 'Spring Charter Club' })
+    ).not.toBeInTheDocument()
+    expect(
+      section.querySelector('.action-list-section__count')
+    ).toHaveTextContent('0')
+    expect(section).toHaveTextContent(
+      '1 suspended/ineligible club without a plan is not listed. ' +
+        '1 club chartered after 1 April has automatic credit and is not listed.'
+    )
   })
 
   it('renders no CSP section and no intro clause for a pre-2025-26 program year', async () => {
