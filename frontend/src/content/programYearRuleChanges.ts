@@ -194,6 +194,9 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'frontend/src/utils/cspCompletion.ts',
       'frontend/src/utils/actionListData.ts',
       'frontend/src/pages/DistrictActionListPage.tsx',
+      // The district overview's one-line CSP summary — gated on the
+      // page-owned year via `isCspRequired`, omitted before the boundary.
+      'frontend/src/components/DistrictOverview.tsx',
     ],
   },
   {
