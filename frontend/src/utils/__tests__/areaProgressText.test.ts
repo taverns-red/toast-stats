@@ -79,6 +79,10 @@ function createArea(
     currentRound: getCurrentVisitRound(snapshotDate),
     clubsMissingCurrentRoundVisit: [],
     clubsMissingCurrentRoundVisitIneligible: [],
+    cspTracked: false,
+    clubsMissingCsp: [],
+    clubsMissingCspIneligible: [],
+    cspSubmittedCount: 0,
   }
 }
 
@@ -629,6 +633,10 @@ function createRoundArea(opts: {
     currentRound,
     clubsMissingCurrentRoundVisit: opts.missing ?? [],
     clubsMissingCurrentRoundVisitIneligible: opts.ineligible ?? [],
+    cspTracked: false,
+    clubsMissingCsp: [],
+    clubsMissingCspIneligible: [],
+    cspSubmittedCount: 0,
   }
 }
 

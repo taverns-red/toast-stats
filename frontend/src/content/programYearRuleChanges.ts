@@ -180,6 +180,10 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'frontend/src/utils/dcpProjections.ts',
       'frontend/src/utils/provisionalDistinguished.ts',
       'frontend/src/utils/extractDivisionPerformance.ts',
+      // Per-area / per-division CSP completion fields (#1555): `cspTracked`
+      // is gated on this boundary so pre-2025-26 rows never read as
+      // "0 of N submitted".
+      'frontend/src/utils/divisionStatus.ts',
     ],
   },
   {

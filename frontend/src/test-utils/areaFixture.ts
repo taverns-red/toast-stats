@@ -28,9 +28,27 @@ type VisitFields = Pick<
   | 'clubsMissingCurrentRoundVisitIneligible'
 >
 
+/**
+ * The Club Success Plan completion fields (#1555). Defaulted to "not tracked"
+ * so fixtures that predate the feature keep rendering exactly as before (a
+ * not-tracked area emits no CSP sentence); pass them explicitly when a test
+ * asserts on the CSP clause.
+ */
+type CspFields = Pick<
+  AreaPerformance,
+  | 'cspTracked'
+  | 'clubsMissingCsp'
+  | 'clubsMissingCspIneligible'
+  | 'cspSubmittedCount'
+>
+
 export function withRecognitionState(
-  fixture: Omit<AreaPerformance, 'recognitionState' | keyof VisitFields> &
-    Partial<VisitFields>,
+  fixture: Omit<
+    AreaPerformance,
+    'recognitionState' | keyof VisitFields | keyof CspFields
+  > &
+    Partial<VisitFields> &
+    Partial<CspFields>,
   snapshotDate = '2026-03-15'
 ): AreaPerformance {
   return {
@@ -39,6 +57,10 @@ export function withRecognitionState(
     clubsMissingCurrentRoundVisit: fixture.clubsMissingCurrentRoundVisit ?? [],
     clubsMissingCurrentRoundVisitIneligible:
       fixture.clubsMissingCurrentRoundVisitIneligible ?? [],
+    cspTracked: fixture.cspTracked ?? false,
+    clubsMissingCsp: fixture.clubsMissingCsp ?? [],
+    clubsMissingCspIneligible: fixture.clubsMissingCspIneligible ?? [],
+    cspSubmittedCount: fixture.cspSubmittedCount ?? 0,
     recognitionState: deriveAreaRecognitionState({
       clubBase: fixture.clubBase,
       paidClubs: fixture.paidClubs,

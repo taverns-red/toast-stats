@@ -15,7 +15,9 @@ import {
   getCSPStatus,
   getConfirmedDistinguishedLevel,
   isClubSmedleyAvailable,
+  isCspRequired,
   isDistinguishedProvisional,
+  CSP_REQUIRED_FROM_PROGRAM_YEAR,
 } from './ClubEligibilityUtils.js'
 import type { ClubStatistics } from '../interfaces.js'
 
@@ -296,6 +298,40 @@ describe('getCSPStatus', () => {
       cspSubmitted: false,
     })
     expect(getCSPStatus(club)).toBe(false)
+  })
+})
+
+// ============================================================
+// isCspRequired (#1555)
+// ============================================================
+
+/**
+ * A Club Success Plan has been a prerequisite for ANY Distinguished level
+ * since program year 2025-26. Before that the dashboard had no CSP column at
+ * all, and `getCSPStatus` normalises the absent field to `true` — so the
+ * per-club boolean cannot tell "submitted" from "not tracked that year". The
+ * page-owned program year (R3) is the only honest gate, and this helper is
+ * the single home for that boundary (lessons 61/76).
+ */
+describe('isCspRequired', () => {
+  it('pins the boundary constant to the first CSP-required program year', () => {
+    expect(CSP_REQUIRED_FROM_PROGRAM_YEAR).toBe('2025-2026')
+  })
+
+  it('is false for program years before 2025-2026', () => {
+    expect(isCspRequired('2024-2025')).toBe(false)
+    expect(isCspRequired('2019-2020')).toBe(false)
+  })
+
+  it('is true from 2025-2026 onward', () => {
+    expect(isCspRequired('2025-2026')).toBe(true)
+    expect(isCspRequired('2026-2027')).toBe(true)
+    expect(isCspRequired('2030-2031')).toBe(true)
+  })
+
+  it('treats an omitted year as current rules (mirrors getConfirmedDistinguishedLevel)', () => {
+    expect(isCspRequired(undefined)).toBe(true)
+    expect(isCspRequired()).toBe(true)
   })
 })
 

@@ -281,6 +281,12 @@ export const areaPerformanceArb = (options?: {
             currentRound: 2 as const,
             clubsMissingCurrentRoundVisit: [],
             clubsMissingCurrentRoundVisitIneligible: [],
+            // #1555: likewise no per-club CSP rows to enumerate — the arb
+            // models a not-tracked snapshot, so no CSP sentence is emitted.
+            cspTracked: false,
+            clubsMissingCsp: [],
+            clubsMissingCspIneligible: [],
+            cspSubmittedCount: 0,
           }
         })
     })
@@ -381,6 +387,9 @@ export const divisionPerformanceArb = (options?: {
         distinguishedClubs,
         requiredDistinguishedClubs,
         areas,
+        cspTracked: false,
+        cspSubmittedCount: 0,
+        clubsMissingCspCount: 0,
       }))
     })
 }

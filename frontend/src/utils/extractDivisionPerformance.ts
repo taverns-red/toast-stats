@@ -27,7 +27,10 @@ import {
   deriveAreaRecognitionState,
   getCurrentVisitRound,
 } from './areaRecognitionState.js'
-import { determineDistinguishedLevel as coreDetermineDistinguishedLevel } from '@taverns-red/analytics-core'
+import {
+  determineDistinguishedLevel as coreDetermineDistinguishedLevel,
+  isCspRequired,
+} from '@taverns-red/analytics-core'
 import { getProgramYearForDate } from './programYear'
 import { logger } from './logger'
 
@@ -61,8 +64,12 @@ function hasCompletedRoundVisit(
  * `Club Status` is suspended/closed/ineligible. Active (or unknown/absent
  * status) clubs go in the primary missing list. Operator rule: "active only,
  * flag others".
+ *
+ * Exported (#1555) so the analytics-path consumer (`actionListData`, reading
+ * `ClubTrend.clubStatus`) applies the SAME split as the raw-snapshot lists
+ * here — one predicate, two paths (Lesson 052).
  */
-function isIneligibleStatus(status: string): boolean {
+export function isIneligibleStatus(status: string): boolean {
   return /suspend|close|ineligib/i.test(status)
 }
 
@@ -83,6 +90,33 @@ function clubNumberOf(club: Record<string, unknown>): string {
 /** Resolve a club's display name from a snapshot row. */
 function clubNameOf(club: Record<string, unknown>): string {
   return typeof club['Club Name'] === 'string' ? club['Club Name'] : ''
+}
+
+/**
+ * File a club that is missing something (a visit report, a Club Success
+ * Plan) into the active list or the flagged suspended/ineligible list — the
+ * ONE place the "active only, flag others" split is applied, so the visit-gap
+ * and CSP lists (#973, #1555) cannot drift apart. Identity comes from the
+ * divisionPerformance `club` row; `Club Status` from the clubPerformance row
+ * that carries it.
+ */
+function pushByEligibility(
+  club: Record<string, unknown>,
+  clubPerf: Record<string, unknown> | undefined,
+  active: MissingVisitClub[],
+  ineligible: IneligibleMissingVisitClub[]
+): void {
+  const clubStatus =
+    clubPerf && typeof clubPerf['Club Status'] === 'string'
+      ? (clubPerf['Club Status'] as string)
+      : ''
+  const clubNumber = clubNumberOf(club)
+  const clubName = clubNameOf(club)
+  if (isIneligibleStatus(clubStatus)) {
+    ineligible.push({ clubNumber, clubName, status: clubStatus })
+  } else {
+    active.push({ clubNumber, clubName })
+  }
 }
 
 /**
@@ -247,6 +281,48 @@ function calculateDistinguishedLevelFromCriteria(
   return level === 'President' ? 'Presidents' : level
 }
 
+/** The raw Club Success Plan cell, under any of the header spellings seen. */
+function rawCspValue(club: Record<string, unknown>): unknown {
+  return (
+    club['CSP'] ??
+    club['Club Success Plan'] ??
+    club['CSP Submitted'] ??
+    club['Club Success Plan Submitted']
+  )
+}
+
+/**
+ * Whether the snapshot carries a Club Success Plan column at all (#1555).
+ * The column is either on every clubPerformance row or on none (verified
+ * 2025-06-30 vs 2025-07-31), so "any row has it" is the presence signal.
+ * This is a belt-and-braces guard against a malformed snapshot rendering
+ * "none submitted"; the program-year gate is the caller's (R3), not this.
+ */
+function hasCspColumn(
+  clubPerformance: Iterable<Record<string, unknown>>
+): boolean {
+  for (const club of clubPerformance) {
+    const v = rawCspValue(club)
+    if (v !== undefined && v !== null) return true
+  }
+  return false
+}
+
+/**
+ * Reads the Club Success Plan cell as a tri-state (#1555): `undefined` when
+ * the column is absent, otherwise the parsed boolean. `getCSPStatus` below
+ * folds `undefined` into `true` for the Distinguished gate (pre-2025-26
+ * compatibility); the completion lists must NOT, or an absent column would
+ * count as "all submitted".
+ */
+function readCspSubmitted(club: Record<string, unknown>): boolean | undefined {
+  const cspValue = rawCspValue(club)
+  if (cspValue === undefined || cspValue === null) {
+    return undefined
+  }
+  return parseCspValue(cspValue)
+}
+
 /**
  * Gets CSP (Club Success Plan) submission status from club data
  *
@@ -258,18 +334,12 @@ function calculateDistinguishedLevelFromCriteria(
  * @returns true if CSP is submitted or field is absent (historical data), false otherwise
  */
 function getCSPStatus(club: Record<string, unknown>): boolean {
-  // Check for CSP field in various possible formats
-  const cspValue =
-    club['CSP'] ??
-    club['Club Success Plan'] ??
-    club['CSP Submitted'] ??
-    club['Club Success Plan Submitted']
-
   // Historical data compatibility: if field doesn't exist (pre-2025-2026 data), assume submitted
-  if (cspValue === undefined || cspValue === null) {
-    return true
-  }
+  return readCspSubmitted(club) ?? true
+}
 
+/** Parse a present CSP cell. Unknown spellings default to true (historical compatibility). */
+function parseCspValue(cspValue: unknown): boolean {
   // Parse the value
   const cspString = String(cspValue).toLowerCase().trim()
 
@@ -485,6 +555,14 @@ export function extractDivisionPerformance(
     divisionMap.get(divisionId)!.push(clubData)
   }
 
+  // #1555: Club Success Plan completion is meaningful only when the CALLER's
+  // program year requires a plan (R3 — the gate is the pinned date's year, not
+  // anything inferred from the rows) AND the snapshot actually carries the
+  // column. Pre-2025-26 rows have no column; a 2025-26+ snapshot missing it is
+  // malformed, and either way the surfaces must stay silent.
+  const cspTracked =
+    isCspRequired(programYear) && hasCspColumn(clubPerformanceMap.values())
+
   // Process each division
   const divisions: DivisionPerformance[] = []
 
@@ -591,7 +669,19 @@ export function extractDivisionPerformance(
       divisionId,
       clubDataRaw,
       clubPerformanceMap,
-      snapshotDate
+      snapshotDate,
+      cspTracked
+    )
+
+    // #1555: division roll-ups are the sum of the areas — one derivation,
+    // one source of truth for the count-only division narrative.
+    const cspSubmittedCount = areas.reduce(
+      (sum, area) => sum + area.cspSubmittedCount,
+      0
+    )
+    const clubsMissingCspCount = areas.reduce(
+      (sum, area) => sum + area.clubsMissingCsp.length,
+      0
     )
 
     // Add division to results
@@ -604,6 +694,9 @@ export function extractDivisionPerformance(
       distinguishedClubs,
       requiredDistinguishedClubs,
       areas,
+      cspTracked,
+      cspSubmittedCount,
+      clubsMissingCspCount,
     })
   }
 
@@ -619,13 +712,18 @@ export function extractDivisionPerformance(
  * @param divisionId - Division identifier to filter areas
  * @param clubData - Array of club-level records
  * @param clubPerformanceMap - Map of club performance data by club identifier
+ * @param snapshotDate - The caller's pinned snapshot date (#1321)
+ * @param cspTracked - Whether Club Success Plan completion is meaningful for
+ *   this snapshot (#1555); resolved ONCE by the caller so every area and the
+ *   division agree. When false the CSP lists stay empty and the count zero.
  * @returns Array of AreaPerformance objects, sorted by area identifier
  */
 function extractAreasForDivision(
   divisionId: string,
   clubData: unknown[],
   clubPerformanceMap: Map<string, Record<string, unknown>>,
-  snapshotDate: string
+  snapshotDate: string,
+  cspTracked: boolean
 ): AreaPerformance[] {
   // Per-program-year club ladder (#1406), from the caller's pinned date.
   const programYear = getProgramYearForDate(snapshotDate).label
@@ -717,6 +815,11 @@ function extractAreasForDivision(
     const clubsMissingCurrentRoundVisitIneligible: IneligibleMissingVisitClub[] =
       []
 
+    // #1555: Club Success Plan completion, same active/ineligible split.
+    const clubsMissingCsp: MissingVisitClub[] = []
+    const clubsMissingCspIneligible: IneligibleMissingVisitClub[] = []
+    let cspSubmittedCount = 0
+
     for (const clubRaw of clubs) {
       const club = clubRaw as Record<string, unknown>
 
@@ -772,20 +875,27 @@ function extractAreasForDivision(
       // fields live on the divisionPerformance `club` row; `Club Status` is
       // cross-referenced from clubPerformance (the row that carries it).
       if (!hasCompletedRoundVisit(club, visitFields)) {
-        const clubStatus =
-          clubPerf && typeof clubPerf['Club Status'] === 'string'
-            ? (clubPerf['Club Status'] as string)
-            : ''
-        const clubNumber = clubNumberOf(club)
-        const clubName = clubNameOf(club)
-        if (isIneligibleStatus(clubStatus)) {
-          clubsMissingCurrentRoundVisitIneligible.push({
-            clubNumber,
-            clubName,
-            status: clubStatus,
-          })
-        } else {
-          clubsMissingCurrentRoundVisit.push({ clubNumber, clubName })
+        pushByEligibility(
+          club,
+          clubPerf,
+          clubsMissingCurrentRoundVisit,
+          clubsMissingCurrentRoundVisitIneligible
+        )
+      }
+
+      // #1555: the CSP cell lives on the clubPerformance row (fall back to the
+      // divisionPerformance row, as the Distinguished gate above does).
+      if (cspTracked) {
+        const cspSubmitted = readCspSubmitted(clubPerf ?? club)
+        if (cspSubmitted === true) {
+          cspSubmittedCount++
+        } else if (cspSubmitted === false) {
+          pushByEligibility(
+            club,
+            clubPerf,
+            clubsMissingCsp,
+            clubsMissingCspIneligible
+          )
         }
       }
     }
@@ -795,6 +905,10 @@ function extractAreasForDivision(
       a.clubNumber.localeCompare(b.clubNumber)
     )
     clubsMissingCurrentRoundVisitIneligible.sort((a, b) =>
+      a.clubNumber.localeCompare(b.clubNumber)
+    )
+    clubsMissingCsp.sort((a, b) => a.clubNumber.localeCompare(b.clubNumber))
+    clubsMissingCspIneligible.sort((a, b) =>
       a.clubNumber.localeCompare(b.clubNumber)
     )
 
@@ -843,6 +957,10 @@ function extractAreasForDivision(
       currentRound,
       clubsMissingCurrentRoundVisit,
       clubsMissingCurrentRoundVisitIneligible,
+      cspTracked,
+      clubsMissingCsp,
+      clubsMissingCspIneligible,
+      cspSubmittedCount,
     })
   }
 

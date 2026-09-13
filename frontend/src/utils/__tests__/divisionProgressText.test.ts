@@ -52,6 +52,9 @@ function createDivision(
     requiredDistinguishedClubs: Math.ceil(clubBase * 0.5),
     status,
     areas: [],
+    cspTracked: false,
+    cspSubmittedCount: 0,
+    clubsMissingCspCount: 0,
   }
 }
 
