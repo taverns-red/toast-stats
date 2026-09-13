@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.40.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.39.0...toast-stats-v2.40.0) (2026-09-13)
+
+
+### Features
+
+* **action-list:** collapsible sections, with the Club Success Plan section pinned first while actionable ([#1569](https://github.com/taverns-red/toast-stats/issues/1569)) ([#1571](https://github.com/taverns-red/toast-stats/issues/1571)) ([56d8194](https://github.com/taverns-red/toast-stats/commit/56d81947be779023c4b13a6d4179e8c4c76cb1f8))
+
+
+### Bug Fixes
+
+* **clubs:** count each club once at its top tier; stack the pack chart ([#1570](https://github.com/taverns-red/toast-stats/issues/1570)) ([#1573](https://github.com/taverns-red/toast-stats/issues/1573)) ([ac5fa9d](https://github.com/taverns-red/toast-stats/commit/ac5fa9d061467121edfecc0f4af71bdd0c8d6b3f))
+
 ## [2.39.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.38.2...toast-stats-v2.39.0) (2026-09-13)
 
 
