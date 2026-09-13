@@ -184,6 +184,10 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       // is gated on this boundary so pre-2025-26 rows never read as
       // "0 of N submitted".
       'frontend/src/utils/divisionStatus.ts',
+      // The narrative clauses that present those fields — silent before the
+      // boundary, so pre-2025-26 prose is unchanged.
+      'frontend/src/utils/areaProgressText.ts',
+      'frontend/src/utils/divisionProgressText.ts',
     ],
   },
   {
