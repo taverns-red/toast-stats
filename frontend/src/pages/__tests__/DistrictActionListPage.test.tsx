@@ -620,15 +620,26 @@ describe('DistrictActionListPage — collapsible sections (#1569)', () => {
   })
 
   it('falls back to the default silently when localStorage throws', async () => {
-    const blocked = () => {
-      throw new Error('localStorage is disabled')
+    // Fault-inject on THIS page's key only: other stored preferences
+    // (ProgramYearContext) are not what #1569 hardened, and blanking them
+    // would be testing somebody else's code.
+    const elsewhere = new Map<string, string>()
+    const blocked = (key: string) => {
+      if (key.includes('action-list-sections'))
+        throw new Error('localStorage is disabled')
     }
     const getItem = vi
       .spyOn(window.localStorage, 'getItem')
-      .mockImplementation(blocked)
+      .mockImplementation(key => {
+        blocked(key)
+        return elsewhere.get(key) ?? null
+      })
     const setItem = vi
       .spyOn(window.localStorage, 'setItem')
-      .mockImplementation(blocked)
+      .mockImplementation((key, value) => {
+        blocked(key)
+        elsewhere.set(key, value)
+      })
     try {
       renderAt('/district/61/action-list')
       await screen.findByTestId('section-csp')

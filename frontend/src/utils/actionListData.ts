@@ -23,7 +23,11 @@
  * than throwing, so a hand-edited/shared URL is always safe (Lesson 144).
  */
 
-import { isCspRequired } from '@taverns-red/analytics-core'
+import {
+  cspDueDate,
+  isCspOverdue,
+  isCspRequired,
+} from '@taverns-red/analytics-core'
 import { calculateClubProjection } from './dcpProjections'
 import { isCloseToDistinguished } from './closeToDistinguished'
 import { getAreaVisitDeadlines } from './areaRecognitionState'
@@ -197,17 +201,15 @@ export function buildActionList(
   // pre-2025-26 rows read as "submitted" under getCSPStatus, so an ungated
   // reduce would report an empty list as if every club had filed.
   const cspTracked = isCspRequired(programYear)
+  // #1565: the per-club deadline is judged against the page's pinned date. The
+  // year is the page's too; when the page did not pass one it is derived from
+  // that same pinned date (as the raw path does), never from the rows or the
+  // clock.
+  const cspYear = programYear ?? getProgramYearForDate(snapshotDate).label
   const csp = cspTracked
     ? summarizeCspCompletion(
         clubs.filter(club => inScope(club.divisionId, club.areaId, scope)),
-        {
-          // #1565: the per-club deadline is judged against the page's pinned
-          // date. The year is the page's too; when the page did not pass one
-          // it is derived from that same pinned date (as the raw path does),
-          // never from the rows or the clock.
-          programYear: programYear ?? getProgramYearForDate(snapshotDate).label,
-          snapshotDate,
-        }
+        { programYear: cspYear, snapshotDate }
       )
     : {
         submittedCount: 0,
@@ -235,13 +237,25 @@ export function buildActionList(
         a.clubName.localeCompare(b.clubName)
     )
 
+  // #1569: can filing still earn credit as of the pinned date? Sourced from
+  // the #1567 rules rather than restating "30 September" — the standard due
+  // date is `cspDueDate` for a club with no charter date, and a club chartered
+  // in-year carries its own later one on the row. Actionable while EITHER is
+  // still open; once neither is, the section is a record of who missed, not a
+  // to-do, and drops below the sections that can still be worked.
+  const standardCspDueDate = cspTracked ? cspDueDate({}, cspYear) : null
+  const cspActionable =
+    cspTracked &&
+    ((standardCspDueDate !== null &&
+      !isCspOverdue(standardCspDueDate, snapshotDate)) ||
+      cspNotSubmitted.some(club => !club.cspOverdue))
+
   return {
     closeToDistinguished,
     visitGaps,
     interventionRequired,
     cspTracked,
-    // #1569 red step — the deadline resolution lands with the green commit.
-    cspActionable: false,
+    cspActionable,
     cspNotSubmitted,
     cspNotSubmittedIneligibleCount: csp.notSubmittedIneligible.length,
     cspNotSubmittedAutoCreditCount: csp.notSubmittedAutoCredit.length,
@@ -257,18 +271,52 @@ export function buildActionList(
 export type ActionSectionId =
   'action-close' | 'action-visits' | 'action-intervention' | 'action-csp'
 
-/** Render order for the sections (#1569) — the green commit implements it. */
+/** The three sections that are always present, in their standing order. */
+const CORE_ACTION_SECTIONS: readonly ActionSectionId[] = [
+  'action-close',
+  'action-visits',
+  'action-intervention',
+]
+
+/**
+ * The order the sections render in (#1569) — the single source every surface
+ * reads, so the rendered list, the intro copy and the CSV export cannot drift
+ * apart, and a program year with no Club Success Plan requirement drops the
+ * section here rather than at each call site.
+ *
+ * The Club Success Plan leads while `cspActionable` (a plan filed now still
+ * earns credit) and trails once it has lapsed: after the deadline it is a
+ * record of who missed, and should not sit above three sections a leader can
+ * still act on.
+ */
 export function orderActionSections(
-  _sections: Pick<ActionListSections, 'cspTracked' | 'cspActionable'>
+  sections: Pick<ActionListSections, 'cspTracked' | 'cspActionable'>
 ): ActionSectionId[] {
-  return ['action-close', 'action-visits', 'action-intervention']
+  if (!sections.cspTracked) return [...CORE_ACTION_SECTIONS]
+  return sections.cspActionable
+    ? ['action-csp', ...CORE_ACTION_SECTIONS]
+    : [...CORE_ACTION_SECTIONS, 'action-csp']
 }
 
-/** Intro-copy clause list, in render order (#1569) — green commit. */
+/** Each section's clause in the page's intro sentence. */
+const ACTION_SECTION_CLAUSES: Record<ActionSectionId, string> = {
+  'action-close': 'clubs within reach of Distinguished',
+  'action-visits': 'areas with outstanding club visits',
+  'action-intervention': 'clubs that need intervention',
+  'action-csp': 'clubs without a Club Success Plan',
+}
+
+/**
+ * The intro sentence's clause list, in render order (#1569) — so the copy
+ * always names the sections in the order the reader meets them, in both
+ * seasonal windows and with or without the Club Success Plan section.
+ */
 export function describeActionSections(
-  _order: readonly ActionSectionId[]
+  order: readonly ActionSectionId[]
 ): string {
-  return ''
+  const clauses = order.map(id => ACTION_SECTION_CLAUSES[id])
+  if (clauses.length <= 1) return clauses[0] ?? ''
+  return `${clauses.slice(0, -1).join(', ')}, and ${clauses[clauses.length - 1]}`
 }
 
 function plural(n: number, noun: string): string {
