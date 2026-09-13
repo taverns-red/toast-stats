@@ -18,6 +18,13 @@
 import { AreaWithDivision } from '../components/DivisionAreaProgressSummary'
 import { GapAnalysis, RecognitionLevel } from './areaGapAnalysis'
 import type { MissingVisitClub } from './divisionStatus'
+import {
+  CSP_LOST_ELIGIBILITY,
+  cspAutoCreditNote,
+  formatCspDueDate,
+  groupByCspDueDate,
+  type CspDueGroup,
+} from './cspDeadlines'
 
 /**
  * Result of generating progress text for an area
@@ -212,18 +219,63 @@ function generateCurrentRoundVisitText(area: AreaWithDivision): string {
 }
 
 /**
- * Describe the area's Club Success Plan completion (#1555, spec §6.1): how many
- * clubs have submitted, which ACTIVE clubs still need to, and the consequence
- * (no club can be Distinguished without a plan, 2025-26 onward). Reads the
- * snapshot-derived `cspTracked` / `clubsMissingCsp` / `clubsMissingCspIneligible`
- * / `cspSubmittedCount` fields — the year gate is NOT re-derived here (R3).
+ * One due-date group of an area's missing clubs (#1565): pending groups say
+ * what to do and by when; overdue groups say what did not happen.
+ */
+function formatCspDueGroup(group: CspDueGroup<MissingVisitClub>): string {
+  const n = group.clubs.length
+  const clubWord = n === 1 ? 'active club' : 'active clubs'
+  const date = formatCspDueDate(group.dueDate)
+  const names = formatMissingClubNames(group.clubs)
+  return group.overdue
+    ? `${n} ${clubWord} did not submit by ${date}: ${names}`
+    : `${n} ${clubWord} still ${n === 1 ? 'needs' : 'need'} to submit by ${date}: ${names}`
+}
+
+/**
+ * The consequence sentence after the named clubs (#1565). Before a due date
+ * it names the date and what missing it costs; once a date has passed the
+ * wording is terminal — eligibility is lost for the year, nothing is "still"
+ * to file, and the word "until" never appears.
+ */
+function formatCspConsequence(
+  groups: readonly CspDueGroup<MissingVisitClub>[]
+): string {
+  const overdue = groups.filter(g => g.overdue)
+  const pending = groups.filter(g => !g.overdue)
+  if (overdue.length === 0) {
+    if (pending.length > 1) {
+      return `Any club that has not filed by its due date ${CSP_LOST_ELIGIBILITY}.`
+    }
+    const date = formatCspDueDate(pending[0]!.dueDate)
+    return pending[0]!.clubs.length === 1
+      ? `If it has not filed by ${date} it ${CSP_LOST_ELIGIBILITY}.`
+      : `Any club that has not filed by ${date} ${CSP_LOST_ELIGIBILITY}.`
+  }
+  if (pending.length > 0) {
+    return `Clubs past their due date ${CSP_LOST_ELIGIBILITY}.`
+  }
+  const overdueCount = overdue.reduce((sum, g) => sum + g.clubs.length, 0)
+  return `${overdueCount === 1 ? 'It' : 'They'} ${CSP_LOST_ELIGIBILITY}.`
+}
+
+/**
+ * Describe the area's Club Success Plan completion (#1555, spec §6.1; #1565):
+ * how many clubs have submitted, which ACTIVE clubs have not — grouped by the
+ * per-club due date (30 September for existing clubs, charter + 90 days for
+ * clubs chartered in-year) — and the consequence, worded for the pinned
+ * snapshot date: urgency before a due date, loss of eligibility after it.
+ * Reads the snapshot-derived `cspTracked` / `clubsMissingCsp` /
+ * `clubsMissingCspIneligible` / `cspSubmittedCount` fields — neither the year
+ * gate nor the overdue state is re-derived here (R3).
  *
- * Returns `''` when not tracked (pre-2025-26, or column absent) or the area
- * has no clubs — never "0 of N" for a year with no requirement.
+ * Returns `''` when not tracked (pre-2025-26, or column absent) or nothing
+ * is held to the requirement — never "0 of N" for a year with no requirement.
  *
  * The "N of M" denominator is submitted + active-missing, so the sentence's
- * own arithmetic always adds up; suspended/ineligible clubs are flagged in a
- * trailing parenthetical exactly like the visit clause.
+ * own arithmetic always adds up; suspended/ineligible clubs and clubs with
+ * automatic credit (chartered after 1 April) are flagged in a trailing
+ * parenthetical exactly like the visit clause.
  */
 function generateCspClause(area: AreaWithDivision): string {
   if (!area.cspTracked || area.clubBase === 0) {
@@ -232,39 +284,35 @@ function generateCspClause(area: AreaWithDivision): string {
 
   const submitted = area.cspSubmittedCount
   const missing = area.clubsMissingCsp
-  const ineligible = area.clubsMissingCspIneligible
   const total = submitted + missing.length
+  if (total === 0) {
+    return ''
+  }
 
-  let clause: string
+  const statusExcluded = area.clubsMissingCspIneligible.filter(
+    c => c.exclusion !== 'auto-credit'
+  ).length
+  const autoCredit = area.clubsMissingCspIneligible.length - statusExcluded
+  const notes: string[] = []
+  if (statusExcluded > 0) {
+    const clubWord = statusExcluded === 1 ? 'club' : 'clubs'
+    notes.push(`${statusExcluded} suspended/ineligible ${clubWord} excluded`)
+  }
+  if (autoCredit > 0) {
+    notes.push(cspAutoCreditNote(autoCredit))
+  }
+  const parenthetical = notes.length > 0 ? ` (${notes.join('; ')}.)` : ''
+
   if (missing.length === 0) {
     const clubWord = total === 1 ? 'club has' : 'clubs have'
-    clause = `Club Success Plans: all ${total} ${clubWord} submitted.`
-  } else if (submitted === 0 && total > 1) {
-    clause =
-      `Club Success Plans: none of the ${total} clubs has submitted — ` +
-      `${formatMissingClubNames(missing)}.`
-  } else {
-    const clubWord = missing.length === 1 ? 'active club' : 'active clubs'
-    const verb = missing.length === 1 ? 'needs' : 'need'
-    clause =
-      `Club Success Plans: ${submitted} of ${total} submitted — ` +
-      `${missing.length} ${clubWord} still ${verb} to submit: ${formatMissingClubNames(missing)}.`
+    return `Club Success Plans: all ${total} ${clubWord} submitted.${parenthetical}`
   }
 
-  if (ineligible.length > 0) {
-    const clubWord = ineligible.length === 1 ? 'club' : 'clubs'
-    clause += ` (${ineligible.length} suspended/ineligible ${clubWord} excluded.)`
-  }
-
-  if (missing.length === 0) {
-    return clause
-  }
-  if (submitted === 0 && total > 1) {
-    return `${clause} No club in this area can be Distinguished until plans are in.`
-  }
-  return missing.length === 1
-    ? `${clause} It cannot be Distinguished until its plan is in.`
-    : `${clause} No club can be Distinguished until its plan is in.`
+  const groups = groupByCspDueDate(missing)
+  const clause =
+    `Club Success Plans: ${submitted} of ${total} submitted — ` +
+    `${groups.map(formatCspDueGroup).join('; ')}.`
+  return `${clause}${parenthetical} ${formatCspConsequence(groups)}`
 }
 
 /**

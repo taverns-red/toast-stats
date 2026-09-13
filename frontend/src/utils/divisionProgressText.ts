@@ -21,6 +21,12 @@
 
 import { DivisionPerformance } from './divisionStatus'
 import {
+  CSP_LOST_ELIGIBILITY,
+  describeCspDueDates,
+  formatCspDueDate,
+  groupByCspDueDate,
+} from './cspDeadlines'
+import {
   DivisionGapAnalysis,
   DivisionRecognitionLevel,
 } from './divisionGapAnalysis'
@@ -77,10 +83,14 @@ function generateMetricsDescription(division: DivisionPerformance): string {
 }
 
 /**
- * Describe the division's Club Success Plan completion (#1555, spec §6.2) —
- * count only, since a division is too big to name clubs. Reads the
+ * Describe the division's Club Success Plan completion (#1555, spec §6.2;
+ * #1565) — counts only, since a division is too big to name clubs, but
+ * deadline-aware: before a due date the clause names the date and what
+ * missing it costs; once a date has passed it states that eligibility is
+ * lost for the year, with nothing left to file and no "until". Reads the
  * snapshot-derived roll-ups (`cspTracked`, `cspSubmittedCount`,
- * `clubsMissingCspCount`); the year gate is NOT re-derived here (R3).
+ * `clubsMissingCsp` with each club's due date and overdue state); neither the
+ * year gate nor the overdue state is re-derived here (R3).
  *
  * Returns `''` when not tracked (pre-2025-26, or column absent) or there are
  * no tracked clubs — never "0 of N" for a year with no requirement.
@@ -90,21 +100,40 @@ function generateCspClause(division: DivisionPerformance): string {
     return ''
   }
   const submitted = division.cspSubmittedCount
-  const missing = division.clubsMissingCsp.length
-  const total = submitted + missing
+  const missing = division.clubsMissingCsp
+  const total = submitted + missing.length
   if (total === 0) {
     return ''
   }
-  if (missing === 0) {
+  if (missing.length === 0) {
     const clubWord = total === 1 ? 'club has' : 'clubs have'
     return `Club Success Plans: all ${total} ${clubWord} submitted.`
   }
   const submittedVerb = submitted === 1 ? 'has' : 'have'
-  const missingClause =
-    missing === 1
-      ? '1 has not and cannot be Distinguished until it does.'
-      : `${missing} have not and cannot be Distinguished until they do.`
-  return `Club Success Plans: ${submitted} of ${total} clubs ${submittedVerb} submitted; ${missingClause}`
+  const head = `Club Success Plans: ${submitted} of ${total} clubs ${submittedVerb} submitted; `
+
+  const groups = groupByCspDueDate(missing)
+  const overdue = groups.filter(g => g.overdue)
+  const pending = groups.filter(g => !g.overdue)
+  const overdueCount = overdue.reduce((sum, g) => sum + g.clubs.length, 0)
+  const pendingCount = pending.reduce((sum, g) => sum + g.clubs.length, 0)
+
+  if (overdueCount === 0) {
+    const haveNot = `${pendingCount} ${pendingCount === 1 ? 'has' : 'have'} not`
+    return pending.length === 1
+      ? `${head}${haveNot} and must file by ${formatCspDueDate(pending[0]!.dueDate)} — a club that misses that date ${CSP_LOST_ELIGIBILITY}.`
+      : `${head}${haveNot} and must file by their due dates (${describeCspDueDates(pending)}) — a club that misses its date ${CSP_LOST_ELIGIBILITY}.`
+  }
+
+  const missedBy =
+    overdue.length === 1
+      ? formatCspDueDate(overdue[0]!.dueDate)
+      : 'their due dates'
+  const lost = `${overdueCount} did not file by ${missedBy} and ${CSP_LOST_ELIGIBILITY}`
+  if (pendingCount === 0) {
+    return `${head}${lost}.`
+  }
+  return `${head}${lost}; ${pendingCount} ${pendingCount === 1 ? 'is' : 'are'} still due by ${describeCspDueDates(pending)}.`
 }
 
 /**
