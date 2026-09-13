@@ -76,11 +76,14 @@ export {
   getCSPStatus,
   isClubSmedleyAvailable,
   isCspRequired,
+  cspDueDate,
+  isCspOverdue,
   CSP_REQUIRED_FROM_PROGRAM_YEAR,
   isDistinguishedProvisional,
 } from './analytics/index.js'
 
 export type {
+  CspDueDateInput,
   DistinguishedLevelAtSnapshotInput,
   DistinguishedMembershipBasis,
   DistinguishedTierCode,

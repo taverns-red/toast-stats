@@ -363,6 +363,79 @@ export function isCspRequired(programYear?: string): boolean {
   return programYear >= CSP_REQUIRED_FROM_PROGRAM_YEAR
 }
 
+/** The only club field the Club Success Plan due-date rule reads. */
+export interface CspDueDateInput {
+  /** Charter date (`YYYY-MM-DD`), from Find-A-Club enrichment. Absent → existing club. */
+  charterDate?: string | undefined
+}
+
+/** Days a newly chartered club has to file its Club Success Plan (DCP p. 11). */
+const CSP_NEW_CHARTER_GRACE_DAYS = 90
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** `YYYY-MM-DD` plus N calendar days, computed in UTC so no DST hour can shift the day. */
+function addDaysIso(isoDate: string, days: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number]
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
+}
+
+/**
+ * When a club's Club Success Plan is due in a program year (#1565), per the
+ * Distinguished Club Program (Item 1111, Rev. 06/2026, pp. 5 and 11):
+ *
+ * | Club                    | CSP due                | If not filed by then                    |
+ * | ----------------------- | ---------------------- | --------------------------------------- |
+ * | Existing                | 30 September           | Cannot earn Distinguished this year     |
+ * | Chartered in-year       | charter date + 90 days | Cannot earn Distinguished this year     |
+ * | Chartered after 1 April | n/a                    | Automatic credit — treated as submitted |
+ *
+ * "Existing" is any club chartered before the program year began (1 July),
+ * including one that earned automatic credit the year before. A missing or
+ * unparseable charter date is read as existing: the common case by far, and
+ * the stricter of the two dates a club could be held to.
+ *
+ * Sits beside `isCspRequired` (the year gate) so every surface sources the
+ * deadline from one rule (lessons 61/76). Callers gate on `isCspRequired`
+ * first — this function does not, so a pre-2025-26 year still yields a date.
+ *
+ * @param club - Any object carrying the club's `charterDate`
+ * @param programYear - "YYYY-YYYY", owned by the caller (R3)
+ * @returns The due date (`YYYY-MM-DD`), or `null` for automatic credit
+ */
+export function cspDueDate(
+  club: CspDueDateInput,
+  programYear: string
+): string | null {
+  const startYear = Number.parseInt(programYear.slice(0, 4), 10)
+  const standardDueDate = `${startYear}-09-30`
+
+  const charterDate = club.charterDate
+  if (!charterDate || !ISO_DATE.test(charterDate)) return standardDueDate
+
+  const programYearStart = `${startYear}-07-01`
+  if (charterDate < programYearStart) return standardDueDate
+
+  // "Clubs that charter after April 1 will automatically receive credit" —
+  // strictly after, so 1 April itself is in-year (+90 days = 30 June).
+  const autoCreditFrom = `${startYear + 1}-04-02`
+  if (charterDate >= autoCreditFrom) return null
+
+  return addDaysIso(charterDate, CSP_NEW_CHARTER_GRACE_DAYS)
+}
+
+/**
+ * Is a Club Success Plan late as of a date? Late means the day AFTER the due
+ * date onward — on the due date itself the plan can still be filed.
+ *
+ * Both arguments are `YYYY-MM-DD`, so the compare is lexical and the answer
+ * depends only on the pinned date the caller passes — never the wall clock
+ * (R3): a historical snapshot renders the wording that was true on its date.
+ */
+export function isCspOverdue(dueDate: string, asOfDate: string): boolean {
+  return asOfDate > dueDate
+}
+
 /**
  * Determines if a Distinguished club's status is provisional (unconfirmed
  * by April renewals) or confirmed.
