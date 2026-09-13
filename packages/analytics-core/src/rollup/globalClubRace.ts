@@ -51,6 +51,7 @@ import {
   distinguishedMembershipBasis,
   getCSPStatus,
   isClubSmedleyAvailable,
+  isCspRequired,
 } from '../analytics/ClubEligibilityUtils.js'
 import { canonicalDistrictId } from './globalRollup.js'
 import { programYearForSnapshotDate } from './globalTotals.js'
@@ -407,7 +408,7 @@ export function buildGlobalClubRace(
     },
     ruleset: {
       programYear,
-      cspRequired: startYear >= 2025,
+      cspRequired: isCspRequired(programYear),
       smedleyAvailable: isClubSmedleyAvailable(programYear),
       membershipBasis: distinguishedMembershipBasis(dataMonth),
       officialRecognitionFrom: `${startYear + 1}-04-01`,
