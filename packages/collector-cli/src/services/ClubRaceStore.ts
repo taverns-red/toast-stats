@@ -39,59 +39,26 @@ import {
   programYearForSnapshotDate,
   type ClubStatistics,
   type DistinguishedLevel,
-  type DistinguishedTierCode,
 } from '@taverns-red/analytics-core'
-import { normalizeClubId } from '@taverns-red/shared-contracts'
+import {
+  CLUB_RACE_STORE_FORMAT,
+  CLUB_RACE_TIERS,
+  ClubRaceStoreSchema,
+  normalizeClubId,
+  type ClubRaceStoreClub,
+  type ClubRaceStoreData,
+  type ClubRaceTier,
+} from '@taverns-red/shared-contracts'
 
-/** The Distinguished tiers a club can cross, lowest first. */
-export const CLUB_RACE_TIERS = [
-  'Distinguished',
-  'Select',
-  'President',
-  'Smedley',
-] as const
-
-export type ClubRaceTier = (typeof CLUB_RACE_TIERS)[number]
-
-/** Format envelope stamped on the file, versioned like the published artifacts. */
-export const CLUB_RACE_STORE_FORMAT = {
-  version: '1.0.0',
-  type: 'club-race-store',
-} as const
-
-/** A dated crossing: the first snapshot it was seen on, and the one before. */
-export interface ClubRaceCrossing {
-  /** First snapshot date (YYYY-MM-DD) the requirements were met. */
-  on: string
-  /**
-   * The observed snapshot date immediately before `on`, or `null` when `on`
-   * is the earliest date this store has ever seen — the club was already
-   * over the line when we started looking.
-   */
-  after: string | null
-}
-
-export interface ClubRaceStoreClub {
-  /** Canonical club id (`normalizeClubId`), never the zero-padded form. */
-  clubId: string
-  clubName: string
-  /** District at the club's latest sighting; a transfer never resets crossings. */
-  districtId: string
-  /** Latest snapshot date this club appeared in a district roster. */
-  lastSeen: string
-  reached: Partial<Record<ClubRaceTier, ClubRaceCrossing>>
-  /** First snapshot date TI's official code (D/S/P/M) was seen, and which. */
-  official?: ClubRaceCrossing & { code: DistinguishedTierCode }
-}
-
-export interface ClubRaceStoreData {
-  _format: typeof CLUB_RACE_STORE_FORMAT
-  programYear: string
-  updatedAt: string
-  /** Every snapshot date ever upserted, ascending and unique. */
-  observedDates: string[]
-  clubs: Record<string, ClubRaceStoreClub>
-}
+// The file shape is the shared contract (`club-race-store.schema`), so the
+// analytics-core projection reads exactly what this store writes.
+export { CLUB_RACE_STORE_FORMAT, CLUB_RACE_TIERS }
+export type {
+  ClubRaceCrossing,
+  ClubRaceStoreClub,
+  ClubRaceStoreData,
+  ClubRaceTier,
+} from '@taverns-red/shared-contracts'
 
 /** One district's clubs at one snapshot date — `district_{id}.json` `data.clubs`. */
 export interface ClubRaceDistrictObservation {
@@ -140,13 +107,22 @@ export class ClubRaceStore {
     programYear: string
   ): Promise<ClubRaceStore | null> {
     const filePath = ClubRaceStore.getPath(cacheDir, programYear)
+    let content: string
     try {
-      const content = await fs.readFile(filePath, 'utf-8')
-      return new ClubRaceStore(JSON.parse(content) as ClubRaceStoreData)
+      content = await fs.readFile(filePath, 'utf-8')
     } catch (err) {
       if ((err as { code?: string }).code === 'ENOENT') return null
       throw err
     }
+    // Validate on load: a store that does not match the contract must fail
+    // here, loudly, not be upserted into and pushed back over the good copy.
+    const parsed = ClubRaceStoreSchema.safeParse(JSON.parse(content))
+    if (!parsed.success) {
+      throw new Error(
+        `club-race store at ${filePath} is off-contract: ${parsed.error.message}`
+      )
+    }
+    return new ClubRaceStore(parsed.data)
   }
 
   static create(programYear: string): ClubRaceStore {
