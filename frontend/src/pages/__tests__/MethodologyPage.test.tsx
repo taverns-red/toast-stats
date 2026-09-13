@@ -96,7 +96,7 @@ describe('MethodologyPage — Club Success Plan due dates (#1565)', () => {
     const txt = document.body.textContent || ''
     expect(txt).toMatch(/90 days after (?:its|the) charter date/i)
     expect(txt).toMatch(
-      /after 1 April[\s\S]{0,80}automatic(?:ally)? (?:receive )?credit/i
+      /after 1 April[\s\S]{0,80}automatic(?:ally)? (?:receives? )?credit/i
     )
   })
 
