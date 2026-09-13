@@ -56,7 +56,7 @@ const ClubsRacePage: React.FC = () => {
       <header className="districts-page-header clubs-page__header">
         <div className="districts-page-header__intro">
           <p className="clubs-page__eyebrow">
-            Program year {race?.programYear ?? selectedProgramYear.year}
+            Program year {race?.programYear ?? selectedProgramYear.label}
             {snapshotDate ? ` · as of ${snapshotDate}` : ''}
           </p>
           <h1 className="placeholder-page__title">First to {title}</h1>
