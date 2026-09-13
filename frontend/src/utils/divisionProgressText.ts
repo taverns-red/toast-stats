@@ -14,6 +14,7 @@
  * - DDP uses 45%/50%/55% thresholds vs DAP's 50%/50%+1/50%+1
  * - DDP requires base/base+1/base+2 paid clubs vs DAP's base/base/base+1
  * - DDP has NO club visit requirements (DAP requires 75% visits)
+ * - Club Success Plan completion is a count-only clause (#1555)
  *
  * Requirements: 5.1, 5.2, 5.3, 5.4, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
  */
@@ -73,6 +74,37 @@ function generateDivisionLabel(division: DivisionPerformance): string {
  */
 function generateMetricsDescription(division: DivisionPerformance): string {
   return `${division.paidClubs} of ${division.clubBase} clubs paid, ${division.distinguishedClubs} of ${division.clubBase} distinguished`
+}
+
+/**
+ * Describe the division's Club Success Plan completion (#1555, spec §6.2) —
+ * count only, since a division is too big to name clubs. Reads the
+ * snapshot-derived roll-ups (`cspTracked`, `cspSubmittedCount`,
+ * `clubsMissingCspCount`); the year gate is NOT re-derived here (R3).
+ *
+ * Returns `''` when not tracked (pre-2025-26, or column absent) or there are
+ * no tracked clubs — never "0 of N" for a year with no requirement.
+ */
+function generateCspClause(division: DivisionPerformance): string {
+  if (!division.cspTracked) {
+    return ''
+  }
+  const submitted = division.cspSubmittedCount
+  const missing = division.clubsMissingCspCount
+  const total = submitted + missing
+  if (total === 0) {
+    return ''
+  }
+  if (missing === 0) {
+    const clubWord = total === 1 ? 'club has' : 'clubs have'
+    return `Club Success Plans: all ${total} ${clubWord} submitted.`
+  }
+  const submittedVerb = submitted === 1 ? 'has' : 'have'
+  const missingClause =
+    missing === 1
+      ? '1 has not and cannot be Distinguished until it does.'
+      : `${missing} have not and cannot be Distinguished until they do.`
+  return `Club Success Plans: ${submitted} of ${total} clubs ${submittedVerb} submitted; ${missingClause}`
 }
 
 /**
@@ -422,6 +454,10 @@ export function generateDivisionProgressText(
   else {
     progressText = `${divisionLabel} ${generateNotDistinguishedText(division, gapAnalysis)}`
   }
+
+  // Club Success Plan completion ends every branch (#1555). Empty when not
+  // tracked, so pre-2025-26 prose is unchanged.
+  progressText = `${progressText} ${generateCspClause(division)}`
 
   // Clean up any double spaces
   progressText = progressText.replace(/\s+/g, ' ').trim()

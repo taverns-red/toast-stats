@@ -17,6 +17,9 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, cleanup } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
+import { extractDivisionPerformance } from '../../utils/extractDivisionPerformance'
+import { generateAreaProgressText } from '../../utils/areaProgressText'
+import { calculateAreaGapAnalysis } from '../../utils/areaGapAnalysis'
 import AreaPage from '../AreaPage'
 
 vi.mock('../../hooks/useIsMobile', () => ({
@@ -60,23 +63,28 @@ const SNAPSHOT = {
     },
   ],
   clubPerformance: [
+    // PY 2025-26 snapshot, so the CSP column is present (#1555): the Select
+    // club has filed; the two undistinguished clubs have not.
     {
       'Club Number': '123456',
       'Club Name': 'Ottawa Club',
       'Club Status': 'Active',
       'Club Distinguished Status': 'Select Distinguished',
+      CSP: 'Y',
     },
     {
       'Club Number': '234567',
       'Club Name': 'Vulnerable Club',
       'Club Status': 'Active',
       'Club Distinguished Status': '',
+      CSP: 'N',
     },
     {
       'Club Number': '654321',
       'Club Name': 'Struggling Club',
       'Club Status': 'Active',
       'Club Distinguished Status': '',
+      CSP: 'N',
     },
   ],
 }
@@ -189,8 +197,32 @@ describe('AreaPage data parity with the Divisions overview (#1016)', () => {
   it('renders the scoped areaProgressText narrative for this area', () => {
     const { getByTestId } = renderArea()
     const narrative = getByTestId('area-progress-text')
-    // The generator always prefixes the area label "Area <id> (Division <id>)".
+    // The generator always prefixes the area label "Area <id> (Division <id)".
     expect(narrative.textContent).toMatch(/Area 10 \(Division A\)/)
+  })
+
+  it('narrative equals the overview generator output for the same snapshot — Club Success Plan clause included (#1555)', () => {
+    // Parity by construction: the page must feed the SAME derived area row to
+    // the SAME generator the Divisions overview uses, so the CSP clause (raw
+    // path, `cspTracked` gated on the pinned date's program year) lands here
+    // with no page-specific logic.
+    const area = extractDivisionPerformance(SNAPSHOT, '2026-03-15')
+      .find(d => d.divisionId === 'A')!
+      .areas.find(a => a.areaId === '10')!
+    const expected = generateAreaProgressText(
+      { ...area, divisionId: 'A' },
+      calculateAreaGapAnalysis({
+        clubBase: area.clubBase,
+        paidClubs: area.paidClubs,
+        distinguishedClubs: area.distinguishedClubs,
+      })
+    ).progressText
+
+    const { getByTestId } = renderArea()
+    const narrative = getByTestId('area-progress-text').textContent ?? ''
+    expect(area.cspTracked).toBe(true)
+    expect(expected).toContain('Club Success Plans: all 1 club has submitted.')
+    expect(narrative).toContain(expected)
   })
 
   it('still renders the recognition surface when allClubs has no rows for the area', async () => {

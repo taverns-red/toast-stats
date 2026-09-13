@@ -241,9 +241,9 @@ With ineligible clubs (mirrors the visit clause suffix):
 
 Not tracked (`cspTracked === false`): **no sentence at all.** Never render "0 of N" for a year that had no requirement.
 
-Real example, Area A01 (Division A), D61 2026-09-11, all 5 clubs `N`:
+Real example, Area A01 (Division A), D61 2026-09-11 — all 5 clubs `N`, of which Toastmasters At St. Lawrence College (01849755) is `Club Status = Ineligible`, so it is flagged rather than listed (E3), and the denominator is the 4 active clubs. Verified on the #1559 preview channel against the CDN; club names are in **club-number order** (3045, 9560, 7260126, 7833019), not alphabetical, per §3.2:
 
-> Area 01 (Division A) is not yet distinguished (5 of 5 clubs paid, 0 of 5 distinguished). For Distinguished, 3 clubs need to become distinguished. … Round 1 club visits: 0 of 5 complete — 5 active clubs still need a visit report: … . Club Success Plans: none of the 5 clubs has submitted — CFB Kingston Toastmasters, KEYS Toastmasters Club, Limestone City Club, Toastmasters At Queen's, Toastmasters At St. Lawrence College. No club in this area can be Distinguished until plans are in.
+> Area 01 (Division A) is not yet distinguished (…). … Club Success Plans: none of the 4 clubs has submitted — Limestone City Club, CFB Kingston Toastmasters, Toastmasters At Queen's, KEYS Toastmasters Club. (1 suspended/ineligible club excluded.) No club in this area can be Distinguished until plans are in.
 
 ### 6.2 Division narrative (appended, count only)
 
@@ -255,9 +255,9 @@ All submitted:
 
 Not tracked: no sentence.
 
-Real example, Division A, D61 2026-09-11:
+Real example, Division A, D61 2026-09-11 — 18 clubs, 13 without a plan, but one of those (St. Lawrence College, above) is Ineligible and therefore excluded from the active count; 5 + 12 = 17 is self-consistent by construction. Verified on the #1559 preview channel:
 
-> Division A is not yet distinguished (18 of 18 clubs paid, 0 of 18 distinguished). For Distinguished, … . Club Success Plans: 5 of 18 clubs have submitted; 13 have not and cannot be Distinguished until they do.
+> Division A is not yet distinguished (…). … Club Success Plans: 5 of 17 clubs have submitted; 12 have not and cannot be Distinguished until they do.
 
 ### 6.3 District overview (one line under the "N clubs · avg …" header, `DistrictOverview.tsx`)
 
@@ -399,7 +399,8 @@ Estimated blast radius: `packages/analytics-core` (1 file + test), `frontend/src
 - [ ] `generateAreaProgressText` appends the §6.1 clause (some / one / all / none / ineligible-suffix variants) and nothing when not tracked; exact strings unit-tested.
 - [ ] `generateDivisionProgressText` appends the §6.2 clause; exact strings unit-tested.
 - [ ] Divisions overview (`DivisionAreaProgressSummary`), `DivisionPage`, and `AreaPage` show the clause with no page-specific logic; parity tests extended and green.
-- [ ] Area A01, D61, snapshot 2026-09-11 renders the §6.1 real example verbatim on the preview channel.
+- [x] Area A01 and Division A, D61, snapshot 2026-09-11 render the §6.1 / §6.2 real examples verbatim on the preview channel — "none of the 4 clubs has submitted … (1 suspended/ineligible club excluded.)" and "5 of 17 clubs have submitted; 12 have not" (verified on #1559; the examples were corrected to the rendered output, which applies the E3 ineligible rule the original draft had not).
+- [ ] The Divisions-overview footer's "and Club Success Plan status" phrase is gated on the same `cspTracked` signal as the clauses — absent for a pre-2025-26 year.
 
 **Action list**
 

@@ -436,11 +436,16 @@ export const DivisionAreaProgressSummary: React.FC<
         })}
       </div>
 
-      {/* Footer */}
+      {/* Footer. The Club Success Plan phrase follows the same `cspTracked`
+          gate as the clauses (#1555): for a pre-2025-26 year the prose says
+          nothing about plans, so the footer must not advertise it. */}
       <footer className="p-4 bg-gray-50 border-t border-gray-200">
         <p className="text-xs text-gray-600 font-tm-body text-center">
           Progress descriptions include current metrics, eligibility status,
-          gaps to each recognition level, and club visit completion status.
+          gaps to each recognition level,{' '}
+          {divisions.some(division => division.cspTracked)
+            ? 'club visit completion status, and Club Success Plan status.'
+            : 'and club visit completion status.'}
         </p>
       </footer>
     </section>

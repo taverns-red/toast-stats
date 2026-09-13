@@ -637,3 +637,119 @@ describe('generateDivisionProgressText', () => {
     })
   })
 })
+
+/**
+ * Club Success Plan clause (#1555, spec §6.2) — count only; divisions are too
+ * big to name clubs. Appended in every branch; nothing when not tracked.
+ */
+describe('generateDivisionProgressText — Club Success Plan clause (#1555)', () => {
+  function divisionWithCsp(
+    clubBase: number,
+    paidClubs: number,
+    distinguishedClubs: number,
+    csp: Partial<
+      Pick<
+        DivisionPerformance,
+        'cspTracked' | 'cspSubmittedCount' | 'clubsMissingCspCount'
+      >
+    >
+  ): DivisionPerformance {
+    return {
+      ...createDivision('A', clubBase, paidClubs, distinguishedClubs),
+      cspTracked: true,
+      ...csp,
+    }
+  }
+
+  function textFor(division: DivisionPerformance): string {
+    const gapAnalysis = calculateDivisionGapAnalysis({
+      clubBase: division.clubBase,
+      paidClubs: division.paidClubs,
+      distinguishedClubs: division.distinguishedClubs,
+    })
+    return generateDivisionProgressText(division, gapAnalysis).progressText
+  }
+
+  it('some missing: the real D61 Division A wording (spec §6.2)', () => {
+    const text = textFor(
+      divisionWithCsp(18, 18, 0, {
+        cspSubmittedCount: 5,
+        clubsMissingCspCount: 13,
+      })
+    )
+    expect(text).toContain('is not yet distinguished')
+    expect(text).toContain(
+      'Club Success Plans: 5 of 18 clubs have submitted; 13 have not and cannot be Distinguished until they do.'
+    )
+  })
+
+  it('one missing: singular', () => {
+    const text = textFor(
+      divisionWithCsp(18, 18, 0, {
+        cspSubmittedCount: 17,
+        clubsMissingCspCount: 1,
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 17 of 18 clubs have submitted; 1 has not and cannot be Distinguished until it does.'
+    )
+  })
+
+  it('one submitted: singular verb on the numerator', () => {
+    const text = textFor(
+      divisionWithCsp(18, 18, 0, {
+        cspSubmittedCount: 1,
+        clubsMissingCspCount: 17,
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 1 of 18 clubs has submitted; 17 have not and cannot be Distinguished until they do.'
+    )
+  })
+
+  it('all submitted', () => {
+    const text = textFor(
+      divisionWithCsp(18, 18, 0, {
+        cspSubmittedCount: 18,
+        clubsMissingCspCount: 0,
+      })
+    )
+    expect(text).toContain('Club Success Plans: all 18 clubs have submitted.')
+  })
+
+  it('renders nothing when not tracked, or when there are no tracked clubs', () => {
+    expect(
+      textFor(
+        divisionWithCsp(18, 18, 0, {
+          cspTracked: false,
+          cspSubmittedCount: 0,
+          clubsMissingCspCount: 13,
+        })
+      )
+    ).not.toContain('Club Success Plan')
+    expect(
+      textFor(
+        divisionWithCsp(0, 0, 0, {
+          cspSubmittedCount: 0,
+          clubsMissingCspCount: 0,
+        })
+      )
+    ).not.toContain('Club Success Plan')
+  })
+
+  it('appears in the net-loss and achieved branches too, at the end', () => {
+    const csp = { cspSubmittedCount: 5, clubsMissingCspCount: 13 }
+    const clause =
+      'Club Success Plans: 5 of 18 clubs have submitted; 13 have not and cannot be Distinguished until they do.'
+
+    const netLoss = textFor(divisionWithCsp(18, 17, 5, csp))
+    expect(netLoss).toContain('has a net club loss')
+    expect(netLoss.endsWith(clause)).toBe(true)
+
+    // 18 base, 18 paid, 9 distinguished (50%) → Distinguished (45%); Select
+    // needs base+1 paid, so this stays on the Distinguished rung.
+    const achieved = textFor(divisionWithCsp(18, 18, 9, csp))
+    expect(achieved).toContain('has achieved Distinguished status')
+    expect(achieved.endsWith(clause)).toBe(true)
+  })
+})

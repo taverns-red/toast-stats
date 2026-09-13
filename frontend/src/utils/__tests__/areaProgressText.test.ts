@@ -907,3 +907,174 @@ describe('generateAreaProgressText — visit-gap edge cases (#975)', () => {
     }
   })
 })
+
+/**
+ * Club Success Plan clause (#1555, spec §6.1). Appended after the visit text
+ * in every branch. Exact strings are the product — assert them verbatim.
+ * `cspTracked === false` (pre-2025-26, or column absent) renders NOTHING:
+ * never "0 of N" for a year with no requirement.
+ */
+describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => {
+  type CspOpts = Pick<
+    AreaWithDivision,
+    | 'cspTracked'
+    | 'clubsMissingCsp'
+    | 'clubsMissingCspIneligible'
+    | 'cspSubmittedCount'
+  >
+
+  /** Not-distinguished, no net loss, all visits done: the CSP clause is the only variable. */
+  function areaWithCsp(
+    clubBase: number,
+    csp: Partial<CspOpts>
+  ): AreaWithDivision {
+    return {
+      ...createArea('01', 'A', clubBase, clubBase, 0),
+      cspTracked: true,
+      clubsMissingCsp: [],
+      clubsMissingCspIneligible: [],
+      cspSubmittedCount: 0,
+      ...csp,
+    }
+  }
+
+  function textFor(area: AreaWithDivision): string {
+    const gapAnalysis = calculateAreaGapAnalysis({
+      clubBase: area.clubBase,
+      paidClubs: area.paidClubs,
+      distinguishedClubs: area.distinguishedClubs,
+    })
+    return generateAreaProgressText(area, gapAnalysis).progressText
+  }
+
+  it('some missing: counts, names the active clubs, and states the Distinguished block', () => {
+    const text = textFor(
+      areaWithCsp(5, {
+        cspSubmittedCount: 2,
+        clubsMissingCsp: [
+          { clubNumber: '3045', clubName: 'Limestone City Club' },
+          { clubNumber: '4321', clubName: 'CFB Kingston Toastmasters' },
+          { clubNumber: '5678', clubName: 'KEYS Toastmasters Club' },
+        ],
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 2 of 5 submitted — 3 active clubs still need to submit: ' +
+        'Limestone City Club, CFB Kingston Toastmasters, KEYS Toastmasters Club. ' +
+        'No club can be Distinguished until its plan is in.'
+    )
+  })
+
+  it('one missing: singular club word, verb and pronoun', () => {
+    const text = textFor(
+      areaWithCsp(5, {
+        cspSubmittedCount: 4,
+        clubsMissingCsp: [
+          { clubNumber: '5678', clubName: 'KEYS Toastmasters Club' },
+        ],
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 4 of 5 submitted — 1 active club still needs to submit: ' +
+        'KEYS Toastmasters Club. It cannot be Distinguished until its plan is in.'
+    )
+  })
+
+  it('all submitted: one short sentence, no club names', () => {
+    const text = textFor(areaWithCsp(5, { cspSubmittedCount: 5 }))
+    expect(text).toContain('Club Success Plans: all 5 clubs have submitted.')
+    expect(text).not.toContain('still need')
+  })
+
+  it('none submitted: the real D61 Area A01 wording (spec §6.1)', () => {
+    const text = textFor(
+      areaWithCsp(5, {
+        cspSubmittedCount: 0,
+        clubsMissingCsp: [
+          { clubNumber: '1', clubName: 'CFB Kingston Toastmasters' },
+          { clubNumber: '2', clubName: 'KEYS Toastmasters Club' },
+          { clubNumber: '3', clubName: 'Limestone City Club' },
+          { clubNumber: '4', clubName: "Toastmasters At Queen's" },
+          { clubNumber: '5', clubName: 'Toastmasters At St. Lawrence College' },
+        ],
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: none of the 5 clubs has submitted — ' +
+        "CFB Kingston Toastmasters, KEYS Toastmasters Club, Limestone City Club, Toastmasters At Queen's, " +
+        'Toastmasters At St. Lawrence College. No club in this area can be Distinguished until plans are in.'
+    )
+  })
+
+  it('suspended/ineligible clubs are excluded from the count and flagged, mirroring the visit clause', () => {
+    const text = textFor(
+      areaWithCsp(5, {
+        cspSubmittedCount: 2,
+        clubsMissingCsp: [
+          { clubNumber: '1', clubName: 'Alpha' },
+          { clubNumber: '2', clubName: 'Bravo' },
+        ],
+        clubsMissingCspIneligible: [
+          { clubNumber: '9', clubName: 'Suspended Club', status: 'Suspended' },
+        ],
+      })
+    )
+    // Denominator = submitted + active missing (4), not the club base (5).
+    expect(text).toContain(
+      'Club Success Plans: 2 of 4 submitted — 2 active clubs still need to submit: Alpha, Bravo. ' +
+        '(1 suspended/ineligible club excluded.) No club can be Distinguished until its plan is in.'
+    )
+  })
+
+  it('renders no CSP sentence at all when not tracked (pre-2025-26 / column absent)', () => {
+    const text = textFor(
+      areaWithCsp(5, {
+        cspTracked: false,
+        cspSubmittedCount: 0,
+        clubsMissingCsp: [{ clubNumber: '1', clubName: 'Alpha' }],
+      })
+    )
+    expect(text).not.toContain('Club Success Plan')
+  })
+
+  it('renders no CSP sentence for an empty area (clubBase 0)', () => {
+    const text = textFor(areaWithCsp(0, { cspSubmittedCount: 0 }))
+    expect(text).not.toContain('Club Success Plan')
+  })
+
+  it('appears after the visit text in the net-loss and achieved branches too', () => {
+    const csp: Partial<CspOpts> = {
+      cspSubmittedCount: 3,
+      clubsMissingCsp: [{ clubNumber: '1', clubName: 'Alpha' }],
+    }
+    const expected =
+      'Club Success Plans: 3 of 4 submitted — 1 active club still needs to submit: Alpha. ' +
+      'It cannot be Distinguished until its plan is in.'
+
+    // Net loss: 3 of 4 paid.
+    const netLossText = textFor({
+      ...createArea('01', 'A', 4, 3, 1),
+      cspTracked: true,
+      clubsMissingCspIneligible: [],
+      ...csp,
+    } as AreaWithDivision)
+    expect(netLossText).toContain('has a net club loss')
+    expect(netLossText).toContain(expected)
+    expect(netLossText.indexOf('club visits:')).toBeLessThan(
+      netLossText.indexOf('Club Success Plans:')
+    )
+
+    // Achieved: 4 of 4 paid, 3 distinguished, all visits done.
+    const achievedText = textFor({
+      ...createArea('01', 'A', 4, 4, 3),
+      cspTracked: true,
+      clubsMissingCspIneligible: [],
+      ...csp,
+    } as AreaWithDivision)
+    expect(achievedText).toContain('has achieved')
+    expect(achievedText).toContain(expected)
+    expect(achievedText.indexOf('club visits:')).toBeLessThan(
+      achievedText.indexOf('Club Success Plans:')
+    )
+  })
+})

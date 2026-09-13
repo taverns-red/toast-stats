@@ -16,6 +16,9 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, cleanup } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
+import { extractDivisionPerformance } from '../../utils/extractDivisionPerformance'
+import { generateDivisionProgressText } from '../../utils/divisionProgressText'
+import { calculateDivisionGapAnalysis } from '../../utils/divisionGapAnalysis'
 import DivisionPage from '../DivisionPage'
 
 vi.mock('../../hooks/useIsMobile', () => ({
@@ -61,23 +64,28 @@ const SNAPSHOT = {
     },
   ],
   clubPerformance: [
+    // PY 2025-26 snapshot, so the CSP column is present (#1555): the Select
+    // club has filed; the two undistinguished clubs have not.
     {
       'Club Number': '123456',
       'Club Name': 'Ottawa Club',
       'Club Status': 'Active',
       'Club Distinguished Status': 'Select Distinguished',
+      CSP: 'Y',
     },
     {
       'Club Number': '234567',
       'Club Name': 'Vulnerable Club',
       'Club Status': 'Active',
       'Club Distinguished Status': '',
+      CSP: 'N',
     },
     {
       'Club Number': '654321',
       'Club Name': 'Struggling Club',
       'Club Status': 'Active',
       'Club Distinguished Status': '',
+      CSP: 'N',
     },
   ],
 }
@@ -198,6 +206,31 @@ describe('DivisionPage data parity with the Divisions overview (#1015)', () => {
     const narrative = getByTestId('division-progress-text')
     // The generator always prefixes the division label "Division <id>".
     expect(narrative.textContent).toMatch(/Division A/)
+  })
+
+  it('narrative equals the overview generator output for the same snapshot — Club Success Plan clause included (#1555)', () => {
+    // Parity by construction: same derived division row, same generator as
+    // the Divisions overview, so the count-only CSP clause lands here with no
+    // page-specific logic.
+    const division = extractDivisionPerformance(SNAPSHOT, '2026-03-15').find(
+      d => d.divisionId === 'A'
+    )!
+    const expected = generateDivisionProgressText(
+      division,
+      calculateDivisionGapAnalysis({
+        clubBase: division.clubBase,
+        paidClubs: division.paidClubs,
+        distinguishedClubs: division.distinguishedClubs,
+      })
+    ).progressText
+
+    const { getByTestId } = renderDivision()
+    const narrative = getByTestId('division-progress-text').textContent ?? ''
+    expect(division.cspTracked).toBe(true)
+    expect(expected).toContain(
+      'Club Success Plans: 1 of 3 clubs has submitted; 2 have not and cannot be Distinguished until they do.'
+    )
+    expect(narrative).toContain(expected)
   })
 
   it('drops the ad-hoc "Needs Attention" KPI card (swapped for shared data)', () => {
