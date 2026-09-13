@@ -18,6 +18,7 @@ import * as path from 'node:path'
 import * as crypto from 'node:crypto'
 import {
   AnalyticsComputer,
+  buildGlobalClubRace,
   buildGlobalTotals,
   canonicalDistrictId,
   findPreviousProgramYearDate,
@@ -36,10 +37,14 @@ import type {
   DistrictStatisticsInput,
   ScrapedRecord,
 } from '@taverns-red/analytics-core'
-import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
+import type {
+  AllDistrictsRankingsData,
+  DistrictRanking,
+} from '@taverns-red/shared-contracts'
 import {
   districtIdFromSnapshotFileName,
   isDistrictSnapshotFile,
+  GLOBAL_CLUB_RACE_FILE_NAME,
   GLOBAL_TOTALS_FILE_NAME,
 } from '@taverns-red/shared-contracts'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
@@ -55,6 +60,21 @@ import {
   ClosingPeriodDetector,
   type ClosingPeriodInfo,
 } from '../utils/ClosingPeriodDetector.js'
+
+/**
+ * What folding a date into the club-race store produced (#1556): the store
+ * and the exact scoped inputs it read, so the artifact projection is built
+ * from the same view and cannot disagree with it.
+ */
+interface ClubRaceFoldResult {
+  path?: string
+  failed: boolean
+  folded?: {
+    store: ClubRaceStore
+    rankings: DistrictRanking[]
+    districts: ClubRaceDistrictObservation[]
+  }
+}
 
 /**
  * Configuration for AnalyticsComputeService
@@ -162,6 +182,19 @@ export interface ComputeOperationResult {
    * from being uploaded.
    */
   clubRaceStoreFailed: boolean
+  /**
+   * Path of `snapshots/{date}/global-club-race.json` (#1556), the published
+   * projection of the crossing store, or undefined when the date was skipped
+   * (no rankings file) or the store fold failed.
+   */
+  globalClubRacePath?: string
+  /**
+   * True when the projection could not be written (#1556) — including when
+   * the store fold it depends on failed. Reported, never publish-blocking: an
+   * absent artifact renders as "not available for this date", a wrong day's
+   * snapshot never recomputes.
+   */
+  globalClubRaceFailed: boolean
   errors: Array<{
     districtId: string
     error: string
@@ -1193,6 +1226,7 @@ export class AnalyticsComputeService {
         // The rollup never ran; "did not run" is not "failed".
         globalTotalsFailed: false,
         clubRaceStoreFailed: false,
+        globalClubRaceFailed: false,
         errors: [
           {
             districtId: 'N/A',
@@ -1235,6 +1269,7 @@ export class AnalyticsComputeService {
         // The rollup never ran; "did not run" is not "failed".
         globalTotalsFailed: false,
         clubRaceStoreFailed: false,
+        globalClubRaceFailed: false,
         errors: [
           {
             districtId: 'N/A',
@@ -1424,6 +1459,13 @@ export class AnalyticsComputeService {
     // rankings — and the same independence from per-district compute.
     const clubRace = await this.writeClubRaceStore(snapshotDate, errors)
 
+    // Project the folded store into the published race artifact (#1556).
+    const globalClubRace = await this.writeGlobalClubRace(
+      snapshotDate,
+      clubRace,
+      errors
+    )
+
     // Calculate result statistics
     const districtsProcessed = districtsToCompute
     const districtsSucceeded = results
@@ -1470,6 +1512,8 @@ export class AnalyticsComputeService {
       globalTotalsFailed: globalTotals.failed,
       clubRaceStorePath: clubRace.path,
       clubRaceStoreFailed: clubRace.failed,
+      globalClubRacePath: globalClubRace.path,
+      globalClubRaceFailed: globalClubRace.failed,
       errors,
       duration_ms: Date.now() - startTime,
     }
@@ -1587,7 +1631,7 @@ export class AnalyticsComputeService {
   private async writeClubRaceStore(
     snapshotDate: string,
     errors: Array<{ districtId: string; error: string; timestamp: string }>
-  ): Promise<{ path?: string; failed: boolean }> {
+  ): Promise<ClubRaceFoldResult> {
     const snapshotDir = this.getSnapshotDir(snapshotDate)
     const rankingsPath = path.join(snapshotDir, 'all-districts-rankings.json')
 
@@ -1602,10 +1646,9 @@ export class AnalyticsComputeService {
     }
 
     try {
+      const rankings = readSnapshotRankings(snapshotDir)
       const inScope = new Set(
-        readSnapshotRankings(snapshotDir).map(row =>
-          canonicalDistrictId(row.districtId)
-        )
+        rankings.map(row => canonicalDistrictId(row.districtId))
       )
       const districts: ClubRaceDistrictObservation[] = []
       for (const fileName of (await fs.readdir(snapshotDir)).sort()) {
@@ -1638,7 +1681,11 @@ export class AnalyticsComputeService {
         newCrossings: summary.newCrossings,
         observedDates: store.observedDates.length,
       })
-      return { path: storePath, failed: false }
+      return {
+        path: storePath,
+        failed: false,
+        folded: { store, rankings, districts },
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       this.logger.error('Failed to update club-race crossing store', {
@@ -1648,6 +1695,75 @@ export class AnalyticsComputeService {
       errors.push({
         districtId: 'N/A',
         error: `Failed to update club-race/first-reached.json: ${message}`,
+        timestamp: new Date().toISOString(),
+      })
+      return { failed: true }
+    }
+  }
+
+  /**
+   * Write `snapshots/{date}/global-club-race.json` — the published
+   * projection of the crossing store for this date (#1556, phase 2).
+   *
+   * Built from exactly what the fold just read (same rankings scope, same
+   * district files, the store as folded), so the artifact and the store can
+   * never disagree about a crossing. Writing it beside the district
+   * snapshots is the whole publish wiring: the upload step copies
+   * `snapshots/${DATE}/*.json` wholesale, gzipped, with the CDN TTL.
+   *
+   * A skipped fold (no rankings) is a skipped artifact; a FAILED fold is a
+   * failed artifact — recorded, because projecting a store that did not
+   * take today's date would publish a race that is silently one day stale.
+   * Neither blocks the day's publish (see `globalClubRaceFailed`).
+   */
+  private async writeGlobalClubRace(
+    snapshotDate: string,
+    fold: ClubRaceFoldResult,
+    errors: Array<{ districtId: string; error: string; timestamp: string }>
+  ): Promise<{ path?: string; failed: boolean }> {
+    if (fold.failed) {
+      errors.push({
+        districtId: 'N/A',
+        error: `Failed to write ${GLOBAL_CLUB_RACE_FILE_NAME}: the club-race store did not fold this date`,
+        timestamp: new Date().toISOString(),
+      })
+      return { failed: true }
+    }
+    if (!fold.folded) return { failed: false }
+
+    try {
+      const race = buildGlobalClubRace({
+        snapshotDate,
+        rankings: fold.folded.rankings,
+        districts: fold.folded.districts,
+        store: fold.folded.store.toJSON(),
+      })
+      const outputPath = path.join(
+        this.getSnapshotDir(snapshotDate),
+        GLOBAL_CLUB_RACE_FILE_NAME
+      )
+      await fs.writeFile(
+        outputPath,
+        JSON.stringify(race, null, 2) + '\n',
+        'utf-8'
+      )
+      this.logger.info('Wrote worldwide club race', {
+        snapshotDate,
+        path: outputPath,
+        reached: race.reached.length,
+        clubsScanned: race.scope.clubsScanned,
+        resolution: race.observation.resolution,
+      })
+      return { path: outputPath, failed: false }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      this.logger.error('Failed to write worldwide club race', {
+        snapshotDate,
+        error: message,
+      })
+      errors.push({
+        districtId: 'N/A',
+        error: `Failed to write ${GLOBAL_CLUB_RACE_FILE_NAME}: ${message}`,
         timestamp: new Date().toISOString(),
       })
       return { failed: true }

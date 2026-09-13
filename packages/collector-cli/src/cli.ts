@@ -671,6 +671,8 @@ export function createCLI(): Command {
         globalTotalsFailed: computeResult.globalTotalsFailed,
         clubRaceStorePath: computeResult.clubRaceStorePath,
         clubRaceStoreFailed: computeResult.clubRaceStoreFailed,
+        globalClubRacePath: computeResult.globalClubRacePath,
+        globalClubRaceFailed: computeResult.globalClubRaceFailed,
         errors: computeResult.errors,
         duration_ms: computeResult.duration_ms,
       }
