@@ -24,6 +24,8 @@ import type {
   AreaPerformance,
   DivisionPerformance,
 } from '../../utils/divisionStatus'
+import { useDistrictCachedDates } from '../../hooks/useDistrictData'
+import { downloadCSV } from '../../utils/csvExport'
 
 function makeClub(overrides: Partial<ClubTrend> = {}): ClubTrend {
   return {
@@ -65,6 +67,28 @@ const interventionClub = makeClub({
   currentStatus: 'intervention-required',
   // Only 1 DCP goal, so it is NOT also close-to-Distinguished — it must appear
   // solely in the intervention section.
+  dcpGoalsTrend: [{ date: '2025-07-15', goalsAchieved: 1 }],
+})
+
+// #1555: an active club without a Club Success Plan (1 goal, so it is not
+// also close-to-Distinguished) and a suspended one that must be footnoted,
+// not listed.
+const noCspClub = makeClub({
+  clubId: 'csp-1',
+  clubName: 'Unplanned Club',
+  divisionId: 'A',
+  areaId: 'A1',
+  cspSubmitted: false,
+  currentStatus: 'vulnerable',
+  dcpGoalsTrend: [{ date: '2025-07-15', goalsAchieved: 1 }],
+})
+const noCspSuspendedClub = makeClub({
+  clubId: 'csp-2',
+  clubName: 'Dormant Club',
+  divisionId: 'B',
+  areaId: 'B2',
+  cspSubmitted: false,
+  clubStatus: 'Suspended',
   dcpGoalsTrend: [{ date: '2025-07-15', goalsAchieved: 1 }],
 })
 
@@ -112,7 +136,7 @@ vi.mock('../../hooks/useDistricts', () => ({
 }))
 
 const analyticsData = {
-  allClubs: [closeClub, interventionClub],
+  allClubs: [closeClub, interventionClub, noCspClub, noCspSuspendedClub],
   interventionRequiredClubs: [interventionClub],
 }
 
@@ -125,15 +149,33 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
   })),
 }))
 
+// PY 2025-26 by default (the first year a Club Success Plan was required);
+// the #1555 year-gate test swaps in a PY 2024-25 date set.
+const DATES_2025_26 = {
+  data: {
+    dates: ['2025-07-15', '2025-07-01'],
+    dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
+  },
+  isLoading: false,
+}
+const DATES_2024_25 = {
+  data: {
+    dates: ['2025-05-15', '2025-05-01'],
+    dateRange: { startDate: '2025-05-01', endDate: '2025-05-15' },
+  },
+  isLoading: false,
+}
+
 vi.mock('../../hooks/useDistrictData', () => ({
-  useDistrictCachedDates: vi.fn(() => ({
-    data: {
-      dates: ['2025-07-15', '2025-07-01'],
-      dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
-    },
-    isLoading: false,
-  })),
+  useDistrictCachedDates: vi.fn(() => DATES_2025_26),
 }))
+
+vi.mock('../../utils/csvExport', async () => {
+  const actual = await vi.importActual<typeof import('../../utils/csvExport')>(
+    '../../utils/csvExport'
+  )
+  return { ...actual, downloadCSV: vi.fn() }
+})
 
 vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(() => ({
@@ -142,9 +184,15 @@ vi.mock('../../hooks/useMembershipData', () => ({
   })),
 }))
 
-vi.mock('../../utils/extractDivisionPerformance', () => ({
-  extractDivisionPerformance: vi.fn(() => divisionPerf),
-}))
+// Partial mock: only the extractor is stubbed. `isIneligibleStatus` (the
+// predicate `summarizeCspCompletion` shares with the raw path, #1555) must
+// stay real.
+vi.mock('../../utils/extractDivisionPerformance', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../utils/extractDivisionPerformance')
+  >('../../utils/extractDivisionPerformance')
+  return { ...actual, extractDivisionPerformance: vi.fn(() => divisionPerf) }
+})
 
 const DistrictActionListPage = React.lazy(
   () => import('../DistrictActionListPage')
@@ -178,7 +226,12 @@ const renderAt = (initialUrl: string) => {
 }
 
 describe('DistrictActionListPage (#1231)', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
+    )
+  })
   afterEach(() => cleanup())
 
   it('renders the three action sections at /district/:id/action-list', async () => {
@@ -252,5 +305,104 @@ describe('DistrictActionListPage (#1231)', () => {
     await waitFor(() =>
       expect(document.title).toBe('District 61 Action List — Toast Stats')
     )
+  })
+})
+
+/**
+ * Fourth section: clubs without a Club Success Plan (#1555, spec §6.4).
+ * Present only for a program year in which a plan was required — the page
+ * passes its own `effectiveProgramYear` to `buildActionList` (R3).
+ */
+describe('DistrictActionListPage — Clubs without a Club Success Plan (#1555)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
+    )
+  })
+  afterEach(() => cleanup())
+
+  it('renders the section after intervention, with a count badge, club link and meta', async () => {
+    renderAt('/district/61/action-list')
+    const section = await screen.findByTestId('section-csp')
+    expect(section).toHaveAttribute('aria-labelledby', 'action-csp')
+    expect(section).toHaveTextContent('Clubs without a Club Success Plan')
+    // Suspended club is footnoted, not counted — badge is 1.
+    expect(
+      section.querySelector('.action-list-section__count')
+    ).toHaveTextContent('1')
+    const link = screen.getByRole('link', { name: 'Unplanned Club' })
+    expect(link).toHaveAttribute('href', '/district/61/club/csp-1')
+    expect(section).toHaveTextContent('A/A1 · CSP not submitted · Vulnerable')
+    // Section order: close → visits → intervention → csp.
+    const ids = Array.from(
+      document.querySelectorAll('.action-list-section')
+    ).map(s => s.getAttribute('data-testid'))
+    expect(ids).toEqual([
+      'section-close',
+      'section-visits',
+      'section-intervention',
+      'section-csp',
+    ])
+  })
+
+  it('footnotes suspended/ineligible clubs without a plan instead of listing them', async () => {
+    renderAt('/district/61/action-list')
+    const section = await screen.findByTestId('section-csp')
+    expect(
+      screen.queryByRole('link', { name: 'Dormant Club' })
+    ).not.toBeInTheDocument()
+    expect(section).toHaveTextContent(
+      '1 suspended/ineligible club without a plan is not listed.'
+    )
+  })
+
+  it('mentions Club Success Plans in the intro paragraph', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('action-list-page')
+    expect(
+      screen.getByText(
+        /clubs that need intervention, and clubs that still need to submit a Club Success Plan\./
+      )
+    ).toBeInTheDocument()
+  })
+
+  it('scopes to ?area= like the other sections, with the empty state when nothing matches', async () => {
+    renderAt('/district/61/action-list?area=B2')
+    const section = await screen.findByTestId('section-csp')
+    // B2 holds only the suspended club: nothing listed, but it is footnoted.
+    expect(
+      screen.queryByRole('link', { name: 'Unplanned Club' })
+    ).not.toBeInTheDocument()
+    expect(section).toHaveTextContent(
+      'Every active club in this scope has submitted its Club Success Plan.'
+    )
+    expect(section).toHaveTextContent(
+      '1 suspended/ineligible club without a plan is not listed.'
+    )
+  })
+
+  it('exports one "Club Success Plan not submitted" CSV row per listed club', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('section-csp')
+    screen.getByRole('button', { name: 'Export CSV' }).click()
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledTimes(1))
+    const csv = vi.mocked(downloadCSV).mock.calls[0]![0]
+    expect(csv).toContain(
+      'Club Success Plan not submitted,A,A1,Unplanned Club,CSP not submitted · Vulnerable'
+    )
+    // The footnoted suspended club is not exported.
+    expect(csv).not.toContain('Dormant Club')
+  })
+
+  it('renders no CSP section and no intro clause for a pre-2025-26 program year', async () => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2024_25 as ReturnType<typeof useDistrictCachedDates>
+    )
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('action-list-page')
+    expect(screen.getByTestId('section-intervention')).toBeInTheDocument()
+    expect(screen.queryByTestId('section-csp')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Club Success Plan/)).not.toBeInTheDocument()
   })
 })
