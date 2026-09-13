@@ -184,6 +184,60 @@ export {
   type GlobalTotalsClubsByCountry,
 } from './schemas/global-totals.schema.js'
 
+// Club-race crossing store — club-race/{PY}/first-reached.json (#1556)
+export {
+  ClubRaceStoreSchema,
+  ClubRaceStoreFormatSchema,
+  ClubRaceStoreClubSchema,
+  ClubRaceCrossingSchema,
+  ClubRaceTierSchema,
+  ClubRaceOfficialCodeSchema,
+  CLUB_RACE_TIERS,
+  CLUB_RACE_STORE_FORMAT,
+  type ClubRaceStoreData,
+  type ClubRaceStoreFormat,
+  type ClubRaceStoreClub,
+  type ClubRaceCrossing,
+  type ClubRaceTier,
+  type ClubRaceOfficialCode,
+} from './schemas/club-race-store.schema.js'
+
+// Worldwide club race artifact — snapshots/{date}/global-club-race.json (#1556)
+export {
+  GlobalClubRaceSchema,
+  GlobalClubRaceFormatSchema,
+  GlobalClubRaceScopeSchema,
+  GlobalClubRaceTierRuleSchema,
+  GlobalClubRaceMembershipBasisSchema,
+  GlobalClubRaceRulesetSchema,
+  GlobalClubRaceObservationSchema,
+  GlobalClubRaceTimelinePointSchema,
+  GlobalClubRaceMembershipBandsSchema,
+  GlobalClubRaceDistributionSchema,
+  GlobalClubRaceLevelSchema,
+  GlobalClubRaceCurrentSchema,
+  GlobalClubRaceTierStandingSchema,
+  GlobalClubRaceReachedSchema,
+  GlobalClubRaceDistrictSchema,
+  GLOBAL_CLUB_RACE_FORMAT,
+  GLOBAL_CLUB_RACE_FILE_NAME,
+  type GlobalClubRace,
+  type GlobalClubRaceFormat,
+  type GlobalClubRaceScope,
+  type GlobalClubRaceTierRule,
+  type GlobalClubRaceMembershipBasis,
+  type GlobalClubRaceRuleset,
+  type GlobalClubRaceObservation,
+  type GlobalClubRaceTimelinePoint,
+  type GlobalClubRaceMembershipBands,
+  type GlobalClubRaceDistribution,
+  type GlobalClubRaceLevel,
+  type GlobalClubRaceCurrent,
+  type GlobalClubRaceTierStanding,
+  type GlobalClubRaceReached,
+  type GlobalClubRaceDistrict,
+} from './schemas/global-club-race.schema.js'
+
 // Worldwide program-year series — v1/global-history.json (#1499)
 export {
   GlobalHistorySchema,
