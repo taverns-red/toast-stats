@@ -41,6 +41,11 @@
     { "type": "perf", "section": "Performance" },
     { "type": "docs", "section": "Documentation" },
     { "type": "test", "section": "Tests" },
+    { "type": "harden", "section": "Security Hardening" },
+    { "type": "cutover", "section": "Migrations" },
+    { "type": "deps", "section": "Dependencies" },
+    { "type": "ci", "section": "Continuous Integration" },
+    { "type": "build", "section": "Build System" },
     { "type": "chore", "section": "Miscellaneous", "hidden": true }
   ]
 }
