@@ -32,6 +32,13 @@ export interface CspCompletionRow {
 export interface CspCompletion<T extends CspCompletionRow> {
   /** Rows with a submitted plan, any operational status. */
   submittedCount: number
+  /**
+   * How many of `submittedCount` are suspended / closed / ineligible — so an
+   * "of N active clubs" denominator can be `submittedCount -
+   * submittedIneligibleCount + notSubmitted.length` and agree with the
+   * active-only list it accompanies.
+   */
+  submittedIneligibleCount: number
   /** Active (non-ineligible) rows without a plan, in input order. */
   notSubmitted: T[]
   /** Suspended / closed / ineligible rows without a plan, in input order. */
@@ -44,6 +51,7 @@ export function summarizeCspCompletion<T extends CspCompletionRow>(
   clubs: readonly T[]
 ): CspCompletion<T> {
   let submittedCount = 0
+  let submittedIneligibleCount = 0
   let unknownCount = 0
   const notSubmitted: T[] = []
   const notSubmittedIneligible: T[] = []
@@ -52,14 +60,24 @@ export function summarizeCspCompletion<T extends CspCompletionRow>(
     const cspSubmitted = club.cspSubmitted
     if (cspSubmitted === undefined) {
       unknownCount++
-    } else if (getCSPStatus({ cspSubmitted })) {
+      continue
+    }
+    const ineligible = isIneligibleStatus(club.clubStatus ?? '')
+    if (getCSPStatus({ cspSubmitted })) {
       submittedCount++
-    } else if (isIneligibleStatus(club.clubStatus ?? '')) {
+      if (ineligible) submittedIneligibleCount++
+    } else if (ineligible) {
       notSubmittedIneligible.push(club)
     } else {
       notSubmitted.push(club)
     }
   }
 
-  return { submittedCount, notSubmitted, notSubmittedIneligible, unknownCount }
+  return {
+    submittedCount,
+    submittedIneligibleCount,
+    notSubmitted,
+    notSubmittedIneligible,
+    unknownCount,
+  }
 }

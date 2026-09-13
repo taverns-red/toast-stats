@@ -648,6 +648,9 @@ const DistrictDetailPageInner: React.FC = () => {
                 {hasValidDates && effectiveProgramYear && (
                   <DistrictOverview
                     districtId={districtId}
+                    /* The year label this page owns (#1555, R3) — the same
+                       value the trophy case and growth card receive below. */
+                    programYear={effectiveProgramYear.label}
                     /* Unconditional: `hasValidDates` above already means
                        `effectiveEndDate !== null`, and the old conditional
                        spread left an undated path open — the one that showed

@@ -17,6 +17,7 @@ import React from 'react'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { DistrictOverview } from '../DistrictOverview'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../../services/cdn'
 import type { CdnRankingsData } from '../../services/cdn'
@@ -144,25 +145,30 @@ afterEach(() => cleanup())
 
 function renderOverview(
   selectedDate: SnapshotDate,
-  programYearStartDate: string
+  programYearStartDate: string,
+  programYear: string
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  // MemoryRouter: the overview now carries a Link to the action list (#1555).
   return render(
     <QueryClientProvider client={client}>
-      <DistrictOverview
-        districtId="61"
-        selectedDate={selectedDate}
-        programYearStartDate={programYearStartDate}
-      />
+      <MemoryRouter>
+        <DistrictOverview
+          districtId="61"
+          selectedDate={selectedDate}
+          programYearStartDate={programYearStartDate}
+          programYear={programYear}
+        />
+      </MemoryRouter>
     </QueryClientProvider>
   )
 }
 
 describe('DistrictOverview — Payment Composition year scoping (#1396)', () => {
   it("shows the selected past year's payments, not the current year's", async () => {
-    renderOverview(snap('2025-06-30'), '2024-07-01')
+    renderOverview(snap('2025-06-30'), '2024-07-01', '2024-2025')
 
     const card = await screen.findByTestId('payment-composition')
     await waitFor(() => expect(card).toHaveTextContent(/843 payment events/))
@@ -172,7 +178,7 @@ describe('DistrictOverview — Payment Composition year scoping (#1396)', () => 
   })
 
   it('still shows the current year on a current-year snapshot (no regression)', async () => {
-    renderOverview(snap('2026-07-31'), '2025-07-01')
+    renderOverview(snap('2026-07-31'), '2025-07-01', '2025-2026')
 
     const card = await screen.findByTestId('payment-composition')
     await waitFor(() => expect(card).toHaveTextContent(/1,602 payment events/))
