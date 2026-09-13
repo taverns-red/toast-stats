@@ -17,6 +17,7 @@ import {
   within,
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { axe, toHaveNoViolations } from 'jest-axe'
 import {
   createMemoryRouter,
   RouterProvider,
@@ -224,6 +225,8 @@ vi.mock('../../utils/extractDivisionPerformance', async () => {
   >('../../utils/extractDivisionPerformance')
   return { ...actual, extractDivisionPerformance: vi.fn(() => divisionPerf) }
 })
+
+expect.extend(toHaveNoViolations)
 
 const DistrictActionListPage = React.lazy(
   () => import('../DistrictActionListPage')
@@ -749,5 +752,21 @@ describe('DistrictActionListPage — collapsible sections (#1569)', () => {
     expect(toggleOf('section-close')).toHaveAttribute('aria-expanded', 'true')
     expect(toggleOf('section-visits')).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByText(/Club Success Plan/)).not.toBeInTheDocument()
+  })
+
+  /* Structural WCAG scan of the disclosures. It lives in this file rather than
+     src/__tests__/accessibility/ so it reuses the page's existing hook mocks
+     instead of forking a second copy of them (lessons 61/76); src/pages/
+     __tests__/ is already in the integration project, where axe scans belong.
+
+     JSDOM has no layout engine, so axe auto-disables `color-contrast`
+     (lesson 075) — a green scan here proves structure, not contrast. Contrast
+     and the focus ring are verified live on the PR preview. */
+  it('is axe-clean with sections collapsed and after expanding one', async () => {
+    const { container } = renderAt('/district/61/action-list')
+    await screen.findByTestId('section-csp')
+    expect(await axe(container)).toHaveNoViolations()
+    await userEvent.click(toggleOf('section-close'))
+    expect(await axe(container)).toHaveNoViolations()
   })
 })
