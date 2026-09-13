@@ -107,12 +107,12 @@ describe('DivisionAreaProgressSummary — Club Success Plan clause (#1555)', () 
 
     expect(
       screen.getByText(
-        /Club Success Plans: 2 of 5 clubs have submitted; 3 have not and cannot be Distinguished until they do\./
+        /Club Success Plans: 2 of 5 clubs have submitted; 3 have not and must file by 30 September 2026 — a club that misses that date cannot be Distinguished this program year\./
       )
     ).toBeInTheDocument()
     expect(
       screen.getByText(
-        /Club Success Plans: 2 of 5 submitted — 3 active clubs still need to submit: Limestone City Club, CFB Kingston Toastmasters, KEYS Toastmasters Club\. No club can be Distinguished until its plan is in\./
+        /Club Success Plans: 2 of 5 submitted — 3 active clubs still need to submit by 30 September 2026: Limestone City Club, CFB Kingston Toastmasters, KEYS Toastmasters Club\. Any club that has not filed by 30 September 2026 cannot be Distinguished this program year\./
       )
     ).toBeInTheDocument()
   })
