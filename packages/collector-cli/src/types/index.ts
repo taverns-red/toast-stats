@@ -365,6 +365,10 @@ export interface ComputeAnalyticsResult {
    * not stop the day's snapshot from uploading.
    */
   clubRaceStoreFailed?: boolean
+  /** Path of `snapshots/{date}/global-club-race.json` written (#1556). */
+  globalClubRacePath?: string
+  /** True when the race projection could not be written (#1556). Never publish-blocking. */
+  globalClubRaceFailed?: boolean
   /** Detailed error information for failed districts */
   errors: Array<{
     districtId: string

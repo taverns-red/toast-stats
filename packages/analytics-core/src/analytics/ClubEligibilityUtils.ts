@@ -199,7 +199,7 @@ export function calculateNetGrowth(club: ClubStatistics): number {
  * substitutes for the absolute member minimum on the two lower rungs.
  * The top two rungs have no alternative — membership is absolute there.
  */
-interface ClubTierThreshold {
+export interface ClubTierThreshold {
   level: Exclude<DistinguishedLevel, 'NotDistinguished'>
   dcpGoals: number
   members: number
@@ -241,7 +241,7 @@ const CLUB_TIERS_PRE_2025: readonly ClubTierThreshold[] =
  * 2025-2026 (#329). The four rungs below it are unchanged across every
  * program year Toast Stats holds.
  */
-function clubTiersForProgramYear(
+export function clubTiersForProgramYear(
   programYear?: string
 ): readonly ClubTierThreshold[] {
   if (!programYear) return CLUB_TIERS_2025
