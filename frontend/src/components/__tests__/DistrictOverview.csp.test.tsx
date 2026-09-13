@@ -74,20 +74,42 @@ beforeEach(() => vi.clearAllMocks())
 afterEach(() => cleanup())
 
 describe('DistrictOverview — Club Success Plan line (#1555)', () => {
-  it('counts clubs without a plan (including ineligible ones) and links to the action-list section', () => {
+  it('counts ACTIVE clubs without a plan — the number the linked action-list badge shows — and footnotes ineligible ones', () => {
+    // Live D61 2026-09-11 in miniature: the overview must agree with its own
+    // link target (badge = active only), so ineligible clubs leave BOTH the
+    // numerator and the denominator and are named in the action list's
+    // footnote voice instead (#1561 review).
     mockAnalytics([
       { clubId: '1', cspSubmitted: false, clubStatus: 'Active' },
-      { clubId: '2', cspSubmitted: false, clubStatus: 'Ineligible' },
-      { clubId: '3', cspSubmitted: true, clubStatus: 'Active' },
+      { clubId: '2', cspSubmitted: false, clubStatus: 'Active' },
+      { clubId: '3', cspSubmitted: false, clubStatus: 'Ineligible' },
+      { clubId: '4', cspSubmitted: true, clubStatus: 'Active' },
     ])
     renderOverview('2026-2027')
 
     const line = screen.getByTestId('district-csp-line')
     expect(line).toHaveTextContent(
-      '2 of 3 clubs (67%) have not submitted a Club Success Plan — required for any Distinguished level this year.'
+      '2 of 3 active clubs (67%) have not submitted a Club Success Plan — required for any Distinguished level this year.'
+    )
+    expect(line).toHaveTextContent(
+      '1 suspended/ineligible club without a plan is not counted.'
     )
     const link = screen.getByRole('link', { name: /See which clubs/ })
     expect(link).toHaveAttribute('href', '/district/61/action-list#action-csp')
+  })
+
+  it('excludes an ineligible club that HAS submitted from the active denominator', () => {
+    mockAnalytics([
+      { clubId: '1', cspSubmitted: false, clubStatus: 'Active' },
+      { clubId: '2', cspSubmitted: true, clubStatus: 'Ineligible' },
+      { clubId: '3', cspSubmitted: true, clubStatus: 'Active' },
+    ])
+    renderOverview('2026-2027')
+    const line = screen.getByTestId('district-csp-line')
+    expect(line).toHaveTextContent(
+      '1 of 2 active clubs (50%) has not submitted'
+    )
+    expect(line).not.toHaveTextContent('suspended/ineligible')
   })
 
   it('says every club has submitted when no club is missing a plan', () => {
@@ -120,7 +142,7 @@ describe('DistrictOverview — Club Success Plan line (#1555)', () => {
     ])
     renderOverview('2026-2027')
     expect(screen.getByTestId('district-csp-line')).toHaveTextContent(
-      '1 of 2 clubs (50%) has not submitted a Club Success Plan — required for any Distinguished level this year. (1 club with no CSP data)'
+      '1 of 2 active clubs (50%) has not submitted a Club Success Plan — required for any Distinguished level this year. (1 club with no CSP data)'
     )
   })
 
@@ -133,7 +155,7 @@ describe('DistrictOverview — Club Success Plan line (#1555)', () => {
     ])
     renderOverview('2026-2027')
     expect(screen.getByTestId('district-csp-line')).toHaveTextContent(
-      '1 of 4 clubs (25%) has not submitted a Club Success Plan'
+      '1 of 4 active clubs (25%) has not submitted a Club Success Plan'
     )
   })
 })

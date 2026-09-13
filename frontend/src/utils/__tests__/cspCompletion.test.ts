@@ -41,6 +41,9 @@ describe('summarizeCspCompletion', () => {
       unknown,
     ])
     expect(s.submittedCount).toBe(3) // any status counts as submitted
+    // …but the overview's "of N active clubs" denominator needs to know how
+    // many of those submitters are ineligible (#1555 part 4).
+    expect(s.submittedIneligibleCount).toBe(1)
     expect(s.notSubmitted.map(r => r.id)).toEqual(['m', 'm2'])
     expect(s.notSubmittedIneligible.map(r => r.id)).toEqual(['m-susp'])
     expect(s.unknownCount).toBe(1)
@@ -54,6 +57,7 @@ describe('summarizeCspCompletion', () => {
   it('returns zeros and empty lists for no rows', () => {
     expect(summarizeCspCompletion([])).toEqual({
       submittedCount: 0,
+      submittedIneligibleCount: 0,
       notSubmitted: [],
       notSubmittedIneligible: [],
       unknownCount: 0,
