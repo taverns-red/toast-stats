@@ -92,7 +92,7 @@ describe('DivisionAreaProgressSummary — Club Success Plan clause (#1555)', () 
     ).toBeInTheDocument()
   })
 
-  it('renders no CSP sentence anywhere when the snapshot is not tracked (pre-2025-26)', () => {
+  it('renders no CSP sentence anywhere — and no footer mention — when the snapshot is not tracked (pre-2025-26)', () => {
     render(
       <DivisionAreaProgressSummary
         divisions={[
@@ -108,6 +108,14 @@ describe('DivisionAreaProgressSummary — Club Success Plan clause (#1555)', () 
       />
     )
     expect(screen.queryByText(/Club Success Plans:/)).toBeNull()
+    // The footer must not advertise a thing the page does not show for this
+    // year: same `cspTracked` gate as the clauses (preview finding, #1559).
+    expect(screen.queryByText(/Club Success Plan/)).toBeNull()
+    expect(
+      screen.getByText(
+        /Progress descriptions include current metrics, eligibility status, gaps to each recognition level, and club visit completion status\./
+      )
+    ).toBeInTheDocument()
   })
 
   it('names Club Success Plan status in the explanatory footer', () => {
