@@ -15,7 +15,9 @@ import {
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import {
   buildActionList,
+  compareId,
   formatCloseGap,
+  formatCspRow,
   formatVisitGap,
   type ActionListSections,
 } from '../utils/actionListData'
@@ -37,7 +39,12 @@ import ErrorBoundary from '../components/ErrorBoundary'
    for visit gaps, and the club-health `currentStatus` for intervention. The page
    OWNS the scope state and passes it to the pure derivation (R3 / Lesson 124);
    the scope whitelist is irrelevant because an out-of-range slice simply yields
-   empty sections (Lesson 144). */
+   empty sections (Lesson 144).
+
+   Fourth section (#1555): clubs without a Club Success Plan, from the same
+   analytics rows, gated on the program year this page owns — rendered only
+   when `sections.cspTracked`, so a pre-2025-26 year shows neither the section
+   nor the intro clause (never "0 of N" for a year with no requirement). */
 
 interface ScopeOption {
   /** Division ids present in the snapshot, sorted. */
@@ -46,21 +53,19 @@ interface ScopeOption {
   areas: string[]
 }
 
-function compareId(a: string, b: string): number {
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
-}
-
 /** One action section: heading + count badge, then either the empty state or
- *  the caller-supplied list rows. The section/heading/count/empty scaffold is
- *  shared; the divergent `<li>` bodies are passed as children. */
+ *  the caller-supplied list rows, then an optional footnote (e.g. "3
+ *  suspended/ineligible clubs … are not listed"). The scaffold is shared; the
+ *  divergent `<li>` bodies are passed as children. */
 const ActionListSection: React.FC<{
   id: string
   testId: string
   heading: string
   count: number
   emptyText: string
+  footnote?: string | undefined
   children: React.ReactNode
-}> = ({ id, testId, heading, count, emptyText, children }) => (
+}> = ({ id, testId, heading, count, emptyText, footnote, children }) => (
   <section
     className="action-list-section"
     aria-labelledby={id}
@@ -75,8 +80,29 @@ const ActionListSection: React.FC<{
     ) : (
       <ul className="action-list-items">{children}</ul>
     )}
+    {footnote && <p className="action-list-section__footnote">{footnote}</p>}
   </section>
 )
+
+/** "1 suspended/ineligible club without a plan is not listed." / "(2 clubs
+ *  with no CSP data)" — the CSP section's footnote, or undefined when there is
+ *  nothing to flag. */
+function cspFootnote(sections: ActionListSections): string | undefined {
+  const parts: string[] = []
+  const inel = sections.cspNotSubmittedIneligibleCount
+  if (inel > 0) {
+    parts.push(
+      inel === 1
+        ? '1 suspended/ineligible club without a plan is not listed.'
+        : `${inel} suspended/ineligible clubs without a plan are not listed.`
+    )
+  }
+  const unknown = sections.cspUnknownCount
+  if (unknown > 0) {
+    parts.push(`(${unknown} club${unknown === 1 ? '' : 's'} with no CSP data)`)
+  }
+  return parts.length > 0 ? parts.join(' ') : undefined
+}
 
 const DistrictActionListPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
@@ -245,7 +271,8 @@ const DistrictActionListPage: React.FC = () => {
   const totalItems =
     sections.closeToDistinguished.length +
     sections.visitGaps.length +
-    sections.interventionRequired.length
+    sections.interventionRequired.length +
+    sections.cspNotSubmitted.length
 
   const handleExport = () => {
     if (!districtId) return
@@ -277,6 +304,15 @@ const DistrictActionListPage: React.FC = () => {
         i.areaId,
         i.clubName,
         'Club health: intervention required',
+      ])
+    }
+    for (const c of sections.cspNotSubmitted) {
+      rows.push([
+        'Club Success Plan not submitted',
+        c.divisionId,
+        c.areaId,
+        c.clubName,
+        formatCspRow(c),
       ])
     }
     downloadCSV(arrayToCSV(rows), generateFilename('action-list', districtId))
@@ -315,9 +351,11 @@ const DistrictActionListPage: React.FC = () => {
               <h2 className="action-list-page__title">Area Director Actions</h2>
               <p className="action-list-page__subtitle">
                 Prioritized to-dos for this district: clubs within reach of
-                Distinguished, areas with outstanding club visits, and clubs
-                that need intervention. Filter to your division or area and
-                share the link.
+                Distinguished, areas with outstanding club visits,
+                {sections.cspTracked
+                  ? ' clubs that need intervention, and clubs that still need to submit a Club Success Plan.'
+                  : ' and clubs that need intervention.'}{' '}
+                Filter to your division or area and share the link.
               </p>
             </header>
 
@@ -460,6 +498,31 @@ const DistrictActionListPage: React.FC = () => {
                     </li>
                   ))}
                 </ActionListSection>
+
+                {sections.cspTracked && (
+                  <ActionListSection
+                    id="action-csp"
+                    testId="section-csp"
+                    heading="Clubs without a Club Success Plan"
+                    count={sections.cspNotSubmitted.length}
+                    emptyText="Every active club in this scope has submitted its Club Success Plan."
+                    footnote={cspFootnote(sections)}
+                  >
+                    {sections.cspNotSubmitted.map(c => (
+                      <li key={c.clubId} className="action-list-item">
+                        <Link
+                          className="action-list-item__link"
+                          to={`/district/${districtId}/club/${c.clubId}`}
+                        >
+                          {c.clubName}
+                        </Link>
+                        <span className="action-list-item__meta">
+                          {c.divisionId}/{c.areaId} · {formatCspRow(c)}
+                        </span>
+                      </li>
+                    ))}
+                  </ActionListSection>
+                )}
               </div>
             )}
           </div>
