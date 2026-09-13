@@ -105,17 +105,77 @@
   border-radius: var(--radius-md, 8px);
 }
 
+/* #1569 — each section is a WAI-ARIA disclosure: the <h3> is a thin wrapper
+   and the full-width <button> inside it is the control. Type styling lives on
+   the button because that is what carries the text. */
 .action-list-section__heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.action-list-section__toggle {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin: 0 0 0.75rem;
+  width: 100%;
+  /* 44px touch target across the whole header row (lesson 111). */
+  min-height: 44px;
+  padding: 0;
+  font: inherit;
   font-size: 1rem;
   font-weight: 700;
+  text-align: left;
   color: var(--ink);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.action-list-section__toggle:focus-visible {
+  outline: 2px solid var(--link, #2563eb);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.action-list-section__heading-text {
+  /* Long headings wrap rather than squeezing the count badge off the row. */
+  min-width: 0;
+}
+
+/* ▶ collapsed / ▼ expanded, drawn from borders so it inherits `currentColor`
+   and needs no icon asset or dark-mode override. */
+.action-list-section__chevron {
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentcolor;
+  border-bottom: 2px solid currentcolor;
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+}
+
+.action-list-section__toggle[aria-expanded='true']
+  .action-list-section__chevron {
+  transform: rotate(45deg);
+}
+
+.action-list-section__panel {
+  margin-top: 0.75rem;
+}
+
+/* The only motion this component introduces is the chevron sweep; honour the
+   viewer's OS preference rather than animating regardless. */
+@media (prefers-reduced-motion: reduce) {
+  .action-list-section__chevron {
+    transition: none;
+  }
 }
 
 .action-list-section__count {
+  /* Pushed to the trailing edge of the full-width header button, where it
+     stays legible while the section is collapsed. */
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;

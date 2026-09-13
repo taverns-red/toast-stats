@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
@@ -16,11 +16,15 @@ import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import {
   buildActionList,
   compareId,
+  describeActionSections,
   formatCloseGap,
   formatCspRow,
   formatVisitGap,
+  orderActionSections,
   type ActionListSections,
+  type ActionSectionId,
 } from '../utils/actionListData'
+import { usePersistedState } from '../hooks/usePersistedState'
 import { cspAutoCreditNote } from '../utils/cspDeadlines'
 import { arrayToCSV, downloadCSV, generateFilename } from '../utils/csvExport'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
@@ -43,9 +47,18 @@ import ErrorBoundary from '../components/ErrorBoundary'
    empty sections (Lesson 144).
 
    Fourth section (#1555): clubs without a Club Success Plan, from the same
-   analytics rows, gated on the program year this page owns — rendered only
-   when `sections.cspTracked`, so a pre-2025-26 year shows neither the section
-   nor the intro clause (never "0 of N" for a year with no requirement). */
+   analytics rows, gated on the program year this page owns — a pre-2025-26
+   year shows neither the section nor the intro clause (never "0 of N" for a
+   year with no requirement).
+
+   Collapsible sections (#1569): each section is a disclosure whose open/closed
+   state is remembered per browser; the FIRST is open by default. Their ORDER
+   comes from `orderActionSections`, which puts the Club Success Plan section
+   first while a plan can still earn credit and last once the deadline has
+   passed — decided by this page's own program year and pinned date (R3), so a
+   pinned historical snapshot orders them the way they should have appeared on
+   its own date, and never by the wall clock. The rendered list, the intro
+   sentence and the CSV export all read that one array. */
 
 interface ScopeOption {
   /** Division ids present in the snapshot, sorted. */
@@ -54,36 +67,110 @@ interface ScopeOption {
   areas: string[]
 }
 
-/** One action section: heading + count badge, then either the empty state or
- *  the caller-supplied list rows, then an optional footnote (e.g. "3
- *  suspended/ineligible clubs … are not listed"). The scaffold is shared; the
- *  divergent `<li>` bodies are passed as children. */
-const ActionListSection: React.FC<{
-  id: string
+/** One section's rendered identity and its CSV lines, side by side (#1569). */
+interface ActionSectionView {
   testId: string
   heading: string
   count: number
   emptyText: string
   footnote?: string | undefined
+  /** Rows for the CSV export, in the same order as the rendered list. */
+  csvRows: (string | number)[][]
   children: React.ReactNode
-}> = ({ id, testId, heading, count, emptyText, footnote, children }) => (
-  <section
-    className="action-list-section"
-    aria-labelledby={id}
-    data-testid={testId}
-  >
-    <h3 id={id} className="action-list-section__heading">
-      {heading}
-      <span className="action-list-section__count">{count}</span>
-    </h3>
-    {count === 0 ? (
-      <p className="action-list-section__empty">{emptyText}</p>
-    ) : (
-      <ul className="action-list-items">{children}</ul>
-    )}
-    {footnote && <p className="action-list-section__footnote">{footnote}</p>}
-  </section>
-)
+}
+
+/** localStorage name (via the versioned primitive) for the collapse
+ *  preference. ONE key for the page, not per district: which sections a
+ *  director likes open is a working preference, not data about a district —
+ *  and it is never put in the URL, so a shared link never carries it (#1569). */
+const COLLAPSE_STORAGE_NAME = 'action-list-sections'
+
+/** `true` when the viewer asked the OS to reduce motion. Wrapped because a
+ *  non-browser/oddly-sandboxed environment can throw on matchMedia. */
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    return false
+  }
+}
+
+/** One action section, as a WAI-ARIA disclosure (#1569): a heading-wrapped
+ *  <button> carrying `aria-expanded`/`aria-controls` over a panel holding
+ *  either the empty state or the caller-supplied list rows, plus an optional
+ *  footnote (e.g. "3 suspended/ineligible clubs … are not listed").
+ *
+ *  The count badge lives INSIDE the button, so it stays visible while the
+ *  section is collapsed and is part of the button's accessible name — a
+ *  screen-reader user hears the total without expanding. `id` sits on the
+ *  button rather than the heading so `#action-csp` (linked from the district
+ *  overview's headline number) still resolves, and so `aria-labelledby` names
+ *  the section with heading + count.
+ *
+ *  Collapsed rows stay mounted behind `hidden`, which takes them out of the
+ *  accessibility tree and out of tab order — the CSV export reads the data,
+ *  never the DOM, so collapsing can never narrow it. */
+const ActionListSection: React.FC<{
+  id: ActionSectionId
+  testId: string
+  heading: string
+  count: number
+  emptyText: string
+  footnote?: string | undefined
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}> = ({
+  id,
+  testId,
+  heading,
+  count,
+  emptyText,
+  footnote,
+  open,
+  onToggle,
+  children,
+}) => {
+  const panelId = `${id}-panel`
+  return (
+    <section
+      className="action-list-section"
+      aria-labelledby={id}
+      data-testid={testId}
+    >
+      <h3 className="action-list-section__heading">
+        <button
+          type="button"
+          id={id}
+          className="action-list-section__toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={onToggle}
+        >
+          <span className="action-list-section__chevron" aria-hidden="true" />
+          <span className="action-list-section__heading-text">
+            {heading}
+          </span>{' '}
+          {/* The space above is load-bearing: without a text node between the
+              two spans the accessible name concatenates to "…Plan1". A
+              whitespace-only run is not rendered as a flex item, so it costs
+              nothing visually. */}
+          <span className="action-list-section__count">{count}</span>
+        </button>
+      </h3>
+      <div id={panelId} className="action-list-section__panel" hidden={!open}>
+        {count === 0 ? (
+          <p className="action-list-section__empty">{emptyText}</p>
+        ) : (
+          <ul className="action-list-items">{children}</ul>
+        )}
+        {footnote && (
+          <p className="action-list-section__footnote">{footnote}</p>
+        )}
+      </div>
+    </section>
+  )
+}
 
 /** "1 suspended/ineligible club without a plan is not listed." / "1 club
  *  chartered after 1 April has automatic credit and is not listed." / "(2
@@ -283,47 +370,168 @@ const DistrictActionListPage: React.FC = () => {
     sections.interventionRequired.length +
     sections.cspNotSubmitted.length
 
-  const handleExport = () => {
-    if (!districtId) return
-    const rows: (string | number)[][] = [
-      ['Section', 'Division', 'Area', 'Item', 'Detail'],
-    ]
-    for (const c of sections.closeToDistinguished) {
-      rows.push([
+  /* Render order (#1569) — computed from the page's own program year and
+     pinned date via `cspActionable`, never a clock, so a pinned historical
+     snapshot orders the sections the way they should have appeared on its own
+     date. The rendered list, the intro copy and the CSV all read this one
+     array, so they cannot drift apart. */
+  const sectionOrder = useMemo(() => orderActionSections(sections), [sections])
+
+  /* Collapse preference — per viewer, per device, ONE key for the page, never
+     in the URL (a shared link must not carry it). Reads and writes go through
+     the versioned localStorage primitive, which swallows a blocked or throwing
+     store, so a private window silently gets the default. */
+  const [openSections, setOpenSections] = usePersistedState<
+    Partial<Record<ActionSectionId, boolean>>
+  >(COLLAPSE_STORAGE_NAME, {})
+
+  /* The default is "the FIRST section is expanded, the rest collapsed" —
+     expressed against the rendered order rather than naming a section, so it
+     stays correct after the seasonal reorder above. */
+  const isSectionOpen = (id: ActionSectionId) =>
+    openSections[id] ?? sectionOrder[0] === id
+
+  const toggleSection = (id: ActionSectionId) => {
+    const next = !isSectionOpen(id)
+    setOpenSections(prev => ({ ...prev, [id]: next }))
+  }
+
+  /* `/district/:id/action-list#action-csp` is the district overview's headline
+     link. Following it must OPEN the section and bring it into view even when
+     the default or a stored preference has it collapsed — otherwise the
+     overview's number points at something invisible. */
+  const { hash } = useLocation()
+  const sectionsRendered = !(isLoading && totalItems === 0)
+  React.useEffect(() => {
+    const target = hash.replace(/^#/, '') as ActionSectionId
+    if (!sectionsRendered || !sectionOrder.includes(target)) return
+    setOpenSections(prev => (prev[target] ? prev : { ...prev, [target]: true }))
+    document.getElementById(target)?.scrollIntoView?.({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'start',
+    })
+  }, [hash, sectionOrder, sectionsRendered, setOpenSections])
+
+  /** Everything a section needs — heading, rows and CSV lines together in one
+   *  place, keyed by the id that orders them. A section that is absent for the
+   *  program year is dropped by `sectionOrder` alone, so neither the render
+   *  loop nor the export special-cases it (#1569). */
+  const sectionViews: Record<ActionSectionId, ActionSectionView> = {
+    'action-close': {
+      testId: 'section-close',
+      heading: 'Clubs close to Distinguished',
+      count: sections.closeToDistinguished.length,
+      emptyText: 'No clubs are within reach of Distinguished for this scope.',
+      csvRows: sections.closeToDistinguished.map(c => [
         'Close to Distinguished',
         c.divisionId,
         c.areaId,
         c.clubName,
         formatCloseGap(c),
-      ])
-    }
-    for (const g of sections.visitGaps) {
-      rows.push([
+      ]),
+      children: sections.closeToDistinguished.map(c => (
+        <li key={c.clubId} className="action-list-item">
+          <Link
+            className="action-list-item__link"
+            to={`/district/${districtId}/club/${c.clubId}`}
+          >
+            {c.clubName}
+          </Link>
+          <span className="action-list-item__meta">
+            {c.divisionId}/{c.areaId} · {formatCloseGap(c)}
+          </span>
+        </li>
+      )),
+    },
+    'action-visits': {
+      testId: 'section-visits',
+      heading: 'Areas missing club visits',
+      count: sections.visitGaps.length,
+      emptyText:
+        "Every area has completed the current round's club visits for this scope.",
+      csvRows: sections.visitGaps.map(g => [
         'Missing club visits',
         g.divisionId,
         g.areaId,
         `Area ${g.areaId}`,
         formatVisitGap(g),
-      ])
-    }
-    for (const i of sections.interventionRequired) {
-      rows.push([
+      ]),
+      children: sections.visitGaps.map(g => (
+        <li key={`${g.divisionId}-${g.areaId}`} className="action-list-item">
+          <Link
+            className="action-list-item__link"
+            to={`/district/${districtId}/division/${g.divisionId}/area/${g.areaId}`}
+          >
+            Area {g.areaId}
+          </Link>
+          <span className="action-list-item__meta">{formatVisitGap(g)}</span>
+        </li>
+      )),
+    },
+    'action-intervention': {
+      testId: 'section-intervention',
+      heading: 'Clubs needing intervention',
+      count: sections.interventionRequired.length,
+      emptyText: 'No clubs are flagged intervention-required for this scope.',
+      csvRows: sections.interventionRequired.map(i => [
         'Intervention required',
         i.divisionId,
         i.areaId,
         i.clubName,
         'Club health: intervention required',
-      ])
-    }
-    for (const c of sections.cspNotSubmitted) {
-      rows.push([
+      ]),
+      children: sections.interventionRequired.map(i => (
+        <li key={i.clubId} className="action-list-item">
+          <Link
+            className="action-list-item__link"
+            to={`/district/${districtId}/club/${i.clubId}`}
+          >
+            {i.clubName}
+          </Link>
+          <span className="action-list-item__meta">
+            {i.divisionId}/{i.areaId} · intervention required
+          </span>
+        </li>
+      )),
+    },
+    'action-csp': {
+      testId: 'section-csp',
+      heading: 'Clubs without a Club Success Plan',
+      count: sections.cspNotSubmitted.length,
+      emptyText:
+        'Every active club in this scope has submitted its Club Success Plan.',
+      footnote: cspFootnote(sections),
+      csvRows: sections.cspNotSubmitted.map(c => [
         'Club Success Plan not submitted',
         c.divisionId,
         c.areaId,
         c.clubName,
         formatCspRow(c),
-      ])
-    }
+      ]),
+      children: sections.cspNotSubmitted.map(c => (
+        <li key={c.clubId} className="action-list-item">
+          <Link
+            className="action-list-item__link"
+            to={`/district/${districtId}/club/${c.clubId}`}
+          >
+            {c.clubName}
+          </Link>
+          <span className="action-list-item__meta">
+            {c.divisionId}/{c.areaId} · {formatCspRow(c)}
+          </span>
+        </li>
+      )),
+    },
+  }
+
+  const handleExport = () => {
+    if (!districtId) return
+    const rows: (string | number)[][] = [
+      ['Section', 'Division', 'Area', 'Item', 'Detail'],
+    ]
+    // Display order, and complete regardless of collapse state — collapsing is
+    // a view concern, never a filter (#1569).
+    for (const id of sectionOrder) rows.push(...sectionViews[id].csvRows)
     downloadCSV(arrayToCSV(rows), generateFilename('action-list', districtId))
   }
 
@@ -359,12 +567,12 @@ const DistrictActionListPage: React.FC = () => {
             <header className="action-list-page__intro">
               <h2 className="action-list-page__title">Area Director Actions</h2>
               <p className="action-list-page__subtitle">
-                Prioritized to-dos for this district: clubs within reach of
-                Distinguished, areas with outstanding club visits,
-                {sections.cspTracked
-                  ? ' clubs that need intervention, and clubs without a Club Success Plan.'
-                  : ' and clubs that need intervention.'}{' '}
-                Filter to your division or area and share the link.
+                {/* The clause order tracks the rendered order in both seasonal
+                    windows, and drops the Club Success Plan clause with the
+                    section (#1569). */}
+                Prioritized to-dos for this district:{' '}
+                {describeActionSections(sectionOrder)}. Filter to your division
+                or area and share the link.
               </p>
             </header>
 
@@ -439,99 +647,24 @@ const DistrictActionListPage: React.FC = () => {
               <LoadingSkeleton variant="table" count={3} />
             ) : (
               <div className="action-list-sections">
-                <ActionListSection
-                  id="action-close"
-                  testId="section-close"
-                  heading="Clubs close to Distinguished"
-                  count={sections.closeToDistinguished.length}
-                  emptyText="No clubs are within reach of Distinguished for this scope."
-                >
-                  {sections.closeToDistinguished.map(c => (
-                    <li key={c.clubId} className="action-list-item">
-                      <Link
-                        className="action-list-item__link"
-                        to={`/district/${districtId}/club/${c.clubId}`}
-                      >
-                        {c.clubName}
-                      </Link>
-                      <span className="action-list-item__meta">
-                        {c.divisionId}/{c.areaId} · {formatCloseGap(c)}
-                      </span>
-                    </li>
-                  ))}
-                </ActionListSection>
-
-                <ActionListSection
-                  id="action-visits"
-                  testId="section-visits"
-                  heading="Areas missing club visits"
-                  count={sections.visitGaps.length}
-                  emptyText="Every area has completed the current round's club visits for this scope."
-                >
-                  {sections.visitGaps.map(g => (
-                    <li
-                      key={`${g.divisionId}-${g.areaId}`}
-                      className="action-list-item"
+                {sectionOrder.map(id => {
+                  const view = sectionViews[id]
+                  return (
+                    <ActionListSection
+                      key={id}
+                      id={id}
+                      testId={view.testId}
+                      heading={view.heading}
+                      count={view.count}
+                      emptyText={view.emptyText}
+                      footnote={view.footnote}
+                      open={isSectionOpen(id)}
+                      onToggle={() => toggleSection(id)}
                     >
-                      <Link
-                        className="action-list-item__link"
-                        to={`/district/${districtId}/division/${g.divisionId}/area/${g.areaId}`}
-                      >
-                        Area {g.areaId}
-                      </Link>
-                      <span className="action-list-item__meta">
-                        {formatVisitGap(g)}
-                      </span>
-                    </li>
-                  ))}
-                </ActionListSection>
-
-                <ActionListSection
-                  id="action-intervention"
-                  testId="section-intervention"
-                  heading="Clubs needing intervention"
-                  count={sections.interventionRequired.length}
-                  emptyText="No clubs are flagged intervention-required for this scope."
-                >
-                  {sections.interventionRequired.map(i => (
-                    <li key={i.clubId} className="action-list-item">
-                      <Link
-                        className="action-list-item__link"
-                        to={`/district/${districtId}/club/${i.clubId}`}
-                      >
-                        {i.clubName}
-                      </Link>
-                      <span className="action-list-item__meta">
-                        {i.divisionId}/{i.areaId} · intervention required
-                      </span>
-                    </li>
-                  ))}
-                </ActionListSection>
-
-                {sections.cspTracked && (
-                  <ActionListSection
-                    id="action-csp"
-                    testId="section-csp"
-                    heading="Clubs without a Club Success Plan"
-                    count={sections.cspNotSubmitted.length}
-                    emptyText="Every active club in this scope has submitted its Club Success Plan."
-                    footnote={cspFootnote(sections)}
-                  >
-                    {sections.cspNotSubmitted.map(c => (
-                      <li key={c.clubId} className="action-list-item">
-                        <Link
-                          className="action-list-item__link"
-                          to={`/district/${districtId}/club/${c.clubId}`}
-                        >
-                          {c.clubName}
-                        </Link>
-                        <span className="action-list-item__meta">
-                          {c.divisionId}/{c.areaId} · {formatCspRow(c)}
-                        </span>
-                      </li>
-                    ))}
-                  </ActionListSection>
-                )}
+                      {view.children}
+                    </ActionListSection>
+                  )
+                })}
               </div>
             )}
           </div>
