@@ -65,4 +65,15 @@ describe('MethodologyPage — Worldwide club race (#1556)', () => {
     renderPage()
     expect(sectionText()).toMatch(/no global list with a bottom/i)
   })
+
+  /* #1570 — the tiles count exclusively while the lists stay cumulative, so
+     the page reads 31 Distinguished above a 35-row Distinguished list. The
+     rule has to be written down, not inferred. */
+  it('states the counting rule: once, at the level the club holds now', () => {
+    renderPage()
+    const txt = sectionText()
+    expect(txt).toMatch(/counted once/i)
+    expect(txt).toMatch(/level it holds now/i)
+    expect(txt).toMatch(/every tier it has reached/i)
+  })
 })
