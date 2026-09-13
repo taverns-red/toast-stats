@@ -25,7 +25,7 @@ describe('DivisionPerformanceCard', () => {
     requiredDistinguishedClubs: 25,
     cspTracked: false,
     cspSubmittedCount: 0,
-    clubsMissingCspCount: 0,
+    clubsMissingCsp: [],
     areas: [
       withRecognitionState({
         areaId: 'A1',

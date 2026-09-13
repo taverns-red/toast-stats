@@ -389,7 +389,7 @@ export const divisionPerformanceArb = (options?: {
         areas,
         cspTracked: false,
         cspSubmittedCount: 0,
-        clubsMissingCspCount: 0,
+        clubsMissingCsp: [],
       }))
     })
 }

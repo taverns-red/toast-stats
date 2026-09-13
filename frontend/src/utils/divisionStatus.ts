@@ -67,6 +67,27 @@ export interface MissingVisitClub {
 export interface IneligibleMissingVisitClub extends MissingVisitClub {
   /** Raw `Club Status` from clubPerformance (e.g. "Suspended", "Ineligible") */
   status: string
+  /**
+   * Why the club is on the flagged list when its `status` alone would not put
+   * it there (#1565). Absent → flagged for a suspended/closed/ineligible
+   * status. `'auto-credit'` → a Club Success Plan list only: the club
+   * chartered after 1 April and automatically receives credit (DCP p. 11), so
+   * it is excluded from the active list and both sides of the "N of M" ratio
+   * through this SAME path, and the footnote names the reason.
+   */
+  exclusion?: 'auto-credit'
+}
+
+/**
+ * An active club without a submitted Club Success Plan, with the per-club
+ * deadline resolved against the caller's pinned snapshot date (#1565) so no
+ * narrative reaches for a clock (R3).
+ */
+export interface MissingCspClub extends MissingVisitClub {
+  /** `cspDueDate(club, programYear)` — never null here (auto-credit clubs are flagged instead). */
+  cspDueDate: string
+  /** `isCspOverdue(cspDueDate, snapshotDate)` — late as of the pinned date. */
+  cspOverdue: boolean
 }
 
 /**
@@ -135,18 +156,22 @@ export interface AreaPerformance {
   cspTracked: boolean
   /**
    * Active clubs (per `isIneligibleStatus`) without a submitted Club Success
-   * Plan. Sorted by club number. Empty when `cspTracked` is false.
+   * Plan, each with its due date and overdue state as of the pinned snapshot
+   * date (#1565). Sorted by club number. Empty when `cspTracked` is false.
    */
-  clubsMissingCsp: MissingVisitClub[]
+  clubsMissingCsp: MissingCspClub[]
   /**
-   * Suspended / ineligible clubs without a Club Success Plan, flagged
-   * separately (operator rule: "active only, flag others"). Sorted by club
-   * number. Empty when `cspTracked` is false.
+   * Clubs without a Club Success Plan that are NOT held to the requirement
+   * on this row — suspended / ineligible (operator rule: "active only, flag
+   * others"), or chartered after 1 April with automatic credit
+   * (`exclusion: 'auto-credit'`, #1565). Sorted by club number. Empty when
+   * `cspTracked` is false.
    */
   clubsMissingCspIneligible: IneligibleMissingVisitClub[]
   /**
-   * Clubs with a submitted Club Success Plan, any status — the numerator for
-   * "N of M submitted". Zero when `cspTracked` is false.
+   * Clubs with a submitted Club Success Plan that were held to the
+   * requirement (any status; auto-credit clubs excluded, #1565) — the
+   * numerator for "N of M submitted". Zero when `cspTracked` is false.
    */
   cspSubmittedCount: number
 }
@@ -185,8 +210,12 @@ export interface DivisionPerformance {
   cspTracked: boolean
   /** Sum of the areas' `cspSubmittedCount`. Zero when not tracked. */
   cspSubmittedCount: number
-  /** Sum of the areas' `clubsMissingCsp.length` (active only). Zero when not tracked. */
-  clubsMissingCspCount: number
+  /**
+   * The areas' `clubsMissingCsp` concatenated (active only), in area order —
+   * rows rather than a sum because the division narrative groups them by due
+   * date (#1565). Empty when not tracked.
+   */
+  clubsMissingCsp: MissingCspClub[]
 }
 
 /**

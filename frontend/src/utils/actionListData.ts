@@ -29,6 +29,12 @@ import { isCloseToDistinguished } from './closeToDistinguished'
 import { getAreaVisitDeadlines } from './areaRecognitionState'
 import { summarizeCspCompletion } from './cspCompletion'
 import { getClubHealthStatusLabel } from './clubHealthStatus'
+import { getProgramYearForDate } from './programYear'
+import {
+  CSP_LOST_ELIGIBILITY,
+  formatCspDueDate,
+  type CspDeadlineFields,
+} from './cspDeadlines'
 import type { ClubHealthStatus, ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { DivisionPerformance, MissingVisitClub } from './divisionStatus'
 
@@ -67,7 +73,7 @@ export interface InterventionItem {
   areaId: string
 }
 
-export interface CspNotSubmittedItem {
+export interface CspNotSubmittedItem extends CspDeadlineFields {
   clubId: string
   clubName: string
   divisionId: string
@@ -90,6 +96,11 @@ export interface ActionListSections {
   cspNotSubmitted: CspNotSubmittedItem[]
   /** Suspended/ineligible clubs without a CSP in scope — footnoted, not listed. */
   cspNotSubmittedIneligibleCount: number
+  /**
+   * Clubs without a CSP chartered after 1 April — automatic credit (#1565):
+   * footnoted, never listed, in neither count.
+   */
+  cspNotSubmittedAutoCreditCount: number
   /** Clubs with no CSP value on a tracked year (E2) — neither listed nor counted. */
   cspUnknownCount: number
 }
@@ -182,12 +193,21 @@ export function buildActionList(
   const cspTracked = isCspRequired(programYear)
   const csp = cspTracked
     ? summarizeCspCompletion(
-        clubs.filter(club => inScope(club.divisionId, club.areaId, scope))
+        clubs.filter(club => inScope(club.divisionId, club.areaId, scope)),
+        {
+          // #1565: the per-club deadline is judged against the page's pinned
+          // date. The year is the page's too; when the page did not pass one
+          // it is derived from that same pinned date (as the raw path does),
+          // never from the rows or the clock.
+          programYear: programYear ?? getProgramYearForDate(snapshotDate).label,
+          snapshotDate,
+        }
       )
     : {
         submittedCount: 0,
         notSubmitted: [],
         notSubmittedIneligible: [],
+        notSubmittedAutoCredit: [],
         unknownCount: 0,
       }
   const cspNotSubmitted: CspNotSubmittedItem[] = csp.notSubmitted
@@ -197,6 +217,8 @@ export function buildActionList(
       divisionId: club.divisionId,
       areaId: club.areaId,
       currentStatus: club.currentStatus,
+      cspDueDate: club.cspDueDate,
+      cspOverdue: club.cspOverdue,
     }))
     // An AD scoping to one area sees an alphabetical chase-list; a DD sees
     // areas grouped.
@@ -214,6 +236,7 @@ export function buildActionList(
     cspTracked,
     cspNotSubmitted,
     cspNotSubmittedIneligibleCount: csp.notSubmittedIneligible.length,
+    cspNotSubmittedAutoCreditCount: csp.notSubmittedAutoCredit.length,
     cspUnknownCount: csp.unknownCount,
   }
 }
@@ -239,8 +262,14 @@ export function formatVisitGap(gap: VisitGapArea): string {
   }, due ${gap.deadline}`
 }
 
-/** "CSP not submitted · Vulnerable" — shared by the list row and the CSV
+/** "CSP due 30 September 2026 · Vulnerable" before the club's due date;
+ *  "CSP not filed by 30 September 2026 — cannot be Distinguished this program
+ *  year · Vulnerable" after it (#1565). Shared by the list row and the CSV
  *  export; the health label is the same one the clubs table renders. */
 export function formatCspRow(item: CspNotSubmittedItem): string {
-  return `CSP not submitted · ${getClubHealthStatusLabel(item.currentStatus)}`
+  const date = formatCspDueDate(item.cspDueDate)
+  const csp = item.cspOverdue
+    ? `CSP not filed by ${date} — ${CSP_LOST_ELIGIBILITY}`
+    : `CSP due ${date}`
+  return `${csp} · ${getClubHealthStatusLabel(item.currentStatus)}`
 }

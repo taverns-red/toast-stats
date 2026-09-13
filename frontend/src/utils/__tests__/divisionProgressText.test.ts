@@ -25,7 +25,11 @@
 import { describe, it, expect } from 'vitest'
 import { generateDivisionProgressText } from '../divisionProgressText'
 import { calculateDivisionGapAnalysis } from '../divisionGapAnalysis'
-import { DivisionPerformance, DistinguishedStatus } from '../divisionStatus'
+import {
+  DivisionPerformance,
+  DistinguishedStatus,
+  MissingCspClub,
+} from '../divisionStatus'
 
 /**
  * Helper function to create a DivisionPerformance object for testing
@@ -54,7 +58,7 @@ function createDivision(
     areas: [],
     cspTracked: false,
     cspSubmittedCount: 0,
-    clubsMissingCspCount: 0,
+    clubsMissingCsp: [],
   }
 }
 
@@ -643,6 +647,21 @@ describe('generateDivisionProgressText', () => {
  * big to name clubs. Appended in every branch; nothing when not tracked.
  */
 describe('generateDivisionProgressText — Club Success Plan clause (#1555)', () => {
+  /** N active clubs without a plan, all existing clubs still inside the 30 September window. */
+  function missingClubs(
+    n: number,
+    deadline: Pick<MissingCspClub, 'cspDueDate' | 'cspOverdue'> = {
+      cspDueDate: '2026-09-30',
+      cspOverdue: false,
+    }
+  ): MissingCspClub[] {
+    return Array.from({ length: n }, (_, i) => ({
+      clubNumber: String(i + 1),
+      clubName: `Club ${i + 1}`,
+      ...deadline,
+    }))
+  }
+
   function divisionWithCsp(
     clubBase: number,
     paidClubs: number,
@@ -650,7 +669,7 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
     csp: Partial<
       Pick<
         DivisionPerformance,
-        'cspTracked' | 'cspSubmittedCount' | 'clubsMissingCspCount'
+        'cspTracked' | 'cspSubmittedCount' | 'clubsMissingCsp'
       >
     >
   ): DivisionPerformance {
@@ -670,28 +689,58 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
     return generateDivisionProgressText(division, gapAnalysis).progressText
   }
 
-  it('some missing: the real D61 Division A wording (spec §6.2)', () => {
+  const OVERDUE = { cspDueDate: '2026-09-30', cspOverdue: true }
+  const NEW_CHARTER = { cspDueDate: '2026-11-13', cspOverdue: false }
+
+  it('before the deadline: the real D61 Division A shape, naming the date and the consequence', () => {
     const text = textFor(
       divisionWithCsp(18, 18, 0, {
         cspSubmittedCount: 5,
-        clubsMissingCspCount: 13,
+        clubsMissingCsp: missingClubs(13),
       })
     )
     expect(text).toContain('is not yet distinguished')
     expect(text).toContain(
-      'Club Success Plans: 5 of 18 clubs have submitted; 13 have not and cannot be Distinguished until they do.'
+      'Club Success Plans: 5 of 18 clubs have submitted; 13 have not and must file by 30 September 2026 — ' +
+        'a club that misses that date cannot be Distinguished this program year.'
     )
+    expect(text).not.toMatch(/until/)
   })
 
-  it('one missing: singular', () => {
+  it('after the deadline: terminal wording, no remediation implied', () => {
     const text = textFor(
       divisionWithCsp(18, 18, 0, {
-        cspSubmittedCount: 17,
-        clubsMissingCspCount: 1,
+        cspSubmittedCount: 5,
+        clubsMissingCsp: missingClubs(13, OVERDUE),
       })
     )
     expect(text).toContain(
-      'Club Success Plans: 17 of 18 clubs have submitted; 1 has not and cannot be Distinguished until it does.'
+      'Club Success Plans: 5 of 18 clubs have submitted; 13 did not file by 30 September 2026 and cannot be Distinguished this program year.'
+    )
+    expect(text).not.toMatch(/until|must file/)
+  })
+
+  it('one missing, before and after: singular', () => {
+    expect(
+      textFor(
+        divisionWithCsp(18, 18, 0, {
+          cspSubmittedCount: 17,
+          clubsMissingCsp: missingClubs(1),
+        })
+      )
+    ).toContain(
+      'Club Success Plans: 17 of 18 clubs have submitted; 1 has not and must file by 30 September 2026 — ' +
+        'a club that misses that date cannot be Distinguished this program year.'
+    )
+    expect(
+      textFor(
+        divisionWithCsp(18, 18, 0, {
+          cspSubmittedCount: 17,
+          clubsMissingCsp: missingClubs(1, OVERDUE),
+        })
+      )
+    ).toContain(
+      'Club Success Plans: 17 of 18 clubs have submitted; 1 did not file by 30 September 2026 and cannot be Distinguished this program year.'
     )
   })
 
@@ -699,11 +748,56 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
     const text = textFor(
       divisionWithCsp(18, 18, 0, {
         cspSubmittedCount: 1,
-        clubsMissingCspCount: 17,
+        clubsMissingCsp: missingClubs(17),
       })
     )
     expect(text).toContain(
-      'Club Success Plans: 1 of 18 clubs has submitted; 17 have not and cannot be Distinguished until they do.'
+      'Club Success Plans: 1 of 18 clubs has submitted; 17 have not and must file by 30 September 2026'
+    )
+  })
+
+  it('several pending dates: names each date with its count', () => {
+    const text = textFor(
+      divisionWithCsp(18, 18, 0, {
+        cspSubmittedCount: 5,
+        clubsMissingCsp: [...missingClubs(12), ...missingClubs(1, NEW_CHARTER)],
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 5 of 18 clubs have submitted; 13 have not and must file by their due dates ' +
+        '(30 September 2026 for 12 clubs and 13 November 2026 for 1 club) — ' +
+        'a club that misses its date cannot be Distinguished this program year.'
+    )
+  })
+
+  it('mixed: some past their date, a new charter still inside its window', () => {
+    const text = textFor(
+      divisionWithCsp(18, 18, 0, {
+        cspSubmittedCount: 5,
+        clubsMissingCsp: [
+          ...missingClubs(12, OVERDUE),
+          ...missingClubs(1, NEW_CHARTER),
+        ],
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 5 of 18 clubs have submitted; 12 did not file by 30 September 2026 and cannot be ' +
+        'Distinguished this program year; 1 is still due by 13 November 2026.'
+    )
+  })
+
+  it('all overdue across several dates: "their due dates"', () => {
+    const text = textFor(
+      divisionWithCsp(18, 18, 0, {
+        cspSubmittedCount: 5,
+        clubsMissingCsp: [
+          ...missingClubs(12, OVERDUE),
+          ...missingClubs(1, { cspDueDate: '2026-09-29', cspOverdue: true }),
+        ],
+      })
+    )
+    expect(text).toContain(
+      '13 did not file by their due dates and cannot be Distinguished this program year.'
     )
   })
 
@@ -711,7 +805,7 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
     const text = textFor(
       divisionWithCsp(18, 18, 0, {
         cspSubmittedCount: 18,
-        clubsMissingCspCount: 0,
+        clubsMissingCsp: [],
       })
     )
     expect(text).toContain('Club Success Plans: all 18 clubs have submitted.')
@@ -723,7 +817,7 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
         divisionWithCsp(18, 18, 0, {
           cspTracked: false,
           cspSubmittedCount: 0,
-          clubsMissingCspCount: 13,
+          clubsMissingCsp: missingClubs(13),
         })
       )
     ).not.toContain('Club Success Plan')
@@ -731,16 +825,17 @@ describe('generateDivisionProgressText — Club Success Plan clause (#1555)', ()
       textFor(
         divisionWithCsp(0, 0, 0, {
           cspSubmittedCount: 0,
-          clubsMissingCspCount: 0,
+          clubsMissingCsp: [],
         })
       )
     ).not.toContain('Club Success Plan')
   })
 
   it('appears in the net-loss and achieved branches too, at the end', () => {
-    const csp = { cspSubmittedCount: 5, clubsMissingCspCount: 13 }
+    const csp = { cspSubmittedCount: 5, clubsMissingCsp: missingClubs(13) }
     const clause =
-      'Club Success Plans: 5 of 18 clubs have submitted; 13 have not and cannot be Distinguished until they do.'
+      'Club Success Plans: 5 of 18 clubs have submitted; 13 have not and must file by 30 September 2026 — ' +
+      'a club that misses that date cannot be Distinguished this program year.'
 
     const netLoss = textFor(divisionWithCsp(18, 17, 5, csp))
     expect(netLoss).toContain('has a net club loss')

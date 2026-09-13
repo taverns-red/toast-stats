@@ -10,15 +10,40 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { DivisionAreaProgressSummary } from '../DivisionAreaProgressSummary'
-import type { DivisionPerformance } from '../../utils/divisionStatus'
+import type {
+  DivisionPerformance,
+  MissingCspClub,
+} from '../../utils/divisionStatus'
 import { withRecognitionState } from '../../test-utils/areaFixture'
 
 afterEach(() => cleanup())
 
+// Snapshot 2026-09-11: existing clubs, still inside the 30 September window.
+const missingThree: MissingCspClub[] = [
+  {
+    clubNumber: '1',
+    clubName: 'Limestone City Club',
+    cspDueDate: '2026-09-30',
+    cspOverdue: false,
+  },
+  {
+    clubNumber: '2',
+    clubName: 'CFB Kingston Toastmasters',
+    cspDueDate: '2026-09-30',
+    cspOverdue: false,
+  },
+  {
+    clubNumber: '3',
+    clubName: 'KEYS Toastmasters Club',
+    cspDueDate: '2026-09-30',
+    cspOverdue: false,
+  },
+]
+
 function division(
   csp: Pick<
     DivisionPerformance,
-    'cspTracked' | 'cspSubmittedCount' | 'clubsMissingCspCount'
+    'cspTracked' | 'cspSubmittedCount' | 'clubsMissingCsp'
   >,
   area: Parameters<typeof withRecognitionState>[0]
 ): DivisionPerformance {
@@ -64,16 +89,16 @@ describe('DivisionAreaProgressSummary — Club Success Plan clause (#1555)', () 
       <DivisionAreaProgressSummary
         divisions={[
           division(
-            { cspTracked: true, cspSubmittedCount: 2, clubsMissingCspCount: 3 },
+            {
+              cspTracked: true,
+              cspSubmittedCount: 2,
+              clubsMissingCsp: missingThree,
+            },
             {
               ...baseArea,
               cspTracked: true,
               cspSubmittedCount: 2,
-              clubsMissingCsp: [
-                { clubNumber: '1', clubName: 'Limestone City Club' },
-                { clubNumber: '2', clubName: 'CFB Kingston Toastmasters' },
-                { clubNumber: '3', clubName: 'KEYS Toastmasters Club' },
-              ],
+              clubsMissingCsp: missingThree,
             }
           ),
         ]}
@@ -82,12 +107,12 @@ describe('DivisionAreaProgressSummary — Club Success Plan clause (#1555)', () 
 
     expect(
       screen.getByText(
-        /Club Success Plans: 2 of 5 clubs have submitted; 3 have not and cannot be Distinguished until they do\./
+        /Club Success Plans: 2 of 5 clubs have submitted; 3 have not and must file by 30 September 2026 — a club that misses that date cannot be Distinguished this program year\./
       )
     ).toBeInTheDocument()
     expect(
       screen.getByText(
-        /Club Success Plans: 2 of 5 submitted — 3 active clubs still need to submit: Limestone City Club, CFB Kingston Toastmasters, KEYS Toastmasters Club\. No club can be Distinguished until its plan is in\./
+        /Club Success Plans: 2 of 5 submitted — 3 active clubs still need to submit by 30 September 2026: Limestone City Club, CFB Kingston Toastmasters, KEYS Toastmasters Club\. Any club that has not filed by 30 September 2026 cannot be Distinguished this program year\./
       )
     ).toBeInTheDocument()
   })
@@ -100,7 +125,7 @@ describe('DivisionAreaProgressSummary — Club Success Plan clause (#1555)', () 
             {
               cspTracked: false,
               cspSubmittedCount: 0,
-              clubsMissingCspCount: 0,
+              clubsMissingCsp: [],
             },
             baseArea
           ),
@@ -123,7 +148,7 @@ describe('DivisionAreaProgressSummary — Club Success Plan clause (#1555)', () 
       <DivisionAreaProgressSummary
         divisions={[
           division(
-            { cspTracked: true, cspSubmittedCount: 5, clubsMissingCspCount: 0 },
+            { cspTracked: true, cspSubmittedCount: 5, clubsMissingCsp: [] },
             { ...baseArea, cspTracked: true, cspSubmittedCount: 5 }
           ),
         ]}

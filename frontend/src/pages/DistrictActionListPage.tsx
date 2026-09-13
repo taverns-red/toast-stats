@@ -21,6 +21,7 @@ import {
   formatVisitGap,
   type ActionListSections,
 } from '../utils/actionListData'
+import { cspAutoCreditNote } from '../utils/cspDeadlines'
 import { arrayToCSV, downloadCSV, generateFilename } from '../utils/csvExport'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
@@ -84,9 +85,10 @@ const ActionListSection: React.FC<{
   </section>
 )
 
-/** "1 suspended/ineligible club without a plan is not listed." / "(2 clubs
- *  with no CSP data)" — the CSP section's footnote, or undefined when there is
- *  nothing to flag. */
+/** "1 suspended/ineligible club without a plan is not listed." / "1 club
+ *  chartered after 1 April has automatic credit and is not listed." / "(2
+ *  clubs with no CSP data)" — the CSP section's footnote, or undefined when
+ *  there is nothing to flag. */
 function cspFootnote(sections: ActionListSections): string | undefined {
   const parts: string[] = []
   const inel = sections.cspNotSubmittedIneligibleCount
@@ -95,6 +97,13 @@ function cspFootnote(sections: ActionListSections): string | undefined {
       inel === 1
         ? '1 suspended/ineligible club without a plan is not listed.'
         : `${inel} suspended/ineligible clubs without a plan are not listed.`
+    )
+  }
+  // #1565: chartered after 1 April — automatic credit, so never a to-do.
+  const autoCredit = sections.cspNotSubmittedAutoCreditCount
+  if (autoCredit > 0) {
+    parts.push(
+      `${cspAutoCreditNote(autoCredit)} and ${autoCredit === 1 ? 'is' : 'are'} not listed.`
     )
   }
   const unknown = sections.cspUnknownCount
@@ -353,7 +362,7 @@ const DistrictActionListPage: React.FC = () => {
                 Prioritized to-dos for this district: clubs within reach of
                 Distinguished, areas with outstanding club visits,
                 {sections.cspTracked
-                  ? ' clubs that need intervention, and clubs that still need to submit a Club Success Plan.'
+                  ? ' clubs that need intervention, and clubs without a Club Success Plan.'
                   : ' and clubs that need intervention.'}{' '}
                 Filter to your division or area and share the link.
               </p>

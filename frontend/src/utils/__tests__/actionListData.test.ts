@@ -420,10 +420,71 @@ describe('buildActionList — cspNotSubmitted section (#1555)', () => {
         divisionId: 'A',
         areaId: 'A1',
         currentStatus: 'vulnerable',
+        // #1565: existing club, pinned 2026-09-11 → still inside the window.
+        cspDueDate: '2026-09-30',
+        cspOverdue: false,
       },
     ])
     expect(result.cspNotSubmittedIneligibleCount).toBe(0)
+    expect(result.cspNotSubmittedAutoCreditCount).toBe(0)
     expect(result.cspUnknownCount).toBe(0)
+  })
+
+  it('judges overdue by the pinned snapshot date the page passes, never the clock (#1565)', () => {
+    const result = buildActionList({
+      ...base,
+      clubs: [missingA1],
+      snapshotDate: '2026-10-01',
+      programYear: '2026-2027',
+    })
+    expect(result.cspNotSubmitted[0]).toMatchObject({
+      cspDueDate: '2026-09-30',
+      cspOverdue: true,
+    })
+  })
+
+  it('gives a club chartered in-year charter + 90 days (#1565)', () => {
+    const newborn = makeClub({
+      clubId: 'csp-new',
+      clubName: 'Newborn Club',
+      divisionId: 'A',
+      areaId: 'A1',
+      cspSubmitted: false,
+      charterDate: '2026-08-15',
+      dcpGoalsTrend: oneGoal,
+    })
+    const result = buildActionList({
+      ...base,
+      clubs: [newborn],
+      snapshotDate: '2026-10-05',
+      programYear: '2026-2027',
+    })
+    expect(result.cspNotSubmitted[0]).toMatchObject({
+      clubId: 'csp-new',
+      cspDueDate: '2026-11-13',
+      cspOverdue: false,
+    })
+  })
+
+  it('never lists a club chartered after 1 April — automatic credit, counted for the footnote (#1565)', () => {
+    const spring = makeClub({
+      clubId: 'csp-spring',
+      clubName: 'Spring Charter',
+      divisionId: 'A',
+      areaId: 'A1',
+      cspSubmitted: false,
+      charterDate: '2027-04-15',
+      dcpGoalsTrend: oneGoal,
+    })
+    const result = buildActionList({
+      ...base,
+      clubs: [missingA1, spring],
+      snapshotDate: '2027-05-31',
+      programYear: '2026-2027',
+    })
+    expect(result.cspNotSubmitted.map(c => c.clubId)).toEqual(['csp-a1'])
+    expect(result.cspNotSubmittedAutoCreditCount).toBe(1)
+    expect(result.cspNotSubmittedIneligibleCount).toBe(0)
   })
 
   it('is not tracked — and empty — for a pre-2025-26 program year, whatever the rows say', () => {
@@ -435,6 +496,7 @@ describe('buildActionList — cspNotSubmitted section (#1555)', () => {
     expect(result.cspTracked).toBe(false)
     expect(result.cspNotSubmitted).toEqual([])
     expect(result.cspNotSubmittedIneligibleCount).toBe(0)
+    expect(result.cspNotSubmittedAutoCreditCount).toBe(0)
     expect(result.cspUnknownCount).toBe(0)
   })
 
@@ -504,24 +566,47 @@ describe('buildActionList — cspNotSubmitted section (#1555)', () => {
 })
 
 describe('formatCspRow (shared list + CSV string)', () => {
-  it('reads "CSP not submitted · <health label>"', () => {
+  const item = {
+    clubId: 'c',
+    clubName: 'C',
+    divisionId: 'A',
+    areaId: 'A1',
+    cspDueDate: '2026-09-30',
+  }
+
+  it('before the due date reads "CSP due <date> · <health label>" (#1565)', () => {
+    expect(
+      formatCspRow({ ...item, cspOverdue: false, currentStatus: 'vulnerable' })
+    ).toBe('CSP due 30 September 2026 · Vulnerable')
     expect(
       formatCspRow({
-        clubId: 'c',
-        clubName: 'C',
-        divisionId: 'A',
-        areaId: 'A1',
-        currentStatus: 'vulnerable',
-      })
-    ).toBe('CSP not submitted · Vulnerable')
-    expect(
-      formatCspRow({
-        clubId: 'c',
-        clubName: 'C',
-        divisionId: 'A',
-        areaId: 'A1',
+        ...item,
+        cspOverdue: false,
         currentStatus: 'intervention-required',
       })
-    ).toBe('CSP not submitted · Intervention Required')
+    ).toBe('CSP due 30 September 2026 · Intervention Required')
+  })
+
+  it('after the due date states the lost eligibility, with no "until" (#1565)', () => {
+    const row = formatCspRow({
+      ...item,
+      cspOverdue: true,
+      currentStatus: 'vulnerable',
+    })
+    expect(row).toBe(
+      'CSP not filed by 30 September 2026 — cannot be Distinguished this program year · Vulnerable'
+    )
+    expect(row).not.toMatch(/until/)
+  })
+
+  it('names a newly chartered club’s own +90-day date', () => {
+    expect(
+      formatCspRow({
+        ...item,
+        cspDueDate: '2026-11-13',
+        cspOverdue: false,
+        currentStatus: 'vulnerable',
+      })
+    ).toBe('CSP due 13 November 2026 · Vulnerable')
   })
 })

@@ -436,16 +436,28 @@ const MethodologyPage: React.FC = () => {
         </ul>
         <p>
           <strong>Club Success Plan completion.</strong> From 2025-26 the
-          Divisions, Division and Area narratives state how many clubs have
-          submitted a plan and name the active clubs that have not, because no
-          club can be Distinguished without one. Two caveats when reading those
-          counts: the dashboard&apos;s CSP column resets to &ldquo;not
-          submitted&rdquo; for nearly every club on July 1, so early-year
-          figures are low by construction, not a regression; and because
-          Toastmasters&apos; program-year rollover lags July 1, a July snapshot
-          can still reflect the prior year&apos;s June close. Years before
-          2025-26 have no CSP column and show no completion sentence at all
-          &mdash; never &ldquo;0 of N submitted&rdquo; for a year with no
+          Divisions, Division and Area narratives, the action list and the
+          district overview state how many clubs have submitted a plan and name
+          the active clubs that have not, because no club can be Distinguished
+          without one. The plan has a per-club due date, from the Distinguished
+          Club Program: an existing club must submit by{' '}
+          <strong>30 September</strong>; a club chartered during the program
+          year has <strong>90 days after its charter date</strong>; and a club
+          chartered after 1 April automatically receives credit for that year,
+          so it is footnoted rather than listed and counts on neither side of
+          the ratio. A club that has not filed by its due date cannot earn
+          Distinguished recognition for that program year, however many goals it
+          meets &mdash; so before the date the wording names it, and from the
+          day after it the wording says the eligibility is lost. That switch
+          follows the snapshot date you are viewing, not today&apos;s calendar,
+          so a historical snapshot reads as it did on its date. Two caveats when
+          reading the counts: the dashboard&apos;s CSP column resets to
+          &ldquo;not submitted&rdquo; for nearly every club on July 1, so
+          early-year figures are low by construction, not a regression; and
+          because Toastmasters&apos; program-year rollover lags July 1, a July
+          snapshot can still reflect the prior year&apos;s June close. Years
+          before 2025-26 have no CSP column and show no completion sentence at
+          all &mdash; never &ldquo;0 of N submitted&rdquo; for a year with no
           requirement.
         </p>
         <p className="methodology-source">

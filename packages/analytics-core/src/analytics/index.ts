@@ -28,10 +28,13 @@ export {
   getCSPStatus,
   isClubSmedleyAvailable,
   isCspRequired,
+  cspDueDate,
+  isCspOverdue,
   CSP_REQUIRED_FROM_PROGRAM_YEAR,
   isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
 export type {
+  CspDueDateInput,
   DistinguishedLevelAtSnapshotInput,
   DistinguishedMembershipBasis,
   DistinguishedTierCode,

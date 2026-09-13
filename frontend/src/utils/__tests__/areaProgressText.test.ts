@@ -26,6 +26,7 @@ import {
   calculateVisitStatus,
   MissingVisitClub,
   IneligibleMissingVisitClub,
+  MissingCspClub,
 } from '../divisionStatus'
 import {
   deriveAreaRecognitionState,
@@ -938,6 +939,16 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
     }
   }
 
+  /** An existing club without a plan, still inside its 30 September window. */
+  function pending(clubNumber: string, clubName: string): MissingCspClub {
+    return {
+      clubNumber,
+      clubName,
+      cspDueDate: '2026-09-30',
+      cspOverdue: false,
+    }
+  }
+
   function textFor(area: AreaWithDivision): string {
     const gapAnalysis = calculateAreaGapAnalysis({
       clubBase: area.clubBase,
@@ -947,36 +958,115 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
     return generateAreaProgressText(area, gapAnalysis).progressText
   }
 
-  it('some missing: counts, names the active clubs, and states the Distinguished block', () => {
+  /** An existing club whose 30 September has passed. */
+  function overdue(clubNumber: string, clubName: string): MissingCspClub {
+    return { ...pending(clubNumber, clubName), cspOverdue: true }
+  }
+
+  const LIMESTONE = pending('3045', 'Limestone City Club')
+  const CFB = pending('4321', 'CFB Kingston Toastmasters')
+  const KEYS = pending('5678', 'KEYS Toastmasters Club')
+
+  it('before the deadline: names the date the clubs must file by, and the consequence of missing it', () => {
+    const text = textFor(
+      areaWithCsp(5, {
+        cspSubmittedCount: 2,
+        clubsMissingCsp: [LIMESTONE, CFB, KEYS],
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 2 of 5 submitted — 3 active clubs still need to submit by 30 September 2026: ' +
+        'Limestone City Club, CFB Kingston Toastmasters, KEYS Toastmasters Club. ' +
+        'Any club that has not filed by 30 September 2026 cannot be Distinguished this program year.'
+    )
+    expect(text).not.toMatch(/until/)
+  })
+
+  it('after the deadline: terminal wording — eligibility is lost, nothing is "still" to do', () => {
+    const text = textFor(
+      areaWithCsp(5, {
+        cspSubmittedCount: 2,
+        clubsMissingCsp: [LIMESTONE, CFB, KEYS].map(c => ({
+          ...c,
+          cspOverdue: true,
+        })),
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 2 of 5 submitted — 3 active clubs did not submit by 30 September 2026: ' +
+        'Limestone City Club, CFB Kingston Toastmasters, KEYS Toastmasters Club. ' +
+        'They cannot be Distinguished this program year.'
+    )
+    expect(text).not.toMatch(/until|still need/)
+  })
+
+  it('one missing, before: singular club word, verb and pronoun', () => {
+    const text = textFor(
+      areaWithCsp(5, { cspSubmittedCount: 4, clubsMissingCsp: [KEYS] })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 4 of 5 submitted — 1 active club still needs to submit by 30 September 2026: ' +
+        'KEYS Toastmasters Club. If it has not filed by 30 September 2026 it cannot be Distinguished this program year.'
+    )
+  })
+
+  it('one missing, after: singular terminal wording', () => {
+    const text = textFor(
+      areaWithCsp(5, {
+        cspSubmittedCount: 4,
+        clubsMissingCsp: [overdue('5678', 'KEYS Toastmasters Club')],
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 4 of 5 submitted — 1 active club did not submit by 30 September 2026: ' +
+        'KEYS Toastmasters Club. It cannot be Distinguished this program year.'
+    )
+  })
+
+  it('a newly chartered club is named with its own +90-day date, grouped apart from the 30 September clubs', () => {
+    // Pinned 2026-10-05: the existing clubs are past 30 September; the club
+    // chartered 15 August has until 13 November.
     const text = textFor(
       areaWithCsp(5, {
         cspSubmittedCount: 2,
         clubsMissingCsp: [
-          { clubNumber: '3045', clubName: 'Limestone City Club' },
-          { clubNumber: '4321', clubName: 'CFB Kingston Toastmasters' },
-          { clubNumber: '5678', clubName: 'KEYS Toastmasters Club' },
+          overdue('1', 'Alpha'),
+          overdue('2', 'Bravo'),
+          {
+            clubNumber: '3',
+            clubName: 'Newborn',
+            cspDueDate: '2026-11-13',
+            cspOverdue: false,
+          },
         ],
       })
     )
     expect(text).toContain(
-      'Club Success Plans: 2 of 5 submitted — 3 active clubs still need to submit: ' +
-        'Limestone City Club, CFB Kingston Toastmasters, KEYS Toastmasters Club. ' +
-        'No club can be Distinguished until its plan is in.'
+      'Club Success Plans: 2 of 5 submitted — 2 active clubs did not submit by 30 September 2026: Alpha, Bravo; ' +
+        '1 active club still needs to submit by 13 November 2026: Newborn. ' +
+        'Clubs past their due date cannot be Distinguished this program year.'
     )
   })
 
-  it('one missing: singular club word, verb and pronoun', () => {
+  it('several pending dates: the consequence names "its due date" rather than one date', () => {
     const text = textFor(
       areaWithCsp(5, {
-        cspSubmittedCount: 4,
+        cspSubmittedCount: 3,
         clubsMissingCsp: [
-          { clubNumber: '5678', clubName: 'KEYS Toastmasters Club' },
+          pending('1', 'Alpha'),
+          {
+            clubNumber: '3',
+            clubName: 'Newborn',
+            cspDueDate: '2026-11-13',
+            cspOverdue: false,
+          },
         ],
       })
     )
     expect(text).toContain(
-      'Club Success Plans: 4 of 5 submitted — 1 active club still needs to submit: ' +
-        'KEYS Toastmasters Club. It cannot be Distinguished until its plan is in.'
+      '1 active club still needs to submit by 30 September 2026: Alpha; ' +
+        '1 active club still needs to submit by 13 November 2026: Newborn. ' +
+        'Any club that has not filed by its due date cannot be Distinguished this program year.'
     )
   })
 
@@ -986,23 +1076,24 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
     expect(text).not.toContain('still need')
   })
 
-  it('none submitted: the real D61 Area A01 wording (spec §6.1)', () => {
+  it('none submitted: the real D61 Area A01 shape, with the date', () => {
     const text = textFor(
       areaWithCsp(5, {
         cspSubmittedCount: 0,
         clubsMissingCsp: [
-          { clubNumber: '1', clubName: 'CFB Kingston Toastmasters' },
-          { clubNumber: '2', clubName: 'KEYS Toastmasters Club' },
-          { clubNumber: '3', clubName: 'Limestone City Club' },
-          { clubNumber: '4', clubName: "Toastmasters At Queen's" },
-          { clubNumber: '5', clubName: 'Toastmasters At St. Lawrence College' },
+          pending('1', 'CFB Kingston Toastmasters'),
+          pending('2', 'KEYS Toastmasters Club'),
+          pending('3', 'Limestone City Club'),
+          pending('4', "Toastmasters At Queen's"),
+          pending('5', 'Toastmasters At St. Lawrence College'),
         ],
       })
     )
     expect(text).toContain(
-      'Club Success Plans: none of the 5 clubs has submitted — ' +
+      'Club Success Plans: 0 of 5 submitted — 5 active clubs still need to submit by 30 September 2026: ' +
         "CFB Kingston Toastmasters, KEYS Toastmasters Club, Limestone City Club, Toastmasters At Queen's, " +
-        'Toastmasters At St. Lawrence College. No club in this area can be Distinguished until plans are in.'
+        'Toastmasters At St. Lawrence College. ' +
+        'Any club that has not filed by 30 September 2026 cannot be Distinguished this program year.'
     )
   })
 
@@ -1010,10 +1101,7 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
     const text = textFor(
       areaWithCsp(5, {
         cspSubmittedCount: 2,
-        clubsMissingCsp: [
-          { clubNumber: '1', clubName: 'Alpha' },
-          { clubNumber: '2', clubName: 'Bravo' },
-        ],
+        clubsMissingCsp: [pending('1', 'Alpha'), pending('2', 'Bravo')],
         clubsMissingCspIneligible: [
           { clubNumber: '9', clubName: 'Suspended Club', status: 'Suspended' },
         ],
@@ -1021,8 +1109,52 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
     )
     // Denominator = submitted + active missing (4), not the club base (5).
     expect(text).toContain(
-      'Club Success Plans: 2 of 4 submitted — 2 active clubs still need to submit: Alpha, Bravo. ' +
-        '(1 suspended/ineligible club excluded.) No club can be Distinguished until its plan is in.'
+      'Club Success Plans: 2 of 4 submitted — 2 active clubs still need to submit by 30 September 2026: Alpha, Bravo. ' +
+        '(1 suspended/ineligible club excluded.) ' +
+        'Any club that has not filed by 30 September 2026 cannot be Distinguished this program year.'
+    )
+  })
+
+  it('a club chartered after 1 April is footnoted as automatic credit, never named as missing (#1565)', () => {
+    const text = textFor(
+      areaWithCsp(5, {
+        cspSubmittedCount: 2,
+        clubsMissingCsp: [pending('1', 'Alpha'), pending('2', 'Bravo')],
+        clubsMissingCspIneligible: [
+          {
+            clubNumber: '8',
+            clubName: 'Spring Charter',
+            status: 'Active',
+            exclusion: 'auto-credit',
+          },
+          { clubNumber: '9', clubName: 'Suspended Club', status: 'Suspended' },
+        ],
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: 2 of 4 submitted — 2 active clubs still need to submit by 30 September 2026: Alpha, Bravo. ' +
+        '(1 suspended/ineligible club excluded; 1 club chartered after 1 April has automatic credit.) ' +
+        'Any club that has not filed by 30 September 2026 cannot be Distinguished this program year.'
+    )
+    expect(text).not.toContain('Spring Charter')
+  })
+
+  it('the automatic-credit footnote also follows the all-submitted sentence', () => {
+    const text = textFor(
+      areaWithCsp(3, {
+        cspSubmittedCount: 2,
+        clubsMissingCspIneligible: [
+          {
+            clubNumber: '8',
+            clubName: 'Spring Charter',
+            status: 'Active',
+            exclusion: 'auto-credit',
+          },
+        ],
+      })
+    )
+    expect(text).toContain(
+      'Club Success Plans: all 2 clubs have submitted. (1 club chartered after 1 April has automatic credit.)'
     )
   })
 
@@ -1031,7 +1163,7 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
       areaWithCsp(5, {
         cspTracked: false,
         cspSubmittedCount: 0,
-        clubsMissingCsp: [{ clubNumber: '1', clubName: 'Alpha' }],
+        clubsMissingCsp: [pending('1', 'Alpha')],
       })
     )
     expect(text).not.toContain('Club Success Plan')
@@ -1042,14 +1174,26 @@ describe('generateAreaProgressText — Club Success Plan clause (#1555)', () => 
     expect(text).not.toContain('Club Success Plan')
   })
 
+  it('renders no CSP sentence when every club in the area is excluded', () => {
+    const text = textFor(
+      areaWithCsp(1, {
+        cspSubmittedCount: 0,
+        clubsMissingCspIneligible: [
+          { clubNumber: '9', clubName: 'Suspended Club', status: 'Suspended' },
+        ],
+      })
+    )
+    expect(text).not.toContain('Club Success Plan')
+  })
+
   it('appears after the visit text in the net-loss and achieved branches too', () => {
     const csp: Partial<CspOpts> = {
       cspSubmittedCount: 3,
-      clubsMissingCsp: [{ clubNumber: '1', clubName: 'Alpha' }],
+      clubsMissingCsp: [pending('1', 'Alpha')],
     }
     const expected =
-      'Club Success Plans: 3 of 4 submitted — 1 active club still needs to submit: Alpha. ' +
-      'It cannot be Distinguished until its plan is in.'
+      'Club Success Plans: 3 of 4 submitted — 1 active club still needs to submit by 30 September 2026: Alpha. ' +
+      'If it has not filed by 30 September 2026 it cannot be Distinguished this program year.'
 
     // Net loss: 3 of 4 paid.
     const netLossText = textFor({

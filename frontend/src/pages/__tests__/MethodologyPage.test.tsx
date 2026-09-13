@@ -75,6 +75,39 @@ describe('MethodologyPage — Club health classifications (#440)', () => {
   })
 })
 
+/**
+ * Club Success Plan due dates (#1565) — from the Distinguished Club Program,
+ * Item 1111 Rev. 06/2026, pp. 5 and 11. The completion paragraph must state
+ * all three rules and the consequence, and must not promise that a late plan
+ * can still be fixed.
+ */
+describe('MethodologyPage — Club Success Plan due dates (#1565)', () => {
+  it('states the 30 September deadline and the loss of eligibility for the year', () => {
+    renderPage()
+    const txt = document.body.textContent || ''
+    expect(txt).toMatch(/Club Success Plan[\s\S]{0,400}30 September/i)
+    expect(txt).toMatch(
+      /has not (?:filed|submitted)[\s\S]{0,120}cannot (?:earn|be) Distinguished[\s\S]{0,40}(?:that|this) program year/i
+    )
+  })
+
+  it('states the 90-day rule for newly chartered clubs and automatic credit after 1 April', () => {
+    renderPage()
+    const txt = document.body.textContent || ''
+    expect(txt).toMatch(/90 days after (?:its|the) charter date/i)
+    expect(txt).toMatch(
+      /after 1 April[\s\S]{0,80}automatic(?:ally)? (?:receives? )?credit/i
+    )
+  })
+
+  it('does not say a club is blocked "until" its plan is in — that wording is false after the deadline', () => {
+    renderPage()
+    const txt = document.body.textContent || ''
+    expect(txt).not.toMatch(/Distinguished until/i)
+    expect(txt).not.toMatch(/until (?:its|their) plans? (?:is|are) in/i)
+  })
+})
+
 describe('MethodologyPage — pointer to the MCP server page (#1165)', () => {
   it('links to /mcp from the data source section', () => {
     renderPage()

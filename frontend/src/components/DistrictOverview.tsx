@@ -5,6 +5,13 @@ import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
 import type { DistrictPerformanceTargets } from '../hooks/useDistrictAnalytics'
 import { summarizeCspCompletion } from '../utils/cspCompletion'
+import {
+  CSP_LOST_ELIGIBILITY,
+  cspAutoCreditNote,
+  describeCspDueDates,
+  formatCspDueDate,
+  groupByCspDueDate,
+} from '../utils/cspDeadlines'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { ErrorDisplay, EmptyState } from './ErrorDisplay'
 import DistinguishedCompositionBar from './DistinguishedCompositionBar'
@@ -13,20 +20,28 @@ import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
  * The one-line Club Success Plan summary under the overview header (#1555,
- * spec §6.3). Counts ACTIVE clubs only — numerator and denominator — so the
- * number a user clicks equals the badge on the action-list section it lands
- * on (#1561 review). Suspended/ineligible clubs without a plan are named in
- * the action list's own footnote voice (`footnote`); an ineligible club that
- * has filed leaves the denominator too. Clubs with no CSP value on a tracked
- * year are excluded from both numbers and named in a suffix (spec E2).
- * Returns null when nothing can be said.
+ * spec §6.3; #1565). Counts ACTIVE clubs only — numerator and denominator —
+ * so the number a user clicks equals the badge on the action-list section it
+ * lands on (#1561 review). Suspended/ineligible clubs without a plan, and
+ * clubs chartered after 1 April (automatic credit), are named in the action
+ * list's own footnote voice (`footnote`); an ineligible or auto-credit club
+ * that has filed leaves the denominator too. Clubs with no CSP value on a
+ * tracked year are excluded from both numbers and named in a suffix (E2).
+ *
+ * Deadline-aware: before a due date the line names it and what missing it
+ * costs; from the day after, it states the clubs did not file and cannot be
+ * Distinguished this program year. The state comes from the pinned snapshot
+ * date in `asOf` (R3), never the clock. Returns null when nothing can be said.
  */
-function cspLine(clubs: Parameters<typeof summarizeCspCompletion>[0]): {
+function cspLine(
+  clubs: Parameters<typeof summarizeCspCompletion>[0],
+  asOf: Parameters<typeof summarizeCspCompletion>[1]
+): {
   text: string
   showLink: boolean
   footnote: string | null
 } | null {
-  const csp = summarizeCspCompletion(clubs)
+  const csp = summarizeCspCompletion(clubs, asOf)
   const notSubmitted = csp.notSubmitted.length
   const known = csp.submittedCount - csp.submittedIneligibleCount + notSubmitted
   if (known === 0) return null
@@ -34,13 +49,20 @@ function cspLine(clubs: Parameters<typeof summarizeCspCompletion>[0]): {
     csp.unknownCount > 0
       ? ` (${csp.unknownCount} club${csp.unknownCount === 1 ? '' : 's'} with no CSP data)`
       : ''
+  const footnotes: string[] = []
   const inel = csp.notSubmittedIneligible.length
-  const footnote =
-    inel === 0
-      ? null
-      : inel === 1
+  if (inel > 0) {
+    footnotes.push(
+      inel === 1
         ? '1 suspended/ineligible club without a plan is not counted.'
         : `${inel} suspended/ineligible clubs without a plan are not counted.`
+    )
+  }
+  const autoCredit = csp.notSubmittedAutoCredit.length
+  if (autoCredit > 0) {
+    footnotes.push(`${cspAutoCreditNote(autoCredit)}.`)
+  }
+  const footnote = footnotes.length > 0 ? footnotes.join(' ') : null
   if (notSubmitted === 0) {
     return {
       text: `Every club has submitted its Club Success Plan.${unknownSuffix}`,
@@ -49,14 +71,38 @@ function cspLine(clubs: Parameters<typeof summarizeCspCompletion>[0]): {
     }
   }
   const pct = Math.round((notSubmitted / known) * 100)
-  const verb = notSubmitted === 1 ? 'has' : 'have'
-  return {
-    text:
-      `${notSubmitted} of ${known} active clubs (${pct}%) ${verb} not submitted a Club Success Plan` +
-      ` — required for any Distinguished level this year.${unknownSuffix}`,
-    showLink: true,
-    footnote,
+  const lead = `${notSubmitted} of ${known} active clubs (${pct}%)`
+
+  const groups = groupByCspDueDate(csp.notSubmitted)
+  const overdue = groups.filter(g => g.overdue)
+  const pending = groups.filter(g => !g.overdue)
+  const overdueCount = overdue.reduce((sum, g) => sum + g.clubs.length, 0)
+  const pendingCount = pending.reduce((sum, g) => sum + g.clubs.length, 0)
+
+  let text: string
+  if (overdueCount === 0) {
+    const verb = notSubmitted === 1 ? 'has' : 'have'
+    text =
+      pending.length === 1
+        ? `${lead} ${verb} not submitted a Club Success Plan — due ${formatCspDueDate(pending[0]!.dueDate)}; a club that misses that date ${CSP_LOST_ELIGIBILITY}.`
+        : `${lead} ${verb} not submitted a Club Success Plan — due ${describeCspDueDates(pending)}; a club that misses its date ${CSP_LOST_ELIGIBILITY}.`
+  } else if (pendingCount === 0) {
+    const missedBy =
+      overdue.length === 1
+        ? formatCspDueDate(overdue[0]!.dueDate)
+        : 'their due dates'
+    text = `${lead} did not submit a Club Success Plan by ${missedBy} and ${CSP_LOST_ELIGIBILITY}.`
+  } else {
+    const missedBy =
+      overdue.length === 1
+        ? formatCspDueDate(overdue[0]!.dueDate)
+        : 'their due dates'
+    text =
+      `${lead} have not submitted a Club Success Plan — ` +
+      `${overdueCount} did not file by ${missedBy} and ${CSP_LOST_ELIGIBILITY}; ` +
+      `${pendingCount} ${pendingCount === 1 ? 'is' : 'are'} still due by ${describeCspDueDates(pending)}.`
   }
+  return { text: `${text}${unknownSuffix}`, showLink: true, footnote }
 }
 
 interface DistrictOverviewProps {
@@ -116,9 +162,13 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   // #1555: rendered inside the same `analytics && clubCount > 0` block as the
   // subtitle, so it cannot add a late layout shift beyond the one that block
   // already reserves (Lesson 107 shape). Year gate first — never the rows.
+  // #1565: the per-club deadline is judged against the PINNED date the page
+  // fetched under (R3). Without one nothing correct can be said about
+  // deadlines, so the line is omitted rather than guessed from the clock —
+  // the page always passes it (`hasValidDates` ⇒ `effectiveEndDate`).
   const csp =
-    analytics && clubCount > 0 && isCspRequired(programYear)
-      ? cspLine(analytics.allClubs)
+    analytics && clubCount > 0 && isCspRequired(programYear) && selectedDate
+      ? cspLine(analytics.allClubs, { programYear, snapshotDate: selectedDate })
       : null
 
   return (
