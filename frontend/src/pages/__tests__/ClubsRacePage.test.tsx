@@ -30,7 +30,7 @@ vi.mock('../../hooks/useGlobalClubRace', () => ({
 
 // ErrorPage's smart recovery reads the district list; keep it inert here.
 vi.mock('../../hooks/useDistricts', () => ({
-  useDistricts: () => ({ data: [], isLoading: false }),
+  useDistricts: () => ({ data: { districts: [] }, isLoading: false }),
 }))
 
 const RACE: GlobalClubRace = {

@@ -24,7 +24,7 @@ export interface RaceTableProps {
   tier: ClubRaceTier
   rows: readonly GlobalClubRaceReached[]
   /** `?highlight=<clubId>` — the row gets aria-current and an outline. */
-  highlightClubId?: string
+  highlightClubId?: string | undefined
 }
 
 const CODE_TO_TIER: Record<ClubRaceOfficialCode, ClubRaceTier> = {

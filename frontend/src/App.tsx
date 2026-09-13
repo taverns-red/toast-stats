@@ -66,6 +66,11 @@ const MethodologyPage = React.lazy(() => import('./pages/MethodologyPage'))
 // Code-split: AwardsPage — top-10 leaderboards per district award (#370-#373)
 const AwardsPage = React.lazy(() => import('./pages/AwardsPage'))
 
+// Clubs worldwide — the race to Distinguished (#1556): hub + one real route
+// per tier (ADR-005, no client-side tabs).
+const ClubsWorldPage = React.lazy(() => import('./pages/ClubsWorldPage'))
+const ClubsRacePage = React.lazy(() => import('./pages/ClubsRacePage'))
+
 // Code-split: McpPage — public MCP-server install page (#1165, epic #1162)
 const McpPage = React.lazy(() => import('./pages/McpPage'))
 
@@ -232,6 +237,24 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <AwardsPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'clubs',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <ClubsWorldPage />
+            </Suspense>
+          ),
+        },
+        {
+          // An unknown :tier throws a 404 Response inside the page, which the
+          // root errorElement renders as the branded not-found (#1011).
+          path: 'clubs/race/:tier',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <ClubsRacePage />
             </Suspense>
           ),
         },
