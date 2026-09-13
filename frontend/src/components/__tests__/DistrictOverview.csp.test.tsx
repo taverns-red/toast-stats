@@ -120,7 +120,7 @@ describe('DistrictOverview — Club Success Plan line (#1555)', () => {
     ])
     renderOverview('2026-2027')
     expect(screen.getByTestId('district-csp-line')).toHaveTextContent(
-      '1 of 2 clubs (50%) have not submitted a Club Success Plan — required for any Distinguished level this year. (1 club with no CSP data)'
+      '1 of 2 clubs (50%) has not submitted a Club Success Plan — required for any Distinguished level this year. (1 club with no CSP data)'
     )
   })
 

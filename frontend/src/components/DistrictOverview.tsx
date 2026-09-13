@@ -1,15 +1,61 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
+import { isCspRequired } from '@taverns-red/analytics-core'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
 import type { DistrictPerformanceTargets } from '../hooks/useDistrictAnalytics'
+import { summarizeCspCompletion } from '../utils/cspCompletion'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { ErrorDisplay, EmptyState } from './ErrorDisplay'
 import DistinguishedCompositionBar from './DistinguishedCompositionBar'
 import PaymentComposition from './PaymentComposition'
 import type { SnapshotDate } from '../types/snapshotDate'
 
+/**
+ * The one-line Club Success Plan summary under the overview header (#1555,
+ * spec §6.3). Counts every club without a plan — ineligible ones included,
+ * so the number matches "listed + footnoted" on the action list it links to.
+ * Clubs with no CSP value on a tracked year are excluded from both numbers
+ * and named in a suffix (spec E2). Returns null when nothing can be said.
+ */
+function cspLine(
+  clubs: Parameters<typeof summarizeCspCompletion>[0]
+): { text: string; showLink: boolean } | null {
+  const csp = summarizeCspCompletion(clubs)
+  const notSubmitted =
+    csp.notSubmitted.length + csp.notSubmittedIneligible.length
+  const known = csp.submittedCount + notSubmitted
+  if (known === 0) return null
+  const unknownSuffix =
+    csp.unknownCount > 0
+      ? ` (${csp.unknownCount} club${csp.unknownCount === 1 ? '' : 's'} with no CSP data)`
+      : ''
+  if (notSubmitted === 0) {
+    return {
+      text: `Every club has submitted its Club Success Plan.${unknownSuffix}`,
+      showLink: false,
+    }
+  }
+  const pct = Math.round((notSubmitted / known) * 100)
+  const verb = notSubmitted === 1 ? 'has' : 'have'
+  return {
+    text:
+      `${notSubmitted} of ${known} clubs (${pct}%) ${verb} not submitted a Club Success Plan` +
+      ` — required for any Distinguished level this year.${unknownSuffix}`,
+    showLink: true,
+  }
+}
+
 interface DistrictOverviewProps {
   districtId: string
+  /**
+   * Program year label ("YYYY-YYYY") of the snapshot being displayed — the
+   * same value the page passes to the trophy case and growth card. Gates the
+   * Club Success Plan line (#1555): the rows cannot say whether a plan was
+   * required that year (pre-2025-26 rows read as submitted), so the year
+   * must come from the page (R3), never from `allClubs`.
+   */
+  programYear: string
   /**
    * The snapshot being displayed. Explicitly `| undefined` so the parent can
    * pass it unconditionally: a `{...(date && { selectedDate })}` spread would
@@ -29,6 +75,7 @@ interface DistrictOverviewProps {
 
 export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   districtId,
+  programYear,
   selectedDate,
   programYearStartDate,
 }) => {
@@ -53,6 +100,14 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
       ? (analytics.totalMembership / clubCount).toFixed(1)
       : null
 
+  // #1555: rendered inside the same `analytics && clubCount > 0` block as the
+  // subtitle, so it cannot add a late layout shift beyond the one that block
+  // already reserves (Lesson 107 shape). Year gate first — never the rows.
+  const csp =
+    analytics && clubCount > 0 && isCspRequired(programYear)
+      ? cspLine(analytics.allClubs)
+      : null
+
   return (
     <div className="redesign-panel">
       <div className="mb-6">
@@ -66,6 +121,25 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                   ·
                 </span>
                 avg {avgMembersPerClub} members/club
+              </>
+            )}
+          </p>
+        )}
+        {csp && (
+          <p
+            className="mt-1 text-sm text-gray-600"
+            data-testid="district-csp-line"
+          >
+            {csp.text}
+            {csp.showLink && (
+              <>
+                {' '}
+                <Link
+                  className="font-medium underline"
+                  to={`/district/${districtId}/action-list#action-csp`}
+                >
+                  See which clubs →
+                </Link>
               </>
             )}
           </p>
