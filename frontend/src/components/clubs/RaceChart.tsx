@@ -3,12 +3,14 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  DefaultLegendContent,
   Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
+import type { DefaultLegendContentProps, LegendPayload } from 'recharts'
 import type {
   ClubRaceTier,
   GlobalClubRaceTimelinePoint,
@@ -79,6 +81,25 @@ export const RaceChart: React.FC<RaceChartProps> = ({
     max === min ? [Math.max(0, min - 1), max + 1] : [0, max]
   const animate = !prefersReducedMotion()
 
+  /* Recharts 3 builds the legend payload from its own chart store and
+     IGNORES `<Legend payload=…>` entirely (`Legend.tsx` reads
+     `useLegendPayload()`), and for a stacked AreaChart that order is not the
+     children's: the strip shipped with Select and President's the wrong way
+     round against correctly painted bands. A `content` FUNCTION is the one
+     hook it honours — the default markup is kept and only the payload is
+     replaced, built from the same `series` array the <Area> children
+     iterate, so the labels cannot drift from the stack again. Colours still
+     come only from SERIES_COLOUR. */
+  const legendPayload: LegendPayload[] = series.map(({ tier }) => ({
+    id: tier,
+    value: raceTierTitle(tier),
+    type: 'square',
+    color: SERIES_COLOUR[tier],
+  }))
+  const renderLegend = (props: DefaultLegendContentProps) => (
+    <DefaultLegendContent {...props} payload={legendPayload} />
+  )
+
   return (
     <figure
       className="race-chart"
@@ -97,7 +118,7 @@ export const RaceChart: React.FC<RaceChartProps> = ({
           <XAxis dataKey="date" tickFormatter={shortDate} minTickGap={24} />
           <YAxis domain={domain} allowDecimals={false} width={40} />
           <Tooltip labelFormatter={label => `Snapshot ${String(label)}`} />
-          <Legend />
+          <Legend content={renderLegend} />
           {series.map(({ tier }) => (
             <Area
               key={tier}
