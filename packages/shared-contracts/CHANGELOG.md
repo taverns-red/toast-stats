@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.11.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.10.1...shared-contracts-v1.11.0) (2026-09-13)
+
+
+### Features
+
+* **pipeline:** global-club-race.json aggregation artifact + schema ([#1556](https://github.com/taverns-red/toast-stats/issues/1556), 2/4) ([#1560](https://github.com/taverns-red/toast-stats/issues/1560)) ([59e44ce](https://github.com/taverns-red/toast-stats/commit/59e44ce3e5c590d22ef64efcd11f897fb93f50c9))
+
+
+### Dependencies
+
+* **deps-dev:** bump the dev-deps group across 1 directory with 4 updates ([#1533](https://github.com/taverns-red/toast-stats/issues/1533)) ([c7c7196](https://github.com/taverns-red/toast-stats/commit/c7c7196acda1cca4d897e8e17d306b1a5990f57c))
+* **deps:** bump the patch-and-minor group with 10 updates ([#1523](https://github.com/taverns-red/toast-stats/issues/1523)) ([dbc727c](https://github.com/taverns-red/toast-stats/commit/dbc727c91e1fd0483686219dd04e522b1167a376))
+
+
+### Build System
+
+* **deps:** migrate to vitest 5 — the coverageFilesDirectory break was a mixed-major tree ([#1529](https://github.com/taverns-red/toast-stats/issues/1529)) ([#1532](https://github.com/taverns-red/toast-stats/issues/1532)) ([9769221](https://github.com/taverns-red/toast-stats/commit/97692210e1547fd801398e9f42e406406a6a1a0b))
+
 ## [1.10.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.10.0...shared-contracts-v1.10.1) (2026-09-02)
 
 

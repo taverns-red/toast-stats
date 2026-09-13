@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.12.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.11.2...analytics-core-v1.12.0) (2026-09-13)
+
+
+### Features
+
+* **collector:** ClubRaceStore daily crossing-date capture ([#1556](https://github.com/taverns-red/toast-stats/issues/1556), 1/4) ([#1558](https://github.com/taverns-red/toast-stats/issues/1558)) ([93816dd](https://github.com/taverns-red/toast-stats/commit/93816ddfee12910cf2e029eb43b2fdc5942793d6))
+* isCspRequired rule + per-area/division Club Success Plan completion fields ([#1555](https://github.com/taverns-red/toast-stats/issues/1555), 1/4) ([#1557](https://github.com/taverns-red/toast-stats/issues/1557)) ([af2bf25](https://github.com/taverns-red/toast-stats/commit/af2bf2533567db27437a576f1aec3021a2bf00e9))
+* **pipeline:** global-club-race.json aggregation artifact + schema ([#1556](https://github.com/taverns-red/toast-stats/issues/1556), 2/4) ([#1560](https://github.com/taverns-red/toast-stats/issues/1560)) ([59e44ce](https://github.com/taverns-red/toast-stats/commit/59e44ce3e5c590d22ef64efcd11f897fb93f50c9))
+
+
+### Bug Fixes
+
+* **csp:** per-club Club Success Plan due dates and deadline-aware copy ([#1565](https://github.com/taverns-red/toast-stats/issues/1565)) ([#1567](https://github.com/taverns-red/toast-stats/issues/1567)) ([d32d7b0](https://github.com/taverns-red/toast-stats/commit/d32d7b05b5e35f77195767c71fc791b379ec2cad))
+
 ## [1.11.2](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.11.1...analytics-core-v1.11.2) (2026-09-09)
 
 

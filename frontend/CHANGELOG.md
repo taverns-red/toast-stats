@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.22.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.21.2...frontend-v3.22.0) (2026-09-13)
+
+
+### Features
+
+* action-list section + CSV export for clubs without a Club Success Plan ([#1555](https://github.com/taverns-red/toast-stats/issues/1555), 3/4) ([#1561](https://github.com/taverns-red/toast-stats/issues/1561)) ([52109a3](https://github.com/taverns-red/toast-stats/commit/52109a3c72b37fc54a1523c1b08e5ab496b4205d))
+* Club Success Plan clauses in the area and division narratives ([#1555](https://github.com/taverns-red/toast-stats/issues/1555), 2/4) ([#1559](https://github.com/taverns-red/toast-stats/issues/1559)) ([d507dac](https://github.com/taverns-red/toast-stats/commit/d507dac6146397e15befe16440d7c60544e1d3a9))
+* **clubs:** /clubs hub and /clubs/race/:tier routed subpages ([#1556](https://github.com/taverns-red/toast-stats/issues/1556), 3/4) ([#1562](https://github.com/taverns-red/toast-stats/issues/1562)) ([5dab761](https://github.com/taverns-red/toast-stats/commit/5dab761c062debdac2745bd487cbcf27c6e42b98))
+* **clubs:** club-page Worldwide standing card + /methodology#club-race basis ([#1556](https://github.com/taverns-red/toast-stats/issues/1556), 4/4) ([#1564](https://github.com/taverns-red/toast-stats/issues/1564)) ([f42a422](https://github.com/taverns-red/toast-stats/commit/f42a422c6847d404943436ba1ccbda9f2827fc35))
+* district overview Club Success Plan completion line ([#1555](https://github.com/taverns-red/toast-stats/issues/1555), 4/4) ([#1563](https://github.com/taverns-red/toast-stats/issues/1563)) ([4be5745](https://github.com/taverns-red/toast-stats/commit/4be5745fc7c1ac9fb9fda690244619060c9a2e7a))
+* isCspRequired rule + per-area/division Club Success Plan completion fields ([#1555](https://github.com/taverns-red/toast-stats/issues/1555), 1/4) ([#1557](https://github.com/taverns-red/toast-stats/issues/1557)) ([af2bf25](https://github.com/taverns-red/toast-stats/commit/af2bf2533567db27437a576f1aec3021a2bf00e9))
+
+
+### Bug Fixes
+
+* **csp:** per-club Club Success Plan due dates and deadline-aware copy ([#1565](https://github.com/taverns-red/toast-stats/issues/1565)) ([#1567](https://github.com/taverns-red/toast-stats/issues/1567)) ([d32d7b0](https://github.com/taverns-red/toast-stats/commit/d32d7b05b5e35f77195767c71fc791b379ec2cad))
+
 ## [3.21.2](https://github.com/taverns-red/toast-stats/compare/frontend-v3.21.1...frontend-v3.21.2) (2026-09-09)
 
 
