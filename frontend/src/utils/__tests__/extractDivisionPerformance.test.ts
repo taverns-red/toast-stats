@@ -3922,6 +3922,8 @@ describe('AreaPerformance / DivisionPerformance — Club Success Plan completion
       area?: string
       /** Omit to leave the CSP column off the row entirely. */
       csp?: 'Y' | 'N'
+      /** Find-A-Club charter date on the clubPerformance row (#1565). */
+      charterDate?: string
     }>
   ) {
     return {
@@ -3942,12 +3944,15 @@ describe('AreaPerformance / DivisionPerformance — Club Success Plan completion
         'Club Status': c.status,
         'Club Distinguished Status': '',
         ...(c.csp !== undefined ? { CSP: c.csp } : {}),
+        ...(c.charterDate !== undefined ? { charterDate: c.charterDate } : {}),
       })),
     }
   }
 
-  // PY 2026-27 — CSP has been required since 2025-26.
+  // PY 2026-27 — CSP has been required since 2025-26. Before the 30 September
+  // deadline every existing club's plan is still pending.
   const TRACKED_DATE = '2026-09-11'
+  const STANDARD_DUE = '2026-09-30'
 
   it('lists ACTIVE clubs without a submitted CSP, sorted by club number, and counts submitters', () => {
     const snapshot = cspSnapshot([
@@ -3959,11 +3964,153 @@ describe('AreaPerformance / DivisionPerformance — Club Success Plan completion
     const area = extractDivisionPerformance(snapshot, TRACKED_DATE)[0].areas[0]
     expect(area.cspTracked).toBe(true)
     expect(area.clubsMissingCsp).toEqual([
-      { clubNumber: '2', clubName: 'Bravo' },
-      { clubNumber: '3', clubName: 'Charlie' },
+      {
+        clubNumber: '2',
+        clubName: 'Bravo',
+        cspDueDate: STANDARD_DUE,
+        cspOverdue: false,
+      },
+      {
+        clubNumber: '3',
+        clubName: 'Charlie',
+        cspDueDate: STANDARD_DUE,
+        cspOverdue: false,
+      },
     ])
     expect(area.clubsMissingCspIneligible).toEqual([])
     expect(area.cspSubmittedCount).toBe(2)
+  })
+
+  /**
+   * Per-club due dates (#1565, DCP Item 1111 Rev. 06/2026 pp. 5/11): 30
+   * September for existing clubs, charter + 90 days in-year, automatic credit
+   * after 1 April. Overdue is resolved against the CALLER's pinned snapshot
+   * date (R3) here, once, so no narrative ever reaches for a clock.
+   */
+  it('marks a plan overdue from the day after its due date, judged by the pinned snapshot date', () => {
+    const snapshot = cspSnapshot([
+      { number: '1', name: 'Alpha', status: 'Active', csp: 'N' },
+    ])
+    const onTheDay = extractDivisionPerformance(snapshot, '2026-09-30')[0]
+      .areas[0]
+    expect(onTheDay.clubsMissingCsp[0]?.cspOverdue).toBe(false)
+
+    const dayAfter = extractDivisionPerformance(snapshot, '2026-10-01')[0]
+      .areas[0]
+    expect(dayAfter.clubsMissingCsp).toEqual([
+      {
+        clubNumber: '1',
+        clubName: 'Alpha',
+        cspDueDate: STANDARD_DUE,
+        cspOverdue: true,
+      },
+    ])
+  })
+
+  it('gives a club chartered in-year 90 days from its charter date, from the clubPerformance row', () => {
+    const snapshot = cspSnapshot([
+      { number: '1', name: 'Alpha', status: 'Active', csp: 'N' },
+      {
+        number: '2',
+        name: 'Newborn',
+        status: 'Active',
+        csp: 'N',
+        charterDate: '2026-08-15',
+      },
+    ])
+    // 2026-10-05: Alpha missed 30 September; Newborn has until 13 November.
+    const area = extractDivisionPerformance(snapshot, '2026-10-05')[0].areas[0]
+    expect(area.clubsMissingCsp).toEqual([
+      {
+        clubNumber: '1',
+        clubName: 'Alpha',
+        cspDueDate: STANDARD_DUE,
+        cspOverdue: true,
+      },
+      {
+        clubNumber: '2',
+        clubName: 'Newborn',
+        cspDueDate: '2026-11-13',
+        cspOverdue: false,
+      },
+    ])
+  })
+
+  it('files a club chartered after 1 April through the flagged list (automatic credit), out of both counts', () => {
+    const snapshot = cspSnapshot([
+      { number: '1', name: 'Alpha', status: 'Active', csp: 'Y' },
+      { number: '2', name: 'Bravo', status: 'Active', csp: 'N' },
+      {
+        number: '3',
+        name: 'Spring Charter',
+        status: 'Active',
+        csp: 'N',
+        charterDate: '2027-04-15',
+      },
+      {
+        number: '4',
+        name: 'Spring Charter Filed',
+        status: 'Active',
+        csp: 'Y',
+        charterDate: '2027-05-22',
+      },
+    ])
+    const area = extractDivisionPerformance(snapshot, '2027-05-31')[0].areas[0]
+    // Bravo only — the auto-credit club is never listed as missing …
+    expect(area.clubsMissingCsp.map(c => c.clubNumber)).toEqual(['2'])
+    // … it is filed on the SAME flagged path as suspended/ineligible clubs,
+    // tagged so the footnote can name the reason …
+    expect(area.clubsMissingCspIneligible).toEqual([
+      {
+        clubNumber: '3',
+        clubName: 'Spring Charter',
+        status: 'Active',
+        exclusion: 'auto-credit',
+      },
+    ])
+    // … and an auto-credit club that filed anyway leaves the denominator too:
+    // Alpha alone counts, so the sentence reads "1 of 2", not "2 of 3".
+    expect(area.cspSubmittedCount).toBe(1)
+  })
+
+  it('a suspended club chartered after 1 April is flagged for its status, not for automatic credit', () => {
+    const snapshot = cspSnapshot([
+      {
+        number: '1',
+        name: 'Gone',
+        status: 'Suspended',
+        csp: 'N',
+        charterDate: '2027-04-15',
+      },
+    ])
+    const area = extractDivisionPerformance(snapshot, '2027-05-31')[0].areas[0]
+    expect(area.clubsMissingCspIneligible).toEqual([
+      { clubNumber: '1', clubName: 'Gone', status: 'Suspended' },
+    ])
+  })
+
+  it('holds a club chartered after 1 April of the PRIOR year to 30 September this year', () => {
+    // Club Toastmasters de Drummondville (D61): chartered 2026-04-17 — credit
+    // for 2025-26, but an existing club for 2026-27.
+    const snapshot = cspSnapshot([
+      {
+        number: '1',
+        name: 'Drummondville',
+        status: 'Active',
+        csp: 'N',
+        charterDate: '2026-04-17',
+      },
+    ])
+    const area = extractDivisionPerformance(snapshot, TRACKED_DATE)[0].areas[0]
+    expect(area.clubsMissingCsp).toEqual([
+      {
+        clubNumber: '1',
+        clubName: 'Drummondville',
+        cspDueDate: STANDARD_DUE,
+        cspOverdue: false,
+      },
+    ])
+    expect(area.clubsMissingCspIneligible).toEqual([])
   })
 
   it('flags suspended/ineligible clubs without a CSP separately (same predicate as visit gaps)', () => {
@@ -3975,7 +4122,12 @@ describe('AreaPerformance / DivisionPerformance — Club Success Plan completion
     ])
     const area = extractDivisionPerformance(snapshot, TRACKED_DATE)[0].areas[0]
     expect(area.clubsMissingCsp).toEqual([
-      { clubNumber: '1', clubName: 'Alpha' },
+      {
+        clubNumber: '1',
+        clubName: 'Alpha',
+        cspDueDate: STANDARD_DUE,
+        cspOverdue: false,
+      },
     ])
     expect(area.clubsMissingCspIneligible).toEqual([
       { clubNumber: '2', clubName: 'Bravo', status: 'Suspended' },
@@ -4011,11 +4163,11 @@ describe('AreaPerformance / DivisionPerformance — Club Success Plan completion
     expect(area.clubsMissingCsp).toEqual([])
     expect(area.cspSubmittedCount).toBe(0)
     expect(division.cspTracked).toBe(false)
-    expect(division.clubsMissingCspCount).toBe(0)
+    expect(division.clubsMissingCsp).toEqual([])
     expect(division.cspSubmittedCount).toBe(0)
   })
 
-  it('rolls the division up as the sum of its areas (active-only missing count)', () => {
+  it('rolls the division up as the concatenation of its areas (active-only, with due dates)', () => {
     const snapshot = cspSnapshot([
       { number: '1', name: 'Alpha', status: 'Active', area: '01', csp: 'Y' },
       { number: '2', name: 'Bravo', status: 'Active', area: '01', csp: 'N' },
@@ -4026,8 +4178,22 @@ describe('AreaPerformance / DivisionPerformance — Club Success Plan completion
     const [division] = extractDivisionPerformance(snapshot, TRACKED_DATE)
     expect(division.cspTracked).toBe(true)
     expect(division.cspSubmittedCount).toBe(2)
-    // Bravo + Charlie; Delta is flagged as ineligible, not counted.
-    expect(division.clubsMissingCspCount).toBe(2)
+    // Bravo + Charlie; Delta is flagged as ineligible, not counted. The
+    // division narrative groups by due date, so it needs the rows, not a sum.
+    expect(division.clubsMissingCsp).toEqual([
+      {
+        clubNumber: '2',
+        clubName: 'Bravo',
+        cspDueDate: STANDARD_DUE,
+        cspOverdue: false,
+      },
+      {
+        clubNumber: '3',
+        clubName: 'Charlie',
+        cspDueDate: STANDARD_DUE,
+        cspOverdue: false,
+      },
+    ])
     expect(division.areas.map(a => a.clubsMissingCsp.length)).toEqual([1, 1])
     expect(division.areas.map(a => a.clubsMissingCspIneligible.length)).toEqual(
       [0, 1]
