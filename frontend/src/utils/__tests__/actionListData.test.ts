@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildActionList,
   formatCloseGap,
+  formatCspRow,
   formatVisitGap,
 } from '../actionListData'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
@@ -319,5 +320,208 @@ describe('formatCloseGap / formatVisitGap (shared list + CSV strings)', () => {
         ],
       })
     ).toBe('2 clubs unvisited · Round 2, due 2026-05-31')
+  })
+})
+
+/**
+ * Clubs without a Club Success Plan (#1555, spec §3.3 / §6.4). Fed by the
+ * analytics `allClubs` rows; gated on the `programYear` the page already
+ * passes (R3); active only (same `isIneligibleStatus` predicate as the raw
+ * path, Lesson 052); `undefined` cspSubmitted is UNKNOWN, not missing (E2).
+ */
+describe('buildActionList — cspNotSubmitted section (#1555)', () => {
+  // Only 1 DCP goal each, so none is also close-to-Distinguished.
+  const oneGoal = [{ date: '2026-06-01', goalsAchieved: 1 }]
+  const missingA1 = makeClub({
+    clubId: 'csp-a1',
+    clubName: 'Zulu Club',
+    divisionId: 'A',
+    areaId: 'A1',
+    cspSubmitted: false,
+    currentStatus: 'vulnerable',
+    dcpGoalsTrend: oneGoal,
+  })
+  const missingA1b = makeClub({
+    clubId: 'csp-a1b',
+    clubName: 'Alpha Club',
+    divisionId: 'A',
+    areaId: 'A1',
+    cspSubmitted: false,
+    currentStatus: 'intervention-required',
+    dcpGoalsTrend: oneGoal,
+  })
+  const missingA10 = makeClub({
+    clubId: 'csp-a10',
+    clubName: 'Mid Club',
+    divisionId: 'A',
+    areaId: 'A10',
+    cspSubmitted: false,
+    dcpGoalsTrend: oneGoal,
+  })
+  const missingA2 = makeClub({
+    clubId: 'csp-a2',
+    clubName: 'Bravo Club',
+    divisionId: 'A',
+    areaId: 'A2',
+    cspSubmitted: false,
+    dcpGoalsTrend: oneGoal,
+  })
+  const missingB1 = makeClub({
+    clubId: 'csp-b1',
+    clubName: 'Charlie Club',
+    divisionId: 'B',
+    areaId: 'B1',
+    cspSubmitted: false,
+    dcpGoalsTrend: oneGoal,
+  })
+  const submitted = makeClub({
+    clubId: 'csp-ok',
+    clubName: 'Filed Club',
+    divisionId: 'A',
+    areaId: 'A1',
+    cspSubmitted: true,
+    dcpGoalsTrend: oneGoal,
+  })
+  const suspended = makeClub({
+    clubId: 'csp-susp',
+    clubName: 'Suspended Club',
+    divisionId: 'A',
+    areaId: 'A1',
+    cspSubmitted: false,
+    clubStatus: 'Suspended',
+    dcpGoalsTrend: oneGoal,
+  })
+  const unknown = makeClub({
+    clubId: 'csp-unk',
+    clubName: 'Unknown Club',
+    divisionId: 'A',
+    areaId: 'A1',
+    cspSubmitted: undefined,
+    dcpGoalsTrend: oneGoal,
+  })
+
+  const base = {
+    interventionClubs: [],
+    divisions: [],
+    snapshotDate: '2026-09-11',
+  }
+
+  it('lists active clubs without a CSP, carrying health status; tracked for a 2025-26+ year', () => {
+    const result = buildActionList({
+      ...base,
+      clubs: [submitted, missingA1],
+      programYear: '2026-2027',
+    })
+    expect(result.cspTracked).toBe(true)
+    expect(result.cspNotSubmitted).toEqual([
+      {
+        clubId: 'csp-a1',
+        clubName: 'Zulu Club',
+        divisionId: 'A',
+        areaId: 'A1',
+        currentStatus: 'vulnerable',
+      },
+    ])
+    expect(result.cspNotSubmittedIneligibleCount).toBe(0)
+    expect(result.cspUnknownCount).toBe(0)
+  })
+
+  it('is not tracked — and empty — for a pre-2025-26 program year, whatever the rows say', () => {
+    const result = buildActionList({
+      ...base,
+      clubs: [missingA1, missingB1],
+      programYear: '2024-2025',
+    })
+    expect(result.cspTracked).toBe(false)
+    expect(result.cspNotSubmitted).toEqual([])
+    expect(result.cspNotSubmittedIneligibleCount).toBe(0)
+    expect(result.cspUnknownCount).toBe(0)
+  })
+
+  it('treats an omitted program year as current rules (tracked)', () => {
+    const result = buildActionList({ ...base, clubs: [missingA1] })
+    expect(result.cspTracked).toBe(true)
+    expect(result.cspNotSubmitted).toHaveLength(1)
+  })
+
+  it('excludes suspended/ineligible clubs from the list and counts them separately', () => {
+    const result = buildActionList({
+      ...base,
+      clubs: [missingA1, suspended],
+      programYear: '2026-2027',
+    })
+    expect(result.cspNotSubmitted.map(c => c.clubId)).toEqual(['csp-a1'])
+    expect(result.cspNotSubmittedIneligibleCount).toBe(1)
+  })
+
+  it('treats undefined cspSubmitted on a tracked year as unknown: excluded and counted (E2)', () => {
+    const result = buildActionList({
+      ...base,
+      clubs: [missingA1, unknown],
+      programYear: '2026-2027',
+    })
+    expect(result.cspNotSubmitted.map(c => c.clubId)).toEqual(['csp-a1'])
+    expect(result.cspUnknownCount).toBe(1)
+  })
+
+  it('sorts division → area (numeric-aware) → club name', () => {
+    const result = buildActionList({
+      ...base,
+      clubs: [missingB1, missingA10, missingA2, missingA1, missingA1b],
+      programYear: '2026-2027',
+    })
+    expect(result.cspNotSubmitted.map(c => c.clubId)).toEqual([
+      'csp-a1b', // A / A1 / Alpha Club
+      'csp-a1', // A / A1 / Zulu Club
+      'csp-a2', // A / A2  (A2 before A10 — numeric-aware)
+      'csp-a10', // A / A10
+      'csp-b1', // B / B1
+    ])
+  })
+
+  it('is scoped by division and by area like the other sections', () => {
+    const clubs = [missingA1, missingA2, missingB1, suspended]
+    const byDivision = buildActionList(
+      { ...base, clubs, programYear: '2026-2027' },
+      { division: 'B' }
+    )
+    expect(byDivision.cspNotSubmitted.map(c => c.clubId)).toEqual(['csp-b1'])
+    expect(byDivision.cspNotSubmittedIneligibleCount).toBe(0)
+
+    const byArea = buildActionList(
+      { ...base, clubs, programYear: '2026-2027' },
+      { area: 'A1' }
+    )
+    expect(byArea.cspNotSubmitted.map(c => c.clubId)).toEqual(['csp-a1'])
+    expect(byArea.cspNotSubmittedIneligibleCount).toBe(1)
+
+    const outOfRange = buildActionList(
+      { ...base, clubs, programYear: '2026-2027' },
+      { division: 'ZZ' }
+    )
+    expect(outOfRange.cspNotSubmitted).toEqual([])
+  })
+})
+
+describe('formatCspRow (shared list + CSV string)', () => {
+  it('reads "CSP not submitted · <health label>"', () => {
+    expect(
+      formatCspRow({
+        clubId: 'c',
+        clubName: 'C',
+        divisionId: 'A',
+        areaId: 'A1',
+        currentStatus: 'vulnerable',
+      })
+    ).toBe('CSP not submitted · Vulnerable')
+    expect(
+      formatCspRow({
+        clubId: 'c',
+        clubName: 'C',
+        divisionId: 'A',
+        areaId: 'A1',
+        currentStatus: 'intervention-required',
+      })
+    ).toBe('CSP not submitted · Intervention Required')
   })
 })

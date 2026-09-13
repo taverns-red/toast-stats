@@ -13,16 +13,23 @@
  *      uses, #973/#832) and `getAreaVisitDeadlines` for the round deadline.
  *   3. Intervention-required — clubs whose health classification
  *      (`currentStatus`) is `'intervention-required'`.
+ *   4. Clubs without a Club Success Plan (#1555) — `summarizeCspCompletion`
+ *      over the same club rows, gated on the `programYear` the page already
+ *      passes (`isCspRequired`, analytics-core): a pre-2025-26 year yields
+ *      `cspTracked: false` and an empty section, never "0 clubs".
  *
  * Scope (`division`/`area`) is owned by the page and passed in as an argument
  * (R3 / Lesson 124); an out-of-range scope simply yields empty sections rather
  * than throwing, so a hand-edited/shared URL is always safe (Lesson 144).
  */
 
+import { isCspRequired } from '@taverns-red/analytics-core'
 import { calculateClubProjection } from './dcpProjections'
 import { isCloseToDistinguished } from './closeToDistinguished'
 import { getAreaVisitDeadlines } from './areaRecognitionState'
-import type { ClubTrend } from '../hooks/useDistrictAnalytics'
+import { summarizeCspCompletion } from './cspCompletion'
+import { getClubHealthStatusLabel } from './clubHealthStatus'
+import type { ClubHealthStatus, ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { DivisionPerformance, MissingVisitClub } from './divisionStatus'
 
 export interface ActionListScope {
@@ -60,10 +67,31 @@ export interface InterventionItem {
   areaId: string
 }
 
+export interface CspNotSubmittedItem {
+  clubId: string
+  clubName: string
+  divisionId: string
+  areaId: string
+  /** Health classification, so the row can say "Vulnerable" / "Intervention Required". */
+  currentStatus: ClubHealthStatus
+}
+
 export interface ActionListSections {
   closeToDistinguished: CloseToDistinguishedItem[]
   visitGaps: VisitGapArea[]
   interventionRequired: InterventionItem[]
+  /**
+   * Whether the Club Success Plan section is meaningful for the program year
+   * shown (#1555). False before 2025-26: the page renders no section and no
+   * intro clause, because "0 of N" would be a lie for a year with no rule.
+   */
+  cspTracked: boolean
+  /** Active clubs without a submitted CSP, sorted division → area → name. */
+  cspNotSubmitted: CspNotSubmittedItem[]
+  /** Suspended/ineligible clubs without a CSP in scope — footnoted, not listed. */
+  cspNotSubmittedIneligibleCount: number
+  /** Clubs with no CSP value on a tracked year (E2) — neither listed nor counted. */
+  cspUnknownCount: number
 }
 
 export interface ActionListInput {
@@ -90,6 +118,11 @@ function inScope(
   if (scope.division && divisionId !== scope.division) return false
   if (scope.area && areaId !== scope.area) return false
   return true
+}
+
+/** Numeric-aware id order, so area "A2" sorts before "A10". */
+export function compareId(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
 }
 
 export function buildActionList(
@@ -143,7 +176,46 @@ export function buildActionList(
       areaId: club.areaId,
     }))
 
-  return { closeToDistinguished, visitGaps, interventionRequired }
+  // #1555: the year gate is the page's `programYear` (R3), never the rows —
+  // pre-2025-26 rows read as "submitted" under getCSPStatus, so an ungated
+  // reduce would report an empty list as if every club had filed.
+  const cspTracked = isCspRequired(programYear)
+  const csp = cspTracked
+    ? summarizeCspCompletion(
+        clubs.filter(club => inScope(club.divisionId, club.areaId, scope))
+      )
+    : {
+        submittedCount: 0,
+        notSubmitted: [],
+        notSubmittedIneligible: [],
+        unknownCount: 0,
+      }
+  const cspNotSubmitted: CspNotSubmittedItem[] = csp.notSubmitted
+    .map(club => ({
+      clubId: club.clubId,
+      clubName: club.clubName,
+      divisionId: club.divisionId,
+      areaId: club.areaId,
+      currentStatus: club.currentStatus,
+    }))
+    // An AD scoping to one area sees an alphabetical chase-list; a DD sees
+    // areas grouped.
+    .sort(
+      (a, b) =>
+        compareId(a.divisionId, b.divisionId) ||
+        compareId(a.areaId, b.areaId) ||
+        a.clubName.localeCompare(b.clubName)
+    )
+
+  return {
+    closeToDistinguished,
+    visitGaps,
+    interventionRequired,
+    cspTracked,
+    cspNotSubmitted,
+    cspNotSubmittedIneligibleCount: csp.notSubmittedIneligible.length,
+    cspUnknownCount: csp.unknownCount,
+  }
 }
 
 function plural(n: number, noun: string): string {
@@ -165,4 +237,10 @@ export function formatVisitGap(gap: VisitGapArea): string {
   return `${plural(gap.missingClubs.length, 'club')} unvisited · Round ${
     gap.currentRound
   }, due ${gap.deadline}`
+}
+
+/** "CSP not submitted · Vulnerable" — shared by the list row and the CSV
+ *  export; the health label is the same one the clubs table renders. */
+export function formatCspRow(item: CspNotSubmittedItem): string {
+  return `CSP not submitted · ${getClubHealthStatusLabel(item.currentStatus)}`
 }

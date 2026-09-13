@@ -135,6 +135,14 @@
   color: var(--ink-3);
 }
 
+/* Muted note under a section's list (#1555: "N suspended/ineligible clubs
+   without a plan are not listed."). Same voice as the empty state. */
+.action-list-section__footnote {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
 .action-list-items {
   list-style: none;
   margin: 0;
