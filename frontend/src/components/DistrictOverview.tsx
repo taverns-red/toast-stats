@@ -13,36 +13,49 @@ import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
  * The one-line Club Success Plan summary under the overview header (#1555,
- * spec §6.3). Counts every club without a plan — ineligible ones included,
- * so the number matches "listed + footnoted" on the action list it links to.
- * Clubs with no CSP value on a tracked year are excluded from both numbers
- * and named in a suffix (spec E2). Returns null when nothing can be said.
+ * spec §6.3). Counts ACTIVE clubs only — numerator and denominator — so the
+ * number a user clicks equals the badge on the action-list section it lands
+ * on (#1561 review). Suspended/ineligible clubs without a plan are named in
+ * the action list's own footnote voice (`footnote`); an ineligible club that
+ * has filed leaves the denominator too. Clubs with no CSP value on a tracked
+ * year are excluded from both numbers and named in a suffix (spec E2).
+ * Returns null when nothing can be said.
  */
-function cspLine(
-  clubs: Parameters<typeof summarizeCspCompletion>[0]
-): { text: string; showLink: boolean } | null {
+function cspLine(clubs: Parameters<typeof summarizeCspCompletion>[0]): {
+  text: string
+  showLink: boolean
+  footnote: string | null
+} | null {
   const csp = summarizeCspCompletion(clubs)
-  const notSubmitted =
-    csp.notSubmitted.length + csp.notSubmittedIneligible.length
-  const known = csp.submittedCount + notSubmitted
+  const notSubmitted = csp.notSubmitted.length
+  const known = csp.submittedCount - csp.submittedIneligibleCount + notSubmitted
   if (known === 0) return null
   const unknownSuffix =
     csp.unknownCount > 0
       ? ` (${csp.unknownCount} club${csp.unknownCount === 1 ? '' : 's'} with no CSP data)`
       : ''
+  const inel = csp.notSubmittedIneligible.length
+  const footnote =
+    inel === 0
+      ? null
+      : inel === 1
+        ? '1 suspended/ineligible club without a plan is not counted.'
+        : `${inel} suspended/ineligible clubs without a plan are not counted.`
   if (notSubmitted === 0) {
     return {
       text: `Every club has submitted its Club Success Plan.${unknownSuffix}`,
       showLink: false,
+      footnote,
     }
   }
   const pct = Math.round((notSubmitted / known) * 100)
   const verb = notSubmitted === 1 ? 'has' : 'have'
   return {
     text:
-      `${notSubmitted} of ${known} clubs (${pct}%) ${verb} not submitted a Club Success Plan` +
+      `${notSubmitted} of ${known} active clubs (${pct}%) ${verb} not submitted a Club Success Plan` +
       ` — required for any Distinguished level this year.${unknownSuffix}`,
     showLink: true,
+    footnote,
   }
 }
 
@@ -142,6 +155,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 </Link>
               </>
             )}
+            {csp.footnote && <> {csp.footnote}</>}
           </p>
         )}
       </div>
