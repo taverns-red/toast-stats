@@ -227,8 +227,10 @@ describe('DivisionPage data parity with the Divisions overview (#1015)', () => {
     const { getByTestId } = renderDivision()
     const narrative = getByTestId('division-progress-text').textContent ?? ''
     expect(division.cspTracked).toBe(true)
+    // Pinned 2026-03-15 (PY 2025-26): the 30 September 2025 due date has
+    // passed, so the clause is the terminal one (#1565).
     expect(expected).toContain(
-      'Club Success Plans: 1 of 3 clubs has submitted; 2 have not and cannot be Distinguished until they do.'
+      'Club Success Plans: 1 of 3 clubs has submitted; 2 did not file by 30 September 2025 and cannot be Distinguished this program year.'
     )
     expect(narrative).toContain(expected)
   })
