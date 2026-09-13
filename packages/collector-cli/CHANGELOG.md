@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.9.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.8.0...collector-cli-v1.9.0) (2026-09-13)
+
+
+### Features
+
+* **collector:** ClubRaceStore daily crossing-date capture ([#1556](https://github.com/taverns-red/toast-stats/issues/1556), 1/4) ([#1558](https://github.com/taverns-red/toast-stats/issues/1558)) ([93816dd](https://github.com/taverns-red/toast-stats/commit/93816ddfee12910cf2e029eb43b2fdc5942793d6))
+* **pipeline:** global-club-race.json aggregation artifact + schema ([#1556](https://github.com/taverns-red/toast-stats/issues/1556), 2/4) ([#1560](https://github.com/taverns-red/toast-stats/issues/1560)) ([59e44ce](https://github.com/taverns-red/toast-stats/commit/59e44ce3e5c590d22ef64efcd11f897fb93f50c9))
+
+
+### Dependencies
+
+* **deps-dev:** bump the dev-deps group across 1 directory with 4 updates ([#1533](https://github.com/taverns-red/toast-stats/issues/1533)) ([c7c7196](https://github.com/taverns-red/toast-stats/commit/c7c7196acda1cca4d897e8e17d306b1a5990f57c))
+* **deps:** bump the patch-and-minor group with 10 updates ([#1523](https://github.com/taverns-red/toast-stats/issues/1523)) ([dbc727c](https://github.com/taverns-red/toast-stats/commit/dbc727c91e1fd0483686219dd04e522b1167a376))
+
+
+### Build System
+
+* **collector-cli:** migrate @google-cloud/storage 7 → 8, verified against a real bucket ([#1531](https://github.com/taverns-red/toast-stats/issues/1531)) ([#1544](https://github.com/taverns-red/toast-stats/issues/1544)) ([a4cc49f](https://github.com/taverns-red/toast-stats/commit/a4cc49f7d3f17f577f14fa3ec139c2192fa93f76))
+* **deps:** migrate to vitest 5 — the coverageFilesDirectory break was a mixed-major tree ([#1529](https://github.com/taverns-red/toast-stats/issues/1529)) ([#1532](https://github.com/taverns-red/toast-stats/issues/1532)) ([9769221](https://github.com/taverns-red/toast-stats/commit/97692210e1547fd801398e9f42e406406a6a1a0b))
+
 ## [1.8.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.7.1...collector-cli-v1.8.0) (2026-09-01)
 
 

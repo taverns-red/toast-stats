@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.5](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.4...toast-stats-mcp-v0.1.5) (2026-09-13)
+
+
+### Dependencies
+
+* **deps-dev:** bump the dev-deps group across 1 directory with 4 updates ([#1502](https://github.com/taverns-red/toast-stats/issues/1502)) ([485dc1c](https://github.com/taverns-red/toast-stats/commit/485dc1c75b0c8ac6d3f8076b87ab608e1e216b14))
+* **deps-dev:** bump the dev-deps group across 1 directory with 4 updates ([#1533](https://github.com/taverns-red/toast-stats/issues/1533)) ([c7c7196](https://github.com/taverns-red/toast-stats/commit/c7c7196acda1cca4d897e8e17d306b1a5990f57c))
+* **deps:** bump the patch-and-minor group across 1 directory with 23 updates ([#1488](https://github.com/taverns-red/toast-stats/issues/1488)) ([5714376](https://github.com/taverns-red/toast-stats/commit/5714376b49bf475c3c7fc08481937fd4966e71c2))
+* **deps:** bump the patch-and-minor group with 10 updates ([#1523](https://github.com/taverns-red/toast-stats/issues/1523)) ([dbc727c](https://github.com/taverns-red/toast-stats/commit/dbc727c91e1fd0483686219dd04e522b1167a376))
+
+
+### Build System
+
+* **deps:** migrate to vitest 5 — the coverageFilesDirectory break was a mixed-major tree ([#1529](https://github.com/taverns-red/toast-stats/issues/1529)) ([#1532](https://github.com/taverns-red/toast-stats/issues/1532)) ([9769221](https://github.com/taverns-red/toast-stats/commit/97692210e1547fd801398e9f42e406406a6a1a0b))
+* migrate off moduleResolution node10 and bump TypeScript to 7.0.2 ([#1489](https://github.com/taverns-red/toast-stats/issues/1489)) ([#1495](https://github.com/taverns-red/toast-stats/issues/1495)) ([a8a4e88](https://github.com/taverns-red/toast-stats/commit/a8a4e88e067aeacf7fbc959708d5bf3dd38b1342))
+
 ## [0.1.4](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.3...toast-stats-mcp-v0.1.4) (2026-08-23)
 
 
