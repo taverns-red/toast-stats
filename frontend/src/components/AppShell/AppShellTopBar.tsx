@@ -8,6 +8,7 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 const NAV_ITEMS = [
   { to: '/', label: 'Districts', end: true },
   { to: '/awards', label: 'Awards', end: false },
+  { to: '/clubs', label: 'Clubs', end: false },
   { to: '/history', label: 'History', end: false },
   { to: '/methodology', label: 'How it works', end: false },
 ] as const

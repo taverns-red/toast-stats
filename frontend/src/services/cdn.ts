@@ -16,11 +16,14 @@
 
 import {
   DistrictReportsDatasetSchema,
+  GlobalClubRaceSchema,
   GlobalHistorySchema,
   GlobalTotalsSchema,
+  GLOBAL_CLUB_RACE_FILE_NAME,
   GLOBAL_HISTORY_OBJECT_PATH,
   GLOBAL_TOTALS_FILE_NAME,
   type DistrictReportsDataset,
+  type GlobalClubRace,
   type GlobalHistory,
   type GlobalTotals,
 } from '@taverns-red/shared-contracts'
@@ -571,6 +574,31 @@ export async function fetchCdnGlobalTotals(
     if (!res.ok) return null
     recordCdnResponse(res)
     const parsed = GlobalTotalsSchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * A date's worldwide race to Distinguished —
+ * `snapshots/{date}/global-club-race.json` (#1556).
+ *
+ * The ONE request the whole `/clubs` area makes. Tolerant like the other
+ * global readers: absent (a date before the feature, or a skipped fold) is
+ * `null`, and an off-contract body is `null` too — never a half-rendered
+ * race.
+ */
+export async function fetchCdnGlobalClubRace(
+  date: SnapshotDate
+): Promise<GlobalClubRace | null> {
+  try {
+    const res = await fetch(
+      `${cdnBaseUrl()}/snapshots/${date}/${GLOBAL_CLUB_RACE_FILE_NAME}`
+    )
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = GlobalClubRaceSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null

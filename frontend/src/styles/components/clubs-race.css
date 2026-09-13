@@ -1,0 +1,382 @@
+/* #1556 — `/clubs` worldwide race surfaces (hub, podium, race table, chart,
+   basis block). New components, so they use the Red Taverns v1 tokens
+   (`--rt-*`, product accent `--rt-stats`) rather than the legacy chrome
+   tokens; text sits on `--rt-paper` / `--rt-bg-2` via `--rt-ink*`.
+
+   Dark mode is the `[data-theme='dark']` scope (R10): the few colours that
+   change are remapped here at CSS level, never per component. Tier colour is
+   never the only signal — every accent pairs with a label (rank ordinal,
+   rosette text). */
+
+@layer components {
+  /* ── Hub ────────────────────────────────────────────────────────────── */
+  .clubs-page__eyebrow {
+    font-family: var(--rt-font-mono);
+    font-size: 0.75rem;
+    letter-spacing: var(--rt-track-loose);
+    text-transform: uppercase;
+    color: var(--rt-ink-3);
+  }
+
+  .clubs-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0 1.5rem;
+    /* Reserve the strip while the query resolves (Lesson 107). */
+    min-height: 96px;
+  }
+
+  .clubs-kpi {
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--rt-paper-3);
+    border-radius: 10px;
+    background: var(--rt-paper-2);
+    color: var(--rt-ink);
+    text-decoration: none;
+    display: block;
+  }
+
+  .clubs-kpi:hover {
+    border-color: var(--rt-stats);
+    text-decoration: none;
+  }
+
+  .clubs-kpi__label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--rt-ink-2);
+  }
+
+  .clubs-kpi__value {
+    display: block;
+    font-family: var(--rt-font-display);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .clubs-kpi__delta {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--rt-ink-3);
+  }
+
+  .clubs-section {
+    margin: 1.5rem 0;
+  }
+
+  .clubs-section__title {
+    font-family: var(--rt-font-display);
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    color: var(--rt-ink);
+  }
+
+  .clubs-section__title a {
+    color: inherit;
+  }
+
+  .clubs-podiums {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  /* ── Podium ─────────────────────────────────────────────────────────── */
+  .race-podium {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .race-podium__rank {
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--rt-paper-3);
+    border-left: 4px solid var(--rt-paper-3);
+    border-radius: 8px;
+    background: var(--rt-paper-2);
+  }
+
+  .race-podium__rank--first {
+    border-left-color: var(--rt-stats);
+  }
+
+  .race-podium__label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .race-podium__ordinal {
+    font-family: var(--rt-font-display);
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--rt-ink);
+  }
+
+  .race-podium__rank--first .race-podium__ordinal {
+    color: var(--rt-stats);
+  }
+
+  .race-podium__tie {
+    font-size: 0.8rem;
+    color: var(--rt-ink-2);
+  }
+
+  .race-podium__when {
+    margin: 0.125rem 0 0.5rem;
+    font-size: 0.8rem;
+    color: var(--rt-ink-3);
+  }
+
+  .race-podium__clubs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .race-podium__club {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .race-podium__club-link {
+    color: var(--rt-ink);
+    font-weight: 500;
+  }
+
+  .race-podium__district {
+    font-family: var(--rt-font-mono);
+    font-size: 0.75rem;
+    color: var(--rt-ink-2);
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--rt-paper-3);
+    text-decoration: none;
+  }
+
+  .race-podium__empty {
+    margin: 0;
+    padding: 0.75rem 0.875rem;
+    border: 1px dashed var(--rt-paper-3);
+    border-radius: 8px;
+    color: var(--rt-ink-2);
+    font-size: 0.9rem;
+  }
+
+  /* ── Race table ─────────────────────────────────────────────────────── */
+  .race-table__scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .race-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    color: var(--rt-ink);
+  }
+
+  .race-table__caption {
+    text-align: left;
+    caption-side: top;
+    padding: 0 0 0.5rem;
+    color: var(--rt-ink-2);
+    font-size: 0.85rem;
+  }
+
+  .race-table th,
+  .race-table td {
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--rt-paper-3);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .race-table th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--rt-ink-3);
+  }
+
+  .race-table__rank {
+    font-family: var(--rt-font-display);
+    font-weight: 700;
+  }
+
+  .race-table__row--highlight {
+    outline: 2px solid var(--rt-stats);
+    outline-offset: -2px;
+    background: color-mix(in srgb, var(--rt-stats) 12%, transparent);
+  }
+
+  .race-table__growth {
+    font-family: var(--rt-font-mono);
+    font-size: 0.8rem;
+    color: var(--rt-ink-2);
+  }
+
+  .race-table__unconfirmed {
+    margin-left: 0.5rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--rt-ink-3);
+    border-bottom: 1px dotted currentColor;
+  }
+
+  .race-goal-strip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .race-goal-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid var(--rt-ink-3);
+    background: transparent;
+  }
+
+  .race-goal-dot--met {
+    background: var(--rt-stats);
+    border-color: var(--rt-stats);
+  }
+
+  .race-goal-strip__count {
+    margin-left: 0.375rem;
+    font-family: var(--rt-font-mono);
+    font-size: 0.8rem;
+    color: var(--rt-ink-2);
+  }
+
+  .race-official {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--rt-ink);
+  }
+
+  .race-official__icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--rt-stats);
+  }
+
+  /* Below 640px: card rows (ADR-006 mobile pattern). */
+  @media (max-width: 639px) {
+    .race-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    .race-table tr {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.25rem 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--rt-paper-3);
+    }
+
+    .race-table td {
+      display: block;
+      padding: 0;
+      border: 0;
+    }
+
+    .race-table td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--rt-ink-3);
+    }
+
+    .race-table__rank,
+    .race-table__club {
+      grid-column: span 2;
+    }
+  }
+
+  /* ── Chart + basis ──────────────────────────────────────────────────── */
+  .race-chart {
+    min-height: 260px;
+  }
+
+  .race-basis {
+    margin: 1.5rem 0;
+    padding: 0.875rem 1rem;
+    border-left: 4px solid var(--rt-stats);
+    background: var(--rt-paper-2);
+    border-radius: 0 8px 8px 0;
+    color: var(--rt-ink-2);
+    font-size: 0.9rem;
+  }
+
+  .race-basis p {
+    margin: 0 0 0.5rem;
+  }
+
+  .race-basis p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── Dark scope (R10) ───────────────────────────────────────────────── */
+  [data-theme='dark'] .clubs-kpi,
+  [data-theme='dark'] .race-podium__rank,
+  [data-theme='dark'] .race-basis {
+    background: var(--rt-bg-2);
+    border-color: var(--rt-ink-2);
+  }
+
+  [data-theme='dark'] .race-podium__rank--first {
+    border-left-color: var(--rt-stats);
+  }
+
+  [data-theme='dark'] .race-basis {
+    border-left-color: var(--rt-stats);
+  }
+
+  [data-theme='dark'] .clubs-kpi,
+  [data-theme='dark'] .clubs-section__title,
+  [data-theme='dark'] .race-podium__ordinal,
+  [data-theme='dark'] .race-podium__club-link,
+  [data-theme='dark'] .race-table,
+  [data-theme='dark'] .race-official {
+    color: var(--rt-ink-on-dk);
+  }
+
+  [data-theme='dark'] .clubs-kpi__label,
+  [data-theme='dark'] .race-podium__tie,
+  [data-theme='dark'] .race-podium__district,
+  [data-theme='dark'] .race-table__caption,
+  [data-theme='dark'] .race-table__growth,
+  [data-theme='dark'] .race-goal-strip__count,
+  [data-theme='dark'] .race-basis,
+  [data-theme='dark'] .race-podium__empty {
+    color: var(--rt-paper-3);
+  }
+
+  [data-theme='dark'] .race-table th,
+  [data-theme='dark'] .race-table td,
+  [data-theme='dark'] .race-podium__district,
+  [data-theme='dark'] .race-podium__empty {
+    border-color: var(--rt-ink-2);
+  }
+}
