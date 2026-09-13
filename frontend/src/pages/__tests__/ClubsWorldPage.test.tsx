@@ -7,7 +7,12 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
-import type { GlobalClubRace } from '@taverns-red/shared-contracts'
+import type {
+  GlobalClubRace,
+  GlobalClubRaceCurrent,
+  GlobalClubRaceLevel,
+  GlobalClubRaceReached,
+} from '@taverns-red/shared-contracts'
 import ClubsWorldPage from '../ClubsWorldPage'
 import { useGlobalClubRace } from '../../hooks/useGlobalClubRace'
 
@@ -166,13 +171,16 @@ describe('ClubsWorldPage (#1556)', () => {
     ).toHaveAttribute('href', '/methodology#club-race')
   })
 
-  it('shows one KPI per tier with the count of clubs that have reached it, linking to the race', () => {
+  /* #1570: the tile counts CLUBS AT THIS LEVEL NOW, not the cumulative
+     timeline — this fixture holds one reached club, so Distinguished is 1.
+     The old read said 35 because it took the artifact's cumulative point. */
+  it('shows one KPI per tier with the count of clubs at that level now, linking to the race', () => {
     mockHook({ race: race(), snapshotDate: '2026-09-11' })
     renderPage()
     const kpis = screen.getAllByTestId('clubs-kpi')
     expect(kpis).toHaveLength(4)
     expect(kpis[0]).toHaveTextContent('Distinguished')
-    expect(kpis[0]).toHaveTextContent('35')
+    expect(kpis[0]).toHaveTextContent('1')
     expect(kpis[0]).toHaveAttribute('href', '/clubs/race/distinguished')
     expect(kpis[3]).toHaveTextContent('Smedley')
     expect(kpis[3]).toHaveTextContent('0')
@@ -200,5 +208,170 @@ describe('ClubsWorldPage (#1556)', () => {
     mockHook({ race: null, isLoading: true })
     renderPage()
     expect(screen.getByTestId('clubs-kpis-skeleton')).toBeInTheDocument()
+  })
+})
+
+/* #1570 — each club counted ONCE, at its top level. The lists are unchanged:
+   a club still appears under every tier it reached, with its crossing date
+   and rank (R-A2). Only the counts became exclusive. */
+describe('ClubsWorldPage — exclusive tile counts (#1570)', () => {
+  beforeEach(() => vi.mocked(useGlobalClubRace).mockReset())
+
+  const standing = (reachedOn: string, rank = 1) => ({
+    reachedOn,
+    observedAfter: null,
+    rank,
+  })
+
+  const current = (level: GlobalClubRaceLevel): GlobalClubRaceCurrent => ({
+    level,
+    activeMembersLevel: level,
+    goalsMet: 7,
+    members: 22,
+    membershipBase: 20,
+    netGrowth: 2,
+    aprilRenewals: 22,
+    cspSubmitted: true,
+    dcpGoalsAchieved: null,
+    divisionId: 'A',
+    areaId: 'A1',
+    country: 'Singapore',
+  })
+
+  const club = (
+    over: Partial<GlobalClubRaceReached> & { clubId: string }
+  ): GlobalClubRaceReached => ({
+    clubName: `Club ${over.clubId}`,
+    districtId: '80',
+    current: current('Distinguished'),
+    tiers: { Distinguished: standing('2026-07-26') },
+    official: null,
+    ...over,
+  })
+
+  /** The club the old cumulative read counted three times. */
+  const angMoKio = club({
+    clubId: '5193',
+    clubName: 'Ang Mo Kio C.C. Mandarin Toastmasters Club',
+    current: current('President'),
+    tiers: {
+      Distinguished: standing('2026-07-26'),
+      Select: standing('2026-08-14', 2),
+      President: standing('2026-08-14'),
+    },
+  })
+
+  /** 31 Distinguished + 1 Select + 3 President's = 35 reached rows. */
+  const liveShapedReached = (): GlobalClubRaceReached[] => [
+    ...Array.from({ length: 31 }, (_, i) => club({ clubId: `d${i}` })),
+    club({
+      clubId: 's0',
+      current: current('Select'),
+      tiers: {
+        Distinguished: standing('2026-07-26'),
+        Select: standing('2026-08-14'),
+      },
+    }),
+    angMoKio,
+    ...Array.from({ length: 2 }, (_, i) =>
+      club({
+        clubId: `p${i}`,
+        current: current('President'),
+        tiers: {
+          Distinguished: standing('2026-07-26'),
+          Select: standing('2026-08-14', 2),
+          President: standing('2026-08-14'),
+        },
+      })
+    ),
+  ]
+
+  const tileCounts = (): number[] =>
+    screen
+      .getAllByTestId('clubs-kpi')
+      .map(
+        kpi =>
+          Number(kpi.querySelector('.clubs-kpi__value')?.textContent?.trim()) ||
+          0
+      )
+
+  it('counts each club once at its current level: 31 / 1 / 3 / 0', () => {
+    const reached = liveShapedReached()
+    mockHook({ race: race({ reached }), snapshotDate: '2026-09-12' })
+    renderPage()
+    expect(tileCounts()).toEqual([31, 1, 3, 0])
+  })
+
+  it('INVARIANT: the tiles sum to reached.length', () => {
+    const reached = liveShapedReached()
+    mockHook({ race: race({ reached }), snapshotDate: '2026-09-12' })
+    renderPage()
+    expect(tileCounts().reduce((a, b) => a + b, 0)).toBe(reached.length)
+  })
+
+  it('labels each tile "at this level now" and states the counting rule once', () => {
+    const reached = liveShapedReached()
+    mockHook({ race: race({ reached }), snapshotDate: '2026-09-12' })
+    renderPage()
+    for (const kpi of screen.getAllByTestId('clubs-kpi')) {
+      expect(kpi).toHaveTextContent(/at this level now/i)
+    }
+    expect(screen.getByTestId('clubs-kpis-total')).toHaveTextContent(
+      '35 clubs recognised worldwide — each counted once, at its top level.'
+    )
+  })
+
+  it('still lists a triple-reaching club under every tier it reached', () => {
+    mockHook({
+      race: race({ reached: liveShapedReached() }),
+      snapshotDate: '2026-09-12',
+    })
+    renderPage()
+    for (const listName of [
+      'First to Distinguished',
+      'First to Select Distinguished',
+      "First to President's Distinguished",
+    ]) {
+      expect(screen.getByRole('list', { name: listName })).toHaveTextContent(
+        'Ang Mo Kio C.C. Mandarin Toastmasters Club'
+      )
+    }
+  })
+
+  describe('when a club has slipped below a tier it once reached', () => {
+    // Ang Mo Kio drops President's → Distinguished. Today's live data has
+    // zero drift, so only a fixture can exercise this.
+    const slipped = (): GlobalClubRaceReached[] =>
+      liveShapedReached().map(row =>
+        row.clubId === '5193'
+          ? { ...row, current: current('Distinguished') }
+          : row
+      )
+
+    it('moves the tile counts down a tier', () => {
+      mockHook({
+        race: race({ reached: slipped() }),
+        snapshotDate: '2026-09-12',
+      })
+      renderPage()
+      expect(tileCounts()).toEqual([32, 1, 2, 0])
+      expect(tileCounts().reduce((a, b) => a + b, 0)).toBe(35)
+    })
+
+    it('keeps the club in the higher tier list with its original crossing date', () => {
+      mockHook({
+        race: race({ reached: slipped() }),
+        snapshotDate: '2026-09-12',
+      })
+      renderPage()
+      const presidents = screen.getByRole('list', {
+        name: "First to President's Distinguished",
+      })
+      expect(presidents).toHaveTextContent(
+        'Ang Mo Kio C.C. Mandarin Toastmasters Club'
+      )
+      // reachedOn 2026-08-14, no earlier observation → "by 14 Aug 2026".
+      expect(presidents).toHaveTextContent('by 14 Aug 2026')
+    })
   })
 })
