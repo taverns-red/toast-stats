@@ -46,7 +46,8 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
     title: 'Program-year rule changes',
   },
   { id: 'worldwide-rollup', num: '11', title: 'Worldwide rollup' },
-  { id: 'changelog', num: '12', title: 'Changelog' },
+  { id: 'club-race', num: '12', title: 'Worldwide club race' },
+  { id: 'changelog', num: '13', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -785,9 +786,86 @@ const MethodologyPage: React.FC = () => {
         </div>
       </CollapsibleSection>
 
+      {/* Worldwide club race (#1556, operator rulings 2026-09-12). The /clubs
+          pages and the club page's standing card link here; this is where the
+          basis is stated. Ruling R-B: we call a club Distinguished when it
+          meets the requirements, knowingly ahead of TI's April 30 stamp. The
+          wording below is asserted by MethodologyPage.clubRace.test.tsx. */}
+      <CollapsibleSection
+        id="club-race"
+        num="12"
+        title="Worldwide club race"
+        collapsible={isMobile}
+        open={openIds.has('club-race')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-club-race">
+          <p>
+            <Link to="/clubs" className="methodology-link">
+              Clubs worldwide
+            </Link>{' '}
+            shows which clubs in the world reached each Distinguished tier
+            first, and when. Toast Stats{' '}
+            <strong>
+              recognises a club as Distinguished when it meets the requirements
+            </strong>{' '}
+            — DCP goals plus membership under the program year's rules, with a
+            Club Success Plan where required — which{' '}
+            <strong>may precede</strong> Toastmasters International's official
+            recognition on April 30. We use the real tier names plainly
+            (Distinguished, Select Distinguished, President's Distinguished,
+            Smedley Distinguished). Clubs TI has already recognised carry a
+            separate rosette.
+          </p>
+
+          <h3>Membership basis</h3>
+          <p>
+            Before April 1, active-member counts still include members who may
+            not renew, so the membership requirement is read against{' '}
+            <strong>confirmed April renewals</strong>; from April 1 it is read
+            against <strong>active members</strong>. Expect a step change at
+            April 1 as the basis switches — it is the renewal-basis switchover,
+            not a single-day surge. Where the active-member reading is ahead of
+            the confirmed one, the club page marks it "unconfirmed" — a
+            qualifier, never a different name.
+          </p>
+
+          <h3>Crossing dates</h3>
+          <p>
+            A crossing is the <strong>first snapshot date</strong> on which the
+            club met the tier's requirements. It is written once and{' '}
+            <strong>never revised</strong>, even if the club later falls below
+            the requirement; today's numbers are shown separately, without a
+            "lost" label. Dates are snapshot dates, and "between A and B" means
+            no snapshot was collected on the days in between — the site does not
+            interpolate. Ranks are competition ranks (ties share a rank; the
+            next rank skips), so every club over the line on the first observed
+            date of a program year ties at first.
+          </p>
+
+          <h3>What is never shown</h3>
+          <p>
+            There is <strong>no global list with a bottom</strong>. Every list
+            on the clubs pages is a list of clubs that have reached a line; a
+            club that has not reached anything appears nowhere on the global
+            surface. A club's own page shows a private, cohort-based percentile
+            ("top X % among clubs with 20–24 members"), never an absolute rank.
+          </p>
+
+          <p className="methodology-source">
+            Sources: the collector's crossing store (
+            <code>club-race/&#123;program year&#125;/first-reached.json</code>,
+            captured daily) and{' '}
+            <code>snapshots/&#123;date&#125;/global-club-race.json</code> (one
+            date's projection). The tier rule is the same shared function the
+            district pages use; see §05 for the thresholds.
+          </p>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="12"
+        num="13"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}

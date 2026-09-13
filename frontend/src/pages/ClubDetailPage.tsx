@@ -3,9 +3,15 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 // One shared definition of "the same club" (#1440) — this file used to hold
 // two comparisons that disagreed with each other sixteen lines apart.
-import { clubIdsMatch, findClubEntry } from '@taverns-red/shared-contracts'
+import {
+  clubIdsMatch,
+  findClubEntry,
+  normalizeClubId,
+} from '@taverns-red/shared-contracts'
 import { fetchCdnClubIndex } from '../services/cdn'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
+import { useGlobalClubRace } from '../hooks/useGlobalClubRace'
+import { WorldwideStandingCard } from '../components/clubs/WorldwideStandingCard'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
@@ -251,6 +257,12 @@ const ClubDetailPage: React.FC = () => {
     if (!analytics || !clubId) return null
     return analytics.allClubs.find(c => clubIdsMatch(c.clubId, clubId)) ?? null
   }, [analytics, clubId])
+
+  // Worldwide standing (#1556): the race artifact for the SAME pinned date
+  // this page reads (Lesson 59). Absent artifact → no card, never an error.
+  const { race: globalRace, reachedById: raceReachedById } = useGlobalClubRace(
+    effectiveEndDate ?? undefined
+  )
 
   // ── Moved-club lookup (#1441) ─────────────────────────────────────────────
   // The 2026-07-01 reformation moved clubs between districts, so every link
@@ -984,6 +996,19 @@ const ClubDetailPage: React.FC = () => {
               />
             )}
           </div>
+
+          {/* Worldwide standing (#1556) — cohort percentile for any club; a
+              rank only when the club has reached a tier. */}
+          <WorldwideStandingCard
+            race={globalRace}
+            clubId={normalizeClubId(club.clubId)}
+            goalsMet={
+              club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]
+                ?.goalsAchieved ?? 0
+            }
+            members={latestMembership}
+            reached={raceReachedById.get(normalizeClubId(club.clubId)) ?? null}
+          />
 
           {/* Risk Factors */}
           {club.riskFactors.length > 0 && (
