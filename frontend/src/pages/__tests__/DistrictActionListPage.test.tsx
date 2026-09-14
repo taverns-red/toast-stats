@@ -269,6 +269,26 @@ const renderedOrder = () =>
 const toggleOf = (testId: string) =>
   within(screen.getByTestId(testId)).getByRole('button')
 
+/* #1577 — the section bodies are real tables now, so the helpers below read
+   structure back OUT of the DOM (`<th>` elements, `<tr>` counts, cell order)
+   rather than asserting the column spec that went in. A renderer that
+   reordered or flattened the columns would still have been handed the same
+   spec, so only the rendered shape is evidence. */
+
+/** A section's visible column headers, left to right. */
+const headersOf = (testId: string): string[] =>
+  Array.from(screen.getByTestId(testId).querySelectorAll('thead th')).map(th =>
+    (th.textContent ?? '').trim()
+  )
+
+/** A section's body rows, each as its cells' text, left to right. */
+const cellsOf = (testId: string): string[][] =>
+  Array.from(screen.getByTestId(testId).querySelectorAll('tbody tr')).map(tr =>
+    Array.from(tr.querySelectorAll('td')).map(td =>
+      (td.textContent ?? '').trim()
+    )
+  )
+
 /** Expand a section if it is collapsed — since #1569 only the FIRST section
  *  is open on load, so any test reading another section's rows opens it the
  *  way a user would. */
@@ -303,10 +323,10 @@ describe('DistrictActionListPage (#1231)', () => {
     await openSection('section-close')
     const link = screen.getByRole('link', { name: 'Rising Club' })
     expect(link).toHaveAttribute('href', '/district/61/club/close-1')
-    // gap reused from the projection: members gap 2, goals gap 1
-    expect(
-      screen.getByText(/needs 2 members \+ 1 DCP goal/)
-    ).toBeInTheDocument()
+    // gap reused from the projection: members gap 2, goals gap 1. Since #1577
+    // it is its own "Needs" column, so the cell drops the sentence's "needs"
+    // lead-in — the header carries it.
+    expect(screen.getByText('2 members + 1 DCP goal')).toBeInTheDocument()
   })
 
   it('lists the area missing club visits with round + deadline, linking to the area page', async () => {
@@ -314,9 +334,13 @@ describe('DistrictActionListPage (#1231)', () => {
     await openSection('section-visits')
     const link = screen.getByRole('link', { name: 'Area A1' })
     expect(link).toHaveAttribute('href', '/district/61/division/A/area/A1')
-    expect(
-      screen.getByText(/1 club unvisited · Round 1, due 2025-11-30/)
-    ).toBeInTheDocument()
+    // #1577 — one column each: Area · Unvisited · Round · Due.
+    expect(cellsOf('section-visits')[0]).toEqual([
+      'Area A1',
+      '1',
+      '1',
+      '2025-11-30',
+    ])
   })
 
   it('lists intervention-required clubs linking to the club page', async () => {
@@ -408,9 +432,13 @@ describe('DistrictActionListPage — Clubs without a Club Success Plan (#1555)',
     const link = screen.getByRole('link', { name: 'Unplanned Club' })
     expect(link).toHaveAttribute('href', '/district/61/club/csp-1')
     // #1565: pinned 2025-07-15, an existing club → due 30 September 2025.
-    expect(section).toHaveTextContent(
-      'A/A1 · CSP due 30 September 2025 · Vulnerable'
-    )
+    // #1577 — one column each: Club · Area · Due · Health.
+    expect(cellsOf('section-csp')[0]).toEqual([
+      'Unplanned Club',
+      'A/A1',
+      '30 September 2025',
+      'Vulnerable',
+    ])
     // #1569 — pinned 2025-07-15, before the 30 September deadline, so the CSP
     // section leads: csp → close → visits → intervention.
     expect(renderedOrder()).toEqual([
@@ -478,8 +506,17 @@ describe('DistrictActionListPage — Clubs without a Club Success Plan (#1555)',
     )
     renderAt('/district/61/action-list')
     const section = await screen.findByTestId('section-csp')
+    // #1577 — the per-row sentence became a marked Due cell plus ONE footnote
+    // for the section, so the consequence is stated once rather than 107
+    // times. The CSV below still carries the full sentence per row.
+    expect(cellsOf('section-csp')[0]).toEqual([
+      'Unplanned Club',
+      'A/A1',
+      '30 September 2025 · overdue',
+      'Vulnerable',
+    ])
     expect(section).toHaveTextContent(
-      'A/A1 · CSP not filed by 30 September 2025 — cannot be Distinguished this program year · Vulnerable'
+      'Clubs marked overdue cannot be Distinguished this program year.'
     )
     expect(section).not.toHaveTextContent(/until/)
     // The CSV carries the same terminal wording.
@@ -768,5 +805,141 @@ describe('DistrictActionListPage — collapsible sections (#1569)', () => {
     expect(await axe(container)).toHaveNoViolations()
     await userEvent.click(toggleOf('section-close'))
     expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+/**
+ * Compact aligned tables (#1577).
+ *
+ * The four sections carry different payloads, so each gets its own column
+ * schema — asserted here by reading the rendered `<th>` elements back out of
+ * the document, never the column spec that produced them (a renderer that
+ * reordered or flattened its output would have been handed the same spec).
+ * The density itself (~28px per row) is a CSS fact jsdom cannot measure; it
+ * is measured on the PR preview.
+ */
+describe('DistrictActionListPage — compact tables (#1577)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
+    )
+  })
+  afterEach(() => cleanup())
+
+  it('gives each section its own column schema, as real <th scope="col">', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('section-csp')
+    expect(headersOf('section-csp')).toEqual(['Club', 'Area', 'Due', 'Health'])
+    expect(headersOf('section-close')).toEqual(['Club', 'Area', 'Needs'])
+    expect(headersOf('section-visits')).toEqual([
+      'Area',
+      'Unvisited',
+      'Round',
+      'Due',
+    ])
+    expect(headersOf('section-intervention')).toEqual([
+      'Club',
+      'Area',
+      'Status',
+    ])
+    for (const testId of [
+      'section-csp',
+      'section-close',
+      'section-visits',
+      'section-intervention',
+    ]) {
+      const ths = screen.getByTestId(testId).querySelectorAll('thead th')
+      expect(ths.length).toBeGreaterThan(0)
+      for (const th of ths) expect(th).toHaveAttribute('scope', 'col')
+    }
+  })
+
+  it('captions every table and labels every cell for the mobile card rows', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('section-csp')
+    for (const [testId, caption] of [
+      ['section-csp', 'Clubs without a Club Success Plan'],
+      ['section-close', 'Clubs close to Distinguished'],
+      ['section-visits', 'Areas missing club visits'],
+      ['section-intervention', 'Clubs needing intervention'],
+    ] as const) {
+      const section = screen.getByTestId(testId)
+      expect(section.querySelector('caption')).toHaveTextContent(caption)
+      const headers = headersOf(testId)
+      for (const tr of section.querySelectorAll('tbody tr')) {
+        expect(
+          Array.from(tr.querySelectorAll('td')).map(td =>
+            td.getAttribute('data-label')
+          )
+        ).toEqual(headers)
+      }
+    }
+  })
+
+  it('renders one body row per listed item, with the club name as the first cell link', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('section-csp')
+    expect(cellsOf('section-csp')).toHaveLength(1)
+    expect(cellsOf('section-close')).toHaveLength(1)
+    expect(cellsOf('section-intervention')).toHaveLength(1)
+    const firstCell = screen
+      .getByTestId('section-csp')
+      .querySelector('tbody tr td') as HTMLElement
+    const link = within(firstCell).getByRole('link')
+    expect(link).toHaveAttribute('href', '/district/61/club/csp-1')
+    expect(link).toHaveTextContent('Unplanned Club')
+  })
+
+  it('leads the areas section with an AREA link, never a club link', async () => {
+    renderAt('/district/61/action-list')
+    await openSection('section-visits')
+    const firstCell = screen
+      .getByTestId('section-visits')
+      .querySelector('tbody tr td') as HTMLElement
+    const link = within(firstCell).getByRole('link')
+    expect(link).toHaveTextContent('Area A1')
+    expect(link).toHaveAttribute('href', '/district/61/division/A/area/A1')
+    expect(link.getAttribute('href')).not.toContain('/club/')
+  })
+
+  it('splits the close-to-Distinguished and intervention rows into their columns', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('section-close')
+    expect(cellsOf('section-close')[0]).toEqual([
+      'Rising Club',
+      'A/A1',
+      '2 members + 1 DCP goal',
+    ])
+    expect(cellsOf('section-intervention')[0]).toEqual([
+      'Struggling Club',
+      'B/B2',
+      'Intervention Required',
+    ])
+  })
+
+  it('renders no table for an empty section, only its empty state', async () => {
+    renderAt('/district/61/action-list?division=ZZ')
+    await screen.findByTestId('action-list-page')
+    const section = screen.getByTestId('section-close')
+    expect(section.querySelector('table')).toBeNull()
+    expect(section).toHaveTextContent(
+      'No clubs are within reach of Distinguished'
+    )
+  })
+
+  it('exports byte-identical CSV — the columns are a display split, not a data change', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('section-csp')
+    screen.getByRole('button', { name: 'Export CSV' }).click()
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledTimes(1))
+    const csv = vi.mocked(downloadCSV).mock.calls[0]![0]
+    expect(csv.split('\n')).toEqual([
+      'Section,Division,Area,Item,Detail',
+      'Club Success Plan not submitted,A,A1,Unplanned Club,CSP due 30 September 2025 · Vulnerable',
+      'Close to Distinguished,A,A1,Rising Club,needs 2 members + 1 DCP goal',
+      'Missing club visits,A,A1,Area A1,"1 club unvisited · Round 1, due 2025-11-30"',
+      'Intervention required,B,B2,Struggling Club,Club health: intervention required',
+    ])
   })
 })
