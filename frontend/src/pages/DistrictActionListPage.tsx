@@ -18,14 +18,25 @@ import {
   compareId,
   describeActionSections,
   formatCloseGap,
+  formatCloseNeeds,
   formatCspRow,
   formatVisitGap,
   orderActionSections,
   type ActionListSections,
   type ActionSectionId,
+  type CloseToDistinguishedItem,
+  type CspNotSubmittedItem,
+  type InterventionItem,
+  type VisitGapArea,
 } from '../utils/actionListData'
 import { usePersistedState } from '../hooks/usePersistedState'
-import { cspAutoCreditNote } from '../utils/cspDeadlines'
+import { getClubHealthStatusLabel } from '../utils/clubHealthStatus'
+import {
+  CSP_LOST_ELIGIBILITY,
+  cspAutoCreditNote,
+  formatCspDueDate,
+} from '../utils/cspDeadlines'
+import { ActionTable, type ActionTableColumn } from '../components/ActionTable'
 import { arrayToCSV, downloadCSV, generateFilename } from '../utils/csvExport'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
@@ -58,7 +69,15 @@ import ErrorBoundary from '../components/ErrorBoundary'
    passed — decided by this page's own program year and pinned date (R3), so a
    pinned historical snapshot orders them the way they should have appeared on
    its own date, and never by the wall clock. The rendered list, the intro
-   sentence and the CSV export all read that one array. */
+   sentence and the CSV export all read that one array.
+
+   Aligned tables (#1577): each section's rows became a real <table> at ~28px
+   per row, because at 107 CSP clubs the win is as much scanability as density
+   — the area and the requirement line up vertically instead of sitting ragged
+   after names of varying length. The four payloads differ, so the COLUMNS are
+   per-section (see the *Columns builders below) and only the chrome is shared
+   (<ActionTable>). The CSV keeps the one-sentence `format*` Detail column it
+   always had: the columns are a display split, not a data change. */
 
 interface ScopeOption {
   /** Division ids present in the snapshot, sorted. */
@@ -97,8 +116,9 @@ function prefersReducedMotion(): boolean {
 
 /** One action section, as a WAI-ARIA disclosure (#1569): a heading-wrapped
  *  <button> carrying `aria-expanded`/`aria-controls` over a panel holding
- *  either the empty state or the caller-supplied list rows, plus an optional
- *  footnote (e.g. "3 suspended/ineligible clubs … are not listed").
+ *  either the empty state or the caller-supplied body — since #1577 an
+ *  <ActionTable> — plus an optional footnote (e.g. "3 suspended/ineligible
+ *  clubs … are not listed").
  *
  *  The count badge lives INSIDE the button, so it stays visible while the
  *  section is collapsed and is part of the button's accessible name — a
@@ -162,7 +182,7 @@ const ActionListSection: React.FC<{
         {count === 0 ? (
           <p className="action-list-section__empty">{emptyText}</p>
         ) : (
-          <ul className="action-list-items">{children}</ul>
+          children
         )}
         {footnote && (
           <p className="action-list-section__footnote">{footnote}</p>
@@ -197,8 +217,136 @@ function cspFootnote(sections: ActionListSections): string | undefined {
   if (unknown > 0) {
     parts.push(`(${unknown} club${unknown === 1 ? '' : 's'} with no CSP data)`)
   }
+  /* #1577 — the lost-eligibility consequence used to be repeated in every
+     row's sentence (#1565). In a 28px-per-row table that sentence is both the
+     tallest thing on the page and the same on all 107 rows, so the row keeps
+     the marker and the section states the consequence ONCE, reusing the same
+     constant so the two can never drift. */
+  if (sections.cspNotSubmitted.some(c => c.cspOverdue)) {
+    parts.unshift(`Clubs marked overdue ${CSP_LOST_ELIGIBILITY}.`)
+  }
   return parts.length > 0 ? parts.join(' ') : undefined
 }
+
+/* Per-section column schemas (#1577). The four sections carry different
+   payloads — one of them is about AREAS, not clubs — so a single schema does
+   not fit; what they share is the chrome in <ActionTable>. Each `cell` reads
+   the row it is given and nothing else.
+
+   Three of the four lead with the same club link over the same division/area
+   pair, so those two columns are defined ONCE and reused: a second copy of a
+   link shape is a second thing to drift. */
+
+/** Any row that names a club and the division/area it sits in. */
+interface ClubRow {
+  clubId: string
+  clubName: string
+  divisionId: string
+  areaId: string
+}
+
+/** The lead column: the club's name, linking to its club page. */
+const clubColumn = <T extends ClubRow>(
+  districtId: string
+): ActionTableColumn<T> => ({
+  key: 'club',
+  header: 'Club',
+  className: 'action-table__subject',
+  cell: row => (
+    <Link
+      className="action-table__link"
+      to={`/district/${districtId}/club/${row.clubId}`}
+    >
+      {row.clubName}
+    </Link>
+  ),
+})
+
+/** "A/01" — the division/area the club sits in, as its own aligned column. */
+const areaColumn = <T extends ClubRow>(): ActionTableColumn<T> => ({
+  key: 'area',
+  header: 'Area',
+  className: 'action-table__area',
+  cell: row => `${row.divisionId}/${row.areaId}`,
+})
+
+const closeColumns = (
+  districtId: string
+): ActionTableColumn<CloseToDistinguishedItem>[] => [
+  clubColumn(districtId),
+  areaColumn(),
+  { key: 'needs', header: 'Needs', cell: c => formatCloseNeeds(c) },
+]
+
+const visitColumns = (
+  districtId: string
+): ActionTableColumn<VisitGapArea>[] => [
+  {
+    key: 'area',
+    header: 'Area',
+    className: 'action-table__subject',
+    // The subject here is an AREA, so the lead column links to the area page —
+    // this section has no club link at all.
+    cell: g => (
+      <Link
+        className="action-table__link"
+        to={`/district/${districtId}/division/${g.divisionId}/area/${g.areaId}`}
+      >
+        Area {g.areaId}
+      </Link>
+    ),
+  },
+  {
+    key: 'unvisited',
+    header: 'Unvisited',
+    className: 'action-table__num',
+    cell: g => g.missingClubs.length,
+  },
+  {
+    key: 'round',
+    header: 'Round',
+    className: 'action-table__num',
+    cell: g => g.currentRound,
+  },
+  { key: 'due', header: 'Due', cell: g => g.deadline },
+]
+
+const interventionColumns = (
+  districtId: string
+): ActionTableColumn<InterventionItem>[] => [
+  clubColumn(districtId),
+  areaColumn(),
+  {
+    key: 'status',
+    header: 'Status',
+    cell: () => getClubHealthStatusLabel('intervention-required'),
+  },
+]
+
+const cspColumns = (
+  districtId: string
+): ActionTableColumn<CspNotSubmittedItem>[] => [
+  clubColumn(districtId),
+  areaColumn(),
+  {
+    key: 'due',
+    header: 'Due',
+    cell: c =>
+      c.cspOverdue ? (
+        <>
+          {formatCspDueDate(c.cspDueDate)}
+          <span className="action-table__flag">{' · overdue'}</span>
+        </>
+      ) : (
+        formatCspDueDate(c.cspDueDate)
+      ),
+  },
+  {
+    key: 'health',
+    header: 'Health',
+    cell: c => getClubHealthStatusLabel(c.currentStatus),
+  },
+]
 
 const DistrictActionListPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
@@ -429,19 +577,15 @@ const DistrictActionListPage: React.FC = () => {
         c.clubName,
         formatCloseGap(c),
       ]),
-      children: sections.closeToDistinguished.map(c => (
-        <li key={c.clubId} className="action-list-item">
-          <Link
-            className="action-list-item__link"
-            to={`/district/${districtId}/club/${c.clubId}`}
-          >
-            {c.clubName}
-          </Link>
-          <span className="action-list-item__meta">
-            {c.divisionId}/{c.areaId} · {formatCloseGap(c)}
-          </span>
-        </li>
-      )),
+      children: (
+        <ActionTable
+          caption="Clubs close to Distinguished"
+          columns={closeColumns(districtId ?? '')}
+          rows={sections.closeToDistinguished}
+          rowKey={c => c.clubId}
+          testId="table-close"
+        />
+      ),
     },
     'action-visits': {
       testId: 'section-visits',
@@ -456,17 +600,15 @@ const DistrictActionListPage: React.FC = () => {
         `Area ${g.areaId}`,
         formatVisitGap(g),
       ]),
-      children: sections.visitGaps.map(g => (
-        <li key={`${g.divisionId}-${g.areaId}`} className="action-list-item">
-          <Link
-            className="action-list-item__link"
-            to={`/district/${districtId}/division/${g.divisionId}/area/${g.areaId}`}
-          >
-            Area {g.areaId}
-          </Link>
-          <span className="action-list-item__meta">{formatVisitGap(g)}</span>
-        </li>
-      )),
+      children: (
+        <ActionTable
+          caption="Areas missing club visits"
+          columns={visitColumns(districtId ?? '')}
+          rows={sections.visitGaps}
+          rowKey={g => `${g.divisionId}-${g.areaId}`}
+          testId="table-visits"
+        />
+      ),
     },
     'action-intervention': {
       testId: 'section-intervention',
@@ -480,19 +622,15 @@ const DistrictActionListPage: React.FC = () => {
         i.clubName,
         'Club health: intervention required',
       ]),
-      children: sections.interventionRequired.map(i => (
-        <li key={i.clubId} className="action-list-item">
-          <Link
-            className="action-list-item__link"
-            to={`/district/${districtId}/club/${i.clubId}`}
-          >
-            {i.clubName}
-          </Link>
-          <span className="action-list-item__meta">
-            {i.divisionId}/{i.areaId} · intervention required
-          </span>
-        </li>
-      )),
+      children: (
+        <ActionTable
+          caption="Clubs needing intervention"
+          columns={interventionColumns(districtId ?? '')}
+          rows={sections.interventionRequired}
+          rowKey={i => i.clubId}
+          testId="table-intervention"
+        />
+      ),
     },
     'action-csp': {
       testId: 'section-csp',
@@ -508,19 +646,15 @@ const DistrictActionListPage: React.FC = () => {
         c.clubName,
         formatCspRow(c),
       ]),
-      children: sections.cspNotSubmitted.map(c => (
-        <li key={c.clubId} className="action-list-item">
-          <Link
-            className="action-list-item__link"
-            to={`/district/${districtId}/club/${c.clubId}`}
-          >
-            {c.clubName}
-          </Link>
-          <span className="action-list-item__meta">
-            {c.divisionId}/{c.areaId} · {formatCspRow(c)}
-          </span>
-        </li>
-      )),
+      children: (
+        <ActionTable
+          caption="Clubs without a Club Success Plan"
+          columns={cspColumns(districtId ?? '')}
+          rows={sections.cspNotSubmitted}
+          rowKey={c => c.clubId}
+          testId="table-csp"
+        />
+      ),
     },
   }
 
