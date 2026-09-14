@@ -231,30 +231,50 @@ function cspFootnote(sections: ActionListSections): string | undefined {
 /* Per-section column schemas (#1577). The four sections carry different
    payloads — one of them is about AREAS, not clubs — so a single schema does
    not fit; what they share is the chrome in <ActionTable>. Each `cell` reads
-   the row it is given and nothing else. */
+   the row it is given and nothing else.
+
+   Three of the four lead with the same club link over the same division/area
+   pair, so those two columns are defined ONCE and reused: a second copy of a
+   link shape is a second thing to drift. */
+
+/** Any row that names a club and the division/area it sits in. */
+interface ClubRow {
+  clubId: string
+  clubName: string
+  divisionId: string
+  areaId: string
+}
+
+/** The lead column: the club's name, linking to its club page. */
+const clubColumn = <T extends ClubRow>(
+  districtId: string
+): ActionTableColumn<T> => ({
+  key: 'club',
+  header: 'Club',
+  className: 'action-table__subject',
+  cell: row => (
+    <Link
+      className="action-table__link"
+      to={`/district/${districtId}/club/${row.clubId}`}
+    >
+      {row.clubName}
+    </Link>
+  ),
+})
+
+/** "A/01" — the division/area the club sits in, as its own aligned column. */
+const areaColumn = <T extends ClubRow>(): ActionTableColumn<T> => ({
+  key: 'area',
+  header: 'Area',
+  className: 'action-table__area',
+  cell: row => `${row.divisionId}/${row.areaId}`,
+})
 
 const closeColumns = (
   districtId: string
 ): ActionTableColumn<CloseToDistinguishedItem>[] => [
-  {
-    key: 'club',
-    header: 'Club',
-    className: 'action-table__subject',
-    cell: c => (
-      <Link
-        className="action-table__link"
-        to={`/district/${districtId}/club/${c.clubId}`}
-      >
-        {c.clubName}
-      </Link>
-    ),
-  },
-  {
-    key: 'area',
-    header: 'Area',
-    className: 'action-table__area',
-    cell: c => `${c.divisionId}/${c.areaId}`,
-  },
+  clubColumn(districtId),
+  areaColumn(),
   { key: 'needs', header: 'Needs', cell: c => formatCloseNeeds(c) },
 ]
 
@@ -294,25 +314,8 @@ const visitColumns = (
 const interventionColumns = (
   districtId: string
 ): ActionTableColumn<InterventionItem>[] => [
-  {
-    key: 'club',
-    header: 'Club',
-    className: 'action-table__subject',
-    cell: i => (
-      <Link
-        className="action-table__link"
-        to={`/district/${districtId}/club/${i.clubId}`}
-      >
-        {i.clubName}
-      </Link>
-    ),
-  },
-  {
-    key: 'area',
-    header: 'Area',
-    className: 'action-table__area',
-    cell: i => `${i.divisionId}/${i.areaId}`,
-  },
+  clubColumn(districtId),
+  areaColumn(),
   {
     key: 'status',
     header: 'Status',
@@ -323,25 +326,8 @@ const interventionColumns = (
 const cspColumns = (
   districtId: string
 ): ActionTableColumn<CspNotSubmittedItem>[] => [
-  {
-    key: 'club',
-    header: 'Club',
-    className: 'action-table__subject',
-    cell: c => (
-      <Link
-        className="action-table__link"
-        to={`/district/${districtId}/club/${c.clubId}`}
-      >
-        {c.clubName}
-      </Link>
-    ),
-  },
-  {
-    key: 'area',
-    header: 'Area',
-    className: 'action-table__area',
-    cell: c => `${c.divisionId}/${c.areaId}`,
-  },
+  clubColumn(districtId),
+  areaColumn(),
   {
     key: 'due',
     header: 'Due',
