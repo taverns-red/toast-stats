@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.41.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.40.0...toast-stats-v2.41.0) (2026-09-14)
+
+
+### Features
+
+* **action-list:** restructure the four sections into aligned 28px tables ([#1577](https://github.com/taverns-red/toast-stats/issues/1577)) ([#1578](https://github.com/taverns-red/toast-stats/issues/1578)) ([6c0389a](https://github.com/taverns-red/toast-stats/commit/6c0389ae0b41bd83ed3e69ec812c7db926c6bad7))
+
+
+### Bug Fixes
+
+* **deps:** resync workspace versions in package-lock.json ([#1574](https://github.com/taverns-red/toast-stats/issues/1574)) ([#1575](https://github.com/taverns-red/toast-stats/issues/1575)) ([bcf53c3](https://github.com/taverns-red/toast-stats/commit/bcf53c3b4c31647a6ef503a251f3cd401a64ecce))
+
+
+### Dependencies
+
+* **deps:** bump the patch-and-minor group with 13 updates ([#1576](https://github.com/taverns-red/toast-stats/issues/1576)) ([89caddc](https://github.com/taverns-red/toast-stats/commit/89caddc2e6bd254d79a926d276a730cbbdfa3a34))
+
 ## [2.40.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.39.0...toast-stats-v2.40.0) (2026-09-13)
 
 
