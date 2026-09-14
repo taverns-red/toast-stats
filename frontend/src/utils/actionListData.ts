@@ -323,13 +323,21 @@ function plural(n: number, noun: string): string {
   return `${n} ${noun}${n === 1 ? '' : 's'}`
 }
 
-/** "needs 2 members + 1 DCP goal" — shared by the list row and the CSV export
- *  so the pluralization rule lives in one place. */
-export function formatCloseGap(item: CloseToDistinguishedItem): string {
-  return `needs ${plural(item.membersNeeded, 'member')} + ${plural(
+/** "2 members + 1 DCP goal" — the "Needs" COLUMN's value (#1577), where the
+ *  header supplies the verb the sentence form spells out. */
+export function formatCloseNeeds(item: CloseToDistinguishedItem): string {
+  return `${plural(item.membersNeeded, 'member')} + ${plural(
     item.goalsNeeded,
     'DCP goal'
   )}`
+}
+
+/** "needs 2 members + 1 DCP goal" — the SENTENCE form, still the CSV's Detail
+ *  column. Derived from the column value above rather than re-stating the
+ *  pluralization: a second copy of a format is a second thing to drift
+ *  (lesson "a fallback alias list copied twice drifts twice"). */
+export function formatCloseGap(item: CloseToDistinguishedItem): string {
+  return `needs ${formatCloseNeeds(item)}`
 }
 
 /** "1 club unvisited · Round 1, due 2025-11-30" — shared by the list row and
