@@ -41,14 +41,14 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "zod": "^4.5.4"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@taverns-red/shared-contracts": "^1.0.0",
     "esbuild": "^0.28.2",
-    "@types/node": "^26.4.1",
-    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@types/node": "^26.5.1",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@typescript-eslint/parser": "^8.56.0",
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
