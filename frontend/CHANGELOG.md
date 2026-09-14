@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.24.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.23.0...frontend-v3.24.0) (2026-09-14)
+
+
+### Features
+
+* **action-list:** restructure the four sections into aligned 28px tables ([#1577](https://github.com/taverns-red/toast-stats/issues/1577)) ([#1578](https://github.com/taverns-red/toast-stats/issues/1578)) ([6c0389a](https://github.com/taverns-red/toast-stats/commit/6c0389ae0b41bd83ed3e69ec812c7db926c6bad7))
+
+
+### Dependencies
+
+* **deps:** bump the patch-and-minor group with 13 updates ([#1576](https://github.com/taverns-red/toast-stats/issues/1576)) ([89caddc](https://github.com/taverns-red/toast-stats/commit/89caddc2e6bd254d79a926d276a730cbbdfa3a34))
+
 ## [3.23.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.22.0...frontend-v3.23.0) (2026-09-13)
 
 
