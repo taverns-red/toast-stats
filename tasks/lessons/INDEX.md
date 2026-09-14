@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-card-fallback-must-be-measured-against-the-rows-it-replaces.md` — A table-to-card mobile fallback is not automatically an improvement — measure the card against the rows it replaces, because a density win at 1280px can be a regression at 375px  (2026-09-14)
 - `a-count-badge-inside-a-control-needs-a-separator-text-node-or-the-accessible-name-runs-together.md` — An accessible name concatenates adjacent elements with no separator — a count badge inside a disclosure button reads "…Plan1" until a literal whitespace text node sits between the spans  (2026-09-13)
 - `a-deadline-turns-copy-into-a-function-of-the-viewed-date-resolve-it-once-at-the-boundary.md` — A deadline turns copy into a function of the viewed date — resolve the as-of state once at the data boundary, so generators stay pure and no surface reaches for a clock  (2026-09-13)
 - `a-mocked-renderer-can-only-prove-the-input-order-not-the-rendered-one.md` — A test that asserts what you hand a renderer cannot catch a renderer that reorders it — mock the chart library for the data contract, render it for real for anything the reader actually reads  (2026-09-13)
