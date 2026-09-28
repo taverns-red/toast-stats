@@ -40,17 +40,17 @@
     "smoke:pack": "bash scripts/pack-smoke.sh"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "zod": "^4.6.2"
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@taverns-red/shared-contracts": "^1.0.0",
     "esbuild": "^0.28.2",
-    "@types/node": "^26.5.1",
-    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@types/node": "^26.6.2",
+    "@typescript-eslint/eslint-plugin": "^8.70.1",
     "@typescript-eslint/parser": "^8.56.0",
-    "eslint": "^10.10.0",
+    "eslint": "^10.11.0",
     "globals": "^17.12.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
