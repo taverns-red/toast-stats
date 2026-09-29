@@ -97,7 +97,8 @@ export interface DuesRenewalLookup {
  *   fetched (404 / malformed) — yields an empty map (no overlay anywhere).
  */
 export function buildDuesRenewalLookup(
-  dataset: DistrictReportsDataset | null
+  dataset: DistrictReportsDataset | null,
+  _asOfDate: string
 ): Map<string, DuesRenewalLookup> {
   const map = new Map<string, DuesRenewalLookup>()
   if (!dataset) return map
