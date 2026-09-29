@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.24.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.24.0...frontend-v3.24.1) (2026-09-29)
+
+
+### Bug Fixes
+
+* **clubs:** apply a verified renewal only within the dues period it pays for ([#1586](https://github.com/taverns-red/toast-stats/issues/1586)) ([#1587](https://github.com/taverns-red/toast-stats/issues/1587)) ([6282da2](https://github.com/taverns-red/toast-stats/commit/6282da27b1c880ba1b148e4fe79cc2f441d2d3c5))
+
 ## [3.24.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.23.0...frontend-v3.24.0) (2026-09-14)
 
 
