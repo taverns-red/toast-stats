@@ -253,7 +253,7 @@ export const useDistrictAnalytics = (
       // Single join site — build the lookup once, attach to every club array so
       // each consumer inherits `statusOverlay`.
       if (reports) {
-        const lookup = buildDuesRenewalLookup(reports)
+        const lookup = buildDuesRenewalLookup(reports, snapshotDate)
         for (const clubs of [
           analytics.allClubs,
           analytics.vulnerableClubs,
