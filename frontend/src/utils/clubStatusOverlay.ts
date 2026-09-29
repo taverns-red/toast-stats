@@ -78,6 +78,50 @@ export function resolveClubStatusOverlay(
   return { status: 'Active', source: 'dues-renewal', activeSince, asOf }
 }
 
+/** Dues periods are six months, starting Apr 1 (April renewal) or Oct 1 (October). */
+const PERIOD_START_MONTH = { april: 4, october: 10 } as const
+type RenewalSeason = keyof typeof PERIOD_START_MONTH
+
+const utcDay = (y: number, m: number, d: number) => Date.UTC(y, m - 1, d)
+
+/**
+ * Whether a renewal verified on `verifiedIso` is in effect on `dateIso` (#1586).
+ *
+ * A renewal pays for ONE six-month dues period: Apr 1 – Sep 30 (April) or
+ * Oct 1 – Mar 31 (October). The period is inferred from the verified date — the
+ * season boundary nearest to it (ties go to the upcoming one) — NOT from the
+ * dataset's program-year label: TI's reports keyed `2026-2027` carry the April
+ * **2026** cycle beside the October **2026** cycle. Nearest-boundary covers both
+ * early payment (Aug 3 → Oct 1) and late payment (Nov 10 → the Oct 1 already
+ * passed). The renewal takes effect at the later of the period start and the
+ * verified date, and lapses when the period ends.
+ */
+export function isRenewalInEffect(
+  verifiedIso: string,
+  season: RenewalSeason,
+  dateIso: string
+): boolean {
+  const [vy = 0, vm = 0, vd = 0] = verifiedIso.split('-').map(Number)
+  const [dy = 0, dm = 0, dd = 0] = dateIso.split('-').map(Number)
+  const verified = utcDay(vy, vm, vd)
+  const date = utcDay(dy, dm, dd)
+  const month = PERIOD_START_MONTH[season]
+
+  let start = utcDay(vy, month, 1)
+  for (const y of [vy - 1, vy + 1]) {
+    const candidate = utcDay(y, month, 1)
+    const closer = Math.abs(candidate - verified) - Math.abs(start - verified)
+    if (closer < 0 || (closer === 0 && candidate > start)) start = candidate
+  }
+  const startDate = new Date(start)
+  const end = Date.UTC(
+    startDate.getUTCFullYear(),
+    startDate.getUTCMonth() + 6,
+    1
+  )
+  return date >= Math.max(start, verified) && date < end
+}
+
 /** A club's renewal signal + its source freshness date, keyed by club number. */
 export interface DuesRenewalLookup {
   renewalStatus: string
@@ -89,28 +133,35 @@ export interface DuesRenewalLookup {
  * Dues Renewal sections (April + October). The join key is the club **number**
  * (`record.club`), which matches `ClubTrend.clubId`.
  *
- * A club may appear in both seasons; we keep the record with the **later**
- * verified-complete date so the freshest confirmation wins. Non-verified
- * records are retained (the resolver turns them into a no-op anyway).
+ * A verified record is kept only while its dues period covers `asOfDate`
+ * ({@link isRenewalInEffect}, #1586) — an early October payment must not
+ * promote a club still in the April period. Of the in-effect records we keep
+ * the later verified-complete date. Non-verified records are retained (the
+ * resolver turns them into a no-op anyway).
  *
  * @param dataset the de-identified reports dataset, or `null` if none was
  *   fetched (404 / malformed) — yields an empty map (no overlay anywhere).
+ * @param asOfDate the viewed snapshot date, ISO `YYYY-MM-DD`.
  */
 export function buildDuesRenewalLookup(
   dataset: DistrictReportsDataset | null,
-  _asOfDate: string
+  asOfDate: string
 ): Map<string, DuesRenewalLookup> {
   const map = new Map<string, DuesRenewalLookup>()
   if (!dataset) return map
 
   const sections = [
-    dataset.sections.aprilDuesRenewal,
-    dataset.sections.octoberDuesRenewal,
-  ]
-  for (const sec of sections) {
+    ['april', dataset.sections.aprilDuesRenewal],
+    ['october', dataset.sections.octoberDuesRenewal],
+  ] as const
+  for (const [season, sec] of sections) {
     if (!sec) continue
     const asOf = sec.sources[0]?.asOf ?? ''
     for (const rec of sec.records) {
+      // A verified renewal whose dues period doesn't cover the viewed date
+      // (paid early, or already lapsed) is no promotion signal — drop it.
+      const verified = parseVerifiedComplete(rec.renewalStatus)
+      if (verified && !isRenewalInEffect(verified, season, asOfDate)) continue
       const candidate: DuesRenewalLookup = {
         renewalStatus: rec.renewalStatus,
         asOf,
