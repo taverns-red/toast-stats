@@ -199,6 +199,16 @@ describe('buildDistrictReports — remaining sections', () => {
     expect(recs.reduce((s, r) => s + r.achievementCount, 0)).toBe(40)
   })
 
+  it('education members: distinct members per club, provenanced to the education report (#1592)', () => {
+    const sec = build().sections.educationMembers!
+    expect(sec.sources[0]!.tableId).toBe(REPORT_GUIDS.education)
+    expect(sec.records).toEqual([
+      { club: '1009147', membersWithAward: 8 },
+      { club: '1036983', membersWithAward: 8 },
+      { club: '1099641', membersWithAward: 2 },
+    ])
+  })
+
   it('dues renewal April + October are separate provenanced sections', () => {
     const ds = build()
     expect(ds.sections.aprilDuesRenewal!.records.length).toBeGreaterThan(0)

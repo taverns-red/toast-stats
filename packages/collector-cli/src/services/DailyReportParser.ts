@@ -73,6 +73,16 @@ export interface EducationAchievementActivity {
 }
 
 /**
+ * Distinct members with ≥1 education award, per club (#1592). Counted from the
+ * raw `Member` column inside the parser; only the count leaves — the Member
+ * value is never projected, stored or hashed.
+ */
+export interface EducationClubMembers {
+  club: string
+  membersWithAward: number
+}
+
+/**
  * Triple Crown has NO club/area/division column; its only non-personal columns
  * are Count + Award. With `Member` excluded, nothing per-club survives — this is
  * the awkward shape the spike flagged for deferral.
@@ -142,6 +152,7 @@ export type ParsedDistrictReport =
       tableId: string
       reportType: 'education-achievements'
       rows: EducationAchievementActivity[]
+      clubMembers: EducationClubMembers[]
     }
   | { tableId: string; reportType: 'triple-crown'; rows: TripleCrownRow[] }
   | {
@@ -459,6 +470,7 @@ export function parseDistrictReport(
       tableId,
       reportType: 'education-achievements',
       rows: aggregateEducation(projected),
+      clubMembers: [],
     }
   }
   return {
