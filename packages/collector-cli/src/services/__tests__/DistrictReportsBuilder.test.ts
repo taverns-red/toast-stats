@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { DistrictReportsDatasetSchema } from '@taverns-red/shared-contracts'
 
+import { deriveEducationMemberDenylist } from '../../__tests__/fixtures/educationMemberDenylist'
 import { parseDistrictReport } from '../DailyReportParser'
 import {
   buildDistrictReports,
@@ -115,6 +116,20 @@ describe('buildDistrictReports — privacy backstop (end-to-end)', () => {
     for (const personal of PERSONAL_DENYLIST) {
       expect(blob).not.toContain(personal)
     }
+  })
+
+  // #1592 — the hand-listed denylist above names ONE education member; derive
+  // every Member value (and bare member ID) from the fixture itself. Counts
+  // only in assertions, so a failure never prints a personal value.
+  it('no Member value (or member ID) from the education fixture survives in the dataset', () => {
+    const raw = readFixture('education-achievements.html')
+    const denylist = deriveEducationMemberDenylist(raw)
+    // Falsifiability: the derived list is real and really from the fixture.
+    expect(denylist.length).toBeGreaterThanOrEqual(18)
+    expect(denylist.filter(v => !raw.includes(v)).length).toBe(0)
+
+    const blob = JSON.stringify(build())
+    expect(denylist.filter(v => blob.includes(v)).length).toBe(0)
   })
 
   it('sponsors-mentors is deferred (#11) — skipped even if fetched', () => {
