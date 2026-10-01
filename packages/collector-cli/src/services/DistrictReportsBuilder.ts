@@ -226,12 +226,15 @@ export function buildDistrictReports(
       ],
       records: edu.report.rows,
     }
-    // Distinct members with ≥1 award per club (#1592) — counts only.
-    sections.educationMembers = {
-      sources: [
-        sourceFor('education-achievements', REPORT_GUIDS.education, edu.html),
-      ],
-      records: edu.report.clubMembers,
+    // Distinct members with ≥1 award per club (#1592) — counts only. Omitted
+    // (not zeros) when the parser could not count: `undefined` = unavailable.
+    if (edu.report.clubMembers !== undefined) {
+      sections.educationMembers = {
+        sources: [
+          sourceFor('education-achievements', REPORT_GUIDS.education, edu.html),
+        ],
+        records: edu.report.clubMembers,
+      }
     }
   }
 

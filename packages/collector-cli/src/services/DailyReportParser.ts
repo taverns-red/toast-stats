@@ -152,7 +152,12 @@ export type ParsedDistrictReport =
       tableId: string
       reportType: 'education-achievements'
       rows: EducationAchievementActivity[]
-      clubMembers: EducationClubMembers[]
+      /**
+       * `undefined` = NOT AVAILABLE (the table has rows but lacks a `Club` or
+       * `Member` header) — distinct from `[]` (no rows ⇒ zero members). Callers
+       * must omit the section rather than publish zeros (#1592).
+       */
+      clubMembers: EducationClubMembers[] | undefined
     }
   | { tableId: string; reportType: 'triple-crown'; rows: TripleCrownRow[] }
   | {
@@ -443,11 +448,30 @@ function aggregateEducation(
  * Distinctness is by the trimmed Member string within one fetch (TI renders a
  * member identically on every row of a single report); blank cells are skipped.
  * Output order is first appearance of each club — deterministic for an input.
+ *
+ * Returns `[]` for a table with no rows (empty body: nothing to count). Returns
+ * `undefined` — "not available", never zeros — when rows exist but the `Club`
+ * or `Member` header is missing (TI layout drift), with one stderr line naming
+ * only the missing header(s); a cell value is never logged (R4).
  */
-function countMembersPerClub(table: RawTable): EducationClubMembers[] {
+function countMembersPerClub(
+  table: RawTable
+): EducationClubMembers[] | undefined {
+  if (table.rows.length === 0) return []
   const clubIdx = table.headers.indexOf('Club')
   const memberIdx = table.headers.indexOf('Member')
-  if (clubIdx === -1 || memberIdx === -1) return []
+  if (clubIdx === -1 || memberIdx === -1) {
+    const missing = [
+      ...(clubIdx === -1 ? ['Club'] : []),
+      ...(memberIdx === -1 ? ['Member'] : []),
+    ]
+    console.error(
+      `[DailyReportParser] education-achievements: missing header(s) ${missing
+        .map(h => `"${h}"`)
+        .join(', ')} — distinct members per club unavailable, section omitted`
+    )
+    return undefined
+  }
 
   const perClub = new Map<string, Set<string>>()
   for (const row of table.rows) {
