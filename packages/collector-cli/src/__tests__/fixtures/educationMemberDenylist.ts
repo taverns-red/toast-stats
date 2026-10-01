@@ -9,9 +9,13 @@
  * built/written dataset. Never print the returned values.
  */
 export function deriveEducationMemberDenylist(html: string): string[] {
+  // Read the cell's text nodes (the runs between tags) rather than "stripping"
+  // tags out of the markup; some cells nest a tooltip <div>, so a `[^<]*`
+  // cell regex would drop cells and shift the Member column index.
   const text = (cell: string): string =>
     cell
-      .replace(/<[^>]*>/g, '')
+      .split(/<[^>]*>/)
+      .join('')
       .replace(/&nbsp;/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
