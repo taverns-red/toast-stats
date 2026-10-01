@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { DistrictReportsDatasetSchema } from '@taverns-red/shared-contracts'
 
@@ -207,6 +207,28 @@ describe('buildDistrictReports — remaining sections', () => {
       { club: '1036983', membersWithAward: 8 },
       { club: '1099641', membersWithAward: 2 },
     ])
+  })
+
+  it('education members: OMITTED (not zeros) when the education table lacks the Member header (#1592)', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const noMember = `<table>
+        <tr><th>Club</th><th>Division</th><th>Area</th><th>Award</th><th>Name</th><th>Location</th></tr>
+        <tr><td>1234</td><td>A</td><td>1</td><td>PM1</td><td>Club 1234</td><td>Town</td></tr>
+      </table>`
+      const ds = build([{ tableId: REPORT_GUIDS.education, html: noMember }])
+      // Raw activity still lands — only the member count is unavailable.
+      expect(ds.sections.educationAchievements!.records).toHaveLength(1)
+      expect(ds.sections.educationMembers).toBeUndefined()
+      expect(DistrictReportsDatasetSchema.safeParse(ds).success).toBe(true)
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('education members: an empty education body publishes an empty section (zero rows ⇒ zero members)', () => {
+    const ds = build([{ tableId: REPORT_GUIDS.education, html: '' }])
+    expect(ds.sections.educationMembers!.records).toEqual([])
   })
 
   it('dues renewal April + October are separate provenanced sections', () => {

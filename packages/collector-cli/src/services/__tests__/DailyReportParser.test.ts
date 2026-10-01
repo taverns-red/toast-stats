@@ -1,6 +1,14 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from 'vitest'
 
 import {
   parseDistrictReport,
@@ -311,6 +319,75 @@ describe('parseDistrictReport — Education Achievements distinct members per cl
     )
     expect(JSON.stringify(r)).not.toContain('Pat Doe')
   })
+})
+
+// #1592 security review — a table that HAS rows but lacks the Club or Member
+// header must yield "not available" (undefined), never [] (which would read as
+// "every club has 0 members"). One stderr line names only the missing header.
+describe('parseDistrictReport — Education Achievements missing header ⇒ clubMembers unavailable', () => {
+  let errorSpy: MockInstance<typeof console.error>
+  beforeEach(() => {
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    errorSpy.mockRestore()
+  })
+
+  const withoutColumn = (drop: 'Member' | 'Club') => {
+    const headers = [
+      'Club',
+      'Division',
+      'Area',
+      'Award',
+      'Date',
+      'Member',
+      'Name',
+      'Location',
+    ]
+    const cells = [
+      '1234',
+      'A',
+      '1',
+      'PM1',
+      '7/15/2026',
+      'Pat Doe',
+      'Club 1234',
+      'Town',
+    ]
+    const keep = headers.map(h => h !== drop)
+    const th = headers.filter((_, i) => keep[i]).map(h => `<th>${h}</th>`)
+    const td = cells.filter((_, i) => keep[i]).map(c => `<td>${c}</td>`)
+    return `<table><tr>${th.join('')}</tr><tr>${td.join('')}</tr></table>`
+  }
+
+  it.each(['Member', 'Club'] as const)(
+    'rows present but no %s header ⇒ clubMembers undefined + one stderr line naming only that header',
+    missing => {
+      const r = parseDistrictReport(ID.education, withoutColumn(missing))
+      if (r.reportType !== 'education-achievements') throw new Error('type')
+      expect(r.clubMembers).toBeUndefined()
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      const msg = String(errorSpy.mock.calls[0]?.[0])
+      expect(msg).toContain(missing)
+      // Never a cell value in the log.
+      for (const cell of ['Pat Doe', '1234', 'PM1', 'Club 1234', 'Town']) {
+        expect(msg).not.toContain(cell)
+      }
+    }
+  )
+
+  it.each([
+    ['an empty body', ''],
+    ['a header-less empty table', '<table></table>'],
+  ])(
+    '%s (no rows) ⇒ clubMembers [] (nothing to count, not a missing header) and no stderr',
+    (_label, html) => {
+      const r = parseDistrictReport(ID.education, html)
+      if (r.reportType !== 'education-achievements') throw new Error('type')
+      expect(r.clubMembers).toEqual([])
+      expect(errorSpy).not.toHaveBeenCalled()
+    }
+  )
 })
 
 describe('parseDistrictReport — triple crown collapses to non-personal cols', () => {
