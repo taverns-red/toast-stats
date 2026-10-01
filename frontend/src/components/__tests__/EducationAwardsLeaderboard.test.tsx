@@ -53,13 +53,15 @@ const twelve = (): EducationAwardRanking =>
 
 const renderBoard = (
   awardsPerBase: EducationAwardRanking,
-  membersWithAward: EducationAwardRanking = ranking()
+  membersWithAward: EducationAwardRanking = ranking(),
+  isPriorProgramYear = false
 ) =>
   render(
     <MemoryRouter>
       <EducationAwardsLeaderboard
         rankings={{ awardsPerBase, membersWithAward }}
         districtId="61"
+        isPriorProgramYear={isPriorProgramYear}
       />
     </MemoryRouter>
   )
@@ -180,18 +182,43 @@ describe('EducationAwardsLeaderboard (#1592)', () => {
     expect(card).not.toHaveTextContent(/as of/)
   })
 
-  it('explains when the members ranking is unavailable', () => {
-    renderBoard(twelve(), ranking({ available: false }))
+  it('explains a missing members ranking on a current-PY date as not-yet-available', () => {
+    renderBoard(twelve(), ranking({ available: false }), false)
+    const card = membersCard()
+    expect(card).toHaveTextContent(
+      "Member counts aren't available for this date yet — they start with newer snapshots."
+    )
+    expect(card).not.toHaveTextContent(/archive/i)
+    expect(within(card).queryByRole('table')).not.toBeInTheDocument()
+  })
+
+  it('explains a missing members ranking on a prior-PY date via the archive', () => {
+    renderBoard(twelve(), ranking({ available: false }), true)
     expect(membersCard()).toHaveTextContent(
       "Not available for this date — Toastmasters' archive for past years doesn't include member-level data."
     )
-    expect(within(membersCard()).queryByRole('table')).not.toBeInTheDocument()
   })
 
-  it('explains when the awards ranking is unavailable', () => {
-    renderBoard(ranking({ available: false }))
+  it('explains a missing awards ranking on a current-PY date', () => {
+    renderBoard(ranking({ available: false }), ranking(), false)
     expect(awardsCard()).toHaveTextContent(
       'No education report available for this date.'
+    )
+  })
+
+  it('points prior-PY viewers at the June 30 year-end snapshot when awards are missing', () => {
+    renderBoard(ranking({ available: false }), ranking(), true)
+    const card = awardsCard()
+    expect(card).toHaveTextContent(
+      'For past program years, this leaderboard is shown on the June 30 year-end snapshot.'
+    )
+    expect(card).not.toHaveTextContent(/No education report available/)
+  })
+
+  it('notes that award counts come from the education report, not DCP credit', () => {
+    renderBoard(twelve())
+    expect(awardsCard()).toHaveTextContent(
+      /counts every award listed in Toastmasters' education report \(not DCP credit\), so totals can differ from the education levels card/i
     )
   })
 

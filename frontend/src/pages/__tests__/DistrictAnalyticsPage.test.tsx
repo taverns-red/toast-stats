@@ -26,6 +26,7 @@ import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import DistrictDetailPage from '../DistrictDetailPage'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: vi.fn(() => ({
@@ -131,6 +132,7 @@ vi.mock('../../components/EducationLevelsCard', () => ({
 
 const leaderboardProps: Array<{
   districtId: string
+  isPriorProgramYear: boolean
   rankings: {
     awardsPerBase: { available: boolean; ranked: Array<{ clubId: string }> }
     membersWithAward: { available: boolean }
@@ -326,5 +328,27 @@ describe('DistrictAnalyticsPage (#680 — ADR-005)', () => {
       'c1',
     ])
     expect(props.rankings.membersWithAward.available).toBe(false)
+  })
+
+  // Unavailable-message copy depends on current vs prior PY — the page passes
+  // it down from its own PY selection (R3), never from reports.programYear.
+  it('flags the newest program year with data as current (not prior)', async () => {
+    renderAt('/district/61/analytics')
+    await screen.findByTestId('education-awards-leaderboard')
+    expect(leaderboardProps.at(-1)!.isPriorProgramYear).toBe(false)
+  })
+
+  it('flags an older selected program year as prior', async () => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        dates: ['2024-10-15', '2024-06-30'],
+        dateRange: { startDate: '2024-06-30', endDate: '2024-10-15' },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+
+    renderAt('/district/61/analytics?py=2023')
+    await screen.findByTestId('education-awards-leaderboard')
+    expect(leaderboardProps.at(-1)!.isPriorProgramYear).toBe(true)
   })
 })

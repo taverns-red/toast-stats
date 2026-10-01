@@ -142,6 +142,23 @@ describe('computeEducationAwardRankings — eligibility', () => {
   })
 })
 
+describe('computeEducationAwardRankings — eligibility boundary', () => {
+  it(`ranks a club whose base is exactly ${MIN_ELIGIBLE_BASE}`, () => {
+    const clubs = [club('edge', MIN_ELIGIBLE_BASE), club('under', 7)]
+    const reports = dataset({
+      educationAchievements: {
+        sources: [source('education-achievements')],
+        records: [award('edge', 'PM1Presentation Mastery Level 1', 2)],
+      },
+    })
+    const { awardsPerBase } = computeEducationAwardRankings(clubs, reports)
+    expect(awardsPerBase.ranked.map(e => [e.clubId, e.rank])).toEqual([
+      ['edge', 1],
+    ])
+    expect(awardsPerBase.ineligible.map(e => e.clubId)).toEqual(['under'])
+  })
+})
+
 describe('computeEducationAwardRankings — members with an award (Team Spirit)', () => {
   const clubs = [club('1', 10), club('2', 8), club('3', 9)]
 
