@@ -434,6 +434,40 @@ function aggregateEducation(
 }
 
 /**
+ * Count distinct members with ≥1 award per club (#1592), straight from the raw
+ * table. This is the ONE place the personal `Member` column is read: its values
+ * live only in a per-club Set for the duration of this call, and only the set
+ * sizes leave. They are deliberately NOT routed through `projectRows` — the
+ * KEEP projection stays personal-free by construction.
+ *
+ * Distinctness is by the trimmed Member string within one fetch (TI renders a
+ * member identically on every row of a single report); blank cells are skipped.
+ * Output order is first appearance of each club — deterministic for an input.
+ */
+function countMembersPerClub(table: RawTable): EducationClubMembers[] {
+  const clubIdx = table.headers.indexOf('Club')
+  const memberIdx = table.headers.indexOf('Member')
+  if (clubIdx === -1 || memberIdx === -1) return []
+
+  const perClub = new Map<string, Set<string>>()
+  for (const row of table.rows) {
+    const club = (row[clubIdx] ?? '').trim()
+    const member = (row[memberIdx] ?? '').trim()
+    if (!club || !member) continue
+    let members = perClub.get(club)
+    if (!members) {
+      members = new Set()
+      perClub.set(club, members)
+    }
+    members.add(member)
+  }
+  return [...perClub].map(([club, members]) => ({
+    club,
+    membersWithAward: members.size,
+  }))
+}
+
+/**
  * Parse a District Daily Report response into typed, KEEP-only rows.
  *
  * @param tableId the report-type GUID (the `tableID` query param)
@@ -470,7 +504,7 @@ export function parseDistrictReport(
       tableId,
       reportType: 'education-achievements',
       rows: aggregateEducation(projected),
-      clubMembers: [],
+      clubMembers: countMembersPerClub(table),
     }
   }
   return {

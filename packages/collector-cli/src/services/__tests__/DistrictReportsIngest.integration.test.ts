@@ -89,6 +89,7 @@ describe('ingestDistrictReports (fetch → build → write)', () => {
         'clubSuccessPlan',
         'coaches',
         'educationAchievements',
+        'educationMembers',
         'newClubs',
         'octoberDuesRenewal',
         'officerList',

@@ -226,6 +226,13 @@ export function buildDistrictReports(
       ],
       records: edu.report.rows,
     }
+    // Distinct members with ≥1 award per club (#1592) — counts only.
+    sections.educationMembers = {
+      sources: [
+        sourceFor('education-achievements', REPORT_GUIDS.education, edu.html),
+      ],
+      records: edu.report.clubMembers,
+    }
   }
 
   // ── Triple Crown → district scalar (achiever count) ──
