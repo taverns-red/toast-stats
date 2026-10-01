@@ -81,8 +81,10 @@ export const ClubSuccessPlanRecordSchema = z.object({
  * (#1080): DCP education credit counts DISTINCT MEMBERS per award tier and is
  * sourced from `clubPerformance` "Level 1s"/"Level 2s or EOM"/… (see
  * dcpGoals.ts).
- * Member-dedup is unrecoverable here — the personal `Member` column is dropped
- * at parse time, before aggregation. Never conflate the two metrics.
+ * These per-tier raw counts remain un-deduped — the personal `Member` column is
+ * not projected into this aggregation. Per-club distinct members are counted
+ * separately in the collector and published as `educationMembers` (#1592).
+ * Never conflate either with DCP credit.
  */
 export const EducationAchievementActivityRecordSchema = z.object({
   club: z.string(),

@@ -56,9 +56,11 @@ export interface ClubSuccessPlanRow {
  * award tier (a member's repeat achievements in a tier count once), and is
  * sourced from the main dashboard's `clubPerformance` "Level 1s"/"Level 2s or
  * EOM"/…
- * fields — see `frontend/src/utils/dcpGoals.ts`. This raw count cannot apply
- * that dedup (`Member` is dropped before aggregation, by design) and must never
- * be conflated with it. Its value is raw activity volume + path/level breakdown.
+ * fields — see `frontend/src/utils/dcpGoals.ts`. This per-tier raw count stays
+ * un-deduped (`Member` is not projected into this aggregation, by design) and
+ * must never be conflated with DCP credit. Its value is raw activity volume +
+ * path/level breakdown. Per-club DISTINCT members (across all tiers) are counted
+ * separately by `countMembersPerClub` → `EducationClubMembers` (#1592).
  */
 export interface EducationAchievementActivity {
   club: string
@@ -405,8 +407,10 @@ function projectRows(
  *
  * `achievementCount` is a RAW achievement-row count, NOT DCP credit: DCP counts
  * distinct members per award tier and lives in `clubPerformance` (dcpGoals.ts).
- * Member-dedup is impossible here — the personal `Member` column is dropped
- * before this aggregation runs (#1080).
+ * The per-tier raw counts remain un-deduped: the personal `Member` column is
+ * not projected, so this aggregation never sees it (#1080). Per-club distinct
+ * members are counted separately, straight from the raw table, by
+ * `countMembersPerClub` (#1592) — only that count leaves the parser.
  */
 function aggregateEducation(
   projected: Array<Record<string, string>>
