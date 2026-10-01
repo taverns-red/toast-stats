@@ -272,7 +272,9 @@ export const useDistrictAnalytics = (
           applyDuesRenewalOverlay(clubs ?? [], lookup)
         }
       }
-      return analytics
+      // Hand the same dataset to the education-award leaderboards (#1592) so
+      // the page never issues a second reports request.
+      return { ...analytics, districtReports: reports }
     },
     enabled: !!districtId && hasValidDateRange,
     staleTime: 10 * 60 * 1000, // 10 minutes - cache analytics calculations longer
