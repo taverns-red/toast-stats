@@ -29,16 +29,21 @@ D61 gives these out as _Crowning Glory_ and _Team Spirit_.
 
 Count distinct members **inside the collector** and publish only the per-club count. No member identifier is stored or published, hashed or otherwise.
 
-- New per-club aggregate: `{ club, membersWithAward, awardCount }`.
+- New per-club aggregate: `{ club, membersWithAward }`. Award totals are not duplicated here; they come from summing `educationAchievements.achievementCount` per club.
 - `Member` is read only in memory to build a `Set` per club, then thrown away.
 - No salt or secret is needed. A plain hash of a member number would be brute-forceable; an HMAC would need a new secret. This avoids both.
 - This gives exact Team Spirit numbers, the same accuracy as hashed IDs, without publishing pseudonymous identifiers.
 - Trade-off: distinct counts can't be recomputed later at a different grain (e.g. per division). Acceptable.
+- If the raw table has rows but lacks a `Club` or `Member` header, the section is omitted ("not available"), never published as zeros. One stderr line names the missing header, never a cell value.
+- **Small-cell suppression: none.** Counts are published even when a club has 1 or 2 members with awards. Reasons:
+  - TI already publishes the same per-member rows, with names, publicly and without login.
+  - The epic's privacy rule bans names and identifiers, not counts.
+  - Suppressing counts below 3 would distort small clubs' rankings and protect no one.
 
 ## Work breakdown (one issue, 3 PR-sized steps, TDD each)
 
 1. **Collector and contract** (`packages/collector-cli`, `packages/shared-contracts`)
-   - Add an optional `educationMembers` section (per-club `membersWithAward`, `awardCount`) to `DistrictReportsSectionsSchema`. It's optional, so old files stay valid.
+   - Add an optional `educationMembers` section (per-club `{ club, membersWithAward }` only) to `DistrictReportsSectionsSchema`. It's optional, so old files stay valid.
    - The parser computes it from the raw rows.
    - Privacy tests:
      - the `Member` values from the fixture never appear anywhere in the serialized output;
