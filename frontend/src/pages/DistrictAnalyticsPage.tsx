@@ -172,6 +172,14 @@ const DistrictAnalyticsPage: React.FC = () => {
     )
   }, [analytics])
 
+  // Prior vs current PY for the leaderboards' "unavailable" copy (#1592) —
+  // from the page's own PY selection against the district's newest PY with
+  // data (data-driven, like useDefaultProgramYear), never reports.programYear.
+  const isPriorProgramYear =
+    effectiveProgramYear !== null &&
+    availableProgramYears[0] !== undefined &&
+    effectiveProgramYear.year < availableProgramYears[0].year
+
   if (!districtId) {
     return null
   }
@@ -239,6 +247,7 @@ const DistrictAnalyticsPage: React.FC = () => {
               <EducationAwardsLeaderboard
                 rankings={educationAwardRankings}
                 districtId={districtId}
+                isPriorProgramYear={isPriorProgramYear}
               />
             )}
           </section>

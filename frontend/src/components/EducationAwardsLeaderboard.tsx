@@ -22,21 +22,32 @@ export interface EducationAwardsLeaderboardProps {
     membersWithAward: EducationAwardRanking
   }
   districtId: string
+  /** The viewed program year is older than the district's newest one with
+   *  data — decided by the page from its own PY selection (R3). Selects which
+   *  "unavailable" explanation applies. */
+  isPriorProgramYear: boolean
 }
 
 interface CardSpec {
   title: string
   subtitle: string
+  note?: string
   countLabel: string
-  unavailableMessage: string
+  unavailableMessage: { current: string; prior: string }
 }
 
 const AWARDS_CARD: CardSpec = {
   title: 'Education awards per base member',
   subtitle:
     "Pathways levels 1–5 + DTM earned this program year ÷ club's membership base.",
+  note: "Counts every award listed in Toastmasters' education report (not DCP credit), so totals can differ from the education levels card.",
   countLabel: 'Awards / base',
-  unavailableMessage: 'No education report available for this date.',
+  unavailableMessage: {
+    current: 'No education report available for this date.',
+    // Prior-PY reports are written only for the June 30 year-end snapshot.
+    prior:
+      'For past program years, this leaderboard is shown on the June 30 year-end snapshot.',
+  },
 }
 
 const MEMBERS_CARD: CardSpec = {
@@ -44,8 +55,13 @@ const MEMBERS_CARD: CardSpec = {
   subtitle:
     "Distinct members who earned at least one award ÷ club's membership base.",
   countLabel: 'Members / base',
-  unavailableMessage:
-    "Not available for this date — Toastmasters' archive for past years doesn't include member-level data.",
+  unavailableMessage: {
+    // Current-PY snapshots predating the member counts lack the section too.
+    current:
+      "Member counts aren't available for this date yet — they start with newer snapshots.",
+    prior:
+      "Not available for this date — Toastmasters' archive for past years doesn't include member-level data.",
+  },
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -170,12 +186,14 @@ interface CardProps {
   spec: CardSpec
   ranking: EducationAwardRanking
   districtId: string
+  isPriorProgramYear: boolean
 }
 
 const LeaderboardCard: React.FC<CardProps> = ({
   spec,
   ranking,
   districtId,
+  isPriorProgramYear,
 }) => {
   const [expanded, setExpanded] = useState(false)
   const baseId = useId()
@@ -193,13 +211,22 @@ const LeaderboardCard: React.FC<CardProps> = ({
       <h3 id={titleId} className="redesign-panel__header !mb-1">
         {spec.title}
       </h3>
-      <p className="text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body mb-3">
+      <p
+        className={`text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body ${spec.note ? 'mb-1' : 'mb-3'}`}
+      >
         {spec.subtitle}
       </p>
+      {spec.note && (
+        <p className="text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body mb-3">
+          {spec.note}
+        </p>
+      )}
 
       {!ranking.available ? (
         <p className="text-sm text-gray-600 theme-dark:text-gray-400 font-tm-body">
-          {spec.unavailableMessage}
+          {isPriorProgramYear
+            ? spec.unavailableMessage.prior
+            : spec.unavailableMessage.current}
         </p>
       ) : (
         <>
@@ -263,17 +290,19 @@ const LeaderboardCard: React.FC<CardProps> = ({
 
 export const EducationAwardsLeaderboard: React.FC<
   EducationAwardsLeaderboardProps
-> = ({ rankings, districtId }) => (
+> = ({ rankings, districtId, isPriorProgramYear }) => (
   <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
     <LeaderboardCard
       spec={AWARDS_CARD}
       ranking={rankings.awardsPerBase}
       districtId={districtId}
+      isPriorProgramYear={isPriorProgramYear}
     />
     <LeaderboardCard
       spec={MEMBERS_CARD}
       ranking={rankings.membersWithAward}
       districtId={districtId}
+      isPriorProgramYear={isPriorProgramYear}
     />
   </div>
 )
