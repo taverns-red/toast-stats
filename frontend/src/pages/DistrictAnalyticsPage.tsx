@@ -13,11 +13,13 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import { extractEducationLevels } from '../utils/extractEducationLevels'
+import { computeEducationAwardRankings } from '../utils/educationAwardRankings'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { EducationLevelsCard } from '../components/EducationLevelsCard'
+import { EducationAwardsLeaderboard } from '../components/EducationAwardsLeaderboard'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { ErrorDisplay } from '../components/ErrorDisplay'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -153,6 +155,23 @@ const DistrictAnalyticsPage: React.FC = () => {
       .slice(0, 10)
   }, [analytics])
 
+  // Education-award leaderboards (#1592) — per-club ratios over the July 1
+  // membership base, from the reports dataset the analytics hook already
+  // fetched for this snapshot.
+  const educationAwardRankings = useMemo(() => {
+    if (!analytics) return null
+    return computeEducationAwardRankings(
+      analytics.allClubs.map(club => ({
+        clubId: club.clubId,
+        clubName: club.clubName,
+        divisionId: club.divisionId,
+        areaId: club.areaId,
+        membershipBase: club.membershipBase ?? 0,
+      })),
+      analytics.districtReports ?? null
+    )
+  }, [analytics])
+
   if (!districtId) {
     return null
   }
@@ -213,6 +232,13 @@ const DistrictAnalyticsPage: React.FC = () => {
             {districtStatistics && (
               <EducationLevelsCard
                 totals={extractEducationLevels(districtStatistics)}
+              />
+            )}
+
+            {educationAwardRankings && (
+              <EducationAwardsLeaderboard
+                rankings={educationAwardRankings}
+                districtId={districtId}
               />
             )}
           </section>
