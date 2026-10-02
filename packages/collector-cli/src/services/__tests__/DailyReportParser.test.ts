@@ -1,6 +1,14 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from 'vitest'
 
 import {
   parseDistrictReport,
@@ -49,12 +57,13 @@ const PERSONAL_DENYLIST = [
   '00987204 - Name unavailable', // triple-crown → Member (the ID is identifying)
 ]
 
-/** Recursively flatten every string value of a parsed result into one blob. */
+/**
+ * Serialize the WHOLE parsed result (rows and any per-report extras such as
+ * education's `clubMembers`) into one blob, so a personal value can't hide in
+ * a field the guard doesn't walk.
+ */
 function flattenValues(report: ParsedDistrictReport): string {
-  return report.rows
-    .flatMap((r: Record<string, unknown>) => Object.values(r))
-    .map(v => String(v))
-    .join('\u0000')
+  return JSON.stringify(report)
 }
 
 const ALL_REPORTS: Array<{ id: string; fixture: string }> = [
@@ -241,6 +250,144 @@ describe('parseDistrictReport — Education Achievements de-identified aggregati
       achievementCount: 2,
     })
   })
+})
+
+// #1592 — distinct members with ≥1 award per club, counted from the raw
+// Member column INSIDE the parser. Only the count leaves; the Member value is
+// never projected, stored or hashed (privacy backstop above walks the whole
+// result, including clubMembers).
+describe('parseDistrictReport — Education Achievements distinct members per club', () => {
+  const table = (rows: string[][]) => `
+    <table>
+      <tr><th>Club</th><th>Division</th><th>Area</th><th>Award</th><th>Date</th><th>Member</th><th>Name</th><th>Location</th></tr>
+      ${rows
+        .map(
+          ([club, award, member]) =>
+            `<tr><td>${club}</td><td>A</td><td>1</td><td>${award}</td><td>7/15/2026</td><td>${member}</td><td>Club ${club}</td><td>Town</td></tr>`
+        )
+        .join('')}
+    </table>`
+
+  it('counts distinct members per club on the recorded fixture', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      readFixture('education-achievements.html')
+    )
+    if (r.reportType !== 'education-achievements') throw new Error('type')
+    // Expected values computed independently from the fixture's Member column.
+    expect(r.clubMembers).toEqual([
+      { club: '1009147', membersWithAward: 8 },
+      { club: '1036983', membersWithAward: 8 },
+      { club: '1099641', membersWithAward: 2 },
+    ])
+  })
+
+  it('a member with several awards counts once; the same name in two clubs counts in each', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      table([
+        ['1234', 'PM1', 'Pat Doe'],
+        ['1234', 'PM2', 'Pat Doe'],
+        ['1234', 'PM1', 'Sam Roe'],
+        ['5678', 'VC1', 'Pat Doe'],
+      ])
+    )
+    if (r.reportType !== 'education-achievements') throw new Error('type')
+    expect(r.clubMembers).toEqual([
+      { club: '1234', membersWithAward: 2 },
+      { club: '5678', membersWithAward: 1 },
+    ])
+  })
+
+  it('ignores blank Member cells and surrounding whitespace', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      table([
+        ['1234', 'PM1', '  Pat Doe '],
+        ['1234', 'PM2', 'Pat Doe'],
+        ['1234', 'PM3', ''],
+      ])
+    )
+    if (r.reportType !== 'education-achievements') throw new Error('type')
+    expect(r.clubMembers).toEqual([{ club: '1234', membersWithAward: 1 }])
+  })
+
+  it('never emits a Member value — only club + count', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      table([['1234', 'PM1', 'Pat Doe']])
+    )
+    expect(JSON.stringify(r)).not.toContain('Pat Doe')
+  })
+})
+
+// #1592 security review — a table that HAS rows but lacks the Club or Member
+// header must yield "not available" (undefined), never [] (which would read as
+// "every club has 0 members"). One stderr line names only the missing header.
+describe('parseDistrictReport — Education Achievements missing header ⇒ clubMembers unavailable', () => {
+  let errorSpy: MockInstance<typeof console.error>
+  beforeEach(() => {
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    errorSpy.mockRestore()
+  })
+
+  const withoutColumn = (drop: 'Member' | 'Club') => {
+    const headers = [
+      'Club',
+      'Division',
+      'Area',
+      'Award',
+      'Date',
+      'Member',
+      'Name',
+      'Location',
+    ]
+    const cells = [
+      '1234',
+      'A',
+      '1',
+      'PM1',
+      '7/15/2026',
+      'Pat Doe',
+      'Club 1234',
+      'Town',
+    ]
+    const keep = headers.map(h => h !== drop)
+    const th = headers.filter((_, i) => keep[i]).map(h => `<th>${h}</th>`)
+    const td = cells.filter((_, i) => keep[i]).map(c => `<td>${c}</td>`)
+    return `<table><tr>${th.join('')}</tr><tr>${td.join('')}</tr></table>`
+  }
+
+  it.each(['Member', 'Club'] as const)(
+    'rows present but no %s header ⇒ clubMembers undefined + one stderr line naming only that header',
+    missing => {
+      const r = parseDistrictReport(ID.education, withoutColumn(missing))
+      if (r.reportType !== 'education-achievements') throw new Error('type')
+      expect(r.clubMembers).toBeUndefined()
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      const msg = String(errorSpy.mock.calls[0]?.[0])
+      expect(msg).toContain(missing)
+      // Never a cell value in the log.
+      for (const cell of ['Pat Doe', '1234', 'PM1', 'Club 1234', 'Town']) {
+        expect(msg).not.toContain(cell)
+      }
+    }
+  )
+
+  it.each([
+    ['an empty body', ''],
+    ['a header-less empty table', '<table></table>'],
+  ])(
+    '%s (no rows) ⇒ clubMembers [] (nothing to count, not a missing header) and no stderr',
+    (_label, html) => {
+      const r = parseDistrictReport(ID.education, html)
+      if (r.reportType !== 'education-achievements') throw new Error('type')
+      expect(r.clubMembers).toEqual([])
+      expect(errorSpy).not.toHaveBeenCalled()
+    }
+  )
 })
 
 describe('parseDistrictReport — triple crown collapses to non-personal cols', () => {

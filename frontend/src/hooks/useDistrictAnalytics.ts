@@ -7,6 +7,7 @@ import {
 } from '../services/cdn'
 import type {
   ClubHealthStatus,
+  DistrictReportsDataset,
   ProspectiveClub,
 } from '@taverns-red/shared-contracts'
 import {
@@ -218,6 +219,14 @@ export interface DistrictPerformanceTargets {
 }
 
 /**
+ * The analytics file plus the district reports dataset fetched alongside it
+ * (#1592). `districtReports` is null when the snapshot has no reports file.
+ */
+export type DistrictAnalyticsWithReports = DistrictAnalytics & {
+  districtReports?: DistrictReportsDataset | null
+}
+
+/**
  * Hook to fetch district analytics with caching for common date ranges
  */
 export const useDistrictAnalytics = (
@@ -228,7 +237,7 @@ export const useDistrictAnalytics = (
   // Validate date range - don't make request if startDate > endDate
   const hasValidDateRange = !startDate || !endDate || startDate <= endDate
 
-  return useQuery<DistrictAnalytics, Error>({
+  return useQuery<DistrictAnalyticsWithReports, Error>({
     queryKey: ['districtAnalytics', districtId, startDate, endDate],
     queryFn: async () => {
       if (!districtId) {
@@ -263,7 +272,9 @@ export const useDistrictAnalytics = (
           applyDuesRenewalOverlay(clubs ?? [], lookup)
         }
       }
-      return analytics
+      // Hand the same dataset to the education-award leaderboards (#1592) so
+      // the page never issues a second reports request.
+      return { ...analytics, districtReports: reports }
     },
     enabled: !!districtId && hasValidDateRange,
     staleTime: 10 * 60 * 1000, // 10 minutes - cache analytics calculations longer

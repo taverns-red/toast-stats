@@ -26,6 +26,7 @@ import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import DistrictDetailPage from '../DistrictDetailPage'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: vi.fn(() => ({
@@ -129,6 +130,22 @@ vi.mock('../../components/EducationLevelsCard', () => ({
   EducationLevelsCard: () => <div data-testid="education-levels-card" />,
 }))
 
+const leaderboardProps: Array<{
+  districtId: string
+  isPriorProgramYear: boolean
+  rankings: {
+    awardsPerBase: { available: boolean; ranked: Array<{ clubId: string }> }
+    membersWithAward: { available: boolean }
+  }
+}> = []
+
+vi.mock('../../components/EducationAwardsLeaderboard', () => ({
+  EducationAwardsLeaderboard: (props: (typeof leaderboardProps)[number]) => {
+    leaderboardProps.push(props)
+    return <div data-testid="education-awards-leaderboard" />
+  },
+}))
+
 const DistrictAnalyticsPage = React.lazy(
   () => import('../DistrictAnalyticsPage')
 )
@@ -165,6 +182,7 @@ describe('DistrictAnalyticsPage (#680 — ADR-005)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     topGrowthProps.length = 0
+    leaderboardProps.length = 0
   })
   afterEach(() => cleanup())
 
@@ -237,5 +255,100 @@ describe('DistrictAnalyticsPage (#680 — ADR-005)', () => {
     expect(screen.queryByTestId('top-growth-clubs')).not.toBeInTheDocument()
     fireEvent.click(retry)
     expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
+  // #1592 — education-award leaderboards, fed by the reports dataset the
+  // analytics hook already fetched (no second request).
+  it('renders the education award leaderboards from the hook reports dataset', async () => {
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: {
+        allClubs: [
+          {
+            clubId: 'c1',
+            clubName: 'Alpha',
+            divisionId: 'A',
+            areaId: '01',
+            membershipBase: 10,
+            dcpGoalsTrend: [],
+          },
+          {
+            clubId: 'c2',
+            clubName: 'Beta',
+            divisionId: 'A',
+            areaId: '02',
+            membershipBase: 20,
+            dcpGoalsTrend: [],
+          },
+        ],
+        topGrowthClubs: [],
+        districtReports: {
+          districtId: '61',
+          programYear: '2024-2025',
+          generatedAt: '2024-10-15T00:00:00Z',
+          sections: {
+            educationAchievements: {
+              sources: [
+                {
+                  reportType: 'education-achievements',
+                  tableId: 't',
+                  asOf: 'October 15, 2024',
+                },
+              ],
+              records: [
+                {
+                  club: 'c2',
+                  division: 'A',
+                  area: '02',
+                  name: 'Beta',
+                  location: 'Town',
+                  award: 'PM1',
+                  achievementCount: 5,
+                },
+              ],
+            },
+          },
+        },
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    renderAt('/district/61/analytics')
+
+    expect(
+      await screen.findByTestId('education-awards-leaderboard')
+    ).toBeInTheDocument()
+    const props = leaderboardProps.at(-1)!
+    expect(props.districtId).toBe('61')
+    expect(props.rankings.awardsPerBase.available).toBe(true)
+    expect(props.rankings.awardsPerBase.ranked.map(e => e.clubId)).toEqual([
+      'c2',
+      'c1',
+    ])
+    expect(props.rankings.membersWithAward.available).toBe(false)
+  })
+
+  // Unavailable-message copy depends on current vs prior PY — the page passes
+  // it down from its own PY selection (R3), never from reports.programYear.
+  it('flags the newest program year with data as current (not prior)', async () => {
+    renderAt('/district/61/analytics')
+    await screen.findByTestId('education-awards-leaderboard')
+    expect(leaderboardProps.at(-1)!.isPriorProgramYear).toBe(false)
+  })
+
+  it('flags an older selected program year as prior', async () => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        dates: ['2024-10-15', '2024-06-30'],
+        dateRange: { startDate: '2024-06-30', endDate: '2024-10-15' },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+
+    renderAt('/district/61/analytics?py=2023')
+    await screen.findByTestId('education-awards-leaderboard')
+    expect(leaderboardProps.at(-1)!.isPriorProgramYear).toBe(true)
   })
 })

@@ -81,8 +81,10 @@ export const ClubSuccessPlanRecordSchema = z.object({
  * (#1080): DCP education credit counts DISTINCT MEMBERS per award tier and is
  * sourced from `clubPerformance` "Level 1s"/"Level 2s or EOM"/… (see
  * dcpGoals.ts).
- * Member-dedup is unrecoverable here — the personal `Member` column is dropped
- * at parse time, before aggregation. Never conflate the two metrics.
+ * These per-tier raw counts remain un-deduped — the personal `Member` column is
+ * not projected into this aggregation. Per-club distinct members are counted
+ * separately in the collector and published as `educationMembers` (#1592).
+ * Never conflate either with DCP credit.
  */
 export const EducationAchievementActivityRecordSchema = z.object({
   club: z.string(),
@@ -92,6 +94,18 @@ export const EducationAchievementActivityRecordSchema = z.object({
   location: z.string(),
   award: z.string(),
   achievementCount: z.number().int().nonnegative(),
+})
+
+/**
+ * Distinct members with at least one education award this program year, per
+ * club (#1592). Counted from the raw report's personal `Member` column INSIDE
+ * the collector's parser; only the count is persisted — no member value, hash
+ * or identifier ever reaches the dataset. Unlike `achievementCount` (raw award
+ * rows), a member with several awards counts once.
+ */
+export const EducationMembersRecordSchema = z.object({
+  club: z.string(),
+  membersWithAward: z.number().int().nonnegative(),
 })
 
 export const NewClubRecordSchema = z.object({
@@ -147,6 +161,7 @@ export const DistrictReportsSectionsSchema = z.object({
   educationAchievements: section(
     EducationAchievementActivityRecordSchema
   ).optional(),
+  educationMembers: section(EducationMembersRecordSchema).optional(),
   tripleCrown: z
     .object({
       sources: z.array(ReportSourceSchema),
@@ -171,6 +186,9 @@ export type OfficerListRecord = z.infer<typeof OfficerListRecordSchema>
 export type ClubSuccessPlanRecord = z.infer<typeof ClubSuccessPlanRecordSchema>
 export type EducationAchievementActivityRecord = z.infer<
   typeof EducationAchievementActivityRecordSchema
+>
+export type EducationMembersRecord = z.infer<
+  typeof EducationMembersRecordSchema
 >
 export type NewClubRecord = z.infer<typeof NewClubRecordSchema>
 export type ProspectiveClubRecord = z.infer<typeof ProspectiveClubRecordSchema>

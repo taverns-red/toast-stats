@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { DistrictReportsDatasetSchema } from '@taverns-red/shared-contracts'
 
+import { deriveEducationMemberDenylist } from '../../__tests__/fixtures/educationMemberDenylist'
 import { DailyReportFetcher } from '../DailyReportFetcher'
 import { REPORT_GUIDS } from '../DistrictReportsBuilder'
 import { ingestDistrictReports } from '../DistrictReportsIngest'
@@ -89,6 +90,7 @@ describe('ingestDistrictReports (fetch → build → write)', () => {
         'clubSuccessPlan',
         'coaches',
         'educationAchievements',
+        'educationMembers',
         'newClubs',
         'octoberDuesRenewal',
         'officerList',
@@ -117,5 +119,13 @@ describe('ingestDistrictReports (fetch → build → write)', () => {
     for (const personal of PERSONAL_DENYLIST) {
       expect(raw).not.toContain(personal)
     }
+
+    // #1592 — every education Member value (and bare member ID), derived from
+    // the fixture itself; asserted by count so a failure prints no value.
+    const fixture = readFixture('education-achievements.html')
+    const denylist = deriveEducationMemberDenylist(fixture)
+    expect(denylist.length).toBeGreaterThanOrEqual(18)
+    expect(denylist.filter(v => !fixture.includes(v)).length).toBe(0)
+    expect(denylist.filter(v => raw.includes(v)).length).toBe(0)
   })
 })

@@ -163,6 +163,33 @@ describe('DistrictReportsDatasetSchema', () => {
     ).toBe(false)
   })
 
+  // #1592 — distinct members with ≥1 award, per club. A COUNT only: the
+  // personal Member column never reaches the dataset (counted in the parser).
+  it('education members carry a non-negative integer membersWithAward per club', () => {
+    const sources = [
+      source(
+        'education-achievements',
+        'c757d313-f815-4b22-93dc-b839d04cec7b',
+        'October 01, 2026'
+      ),
+    ]
+    const ok = structuredClone(VALID)
+    ok.sections.educationMembers = {
+      sources,
+      records: [{ club: '1234', membersWithAward: 3 }],
+    }
+    expect(DistrictReportsDatasetSchema.safeParse(ok).success).toBe(true)
+
+    for (const bad of [-1, 1.5]) {
+      const ds = structuredClone(VALID)
+      ds.sections.educationMembers = {
+        sources,
+        records: [{ club: '1234', membersWithAward: bad }],
+      }
+      expect(DistrictReportsDatasetSchema.safeParse(ds).success).toBe(false)
+    }
+  })
+
   it('requires coach activeCoach to be a boolean', () => {
     const bad = structuredClone(VALID)
     // @ts-expect-error — deliberately wrong type

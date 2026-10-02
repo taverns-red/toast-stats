@@ -56,9 +56,11 @@ export interface ClubSuccessPlanRow {
  * award tier (a member's repeat achievements in a tier count once), and is
  * sourced from the main dashboard's `clubPerformance` "Level 1s"/"Level 2s or
  * EOM"/…
- * fields — see `frontend/src/utils/dcpGoals.ts`. This raw count cannot apply
- * that dedup (`Member` is dropped before aggregation, by design) and must never
- * be conflated with it. Its value is raw activity volume + path/level breakdown.
+ * fields — see `frontend/src/utils/dcpGoals.ts`. This per-tier raw count stays
+ * un-deduped (`Member` is not projected into this aggregation, by design) and
+ * must never be conflated with DCP credit. Its value is raw activity volume +
+ * path/level breakdown. Per-club DISTINCT members (across all tiers) are counted
+ * separately by `countMembersPerClub` → `EducationClubMembers` (#1592).
  */
 export interface EducationAchievementActivity {
   club: string
@@ -70,6 +72,16 @@ export interface EducationAchievementActivity {
   award: string
   /** RAW achievement-row count for this (club, award) — NOT member-deduped DCP credit. */
   achievementCount: number
+}
+
+/**
+ * Distinct members with ≥1 education award, per club (#1592). Counted from the
+ * raw `Member` column inside the parser; only the count leaves — the Member
+ * value is never projected, stored or hashed.
+ */
+export interface EducationClubMembers {
+  club: string
+  membersWithAward: number
 }
 
 /**
@@ -142,6 +154,12 @@ export type ParsedDistrictReport =
       tableId: string
       reportType: 'education-achievements'
       rows: EducationAchievementActivity[]
+      /**
+       * `undefined` = NOT AVAILABLE (the table has rows but lacks a `Club` or
+       * `Member` header) — distinct from `[]` (no rows ⇒ zero members). Callers
+       * must omit the section rather than publish zeros (#1592).
+       */
+      clubMembers: EducationClubMembers[] | undefined
     }
   | { tableId: string; reportType: 'triple-crown'; rows: TripleCrownRow[] }
   | {
@@ -389,8 +407,10 @@ function projectRows(
  *
  * `achievementCount` is a RAW achievement-row count, NOT DCP credit: DCP counts
  * distinct members per award tier and lives in `clubPerformance` (dcpGoals.ts).
- * Member-dedup is impossible here — the personal `Member` column is dropped
- * before this aggregation runs (#1080).
+ * The per-tier raw counts remain un-deduped: the personal `Member` column is
+ * not projected, so this aggregation never sees it (#1080). Per-club distinct
+ * members are counted separately, straight from the raw table, by
+ * `countMembersPerClub` (#1592) — only that count leaves the parser.
  */
 function aggregateEducation(
   projected: Array<Record<string, string>>
@@ -420,6 +440,59 @@ function aggregateEducation(
     }
   }
   return [...groups.values()]
+}
+
+/**
+ * Count distinct members with ≥1 award per club (#1592), straight from the raw
+ * table. This is the ONE place the personal `Member` column is read: its values
+ * live only in a per-club Set for the duration of this call, and only the set
+ * sizes leave. They are deliberately NOT routed through `projectRows` — the
+ * KEEP projection stays personal-free by construction.
+ *
+ * Distinctness is by the trimmed Member string within one fetch (TI renders a
+ * member identically on every row of a single report); blank cells are skipped.
+ * Output order is first appearance of each club — deterministic for an input.
+ *
+ * Returns `[]` for a table with no rows (empty body: nothing to count). Returns
+ * `undefined` — "not available", never zeros — when rows exist but the `Club`
+ * or `Member` header is missing (TI layout drift), with one stderr line naming
+ * only the missing header(s); a cell value is never logged (R4).
+ */
+function countMembersPerClub(
+  table: RawTable
+): EducationClubMembers[] | undefined {
+  if (table.rows.length === 0) return []
+  const clubIdx = table.headers.indexOf('Club')
+  const memberIdx = table.headers.indexOf('Member')
+  if (clubIdx === -1 || memberIdx === -1) {
+    const missing = [
+      ...(clubIdx === -1 ? ['Club'] : []),
+      ...(memberIdx === -1 ? ['Member'] : []),
+    ]
+    console.error(
+      `[DailyReportParser] education-achievements: missing header(s) ${missing
+        .map(h => `"${h}"`)
+        .join(', ')} — distinct members per club unavailable, section omitted`
+    )
+    return undefined
+  }
+
+  const perClub = new Map<string, Set<string>>()
+  for (const row of table.rows) {
+    const club = (row[clubIdx] ?? '').trim()
+    const member = (row[memberIdx] ?? '').trim()
+    if (!club || !member) continue
+    let members = perClub.get(club)
+    if (!members) {
+      members = new Set()
+      perClub.set(club, members)
+    }
+    members.add(member)
+  }
+  return [...perClub].map(([club, members]) => ({
+    club,
+    membersWithAward: members.size,
+  }))
 }
 
 /**
@@ -459,6 +532,7 @@ export function parseDistrictReport(
       tableId,
       reportType: 'education-achievements',
       rows: aggregateEducation(projected),
+      clubMembers: countMembersPerClub(table),
     }
   }
   return {

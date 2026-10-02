@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { DistrictReportsDatasetSchema } from '@taverns-red/shared-contracts'
 
+import { deriveEducationMemberDenylist } from '../../__tests__/fixtures/educationMemberDenylist'
 import { parseDistrictReport } from '../DailyReportParser'
 import {
   buildDistrictReports,
@@ -117,6 +118,20 @@ describe('buildDistrictReports — privacy backstop (end-to-end)', () => {
     }
   })
 
+  // #1592 — the hand-listed denylist above names ONE education member; derive
+  // every Member value (and bare member ID) from the fixture itself. Counts
+  // only in assertions, so a failure never prints a personal value.
+  it('no Member value (or member ID) from the education fixture survives in the dataset', () => {
+    const raw = readFixture('education-achievements.html')
+    const denylist = deriveEducationMemberDenylist(raw)
+    // Falsifiability: the derived list is real and really from the fixture.
+    expect(denylist.length).toBeGreaterThanOrEqual(18)
+    expect(denylist.filter(v => !raw.includes(v)).length).toBe(0)
+
+    const blob = JSON.stringify(build())
+    expect(denylist.filter(v => blob.includes(v)).length).toBe(0)
+  })
+
   it('sponsors-mentors is deferred (#11) — skipped even if fetched', () => {
     const withSponsors: RawReport[] = [
       ...ALL_IN_SCOPE,
@@ -197,6 +212,38 @@ describe('buildDistrictReports — remaining sections', () => {
     const recs = build().sections.educationAchievements!.records
     expect(recs).toHaveLength(33)
     expect(recs.reduce((s, r) => s + r.achievementCount, 0)).toBe(40)
+  })
+
+  it('education members: distinct members per club, provenanced to the education report (#1592)', () => {
+    const sec = build().sections.educationMembers!
+    expect(sec.sources[0]!.tableId).toBe(REPORT_GUIDS.education)
+    expect(sec.records).toEqual([
+      { club: '1009147', membersWithAward: 8 },
+      { club: '1036983', membersWithAward: 8 },
+      { club: '1099641', membersWithAward: 2 },
+    ])
+  })
+
+  it('education members: OMITTED (not zeros) when the education table lacks the Member header (#1592)', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const noMember = `<table>
+        <tr><th>Club</th><th>Division</th><th>Area</th><th>Award</th><th>Name</th><th>Location</th></tr>
+        <tr><td>1234</td><td>A</td><td>1</td><td>PM1</td><td>Club 1234</td><td>Town</td></tr>
+      </table>`
+      const ds = build([{ tableId: REPORT_GUIDS.education, html: noMember }])
+      // Raw activity still lands — only the member count is unavailable.
+      expect(ds.sections.educationAchievements!.records).toHaveLength(1)
+      expect(ds.sections.educationMembers).toBeUndefined()
+      expect(DistrictReportsDatasetSchema.safeParse(ds).success).toBe(true)
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('education members: an empty education body publishes an empty section (zero rows ⇒ zero members)', () => {
+    const ds = build([{ tableId: REPORT_GUIDS.education, html: '' }])
+    expect(ds.sections.educationMembers!.records).toEqual([])
   })
 
   it('dues renewal April + October are separate provenanced sections', () => {
