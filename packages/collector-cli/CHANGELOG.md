@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.9.1...collector-cli-v1.10.0) (2026-10-02)
+
+
+### Features
+
+* **analytics:** education award leaderboards ([#1592](https://github.com/taverns-red/toast-stats/issues/1592)) ([#1593](https://github.com/taverns-red/toast-stats/issues/1593)) ([504f792](https://github.com/taverns-red/toast-stats/commit/504f7926f2ae5a3970863669e505a301e64ee59d))
+
 ## [1.9.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.9.0...collector-cli-v1.9.1) (2026-09-14)
 
 
