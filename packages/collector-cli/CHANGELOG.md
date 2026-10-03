@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.11.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.10.1...collector-cli-v1.11.0) (2026-10-03)
+
+
+### Features
+
+* **collector:** import prior-year education members from a TI export CSV ([#1603](https://github.com/taverns-red/toast-stats/issues/1603)) ([#1605](https://github.com/taverns-red/toast-stats/issues/1605)) ([0a86d90](https://github.com/taverns-red/toast-stats/commit/0a86d90723d6c530b43b1ce32782324e5bbdc29f))
+
+
+### Dependencies
+
+* **deps:** bump the patch-and-minor group across 1 directory with 18 updates ([#1604](https://github.com/taverns-red/toast-stats/issues/1604)) ([0f42c54](https://github.com/taverns-red/toast-stats/commit/0f42c548ffb240d7496945b09c9ea7b21b3cbd7b))
+* **deps:** bump the prod-deps group across 1 directory with 6 updates ([#1582](https://github.com/taverns-red/toast-stats/issues/1582)) ([0c9fe54](https://github.com/taverns-red/toast-stats/commit/0c9fe5459f2e77b78e862235877b66237a8f7a9d))
+
 ## [1.10.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.10.0...collector-cli-v1.10.1) (2026-10-03)
 
 

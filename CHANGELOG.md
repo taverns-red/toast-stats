@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.43.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.42.1...toast-stats-v2.43.0) (2026-10-03)
+
+
+### Features
+
+* **collector:** import prior-year education members from a TI export CSV ([#1603](https://github.com/taverns-red/toast-stats/issues/1603)) ([#1605](https://github.com/taverns-red/toast-stats/issues/1605)) ([0a86d90](https://github.com/taverns-red/toast-stats/commit/0a86d90723d6c530b43b1ce32782324e5bbdc29f))
+
+
+### Dependencies
+
+* **deps-dev:** bump brace-expansion from 5.0.8 to 5.0.12 ([#1596](https://github.com/taverns-red/toast-stats/issues/1596)) ([3801c87](https://github.com/taverns-red/toast-stats/commit/3801c8797b6c7d10085308f4ec88be658a2df219))
+* **deps-dev:** bump undici from 8.10.0 to 8.11.2 ([#1591](https://github.com/taverns-red/toast-stats/issues/1591)) ([525390f](https://github.com/taverns-red/toast-stats/commit/525390fcc7d886058dd16720604e249d8cc0c5cb))
+* **deps:** bump fast-uri from 3.1.7 to 3.1.8 ([#1598](https://github.com/taverns-red/toast-stats/issues/1598)) ([9f8e587](https://github.com/taverns-red/toast-stats/commit/9f8e5877e20ca07e8a544228a668db7211f81d48))
+* **deps:** bump ip-address from 10.5.0 to 10.7.3 ([#1597](https://github.com/taverns-red/toast-stats/issues/1597)) ([e6fe453](https://github.com/taverns-red/toast-stats/commit/e6fe453fdd3fe23e33abeff349415aa4cb9d467b))
+* **deps:** bump the patch-and-minor group across 1 directory with 18 updates ([#1604](https://github.com/taverns-red/toast-stats/issues/1604)) ([0f42c54](https://github.com/taverns-red/toast-stats/commit/0f42c548ffb240d7496945b09c9ea7b21b3cbd7b))
+* **deps:** bump the prod-deps group across 1 directory with 6 updates ([#1582](https://github.com/taverns-red/toast-stats/issues/1582)) ([0c9fe54](https://github.com/taverns-red/toast-stats/commit/0c9fe5459f2e77b78e862235877b66237a8f7a9d))
+
 ## [2.42.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.42.0...toast-stats-v2.42.1) (2026-10-03)
 
 
