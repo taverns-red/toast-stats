@@ -84,5 +84,12 @@ export {
   type EducationArchiveBackfillOptions,
   type EducationArchiveBackfillResult,
 } from './EducationArchiveBackfill.js'
+export {
+  formatReportAsOf,
+  importEducationMembers,
+  parseEducationExportCsv,
+  type ImportEducationMembersOptions,
+  type ImportEducationMembersResult,
+} from './EducationMembersImport.js'
 // CollectorOrchestrator will be added in Task 3
 // export { CollectorOrchestrator } from './CollectorOrchestrator.js'
