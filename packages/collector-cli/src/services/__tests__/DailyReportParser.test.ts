@@ -319,10 +319,10 @@ describe('parseDistrictReport — Education Achievements distinct members per cl
     expect(r.clubMembers).toEqual([{ club: '1234', membersWithAward: 1 }])
   })
 
-  // #1599 — TI renders one member two ways within a single report:
-  // `First Last, DESIG` and `NNNNNNNN - First Last`. Identity is the member,
-  // not the cell string.
-  it('a number-prefixed and a designation-suffixed rendering of one member count once', () => {
+  // #1599 — defensive: real TI numbered rows are `NNNNNNNN - Name unavailable`
+  // (suppressed names), but should a numbered row ever carry a name, it keys
+  // on that name, so it and a designation-suffixed row of the same name merge.
+  it('defensively treats a numbered and a named rendering of the same name as one member', () => {
     const r = parseDistrictReport(
       ID.education,
       table([

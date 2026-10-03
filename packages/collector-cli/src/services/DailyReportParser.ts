@@ -450,9 +450,10 @@ const MEMBER_NUMBER_PREFIX = /^(\d+)\s*-\s*/
 /**
  * Normalise a raw TI `Member` cell to a per-member identity key (#1599).
  *
- * TI renders one member two ways within a single report — `First Last, DESIG`
- * (the designation varies row to row: `, PM5`, `, DTM`) and `NNNNNNNN - First
- * Last` — so the raw string is NOT an identity. The key is the name: an
+ * TI's raw Member string isn't a stable identity (designation suffix such as
+ * `, PM5`/`, DTM`, case, whitespace vary; suppressed names appear as
+ * `NNNNNNNN - Name unavailable`), so we key on a normalised name, or the member
+ * number when the name is suppressed. The key is the name: an
  * optional member-number prefix stripped, the text before the first comma,
  * NFKC-normalised, whitespace collapsed, lower-cased. When the name is empty or
  * TI's `Name unavailable` placeholder, the member number is the identity
@@ -488,11 +489,11 @@ export function memberIdentityKey(raw: string): string | null {
  * They are deliberately NOT routed through `projectRows` — the KEEP projection
  * stays personal-free by construction.
  *
- * Distinctness is by `memberIdentityKey`, not the raw string: TI renders one
- * member in more than one format within a single report (#1599). Rows with a
- * non-counted award or no identity are skipped, so a club whose only rows are
- * non-counted awards is absent (not zero). Output order is first appearance of
- * each counted club — deterministic for an input.
+ * Distinctness is by `memberIdentityKey`, not the raw string, so
+ * designation/case/whitespace variants of one member count once (#1599). Rows
+ * with a non-counted award or no identity are skipped, so a club whose only
+ * rows are non-counted awards is absent (not zero). Output order is first
+ * appearance of each counted club — deterministic for an input.
  *
  * Returns `[]` for a table with no rows (empty body: nothing to count). Returns
  * `undefined` — "not available", never zeros — when rows exist but the `Club`,
