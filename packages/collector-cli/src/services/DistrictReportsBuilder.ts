@@ -226,8 +226,9 @@ export function buildDistrictReports(
       ],
       records: edu.report.rows,
     }
-    // Distinct members with ≥1 award per club (#1592) — counts only. Omitted
-    // (not zeros) when the parser could not count: `undefined` = unavailable.
+    // Distinct members with ≥1 counted award per club (#1592, #1599) — counts
+    // only. Omitted (not zeros) when the parser could not count: `undefined` =
+    // unavailable.
     if (edu.report.clubMembers !== undefined) {
       sections.educationMembers = {
         sources: [

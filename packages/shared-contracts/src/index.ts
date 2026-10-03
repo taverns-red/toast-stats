@@ -324,3 +324,7 @@ export {
   clubIdsMatch,
   findClubEntry,
 } from './naming/clubId.js'
+
+// Counted education award (#1592, #1599) — Pathways L1–L5 + DTM. The collector
+// counts distinct members per club by it; the frontend counts awards by it.
+export { isCountedEducationAward } from './education/countedEducationAward.js'
