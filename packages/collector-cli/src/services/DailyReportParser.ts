@@ -16,6 +16,8 @@
  * This module is pure — no I/O, no pipeline wiring (that is a later sprint).
  */
 
+import { isCountedEducationAward } from '@taverns-red/shared-contracts'
+
 // ─── Typed per-report KEEP shapes ───────────────────────────────────────────
 
 export interface DuesRenewalRow {
@@ -75,9 +77,9 @@ export interface EducationAchievementActivity {
 }
 
 /**
- * Distinct members with ≥1 education award, per club (#1592). Counted from the
- * raw `Member` column inside the parser; only the count leaves — the Member
- * value is never projected, stored or hashed.
+ * Distinct members with ≥1 counted education award (Pathways L1–L5 + DTM), per
+ * club (#1592, #1599). Counted from the raw `Member` column inside the parser;
+ * only the count leaves — the Member value is never projected, stored or hashed.
  */
 export interface EducationClubMembers {
   club: string
@@ -442,21 +444,60 @@ function aggregateEducation(
   return [...groups.values()]
 }
 
+/** Optional TI member-number prefix: `NNNNNNNN - ` (digits captured). */
+const MEMBER_NUMBER_PREFIX = /^(\d+)\s*-\s*/
+
 /**
- * Count distinct members with ≥1 award per club (#1592), straight from the raw
- * table. This is the ONE place the personal `Member` column is read: its values
- * live only in a per-club Set for the duration of this call, and only the set
- * sizes leave. They are deliberately NOT routed through `projectRows` — the
- * KEEP projection stays personal-free by construction.
+ * Normalise a raw TI `Member` cell to a per-member identity key (#1599).
  *
- * Distinctness is by the trimmed Member string within one fetch (TI renders a
- * member identically on every row of a single report); blank cells are skipped.
- * Output order is first appearance of each club — deterministic for an input.
+ * TI renders one member two ways within a single report — `First Last, DESIG`
+ * (the designation varies row to row: `, PM5`, `, DTM`) and `NNNNNNNN - First
+ * Last` — so the raw string is NOT an identity. The key is the name: an
+ * optional member-number prefix stripped, the text before the first comma,
+ * NFKC-normalised, whitespace collapsed, lower-cased. When the name is empty or
+ * TI's `Name unavailable` placeholder, the member number is the identity
+ * (`id:<digits>`); with no number either there is no identity (`null`).
+ *
+ * Known limit: two different members of one club with the same name merge.
+ * The alternative — keying by number — cannot work, since the comma rendering
+ * carries no number.
+ *
+ * The key is transient: it lives only in a per-club Set inside
+ * `countMembersPerClub` and never leaves the parser.
+ */
+export function memberIdentityKey(raw: string): string | null {
+  const trimmed = raw.trim()
+  const prefix = MEMBER_NUMBER_PREFIX.exec(trimmed)
+  const digits = prefix?.[1]
+  const rest = prefix ? trimmed.slice(prefix[0].length) : trimmed
+  const name = (rest.split(',')[0] ?? '')
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+  if (name && name !== 'name unavailable') return name
+  return digits ? `id:${digits}` : null
+}
+
+/**
+ * Count distinct members with ≥1 counted award (Pathways L1–L5 + DTM,
+ * `isCountedEducationAward` — the same rule the frontend counts awards by)
+ * per club (#1592, #1599), straight from the raw table. This is the ONE place
+ * the personal `Member` column is read: its identity keys live only in a
+ * per-club Set for the duration of this call, and only the set sizes leave.
+ * They are deliberately NOT routed through `projectRows` — the KEEP projection
+ * stays personal-free by construction.
+ *
+ * Distinctness is by `memberIdentityKey`, not the raw string: TI renders one
+ * member in more than one format within a single report (#1599). Rows with a
+ * non-counted award or no identity are skipped, so a club whose only rows are
+ * non-counted awards is absent (not zero). Output order is first appearance of
+ * each counted club — deterministic for an input.
  *
  * Returns `[]` for a table with no rows (empty body: nothing to count). Returns
- * `undefined` — "not available", never zeros — when rows exist but the `Club`
- * or `Member` header is missing (TI layout drift), with one stderr line naming
- * only the missing header(s); a cell value is never logged (R4).
+ * `undefined` — "not available", never zeros — when rows exist but the `Club`,
+ * `Member` or `Award` header is missing (TI layout drift), with one stderr line
+ * naming only the missing header(s); a cell value is never logged (R4).
  */
 function countMembersPerClub(
   table: RawTable
@@ -464,10 +505,12 @@ function countMembersPerClub(
   if (table.rows.length === 0) return []
   const clubIdx = table.headers.indexOf('Club')
   const memberIdx = table.headers.indexOf('Member')
-  if (clubIdx === -1 || memberIdx === -1) {
+  const awardIdx = table.headers.indexOf('Award')
+  if (clubIdx === -1 || memberIdx === -1 || awardIdx === -1) {
     const missing = [
       ...(clubIdx === -1 ? ['Club'] : []),
       ...(memberIdx === -1 ? ['Member'] : []),
+      ...(awardIdx === -1 ? ['Award'] : []),
     ]
     console.error(
       `[DailyReportParser] education-achievements: missing header(s) ${missing
@@ -480,8 +523,10 @@ function countMembersPerClub(
   const perClub = new Map<string, Set<string>>()
   for (const row of table.rows) {
     const club = (row[clubIdx] ?? '').trim()
-    const member = (row[memberIdx] ?? '').trim()
-    if (!club || !member) continue
+    if (!club) continue
+    if (!isCountedEducationAward((row[awardIdx] ?? '').trim())) continue
+    const member = memberIdentityKey(row[memberIdx] ?? '')
+    if (member === null) continue
     let members = perClub.get(club)
     if (!members) {
       members = new Set()
