@@ -346,7 +346,8 @@ export function extractReportAsOf(html: string): string {
 
 // ─── HTML table parsing (desktop <table> only) ───────────────────────────────
 
-interface RawTable {
+/** A header row + string cells — an HTML table or a CSV export (#1603). */
+export interface RawTable {
   headers: string[]
   rows: string[][]
 }
@@ -500,7 +501,7 @@ export function memberIdentityKey(raw: string): string | null {
  * `Member` or `Award` header is missing (TI layout drift), with one stderr line
  * naming only the missing header(s); a cell value is never logged (R4).
  */
-function countMembersPerClub(
+export function countMembersPerClub(
   table: RawTable
 ): EducationClubMembers[] | undefined {
   if (table.rows.length === 0) return []
