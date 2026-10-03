@@ -11,6 +11,7 @@ import {
 } from 'vitest'
 
 import {
+  memberIdentityKey,
   parseDistrictReport,
   type ParsedDistrictReport,
 } from '../DailyReportParser'
@@ -274,7 +275,13 @@ describe('parseDistrictReport — Education Achievements distinct members per cl
       readFixture('education-achievements.html')
     )
     if (r.reportType !== 'education-achievements') throw new Error('type')
-    // Expected values computed independently from the fixture's Member column.
+    // Expected values computed independently (a one-off script over the
+    // fixture) with the #1599 identity rule — number prefix stripped, name
+    // before the first comma, `Name unavailable` rows keyed by member number —
+    // over counted awards only (Pathways L1–L5 + DTM). The fixture's numbered
+    // rows are all `Name unavailable` with distinct numbers, and its one
+    // Pathways Mentor row belongs to a member with counted awards, so the
+    // counts match the pre-#1599 raw-string result.
     expect(r.clubMembers).toEqual([
       { club: '1009147', membersWithAward: 8 },
       { club: '1036983', membersWithAward: 8 },
@@ -312,12 +319,140 @@ describe('parseDistrictReport — Education Achievements distinct members per cl
     expect(r.clubMembers).toEqual([{ club: '1234', membersWithAward: 1 }])
   })
 
+  // #1599 — TI renders one member two ways within a single report:
+  // `First Last, DESIG` and `NNNNNNNN - First Last`. Identity is the member,
+  // not the cell string.
+  it('a number-prefixed and a designation-suffixed rendering of one member count once', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      table([
+        ['1234', 'PM1Presentation Mastery Level 1', 'Pat Doe, PM5'],
+        ['1234', 'PM2Presentation Mastery Level 2', '00012345 - Pat Doe'],
+      ])
+    )
+    if (r.reportType !== 'education-achievements') throw new Error('type')
+    expect(r.clubMembers).toEqual([{ club: '1234', membersWithAward: 1 }])
+  })
+
+  it('designation variants of one member count once', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      table([
+        ['1234', 'PM5Presentation Mastery Level 5', 'Pat Doe, PM5'],
+        ['1234', 'DTMDistinguished Toastmaster', 'Pat Doe, DTM'],
+      ])
+    )
+    if (r.reportType !== 'education-achievements') throw new Error('type')
+    expect(r.clubMembers).toEqual([{ club: '1234', membersWithAward: 1 }])
+  })
+
+  it('case and inner-whitespace variants of one member count once', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      table([
+        ['1234', 'PM1Presentation Mastery Level 1', 'Pat Doe'],
+        ['1234', 'PM2Presentation Mastery Level 2', 'PAT   doe, PM2'],
+        ['1234', 'PM3Presentation Mastery Level 3', '00012345 -  pat\u00a0Doe'],
+      ])
+    )
+    if (r.reportType !== 'education-achievements') throw new Error('type')
+    expect(r.clubMembers).toEqual([{ club: '1234', membersWithAward: 1 }])
+  })
+
+  it('`Name unavailable` rows are told apart by member number', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      table([
+        [
+          '1234',
+          'PM1Presentation Mastery Level 1',
+          '00011111 - Name unavailable',
+        ],
+        [
+          '1234',
+          'PM2Presentation Mastery Level 2',
+          '00022222 - Name unavailable',
+        ],
+        [
+          '5678',
+          'PM1Presentation Mastery Level 1',
+          '00033333 - Name unavailable',
+        ],
+        [
+          '5678',
+          'PM2Presentation Mastery Level 2',
+          '00033333 - Name unavailable',
+        ],
+      ])
+    )
+    if (r.reportType !== 'education-achievements') throw new Error('type')
+    expect(r.clubMembers).toEqual([
+      { club: '1234', membersWithAward: 2 },
+      { club: '5678', membersWithAward: 1 },
+    ])
+  })
+
+  it('a member whose only award is not a counted award (Pathways Mentor) is not counted', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      table([
+        ['1234', 'PM1Presentation Mastery Level 1', 'Pat Doe'],
+        ['1234', 'PWMENTORPGMPathways Mentor Program', 'Sam Roe, PM3'],
+      ])
+    )
+    if (r.reportType !== 'education-achievements') throw new Error('type')
+    expect(r.clubMembers).toEqual([{ club: '1234', membersWithAward: 1 }])
+  })
+
+  it('a club whose rows are all non-counted awards is absent, not zero', () => {
+    const r = parseDistrictReport(
+      ID.education,
+      table([
+        ['1234', 'PM1Presentation Mastery Level 1', 'Pat Doe'],
+        ['5678', 'PWMENTORPGMPathways Mentor Program', 'Sam Roe'],
+      ])
+    )
+    if (r.reportType !== 'education-achievements') throw new Error('type')
+    expect(r.clubMembers).toEqual([{ club: '1234', membersWithAward: 1 }])
+  })
+
   it('never emits a Member value — only club + count', () => {
     const r = parseDistrictReport(
       ID.education,
       table([['1234', 'PM1', 'Pat Doe']])
     )
     expect(JSON.stringify(r)).not.toContain('Pat Doe')
+  })
+})
+
+// #1599 — the pure identity rule behind the distinct-member count.
+describe('memberIdentityKey', () => {
+  it.each([
+    ['Pat Doe', 'pat doe'],
+    ['Pat Doe, PM5', 'pat doe'],
+    ['Pat Doe, DTM', 'pat doe'],
+    ['00012345 - Pat Doe', 'pat doe'],
+    ['00012345-Pat Doe, PM5', 'pat doe'],
+    ['  PAT \t  doe  ', 'pat doe'],
+    ['Pat\u00a0Doe', 'pat doe'], // NFKC folds the no-break space
+    ['\uff30at Doe', 'pat doe'], // NFKC folds a fullwidth letter
+  ])('%j ⇒ %j', (raw, key) => {
+    expect(memberIdentityKey(raw)).toBe(key)
+  })
+
+  it('falls back to the member number when the name is unavailable or empty', () => {
+    expect(memberIdentityKey('00011111 - Name unavailable')).toBe('id:00011111')
+    expect(memberIdentityKey('00011111 - NAME  UNAVAILABLE')).toBe(
+      'id:00011111'
+    )
+    expect(memberIdentityKey('00011111 - ')).toBe('id:00011111')
+  })
+
+  it('returns null when there is neither a name nor a number', () => {
+    expect(memberIdentityKey('')).toBeNull()
+    expect(memberIdentityKey('   ')).toBeNull()
+    expect(memberIdentityKey('Name unavailable')).toBeNull()
+    expect(memberIdentityKey(', PM5')).toBeNull()
   })
 })
 
@@ -333,7 +468,7 @@ describe('parseDistrictReport — Education Achievements missing header ⇒ club
     errorSpy.mockRestore()
   })
 
-  const withoutColumn = (drop: 'Member' | 'Club') => {
+  const withoutColumn = (drop: 'Member' | 'Club' | 'Award') => {
     const headers = [
       'Club',
       'Division',
@@ -360,7 +495,8 @@ describe('parseDistrictReport — Education Achievements missing header ⇒ club
     return `<table><tr>${th.join('')}</tr><tr>${td.join('')}</tr></table>`
   }
 
-  it.each(['Member', 'Club'] as const)(
+  // Award is required too since #1599: only counted awards are counted.
+  it.each(['Member', 'Club', 'Award'] as const)(
     'rows present but no %s header ⇒ clubMembers undefined + one stderr line naming only that header',
     missing => {
       const r = parseDistrictReport(ID.education, withoutColumn(missing))
