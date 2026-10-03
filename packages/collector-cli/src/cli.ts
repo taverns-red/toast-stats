@@ -2061,5 +2061,66 @@ export function createCLI(): Command {
       }
     )
 
+  // One-off import of a prior PY's distinct members per club from a TI
+  // Education Achievements CSV export (#1603). Operator-run, local cache only;
+  // see docs/runbooks/education-members-import.md.
+  program
+    .command('import-education-members')
+    .description(
+      'One-off: count distinct members with a counted education award per ' +
+        'club from a TI Education Achievements CSV export and write ONLY the ' +
+        'educationMembers section of the PY-end reports dataset (#1603)'
+    )
+    .requiredOption('--file <csv>', 'Path to the TI Education Achievements CSV')
+    .requiredOption('--district <id>', 'District ID the export is for')
+    .requiredOption(
+      '--program-year <YYYY-YYYY>',
+      "The export's program year, e.g. 2025-2026"
+    )
+    .requiredOption(
+      '--as-of <YYYY-MM-DD>',
+      'Date the export was taken (provenance shown as "as of")'
+    )
+    .option(
+      '--cache-dir <dir>',
+      'Cache directory (default: CACHE_DIR or ./cache)'
+    )
+    .action(
+      async (options: {
+        file: string
+        district: string
+        programYear: string
+        asOf: string
+        cacheDir?: string
+      }) => {
+        const { importEducationMembers } = await import('./services/index.js')
+        const { readFile } = await import('fs/promises')
+        const { cacheDir } = resolveConfiguration({
+          cacheDir: options.cacheDir,
+        })
+        try {
+          const csvText = await readFile(options.file, 'utf-8')
+          const result = await importEducationMembers({
+            cacheDir,
+            districtId: options.district,
+            programYear: options.programYear,
+            csvText,
+            asOf: options.asOf,
+          })
+          console.error(
+            `[INFO] D${result.districtId} ${result.programYear}: educationMembers written to ${result.path}`
+          )
+          // Counts only — never a member value (epic #1062).
+          emitJsonAndExit(result, ExitCode.SUCCESS)
+        } catch (err) {
+          // Error messages name headers/rows/dates/paths only, never a member.
+          console.error(
+            `Error: ${err instanceof Error ? err.message : String(err)}`
+          )
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+      }
+    )
+
   return program
 }

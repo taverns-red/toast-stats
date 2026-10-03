@@ -63,6 +63,7 @@ Count distinct members **inside the collector** and publish only the per-club co
 
 - **Crowning Glory:** available. The Educational Achievement _Archive_ report (`a30b93f3…`) returns the full 2025-26 ledger (1,246 rows, Jul 2025 – Jun 2026, re-checked live 2026-10-01). It is already backfilled into `snapshots/2026-06-30/` as `educationAchievements`.
 - **Team Spirit:** **not available from TI.** The archive's columns are `Club, Division, Area, Award, Date, Name, Location`, and `Name` is the club name (145 distinct values = clubs). There's no member column. The daily report has `Member` but ignores `year` and always returns the current PY. Prior years show "not available" unless the district supplies its own member-level records (a possible one-off import, counts only).
+  - **2025-26 (D61):** imported from the operator's year-end CSV export with `import-education-members` (#1603), counts only. See `docs/runbooks/education-members-import.md`.
 
 ## Data landing
 
