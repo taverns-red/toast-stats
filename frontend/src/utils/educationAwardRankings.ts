@@ -11,7 +11,10 @@
  *
  * Clubs with a base below MIN_ELIGIBLE_BASE are listed as ineligible, unranked.
  */
-import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
+import {
+  isCountedEducationAward,
+  type DistrictReportsDataset,
+} from '@taverns-red/shared-contracts'
 import { computeTiedRanks } from './tieRankingUtils'
 
 export const MIN_ELIGIBLE_BASE = 8
@@ -39,12 +42,9 @@ export interface EducationAwardRanking {
   ineligible: EducationAwardEntry[]
 }
 
-/** Pathways level award (e.g. `PM1…`–`VC5…`) or DTM. */
-const COUNTED_AWARD = /^(?:[A-Z]{2}[1-5]|DTM)/
-
-export function isCountedEducationAward(award: string): boolean {
-  return COUNTED_AWARD.test(award)
-}
+// Pathways L1–L5 + DTM. Shared with collector-cli, which counts distinct
+// members per club by the same rule (#1599); re-exported for callers here.
+export { isCountedEducationAward }
 
 const unavailable = (): EducationAwardRanking => ({
   available: false,
