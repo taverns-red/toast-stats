@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.25.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.25.0...frontend-v3.25.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **collector:** count education-award members only for counted awards ([#1599](https://github.com/taverns-red/toast-stats/issues/1599)) ([#1600](https://github.com/taverns-red/toast-stats/issues/1600)) ([9abaae2](https://github.com/taverns-red/toast-stats/commit/9abaae2c859e7ac0548a3f3a848f0bf23cc33c87))
+
 ## [3.25.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.24.1...frontend-v3.25.0) (2026-10-02)
 
 
