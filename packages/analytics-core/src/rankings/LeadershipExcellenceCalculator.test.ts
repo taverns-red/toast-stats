@@ -166,4 +166,125 @@ describe('LeadershipExcellenceCalculator (#333)', () => {
     expect(result.qualifyingDistricts).toHaveLength(0)
     expect(result.allDistricts[0]?.consecutiveYears).toBe(2)
   })
+
+  describe('award year counts toward the streak (#1609)', () => {
+    const prior = [tier('2023-2024', 'Select'), tier('2024-2025', 'Smedley')]
+
+    it('at the year-end close, Distinguished in Y-2, Y-1 and Y qualifies for year Y', () => {
+      // D104, TI 2025-26 recipient: 23-24 Select, 24-25 Smedley, 25-26 Smedley.
+      const result = calculator.calculate([
+        input({
+          districtId: '104',
+          yearEndTiers: prior,
+          currentYear: {
+            programYear: '2025-2026',
+            tier: 'Smedley',
+            final: true,
+          },
+        }),
+      ])
+      expect(result.qualifyingDistricts.map(d => d.districtId)).toEqual(['104'])
+      const d = result.allDistricts[0]!
+      expect(d.consecutiveYears).toBe(3)
+      expect(d.onTrack).toBe(false)
+      expect(d.streakDetails.map(s => s.programYear)).toEqual([
+        '2023-2024',
+        '2024-2025',
+        '2025-2026',
+      ])
+    })
+
+    it('at the year-end close, a NotDistinguished award year breaks the streak', () => {
+      const result = calculator.calculate([
+        input({
+          yearEndTiers: [tier('2022-2023', 'Select'), ...prior],
+          currentYear: {
+            programYear: '2025-2026',
+            tier: 'NotDistinguished',
+            final: true,
+          },
+        }),
+      ])
+      expect(result.qualifyingDistricts).toHaveLength(0)
+      expect(result.allDistricts[0]?.consecutiveYears).toBe(0)
+    })
+
+    it('mid-year, 2 prior years + currently tracking Distinguished is ON TRACK, not a recipient', () => {
+      const result = calculator.calculate([
+        input({
+          yearEndTiers: prior,
+          currentYear: {
+            programYear: '2025-2026',
+            tier: 'Distinguished',
+            final: false,
+          },
+        }),
+      ])
+      expect(result.qualifyingDistricts).toHaveLength(0)
+      const d = result.allDistricts[0]!
+      expect(d.qualifies).toBe(false)
+      expect(d.onTrack).toBe(true)
+      expect(d.consecutiveYears).toBe(2)
+    })
+
+    it('mid-year, a 3+ year prior streak is still only on track — never a recipient before the close', () => {
+      const result = calculator.calculate([
+        input({
+          yearEndTiers: [tier('2022-2023', 'Presidents'), ...prior],
+          currentYear: {
+            programYear: '2025-2026',
+            tier: 'Select',
+            final: false,
+          },
+        }),
+      ])
+      expect(result.qualifyingDistricts).toHaveLength(0)
+      expect(result.allDistricts[0]?.onTrack).toBe(true)
+    })
+
+    it('mid-year, not currently tracking Distinguished is not on track', () => {
+      const result = calculator.calculate([
+        input({
+          yearEndTiers: prior,
+          currentYear: {
+            programYear: '2025-2026',
+            tier: 'NotDistinguished',
+            final: false,
+          },
+        }),
+      ])
+      expect(result.allDistricts[0]?.onTrack).toBe(false)
+    })
+
+    it('mid-year, only 1 prior Distinguished year is not on track', () => {
+      const result = calculator.calculate([
+        input({
+          yearEndTiers: [tier('2023-2024', 'NotDistinguished'), prior[1]!],
+          currentYear: {
+            programYear: '2025-2026',
+            tier: 'Smedley',
+            final: false,
+          },
+        }),
+      ])
+      expect(result.allDistricts[0]?.onTrack).toBe(false)
+    })
+
+    it('mid-year, a gap before the current year (prior streak ends in Y-2) is not on track', () => {
+      const result = calculator.calculate([
+        input({
+          yearEndTiers: [
+            tier('2022-2023', 'Select'),
+            tier('2023-2024', 'Select'),
+          ],
+          currentYear: {
+            programYear: '2025-2026',
+            tier: 'Smedley',
+            final: false,
+          },
+        }),
+      ])
+      expect(result.allDistricts[0]?.onTrack).toBe(false)
+    })
+  })
 })

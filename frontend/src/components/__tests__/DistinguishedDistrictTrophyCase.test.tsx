@@ -484,4 +484,41 @@ describe('DistinguishedDistrictTrophyCase', () => {
       expect(screen.queryByText(/Rev\. 03\/2026/i)).not.toBeInTheDocument()
     })
   })
+
+  describe('Leadership Excellence on track (#1609)', () => {
+    it('mid-year, an on-track district says so — and does not list the award as earned', () => {
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear={LEGACY_PY}
+          leadershipExcellenceQualifies={false}
+          leadershipExcellenceOnTrack={true}
+          leadershipExcellenceYears={2}
+        />
+      )
+      const note = screen.getByText(/on track for leadership excellence/i)
+      expect(note.textContent).toMatch(/2 consecutive Distinguished years/i)
+      expect(note.textContent).toMatch(/year-end close/i)
+      expect(screen.queryByText(/Additional Awards Earned/i)).toBeNull()
+    })
+
+    it('a recipient shows the earned chip, not the on-track note', () => {
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear={LEGACY_PY}
+          leadershipExcellenceQualifies={true}
+          leadershipExcellenceOnTrack={false}
+          leadershipExcellenceYears={3}
+        />
+      )
+      expect(screen.getByText(/Additional Awards Earned/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Leadership Excellence \(3yr\)/)
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText(/on track for leadership excellence/i)
+      ).toBeNull()
+    })
+  })
 })

@@ -1849,11 +1849,14 @@ export class TransformService {
    *
    * @param snapshotDate - The date to write the snapshot under
    * @param rankings - The rankings data already computed for this date
+   * @param isYearEndClose - True when this is the program year's June close;
+   *   only then does the award year count toward Leadership Excellence (#1609)
    * @returns Path to the written competitive awards file
    */
   private async writeCompetitiveAwardsToDate(
     snapshotDate: string,
-    rankings: AllDistrictsRankingsData
+    rankings: AllDistrictsRankingsData,
+    isYearEndClose = false
   ): Promise<string> {
     // ── Competitive awards (Extension, 20-Plus, Retention) ──
     const competitiveCalculator = new CompetitiveAwardsCalculator()
@@ -1948,6 +1951,15 @@ export class TransformService {
             | 'Presidents'
             | 'Smedley',
         })),
+      // The award year counts toward its own streak once its close is in;
+      // before that the calculator reports on track (#1609).
+      currentYear: {
+        programYear,
+        tier:
+          distinguishedDistrict[r.districtId]?.currentTier ??
+          'NotDistinguished',
+        final: isYearEndClose,
+      },
     }))
     const leadershipExcellenceAward =
       leadershipCalculator.calculate(leadershipInputs)
@@ -2275,8 +2287,16 @@ export class TransformService {
 
             // Calculate and write competitive awards standings (#330)
             try {
+              // The June close (collected in July) is the year-end (#1609).
+              const isYearEndClose =
+                closingPeriodInfo.isClosingPeriod &&
+                closingPeriodInfo.dataMonth.endsWith('-06')
               const competitiveAwardsPath =
-                await this.writeCompetitiveAwardsToDate(snapshotDate, rankings)
+                await this.writeCompetitiveAwardsToDate(
+                  snapshotDate,
+                  rankings,
+                  isYearEndClose
+                )
               snapshotLocations.push(competitiveAwardsPath)
             } catch (awardsError) {
               const msg =

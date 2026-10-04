@@ -105,6 +105,20 @@ describe('DistrictAwardsHistoryStore (#333)', () => {
     ])
   })
 
+  it('excludes LATER program years when rebuilding a past year (#1609)', () => {
+    // The live history already carries 2026-2027 rows. Rebuilding a 2025-26
+    // snapshot must not see them, or every streak counted back from the
+    // newest year starts at a NotDistinguished future year and reads 0.
+    const store = DistrictAwardsHistoryStore.create()
+    store.upsertYearSummary('104', summary('2023-2024', 'Select'))
+    store.upsertYearSummary('104', summary('2024-2025', 'Smedley'))
+    store.upsertYearSummary('104', summary('2025-2026', 'Smedley'))
+    store.upsertYearSummary('104', summary('2026-2027', 'NotDistinguished'))
+
+    const tiers = store.getCompletedYearTiers('104', '2025-2026')
+    expect(tiers.map(t => t.programYear)).toEqual(['2023-2024', '2024-2025'])
+  })
+
   it('should save and load round-trip correctly', async () => {
     const store = DistrictAwardsHistoryStore.create()
     store.upsertYearSummary('61', summary('2023-2024', 'Select'))
