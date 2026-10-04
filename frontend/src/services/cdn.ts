@@ -405,6 +405,9 @@ export interface CompetitiveAwardStandings {
       districtId: string
       consecutiveYears: number
       qualifies: boolean
+      /** Mid-year: on course to receive the award at the close (#1609).
+          Absent on snapshots built before #1609. */
+      onTrack?: boolean
     }>
   }
   /** Officer Awards — PQD and CGD (#333) */

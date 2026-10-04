@@ -271,6 +271,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
   clubStrengthGrowth,
   leadershipExcellenceQualifies,
   leadershipExcellenceYears,
+  leadershipExcellenceOnTrack,
   educationTrainingQualifies,
   clubGrowthQualifies,
 }) => {
@@ -513,6 +514,14 @@ export const DistinguishedDistrictTrophyCase: React.FC<
             </p>
           )}
         </div>
+      )}
+
+      {leadershipExcellenceOnTrack && !leadershipExcellenceQualifies && (
+        <p className="border-t border-gray-200 pt-4 text-sm text-gray-700 font-tm-body">
+          <span aria-hidden="true">⭐</span> On track for Leadership Excellence:{' '}
+          {leadershipExcellenceYears} consecutive Distinguished years so far,
+          and tracking Distinguished this year. Awarded at the year-end close.
+        </p>
       )}
     </div>
   )

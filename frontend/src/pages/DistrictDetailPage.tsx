@@ -683,6 +683,9 @@ const DistrictDetailPageInner: React.FC = () => {
                   leadershipExcellenceYears={
                     leadershipExcellenceResult?.consecutiveYears
                   }
+                  leadershipExcellenceOnTrack={
+                    leadershipExcellenceResult?.onTrack
+                  }
                   educationTrainingQualifies={
                     officerAwardsResult?.educationTraining?.qualifies
                   }
