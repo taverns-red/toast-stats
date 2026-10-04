@@ -605,6 +605,22 @@ const MethodologyPage: React.FC = () => {
             can reach 100%. Values display to one decimal place; ranking uses
             the unrounded values.
           </li>
+          <li>
+            <strong>Leadership Excellence</strong> — the District Leadership
+            Excellence Award goes to districts that are Distinguished (any tier)
+            for three or more consecutive years (Item 1490). The award year
+            itself counts toward the streak, so a district Distinguished in
+            2023–24, 2024–25 and 2025–26 receives the 2025–26 award. During the
+            year, a district with two prior consecutive years that is currently
+            tracking Distinguished is shown as on track. It is shown as a
+            recipient only once the year-end close is in. For 2025–26 the rule
+            names Districts 104, 59, 88 and 71, which match TI&apos;s published
+            list, plus Districts 94, 109 and 93. All three were Smedley in
+            2025–26 and Distinguished in both prior years, but TI did not list
+            them. Item 1490 doesn&apos;t explain why, and District 94 was listed
+            in both of the previous two years. Toast Stats shows the published
+            rule and does not guess at an unpublished one.
+          </li>
         </ul>
       </CollapsibleSection>
 
