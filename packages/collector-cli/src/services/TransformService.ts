@@ -605,6 +605,33 @@ export class TransformService {
   }
 
   /**
+   * The collectionDate of an existing CLOSING snapshot at `snapshotDate`, or
+   * null when there is no snapshot, it is not closing-period data, or its
+   * metadata is unreadable (#1608).
+   */
+  private async readClosingCollectionDate(
+    snapshotDate: string
+  ): Promise<string | null> {
+    const metadataPath = path.join(
+      this.getSnapshotDir(snapshotDate),
+      'metadata.json'
+    )
+    try {
+      const parsed: unknown = JSON.parse(
+        await fs.readFile(metadataPath, 'utf-8')
+      )
+      if (typeof parsed !== 'object' || parsed === null) return null
+      const metadata = parsed as Record<string, unknown>
+      if (metadata['isClosingPeriodData'] !== true) return null
+      return typeof metadata['collectionDate'] === 'string'
+        ? metadata['collectionDate']
+        : snapshotDate
+    } catch {
+      return null
+    }
+  }
+
+  /**
    * Parse CSV content into 2D array format expected by DataTransformer
    */
   private parseCSVToArray(csvContent: string): string[][] {
@@ -2069,6 +2096,32 @@ export class TransformService {
           }
         )
 
+        return {
+          success: true,
+          date: snapshotDate,
+          districtsProcessed: [],
+          districtsSucceeded: [],
+          districtsFailed: [],
+          districtsSkipped: [],
+          snapshotLocations: [],
+          errors: [],
+          duration_ms: Date.now() - startTime,
+        }
+      }
+    }
+
+    // Step 3b (#1608): pre-close data never replaces a closing snapshot —
+    // not even under --force. The 2026-09-10 rebuild of 2026-06-30 from its
+    // in-month raw overwrote the June close this way; the close is strictly
+    // more authoritative for a month-end than any in-month view of it.
+    if (!closingPeriodInfo.isClosingPeriod) {
+      const closingCollectionDate =
+        await this.readClosingCollectionDate(snapshotDate)
+      if (closingCollectionDate !== null) {
+        this.logger.warn(
+          'Skipping transform: snapshot holds closing-period data and the input is pre-close',
+          { snapshotDate, sourceDate: date, closingCollectionDate, force }
+        )
         return {
           success: true,
           date: snapshotDate,
