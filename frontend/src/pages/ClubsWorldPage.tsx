@@ -104,7 +104,7 @@ const ClubsWorldPage: React.FC = () => {
     <div className="clubs-page">
       <header className="districts-page-header clubs-page__header">
         <div className="districts-page-header__intro">
-          <p className="clubs-page__eyebrow">
+          <p className="placeholder-page__eyebrow">
             Program year {race?.programYear ?? selectedProgramYear.label}
             {snapshotDate ? ` · as of ${snapshotDate}` : ''}
           </p>

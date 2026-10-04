@@ -9,7 +9,7 @@ import { RacePodium } from '../RacePodium'
  * #1556 — the podium is an ordered list of RANKS, not of clubs: a tie on the
  * first observed date renders as one rank label with a stacked list under
  * it ("1st — 3 clubs"), never as three "1st" cards. Rank 1 carries the
- * `--rt-stats` accent class; tier colour is never the only signal.
+ * loyal-blue accent class (#1606); tier colour is never the only signal.
  */
 const row = (
   clubId: string,
