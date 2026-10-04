@@ -400,6 +400,7 @@ describe('classifyRegistryRemediation (#1419)', () => {
         fresh: false,
         missing: [{ dataMonth: '2026-05', closingDate: '2026-06-05' }],
         mismatched: [],
+        contradicted: [],
         emptyFeed: true,
         noDerivableMonths: false,
         checkedMonths: [],

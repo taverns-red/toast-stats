@@ -41,12 +41,23 @@ export interface RegistryMismatch {
   derivedClosingDate: string
 }
 
+/**
+ * A registry entry whose closing date has raw-csv metadata that does NOT
+ * mark it as a close for that data month (#1620) — provably wrong.
+ */
+export interface RegistryContradiction {
+  dataMonth: string
+  registryClosingDate: string
+}
+
 export interface RegistryFreshnessResult {
   fresh: boolean
   /** Derivable completed months absent from the registry. */
   missing: RegistryMonthEntry[]
   /** Months where reality moved past the registered closing date. */
   mismatched: RegistryMismatch[]
+  /** Entries contradicted by their own closing date's raw-csv metadata. */
+  contradicted: RegistryContradiction[]
   /** True when no metadata entries were supplied — a monitor-feed failure. */
   emptyFeed: boolean
   /**
@@ -110,6 +121,7 @@ export function evaluateRegistryFreshness(
       fresh: false,
       missing: [],
       mismatched: [],
+      contradicted: [],
       emptyFeed: true,
       noDerivableMonths: false,
       checkedMonths: [],
@@ -142,16 +154,47 @@ export function evaluateRegistryFreshness(
   // per-object metadata reads degraded to non-closing defaults (gcsHelpers
   // swallows read errors) — the monitor cannot see, so it must alert (L107).
   const noDerivableMonths = expected.length === 0
+  const contradicted = findRegistryContradictions(registryMonths, entries)
 
   return {
     fresh:
-      !noDerivableMonths && missing.length === 0 && mismatched.length === 0,
+      !noDerivableMonths &&
+      missing.length === 0 &&
+      mismatched.length === 0 &&
+      contradicted.length === 0,
     missing,
     mismatched,
+    contradicted,
     emptyFeed: false,
     noDerivableMonths,
     checkedMonths: expected.map(e => e.dataMonth),
   }
+}
+
+/**
+ * Registry entries whose closing date's raw-csv metadata EXISTS and does not
+ * say `isClosingPeriod: true` for that data month (#1620).
+ *
+ * The trust-later rule above lets a manual entry run past the derivable
+ * close, which is how 2026-06 → 2026-07-29 (a July daily) sat unnoticed.
+ * Trust ends where direct evidence disagrees: a dated raw whose metadata
+ * calls it a non-close, or a close for another month, cannot be that
+ * month's closing collection. Dates outside the feed window, or whose
+ * metadata is absent (pre-2026 raws, outage months), stay trusted.
+ */
+export function findRegistryContradictions(
+  registryMonths: RegistryMonthEntry[],
+  entries: RawCSVEntry[]
+): RegistryContradiction[] {
+  const byDate = new Map(entries.map(e => [e.collectionDate, e]))
+  const contradicted: RegistryContradiction[] = []
+  for (const { dataMonth, closingDate } of registryMonths) {
+    const raw = byDate.get(closingDate)
+    if (raw === undefined || raw.metadataFound === false) continue
+    if (raw.isClosingPeriod && raw.dataMonth === dataMonth) continue
+    contradicted.push({ dataMonth, registryClosingDate: closingDate })
+  }
+  return contradicted.sort((a, b) => a.dataMonth.localeCompare(b.dataMonth))
 }
 
 /**
@@ -283,6 +326,10 @@ export function classifyRegistryRemediation(
 ): RegistryRemediation {
   if (result.fresh) return 'none'
   if (result.emptyFeed || result.noDerivableMonths) return 'manual'
+  // A contradicted entry is usually LATER than the derivable close, and a
+  // derived date never regresses a later registry date (planRegistryUpdates),
+  // so the auto-PR cannot fix it: a human corrects it with --set (#1620).
+  if (result.contradicted.length > 0) return 'manual'
   if (result.missing.length > 0 || result.mismatched.length > 0) return 'auto'
   // Not fresh, feed readable, nothing recorded: an unmodelled verdict. Fall
   // back to the loud path rather than inventing a silent auto-fix.
@@ -301,6 +348,7 @@ export function buildRegistryStaleTitle(
   const months = [
     ...result.missing.map(m => m.dataMonth),
     ...result.mismatched.map(m => m.dataMonth),
+    ...result.contradicted.map(m => m.dataMonth),
   ].sort()
   return `🟥 closing-date registry stale — ${months.join(', ')}`
 }
@@ -339,6 +387,11 @@ export function buildRegistryStaleBody(
     for (const m of result.mismatched) {
       lines.push(
         `- **${m.dataMonth}** — registered as ${m.registryClosingDate}, but reality moved on to **${m.derivedClosingDate}**`
+      )
+    }
+    for (const m of result.contradicted) {
+      lines.push(
+        `- **${m.dataMonth}** — registered as **${m.registryClosingDate}**, but raw-csv/${m.registryClosingDate}/metadata.json does not mark it as a ${m.dataMonth} close (#1620). Verify against TI's as-of list and correct with \`--no-derive --set ${m.dataMonth}=YYYY-MM-DD\``
       )
     }
   }

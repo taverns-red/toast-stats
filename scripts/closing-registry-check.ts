@@ -97,6 +97,7 @@ async function main(): Promise<void> {
   log(
     `verdict: fresh=${result.fresh} checked=[${result.checkedMonths.join(', ')}] ` +
       `missing=${result.missing.length} mismatched=${result.mismatched.length} ` +
+      `contradicted=${result.contradicted.length} ` +
       `emptyFeed=${result.emptyFeed} remediation=${remediation}`
   )
 
