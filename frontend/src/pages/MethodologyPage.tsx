@@ -292,7 +292,7 @@ const MethodologyPage: React.FC = () => {
           </li>
           <li>
             <strong>Distinguished share</strong> — sum of distinguished clubs
-            across the region, divided by the sum of paid clubs.
+            across the region, divided by the sum of paid-club bases.
           </li>
         </ul>
         <p>
@@ -551,8 +551,9 @@ const MethodologyPage: React.FC = () => {
           </dd>
           <dt>Distinguished Percent</dt>
           <dd>
-            (Distinguished + Select + President's + Smedley clubs) ÷ paid clubs
-            at year-end.
+            (Distinguished + Select + President's + Smedley clubs) ÷ club base —
+            the paid clubs at the start of the program year (Item 1490), not the
+            current paid-club count.
           </dd>
           <dt>Aggregate Score</dt>
           <dd>
