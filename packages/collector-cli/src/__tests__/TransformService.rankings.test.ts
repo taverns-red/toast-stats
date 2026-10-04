@@ -679,6 +679,67 @@ U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
       expect(d93.newCharteredClubs).toBe(1)
     })
 
+    it('scopes charters/suspensions of a June close collected in July to the CLOSING program year (#1622)', async () => {
+      // TI's June close is collected in late July (raw-csv/2026-07-25,
+      // isClosingPeriod, dataMonth 2026-06) and written to snapshots/2026-06-30.
+      // The PY window must come from that logical date (PY 2025-26 starts
+      // 2025-07-01), not the collection date — 2026-07-25 would resolve to the
+      // NEXT PY's start (2026-07-01) and zero every in-year charter, pushing
+      // Club Retention (paid − newCharters)/base past 100%.
+      const date = '2026-07-25'
+      const rawCsvDir = path.join(tempDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify({ date, isClosingPeriod: true, dataMonth: '2026-06' })
+      )
+
+      await fs.writeFile(
+        path.join(rawCsvDir, 'all-districts.csv'),
+        `DISTRICT,REGION,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs
+93,Region 9,73,69,5.8%,2895,2737,5.77%,73,3,1,0`
+      )
+
+      const districtDir = path.join(rawCsvDir, 'district-93')
+      await fs.mkdir(districtDir, { recursive: true })
+      await fs.writeFile(
+        path.join(districtDir, 'club-performance.csv'),
+        `Club Number,Club Name,Division,Area,Active Members,Goals Met
+1001,Club A,A,1,22,3
+1002,Club B,B,2,21,2`
+      )
+      // 2 charters + 1 suspension inside PY 2025-26; 1 charter from 2022.
+      await fs.writeFile(
+        path.join(districtDir, 'district-performance.csv'),
+        `District,Division,Area,Club,Club Name,New,Late Ren.,Oct. Ren.,Apr. Ren.,Total Ren.,Total Chart,Total to Date,Distinguished Status,Charter Date/Suspend Date
+93,A,1,1001,Club A,0,0,0,0,0,20,20,,Charter 04/15/26
+93,B,2,1002,Club B,4,0,0,7,7,20,31,,Charter 12/01/25
+93,C,3,1003,Club C,0,0,5,3,8,0,8,,Charter 09/15/22
+93,D,4,1004,Club D,0,0,0,0,0,0,0,, Susp 03/31/26`
+      )
+
+      const result = await transformService.transform({ date, force: true })
+      expect(result.date).toBe('2026-06-30')
+
+      const rankings = JSON.parse(
+        await fs.readFile(
+          path.join(
+            tempDir,
+            'snapshots',
+            '2026-06-30',
+            'all-districts-rankings.json'
+          ),
+          'utf-8'
+        )
+      )
+      const d93 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '93'
+      )
+
+      expect(d93.newCharteredClubs).toBe(2)
+      expect(d93.suspendedClubs).toBe(1)
+    })
+
     it('should default missing prerequisite columns to false (legacy CSVs)', async () => {
       const date = '2024-01-15'
       const rawCsvDir = path.join(tempDir, 'raw-csv', date)
