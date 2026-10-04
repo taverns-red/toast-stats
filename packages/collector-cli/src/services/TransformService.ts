@@ -907,9 +907,14 @@ export class TransformService {
    *
    * Requirements:
    * - 2.4: Write all-districts-rankings.json to snapshot directory
+   *
+   * @param date - The raw-csv (collection) date to read CSVs from
+   * @param logicalDate - The snapshot date the data describes; scopes the
+   *   program-year window for charter/suspension counts (#1622)
    */
   private async calculateAllDistrictsRankings(
-    date: string
+    date: string,
+    logicalDate: string = date
   ): Promise<AllDistrictsRankingsData | null> {
     this.logger.info('Calculating all-districts rankings', { date })
 
@@ -933,7 +938,10 @@ export class TransformService {
     // - suspendedClubs (#1497) — the Susp branch of that same status column
     // - confirmed Distinguished count (#304) — only when all districts report 0
     const allZeroDistinguished = metrics.every(m => m.distinguishedClubs === 0)
-    const programYearStart = getProgramYearStartDate(date)
+    // PY window from the snapshot's LOGICAL date, not the raw collection
+    // date: a June close collected 07-25 is written to {year}-06-30 and
+    // belongs to the closing PY (#1622).
+    const programYearStart = getProgramYearStartDate(logicalDate)
     for (const metric of metrics) {
       try {
         const districtDir = path.join(
@@ -2249,7 +2257,10 @@ export class TransformService {
         // Calculate and write all-districts rankings (Requirement 2.4)
         // Read rankings from source date, write to snapshot date
         try {
-          const rankings = await this.calculateAllDistrictsRankings(date)
+          const rankings = await this.calculateAllDistrictsRankings(
+            date,
+            snapshotDate
+          )
           if (rankings) {
             const rankingsPath = await this.writeAllDistrictsRankingsToDate(
               snapshotDate,
