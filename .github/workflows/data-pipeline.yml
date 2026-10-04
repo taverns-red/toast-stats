@@ -868,7 +868,7 @@ jobs:
             GUARD_STATUS=0
             npx tsx scripts/guard-snapshot-upload.ts "${ACTUAL_DATE}" || GUARD_STATUS=$?
             if [ "${GUARD_STATUS}" -ne 0 ]; then
-              echo "::warning::Not publishing ${ACTUAL_DATE}: snapshot upload guard exit ${GUARD_STATUS} (3 = would overwrite a closing snapshot)"
+              echo "::warning::Not publishing ${ACTUAL_DATE}: upload guard exit ${GUARD_STATUS} (3 = closing snapshot)"
               FAILED=$((FAILED + 1))
               rm -rf "./cache/raw-csv/${SOURCE_DATE}" "./cache/snapshots/${ACTUAL_DATE}" \
                 ${PREV_YEAR_DATE:+"./cache/snapshots/${PREV_YEAR_DATE}"}
@@ -1179,7 +1179,7 @@ jobs:
             GUARD_STATUS=0
             npx tsx scripts/guard-snapshot-upload.ts "${ACTUAL_DATE}" || GUARD_STATUS=$?
             if [ "${GUARD_STATUS}" -ne 0 ]; then
-              echo "::warning::Not publishing ${ACTUAL_DATE}: snapshot upload guard exit ${GUARD_STATUS} (3 = would overwrite a closing snapshot)"
+              echo "::warning::Not publishing ${ACTUAL_DATE}: upload guard exit ${GUARD_STATUS} (3 = closing snapshot)"
               FAILED=$((FAILED + 1))
               rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${ACTUAL_DATE}"
               continue
