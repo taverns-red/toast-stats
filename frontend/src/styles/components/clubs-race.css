@@ -188,14 +188,33 @@
     font-weight: 500;
   }
 
+  /* #1617 — a compact pill. As an `a[href]` it inherits the base layer's
+     44px touch-target floor, which under the 999px radius drew a 44px
+     circle; the visible box opts out and the centred ::before below keeps
+     the ≥44px hit area (the row reserves 44px, so it is never clipped). */
   .race-podium__district {
+    position: relative;
+    flex-shrink: 0;
+    min-height: 0;
+    min-width: 0;
     font-family: var(--mono);
     font-size: 0.75rem;
+    line-height: 1.4;
     color: var(--ink-2);
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
     border: 1px solid var(--line);
     text-decoration: none;
+  }
+
+  .race-podium__district::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: 44px;
+    transform: translate(-50%, -50%);
   }
 
   .race-podium__empty {
