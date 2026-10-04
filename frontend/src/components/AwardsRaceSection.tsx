@@ -9,6 +9,7 @@ import type {
   CompetitiveAwardRanking,
   CompetitiveAwardStandings,
 } from '../services/cdn'
+import { tiedWinnerIds, TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
 
 /* AwardsRaceSection — 2026 redesign 3-card contender summary (#357).
    The deeper top-10 leaderboards move to the future Awards page (Epic
@@ -152,6 +153,8 @@ const AwardCard: React.FC<AwardCardProps> = ({ spec, entries }) => {
   const leader = entries[0]
   const winners = entries.filter(e => e.isWinner)
   const isAchieved = leader?.isWinner ?? false
+  // TI names three winners but doesn't publish its tie-break (#1610).
+  const tiedCount = tiedWinnerIds(entries).size
 
   // No contenders yet — the normal state for the first months of a program
   // year, not an exotic one (#1359). Mirrors the populated card's rows
@@ -232,9 +235,12 @@ const AwardCard: React.FC<AwardCardProps> = ({ spec, entries }) => {
       >
         <span aria-hidden="true" className="awards-race-card__status-dot" />
         {isAchieved ? (
-          <span>
+          <span title={tiedCount > 0 ? TIE_BREAK_UNPUBLISHED : undefined}>
             ✓ Achieved
-            {winners.length > 1 && ` · ${winners.length} districts qualifying`}
+            {tiedCount > 0
+              ? ` · ${tiedCount} districts tied`
+              : winners.length > 1 &&
+                ` · ${winners.length} districts qualifying`}
           </span>
         ) : (
           <span>

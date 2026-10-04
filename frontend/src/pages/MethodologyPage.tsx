@@ -588,13 +588,18 @@ const MethodologyPage: React.FC = () => {
             <code>tasks/lessons.md</code> Lesson 47 for context.
           </li>
           <li>
-            <strong>Extension and Retention award rounding</strong> — the live{' '}
+            <strong>Ties in the Top-3 awards</strong> — Toastmasters names three
+            winners for each of the Extension, 20-Plus and Club Retention
+            awards, but TI&apos;s tie-break isn&apos;t published. Toast Stats
+            does not invent one: districts with exactly equal values share a
+            rank, and when a tie reaches into the top three every tied district
+            is shown as a co-winner, labelled <em>tied</em> on the{' '}
             <Link to="/awards" className="methodology-link">
               District Awards leaderboards
-            </Link>{' '}
-            display computed values to one decimal place. Ties at that precision
-            are broken by raw paid-club counts; the underlying ranking uses
-            unrounded values.
+            </Link>
+            . Ties are most common in Club Retention, where several districts
+            can reach 100%. Values display to one decimal place; ranking uses
+            the unrounded values.
           </li>
         </ul>
       </CollapsibleSection>
