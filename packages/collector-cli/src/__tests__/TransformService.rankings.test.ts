@@ -564,6 +564,46 @@ U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
       expect(d61.clubsWith20PlusMembers).toBe(2)
     })
 
+    it('counts only active clubs toward 20-Plus — suspended/ineligible rows are excluded (#1611)', async () => {
+      // Item 1490: "% of ACTIVE clubs with 20+ paid members". The denominator
+      // is Active Clubs, so a suspended or ineligible club's members must not
+      // inflate the numerator.
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(tempDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      await fs.writeFile(
+        path.join(rawCsvDir, 'all-districts.csv'),
+        `DISTRICT,REGION,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs
+61,Region 5,2,2,0%,100,100,0%,2,1,0,0`
+      )
+
+      const districtDir = path.join(rawCsvDir, 'district-61')
+      await fs.mkdir(districtDir, { recursive: true })
+      await fs.writeFile(
+        path.join(districtDir, 'club-performance.csv'),
+        `Club Number,Club Name,Division,Area,Active Members,Goals Met,Club Status
+1001,Alpha Club,A,1,25,5,Active
+1002,Beta Club,A,1,25,5,Suspended
+1003,Gamma Club,A,1,22,5,Ineligible
+1004,Delta Club,A,1,21,5,Active`
+      )
+
+      await transformService.transform({ date, force: true })
+
+      const rankings = JSON.parse(
+        await fs.readFile(
+          path.join(tempDir, 'snapshots', date, 'all-districts-rankings.json'),
+          'utf-8'
+        )
+      )
+      const d61 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '61'
+      )
+
+      expect(d61.clubsWith20PlusMembers).toBe(2)
+    })
+
     it('should count newly chartered clubs from district-performance.csv (#336)', async () => {
       // The District Performance CSV has a "Charter Date/Suspend Date" column
       // populated with "Charter MM/DD/YY" for newly chartered clubs and
