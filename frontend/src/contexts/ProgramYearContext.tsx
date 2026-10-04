@@ -4,11 +4,14 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useEffect,
   ReactNode,
 } from 'react'
-import { logger } from '../utils/logger'
-import { ProgramYear, getProgramYear } from '../utils/programYear'
+import { ProgramYear } from '../utils/programYear'
 import { useDefaultProgramYear } from '../hooks/useDefaultProgramYear'
+
+/** localStorage key older builds persisted the selected year under (#1618). */
+const LEGACY_STORAGE_KEY = 'selectedProgramYear'
 
 interface ProgramYearContextType {
   selectedProgramYear: ProgramYear
@@ -33,30 +36,32 @@ export const ProgramYearProvider: React.FC<ProgramYearProviderProps> = ({
   // as new data publishes.
   const defaultProgramYear = useDefaultProgramYear()
 
-  // The user's EXPLICIT selection (persisted from a prior UI choice), or null
-  // when they've made none. Only explicit choices are persisted; the
-  // auto-adopted default is NEVER written to localStorage, so the effective
-  // default can advance with the data instead of being frozen at first visit.
+  // The in-session selection, or null when nothing has selected a year yet.
+  // It is deliberately NOT persisted across visits (#1618): every writer of
+  // this state — the picker, the `?py=` URL sync, the self-heal — used to
+  // write localStorage, so one visit to a `?py=2025` link pinned PY 2025-26 as
+  // the default for every later visit, long after PY 2026-27 published. A
+  // persisted year always goes stale at the rollover; the URL (`?py=`) is the
+  // durable, shareable carrier of a non-default year.
   const [explicitProgramYear, setExplicitProgramYear] =
-    useState<ProgramYear | null>(() => {
-      const savedYear = localStorage.getItem('selectedProgramYear')
-      if (savedYear) {
-        const year = parseInt(savedYear, 10)
-        if (!Number.isNaN(year)) {
-          return getProgramYear(year)
-        }
-        logger.error('Failed to load saved program year:', savedYear)
-      }
-      return null
-    })
+    useState<ProgramYear | null>(null)
 
-  // Effective selection: explicit user choice wins; otherwise the data-driven
+  // Drop the key earlier builds persisted, so visitors already pinned to a
+  // stale year are released rather than carrying it forever.
+  useEffect(() => {
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+    } catch {
+      // Storage can be unavailable (private mode); nothing to clean up then.
+    }
+  }, [])
+
+  // Effective selection: an in-session choice wins; otherwise the data-driven
   // default (which advances automatically as new program years publish).
   const selectedProgramYear = explicitProgramYear ?? defaultProgramYear
 
   const setSelectedProgramYear = useCallback((programYear: ProgramYear) => {
     setExplicitProgramYear(programYear)
-    localStorage.setItem('selectedProgramYear', programYear.year.toString())
   }, [])
 
   const [selectedDate, setSelectedDate] = useState<string | undefined>(
