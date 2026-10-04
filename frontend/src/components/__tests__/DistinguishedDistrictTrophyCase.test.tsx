@@ -467,7 +467,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
           clubStrengthGrowth={12.3}
         />
       )
-      expect(screen.getByText(/Club Strength/)).toBeInTheDocument()
+      expect(screen.getByTitle(/Club Strength Award/)).toBeInTheDocument()
       expect(
         screen.getByText(/removed .*Item 1490 in Rev\. 03\/2026/i)
       ).toBeInTheDocument()
