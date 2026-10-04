@@ -7,7 +7,12 @@
  * avgClubSize = totalMembership / activeClubs
  * growthPercent = ((current - prior) / prior) * 100
  *
- * Source: Item 1490, Rev. 04/2025
+ * Source: Item 1490, Rev. 04/2025. TI dropped the award from Rev. 03/2026;
+ * it is still computed and shown for every program year with that note
+ * (#1613, product decision).
+ *
+ * The undistricted `U` bucket is not a district and cannot receive a
+ * district award, so it never ranks or qualifies (#1613).
  */
 
 export interface ClubStrengthInput {
@@ -35,9 +40,13 @@ export interface ClubStrengthAwardStandings {
 
 const GROWTH_THRESHOLD = 10
 
+/** The undistricted bucket's ranking id — a row, but not a district. */
+const UNDISTRICTED_ID = 'U'
+
 export class ClubStrengthAwardCalculator {
   calculate(inputs: ClubStrengthInput[]): ClubStrengthAwardStandings {
-    const allDistricts: ClubStrengthResult[] = inputs.map(input => {
+    const districts = inputs.filter(i => i.districtId !== UNDISTRICTED_ID)
+    const allDistricts: ClubStrengthResult[] = districts.map(input => {
       const growthPercent = this.computeGrowth(
         input.currentAvgClubSize,
         input.priorYearAvgClubSize

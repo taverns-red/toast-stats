@@ -500,6 +500,15 @@ export const DistinguishedDistrictTrophyCase: React.FC<
               </span>
             )}
           </div>
+          {/* #1613 — shown for every program year (product decision), but
+              TI no longer lists it, so say so rather than imply it is
+              still presented. */}
+          {clubStrengthQualifies && (
+            <p className="mt-2 text-xs text-gray-600 font-tm-body">
+              Club Strength: TI removed this award from Item 1490 in Rev.
+              03/2026, so it may not be presented.
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -86,4 +86,24 @@ describe('ClubStrengthAwardCalculator (#333)', () => {
     expect(result.allDistricts[2]?.districtId).toBe('3')
     expect(result.qualifyingDistricts).toHaveLength(2) // D1 and D2
   })
+
+  // #1613 — "U" is the undistricted bucket, not a district; it can't
+  // receive a district award, so it never ranks or qualifies.
+  it('never ranks or qualifies the undistricted "U" bucket (#1613)', () => {
+    const result = calculator.calculate([
+      input({
+        districtId: 'U',
+        districtName: 'U',
+        currentAvgClubSize: 30,
+        priorYearAvgClubSize: 20,
+      }),
+      input({
+        districtId: '16',
+        currentAvgClubSize: 24,
+        priorYearAvgClubSize: 20,
+      }),
+    ])
+    expect(result.allDistricts.map(d => d.districtId)).toEqual(['16'])
+    expect(result.qualifyingDistricts.map(d => d.districtId)).toEqual(['16'])
+  })
 })

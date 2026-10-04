@@ -454,4 +454,34 @@ describe('DistinguishedDistrictTrophyCase', () => {
       ).toBeInTheDocument()
     })
   })
+
+  // #1613 — shown for every program year (Ron's decision), with a note that
+  // TI dropped the award from Item 1490 in Rev. 03/2026.
+  describe('Club Strength award note (#1613)', () => {
+    it('notes that TI removed Club Strength from Item 1490 in Rev. 03/2026', () => {
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear={LEGACY_PY}
+          clubStrengthQualifies
+          clubStrengthGrowth={12.3}
+        />
+      )
+      expect(screen.getByTitle(/Club Strength Award/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/removed .*Item 1490 in Rev\. 03\/2026/i)
+      ).toBeInTheDocument()
+    })
+
+    it('shows no Club Strength note when the award is not earned', () => {
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear={LEGACY_PY}
+          clubGrowthQualifies
+        />
+      )
+      expect(screen.queryByText(/Rev\. 03\/2026/i)).not.toBeInTheDocument()
+    })
+  })
 })
