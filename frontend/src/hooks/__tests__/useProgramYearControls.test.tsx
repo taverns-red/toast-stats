@@ -11,7 +11,7 @@
  * It self-heals a ?py= that has no data to the newest available PY (L124).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -119,5 +119,66 @@ describe('useProgramYearControls (#1301)', () => {
     await waitFor(() =>
       expect(result.current.selectedProgramYear.year).toBe(2026)
     )
+  })
+
+  // #1618 — /clubs and /awards opened on PY 2025-26 while the data's newest PY
+  // was 2026-27: a year persisted to localStorage by an EARLIER session
+  // outranked the data-resolved default on every later visit.
+  describe('a fresh visit always defaults to the data-resolved PY (#1618)', () => {
+    it('ignores a program year persisted by a prior session', async () => {
+      localStorage.setItem('selectedProgramYear', '2025')
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(),
+      })
+      await waitFor(() =>
+        expect(result.current.availableProgramYears.length).toBe(3)
+      )
+      expect(result.current.selectedProgramYear.year).toBe(2026)
+      expect(result.current.effectiveDate).toBe('2026-09-15')
+    })
+
+    it('a ?py= link does not pin the default for the next visit', async () => {
+      const first = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?py=2025']),
+      })
+      await waitFor(() =>
+        expect(first.result.current.effectiveDate).toBe('2026-05-01')
+      )
+      first.unmount()
+
+      const next = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(),
+      })
+      await waitFor(() =>
+        expect(next.result.current.availableProgramYears.length).toBe(3)
+      )
+      expect(next.result.current.selectedProgramYear.year).toBe(2026)
+    })
+
+    it('an explicit pick in one visit does not become the next visit default', async () => {
+      const first = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(),
+      })
+      await waitFor(() =>
+        expect(first.result.current.availableProgramYears.length).toBe(3)
+      )
+      act(() => {
+        first.result.current.setSelectedProgramYear(
+          first.result.current.availableProgramYears[1]!
+        )
+      })
+      await waitFor(() =>
+        expect(first.result.current.selectedProgramYear.year).toBe(2025)
+      )
+      first.unmount()
+
+      const next = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(),
+      })
+      await waitFor(() =>
+        expect(next.result.current.availableProgramYears.length).toBe(3)
+      )
+      expect(next.result.current.selectedProgramYear.year).toBe(2026)
+    })
   })
 })
