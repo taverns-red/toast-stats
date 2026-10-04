@@ -17,10 +17,7 @@
  */
 
 import type { DistrictRanking } from '@taverns-red/shared-contracts'
-import {
-  distinguishedClubsGoalPercent,
-  type DistinguishedDistrictStatus,
-} from './DistinguishedDistrictCalculator.js'
+import { distinguishedClubsGoalPercent } from './DistinguishedDistrictCalculator.js'
 
 export interface OfficerAwardResult {
   districtId: string
@@ -41,7 +38,6 @@ export class OfficerAwardsCalculator {
    */
   calculate(
     rankings: DistrictRanking[],
-    _statuses: Record<string, DistinguishedDistrictStatus>,
     programYear?: string
   ): OfficerAwardStandings {
     const clubsGoal = distinguishedClubsGoalPercent(programYear)

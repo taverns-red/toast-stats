@@ -9,7 +9,6 @@
 import { describe, it, expect } from 'vitest'
 import { OfficerAwardsCalculator } from './OfficerAwardsCalculator.js'
 import type { DistrictRanking } from '@taverns-red/shared-contracts'
-import type { DistinguishedDistrictStatus } from './DistinguishedDistrictCalculator.js'
 
 function buildRanking(overrides: Partial<DistrictRanking>): DistrictRanking {
   return {
@@ -41,25 +40,6 @@ function buildRanking(overrides: Partial<DistrictRanking>): DistrictRanking {
   }
 }
 
-function buildStatus(
-  overrides: Partial<DistinguishedDistrictStatus>
-): DistinguishedDistrictStatus {
-  return {
-    districtId: '1',
-    currentTier: 'NotDistinguished',
-    allPrerequisitesMet: true,
-    prerequisites: {
-      dspSubmitted: true,
-      trainingMet: true,
-      marketAnalysisSubmitted: true,
-      communicationPlanSubmitted: true,
-      regionAdvisorVisitMet: true,
-    },
-    nextTierGap: null,
-    ...overrides,
-  }
-}
-
 describe('OfficerAwardsCalculator (#333)', () => {
   const calculator = new OfficerAwardsCalculator()
 
@@ -77,11 +57,8 @@ describe('OfficerAwardsCalculator (#333)', () => {
           paymentGrowthPercent: 0.5,
         }),
       ]
-      const statuses: Record<string, DistinguishedDistrictStatus> = {
-        '1': buildStatus({ currentTier: 'NotDistinguished' }),
-      }
 
-      const result = calculator.calculate(rankings, statuses, '2025-2026')
+      const result = calculator.calculate(rankings, '2025-2026')
 
       expect(result.educationTraining).toHaveLength(1)
       expect(result.educationTraining[0]?.qualifies).toBe(true)
@@ -96,11 +73,7 @@ describe('OfficerAwardsCalculator (#333)', () => {
           marketAnalysisSubmitted: false,
         }),
       ]
-      const result = calculator.calculate(
-        rankings,
-        { '1': buildStatus({ currentTier: 'NotDistinguished' }) },
-        '2025-2026'
-      )
+      const result = calculator.calculate(rankings, '2025-2026')
       expect(result.educationTraining[0]?.qualifies).toBe(true)
     })
 
@@ -108,11 +81,8 @@ describe('OfficerAwardsCalculator (#333)', () => {
       const rankings = [
         buildRanking({ trainingMet: false, distinguishedPercent: 70 }),
       ]
-      const statuses: Record<string, DistinguishedDistrictStatus> = {
-        '1': buildStatus({ currentTier: 'Presidents' }),
-      }
 
-      const result = calculator.calculate(rankings, statuses, '2025-2026')
+      const result = calculator.calculate(rankings, '2025-2026')
 
       expect(result.educationTraining[0]?.qualifies).toBe(false)
     })
@@ -121,11 +91,7 @@ describe('OfficerAwardsCalculator (#333)', () => {
       const rankings = [
         buildRanking({ trainingMet: true, distinguishedPercent: 44.9 }),
       ]
-      const result = calculator.calculate(
-        rankings,
-        { '1': buildStatus({ currentTier: 'Distinguished' }) },
-        '2025-2026'
-      )
+      const result = calculator.calculate(rankings, '2025-2026')
       expect(result.educationTraining[0]?.qualifies).toBe(false)
     })
 
@@ -133,14 +99,13 @@ describe('OfficerAwardsCalculator (#333)', () => {
       const rankings = [
         buildRanking({ trainingMet: true, distinguishedPercent: 42 }),
       ]
-      const statuses = { '1': buildStatus({}) }
       expect(
-        calculator.calculate(rankings, statuses, '2024-2025')
-          .educationTraining[0]?.qualifies
+        calculator.calculate(rankings, '2024-2025').educationTraining[0]
+          ?.qualifies
       ).toBe(true)
       expect(
-        calculator.calculate(rankings, statuses, '2025-2026')
-          .educationTraining[0]?.qualifies
+        calculator.calculate(rankings, '2025-2026').educationTraining[0]
+          ?.qualifies
       ).toBe(false)
     })
 
@@ -148,11 +113,7 @@ describe('OfficerAwardsCalculator (#333)', () => {
       const rankings = [
         buildRanking({ trainingMet: undefined, distinguishedPercent: 70 }),
       ]
-      const result = calculator.calculate(
-        rankings,
-        { '1': buildStatus({ currentTier: 'Unknown' }) },
-        '2025-2026'
-      )
+      const result = calculator.calculate(rankings, '2025-2026')
       expect(result.educationTraining[0]?.qualifies).toBe(false)
     })
   })
@@ -162,11 +123,8 @@ describe('OfficerAwardsCalculator (#333)', () => {
       const rankings = [
         buildRanking({ clubGrowthPercent: 1, paymentGrowthPercent: 1 }),
       ]
-      const statuses: Record<string, DistinguishedDistrictStatus> = {
-        '1': buildStatus(),
-      }
 
-      const result = calculator.calculate(rankings, statuses)
+      const result = calculator.calculate(rankings)
 
       expect(result.clubGrowth).toHaveLength(1)
       expect(result.clubGrowth[0]?.qualifies).toBe(true)
@@ -176,11 +134,8 @@ describe('OfficerAwardsCalculator (#333)', () => {
       const rankings = [
         buildRanking({ clubGrowthPercent: 0.9, paymentGrowthPercent: 5 }),
       ]
-      const statuses: Record<string, DistinguishedDistrictStatus> = {
-        '1': buildStatus(),
-      }
 
-      const result = calculator.calculate(rankings, statuses)
+      const result = calculator.calculate(rankings)
 
       expect(result.clubGrowth[0]?.qualifies).toBe(false)
     })
@@ -189,11 +144,8 @@ describe('OfficerAwardsCalculator (#333)', () => {
       const rankings = [
         buildRanking({ clubGrowthPercent: 5, paymentGrowthPercent: 0.5 }),
       ]
-      const statuses: Record<string, DistinguishedDistrictStatus> = {
-        '1': buildStatus(),
-      }
 
-      const result = calculator.calculate(rankings, statuses)
+      const result = calculator.calculate(rankings)
 
       expect(result.clubGrowth[0]?.qualifies).toBe(false)
     })
