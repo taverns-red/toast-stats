@@ -31,7 +31,8 @@ export interface OfficerAwardStandings {
 export class OfficerAwardsCalculator {
   calculate(
     rankings: DistrictRanking[],
-    statuses: Record<string, DistinguishedDistrictStatus>
+    statuses: Record<string, DistinguishedDistrictStatus>,
+    _programYear?: string
   ): OfficerAwardStandings {
     const educationTraining: OfficerAwardResult[] = rankings.map(r => {
       const status = statuses[r.districtId]
