@@ -10,6 +10,8 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import * as path from 'node:path'
 import type { RawCSVEntry } from '../monthEndDates.js'
 import {
   deriveCompletedClosingMonths,
@@ -403,5 +405,98 @@ describe('classifyRegistryRemediation (#1419)', () => {
         checkedMonths: [],
       })
     ).toBe('manual')
+  })
+})
+
+/**
+ * Registry ↔ metadata consistency (#1620).
+ *
+ * The registry listed 2026-06 → 2026-07-29, but raw-csv/2026-07-29 is a July
+ * daily (its metadata carries no closing flag; footer "Month of Jul"). The
+ * June close is raw-csv/2026-07-25 (isClosingPeriod:true, dataMonth
+ * 2026-06). Freshness trusted the LATER registry date by design (manual
+ * entries can know more), so the bad entry never alerted. A registry date
+ * whose raw-csv metadata EXISTS and does not mark it closing for that data
+ * month is provably wrong and must be reported.
+ */
+describe('registry ↔ metadata consistency (#1620)', () => {
+  const JUNE_2026_FEED: RawCSVEntry[] = [
+    entry('2026-07-24', true, '2026-06'),
+    entry('2026-07-25', true, '2026-06'),
+    { ...entry('2026-07-29', false), metadataFound: true },
+    entry('2026-07-30', false),
+  ]
+
+  it('reports a registry date whose metadata is not a close for that month', () => {
+    const result = evaluateRegistryFreshness(
+      [{ dataMonth: '2026-06', closingDate: '2026-07-29' }],
+      JUNE_2026_FEED
+    )
+    expect(result.fresh).toBe(false)
+    expect(result.contradicted).toEqual([
+      { dataMonth: '2026-06', registryClosingDate: '2026-07-29' },
+    ])
+    expect(buildRegistryStaleTitle(result)).toContain('2026-06')
+    expect(buildRegistryStaleBody(result)).toContain('2026-07-29')
+  })
+
+  it('reports a registry date whose metadata is a close for a DIFFERENT month', () => {
+    const result = evaluateRegistryFreshness(
+      [
+        { dataMonth: '2026-05', closingDate: '2026-07-25' },
+        { dataMonth: '2026-06', closingDate: '2026-07-25' },
+      ],
+      JUNE_2026_FEED
+    )
+    expect(result.contradicted).toEqual([
+      { dataMonth: '2026-05', registryClosingDate: '2026-07-25' },
+    ])
+  })
+
+  it('needs a human, not the auto-PR: a derived date never regresses a later entry', () => {
+    const result = evaluateRegistryFreshness(
+      [{ dataMonth: '2026-06', closingDate: '2026-07-29' }],
+      JUNE_2026_FEED
+    )
+    expect(classifyRegistryRemediation(result)).toBe('manual')
+  })
+
+  it('accepts the corrected entry (2026-06 → 2026-07-25)', () => {
+    const result = evaluateRegistryFreshness(
+      [{ dataMonth: '2026-06', closingDate: '2026-07-25' }],
+      JUNE_2026_FEED
+    )
+    expect(result.contradicted).toEqual([])
+    expect(result.fresh).toBe(true)
+  })
+
+  it('trusts a registry date whose metadata is absent (pre-2026 / outage raws)', () => {
+    const result = evaluateRegistryFreshness(
+      [
+        { dataMonth: '2026-06', closingDate: '2026-07-25' },
+        { dataMonth: '2026-02', closingDate: '2026-03-05' },
+      ],
+      [
+        ...JUNE_2026_FEED,
+        { ...entry('2026-03-05', false), metadataFound: false },
+      ]
+    )
+    expect(result.contradicted).toEqual([])
+  })
+
+  it('the committed registry records the June 2026 close as raw-csv/2026-07-25', () => {
+    // Verified 2026-10-04 (read-only): raw-csv/2026-07-25 metadata is
+    // isClosingPeriod:true dataMonth 2026-06, footer "Month of Jun, As of
+    // 07/25/2026"; 07-26..07-31 are July dailies.
+    const registry = JSON.parse(
+      readFileSync(
+        path.resolve(process.cwd(), 'docs/month-end-closing-dates.json'),
+        'utf-8'
+      )
+    ) as { months: Array<{ dataMonth: string; closingDate: string }> }
+    expect(registry.months.find(m => m.dataMonth === '2026-06')).toEqual({
+      dataMonth: '2026-06',
+      closingDate: '2026-07-25',
+    })
   })
 })
