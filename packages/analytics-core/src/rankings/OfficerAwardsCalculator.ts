@@ -4,7 +4,10 @@
  * Computes two officer-specific district awards:
  *
  * - **Excellence in Education & Training** (PQD role):
- *   85% Director training complete + district is Distinguished (any tier)
+ *   85% of Area and Division Directors trained AND the district meets the
+ *   Distinguished goal for number of Distinguished clubs (#1612) — not full
+ *   Distinguished District status (growth goals and the other
+ *   prerequisites are not required)
  *
  * - **Excellence in Club Growth** (CGD role):
  *   District meets Distinguished goals in club growth (1%+) AND
@@ -14,7 +17,10 @@
  */
 
 import type { DistrictRanking } from '@taverns-red/shared-contracts'
-import type { DistinguishedDistrictStatus } from './DistinguishedDistrictCalculator.js'
+import {
+  distinguishedClubsGoalPercent,
+  type DistinguishedDistrictStatus,
+} from './DistinguishedDistrictCalculator.js'
 
 export interface OfficerAwardResult {
   districtId: string
@@ -29,26 +35,23 @@ export interface OfficerAwardStandings {
 }
 
 export class OfficerAwardsCalculator {
+  /**
+   * @param programYear - "YYYY-YYYY"; selects that year's Distinguished-clubs
+   *   goal (45% from 2025-26, 40% before). Omitted → current rules.
+   */
   calculate(
     rankings: DistrictRanking[],
-    statuses: Record<string, DistinguishedDistrictStatus>,
-    _programYear?: string
+    _statuses: Record<string, DistinguishedDistrictStatus>,
+    programYear?: string
   ): OfficerAwardStandings {
-    const educationTraining: OfficerAwardResult[] = rankings.map(r => {
-      const status = statuses[r.districtId]
-      const trainingMet = r.trainingMet ?? false
-      const isDistinguished =
-        status !== undefined &&
-        status.currentTier !== 'NotDistinguished' &&
-        status.currentTier !== 'Unknown'
+    const clubsGoal = distinguishedClubsGoalPercent(programYear)
 
-      return {
-        districtId: r.districtId,
-        districtName: r.districtName,
-        region: r.region,
-        qualifies: trainingMet && isDistinguished,
-      }
-    })
+    const educationTraining: OfficerAwardResult[] = rankings.map(r => ({
+      districtId: r.districtId,
+      districtName: r.districtName,
+      region: r.region,
+      qualifies: r.trainingMet === true && r.distinguishedPercent >= clubsGoal,
+    }))
 
     const clubGrowth: OfficerAwardResult[] = rankings.map(r => ({
       districtId: r.districtId,

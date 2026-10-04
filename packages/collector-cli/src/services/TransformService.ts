@@ -1951,7 +1951,8 @@ export class TransformService {
     const officerCalculator = new OfficerAwardsCalculator()
     const officerAwards = officerCalculator.calculate(
       rankings.rankings,
-      distinguishedDistrict
+      distinguishedDistrict,
+      programYear
     )
 
     // ── Write payload ─��
