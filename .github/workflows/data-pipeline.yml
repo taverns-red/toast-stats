@@ -810,11 +810,24 @@ jobs:
             echo "[${INDEX}/${DATE_COUNT}] Processing ${DATE}"
             echo "═══════════════════════════════════════"
 
-            # 1. Download this date's raw-csv from GCS
-            mkdir -p "./cache/raw-csv/${DATE}"
+            # 1. Resolve the raw source, then download it (#1608)
+            # A month-end is sourced from its month's CLOSE (a next-month
+            # collection the transform remaps back onto the month-end), not
+            # from the same-named in-month raw — rebuilding 2026-06-30 from
+            # raw-csv/2026-06-30 replaced the June close with pre-close data.
+            # Fail closed: if the source cannot be resolved, skip the date.
+            if ! SOURCE_DATE=$(npx tsx scripts/resolve-rebuild-source.ts "${DATE}"); then
+              echo "::warning::Could not resolve rebuild source for ${DATE}; skipping"
+              FAILED=$((FAILED + 1))
+              continue
+            fi
+            if [ "${SOURCE_DATE}" != "${DATE}" ]; then
+              echo "Month-end ${DATE} sourced from closing raw ${SOURCE_DATE}"
+            fi
+            mkdir -p "./cache/raw-csv/${SOURCE_DATE}"
             gsutil -m rsync -r \
-              "gs://${GCS_BUCKET}/raw-csv/${DATE}/" \
-              "./cache/raw-csv/${DATE}/" 2>&1 || true
+              "gs://${GCS_BUCKET}/raw-csv/${SOURCE_DATE}/" \
+              "./cache/raw-csv/${SOURCE_DATE}/" 2>&1 || true
 
             # 2. Download previous-year snapshot for YoY (if needed)
             PREV_YEAR_DATE=$(date -d "${DATE} - 1 year" +%Y-%m-%d 2>/dev/null || echo "")
@@ -829,11 +842,11 @@ jobs:
             BEFORE_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
 
             # 4. Transform raw-csv → snapshots
-            echo "Transforming ${DATE}..."
-            if ! npx collector-cli transform --date "${DATE}" --force --verbose 2>&1; then
-              echo "::warning::Transform failed for ${DATE}"
+            echo "Transforming ${SOURCE_DATE}..."
+            if ! npx collector-cli transform --date "${SOURCE_DATE}" --force --verbose 2>&1; then
+              echo "::warning::Transform failed for ${SOURCE_DATE}"
               FAILED=$((FAILED + 1))
-              rm -rf "./cache/raw-csv/${DATE}"
+              rm -rf "./cache/raw-csv/${SOURCE_DATE}"
               continue
             fi
 
@@ -884,7 +897,7 @@ jobs:
             # 8. Cleanup to free disk (keep time-series + club-trends)
             # Also remove previous-year snapshot dir to prevent orphan dirs
             # from polluting LATEST_DATE resolution (#295)
-            rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${ACTUAL_DATE}" \
+            rm -rf "./cache/raw-csv/${SOURCE_DATE}" "./cache/snapshots/${ACTUAL_DATE}" \
               ${PREV_YEAR_DATE:+"./cache/snapshots/${PREV_YEAR_DATE}"}
 
             # Report disk usage every 10 dates
