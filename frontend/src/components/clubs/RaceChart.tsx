@@ -55,6 +55,9 @@ const SERIES_COLOUR: Record<ClubRaceTier, string> = {
   Smedley: '#7b1828', // --maroon-500
 }
 
+/** Legend label ink (#1616): neutral in both themes, never a series colour. */
+const LEGEND_LABEL_STYLE: React.CSSProperties = { color: 'var(--ink-2)' }
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -91,7 +94,11 @@ export const RaceChart: React.FC<RaceChartProps> = ({
      hook it honours — the default markup is kept and only the payload is
      replaced, built from the same `series` array the <Area> children
      iterate, so the labels cannot drift from the stack again. Colours still
-     come only from SERIES_COLOUR. */
+     come only from SERIES_COLOUR — and only on the SWATCH (#1616): Recharts
+     paints the label text in the series colour unless `labelStyle` names
+     one, which left loyal-blue / maroon text unreadable on the dark
+     surface. The label reads in neutral theme ink, which the redesign tokens
+     remap at [data-theme='dark'] (an HTML style, so var() resolves here). */
   const legendPayload: LegendPayload[] = series.map(({ tier }) => ({
     id: tier,
     value: raceTierTitle(tier),
@@ -99,7 +106,11 @@ export const RaceChart: React.FC<RaceChartProps> = ({
     color: SERIES_COLOUR[tier],
   }))
   const renderLegend = (props: DefaultLegendContentProps) => (
-    <DefaultLegendContent {...props} payload={legendPayload} />
+    <DefaultLegendContent
+      {...props}
+      payload={legendPayload}
+      labelStyle={LEGEND_LABEL_STYLE}
+    />
   )
 
   return (
