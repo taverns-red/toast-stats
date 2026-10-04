@@ -955,9 +955,14 @@ export class TransformService {
         if (!content) continue
         const clubs = this.parseCSVToRecords(content)
 
-        // Always count clubs with 20+ paid members for President's 20-Plus Award (#330)
+        // Always count clubs with 20+ paid members for President's 20-Plus Award (#330).
+        // Item 1490 scopes it to ACTIVE clubs (the denominator is Active
+        // Clubs), so suspended and ineligible rows are excluded (#1611). A
+        // legacy export without the Club Status column counts every row.
         let twentyPlus = 0
         for (const club of clubs) {
+          const status = club['Club Status']?.trim().toLowerCase()
+          if (status === 'suspended' || status === 'ineligible') continue
           const members = this.parseNumber(
             club['Active Members'] ?? club['Membership'] ?? club['Paid Members']
           )
