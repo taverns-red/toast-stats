@@ -108,7 +108,12 @@ describe('RaceChart legend (#1570)', () => {
     ])
   })
 
-  it('gives every legend entry the colour of the band it names', () => {
+  // #1616 — the colour belongs to the SWATCH only. Painting the label text in
+  // the series colour put #004165 / #7b1828 text on the dark surface (≈1.6:1),
+  // so every label reads in the theme's neutral ink, which the redesign
+  // tokens remap per theme (light #344052 on #fff, dark #c8d1dd on #111922 —
+  // both well above WCAG AA 4.5:1).
+  it('writes every legend label in neutral theme ink, never a series colour', () => {
     const { container } = render(
       <RaceChart
         timeline={timeline}
@@ -116,9 +121,35 @@ describe('RaceChart legend (#1570)', () => {
         currentCounts={currentCounts}
       />
     )
-    const colours = [
+    const labelColours = [
       ...container.querySelectorAll<HTMLElement>('.recharts-legend-item-text'),
     ].map(node => node.style.color)
+    expect(labelColours).toEqual([
+      'var(--ink-2)',
+      'var(--ink-2)',
+      'var(--ink-2)',
+      'var(--ink-2)',
+    ])
+  })
+
+  it('gives every legend swatch the colour of the band it names', () => {
+    const { container } = render(
+      <RaceChart
+        timeline={timeline}
+        smedleyAvailable
+        currentCounts={currentCounts}
+      />
+    )
+    const toRgb = (hex: string | null): string => {
+      const probe = document.createElement('i')
+      probe.style.color = hex ?? ''
+      return probe.style.color
+    }
+    const colours = [
+      ...container.querySelectorAll('.recharts-legend-item'),
+    ].map(item =>
+      toRgb(item.querySelector('svg [fill]')?.getAttribute('fill') ?? null)
+    )
     expect(colours).toEqual([
       'rgb(21, 128, 61)', // #15803d --green-600, Distinguished
       'rgb(44, 110, 144)', // #2c6e90 --loyal-400, Select
