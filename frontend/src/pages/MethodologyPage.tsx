@@ -383,9 +383,9 @@ const MethodologyPage: React.FC = () => {
           <Link to="/awards" className="methodology-link">
             President's 20-Plus Award leaderboard
           </Link>{' '}
-          ranks districts by the percentage of clubs achieving 20+ paid members
-          — the same denominator that underpins the Distinguished tier
-          definitions above.
+          ranks districts by the percentage of active clubs achieving 20+ paid
+          members (Item 1490). Suspended and ineligible clubs are not counted
+          toward the 20+ total, whatever their membership.
         </p>
       </CollapsibleSection>
 
