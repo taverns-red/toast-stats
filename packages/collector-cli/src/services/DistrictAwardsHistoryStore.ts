@@ -92,7 +92,10 @@ export class DistrictAwardsHistoryStore {
 
   /**
    * Get completed year tiers for Leadership Excellence calculation.
-   * Excludes the current (in-progress) program year.
+   * Returns only years BEFORE `currentProgramYear`: the current year is
+   * excluded, and so is any later year already in the store, which happens
+   * when a past snapshot is rebuilt (#1609). "YYYY-YYYY" labels sort
+   * lexically in chronological order.
    */
   getCompletedYearTiers(
     districtId: string,
@@ -100,7 +103,7 @@ export class DistrictAwardsHistoryStore {
   ): Array<{ programYear: string; tier: string }> {
     const entries = this.data.districts[districtId] ?? []
     return entries
-      .filter(e => e.programYear !== currentProgramYear)
+      .filter(e => e.programYear < currentProgramYear)
       .map(e => ({ programYear: e.programYear, tier: e.distinguishedTier }))
   }
 
