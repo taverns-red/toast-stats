@@ -204,6 +204,17 @@ describe('ClubsWorldPage (#1556)', () => {
     expect(screen.queryByTestId('clubs-kpi')).toBeNull()
   })
 
+  /* #1606: the header eyebrow is the SHARED legacy-chrome class every other
+     top-level page uses (red Montserrat caps), not a page-local Brand v1
+     mono eyebrow. */
+  it('renders the shared legacy eyebrow above the heading', () => {
+    mockHook({ race: race(), snapshotDate: '2026-09-11' })
+    renderPage()
+    const eyebrow = screen.getByText(/Program year .* · as of 2026-09-11/)
+    expect(eyebrow).toHaveClass('placeholder-page__eyebrow')
+    expect(eyebrow).not.toHaveClass('clubs-page__eyebrow')
+  })
+
   it('reserves the KPI and podium slots while loading (no late layout shift)', () => {
     mockHook({ race: null, isLoading: true })
     renderPage()

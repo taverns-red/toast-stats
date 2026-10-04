@@ -120,10 +120,10 @@ describe('RaceChart legend (#1570)', () => {
       ...container.querySelectorAll<HTMLElement>('.recharts-legend-item-text'),
     ].map(node => node.style.color)
     expect(colours).toEqual([
-      'rgb(212, 135, 63)', // #D4873F --rt-stats, Distinguished
-      'rgb(230, 57, 70)', // #E63946 --rt-red, Select
-      'rgb(142, 27, 37)', // #8E1B25 --rt-red-dk, President's
-      'rgb(61, 59, 56)', // #3D3B38 --rt-ink-2, Smedley
+      'rgb(21, 128, 61)', // #15803d --green-600, Distinguished
+      'rgb(44, 110, 144)', // #2c6e90 --loyal-400, Select
+      'rgb(0, 65, 101)', // #004165 --loyal-500, President's
+      'rgb(123, 24, 40)', // #7b1828 --maroon-500, Smedley
     ])
   })
 })

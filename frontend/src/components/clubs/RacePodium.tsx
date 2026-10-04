@@ -12,7 +12,7 @@ import { reachWindowCopy } from '../../utils/reachWindowCopy'
    the first observed date is rank 1), so a tie renders as ONE rank entry with
    the clubs stacked under it — never three "1st" cards. The DOM is an <ol> of
    ranks (screen readers get the order for free); the cards are presentation.
-   Rank 1 carries the --rt-stats accent, and never colour alone: the ordinal
+   Rank 1 carries the loyal-blue accent, never colour alone: the ordinal
    label is always present. */
 
 export interface RacePodiumProps {

@@ -43,14 +43,16 @@ export interface RaceChartProps {
   currentCounts: ClubRaceTierCounts
 }
 
-/* Brand hexes (rt-brand-v1.css): Recharts sets `stroke`/`fill` as SVG
+/* Legacy tier palette (#1606) — the same hexes the club grid's tier mode
+   paints (`.club-grid-tile--tier-*`, club-grid.css), so a tier reads the same
+   colour wherever it appears. Recharts sets `stroke`/`fill` as SVG
    attributes, where `var()` does not resolve, so the token VALUES are
-   restated here and nowhere else in this feature. */
+   restated here. */
 const SERIES_COLOUR: Record<ClubRaceTier, string> = {
-  Distinguished: '#D4873F', // --rt-stats
-  Select: '#E63946', // --rt-red
-  President: '#8E1B25', // --rt-red-dk
-  Smedley: '#3D3B38', // --rt-ink-2
+  Distinguished: '#15803d', // --green-600 (light)
+  Select: '#2c6e90', // --loyal-400
+  President: '#004165', // --loyal-500
+  Smedley: '#7b1828', // --maroon-500
 }
 
 function prefersReducedMotion(): boolean {
@@ -136,7 +138,7 @@ export const RaceChart: React.FC<RaceChartProps> = ({
           ))}
         </AreaChart>
       </ResponsiveContainer>
-      <figcaption className="clubs-page__eyebrow">
+      <figcaption className="race-chart__caption">
         Clubs recognised per observed snapshot date, banded by the tier each
         holds — every club counted once. The stack reaches{' '}
         {totalRecognised(currentCounts)} today. Gaps between snapshots are not
