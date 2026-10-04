@@ -17,10 +17,21 @@ export interface LeadershipExcellenceInput {
   districtId: string
   districtName: string
   region: string
+  /** Completed program years BEFORE the current one. */
   yearEndTiers: Array<{
     programYear: string
     tier: DistinguishedDistrictTier
   }>
+  /**
+   * The program year the snapshot describes (#1609). The award year counts
+   * toward its own streak, but only once its year-end close is in
+   * (`final`). Before that, a qualifying trajectory is reported as on track.
+   */
+  currentYear?: {
+    programYear: string
+    tier: DistinguishedDistrictTier
+    final: boolean
+  }
 }
 
 export interface LeadershipExcellenceResult {
@@ -29,6 +40,11 @@ export interface LeadershipExcellenceResult {
   region: string
   consecutiveYears: number
   qualifies: boolean
+  /**
+   * Mid-year only (#1609): 2+ consecutive Distinguished years immediately
+   * before the current one, and currently tracking Distinguished.
+   */
+  onTrack: boolean
   streakDetails: Array<{
     programYear: string
     tier: DistinguishedDistrictTier
@@ -56,6 +72,7 @@ export class LeadershipExcellenceCalculator {
         region: input.region,
         consecutiveYears,
         qualifies: consecutiveYears >= CONSECUTIVE_YEARS_THRESHOLD,
+        onTrack: false,
         streakDetails,
       }
     })
