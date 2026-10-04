@@ -543,7 +543,11 @@ const MethodologyPage: React.FC = () => {
           <dt>New Charter</dt>
           <dd>
             A club chartered during the current program year. Counts toward the
-            President's Extension Award but not toward retention.
+            President's Extension Award but not toward retention. The year-end
+            close is published in July but still counts charters from the
+            program year it closes. Retention can exceed 100% only when clubs
+            outside the base (for example, reinstated after a prior-year
+            suspension) are paid at year-end.
           </dd>
           <dt>Distinguished Percent</dt>
           <dd>
