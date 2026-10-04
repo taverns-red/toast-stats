@@ -34,7 +34,8 @@ export interface OfficerAwardStandings {
 export class OfficerAwardsCalculator {
   /**
    * @param programYear - "YYYY-YYYY"; selects that year's Distinguished-clubs
-   *   goal (45% from 2025-26, 40% before). Omitted → current rules.
+   *   goal via the DistinguishedDistrictCalculator ruleset, which owns the
+   *   per-year thresholds. Omitted → current rules.
    */
   calculate(
     rankings: DistrictRanking[],
