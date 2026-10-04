@@ -84,6 +84,9 @@ interface DistinguishedDistrictTrophyCaseProps {
   clubStrengthGrowth?: number | null | undefined
   leadershipExcellenceQualifies?: boolean | undefined
   leadershipExcellenceYears?: number | undefined
+  /** Mid-year: 2+ prior consecutive Distinguished years and currently
+      tracking Distinguished — awarded only at the year-end close (#1609). */
+  leadershipExcellenceOnTrack?: boolean | undefined
   educationTrainingQualifies?: boolean | undefined
   clubGrowthQualifies?: boolean | undefined
 }
