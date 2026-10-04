@@ -4,6 +4,7 @@ import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
+import { tiedWinnerIds, TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
 import type {
   CompetitiveAwardRanking,
   CompetitiveAwardStandings,
@@ -134,6 +135,7 @@ const AwardsPage: React.FC = () => {
               key={spec.title}
               spec={spec}
               entries={(standings[spec.key] ?? []).slice(0, 10)}
+              tiedIds={tiedWinnerIds(standings[spec.key] ?? [])}
             />
           ))}
         </div>
@@ -147,11 +149,14 @@ export default AwardsPage
 interface AwardLeaderboardProps {
   spec: AwardSpec
   entries: CompetitiveAwardRanking[]
+  /** Winners sharing a rank — TI's tie-break is unpublished (#1610). */
+  tiedIds: ReadonlySet<string>
 }
 
 const AwardLeaderboard: React.FC<AwardLeaderboardProps> = ({
   spec,
   entries,
+  tiedIds,
 }) => {
   const winnerCount = entries.filter(e => e.isWinner).length
 
@@ -178,6 +183,12 @@ const AwardLeaderboard: React.FC<AwardLeaderboardProps> = ({
             Methodology
           </Link>
         </div>
+        {tiedIds.size > 0 && (
+          <p className="awards-page-card__tie-note">
+            {tiedIds.size} districts tied — {TIE_BREAK_UNPUBLISHED}, so they
+            share a rank.
+          </p>
+        )}
       </header>
       {entries.length === 0 ? (
         <p className="awards-page-card__empty">No standings yet.</p>
@@ -186,12 +197,25 @@ const AwardLeaderboard: React.FC<AwardLeaderboardProps> = ({
           {entries.map(entry => (
             <li key={entry.districtId} className="awards-page-card__row">
               <span className="awards-page-card__rank">#{entry.rank}</span>
-              <Link
-                to={`/district/${entry.districtId}`}
-                className="awards-page-card__district"
-              >
-                {entry.districtName}
-              </Link>
+              <span className="awards-page-card__name">
+                <Link
+                  to={`/district/${entry.districtId}`}
+                  className="awards-page-card__district"
+                >
+                  {entry.districtName}
+                </Link>
+                {tiedIds.has(entry.districtId) && (
+                  <>
+                    {' '}
+                    <span
+                      className="awards-page-card__tied"
+                      title={TIE_BREAK_UNPUBLISHED}
+                    >
+                      tied
+                    </span>
+                  </>
+                )}
+              </span>
               <span className="awards-page-card__region">R{entry.region}</span>
               <span className="awards-page-card__value">
                 {spec.formatValue(entry.value)}
