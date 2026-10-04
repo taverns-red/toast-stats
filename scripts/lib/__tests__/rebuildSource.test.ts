@@ -85,6 +85,39 @@ describe('resolveRebuildSourceDate', () => {
     ).toBe('2026-01-08')
   })
 
+  // Pre-2026 raws carry no metadata.json (closing is decided by the CSV
+  // footer / registry), so metadata reads come back non-closing. The
+  // committed registry then names the close: raw-csv/2025-07-20 → 2025-06.
+  it('falls back to the closing-date registry when metadata proves nothing', () => {
+    const metadataless = [nonClosing('2025-07-01'), nonClosing('2025-07-20')]
+    expect(
+      resolveRebuildSourceDate('2025-06-30', metadataless, {
+        registry: [{ dataMonth: '2025-06', closingDate: '2025-07-20' }],
+        rawDates: ['2025-07-01', '2025-07-20'],
+      })
+    ).toBe('2025-07-20')
+  })
+
+  it('ignores a registry closing date whose raw dir does not exist', () => {
+    expect(
+      resolveRebuildSourceDate('2025-06-30', [], {
+        registry: [{ dataMonth: '2025-06', closingDate: '2025-07-20' }],
+        rawDates: ['2025-07-01'],
+      })
+    ).toBe('2025-06-30')
+  })
+
+  it('prefers metadata-proven closes over the registry', () => {
+    // docs/month-end-closing-dates.json lists 2026-06 → 2026-07-29, which is
+    // a July daily ("Month of Jul, As of 07/29/2026"); metadata proves 07-25.
+    expect(
+      resolveRebuildSourceDate('2026-06-30', JUNE_2026, {
+        registry: [{ dataMonth: '2026-06', closingDate: '2026-07-29' }],
+        rawDates: JUNE_2026.map(e => e.collectionDate),
+      })
+    ).toBe('2026-07-25')
+  })
+
   it('leaves a non-month-end date untouched (closing raws remap themselves)', () => {
     expect(resolveRebuildSourceDate('2026-07-25', JUNE_2026)).toBe('2026-07-25')
     expect(resolveRebuildSourceDate('2026-06-15', JUNE_2026)).toBe('2026-06-15')
