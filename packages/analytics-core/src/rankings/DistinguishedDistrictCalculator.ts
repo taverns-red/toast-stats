@@ -368,6 +368,17 @@ export function requiredPrerequisitesForProgramYear(
   return rulesetForProgramYear(programYear).requiredPrerequisites
 }
 
+/**
+ * The Distinguished goal for number of Distinguished clubs (% of club base)
+ * in a program year — the entry-tier `distinguishedPercentMin`. Item 1490's
+ * Excellence in Education & Training award (PQD) gates on this goal alone,
+ * not on full Distinguished District status (#1612).
+ */
+export function distinguishedClubsGoalPercent(programYear?: string): number {
+  const tiers = rulesetForProgramYear(programYear).tiers
+  return Math.min(...tiers.map(t => t.distinguishedPercentMin))
+}
+
 export class DistinguishedDistrictCalculator {
   /**
    * Calculate Distinguished District status for a single district.
