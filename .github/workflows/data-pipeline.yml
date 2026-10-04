@@ -861,6 +861,20 @@ jobs:
               echo "Date remapped: ${DATE} → ${ACTUAL_DATE}"
             fi
 
+            # 5b. Never publish over a remote close (#1621). The runner cache
+            # is empty, so TransformService's local closing guard cannot see
+            # the GCS snapshot; compare against its metadata before computing
+            # or uploading. Refusal (exit 3) or an unreadable GCS: skip.
+            GUARD_STATUS=0
+            npx tsx scripts/guard-snapshot-upload.ts "${ACTUAL_DATE}" || GUARD_STATUS=$?
+            if [ "${GUARD_STATUS}" -ne 0 ]; then
+              echo "::warning::Not publishing ${ACTUAL_DATE}: snapshot upload guard exit ${GUARD_STATUS} (3 = would overwrite a closing snapshot)"
+              FAILED=$((FAILED + 1))
+              rm -rf "./cache/raw-csv/${SOURCE_DATE}" "./cache/snapshots/${ACTUAL_DATE}" \
+                ${PREV_YEAR_DATE:+"./cache/snapshots/${PREV_YEAR_DATE}"}
+              continue
+            fi
+
             # 6. Compute analytics (using actual snapshot date)
             echo "Computing analytics for ${ACTUAL_DATE}..."
             if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose 2>&1; then
@@ -1156,6 +1170,19 @@ jobs:
             ACTUAL_DATE="${ACTUAL_DATE:-$DATE}"
             if [ "$ACTUAL_DATE" != "$DATE" ]; then
               echo "Date remapped: ${DATE} → ${ACTUAL_DATE}"
+            fi
+
+            # 3b. Never publish over a remote close (#1621). The runner cache
+            # is empty, so TransformService's local closing guard cannot see
+            # the GCS snapshot; compare against its metadata before computing
+            # or uploading. Refusal (exit 3) or an unreadable GCS: skip.
+            GUARD_STATUS=0
+            npx tsx scripts/guard-snapshot-upload.ts "${ACTUAL_DATE}" || GUARD_STATUS=$?
+            if [ "${GUARD_STATUS}" -ne 0 ]; then
+              echo "::warning::Not publishing ${ACTUAL_DATE}: snapshot upload guard exit ${GUARD_STATUS} (3 = would overwrite a closing snapshot)"
+              FAILED=$((FAILED + 1))
+              rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${ACTUAL_DATE}"
+              continue
             fi
 
             # 4. Compute analytics

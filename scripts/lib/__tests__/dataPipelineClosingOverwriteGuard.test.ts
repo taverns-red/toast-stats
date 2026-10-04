@@ -57,7 +57,9 @@ describe.each([
     const guardAt = run.indexOf(GUARD)
     expect(guardAt).toBeGreaterThan(-1)
     expect(guardAt).toBeLessThan(run.indexOf('collector-cli compute-analytics'))
-    expect(guardAt).toBeLessThan(run.indexOf('gcloud storage cp'))
+    expect(guardAt).toBeLessThan(
+      run.indexOf('"gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"')
+    )
   })
 
   it('skips the date when the guard refuses or fails (fail closed)', () => {
