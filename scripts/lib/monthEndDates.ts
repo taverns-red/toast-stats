@@ -20,6 +20,12 @@ export interface RawCSVEntry {
   isClosingPeriod: boolean
   /** YYYY-MM of the prior month the data represents (only meaningful when isClosingPeriod) */
   dataMonth: string | undefined
+  /**
+   * False when metadata.json could not be read (absent on pre-2026 raws, or
+   * a read error) — the other fields are then defaults, not evidence. Unset
+   * means the producer did not say; treated as found (#1620).
+   */
+  metadataFound?: boolean
 }
 
 export interface MonthEndResult {

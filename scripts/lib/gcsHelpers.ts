@@ -99,6 +99,7 @@ export async function readMetadataForDate(
       collectionDate: date,
       isClosingPeriod: meta.isClosingPeriod === true,
       dataMonth: meta.dataMonth,
+      metadataFound: true,
     }
   } catch {
     // Missing or malformed metadata — treat as non-closing-period entry
@@ -106,6 +107,7 @@ export async function readMetadataForDate(
       collectionDate: date,
       isClosingPeriod: false,
       dataMonth: undefined,
+      metadataFound: false,
     }
   }
 }
