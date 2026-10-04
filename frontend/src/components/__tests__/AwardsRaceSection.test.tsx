@@ -313,4 +313,31 @@ describe('AwardsRaceSection — 3-card redesign (#357)', () => {
     ).toBeInTheDocument()
     expect(screen.getByText(/updated /i)).toBeInTheDocument()
   })
+
+  // #1610 — TI names three winners and doesn't publish its tie-break, so
+  // tied co-winners are called tied, not "qualifying".
+  it('calls tied co-winners tied and names the unpublished tie-break', () => {
+    const tiedRow = (districtId: string) => ({
+      districtId,
+      districtName: `District ${districtId}`,
+      region: '1',
+      rank: 1,
+      value: 100,
+      isWinner: true,
+    })
+    renderWithRouter(
+      <AwardsRaceSection
+        standings={{
+          ...mockStandings,
+          retentionAward: ['93', '49', '104', '17', '73'].map(tiedRow),
+        }}
+      />
+    )
+    const ret = findCard(/retention/i)
+    expect(within(ret).getByText(/5 districts tied/i)).toBeInTheDocument()
+    expect(within(ret).queryByText(/qualifying/i)).not.toBeInTheDocument()
+    expect(
+      within(ret).getByTitle(/tie-break isn.t published/i)
+    ).toBeInTheDocument()
+  })
 })
