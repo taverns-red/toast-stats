@@ -248,3 +248,15 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/landing-font-swap-cls.smoke.ts
+
+      # District overview CLS budget (#1647). lighthouserc.js only loads `/`,
+      # so /district/:id carried CLS 0.25 (desktop) / 0.44 (mobile) with every
+      # gate green: late inserts and skeleton→panel height mismatches in the
+      # Overview stack. Cold cache, pre-navigation layout-shift observer, the
+      # current and a past program year, 412px and 1350px, on the deployed
+      # channel. Chromium-only: the webkit project skips itself.
+      - name: District overview CLS budget against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/district-overview-cls.smoke.ts
