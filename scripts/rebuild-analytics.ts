@@ -102,7 +102,7 @@ async function main() {
   console.log()
   console.log('Next step — sync to GCS:')
   console.log(
-    `  gsutil -m rsync -r -d ${cacheDir}/snapshots gs://toast-stats-data-ca/snapshots`
+    `  gcloud storage rsync -r --delete-unmatched-destination-objects ${cacheDir}/snapshots gs://toast-stats-data-ca/snapshots`
   )
 }
 

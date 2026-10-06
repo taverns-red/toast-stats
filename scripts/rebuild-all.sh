@@ -2,7 +2,7 @@
 # rebuild-all.sh — Transform all raw CSVs → snapshots → analytics
 #
 # Runs the full local pipeline over every date found in cache/raw-csv/.
-# After running, use `gsutil -m rsync -r ./cache gs://toast-stats-data-ca/` to sync.
+# After running, use `gcloud storage rsync -r ./cache gs://toast-stats-data-ca/` to sync.
 #
 # Usage:
 #   ./scripts/rebuild-all.sh              # all dates
@@ -119,4 +119,4 @@ echo "  Transform:  $TRANSFORM_OK ok, $TRANSFORM_FAIL failed"
 echo "  Analytics:  $ANALYTICS_OK ok, $ANALYTICS_FAIL failed"
 echo ""
 echo "Next step — sync to GCS:"
-echo "  gsutil -m rsync -r -d $CACHE_DIR/snapshots gs://toast-stats-data-ca/snapshots"
+echo "  gcloud storage rsync -r --delete-unmatched-destination-objects $CACHE_DIR/snapshots gs://toast-stats-data-ca/snapshots"

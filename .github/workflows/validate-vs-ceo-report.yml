@@ -176,10 +176,10 @@ jobs:
             esac
             echo "::group::sync ${DATE}"
             mkdir -p "./cache/snapshots/${DATE}"
-            # STILL gsutil, deliberately (#1412): `-x` exclude anchoring under
-            # `gcloud storage rsync` is not established as identical, and a
-            # wrong match set here silently changes what the oracle compares.
-            gsutil -m rsync -r -x '^analytics/.*$' \
+            # A wrong match set here silently changes what the oracle compares.
+            # Moved off gsutil (#1412) after a `--dry-run` diff showed gcloud's
+            # `-x` (relative-path Python regex) plans gsutil's exact file set.
+            gcloud storage rsync -r -x '^analytics/.*$' \
               "gs://${BUCKET}/snapshots/${DATE}/" \
               "./cache/snapshots/${DATE}/"
             echo "::endgroup::"
