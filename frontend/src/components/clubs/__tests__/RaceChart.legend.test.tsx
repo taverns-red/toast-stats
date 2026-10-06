@@ -157,4 +157,21 @@ describe('RaceChart legend (#1570)', () => {
       'rgb(123, 24, 40)', // #7b1828 --maroon-500, Smedley
     ])
   })
+
+  // #1636 — each band carries a per-tier class so clubs-race.css can bind its
+  // fill/stroke to the --tier-chart-* tokens, which remap in dark mode.
+  it('tags every band with its tier class', () => {
+    const { container } = render(
+      <RaceChart
+        timeline={timeline}
+        smedleyAvailable
+        currentCounts={currentCounts}
+      />
+    )
+    for (const slug of ['distinguished', 'select', 'presidents', 'smedley']) {
+      const band = container.querySelector(`.race-chart__band--${slug}`)
+      expect(band, slug).not.toBeNull()
+      expect(band!.querySelector('.recharts-area-area'), slug).not.toBeNull()
+    }
+  })
 })

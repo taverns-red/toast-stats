@@ -26,3 +26,34 @@ describe('DistinguishedCompositionBar caption (#1107)', () => {
     expect(caption.textContent).not.toMatch(/paid/i)
   })
 })
+
+/* #1636 — each tier segment and its legend swatch carry a `.tier-fill--*`
+   hook, which dark-mode.css remaps to the `--tier-chart-*` tokens so the
+   President's / Smedley fills clear 3:1 on the dark surface. Light mode keeps
+   the Tailwind fills. "Not yet" is neutral and has no tier hook. */
+describe('DistinguishedCompositionBar tier hooks (#1636)', () => {
+  it('tags every tier segment and swatch with its tier-fill class', () => {
+    const { container } = render(
+      <DistinguishedCompositionBar
+        smedley={1}
+        presidents={2}
+        select={3}
+        distinguished={4}
+        totalClubs={20}
+      />
+    )
+    for (const [tier, label] of [
+      ['smedley', 'Smedley'],
+      ['presidents', "President's"],
+      ['select', 'Select'],
+      ['distinguished', 'Distinguished'],
+    ] as const) {
+      expect(screen.getByTitle(new RegExp(`^${label}:`))).toHaveClass(
+        `tier-fill--${tier}`
+      )
+      // the bar segment + its legend swatch
+      expect(container.querySelectorAll(`.tier-fill--${tier}`)).toHaveLength(2)
+    }
+    expect(screen.getByTitle(/^Not yet:/).className).not.toMatch(/tier-fill/)
+  })
+})
