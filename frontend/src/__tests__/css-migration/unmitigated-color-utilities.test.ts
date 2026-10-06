@@ -70,10 +70,9 @@ const EXPECTED_FAILURES = new Set<string>([
   //     entries from this list as their page-by-page dark-mode sweeps land.
   // Saturated foreground tones — illegible on the dark surface, need a
   // lighter shade override in dark mode.
-  'text-red-900',
-  'text-green-900',
   // text-yellow-900 / text-blue-900 mitigated in Sprint 14 (#610) — the club
   // anniversary badge consumes them, now remapped light in the dark block.
+  // text-red-900 / text-green-900 mitigated in #1660 (Trends deltas).
   // High-saturation fill colors — text-on-fill contrast may degrade on the
   // dark surface; needs a per-callsite check before override.
   'bg-red-500',

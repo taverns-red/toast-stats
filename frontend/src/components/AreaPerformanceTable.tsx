@@ -13,6 +13,9 @@ import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
 interface AreaPerformanceTableProps {
   /** Array of area performance data to display */
   areas: AreaPerformance[]
+  /** Accessible name of the scroll region. Must be unique per page when
+   *  several tables render (axe landmark-unique), e.g. one per division. */
+  label?: string
 }
 
 /**
@@ -107,6 +110,7 @@ const formatGap = (
  */
 export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
   areas,
+  label = 'Area performance',
 }) => {
   // Sort areas by area identifier (Requirement 6.8)
   const sortedAreas = [...areas].sort((a, b) =>
@@ -114,7 +118,15 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
   )
 
   return (
-    <div className="overflow-x-auto">
+    // role=region + tabIndex + aria-label make the horizontal scroll
+    // keyboard-operable (WCAG 2.1.1, axe scrollable-region-focusable, #1660),
+    // as RegionsLeaderboard's does (#689).
+    <div
+      className="overflow-x-auto"
+      role="region"
+      tabIndex={0}
+      aria-label={`${label} — scroll horizontally to see all columns`}
+    >
       <table className="w-full table-auto border-collapse">
         <thead className="bg-tm-cool-gray-10 border-b-2 border-tm-loyal-blue">
           <tr>

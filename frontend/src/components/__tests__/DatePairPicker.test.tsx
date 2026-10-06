@@ -94,4 +94,27 @@ describe('DatePairPicker', () => {
       expect(cls, `${id} appearance-none`).toContain('appearance-none')
     }
   })
+
+  // #1660 — the "From"/"To" label was text-gray-400 (#9ca3af, 2.53:1 on the
+  // white chip). text-gray-500 clears AA (4.83:1); dark keeps its own shade.
+  it('labels the from/to chips in an AA-legible grey', () => {
+    render(
+      <DatePairPicker
+        dates={DATES}
+        from="2026-05-22"
+        to="2026-05-26"
+        onFromChange={vi.fn()}
+        onToChange={vi.fn()}
+      />
+    )
+    for (const [id, text] of [
+      ['changes-from-chip', 'From'],
+      ['changes-to-chip', 'To'],
+    ] as const) {
+      const label = screen.getByTestId(id).querySelector('span')!
+      expect(label).toHaveTextContent(text)
+      expect(label.className).not.toMatch(/(^|\s)text-gray-400(\s|$)/)
+      expect(label.className).toMatch(/(^|\s)text-gray-500(\s|$)/)
+    }
+  })
 })

@@ -2962,6 +2962,39 @@
     color: var(--maroon-500);
   }
 
+  /* #1660: the light-tuned tier inks are 1.78–3.82:1 on the dark page. Each
+     keeps its hue family via a token that already remaps for dark: gold ink
+     (9.48:1 on --bg), the tier-chart blue (6.47:1) and dark maroon (7.66:1). */
+  [data-theme='dark'] .ddp-criteria__level-name--presidents {
+    color: var(--gold-ink);
+  }
+  [data-theme='dark'] .ddp-criteria__level-name--select {
+    color: var(--tier-chart-select);
+  }
+  [data-theme='dark'] .ddp-criteria__level-name--distinguished,
+  [data-theme='dark'] .ddp-criteria__level-name--loss {
+    color: var(--tier-chart-smedley);
+  }
+
+  /* Rank-change chip (MultiYearComparisonTable, #1660). Colours were inline
+     styles, which no theme rule can remap: "+N" was --green-600 on --loyal-50
+     (4.27:1, light) and "-N" --red-600 on the red tint (4.45:1, dark). */
+  .rank-change-chip--improved {
+    background-color: var(--loyal-50);
+    color: var(--green-700);
+  }
+  .rank-change-chip--declined {
+    background-color: rgba(220, 38, 38, 0.08);
+    color: var(--red-600);
+  }
+  [data-theme='dark'] .rank-change-chip--declined {
+    color: var(--red-500);
+  }
+  .rank-change-chip--unchanged {
+    background-color: var(--surface-3);
+    color: var(--ink-3);
+  }
+
   .ddp-criteria__source {
     font-size: 12px;
     color: var(--ink-3);
@@ -3619,6 +3652,13 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--maroon-500);
+  }
+
+  /* #1660: same gap #609 closed for .districts-page-header__eyebrow —
+     --maroon-500 has no dark remap (1.83:1 on --bg). The dark maroon the tier
+     charts already use clears AA (7.66:1 on --bg). */
+  [data-theme='dark'] .district-detail-page-header__eyebrow {
+    color: var(--tier-chart-smedley);
   }
 
   .district-detail-page-header__title {

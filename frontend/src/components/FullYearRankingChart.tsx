@@ -353,6 +353,9 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
               data={chartData}
               margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
               aria-hidden="true"
+              // The wrapper is the accessible role="img"; Recharts' default
+              // layer would put tabindex=0 inside aria-hidden (#1660).
+              accessibilityLayer={false}
             >
               <CartesianGrid
                 strokeDasharray="3 3"

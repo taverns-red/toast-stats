@@ -256,6 +256,8 @@ describe('MultiYearComparisonTable', () => {
       expect(changeIndicators).toHaveLength(0)
     })
 
+    // #1660: colours live in CSS (.rank-change-chip--*) so each theme can
+    // remap them; inline styles could not, and missed AA in light/dark.
     it('uses token-driven color for improvement', () => {
       renderWithProviders(<MultiYearComparisonTable {...baseProps} />)
 
@@ -263,8 +265,8 @@ describe('MultiYearComparisonTable', () => {
         name: /Overall rank improved by 5 positions/i,
       })
       const indicator = improvementIndicators[0] as HTMLElement
-      expect(indicator.style.color).toBe('var(--green-600)')
-      expect(indicator.style.backgroundColor).toBe('var(--loyal-50)')
+      expect(indicator).toHaveClass('rank-change-chip--improved')
+      expect(indicator.getAttribute('style')).toBeNull()
     })
 
     it('uses token-driven color for decline', () => {
@@ -274,7 +276,8 @@ describe('MultiYearComparisonTable', () => {
         name: /Payments rank declined by 2 positions/i,
       })
       const indicator = declineIndicators[0] as HTMLElement
-      expect(indicator.style.color).toBe('var(--red-600)')
+      expect(indicator).toHaveClass('rank-change-chip--declined')
+      expect(indicator.getAttribute('style')).toBeNull()
     })
 
     it('uses muted token color for unchanged', () => {
@@ -284,8 +287,8 @@ describe('MultiYearComparisonTable', () => {
         name: /Distinguished rank unchanged/i,
       })
       const indicator = unchangedIndicators[0] as HTMLElement
-      expect(indicator.style.color).toBe('var(--ink-3)')
-      expect(indicator.style.backgroundColor).toBe('var(--surface-3)')
+      expect(indicator).toHaveClass('rank-change-chip--unchanged')
+      expect(indicator.getAttribute('style')).toBeNull()
     })
   })
 
