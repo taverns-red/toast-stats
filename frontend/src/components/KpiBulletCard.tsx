@@ -211,8 +211,11 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
       className="rounded-lg border border-gray-200 bg-white p-4"
       data-testid="kpi-bullet-card"
     >
-      <div className="flex items-center gap-1">
-        <h3 className="text-sm font-medium text-gray-700">{title}</h3>
+      {/* flex-wrap + min-w-0 (#1655): on a narrow card (113px at 375) the
+          title and the 44px info button can't share a line — the button wraps
+          under the title instead of pushing past the viewport. */}
+      <div className="flex flex-wrap items-center gap-1">
+        <h3 className="min-w-0 text-sm font-medium text-gray-700">{title}</h3>
         {tooltipContent && (
           <Tooltip content={tooltipContent}>
             <button
