@@ -224,3 +224,47 @@ describe('resolveActiveProgramYear', () => {
     expect(res.content).toBeUndefined()
   })
 })
+
+// #1669: the scrape path asks for a HISTORICAL as-of by populating the URL's
+// month-end slot. The live root endpoint then answers with a header row and a
+// footer naming the requested date, but zero data rows (it only holds its own
+// year). "The footer names a program year" is therefore not enough to accept
+// it. The caller supplies a stricter acceptance check, and every probe must
+// pass it.
+describe('resolveActiveProgramYear — caller acceptance check (#1669)', () => {
+  const HEADER =
+    '"REGION","DISTRICT","DSP","Training","New Payments","Paid Club Base","Paid Clubs"'
+  const EMPTY_JUN_2022 = `${HEADER}\nMonth of Jun, As of 07/28/2022`
+  const FULL_JUN_2022 = `${HEADER}\n"01","02","Y","Y","10","212","192"\nMonth of Jun, As of 07/28/2022`
+  const hasRows = (content: string) =>
+    content.split('\n').some(l => l.startsWith('"01"'))
+
+  it('falls through a live answer the caller rejects to the archive path that serves the date', async () => {
+    const fetchSummary = vi.fn(
+      async (py: string, pathStyle: 'live' | 'archive') => {
+        if (pathStyle === 'live') return EMPTY_JUN_2022
+        if (py === '2022-2023') return EMPTY_JUN_2022
+        return FULL_JUN_2022
+      }
+    )
+    const accept = vi.fn((content: string) => hasRows(content))
+
+    const res = await resolveActiveProgramYear('2022-07-28', fetchSummary, {
+      accept,
+    })
+
+    expect(res.programYear).toBe('2021-2022')
+    expect(res.pathStyle).toBe('archive')
+    expect(res.content).toBe(FULL_JUN_2022)
+    expect(accept).toHaveBeenCalledWith(EMPTY_JUN_2022, '2021-2022', 'live')
+  })
+
+  it('returns no content when no probe passes the caller check', async () => {
+    const fetchSummary = vi.fn(async () => FULL_JUN_2022)
+    const res = await resolveActiveProgramYear('2022-07-28', fetchSummary, {
+      accept: () => false,
+    })
+
+    expect(res.content).toBeUndefined()
+  })
+})
