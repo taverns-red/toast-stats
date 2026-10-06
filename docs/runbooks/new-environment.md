@@ -103,4 +103,7 @@ gh workflow run deploy.yml --repo taverns-red/toast-stats
 ```
 
 Open a frontend PR to exercise `pr-preview.yml` against the `staging` site.
-If either deploy fails with `404 Site Not Found`, step 3 was skipped.
+Both workflows first run `scripts/check-hosting-site.sh <target>` (#1585). If
+the site or its `.firebaserc` mapping is missing, they fail fast with an
+`::error::` that points back to step 3. To run the same check locally:
+`PROJECT="$PROJECT_ID" scripts/check-hosting-site.sh production`.
