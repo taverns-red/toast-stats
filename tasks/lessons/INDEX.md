@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-dry-run-diff-between-two-clis-must-not-anchor-on-line-start.md` — When proving two CLIs plan the same operations by diffing their dry-run output, match the operation marker anywhere in the line — progress meters share stderr and a `^Would` anchor silently drops lines, faking a mismatch (or hiding one)  (2026-10-06)
 - `derive-the-program-year-from-a-snapshots-logical-date-not-its-collection-date.md` — Derive the program year (and any PY window) from a snapshot's logical date (the 06-30 it describes), never its collection date — a June close collected in July otherwise resolves to the next PY; and when rebuilding the past, exclude later years with `<`, not `!==`  (2026-10-06)
 - `release-please-node-strategy-bumps-only-the-root-entry-of-the-root-lockfile.md` — release-please's `node` strategy rewrites only the root entry of the root package-lock.json; npm-workspace entries (`packages['<path>'].version`) need a root-relative `json` extra-file per package, or they drift one release behind every release  (2026-10-06)
 - `a-payment-signal-is-period-scoped-gate-it-on-the-period-it-pays-for.md` — A "paid/verified" signal is scoped to the period it pays for — gate it on that period covering the viewed date, and derive the period from the event date, not the report's program-year label  (2026-09-28)

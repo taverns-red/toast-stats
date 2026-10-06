@@ -17,21 +17,21 @@
 # The collector uses Playwright (chromium) to scrape Toastmasters dashboards.
 # Data is processed locally and uploaded to GCS for the frontend to consume.
 #
-# GCS CLI — `gcloud storage`, with `rsync` deliberately still on `gsutil` (#1412):
+# GCS CLI — `gcloud storage` only; no `gsutil` anywhere (#1412):
 #   Google drops the bundled `gsutil` from the Cloud SDK in March 2027, and this
 #   workflow never installs it explicitly (setup-gcloud@v3 gives us the default
-#   bundle), so every call would break at once. `cp`/`ls`/`cat`/`rm` are migrated;
-#   equivalence was verified command-by-command against the real staging bucket.
-#   Two things a mechanical rewrite gets wrong:
+#   bundle), so every call would break at once. `cp`/`ls`/`cat`/`rm` moved first;
+#   `rsync` followed once per-call-site `--dry-run` diffs against the real
+#   staging and prod buckets showed gsutil and gcloud plan the identical object
+#   set (promotion, downloads, uploads, and both `-x` excludes) — see #1412.
+#   Three things a mechanical rewrite gets wrong:
 #     * `-m` has NO equivalent — parallelism is the default in `gcloud storage`.
 #     * BUNDLED SHORT FLAGS DO NOT PARSE. `gcloud storage cp -rZ` exits 2 with a
 #       usage error; it must be written `-r -Z`. gsutil accepts both.
-#   `rsync` is deliberately NOT migrated. `gcloud storage rsync` exists, but its
-#   object-comparison defaults and `-x` exclude anchoring are not established as
-#   byte-identical to gsutil's, and the destructive call sites (the `-x` keep-only
-#   skeleton sync at prune time, and staging→prod promotion) are exactly where a
-#   near-miss deletes retained data. Those move in their own PR with per-call-site
-#   dry-run evidence — see #1412.
+#     * `rsync -n` is a DRY RUN in gsutil but `--no-clobber` in gcloud (it
+#       writes, skipping changed objects). Use `--dry-run`. Promotion stays
+#       additive: no `--delete-unmatched-destination-objects` (gsutil `-d`).
+#   scripts/lib/__tests__/gcloudStorageCli.test.ts guards all of this.
 
 name: Data Pipeline
 
@@ -277,7 +277,7 @@ jobs:
 
           # Sync raw-csv cache for target date
           mkdir -p "./cache/raw-csv/${TARGET_DATE}"
-          gsutil -m rsync -r \
+          gcloud storage rsync -r \
             "gs://${GCS_BUCKET}/raw-csv/${TARGET_DATE}/" \
             "./cache/raw-csv/${TARGET_DATE}/" \
             2>&1 || echo "No existing raw-csv for ${TARGET_DATE} in GCS (first run)"
@@ -335,12 +335,12 @@ jobs:
           # Time-series index (~344 KB)
           echo "Syncing time-series..."
           mkdir -p ./cache/time-series
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
 
           # Club-trends store (~50 KB/district)
           echo "Syncing club-trends..."
           mkdir -p ./cache/club-trends
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
 
           # Club-race crossing store (#1556): one file per PY. MUST be pulled
           # before compute — the store starts empty when absent, and the push
@@ -348,7 +348,7 @@ jobs:
           # today's alone (the awards-history lesson, #1111).
           echo "Syncing club-race..."
           mkdir -p ./cache/club-race
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
 
           # District awards history store (~5 KB) (#333)
           echo "Syncing district-awards-history..."
@@ -511,11 +511,11 @@ jobs:
 
           # Internal state: rsync (no CDN metadata needed)
           # raw-csv keyed by collection date (DATE), not snapshot date
-          gsutil -m rsync -r "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
-          gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
-          gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+          gcloud storage rsync -r "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
+          gcloud storage rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
+          gcloud storage rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
           # Club-race crossing store (#1556) — the dir exists from the sync step
-          gsutil -m rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
+          gcloud storage rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
           # District awards history (#333)
           if [ -f "./cache/district-awards-history.json" ]; then
@@ -753,11 +753,11 @@ jobs:
           # These are small (~344 KB + ~50 KB/district) and persist across dates
           echo "Syncing time-series..."
           mkdir -p ./cache/time-series
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
 
           echo "Syncing club-trends..."
           mkdir -p ./cache/club-trends
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
 
           # Club-race crossing store (#1556). A rebuild walks dates in any
           # order; the store keeps the EARLIER of stored/observed per crossing,
@@ -765,7 +765,7 @@ jobs:
           # replace daily resolution with the surviving month-ends.
           echo "Syncing club-race..."
           mkdir -p ./cache/club-race
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
 
           # District awards history store (#333)
           echo "Syncing district-awards-history..."
@@ -825,7 +825,7 @@ jobs:
               echo "Month-end ${DATE} sourced from closing raw ${SOURCE_DATE}"
             fi
             mkdir -p "./cache/raw-csv/${SOURCE_DATE}"
-            gsutil -m rsync -r \
+            gcloud storage rsync -r \
               "gs://${GCS_BUCKET}/raw-csv/${SOURCE_DATE}/" \
               "./cache/raw-csv/${SOURCE_DATE}/" 2>&1 || true
 
@@ -922,9 +922,9 @@ jobs:
 
           # Sync accumulated stores back to GCS
           echo "Syncing time-series, club-trends and club-race back to GCS..."
-          gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
-          gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
-          gsutil -m rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
+          gcloud storage rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
+          gcloud storage rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+          gcloud storage rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
           # District awards history (#333)
           if [ -f "./cache/district-awards-history.json" ]; then
@@ -1059,10 +1059,10 @@ jobs:
         if: steps.mode.outputs.mode == 'rescrape'
         run: |
           mkdir -p ./cache/time-series ./cache/club-trends ./cache/club-race
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
           # Club-race crossing store (#1556): pull before push, min-on-rebuild.
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
 
           # District awards history store (~5 KB) (#1111): pull before push, or
           # the end-of-run push back (DistrictAwardsHistoryStore starts empty
@@ -1221,7 +1221,7 @@ jobs:
             RAW_CSV_DIR="./cache/raw-csv/${DATE}"
             if [ -d "${RAW_CSV_DIR}" ]; then
               echo "Uploading raw-csv/${DATE}/..."
-              gsutil -m rsync -r "${RAW_CSV_DIR}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
+              gcloud storage rsync -r "${RAW_CSV_DIR}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
             fi
 
             # 7. Cleanup to free disk
@@ -1234,9 +1234,9 @@ jobs:
 
           # Sync accumulated stores back to GCS
           echo "Syncing time-series, club-trends and club-race back to GCS..."
-          gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
-          gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
-          gsutil -m rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
+          gcloud storage rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
+          gcloud storage rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+          gcloud storage rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
 
           # District awards history (#333)
@@ -1301,7 +1301,7 @@ jobs:
           # daily-resolution crossings the live pipeline already captured.
           echo "Syncing club-race..."
           mkdir -p ./cache/club-race
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
 
           echo "Rebuilding all derived data from fresh CSVs..."
           npx collector-cli rebuild --verbose
@@ -1346,11 +1346,11 @@ jobs:
 
           # Club-race crossing store (#1556): internal state, rsync back
           echo "Syncing club-race back to GCS..."
-          gsutil -m rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
+          gcloud storage rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
           # Upload raw-csv
           echo "Uploading raw-csv..."
-          gsutil -m rsync -r "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
+          gcloud storage rsync -r "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
 
           SNAP_COUNT=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' | wc -l | tr -d ' ')
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
@@ -1387,12 +1387,13 @@ jobs:
           # Overlay metadata.json files only (exclude regex is single-sourced
           # from the tested scripts/lib constant; rsync never downloads CSVs)
           EXCLUDE_REGEX=$(npx tsx scripts/prune-skeleton-sync.ts --print-exclude-regex)
-          # STILL gsutil, deliberately (#1412). This is a KEEP-ONLY exclude: a
-          # regex that anchors differently under `gcloud storage rsync --exclude`
-          # silently drops metadata.json files, and the prune classifier then
-          # deletes the dates it could not see. Migrate only with a proven-
-          # equivalent match set per lesson `a-keep-only-rsync-exclude-...`.
-          gsutil -m rsync -r -x "${EXCLUDE_REGEX}" \
+          # KEEP-ONLY exclude: a regex that anchors differently silently drops
+          # metadata.json files, and the prune classifier then deletes the
+          # dates it could not see. Moved off gsutil (#1412) only after a
+          # `--dry-run` diff on the real staging raw-csv/ showed gcloud plans
+          # exactly gsutil's metadata.json set and zero payload files
+          # (lesson `a-keep-only-rsync-exclude-...`). Source is STAGING only.
+          gcloud storage rsync -r -x "${EXCLUDE_REGEX}" \
             "gs://${GCS_BUCKET}/raw-csv/" "./cache/raw-csv/"
 
           echo "## ⏬ Skeleton Sync for Prune (#1175)" >> "$GITHUB_STEP_SUMMARY"
@@ -1952,8 +1953,8 @@ jobs:
           # Sync the regenerated manifests so the next daily's count gate
           # compares like with like (prod's v1/dates.json would otherwise
           # still list the pruned dates and freeze promotion).
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"
 
           echo "## ✅ Prod Reconciliation Complete (#1133)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Prefixes deleted from prod**: ${DELETED}" >> "$GITHUB_STEP_SUMMARY"
@@ -2129,28 +2130,28 @@ jobs:
         run: |
           echo "Promoting staging → production..."
 
-          # STILL gsutil, deliberately (#1412): these six writes ARE production.
-          # `gcloud storage rsync`'s object-comparison defaults are not proven
-          # byte-identical to gsutil's here, and a difference shows up as data
-          # that silently did or did not promote. Migrate with a dry-run diff.
+          # These six writes ARE production. Moved off gsutil (#1412) after a
+          # per-layer `--dry-run` diff staging→prod showed gcloud and gsutil
+          # plan the identical copy set. Additive by design: never add
+          # `--delete-unmatched-destination-objects` (gsutil `-d`) here.
 
           # Sync manifests (v1/)
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"
 
           # Sync snapshots (only new/changed)
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/snapshots/" "gs://${GCS_BUCKET_PRODUCTION}/snapshots/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/snapshots/" "gs://${GCS_BUCKET_PRODUCTION}/snapshots/"
 
           # Sync time-series
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "gs://${GCS_BUCKET_PRODUCTION}/time-series/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "gs://${GCS_BUCKET_PRODUCTION}/time-series/"
 
           # Sync club-trends
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "gs://${GCS_BUCKET_PRODUCTION}/club-trends/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "gs://${GCS_BUCKET_PRODUCTION}/club-trends/"
 
           # Sync club-race crossing store (#1556)
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-race/" "gs://${GCS_BUCKET_PRODUCTION}/club-race/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "gs://${GCS_BUCKET_PRODUCTION}/club-race/"
 
           # Sync config (snapshot index)
-          gsutil -m rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"
 
           echo "## ✅ Promotion Complete" >> "$GITHUB_STEP_SUMMARY"
           echo "Staging data synced to production bucket." >> "$GITHUB_STEP_SUMMARY"
@@ -2881,7 +2882,7 @@ jobs:
 
           # ── PROD PATH — explicit mirror, chosen over the next-day rsync ──
           # This job runs AFTER `pipeline` has already promoted, so the
-          # sidecars miss that run's `gsutil -m rsync -r snapshots/`. The
+          # sidecars miss that run's `gcloud storage rsync -r snapshots/`. The
           # alternative — let tomorrow's promotion sweep them up — means the
           # frontend reads a day-old overlay, a miniature repeat of the silent
           # staleness this issue exists to fix. So mirror explicitly, gated on

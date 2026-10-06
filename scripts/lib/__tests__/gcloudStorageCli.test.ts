@@ -11,8 +11,9 @@
  * This guard is sourced from the workflow YAML itself so it cannot drift from
  * the real steps. It pins the three things a mechanical rewrite gets wrong:
  *
- *   1. `gsutil` must not come back for cp/ls/cat/rm. `rsync` is the ONE
- *      deliberate exception (see ALLOWED_GSUTIL_SUBCOMMANDS).
+ *   1. `gsutil` must not come back — not for cp/ls/cat/rm, and since the
+ *      rsync migration (proven no-op by per-site `--dry-run` diffs against
+ *      the real buckets) not for rsync either.
  *   2. Bundled short flags DO NOT PARSE in `gcloud storage`. `cp -rZ` exits 2
  *      with a usage error where gsutil accepted it — verified against the real
  *      CLI (Google Cloud SDK 578.0.0). Short flags must be written separately.
@@ -29,15 +30,6 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 const WORKFLOW_DIR = path.resolve(process.cwd(), '.github/workflows')
-
-/**
- * `rsync` stays on gsutil on purpose (#1412). `gcloud storage rsync` exists, but
- * its object-comparison defaults and `-x` exclude anchoring are not established
- * as identical, and the destructive call sites — the keep-only skeleton sync at
- * prune time, and staging→prod promotion — are exactly where a near-miss deletes
- * retained data. It moves in its own PR with per-call-site dry-run evidence.
- */
-const ALLOWED_GSUTIL_SUBCOMMANDS = new Set(['rsync'])
 
 interface Site {
   file: string
@@ -117,20 +109,77 @@ describe('gsutil → gcloud storage migration guard (#1412)', () => {
     expect(invocations.length).toBeGreaterThan(30)
   })
 
-  it('no gsutil invocation survives except the deliberate rsync exception', () => {
-    const hits = lines.filter(l => {
-      const m = l.text.match(/(?<![\w./-])gsutil(?:\s+-[a-zA-Z]+)*\s+([a-z]+)/)
-      return m !== null && !ALLOWED_GSUTIL_SUBCOMMANDS.has(m[1]!)
-    })
+  it('no gsutil invocation survives in any workflow (rsync included)', () => {
+    const hits = lines.filter(l => /(?<![\w./-])gsutil\s/.test(l.text))
     expect(render(hits)).toEqual([])
   })
 
-  it('every surviving gsutil call is an rsync (nothing regresses back)', () => {
-    for (const l of lines.filter(x => /(?<![\w./-])gsutil\b/.test(x.text))) {
-      expect(l.text, `${l.file}:${l.n}`).toMatch(
-        /gsutil(\s+-[a-zA-Z]+)*\s+rsync\b/
+  describe('gcloud storage rsync semantics', () => {
+    const rsyncs = invocations.filter(i =>
+      /^gcloud storage rsync\b/.test(i.text)
+    )
+
+    it('the rsync call sites are actually under test', () => {
+      expect(rsyncs.length).toBeGreaterThanOrEqual(30)
+    })
+
+    it('every rsync is recursive (`-r`), as every gsutil site was', () => {
+      const flat = rsyncs.filter(i => !i.flags.includes('-r'))
+      expect(render(flat)).toEqual([])
+    })
+
+    it('no rsync carries `-n` (gsutil: dry-run; gcloud: --no-clobber)', () => {
+      // A mechanical port of `gsutil rsync -n` would not be a dry run under
+      // gcloud — it would write, but silently skip every changed object.
+      const hits = rsyncs.filter(i => i.flags.includes('-n'))
+      expect(render(hits)).toEqual([])
+    })
+
+    it('no workflow rsync deletes (promotion is additive by design)', () => {
+      const hits = rsyncs.filter(i =>
+        i.flags.some(f =>
+          /^(-d|--delete-unmatched-destination-objects)$/.test(f)
+        )
       )
+      expect(render(hits)).toEqual([])
+    })
+
+    it('every rsync into the production bucket mirrors the same staging layer', () => {
+      const toProd = rsyncs.filter(i =>
+        i.text.includes('gs://${GCS_BUCKET_PRODUCTION}/')
+      )
+      // 6 promote layers + 2 prod-reconcile manifest syncs (v1/, config/).
+      expect(toProd).toHaveLength(8)
+      for (const i of toProd) {
+        expect(i.flags, `${i.file}:${i.n}`).toEqual(['-r'])
+        expect(i.text, `${i.file}:${i.n}`).toMatch(
+          /rsync -r "gs:\/\/\$\{GCS_BUCKET\}\/([a-z0-9-]+)\/" "gs:\/\/\$\{GCS_BUCKET_PRODUCTION\}\/\1\/"/
+        )
+      }
+    })
+
+    it('the prune keep-only sync uses the tested exclude constant, from staging', () => {
+      const prune = rsyncs.filter(i => i.text.includes('${EXCLUDE_REGEX}'))
+      expect(prune).toHaveLength(1)
+      expect(prune[0]!.flags).toEqual(['-r', '-x'])
+      expect(prune[0]!.text).toMatch(
+        /"gs:\/\/\$\{GCS_BUCKET\}\/raw-csv\/" "\.\/cache\/raw-csv\/"/
+      )
+    })
+  })
+
+  it('no runbook still tells an operator to `gsutil rsync`', () => {
+    const dir = path.resolve(process.cwd(), 'docs/runbooks')
+    const hits: string[] = []
+    for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.md'))) {
+      fs.readFileSync(path.join(dir, f), 'utf-8')
+        .split('\n')
+        .forEach((t, i) => {
+          if (/gsutil(\s+-[a-zA-Z]+)*\s+rsync\b/.test(t))
+            hits.push(`${f}:${i + 1}`)
+        })
     }
+    expect(hits).toEqual([])
   })
 
   it('no gcloud storage call carries `-m` (no equivalent; parallel by default)', () => {

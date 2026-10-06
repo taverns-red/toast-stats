@@ -152,11 +152,11 @@ touches them), the count gate passes, and the **value gate does the real work**.
 ```bash
 # One-time copy prod → staging BEFORE dispatching the rebuild.
 # (additive rsync, no -d: brings staging up to prod's full date set + time-series base)
-gsutil -m rsync -r gs://toast-stats-data-ca/v1/          gs://toast-stats-data-staging/v1/
-gsutil -m rsync -r gs://toast-stats-data-ca/snapshots/   gs://toast-stats-data-staging/snapshots/
-gsutil -m rsync -r gs://toast-stats-data-ca/time-series/ gs://toast-stats-data-staging/time-series/
-gsutil -m rsync -r gs://toast-stats-data-ca/club-trends/ gs://toast-stats-data-staging/club-trends/
-gsutil -m rsync -r gs://toast-stats-data-ca/config/      gs://toast-stats-data-staging/config/
+gcloud storage rsync -r gs://toast-stats-data-ca/v1/          gs://toast-stats-data-staging/v1/
+gcloud storage rsync -r gs://toast-stats-data-ca/snapshots/   gs://toast-stats-data-staging/snapshots/
+gcloud storage rsync -r gs://toast-stats-data-ca/time-series/ gs://toast-stats-data-staging/time-series/
+gcloud storage rsync -r gs://toast-stats-data-ca/club-trends/ gs://toast-stats-data-staging/club-trends/
+gcloud storage rsync -r gs://toast-stats-data-ca/config/      gs://toast-stats-data-staging/config/
 
 # Confirm staging now mirrors prod's date count before rebuilding:
 gsutil cat gs://toast-stats-data-staging/v1/dates.json | jq '.count'   # should == prod count

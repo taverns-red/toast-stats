@@ -7,13 +7,13 @@
  * Classification (PruneService) reads only the raw-csv date-dir SET and
  * each date's metadata.json — so the sync becomes a skeleton:
  *
- *   1. `gsutil ls` the raw-csv/ and snapshots/ prefixes
+ *   1. `gcloud storage ls` the raw-csv/ and snapshots/ prefixes
  *   2. materialize ALL date dirs locally (a metadata-less dir must stay
  *      VISIBLE — the #1131 fail-closed protection works by SEEING a
  *      raw-csv date dir without metadata.json; a metadata-only sync that
  *      skipped those dirs would make protected dates invisible instead
  *      of protected)
- *   3. overlay metadata.json files via `gsutil -m rsync -r -x <exclude>`
+ *   3. overlay metadata.json files via `gcloud storage rsync -r -x <exclude>`
  *
  * No GCS I/O lives here; scripts/prune-skeleton-sync.ts is the runner
  * glue and the workflow supplies the listings.
@@ -28,11 +28,11 @@ export interface SkeletonDirPlan {
 }
 
 /**
- * Plan the local skeleton from the two `gsutil ls` listings.
+ * Plan the local skeleton from the two `gcloud storage ls` listings.
  *
  * Fails closed when the raw-csv listing parses to zero date dirs: the
  * staging bucket is never legitimately empty, so an empty listing means
- * the `gsutil ls` itself failed (wrong bucket, auth, transient error) —
+ * the `gcloud storage ls` itself failed (wrong bucket, auth, transient error) —
  * and proceeding would classify nothing while reporting success.
  * An empty snapshots listing is tolerated: snapshots are not a
  * classification input (PruneService reads only raw-csv).
@@ -46,7 +46,7 @@ export function planSkeletonDirs(
     throw new Error(
       'prune skeleton sync (#1175): raw-csv listing parsed to zero date dirs — ' +
         'refusing to proceed; an empty listing on a populated bucket means the ' +
-        '`gsutil ls` failed, and classifying an empty cache would silently prune nothing'
+        '`gcloud storage ls` failed, and classifying an empty cache would silently prune nothing'
     )
   }
   return {
@@ -56,11 +56,11 @@ export function planSkeletonDirs(
 }
 
 /**
- * `gsutil rsync -x` exclusion regex (Python `re` syntax) that keeps ONLY
+ * `gcloud storage rsync -x` exclusion regex (Python `re` syntax) that keeps ONLY
  * `<date>/metadata.json` when overlaying gs://bucket/raw-csv/ onto the
  * local skeleton.
  *
- * gsutil matches the pattern against paths RELATIVE to the source URL,
+ * The CLI matches the pattern against paths RELATIVE to the source URL,
  * and a pattern that matches a DIRECTORY path excludes the whole
  * directory from traversal — so the bare `<date>` path must also be kept
  * (not matched), or the metadata.json inside is never even compared.

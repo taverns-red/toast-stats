@@ -6,8 +6,8 @@ prune mode.
 
 ## Why prod freezes after a prune
 
-Prune deletes only from **staging**. Promotion (`gsutil rsync` without
-`-d`) never deletes from prod. After a staging prune:
+Prune deletes only from **staging**. Promotion (`gcloud storage rsync` without
+`--delete-unmatched-destination-objects`, gsutil's `-d`) never deletes from prod. After a staging prune:
 
 1. Staging's regenerated `v1/dates.json` lists fewer dates than prod's.
 2. The next daily run's **count gate** sees `staging dates < prod dates`,
@@ -116,8 +116,8 @@ Symptoms: a `promotion-held` issue citing the count gate;
    while IFS= read -r PREFIX; do
      gsutil -m rm -r "gs://toast-stats-data-ca/${PREFIX}/"
    done < /tmp/prod-reconcile-paths.txt
-   gsutil -m rsync -r gs://toast-stats-data-staging/v1/ gs://toast-stats-data-ca/v1/
-   gsutil -m rsync -r gs://toast-stats-data-staging/config/ gs://toast-stats-data-ca/config/
+   gcloud storage rsync -r gs://toast-stats-data-staging/v1/ gs://toast-stats-data-ca/v1/
+   gcloud storage rsync -r gs://toast-stats-data-staging/config/ gs://toast-stats-data-ca/config/
    ```
 
 4. Verify: the next daily run promotes (count gate passes) and the

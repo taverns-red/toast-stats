@@ -4,11 +4,11 @@
  * Thin glue around the pure functions in ./lib/pruneSkeletonSync.js. The
  * data-pipeline prune mode calls it twice:
  *
- *   1. `--print-exclude-regex` — prints the `gsutil rsync -x` pattern that
+ *   1. `--print-exclude-regex` — prints the `gcloud storage rsync -x` pattern that
  *      overlays ONLY `<date>/metadata.json` (single source of truth; the
  *      workflow never hardcodes the regex).
  *   2. `--raw-listing <file> --snapshot-listing <file> --cache-dir <dir>` —
- *      reads the two `gsutil ls` outputs and materializes EVERY date dir
+ *      reads the two `gcloud storage ls` outputs and materializes EVERY date dir
  *      locally. A metadata-less raw-csv dir must exist locally so the
  *      #1131 protection can SEE it; the rsync overlay alone would skip it.
  *

@@ -4,9 +4,9 @@
  * The prune sync previously downloaded every raw-csv and snapshot byte;
  * post-#1147 that no longer fits a GitHub runner's disk. Classification
  * needs only the date-dir SET plus each date's metadata.json, so the sync
- * becomes: materialize ALL date dirs from `gsutil ls` (a metadata-less dir
+ * becomes: materialize ALL date dirs from `gcloud storage ls` (a metadata-less dir
  * must stay VISIBLE — the #1131 protection depends on prune seeing it),
- * then overlay metadata.json files via `gsutil rsync -x <exclude>`.
+ * then overlay metadata.json files via `gcloud storage rsync -x <exclude>`.
  */
 
 import { describe, it, expect } from 'vitest'
@@ -46,8 +46,8 @@ describe('planSkeletonDirs', () => {
 })
 
 describe('RAW_CSV_METADATA_ONLY_EXCLUDE', () => {
-  // gsutil rsync -x matches a Python regex against paths RELATIVE to the
-  // source URL, and an exclude that matches a directory path prunes the
+  // `rsync -x` (gsutil and gcloud storage alike) matches a Python regex
+  // against paths RELATIVE to the source URL, and an exclude that matches a directory path prunes the
   // whole directory from traversal. The pattern must therefore NOT match
   // the bare date-dir path, or the metadata.json inside is never compared.
   const re = new RegExp(RAW_CSV_METADATA_ONLY_EXCLUDE)
