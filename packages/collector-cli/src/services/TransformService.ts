@@ -942,6 +942,21 @@ export class TransformService {
     // date: a June close collected 07-25 is written to {year}-06-30 and
     // belongs to the closing PY (#1622).
     const programYearStart = getProgramYearStartDate(logicalDate)
+    // ...and it ENDS June 30 of that PY (inclusive). A June close is
+    // collected in July, so its raw already carries next-PY rows
+    // (`Charter 07/01/19`, `Susp 07/01/26`) that must not count here (#1675).
+    // PY end rather than the logical date: newCharteredClubs is subtracted
+    // from paidClubs read from the same raw, so an in-PY charter dated after
+    // a mid-year month-end must still be counted; mid-PY values are unchanged.
+    const programYearEnd = programYearStart
+      ? new Date(Date.UTC(programYearStart.getUTCFullYear() + 1, 5, 30))
+      : null
+    const inProgramYear = (d: Date | null): boolean =>
+      !!d &&
+      !!programYearStart &&
+      !!programYearEnd &&
+      d >= programYearStart &&
+      d <= programYearEnd
     for (const metric of metrics) {
       try {
         const districtDir = path.join(
@@ -991,9 +1006,9 @@ export class TransformService {
             for (const row of rows) {
               const status = row['Charter Date/Suspend Date']
               const chartered = parseCharterDateFromStatusField(status)
-              if (chartered && chartered >= programYearStart) newCharters++
+              if (inProgramYear(chartered)) newCharters++
               const suspendedOn = parseSuspendDateFromStatusField(status)
-              if (suspendedOn && suspendedOn >= programYearStart) suspended++
+              if (inProgramYear(suspendedOn)) suspended++
             }
             metric.newCharteredClubs = newCharters
             metric.suspendedClubs = suspended
