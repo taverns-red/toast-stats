@@ -8,7 +8,7 @@ import {
   beforeAll,
   afterEach,
 } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import App from '../../../App'
@@ -74,12 +74,16 @@ describe('Journey 03: The DCP Progress Flow', () => {
     )
     expect(districtHeading).toBeInTheDocument()
 
-    // Step 2: Verify the three KPI bullet cards render (#550 redesign)
-    const paidClubsCard = await screen.findByText(
-      /Paid Clubs/i,
-      {},
+    // Step 2: Verify the three KPI bullet cards render (#550 redesign).
+    // Scoped to the LOADED strip's landmark: while loading, the strip's
+    // structural skeleton lays out an invisible, aria-hidden copy of the same
+    // cards (#1647), which an unscoped text query would match and then lose.
+    const kpiStrip = await screen.findByRole(
+      'region',
+      { name: /Key district metrics/i },
       { timeout: 5000 }
     )
+    const paidClubsCard = within(kpiStrip).getByText(/Paid Clubs/i)
     expect(paidClubsCard).toBeInTheDocument()
 
     const memPaymentsCard = await screen.findByText(
