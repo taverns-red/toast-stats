@@ -57,3 +57,23 @@ describe('DistinguishedCompositionBar tier hooks (#1636)', () => {
     expect(screen.getByTitle(/^Not yet:/).className).not.toMatch(/tier-fill/)
   })
 })
+
+/* #1652 — the neutral "Not yet" segment carries its own hook so light mode
+   can give its count dark ink (white on gray-200 is 1.23:1). It is not a
+   tier, so it stays out of the `.tier-fill--*` family. */
+describe('DistinguishedCompositionBar not-yet hook (#1652)', () => {
+  it('tags the Not yet segment with composition-fill--not-yet', () => {
+    render(
+      <DistinguishedCompositionBar
+        smedley={1}
+        presidents={2}
+        select={3}
+        distinguished={4}
+        totalClubs={20}
+      />
+    )
+    expect(screen.getByTitle(/^Not yet:/)).toHaveClass(
+      'composition-fill--not-yet'
+    )
+  })
+})
