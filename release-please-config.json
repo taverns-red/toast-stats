@@ -9,23 +9,58 @@
     },
     "frontend": {
       "release-type": "node",
-      "component": "frontend"
+      "component": "frontend",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/package-lock.json",
+          "jsonpath": "$.packages['frontend'].version"
+        }
+      ]
     },
     "packages/shared-contracts": {
       "release-type": "node",
-      "component": "shared-contracts"
+      "component": "shared-contracts",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/package-lock.json",
+          "jsonpath": "$.packages['packages/shared-contracts'].version"
+        }
+      ]
     },
     "packages/collector-cli": {
       "release-type": "node",
-      "component": "collector-cli"
+      "component": "collector-cli",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/package-lock.json",
+          "jsonpath": "$.packages['packages/collector-cli'].version"
+        }
+      ]
     },
     "packages/analytics-core": {
       "release-type": "node",
-      "component": "analytics-core"
+      "component": "analytics-core",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/package-lock.json",
+          "jsonpath": "$.packages['packages/analytics-core'].version"
+        }
+      ]
     },
     "packages/mcp-server": {
       "release-type": "node",
-      "component": "toast-stats-mcp"
+      "component": "toast-stats-mcp",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/package-lock.json",
+          "jsonpath": "$.packages['packages/mcp-server'].version"
+        }
+      ]
     }
   },
   "bump-minor-pre-major": true,
