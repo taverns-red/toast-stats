@@ -244,12 +244,36 @@
   .app-shell-tools {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     flex-shrink: 0;
     /* Right-align the cluster on mobile, where the nav is an absolute
        dropdown and no longer the flex:1 spacer that pushed it right (#735).
        Inert on desktop — the flex:1 nav already consumes the free space. */
     margin-left: auto;
+  }
+
+  /* #1651 — the cluster is flex-shrink:0, and once the #1058 search control
+     joined it the bar outgrew the viewport: 26px past 375 and 178px past 768,
+     so every page scrolled sideways. Below the 1024px desktop width the bar
+     drops the two items that duplicate or stub something else: the "?" help
+     link ("How it works" is already in the primary nav at every width) and
+     the placeholder avatar (no account feature yet, cf. the #411 bell stub).
+     That keeps search + theme toggle (both ≥44px targets) and clears 320px. */
+  @media (max-width: 1023.98px) {
+    /* Child selectors: outrank the later base display rules. */
+    .app-shell-tools > .app-shell-help,
+    .app-shell-tools > .app-shell-avatar {
+      display: none;
+    }
+  }
+
+  /* Tablet (768–1023px): the six inline nav links plus the search combobox
+     still don't fit beside the full wordmark, so the brand collapses to its
+     "TS" mark. The link keeps its accessible name ("Toast Stats home"). */
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    .app-shell-brand > .app-shell-brand__name {
+      display: none;
+    }
   }
 
   /* Desktop (≥768px): no hamburger; the nav is the inline middle column

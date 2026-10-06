@@ -152,7 +152,7 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
             trust. Re-add when there's real notification content. */}
         <Link
           to="/methodology"
-          className="app-shell-icon-btn"
+          className="app-shell-icon-btn app-shell-help"
           aria-label="How it works"
           title="How it works"
         >
