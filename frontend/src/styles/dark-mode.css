@@ -87,7 +87,8 @@
 /* ─── Root & Body Overrides ─── */
 
 [data-theme='dark'] body {
-  background-color: var(--surface-primary);
+  /* #1662: same --bg as html and the app shell, so the canvas is one colour */
+  background-color: var(--bg);
   color: var(--text-body);
 }
 
@@ -1051,6 +1052,8 @@
 
 /* ─── Transition for Theme Switch ─── */
 
+/* #1662: html transitions with body so the canvas edge never lags a toggle */
+html[data-theme],
 html[data-theme] body {
   transition:
     background-color 0.3s ease,

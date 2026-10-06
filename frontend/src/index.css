@@ -547,8 +547,11 @@ body {
   font-family: var(--tm-font-body);
   font-size: max(var(--tm-font-size-min-body), 14px);
   line-height: max(var(--tm-line-height-min), 1.4);
-  background-color: var(--tm-black);
-  color: rgba(255, 255, 255, 0.87);
+  /* #1662: the canvas is the theme's page background — the same --bg the
+     app shell paints — so overscroll, short pages and overflow never show
+     an inverted colour. --tm-black is remapped to near-white in dark mode. */
+  background-color: var(--bg);
+  color: var(--ink);
 }
 
 :root {
@@ -556,9 +559,11 @@ body {
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: var(--tm-black);
+  /* #1662: UA colour-scheme (scrollbars, form controls, default canvas)
+     follows the app's [data-theme], not the OS preference. */
+  color-scheme: light;
+  color: var(--ink);
+  background-color: var(--bg);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -570,6 +575,10 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 #root {

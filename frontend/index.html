@@ -74,6 +74,25 @@
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
     </noscript>
     
+    <!-- Theme init (#1662): set data-theme before first paint so the canvas
+         never flashes the wrong theme. Mirrors DarkModeContext.getInitialTheme;
+         storage access is guarded (#1646). -->
+    <script>
+      (function () {
+        var theme = null
+        try {
+          theme = window.localStorage.getItem('theme')
+        } catch (e) {}
+        if (theme !== 'dark' && theme !== 'light') {
+          theme =
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+        }
+        document.documentElement.setAttribute('data-theme', theme)
+      })()
+    </script>
     <!-- Font Loading Optimization Script -->
     <script>
       // Optimize font loading with font-display: swap fallback
