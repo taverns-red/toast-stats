@@ -49,9 +49,23 @@ function parseBlock(css: string, selector: string): Map<string, string> {
   return map
 }
 
+// Legacy chrome tokens (#1537): the Club Growth accent is a TM-palette token,
+// not a --rt-* one, so the resolver must see where those live in each theme.
+const legacyLight = parseBlock(
+  stripComments(readFileSync(resolve(stylesDir, 'tokens/colors.css'), 'utf8')),
+  ':root'
+)
+const legacyDark = parseBlock(
+  stripComments(readFileSync(resolve(stylesDir, 'dark-mode.css'), 'utf8')),
+  "[data-theme='dark']"
+)
+
 const brand = parseBlock(brandCss, ':root')
-const light = parseBlock(tokensCss, ':root')
-const dark = parseBlock(tokensCss, "[data-theme='dark']")
+const light = new Map([...legacyLight, ...parseBlock(tokensCss, ':root')])
+const dark = new Map([
+  ...legacyDark,
+  ...parseBlock(tokensCss, "[data-theme='dark']"),
+])
 
 /** Resolve `var(--x)` chains against a theme map, falling back to light/brand. */
 function resolve_(
@@ -76,6 +90,7 @@ const ACCENTS = [
   '--recognition-select',
   '--recognition-presidents',
   '--recognition-smedley',
+  '--recognition-club-growth',
 ]
 
 describe('recognition badge contrast (#1361)', () => {
@@ -93,7 +108,7 @@ describe('recognition badge contrast (#1361)', () => {
       ).toBeGreaterThanOrEqual(4.5)
     })
 
-    it(`defines all seven accents in the ${themeName} theme`, () => {
+    it(`defines every accent in the ${themeName} theme`, () => {
       for (const accent of ACCENTS) {
         expect(theme.has(accent), `${accent} missing from ${themeName}`).toBe(
           true
@@ -114,12 +129,20 @@ describe('recognition badge contrast (#1361)', () => {
     })
   }
 
-  it('keeps the seven accents visually distinct in each theme', () => {
+  it('keeps every accent visually distinct in each theme', () => {
     for (const theme of [light, dark]) {
       const values = ACCENTS.map(a =>
         resolve_(`var(${a})`, theme).toLowerCase()
       )
       expect(new Set(values).size).toBe(ACCENTS.length)
+    }
+  })
+
+  it('routes the Club Growth accent through legacy chrome tokens, not --rt-* (#1537)', () => {
+    // New UI stays on the legacy chrome until the Phase 2 migration (ops#37).
+    for (const theme of [light, dark]) {
+      const raw = theme.get('--recognition-club-growth') ?? ''
+      expect(raw).toMatch(/^var\(--tm-/)
     }
   })
 

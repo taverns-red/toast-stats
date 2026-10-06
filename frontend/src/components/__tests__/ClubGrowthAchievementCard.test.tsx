@@ -4,6 +4,7 @@ import { axe, toHaveNoViolations } from 'jest-axe'
 
 import { ClubGrowthAchievementCard } from '../ClubGrowthAchievementCard'
 import type { ClubGrowthCheckpoint as ClubGrowthCheckpointRead } from '../../hooks/useClubGrowthMilestones'
+import { CLUB_GROWTH_RECOGNITION } from '../recognition/recognitionRegistry'
 
 expect.extend(toHaveNoViolations)
 afterEach(() => cleanup())
@@ -536,6 +537,43 @@ describe('ClubGrowthAchievementCard', () => {
         />
       )
       expect(await axe(container)).toHaveNoViolations()
+    })
+  })
+
+  describe('recognition registry (#1537)', () => {
+    const glyphIn = (el: HTMLElement) =>
+      el.querySelector(`[data-recognition="${CLUB_GROWTH_RECOGNITION.id}"]`)
+
+    it('draws the registry glyph, with its accent, beside the loaded heading', () => {
+      render(
+        <ClubGrowthAchievementCard
+          programYear={PY}
+          asOfDate="2026-09-15"
+          checkpointReads={bothPending}
+          toDateCount={2}
+        />
+      )
+      const heading = screen.getByRole('heading', { level: 2 })
+      const glyph = glyphIn(heading) as HTMLElement | null
+      expect(glyph).not.toBeNull()
+      expect(glyph!.getAttribute('aria-hidden')).toBe('true')
+      expect(glyph!.querySelector('svg')).not.toBeNull()
+      expect(glyph!.getAttribute('style')).toContain(
+        `var(${CLUB_GROWTH_RECOGNITION.accentVar})`
+      )
+    })
+
+    it('reserves the same glyph in the skeleton, so the heading line cannot grow on load', () => {
+      render(
+        <ClubGrowthAchievementCard
+          programYear={PY}
+          asOfDate="2026-09-15"
+          checkpointReads={bothPending}
+          isLoading
+        />
+      )
+      const skeleton = screen.getByTestId('club-growth-achievement-skeleton')
+      expect(glyphIn(skeleton.querySelector('h2')!)).not.toBeNull()
     })
   })
 })

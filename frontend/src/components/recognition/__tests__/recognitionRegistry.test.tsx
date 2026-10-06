@@ -13,18 +13,24 @@
 import { describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
+  ACHIEVEMENT_RECOGNITION,
   AWARD_RECOGNITION,
+  CLUB_GROWTH_RECOGNITION,
   TIER_RECOGNITION,
   RECOGNITION_ITEMS,
   TIER_TITLES,
   tierRecognition,
 } from '../recognitionRegistry'
+import {
+  CLUB_GROWTH_ACHIEVEMENT_FIRST_PROGRAM_YEAR,
+  clubGrowthCheckpoints,
+} from '../../../utils/clubGrowthAchievement'
 
 const render = (Icon: React.FC<{ className?: string }>) =>
   renderToStaticMarkup(<Icon />)
 
 describe('recognition registry (#1361)', () => {
-  it('covers the three competitive awards and the four Distinguished tiers', () => {
+  it('covers the three competitive awards, the four Distinguished tiers and the Club Growth Achievement', () => {
     expect(AWARD_RECOGNITION.map(a => a.id)).toEqual([
       'extension',
       'twentyPlus',
@@ -36,7 +42,13 @@ describe('recognition registry (#1361)', () => {
       'Presidents',
       'Smedley',
     ])
-    expect(RECOGNITION_ITEMS).toHaveLength(7)
+    expect(ACHIEVEMENT_RECOGNITION.map(a => a.id)).toEqual(['clubGrowth'])
+    // Awards first, then the tier ladder, then the threshold achievements.
+    expect(RECOGNITION_ITEMS.map(i => i.id)).toEqual([
+      ...AWARD_RECOGNITION.map(a => a.id),
+      ...TIER_RECOGNITION.map(t => t.id),
+      'clubGrowth',
+    ])
   })
 
   it('gives every item a title, a short label, a description and an accent', () => {
@@ -120,6 +132,56 @@ describe('recognition registry (#1361)', () => {
     }
   })
 
+  describe('Club Growth Achievement (#1537)', () => {
+    it('is its own family — a threshold achievement, neither a competitive award nor a tier', () => {
+      expect(CLUB_GROWTH_RECOGNITION.kind).toBe('achievement')
+      expect(CLUB_GROWTH_RECOGNITION.id).toBe('clubGrowth')
+      // TI's own name for it (rules reference §13.7, the TI announcement).
+      expect(CLUB_GROWTH_RECOGNITION.title).toBe(
+        'District Club Growth Achievement'
+      )
+      expect(CLUB_GROWTH_RECOGNITION.shortLabel).toBe('Club Growth')
+      expect(CLUB_GROWTH_RECOGNITION.accentVar).toBe(
+        '--recognition-club-growth'
+      )
+    })
+
+    it('takes its first program year from the predicate, never a restated literal', () => {
+      expect(CLUB_GROWTH_RECOGNITION.firstProgramYear).toBe(
+        CLUB_GROWTH_ACHIEVEMENT_FIRST_PROGRAM_YEAR
+      )
+    })
+
+    it('describes the milestones the predicate judges on, not a second copy of them', () => {
+      const [sep, mar] = clubGrowthCheckpoints(
+        CLUB_GROWTH_ACHIEVEMENT_FIRST_PROGRAM_YEAR
+      )!
+      const list = (ms: readonly number[]) =>
+        ms.length === 1
+          ? `${ms[0]}`
+          : `${ms.slice(0, -1).join(', ')} or ${ms[ms.length - 1]}`
+      expect(CLUB_GROWTH_RECOGNITION.description).toContain(
+        `${list(sep!.milestones)} new clubs by September 30`
+      )
+      expect(CLUB_GROWTH_RECOGNITION.description).toContain(
+        `${list(mar!.milestones)} by March 31`
+      )
+    })
+
+    it('has a glyph of its own — distinct from every award glyph and the tier rosette', () => {
+      const growth = render(CLUB_GROWTH_RECOGNITION.Icon)
+      for (const other of [...AWARD_RECOGNITION, ...TIER_RECOGNITION]) {
+        expect(render(other.Icon)).not.toBe(growth)
+      }
+    })
+
+    it('links to the rule-change log entry that documents it', () => {
+      expect(CLUB_GROWTH_RECOGNITION.methodologyHref).toBe(
+        '/methodology#py-2026-2027-district-club-growth-achievement'
+      )
+    })
+  })
+
   describe('tierRecognition()', () => {
     it('resolves an achieved tier to its entry', () => {
       expect(tierRecognition('Smedley')?.shortLabel).toBe('Smedley')
@@ -131,6 +193,12 @@ describe('recognition registry (#1361)', () => {
       expect(tierRecognition(undefined)).toBeUndefined()
       expect(tierRecognition('NotDistinguished')).toBeUndefined()
       expect(tierRecognition('Unknown')).toBeUndefined()
+    })
+
+    it('never resolves the achievement as a tier (#1537)', () => {
+      expect(
+        tierRecognition('clubGrowth' as unknown as 'Smedley')
+      ).toBeUndefined()
     })
   })
 })
