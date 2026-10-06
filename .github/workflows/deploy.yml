@@ -86,11 +86,21 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
 
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools
+
+      # Fail fast with an actionable error if the production site is missing
+      # (new projects get no default Hosting site since 2026-10-15). Checks
+      # only — never creates a site from CI (#1585).
+      - name: Preflight — Hosting site exists
+        run: scripts/check-hosting-site.sh production
+        env:
+          PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+
       - name: Build and deploy production
         run: |
           set -o pipefail
           npm run build:frontend
-          npm install -g firebase-tools
           # firebase-tools exits non-zero when the finalized version already IS the
           # live version (unchanged frontend content, or an internal retry re-issuing
           # the release after it already succeeded). Hosting then already serves the
