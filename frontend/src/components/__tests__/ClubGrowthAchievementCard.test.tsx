@@ -414,6 +414,31 @@ describe('ClubGrowthAchievementCard', () => {
       ).toHaveLength(2)
     })
 
+    // #1647 — the skeleton drew the static rule text as two short bars and
+    // omitted the 44px methodology link, so the loaded card was 47px (desktop)
+    // to 223px (mobile) taller. Static content is rendered verbatim (Lesson
+    // 107) so it wraps exactly like the loaded card.
+    it('skeleton carries the static rule text and the 44px link slot (#1647)', () => {
+      render(
+        <ClubGrowthAchievementCard
+          programYear={PY}
+          asOfDate="2026-08-31"
+          checkpointReads={[]}
+          isLoading
+        />
+      )
+      const skeleton = screen.getByTestId('club-growth-achievement-skeleton')
+      expect(
+        within(skeleton).getByText(/recognises districts that charter 3 or 5/)
+      ).toBeInTheDocument()
+      expect(
+        within(skeleton).getByText(/We read the counts as cumulative/)
+      ).toBeInTheDocument()
+      expect(
+        within(skeleton).getByTestId('club-growth-skeleton-link')
+      ).toHaveClass('min-h-11')
+    })
+
     it('never collapses to null once the program year is applicable', () => {
       // Every checkpoint unavailable AND no live count: the emptiest state
       // the card can reach. It still occupies its slot.

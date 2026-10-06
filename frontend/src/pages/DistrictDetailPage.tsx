@@ -25,7 +25,10 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
-import { DistrictOverview } from '../components/DistrictOverview'
+import {
+  DistrictOverview,
+  DistrictOverviewSkeleton,
+} from '../components/DistrictOverview'
 import { NotableDatesSection } from '../components/NotableDatesSection'
 import { LongestServingClubsLeaderboard } from '../components/LongestServingClubsLeaderboard'
 import { MobileDisclosure } from '../components/MobileDisclosure'
@@ -76,7 +79,8 @@ const DistrictDetailPageInner: React.FC = () => {
   } = useUrlProgramYear()
 
   // Fetch cached dates for date selector
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId || '')
+  const { data: cachedDatesData, isLoading: isLoadingCachedDates } =
+    useDistrictCachedDates(districtId || '')
 
   // Get all cached dates
   const allCachedDates = React.useMemo(
@@ -358,8 +362,13 @@ const DistrictDetailPageInner: React.FC = () => {
   // Use aggregated data if available, otherwise fall back to full analytics
   const hasOverviewData = overviewData !== null || analytics !== null
 
-  // Loading state for overview tab - prefer aggregated, but show loading if both are loading
-  const isLoadingOverview = isLoadingAggregated && isLoadingAnalytics
+  // Loading state for overview tab - prefer aggregated, but show loading if both are loading.
+  // Also loading while the date index resolves (#1647): the analytics queries
+  // stay disabled until there is a date to read, so without this the overview
+  // reads as "not loading, no data" and its slots (KPI strip, Overview stack)
+  // were not reserved — they inserted from 0px once the dates landed.
+  const isLoadingOverview =
+    (isLoadingAggregated && isLoadingAnalytics) || isLoadingCachedDates
 
   // Error state for overview - only show error if both fail
   const overviewError =
@@ -590,6 +599,9 @@ const DistrictDetailPageInner: React.FC = () => {
               latestSnapshotDate={
                 cachedDatesData?.dateRange?.endDate ?? availableDates[0]
               }
+              /* Reserve the freshness pill's slot until the date index lands,
+                 so the toolbar's wrap is settled from the first paint (#1647). */
+              freshnessPending={isLoadingCachedDates}
             />
           )}
 
@@ -631,7 +643,7 @@ const DistrictDetailPageInner: React.FC = () => {
           {/* Sticky KPI strip (#572). Sits above the narrative so the
               4 numbers stay pinned as the user scrolls; mobile gets a
               collapse chevron. */}
-          {districtId && hasOverviewData && (
+          {districtId && (hasOverviewData || isLoadingOverview) && (
             <DistrictKpiStrip kpis={kpiStripData} />
           )}
 
@@ -642,10 +654,10 @@ const DistrictDetailPageInner: React.FC = () => {
               remaining sections scroll as one story, with CTAs at the bottom
               that link out to the dedicated routes. */}
           <div className="space-y-4 sm:space-y-6">
-            {districtId && hasOverviewData && (
+            {districtId && (hasOverviewData || isLoadingOverview) && (
               <section aria-label="District overview">
                 {/* District Overview - Now uses global date selector */}
-                {hasValidDates && effectiveProgramYear && (
+                {hasValidDates && effectiveProgramYear ? (
                   <DistrictOverview
                     districtId={districtId}
                     /* The year label this page owns (#1555, R3) — the same
@@ -659,6 +671,16 @@ const DistrictDetailPageInner: React.FC = () => {
                     programYearStartDate={effectiveProgramYear.startDate}
                     performanceTargets={performanceTargets ?? undefined}
                   />
+                ) : (
+                  /* While the date index resolves, hold the Overview's slot
+                     with its structural skeleton (#1647) — it used to mount
+                     only once the dates landed, inserting a 208–468px panel
+                     above the rest of the stack. */
+                  isLoadingOverview && (
+                    <DistrictOverviewSkeleton
+                      programYear={selectedProgramYear.label}
+                    />
+                  )
                 )}
 
                 {/* Distinguished District Trophy Case (#332).

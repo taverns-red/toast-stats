@@ -103,6 +103,36 @@ describe('DistrictKpiStrip (#572)', () => {
     ).toBeInTheDocument()
   })
 
+  // #1647 — the old 64px bar swapped for a 312px (desktop) / 750px (mobile)
+  // strip, the largest single shift on /district/:id. The skeleton now lays
+  // out the loaded strip's own structure (Lesson 158) so its height emerges
+  // from the same CSS.
+  it('reserves the loaded strip structure while kpis is null (#1647)', () => {
+    renderStrip(<DistrictKpiStrip kpis={null} />)
+    const skeleton = screen.getByTestId('district-kpi-strip-skeleton')
+    const ghost = skeleton.querySelector('.district-kpi-strip__expanded')
+    expect(ghost).not.toBeNull()
+    expect(ghost).toHaveAttribute('aria-hidden', 'true')
+    expect(
+      ghost?.querySelector('.district-kpi-strip__cards')?.children
+    ).toHaveLength(4)
+    expect(ghost?.querySelector('.district-kpi-strip__legend')).not.toBeNull()
+    // The <980px collapse chevron occupies a 44px column in the loaded strip.
+    expect(skeleton.querySelector('.district-kpi-strip__toggle')).not.toBeNull()
+    // Nothing in the reserved slot is reachable by AT or keyboard.
+    expect(within(skeleton).queryAllByRole('button')).toHaveLength(0)
+  })
+
+  it('reserves the collapsed summary row when the strip was collapsed (#1647)', () => {
+    window.sessionStorage.setItem('district-kpi-strip-collapsed', 'true')
+    renderStrip(<DistrictKpiStrip kpis={null} />)
+    const skeleton = screen.getByTestId('district-kpi-strip-skeleton')
+    expect(
+      skeleton.querySelector('.district-kpi-strip__summary')
+    ).not.toBeNull()
+    expect(skeleton.querySelector('.district-kpi-strip__cards')).toBeNull()
+  })
+
   // #681 — KPI strip to spec: 4th card + legible gauge.
   it('renders the 4th Net Member Change card with its signed value', () => {
     renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)

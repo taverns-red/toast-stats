@@ -34,6 +34,7 @@ const py2526 = getProgramYear(2025)
  *  `undefined` and `renderHeader`'s `Partial<typeof baseProps>` would then
  *  reject a real date. */
 const noDate = (): SnapshotDate | undefined => undefined
+const latestDate = (): string | undefined => snap('2026-04-26')
 
 const baseProps = {
   districtId: '61',
@@ -44,7 +45,8 @@ const baseProps = {
   selectedDate: noDate(),
   onDateChange: vi.fn(),
   availableDates: [snap('2026-04-26')],
-  latestSnapshotDate: snap('2026-04-26'),
+  latestSnapshotDate: latestDate(),
+  freshnessPending: false,
 }
 
 const renderHeader = (overrides: Partial<typeof baseProps> = {}) =>
@@ -172,5 +174,22 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
     expect(pill).not.toHaveTextContent(/month-end reconciliation/i)
     expect(pill.getAttribute('data-reconciling')).toBeNull()
     expect(pill).toHaveTextContent(/Data fresh · May 31, 2026/)
+  })
+
+  // #1647 — at 412px the toolbar laid out on one row while the date index
+  // loaded, then wrapped to three once the freshness pill arrived (+104px),
+  // shifting everything below. The page says when the date is still pending,
+  // and the header reserves the pill's slot (the #922 placeholder).
+  it('reserves the freshness pill slot while the snapshot date is pending', () => {
+    renderHeader({ latestSnapshotDate: undefined, freshnessPending: true })
+    expect(screen.getByTestId('freshness-pill-skeleton')).toBeInTheDocument()
+  })
+
+  it('does not reserve a pill slot once the date has resolved', () => {
+    renderHeader({ freshnessPending: false })
+    expect(
+      screen.queryByTestId('freshness-pill-skeleton')
+    ).not.toBeInTheDocument()
+    expect(screen.getByTestId('freshness-pill')).toBeInTheDocument()
   })
 })
