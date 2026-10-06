@@ -24,7 +24,7 @@ else
   LATEST_DATE=$(gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" 2>/dev/null \
     | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' \
     | sort -r \
-    | head -1 || true)
+    | awk 'NR==1' || true)  # drain input, not head -1 (#1667)
   if [ -z "$LATEST_DATE" ]; then
     echo "ERROR: Could not discover latest snapshot date"
     exit 1
