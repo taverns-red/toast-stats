@@ -16,6 +16,8 @@ import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import type { GlobalClubRaceTimelinePoint } from '@taverns-red/shared-contracts'
 import type { ClubRaceTierCounts } from '../../../utils/clubRaceCounts'
 import { RaceChart } from '../RaceChart'
@@ -156,5 +158,48 @@ describe('RaceChart legend (#1570)', () => {
       'rgb(0, 65, 101)', // #004165 --loyal-500, President's
       'rgb(123, 24, 40)', // #7b1828 --maroon-500, Smedley
     ])
+  })
+
+  // #1636 — each band carries a per-tier class so clubs-race.css can bind its
+  // fill/stroke to the --tier-chart-* tokens, which remap in dark mode.
+  it('tags every band with its tier class', () => {
+    const { container } = render(
+      <RaceChart
+        timeline={timeline}
+        smedleyAvailable
+        currentCounts={currentCounts}
+      />
+    )
+    for (const slug of ['distinguished', 'select', 'presidents', 'smedley']) {
+      const band = container.querySelector(`.race-chart__band--${slug}`)
+      expect(band, slug).not.toBeNull()
+      expect(band!.querySelector('.recharts-area-area'), slug).not.toBeNull()
+    }
+  })
+
+  // #1636 — every tier-colour selector in clubs-race.css must hit the REAL
+  // Recharts markup. The first cut targeted `.recharts-legend-icon`, which a
+  // `square` legend entry never renders (it draws `path.recharts-symbols`),
+  // so the swatches silently kept the light hexes in dark mode.
+  it('every --tier-chart-* selector in clubs-race.css matches the rendered chart', () => {
+    const css = readFileSync(
+      resolve(__dirname, '../../../styles/components/clubs-race.css'),
+      'utf-8'
+    ).replace(/\/\*[\s\S]*?\*\//g, '')
+    const selectors = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter(m => (m[2] ?? '').includes('var(--tier-chart-'))
+      .flatMap(m => (m[1] ?? '').split(','))
+      .map(s => s.trim())
+    expect(selectors.length).toBeGreaterThanOrEqual(12)
+    const { container } = render(
+      <RaceChart
+        timeline={timeline}
+        smedleyAvailable
+        currentCounts={currentCounts}
+      />
+    )
+    for (const sel of selectors) {
+      expect(container.querySelector(sel), sel).not.toBeNull()
+    }
   })
 })
