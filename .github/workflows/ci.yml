@@ -247,6 +247,13 @@ jobs:
       - name: Run frontend tests
         run: npm run test --workspace=frontend -- --coverage
 
+      - name: Check coverage denominator is exhaustive (#1536)
+        # R20 applied to coverage: every git-tracked source file a workspace's
+        # vitest coverage config keeps in scope must appear in that workspace's
+        # coverage-final.json from the full-suite runs above. Exclusions are
+        # read from each vitest config, never restated here.
+        run: npm run test:coverage:denominator-check
+
       - name: Run scripts/lib tests
         run: npm run test:scripts
 
