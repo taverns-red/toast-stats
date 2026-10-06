@@ -15,8 +15,16 @@ import { test, expect } from '@playwright/test'
  * playwright.config. */
 
 const WIDTHS = [375, 768, 1280]
-// /district/:id joins once its own content overflows are fixed (#1655).
-const ROUTES = ['/clubs', '/', '/club/9750', '/awards']
+// #1655: the District overview (KPI card info button, milestone entries) and
+// its Analytics subpage (Top Growth / Top DCP rows) overflowed with real data.
+const ROUTES = [
+  '/clubs',
+  '/',
+  '/club/9750',
+  '/awards',
+  '/district/61',
+  '/district/61/analytics',
+]
 const THEMES = ['light', 'dark'] as const
 
 for (const theme of THEMES) {
@@ -44,10 +52,31 @@ for (const theme of THEMES) {
         const { scrollWidth, clientWidth, offenders } = await page.evaluate(
           () => {
             const vw = document.documentElement.clientWidth
+            const past = (el: Element) =>
+              el.getBoundingClientRect().right > vw + 0.5
+            // Content inside a scroller or clip (e.g. the district subnav
+            // strip) can sit past the edge without widening the page, so it
+            // is not an offender. Report the outermost element that is past
+            // the edge while its parent is not: that is where to fix (#1655).
+            const clipped = (el: Element) => {
+              for (let a = el.parentElement; a; a = a.parentElement) {
+                if (a === document.body) return false
+                if (getComputedStyle(a).overflowX !== 'visible') return true
+              }
+              return false
+            }
             const offenders = [...document.querySelectorAll('body *')]
-              .filter(el => el.getBoundingClientRect().right > vw + 0.5)
+              .filter(
+                el =>
+                  past(el) &&
+                  !(el.parentElement && past(el.parentElement)) &&
+                  !clipped(el)
+              )
               .slice(0, 5)
-              .map(el => `${el.tagName.toLowerCase()}.${el.classList[0] ?? ''}`)
+              .map(el => {
+                const r = el.getBoundingClientRect()
+                return `${el.tagName.toLowerCase()}.${[...el.classList].slice(0, 3).join('.')} (right ${Math.round(r.right)}, "${(el.textContent ?? '').trim().slice(0, 30)}")`
+              })
             return {
               scrollWidth: document.documentElement.scrollWidth,
               clientWidth: vw,

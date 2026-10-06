@@ -238,9 +238,13 @@ export const MilestonesCallout: React.FC<MilestonesCalloutProps> = ({
             </span>
             <span className="flex-1 min-w-0 flex flex-wrap gap-x-2 gap-y-0.5">
               {group.entries.map((entry, i) => (
+                // min-w-0 + max-w-full (#1655): without them the entry sizes to
+                // its content, so `truncate` on a long club name never applies
+                // and the entry runs past the panel. Date and separator keep
+                // their width; only the name ellipsizes.
                 <span
                   key={entry.club.clubId}
-                  className="inline-flex items-baseline gap-1"
+                  className="inline-flex min-w-0 max-w-full items-baseline gap-1"
                 >
                   <Link
                     data-testid="milestone-club"
@@ -249,11 +253,11 @@ export const MilestonesCallout: React.FC<MilestonesCalloutProps> = ({
                   >
                     {entry.club.clubName}
                   </Link>
-                  <span className="text-[11px] text-gray-600 theme-dark:text-gray-400 tabular-nums">
+                  <span className="shrink-0 text-[11px] text-gray-600 theme-dark:text-gray-400 tabular-nums">
                     {formatShortDate(entry.anniversaryDate)}
                   </span>
                   {i < group.entries.length - 1 && (
-                    <span aria-hidden="true" className="text-gray-300">
+                    <span aria-hidden="true" className="shrink-0 text-gray-300">
                       ·
                     </span>
                   )}

@@ -163,7 +163,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
                   key={club.clubId}
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center gap-4 flex-1">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="flex-shrink-0">
                       {rank <= 3 ? (
                         getTrophyIcon(rank)
@@ -189,7 +189,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex items-center gap-2 ml-4 shrink-0">
                     {getGrowthIcon(club.growth)}
                     <div className="text-right">
                       <p className="text-2xl font-bold text-green-600 font-tm-headline">
@@ -240,7 +240,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
                   key={club.clubId}
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center gap-4 flex-1">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="flex-shrink-0">
                       {rank <= 3 ? (
                         getTrophyIcon(rank)
@@ -267,7 +267,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
                       </p>
                     </div>
                   </div>
-                  <div className="text-right ml-4">
+                  <div className="text-right ml-4 shrink-0">
                     <p className="text-2xl font-bold text-tm-loyal-blue font-tm-headline">
                       {club.goalsAchieved}
                     </p>

@@ -41,8 +41,11 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
       className="rounded-lg border border-gray-200 bg-white p-4"
       data-testid="kpi-delta-card"
     >
-      <div className="flex items-center gap-1">
-        <h3 className="text-sm font-medium text-gray-700">{title}</h3>
+      {/* flex-wrap + min-w-0 (#1655): on a narrow card (113px at 375) the
+          title and the 44px info button can't share a line — the button wraps
+          under the title instead of pushing past the viewport. */}
+      <div className="flex flex-wrap items-center gap-1">
+        <h3 className="min-w-0 text-sm font-medium text-gray-700">{title}</h3>
         {tooltipContent && (
           <Tooltip content={tooltipContent}>
             <button
@@ -56,9 +59,12 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
         )}
       </div>
 
+      {/* #1655: a 2×2 card at 375px has a ~79px content box. "▼ −2,840" at
+          text-3xl is ~115px and ran 3px past the viewport on Linux. Below sm
+          the value steps down to text-xl (the arrow may wrap). */}
       <p
         data-testid="kpi-delta-value"
-        className={`mt-1 flex items-center gap-1 text-3xl font-bold ${colorClass}`}
+        className={`mt-1 flex flex-wrap items-center gap-x-1 text-xl sm:text-3xl font-bold ${colorClass}`}
       >
         {(isUp || isDown) && (
           <span
