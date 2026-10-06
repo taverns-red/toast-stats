@@ -454,8 +454,14 @@
     gap: 8px;
   }
 
+  /* #1648 — the links sit inside running footer text (--ink-3), and
+     --link vs --ink-3 is only 1.85:1 in light mode, so colour alone can't
+     mark them (WCAG 1.4.1 / axe link-in-text-block needs 3:1 or a
+     non-colour cue). The underline is that cue, in every theme. */
   .app-shell-footer__link {
     color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   /* Placeholder pages (#355). Removed when their real implementations
@@ -2830,10 +2836,13 @@
   }
 
   /* Footnote explaining the * marker on fallback rows. */
+  /* #1648 — --ink-4 is 3.43:1 on the white card in light mode; --ink-3
+     clears AA in both themes (#5b6675 on #fff 5.8:1, #8a96a6 on dark
+     --surface ~6:1). The token already remaps under [data-theme='dark']. */
   .goal-timeline__note {
     margin: 10px 0 0;
     font-size: 11px;
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   @media (max-width: 640px) {
