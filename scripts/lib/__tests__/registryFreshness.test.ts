@@ -500,4 +500,28 @@ describe('registry ↔ metadata consistency (#1620)', () => {
       closingDate: '2026-07-25',
     })
   })
+
+  it.each([
+    // TI's last as-of per June close (#1429, docs/investigations/
+    // 1429-residual-attribution.md): the registry must name TI's FINAL
+    // publication of the close, not our last crawl. 2022-06 at 07-25 left
+    // 2021-22 short of the CEO Report; at 07-28 every tier matches. 2019-06
+    // was one day stale (07-17, Paid +1 in D75).
+    ['2019-06', '2019-07-17'],
+    ['2022-06', '2022-07-28'],
+  ])(
+    "the committed registry records the %s close at TI's final as-of %s",
+    (dataMonth, closingDate) => {
+      const registry = JSON.parse(
+        readFileSync(
+          path.resolve(process.cwd(), 'docs/month-end-closing-dates.json'),
+          'utf-8'
+        )
+      ) as { months: Array<{ dataMonth: string; closingDate: string }> }
+      expect(registry.months.find(m => m.dataMonth === dataMonth)).toEqual({
+        dataMonth,
+        closingDate,
+      })
+    }
+  )
 })
