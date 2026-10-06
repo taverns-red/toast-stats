@@ -14,7 +14,10 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import {
+  CEO_REPORT_DOCUMENTED_EXCEPTIONS,
   CEO_REPORT_FIGURES,
   CEO_REPORT_METRICS,
   CEO_REPORT_REPORT_DATE,
@@ -441,5 +444,123 @@ describe('formatComparisonTable', () => {
     expect(table).toContain('MISMATCH')
     // Unknown-tier districts are surfaced in the table, never hidden.
     expect(table.toLowerCase()).toContain('unknown')
+  })
+})
+
+describe('documented per-cell exceptions (#1429)', () => {
+  const DOC = 'docs/investigations/1429-residual-attribution.md'
+
+  /** The exact cells the latest oracle run left (8 findings, 2026-10-06). */
+  const EXPECTED_CELLS = [
+    ['2021-2022', 'paidClubs', 14748],
+    ['2022-2023', 'distinguishedClubs', 1597],
+    ['2022-2023', 'selectDistinguishedClubs', 1259],
+    ['2022-2023', 'totalDistinguishedClubs', 6460],
+    ['2022-2023', 'paidClubs', 14266],
+    ['2024-2025', 'distinguishedClubs', 1826],
+    ['2024-2025', 'totalDistinguishedClubs', 6736],
+    ['2024-2025', 'paidClubs', 13834],
+  ] as const
+
+  /** The archive as it stands: exact everywhere except the excepted cells. */
+  function currentArchive(): ComputedProgramYearTotals[] {
+    return allMatching().map(c =>
+      EXPECTED_CELLS.filter(
+        ([py]) => py === c.programYear
+      ).reduce<ComputedProgramYearTotals>(
+        (acc, [, metric, value]) => ({ ...acc, [metric]: value }),
+        c
+      )
+    )
+  }
+
+  it('allow-lists exactly the eight remaining TI-internal cells', () => {
+    expect(
+      CEO_REPORT_DOCUMENTED_EXCEPTIONS.map(e => [
+        e.programYear,
+        e.metric,
+        e.computed,
+      ])
+    ).toEqual(EXPECTED_CELLS.map(cell => [...cell]))
+  })
+
+  it('records each cell against the published table and links its evidence', () => {
+    const doc = fs.readFileSync(path.resolve(process.cwd(), DOC), 'utf-8')
+    const anchors = new Set(
+      doc
+        .split('\n')
+        .filter(line => /^#{2,6} /.test(line))
+        .map(line =>
+          line
+            .replace(/^#+ /, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9 -]/g, '')
+            .replace(/ /g, '-')
+        )
+    )
+    for (const e of CEO_REPORT_DOCUMENTED_EXCEPTIONS) {
+      expect(e.published).toBe(figuresFor(e.programYear)[e.metric])
+      expect(e.computed).not.toBe(e.published)
+      const [file, anchor] = e.evidence.split('#')
+      expect(file).toBe(DOC)
+      expect(anchors.has(anchor!)).toBe(true)
+      expect(e.reason.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('passes the current archive: excepted cells are not findings', () => {
+    const result = compareToCeoReport(currentArchive())
+
+    expect(result.findings).toEqual([])
+    expect(result.ok).toBe(true)
+    expect(result.exceptions).toHaveLength(EXPECTED_CELLS.length)
+    const excepted = result.years.flatMap(y =>
+      y.metrics.filter(m => m.status === 'exception')
+    )
+    expect(excepted).toHaveLength(EXPECTED_CELLS.length)
+  })
+
+  it('still fails a mismatch in a cell that is not listed', () => {
+    const archive = currentArchive().map(c =>
+      c.programYear === '2023-2024' ? bumpMetric(c, 'paidClubs') : c
+    )
+    const result = compareToCeoReport(archive)
+
+    expect(result.ok).toBe(false)
+    expect(result.findings).toEqual([
+      expect.objectContaining({
+        kind: 'mismatch',
+        programYear: '2023-2024',
+        metric: 'paidClubs',
+      }),
+    ])
+  })
+
+  it('still fails a listed cell at any other value (no tolerance band)', () => {
+    const archive = currentArchive().map(c =>
+      c.programYear === '2022-2023' ? { ...c, paidClubs: 14265 } : c
+    )
+    const result = compareToCeoReport(archive)
+
+    expect(result.ok).toBe(false)
+    expect(result.findings).toEqual([
+      {
+        kind: 'mismatch',
+        programYear: '2022-2023',
+        metric: 'paidClubs',
+        computed: 14265,
+        published: 14271,
+        delta: -6,
+      },
+    ])
+  })
+
+  it('labels excepted cells in the table and counts them in the result line', () => {
+    const table = formatComparisonTable(compareToCeoReport(currentArchive()))
+
+    expect(table).toContain('EXCEPTION (documented)')
+    expect(table).toMatch(
+      /RESULT: every published figure reproduced.*8 documented exception/s
+    )
   })
 })

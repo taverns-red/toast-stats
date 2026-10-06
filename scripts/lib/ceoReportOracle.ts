@@ -164,6 +164,27 @@ export const CEO_REPORT_MEMBERSHIP_PAYMENTS: Readonly<Record<string, number>> =
     '2025-2026': 548483,
   })
 
+/**
+ * A single (program year, metric) cell where our archive is known to differ
+ * from the report for a documented TI-side reason (#1429). Pinned to the
+ * EXACT computed value: any other value is still a mismatch.
+ */
+export interface CeoReportException {
+  readonly programYear: string
+  readonly metric: CeoReportMetric
+  /** The value our archive produces for this cell — matched exactly. */
+  readonly computed: number
+  /** The report's value (must equal CEO_REPORT_FIGURES). */
+  readonly published: number
+  /** Repo-relative `path#anchor` to the attribution evidence. */
+  readonly evidence: string
+  /** One line: why this cell cannot match. */
+  readonly reason: string
+}
+
+export const CEO_REPORT_DOCUMENTED_EXCEPTIONS: readonly CeoReportException[] =
+  Object.freeze([])
+
 /** The per-tier club metrics that must add up to the total. */
 const CLUB_TIER_METRICS = [
   'distinguishedClubs',
