@@ -13,17 +13,23 @@
 # Usage:
 #   chmod +x scripts/setup-wif.sh
 #   ./scripts/setup-wif.sh
+#   PROJECT_ID=<new-project> ./scripts/setup-wif.sh   # rebuilt environment
+#
+# Run scripts/setup-hosting-sites.sh BEFORE this on a new project: Firebase no
+# longer creates a default Hosting site (2026-10-15). Full order of a rebuild:
+# docs/runbooks/new-environment.md (#1584).
 # =============================================================================
 
 set -euo pipefail
 
-# Configuration — update these if your project/repo differs
-PROJECT_ID="toast-stats-prod-6d64a"
-GITHUB_REPO="rservant/toast-stats"
+# Configuration — override via env for a new project/repo. Defaults match the
+# live deployer for this repo (toast-stats-deployer, taverns-red/toast-stats).
+PROJECT_ID="${PROJECT_ID:-toast-stats-prod-6d64a}"
+GITHUB_REPO="${GITHUB_REPO:-taverns-red/toast-stats}"
 REGION="us-east1"
 POOL_NAME="github-actions-pool"
 PROVIDER_NAME="github-provider"
-SA_NAME="github-deployer"
+SA_NAME="${SA_NAME:-toast-stats-deployer}"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "============================================"
