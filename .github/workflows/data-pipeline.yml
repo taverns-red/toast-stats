@@ -2038,6 +2038,7 @@ jobs:
         if: steps.mode.outputs.mode != 'prune'
         env:
           ALLOW_VALUE_CHANGES: ${{ inputs.allow_value_changes }}
+          PIPELINE_MODE: ${{ steps.mode.outputs.mode }}
         run: |
           set -uo pipefail
           VALUE_PROMOTE="false"
@@ -2071,13 +2072,23 @@ jobs:
             ALLOW_FLAG="--allow-value-changes"
           fi
 
+          # Closing-Pinned Auto-Allow is for the routine DAILY month-end
+          # reconciliation only (#1083). A rebuild/rescrape of a past close
+          # carries the same closing-pinned signature and auto-promoted in
+          # run 37535062136 — every non-daily mode holds for review (#1673).
+          CPAA_FLAG=""
+          if [ "${PIPELINE_MODE:-}" != "daily" ]; then
+            CPAA_FLAG="--no-closing-auto-allow"
+            echo "Closing-pinned auto-allow disabled (mode=${PIPELINE_MODE:-unset})"
+          fi
+
           # R4: structured JSON on stdout, logs on stderr. Parse .promote from JSON
           # rather than the exit code so this step stays green and the gate flows
           # through the step output.
           npx collector-cli value-diff \
             --staging-dir /tmp/vd/staging \
             --prod-dir /tmp/vd/prod \
-            ${ALLOW_FLAG} > /tmp/value-diff.json 2>/tmp/value-diff.log || true
+            ${ALLOW_FLAG} ${CPAA_FLAG} > /tmp/value-diff.json 2>/tmp/value-diff.log || true
 
           echo "## 🔬 Value Diff (staging vs production)" >> "$GITHUB_STEP_SUMMARY"
           if jq -e . /tmp/value-diff.json >/dev/null 2>&1; then

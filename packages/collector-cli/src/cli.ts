@@ -1693,12 +1693,17 @@ export function createCLI(): Command {
       'Operator override: promote re-derived value changes after reviewing the diff',
       false
     )
+    .option(
+      '--no-closing-auto-allow',
+      'Disable Closing-Pinned Auto-Allow — set for non-daily (rebuild/rescrape) runs so they hold for review (#1673)'
+    )
     .option('-v, --verbose', 'Enable detailed logging output', false)
     .action(
       async (options: {
         stagingDir: string
         prodDir: string
         allowValueChanges: boolean
+        closingAutoAllow: boolean
         verbose: boolean
       }) => {
         const { runValueDiff } =
@@ -1710,6 +1715,7 @@ export function createCLI(): Command {
             stagingDir: options.stagingDir,
             prodDir: options.prodDir,
             allowValueChanges: options.allowValueChanges,
+            closingAutoAllow: options.closingAutoAllow,
           })
         } catch (err) {
           // Fail-closed: if we cannot read/compare the snapshots, do NOT promote.

@@ -327,3 +327,14 @@ genuinely carries lots of change, especially at the July program-year rollover;
 promotion is recoverable (deterministic re-derive from raw-csv + re-promote),
 every move is in the provenance table, and non-closing-pinned/historical dates
 still block.
+
+## Amendment 2026-10-06 (#1673) — CPAA is daily-only
+
+The §5 signature (month-end, later as-of, gap ≤ 31 days) describes the _date_,
+not the _run_. A deliberate `mode=rebuild` of a past year-end close from a later
+in-window as-of matches it too, and run 37535062136 (2019-06-30 + 2022-06-30)
+auto-promoted to prod with `allow_value_changes=false`. CPAA now applies only
+to `daily` runs: the value-diff step passes `--no-closing-auto-allow` for every
+other mode (an allowlist, so new modes fail closed), and those runs hold for
+operator review exactly as they did before #1086. Guarded by
+`scripts/lib/__tests__/dataPipelineCpaaDailyOnly.test.ts`.

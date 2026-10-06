@@ -579,9 +579,11 @@ export function evaluatePromote(
     )
     if (!opts.allowValueChanges) {
       // CPAA applies only when the verdict would otherwise be "blocked
-      // because changed is non-empty" — never to a subtractive change.
+      // because changed is non-empty" — never to a subtractive change, and
+      // never to a non-daily run (#1673).
+      const cpaaEnabled = opts.closingAutoAllow !== false
       const cpaa =
-        digests && report.removed.length === 0
+        cpaaEnabled && digests && report.removed.length === 0
           ? evaluateClosingAutoAllowAcross(report.changed, digests)
           : undefined
       if (cpaa?.allowed) {
@@ -599,6 +601,11 @@ export function evaluatePromote(
         reasons.push(
           'value changes require operator review — re-run with --allow-value-changes to promote after reviewing the diff'
         )
+        if (!cpaaEnabled) {
+          reasons.push(
+            'closing-pinned auto-allow disabled for this run (non-daily mode, #1673)'
+          )
+        }
         if (cpaa) reasons.push(...cpaa.reasons)
       }
     }

@@ -68,7 +68,10 @@ export function runValueDiff(opts: RunValueDiffOptions): RunValueDiffResult {
   const report = diffSnapshots(staging, prod)
   const decision = evaluatePromote(
     report,
-    { allowValueChanges: opts.allowValueChanges },
+    {
+      allowValueChanges: opts.allowValueChanges,
+      closingAutoAllow: opts.closingAutoAllow,
+    },
     // CPAA (#1086): digests carry the already-parsed rows + sourceCsvDate.
     { staging, prod }
   )
