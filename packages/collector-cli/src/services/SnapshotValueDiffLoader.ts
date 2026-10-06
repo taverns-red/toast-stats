@@ -24,6 +24,8 @@ export interface RunValueDiffOptions {
   stagingDir: string
   prodDir: string
   allowValueChanges?: boolean
+  /** CPAA eligibility; false for non-daily pipeline runs (#1673). Default true. */
+  closingAutoAllow?: boolean
 }
 
 export interface RunValueDiffResult {

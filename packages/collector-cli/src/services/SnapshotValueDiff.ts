@@ -356,6 +356,13 @@ export interface PromoteDecision {
 export interface PromoteOptions {
   /** operator override: promote a reviewed value re-derive despite changed dates */
   allowValueChanges?: boolean
+  /**
+   * Closing-Pinned Auto-Allow eligibility (default true). The pipeline sets
+   * this false for every non-daily mode: a deliberate rebuild/rescrape of a
+   * past close carries the same closing-pinned signature as routine daily
+   * reconciliation and must hold for operator review (#1673).
+   */
+  closingAutoAllow?: boolean
 }
 
 /** Digest sets for CPAA evaluation of changed overlap dates (#1086). */

@@ -581,6 +581,33 @@ describe('evaluatePromote CPAA wiring (#1086)', () => {
     ])
   })
 
+  it('does NOT auto-allow when CPAA is disabled (non-daily run, #1673)', () => {
+    // A deliberate rebuild of a past close carries the same closing-pinned
+    // signature as routine daily reconciliation (run 37535062136). Rebuilds
+    // must hold for operator review.
+    const { report, digests } = promoteCase({ totalPayments: 5050 })
+    const decision = evaluatePromote(
+      report,
+      { closingAutoAllow: false },
+      digests
+    )
+    expect(decision.promote).toBe(false)
+    expect(decision.requiresReview).toBe(true)
+    expect(decision.autoAllowed).toBeUndefined()
+    expect(decision.reasons.join(' ')).toMatch(/auto-allow disabled/i)
+  })
+
+  it('allowValueChanges still promotes when CPAA is disabled (#1673)', () => {
+    const { report, digests } = promoteCase({ totalPayments: 5050 })
+    const decision = evaluatePromote(
+      report,
+      { closingAutoAllow: false, allowValueChanges: true },
+      digests
+    )
+    expect(decision.promote).toBe(true)
+    expect(decision.autoAllowed).toBeUndefined()
+  })
+
   it('keeps blocking when CPAA finds a real violation, surfacing it (identity drift)', () => {
     // Counters/bases now allow freely (#1292/#1289); identity drift still
     // blocks, so it exercises the "CPAA found a violation" wiring.
