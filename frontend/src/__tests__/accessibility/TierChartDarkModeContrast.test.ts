@@ -169,7 +169,7 @@ describe('tier chart colours (#1636)', () => {
       expect(
         declsFor(
           raceCss,
-          `.race-chart .legend-item-${LEGEND_INDEX[t]} .recharts-legend-icon`
+          `.race-chart .legend-item-${LEGEND_INDEX[t]} .recharts-symbols`
         )
       ).toContain(`fill: ${token}`)
     }

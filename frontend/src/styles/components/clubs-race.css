@@ -386,22 +386,22 @@
      only an index class; the order is RACE_TIER_ROUTES with Smedley last, so
      an index names the same tier whether or not the Smedley band shows. */
   .race-chart__band--distinguished .recharts-area-area,
-  .race-chart .legend-item-0 .recharts-legend-icon {
+  .race-chart .legend-item-0 .recharts-symbols {
     fill: var(--tier-chart-distinguished);
   }
 
   .race-chart__band--select .recharts-area-area,
-  .race-chart .legend-item-1 .recharts-legend-icon {
+  .race-chart .legend-item-1 .recharts-symbols {
     fill: var(--tier-chart-select);
   }
 
   .race-chart__band--presidents .recharts-area-area,
-  .race-chart .legend-item-2 .recharts-legend-icon {
+  .race-chart .legend-item-2 .recharts-symbols {
     fill: var(--tier-chart-presidents);
   }
 
   .race-chart__band--smedley .recharts-area-area,
-  .race-chart .legend-item-3 .recharts-legend-icon {
+  .race-chart .legend-item-3 .recharts-symbols {
     fill: var(--tier-chart-smedley);
   }
 
