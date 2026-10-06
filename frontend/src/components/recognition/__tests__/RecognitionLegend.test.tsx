@@ -13,12 +13,15 @@ import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { RecognitionLegend } from '../RecognitionLegend'
-import { RECOGNITION_ITEMS } from '../recognitionRegistry'
+import { AWARD_RECOGNITION, TIER_RECOGNITION } from '../recognitionRegistry'
 
 describe('RecognitionLegend (#1361)', () => {
-  it('lists every recognition item with its title and explanation', () => {
+  it('lists every award and tier with its title and explanation', () => {
     render(<RecognitionLegend />)
-    for (const item of RECOGNITION_ITEMS) {
+    // The Club Growth Achievement joins the legend with its rankings-table
+    // badge (#1537 PR 3); its absence until then is pinned in
+    // recognitionConsumers.test.tsx.
+    for (const item of [...AWARD_RECOGNITION, ...TIER_RECOGNITION]) {
       expect(screen.getByText(item.title)).toBeInTheDocument()
       expect(screen.getByText(item.description)).toBeInTheDocument()
     }
