@@ -1,0 +1,65 @@
+import { test, expect } from '@playwright/test'
+
+/* No horizontal page scroll (#1651).
+ *
+ * The shared top bar's tools cluster (search, "How it works", theme toggle,
+ * placeholder avatar) is `flex-shrink: 0`. Once #1058 added the search
+ * control it outgrew the bar: 26px past the viewport at 375px and 178px at
+ * 768px, so EVERY page panned sideways. #735 had sized the bar to clear
+ * 375px, but no guard pinned that, so the regression went unnoticed.
+ *
+ * This guard pins it on the routes the issue names, at phone, tablet and
+ * desktop widths, in both themes. It measures the document's scrollWidth,
+ * which is what a reader feels, rather than any one element, so a future
+ * overflow from any component trips it too. It runs in both engines via
+ * playwright.config. */
+
+const WIDTHS = [375, 768, 1280]
+// /district/:id joins once its own content overflows are fixed (#1655).
+const ROUTES = ['/clubs', '/', '/club/9750', '/awards']
+const THEMES = ['light', 'dark'] as const
+
+for (const theme of THEMES) {
+  for (const width of WIDTHS) {
+    test(`no horizontal page scroll at ${width}px (${theme})`, async ({
+      page,
+    }) => {
+      test.setTimeout(120_000)
+      await page.addInitScript(t => {
+        try {
+          localStorage.setItem('theme', t)
+        } catch {
+          // storage blocked: the theme falls back to prefers-color-scheme
+        }
+      }, theme)
+      await page.emulateMedia({ colorScheme: theme })
+      await page.setViewportSize({ width, height: 900 })
+
+      for (const route of ROUTES) {
+        await page.goto(route, { waitUntil: 'networkidle', timeout: 60_000 })
+        await page.locator('.app-shell-top-bar').waitFor({ state: 'visible' })
+        // Let separately-resolving sections settle before measuring.
+        await page.waitForTimeout(1_000)
+
+        const { scrollWidth, clientWidth, offenders } = await page.evaluate(
+          () => {
+            const vw = document.documentElement.clientWidth
+            const offenders = [...document.querySelectorAll('body *')]
+              .filter(el => el.getBoundingClientRect().right > vw + 0.5)
+              .slice(0, 5)
+              .map(el => `${el.tagName.toLowerCase()}.${el.classList[0] ?? ''}`)
+            return {
+              scrollWidth: document.documentElement.scrollWidth,
+              clientWidth: vw,
+              offenders,
+            }
+          }
+        )
+        expect(
+          scrollWidth,
+          `${route} at ${width}px (${theme}) scrolls horizontally: scrollWidth ${scrollWidth} > ${clientWidth}. Past the right edge: ${offenders.join(', ')}`
+        ).toBeLessThanOrEqual(clientWidth)
+      }
+    })
+  }
+}
