@@ -260,3 +260,13 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/district-overview-cls.smoke.ts
+
+      # No horizontal page scroll (#1651, #1655). The document's scrollWidth
+      # must not exceed the viewport at 375/768/1280 in both themes on the
+      # shell routes, /clubs, and /district/61 (+ Analytics) with real data, so
+      # an overflow from any component fails the PR. Both engines.
+      - name: Cross-engine no-horizontal-scroll guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/no-horizontal-scroll.smoke.ts

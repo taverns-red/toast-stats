@@ -15,8 +15,16 @@ import { test, expect } from '@playwright/test'
  * playwright.config. */
 
 const WIDTHS = [375, 768, 1280]
-// /district/:id joins once its own content overflows are fixed (#1655).
-const ROUTES = ['/clubs', '/', '/club/9750', '/awards']
+// #1655: the District overview (KPI card info button, milestone entries) and
+// its Analytics subpage (Top Growth / Top DCP rows) overflowed with real data.
+const ROUTES = [
+  '/clubs',
+  '/',
+  '/club/9750',
+  '/awards',
+  '/district/61',
+  '/district/61/analytics',
+]
 const THEMES = ['light', 'dark'] as const
 
 for (const theme of THEMES) {
