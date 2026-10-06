@@ -12,7 +12,6 @@ import {
   formatCspDueDate,
   groupByCspDueDate,
 } from '../utils/cspDeadlines'
-import { LoadingSkeleton } from './LoadingSkeleton'
 import { ErrorDisplay, EmptyState } from './ErrorDisplay'
 import DistinguishedCompositionBar from './DistinguishedCompositionBar'
 import PaymentComposition from './PaymentComposition'
@@ -171,6 +170,8 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
       ? cspLine(analytics.allClubs, { programYear, snapshotDate: selectedDate })
       : null
 
+  if (isLoading) return <DistrictOverviewSkeleton programYear={programYear} />
+
   return (
     <div className="redesign-panel">
       <div className="mb-6">
@@ -210,15 +211,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
         )}
       </div>
 
-      {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <LoadingSkeleton variant="stat" />
-          <LoadingSkeleton variant="stat" />
-          <LoadingSkeleton variant="stat" />
-        </div>
-      )}
-
-      {!isLoading && error && (
+      {error && (
         <ErrorDisplay
           error={error}
           title="Failed to Load District Analytics"
@@ -227,7 +220,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
         />
       )}
 
-      {!isLoading && !error && !analytics && (
+      {!error && !analytics && (
         <EmptyState
           title="No Cached Data Available"
           message="This district doesn't have any cached historical data yet. Use the Admin Panel to start collecting performance data over time."
@@ -247,7 +240,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
           remain the Overview section's "long-form" content. */}
 
       {/* Distinguished Composition stack-bar + Payment Composition donut */}
-      {!isLoading && !error && analytics && analytics.allClubs.length > 0 && (
+      {!error && analytics && analytics.allClubs.length > 0 && (
         <div className="mt-4 grid grid-cols-1 min-[980px]:grid-cols-2 gap-4">
           <DistinguishedCompositionBar
             smedley={analytics.distinguishedClubs.smedley}
@@ -269,3 +262,95 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
     </div>
   )
 }
+
+/** A text-shaped placeholder: laid out like the loaded copy, painted as a
+ *  pulsing bar. */
+const GhostText: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span
+    aria-hidden="true"
+    className="animate-pulse rounded bg-gray-200 theme-dark:bg-gray-700 text-transparent"
+  >
+    {children}
+  </span>
+)
+
+/** An invisible, inert copy of a loaded panel under a shimmer: the slot is
+ *  exactly as tall as the panel because the panel itself lays it out. */
+const GhostPanel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="relative">
+    <div className="invisible" inert>
+      {children}
+    </div>
+    <span className="absolute inset-0 animate-pulse rounded-lg bg-gray-200 theme-dark:bg-gray-700" />
+  </div>
+)
+
+/**
+ * Structural loading skeleton for the Overview panel (#1647, Lessons 107/158).
+ *
+ * The old loading state was three one-row stat bars in a 3-up grid; the loaded
+ * panel is a subtitle, a Club Success Plan line (for years that require one)
+ * and the two-up composition grid, so the swap grew the panel 208→360px on
+ * desktop and 468→717px on a phone. This lays out the loaded panel's own
+ * rows: the same header chrome, representative subtitle and CSP copy painted
+ * as text-shaped bars, and the real composition bar + payment card rendered
+ * invisibly with representative values under a shimmer. The page also renders
+ * it while the snapshot dates are still resolving, so the slot exists from the
+ * first paint rather than inserting above everything once the dates land.
+ */
+export const DistrictOverviewSkeleton: React.FC<{ programYear: string }> = ({
+  programYear,
+}) => (
+  <div
+    className="redesign-panel"
+    aria-busy="true"
+    data-testid="district-overview-skeleton"
+  >
+    <div className="mb-6">
+      <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
+      <p
+        className="mt-1 text-sm"
+        data-testid="district-overview-skeleton-subtitle"
+      >
+        <GhostText>120 clubs · avg 20.0 members/club</GhostText>
+      </p>
+      {isCspRequired(programYear) && (
+        <p
+          className="mt-1 text-sm"
+          data-testid="district-overview-skeleton-csp"
+        >
+          <GhostText>
+            34 of 120 active clubs (28%) have not submitted a Club Success Plan
+            — due September 30; a club that misses that date{' '}
+            {CSP_LOST_ELIGIBILITY}. See which clubs →
+          </GhostText>
+        </p>
+      )}
+    </div>
+    <div
+      aria-hidden="true"
+      data-testid="district-overview-skeleton-composition"
+      className="mt-4 grid grid-cols-1 min-[980px]:grid-cols-2 gap-4"
+    >
+      <GhostPanel>
+        <DistinguishedCompositionBar
+          smedley={4}
+          presidents={8}
+          select={12}
+          distinguished={16}
+          totalClubs={120}
+        />
+      </GhostPanel>
+      <GhostPanel>
+        <PaymentComposition
+          totalMembership={2400}
+          newPayments={400}
+          aprilPayments={800}
+          octoberPayments={1000}
+          latePayments={100}
+          charterPayments={100}
+        />
+      </GhostPanel>
+    </div>
+  </div>
+)

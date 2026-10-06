@@ -163,6 +163,25 @@
     animation: district-kpi-strip-shimmer 1.4s linear infinite;
   }
 
+  /* Structural loading skeleton (#1647). The strip lays out an invisible,
+     inert copy of its loaded body (`__ghost`) so the reserved height comes
+     from the same rules as the loaded strip; the shimmer is laid over it. */
+  .district-kpi-strip--loading {
+    /* `position: sticky` already makes the strip the containing block. */
+    overflow: hidden;
+  }
+
+  .district-kpi-strip__ghost,
+  .district-kpi-strip--loading .district-kpi-strip__toggle {
+    visibility: hidden;
+  }
+
+  .district-kpi-strip--loading .district-kpi-strip__skeleton {
+    position: absolute;
+    inset: 12px 16px;
+    height: auto;
+  }
+
   @keyframes district-kpi-strip-shimmer {
     0% {
       background-position: 200% 0;

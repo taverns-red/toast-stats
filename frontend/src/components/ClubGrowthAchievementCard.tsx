@@ -358,20 +358,46 @@ const CheckpointBlock: React.FC<{
   )
 }
 
-const SkeletonBar: React.FC<{ className: string }> = ({ className }) => (
-  <span
-    className={`block animate-pulse rounded bg-gray-200 theme-dark:bg-gray-700 ${className}`}
-  />
+/** The published rule and our reading of it — static copy, rendered verbatim
+ *  by the skeleton too so it wraps identically (#1647, Lesson 107). */
+const RuleCopy: React.FC = () => (
+  <>
+    <p className="text-sm text-gray-700 font-tm-body">
+      Toastmasters International recognises districts that charter 3 or 5 new
+      clubs by September 30, and 3, 5 or 10 new clubs by March 31.
+    </p>
+    {/* The announcement above is the whole published rule. Everything in this
+        line is our reading of it (#1473 A2/A3) and says so. */}
+    <p className="mt-1 text-xs text-gray-600 font-tm-body">
+      We read the counts as cumulative from July 1 — so the March total includes
+      the clubs already counted in September — and show the highest milestone
+      reached at each checkpoint.
+    </p>
+  </>
+)
+
+/** A text-shaped placeholder: the text is laid out (so it wraps like the
+ *  loaded copy) but painted as a pulsing bar. */
+const GhostText: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span className="animate-pulse rounded bg-gray-200 theme-dark:bg-gray-700 text-transparent">
+    {children}
+  </span>
 )
 
 /**
- * Structural skeleton (Lesson 158): reuse the real chrome — the
- * `redesign-panel` wrapper, the static title + caption, the two-up checkpoint
- * grid and each block's border/padding — and pin only the widths of the data
- * rows. Total height is never stated, so it emerges from the same CSS that
- * sizes the loaded card at every breakpoint and in dark mode.
+ * Structural skeleton (Lessons 107, 158): reuse the real chrome — the
+ * `redesign-panel` wrapper, the static title, caption, methodology-link slot
+ * and rule copy, the two-up checkpoint grid and each block's border/padding.
+ * The data rows are the loaded block's own rows with representative copy
+ * painted as text-shaped bars, built from the year's real checkpoint dates and
+ * milestones. Total height is never stated, so it emerges from the same CSS
+ * that sizes the loaded card at every breakpoint and in dark mode. The old
+ * skeleton drew the rule copy as two short bars and omitted the 44px link,
+ * so the card grew 47px (desktop) to 223px (mobile) when it loaded (#1647).
  */
-const ClubGrowthAchievementCardSkeleton: React.FC = () => (
+const ClubGrowthAchievementCardSkeleton: React.FC<{
+  checkpoints: readonly ClubGrowthCheckpointState[]
+}> = ({ checkpoints }) => (
   <div
     className="redesign-panel"
     aria-hidden="true"
@@ -386,28 +412,55 @@ const ClubGrowthAchievementCardSkeleton: React.FC = () => (
           New clubs chartered
         </p>
       </div>
+      <span
+        data-testid="club-growth-skeleton-link"
+        className="inline-flex min-h-11 items-center text-xs font-semibold font-tm-body"
+      >
+        <GhostText>How this is measured</GhostText>
+      </span>
     </div>
-    <SkeletonBar className="h-3 w-full max-w-xl" />
-    <SkeletonBar className="mt-1.5 h-3 w-3/4 max-w-md" />
+    <RuleCopy />
     <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-      {[0, 1].map(i => (
+      {checkpoints.map(state => (
         <div
-          key={i}
+          key={state.id}
           data-testid="club-growth-skeleton-checkpoint"
           className="rounded-md border border-gray-200 px-3 py-3"
         >
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <SkeletonBar className="h-4 w-36" />
-            <SkeletonBar className="h-6 w-24 rounded-full" />
+            <h3 className="text-sm font-semibold font-tm-body">
+              <GhostText>By {formatFullDate(state.date)}</GhostText>
+            </h3>
+            <span className="inline-flex items-center rounded-full border border-gray-200 px-2.5 py-1 text-xs font-semibold font-tm-body">
+              <GhostText>In progress</GhostText>
+            </span>
           </div>
           <div className="mt-2 min-h-11">
-            <SkeletonBar className="h-7 w-10" />
-            <SkeletonBar className="mt-1.5 h-4 w-48" />
+            <p className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold font-tm-headline tabular-nums">
+                <GhostText>0</GhostText>
+              </span>
+              <span className="text-xs font-tm-body">
+                <GhostText>new clubs chartered so far</GhostText>
+              </span>
+            </p>
+            <p className="mt-1 text-sm font-tm-body">
+              <GhostText>
+                {state.milestones[0] ?? 3} more by {formatMonthDay(state.date)}{' '}
+                to reach the {state.milestones[0] ?? 3}-club milestone
+              </GhostText>
+            </p>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <SkeletonBar className="h-6 w-9 rounded-full" />
-            <SkeletonBar className="h-6 w-9 rounded-full" />
-          </div>
+          <ul className="mt-3 flex flex-wrap items-center gap-1.5">
+            {state.milestones.map(milestone => (
+              <li
+                key={milestone}
+                className="inline-flex min-w-8 items-center justify-center rounded-full border border-gray-200 px-2.5 py-1 text-xs tabular-nums font-tm-body"
+              >
+                <GhostText>{milestone}</GhostText>
+              </li>
+            ))}
+          </ul>
         </div>
       ))}
     </div>
@@ -455,7 +508,10 @@ export const ClubGrowthAchievementCard: React.FC<
     checkpointReads.length === 0 ||
     checkpointReads.some(r => r.status === 'loading')
 
-  if (loading) return <ClubGrowthAchievementCardSkeleton />
+  if (loading)
+    return (
+      <ClubGrowthAchievementCardSkeleton checkpoints={result.checkpoints} />
+    )
 
   // Past this point the card never returns null: every remaining state —
   // settled, pending, unavailable — renders the same outer geometry, so no
@@ -486,17 +542,7 @@ export const ClubGrowthAchievementCard: React.FC<
         </a>
       </div>
 
-      <p className="text-sm text-gray-700 font-tm-body">
-        Toastmasters International recognises districts that charter 3 or 5 new
-        clubs by September 30, and 3, 5 or 10 new clubs by March 31.
-      </p>
-      {/* The announcement above is the whole published rule. Everything in this
-          line is our reading of it (#1473 A2/A3) and says so. */}
-      <p className="mt-1 text-xs text-gray-600 font-tm-body">
-        We read the counts as cumulative from July 1 — so the March total
-        includes the clubs already counted in September — and show the highest
-        milestone reached at each checkpoint.
-      </p>
+      <RuleCopy />
 
       <ul
         data-testid="club-growth-checkpoints"

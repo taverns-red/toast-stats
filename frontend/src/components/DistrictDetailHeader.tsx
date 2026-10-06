@@ -25,6 +25,13 @@ interface DistrictDetailHeaderProps {
   onDateChange: (date: SnapshotDate | undefined) => void
   availableDates: SnapshotDate[]
   latestSnapshotDate: string | undefined
+  /**
+   * True while the snapshot date is still resolving (#1647). The header then
+   * reserves the freshness pill's slot so the toolbar's wrap is settled from
+   * the first paint — at phone widths the late pill rewrapped it from one
+   * row to three and shifted the page.
+   */
+  freshnessPending?: boolean
 }
 
 export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
@@ -37,6 +44,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
   onDateChange,
   availableDates,
   latestSnapshotDate,
+  freshnessPending = false,
 }) => {
   // Freshness parity (#1310): every district detail + subnav page shares this
   // header, and most fetch no per-district snapshot, so the as-of date comes
@@ -87,6 +95,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
             availableDates={availableDates}
             selectedDate={selectedDate}
             onDateChange={onDateChange}
+            freshnessPending={freshnessPending}
           />
           <HeaderActionsMenu districtId={districtId} />
         </div>

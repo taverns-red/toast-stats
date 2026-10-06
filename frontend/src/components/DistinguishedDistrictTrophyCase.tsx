@@ -203,7 +203,9 @@ const SkeletonBar: React.FC<{ className: string }> = ({ className }) => (
   />
 )
 
-const TrophyCaseSkeleton: React.FC = () => (
+const TrophyCaseSkeleton: React.FC<{ programYear: string }> = ({
+  programYear,
+}) => (
   <div
     className="redesign-panel"
     aria-hidden="true"
@@ -223,9 +225,32 @@ const TrophyCaseSkeleton: React.FC = () => (
     </div>
 
     {/* Prerequisite summary line — 44px touch-target floor like the real
-        toggle/status row, so the reserved height tracks it. */}
-    <div className="mb-4 flex items-center min-h-11">
-      <SkeletonBar className="h-4 w-44" />
+        toggle/status row, so the reserved height tracks it — and the
+        checklist below it (#1647). The loaded list is expanded whenever a
+        prerequisite is unmet, the common case for most of the year, and its
+        rows are known before the data: one per required prerequisite of the
+        program year. Each row carries its real label (invisible) so it wraps
+        exactly like the loaded row at every column count. A district with
+        every prerequisite met renders the list collapsed and settles upward —
+        the same bounded, accepted residual as the gap tiles below. */}
+    <div className="mb-4">
+      <div className="flex items-center min-h-11">
+        <SkeletonBar className="h-4 w-44" />
+      </div>
+      <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
+        {requiredPrerequisitesForProgramYear(programYear).map(key => (
+          <li
+            key={key}
+            data-testid="distinguished-trophy-skeleton-prereq"
+            className="flex items-center gap-2 text-sm font-tm-body"
+          >
+            <span className="invisible font-bold">✗</span>
+            <span className="invisible font-medium">
+              {PREREQUISITE_LABELS[key]}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
 
     {/* Gap-to-next-tier: the dominant slot. Reuse the real section border +
@@ -238,6 +263,14 @@ const TrophyCaseSkeleton: React.FC = () => (
         AwardsRaceSection (#750). */}
     <div className="border-t border-gray-200 pt-4">
       <SkeletonBar className="h-4 w-40 mb-2" />
+      {/* The "prerequisites must be met" line the loaded panel shows above
+          the tiles while any prerequisite is unmet (#1647). */}
+      <p
+        data-testid="distinguished-trophy-skeleton-warning"
+        className="invisible text-xs mb-2 font-tm-body"
+      >
+        ⚠ Prerequisites must be met before any tier can be earned
+      </p>
       <div
         data-testid="distinguished-trophy-skeleton-tiles"
         className="grid grid-cols-1 md:grid-cols-3 gap-2"
@@ -280,7 +313,8 @@ export const DistinguishedDistrictTrophyCase: React.FC<
   // Reserve the slot while the (separate, slower) competitive-awards query is
   // in flight so its late arrival doesn't shift the page below it (#1105 /
   // Lesson 107). Once it settles with genuinely no status, collapse to null.
-  if (!status) return isLoading ? <TrophyCaseSkeleton /> : null
+  if (!status)
+    return isLoading ? <TrophyCaseSkeleton programYear={programYear} /> : null
 
   const { currentTier, allPrerequisitesMet, prerequisites, nextTierGap } =
     status
