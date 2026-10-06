@@ -385,6 +385,12 @@
   .header-search__input {
     flex: 1;
     min-width: 0;
+    /* #1655: without an explicit width the input sizes to its `size=20`
+       intrinsic width, which tracks the platform font's average glyph width
+       (133px on macOS, 172px on Linux Chromium). That pushed the field, and
+       the theme toggle after it, 33px past a 768px viewport on Linux. Width 0
+       + flex: 1 lets the field's own min/max-width set its size instead. */
+    width: 0;
     border: 0;
     background: transparent;
     font-family: var(--sans);
