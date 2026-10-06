@@ -84,23 +84,25 @@ describe('isInDeclaredDenominator (mirrors vitest BaseCoverageProvider.isInclude
   })
 })
 
-describe('hasRuntimeCode', () => {
-  it('is false for a type-only module (TypeScript erases it entirely)', () => {
+describe('hasRuntimeCode', async () => {
+  it('is false for a type-only module (its types are erased entirely)', async () => {
     const src = `import type { X } from './x'\nexport interface A { a: X }\nexport type B = string\n`
-    expect(hasRuntimeCode(src, 'src/types/a.ts')).toBe(false)
+    expect(await hasRuntimeCode(src, 'src/types/a.ts')).toBe(false)
   })
 
-  it('is true for a module with a runtime statement', () => {
-    expect(hasRuntimeCode('export const A = 1\n', 'src/a.ts')).toBe(true)
+  it('is true for a module with a runtime statement', async () => {
+    expect(await hasRuntimeCode('export const A = 1\n', 'src/a.ts')).toBe(true)
   })
 
-  it('is true for a pure re-export barrel (it is loaded at runtime)', () => {
-    expect(hasRuntimeCode(`export * from './a'\n`, 'src/index.ts')).toBe(true)
+  it('is true for a pure re-export barrel (it is loaded at runtime)', async () => {
+    expect(await hasRuntimeCode(`export * from './a'\n`, 'src/index.ts')).toBe(
+      true
+    )
   })
 
-  it('handles TSX', () => {
+  it('handles TSX', async () => {
     const src = `export const C = () => <div>hi</div>\n`
-    expect(hasRuntimeCode(src, 'src/C.tsx')).toBe(true)
+    expect(await hasRuntimeCode(src, 'src/C.tsx')).toBe(true)
   })
 })
 

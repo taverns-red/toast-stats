@@ -34,6 +34,7 @@
     "test:projects:check": "npm run test:projects:check --workspace=frontend",
     "test:no-page-mounts:check": "npm run test:no-page-mounts:check --workspace=frontend",
     "test:coverage": "npm run test --workspaces -- --coverage",
+    "test:coverage:denominator-check": "tsx scripts/check-coverage-denominator.ts",
     "test:scripts": "vitest run --config scripts/vitest.config.ts",
     "test:quarantine:check": "npx tsx scripts/check-quarantine.ts",
     "test:watch": "npm run test:watch --workspaces --if-present",
@@ -64,8 +65,10 @@
     "husky": "^9.1.7",
     "jsdom": "^30.1.1",
     "lint-staged": "^17.6.0",
+    "picomatch": "^4.0.7",
     "prettier": "^3.9.9",
     "tsx": "^4.23.15",
+    "vite": "^8.3.3",
     "vitest": "^5.0.0"
   },
   "lint-staged": {
