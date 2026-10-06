@@ -356,6 +356,13 @@ export interface PromoteDecision {
 export interface PromoteOptions {
   /** operator override: promote a reviewed value re-derive despite changed dates */
   allowValueChanges?: boolean
+  /**
+   * Closing-Pinned Auto-Allow eligibility (default true). The pipeline sets
+   * this false for every non-daily mode: a deliberate rebuild/rescrape of a
+   * past close carries the same closing-pinned signature as routine daily
+   * reconciliation and must hold for operator review (#1673).
+   */
+  closingAutoAllow?: boolean
 }
 
 /** Digest sets for CPAA evaluation of changed overlap dates (#1086). */
@@ -572,9 +579,11 @@ export function evaluatePromote(
     )
     if (!opts.allowValueChanges) {
       // CPAA applies only when the verdict would otherwise be "blocked
-      // because changed is non-empty" — never to a subtractive change.
+      // because changed is non-empty" — never to a subtractive change, and
+      // never to a non-daily run (#1673).
+      const cpaaEnabled = opts.closingAutoAllow !== false
       const cpaa =
-        digests && report.removed.length === 0
+        cpaaEnabled && digests && report.removed.length === 0
           ? evaluateClosingAutoAllowAcross(report.changed, digests)
           : undefined
       if (cpaa?.allowed) {
@@ -592,6 +601,11 @@ export function evaluatePromote(
         reasons.push(
           'value changes require operator review — re-run with --allow-value-changes to promote after reviewing the diff'
         )
+        if (!cpaaEnabled) {
+          reasons.push(
+            'closing-pinned auto-allow disabled for this run (non-daily mode, #1673)'
+          )
+        }
         if (cpaa) reasons.push(...cpaa.reasons)
       }
     }

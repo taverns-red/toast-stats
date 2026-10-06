@@ -156,6 +156,30 @@ describe('runValueDiff — Closing-Pinned Auto-Allow end-to-end (#1086)', () => 
     expect(exitCode).toBe(0)
   })
 
+  it('blocks (exit 1) a closing-pinned change when closingAutoAllow is false (#1673)', () => {
+    // Mirrors run 37535062136: a year-end rebuild from a later in-window as-of.
+    const staging = join(tmp, 'staging')
+    const prod = join(tmp, 'prod')
+    writeSnapshot(
+      prod,
+      '2019-06-30',
+      closingRankings('2019-06-30', '2019-07-16', 5000)
+    )
+    writeSnapshot(
+      staging,
+      '2019-06-30',
+      closingRankings('2019-06-30', '2019-07-17', 5050)
+    )
+    const { decision, exitCode } = runValueDiff({
+      stagingDir: staging,
+      prodDir: prod,
+      closingAutoAllow: false,
+    })
+    expect(decision.promote).toBe(false)
+    expect(decision.autoAllowed).toBeUndefined()
+    expect(exitCode).toBe(1)
+  })
+
   it('auto-allows (exit 0) a closing-period counter decrease (#1092)', () => {
     const staging = join(tmp, 'staging')
     const prod = join(tmp, 'prod')
