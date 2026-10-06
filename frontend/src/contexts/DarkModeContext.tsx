@@ -28,9 +28,29 @@ const DarkModeContext = createContext<DarkModeContextValue | null>(null)
 
 const STORAGE_KEY = 'theme'
 
+/* Storage can be blocked outright ("block all site data", some private modes,
+   enterprise policy): then even reading `window.localStorage` throws a
+   SecurityError. Every access is guarded so a blocked store degrades to an
+   unpersisted, session-only theme instead of blanking the app (#1646). */
+function readStoredTheme(): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function persistTheme(theme: Theme): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, theme)
+  } catch {
+    // Storage unavailable: the theme still applies for this session.
+  }
+}
+
 function getInitialTheme(): Theme {
   // 1. Check localStorage first
-  const stored = localStorage.getItem(STORAGE_KEY)
+  const stored = readStoredTheme()
   if (stored === 'dark' || stored === 'light') {
     return stored
   }
@@ -65,13 +85,13 @@ export const DarkModeProvider: React.FC<{ children: React.ReactNode }> = ({
   const toggle = useCallback(() => {
     setThemeState(prev => {
       const next = prev === 'light' ? 'dark' : 'light'
-      localStorage.setItem(STORAGE_KEY, next)
+      persistTheme(next)
       return next
     })
   }, [])
 
   const setTheme = useCallback((newTheme: Theme) => {
-    localStorage.setItem(STORAGE_KEY, newTheme)
+    persistTheme(newTheme)
     setThemeState(newTheme)
   }, [])
 
