@@ -230,7 +230,7 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
       </div>
       <p
         data-testid="kpi-value"
-        className="mt-1 text-3xl font-bold text-gray-900"
+        className="mt-1 text-xl sm:text-3xl font-bold text-gray-900"
       >
         {current.toLocaleString()}
       </p>

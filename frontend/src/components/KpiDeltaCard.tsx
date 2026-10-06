@@ -59,9 +59,12 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
         )}
       </div>
 
+      {/* #1655: a 2×2 card at 375px has a ~79px content box. "▼ −2,840" at
+          text-3xl is ~115px and ran 3px past the viewport on Linux. Below sm
+          the value steps down to text-xl (the arrow may wrap). */}
       <p
         data-testid="kpi-delta-value"
-        className={`mt-1 flex items-center gap-1 text-3xl font-bold ${colorClass}`}
+        className={`mt-1 flex flex-wrap items-center gap-x-1 text-xl sm:text-3xl font-bold ${colorClass}`}
       >
         {(isUp || isDown) && (
           <span
