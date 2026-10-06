@@ -229,3 +229,15 @@ All probes were read-only HTTP GETs to TI's public export endpoint and
 canary scripts (summary series fetch, per-district bisection, club-level diff)
 lived in the session scratchpad and were deleted; the URLs above are sufficient
 to reproduce every number. TI was fetched at ≤4 concurrent requests.
+
+## Oracle allow-list (operator decision, 2026-10-06)
+
+Once the 2019-06 and 2022-06 closes were rebuilt from TI's final as-of (#1672),
+the oracle printed 8 findings. These are exactly the TI-internal cells above:
+2021-22 Paid −1; 2022-23 D −1, S −1, Total −2, Paid −5; and 2024-25 D −1,
+Total −1, Paid +1. Ron decided to allow-list them as documented per-cell
+exceptions in `CEO_REPORT_DOCUMENTED_EXCEPTIONS`
+(`scripts/lib/ceoReportOracle.ts`). Each exception is pinned to its exact
+computed value and links back to §2 or §4 of this doc. There is no tolerance
+band. Every other cell must match exactly, and a listed cell at any other value
+still fails.
