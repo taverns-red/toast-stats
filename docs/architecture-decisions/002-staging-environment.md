@@ -127,7 +127,7 @@ Playwright-based suite runs against the **staging frontend + staging data**:
 1. Create `gs://toast-stats-data-staging` GCS bucket
 2. Seed it with a copy of production data: `gsutil rsync gs://toast-stats-data-ca gs://toast-stats-data-staging`
 3. Make staging bucket publicly readable (no CDN needed — direct GCS URL)
-4. Add Firebase Hosting target `staging` in `firebase.json`
+4. Add Firebase Hosting target `staging` in `firebase.json`. **Create the site first.** Since 2026-10-15, Firebase no longer creates Hosting sites automatically, so a new project needs `scripts/setup-hosting-sites.sh` (it runs `firebase hosting:sites:create` + `target:apply`). Full order: [`docs/runbooks/new-environment.md`](../runbooks/new-environment.md) (#1584)
 5. DNS: add `staging.ts.taverns.red` CNAME to Firebase
 
 **Phase 2 — Pipeline changes:** 6. Add `GCS_BUCKET` input to data-pipeline workflow (default: staging bucket) 7. Daily pipeline writes to staging bucket 8. Add diff step: compare staging vs production bucket manifests 9. Add promotion step: `gsutil rsync staging → production` on additive-only diff 10. Add alert step: notify on subtractive diff (GitHub Actions annotation + issue comment)
