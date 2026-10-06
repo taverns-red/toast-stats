@@ -22,7 +22,10 @@ June close that resolved to the **next** PY (2026-07-01), so no charter or
 suspension in the closing year was `>= programYearStart`. `newCharteredClubs`
 came out 0 and Club Retention `(paid − newCharters) / base` went over 100%
 (117.3% for 2026, 115.8% for 2025). This happened on every June-close
-year-end built from a July collection. Nobody noticed for years, because
+year-end built from a July collection. That is every year-end close since
+2017: all ten `06-30` snapshots from 2017 to 2026 carry a July
+`collectionDate`, and the #1637 value-diff shows `newCharteredClubs` going
+from 0 to real counts on each of them. Nobody noticed for years, because
 mid-year snapshots, where the two dates share a PY, were correct. PR #1625
 scoped the PY window to the snapshot's logical date. After the rebuild, the
 maximum retention on every year-end is 100.0%.
