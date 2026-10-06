@@ -132,9 +132,13 @@ export const RaceChart: React.FC<RaceChartProps> = ({
           <YAxis domain={domain} allowDecimals={false} width={40} />
           <Tooltip labelFormatter={label => `Snapshot ${String(label)}`} />
           <Legend content={renderLegend} />
-          {series.map(({ tier }) => (
+          {series.map(({ tier, slug }) => (
             <Area
               key={tier}
+              /* #1636 — clubs-race.css binds this band to --tier-chart-*,
+                 which remaps in dark mode; the attributes below are the
+                 light fallback. */
+              className={`race-chart__band race-chart__band--${slug}`}
               type="stepAfter"
               dataKey={tier}
               stackId="tiers"

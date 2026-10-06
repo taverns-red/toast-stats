@@ -21,6 +21,10 @@ interface Segment {
   bgClassName: string
   /** Display swatch in the legend (must visually match bg). */
   swatchClassName: string
+  /** #1636 — dark-mode hook: dark-mode.css remaps `.tier-fill--*` to the
+   *  `--tier-chart-*` tokens (the light Tailwind fills are ~1.6–3:1 on the
+   *  dark surface). Absent on the neutral "Not yet" segment. */
+  tierClassName?: string
 }
 
 const DistinguishedCompositionBar: React.FC<
@@ -34,6 +38,7 @@ const DistinguishedCompositionBar: React.FC<
   const segments: Segment[] = [
     {
       key: 'smedley',
+      tierClassName: 'tier-fill--smedley',
       label: 'Smedley',
       count: smedley,
       bgClassName: 'bg-tm-true-maroon',
@@ -41,6 +46,7 @@ const DistinguishedCompositionBar: React.FC<
     },
     {
       key: 'presidents',
+      tierClassName: 'tier-fill--presidents',
       label: "President's",
       count: presidents,
       bgClassName: 'bg-tm-loyal-blue',
@@ -48,6 +54,7 @@ const DistinguishedCompositionBar: React.FC<
     },
     {
       key: 'select',
+      tierClassName: 'tier-fill--select',
       label: 'Select',
       count: select,
       bgClassName: 'bg-tm-loyal-blue-80',
@@ -55,6 +62,7 @@ const DistinguishedCompositionBar: React.FC<
     },
     {
       key: 'distinguished',
+      tierClassName: 'tier-fill--distinguished',
       label: 'Distinguished',
       count: distinguished,
       bgClassName: 'bg-green-600',
@@ -108,7 +116,7 @@ const DistinguishedCompositionBar: React.FC<
           return (
             <div
               key={seg.key}
-              className={`${seg.bgClassName} flex items-center justify-center text-[11px] font-medium text-white`}
+              className={`${seg.bgClassName} ${seg.tierClassName ?? ''} flex items-center justify-center text-[11px] font-medium text-white`}
               style={{ width: `${widthPct}%`, minWidth: 0 }}
               title={`${seg.label}: ${seg.count}`}
             >
@@ -123,7 +131,7 @@ const DistinguishedCompositionBar: React.FC<
           <li key={seg.key} className="inline-flex items-center gap-1.5">
             <span
               aria-hidden="true"
-              className={`inline-block w-3 h-3 rounded-sm ${seg.swatchClassName}`}
+              className={`inline-block w-3 h-3 rounded-sm ${seg.swatchClassName} ${seg.tierClassName ?? ''}`}
             />
             <span>
               {seg.label} · {seg.count}

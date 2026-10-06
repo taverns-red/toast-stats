@@ -945,6 +945,36 @@
   color: #e8879a;
 }
 
+/* ─── Tier chart fills: District composition bar (#1636) ───
+   The bar paints tiers with the generic `.bg-tm-true-maroon` /
+   `.bg-tm-loyal-blue` / `-80` / `.bg-green-600` utilities, whose dark remaps
+   above (#8b2d3c 2.14:1, #1a6b8a 2.96:1 on --surface) are tuned for white-text
+   badges and miss the 3:1 non-text floor as chart fills. The segments and
+   their legend swatches carry a `.tier-fill--*` hook and take the shared
+   --tier-chart-* tokens (redesign.css) — the same fills as the /clubs race
+   chart. Those fills are light, so the segment count text flips to the dark
+   --tier-chart-ink. Placed after the generic remaps so the equal-specificity
+   `!important` tie resolves here. */
+[data-theme='dark'] .tier-fill--distinguished {
+  background-color: var(--tier-chart-distinguished) !important;
+  color: var(--tier-chart-ink) !important;
+}
+
+[data-theme='dark'] .tier-fill--select {
+  background-color: var(--tier-chart-select) !important;
+  color: var(--tier-chart-ink) !important;
+}
+
+[data-theme='dark'] .tier-fill--presidents {
+  background-color: var(--tier-chart-presidents) !important;
+  color: var(--tier-chart-ink) !important;
+}
+
+[data-theme='dark'] .tier-fill--smedley {
+  background-color: var(--tier-chart-smedley) !important;
+  color: var(--tier-chart-ink) !important;
+}
+
 /* ─── Transition for Theme Switch ─── */
 
 html[data-theme] body {

@@ -114,6 +114,19 @@
   --recognition-select: var(--rt-ink-2); /* 10.89:1 */
   --recognition-presidents: var(--rt-stats-focus); /* 4.23:1 */
   --recognition-smedley: var(--rt-eval); /* 5.31:1 */
+
+  /* ── Tier chart fills (#1636) ──────────────────────────────────────────
+     The four Distinguished tiers as chart FILLS — the /clubs race chart
+     bands + swatches and the District composition bar. Light values are the
+     club grid's tier hexes (club-grid.css, #1607) so a tier reads the same
+     colour everywhere; --tier-chart-ink is the count text set on a fill.
+     Defined in BOTH theme blocks, pinned by
+     __tests__/accessibility/TierChartDarkModeContrast.test.ts. */
+  --tier-chart-distinguished: #15803d;
+  --tier-chart-select: #2c6e90;
+  --tier-chart-presidents: #004165;
+  --tier-chart-smedley: #7b1828;
+  --tier-chart-ink: #ffffff;
 }
 
 [data-theme='dark'] {
@@ -182,4 +195,19 @@
   --recognition-select: var(--rt-ink-3); /* 4.81:1 */
   --recognition-presidents: var(--rt-stats); /* 5.81:1 */
   --recognition-smedley: var(--rt-eval); /* 3.06:1 */
+
+  /* ── Tier chart fills (#1636), dark ────────────────────────────────────
+     The light hexes are tuned for white: President's #004165 and Smedley
+     #7b1828 are ~1.6:1 on the dark --bg / --surface (and Distinguished /
+     Select miss 3:1 at the race chart's 0.85 band opacity). Each tier keeps
+     its hue family and the President's-above-Select ordering by lightness;
+     ratios are on --surface (#111922), solid / at 0.85 opacity. The fills go
+     light, so the count text set on them flips to dark ink (≥6:1 on all
+     four). Smedley reuses the dark maroon the theme already uses for
+     --tm-true-maroon text. */
+  --tier-chart-distinguished: #4ade80; /* 10.16 / 7.60 */
+  --tier-chart-select: #5a9ccc; /* 5.95 / 4.64 */
+  --tier-chart-presidents: #8ec5ee; /* 9.59 / 7.22 */
+  --tier-chart-smedley: #e8879a; /* 7.05 / 5.44 */
+  --tier-chart-ink: #0a0f15;
 }
