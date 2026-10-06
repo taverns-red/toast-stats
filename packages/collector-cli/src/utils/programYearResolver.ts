@@ -164,6 +164,24 @@ export function parseDistrictIdsFromSummaryCsv(
   return ids
 }
 
+export interface ResolveActiveProgramYearOptions {
+  /**
+   * An extra condition every probe's body must meet before it is accepted, on
+   * top of the built-in "valid districtsummary for this year" check (#1669).
+   *
+   * The scrape path uses it to demand that a body is *for the requested
+   * as-of*: once the URL's month-end slot is populated, the live endpoint
+   * answers a historical date with a footer naming that date and zero rows,
+   * which the built-in check alone would accept. Omitted → accept everything
+   * the built-in check accepts (the original behaviour).
+   */
+  accept?: (
+    content: string,
+    programYear: string,
+    pathStyle: ExportPathStyle
+  ) => boolean
+}
+
 /**
  * Resolve the active Toastmasters program year for a date by probing which year
  * actually has data. Falls back to the prior program year when the calendar
@@ -173,15 +191,18 @@ export function parseDistrictIdsFromSummaryCsv(
  * @param date         YYYY-MM-DD target date.
  * @param fetchSummary Fetches the districtsummary CSV body for a program year.
  *                     May throw; a throw is treated the same as invalid content.
+ * @param options      See {@link ResolveActiveProgramYearOptions}.
  */
 export async function resolveActiveProgramYear(
   date: string,
   fetchSummary: (
     programYear: string,
     pathStyle: ExportPathStyle
-  ) => Promise<string>
+  ) => Promise<string>,
+  options: ResolveActiveProgramYearOptions = {}
 ): Promise<ProgramYearResolution> {
   const calendarPY = calculateProgramYear(date)
+  const accept = options.accept ?? (() => true)
 
   // A throw ANYWHERE in the probe chain makes the outcome an upstream error,
   // even if a later probe merely returned an unpublished-year page (#1343).
@@ -195,7 +216,23 @@ export async function resolveActiveProgramYear(
   const liveContent = live.content
   if (isValidDistrictSummaryCsv(liveContent)) {
     const livePY = programYearFromCsvFooter(liveContent, date)
-    if (livePY) {
+    if (!livePY) {
+      // Valid CSV but no footer: we cannot tell which year it is, and the live
+      // endpoint ignores the year token — so labelling it would be a guess.
+      // Fall through to the archive path, where the URL does pin the year.
+      logger.warn(
+        'Live districtsummary has no "Month of" footer — cannot confirm its program year (#1342)',
+        { date, calendarPY }
+      )
+    } else if (!accept(liveContent!, livePY, 'live')) {
+      // The live endpoint answered, but not with what the caller asked for
+      // (e.g. a historical as-of it holds no rows for, #1669). The archive
+      // path below is the one whose URL pins the year, so try it.
+      logger.warn(
+        'Live districtsummary rejected by the caller — trying the archive path (#1669)',
+        { date, calendarPY, programYear: livePY }
+      )
+    } else {
       if (livePY !== calendarPY) {
         logger.info(
           'Live dashboard is still serving the prior program year (rollover window)',
@@ -210,13 +247,6 @@ export async function resolveActiveProgramYear(
         content: liveContent,
       }
     }
-    // Valid CSV but no footer: we cannot tell which year it is, and the live
-    // endpoint ignores the year token — so labelling it would be a guess. Fall
-    // through to the archive path, where the URL does pin the year.
-    logger.warn(
-      'Live districtsummary has no "Month of" footer — cannot confirm its program year (#1342)',
-      { date, calendarPY }
-    )
   }
 
   // 2. Archive path for the calendar year. Reachable once TM archives it, and
@@ -224,7 +254,10 @@ export async function resolveActiveProgramYear(
   const calendar = await tryFetch(fetchSummary, calendarPY, 'archive', date)
   sawThrow ||= calendar.threw
   const calendarContent = calendar.content
-  if (isValidForProgramYear(calendarContent, calendarPY, date)) {
+  if (
+    isValidForProgramYear(calendarContent, calendarPY, date) &&
+    accept(calendarContent!, calendarPY, 'archive')
+  ) {
     return {
       programYear: calendarPY,
       reason: 'resolved',
@@ -244,7 +277,10 @@ export async function resolveActiveProgramYear(
   const prior = await tryFetch(fetchSummary, priorPY, 'archive', date)
   sawThrow ||= prior.threw
   const priorContent = prior.content
-  if (isValidForProgramYear(priorContent, priorPY, date)) {
+  if (
+    isValidForProgramYear(priorContent, priorPY, date) &&
+    accept(priorContent!, priorPY, 'archive')
+  ) {
     logger.info(
       'Resolved active program year to prior year (rollover window)',
       {

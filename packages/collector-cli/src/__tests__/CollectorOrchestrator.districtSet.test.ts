@@ -27,7 +27,9 @@ const LEGACY_SUMMARY_CSV = [
   '"62","6","90","90"',
   '"F","2","110","110"',
   '"U","14","300","300"',
-  '"Month of Jun, As of 07/30/2026"',
+  // The footer names the date the scrape asks for. A body "As of" any other
+  // day is refused before it is stored (#1669).
+  '"Month of Jun, As of 06/30/2026"',
 ].join('\n')
 
 const capturedDownloadSpecs: Array<{

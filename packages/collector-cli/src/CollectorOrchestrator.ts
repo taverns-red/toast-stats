@@ -22,6 +22,7 @@ import { CircuitBreaker, CircuitState } from './utils/CircuitBreaker.js'
 import { RetryManager } from './utils/RetryManager.js'
 import {
   HttpCsvDownloader,
+  computeMonthEndDate,
   parseClosingPeriodFromCsv,
   type ReportType as HttpReportType,
   type CsvClosingPeriodInfo,
@@ -42,6 +43,8 @@ import {
   calculateProgramYear,
 } from './utils/CachePaths.js'
 import { resolveActiveProgramYear } from './utils/programYearResolver.js'
+import { parseFooterAsOfDate } from './utils/csvFooterParser.js'
+import { verifyBackfillCsv } from './utils/backfillContentGuard.js'
 import { reconcileDistrictsForDate } from './utils/districtSetForDate.js'
 /**
  * District configuration file structure
@@ -274,6 +277,29 @@ export class CollectorOrchestrator {
   }
 
   /**
+   * Refuse a body that is for another day than the one requested (#1669).
+   *
+   * The export endpoint answers a request it cannot serve with a 200 and a
+   * perfectly valid CSV for some other as-of (today's, when the month-end slot
+   * is empty). The footer's "As of" is the only signal, so every body is
+   * checked against it before it is stored. A body without a footer is
+   * undecided (#1129) and passes; the resolver has already pinned the run.
+   */
+  private assertBodyIsForDate(
+    content: string,
+    date: string,
+    what: string
+  ): void {
+    const servedAsOf = parseFooterAsOfDate(content)
+    if (servedAsOf !== undefined && servedAsOf !== date) {
+      throw new Error(
+        `${what} is "As of ${servedAsOf}" but ${date} was requested — ` +
+          "refusing to store another day's data under it (#1669)"
+      )
+    }
+  }
+
+  /**
    * Scrape all-districts summary data via HTTP
    */
   private async scrapeAllDistricts(
@@ -281,7 +307,8 @@ export class CollectorOrchestrator {
     date: string,
     force: boolean,
     programYear: string,
-    pathStyle: ExportPathStyle
+    pathStyle: ExportPathStyle,
+    monthEndDate: Date | undefined
   ): Promise<DistrictScrapeResult> {
     const startTime = Date.now()
     const timestamp = new Date().toISOString()
@@ -307,41 +334,47 @@ export class CollectorOrchestrator {
         }
       }
 
-      let closingPeriodInfo: CsvClosingPeriodInfo | undefined
-
       const retryResult = await RetryManager.executeWithRetry(
         async () => {
           const result = await downloader.downloadCsv({
             programYear,
             reportType: 'districtsummary',
             date: new Date(date + 'T00:00:00'),
+            monthEndDate,
             pathStyle,
           })
-
-          const filePath = await this.writeCsvToCache(
-            date,
-            CSVType.ALL_DISTRICTS,
-            result.content
-          )
-          cacheLocations.push(filePath)
-
-          // Parse closing period metadata from CSV footer (#278)
-          closingPeriodInfo = parseClosingPeriodFromCsv(result.content, date)
-
-          return { byteSize: result.byteSize }
+          return result.content
         },
         RetryManager.getDashboardRetryOptions(),
         { date, operation: 'scrapeAllDistricts' }
       )
 
-      if (!retryResult.success) {
+      if (!retryResult.success || retryResult.result === undefined) {
         throw (
           retryResult.error ??
           new Error('All-districts download failed after retries')
         )
       }
 
-      if (closingPeriodInfo?.isClosingPeriod) {
+      // Checked outside the retry: a wrong-day body is deterministic, and
+      // retrying it would only delay the refusal.
+      const content = retryResult.result
+      this.assertBodyIsForDate(content, date, 'all-districts summary')
+
+      const filePath = await this.writeCsvToCache(
+        date,
+        CSVType.ALL_DISTRICTS,
+        content
+      )
+      cacheLocations.push(filePath)
+
+      // Parse closing period metadata from CSV footer (#278)
+      const closingPeriodInfo: CsvClosingPeriodInfo = parseClosingPeriodFromCsv(
+        content,
+        date
+      )
+
+      if (closingPeriodInfo.isClosingPeriod) {
         logger.info('Closing period detected from CSV footer', {
           date,
           dataMonth: closingPeriodInfo.dataMonth,
@@ -390,7 +423,8 @@ export class CollectorOrchestrator {
     date: string,
     force: boolean,
     programYear: string,
-    pathStyle: ExportPathStyle
+    pathStyle: ExportPathStyle,
+    monthEndDate: Date | undefined
   ): Promise<DistrictScrapeResult> {
     const startTime = Date.now()
     const timestamp = new Date().toISOString()
@@ -431,32 +465,47 @@ export class CollectorOrchestrator {
             },
           ]
 
+          const bodies: Array<{
+            report: HttpReportType
+            csv: CSVType
+            content: string
+          }> = []
           for (const { report, csv } of reportTypes) {
             const result = await downloader.downloadCsv({
               programYear,
               reportType: report,
               districtId,
               date: new Date(date + 'T00:00:00'),
+              monthEndDate,
               pathStyle,
             })
-
-            const filePath = await this.writeCsvToCache(
-              date,
-              csv,
-              result.content,
-              districtId
-            )
-            cacheLocations.push(filePath)
+            bodies.push({ report, csv, content: result.content })
           }
 
-          return { csvCount: reportTypes.length }
+          return bodies
         },
         RetryManager.getDashboardRetryOptions(),
         { districtId, date, operation: 'scrapeDistrict' }
       )
 
-      if (!retryResult.success) {
+      if (!retryResult.success || retryResult.result === undefined) {
         throw retryResult.error ?? new Error('Download failed after retries')
+      }
+
+      // Verify every body before writing any of them, so a district is stored
+      // whole or not at all (#1669). Outside the retry: a wrong-day body is
+      // deterministic.
+      for (const { report, content } of retryResult.result) {
+        this.assertBodyIsForDate(content, date, `${report} for ${districtId}`)
+      }
+      for (const { csv, content } of retryResult.result) {
+        const filePath = await this.writeCsvToCache(
+          date,
+          csv,
+          content,
+          districtId
+        )
+        cacheLocations.push(filePath)
       }
 
       logger.info('District download completed', {
@@ -608,20 +657,83 @@ export class CollectorOrchestrator {
     // June's close is still live under the prior year. Resolving once here and
     // threading it means every fetch (all-districts + per-district) and the
     // stored metadata agree on the year we actually scraped.
+    const dateObj = new Date(date + 'T00:00:00')
+    const summaryFetcher =
+      (monthEndDate: Date | undefined) =>
+      async (programYear: string, pathStyle: ExportPathStyle) => {
+        const result = await downloader.downloadCsv({
+          programYear,
+          reportType: 'districtsummary',
+          date: dateObj,
+          monthEndDate,
+          pathStyle,
+        })
+        return result.content
+      }
+
+    // Which as-of are we actually getting? (#1669) The first request leaves the
+    // month-end slot empty. That is the only shape that serves the LIVE as-of
+    // (a populated slot answers the newest day with zero rows), and also the
+    // shape that silently serves the live as-of for ANY requested date. So when
+    // the footer names another day, D is historical: ask for it explicitly with
+    // the slot populated, and accept only a body that is for D and has data.
+    // Still one program-year decision per run (#1284): the second resolution
+    // replaces the first, it does not run beside it.
+    let monthEndDate: Date | undefined
+    let resolution = await resolveActiveProgramYear(
+      date,
+      summaryFetcher(undefined)
+    )
+    const liveAsOf = parseFooterAsOfDate(resolution.content)
+    if (liveAsOf !== undefined && liveAsOf !== date) {
+      logger.warn(
+        'Requested date is not the live as-of — requesting it via the month-end slot (#1669)',
+        { date, liveAsOf }
+      )
+      monthEndDate = computeMonthEndDate(dateObj)
+      resolution = await resolveActiveProgramYear(
+        date,
+        summaryFetcher(monthEndDate),
+        {
+          accept: (content, programYear, pathStyle) =>
+            verifyBackfillCsv({ content, programYear, date, pathStyle })
+              .status === 'ok',
+        }
+      )
+
+      if (resolution.content === undefined) {
+        const message =
+          `The dashboard does not serve ${date}: the current-data endpoint ` +
+          `answered "As of ${liveAsOf}", and no month-end-pinned request ` +
+          `returned data for ${date}. Refusing to store another day's data ` +
+          'under it (#1669).'
+        logger.error(message, { date, liveAsOf })
+        await this.close()
+        return {
+          success: false,
+          date,
+          districtsProcessed: [],
+          districtsSucceeded: [],
+          districtsFailed: [],
+          cacheLocations: [],
+          errors: [
+            {
+              districtId: 'N/A',
+              error: message,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+          duration_ms: Date.now() - startTime,
+        }
+      }
+    }
+
     const {
       programYear: activeProgramYear,
       pathStyle: activePathStyle,
       fellBack,
       content: districtSummaryCsv,
-    } = await resolveActiveProgramYear(date, async (programYear, pathStyle) => {
-      const result = await downloader.downloadCsv({
-        programYear,
-        reportType: 'districtsummary',
-        date: new Date(date + 'T00:00:00'),
-        pathStyle,
-      })
-      return result.content
-    })
+    } = resolution
     if (fellBack) {
       logger.warn(
         'Scraping the prior program year — new program year not yet published (#1284)',
@@ -704,7 +816,8 @@ export class CollectorOrchestrator {
       date,
       force,
       activeProgramYear,
-      activePathStyle
+      activePathStyle,
+      monthEndDate
     )
     if (allDistrictsResult.success) {
       allCacheLocations.push(...allDistrictsResult.cacheLocations)
@@ -746,7 +859,8 @@ export class CollectorOrchestrator {
               date,
               force,
               activeProgramYear,
-              activePathStyle
+              activePathStyle,
+              monthEndDate
             ),
           { districtId, date }
         )

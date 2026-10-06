@@ -67,6 +67,8 @@ on:
       dates:
         description: >-
           Rebuild/rescrape: comma-separated dates (default: all in raw-csv/ for rebuild).
+          Rescrape fetches each date's own as-of (month-end-pinned URL for a past date) and
+          skips any date whose CSV footer "As of" differs from it, uploading nothing for it (#1669).
           backfill-global-totals: comma-separated dates (default: the five PY-ends + five Mar-31s).
         required: false
         type: string
@@ -1154,12 +1156,19 @@ jobs:
             # 1. Snapshot existing dirs before scrape+transform
             BEFORE_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
 
-            # 2. Scrape from dashboard + transform in one step
+            # 2. Scrape from dashboard + transform in one step. The scrape
+            # requests DATE's own as-of and exits non-zero, writing nothing,
+            # when the dashboard answers with another day's data (#1669).
+            # A failed date publishes nothing: drop whatever it left locally
+            # so no later step (store sync, manifests) picks it up.
             echo "Scraping and transforming ${DATE}..."
             SCRAPE_ARGS="--date ${DATE} --transform --force --verbose --districts ${DISTRICTS}"
             if ! npx collector-cli scrape ${SCRAPE_ARGS} 2>&1; then
-              echo "::warning::Scrape/transform failed for ${DATE}"
+              echo "::warning::Scrape/transform failed for ${DATE}; nothing uploaded for it"
               FAILED=$((FAILED + 1))
+              LEFTOVER_DIRS=$(comm -13 <(echo "$BEFORE_DIRS") \
+                <(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true))
+              rm -rf "./cache/raw-csv/${DATE}" ${LEFTOVER_DIRS}
               continue
             fi
 
