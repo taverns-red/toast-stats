@@ -4,7 +4,7 @@
  * Tests for dark mode context, hook, and persistence behavior.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
@@ -216,6 +216,81 @@ describe('DarkModeContext (#120)', () => {
       )
 
       expect(screen.getByTestId('theme-status').textContent).toBe('light')
+    })
+  })
+
+  describe('Blocked storage (#1646)', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    // "Block all site data" makes the `localStorage` getter itself throw a
+    // SecurityError; quota/private modes make the Storage methods throw.
+    // Either way the provider must render, fall back to the system theme,
+    // and still switch theme for the session.
+    const throwingGetter = () => {
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        get() {
+          throw new DOMException('blocked-storage', 'SecurityError')
+        },
+      })
+    }
+    const throwingMethods = () => {
+      const fail = () => {
+        throw new DOMException('blocked-storage', 'SecurityError')
+      }
+      vi.stubGlobal('localStorage', {
+        getItem: fail,
+        setItem: fail,
+        removeItem: fail,
+        clear: fail,
+        key: fail,
+        length: 0,
+      })
+    }
+
+    it.each([
+      ['the localStorage getter throws', throwingGetter],
+      ['every Storage method throws', throwingMethods],
+    ])('renders and switches theme when %s', async (_label, block) => {
+      block()
+      const user = userEvent.setup()
+      render(
+        <DarkModeProvider>
+          <TestConsumer />
+        </DarkModeProvider>
+      )
+
+      expect(screen.getByTestId('theme-status').textContent).toBe('light')
+      await user.click(screen.getByTestId('toggle-btn'))
+      expect(screen.getByTestId('theme-status').textContent).toBe('dark')
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+      await user.click(screen.getByTestId('set-light-btn'))
+      expect(screen.getByTestId('theme-status').textContent).toBe('light')
+    })
+
+    it('falls back to the system preference when the read is blocked', () => {
+      throwingGetter()
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn().mockImplementation((query: string) => ({
+          matches: query === '(prefers-color-scheme: dark)',
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }))
+      )
+      render(
+        <DarkModeProvider>
+          <TestConsumer />
+        </DarkModeProvider>
+      )
+      expect(screen.getByTestId('theme-status').textContent).toBe('dark')
     })
   })
 
