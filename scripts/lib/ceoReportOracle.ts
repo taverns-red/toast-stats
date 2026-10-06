@@ -182,8 +182,94 @@ export interface CeoReportException {
   readonly reason: string
 }
 
+const RESIDUAL_DOC = 'docs/investigations/1429-residual-attribution.md'
+const DAILY_SERIES = `${RESIDUAL_DOC}#2-tis-daily-as-of-series-for-each-june-close`
+const NAMED_CLUBS = `${RESIDUAL_DOC}#4-the-named-clubs`
+
+/**
+ * The operator-approved per-cell exceptions (#1429, 2026-10-06): exactly the
+ * eight findings left once our archive holds TI's final close for every
+ * year. Each is a TI-internal difference between the CEO Report and TI's own
+ * final dashboard, attributed in the residual doc. No tolerance band (R1):
+ * every other cell must match exactly, and a listed cell must hold exactly
+ * the value below.
+ */
 export const CEO_REPORT_DOCUMENTED_EXCEPTIONS: readonly CeoReportException[] =
-  Object.freeze([])
+  Object.freeze(
+    [
+      {
+        programYear: '2021-2022',
+        metric: 'paidClubs',
+        computed: 14748,
+        published: 14749,
+        evidence: DAILY_SERIES,
+        reason:
+          "CEO exceeds every value TI's dashboard served (final 14,748, flat 07-26..07-28)",
+      },
+      {
+        programYear: '2022-2023',
+        metric: 'distinguishedClubs',
+        computed: 1597,
+        published: 1598,
+        evidence: DAILY_SERIES,
+        reason:
+          'Archive = TI final 07-19; report cut from TI records after the dashboard stopped',
+      },
+      {
+        programYear: '2022-2023',
+        metric: 'selectDistinguishedClubs',
+        computed: 1259,
+        published: 1260,
+        evidence: DAILY_SERIES,
+        reason:
+          'CEO S 1,260 appears on no day TI published (max 1,259 over 07-01..07-19)',
+      },
+      {
+        programYear: '2022-2023',
+        metric: 'totalDistinguishedClubs',
+        computed: 6460,
+        published: 6462,
+        evidence: DAILY_SERIES,
+        reason: 'Sum of the 2022-23 D -1 and S -1 post-freeze cut',
+      },
+      {
+        programYear: '2022-2023',
+        metric: 'paidClubs',
+        computed: 14266,
+        published: 14271,
+        evidence: DAILY_SERIES,
+        reason:
+          'CEO 14,271 appears on no day TI published (max 14,266 at final 07-19)',
+      },
+      {
+        programYear: '2024-2025',
+        metric: 'distinguishedClubs',
+        computed: 1826,
+        published: 1827,
+        evidence: NAMED_CLUBS,
+        reason:
+          "CEO tiers = TI's 07-14 state; named clubs moved before the 07-20 final",
+      },
+      {
+        programYear: '2024-2025',
+        metric: 'totalDistinguishedClubs',
+        computed: 6736,
+        published: 6737,
+        evidence: NAMED_CLUBS,
+        reason:
+          "CEO tiers = TI's 07-14 state; D07786305 dropped below Distinguished by 07-20",
+      },
+      {
+        programYear: '2024-2025',
+        metric: 'paidClubs',
+        computed: 13834,
+        published: 13833,
+        evidence: NAMED_CLUBS,
+        reason:
+          'CEO counts two of three charters added 07-15→07-16 (D07, D53, D92)',
+      },
+    ].map(e => Object.freeze(e as CeoReportException))
+  )
 
 /** The per-tier club metrics that must add up to the total. */
 const CLUB_TIER_METRICS = [
@@ -270,7 +356,13 @@ export type CeoReportFinding =
     }
 
 export type MetricStatus =
-  'match' | 'mismatch' | 'missing' | 'unpublished' | 'notApplicable' | 'noData'
+  | 'match'
+  | 'mismatch'
+  | 'exception'
+  | 'missing'
+  | 'unpublished'
+  | 'notApplicable'
+  | 'noData'
 
 export interface MetricComparison {
   metric: CeoReportMetric
@@ -279,6 +371,8 @@ export interface MetricComparison {
   /** computed − published, present only when both sides exist. */
   delta?: number
   status: MetricStatus
+  /** The documented exception that cleared this cell (status 'exception'). */
+  exception?: CeoReportException
 }
 
 export interface ProgramYearComparison {
@@ -299,6 +393,8 @@ export interface CeoReportComparison {
   years: ProgramYearComparison[]
   /** Every year's findings, flattened in year order. */
   findings: CeoReportFinding[]
+  /** Documented exceptions that cleared a mismatching cell (#1429). */
+  exceptions: CeoReportException[]
 }
 
 /**
@@ -339,7 +435,8 @@ function computedValueFor(
 
 function compareOneYear(
   published: CeoReportFigures,
-  computed: ComputedProgramYearTotals | undefined
+  computed: ComputedProgramYearTotals | undefined,
+  exceptions: readonly CeoReportException[]
 ): ProgramYearComparison {
   const { programYear } = published
 
@@ -404,6 +501,29 @@ function compareOneYear(
     }
 
     const delta = computedValue - publishedValue
+    // A documented exception clears the cell only at its EXACT pinned
+    // value against the published one — no tolerance band (#1429, R1).
+    const exception =
+      delta === 0
+        ? undefined
+        : exceptions.find(
+            e =>
+              e.programYear === programYear &&
+              e.metric === metric &&
+              e.computed === computedValue &&
+              e.published === publishedValue
+          )
+    if (exception) {
+      metrics.push({
+        metric,
+        published: publishedValue,
+        computed: computedValue,
+        delta,
+        status: 'exception',
+        exception,
+      })
+      continue
+    }
     metrics.push({
       metric,
       published: publishedValue,
@@ -453,26 +573,36 @@ function compareOneYear(
  * the input.
  */
 export function compareToCeoReport(
-  computed: readonly ComputedProgramYearTotals[]
+  computed: readonly ComputedProgramYearTotals[],
+  exceptions: readonly CeoReportException[] = CEO_REPORT_DOCUMENTED_EXCEPTIONS
 ): CeoReportComparison {
   const byProgramYear = new Map(computed.map(c => [c.programYear, c]))
 
   const years = CEO_REPORT_FIGURES.map(published =>
-    compareOneYear(published, byProgramYear.get(published.programYear))
+    compareOneYear(
+      published,
+      byProgramYear.get(published.programYear),
+      exceptions
+    )
   )
   const findings = years.flatMap(year => year.findings)
+  const applied = years.flatMap(year =>
+    year.metrics.flatMap(m => (m.exception ? [m.exception] : []))
+  )
 
   return {
     ok: findings.length === 0,
     source: { url: CEO_REPORT_SOURCE_URL, reportDate: CEO_REPORT_REPORT_DATE },
     years,
     findings,
+    exceptions: applied,
   }
 }
 
 const STATUS_LABEL: Record<MetricStatus, string> = {
   match: 'match',
   mismatch: 'MISMATCH',
+  exception: 'EXCEPTION (documented)',
   missing: 'MISSING (not computed)',
   unpublished: 'UNPUBLISHED (not in report)',
   notApplicable: 'n/a',
@@ -532,7 +662,8 @@ export function formatComparisonTable(comparison: CeoReportComparison): string {
         `  ${pad(metric.metric, METRIC_WIDTH)} ` +
           `${padStart(num(metric.published), 10)} ` +
           `${padStart(num(metric.computed), 10)} ` +
-          `${padStart(signed(metric.delta), 8)}  ${STATUS_LABEL[metric.status]}`
+          `${padStart(signed(metric.delta), 8)}  ${STATUS_LABEL[metric.status]}` +
+          (metric.exception ? ` — ${metric.exception.evidence}` : '')
       )
     }
 
@@ -549,11 +680,17 @@ export function formatComparisonTable(comparison: CeoReportComparison): string {
 
   const mismatches = comparison.findings.filter(f => f.kind === 'mismatch')
   const noData = comparison.findings.filter(f => f.kind === 'noData')
+  const excepted = comparison.exceptions.length
+  const exceptionNote =
+    excepted > 0
+      ? ` (${excepted} documented exception(s) — see the cited evidence, #1429)`
+      : ''
   lines.push(
     comparison.ok
-      ? 'RESULT: every published figure reproduced.'
+      ? `RESULT: every published figure reproduced${exceptionNote}.`
       : `RESULT: ${comparison.findings.length} finding(s) — ` +
-          `${mismatches.length} mismatch(es), ${noData.length} year(s) with no data.`
+          `${mismatches.length} mismatch(es), ${noData.length} year(s) with no data` +
+          `${exceptionNote}.`
   )
 
   return lines.join('\n')

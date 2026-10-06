@@ -438,7 +438,9 @@ describe('formatComparisonTable', () => {
       c.programYear === '2024-2025' ? bumpMetric(c, 'paidClubs') : c
     )
 
-    const table = formatComparisonTable(compareToCeoReport(short))
+    // No exceptions: 2024-25 paid +1 (13,834) is exactly a documented
+    // exception cell (#1429), and this test is about rendering a mismatch.
+    const table = formatComparisonTable(compareToCeoReport(short, []))
 
     expect(table).toMatch(/2021-2022.*no data/s)
     expect(table).toContain('MISMATCH')
