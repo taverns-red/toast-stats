@@ -238,6 +238,24 @@ function readCount(
   return { count: row.newCharteredClubs }
 }
 
+/**
+ * The availability set: the union of every date in the district snapshot
+ * index. A dated rankings file is global (all districts in one file), so its
+ * existence is not a per-district fact. Shared with `useClubGrowthRecipients`
+ * (#1537) so the district card and the worldwide list plan from one set.
+ */
+export function availableSnapshotDates(
+  index: Record<string, readonly string[] | undefined>
+): SnapshotDate[] {
+  const union = new Set<string>()
+  for (const dates of Object.values(index)) {
+    for (const date of dates ?? []) union.add(date)
+  }
+  // Minted from the pipeline's own enumeration of what it wrote — the
+  // provenance the SnapshotDate brand claims.
+  return snapshotDatesFrom({ dates: [...union] })
+}
+
 export function useClubGrowthMilestones(
   districtId: string | undefined,
   programYear: ProgramYear
@@ -247,25 +265,16 @@ export function useClubGrowthMilestones(
     [programYear]
   )
 
-  // The availability set: the union of every date in the district snapshot
-  // index. A dated rankings file is global (all districts in one file), so its
-  // existence is not a per-district fact.
   const indexQuery = useQuery({
     queryKey: snapshotIndexQueryKey,
     queryFn: fetchCdnSnapshotIndex,
     staleTime: 60 * 60 * 1000,
   })
 
-  const availableDates = useMemo(() => {
-    if (!indexQuery.data) return null
-    const union = new Set<string>()
-    for (const dates of Object.values(indexQuery.data)) {
-      for (const date of dates ?? []) union.add(date)
-    }
-    // Minted from the pipeline's own enumeration of what it wrote — the
-    // provenance the SnapshotDate brand claims.
-    return snapshotDatesFrom({ dates: [...union] })
-  }, [indexQuery.data])
+  const availableDates = useMemo(
+    () => (indexQuery.data ? availableSnapshotDates(indexQuery.data) : null),
+    [indexQuery.data]
+  )
 
   const plans = useMemo(
     () =>

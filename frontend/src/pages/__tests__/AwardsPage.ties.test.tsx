@@ -16,6 +16,9 @@ import type {
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn().mockResolvedValue({ dates: [], count: 0 }),
+  // Club Growth recipients (#1537) read the snapshot index + checkpoint files.
+  fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({}),
+  fetchCdnRankingsForDateExact: vi.fn().mockResolvedValue(null),
 }))
 
 vi.mock('../../hooks/useLatestAsOfDate', () => ({

@@ -65,6 +65,9 @@ vi.mock('../../services/cdn', () => {
       .fn()
       .mockResolvedValue({ latestSnapshotDate: '2026-08-01' }),
     fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(standings),
+    // Club Growth recipients (#1537) read the snapshot index + checkpoint files.
+    fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({}),
+    fetchCdnRankingsForDateExact: vi.fn().mockResolvedValue(null),
   }
 })
 
