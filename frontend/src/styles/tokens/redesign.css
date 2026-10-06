@@ -35,6 +35,9 @@
 
   --green-500: #16a34a;
   --green-600: #15803d;
+  /* #1660: green ink for text on a tinted surface, where --green-600 misses
+     AA (4.27:1 on --loyal-50). 6.4:1 there. */
+  --green-700: #166534;
   --red-500: #dc2626;
   --red-600: #b91c1c;
 
@@ -168,6 +171,7 @@
      drop below 4.5:1 contrast on --surface in dark. */
   --green-500: #4ade80;
   --green-600: #22c55e;
+  --green-700: #86efac; /* #1660 — matches the dark .text-green-700 remap */
   --red-500: #f87171;
   --red-600: #ef4444;
   /* #1360: on the dark surfaces the bright gold is already the accessible

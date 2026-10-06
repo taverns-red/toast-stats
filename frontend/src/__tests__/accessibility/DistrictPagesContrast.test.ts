@@ -77,7 +77,8 @@ function resolveColor(value: string, theme: Theme): string {
   const v = value.replace(/!important/, '').trim()
   const ref = /^var\((--[\w-]+)\)$/.exec(v)
   if (ref) {
-    const t = theme.get(ref[1]!)
+    // [data-theme='dark'] inherits every token it doesn't redeclare.
+    const t = theme.get(ref[1]!) ?? light.get(ref[1]!)
     if (!t) throw new Error(`token ${ref[1]} not defined`)
     return resolveColor(t, theme)
   }

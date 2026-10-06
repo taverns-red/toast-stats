@@ -62,7 +62,7 @@ function DateChipSelect<T extends string>({
       data-testid={testId}
       className={`${CHIP_BASE} relative cursor-pointer hover:bg-gray-50 theme-dark:hover:bg-gray-700 focus-within:ring-2 focus-within:ring-tm-loyal-blue focus-within:ring-offset-1`}
     >
-      <span className="text-gray-400 theme-dark:text-gray-500">{label}</span>
+      <span className="text-gray-500">{label}</span>
       <span>{value ? formatDisplayDate(value) : '—'}</span>
       <span aria-hidden="true" className="text-gray-400">
         ▾

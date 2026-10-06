@@ -30,29 +30,16 @@ const ChangeIndicator: React.FC<ChangeIndicatorProps> = ({
   const isDeclined = change < 0
   const isUnchanged = change === 0
 
+  // Colours live in CSS (.rank-change-chip--*, app-shell.css) so each theme
+  // can remap them (#1660); inline styles could not, and missed AA.
   const getIndicatorStyles = () => {
     if (isImproved) {
-      return {
-        bgStyle: { backgroundColor: 'var(--loyal-50)' },
-        textStyle: { color: 'var(--green-600)' },
-        icon: '↑',
-        label: 'improved',
-      }
+      return { kind: 'improved', icon: '↑', label: 'improved' }
     }
     if (isDeclined) {
-      return {
-        bgStyle: { backgroundColor: 'rgba(220, 38, 38, 0.08)' },
-        textStyle: { color: 'var(--red-600)' },
-        icon: '↓',
-        label: 'declined',
-      }
+      return { kind: 'declined', icon: '↓', label: 'declined' }
     }
-    return {
-      bgStyle: { backgroundColor: 'var(--surface-3)' },
-      textStyle: { color: 'var(--ink-3)' },
-      icon: '→',
-      label: 'unchanged',
-    }
+    return { kind: 'unchanged', icon: '→', label: 'unchanged' }
   }
 
   const styles = getIndicatorStyles()
@@ -60,8 +47,7 @@ const ChangeIndicator: React.FC<ChangeIndicatorProps> = ({
 
   return (
     <span
-      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium"
-      style={{ ...styles.bgStyle, ...styles.textStyle }}
+      className={`rank-change-chip--${styles.kind} inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium`}
       role="status"
       aria-label={`${metricLabel} ${styles.label}${!isUnchanged ? ` by ${absoluteChange} position${absoluteChange !== 1 ? 's' : ''}` : ''}`}
     >

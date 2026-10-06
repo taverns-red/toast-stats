@@ -98,7 +98,10 @@ export const DivisionPerformanceCard: React.FC<
 
       {/* Area Performance Table - displays detailed area metrics */}
       <div className="p-6">
-        <AreaPerformanceTable areas={division.areas} />
+        <AreaPerformanceTable
+          areas={division.areas}
+          label={`Division ${division.divisionId} area performance`}
+        />
       </div>
     </Card>
   )

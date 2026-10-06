@@ -274,6 +274,21 @@ describe('AreaPerformanceTable', () => {
       expect(wrapper.getAttribute('aria-label')).toMatch(/area performance/i)
     })
 
+    // Several tables render on the Divisions page; each region needs its own
+    // name (axe landmark-unique).
+    it('names the scroll region from the label prop', () => {
+      const { container } = render(
+        <AreaPerformanceTable
+          areas={[mockArea1]}
+          label="Division A area performance"
+        />
+      )
+
+      expect(
+        container.querySelector('.overflow-x-auto')!.getAttribute('aria-label')
+      ).toMatch(/^Division A area performance/)
+    })
+
     it('should maintain table structure for screen readers', () => {
       const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
 

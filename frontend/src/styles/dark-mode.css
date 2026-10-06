@@ -365,8 +365,12 @@
    Dark text-on-color → light text-on-color
    ═══════════════════════════════════════════ */
 
+/* #1660: -900 joins the group (as #610 did for yellow/blue) — Trends "Net
+   Change" / "Overall Decline" values sat at Tailwind #7f1d1d on the dark red
+   tint. */
 [data-theme='dark'] .text-red-700,
-[data-theme='dark'] .text-red-800 {
+[data-theme='dark'] .text-red-800,
+[data-theme='dark'] .text-red-900 {
   color: #fca5a5 !important;
 }
 
@@ -388,8 +392,11 @@
   color: #fbbf24 !important;
 }
 
+/* #1660: -900 joins the group — Trends "Overall Improvement" kept #14532d on
+   the dark green tint (1.65:1). */
 [data-theme='dark'] .text-green-700,
-[data-theme='dark'] .text-green-800 {
+[data-theme='dark'] .text-green-800,
+[data-theme='dark'] .text-green-900 {
   color: #86efac !important;
 }
 
@@ -1005,6 +1012,41 @@
 
 [data-theme='light'] .composition-fill--not-yet {
   color: var(--ink-2) !important;
+}
+
+/* ─── District-page contrast pairings (#1660) ───────────────────────────
+   Each pair below is a foreground whose surface remaps (or doesn't) without
+   it — Lesson 94: fg and bg must remap together. */
+
+/* "Limited data" banner (DistrictDetailPage): the gold callout stays a light
+   fill in dark, so its text must stay dark — the #609 chip fix, extended to
+   the banner's descendants (was #f0ecf5 / #9b95a5 on gold, 1.72 / 1.44:1). */
+[data-theme='dark'] .bg-tm-happy-yellow .text-tm-black,
+[data-theme='dark'] .bg-tm-happy-yellow .text-gray-600 {
+  color: #111827 !important;
+}
+
+/* Smedley/Select club badges (TopGrowthClubs, ClubPerformanceTable): dark
+   true-maroon on the happy-yellow-30 tint is 4.07:1. Light ink is 9.13:1. */
+[data-theme='dark'] .bg-tm-happy-yellow-30.text-tm-true-maroon {
+  color: var(--ink) !important;
+}
+
+/* Trends deltas: Tailwind red-600 on red-50 is 4.41:1 in light. The theme's
+   own --red-600 is the AA red (5.91:1 there). */
+[data-theme='light'] .bg-red-50 .text-red-600 {
+  color: var(--red-600);
+}
+
+/* Division progress panel (DivisionAreaProgressSummary): `/10` compiles to an
+   oklab() color-mix that axe cannot resolve (contrast NaN), and in dark the
+   10% navy is invisible. An explicit rgba per theme fixes both. */
+[data-theme='light'] .bg-tm-loyal-blue\/10 {
+  background-color: rgba(0, 65, 101, 0.1);
+}
+
+[data-theme='dark'] .bg-tm-loyal-blue\/10 {
+  background-color: rgba(93, 173, 226, 0.1) !important;
 }
 
 /* ─── Transition for Theme Switch ─── */
