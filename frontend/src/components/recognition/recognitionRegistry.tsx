@@ -11,6 +11,12 @@
  *     (Distinguished < Select < President's < Smedley), so they share one
  *     rosette glyph and differentiate by colour + label. Smedley keeps the
  *     rare-tier gold ring from #546.
+ *   - the **threshold achievements** (#1537) — the District Club Growth
+ *     Achievement, TI's PY 2026-27 charter milestones. Neither competitive
+ *     (any number of districts can earn it; there is no race leader) nor a
+ *     rung of the Distinguished ladder, so it is its own family with its own
+ *     glyph. It also carries a legacy-chrome accent (`--tm-loyal-blue`), not a
+ *     `--rt-*` one: new UI stays on the legacy tokens until Phase 2 (ops#37).
  *
  * Before this module the same vocabulary was described three times, in three
  * places that could drift: `AWARD_CARDS` in `AwardsRaceSection`, `TIER_CONFIG`
@@ -30,6 +36,10 @@ import type {
   CompetitiveAwardStandings,
   DistinguishedDistrictTier,
 } from '../../services/cdn'
+import {
+  CLUB_GROWTH_ACHIEVEMENT_FIRST_PROGRAM_YEAR,
+  clubGrowthCheckpoints,
+} from '../../utils/clubGrowthAchievement'
 
 export type RecognitionIconProps = { className?: string }
 export type RecognitionIcon = React.FC<RecognitionIconProps>
@@ -39,7 +49,9 @@ export type TierRecognitionId = Exclude<
   DistinguishedDistrictTier,
   'NotDistinguished' | 'Unknown'
 >
-export type RecognitionId = AwardRecognitionId | TierRecognitionId
+export type AchievementRecognitionId = 'clubGrowth'
+export type RecognitionId =
+  AwardRecognitionId | TierRecognitionId | AchievementRecognitionId
 
 /**
  * Keys on `CompetitiveAwardsByDistrict` that flag a winner. Derived from the
@@ -95,7 +107,17 @@ export interface TierRecognition extends RecognitionBase {
   rare?: boolean
 }
 
-export type RecognitionItem = AwardRecognition | TierRecognition
+export interface AchievementRecognition extends RecognitionBase {
+  kind: 'achievement'
+  id: AchievementRecognitionId
+  /** First program year the achievement exists (forward-only, #1473 A1/A5). */
+  firstProgramYear: string
+  /** Where the rule and our readings of it are documented. */
+  methodologyHref: string
+}
+
+export type RecognitionItem =
+  AwardRecognition | TierRecognition | AchievementRecognition
 
 /* ── Glyphs ───────────────────────────────────────────────────────────────
    16x16, stroke-only, `currentColor` so the accent is applied by CSS. Each
@@ -179,6 +201,29 @@ export const RosetteIcon: RecognitionIcon = ({ className }) => (
     <circle cx="8" cy="6" r="4.2" />
     <path d="M8 3.9 8.7 5.3l1.5.2-1.1 1.1.26 1.5L8 7.4l-1.36.7.26-1.5-1.1-1.1 1.5-.2z" />
     <path d="M5.6 9.7 4.3 14.2l3.7-1.9 3.7 1.9-1.3-4.5" />
+  </svg>
+)
+
+/**
+ * Club Growth Achievement — a pennant on a pole: a milestone reached. Not an
+ * arrow (Extension already owns "growth") and not the rosette (it is not a
+ * Distinguished rung).
+ */
+export const MilestoneFlagIcon: RecognitionIcon = ({ className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="M4 14.2V1.8" />
+    <path d="M4 2.6h8.4l-2.2 2.7 2.2 2.7H4" />
+    <path d="M2 14.2h5" />
   </svg>
 )
 
@@ -275,10 +320,49 @@ export const TIER_RECOGNITION: readonly TierRecognition[] = [
   },
 ]
 
-/** Awards first, then the tier ladder in ordinal order. */
+/** `[3, 5]` → `"3 or 5"`, `[3, 5, 10]` → `"3, 5 or 10"`. */
+const milestoneList = (milestones: readonly number[]): string =>
+  milestones.length <= 1
+    ? milestones.join('')
+    : `${milestones.slice(0, -1).join(', ')} or ${milestones[milestones.length - 1]}`
+
+/**
+ * The description is BUILT from the predicate's own checkpoints (#1474), so
+ * the legend and the verdict cannot disagree about the thresholds. The
+ * milestones are TI's, quoted in `docs/toastmasters-rules-reference.md` §13.7.
+ */
+const clubGrowthDescription = (): string => {
+  const [sep, mar] = clubGrowthCheckpoints(
+    CLUB_GROWTH_ACHIEVEMENT_FIRST_PROGRAM_YEAR
+  )!
+  return (
+    `Chartered ${milestoneList(sep!.milestones)} new clubs by September 30, ` +
+    `or ${milestoneList(mar!.milestones)} by March 31 — ` +
+    `from ${CLUB_GROWTH_ACHIEVEMENT_FIRST_PROGRAM_YEAR}.`
+  )
+}
+
+export const CLUB_GROWTH_RECOGNITION: AchievementRecognition = {
+  kind: 'achievement',
+  id: 'clubGrowth',
+  title: 'District Club Growth Achievement',
+  shortLabel: 'Club Growth',
+  description: clubGrowthDescription(),
+  Icon: MilestoneFlagIcon,
+  accentVar: '--recognition-club-growth',
+  firstProgramYear: CLUB_GROWTH_ACHIEVEMENT_FIRST_PROGRAM_YEAR,
+  methodologyHref: '/methodology#py-2026-2027-district-club-growth-achievement',
+}
+
+export const ACHIEVEMENT_RECOGNITION: readonly AchievementRecognition[] = [
+  CLUB_GROWTH_RECOGNITION,
+]
+
+/** Awards first, then the tier ladder in ordinal order, then achievements. */
 export const RECOGNITION_ITEMS: readonly RecognitionItem[] = [
   ...AWARD_RECOGNITION,
   ...TIER_RECOGNITION,
+  ...ACHIEVEMENT_RECOGNITION,
 ]
 
 /**

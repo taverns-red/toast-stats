@@ -117,6 +117,9 @@
   --recognition-select: var(--rt-ink-2); /* 10.89:1 */
   --recognition-presidents: var(--rt-stats-focus); /* 4.23:1 */
   --recognition-smedley: var(--rt-eval); /* 5.31:1 */
+  /* Club Growth Achievement (#1537): a LEGACY chrome token, not --rt-*, until
+     the Phase 2 chrome migration (ops#37). TM Loyal Blue, 10.9:1. */
+  --recognition-club-growth: var(--tm-loyal-blue);
 
   /* ── Tier chart fills (#1636) ──────────────────────────────────────────
      The four Distinguished tiers as chart FILLS — the /clubs race chart
@@ -199,6 +202,8 @@
   --recognition-select: var(--rt-ink-3); /* 4.81:1 */
   --recognition-presidents: var(--rt-stats); /* 5.81:1 */
   --recognition-smedley: var(--rt-eval); /* 3.06:1 */
+  /* dark-mode.css remaps --tm-loyal-blue to #5dade2 on this same scope. */
+  --recognition-club-growth: var(--tm-loyal-blue);
 
   /* ── Tier chart fills (#1636), dark ────────────────────────────────────
      The light hexes are tuned for white: President's #004165 and Smedley

@@ -48,6 +48,7 @@ import {
   type ClubGrowthCheckpointState,
 } from '../utils/clubGrowthAchievement'
 import type { ClubGrowthCheckpoint as ClubGrowthCheckpointRead } from '../hooks/useClubGrowthMilestones'
+import { CLUB_GROWTH_RECOGNITION } from './recognition/recognitionRegistry'
 
 /** The rule-change log entry that documents this achievement (#1400 / #1474). */
 const METHODOLOGY_HREF =
@@ -72,6 +73,27 @@ export interface ClubGrowthAchievementCardProps {
    * `null`/`undefined` means "not available", never "chartered nothing".
    */
   toDateCount?: number | null
+}
+
+/**
+ * The achievement's registry glyph (#1537) — the same mark the Awards page and
+ * the rankings table use, so a reader learns one symbol. Decorative: the
+ * heading text already names the achievement. Rendered identically in the
+ * skeleton and the loaded card, so the heading line is the same height in
+ * both and the swap cannot shift anything.
+ */
+const AchievementGlyph: React.FC = () => {
+  const { Icon, id, accentVar } = CLUB_GROWTH_RECOGNITION
+  return (
+    <span
+      aria-hidden="true"
+      data-recognition={id}
+      className="mr-1.5 inline-flex h-4 w-4 align-[-0.125em]"
+      style={{ color: `var(${accentVar})` }}
+    >
+      <Icon className="h-4 w-4" />
+    </span>
+  )
 }
 
 /* ── Small pure helpers ──────────────────────────────────────────────────── */
@@ -406,6 +428,7 @@ const ClubGrowthAchievementCardSkeleton: React.FC<{
     <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
       <div>
         <h2 className="text-lg font-bold text-gray-900 font-tm-headline">
+          <AchievementGlyph />
           Club Growth Achievement
         </h2>
         <p className="mt-0.5 text-xs uppercase tracking-wide text-gray-500 font-tm-body">
@@ -528,6 +551,7 @@ export const ClubGrowthAchievementCard: React.FC<
             id="club-growth-achievement-title"
             className="text-lg font-bold text-gray-900 font-tm-headline"
           >
+            <AchievementGlyph />
             Club Growth Achievement
           </h2>
           <p className="mt-0.5 text-xs uppercase tracking-wide text-gray-500 font-tm-body">

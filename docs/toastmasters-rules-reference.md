@@ -500,7 +500,7 @@ A twelfth district award type, announced by Toastmasters International in August
 
 **Checkpoint semantics.** A checkpoint verdict is read from **that date's own rankings snapshot**, never recomputed from current data. A district's charter count can **fall** mid-year without any charter being revoked: the global total across all districts is strictly monotonic (measured over PY 2025-26: 81 → 638, never decreasing), while individual districts decrease when a club chartered this year **moves between districts** and its charter credit follows it. Recomputing from today's numbers would let an April transfer erase a September 30 achievement.
 
-**Implementation:** `frontend/src/utils/clubGrowthAchievement.ts` (#1474).
+**Implementation:** `frontend/src/utils/clubGrowthAchievement.ts` (#1474). Registry entry `CLUB_GROWTH_RECOGNITION` in `frontend/src/components/recognition/recognitionRegistry.tsx` (#1537).
 
 ---
 
