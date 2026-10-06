@@ -975,6 +975,38 @@
   color: var(--tier-chart-ink) !important;
 }
 
+/* ─── Tier chart fills: District composition bar, light (#1652) ───
+   Light mode kept the generic Tailwind fills under white 11px counts, and
+   Distinguished (`.bg-green-600` #16a34a, 3.30:1) and the neutral "Not yet"
+   (`.bg-gray-200` #e5e7eb, 1.23:1) miss AA 4.5:1. Light now binds the same
+   `.tier-fill--*` hooks to the --tier-chart-* tokens as dark does above (their
+   light values are the club grid hexes, each >=5:1 under white ink), so a
+   tier reads one colour on the bar, the race chart and the grid. "Not yet"
+   is not a tier: its own hook takes dark ink (#344052 on #e5e7eb, 8.9:1). */
+[data-theme='light'] .tier-fill--distinguished {
+  background-color: var(--tier-chart-distinguished) !important;
+  color: var(--tier-chart-ink) !important;
+}
+
+[data-theme='light'] .tier-fill--select {
+  background-color: var(--tier-chart-select) !important;
+  color: var(--tier-chart-ink) !important;
+}
+
+[data-theme='light'] .tier-fill--presidents {
+  background-color: var(--tier-chart-presidents) !important;
+  color: var(--tier-chart-ink) !important;
+}
+
+[data-theme='light'] .tier-fill--smedley {
+  background-color: var(--tier-chart-smedley) !important;
+  color: var(--tier-chart-ink) !important;
+}
+
+[data-theme='light'] .composition-fill--not-yet {
+  color: var(--ink-2) !important;
+}
+
 /* ─── Transition for Theme Switch ─── */
 
 html[data-theme] body {

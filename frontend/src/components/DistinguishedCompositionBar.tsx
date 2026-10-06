@@ -70,6 +70,7 @@ const DistinguishedCompositionBar: React.FC<
     },
     {
       key: 'notYet',
+      tierClassName: 'composition-fill--not-yet',
       label: 'Not yet',
       count: notYet,
       bgClassName: 'bg-gray-200',
