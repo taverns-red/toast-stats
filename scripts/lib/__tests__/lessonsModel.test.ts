@@ -99,14 +99,14 @@ describe('Lessons follow the Red Barkeep model (#1273)', () => {
     // The newest-lesson pick pipes the whole corpus through `sort -r` into a
     // consumer that wants one line. Under `set -o pipefail`, a consumer that
     // exits early (`head -1`) SIGPIPEs sort once its output exceeds the pipe
-    // buffer (64 KiB) and the script dies with 141. ~200 KiB of sort output
-    // makes that deterministic rather than a timing race.
+    // buffer (64 KiB) and the script dies with 141. ~150 KiB of sort output
+    // (600 long names) makes that deterministic rather than a timing race.
     const dir = mkdtempSync(path.join(os.tmpdir(), 'ts-lessons-1667-'))
     try {
       mkdirSync(path.join(dir, 'lessons'))
       writeFileSync(path.join(dir, 'INDEX.md'), '# index\n')
-      const pad = 'a'.repeat(120)
-      for (let i = 1; i <= 1500; i++) {
+      const pad = 'a'.repeat(220)
+      for (let i = 1; i <= 600; i++) {
         const day = String((i % 28) + 1).padStart(2, '0')
         writeFileSync(
           path.join(
@@ -133,7 +133,7 @@ describe('Lessons follow the Red Barkeep model (#1273)', () => {
         path.join(dir, 'INDEX.md'),
         // Newest date is 2026-01-28 (i % 28 === 27); sort -r on the whole
         // "date<TAB>path" line breaks the tie by the greatest path.
-        path.join(dir, 'lessons', `lesson-1483-${pad}.md`),
+        path.join(dir, 'lessons', `lesson-0587-${pad}.md`),
       ])
     } finally {
       rmSync(dir, { recursive: true, force: true })
