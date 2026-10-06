@@ -262,6 +262,18 @@ describe('AreaPerformanceTable', () => {
       expect(table).toBeInTheDocument()
     })
 
+    // #1660 — axe scrollable-region-focusable: a scroll container with no
+    // focusable content must itself be keyboard-reachable (WCAG 2.1.1), as
+    // RegionsLeaderboard's (#689) is.
+    it('makes the horizontal scroll region keyboard-focusable and named', () => {
+      const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
+
+      const wrapper = container.querySelector('.overflow-x-auto')!
+      expect(wrapper).toHaveAttribute('tabindex', '0')
+      expect(wrapper).toHaveAttribute('role', 'region')
+      expect(wrapper.getAttribute('aria-label')).toMatch(/area performance/i)
+    })
+
     it('should maintain table structure for screen readers', () => {
       const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
 

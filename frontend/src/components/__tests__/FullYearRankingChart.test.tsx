@@ -17,8 +17,19 @@ import type { ProgramYear } from '../../utils/programYear'
 
 // Mock recharts to avoid rendering issues in tests
 vi.mock('recharts', () => ({
-  LineChart: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="line-chart">{children}</div>
+  LineChart: ({
+    children,
+    accessibilityLayer,
+  }: {
+    children: React.ReactNode
+    accessibilityLayer?: boolean
+  }) => (
+    <div
+      data-testid="line-chart"
+      data-accessibility-layer={String(accessibilityLayer)}
+    >
+      {children}
+    </div>
   ),
   Line: () => <div data-testid="chart-line" />,
   XAxis: () => <div data-testid="x-axis" />,
@@ -161,6 +172,19 @@ describe('FullYearRankingChart', () => {
 
       expect(screen.getByTestId('line-chart')).toBeInTheDocument()
       expect(screen.getByTestId('chart-line')).toBeInTheDocument()
+    })
+
+    // #1660 — the chart SVG is aria-hidden (the wrapper is role="img" with a
+    // text description), but Recharts' default accessibilityLayer puts
+    // tabindex=0 on it: a focusable element inside aria-hidden (axe
+    // aria-hidden-focus). The layer must be off.
+    it('keeps the aria-hidden chart out of the tab order', () => {
+      renderWithProviders(<FullYearRankingChart {...baseProps} />)
+
+      expect(screen.getByTestId('line-chart')).toHaveAttribute(
+        'data-accessibility-layer',
+        'false'
+      )
     })
 
     it('displays program year information', () => {
