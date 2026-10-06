@@ -5,8 +5,15 @@
  * shell loader. Replaces the retired custom TS lessons subsystem.
  */
 import { describe, it, expect } from 'vitest'
-import { execFileSync } from 'node:child_process'
-import { readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  rmSync,
+} from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
@@ -85,6 +92,51 @@ describe('Lessons follow the Red Barkeep model (#1273)', () => {
       expect(lessonLines).toHaveLength(1)
     } finally {
       rmSync(bodyFile, { force: true })
+    }
+  })
+
+  it('relevant-lessons.sh survives a corpus larger than the pipe buffer (#1667)', () => {
+    // The newest-lesson pick pipes the whole corpus through `sort -r` into a
+    // consumer that wants one line. Under `set -o pipefail`, a consumer that
+    // exits early (`head -1`) SIGPIPEs sort once its output exceeds the pipe
+    // buffer (64 KiB) and the script dies with 141. ~150 KiB of sort output
+    // (600 long names) makes that deterministic rather than a timing race.
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'ts-lessons-1667-'))
+    try {
+      mkdirSync(path.join(dir, 'lessons'))
+      writeFileSync(path.join(dir, 'INDEX.md'), '# index\n')
+      const pad = 'a'.repeat(220)
+      for (let i = 1; i <= 600; i++) {
+        const day = String((i % 28) + 1).padStart(2, '0')
+        writeFileSync(
+          path.join(
+            dir,
+            'lessons',
+            `lesson-${String(i).padStart(4, '0')}-${pad}.md`
+          ),
+          `---\ndate: 2026-01-${day}\ntier: lesson\nsummary: x\n---\n`
+        )
+      }
+      const bodyFile = path.join(dir, 'body.txt')
+      writeFileSync(bodyFile, 'chore: no manifest\n')
+      const res = spawnSync(
+        'bash',
+        [path.join(ROOT, 'scripts/relevant-lessons.sh'), '999'],
+        {
+          cwd: ROOT,
+          encoding: 'utf8',
+          env: { ...process.env, LESSONS_DIR: dir, ISSUE_BODY_FILE: bodyFile },
+        }
+      )
+      expect(res.status, res.stderr).toBe(0)
+      expect(res.stdout.trim().split('\n')).toEqual([
+        path.join(dir, 'INDEX.md'),
+        // Newest date is 2026-01-28 (i % 28 === 27); sort -r on the whole
+        // "date<TAB>path" line breaks the tie by the greatest path.
+        path.join(dir, 'lessons', `lesson-0587-${pad}.md`),
+      ])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
     }
   })
 })

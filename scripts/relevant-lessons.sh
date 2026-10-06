@@ -95,10 +95,13 @@ if [[ -d "$LESSONS_DIR/lessons" ]]; then
     # Large corpus: hand the session the catalog to judge from...
     [[ -f "$LESSONS_DIR/INDEX.md" ]] && emit "$LESSONS_DIR/INDEX.md"
     # ...plus the single newest lesson by frontmatter date (awareness floor).
+    # The consumer must drain sort's output: `head -1` exits early, and once
+    # sort's output outgrows the pipe buffer, pipefail turns its SIGPIPE into
+    # exit 141 (#1667). awk reads to EOF, so real sort failures still surface.
     newest="$(while IFS= read -r f; do
                 [[ -n "$f" ]] && printf '%s\t%s\n' "$(fm "$f" date)" "$f"
               done < <(find "$LESSONS_DIR/lessons" -maxdepth 1 -name '*.md') \
-              | sort -r | head -1 | cut -f2-)"
+              | sort -r | awk 'NR==1{sub(/^[^\t]*\t/, ""); print}')"
     [[ -n "$newest" ]] && emit "$newest"
   fi
 fi

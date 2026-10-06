@@ -25,7 +25,7 @@ else
   SNAPSHOT_DATE=$(gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" \
     | grep -oP '\d{4}-\d{2}-\d{2}' \
     | sort -r \
-    | head -1)
+    | awk 'NR==1')  # drain input: head -1 can SIGPIPE sort under pipefail (#1667)
 fi
 
 echo "=== YoY Backfill ==="
