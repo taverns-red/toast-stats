@@ -110,7 +110,7 @@ A sprint issue body **SHOULD** include a `## Relevant lessons` section naming th
 - [Lesson 092](tasks/lessons/092-workspace-package-dist-is-gitignored-and-not-auto-rebuilt.md) — rebuild workspace dist before tests
 ```
 
-Only the strict `- [text](path)` (or `* [text](path)`) bullet form is recognized — a colon separator or a space before `(` is silently skipped. Validate a manifest with `scripts/relevant-lessons.sh <issue#>` (or `--stdin`): it prints each resolved path and exits non-zero if a listed lesson file is missing.
+Only the strict `- [text](path)` (or `* [text](path)`) bullet form is recognized — a colon separator or a space before `(` is silently skipped. Validate a manifest with `scripts/relevant-lessons.sh <issue#>`: it fetches the issue via `gh`, prints each resolved path, and exits 3 if a listed lesson file is missing. To check a draft body offline, set `ISSUE_BODY_FILE` (the issue-number argument is still required): `ISSUE_BODY_FILE=draft.md scripts/relevant-lessons.sh 0`. There is no `--stdin` flag.
 
 ## Key Conventions
 
