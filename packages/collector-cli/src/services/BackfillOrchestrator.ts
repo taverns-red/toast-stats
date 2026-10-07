@@ -41,6 +41,7 @@ import {
   resolveExportPathStyle,
   verifyBackfillCsv,
 } from '../utils/backfillContentGuard.js'
+import { NonCsvBodyError } from '../utils/csvBodyGuard.js'
 import { ExitCode } from '../types/index.js'
 
 // ── Storage Abstraction ──────────────────────────────────────────────
@@ -571,13 +572,16 @@ export class BackfillOrchestrator {
    * whether it may be stored (#1384).
    *
    * A mismatch throws: it means the dashboard gave us a different period than
-   * we asked for, and writing it would put wrong data under a real date.
+   * we asked for, and writing it would put wrong data under a real date. A
+   * body that is not a CSV (TI's HTML error page served with a 200) throws
+   * too, so it is counted as an error and never written (#1671).
    */
   private acceptDownload(args: {
     content: string
     programYear: string
     date: Date
     pathStyle: ExportPathStyle
+    reportType: ReportType
     url: string
     context: Record<string, unknown>
   }): 'store' | 'skip' {
@@ -587,7 +591,14 @@ export class BackfillOrchestrator {
       programYear: args.programYear,
       date: dateStr,
       pathStyle: args.pathStyle,
+      reportType: args.reportType,
     })
+
+    if (verdict.status === 'invalid') {
+      throw new NonCsvBodyError(
+        `Refusing to ingest ${args.url}: ${verdict.reason} (#1671)`
+      )
+    }
 
     if (verdict.status === 'mismatch') {
       throw new BackfillContentMismatchError(
@@ -743,6 +754,7 @@ export class BackfillOrchestrator {
             programYear: year,
             date,
             pathStyle,
+            reportType: 'districtsummary',
             url: result.url,
             context: { phase: 1, year },
           })
@@ -908,6 +920,7 @@ export class BackfillOrchestrator {
                 programYear: year,
                 date,
                 pathStyle,
+                reportType,
                 url: result.url,
                 context: { phase: 2, year, districtId, reportType },
               })

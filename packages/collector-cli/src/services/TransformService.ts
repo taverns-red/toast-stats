@@ -18,6 +18,7 @@ import * as path from 'node:path'
 import { parse } from 'csv-parse/sync'
 import { parseClosingPeriodFromCsv } from '../utils/csvFooterParser.js'
 import { validateDistrictId } from '../utils/validateDistrictId.js'
+import { validateCsvBody } from '../utils/csvBodyGuard.js'
 import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
 import {
   resolveClosingWindow,
@@ -1179,12 +1180,18 @@ export class TransformService {
   }
 
   /**
-   * Load raw CSV data for a district
+   * Load raw CSV data for a district.
+   *
+   * @returns the parsed data; `null` when the district has no raw directory
+   *          (a failure); or `{ gap }` when the directory exists but its
+   *          club-performance report is unusable. A gap is reported as a
+   *          skipped district through the single results[] path, never as a
+   *          district with zero or garbage clubs (#199, #1671).
    */
   private async loadRawCSVData(
     date: string,
     districtId: string
-  ): Promise<RawCSVData | null | 'corrupt'> {
+  ): Promise<RawCSVData | null | { gap: string }> {
     const districtDir = path.join(
       this.getRawCsvDir(date),
       `district-${districtId}`
@@ -1217,14 +1224,47 @@ export class TransformService {
     const divisionContent = await this.readCSVFile(divisionPerformancePath)
     const districtContent = await this.readCSVFile(districtPerformancePath)
 
-    // At minimum, we need club performance data
+    // At minimum, we need club performance data. With nothing at all in the
+    // directory the district was never fetched: a failure, as before. When its
+    // other reports are present, the club report alone is missing, which is a
+    // gap in the source (e.g. the downloader refused TI's HTML error page,
+    // #1671), not a district with zero clubs.
+    if (!clubContent && !divisionContent && !districtContent) {
+      this.logger.warn('No raw CSVs for district', {
+        date,
+        districtId,
+        path: districtDir,
+      })
+      return null
+    }
     if (!clubContent) {
-      this.logger.warn('Club performance CSV not found', {
+      this.logger.warn('Club performance CSV not found — skipping district', {
         date,
         districtId,
         path: clubPerformancePath,
       })
-      return null
+      return {
+        gap: `Skipped: no club-performance.csv for district ${districtId} on ${date} — a gap in the source, not zero clubs (#1671)`,
+      }
+    }
+
+    // A 200 is not proof of a CSV (#1671): TI's HTML error page was stored as
+    // raw-csv before the downloader checked bodies.
+    const body = validateCsvBody(clubContent, 'clubperformance')
+    if (!body.ok) {
+      this.logger.warn(
+        'club-performance.csv is not a CSV — skipping district',
+        {
+          date,
+          districtId,
+          path: clubPerformancePath,
+          reason: body.reason,
+          fileSize: clubContent.length,
+        }
+      )
+      return {
+        gap: `Skipped: club-performance.csv for district ${districtId} on ${date} is not a CSV (${body.reason}) — a gap, not zero clubs (#1671)`,
+      }
     }
 
     // Validate CSV content (#199): detect corrupt files with 0 data rows
@@ -1237,7 +1277,9 @@ export class TransformService {
         reason: validation.reason,
         fileSize: clubContent.length,
       })
-      return 'corrupt'
+      return {
+        gap: `Skipped: corrupt club-performance.csv for district ${districtId} on ${date}`,
+      }
     }
 
     const rawData: RawCSVData = {
@@ -1374,12 +1416,12 @@ export class TransformService {
 
     // Load raw CSV data
     const rawData = await this.loadRawCSVData(date, districtId)
-    if (rawData === 'corrupt') {
+    if (rawData && 'gap' in rawData) {
       return {
         districtId,
         success: true,
         skipped: true,
-        error: `Skipped: corrupt club-performance.csv for district ${districtId} on ${date}`,
+        error: rawData.gap,
       }
     }
     if (!rawData) {
@@ -1722,12 +1764,12 @@ export class TransformService {
 
     // Load raw CSV data from source date
     const rawData = await this.loadRawCSVData(sourceDate, districtId)
-    if (rawData === 'corrupt') {
+    if (rawData && 'gap' in rawData) {
       return {
         districtId,
         success: true,
         skipped: true,
-        error: `Skipped: corrupt club-performance.csv for district ${districtId} on ${sourceDate}`,
+        error: rawData.gap,
       }
     }
     if (!rawData) {

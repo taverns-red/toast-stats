@@ -33,7 +33,11 @@
 import { getPriorProgramYear } from './CachePaths.js'
 import { parseFooterAsOfDate } from './csvFooterParser.js'
 import { programYearFromCsvFooter } from './programYearResolver.js'
-import type { ExportPathStyle } from '../services/HttpCsvDownloader.js'
+import type {
+  ExportPathStyle,
+  ReportType,
+} from '../services/HttpCsvDownloader.js'
+import { validateCsvBody } from './csvBodyGuard.js'
 
 /**
  * Which endpoint shape a program year must be fetched from.
@@ -78,11 +82,15 @@ export function countCsvDataRows(content: string | undefined | null): number {
  * - `empty`    — 200 with no data rows. Skip it: not an error, but not data.
  * - `mismatch` — the body is for a different period or year than requested.
  *                Never ingest; fail loudly.
+ * - `invalid`  — the body is not a CSV at all (TI's HTML error page served
+ *                with a 200), or lacks the report's header (#1671). Never
+ *                ingest; fail loudly.
  */
 export type BackfillCsvVerdict =
   | { status: 'ok' }
   | { status: 'empty'; reason: string }
   | { status: 'mismatch'; reason: string }
+  | { status: 'invalid'; reason: string }
 
 export interface VerifyBackfillCsvInput {
   content: string | undefined
@@ -92,6 +100,11 @@ export interface VerifyBackfillCsvInput {
   date: string
   /** Which endpoint the request went to. */
   pathStyle: ExportPathStyle
+  /**
+   * Which report was requested. When given, the body's header must carry
+   * that report's columns. An HTML body is rejected either way (#1671).
+   */
+  reportType?: ReportType
 }
 
 /** Thrown when a downloaded body is not for the period that was requested. */
@@ -119,6 +132,14 @@ export function verifyBackfillCsv(
 
   if (!content || content.trim().length === 0) {
     return { status: 'empty', reason: 'response body was empty' }
+  }
+
+  // Not a CSV at all? (#1671) Checked before anything reads the body as one.
+  // Without a report type the summary header is not required, but an HTML
+  // page is still refused.
+  const body = validateCsvBody(content, input.reportType ?? 'districtsummary')
+  if (!body.ok && (input.reportType !== undefined || body.kind === 'html')) {
+    return { status: 'invalid', reason: body.reason }
   }
 
   const footerAsOf = parseFooterAsOfDate(content)
