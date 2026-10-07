@@ -244,10 +244,11 @@ const DistrictDetailPageInner: React.FC = () => {
   )
 
   // Fetch performance targets and rankings for overview cards (#183)
-  const { data: performanceTargets } = usePerformanceTargets(
-    hasValidDates ? districtId || null : null,
-    effectiveEndDate ?? undefined
-  )
+  const { data: performanceTargets, isLoading: isLoadingPerformanceTargets } =
+    usePerformanceTargets(
+      hasValidDates ? districtId || null : null,
+      effectiveEndDate ?? undefined
+    )
 
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
@@ -384,6 +385,14 @@ const DistrictDetailPageInner: React.FC = () => {
   // working while the targets pipeline is catching up.
   const kpiStripData: DistrictKpiStripData | null = useMemo(() => {
     if (!analytics) return null
+    // Hold the skeleton until the targets read settles (#1685). Rendering on
+    // analytics alone painted every card without its rank line and bullet bar
+    // (`targets: null`, NULL_RANKINGS) for the frames until targets landed —
+    // an 88px-shorter strip at 1350px that then grew back: two shifts of the
+    // whole Overview stack. A settled-empty read falls through to the
+    // analytics-inline targets below, so a missing file never pins the
+    // skeleton.
+    if (isLoadingPerformanceTargets) return null
     const pt = performanceTargets ?? analytics.performanceTargets
     return {
       paidClubs: {
@@ -413,7 +422,7 @@ const DistrictDetailPageInner: React.FC = () => {
         current: analytics.membershipChange ?? 0,
       },
     }
-  }, [analytics, performanceTargets])
+  }, [analytics, performanceTargets, isLoadingPerformanceTargets])
 
   // ── Degraded "limited data" view: program-year controls (#1436) ────────────
   //
