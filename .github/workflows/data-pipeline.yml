@@ -1270,8 +1270,9 @@ jobs:
 
       # ════════════════════════════════════════════════════════
       # RESCRAPE-HISTORICAL MODE (#205)
-      # One-time: re-download ALL historical CSVs from the dashboard
-      # using the 4-segment URL format, then rebuild everything.
+      # Re-download historical CSVs from the dashboard using the 4-segment
+      # URL format, then rebuild and publish them through the upload guard,
+      # upserting into the GCS-backed stores (#1670).
       # ════════════════════════════════════════════════════════
 
       - name: '[rescrape-historical] Download historical CSVs'
@@ -1301,52 +1302,131 @@ jobs:
           DATE_COUNT=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' | wc -l | tr -d ' ')
           echo "- **Raw-csv dates downloaded**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: '[rescrape-historical] Rebuild from fresh CSVs'
+      # One date at a time, through the same gate as rescrape and rebuild
+      # (#1670): transform → upload guard (#1621/#1626) → compute → publish.
+      # The guard runs BEFORE compute-analytics, so a refused snapshot never
+      # reaches the time-series or club-trends stores either. (The previous
+      # all-at-once `collector-cli rebuild` computed every date first and
+      # uploaded every snapshot with one unguarded `cp -r`.)
+      - name: '[rescrape-historical] Rebuild, guard and publish one date at a time'
         if: steps.mode.outputs.mode == 'rescrape-historical'
         run: |
-          # Club-race crossing store (#1556) is pulled BEFORE the rebuild and
-          # is deliberately NOT nuked below: the historical dashboard only
-          # yields month-ends, and the store's min-on-rebuild upsert keeps the
-          # daily-resolution crossings the live pipeline already captured.
-          echo "Syncing club-race..."
-          mkdir -p ./cache/club-race
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
+          # R2 + R9: the stores are GCS-backed. Pull them BEFORE rebuilding so
+          # each date is UPSERTED into the history (TimeSeriesIndexWriter and
+          # ClubTrendsStore replace a point by date, keep the rest). Rebuilt
+          # from an empty runner instead, a single-PY run wrote an
+          # index-metadata.json listing only that PY and replaced that PY's
+          # daily points with its 12 month-ends. Fail closed: no `|| true` —
+          # a failed pull must stop the run, not publish a partial store.
+          # Club-race (#1556) keeps the daily-resolution crossings the live
+          # pipeline captured via its min-on-rebuild upsert.
+          mkdir -p ./cache/time-series ./cache/club-trends ./cache/club-race
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/"
+          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/"
 
-          echo "Rebuilding all derived data from fresh CSVs..."
-          npx collector-cli rebuild --verbose
+          RAW_DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
+          DATE_COUNT=$(echo "${RAW_DATES}" | grep -c . || true)
+          echo "## 🔨 Historical rebuild (#1670)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Raw dates to process**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: '[rescrape-historical] Nuke stale GCS data'
-        if: steps.mode.outputs.mode == 'rescrape-historical' && inputs.program_year == ''
-        run: |
-          echo "## 🗑️ GCS Cleanup (pre-upload, full rescrape only)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Deleting stale time-series from GCS..."
-          gcloud storage rm -r "gs://${GCS_BUCKET}/time-series/" 2>&1 || echo "(no time-series to delete)"
-          echo "Deleting stale snapshots from GCS..."
-          gcloud storage rm -r "gs://${GCS_BUCKET}/snapshots/" 2>&1 || echo "(no snapshots to delete)"
-          echo "Deleting stale club-trends from GCS..."
-          gcloud storage rm -r "gs://${GCS_BUCKET}/club-trends/" 2>&1 || echo "(no club-trends to delete)"
-          echo "- **Stale GCS data deleted** ✓" >> "$GITHUB_STEP_SUMMARY"
+          SUCCEEDED=0
+          FAILED=0
+          REFUSED=0
+          INDEX=0
 
-      - name: '[rescrape-historical] Upload rebuilt data to GCS'
+          for RAW_DATE in ${RAW_DATES}; do
+            INDEX=$((INDEX + 1))
+            echo ""
+            echo "[${INDEX}/${DATE_COUNT}] Processing raw ${RAW_DATE}"
+
+            # Previous-year snapshot for YoY, as in rebuild mode.
+            PREV_YEAR_DATE=$(date -d "${RAW_DATE} - 1 year" +%Y-%m-%d 2>/dev/null || echo "")
+            if [ -n "${PREV_YEAR_DATE}" ] && [ ! -d "./cache/snapshots/${PREV_YEAR_DATE}" ]; then
+              mkdir -p "./cache/snapshots/${PREV_YEAR_DATE}"
+              gcloud storage cp \
+                "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR_DATE}/district_*.json" \
+                "./cache/snapshots/${PREV_YEAR_DATE}/" 2>/dev/null || true
+            fi
+
+            BEFORE_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
+
+            if ! npx collector-cli transform --date "${RAW_DATE}" --force --verbose 2>&1; then
+              echo "::warning::Transform failed for ${RAW_DATE}"
+              FAILED=$((FAILED + 1))
+              continue
+            fi
+
+            # The transform remaps a close onto its month-end (#193).
+            AFTER_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
+            ACTUAL_DATE=$(comm -13 <(echo "$BEFORE_DIRS") <(echo "$AFTER_DIRS") \
+                          | head -1 | grep -oP '\d{4}-\d{2}-\d{2}' || true)
+            ACTUAL_DATE="${ACTUAL_DATE:-$RAW_DATE}"
+
+            # Never publish over a remote close (#1621/#1626). Refusal (exit 3)
+            # or an unreadable GCS (exit 1): skip the date entirely.
+            GUARD_STATUS=0
+            npx tsx scripts/guard-snapshot-upload.ts "${ACTUAL_DATE}" || GUARD_STATUS=$?
+            if [ "${GUARD_STATUS}" -ne 0 ]; then
+              echo "::warning::Not publishing ${ACTUAL_DATE}: upload guard exit ${GUARD_STATUS} (3 = closing snapshot)"
+              REFUSED=$((REFUSED + 1))
+              rm -rf "./cache/snapshots/${ACTUAL_DATE}" \
+                ${PREV_YEAR_DATE:+"./cache/snapshots/${PREV_YEAR_DATE}"}
+              continue
+            fi
+
+            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose 2>&1; then
+              echo "::warning::Compute failed for ${ACTUAL_DATE}"
+              FAILED=$((FAILED + 1))
+            fi
+
+            SNAPSHOT_DIR="./cache/snapshots/${ACTUAL_DATE}"
+            if [ -d "${SNAPSHOT_DIR}" ]; then
+              echo "Uploading snapshots/${ACTUAL_DATE}/..."
+              gcloud storage cp \
+                --content-type="application/json" \
+                --cache-control="public, max-age=3600, must-revalidate" \
+                -Z \
+                "${SNAPSHOT_DIR}"/*.json \
+                "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"
+              if [ -d "${SNAPSHOT_DIR}/analytics" ]; then
+                gcloud storage cp \
+                  --content-type="application/json" \
+                  --cache-control="public, max-age=3600, must-revalidate" \
+                  -Z \
+                  "${SNAPSHOT_DIR}/analytics"/*.json \
+                  "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/analytics/"
+              fi
+              SUCCEEDED=$((SUCCEEDED + 1))
+            fi
+
+            # Keep no snapshot dirs locally: the manifest step must not read a
+            # historical date as "latest" (#1670, #295).
+            rm -rf "${SNAPSHOT_DIR}" ${PREV_YEAR_DATE:+"./cache/snapshots/${PREV_YEAR_DATE}"}
+          done
+
+          echo "- **Snapshots published**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Refused by the upload guard**: ${REFUSED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
+
+      # No GCS deletion in this mode (#1670). The old clean-slate step deleted
+      # snapshots/, time-series/ and club-trends/ when program_year was empty,
+      # which destroyed every close the upload guard exists to protect and
+      # every daily point a month-end-only rescrape cannot reproduce. Removing
+      # stale dates is prune mode's job.
+      - name: '[rescrape-historical] Upload upserted stores and raw-csv'
         if: steps.mode.outputs.mode == 'rescrape-historical'
         run: |
-          echo "## ⬆️ Upload Fresh Data" >> "$GITHUB_STEP_SUMMARY"
+          echo "## ⬆️ Upload stores (#1670)" >> "$GITHUB_STEP_SUMMARY"
 
-          # Upload snapshots with immutable CDN headers
-          echo "Uploading snapshots..."
-          gcloud storage cp \
-            --content-type="application/json" \
-            --cache-control="public, max-age=3600, must-revalidate" \
-            -r -Z ./cache/snapshots/* "gs://${GCS_BUCKET}/snapshots/"
-
-          # Upload time-series with short cache
+          # Time-series and club-trends were pulled from GCS before the
+          # rebuild and upserted per date, so these carry every other year.
           echo "Uploading time-series..."
           gcloud storage cp \
             --content-type="application/json" \
             --cache-control="public, max-age=3600" \
             -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
 
-          # Upload club-trends
           echo "Uploading club-trends..."
           gcloud storage cp \
             --content-type="application/json" \
@@ -1357,13 +1437,10 @@ jobs:
           echo "Syncing club-race back to GCS..."
           gcloud storage rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
-          # Upload raw-csv
           echo "Uploading raw-csv..."
           gcloud storage rsync -r "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
 
-          SNAP_COUNT=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' | wc -l | tr -d ' ')
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
-          echo "- **Snapshots uploaded**: ${SNAP_COUNT}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
@@ -1485,14 +1562,24 @@ jobs:
           # Only consider snapshot dirs that contain actual JSON files (#295).
           # Orphan empty dirs (from previous-year YoY fetches) must not
           # be picked up as the latest date.
-          LATEST_DATE=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' \
+          LOCAL_LATEST=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' \
             -exec sh -c 'ls "$1"/*.json >/dev/null 2>&1 && basename "$1"' _ {} \; \
             | sort | tail -1)
-          if [ -z "${LATEST_DATE}" ]; then
-            echo "Local snapshot cache empty — checking GCS for latest date..."
-            LATEST_DATE=$(gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" \
-              | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u | tail -1)
-          fi
+
+          # v1/latest.json never moves backwards (#1670): a historical run's
+          # newest local snapshot is a past year-end. Take the newer of it and
+          # the current remote latest (while that date still exists in the
+          # bucket — prune may have removed it). The unit-tested resolver
+          # (scripts/lib/latestSnapshotDate.ts) also keeps the bucket-listing
+          # fallback for an empty local cache.
+          gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" \
+            | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u > /tmp/all-dates.txt || true
+          REMOTE_LATEST=$(gcloud storage cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \
+            | jq -r '.latestSnapshotDate // empty' 2>/dev/null || true)
+          LATEST_DATE=$(npx tsx scripts/resolve-latest-snapshot-date.ts \
+            --dates-file /tmp/all-dates.txt \
+            ${LOCAL_LATEST:+--local "${LOCAL_LATEST}"} \
+            ${REMOTE_LATEST:+--remote "${REMOTE_LATEST}"})
           if [ -z "${LATEST_DATE}" ]; then
             echo "::warning::No snapshot dates found locally or in GCS, skipping manifests"
             exit 0
@@ -1724,8 +1811,13 @@ jobs:
           MODE="${{ steps.mode.outputs.mode }}"
           INDEX_PATH="gs://${GCS_BUCKET}/config/district-snapshot-index.json"
 
-          if [ "${MODE}" = "rebuild" ] || [ "${MODE}" = "prune" ]; then
-            # Rebuild/prune: regenerate from the GCS listing so the index only
+          # R17 — one explicit case per mode (#1670). rescrape and
+          # rescrape-historical used to fall into the daily merge with an empty
+          # DATE and DISTRICT_LIST, writing a phantom "" entry. An unknown
+          # mode now fails instead of merging nothing.
+          case "${MODE}" in
+          rebuild|prune|rescrape|rescrape-historical)
+            # Rebuild/prune/rescrape: regenerate from the GCS listing so the index only
             # lists dates whose district_*.json files actually still exist.
             # Prune deletes snapshot prefixes from GCS; merging (the daily path)
             # would write the stale index back unchanged and keep advertising
@@ -1765,7 +1857,8 @@ jobs:
               fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(out, null, 2));
               console.log('Generated snapshot index: ' + Object.keys(index).length + ' districts, ' + dates.length + ' dates');
             "
-          else
+            ;;
+          daily)
             # Daily: merge today's snapshot date into existing index
             # Use snapshot_date (post closing-period remap) not raw date (#309)
             DATE="${{ steps.daily-scrape.outputs.snapshot_date || steps.daily-scrape.outputs.date || steps.daily-config.outputs.date }}"
@@ -1791,7 +1884,12 @@ jobs:
               fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(out, null, 2));
               console.log('Updated index for ' + Object.keys(districts).length + ' districts with date ' + date);
             "
-          fi
+            ;;
+          *)
+            echo "::error::Update district-snapshot-index has no case for mode '${MODE}' (R17)"
+            exit 1
+            ;;
+          esac
 
           gcloud storage cp \
             --content-type="application/json" \

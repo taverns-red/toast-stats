@@ -104,9 +104,11 @@ describe('rescrape-historical — guarded, upserting, never backwards (#1670)', 
       expect(loop.indexOf('collector-cli compute-analytics')).toBeGreaterThan(
         guardAt
       )
-      expect(loop.indexOf('gs://${GCS_BUCKET}/snapshots/')).toBeGreaterThan(
-        guardAt
+      // The upload destination, not the read-only previous-year YoY fetch.
+      const uploadAt = loop.indexOf(
+        '"gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"'
       )
+      expect(uploadAt).toBeGreaterThan(guardAt)
     })
 
     it('skips a refused (exit 3) or unverifiable snapshot', () => {
