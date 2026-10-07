@@ -87,6 +87,50 @@ The expectation set is `Quality Gates` + `Test Suite` + `Build Applications`
 (the `ci.yml` jobs) for any diff that touches code, plus `Docs Gate` for any
 diff that touches a `paths:`-matched file. A mixed PR expects all four.
 
+## Release PRs and workflow approval (#1548)
+
+Release PRs are opened by `github-actions[bot]` (release-please). Under the
+repository's original fork-PR approval setting, every workflow on those PRs
+sat at `conclusion: action_required` and never ran. That was harmless until
+`CI Gate` became a required check (#1216): a gate that never runs stays
+**Expected**, so every release from 2.38.2 on was unmergeable until someone
+approved each run by hand.
+
+**Mechanism (Ron, 2026-10-07):** Settings → Actions → General → "Approval for
+running fork pull request workflows from contributors" → **Require approval
+for first-time contributors who are new to GitHub**. This is a repo setting,
+not part of `main.json`, so `apply-main-ruleset.sh` neither checks nor applies
+it.
+
+Why this one and not the alternatives:
+
+- It leaves the ruleset untouched. `bypass_actors` stays `[]` and `CI Gate`
+  stays required for every PR, release PRs included. Release PRs now run the
+  full gate rather than skipping it.
+- A ruleset bypass for the release automation would have opened a hole in
+  the gate for exactly the PRs that touch the changelog and version manifests.
+- A PAT or GitHub App token for release-please works too, but adds a secret
+  to rotate.
+
+**Tradeoff.** The repo is public, so a fork PR from an established GitHub
+account now runs workflows without a maintainer clicking approve. The exposure
+is bounded: no workflow here uses `pull_request_target`, so fork-PR runs get a
+read-only `GITHUB_TOKEN` and no repository secrets. Re-check this if a
+`pull_request_target` workflow is ever added; that trigger runs with secrets
+and would turn this setting into a real risk.
+
+**Fallback.** If a release PR is ever back at `action_required` (the setting
+was reverted, or GitHub changes how it classifies bot actors), approve its
+runs by hand:
+
+```bash
+SHA=$(gh api repos/taverns-red/toast-stats/pulls/<N> --jq .head.sha)
+for RID in $(gh api "repos/taverns-red/toast-stats/actions/runs?head_sha=$SHA" \
+    --jq '.workflow_runs[]|select(.conclusion=="action_required")|.id'); do
+  gh api -X POST "repos/taverns-red/toast-stats/actions/runs/$RID/approve"
+done
+```
+
 ## Drift guards
 
 Three artifacts have to agree or the gate either blocks a PR forever or lets
