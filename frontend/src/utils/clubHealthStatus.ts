@@ -8,7 +8,7 @@ import type { ClubHealthStatus } from '../hooks/useDistrictAnalytics'
  * Both the desktop ClubsTable row and the mobile ClubCard import these so the
  * same datum reads identically on both surfaces (lesson 052 — one definition,
  * not two). This is distinct from the OPERATIONAL club status
- * (active/suspended/ineligible) handled by `clubStatusBadge.ts`.
+ * (active/suspended/ineligible).
  */
 
 export function getClubHealthStatusLabel(status: ClubHealthStatus): string {

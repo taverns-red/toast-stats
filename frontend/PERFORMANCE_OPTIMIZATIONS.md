@@ -43,7 +43,6 @@ The following optimizations have been implemented to improve application perform
 
 - `DistrictDetailPage` for all chart components
 - `DistinguishedProgressChart`
-- `AreaPerformanceChart`
 - `MembershipTrendChart`
 - `YearOverYearComparison`
 - `DCPGoalAnalysis`

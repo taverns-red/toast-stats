@@ -1027,7 +1027,7 @@
   color: #111827 !important;
 }
 
-/* Smedley/Select club badges (TopGrowthClubs, ClubPerformanceTable): dark
+/* Smedley/Select club badges (TopGrowthClubs): dark
    true-maroon on the happy-yellow-30 tint is 4.07:1. Light ink is 9.13:1. */
 [data-theme='dark'] .bg-tm-happy-yellow-30.text-tm-true-maroon {
   color: var(--ink) !important;
