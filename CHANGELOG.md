@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.44.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.44.0...toast-stats-v2.44.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **pipeline:** race artifact as of its snapshot date — no future crossings, as-of official code ([#1689](https://github.com/taverns-red/toast-stats/issues/1689)) ([#1691](https://github.com/taverns-red/toast-stats/issues/1691)) ([d5dfea5](https://github.com/taverns-red/toast-stats/commit/d5dfea5f140e1b7b9c24f1cfa00e3fcb25533350))
+
+
+### Refactors
+
+* delete 32 verified-dead frontend files ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1692](https://github.com/taverns-red/toast-stats/issues/1692)) ([f64d0ac](https://github.com/taverns-red/toast-stats/commit/f64d0ac0b2a1b4726edcaef15dc92c94e91001d4))
+
+
+### Documentation
+
+* **claude:** correct relevant-lessons.sh usage ([#650](https://github.com/taverns-red/toast-stats/issues/650)) ([#1697](https://github.com/taverns-red/toast-stats/issues/1697)) ([9783ff8](https://github.com/taverns-red/toast-stats/commit/9783ff827fabbb523d9f78d7ea9a25404a3ef7d3))
+* **claude:** extend PY tripwire with logical-date window rule ([#1622](https://github.com/taverns-red/toast-stats/issues/1622)) ([#1696](https://github.com/taverns-red/toast-stats/issues/1696)) ([e0ff19d](https://github.com/taverns-red/toast-stats/commit/e0ff19d7a884f01c2f4a9b3c12e078a476415c1c))
+* **rulesets:** document release-PR approval setting ([#1548](https://github.com/taverns-red/toast-stats/issues/1548)) ([#1698](https://github.com/taverns-red/toast-stats/issues/1698)) ([694984b](https://github.com/taverns-red/toast-stats/commit/694984b74910c624a91ca374a816e5c2063252aa))
+
+
+### Tests
+
+* behavioural tests for cdnTimeSeries, transformServiceFactory, createVerboseLogger ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1690](https://github.com/taverns-red/toast-stats/issues/1690)) ([8316cb1](https://github.com/taverns-red/toast-stats/commit/8316cb16883f0a1186fe18d7fd674d19535a8045))
+* behavioural tests for the collector-cli, mcp-server and frontend entrypoints ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1695](https://github.com/taverns-red/toast-stats/issues/1695)) ([f9d1f53](https://github.com/taverns-red/toast-stats/commit/f9d1f53ffa9cfa655a8a231f39aea4cbd45ea821))
+* behavioural tests for useGlobalHistory, textEffectsRemover, TopGrowthClubs ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1693](https://github.com/taverns-red/toast-stats/issues/1693)) ([f214519](https://github.com/taverns-red/toast-stats/commit/f2145197a74fb132b1667a69f5580ec23b8db462))
+
 ## [2.44.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.43.0...toast-stats-v2.44.0) (2026-10-07)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.7...toast-stats-mcp-v0.1.8) (2026-10-07)
+
+
+### Tests
+
+* behavioural tests for the collector-cli, mcp-server and frontend entrypoints ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1695](https://github.com/taverns-red/toast-stats/issues/1695)) ([f9d1f53](https://github.com/taverns-red/toast-stats/commit/f9d1f53ffa9cfa655a8a231f39aea4cbd45ea821))
+
 ## [0.1.7](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.6...toast-stats-mcp-v0.1.7) (2026-10-03)
 
 
