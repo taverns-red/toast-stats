@@ -127,6 +127,24 @@ describe('AwardsPage — Club Growth Achievement recipients (#1537)', () => {
     )
   })
 
+  it('mounts the section only once the award leaderboards have settled, so their late grid cannot push it down (CLS)', async () => {
+    // The leaderboard grid renders above this section and resolves on its own
+    // query. Mounting the section first and the grid later shifted the whole
+    // section (/awards CLS 0.24–0.44 on the #1680 preview).
+    let release: (v: unknown) => void = () => undefined
+    mockedAwards.mockImplementationOnce(
+      () => new Promise(resolve => (release = resolve)) as never
+    )
+    renderAt('/awards')
+    await waitFor(() => expect(mockedAwards).toHaveBeenCalled())
+    await waitFor(() => expect(mockedExact).toHaveBeenCalled())
+    expect(screen.queryByTestId('club-growth-recipients')).toBeNull()
+    release(null)
+    expect(
+      await screen.findByTestId('club-growth-recipients')
+    ).toBeInTheDocument()
+  })
+
   it('renders no recipients section for a program year before the achievement', async () => {
     renderAt('/awards?py=2025')
     await waitFor(() => expect(mockedAwards).toHaveBeenCalledWith('2026-05-01'))
