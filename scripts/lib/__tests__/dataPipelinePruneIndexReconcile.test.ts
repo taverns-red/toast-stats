@@ -68,10 +68,15 @@ function modesReachingRegenerateBranch(run: string): Set<string> {
       'regenerate-from-GCS listing (gcloud storage ls) not found in step'
     )
   }
-  // Walk back to the nearest `if`/`elif [ ... ]; then` gating that branch.
+  // Walk back to the nearest gate of that branch: an `if`/`elif [ ... ]; then`
+  // line, or a `case` arm such as `rebuild|prune|rescrape)` (#1670, R17).
+  const caseArm = /^\s*([\w-]+(?:\|[\w-]+)*)\)\s*$/
   let condLine: string | undefined
   for (let i = lsIdx; i >= 0; i--) {
-    if (/^\s*(if|elif)\b.*;\s*then\s*$/.test(lines[i]!)) {
+    if (
+      /^\s*(if|elif)\b.*;\s*then\s*$/.test(lines[i]!) ||
+      caseArm.test(lines[i]!)
+    ) {
       condLine = lines[i]
       break
     }
@@ -79,6 +84,11 @@ function modesReachingRegenerateBranch(run: string): Set<string> {
   if (!condLine)
     throw new Error('gating if/then for regenerate branch not found')
   const modes = new Set<string>()
+  const arm = condLine.match(caseArm)
+  if (arm) {
+    for (const mode of arm[1]!.split('|')) modes.add(mode)
+    return modes
+  }
   for (const m of condLine.matchAll(/"\$\{MODE\}"\s*=\s*"(\w+)"/g)) {
     modes.add(m[1]!)
   }
