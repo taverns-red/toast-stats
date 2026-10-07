@@ -15,10 +15,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import DistrictsPage from '../DistrictsPage'
-import { fetchCdnRankings, fetchCdnCompetitiveAwards } from '../../services/cdn'
+import {
+  fetchCdnRankings,
+  fetchCdnRankingsForDate,
+  fetchCdnRankingsForDateExact,
+  fetchCdnSnapshotIndex,
+  fetchCdnCompetitiveAwards,
+} from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
 import {
   AWARD_RECOGNITION,
+  CLUB_GROWTH_RECOGNITION,
   TIER_RECOGNITION,
 } from '../../components/recognition/recognitionRegistry'
 
@@ -31,6 +38,7 @@ vi.mock('../../services/cdn', () => ({
   fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({}),
   fetchCdnRankings: vi.fn(),
   fetchCdnRankingsForDate: vi.fn(),
+  fetchCdnRankingsForDateExact: vi.fn().mockResolvedValue(null),
   fetchCdnCompetitiveAwards: vi.fn(),
   fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2026-05-18'),
   cdnAnalyticsUrl: vi.fn().mockReturnValue('https://cdn.taverns.red/test'),
@@ -236,6 +244,78 @@ describe('DistrictsPage recognition badges (#1361)', () => {
     // D99 holds no tier: previously an em-dash placeholder cell, now nothing.
     expect(within(row('99')).queryByTestId('tier-chip-99')).toBeNull()
     expect(within(row('99')).queryByText('—')).toBeNull()
+  })
+})
+
+describe('DistrictsPage Club Growth Achievement badge (#1537)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  /**
+   * The page is pinned to 2026-09-30, so the September checkpoint is settled.
+   * Its OWN file says 102 chartered 5 and 76 chartered 2; the page's rankings
+   * (and any falling-back read) say 76 has since reached 9. The badge must
+   * follow the checkpoint file.
+   */
+  const setupCheckpoint = () => {
+    setup()
+    vi.mocked(fetchCdnSnapshotIndex).mockResolvedValue({
+      '102': ['2026-09-29', '2026-09-30'],
+    } as never)
+    const today = {
+      rankings: [
+        { ...mkRanking('102', 1), newCharteredClubs: 5 },
+        { ...mkRanking('76', 2), newCharteredClubs: 9 },
+        { ...mkRanking('99', 3), newCharteredClubs: 0 },
+      ],
+      asOfDate: '2026-10-05',
+    }
+    vi.mocked(fetchCdnRankingsForDate).mockResolvedValue(today as never)
+    mockedFetchCdnRankings.mockResolvedValue(today as never)
+    vi.mocked(fetchCdnRankingsForDateExact).mockImplementation(
+      async date =>
+        (date === '2026-09-30'
+          ? {
+              rankings: [
+                { ...mkRanking('102', 1), newCharteredClubs: 5 },
+                { ...mkRanking('76', 2), newCharteredClubs: 2 },
+                { ...mkRanking('99', 3), newCharteredClubs: 0 },
+              ],
+              snapshotDate: '2026-09-30',
+              asOfDate: '2026-10-05',
+              generatedAt: '2026-10-05T00:00:00Z',
+            }
+          : null) as never
+    )
+  }
+
+  it('badges a district holding a settled milestone, naming the tier reached', async () => {
+    setupCheckpoint()
+    renderWithProviders(<DistrictsPage />)
+    const badge = await screen.findByTestId(
+      `recognition-${CLUB_GROWTH_RECOGNITION.id}-102`
+    )
+    expect(badge).toHaveAttribute(
+      'aria-label',
+      `${CLUB_GROWTH_RECOGNITION.title} — 5-club milestone by September 30, 2026`
+    )
+    expect(badge).toHaveTextContent(`${CLUB_GROWTH_RECOGNITION.shortLabel}5`)
+    expect(cell('102')).toContainElement(badge)
+  })
+
+  it("follows the checkpoint's own file — today's higher count earns nothing", async () => {
+    setupCheckpoint()
+    renderWithProviders(<DistrictsPage />)
+    await screen.findByTestId(`recognition-${CLUB_GROWTH_RECOGNITION.id}-102`)
+    expect(
+      within(row('76')).queryByTestId(
+        `recognition-${CLUB_GROWTH_RECOGNITION.id}-76`
+      )
+    ).toBeNull()
+    expect(
+      within(row('99')).queryByTestId(
+        `recognition-${CLUB_GROWTH_RECOGNITION.id}-99`
+      )
+    ).toBeNull()
   })
 })
 

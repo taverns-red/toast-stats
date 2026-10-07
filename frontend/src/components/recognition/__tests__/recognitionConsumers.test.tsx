@@ -15,9 +15,9 @@
  *  | RecognitionFilterBar / filter | absent       | filters on competitive-award flags + tier; |
  *  |                               |              | a checkpoint verdict is a different query  |
  *  | DistrictTierChip              | absent       | the Distinguished ladder only              |
- *  | RecognitionLegend             | absent       | explains rankings-table badges; the table  |
- *  |                               |              | gains the badge in #1537 PR 3, and the     |
- *  |                               |              | legend entry lands with it, not before     |
+ *  | RecognitionLegend             | renders      | its own "Achievements" group               |
+ *  | DistrictsPage rankings table  | renders      | badge with the tier reached, for holders   |
+ *  |                               |              | (DistrictsPage.recognition.test.tsx)       |
  */
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
@@ -83,8 +83,8 @@ describe('recognition registry consumers — Club Growth Achievement (#1537)', (
     ).toBeUndefined()
   })
 
-  it('RecognitionLegend: absent until the rankings table can show the badge (#1537 PR 3)', () => {
+  it('RecognitionLegend: renders it, in its own group', () => {
     const { container } = render(<RecognitionLegend />)
-    expect(container.querySelector(CLUB_GROWTH)).toBeNull()
+    expect(container.querySelector(CLUB_GROWTH)).not.toBeNull()
   })
 })
