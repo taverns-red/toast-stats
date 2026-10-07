@@ -4,6 +4,8 @@ import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
+import { ClubGrowthRecipientsSection } from '../components/ClubGrowthRecipientsSection'
+import { useClubGrowthRecipients } from '../hooks/useClubGrowthRecipients'
 import { tiedWinnerIds, TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
 import type {
   CompetitiveAwardRanking,
@@ -69,6 +71,12 @@ const AwardsPage: React.FC = () => {
   } = useProgramYearControls()
 
   const { data: standings, isLoading } = useCompetitiveAwards(effectiveDate)
+
+  // District Club Growth Achievement recipients (#1537). Program year and the
+  // pinned date are the page's own (R3); each checkpoint is judged on that
+  // date's own rankings file inside the hook. Before PY 2026-27 the
+  // achievement did not exist, so the section is absent (forward-only).
+  const clubGrowth = useClubGrowthRecipients(selectedProgramYear, effectiveDate)
 
   // Awards standings carry no `sourceCsvDate`, so source the as-of date from the
   // shared global freshness signal so the pill matches every other page (#1310).
@@ -138,6 +146,18 @@ const AwardsPage: React.FC = () => {
               tiedIds={tiedWinnerIds(standings[spec.key] ?? [])}
             />
           ))}
+        </div>
+      )}
+
+      {/* Mounted only once the leaderboards settle: the grid above resolves
+          on its own query, and a section already on screen would be shoved
+          down by it (CLS). The recipients query still runs meanwhile. */}
+      {!isLoading && clubGrowth.applicable && (
+        <div className="awards-page__achievements">
+          <ClubGrowthRecipientsSection
+            programYearLabel={selectedProgramYear.label}
+            checkpoints={clubGrowth.checkpoints}
+          />
         </div>
       )}
     </div>

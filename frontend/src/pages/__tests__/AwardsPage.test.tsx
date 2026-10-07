@@ -15,6 +15,9 @@ import type { CompetitiveAwardStandings } from '../../services/cdn'
 // effectiveDate undefined, so the awards fetch (mocked below) is unchanged.
 vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn().mockResolvedValue({ dates: [], count: 0 }),
+  // Club Growth recipients (#1537) read the snapshot index + checkpoint files.
+  fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({}),
+  fetchCdnRankingsForDateExact: vi.fn().mockResolvedValue(null),
 }))
 
 // AwardsPage now sources the freshness as-of date from this shared hook (#1310).

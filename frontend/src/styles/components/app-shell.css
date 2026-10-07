@@ -5715,7 +5715,101 @@
     color: var(--ink-3);
   }
 
-  /* Universal CommandPalette (#422). Cmd-K / Ctrl-K modal. Centered
+  /* District Club Growth Achievement recipients (#1537). A threshold, not a
+     race: districts grouped by the tier reached, no rank column. Legacy
+     chrome tokens only (no --rt-* before Phase 2). */
+  .awards-page__achievements {
+    margin-top: 16px;
+  }
+
+  .club-growth-recipients__glyph {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    vertical-align: -0.15em;
+  }
+
+  .club-growth-recipients__glyph-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .club-growth-recipients__py {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+
+  .club-growth-recipients__checkpoints {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 768px) {
+    .club-growth-recipients__checkpoints {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .club-growth-recipients__checkpoint + .club-growth-recipients__checkpoint {
+      border-left: 1px solid var(--line-2);
+    }
+  }
+
+  .club-growth-recipients__checkpoint {
+    min-width: 0;
+    border-top: 1px solid var(--line-2);
+  }
+
+  .club-growth-recipients__heading {
+    margin: 0;
+    padding: 12px 18px 4px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .club-growth-recipients__tiers {
+    font-weight: 400;
+    color: var(--ink-3);
+  }
+
+  .club-growth-recipients__count {
+    margin: 0;
+    padding: 0 18px 4px;
+    font-family: var(--sans);
+    font-size: 12px;
+  }
+
+  .club-growth-recipients__tier-heading {
+    margin: 0;
+    padding: 8px 18px 4px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .club-growth-recipients__row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .club-growth-recipients__provenance {
+    margin: 0;
+    padding: 8px 18px 14px;
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+
+  .club-growth-recipients__skeleton {
+    min-height: 88px;
+  }
+
+ Cmd-K / Ctrl-K modal. Centered
      dialog over a translucent backdrop. */
   .command-palette__backdrop {
     position: fixed;
