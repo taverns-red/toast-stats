@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.11.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.11.0...collector-cli-v1.11.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **analytics:** end the charter/suspension window at PY end ([#1675](https://github.com/taverns-red/toast-stats/issues/1675)) ([#1676](https://github.com/taverns-red/toast-stats/issues/1676)) ([a6da54e](https://github.com/taverns-red/toast-stats/commit/a6da54ee2ae42483f94e2b0a78d0bc4a74b36664))
+* **awards:** count only active clubs in the 20-Plus numerator ([#1611](https://github.com/taverns-red/toast-stats/issues/1611)) ([#1633](https://github.com/taverns-red/toast-stats/issues/1633)) ([2a6bdc2](https://github.com/taverns-red/toast-stats/commit/2a6bdc2eb246cd4ed96448547c8c55266241d5a3))
+* **awards:** gate PQD on the Distinguished-clubs goal, not full Distinguished ([#1612](https://github.com/taverns-red/toast-stats/issues/1612)) ([#1628](https://github.com/taverns-red/toast-stats/issues/1628)) ([37642fa](https://github.com/taverns-red/toast-stats/commit/37642fada6e757ab405ae829f1a135fcda338049))
+* **awards:** Leadership Excellence — no future-PY leak, award year counts, on track mid-year ([#1609](https://github.com/taverns-red/toast-stats/issues/1609)) ([#1635](https://github.com/taverns-red/toast-stats/issues/1635)) ([c66dbcc](https://github.com/taverns-red/toast-stats/commit/c66dbcc62547d1f89097098dfb5c03571dba7bd7))
+* **awards:** scope June-close charter/suspension counts to the logical snapshot date ([#1622](https://github.com/taverns-red/toast-stats/issues/1622)) ([#1625](https://github.com/taverns-red/toast-stats/issues/1625)) ([e029fa7](https://github.com/taverns-red/toast-stats/commit/e029fa7d24fa46788fdce34a3ffb3f56f2997f1d))
+* **collector-cli:** reject non-CSV bodies; a missing club report is a gap ([#1671](https://github.com/taverns-red/toast-stats/issues/1671)) ([#1683](https://github.com/taverns-red/toast-stats/issues/1683)) ([4a47741](https://github.com/taverns-red/toast-stats/commit/4a47741f7e4222b129dc4de0bb4a1399e7fc167d))
+* **collector-cli:** scrape fetches the requested as-of or refuses the date ([#1669](https://github.com/taverns-red/toast-stats/issues/1669)) ([#1681](https://github.com/taverns-red/toast-stats/issues/1681)) ([f6daa79](https://github.com/taverns-red/toast-stats/commit/f6daa79daf928583712d328dda009570d15c42d5))
+* **pipeline:** limit closing-pinned auto-allow to daily runs ([#1673](https://github.com/taverns-red/toast-stats/issues/1673)) ([#1674](https://github.com/taverns-red/toast-stats/issues/1674)) ([c3f66ab](https://github.com/taverns-red/toast-stats/commit/c3f66ab9a7ea618f6b48b19c91b1d3da033a9d57))
+* **pipeline:** never rebuild a month-end from pre-close data ([#1608](https://github.com/taverns-red/toast-stats/issues/1608)) ([#1619](https://github.com/taverns-red/toast-stats/issues/1619)) ([995f1ac](https://github.com/taverns-red/toast-stats/commit/995f1ac57a473c5a5da4b1c28edb5454593c83af))
+
 ## [1.11.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.10.1...collector-cli-v1.11.0) (2026-10-03)
 
 

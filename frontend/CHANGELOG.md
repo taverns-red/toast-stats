@@ -1,5 +1,46 @@
 # Changelog
 
+## [3.26.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.25.2...frontend-v3.26.0) (2026-10-07)
+
+
+### Features
+
+* **awards:** District Club Growth Achievement recipients on /awards ([#1537](https://github.com/taverns-red/toast-stats/issues/1537)) ([#1680](https://github.com/taverns-red/toast-stats/issues/1680)) ([3533f3f](https://github.com/taverns-red/toast-stats/commit/3533f3f0557b7c6627c20024c6f67cb778607b4b))
+* **landing:** Club Growth Achievement badge on the rankings table ([#1537](https://github.com/taverns-red/toast-stats/issues/1537)) ([#1684](https://github.com/taverns-red/toast-stats/issues/1684)) ([b0b3dd3](https://github.com/taverns-red/toast-stats/commit/b0b3dd3db78d7dcc2db851834ffe921a6927a8cb))
+* **recognition:** register the District Club Growth Achievement ([#1537](https://github.com/taverns-red/toast-stats/issues/1537)) ([#1679](https://github.com/taverns-red/toast-stats/issues/1679)) ([1d8857f](https://github.com/taverns-red/toast-stats/commit/1d8857fca4be9cb29bd735fc3070b18df3dc6f0c))
+
+
+### Bug Fixes
+
+* **a11y:** clear AA on district pages in both themes ([#1660](https://github.com/taverns-red/toast-stats/issues/1660)) ([#1661](https://github.com/taverns-red/toast-stats/issues/1661)) ([f12996f](https://github.com/taverns-red/toast-stats/commit/f12996ff9713cd7111abfffe03b6e31487d343b6))
+* **a11y:** club timeline note + footer link clear AA ([#1648](https://github.com/taverns-red/toast-stats/issues/1648)) ([#1654](https://github.com/taverns-red/toast-stats/issues/1654)) ([c2f3a8d](https://github.com/taverns-red/toast-stats/commit/c2f3a8dc41b266d1a8660dba0c4f454910caa1e0))
+* **a11y:** composition bar counts clear AA in light mode ([#1652](https://github.com/taverns-red/toast-stats/issues/1652)) ([#1659](https://github.com/taverns-red/toast-stats/issues/1659)) ([0450656](https://github.com/taverns-red/toast-stats/commit/0450656071096af0297f41f1e4934a8f450deb18))
+* **awards:** count only active clubs in the 20-Plus numerator ([#1611](https://github.com/taverns-red/toast-stats/issues/1611)) ([#1633](https://github.com/taverns-red/toast-stats/issues/1633)) ([2a6bdc2](https://github.com/taverns-red/toast-stats/commit/2a6bdc2eb246cd4ed96448547c8c55266241d5a3))
+* **awards:** exclude undistricted 'U' from Club Strength; note its 1490 removal ([#1613](https://github.com/taverns-red/toast-stats/issues/1613)) ([#1629](https://github.com/taverns-red/toast-stats/issues/1629)) ([2f6d607](https://github.com/taverns-red/toast-stats/commit/2f6d6078de11fe53b8f2183f3487b7fa0aa256e1))
+* **awards:** label tied Top-3 co-winners honestly ([#1610](https://github.com/taverns-red/toast-stats/issues/1610)) ([#1624](https://github.com/taverns-red/toast-stats/issues/1624)) ([46051bd](https://github.com/taverns-red/toast-stats/commit/46051bd5d83d950bb004b4a3f2ebd247a68949a9))
+* **awards:** Leadership Excellence — no future-PY leak, award year counts, on track mid-year ([#1609](https://github.com/taverns-red/toast-stats/issues/1609)) ([#1635](https://github.com/taverns-red/toast-stats/issues/1635)) ([c66dbcc](https://github.com/taverns-red/toast-stats/commit/c66dbcc62547d1f89097098dfb5c03571dba7bd7))
+* **awards:** scope June-close charter/suspension counts to the logical snapshot date ([#1622](https://github.com/taverns-red/toast-stats/issues/1622)) ([#1625](https://github.com/taverns-red/toast-stats/issues/1625)) ([e029fa7](https://github.com/taverns-red/toast-stats/commit/e029fa7d24fa46788fdce34a3ffb3f56f2997f1d))
+* **clubs:** dark-mode tier chart fills clear 3:1 ([#1636](https://github.com/taverns-red/toast-stats/issues/1636)) ([#1641](https://github.com/taverns-red/toast-stats/issues/1641)) ([91c84e5](https://github.com/taverns-red/toast-stats/commit/91c84e590385aaa9462fcb1be61b82ee4f99c02f))
+* **clubs:** podium district chip renders as a compact pill ([#1617](https://github.com/taverns-red/toast-stats/issues/1617)) ([#1634](https://github.com/taverns-red/toast-stats/issues/1634)) ([19ae5d8](https://github.com/taverns-red/toast-stats/commit/19ae5d82e25b31916ee1aa67ccbb9cf34aeee1eb))
+* **clubs:** race chart legend text in neutral ink ([#1616](https://github.com/taverns-red/toast-stats/issues/1616)) ([#1630](https://github.com/taverns-red/toast-stats/issues/1630)) ([576f8a9](https://github.com/taverns-red/toast-stats/commit/576f8a90364b6f604bc17b23d3a9d3b1469ef559))
+* **clubs:** restyle /clubs on legacy chrome tokens ([#1606](https://github.com/taverns-red/toast-stats/issues/1606)) ([#1607](https://github.com/taverns-red/toast-stats/issues/1607)) ([220703d](https://github.com/taverns-red/toast-stats/commit/220703dfcdf07e08504db3f3857dc2275fe8e4c6))
+* **district:** KPI strip waits for performance targets, fixing the flaky 1350px CLS ([#1685](https://github.com/taverns-red/toast-stats/issues/1685)) ([#1686](https://github.com/taverns-red/toast-stats/issues/1686)) ([9f622c0](https://github.com/taverns-red/toast-stats/commit/9f622c07ac75b9b159df35db4fbec85be4e19b4f))
+* **district:** no horizontal scroll on /district/:id at 375/768 ([#1655](https://github.com/taverns-red/toast-stats/issues/1655)) ([#1663](https://github.com/taverns-red/toast-stats/issues/1663)) ([524ab1a](https://github.com/taverns-red/toast-stats/commit/524ab1aa2b2bc8b84ad113c63d199736389a4d76))
+* every page defaults to the data-resolved program year ([#1618](https://github.com/taverns-red/toast-stats/issues/1618)) ([#1627](https://github.com/taverns-red/toast-stats/issues/1627)) ([f78ad8a](https://github.com/taverns-red/toast-stats/commit/f78ad8a8c8a3e3336b959eabf797e96eeca8e0d5))
+* **frontend:** guard browser storage so the app renders when storage is blocked ([#1646](https://github.com/taverns-red/toast-stats/issues/1646)) ([#1653](https://github.com/taverns-red/toast-stats/issues/1653)) ([aba37c0](https://github.com/taverns-red/toast-stats/commit/aba37c0bb7c69d119d287d443ea8eeeb433d6c79))
+* **shell:** no horizontal page scroll at 375/768 — top bar fits the viewport ([#1651](https://github.com/taverns-red/toast-stats/issues/1651)) ([#1657](https://github.com/taverns-red/toast-stats/issues/1657)) ([6cd7aab](https://github.com/taverns-red/toast-stats/commit/6cd7aabb0acf734db0caf6b2b16e3c9fb280a573))
+* **theme:** page canvas paints --bg in both themes ([#1662](https://github.com/taverns-red/toast-stats/issues/1662)) ([#1664](https://github.com/taverns-red/toast-stats/issues/1664)) ([36da73f](https://github.com/taverns-red/toast-stats/commit/36da73f15d290f30e8c4485ca12c786abda60446))
+
+
+### Performance
+
+* **district:** reserve every Overview slot — /district/:id CLS under 0.1 ([#1647](https://github.com/taverns-red/toast-stats/issues/1647)) ([#1658](https://github.com/taverns-red/toast-stats/issues/1658)) ([3320e5d](https://github.com/taverns-red/toast-stats/commit/3320e5dabc5a27b009052fcf9202ac0bfb84d06c))
+
+
+### Documentation
+
+* **methodology:** Distinguished Percent divides by club base ([#1615](https://github.com/taverns-red/toast-stats/issues/1615)) ([#1631](https://github.com/taverns-red/toast-stats/issues/1631)) ([205455e](https://github.com/taverns-red/toast-stats/commit/205455e5401c8453c2ac7a0b3d956c7c42bc11fa))
+
 ## [3.25.2](https://github.com/taverns-red/toast-stats/compare/frontend-v3.25.1...frontend-v3.25.2) (2026-10-03)
 
 

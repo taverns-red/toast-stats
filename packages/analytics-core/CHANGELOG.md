@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.12.3](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.12.2...analytics-core-v1.12.3) (2026-10-07)
+
+
+### Bug Fixes
+
+* **awards:** exclude undistricted 'U' from Club Strength; note its 1490 removal ([#1613](https://github.com/taverns-red/toast-stats/issues/1613)) ([#1629](https://github.com/taverns-red/toast-stats/issues/1629)) ([2f6d607](https://github.com/taverns-red/toast-stats/commit/2f6d6078de11fe53b8f2183f3487b7fa0aa256e1))
+* **awards:** gate PQD on the Distinguished-clubs goal, not full Distinguished ([#1612](https://github.com/taverns-red/toast-stats/issues/1612)) ([#1628](https://github.com/taverns-red/toast-stats/issues/1628)) ([37642fa](https://github.com/taverns-red/toast-stats/commit/37642fada6e757ab405ae829f1a135fcda338049))
+* **awards:** Leadership Excellence — no future-PY leak, award year counts, on track mid-year ([#1609](https://github.com/taverns-red/toast-stats/issues/1609)) ([#1635](https://github.com/taverns-red/toast-stats/issues/1635)) ([c66dbcc](https://github.com/taverns-red/toast-stats/commit/c66dbcc62547d1f89097098dfb5c03571dba7bd7))
+
 ## [1.12.2](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.12.1...analytics-core-v1.12.2) (2026-10-03)
 
 
