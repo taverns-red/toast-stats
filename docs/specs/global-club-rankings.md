@@ -333,10 +333,18 @@ Rebuild and rescrape modes stream dates ascending, and the upsert uses
       },
       /** First snapshot date the official TI code (D/S/P/M) was seen. */
       official?: { code: 'S', on: '2027-04-01', after: '2027-03-31' },
+      /** First and last date each code was seen (#1689) — min/max folds. */
+      officialCodes?: { S?: { first: '2027-04-01', last: '2027-05-14' }, P?: { … } },
     }
   }
 }
 ```
+
+**As of the file's date (#1689).** The artifact for date D projects the store
+as it stood on D: observed dates, crossings and official sightings dated after
+D are cut before ranks, the timeline, `byDistrict` and the scope counts are
+computed. A rebuild of a past date therefore reproduces what the forward run
+published that day; on the forward daily path the cut is the identity.
 
 `after` is `null` when `on` is the first observed date of the PY (the club was
 already over the line when we started looking — copy: "by 26 Jul 2026").
@@ -407,6 +415,8 @@ already over the line when we started looking — copy: "by 26 Jul 2026").
         Distinguished: { reachedOn: '2026-08-12', observedAfter: '2026-08-11', rank: 37 },
         Select:        { reachedOn: '2026-09-04', observedAfter: '2026-08-31', rank: 4 },
       },
+      /** The code held AS OF the file's date — the latest one seen on or
+          before it — since that code's first sighting (#1689). */
       official: { code: 'S', since: '2027-04-01' } | null,
     }, …
   ],
