@@ -128,22 +128,6 @@ vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(() => ({ data: null, isLoading: false })),
 }))
 
-vi.mock('../../hooks/useLeadershipInsights', () => ({
-  useLeadershipInsights: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    error: null,
-  })),
-}))
-
-vi.mock('../../hooks/useDistinguishedClubAnalytics', () => ({
-  useDistinguishedClubAnalytics: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-    error: null,
-  })),
-}))
-
 vi.mock('../../hooks/usePaymentsTrend', () => ({
   usePaymentsTrend: vi.fn(() => ({
     data: null,

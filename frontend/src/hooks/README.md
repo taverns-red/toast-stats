@@ -73,26 +73,6 @@ const { data: analytics } = useDistrictAnalytics(
 )
 ```
 
-#### `useClubTrends(districtId, clubId, enabled?)`
-
-Fetches trend data for a specific club including membership history, DCP goal progress, and risk assessment.
-
-**Parameters:**
-
-- `districtId`: The district ID
-- `clubId`: The club ID
-- `enabled`: Optional boolean to enable/disable the query (default: true)
-
-**Returns:** Club trend data with membership and DCP trends
-
-**Cache Strategy:** 5 minutes stale time
-
-**Example:**
-
-```typescript
-const { data: clubTrend } = useClubTrends('46', '123456')
-```
-
 #### `useAtRiskClubs(districtId, enabled?)`
 
 Fetches list of at-risk and critical clubs for a district.
@@ -269,7 +249,7 @@ These hooks fulfill the following requirements from the archived district-level-
 
 - **Requirement 1.4:** Cache district data retrieval (useDistrictData, useDistrictCachedDates)
 - **Requirement 2.2:** Backfill progress tracking (useBackfillStatus)
-- **Requirement 3.1:** Display club performance (useDistrictAnalytics, useClubTrends)
+- **Requirement 3.1:** Display club performance (useDistrictAnalytics)
 - **Requirement 4.4:** At-risk club identification (useAtRiskClubs)
 
 The backfill hooks also fulfill requirements from the codebase-cleanup spec:
