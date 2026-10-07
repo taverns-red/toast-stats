@@ -49,6 +49,12 @@ export const ClubRaceCrossingSchema = z.object({
   after: IsoDate.nullable(),
 })
 
+/** The first and last snapshot dates one official code was observed. */
+export const ClubRaceCodeSpanSchema = z.object({
+  first: IsoDate,
+  last: IsoDate,
+})
+
 export const ClubRaceStoreClubSchema = z.object({
   /** Canonical club id (`normalizeClubId`), never the zero-padded form. */
   clubId: z.string(),
@@ -69,6 +75,21 @@ export const ClubRaceStoreClubSchema = z.object({
   official: ClubRaceCrossingSchema.extend({
     code: ClubRaceOfficialCodeSchema,
   }).optional(),
+  /**
+   * First and last snapshot date each official code was seen (#1689), so a
+   * rebuild of a past date can show the code the club held THEN. Min/max
+   * folds make it order-independent. Absent on stores written before it;
+   * the projection then falls back to `official`.
+   */
+  officialCodes: z
+    .object({
+      D: ClubRaceCodeSpanSchema.optional(),
+      S: ClubRaceCodeSpanSchema.optional(),
+      P: ClubRaceCodeSpanSchema.optional(),
+      M: ClubRaceCodeSpanSchema.optional(),
+    })
+    .strict()
+    .optional(),
 })
 
 export const ClubRaceStoreSchema = z.object({
@@ -83,6 +104,7 @@ export type ClubRaceTier = z.infer<typeof ClubRaceTierSchema>
 export type ClubRaceOfficialCode = z.infer<typeof ClubRaceOfficialCodeSchema>
 export type ClubRaceStoreFormat = z.infer<typeof ClubRaceStoreFormatSchema>
 export type ClubRaceCrossing = z.infer<typeof ClubRaceCrossingSchema>
+export type ClubRaceCodeSpan = z.infer<typeof ClubRaceCodeSpanSchema>
 export type ClubRaceStoreClub = z.infer<typeof ClubRaceStoreClubSchema>
 export type ClubRaceStoreData = z.infer<typeof ClubRaceStoreSchema>
 

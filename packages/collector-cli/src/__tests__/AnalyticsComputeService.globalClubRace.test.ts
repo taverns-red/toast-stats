@@ -220,6 +220,85 @@ describe('AnalyticsComputeService — global-club-race.json (#1556)', () => {
     expect(row?.current?.level).toBe('NotDistinguished')
   })
 
+  describe('as of the snapshot date (#1689)', () => {
+    // After April 30, so TI's official codes are present (PY 2025-26).
+    const EARLY = '2026-05-12'
+    const LATE = '2026-05-19'
+    const early = {
+      '61': [
+        club({ dcpGoals: 5, distinguishedStatus: 'D' }),
+        club({ clubId: '77', clubName: 'Late Bloomer', dcpGoals: 2 }),
+      ],
+    }
+    const late = {
+      '61': [
+        club({ dcpGoals: 7, membershipCount: 30, distinguishedStatus: 'S' }),
+        club({ clubId: '77', clubName: 'Late Bloomer', dcpGoals: 5 }),
+      ],
+    }
+    const comparable = (race: Awaited<ReturnType<typeof readArtifact>>) => ({
+      ...race,
+      generatedAt: 'frozen',
+    })
+
+    it('a rebuild of an earlier date excludes later crossings and shows the code held then', async () => {
+      await writeDate(EARLY, early)
+      await service.compute({ date: EARLY, districts: ['61'] })
+      const forwardEarly = await readArtifact(EARLY)
+      await writeDate(LATE, late)
+      await service.compute({ date: LATE, districts: ['61'] })
+
+      // Rebuild the earlier date while the store already holds LATE.
+      await service.compute({ date: EARLY, districts: ['61'], force: true })
+      const rebuilt = await readArtifact(EARLY)
+
+      expect(rebuilt.timeline.map(p => p.date)).toEqual([EARLY])
+      expect(rebuilt.observation.observedDates).toBe(1)
+      expect(rebuilt.reached.map(r => r.clubId)).toEqual(['3045'])
+      expect(rebuilt.reached[0]?.tiers).toEqual({
+        Distinguished: { reachedOn: EARLY, observedAfter: null, rank: 1 },
+      })
+      expect(rebuilt.reached[0]?.official).toEqual({
+        code: 'D',
+        since: EARLY,
+        observedAfter: null,
+      })
+      expect(rebuilt.byDistrict[0]?.reached.Select).toBe(0)
+      // The rebuild reproduces what the forward run published that day.
+      expect(comparable(rebuilt)).toEqual(comparable(forwardEarly))
+    })
+
+    it('the forward daily fold is unchanged: crossings stay sticky and the code is current', async () => {
+      await writeDate(EARLY, early)
+      await service.compute({ date: EARLY, districts: ['61'] })
+      await writeDate(LATE, late)
+      await service.compute({ date: LATE, districts: ['61'] })
+
+      const race = await readArtifact(LATE)
+      expect(
+        race.timeline.map(p => [p.date, p.Distinguished, p.Select])
+      ).toEqual([
+        [EARLY, 1, 0],
+        [LATE, 2, 1],
+      ])
+      const leader = race.reached.find(r => r.clubId === '3045')
+      expect(leader?.tiers).toEqual({
+        Distinguished: { reachedOn: EARLY, observedAfter: null, rank: 1 },
+        Select: { reachedOn: LATE, observedAfter: EARLY, rank: 1 },
+      })
+      expect(leader?.official).toEqual({
+        code: 'S',
+        since: LATE,
+        observedAfter: EARLY,
+      })
+      expect(
+        race.reached.find(r => r.clubId === '77')?.tiers.Distinguished
+      ).toEqual({ reachedOn: LATE, observedAfter: EARLY, rank: 2 })
+      // The official-code rows agree with the day's own distribution.
+      expect(race.distribution.byOfficialCode).toMatchObject({ D: 0, S: 1 })
+    })
+  })
+
   it('writes no artifact, without failing, when the date has no rankings file', async () => {
     await fs.mkdir(snapshotDir(DATE), { recursive: true })
     await fs.writeFile(

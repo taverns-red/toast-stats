@@ -162,7 +162,7 @@ const store = (
   ...overrides,
 })
 
-const build = () =>
+const build = (raceStore: ClubRaceStoreData = store()) =>
   buildGlobalClubRace({
     snapshotDate: DATE,
     rankings: [
@@ -180,7 +180,7 @@ const build = () =>
       // Present on disk, not in the date's rankings set (#1465).
       { districtId: '201', clubs: [club({ clubId: '201201' })] },
     ],
-    store: store(),
+    store: raceStore,
     generatedAt: '2026-09-11T10:00:00.000Z',
   })
 
@@ -481,5 +481,74 @@ describe('buildGlobalClubRace — district standings (#1556)', () => {
       Smedley: 0,
     })
     expect(d86?.percentOfBase).toBe(0)
+  })
+})
+
+describe('buildGlobalClubRace — as of the snapshot date (#1689)', () => {
+  const LATER = '2026-09-20'
+  const base = store()
+  /** The same store after a later date was folded in. */
+  const later = store({
+    observedDates: [...base.observedDates, LATER],
+    clubs: {
+      ...base.clubs,
+      '3045': {
+        ...base.clubs['3045']!,
+        lastSeen: LATER,
+        reached: {
+          ...base.clubs['3045']!.reached,
+          President: { on: LATER, after: DATE },
+        },
+      },
+      '808': {
+        clubId: '808',
+        clubName: 'Future Only',
+        districtId: '61',
+        lastSeen: LATER,
+        reached: { Distinguished: { on: LATER, after: DATE } },
+      },
+      '55': {
+        ...base.clubs['55']!,
+        lastSeen: LATER,
+        official: { code: 'D', on: DATE, after: '2026-08-12' },
+        officialCodes: {
+          D: { first: DATE, last: DATE },
+          S: { first: LATER, last: LATER },
+        },
+      },
+      '66': {
+        clubId: '66',
+        clubName: 'Official Later',
+        districtId: '61',
+        lastSeen: LATER,
+        reached: {},
+        official: { code: 'S', on: LATER, after: DATE },
+      },
+    },
+  })
+
+  it('a store holding a later date projects exactly as the store did on the day', () => {
+    expect(build(later)).toEqual(build(base))
+  })
+
+  it('shows the latest official code seen on or before the date, since its first sighting', () => {
+    const asOf = (snapshotDate: string) =>
+      buildGlobalClubRace({
+        snapshotDate,
+        rankings: [ranking('61')],
+        districts: [],
+        store: later,
+      }).reached.find(r => r.clubId === '55')?.official
+    expect(asOf(DATE)).toEqual({
+      code: 'D',
+      since: DATE,
+      observedAfter: '2026-08-12',
+    })
+    expect(asOf(LATER)).toEqual({
+      code: 'S',
+      since: LATER,
+      observedAfter: DATE,
+    })
+    expect(asOf('2026-08-12')).toBeUndefined()
   })
 })

@@ -299,6 +299,26 @@ describe('ClubRaceStore.upsertSnapshot — crossings (#1556)', () => {
     expect(store.getClub('3045')?.official?.on).toBe('2027-04-30')
   })
 
+  it('records the first and last date each official code was seen, in any walk order (#1689)', () => {
+    const at = (date: string, code: string) =>
+      [date, [district('61', [club({ distinguishedStatus: code })])]] as const
+    const walks = [
+      [at('2027-04-30', 'D'), at('2027-05-15', 'D'), at('2027-05-31', 'S')],
+      [at('2027-05-31', 'S'), at('2027-04-30', 'D'), at('2027-05-15', 'D')],
+    ]
+    for (const walk of walks) {
+      const store = ClubRaceStore.create(PY)
+      for (const [date, districts] of walk)
+        store.upsertSnapshot(date, districts)
+      expect(store.getClub('3045')?.officialCodes).toEqual({
+        D: { first: '2027-04-30', last: '2027-05-15' },
+        S: { first: '2027-05-31', last: '2027-05-31' },
+      })
+      // The sticky first recognition is unchanged.
+      expect(store.getClub('3045')?.official?.on).toBe('2027-04-30')
+    }
+  })
+
   it('refuses a snapshot date from another program year', () => {
     const store = ClubRaceStore.create(PY)
     expect(() =>

@@ -192,6 +192,7 @@ export {
   ClubRaceStoreFormatSchema,
   ClubRaceStoreClubSchema,
   ClubRaceCrossingSchema,
+  ClubRaceCodeSpanSchema,
   ClubRaceTierSchema,
   ClubRaceOfficialCodeSchema,
   CLUB_RACE_TIERS,
@@ -200,6 +201,7 @@ export {
   type ClubRaceStoreFormat,
   type ClubRaceStoreClub,
   type ClubRaceCrossing,
+  type ClubRaceCodeSpan,
   type ClubRaceTier,
   type ClubRaceOfficialCode,
 } from './schemas/club-race-store.schema.js'
