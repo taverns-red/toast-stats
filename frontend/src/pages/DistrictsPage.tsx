@@ -7,6 +7,11 @@ import {
   fetchCdnRankingsForDate,
 } from '../services/cdn'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
+import {
+  clubGrowthHoldings,
+  useClubGrowthRecipients,
+  type ClubGrowthHolding,
+} from '../hooks/useClubGrowthRecipients'
 import { AwardsRaceSection } from '../components/AwardsRaceSection'
 import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
 import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
@@ -21,7 +26,10 @@ import DistrictTierChip from '../components/DistrictTierChip'
 import { RecognitionBadge } from '../components/recognition/RecognitionBadge'
 import { RecognitionLegend } from '../components/recognition/RecognitionLegend'
 import { RecognitionFilterBar } from '../components/recognition/RecognitionFilterBar'
-import { AWARD_RECOGNITION } from '../components/recognition/recognitionRegistry'
+import {
+  AWARD_RECOGNITION,
+  CLUB_GROWTH_RECOGNITION,
+} from '../components/recognition/recognitionRegistry'
 import {
   EMPTY_RECOGNITION_FILTER,
   districtMatchesRecognition,
@@ -313,6 +321,22 @@ const DistrictsPage: React.FC = () => {
   // the toolbar + table down ~286px → CLS (#750).
   const { data: competitiveAwards, isLoading: isLoadingAwards } =
     useCompetitiveAwards(effectiveRankingsDate)
+
+  // District Club Growth Achievement holdings (#1537) for the rankings-table
+  // badge. Program year + pinned date are the page's own (R3); each settled
+  // checkpoint is judged on that date's own rankings file inside the hook,
+  // never on the rankings this page shows. Before PY 2026-27 nothing is held.
+  const clubGrowth = useClubGrowthRecipients(
+    selectedProgramYear,
+    effectiveRankingsDate
+  )
+  const clubGrowthHeld = React.useMemo(
+    () =>
+      clubGrowth.applicable
+        ? clubGrowthHoldings(clubGrowth.checkpoints)
+        : new Map<string, ClubGrowthHolding>(),
+    [clubGrowth]
+  )
 
   const rankings: DistrictRanking[] = React.useMemo(
     () => data?.rankings || [],
@@ -1686,6 +1710,19 @@ const DistrictsPage: React.FC = () => {
                                 />
                               ) : null
                             )}
+                            {(() => {
+                              const held = clubGrowthHeld.get(
+                                district.districtId
+                              )
+                              return held ? (
+                                <RecognitionBadge
+                                  item={CLUB_GROWTH_RECOGNITION}
+                                  detail={String(held.milestone)}
+                                  detailDescription={held.description}
+                                  testId={`recognition-${CLUB_GROWTH_RECOGNITION.id}-${district.districtId}`}
+                                />
+                              ) : null
+                            })()}
                             {/* Region collapses into the District cell as
                               a quiet "· R<n>" suffix (#546) — saves the
                               standalone Region column's width. */}

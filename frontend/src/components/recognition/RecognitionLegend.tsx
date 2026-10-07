@@ -1,6 +1,7 @@
 import React, { useId, useState } from 'react'
 import { RecognitionBadge } from './RecognitionBadge'
 import {
+  ACHIEVEMENT_RECOGNITION,
   AWARD_RECOGNITION,
   TIER_RECOGNITION,
   type RecognitionItem,
@@ -40,6 +41,13 @@ const GROUPS: ReadonlyArray<{
     heading: 'Distinguished tiers',
     hint: 'one ladder, lowest to highest',
     items: TIER_RECOGNITION,
+  },
+  {
+    // #1537 — thresholds any number of districts can earn; the badge carries
+    // the tier reached (3 / 5 / 10).
+    heading: 'Achievements',
+    hint: 'thresholds, any district can earn',
+    items: ACHIEVEMENT_RECOGNITION,
   },
 ]
 

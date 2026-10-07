@@ -1501,6 +1501,16 @@
     color: var(--recognition-accent, currentColor);
   }
 
+  /* Club Growth tier reached (#1537), e.g. "Club Growth 5". Mono numeral,
+     separated by a hairline so it reads as a qualifier, not part of the name.
+     Legacy chrome tokens only. */
+  .recognition-badge__detail {
+    padding-left: 4px;
+    border-left: 1px solid var(--line);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+
   /* Smedley's rare-tier treatment (#546) — under ten districts a year earn
      it. box-shadow rather than a border so the ring doesn't change the
      badge's box and reflow the cell. */

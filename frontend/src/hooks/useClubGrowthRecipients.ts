@@ -136,6 +136,63 @@ export function recipientsAtCheckpoint(
   )
 }
 
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const
+
+/** `2026-09-30` → `September 30, 2026`, from the string (no TZ roll). */
+const formatFullDate = (iso: string): string => {
+  const month = MONTHS[Number.parseInt(iso.slice(5, 7), 10) - 1]
+  if (!month) return iso
+  return `${month} ${Number.parseInt(iso.slice(8, 10), 10)}, ${iso.slice(0, 4)}`
+}
+
+export interface ClubGrowthHolding {
+  /** Highest milestone held across the settled checkpoints. */
+  milestone: number
+  /** Each milestone held, as a phrase — the badge's accessible detail. */
+  description: string
+}
+
+/**
+ * What each district HOLDS, for the landing-table badge (#1537): the highest
+ * milestone across the settled checkpoints, with every checkpoint named. Only
+ * `resolved` checkpoints contribute — pending, loading and unavailable hold
+ * nothing, so a badge can never come from a guess.
+ */
+export function clubGrowthHoldings(
+  checkpoints: readonly ClubGrowthRecipientsCheckpoint[]
+): Map<string, ClubGrowthHolding> {
+  const held = new Map<string, { milestone: number; phrases: string[] }>()
+  for (const checkpoint of checkpoints) {
+    if (checkpoint.status !== 'resolved') continue
+    const deadline = formatFullDate(checkpoint.checkpointDate)
+    for (const r of checkpoint.recipients) {
+      const entry = held.get(r.districtId) ?? { milestone: 0, phrases: [] }
+      entry.milestone = Math.max(entry.milestone, r.milestone)
+      entry.phrases.push(`${r.milestone}-club milestone by ${deadline}`)
+      held.set(r.districtId, entry)
+    }
+  }
+  return new Map(
+    [...held].map(([id, { milestone, phrases }]) => [
+      id,
+      { milestone, description: phrases.join('; ') },
+    ])
+  )
+}
+
 export function useClubGrowthRecipients(
   programYear: ProgramYear,
   asOfDate: string | undefined
