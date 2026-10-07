@@ -19,7 +19,8 @@ on:
       - '.gitignore'
       - 'LICENSE'
   pull_request:
-    branches: [main]
+    # THROWAWAY (#1548 AC2 proof, never merge): retarget so CI is never scheduled.
+    branches: [never-merge-1548-ci-gate-proof]
     # Keep in sync with .github/workflows/docs.yml -- see the note above.
     paths-ignore:
       - '**/*.md'
