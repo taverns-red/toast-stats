@@ -197,6 +197,15 @@ export class ClubRaceStore {
           } else if (date === existing.on) {
             existing.code = code
           }
+          // Per-code span (#1689): min/max, so any walk order converges and
+          // a past date can be projected with the code it held then.
+          const codes = (entry.officialCodes ??= {})
+          const span = codes[code]
+          if (span === undefined) codes[code] = { first: date, last: date }
+          else {
+            if (date < span.first) span.first = date
+            if (date > span.last) span.last = date
+          }
         }
       }
     }

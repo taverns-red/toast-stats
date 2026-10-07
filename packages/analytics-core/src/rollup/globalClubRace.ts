@@ -29,6 +29,8 @@
 import {
   GLOBAL_CLUB_RACE_FORMAT,
   CLUB_RACE_TIERS,
+  type ClubRaceOfficialCode,
+  type ClubRaceStoreClub,
   type ClubRaceStoreData,
   type ClubRaceTier,
   type DistrictRanking,
@@ -70,7 +72,10 @@ export interface GlobalClubRaceInput {
   readonly rankings: readonly DistrictRanking[]
   /** Every district file found for the date. */
   readonly districts: readonly GlobalClubRaceDistrictInput[]
-  /** The program year's crossing store, already folded for this date. */
+  /**
+   * The program year's crossing store, folded for this date. It may also
+   * hold LATER dates (a rebuild); the projection cuts it to this date.
+   */
   readonly store: ClubRaceStoreData
   /** ISO timestamp to stamp; defaults to now. Injected so tests can freeze it. */
   readonly generatedAt?: string
@@ -134,6 +139,107 @@ function observationFor(
     observedDates: sorted.length,
     resolution,
   }
+}
+
+const CLUB_RACE_OFFICIAL_CODES = ['D', 'S', 'P', 'M'] as const
+
+/**
+ * The store as it stood on `date` (#1689): only observed dates, crossings
+ * and official sightings on or before it. A rebuild of a past date runs
+ * against a store that already holds later dates; without this cut the
+ * artifact would list crossings that had not happened yet.
+ *
+ * Crossings are sticky and min-folded, so a crossing with `on <= date` is
+ * exactly the one the store held that day, `after` included (it points at
+ * an observed date before `on`). On the forward daily path the store's
+ * latest date IS `date`, and this is the identity.
+ */
+function storeAsOf(store: ClubRaceStoreData, date: string): ClubRaceStoreData {
+  const clubs: ClubRaceStoreData['clubs'] = {}
+  for (const [clubId, entry] of Object.entries(store.clubs)) {
+    const reached: ClubRaceStoreClub['reached'] = {}
+    for (const tier of CLUB_RACE_TIERS) {
+      const crossing = entry.reached[tier]
+      if (crossing && crossing.on <= date) reached[tier] = crossing
+    }
+    const official =
+      entry.official && entry.official.on <= date ? entry.official : undefined
+    let officialCodes: ClubRaceStoreClub['officialCodes']
+    for (const code of CLUB_RACE_OFFICIAL_CODES) {
+      const span = entry.officialCodes?.[code]
+      if (!span || span.first > date) continue
+      officialCodes ??= {}
+      officialCodes[code] = {
+        first: span.first,
+        last: span.last <= date ? span.last : date,
+      }
+    }
+    if (Object.keys(reached).length === 0 && !official) continue
+    const projected: ClubRaceStoreClub = { ...entry, reached }
+    if (official) projected.official = official
+    else delete projected.official
+    if (officialCodes) projected.officialCodes = officialCodes
+    else delete projected.officialCodes
+    clubs[clubId] = projected
+  }
+  return {
+    ...store,
+    observedDates: store.observedDates.filter(d => d <= date),
+    clubs,
+  }
+}
+
+/**
+ * The official code a club holds in an as-of store: the code seen most
+ * recently, `since` the first sighting of THAT code. A store written before
+ * per-code spans existed falls back to its single first-seen record.
+ */
+function officialFor(
+  entry: ClubRaceStoreClub,
+  store: ClubRaceStoreData
+): GlobalClubRaceReached['official'] {
+  let latest: {
+    code: ClubRaceOfficialCode
+    first: string
+    last: string
+  } | null = null
+  for (const code of CLUB_RACE_OFFICIAL_CODES) {
+    const span = entry.officialCodes?.[code]
+    if (!span) continue
+    if (
+      latest === null ||
+      span.last > latest.last ||
+      (span.last === latest.last && span.first > latest.first)
+    ) {
+      latest = { code, ...span }
+    }
+  }
+  if (latest !== null) {
+    return {
+      code: latest.code,
+      since: latest.first,
+      observedAfter: previousObserved(store.observedDates, latest.first),
+    }
+  }
+  return entry.official
+    ? {
+        code: entry.official.code,
+        since: entry.official.on,
+        observedAfter: entry.official.after,
+      }
+    : null
+}
+
+function previousObserved(
+  observedDates: readonly string[],
+  date: string
+): string | null {
+  let previous: string | null = null
+  for (const observed of [...observedDates].sort()) {
+    if (observed >= date) break
+    previous = observed
+  }
+  return previous
 }
 
 function timelineFor(store: ClubRaceStoreData): GlobalClubRaceTimelinePoint[] {
@@ -221,15 +327,17 @@ function currentFor(
 export function buildGlobalClubRace(
   input: GlobalClubRaceInput
 ): GlobalClubRace {
-  const { snapshotDate, rankings, store } = input
+  const { snapshotDate, rankings } = input
   const programYear = programYearForSnapshotDate(snapshotDate)
-  if (store.programYear !== programYear) {
+  if (input.store.programYear !== programYear) {
     throw new Error(
-      `club-race store is for ${store.programYear} but ${snapshotDate} ` +
+      `club-race store is for ${input.store.programYear} but ${snapshotDate} ` +
         `belongs to ${programYear} — refusing to project one year's ` +
         'crossings onto another'
     )
   }
+  // A rebuild of a past date must not see the store's later dates (#1689).
+  const store = storeAsOf(input.store, snapshotDate)
 
   // ── Scope: the date's own district set, never the directory ────────────
   const inScope = new Map<string, DistrictRanking>()
@@ -328,13 +436,7 @@ export function buildGlobalClubRace(
       districtId: entry.districtId,
       current,
       tiers,
-      official: entry.official
-        ? {
-            code: entry.official.code,
-            since: entry.official.on,
-            observedAfter: entry.official.after,
-          }
-        : null,
+      official: officialFor(entry, store),
     })
   }
   // Earliest Distinguished crossing first; official-only rows last.
