@@ -16,8 +16,13 @@ import type { CollectorOrchestratorConfig } from '../types/index.js'
 // Track which districts should fail when downloadCsv is called
 let failingDistricts = new Set<string>()
 
-// CSV content the mock downloader returns (reset per test)
-const DEFAULT_MOCK_CSV = `Header\nRow1\nMonth of December, As of 01/11/2026`
+// CSV content the mock downloader returns (reset per test). The one body
+// serves every report type, so its header carries each report's required
+// columns: a body without them is refused as not-a-CSV (#1671). Its data rows
+// name no parseable district id, so the #1465 district-set reconciliation
+// does not apply and each test's requested districts are scraped as before.
+const MOCK_HEADER = '"District","Division","Club Number"'
+const DEFAULT_MOCK_CSV = `${MOCK_HEADER}\nRow 1\nMonth of December, As of 01/11/2026`
 let mockCsvContent = DEFAULT_MOCK_CSV
 
 // Optional per-program-year content override (rollover tests, #1284). When set,
@@ -299,8 +304,8 @@ describe('CollectorOrchestrator - Partial Failure Resilience (#124)', () => {
   // archive path, which 500s for the live year. TypeScript cannot catch that,
   // so it is pinned here.
   it('threads the resolved live pathStyle into every per-district fetch (#1342)', async () => {
-    const liveCsv = `"REGION","DISTRICT","Paid Clubs"
-"01","02","192"
+    const liveCsv = `"REGION","DISTRICT","Division","Club Number","Paid Clubs"
+"01","02","A","1","192"
 Month of July, As of 07/30/2026`
     mockCsvByProgramYear = { '2026-2027': liveCsv }
 
@@ -340,8 +345,8 @@ Month of July, As of 07/30/2026`
     // Full month name here: this file's simplified mock parser matches full
     // names only. The real parser's "Jun" abbreviation + rollover handling is
     // covered authoritatively in csvFooterParser.test.ts.
-    const priorCsv = `"REGION","DISTRICT","Paid Clubs"
-"01","02","192"
+    const priorCsv = `"REGION","DISTRICT","Division","Club Number","Paid Clubs"
+"01","02","A","1","192"
 Month of June, As of 07/01/2026`
     mockCsvByProgramYear = {
       '2026-2027': `<html><head><title>Object moved</title></head><body></body></html>`,
@@ -412,7 +417,7 @@ Month of June, As of 07/01/2026`
     // isClosingPeriod:false here would launder "no footer" into a decision
     // that TransformService trusts, re-opening the raw-date publish hole the
     // fail-closed chain exists to close.
-    mockCsvContent = 'Header\nRow1\nRow2'
+    mockCsvContent = `${MOCK_HEADER}\nRow 1\nRow 2`
 
     await runScrapeTest(['09'], new Set())
 

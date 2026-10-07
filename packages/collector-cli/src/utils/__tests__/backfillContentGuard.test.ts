@@ -211,3 +211,36 @@ describe('verifyBackfillCsv (#1384)', () => {
     ).toMatchObject({ status: 'empty' })
   })
 })
+
+describe('verifyBackfillCsv — the body must be a CSV (#1671)', () => {
+  const request = {
+    programYear: '2018-2019',
+    date: '2019-07-16',
+    pathStyle: 'archive' as const,
+  }
+  const HTML =
+    '\r\n\r\n<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN">\r\n<html><body>error</body></html>'
+
+  it('rejects an HTML error page served with a 200', () => {
+    const verdict = verifyBackfillCsv({ ...request, content: HTML })
+    expect(verdict.status).toBe('invalid')
+  })
+
+  it("rejects a body missing the report's expected header", () => {
+    const verdict = verifyBackfillCsv({
+      ...request,
+      reportType: 'clubperformance',
+      content: csv([ROW], 'Month of Jun, As of 07/16/2019'),
+    })
+    expect(verdict.status).toBe('invalid')
+  })
+
+  it('still accepts a real body of the requested report', () => {
+    const verdict = verifyBackfillCsv({
+      ...request,
+      reportType: 'districtsummary',
+      content: csv([ROW], 'Month of Jun, As of 07/16/2019'),
+    })
+    expect(verdict).toEqual({ status: 'ok' })
+  })
+})

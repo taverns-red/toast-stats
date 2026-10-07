@@ -22,11 +22,13 @@ import type { CollectorOrchestratorConfig } from '../types/index.js'
 
 /** The 2025-26 close: the districts that actually existed on 2026-06-30. */
 const LEGACY_SUMMARY_CSV = [
-  '"DISTRICT","REGION","Paid Clubs Base","Paid Clubs"',
-  '"61","6","164","164"',
-  '"62","6","90","90"',
-  '"F","2","110","110"',
-  '"U","14","300","300"',
+  // One body serves every report in this mock, so the header carries each
+  // report's required columns (#1671).
+  '"DISTRICT","REGION","Paid Clubs Base","Paid Clubs","Division","Club Number"',
+  '"61","6","164","164","A","1"',
+  '"62","6","90","90","A","2"',
+  '"F","2","110","110","A","3"',
+  '"U","14","300","300","A","4"',
   // The footer names the date the scrape asks for. A body "As of" any other
   // day is refused before it is stored (#1669).
   '"Month of Jun, As of 06/30/2026"',

@@ -45,6 +45,7 @@ import {
 import { resolveActiveProgramYear } from './utils/programYearResolver.js'
 import { parseFooterAsOfDate } from './utils/csvFooterParser.js'
 import { verifyBackfillCsv } from './utils/backfillContentGuard.js'
+import { assertCsvBody } from './utils/csvBodyGuard.js'
 import { reconcileDistrictsForDate } from './utils/districtSetForDate.js'
 /**
  * District configuration file structure
@@ -359,6 +360,8 @@ export class CollectorOrchestrator {
       // Checked outside the retry: a wrong-day body is deterministic, and
       // retrying it would only delay the refusal.
       const content = retryResult.result
+      // A 200 is not proof of a CSV (#1671): TI's HTML error page is refused.
+      assertCsvBody(content, 'districtsummary', 'all-districts summary')
       this.assertBodyIsForDate(content, date, 'all-districts summary')
 
       const filePath = await this.writeCsvToCache(
@@ -496,6 +499,8 @@ export class CollectorOrchestrator {
       // whole or not at all (#1669). Outside the retry: a wrong-day body is
       // deterministic.
       for (const { report, content } of retryResult.result) {
+        // A 200 is not proof of a CSV (#1671): TI's HTML error page is refused.
+        assertCsvBody(content, report, `${report} for ${districtId}`)
         this.assertBodyIsForDate(content, date, `${report} for ${districtId}`)
       }
       for (const { csv, content } of retryResult.result) {

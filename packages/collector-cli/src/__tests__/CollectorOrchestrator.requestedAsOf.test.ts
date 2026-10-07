@@ -197,6 +197,23 @@ describe('CollectorOrchestrator — a scrape returns the requested as-of or noth
     ).rejects.toThrow()
   })
 
+  // #1671: TI answers some reports with its HTML error page and a 200. The
+  // district fails and none of its files reach raw-csv.
+  it('fails a district, and stores none of its files, when a body is an HTML error page', async () => {
+    serve = spec =>
+      spec.reportType === 'clubperformance'
+        ? '\r\n\r\n<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN">\r\n<html><head><title>Toastmasters International</title></head></html>'
+        : tiAsMeasured(spec)
+
+    const result = await scrape('2022-07-28')
+
+    expect(result.districtsFailed).toEqual(['61'])
+    expect(result.errors.map(e => e.error).join('\n')).toMatch(/not a CSV/i)
+    await expect(
+      fs.readdir(path.join(cacheDir, 'raw-csv', '2022-07-28', 'district-61'))
+    ).rejects.toThrow()
+  })
+
   it('keeps the daily request shape (empty slot) when D is the live as-of', async () => {
     const result = await scrape('2026-10-05')
 

@@ -25,6 +25,7 @@ import {
   type ReportType,
 } from '../packages/collector-cli/src/services/HttpCsvDownloader.js'
 import { calculateProgramYear } from '../packages/collector-cli/src/utils/CachePaths.js'
+import { validateCsvBody } from '../packages/collector-cli/src/utils/csvBodyGuard.js'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -134,7 +135,7 @@ async function downloadAndSaveCSV(
   spec: BackfillDateSpec,
   outputPath: string,
   dryRun: boolean
-): Promise<{ downloaded: boolean; bytes: number }> {
+): Promise<{ downloaded: boolean; bytes: number; rejected?: string }> {
   if (dryRun) {
     const url = buildExportUrl(spec)
     console.log(`  [dry-run] ${url}`)
@@ -142,11 +143,15 @@ async function downloadAndSaveCSV(
     return { downloaded: false, bytes: 0 }
   }
 
-  // Skip if file already exists
+  // Skip if a usable file already exists. Size alone is not usability: TI's
+  // HTML error page is 8 KB (#1671), so an existing body must also be a CSV.
   try {
     const stat = await fs.stat(outputPath)
-    if (stat.size > 500) {
-      // Skip files > 500 bytes (non-corrupt)
+    if (
+      stat.size > 500 &&
+      validateCsvBody(await fs.readFile(outputPath, 'utf-8'), spec.reportType)
+        .ok
+    ) {
       return { downloaded: false, bytes: 0 }
     }
   } catch {
@@ -154,6 +159,14 @@ async function downloadAndSaveCSV(
   }
 
   const result = await downloader.downloadCsv(spec)
+
+  // A 200 is not proof of a CSV (#1671). Never write TI's HTML error page to
+  // raw-csv; remove a stale copy so transform sees an explicit gap instead.
+  const body = validateCsvBody(result.content, spec.reportType)
+  if (!body.ok) {
+    await fs.rm(outputPath, { force: true })
+    return { downloaded: false, bytes: 0, rejected: body.reason }
+  }
 
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
   await fs.writeFile(outputPath, result.content, 'utf-8')
@@ -250,6 +263,11 @@ async function main(): Promise<void> {
   let totalDownloaded = 0
   let totalSkipped = 0
   let totalErrors = 0
+  // Bodies refused as not-a-CSV (#1671). Reported separately from fetch
+  // errors: TI serves its HTML error page for some reports permanently (e.g.
+  // district U club-performance for 2019-06), so they must be visible in the
+  // summary without failing every run that covers that month.
+  let totalRejected = 0
   let totalBytes = 0
 
   for (const entry of entries) {
@@ -283,7 +301,14 @@ async function main(): Promise<void> {
         summaryPath,
         dryRun
       )
-      if (summaryResult.downloaded) {
+      if (summaryResult.rejected) {
+        // Without a summary there is no district list for this month.
+        console.error(
+          `  ✗ Rejected: districtsummary is not a CSV — ${summaryResult.rejected}`
+        )
+        totalRejected++
+        continue
+      } else if (summaryResult.downloaded) {
         totalDownloaded++
         totalBytes += summaryResult.bytes
       } else if (!dryRun) {
@@ -333,7 +358,12 @@ async function main(): Promise<void> {
               csvPath,
               dryRun
             )
-            if (result.downloaded) {
+            if (result.rejected) {
+              console.error(
+                `  ✗ Rejected: ${reportType} district=${districtId} is not a CSV — ${result.rejected}`
+              )
+              totalRejected++
+            } else if (result.downloaded) {
               totalDownloaded++
               totalBytes += result.bytes
             } else {
@@ -361,7 +391,7 @@ async function main(): Promise<void> {
 
     if (!dryRun) {
       console.log(
-        `  ✓ downloaded=${totalDownloaded} skipped=${totalSkipped} errors=${totalErrors}`
+        `  ✓ downloaded=${totalDownloaded} skipped=${totalSkipped} errors=${totalErrors} rejected=${totalRejected}`
       )
     }
   }
@@ -375,7 +405,16 @@ async function main(): Promise<void> {
   )
   console.log(`  Skipped:     ${totalSkipped}`)
   console.log(`  Errors:      ${totalErrors}`)
+  console.log(
+    `  Rejected:    ${totalRejected} (not a CSV, not written — #1671)`
+  )
   console.log(`  Requests:    ${downloader.getRequestCount()}`)
+
+  if (totalRejected > 0) {
+    console.error(
+      `\n⚠ ${totalRejected} responses were not CSVs (TI error pages) and were not written. Transform reports each as a gap.`
+    )
+  }
 
   if (totalErrors > 0) {
     console.error(

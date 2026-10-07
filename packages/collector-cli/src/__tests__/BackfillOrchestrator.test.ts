@@ -253,7 +253,9 @@ describe('BackfillOrchestrator storage paths (#125)', () => {
       // dashboard returns for a period it has no data for, and #1384 skips
       // those instead of writing a bogus snapshot. This test is about the
       // storage path shape, so the fixture has to be a realistic response.
-      content: 'some,csv,data\n1,2,3\n',
+      // The header carries every report's required columns: one body serves
+      // all three reports here, and a body without them is refused (#1671).
+      content: 'District,Division,Club Number\n09,A,1\n',
       statusCode: 200,
       byteSize: 20,
     })
