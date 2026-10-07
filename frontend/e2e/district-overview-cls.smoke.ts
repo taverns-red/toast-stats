@@ -40,6 +40,18 @@ const VIEWPORTS = [
 
 const PATHS = ['/district/61', '/district/61?py=2024'] as const
 
+/* The KPI strip joins two independent CDN reads — the analytics file and the
+ * performance-targets file. Which lands first is a network race; CI lost it
+ * intermittently (#1685: 0.103–0.134 at 1350px, green on rerun) while a fast
+ * local load resolved both in one frame. The `targets late` case pins the
+ * losing order by holding the targets response, so the race is tested every
+ * run instead of whenever the network happens to reorder it. */
+const TARGETS_LAG_MS = 1_500
+const TARGETS_ORDERS = [
+  { name: '', lagTargets: false },
+  { name: ' (targets late)', lagTargets: true },
+] as const
+
 interface ShiftEntry {
   t: number
   value: number
@@ -91,50 +103,62 @@ test.describe('district overview CLS on a cold load (#1647)', () => {
 
   for (const vp of VIEWPORTS) {
     for (const path of PATHS) {
-      test(`${path} at ${vp.width}px stays inside the 0.1 CLS budget`, async ({
-        page,
-      }) => {
-        test.setTimeout(120_000)
-        await page.setViewportSize({ width: vp.width, height: vp.height })
+      for (const order of TARGETS_ORDERS) {
+        // The late-targets order is pinned on the current year only: it is the
+        // same strip on every path.
+        if (order.lagTargets && path !== PATHS[0]) continue
+        test(`${path} at ${vp.width}px stays inside the 0.1 CLS budget${order.name}`, async ({
+          page,
+        }) => {
+          test.setTimeout(120_000)
+          await page.setViewportSize({ width: vp.width, height: vp.height })
 
-        const cdp = await page.context().newCDPSession(page)
-        await cdp.send('Network.enable')
-        await cdp.send('Network.setCacheDisabled', { cacheDisabled: true })
+          if (order.lagTargets) {
+            await page.route('**/*_performance-targets.json', async route => {
+              await new Promise(resolve => setTimeout(resolve, TARGETS_LAG_MS))
+              await route.continue()
+            })
+          }
 
-        await page.addInitScript(INSTALL_OBSERVER)
-        await page.goto(path, { waitUntil: 'load', timeout: 60_000 })
+          const cdp = await page.context().newCDPSession(page)
+          await cdp.send('Network.enable')
+          await cdp.send('Network.setCacheDisabled', { cacheDisabled: true })
 
-        // Sanity gate before the number is read: an all-zeros CLS almost
-        // always means the page never left its loading state. The loaded KPI
-        // strip is the last above-the-fold block to resolve.
-        await page
-          .locator(
-            'section.district-kpi-strip:not(.district-kpi-strip--loading)'
+          await page.addInitScript(INSTALL_OBSERVER)
+          await page.goto(path, { waitUntil: 'load', timeout: 60_000 })
+
+          // Sanity gate before the number is read: an all-zeros CLS almost
+          // always means the page never left its loading state. The loaded KPI
+          // strip is the last above-the-fold block to resolve.
+          await page
+            .locator(
+              'section.district-kpi-strip:not(.district-kpi-strip--loading)'
+            )
+            .waitFor({ state: 'visible', timeout: 60_000 })
+          await page.evaluate(() => document.fonts.ready.then(() => undefined))
+          // Let the separately-resolving queries (awards, checkpoints, clubs)
+          // land before sampling.
+          await page.waitForTimeout(4_000)
+
+          const entries = await page.evaluate(() => window.__clsEntries ?? [])
+          const total = Number(
+            entries.reduce((a, e) => a + e.value, 0).toFixed(5)
           )
-          .waitFor({ state: 'visible', timeout: 60_000 })
-        await page.evaluate(() => document.fonts.ready.then(() => undefined))
-        // Let the separately-resolving queries (awards, checkpoints, clubs)
-        // land before sampling.
-        await page.waitForTimeout(4_000)
+          const breakdown = entries
+            .filter(e => e.value > 0.0005)
+            .map(
+              e =>
+                `  t=${e.t}ms value=${e.value}\n    ${e.sources.join('\n    ')}`
+            )
+            .join('\n')
 
-        const entries = await page.evaluate(() => window.__clsEntries ?? [])
-        const total = Number(
-          entries.reduce((a, e) => a + e.value, 0).toFixed(5)
-        )
-        const breakdown = entries
-          .filter(e => e.value > 0.0005)
-          .map(
-            e =>
-              `  t=${e.t}ms value=${e.value}\n    ${e.sources.join('\n    ')}`
-          )
-          .join('\n')
-
-        expect(
-          total,
-          `${path} CLS at ${vp.width}px is ${total} (budget ${CLS_BUDGET}) on ${page.url()}\n` +
-            `Largest contributors — read the sources, not the total:\n${breakdown}`
-        ).toBeLessThan(CLS_BUDGET)
-      })
+          expect(
+            total,
+            `${path} CLS at ${vp.width}px is ${total} (budget ${CLS_BUDGET}) on ${page.url()}\n` +
+              `Largest contributors — read the sources, not the total:\n${breakdown}`
+          ).toBeLessThan(CLS_BUDGET)
+        })
+      }
     }
   }
 })
