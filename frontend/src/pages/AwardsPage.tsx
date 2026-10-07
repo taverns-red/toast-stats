@@ -149,7 +149,10 @@ const AwardsPage: React.FC = () => {
         </div>
       )}
 
-      {clubGrowth.applicable && (
+      {/* Mounted only once the leaderboards settle: the grid above resolves
+          on its own query, and a section already on screen would be shoved
+          down by it (CLS). The recipients query still runs meanwhile. */}
+      {!isLoading && clubGrowth.applicable && (
         <div className="awards-page__achievements">
           <ClubGrowthRecipientsSection
             programYearLabel={selectedProgramYear.label}
