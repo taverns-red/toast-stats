@@ -13,15 +13,13 @@ import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { RecognitionLegend } from '../RecognitionLegend'
-import { AWARD_RECOGNITION, TIER_RECOGNITION } from '../recognitionRegistry'
+import { RECOGNITION_ITEMS } from '../recognitionRegistry'
 
 describe('RecognitionLegend (#1361)', () => {
-  it('lists every award and tier with its title and explanation', () => {
+  it('lists every recognition item with its title and explanation', () => {
     render(<RecognitionLegend />)
-    // The Club Growth Achievement joins the legend with its rankings-table
-    // badge (#1537 PR 3); its absence until then is pinned in
-    // recognitionConsumers.test.tsx.
-    for (const item of [...AWARD_RECOGNITION, ...TIER_RECOGNITION]) {
+    // Includes the Club Growth Achievement now the table shows its badge (#1537).
+    for (const item of RECOGNITION_ITEMS) {
       expect(screen.getByText(item.title)).toBeInTheDocument()
       expect(screen.getByText(item.description)).toBeInTheDocument()
     }
@@ -31,6 +29,11 @@ describe('RecognitionLegend (#1361)', () => {
     render(<RecognitionLegend />)
     expect(screen.getByText(/awards/i)).toBeInTheDocument()
     expect(screen.getByText(/distinguished tiers/i)).toBeInTheDocument()
+  })
+
+  it('gives the threshold achievements their own group (#1537)', () => {
+    render(<RecognitionLegend />)
+    expect(screen.getByText('Achievements')).toBeInTheDocument()
   })
 
   it('is titled "Recognition", the product owner’s umbrella term', () => {

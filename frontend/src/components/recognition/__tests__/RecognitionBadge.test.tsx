@@ -117,4 +117,26 @@ describe('RecognitionBadge (#1361)', () => {
       container.querySelector('.recognition-badge')?.getAttribute('aria-hidden')
     ).toBe('true')
   })
+
+  it('carries a detail beside the label and in the accessible name (#1537)', () => {
+    // The Club Growth badge names the tier reached: "Club Growth 5" visibly,
+    // and the full sentence for assistive tech.
+    render(
+      <RecognitionBadge
+        item={byId('clubGrowth')}
+        detail="5"
+        detailDescription="5-club milestone by September 30, 2026"
+      />
+    )
+    const badge = screen.getByRole('img', {
+      name: 'District Club Growth Achievement — 5-club milestone by September 30, 2026',
+    })
+    expect(badge.querySelector('.recognition-badge__detail')?.textContent).toBe(
+      '5'
+    )
+    expect(badge).toHaveAttribute(
+      'title',
+      'District Club Growth Achievement — 5-club milestone by September 30, 2026'
+    )
+  })
 })

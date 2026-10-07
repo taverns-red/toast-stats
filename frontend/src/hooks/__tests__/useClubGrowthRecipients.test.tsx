@@ -12,8 +12,10 @@ import React from 'react'
 import { renderHook, waitFor, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
+  clubGrowthHoldings,
   recipientsAtCheckpoint,
   useClubGrowthRecipients,
+  type ClubGrowthRecipientsCheckpoint,
 } from '../useClubGrowthRecipients'
 import {
   fetchCdnRankings,
@@ -138,6 +140,64 @@ describe('recipientsAtCheckpoint', () => {
       ['42', 10],
       ['61', 10],
     ])
+  })
+})
+
+describe('clubGrowthHoldings (#1537 — landing badge)', () => {
+  const resolved = (
+    id: 'september' | 'march',
+    recipients: { districtId: string; count: number; milestone: number }[]
+  ): ClubGrowthRecipientsCheckpoint => ({
+    id,
+    checkpointDate: id === 'september' ? '2026-09-30' : '2027-03-31',
+    milestones: id === 'september' ? [3, 5] : [3, 5, 10],
+    status: 'resolved',
+    resolvedFromDate: snap(id === 'september' ? '2026-09-30' : '2027-03-31'),
+    asOfDate: id === 'september' ? '2026-10-05' : '2027-04-07',
+    recipients: recipients.map(r => ({
+      ...r,
+      districtName: `District ${r.districtId}`,
+      region: '07',
+    })),
+  })
+
+  it('holds each district at the highest tier earned across settled checkpoints, naming each', () => {
+    const holdings = clubGrowthHoldings([
+      resolved('september', [
+        { districtId: '61', count: 5, milestone: 5 },
+        { districtId: '42', count: 3, milestone: 3 },
+      ]),
+      resolved('march', [{ districtId: '42', count: 11, milestone: 10 }]),
+    ])
+    expect(holdings.get('61')).toEqual({
+      milestone: 5,
+      description: '5-club milestone by September 30, 2026',
+    })
+    expect(holdings.get('42')).toEqual({
+      milestone: 10,
+      description:
+        '3-club milestone by September 30, 2026; 10-club milestone by March 31, 2027',
+    })
+    expect(holdings.has('7')).toBe(false)
+  })
+
+  it('holds nothing from pending, loading or unavailable checkpoints', () => {
+    const holdings = clubGrowthHoldings([
+      {
+        id: 'september',
+        checkpointDate: '2026-09-30',
+        milestones: [3, 5],
+        status: 'unavailable',
+        reason: 'count-not-collected',
+      },
+      {
+        id: 'march',
+        checkpointDate: '2027-03-31',
+        milestones: [3, 5, 10],
+        status: 'pending',
+      },
+    ])
+    expect(holdings.size).toBe(0)
   })
 })
 

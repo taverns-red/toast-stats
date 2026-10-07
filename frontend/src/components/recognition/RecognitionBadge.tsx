@@ -23,14 +23,26 @@ export interface RecognitionBadgeProps {
    * must not announce it a second time.
    */
   decorative?: boolean
+  /**
+   * A short qualifier shown after the label — the Club Growth tier reached,
+   * e.g. "5" (#1537). Visible at every width, like the label.
+   */
+  detail?: string
+  /** The detail as a phrase, appended to the accessible name and tooltip. */
+  detailDescription?: string
 }
 
 export const RecognitionBadge: React.FC<RecognitionBadgeProps> = ({
   item,
   testId,
   decorative = false,
+  detail,
+  detailDescription,
 }) => {
   const { Icon } = item
+  const name = detailDescription
+    ? `${item.title} — ${detailDescription}`
+    : item.title
   return (
     <span
       data-testid={testId}
@@ -47,13 +59,14 @@ export const RecognitionBadge: React.FC<RecognitionBadgeProps> = ({
           '--recognition-accent': `var(${item.accentVar})`,
         } as React.CSSProperties
       }
-      title={item.title}
+      title={name}
       {...(decorative
         ? { 'aria-hidden': true as const }
-        : { role: 'img', 'aria-label': item.title })}
+        : { role: 'img', 'aria-label': name })}
     >
       <Icon className="recognition-badge__icon" />
       <span className="recognition-badge__label">{item.shortLabel}</span>
+      {detail && <span className="recognition-badge__detail">{detail}</span>}
     </span>
   )
 }
