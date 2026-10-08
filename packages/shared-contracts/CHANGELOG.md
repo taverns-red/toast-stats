@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.3](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.12.2...shared-contracts-v1.12.3) (2026-10-07)
+
+
+### Bug Fixes
+
+* **pipeline:** race artifact as of its snapshot date — no future crossings, as-of official code ([#1689](https://github.com/taverns-red/toast-stats/issues/1689)) ([#1691](https://github.com/taverns-red/toast-stats/issues/1691)) ([d5dfea5](https://github.com/taverns-red/toast-stats/commit/d5dfea5f140e1b7b9c24f1cfa00e3fcb25533350))
+
 ## [1.12.2](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.12.1...shared-contracts-v1.12.2) (2026-10-03)
 
 

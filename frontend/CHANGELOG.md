@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.26.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.26.0...frontend-v3.26.1) (2026-10-07)
+
+
+### Refactors
+
+* delete 32 verified-dead frontend files ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1692](https://github.com/taverns-red/toast-stats/issues/1692)) ([f64d0ac](https://github.com/taverns-red/toast-stats/commit/f64d0ac0b2a1b4726edcaef15dc92c94e91001d4))
+
+
+### Tests
+
+* behavioural tests for cdnTimeSeries, transformServiceFactory, createVerboseLogger ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1690](https://github.com/taverns-red/toast-stats/issues/1690)) ([8316cb1](https://github.com/taverns-red/toast-stats/commit/8316cb16883f0a1186fe18d7fd674d19535a8045))
+* behavioural tests for the collector-cli, mcp-server and frontend entrypoints ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1695](https://github.com/taverns-red/toast-stats/issues/1695)) ([f9d1f53](https://github.com/taverns-red/toast-stats/commit/f9d1f53ffa9cfa655a8a231f39aea4cbd45ea821))
+* behavioural tests for useGlobalHistory, textEffectsRemover, TopGrowthClubs ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1693](https://github.com/taverns-red/toast-stats/issues/1693)) ([f214519](https://github.com/taverns-red/toast-stats/commit/f2145197a74fb132b1667a69f5580ec23b8db462))
+
 ## [3.26.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.25.2...frontend-v3.26.0) (2026-10-07)
 
 

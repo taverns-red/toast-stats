@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.11.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.11.1...collector-cli-v1.11.2) (2026-10-07)
+
+
+### Bug Fixes
+
+* **pipeline:** race artifact as of its snapshot date — no future crossings, as-of official code ([#1689](https://github.com/taverns-red/toast-stats/issues/1689)) ([#1691](https://github.com/taverns-red/toast-stats/issues/1691)) ([d5dfea5](https://github.com/taverns-red/toast-stats/commit/d5dfea5f140e1b7b9c24f1cfa00e3fcb25533350))
+
+
+### Tests
+
+* behavioural tests for cdnTimeSeries, transformServiceFactory, createVerboseLogger ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1690](https://github.com/taverns-red/toast-stats/issues/1690)) ([8316cb1](https://github.com/taverns-red/toast-stats/commit/8316cb16883f0a1186fe18d7fd674d19535a8045))
+* behavioural tests for the collector-cli, mcp-server and frontend entrypoints ([#1687](https://github.com/taverns-red/toast-stats/issues/1687)) ([#1695](https://github.com/taverns-red/toast-stats/issues/1695)) ([f9d1f53](https://github.com/taverns-red/toast-stats/commit/f9d1f53ffa9cfa655a8a231f39aea4cbd45ea821))
+
 ## [1.11.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.11.0...collector-cli-v1.11.1) (2026-10-07)
 
 
