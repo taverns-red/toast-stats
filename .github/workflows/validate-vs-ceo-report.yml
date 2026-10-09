@@ -91,6 +91,13 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720): `latest` resolves from setup-cloud-sdk's stale
+          # manifest (568.0.0), whose rsync keeps gzip bytes (#1702). >= 576.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
 
       # ── Which dates? Ask the rule, do not guess ─────────────────
       # The PY-end date is NOT reliably `YYYY-06-30`: a closing period can
