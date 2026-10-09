@@ -39,15 +39,42 @@ function loadSteps(): Step[] {
 }
 
 function modeOf(step: Step): string | null {
-  const m = step.name?.match(/^\[(\w+)\]/)
+  const m = step.name?.match(/^\[([\w-]+)\]/)
   return m ? m[1]! : null
 }
 
-// download: GCS path is the FIRST cp arg (gs:// → ./cache)
-function downloadsStore(run: string, file: string): boolean {
+// download: GCS path is the FIRST cp arg (gs:// → ./cache), or the
+// fail-closed pull helper (#1704).
+function downloadRegex(file: string): RegExp {
+  const escaped = file.replace(/\./g, '\\.')
   return new RegExp(
-    `cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${file.replace(/\./g, '\\.')}"`
-  ).test(run)
+    `cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${escaped}"|scripts/pull-awards-history\\.sh`
+  )
+}
+
+function downloadsStore(run: string, file: string): boolean {
+  return downloadRegex(file).test(run)
+}
+
+// Every collector-cli command that runs TransformService, which loads and
+// saves the awards-history store (TransformService.writeCompetitiveAwardsToDate).
+const TRANSFORM_RE = /npx\s+collector-cli\s+(?:scrape|transform)\b/
+
+/** Position of a match across the whole workflow: [stepIndex, charOffset]. */
+type Pos = [number, number]
+
+function firstMatch(steps: Step[], mode: string, re: RegExp): Pos | null {
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i]!
+    if (modeOf(step) !== mode || !step.run) continue
+    const m = re.exec(step.run)
+    if (m) return [i, m.index]
+  }
+  return null
+}
+
+function before(a: Pos, b: Pos): boolean {
+  return a[0] < b[0] || (a[0] === b[0] && a[1] < b[1])
 }
 
 // upload: local cache path is the FIRST cp arg (./cache → gs://)
@@ -76,6 +103,63 @@ describe('data-pipeline.yml store-sync symmetry (#1111)', () => {
     it(`rescrape syncs ${file} down (regression: #1111)`, () => {
       expect(uploaders.has('rescrape')).toBe(true)
       expect(downloaders.has('rescrape')).toBe(true)
+    })
+
+    // #1704: syncing at all is not enough. Daily pulled the store AFTER its
+    // scrape --transform, so the transform loaded an empty store (every daily
+    // competitive-awards.json had priorYearAvgClubSize: null) and the late
+    // pull then overwrote the store the transform had saved.
+    const transformModes = [
+      ...new Set(
+        steps
+          .filter(s => s.run && TRANSFORM_RE.test(s.run))
+          .map(modeOf)
+          .filter((m): m is string => m !== null)
+      ),
+    ].sort()
+
+    it('finds a transform in every data mode', () => {
+      expect(transformModes).toEqual([
+        'daily',
+        'rebuild',
+        'rescrape',
+        'rescrape-historical',
+      ])
+    })
+
+    for (const mode of transformModes) {
+      it(`${mode} pulls ${file} BEFORE its first transform (#1704)`, () => {
+        const transform = firstMatch(steps, mode, TRANSFORM_RE)!
+        const pull = firstMatch(steps, mode, downloadRegex(file))
+        expect(pull, `${mode} never pulls ${file}`).not.toBeNull()
+        expect(
+          before(pull!, transform),
+          `${mode} pulls ${file} at ${pull} after transform at ${transform}`
+        ).toBe(true)
+      })
+
+      it(`${mode} pulls ${file} exactly once, so nothing overwrites the transform's save (#1704)`, () => {
+        const pulls = steps.filter(
+          s => modeOf(s) === mode && s.run && downloadsStore(s.run, file)
+        )
+        expect(pulls.length).toBe(1)
+      })
+
+      it(`${mode} pushes the upserted ${file} back (#1704)`, () => {
+        expect(uploaders.has(mode)).toBe(true)
+      })
+    }
+
+    it(`every ${file} pull is fail-closed via scripts/pull-awards-history.sh (#1704)`, () => {
+      const inlinePulls = steps.filter(
+        s =>
+          modeOf(s) &&
+          s.run &&
+          new RegExp(
+            `cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${file.replace(/\./g, '\\.')}"`
+          ).test(s.run)
+      )
+      expect(inlinePulls.map(s => s.name)).toEqual([])
     })
   }
 })
