@@ -60,12 +60,24 @@ function stepMode(step: Step): string | undefined {
   )?.[1]
 }
 
-/** Lines of a run block with comments and blank lines dropped. */
+/**
+ * Logical lines of a run block: comments and blank lines dropped, and
+ * backslash-continued lines joined into one command.
+ */
 function codeLines(run: string): string[] {
-  return run
-    .split('\n')
-    .map(line => line.replace(/^\s*#.*$/, '').trimEnd())
-    .filter(line => line.trim() !== '')
+  const out: string[] = []
+  let buffer = ''
+  for (const raw of run.split('\n')) {
+    const line = raw.replace(/^\s*#.*$/, '').trimEnd()
+    if (/\\$/.test(line)) {
+      buffer += line.slice(0, -1) + ' '
+      continue
+    }
+    const joined = buffer + line
+    buffer = ''
+    if (joined.trim() !== '') out.push(joined)
+  }
+  return out
 }
 
 /** The body of every `if ! <...compute-analytics...>; then ... fi` block. */

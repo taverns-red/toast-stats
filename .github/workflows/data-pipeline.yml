@@ -944,7 +944,8 @@ jobs:
             # 6. Compute analytics (using actual snapshot date)
             echo "Computing analytics for ${ACTUAL_DATE}..."
             # stdout is the JSON summary (R4); stderr still goes to the log.
-            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose > "${COMPUTE_JSON}"; then
+            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" \
+              --force-analytics --verbose > "${COMPUTE_JSON}"; then
               echo "::warning::Compute failed for ${ACTUAL_DATE}"
               FAILED=$((FAILED + 1))
               # Still upload whatever snapshots were generated
@@ -1295,7 +1296,8 @@ jobs:
             # 4. Compute analytics
             echo "Computing analytics for ${ACTUAL_DATE}..."
             # stdout is the JSON summary (R4); stderr still goes to the log.
-            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose > "${COMPUTE_JSON}"; then
+            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" \
+              --force-analytics --verbose > "${COMPUTE_JSON}"; then
               echo "::warning::Compute failed for ${ACTUAL_DATE}"
               FAILED=$((FAILED + 1))
             fi
@@ -1499,7 +1501,8 @@ jobs:
             fi
 
             # stdout is the JSON summary (R4); stderr still goes to the log.
-            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose > "${COMPUTE_JSON}"; then
+            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" \
+              --force-analytics --verbose > "${COMPUTE_JSON}"; then
               echo "::warning::Compute failed for ${ACTUAL_DATE}"
               FAILED=$((FAILED + 1))
             fi
