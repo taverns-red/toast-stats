@@ -127,6 +127,8 @@ export interface DistrictComputeResult {
   timeSeriesWritten?: boolean
   /** Error message if time-series write failed (non-fatal) */
   timeSeriesError?: string
+  /** Whether the club-trends store was updated for this district (#1708) */
+  clubTrendsUpdated?: boolean
   error?: string
   skipped?: boolean
 }
@@ -201,6 +203,12 @@ export interface ComputeOperationResult {
    * reads nothing else, so a skipped write is a stale page, not a detail.
    */
   timeSeriesFailed: string[]
+  /** Districts whose time-series data point was written (#1708 counters). */
+  timeSeriesWritten: string[]
+  /** Districts whose club-trends store was updated (#1708 counters). */
+  clubTrendsUpdated: string[]
+  /** Computed (not skipped) districts whose club-trends store was not updated (#1708). */
+  clubTrendsFailed: string[]
   errors: Array<{
     districtId: string
     error: string
@@ -1137,6 +1145,7 @@ export class AnalyticsComputeService {
         clubTrendsIndexPath,
         timeSeriesWritten,
         timeSeriesError,
+        clubTrendsUpdated: true,
       }
     } catch (error) {
       const errorMessage =
@@ -1234,6 +1243,9 @@ export class AnalyticsComputeService {
         clubRaceStoreFailed: false,
         globalClubRaceFailed: false,
         timeSeriesFailed: [],
+        timeSeriesWritten: [],
+        clubTrendsUpdated: [],
+        clubTrendsFailed: [],
         errors: [
           {
             districtId: 'N/A',
@@ -1278,6 +1290,9 @@ export class AnalyticsComputeService {
         clubRaceStoreFailed: false,
         globalClubRaceFailed: false,
         timeSeriesFailed: [],
+        timeSeriesWritten: [],
+        clubTrendsUpdated: [],
+        clubTrendsFailed: [],
         errors: [
           {
             districtId: 'N/A',
@@ -1487,6 +1502,18 @@ export class AnalyticsComputeService {
       })
     }
 
+    // Store write counters for the step summary (#1708)
+    const computed = results.filter(r => !r.skipped)
+    const timeSeriesWritten = computed
+      .filter(r => r.timeSeriesWritten === true)
+      .map(r => r.districtId)
+    const clubTrendsUpdated = computed
+      .filter(r => r.clubTrendsUpdated === true)
+      .map(r => r.districtId)
+    const clubTrendsFailed = computed
+      .filter(r => r.clubTrendsUpdated !== true)
+      .map(r => r.districtId)
+
     // Calculate result statistics
     const districtsProcessed = districtsToCompute
     const districtsSucceeded = results
@@ -1536,6 +1563,9 @@ export class AnalyticsComputeService {
       globalClubRacePath: globalClubRace.path,
       globalClubRaceFailed: globalClubRace.failed,
       timeSeriesFailed,
+      timeSeriesWritten,
+      clubTrendsUpdated,
+      clubTrendsFailed,
       errors,
       duration_ms: Date.now() - startTime,
     }

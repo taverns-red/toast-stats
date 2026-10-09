@@ -111,6 +111,11 @@ on:
         required: false
         type: boolean
         default: false
+      allow_partial:
+        description: 'rebuild/rescrape/rescrape-historical: let a run with failed dates go on to promotion (#1708). Default fails it.'
+        required: false
+        type: boolean
+        default: false
 
 # Prevent overlapping pipeline runs
 concurrency:
@@ -512,6 +517,8 @@ jobs:
           echo "## 📊 Analytics Results" >> "$GITHUB_STEP_SUMMARY"
           SUCCEEDED=$(jq '.districts.succeeded' /tmp/analytics-output.json)
           echo "- **Districts computed**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
+          # Store write counters (#1708)
+          jq -rs -f scripts/compute-counters.jq /tmp/analytics-output.json >> "$GITHUB_STEP_SUMMARY"
 
       # ── Daily Step 4.5: Snapshot schema gate (#1125) ──
       # The transform write path validates, but merge-find-a-club rewrites
@@ -828,6 +835,8 @@ jobs:
       # ── Rebuild Step 2: Discover dates, then stream one-at-a-time ──
       - name: '[rebuild] Stream rebuild — one date at a time'
         if: steps.mode.outputs.mode == 'rebuild'
+        env:
+          ALLOW_PARTIAL: ${{ inputs.allow_partial }}
         run: |
           # Determine which dates to rebuild
           if [ -n "${{ inputs.dates }}" ]; then
@@ -844,8 +853,14 @@ jobs:
           echo "## 🔨 Rebuild (streaming)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Dates to process**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
+          # Per-date compute JSON for the store counters (#1708)
+          COMPUTE_JSON=/tmp/compute-analytics.json
+          COUNTERS_JSONL=/tmp/compute-counters.jsonl
+          : > "${COUNTERS_JSONL}"
+
           SUCCEEDED=0
           FAILED=0
+          REFUSED=0
           INDEX=0
 
           for DATE in ${DATES}; do
@@ -914,7 +929,13 @@ jobs:
             npx tsx scripts/guard-snapshot-upload.ts "${ACTUAL_DATE}" || GUARD_STATUS=$?
             if [ "${GUARD_STATUS}" -ne 0 ]; then
               echo "::warning::Not publishing ${ACTUAL_DATE}: upload guard exit ${GUARD_STATUS} (3 = closing snapshot)"
-              FAILED=$((FAILED + 1))
+              # Refusing to overwrite a close is the guard working, as in
+              # rescrape-historical (#1708); an unreadable GCS is a failure.
+              if [ "${GUARD_STATUS}" -eq 3 ]; then
+                REFUSED=$((REFUSED + 1))
+              else
+                FAILED=$((FAILED + 1))
+              fi
               rm -rf "./cache/raw-csv/${SOURCE_DATE}" "./cache/snapshots/${ACTUAL_DATE}" \
                 ${PREV_YEAR_DATE:+"./cache/snapshots/${PREV_YEAR_DATE}"}
               continue
@@ -922,11 +943,15 @@ jobs:
 
             # 6. Compute analytics (using actual snapshot date)
             echo "Computing analytics for ${ACTUAL_DATE}..."
-            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose 2>&1; then
+            # stdout is the JSON summary (R4); stderr still goes to the log.
+            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" \
+              --force-analytics --verbose > "${COMPUTE_JSON}"; then
               echo "::warning::Compute failed for ${ACTUAL_DATE}"
               FAILED=$((FAILED + 1))
               # Still upload whatever snapshots were generated
             fi
+            jq -c . "${COMPUTE_JSON}" >> "${COUNTERS_JSONL}" \
+              || echo "::warning::No compute JSON for ${ACTUAL_DATE}; the counters omit it"
 
             # 7. Upload this date's snapshots + analytics to GCS
             SNAPSHOT_DIR="./cache/snapshots/${ACTUAL_DATE}"
@@ -951,6 +976,7 @@ jobs:
               SUCCEEDED=$((SUCCEEDED + 1))
             else
               echo "::warning::No snapshot directory found for ${DATE} (expected ${ACTUAL_DATE})"
+              FAILED=$((FAILED + 1))
             fi
 
             # 8. Cleanup to free disk (keep time-series + club-trends)
@@ -990,11 +1016,13 @@ jobs:
             -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
 
           echo "- **Dates succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Refused by the upload guard**: ${REFUSED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
+          jq -rs -f scripts/compute-counters.jq "${COUNTERS_JSONL}" >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "${FAILED}" -gt 0 ]; then
-            echo "::warning::${FAILED} dates failed during rebuild"
-          fi
+          # Fail the run (no promotion) on any failed date unless allow_partial
+          # (#1708). Last, so the per-date uploads and store pushes above stand.
+          bash scripts/partial-failure-gate.sh "rebuild" "${FAILED}"
 
       # ════════════════════════════════════════════════════════
       # BACKFILL GLOBAL TOTALS MODE (#1498, epic #1496)
@@ -1136,6 +1164,8 @@ jobs:
       # ── Rescrape Step 2: Scrape → transform → compute → upload ──
       - name: '[rescrape] Re-collect and process dates'
         if: steps.mode.outputs.mode == 'rescrape'
+        env:
+          ALLOW_PARTIAL: ${{ inputs.allow_partial }}
         run: |
           # Determine dates to rescrape
           if [ -n "${{ inputs.dates }}" ]; then
@@ -1199,8 +1229,14 @@ jobs:
           fi
           echo "- **Districts**: $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')" >> "$GITHUB_STEP_SUMMARY"
 
+          # Per-date compute JSON for the store counters (#1708)
+          COMPUTE_JSON=/tmp/compute-analytics.json
+          COUNTERS_JSONL=/tmp/compute-counters.jsonl
+          : > "${COUNTERS_JSONL}"
+
           SUCCEEDED=0
           FAILED=0
+          REFUSED=0
           INDEX=0
 
           for DATE in ${DATES}; do
@@ -1246,17 +1282,27 @@ jobs:
             npx tsx scripts/guard-snapshot-upload.ts "${ACTUAL_DATE}" || GUARD_STATUS=$?
             if [ "${GUARD_STATUS}" -ne 0 ]; then
               echo "::warning::Not publishing ${ACTUAL_DATE}: upload guard exit ${GUARD_STATUS} (3 = closing snapshot)"
-              FAILED=$((FAILED + 1))
+              # Refusing to overwrite a close is the guard working, as in
+              # rescrape-historical (#1708); an unreadable GCS is a failure.
+              if [ "${GUARD_STATUS}" -eq 3 ]; then
+                REFUSED=$((REFUSED + 1))
+              else
+                FAILED=$((FAILED + 1))
+              fi
               rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${ACTUAL_DATE}"
               continue
             fi
 
             # 4. Compute analytics
             echo "Computing analytics for ${ACTUAL_DATE}..."
-            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose 2>&1; then
+            # stdout is the JSON summary (R4); stderr still goes to the log.
+            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" \
+              --force-analytics --verbose > "${COMPUTE_JSON}"; then
               echo "::warning::Compute failed for ${ACTUAL_DATE}"
               FAILED=$((FAILED + 1))
             fi
+            jq -c . "${COMPUTE_JSON}" >> "${COUNTERS_JSONL}" \
+              || echo "::warning::No compute JSON for ${ACTUAL_DATE}; the counters omit it"
 
             # 5. Upload snapshots + analytics to GCS
             SNAPSHOT_DIR="./cache/snapshots/${ACTUAL_DATE}"
@@ -1281,6 +1327,7 @@ jobs:
               SUCCEEDED=$((SUCCEEDED + 1))
             else
               echo "::warning::No snapshot directory found for ${DATE} (expected ${ACTUAL_DATE})"
+              FAILED=$((FAILED + 1))
             fi
 
             # 6. Upload raw-csv to GCS (replace old corrupt data)
@@ -1323,11 +1370,13 @@ jobs:
             -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
 
           echo "- **Dates succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Refused by the upload guard**: ${REFUSED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
+          jq -rs -f scripts/compute-counters.jq "${COUNTERS_JSONL}" >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "${FAILED}" -gt 0 ]; then
-            echo "::warning::${FAILED} dates failed during rescrape"
-          fi
+          # Fail the run (no promotion) on any failed date unless allow_partial
+          # (#1708). Last, so the per-date uploads and store pushes above stand.
+          bash scripts/partial-failure-gate.sh "rescrape" "${FAILED}"
 
       # ════════════════════════════════════════════════════════
       # RESCRAPE-HISTORICAL MODE (#205)
@@ -1370,6 +1419,7 @@ jobs:
       # all-at-once `collector-cli rebuild` computed every date first and
       # uploaded every snapshot with one unguarded `cp -r`.)
       - name: '[rescrape-historical] Rebuild, guard and publish one date at a time'
+        id: historical-loop
         if: steps.mode.outputs.mode == 'rescrape-historical'
         run: |
           # R2 + R9: the stores are GCS-backed. Pull them BEFORE rebuilding so
@@ -1399,6 +1449,11 @@ jobs:
           DATE_COUNT=$(echo "${RAW_DATES}" | grep -c . || true)
           echo "## 🔨 Historical rebuild (#1670)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Raw dates to process**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+          # Per-date compute JSON for the store counters (#1708)
+          COMPUTE_JSON=/tmp/compute-analytics.json
+          COUNTERS_JSONL=/tmp/compute-counters.jsonl
+          : > "${COUNTERS_JSONL}"
 
           SUCCEEDED=0
           FAILED=0
@@ -1445,10 +1500,14 @@ jobs:
               continue
             fi
 
-            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose 2>&1; then
+            # stdout is the JSON summary (R4); stderr still goes to the log.
+            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" \
+              --force-analytics --verbose > "${COMPUTE_JSON}"; then
               echo "::warning::Compute failed for ${ACTUAL_DATE}"
               FAILED=$((FAILED + 1))
             fi
+            jq -c . "${COMPUTE_JSON}" >> "${COUNTERS_JSONL}" \
+              || echo "::warning::No compute JSON for ${ACTUAL_DATE}; the counters omit it"
 
             SNAPSHOT_DIR="./cache/snapshots/${ACTUAL_DATE}"
             if [ -d "${SNAPSHOT_DIR}" ]; then
@@ -1478,6 +1537,11 @@ jobs:
           echo "- **Snapshots published**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Refused by the upload guard**: ${REFUSED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
+          jq -rs -f scripts/compute-counters.jq "${COUNTERS_JSONL}" >> "$GITHUB_STEP_SUMMARY"
+
+          # The store upload step runs the partial-failure gate (#1708) after
+          # it pushes the upserted stores, so hand it the count.
+          echo "failed=${FAILED}" >> "$GITHUB_OUTPUT"
 
       # No GCS deletion in this mode (#1670). The old clean-slate step deleted
       # snapshots/, time-series/ and club-trends/ when program_year was empty,
@@ -1486,6 +1550,9 @@ jobs:
       # stale dates is prune mode's job.
       - name: '[rescrape-historical] Upload upserted stores and raw-csv'
         if: steps.mode.outputs.mode == 'rescrape-historical'
+        env:
+          ALLOW_PARTIAL: ${{ inputs.allow_partial }}
+          LOOP_FAILED: ${{ steps.historical-loop.outputs.failed }}
         run: |
           echo "## ⬆️ Upload stores (#1670)" >> "$GITHUB_STEP_SUMMARY"
 
@@ -1524,6 +1591,10 @@ jobs:
 
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+          # Fail the run (no promotion) on any failed date unless allow_partial
+          # (#1708). Last, so the per-date uploads and store pushes above stand.
+          bash scripts/partial-failure-gate.sh "rescrape-historical" "${LOOP_FAILED}"
 
       # ════════════════════════════════════════════════════════
       # PRUNE MODE

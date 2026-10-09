@@ -470,6 +470,20 @@ export function formatComputeAnalyticsSummary(
       directory: analyticsDir,
       filesCreated: result.analyticsLocations.length,
     },
+    // Store write counters (#1708): the step summary printed "districts
+    // computed" only, so a run that wrote no time-series point looked normal.
+    timeSeries: {
+      written: result.timeSeriesWritten?.length ?? 0,
+      failed: result.timeSeriesFailed?.length ?? 0,
+    },
+    clubTrends: {
+      written: result.clubTrendsUpdated?.length ?? 0,
+      failed: result.clubTrendsFailed?.length ?? 0,
+    },
+    clubRace: {
+      written: result.clubRaceStorePath ? 1 : 0,
+      failed: result.clubRaceStoreFailed === true ? 1 : 0,
+    },
     errors: result.errors.map(e => ({
       districtId: e.districtId,
       error: e.error,

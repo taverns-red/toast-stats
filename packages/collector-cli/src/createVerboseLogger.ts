@@ -16,6 +16,27 @@ export interface VerboseLogger {
 }
 
 /**
+ * Render an error argument for the `[ERROR]` line (#1708).
+ *
+ * Callers pass either an `Error` or a context object such as
+ * `{ date, districtId, error }`. Printing `''` for the object (the previous
+ * behaviour) left the line saying what failed but never where or why. An
+ * `Error` nested in the context serialises as its message (JSON.stringify
+ * would print `{}`), and an unserialisable context falls back to String().
+ */
+function describeError(err: unknown): string {
+  if (err === undefined) return ''
+  if (err instanceof Error) return err.message
+  try {
+    return JSON.stringify(err, (_key, value: unknown) =>
+      value instanceof Error ? value.message : value
+    )
+  } catch {
+    return String(err)
+  }
+}
+
+/**
  * Create a verbose logger that writes to stderr with level prefixes.
  * Returns undefined when verbose is false, matching the optional logger
  * pattern used throughout the CLI services.
@@ -33,7 +54,7 @@ export function createVerboseLogger(
     warn: (msg: string, data?: unknown) =>
       console.error(`[WARN] ${msg}`, data ? JSON.stringify(data) : ''),
     error: (msg: string, err?: unknown) =>
-      console.error(`[ERROR] ${msg}`, err instanceof Error ? err.message : ''),
+      console.error(`[ERROR] ${msg}`, describeError(err)),
     debug: (msg: string, data?: unknown) =>
       console.error(`[DEBUG] ${msg}`, data ? JSON.stringify(data) : ''),
   }

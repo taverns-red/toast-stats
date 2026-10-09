@@ -376,6 +376,12 @@ export interface ComputeAnalyticsResult {
    * Trends for days while every run reported green.
    */
   timeSeriesFailed?: string[]
+  /** Districts whose time-series data point was written (#1708 counters). */
+  timeSeriesWritten?: string[]
+  /** Districts whose club-trends store was updated (#1708 counters). */
+  clubTrendsUpdated?: string[]
+  /** Computed (not skipped) districts whose club-trends store was not updated (#1708). */
+  clubTrendsFailed?: string[]
   /** Detailed error information for failed districts */
   errors: Array<{
     districtId: string
@@ -416,6 +422,12 @@ export interface ComputeAnalyticsSummary {
     directory: string
     filesCreated: number
   }
+  /** Time-series data points written / failed this date (#1708). */
+  timeSeries: StoreWriteCounter
+  /** Club-trends store updates written / failed this date (#1708). */
+  clubTrends: StoreWriteCounter
+  /** Club-race crossing store fold written / failed this date (#1708). */
+  clubRace: StoreWriteCounter
   /** Error details for failed districts */
   errors: Array<{
     districtId: string
@@ -423,6 +435,12 @@ export interface ComputeAnalyticsSummary {
   }>
   /** Total duration in milliseconds */
   duration_ms: number
+}
+
+/** A store's write tally for one compute-analytics run (#1708). */
+export interface StoreWriteCounter {
+  written: number
+  failed: number
 }
 
 /**
