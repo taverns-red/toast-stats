@@ -170,9 +170,11 @@ describe('sync-stores.sh (#1722)', () => {
     expect(r.status, r.stderr).toBe(0)
     const c = calls()
     for (const store of DIR_STORES) {
-      const ls = c.findIndex(l => l.startsWith(`ls gs://${BUCKET}/${store}/`))
+      const ls = c.findIndex(l =>
+        l.startsWith(`storage ls gs://${BUCKET}/${store}/`)
+      )
       const rsync = c.findIndex(l =>
-        l.startsWith(`rsync -r gs://${BUCKET}/${store}/`)
+        l.startsWith(`storage rsync -r gs://${BUCKET}/${store}/`)
       )
       expect(ls, c.join('\n')).toBeGreaterThanOrEqual(0)
       expect(rsync, c.join('\n')).toBeGreaterThan(ls)
