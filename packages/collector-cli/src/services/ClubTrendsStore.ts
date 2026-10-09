@@ -22,6 +22,7 @@ import type {
   DcpGoalsTrendPoint,
 } from '@taverns-red/analytics-core'
 import { calculateProgramYear } from '../utils/CachePaths.js'
+import { readStoreFileText } from '../utils/gzipLayers.js'
 
 /**
  * Persisted store for a single district's club trends.
@@ -74,7 +75,8 @@ export class ClubTrendsStore {
   ): Promise<ClubTrendsStore | null> {
     const filePath = ClubTrendsStore.getPath(cacheDir, programYear, districtId)
     try {
-      const content = await fs.readFile(filePath, 'utf-8')
+      // Peels any gzip layers a non-decompressing download left on (#1702).
+      const content = await readStoreFileText(filePath)
       const data = JSON.parse(content) as ClubTrendsStoreData
       return new ClubTrendsStore(data)
     } catch (err) {

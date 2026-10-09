@@ -254,6 +254,16 @@ export function determineComputeAnalyticsExitCode(
       : ExitCode.PARTIAL_FAILURE
   }
 
+  // Same shape for a time-series write failure (#1702): the district's other
+  // analytics computed, so it sits in `districtsSucceeded`, but Trends did
+  // not move. That exited 0 for days while every program-year index on the
+  // runner was unreadable.
+  if ((result.timeSeriesFailed?.length ?? 0) > 0) {
+    return failed > 0 && succeeded === 0
+      ? ExitCode.COMPLETE_FAILURE
+      : ExitCode.PARTIAL_FAILURE
+  }
+
   // All succeeded (including skipped) = success
   if (failed === 0 && succeeded > 0) {
     return ExitCode.SUCCESS
