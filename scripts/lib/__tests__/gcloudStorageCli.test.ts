@@ -34,6 +34,9 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 const WORKFLOW_DIR = path.resolve(process.cwd(), '.github/workflows')
+// Store sync/publish moved out of the workflow into these scripts (#1722);
+// their gcloud calls are held to the same CLI rules.
+const PIPELINE_SCRIPT_DIR = path.resolve(process.cwd(), 'scripts/pipeline')
 
 interface Site {
   file: string
@@ -45,11 +48,28 @@ function workflowFiles(): string[] {
   return fs.readdirSync(WORKFLOW_DIR).filter(f => /\.ya?ml$/.test(f))
 }
 
+/** Workflows plus scripts/pipeline/*.sh, as [label, source] pairs. */
+function sources(): Array<[string, string]> {
+  const out: Array<[string, string]> = workflowFiles().map(f => [
+    f,
+    fs.readFileSync(path.join(WORKFLOW_DIR, f), 'utf-8'),
+  ])
+  for (const f of fs.readdirSync(PIPELINE_SCRIPT_DIR)) {
+    if (!f.endsWith('.sh')) continue
+    const src = fs.readFileSync(path.join(PIPELINE_SCRIPT_DIR, f), 'utf-8')
+    // The scripts call "${GCLOUD}" so tests can substitute a shim (D10).
+    out.push([
+      `scripts/pipeline/${f}`,
+      src.replace(/"\$\{GCLOUD\}" storage /g, 'gcloud storage '),
+    ])
+  }
+  return out
+}
+
 /** Non-comment workflow lines, so history in comments is not under test. */
 function codeLines(): Site[] {
   const out: Site[] = []
-  for (const file of workflowFiles()) {
-    const src = fs.readFileSync(path.join(WORKFLOW_DIR, file), 'utf-8')
+  for (const [file, src] of sources()) {
     src.split('\n').forEach((text, i) => {
       if (/^\s*#/.test(text)) return
       out.push({ file, n: i + 1, text })
@@ -66,10 +86,8 @@ function codeLines(): Site[] {
  */
 function gcloudInvocations(): Array<Site & { flags: string[] }> {
   const out: Array<Site & { flags: string[] }> = []
-  for (const file of workflowFiles()) {
-    const raw = fs
-      .readFileSync(path.join(WORKFLOW_DIR, file), 'utf-8')
-      .split('\n')
+  for (const [file, src] of sources()) {
+    const raw = src.split('\n')
     for (let i = 0; i < raw.length; i++) {
       if (/^\s*#/.test(raw[i]!)) continue
       const start = raw[i]!.indexOf('gcloud storage ')
@@ -124,7 +142,13 @@ describe('gsutil → gcloud storage migration guard (#1412)', () => {
     )
 
     it('the rsync call sites are actually under test', () => {
-      expect(rsyncs.length).toBeGreaterThanOrEqual(30)
+      // Non-vacuity floor. It was 30; #1722 folds the per-mode store
+      // transfers (3 down + 3 up per mode) into the two scripts in
+      // scripts/pipeline/, which this guard now scans too.
+      expect(rsyncs.length).toBeGreaterThanOrEqual(15)
+      expect(rsyncs.some(i => i.file.startsWith('scripts/pipeline/'))).toBe(
+        true
+      )
     })
 
     it('every rsync is recursive (`-r`), as every gsutil site was', () => {
@@ -204,10 +228,10 @@ describe('gsutil → gcloud storage migration guard (#1412)', () => {
   })
 
   it('the #1380 CDN cache TTLs still reach every published object', () => {
-    const pipeline = fs.readFileSync(
-      path.join(WORKFLOW_DIR, 'data-pipeline.yml'),
-      'utf-8'
-    )
+    const pipeline = sources()
+      .filter(([f]) => f === 'data-pipeline.yml' || f.endsWith('.sh'))
+      .map(([, src]) => src)
+      .join('\n')
     const values = new Set(
       [...pipeline.matchAll(/--cache-control="([^"]+)"/g)].map(m => m[1]!)
     )
@@ -221,10 +245,10 @@ describe('gsutil → gcloud storage migration guard (#1412)', () => {
   })
 
   it('every --cache-control upload also pins --content-type', () => {
-    const pipeline = fs.readFileSync(
-      path.join(WORKFLOW_DIR, 'data-pipeline.yml'),
-      'utf-8'
-    )
+    const pipeline = sources()
+      .filter(([f]) => f === 'data-pipeline.yml' || f.endsWith('.sh'))
+      .map(([, src]) => src)
+      .join('\n')
     const cacheControl = [...pipeline.matchAll(/--cache-control=/g)].length
     const contentType = [...pipeline.matchAll(/--content-type=/g)].length
     expect(cacheControl).toBeGreaterThan(0)
