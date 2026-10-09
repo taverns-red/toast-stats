@@ -22,8 +22,8 @@ const WORKFLOW_PATH = path.resolve(
   '.github/workflows/data-pipeline.yml'
 )
 
-const MIGRATED_MODES = ['daily'] as const
-const PENDING_MODES = ['rebuild', 'rescrape', 'rescrape-historical']
+const MIGRATED_MODES = ['daily', 'rebuild'] as const
+const PENDING_MODES = ['rescrape', 'rescrape-historical']
 
 const DIR_STORES = ['time-series', 'club-trends', 'club-race'] as const
 const AWARDS = 'district-awards-history'
