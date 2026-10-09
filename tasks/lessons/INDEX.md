@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-store-round-tripped-through-gzip-encoding-needs-a-download-normaliser-and-an-upload-guard.md` — A store that is downloaded and re-uploaded with `-Z` depends on the download tool inflating Content-Encoding gzip; normalise on download, refuse gzip bytes on upload, and never let `| tee` drop the exit code  (2026-10-09)
 - `a-component-joining-two-queries-must-hold-its-skeleton-until-every-height-bearing-input-settles.md` — A component built from two independent queries must stay in its skeleton until every input that changes its height has settled; rendering on the first one paints a partial state whose height differs, and the race only loses on slow runners  (2026-10-06)
 - `a-coverage-report-without-include-only-measures-what-a-test-imported.md` — Without coverage.include, vitest reports only files some test imported — an untested file leaves the denominator and counts as covered; set include and guard the denominator against the tracked file list  (2026-10-06)
 - `a-disabled-query-is-not-loading-so-slots-gated-on-isloading-miss-the-upstream-wait.md` — A dependent (disabled-until-ready) query reports isLoading=false, so slots gated on it are not reserved while its upstream query is still pending  (2026-10-06)
