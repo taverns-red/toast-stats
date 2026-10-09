@@ -1060,31 +1060,17 @@ jobs:
       - name: '[rescrape] Sync time-series, club-trends, club-race from GCS'
         if: steps.mode.outputs.mode == 'rescrape'
         run: |
-          mkdir -p ./cache/time-series ./cache/club-trends ./cache/club-race
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
           # Club-race crossing store (#1556): pull before push, min-on-rebuild.
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
-
-          # District awards history store (~5 KB) (#1111): pull before push, or
-          # the end-of-run push back (DistrictAwardsHistoryStore starts empty
-          # when absent) clobbers the accumulated multi-PY GCS store with a
-          # single-PY partial. Mirrors the daily/rebuild sync steps.
-          # Fail-closed (#1704).
-          echo "Syncing district-awards-history..."
-          bash scripts/pull-awards-history.sh "${GCS_BUCKET}"
-
-          # Peel the gzip layers a non-decompressing download leaves on (#1702).
-          # `gcloud storage rsync` before SDK 576 (the unpinned 568) does not inflate
-          # Content-Encoding: gzip objects, and only the current PY's files
-          # are rewritten by compute, so every other file must be peeled here
-          # or the -Z upload below stacks another layer on it. Also fails the
-          # run on a store file that exists but is not JSON.
-          npx tsx scripts/store-encoding.ts normalize \
-            ./cache/time-series ./cache/club-trends ./cache/club-race \
-            ./cache/district-awards-history.json
-
+          # District awards history (#1111): pull before push, or the
+          # end-of-run push back (DistrictAwardsHistoryStore starts empty when
+          # absent) clobbers the accumulated multi-PY GCS store with a
+          # single-PY partial; pulled before the first transform (#1704).
+          # The script fails on anything but an empty remote, checks the file
+          # count against the listing, and peels gzip layers on disk under
+          # either gcloud rsync behaviour (#1702, #1722).
           echo "## ⏬ Store Sync (rescrape)" >> "$GITHUB_STEP_SUMMARY"
+          bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
+            time-series club-trends club-race district-awards-history
 
       # ── Rescrape Step 2: Scrape → transform → compute → upload ──
       - name: '[rescrape] Re-collect and process dates'
@@ -1270,29 +1256,12 @@ jobs:
             fi
           done
 
-          # Double-encoding guard (#1702): anything still gzip on disk would get
-          # another layer from the -Z upload below. Fail before any push.
-          npx tsx scripts/store-encoding.ts check ./cache/time-series ./cache/club-trends ./cache/club-race
-
-          # Sync accumulated stores back to GCS
-          echo "Syncing time-series, club-trends and club-race back to GCS..."
-          gcloud storage rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
-          gcloud storage rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
-          gcloud storage rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
-
-
-          # District awards history (#333)
-          if [ -f "./cache/district-awards-history.json" ]; then
-            echo "Syncing district-awards-history back to GCS..."
-            gcloud storage cp "./cache/district-awards-history.json" \
-              "gs://${GCS_BUCKET}/district-awards-history.json"
-          fi
-          # Time-series: CDN-served overlay (mutable, short cache)
-          echo "Uploading time-series with CDN headers..."
-          gcloud storage cp \
-            --content-type="application/json" \
-            --cache-control="public, max-age=3600" \
-            -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
+          # Push the accumulated stores back (#1722): the double-encoding
+          # check runs before any push (#1702), then rsync for internal state,
+          # the awards history copy (#333), and the CDN-headed -Z time-series.
+          echo "Syncing time-series, club-trends, club-race and awards history back to GCS..."
+          bash scripts/pipeline/publish-stores.sh "${GCS_BUCKET}" \
+            time-series club-trends club-race district-awards-history
 
           echo "- **Dates succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Refused by the upload guard**: ${REFUSED}" >> "$GITHUB_STEP_SUMMARY"
