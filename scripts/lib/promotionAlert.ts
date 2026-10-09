@@ -52,7 +52,13 @@ export interface ValueDiffOutput {
 }
 
 /** Which gate(s) refused promotion. */
-export type BlockingGate = 'count' | 'value' | 'both' | 'none'
+export type BlockingGate = 'count' | 'value' | 'both' | 'content' | 'none'
+
+/** One object the #1715 content gate refused. */
+export interface ContentGateFailure {
+  path: string
+  reason: string
+}
 
 export interface PromotionAlertInput {
   /** `steps.diff.outputs.promote` — the additive-only count gate. */
@@ -66,6 +72,13 @@ export interface PromotionAlertInput {
    * staging-ahead content signal can't be confirmed.
    */
   valueDiff: ValueDiffOutput | null
+  /**
+   * `steps.contentgate.outputs.content_promote` — the #1715 content gate.
+   * Omitted = not evaluated (treated as pass); the runner always passes it.
+   */
+  contentPromote?: boolean
+  /** Objects the content gate refused, surfaced in the alert. */
+  contentFailures?: ContentGateFailure[]
 }
 
 export interface PromotionAlertResult {
@@ -87,6 +100,8 @@ export interface PromotionAlertResult {
   affectedDistricts: string[]
   countPromote: boolean
   valuePromote: boolean
+  contentPromote: boolean
+  contentFailures: ContentGateFailure[]
   /** value-gate reasons, surfaced verbatim in the alert. */
   reasons: string[]
 }
@@ -106,7 +121,12 @@ export function evaluatePromotion(
   input: PromotionAlertInput
 ): PromotionAlertResult {
   const { countPromote, valuePromote, valueDiff } = input
-  const gate = classifyGate(countPromote, valuePromote)
+  const contentPromote = input.contentPromote ?? true
+  // count/value keep their classification; the content gate is named on its
+  // own only when it is the sole refusal (the title/body name it either way).
+  const countValueGate = classifyGate(countPromote, valuePromote)
+  const gate: BlockingGate =
+    countValueGate === 'none' && !contentPromote ? 'content' : countValueGate
   const promoted = gate === 'none'
 
   const changed = valueDiff?.report.changed ?? []
@@ -126,6 +146,8 @@ export function evaluatePromotion(
     affectedDistricts,
     countPromote,
     valuePromote,
+    contentPromote,
+    contentFailures: input.contentFailures ?? [],
     reasons: valueDiff?.reasons ?? [],
   }
 }
@@ -139,13 +161,17 @@ const GATE_LABEL: Record<Exclude<BlockingGate, 'none'>, string> = {
   value: 'value gate',
   count: 'count gate',
   both: 'count gate + value gate',
+  content: 'content gate',
 }
 
 /** Title for the `promotion-held` alert issue. */
 export function buildPromotionHeldTitle(result: PromotionAlertResult): string {
   if (result.gate === 'none') return 'promotion not held'
-  const label =
+  let label =
     result.gate === 'both' ? 'count + value gates' : GATE_LABEL[result.gate]
+  if (!result.contentPromote && result.gate !== 'content') {
+    label += ' + content gate'
+  }
   return `🚫 Promotion held — prod stale (${label})`
 }
 
@@ -174,8 +200,34 @@ export function buildPromotionHeldBody(
     '|------|--------|',
     `| Count gate (additive) | ${result.countPromote ? '✅ pass' : '❌ **blocked**'} |`,
     `| Value gate (#1034) | ${result.valuePromote ? '✅ pass' : '❌ **blocked**'} |`,
+    `| Content gate (#1715) | ${result.contentPromote ? '✅ pass' : '❌ **blocked**'} |`,
     '',
   ]
+
+  // Content-gate framing leads: an unreadable or wrong-shaped object would
+  // break the site the moment it reached prod (#1702, #1704).
+  if (!result.contentPromote) {
+    lines.push(
+      '### 🧪 Content gate blocked — staging holds objects a reader cannot use',
+      '',
+      'Objects promotion would copy fail decoding (nested gzip), parsing, or the shape check. There is **no override flag**: fix the writer or the store, let a later run rewrite the object, and the next run promotes.',
+      ''
+    )
+    if (result.contentFailures.length > 0) {
+      lines.push('| Object | Reason |', '| --- | --- |')
+      const cell = (s: string) => s.replaceAll('|', '\\|')
+      for (const f of result.contentFailures.slice(0, MAX_REASONS)) {
+        lines.push(`| ${cell(f.path)} | ${cell(f.reason)} |`)
+      }
+      if (result.contentFailures.length > MAX_REASONS) {
+        lines.push(
+          '',
+          `_…and ${result.contentFailures.length - MAX_REASONS} more — full list in the run's Step Summary._`
+        )
+      }
+      lines.push('')
+    }
+  }
 
   // Count-gate framing leads when present — a subtractive change is the more
   // serious "possible real regression" signal.

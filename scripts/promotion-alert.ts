@@ -16,6 +16,10 @@
  *   COUNT_PROMOTE   — `steps.diff.outputs.promote`        ("true"/"false")
  *   VALUE_PROMOTE   — `steps.valuediff.outputs.value_promote` ("true"/"false")
  *   VALUE_DIFF_FILE — path to the value-diff JSON (default /tmp/value-diff.json)
+ *   CONTENT_PROMOTE — `steps.contentgate.outputs.content_promote` (#1715);
+ *                     anything but "true" holds (fail closed)
+ *   CONTENT_GATE_FILE — the content gate's JSON result, for the failing
+ *                     objects listed in the alert
  *
  * Always exits 0; the workflow decides whether to open/refresh or close the
  * issue based on the `blocked`/`promoted` outputs. A missing/garbage
@@ -28,6 +32,7 @@ import {
   evaluatePromotion,
   buildPromotionHeldTitle,
   buildPromotionHeldBody,
+  type ContentGateFailure,
   type ValueDiffOutput,
 } from './lib/promotionAlert.js'
 
@@ -64,17 +69,42 @@ function readValueDiff(path: string): ValueDiffOutput | null {
   }
 }
 
+/** The content gate's failing objects; empty on any read/parse failure. */
+function readContentFailures(path: string | undefined): ContentGateFailure[] {
+  if (!path) return []
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as {
+      failures?: unknown
+    }
+    return Array.isArray(parsed.failures)
+      ? (parsed.failures as ContentGateFailure[])
+      : []
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log(`Could not read content gate result at ${path}: ${message}`)
+    return []
+  }
+}
+
 function main(): void {
   const countPromote = process.env.COUNT_PROMOTE === 'true'
   const valuePromote = process.env.VALUE_PROMOTE === 'true'
+  const contentPromote = process.env.CONTENT_PROMOTE === 'true'
   const valueDiffFile = process.env.VALUE_DIFF_FILE || DEFAULT_VALUE_DIFF_FILE
   const now = new Date()
 
   log(
-    `Gate outputs — count_promote=${countPromote} value_promote=${valuePromote}`
+    `Gate outputs — count_promote=${countPromote} value_promote=${valuePromote} ` +
+      `content_promote=${contentPromote}`
   )
   const valueDiff = readValueDiff(valueDiffFile)
-  const result = evaluatePromotion({ countPromote, valuePromote, valueDiff })
+  const result = evaluatePromotion({
+    countPromote,
+    valuePromote,
+    valueDiff,
+    contentPromote,
+    contentFailures: readContentFailures(process.env.CONTENT_GATE_FILE),
+  })
 
   log(
     `Decision — blocked=${result.blocked} gate=${result.gate} ` +

@@ -2396,8 +2396,28 @@ jobs:
 
           echo "value_promote=${VALUE_PROMOTE}" >> "$GITHUB_OUTPUT"
 
+      # Content gate (#1715, plan S1-4, decision D8 — HOLD, not warn). The two
+      # gates above read two integers and one file per date; promotion then
+      # rsyncs six prefixes unread, and three corrupt promotions passed
+      # (#1702 nested gzip, #1704 null priorYearAvgClubSize). This reads the
+      # staging objects promotion would copy (changed vs prod — not the
+      # bucket), decoded the way a browser does, and checks bytes, parse and
+      # shape. Logic: scripts/lib/promotionContentGate.ts. Read-only. Stays
+      # green and fails CLOSED through `content_promote`, like the value gate,
+      # so the promotion-held steps below stay reachable.
+      - name: Content gate staging objects (#1715)
+        id: contentgate
+        if: steps.mode.outputs.mode != 'prune'
+        env:
+          CONTENT_GATE_FILE: /tmp/content-gate.json
+        run: npx tsx scripts/promotion-content-gate.ts
+
       - name: Promote staging to production
-        if: steps.diff.outputs.promote == 'true' && steps.valuediff.outputs.value_promote == 'true' && steps.mode.outputs.mode != 'prune'
+        if: >-
+          steps.diff.outputs.promote == 'true'
+          && steps.valuediff.outputs.value_promote == 'true'
+          && steps.contentgate.outputs.content_promote == 'true'
+          && steps.mode.outputs.mode != 'prune'
         run: |
           echo "Promoting staging → production..."
 
@@ -2435,7 +2455,11 @@ jobs:
       # purges the EDGE only — an already-open browser tab still honours the
       # response's max-age until it reloads.
       - name: Invalidate CDN cache after promotion (#1294)
-        if: steps.diff.outputs.promote == 'true' && steps.valuediff.outputs.value_promote == 'true' && steps.mode.outputs.mode != 'prune'
+        if: >-
+          steps.diff.outputs.promote == 'true'
+          && steps.valuediff.outputs.value_promote == 'true'
+          && steps.contentgate.outputs.content_promote == 'true'
+          && steps.mode.outputs.mode != 'prune'
         continue-on-error: true
         run: |
           echo "Invalidating Cloud CDN cache (toast-stats-cdn-url-map, cdn.taverns.red)..."
@@ -2450,12 +2474,17 @@ jobs:
           fi
 
       - name: Promotion blocked
-        if: (steps.diff.outputs.promote == 'false' || steps.valuediff.outputs.value_promote == 'false') && steps.mode.outputs.mode != 'prune'
+        if: >-
+          (steps.diff.outputs.promote == 'false'
+          || steps.valuediff.outputs.value_promote == 'false'
+          || steps.contentgate.outputs.content_promote == 'false')
+          && steps.mode.outputs.mode != 'prune'
         run: |
-          echo "::error::Promotion BLOCKED — count gate or value gate refused. Production data unchanged."
+          echo "::error::Promotion BLOCKED — count, value or content gate refused. Production data unchanged."
           echo "## ❌ Promotion Blocked" >> "$GITHUB_STEP_SUMMARY"
           echo "- Count gate (additive): **${{ steps.diff.outputs.promote }}**" >> "$GITHUB_STEP_SUMMARY"
           echo "- Value gate: **${{ steps.valuediff.outputs.value_promote }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Content gate (#1715): **${{ steps.contentgate.outputs.content_promote }}**" >> "$GITHUB_STEP_SUMMARY"
           echo "Production data is **unchanged**. Review the diffs above." >> "$GITHUB_STEP_SUMMARY"
           echo "For a reviewed re-derive, re-run with **allow_value_changes = true**." >> "$GITHUB_STEP_SUMMARY"
           echo "For a reviewed district/date REDUCTION (e.g. a TI consolidation), re-run with **allow_subtractive = true**." >> "$GITHUB_STEP_SUMMARY"
@@ -2474,6 +2503,8 @@ jobs:
           COUNT_PROMOTE: ${{ steps.diff.outputs.promote }}
           VALUE_PROMOTE: ${{ steps.valuediff.outputs.value_promote }}
           VALUE_DIFF_FILE: /tmp/value-diff.json
+          CONTENT_PROMOTE: ${{ steps.contentgate.outputs.content_promote }}
+          CONTENT_GATE_FILE: /tmp/content-gate.json
         run: npx tsx scripts/promotion-alert.ts
 
       - name: Ensure promotion-held label exists

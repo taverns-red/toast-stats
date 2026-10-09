@@ -221,3 +221,67 @@ describe('buildPromotionHeldBody', () => {
     expect(body).toMatch(/allow_value_changes=true/)
   })
 })
+
+// ── Content gate (#1715, plan S1-4, decision D8: hold, don't warn) ───────────
+
+describe('content gate holds promotion through the promotion-held flow', () => {
+  const FAILURES = [
+    {
+      path: 'time-series/district_61/2026-2027.json',
+      reason:
+        'body is still gzip-encoded after HTTP decoding (nested gzip, #1702)',
+    },
+  ]
+
+  it('is blocked by the content gate alone, with the gate named', () => {
+    const r = evaluatePromotion({
+      countPromote: true,
+      valuePromote: true,
+      valueDiff: CLEAN_DIFF,
+      contentPromote: false,
+      contentFailures: FAILURES,
+    })
+    expect(r.blocked).toBe(true)
+    expect(r.promoted).toBe(false)
+    expect(r.gate).toBe('content')
+    expect(buildPromotionHeldTitle(r)).toMatch(/content gate/)
+  })
+
+  it('body lists the failing objects and does not offer allow_value_changes as the fix', () => {
+    const r = evaluatePromotion({
+      countPromote: true,
+      valuePromote: true,
+      valueDiff: CLEAN_DIFF,
+      contentPromote: false,
+      contentFailures: FAILURES,
+    })
+    const body = buildPromotionHeldBody(r, OPTS)
+    expect(body).toContain('time-series/district_61/2026-2027.json')
+    expect(body).toMatch(/Content gate/)
+    expect(body).not.toMatch(/allow_value_changes=true/)
+  })
+
+  it('names the content gate alongside another refusing gate', () => {
+    const r = evaluatePromotion({
+      countPromote: true,
+      valuePromote: false,
+      valueDiff: CHANGED_DIFF,
+      contentPromote: false,
+      contentFailures: FAILURES,
+    })
+    expect(r.gate).toBe('value')
+    expect(buildPromotionHeldTitle(r)).toMatch(/value gate.*content gate/)
+  })
+
+  it('a passing content gate leaves the existing decision unchanged', () => {
+    const r = evaluatePromotion({
+      countPromote: true,
+      valuePromote: true,
+      valueDiff: CLEAN_DIFF,
+      contentPromote: true,
+      contentFailures: [],
+    })
+    expect(r.promoted).toBe(true)
+    expect(r.gate).toBe('none')
+  })
+})
