@@ -1,8 +1,8 @@
 ---
 date: 2026-10-09
 tier: lesson
-summary: A store that is downloaded and re-uploaded with `-Z` depends on the download tool inflating Content-Encoding gzip; normalise on download, refuse gzip bytes on upload, and never let `| tee` drop the exit code
-tags: [ci, pipeline, gcs, silent-failure, data-integrity]
+summary: A store that is downloaded and re-uploaded with `-Z` depends on the download tool inflating Content-Encoding gzip; normalise on download, refuse gzip bytes on upload, never let `| tee` drop the exit code — and never accept an op-list or count comparison as proof the content is right: decode, parse and check what lands
+tags: [ci, pipeline, gcs, silent-failure, data-integrity, verification, dry-run, cli-migration]
 ---
 
 # A store round-tripped through gzip encoding needs a download normaliser and an upload guard
@@ -39,3 +39,46 @@ change between versions and platforms. Do not rely on it:
 
 `scripts/store-encoding.ts` (`normalize` / `check`) and the guard test
 `scripts/lib/__tests__/dataPipelineStoreEncoding.test.ts` encode this.
+
+## Second takeaway: matching op lists is not evidence the content is right
+
+#1649 (#1412) was verified. Its evidence table showed that `gsutil rsync -n`
+and `gcloud storage rsync --dry-run` planned the same operations: 1564 = 1564
+time-series objects, and the same for every other prefix. That check could
+not have caught this bug:
+
+- **A dry run transfers no bytes.** Decompressive transcoding, `-Z`, hashes
+  and metadata belong to the transfer, not the plan. Neither tool reads
+  `Content-Encoding` while it plans.
+- **Copying into an empty directory plans every object.** For a download
+  into an empty runner cache, 1564 = 1564 is true no matter how either tool
+  compares files.
+- **Equal path sets can still hold different bytes,** and that is exactly
+  this failure.
+
+Afterwards the runs stayed green for the same reason. The gates compared two
+counters and one rankings file, and `compute` reported `succeeded: 94` while
+it wrote 0 time-series points. Nothing ever read a time-series object back the
+way the browser does.
+
+**Rule:** a dry run, a plan diff or a count only shows that the same paths
+were touched. It says nothing about what is in them. Before you call a
+transfer change, tool swap, rebuild or promotion verified:
+
+- Read what actually landed, through the reader's path. Run the real transfer
+  into a temp dir, or `curl --compressed` the object the way the browser
+  fetches it.
+- **Decode it.** It must have no `1f 8b` magic left after the expected
+  layers.
+- **Parse it.** `jq empty`, or the Zod schema.
+- **Check its shape.** The last data point is the expected date, and the
+  point count went up, not just the file count.
+- For a tool swap, run both tools for real into two directories and
+  `cmp -r` them, starting from a **non-empty** destination as well as an
+  empty one.
+
+The dry-run lesson
+(`a-dry-run-diff-between-two-clis-must-not-anchor-on-line-start.md`) makes the
+plan comparison accurate. This lesson is about why an accurate plan comparison
+still is not enough.
+
