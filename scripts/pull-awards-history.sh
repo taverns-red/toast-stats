@@ -2,6 +2,7 @@
 # Pull district-awards-history.json from GCS, fail-closed (#1704).
 #
 # Usage: scripts/pull-awards-history.sh <bucket> [dest]
+# Env:   GCLOUD — the gcloud binary (default `gcloud`; tests use a shim, #1722)
 #
 # TransformService loads this store and computes Club Strength and Leadership
 # Excellence from it, so it must be pulled BEFORE any transform. A missing
@@ -16,7 +17,7 @@ SRC="gs://${BUCKET}/district-awards-history.json"
 
 mkdir -p "$(dirname "${DEST}")"
 
-if ERR=$(gcloud storage cp "${SRC}" "${DEST}" 2>&1); then
+if ERR=$("${GCLOUD:-gcloud}" storage cp "${SRC}" "${DEST}" 2>&1); then
   echo "Pulled ${SRC}" >&2
   exit 0
 fi

@@ -71,6 +71,22 @@ function escapeRegExp(literal: string): string {
   return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+/**
+ * A scripts/pipeline/<script>.sh call naming the store (#1722). The scripts
+ * normalise after download and check before the -Z upload internally; that
+ * is tested by running them in storeSyncScripts.test.ts.
+ */
+function isStoreScriptCall(
+  text: string,
+  script: 'sync-stores' | 'publish-stores',
+  store: string
+): boolean {
+  const name = escapeRegExp(store.replace(/\.json$/, ''))
+  return new RegExp(
+    `scripts/pipeline/${script}\\.sh\\b.*\\s${name}(?:\\s|$)`
+  ).test(text)
+}
+
 function isStoreDownload(text: string, store: string): boolean {
   const name = escapeRegExp(store)
   if (store === AWARDS) {
@@ -116,6 +132,10 @@ describe('data-pipeline.yml store encoding guards (#1702)', () => {
       for (const step of steps) {
         const lines = logicalLines(step.run)
         lines.forEach(({ text }, i) => {
+          if (isStoreScriptCall(text, 'sync-stores', store)) {
+            downloads++
+            return
+          }
           if (!isStoreDownload(text, store)) return
           downloads++
           const later = lines.slice(i + 1)
@@ -149,8 +169,10 @@ describe('data-pipeline.yml store encoding guards (#1702)', () => {
 
   it('finds the time-series -Z uploads it guards (non-vacuous)', () => {
     const uploads = steps.flatMap(step =>
-      logicalLines(step.run).filter(l =>
-        isGzipStoreUpload(l.text, 'time-series')
+      logicalLines(step.run).filter(
+        l =>
+          isGzipStoreUpload(l.text, 'time-series') ||
+          isStoreScriptCall(l.text, 'publish-stores', 'time-series')
       )
     )
     expect(uploads.length).toBeGreaterThanOrEqual(4)

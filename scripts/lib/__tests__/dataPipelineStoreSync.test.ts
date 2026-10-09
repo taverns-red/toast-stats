@@ -47,15 +47,25 @@ function escapeRegExp(literal: string): string {
   return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-// download: GCS path is the FIRST cp arg (gs:// → ./cache), or the
-// fail-closed pull helper (#1704).
+// download: GCS path is the FIRST cp arg (gs:// → ./cache), the
+// fail-closed pull helper (#1704), or scripts/pipeline/sync-stores.sh naming
+// the store (#1722), possibly across `\` continuation lines.
 function inlinePullRegex(file: string): RegExp {
   return new RegExp(`cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${escapeRegExp(file)}"`)
 }
 
+/** `scripts/pipeline/<script>` naming `store` as an argument. */
+function storeScriptRegex(script: string, file: string): RegExp {
+  const store = escapeRegExp(file.replace(/\.json$/, ''))
+  return new RegExp(
+    `scripts/pipeline/${script}\\.sh(?:[^\\n]|\\\\\\n)*?\\s${store}(?:\\s|$)`
+  )
+}
+
 function downloadRegex(file: string): RegExp {
   return new RegExp(
-    `${inlinePullRegex(file).source}|scripts/pull-awards-history\\.sh`
+    `${inlinePullRegex(file).source}|scripts/pull-awards-history\\.sh|` +
+      storeScriptRegex('sync-stores', file).source
   )
 }
 
@@ -84,9 +94,13 @@ function before(a: Pos, b: Pos): boolean {
   return a[0] < b[0] || (a[0] === b[0] && a[1] < b[1])
 }
 
-// upload: local cache path is the FIRST cp arg (./cache → gs://)
+// upload: local cache path is the FIRST cp arg (./cache → gs://), or
+// scripts/pipeline/publish-stores.sh naming the store (#1722)
 function uploadsStore(run: string, file: string): boolean {
-  return new RegExp(`cp\\s+"\\./cache/${escapeRegExp(file)}"`).test(run)
+  return (
+    new RegExp(`cp\\s+"\\./cache/${escapeRegExp(file)}"`).test(run) ||
+    storeScriptRegex('publish-stores', file).test(run)
+  )
 }
 
 describe('data-pipeline.yml store-sync symmetry (#1111)', () => {

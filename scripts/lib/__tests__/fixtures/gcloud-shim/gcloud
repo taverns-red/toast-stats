@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+# Stand-in `gcloud` for the store sync/publish script tests (#1722, D10).
+#
+# Maps gs://<bucket>/<path> onto $SHIM_ROOT/<bucket>/<path>. Object metadata
+# (content-encoding, cache-control, content-type) lives in a parallel tree at
+# $SHIM_ROOT/.meta/<bucket>/<path> so it never shows up as an object.
+#
+# Implements only what scripts/pipeline/*.sh and scripts/pull-awards-history.sh
+# call: `storage ls <prefix>/**`, `storage rsync -r <src> <dst>` and
+# `storage cp [--content-type=..] [--cache-control=..] [-r] [-Z] <src>... <dst>`.
+# Error texts are the ones Google Cloud SDK 583.0.0 prints (probed read-only
+# against the staging bucket, 2026-10-09).
+#
+# Env:
+#   SHIM_ROOT              required: the directory standing in for GCS
+#   SHIM_LOG               optional: every invocation's argv is appended here
+#   SHIM_FAIL_MATCH        optional: ERE; an invocation whose "$*" matches it
+#                          fails with an HTTP 503 (a transport error)
+#   SHIM_DOWNLOAD_DECOMPRESS
+#                          "1": downloads inflate one layer of a
+#                          Content-Encoding: gzip object (gcloud >= 576, the
+#                          588 pin). Anything else: bytes as stored (gcloud 568,
+#                          the runner's old `latest`) (#1702).
+#   SHIM_DOWNLOAD_SKIP     optional: ERE; an rsync download silently skips
+#                          objects whose relative path matches (a short read)
+set -euo pipefail
+
+: "${SHIM_ROOT:?SHIM_ROOT must be set}"
+[ -n "${SHIM_LOG:-}" ] && printf '%s\n' "$*" >>"${SHIM_LOG}"
+
+if [ "${1:-}" != "storage" ]; then
+  echo "gcloud shim: unsupported command: $*" >&2
+  exit 2
+fi
+shift
+CMD="${1:-}"
+shift
+
+if [ -n "${SHIM_FAIL_MATCH:-}" ] && [[ "${CMD} $*" =~ ${SHIM_FAIL_MATCH} ]]; then
+  echo "ERROR: (gcloud.storage.${CMD}) HTTPError 503: Service Unavailable" >&2
+  exit 1
+fi
+
+is_gs() { [[ "$1" == gs://* ]]; }
+bucket_of() { local p="${1#gs://}"; echo "${p%%/*}"; }
+local_of() { echo "${SHIM_ROOT}/${1#gs://}"; }
+meta_of() { echo "${SHIM_ROOT}/.meta/${1#gs://}"; }
+
+require_bucket() {
+  local b
+  b="$(bucket_of "$1")"
+  if [ ! -d "${SHIM_ROOT}/${b}" ]; then
+    echo "ERROR: (gcloud.storage.${CMD}) gs://${b} not found: 404." >&2
+    exit 1
+  fi
+}
+
+# Download one object to a local file, honouring SHIM_DOWNLOAD_DECOMPRESS.
+download_object() {
+  local url="$1" dest="$2"
+  mkdir -p "$(dirname "${dest}")"
+  if [ "${SHIM_DOWNLOAD_DECOMPRESS:-0}" = "1" ] &&
+    grep -qx 'content-encoding=gzip' "$(meta_of "${url}")" 2>/dev/null; then
+    gzip -dc <"$(local_of "${url}")" >"${dest}"
+  else
+    cp "$(local_of "${url}")" "${dest}"
+  fi
+}
+
+# Upload one local file to an object, recording its metadata.
+upload_object() {
+  local src="$1" url="$2" gz="$3" ctype="$4" cache="$5"
+  local obj meta
+  obj="$(local_of "${url}")"
+  meta="$(meta_of "${url}")"
+  mkdir -p "$(dirname "${obj}")" "$(dirname "${meta}")"
+  if [ "${gz}" = "1" ]; then
+    gzip -c -n <"${src}" >"${obj}"
+  else
+    cp "${src}" "${obj}"
+  fi
+  {
+    [ "${gz}" = "1" ] && echo 'content-encoding=gzip'
+    [ -n "${ctype}" ] && echo "content-type=${ctype}"
+    [ -n "${cache}" ] && echo "cache-control=${cache}"
+    true
+  } >"${meta}"
+}
+
+case "${CMD}" in
+  ls)
+    url="${1:?}"
+    require_bucket "${url}"
+    prefix="${url%\*\*}"
+    dir="$(local_of "${prefix}")"
+    found=0
+    if [ -d "${dir}" ]; then
+      while IFS= read -r f; do
+        found=1
+        echo "gs://${f#"${SHIM_ROOT}/"}"
+      done < <(find "${dir}" -type f | LC_ALL=C sort)
+    fi
+    if [ "${found}" = 0 ]; then
+      echo "ERROR: (gcloud.storage.ls) One or more URLs matched no objects." >&2
+      exit 1
+    fi
+    ;;
+
+  rsync)
+    [ "${1:-}" = "-r" ] && shift
+    src="${1:?}"
+    dst="${2:?}"
+    if is_gs "${src}"; then
+      require_bucket "${src}"
+      sdir="$(local_of "${src}")"
+      if [ ! -d "${sdir}" ] || [ -z "$(find "${sdir}" -type f | head -1)" ]; then
+        echo "ERROR: (gcloud.storage.rsync) Did not find existing container at: ${src}" >&2
+        exit 1
+      fi
+      while IFS= read -r f; do
+        rel="${f#"${sdir%/}/"}"
+        if [ -n "${SHIM_DOWNLOAD_SKIP:-}" ] && [[ "${rel}" =~ ${SHIM_DOWNLOAD_SKIP} ]]; then
+          continue
+        fi
+        download_object "${src%/}/${rel}" "${dst%/}/${rel}"
+      done < <(find "${sdir}" -type f)
+    else
+      require_bucket "${dst}"
+      while IFS= read -r f; do
+        rel="${f#"${src%/}/"}"
+        upload_object "${f}" "${dst%/}/${rel}" 0 "" ""
+      done < <(find "${src}" -type f)
+    fi
+    ;;
+
+  cp)
+    recursive=0 gz=0 ctype="" cache=""
+    args=()
+    for a in "$@"; do
+      case "${a}" in
+        -r) recursive=1 ;;
+        -Z) gz=1 ;;
+        --content-type=*) ctype="${a#--content-type=}" ;;
+        --cache-control=*) cache="${a#--cache-control=}" ;;
+        -*)
+          echo "gcloud shim: unsupported cp flag ${a}" >&2
+          exit 2
+          ;;
+        *) args+=("${a}") ;;
+      esac
+    done
+    dst="${args[${#args[@]}-1]}"
+    unset 'args[${#args[@]}-1]'
+    for src in "${args[@]}"; do
+      if is_gs "${src}"; then
+        require_bucket "${src}"
+        if [ ! -f "$(local_of "${src}")" ]; then
+          echo "ERROR: (gcloud.storage.cp) The following URLs matched no objects or files:" >&2
+          echo "${src}" >&2
+          exit 1
+        fi
+        download_object "${src}" "${dst}"
+        continue
+      fi
+      require_bucket "${dst}"
+      if [ -d "${src}" ]; then
+        if [ "${recursive}" != 1 ]; then
+          echo "gcloud shim: ${src} is a directory; -r required" >&2
+          exit 2
+        fi
+        base="$(basename "${src}")"
+        while IFS= read -r f; do
+          rel="${f#"${src%/}/"}"
+          upload_object "${f}" "${dst%/}/${base}/${rel}" "${gz}" "${ctype}" "${cache}"
+        done < <(find "${src}" -type f)
+      elif [[ "${dst}" == */ ]]; then
+        upload_object "${src}" "${dst}$(basename "${src}")" "${gz}" "${ctype}" "${cache}"
+      else
+        upload_object "${src}" "${dst}" "${gz}" "${ctype}" "${cache}"
+      fi
+    done
+    ;;
+
+  *)
+    echo "gcloud shim: unsupported storage command: ${CMD}" >&2
+    exit 2
+    ;;
+esac

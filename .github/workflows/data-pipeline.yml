@@ -320,9 +320,8 @@ jobs:
       - name: '[daily] Pull district-awards-history from GCS'
         if: steps.mode.outputs.mode == 'daily'
         run: |
-          bash scripts/pull-awards-history.sh "${GCS_BUCKET}"
-          # Peel the gzip layers a non-decompressing download leaves on (#1702).
-          npx tsx scripts/store-encoding.ts normalize ./cache/district-awards-history.json
+          # Fail-closed pull + on-disk normalise (#1704, #1702, #1722).
+          bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" district-awards-history
 
       # ── Daily Step 2: Scrape + Transform ──
       - name: '[daily] Scrape & Transform'
@@ -368,35 +367,17 @@ jobs:
         run: |
           DATE="${{ steps.daily-scrape.outputs.date }}"
 
-          # Time-series index (~344 KB)
-          echo "Syncing time-series..."
-          mkdir -p ./cache/time-series
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
+          echo "## ⏬ Store Sync" >> "$GITHUB_STEP_SUMMARY"
 
-          # Club-trends store (~50 KB/district)
-          echo "Syncing club-trends..."
-          mkdir -p ./cache/club-trends
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
-
-          # Club-race crossing store (#1556): one file per PY. MUST be pulled
-          # before compute — the store starts empty when absent, and the push
-          # back below would clobber every accumulated crossing date with
-          # today's alone (the awards-history lesson, #1111).
-          echo "Syncing club-race..."
-          mkdir -p ./cache/club-race
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
-
-          # District awards history is pulled BEFORE the transform, in its own
-          # step (#1704). Pulling it here would overwrite the transform's save.
-
-          # Peel the gzip layers a non-decompressing download leaves on (#1702).
-          # `gcloud storage rsync` before SDK 576 (the unpinned 568) does not inflate
-          # Content-Encoding: gzip objects, and only the current PY's files
-          # are rewritten by compute, so every other file must be peeled here
-          # or the -Z upload below stacks another layer on it. Also fails the
-          # run on a store file that exists but is not JSON.
-          npx tsx scripts/store-encoding.ts normalize \
-            ./cache/time-series ./cache/club-trends ./cache/club-race
+          # Club-race (#1556) and the other stores MUST be pulled before
+          # compute: a store that loads empty is pushed back over the
+          # accumulated copy (#1111). The script fails on anything but an
+          # empty remote, checks the file count against the listing, and
+          # peels gzip layers on disk under either gcloud rsync behaviour
+          # (#1702, #1722). District awards history is pulled before the
+          # transform, in its own step (#1704).
+          bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
+            time-series club-trends club-race
 
           # Previous year snapshots for YoY comparison
           PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
@@ -405,14 +386,7 @@ jobs:
           gcloud storage cp "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR}/district_*.json" \
             "./cache/snapshots/${PREV_YEAR}/" 2>/dev/null || true
 
-          echo "## ⏬ Store Sync" >> "$GITHUB_STEP_SUMMARY"
-          TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
-          CT_COUNT=$(find ./cache/club-trends -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
-          CR_COUNT=$(find ./cache/club-race -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           PREV_COUNT=$(find "./cache/snapshots/${PREV_YEAR}" -name 'district_*.json' 2>/dev/null | wc -l | tr -d ' ')
-          echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Club-trends files**: ${CT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Club-race store files**: ${CR_COUNT}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Prev-year snapshots**: ${PREV_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Daily Step 3b: Find-A-Club enrichment fetch (#430) ──
@@ -558,31 +532,15 @@ jobs:
           fi
           echo "Uploading daily data — raw=${DATE}, snapshot=${SNAPSHOT_DATE}"
 
-          # Double-encoding guard (#1702): anything still gzip on disk would get
-          # another layer from the -Z upload below. Fail before any push.
-          npx tsx scripts/store-encoding.ts check ./cache/time-series ./cache/club-trends ./cache/club-race
-
           # Internal state: rsync (no CDN metadata needed)
           # raw-csv keyed by collection date (DATE), not snapshot date
           gcloud storage rsync -r "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
-          gcloud storage rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
-          gcloud storage rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
-          # Club-race crossing store (#1556) — the dir exists from the sync step
-          gcloud storage rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
 
-          # District awards history (#333)
-          if [ -f "./cache/district-awards-history.json" ]; then
-            gcloud storage cp "./cache/district-awards-history.json" \
-              "gs://${GCS_BUCKET}/district-awards-history.json"
-          fi
-
-          # Time-series: CDN-served overlay (mutable, short cache)
-          # rsync above keeps internal state; `cp -r -Z` adds CDN headers + gzip
-          # (parallelism is the default in `gcloud storage`, so `-m` has no equivalent).
-          gcloud storage cp \
-            --content-type="application/json" \
-            --cache-control="public, max-age=3600" \
-            -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
+          # Stateful stores (#1722): the double-encoding check runs before
+          # any store push (#1702), then rsync for internal state, the awards
+          # history copy (#333), and the CDN-headed -Z time-series overlay.
+          bash scripts/pipeline/publish-stores.sh "${GCS_BUCKET}" \
+            time-series club-trends club-race district-awards-history
 
           # CDN-served: snapshots + analytics (immutable, gzipped)
           # Use SNAPSHOT_DATE for the actual snapshot directory (#309)
