@@ -74,8 +74,9 @@ function escapeRegExp(literal: string): string {
 function isStoreDownload(text: string, store: string): boolean {
   const name = escapeRegExp(store)
   if (store === AWARDS) {
+    // Inline `cp`, or the fail-closed pull helper (#1704).
     return new RegExp(
-      `gcloud storage cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${name}"`
+      `gcloud storage cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${name}"|scripts/pull-awards-history\\.sh`
     ).test(text)
   }
   return new RegExp(

@@ -290,6 +290,19 @@ jobs:
           echo "- **Date**: ${TARGET_DATE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **CSV files restored**: ${FILE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Daily Step 2a: Pull district awards history BEFORE the transform ──
+      # (#1704) scrape --transform loads this store to compute Club Strength
+      # and Leadership Excellence, then saves its upsert. Pulled after the
+      # transform (as it was from #333), every daily competitive-awards.json
+      # was computed from an empty store and the late pull overwrote the
+      # transform's save before the upload pushed it back.
+      - name: '[daily] Pull district-awards-history from GCS'
+        if: steps.mode.outputs.mode == 'daily'
+        run: |
+          bash scripts/pull-awards-history.sh "${GCS_BUCKET}"
+          # Peel the gzip layers a non-decompressing download leaves on (#1702).
+          npx tsx scripts/store-encoding.ts normalize ./cache/district-awards-history.json
+
       # ── Daily Step 2: Scrape + Transform ──
       - name: '[daily] Scrape & Transform'
         if: steps.mode.outputs.mode == 'daily'
@@ -352,10 +365,8 @@ jobs:
           mkdir -p ./cache/club-race
           gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
 
-          # District awards history store (~5 KB) (#333)
-          echo "Syncing district-awards-history..."
-          gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
-            "./cache/district-awards-history.json" 2>/dev/null || true
+          # District awards history is pulled BEFORE the transform, in its own
+          # step (#1704). Pulling it here would overwrite the transform's save.
 
           # Peel the gzip layers a non-decompressing download leaves on (#1702).
           # `gcloud storage rsync` on the runner's SDK does not inflate
@@ -364,8 +375,7 @@ jobs:
           # or the -Z upload below stacks another layer on it. Also fails the
           # run on a store file that exists but is not JSON.
           npx tsx scripts/store-encoding.ts normalize \
-            ./cache/time-series ./cache/club-trends ./cache/club-race \
-            ./cache/district-awards-history.json
+            ./cache/time-series ./cache/club-trends ./cache/club-race
 
           # Previous year snapshots for YoY comparison
           PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
@@ -787,10 +797,9 @@ jobs:
           mkdir -p ./cache/club-race
           gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/" 2>&1 || true
 
-          # District awards history store (#333)
+          # District awards history store (#333). Fail-closed (#1704).
           echo "Syncing district-awards-history..."
-          gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
-            "./cache/district-awards-history.json" 2>/dev/null || true
+          bash scripts/pull-awards-history.sh "${GCS_BUCKET}"
 
           # Peel the gzip layers a non-decompressing download leaves on (#1702).
           # `gcloud storage rsync` on the runner's SDK does not inflate
@@ -1102,9 +1111,9 @@ jobs:
           # the end-of-run push back (DistrictAwardsHistoryStore starts empty
           # when absent) clobbers the accumulated multi-PY GCS store with a
           # single-PY partial. Mirrors the daily/rebuild sync steps.
+          # Fail-closed (#1704).
           echo "Syncing district-awards-history..."
-          gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
-            "./cache/district-awards-history.json" 2>/dev/null || true
+          bash scripts/pull-awards-history.sh "${GCS_BUCKET}"
 
           # Peel the gzip layers a non-decompressing download leaves on (#1702).
           # `gcloud storage rsync` on the runner's SDK does not inflate
@@ -1370,10 +1379,15 @@ jobs:
           gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/"
           gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/"
           gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/"
+          # District awards history (#1704): the transform loads it for Club
+          # Strength / Leadership Excellence and upserts each PY's year-end
+          # tier; without the pull every rebuilt date had no award history.
+          bash scripts/pull-awards-history.sh "${GCS_BUCKET}"
 
           # Peel the gzip layers a non-decompressing download leaves on (#1702).
           npx tsx scripts/store-encoding.ts normalize \
-            ./cache/time-series ./cache/club-trends ./cache/club-race
+            ./cache/time-series ./cache/club-trends ./cache/club-race \
+            ./cache/district-awards-history.json
 
           RAW_DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
           DATE_COUNT=$(echo "${RAW_DATES}" | grep -c . || true)
@@ -1490,6 +1504,14 @@ jobs:
           # Club-race crossing store (#1556): internal state, rsync back
           echo "Syncing club-race back to GCS..."
           gcloud storage rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
+
+          # District awards history (#1704): pulled before the rebuild loop and
+          # upserted per date, so this carries every other PY.
+          if [ -f "./cache/district-awards-history.json" ]; then
+            echo "Syncing district-awards-history back to GCS..."
+            gcloud storage cp "./cache/district-awards-history.json" \
+              "gs://${GCS_BUCKET}/district-awards-history.json"
+          fi
 
           echo "Uploading raw-csv..."
           gcloud storage rsync -r "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
