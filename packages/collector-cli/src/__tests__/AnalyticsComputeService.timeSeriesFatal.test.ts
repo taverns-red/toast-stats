@@ -195,6 +195,37 @@ describe('AnalyticsComputeService — time-series failures are fatal (#1702)', (
     )
   })
 
+  // #1708: the counters the step summary prints come from these lists.
+  it('lists the districts whose time-series point and club-trends store were written', async () => {
+    const result = await service.compute({ date: DATE, districts: ['61'] })
+
+    expect(result.timeSeriesWritten).toEqual(['61'])
+    expect(result.clubTrendsUpdated).toEqual(['61'])
+    expect(result.clubTrendsFailed).toEqual([])
+  })
+
+  it('leaves a district out of timeSeriesWritten when its write failed', async () => {
+    await fs.mkdir(path.dirname(indexPath()), { recursive: true })
+    await fs.writeFile(indexPath(), '{ not json')
+
+    const result = await service.compute({ date: DATE, districts: ['61'] })
+
+    expect(result.timeSeriesWritten).toEqual([])
+    expect(result.timeSeriesFailed).toEqual(['61'])
+  })
+
+  it('counts a district that failed before its club-trends update as clubTrendsFailed', async () => {
+    // No snapshot for district 99: compute fails before the store update.
+    const result = await service.compute({
+      date: DATE,
+      districts: ['61', '99'],
+    })
+
+    expect(result.districtsFailed).toEqual(['99'])
+    expect(result.clubTrendsUpdated).toEqual(['61'])
+    expect(result.clubTrendsFailed).toEqual(['99'])
+  })
+
   it('exits non-zero on a time-series failure even when every district computed', () => {
     const allDistrictsFine = asCliResult({
       districtsProcessed: ['61'],

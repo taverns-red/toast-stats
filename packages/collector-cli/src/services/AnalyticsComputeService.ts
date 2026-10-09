@@ -201,6 +201,12 @@ export interface ComputeOperationResult {
    * reads nothing else, so a skipped write is a stale page, not a detail.
    */
   timeSeriesFailed: string[]
+  /** Districts whose time-series data point was written (#1708 counters). */
+  timeSeriesWritten?: string[]
+  /** Districts whose club-trends store was updated (#1708 counters). */
+  clubTrendsUpdated?: string[]
+  /** Computed (not skipped) districts whose club-trends store was not updated (#1708). */
+  clubTrendsFailed?: string[]
   errors: Array<{
     districtId: string
     error: string

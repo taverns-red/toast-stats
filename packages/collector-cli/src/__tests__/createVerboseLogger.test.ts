@@ -91,13 +91,62 @@ describe('createVerboseLogger', () => {
     expectStdoutUntouched()
   })
 
-  it('error with a non-Error value drops it rather than serialising it', () => {
+  // #1708: every writer passes a context object (`{ date, districtId, error }`),
+  // and the logger used to print '' for it — the stderr line said what failed
+  // but never where or why.
+  it('error serialises a context object instead of dropping it', () => {
     const logger = createVerboseLogger(true)!
-    logger.error('odd failure', { code: 'E_SOMETHING' })
-    logger.error('string failure', 'boom')
+    logger.error('Failed to write time-series data point', {
+      date: '2026-10-01',
+      districtId: '61',
+      error: 'Unexpected token',
+    })
 
-    expect(stderr).toHaveBeenNthCalledWith(1, '[ERROR] odd failure', '')
-    expect(stderr).toHaveBeenNthCalledWith(2, '[ERROR] string failure', '')
+    expect(stderr).toHaveBeenCalledWith(
+      '[ERROR] Failed to write time-series data point',
+      '{"date":"2026-10-01","districtId":"61","error":"Unexpected token"}'
+    )
+    expectStdoutUntouched()
+  })
+
+  it('error serialises an Error nested in the context as its message', () => {
+    const logger = createVerboseLogger(true)!
+    logger.error('Failed to write metadata.json', {
+      date: '2026-10-01',
+      error: new Error('ENOSPC'),
+    })
+
+    expect(stderr).toHaveBeenCalledWith(
+      '[ERROR] Failed to write metadata.json',
+      '{"date":"2026-10-01","error":"ENOSPC"}'
+    )
+    expectStdoutUntouched()
+  })
+
+  it('error serialises a non-object value and prints nothing for undefined', () => {
+    const logger = createVerboseLogger(true)!
+    logger.error('string failure', 'boom')
+    logger.error('bare failure')
+
+    expect(stderr).toHaveBeenNthCalledWith(
+      1,
+      '[ERROR] string failure',
+      '"boom"'
+    )
+    expect(stderr).toHaveBeenNthCalledWith(2, '[ERROR] bare failure', '')
+    expectStdoutUntouched()
+  })
+
+  it('error survives a context that cannot be serialised', () => {
+    const logger = createVerboseLogger(true)!
+    const circular: Record<string, unknown> = { date: '2026-10-01' }
+    circular.self = circular
+
+    expect(() => logger.error('odd failure', circular)).not.toThrow()
+    expect(stderr).toHaveBeenCalledWith(
+      '[ERROR] odd failure',
+      '[object Object]'
+    )
     expectStdoutUntouched()
   })
 

@@ -476,4 +476,45 @@ describe('compute-analytics CLI command', () => {
       )
     })
   })
+
+  // #1708: the step summaries printed "districts computed" only, so a run
+  // that wrote no time-series point (#1702) looked like a normal day.
+  describe('store write counters (#1708)', () => {
+    it('reports timeSeries, clubTrends and clubRace written/failed', () => {
+      const result = createComputeResult({
+        success: false,
+        districtsProcessed: ['1', '2', '3'],
+        districtsSucceeded: ['1', '2'],
+        districtsFailed: ['3'],
+        timeSeriesWritten: ['1'],
+        timeSeriesFailed: ['2'],
+        clubTrendsUpdated: ['1', '2'],
+        clubTrendsFailed: ['3'],
+        clubRaceStorePath: '/cache/club-race/2025-2026.json',
+        clubRaceStoreFailed: false,
+      })
+
+      const summary = formatComputeAnalyticsSummary(result, '/analytics')
+
+      expect(summary.timeSeries).toEqual({ written: 1, failed: 1 })
+      expect(summary.clubTrends).toEqual({ written: 2, failed: 1 })
+      expect(summary.clubRace).toEqual({ written: 1, failed: 0 })
+    })
+
+    it('counts a club-race store failure and a skipped (no rankings) date', () => {
+      const failed = formatComputeAnalyticsSummary(
+        createComputeResult({ clubRaceStoreFailed: true }),
+        '/analytics'
+      )
+      expect(failed.clubRace).toEqual({ written: 0, failed: 1 })
+
+      const skipped = formatComputeAnalyticsSummary(
+        createComputeResult(),
+        '/analytics'
+      )
+      expect(skipped.timeSeries).toEqual({ written: 0, failed: 0 })
+      expect(skipped.clubTrends).toEqual({ written: 0, failed: 0 })
+      expect(skipped.clubRace).toEqual({ written: 0, failed: 0 })
+    })
+  })
 })
