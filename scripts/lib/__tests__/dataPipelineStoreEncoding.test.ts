@@ -66,14 +66,20 @@ function logicalLines(run: string): Array<{ text: string; index: number }> {
   return out
 }
 
+/** Escape every RegExp metacharacter, backslash included. */
+function escapeRegExp(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function isStoreDownload(text: string, store: string): boolean {
+  const name = escapeRegExp(store)
   if (store === AWARDS) {
     return new RegExp(
-      `gcloud storage cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${AWARDS.replace(/\./g, '\\.')}"`
+      `gcloud storage cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${name}"`
     ).test(text)
   }
   return new RegExp(
-    `gcloud storage rsync -r\\s+"gs://\\$\\{GCS_BUCKET\\}/${store}/"\\s+"\\./cache/${store}/"`
+    `gcloud storage rsync -r\\s+"gs://\\$\\{GCS_BUCKET\\}/${name}/"\\s+"\\./cache/${name}/"`
   ).test(text)
 }
 
