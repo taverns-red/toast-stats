@@ -27,6 +27,9 @@
 #   not what bytes land on disk. It missed that gcloud rsync on the runner SDK
 #   downloads `Content-Encoding: gzip` objects without inflating them (gsutil
 #   inflated), which wrapped every time-series object ~10x in gzip (#1702).
+#   Root cause: unpinned setup-gcloud@v3 resolved `latest` to 568.0.0 from a
+#   stale manifest; rsync decompresses only from 576.0.0. Every setup-gcloud
+#   step now pins an exact version >= 576 and logs `gcloud version` (#1720).
 #   Any CLI or flag change on a read path also needs a content check: decode,
 #   parse and compare. See tasks/lessons/lessons/
 #   a-store-round-tripped-through-gzip-encoding-needs-a-download-normaliser-and-an-upload-guard.md
@@ -197,6 +200,13 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720): `latest` resolves from setup-cloud-sdk's stale
+          # manifest (568.0.0), whose rsync keeps gzip bytes (#1702). >= 576.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
 
       - name: Determine mode
         id: mode
@@ -380,7 +390,7 @@ jobs:
           # step (#1704). Pulling it here would overwrite the transform's save.
 
           # Peel the gzip layers a non-decompressing download leaves on (#1702).
-          # `gcloud storage rsync` on the runner's SDK does not inflate
+          # `gcloud storage rsync` before SDK 576 (the unpinned 568) does not inflate
           # Content-Encoding: gzip objects, and only the current PY's files
           # are rewritten by compute, so every other file must be peeled here
           # or the -Z upload below stacks another layer on it. Also fails the
@@ -815,7 +825,7 @@ jobs:
           bash scripts/pull-awards-history.sh "${GCS_BUCKET}"
 
           # Peel the gzip layers a non-decompressing download leaves on (#1702).
-          # `gcloud storage rsync` on the runner's SDK does not inflate
+          # `gcloud storage rsync` before SDK 576 (the unpinned 568) does not inflate
           # Content-Encoding: gzip objects, and only the current PY's files
           # are rewritten by compute, so every other file must be peeled here
           # or the -Z upload below stacks another layer on it. Also fails the
@@ -1150,7 +1160,7 @@ jobs:
           bash scripts/pull-awards-history.sh "${GCS_BUCKET}"
 
           # Peel the gzip layers a non-decompressing download leaves on (#1702).
-          # `gcloud storage rsync` on the runner's SDK does not inflate
+          # `gcloud storage rsync` before SDK 576 (the unpinned 568) does not inflate
           # Content-Encoding: gzip objects, and only the current PY's files
           # are rewritten by compute, so every other file must be peeled here
           # or the -Z upload below stacks another layer on it. Also fails the
@@ -2670,6 +2680,13 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720): `latest` resolves from setup-cloud-sdk's stale
+          # manifest (568.0.0), whose rsync keeps gzip bytes (#1702). >= 576.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
 
       # The same writer the operator runbook prescribes — derived entries only
       # (no --set). planRegistryUpdates still refuses to regress a later manual
@@ -2859,6 +2876,13 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720): `latest` resolves from setup-cloud-sdk's stale
+          # manifest (568.0.0), whose rsync keeps gzip bytes (#1702). >= 576.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
 
       # ── Reports Step 1: raw date + districts + program year ──
       - name: '[reports] Resolve date, districts and program year'
@@ -3051,6 +3075,13 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720): `latest` resolves from setup-cloud-sdk's stale
+          # manifest (568.0.0), whose rsync keeps gzip bytes (#1702). >= 576.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
 
       # ── The #1284 cross-job assertion ──
       # `daily-reports` had to resolve the active program year a second time
