@@ -423,11 +423,11 @@ export interface ComputeAnalyticsSummary {
     filesCreated: number
   }
   /** Time-series data points written / failed this date (#1708). */
-  timeSeries?: StoreWriteCounter
+  timeSeries: StoreWriteCounter
   /** Club-trends store updates written / failed this date (#1708). */
-  clubTrends?: StoreWriteCounter
+  clubTrends: StoreWriteCounter
   /** Club-race crossing store fold written / failed this date (#1708). */
-  clubRace?: StoreWriteCounter
+  clubRace: StoreWriteCounter
   /** Error details for failed districts */
   errors: Array<{
     districtId: string
