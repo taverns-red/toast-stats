@@ -369,6 +369,13 @@ export interface ComputeAnalyticsResult {
   globalClubRacePath?: string
   /** True when the race projection could not be written (#1556). Never publish-blocking. */
   globalClubRaceFailed?: boolean
+  /**
+   * Districts whose time-series data point could not be written (#1702),
+   * e.g. because the synced program-year index exists but cannot be parsed.
+   * Non-empty makes the exit code non-zero: a swallowed failure here froze
+   * Trends for days while every run reported green.
+   */
+  timeSeriesFailed?: string[]
   /** Detailed error information for failed districts */
   errors: Array<{
     districtId: string

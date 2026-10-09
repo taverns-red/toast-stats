@@ -21,6 +21,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { TimeSeriesDataPointBuilder } from '@taverns-red/analytics-core'
+import { readStoreFileText } from '../utils/gzipLayers.js'
 import type {
   TimeSeriesDataPoint,
   ProgramYearIndexFile,
@@ -621,7 +622,8 @@ export class TimeSeriesIndexWriter {
     }
 
     try {
-      const content = await fs.readFile(resolvedPath, 'utf-8')
+      // Peels any gzip layers a non-decompressing download left on (#1702).
+      const content = await readStoreFileText(resolvedPath)
       const indexFile = JSON.parse(content) as ProgramYearIndexFile
 
       this.logger.debug('Read program year index file', {

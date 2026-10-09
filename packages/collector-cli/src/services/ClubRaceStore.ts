@@ -49,6 +49,7 @@ import {
   type ClubRaceStoreData,
   type ClubRaceTier,
 } from '@taverns-red/shared-contracts'
+import { readStoreFileText } from '../utils/gzipLayers.js'
 
 // The file shape is the shared contract (`club-race-store.schema`), so the
 // analytics-core projection reads exactly what this store writes.
@@ -109,7 +110,8 @@ export class ClubRaceStore {
     const filePath = ClubRaceStore.getPath(cacheDir, programYear)
     let content: string
     try {
-      content = await fs.readFile(filePath, 'utf-8')
+      // Peels any gzip layers a non-decompressing download left on (#1702).
+      content = await readStoreFileText(filePath)
     } catch (err) {
       if ((err as { code?: string }).code === 'ENOENT') return null
       throw err

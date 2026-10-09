@@ -357,6 +357,16 @@ jobs:
           gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
             "./cache/district-awards-history.json" 2>/dev/null || true
 
+          # Peel the gzip layers a non-decompressing download leaves on (#1702).
+          # `gcloud storage rsync` on the runner's SDK does not inflate
+          # Content-Encoding: gzip objects, and only the current PY's files
+          # are rewritten by compute, so every other file must be peeled here
+          # or the -Z upload below stacks another layer on it. Also fails the
+          # run on a store file that exists but is not JSON.
+          npx tsx scripts/store-encoding.ts normalize \
+            ./cache/time-series ./cache/club-trends ./cache/club-race \
+            ./cache/district-awards-history.json
+
           # Previous year snapshots for YoY comparison
           PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
           echo "Syncing previous year snapshots (${PREV_YEAR})..."
@@ -476,6 +486,10 @@ jobs:
           DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
           ARGS="--date ${DATE} --districts ${DISTRICT_LIST} --verbose"
 
+          # pipefail (#1702): without it `| tee` discards the CLI's exit code,
+          # and a run that wrote no time-series point for any district (or no
+          # worldwide rollup, #1498) reported green.
+          set -o pipefail
           echo "Running: npx collector-cli compute-analytics $ARGS"
           npx collector-cli compute-analytics $ARGS | tee /tmp/analytics-output.json
 
@@ -510,6 +524,10 @@ jobs:
             SNAPSHOT_DATE="${DATE}"
           fi
           echo "Uploading daily data — raw=${DATE}, snapshot=${SNAPSHOT_DATE}"
+
+          # Double-encoding guard (#1702): anything still gzip on disk would get
+          # another layer from the -Z upload below. Fail before any push.
+          npx tsx scripts/store-encoding.ts check ./cache/time-series ./cache/club-trends ./cache/club-race
 
           # Internal state: rsync (no CDN metadata needed)
           # raw-csv keyed by collection date (DATE), not snapshot date
@@ -774,6 +792,16 @@ jobs:
           gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
             "./cache/district-awards-history.json" 2>/dev/null || true
 
+          # Peel the gzip layers a non-decompressing download leaves on (#1702).
+          # `gcloud storage rsync` on the runner's SDK does not inflate
+          # Content-Encoding: gzip objects, and only the current PY's files
+          # are rewritten by compute, so every other file must be peeled here
+          # or the -Z upload below stacks another layer on it. Also fails the
+          # run on a store file that exists but is not JSON.
+          npx tsx scripts/store-encoding.ts normalize \
+            ./cache/time-series ./cache/club-trends ./cache/club-race \
+            ./cache/district-awards-history.json
+
           echo "## ⏬ Store Sync (rebuild)" >> "$GITHUB_STEP_SUMMARY"
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           CT_COUNT=$(find ./cache/club-trends -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
@@ -921,6 +949,10 @@ jobs:
               echo "Disk usage after ${INDEX} dates: $(df -h . | tail -1 | awk '{print $3 " used / " $4 " free"}')"
             fi
           done
+
+          # Double-encoding guard (#1702): anything still gzip on disk would get
+          # another layer from the -Z upload below. Fail before any push.
+          npx tsx scripts/store-encoding.ts check ./cache/time-series ./cache/club-trends ./cache/club-race
 
           # Sync accumulated stores back to GCS
           echo "Syncing time-series, club-trends and club-race back to GCS..."
@@ -1073,6 +1105,16 @@ jobs:
           echo "Syncing district-awards-history..."
           gcloud storage cp "gs://${GCS_BUCKET}/district-awards-history.json" \
             "./cache/district-awards-history.json" 2>/dev/null || true
+
+          # Peel the gzip layers a non-decompressing download leaves on (#1702).
+          # `gcloud storage rsync` on the runner's SDK does not inflate
+          # Content-Encoding: gzip objects, and only the current PY's files
+          # are rewritten by compute, so every other file must be peeled here
+          # or the -Z upload below stacks another layer on it. Also fails the
+          # run on a store file that exists but is not JSON.
+          npx tsx scripts/store-encoding.ts normalize \
+            ./cache/time-series ./cache/club-trends ./cache/club-race \
+            ./cache/district-awards-history.json
 
           echo "## ⏬ Store Sync (rescrape)" >> "$GITHUB_STEP_SUMMARY"
 
@@ -1241,6 +1283,10 @@ jobs:
             fi
           done
 
+          # Double-encoding guard (#1702): anything still gzip on disk would get
+          # another layer from the -Z upload below. Fail before any push.
+          npx tsx scripts/store-encoding.ts check ./cache/time-series ./cache/club-trends ./cache/club-race
+
           # Sync accumulated stores back to GCS
           echo "Syncing time-series, club-trends and club-race back to GCS..."
           gcloud storage rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
@@ -1324,6 +1370,10 @@ jobs:
           gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/"
           gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/"
           gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/"
+
+          # Peel the gzip layers a non-decompressing download leaves on (#1702).
+          npx tsx scripts/store-encoding.ts normalize \
+            ./cache/time-series ./cache/club-trends ./cache/club-race
 
           RAW_DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
           DATE_COUNT=$(echo "${RAW_DATES}" | grep -c . || true)
@@ -1418,6 +1468,10 @@ jobs:
         if: steps.mode.outputs.mode == 'rescrape-historical'
         run: |
           echo "## ⬆️ Upload stores (#1670)" >> "$GITHUB_STEP_SUMMARY"
+
+          # Double-encoding guard (#1702): anything still gzip on disk would get
+          # another layer from the -Z upload below. Fail before any push.
+          npx tsx scripts/store-encoding.ts check ./cache/time-series ./cache/club-trends ./cache/club-race
 
           # Time-series and club-trends were pulled from GCS before the
           # rebuild and upserted per date, so these carry every other year.

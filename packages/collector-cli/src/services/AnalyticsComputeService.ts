@@ -195,6 +195,12 @@ export interface ComputeOperationResult {
    * snapshot never recomputes.
    */
   globalClubRaceFailed: boolean
+  /**
+   * Districts whose time-series data point was not written (#1702). The
+   * loop still continues to the next district, but the run fails: Trends
+   * reads nothing else, so a skipped write is a stale page, not a detail.
+   */
+  timeSeriesFailed: string[]
   errors: Array<{
     districtId: string
     error: string
@@ -1090,7 +1096,7 @@ export class AnalyticsComputeService {
           error instanceof Error ? error.message : 'Unknown error'
         timeSeriesError = errorMessage
         this.logger.error(
-          'Failed to write time-series data point (continuing)',
+          'Failed to write time-series data point (continuing to the next district; the run will fail, #1702)',
           {
             date,
             districtId,
@@ -1227,6 +1233,7 @@ export class AnalyticsComputeService {
         globalTotalsFailed: false,
         clubRaceStoreFailed: false,
         globalClubRaceFailed: false,
+        timeSeriesFailed: [],
         errors: [
           {
             districtId: 'N/A',
@@ -1270,6 +1277,7 @@ export class AnalyticsComputeService {
         globalTotalsFailed: false,
         clubRaceStoreFailed: false,
         globalClubRaceFailed: false,
+        timeSeriesFailed: [],
         errors: [
           {
             districtId: 'N/A',
@@ -1466,6 +1474,19 @@ export class AnalyticsComputeService {
       errors
     )
 
+    // A time-series write failure is recorded per district but must fail the
+    // run (#1702): it is the only writer behind Trends.
+    const timeSeriesFailed: string[] = []
+    for (const result of results) {
+      if (result.timeSeriesError === undefined) continue
+      timeSeriesFailed.push(result.districtId)
+      errors.push({
+        districtId: result.districtId,
+        error: `Failed to write time-series data point: ${result.timeSeriesError}`,
+        timestamp: new Date().toISOString(),
+      })
+    }
+
     // Calculate result statistics
     const districtsProcessed = districtsToCompute
     const districtsSucceeded = results
@@ -1514,6 +1535,7 @@ export class AnalyticsComputeService {
       clubRaceStoreFailed: clubRace.failed,
       globalClubRacePath: globalClubRace.path,
       globalClubRaceFailed: globalClubRace.failed,
+      timeSeriesFailed,
       errors,
       duration_ms: Date.now() - startTime,
     }

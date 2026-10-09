@@ -673,6 +673,7 @@ export function createCLI(): Command {
         clubRaceStoreFailed: computeResult.clubRaceStoreFailed,
         globalClubRacePath: computeResult.globalClubRacePath,
         globalClubRaceFailed: computeResult.globalClubRaceFailed,
+        timeSeriesFailed: computeResult.timeSeriesFailed,
         errors: computeResult.errors,
         duration_ms: computeResult.duration_ms,
       }
