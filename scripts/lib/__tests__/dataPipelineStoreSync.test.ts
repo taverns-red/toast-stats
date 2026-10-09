@@ -43,12 +43,19 @@ function modeOf(step: Step): string | null {
   return m ? m[1]! : null
 }
 
+function escapeRegExp(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 // download: GCS path is the FIRST cp arg (gs:// → ./cache), or the
 // fail-closed pull helper (#1704).
+function inlinePullRegex(file: string): RegExp {
+  return new RegExp(`cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${escapeRegExp(file)}"`)
+}
+
 function downloadRegex(file: string): RegExp {
-  const escaped = file.replace(/\./g, '\\.')
   return new RegExp(
-    `cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${escaped}"|scripts/pull-awards-history\\.sh`
+    `${inlinePullRegex(file).source}|scripts/pull-awards-history\\.sh`
   )
 }
 
@@ -79,7 +86,7 @@ function before(a: Pos, b: Pos): boolean {
 
 // upload: local cache path is the FIRST cp arg (./cache → gs://)
 function uploadsStore(run: string, file: string): boolean {
-  return new RegExp(`cp\\s+"\\./cache/${file.replace(/\./g, '\\.')}"`).test(run)
+  return new RegExp(`cp\\s+"\\./cache/${escapeRegExp(file)}"`).test(run)
 }
 
 describe('data-pipeline.yml store-sync symmetry (#1111)', () => {
@@ -152,12 +159,7 @@ describe('data-pipeline.yml store-sync symmetry (#1111)', () => {
 
     it(`every ${file} pull is fail-closed via scripts/pull-awards-history.sh (#1704)`, () => {
       const inlinePulls = steps.filter(
-        s =>
-          modeOf(s) &&
-          s.run &&
-          new RegExp(
-            `cp\\s+"gs://\\$\\{GCS_BUCKET\\}/${file.replace(/\./g, '\\.')}"`
-          ).test(s.run)
+        s => modeOf(s) && s.run && inlinePullRegex(file).test(s.run)
       )
       expect(inlinePulls.map(s => s.name)).toEqual([])
     })
