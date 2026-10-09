@@ -23,7 +23,7 @@
  */
 
 import { appendFileSync, writeFileSync } from 'node:fs'
-import { Storage, type Bucket } from '@google-cloud/storage'
+import { Storage, type Bucket, type File } from '@google-cloud/storage'
 import {
   DATES_PATH,
   LATEST_PATH,
@@ -76,18 +76,22 @@ async function mapLimit<T, R>(
   return out
 }
 
-async function listFlat(
-  bucket: Bucket,
-  prefix: string
-): Promise<GcsObjectMeta[]> {
-  const [files] = await bucket.getFiles({ prefix, fields: LIST_FIELDS })
-  return files.map(f => ({
+function toMeta(f: File): GcsObjectMeta {
+  return {
     name: f.name,
     size: f.metadata.size,
     crc32c: f.metadata.crc32c,
     md5Hash: f.metadata.md5Hash,
     contentEncoding: f.metadata.contentEncoding,
-  }))
+  }
+}
+
+async function listFlat(
+  bucket: Bucket,
+  prefix: string
+): Promise<GcsObjectMeta[]> {
+  const [files] = await bucket.getFiles({ prefix, fields: LIST_FIELDS })
+  return files.map(toMeta)
 }
 
 /** Immediate sub-prefixes ("directories") under `prefix`. */
@@ -127,16 +131,7 @@ async function listPromoted(bucket: Bucket): Promise<GcsObjectMeta[]> {
       fields: LIST_FIELDS,
     })
     const nested = await mapLimit(dirs, CONCURRENCY, d => listFlat(bucket, d))
-    return [
-      ...top.map(f => ({
-        name: f.name,
-        size: f.metadata.size,
-        crc32c: f.metadata.crc32c,
-        md5Hash: f.metadata.md5Hash,
-        contentEncoding: f.metadata.contentEncoding,
-      })),
-      ...nested.flat(),
-    ]
+    return [...top.map(toMeta), ...nested.flat()]
   })
   return parts.flat()
 }
