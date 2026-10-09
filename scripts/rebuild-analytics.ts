@@ -100,9 +100,17 @@ async function main() {
   console.log(`  Skipped: ${skipped}`)
   console.log(`  Failed:  ${failed}`)
   console.log()
-  console.log('Next step — sync to GCS:')
+  // No GCS command here on purpose (#1709): prod is written only by the gated
+  // promotion in data-pipeline.yml, which is additive. The old hint mirrored
+  // this local cache onto prod with --delete-unmatched-destination-objects.
   console.log(
-    `  gcloud storage rsync -r --delete-unmatched-destination-objects ${cacheDir}/snapshots gs://toast-stats-data-ca/snapshots`
+    'Next step — publish through the Data Pipeline workflow (mode=rebuild):'
+  )
+  console.log(
+    '  it uploads to staging, then promotes to prod only if the gates pass.'
+  )
+  console.log(
+    `  Do not rsync ${cacheDir}/snapshots to the production bucket by hand.`
   )
 }
 
