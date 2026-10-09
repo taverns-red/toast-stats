@@ -9,6 +9,13 @@
 # `cdn-schema-canary` issue when a validating consumer would get schema
 # not-available — the #1096 outage class.
 #
+# #1710 (plan S1-5): it also checks `config/district-snapshot-index.json`
+# and, for D61 plus two random published districts, the time-series
+# index-metadata and current-PY file. Each object is decoded exactly as a
+# browser does (one Content-Encoding layer) and must parse as JSON — a
+# nested-gzip object (the #1702 Trends outage) fails — and the current-PY
+# last point must be at most MAX_TIME_SERIES_AGE_DAYS (default 3) old.
+#
 # Self-clearing: a healthy run closes any open canary alert. Safe because
 # runs are serialized by the concurrency group.
 #
@@ -43,7 +50,7 @@ concurrency:
 
 jobs:
   check:
-    name: Validate published district snapshots
+    name: Validate published snapshots, time-series and config
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -129,7 +136,7 @@ jobs:
       - name: Fail the run when unhealthy
         if: steps.canary.outputs.unhealthy == 'true'
         run: |
-          MSG='Published CDN snapshots fail shared-contracts'
+          MSG='Published CDN objects fail decoding or shared-contracts'
           MSG="${MSG} read-validation — a cdn-schema-canary issue has been filed."
           echo "::error::${MSG}"
           exit 1
