@@ -118,5 +118,9 @@ echo "  Dates processed: ${#DATES[@]}"
 echo "  Transform:  $TRANSFORM_OK ok, $TRANSFORM_FAIL failed"
 echo "  Analytics:  $ANALYTICS_OK ok, $ANALYTICS_FAIL failed"
 echo ""
-echo "Next step — sync to GCS:"
-echo "  gcloud storage rsync -r --delete-unmatched-destination-objects $CACHE_DIR/snapshots gs://toast-stats-data-ca/snapshots"
+# No GCS command here on purpose (#1709): prod is written only by the gated
+# promotion in data-pipeline.yml, which is additive. The old hint mirrored this
+# local cache onto prod with --delete-unmatched-destination-objects.
+echo "Next step — publish through the Data Pipeline workflow (mode=rebuild):"
+echo "  it uploads to staging, then promotes to prod only if the gates pass."
+echo "  Do not rsync this local cache to the production bucket by hand."

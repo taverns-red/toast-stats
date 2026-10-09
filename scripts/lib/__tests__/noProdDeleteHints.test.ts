@@ -4,8 +4,7 @@
  *
  * `rebuild-all.sh` and `rebuild-analytics.ts` used to finish by printing an
  * operator hint to run
- *   gcloud storage rsync -r --delete-unmatched-destination-objects \
- *     ./cache/snapshots gs://toast-stats-data-ca/snapshots
+ *   gcloud storage rsync -r <delete-unmatched flag> ./cache/snapshots <prod>
  * That is a destructive mirror of a local cache onto prod: any snapshot date
  * missing locally is deleted from the bucket the frontend reads. Prod is only
  * ever written by the gated promotion in data-pipeline.yml, which is additive
