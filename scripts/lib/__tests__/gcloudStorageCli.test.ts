@@ -12,8 +12,12 @@
  * the real steps. It pins the three things a mechanical rewrite gets wrong:
  *
  *   1. `gsutil` must not come back — not for cp/ls/cat/rm, and since the
- *      rsync migration (proven no-op by per-site `--dry-run` diffs against
- *      the real buckets) not for rsync either.
+ *      rsync migration not for rsync either. That migration was justified by
+ *      per-site `--dry-run` diffs, which prove only that both CLIs plan the
+ *      same object set, not that they write the same bytes. They did not:
+ *      gcloud rsync left gzip-encoded downloads compressed (#1702). This file
+ *      guards CLI syntax only; content is guarded by the store normaliser and
+ *      upload guard (dataPipelineStoreEncoding.test.ts).
  *   2. Bundled short flags DO NOT PARSE in `gcloud storage`. `cp -rZ` exits 2
  *      with a usage error where gsutil accepted it — verified against the real
  *      CLI (Google Cloud SDK 578.0.0). Short flags must be written separately.

@@ -21,9 +21,15 @@
 #   Google drops the bundled `gsutil` from the Cloud SDK in March 2027, and this
 #   workflow never installs it explicitly (setup-gcloud@v3 gives us the default
 #   bundle), so every call would break at once. `cp`/`ls`/`cat`/`rm` moved first;
-#   `rsync` followed once per-call-site `--dry-run` diffs against the real
-#   staging and prod buckets showed gsutil and gcloud plan the identical object
-#   set (promotion, downloads, uploads, and both `-x` excludes) — see #1412.
+#   `rsync` followed in #1649 after per-call-site `--dry-run` diffs against the
+#   real buckets showed both CLIs plan the identical object SET (#1412).
+#   A plan diff is NOT byte evidence. It proves which objects would be copied,
+#   not what bytes land on disk. It missed that gcloud rsync on the runner SDK
+#   downloads `Content-Encoding: gzip` objects without inflating them (gsutil
+#   inflated), which wrapped every time-series object ~10x in gzip (#1702).
+#   Any CLI or flag change on a read path also needs a content check: decode,
+#   parse and compare. See tasks/lessons/lessons/
+#   a-store-round-tripped-through-gzip-encoding-needs-a-download-normaliser-and-an-upload-guard.md
 #   Three things a mechanical rewrite gets wrong:
 #     * `-m` has NO equivalent — parallelism is the default in `gcloud storage`.
 #     * BUNDLED SHORT FLAGS DO NOT PARSE. `gcloud storage cp -rZ` exits 2 with a
