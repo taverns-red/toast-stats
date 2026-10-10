@@ -6,7 +6,7 @@
 # $SHIM_ROOT/.meta/<bucket>/<path> so it never shows up as an object.
 #
 # Implements only what scripts/pipeline/*.sh and scripts/pull-awards-history.sh
-# call: `storage ls <prefix>/**`, `storage rsync -r <src> <dst>` and
+# call: `storage ls <prefix>/**` (or a single-segment `*` glob), `storage rsync -r <src> <dst>` and
 # `storage cp [--content-type=..] [--cache-control=..] [-r] [-Z] <src>... <dst>`.
 # Error texts are the ones Google Cloud SDK 583.0.0 prints (probed read-only
 # against the staging bucket, 2026-10-09).
@@ -91,6 +91,21 @@ case "${CMD}" in
   ls)
     url="${1:?}"
     require_bucket "${url}"
+    # A single-segment wildcard (`snapshots/*/all-districts-rankings.json`,
+    # the legacy rank-history loop, #1733): expand it as a shell glob.
+    if [[ "${url}" != *'**' && "${url}" == *'*'* ]]; then
+      found=0
+      while IFS= read -r f; do
+        [ -f "${f}" ] || continue
+        found=1
+        echo "gs://${f#"${SHIM_ROOT}/"}"
+      done < <(compgen -G "$(local_of "${url}")" | LC_ALL=C sort)
+      if [ "${found}" = 0 ]; then
+        echo "ERROR: (gcloud.storage.ls) One or more URLs matched no objects." >&2
+        exit 1
+      fi
+      exit 0
+    fi
     prefix="${url%\*\*}"
     dir="$(local_of "${prefix}")"
     found=0

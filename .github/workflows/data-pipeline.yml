@@ -1701,16 +1701,11 @@ jobs:
           # v1/rank-history/{districtId}.json
           # Issue #186: Download rankings into date-prefixed filenames
           # to avoid overwriting (all files are named all-districts-rankings.json)
+          # #1733 (E2-3): one listing + one parallel download, fail-closed;
+          # replaced ~206 sequential cp calls that swallowed every failure.
           echo "Building per-district rank history..."
           mkdir -p /tmp/rank-history-src /tmp/rank-history-out
-          gcloud storage ls "gs://${GCS_BUCKET}/snapshots/*/all-districts-rankings.json" \
-            2>/dev/null | while IFS= read -r gcs_path; do
-            DATE_DIR=$(echo "${gcs_path}" | grep -oP '\d{4}-\d{2}-\d{2}')
-            if [ -n "${DATE_DIR}" ]; then
-              gcloud storage cp "${gcs_path}" \
-                "/tmp/rank-history-src/${DATE_DIR}.json" 2>/dev/null || true
-            fi
-          done
+          npx tsx scripts/pull-rank-history.ts "${GCS_BUCKET}" /tmp/rank-history-src
 
           RANK_FILE_COUNT=$(ls /tmp/rank-history-src/*.json 2>/dev/null | wc -l | tr -d ' ')
           echo "Downloaded ${RANK_FILE_COUNT} historical rankings files"
