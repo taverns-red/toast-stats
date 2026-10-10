@@ -2210,7 +2210,37 @@ jobs:
           OVERLAP_COUNT=$(wc -l < /tmp/overlap-dates.txt | tr -d ' ')
           echo "Overlap dates to value-compare: ${OVERLAP_COUNT}"
 
-          # Pull each overlap date's all-districts-rankings.json from both buckets.
+          # Fetch only dates whose stored hashes differ (#1730, plan E2-4).
+          # Promotion copies objects byte for byte, so a date whose live object
+          # has the same crc32c/md5 in both buckets is unchanged; it is skipped
+          # and passed to value-diff as --hash-equal-dates (counted unchanged).
+          # A failed listing is discarded and the plan fetches every overlap
+          # date; a date missing or unhashed on a side is always fetched.
+          # The two listings (~12 s each) run concurrently.
+          ( gcloud storage objects list "gs://${GCS_BUCKET}/snapshots/*/all-districts-rankings.json" --format=json \
+            > /tmp/vd-staging-listing.json 2>>/tmp/vd-plan.log || rm -f /tmp/vd-staging-listing.json ) &
+          ( gcloud storage objects list "gs://${GCS_BUCKET_PRODUCTION}/snapshots/*/all-districts-rankings.json" --format=json \
+            > /tmp/vd-prod-listing.json 2>>/tmp/vd-plan.log || rm -f /tmp/vd-prod-listing.json ) &
+          wait
+          npx collector-cli value-diff-plan \
+            --overlap-dates /tmp/overlap-dates.txt \
+            --staging-listing /tmp/vd-staging-listing.json \
+            --prod-listing /tmp/vd-prod-listing.json \
+            > /tmp/vd-plan.json 2>>/tmp/vd-plan.log || true
+          if jq -e '(.fetch | type == "array") and (.hashEqual | type == "array")' /tmp/vd-plan.json >/dev/null 2>&1; then
+            jq -r '.fetch[]' /tmp/vd-plan.json > /tmp/vd-fetch-dates.txt
+            jq -r '.hashEqual[]' /tmp/vd-plan.json > /tmp/vd-hash-equal-dates.txt
+            PLAN_REASON=$(jq -r '.reason' /tmp/vd-plan.json)
+          else
+            cp /tmp/overlap-dates.txt /tmp/vd-fetch-dates.txt
+            : > /tmp/vd-hash-equal-dates.txt
+            PLAN_REASON="fetch plan unavailable — full fetch"
+          fi
+          FETCH_COUNT=$(wc -l < /tmp/vd-fetch-dates.txt | tr -d ' ')
+          SKIP_COUNT=$(wc -l < /tmp/vd-hash-equal-dates.txt | tr -d ' ')
+          echo "Value-diff fetch plan: ${PLAN_REASON}"
+
+          # Pull each planned date's all-districts-rankings.json from both buckets.
           # Parallelized (xargs -P): ~2 cp/date sequentially over ~100 dates is
           # ~200 round-trips dominated by CLI startup; running them concurrently
           # cuts wall time markedly. Each cp is fail-soft (a missing file just drops
@@ -2223,7 +2253,7 @@ jobs:
               "/tmp/vd/staging/${d}/all-districts-rankings.json" 2>/dev/null || true
             gcloud storage cp "gs://${pb}/snapshots/${d}/all-districts-rankings.json" \
               "/tmp/vd/prod/${d}/all-districts-rankings.json" 2>/dev/null || true
-          ' _ {} "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" < /tmp/overlap-dates.txt
+          ' _ {} "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" < /tmp/vd-fetch-dates.txt
 
           ALLOW_FLAG=""
           if [ "${ALLOW_VALUE_CHANGES:-false}" = "true" ]; then
@@ -2246,9 +2276,11 @@ jobs:
           npx collector-cli value-diff \
             --staging-dir /tmp/vd/staging \
             --prod-dir /tmp/vd/prod \
+            --hash-equal-dates /tmp/vd-hash-equal-dates.txt \
             ${ALLOW_FLAG} ${CPAA_FLAG} > /tmp/value-diff.json 2>/tmp/value-diff.log || true
 
           echo "## 🔬 Value Diff (staging vs production)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Fetched ${FETCH_COUNT} date(s), skipped ${SKIP_COUNT} hash-equal (${PLAN_REASON})" >> "$GITHUB_STEP_SUMMARY"
           if jq -e . /tmp/value-diff.json >/dev/null 2>&1; then
             VALUE_PROMOTE=$(jq -r '.promote' /tmp/value-diff.json)
             ADDED=$(jq -r '.report.added | length' /tmp/value-diff.json)
@@ -2291,6 +2323,7 @@ jobs:
             echo "- ⚠️ value-diff failed to produce output — **failing closed**" >> "$GITHUB_STEP_SUMMARY"
             cat /tmp/value-diff.log || true
           fi
+          cat /tmp/vd-plan.log 2>/dev/null || true
 
           echo "value_promote=${VALUE_PROMOTE}" >> "$GITHUB_OUTPUT"
 

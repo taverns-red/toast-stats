@@ -1,0 +1,102 @@
+[
+  {
+    "bucket": "toast-stats-data-ca",
+    "cache_control": "public, max-age=3600, must-revalidate,no-transform",
+    "content_encoding": "gzip",
+    "content_type": "application/json",
+    "crc32c_hash": "zIXbHQ==",
+    "creation_time": "2026-04-17T11:07:31+0000",
+    "etag": "CM/GoqTf9JMDEAE=",
+    "generation": "1776424051057487",
+    "md5_hash": "X63jRwnzF6kdtUpaPvvJCw==",
+    "metageneration": 1,
+    "name": "snapshots/2017-01-31/all-districts-rankings.json",
+    "noncurrent_time": "2026-06-11T13:07:10+0000",
+    "size": 5344,
+    "storage_class": "STANDARD",
+    "storage_class_update_time": "2026-04-17T11:07:31+0000",
+    "storage_url": "gs://toast-stats-data-ca/snapshots/2017-01-31/all-districts-rankings.json#1776424051057487",
+    "update_time": "2026-04-17T11:07:31+0000"
+  },
+  {
+    "bucket": "toast-stats-data-ca",
+    "cache_control": "public, max-age=3600, must-revalidate,no-transform",
+    "content_encoding": "gzip",
+    "content_type": "application/json",
+    "crc32c_hash": "sjxeAg==",
+    "creation_time": "2026-06-11T13:07:10+0000",
+    "etag": "COjn8c2g/5QDEAE=",
+    "generation": "1781183230538728",
+    "md5_hash": "Egkmiod2jdj1u1U7UUZHqg==",
+    "metageneration": 1,
+    "name": "snapshots/2017-01-31/all-districts-rankings.json",
+    "size": 7020,
+    "storage_class": "STANDARD",
+    "storage_class_update_time": "2026-06-11T13:07:10+0000",
+    "storage_url": "gs://toast-stats-data-ca/snapshots/2017-01-31/all-districts-rankings.json#1781183230538728",
+    "update_time": "2026-06-11T13:07:10+0000"
+  },
+  {
+    "bucket": "toast-stats-data-ca",
+    "cache_control": "public, max-age=3600, must-revalidate, no-transform",
+    "content_encoding": "gzip",
+    "content_type": "application/json",
+    "crc32c_hash": "5Zwwww==",
+    "creation_time": "2026-10-09T21:43:21+0000",
+    "custom_fields": {
+      "goog-reserved-file-mtime": "1791581075"
+    },
+    "etag": "CMysvOXzrZcDEAE=",
+    "generation": "1791582201124428",
+    "md5_hash": "m/e/jgvy03jYAecfBUmryA==",
+    "metageneration": 1,
+    "name": "snapshots/2026-09-30/all-districts-rankings.json",
+    "size": 6504,
+    "storage_class": "STANDARD",
+    "storage_class_update_time": "2026-10-09T21:43:21+0000",
+    "storage_url": "gs://toast-stats-data-ca/snapshots/2026-09-30/all-districts-rankings.json#1791582201124428",
+    "update_time": "2026-10-09T21:43:21+0000"
+  },
+  {
+    "bucket": "toast-stats-data-ca",
+    "cache_control": "public, max-age=3600, must-revalidate, no-transform",
+    "content_encoding": "gzip",
+    "content_type": "application/json",
+    "crc32c_hash": "lTA6xg==",
+    "creation_time": "2026-10-09T21:43:26+0000",
+    "custom_fields": {
+      "goog-reserved-file-mtime": "1791581116"
+    },
+    "etag": "CNuZhujzrZcDEAE=",
+    "generation": "1791582206528731",
+    "md5_hash": "T0oGwDBYXjXTDb1Pv4RrnQ==",
+    "metageneration": 1,
+    "name": "snapshots/2026-10-08/all-districts-rankings.json",
+    "size": 6630,
+    "storage_class": "STANDARD",
+    "storage_class_update_time": "2026-10-09T21:43:26+0000",
+    "storage_url": "gs://toast-stats-data-ca/snapshots/2026-10-08/all-districts-rankings.json#1791582206528731",
+    "update_time": "2026-10-09T21:43:26+0000"
+  },
+  {
+    "bucket": "toast-stats-data-ca",
+    "cache_control": "public, max-age=3600, must-revalidate, no-transform",
+    "content_encoding": "gzip",
+    "content_type": "application/json",
+    "crc32c_hash": "p0CFcQ==",
+    "creation_time": "2026-10-10T14:05:51+0000",
+    "custom_fields": {
+      "goog-reserved-file-mtime": "1791640488"
+    },
+    "etag": "CNvhl7PPr5cDEAE=",
+    "generation": "1791641151467739",
+    "md5_hash": "9P6ysq3jHRWSRz/utYlAIA==",
+    "metageneration": 1,
+    "name": "snapshots/2026-10-09/all-districts-rankings.json",
+    "size": 6642,
+    "storage_class": "STANDARD",
+    "storage_class_update_time": "2026-10-10T14:05:51+0000",
+    "storage_url": "gs://toast-stats-data-ca/snapshots/2026-10-09/all-districts-rankings.json#1791641151467739",
+    "update_time": "2026-10-10T14:05:51+0000"
+  }
+]

@@ -1,9 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { cpSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
-import { loadDateDigests, runValueDiff } from '../SnapshotValueDiffLoader.js'
+import {
+  loadDateDigests,
+  loadValueDiffFetchPlan,
+  readDateList,
+  runValueDiff,
+} from '../SnapshotValueDiffLoader.js'
 
 function rankings(
   date: string,
@@ -228,5 +234,150 @@ describe('runValueDiff — Closing-Pinned Auto-Allow end-to-end (#1086)', () => 
       expect.objectContaining({ delta: -600 }),
     ])
     expect(exitCode).toBe(0)
+  })
+})
+
+describe('runValueDiff — hash-equal dates skipped by the fetch plan (#1730)', () => {
+  /**
+   * Today every overlap date is downloaded from both buckets. With the plan,
+   * hash-equal dates are not downloaded and are passed as hashEqualDates.
+   * The verdict and report must be identical either way.
+   */
+  interface Dirs {
+    staging: string
+    prod: string
+  }
+
+  /** Full download: three overlap dates; 2026-10-08 changed if asked. */
+  function fullDownload(changed: boolean): Dirs {
+    const full = { staging: join(tmp, 'full-s'), prod: join(tmp, 'full-p') }
+    for (const d of ['2026-09-29', '2026-09-30', '2026-10-08']) {
+      writeSnapshot(full.prod, d, rankings(d, 5000))
+      const v = changed && d === '2026-10-08' ? 5001 : 5000
+      writeSnapshot(full.staging, d, rankings(d, v))
+    }
+    return full
+  }
+
+  /** The same download minus the hash-equal dates (they are not fetched). */
+  function withoutSkipped(full: Dirs, skip: string[]): Dirs {
+    const out = { staging: join(tmp, 'skip-s'), prod: join(tmp, 'skip-p') }
+    cpSync(full.staging, out.staging, { recursive: true })
+    cpSync(full.prod, out.prod, { recursive: true })
+    for (const d of skip) {
+      rmSync(join(out.staging, d), { recursive: true, force: true })
+      rmSync(join(out.prod, d), { recursive: true, force: true })
+    }
+    return out
+  }
+
+  for (const allowValueChanges of [false, true]) {
+    it(`same verdict + report with one changed date (allow=${allowValueChanges})`, () => {
+      const full = fullDownload(true)
+      const skip = ['2026-09-29', '2026-09-30']
+      const before = runValueDiff({
+        stagingDir: full.staging,
+        prodDir: full.prod,
+        allowValueChanges,
+      })
+      const s = withoutSkipped(full, skip)
+      const after = runValueDiff({
+        stagingDir: s.staging,
+        prodDir: s.prod,
+        allowValueChanges,
+        hashEqualDates: skip,
+      })
+      expect(before.report.changed).toHaveLength(1)
+      expect(after).toEqual(before)
+    })
+  }
+
+  it('same verdict + report when nothing changed (the additive reason counts unchanged dates)', () => {
+    const full = fullDownload(false)
+    writeSnapshot(full.staging, '2026-10-09', rankings('2026-10-09', 5000))
+    const skip = ['2026-09-29', '2026-09-30', '2026-10-08']
+    const before = runValueDiff({
+      stagingDir: full.staging,
+      prodDir: full.prod,
+    })
+    const s = withoutSkipped(full, skip)
+    const after = runValueDiff({
+      stagingDir: s.staging,
+      prodDir: s.prod,
+      hashEqualDates: skip,
+    })
+    expect(before.decision.promote).toBe(true)
+    expect(after).toEqual(before)
+  })
+
+  it('a date on only one side is still flagged exactly as today (removed blocks)', () => {
+    const full = fullDownload(false)
+    writeSnapshot(full.prod, '2026-10-09', rankings('2026-10-09', 5000))
+    const skip = ['2026-09-29', '2026-09-30']
+    const before = runValueDiff({
+      stagingDir: full.staging,
+      prodDir: full.prod,
+    })
+    const s = withoutSkipped(full, skip)
+    const after = runValueDiff({
+      stagingDir: s.staging,
+      prodDir: s.prod,
+      hashEqualDates: skip,
+    })
+    expect(before.report.removed).toEqual(['2026-10-09'])
+    expect(before.decision.promote).toBe(false)
+    expect(after).toEqual(before)
+  })
+
+  it('a hash-equal date that was downloaded anyway is judged by its digests', () => {
+    const full = fullDownload(true)
+    const result = runValueDiff({
+      stagingDir: full.staging,
+      prodDir: full.prod,
+      hashEqualDates: ['2026-10-08', '2026-10-08'],
+    })
+    expect(result.report.changed.map(c => c.date)).toEqual(['2026-10-08'])
+    expect(result.report.overlap).toBe(3)
+  })
+})
+
+describe('readDateList / loadValueDiffFetchPlan (#1730)', () => {
+  const listing = (f: string): string =>
+    fileURLToPath(new URL(`./fixtures/gcs-objects-list/${f}`, import.meta.url))
+
+  it('readDateList reads one date per line and ignores blanks', () => {
+    const f = join(tmp, 'dates.txt')
+    writeFileSync(f, '2026-10-08\n\n2026-10-09\n')
+    expect(readDateList(f)).toEqual(['2026-10-08', '2026-10-09'])
+  })
+
+  it('plans from the recorded listing files', () => {
+    const overlap = join(tmp, 'overlap.txt')
+    writeFileSync(overlap, '2026-10-08\n2026-10-09\n')
+    const plan = loadValueDiffFetchPlan({
+      overlapDatesFile: overlap,
+      stagingListingFile: listing('staging-rankings.json'),
+      prodListingFile: listing('prod-rankings.json'),
+    })
+    expect(plan.fullFetch).toBe(false)
+    expect(plan.hashEqual).toEqual(['2026-10-08', '2026-10-09'])
+    expect(plan.fetch).toEqual([])
+  })
+
+  it('falls back to a full fetch when a listing file is missing or not JSON', () => {
+    const overlap = join(tmp, 'overlap.txt')
+    writeFileSync(overlap, '2026-10-08\n')
+    const bad = join(tmp, 'bad.json')
+    writeFileSync(bad, 'ERROR: (gcloud.storage.objects.list) ...')
+    for (const stagingListingFile of [join(tmp, 'missing.json'), bad]) {
+      const plan = loadValueDiffFetchPlan({
+        overlapDatesFile: overlap,
+        stagingListingFile,
+        prodListingFile: listing('prod-rankings.json'),
+      })
+      expect(plan.fullFetch).toBe(true)
+      expect(plan.fetch).toEqual(['2026-10-08'])
+      expect(plan.hashEqual).toEqual([])
+    }
   })
 })

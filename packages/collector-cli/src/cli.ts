@@ -1701,6 +1701,10 @@ export function createCLI(): Command {
       '--no-closing-auto-allow',
       'Disable Closing-Pinned Auto-Allow — set for non-daily (rebuild/rescrape) runs so they hold for review (#1673)'
     )
+    .option(
+      '--hash-equal-dates <file>',
+      'Newline-separated overlap dates skipped by value-diff-plan (equal stored hashes); counted as unchanged (#1730)'
+    )
     .option('-v, --verbose', 'Enable detailed logging output', false)
     .action(
       async (options: {
@@ -1708,9 +1712,10 @@ export function createCLI(): Command {
         prodDir: string
         allowValueChanges: boolean
         closingAutoAllow: boolean
+        hashEqualDates?: string
         verbose: boolean
       }) => {
-        const { runValueDiff } =
+        const { runValueDiff, readDateList } =
           await import('./services/SnapshotValueDiffLoader.js')
 
         let result
@@ -1720,6 +1725,10 @@ export function createCLI(): Command {
             prodDir: options.prodDir,
             allowValueChanges: options.allowValueChanges,
             closingAutoAllow: options.closingAutoAllow,
+            // An unreadable list throws → fail closed below.
+            hashEqualDates: options.hashEqualDates
+              ? readDateList(options.hashEqualDates)
+              : undefined,
           })
         } catch (err) {
           // Fail-closed: if we cannot read/compare the snapshots, do NOT promote.
@@ -1753,6 +1762,42 @@ export function createCLI(): Command {
         // result.exitCode is the single source of truth (0 promote / 1 blocked).
         // Flush-before-exit so the full diff isn't truncated through a pipe (#1182).
         emitJsonAndExit({ ...decision, report }, result.exitCode)
+      }
+    )
+
+  // Which overlap dates the value gate must download (#1730, plan E2-4).
+  // Reads the two `gcloud storage objects list --format=json` listings and
+  // skips dates whose live stored hashes match on both sides. Fail-safe: an
+  // unusable listing yields a full fetch. Always exits 0 with JSON on stdout.
+  program
+    .command('value-diff-plan')
+    .description(
+      'Plan the value-diff download: only overlap dates whose staging/prod stored hashes differ (#1730)'
+    )
+    .requiredOption(
+      '--overlap-dates <file>',
+      'Newline-separated dates present in both staging and prod dates.json'
+    )
+    .requiredOption(
+      '--staging-listing <file>',
+      'Staging `gcloud storage objects list --format=json` of snapshots/*/all-districts-rankings.json'
+    )
+    .requiredOption('--prod-listing <file>', 'Production listing (same call)')
+    .action(
+      async (options: {
+        overlapDates: string
+        stagingListing: string
+        prodListing: string
+      }) => {
+        const { loadValueDiffFetchPlan } =
+          await import('./services/SnapshotValueDiffLoader.js')
+        const plan = loadValueDiffFetchPlan({
+          overlapDatesFile: options.overlapDates,
+          stagingListingFile: options.stagingListing,
+          prodListingFile: options.prodListing,
+        })
+        console.error(`[INFO] value-diff-plan: ${plan.reason}`)
+        emitJsonAndExit(plan, ExitCode.SUCCESS)
       }
     )
 
