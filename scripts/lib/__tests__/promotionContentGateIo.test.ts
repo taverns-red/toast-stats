@@ -267,6 +267,17 @@ describe('toMeta', () => {
     expect(toMeta(item).contentEncoding).toBeUndefined()
   })
 
+  it('throws when an item has no crc32c, md5Hash or size to diff on', () => {
+    // A `fields` mask that drops them would make every object look
+    // unchanged — the gate would check nothing and pass. Fail closed.
+    expect(() => toMeta({ name: 'v1/latest.json' })).toThrow(
+      /crc32c, md5Hash or size/
+    )
+    expect(() =>
+      toMeta({ name: 'v1/latest.json', metadata: { name: 'v1/latest.json' } })
+    ).toThrow(/crc32c, md5Hash or size/)
+  })
+
   it('throws on an item with no name rather than diffing garbage', () => {
     expect(() => toMeta({ size: '1' })).toThrow(/name/)
     expect(() => toMeta(null)).toThrow(/name/)
