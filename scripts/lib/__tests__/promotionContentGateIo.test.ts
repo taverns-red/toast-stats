@@ -23,6 +23,7 @@ import {
   LIST_FIELDS,
   listPromoted,
   runContentGate,
+  selfCheckListing,
   toMeta,
   type GateBucket,
 } from '../promotionContentGateIo.js'
@@ -329,5 +330,22 @@ describe('runContentGate end to end over the real SDK shape', () => {
     })
     expect(result.promote).toBe(false)
     expect(result.failures.map(f => f.path)).toContain(PY)
+  })
+})
+
+describe('selfCheckListing (read-only probe of the real SDK shape)', () => {
+  it('lists one prefix through the gate path and reports what it saw', async () => {
+    const { staging } = buckets()
+    const report = await selfCheckListing(staging, 'time-series/')
+    expect(report.count).toBeGreaterThan(0)
+    expect(report.sample.contentEncoding).toBe('gzip')
+    expect(staging.calls.every(c => c.fields === LIST_FIELDS)).toBe(true)
+  })
+
+  it('throws on an empty listing (nothing proven)', async () => {
+    const { staging } = buckets()
+    await expect(selfCheckListing(staging, 'nope/')).rejects.toThrow(
+      /no objects/
+    )
   })
 })
