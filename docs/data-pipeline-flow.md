@@ -95,7 +95,15 @@ toast-stats-data-{staging|ca}/
 
 Production is never written directly. Each run processes into **staging**; a two-gate promotion
 step then decides whether to `rsync` staging → prod (`v1/`, `snapshots/`, `time-series/`,
-`club-trends/`, `club-race/`, `config/` — additive, no `-d`):
+`club-trends/`, `club-race/`, `config/` — additive, no `-d`).
+
+The bucket-to-bucket rsync compares stored hashes, so it copies only objects whose bytes changed.
+`time-series/` relies on that (#1731). `scripts/pipeline/publish-stores.sh` uploads a time-series
+file to staging only when the sha256 of its uncompressed JSON differs from the object's
+`x-goog-meta-sha256`. An unchanged object keeps its generation and hash, so promotion skips it.
+Re-uploading it with `cp -Z` would give it a new crc32c, because `-Z` gzip is not byte-deterministic.
+
+The gates:
 
 1. **Count gate (#316)** — blocks if staging has _fewer_ ranked districts or _fewer_ dates than
    prod (a subtractive change). Catches accidental data loss.
