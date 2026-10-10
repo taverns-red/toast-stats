@@ -90,15 +90,23 @@ export function toMeta(f: unknown): GcsObjectMeta {
       `listed object has no name: ${JSON.stringify(f)?.slice(0, 120)}`
     )
   }
-  const size = src.size
-  return {
+  const size =
+    typeof src.size === 'string' || typeof src.size === 'number'
+      ? src.size
+      : undefined
+  const meta: GcsObjectMeta = {
     name,
-    size:
-      typeof size === 'string' || typeof size === 'number' ? size : undefined,
+    size,
     crc32c: optString(src.crc32c),
     md5Hash: optString(src.md5Hash),
     contentEncoding: optString(src.contentEncoding),
   }
+  // diffChangedObjects compares crc32c, else md5Hash, else size; with none
+  // of them every object would look unchanged and the gate would pass empty.
+  if (!meta.crc32c && !meta.md5Hash && meta.size === undefined) {
+    throw new Error(`listed object ${name} has no crc32c, md5Hash or size`)
+  }
+  return meta
 }
 
 async function listItems(
