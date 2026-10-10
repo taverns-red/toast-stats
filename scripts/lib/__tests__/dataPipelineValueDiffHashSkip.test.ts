@@ -73,8 +73,13 @@ describe('data-pipeline value gate — hash-scoped fetch (#1730)', () => {
   })
 
   it('downloads only the planned dates', () => {
-    expect(run).toContain('< /tmp/vd-fetch-dates.txt')
-    expect(run).not.toContain('< /tmp/overlap-dates.txt')
+    // The xargs download loop's input (OVERLAP_COUNT still reads the overlap).
+    expect(run).toContain(
+      '"${GCS_BUCKET_PRODUCTION}" < /tmp/vd-fetch-dates.txt'
+    )
+    expect(run).not.toContain(
+      '"${GCS_BUCKET_PRODUCTION}" < /tmp/overlap-dates.txt'
+    )
   })
 
   it('passes the skipped dates to value-diff so they count as unchanged', () => {

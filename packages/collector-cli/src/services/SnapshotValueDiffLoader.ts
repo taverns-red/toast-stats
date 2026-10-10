@@ -17,6 +17,10 @@ import {
   type PromoteDecision,
   type ValueDiffReport,
 } from './SnapshotValueDiff.js'
+import {
+  planValueDiffFetch,
+  type ValueDiffFetchPlan,
+} from './SnapshotListingHashes.js'
 
 const RANKINGS_FILE = 'all-districts-rankings.json'
 
@@ -26,6 +30,70 @@ export interface RunValueDiffOptions {
   allowValueChanges?: boolean
   /** CPAA eligibility; false for non-daily pipeline runs (#1673). Default true. */
   closingAutoAllow?: boolean
+  /**
+   * Overlap dates not downloaded because their live object hashes match on
+   * both sides (#1730). Byte-identical ⇒ equal digests, so each counts as an
+   * unchanged overlap date — the report is what a full download would give.
+   * A listed date that was downloaded anyway is judged by its digests.
+   */
+  hashEqualDates?: string[]
+}
+
+/** Read a newline-separated date list; blank lines are ignored. */
+export function readDateList(file: string): string[] {
+  return readFileSync(file, 'utf8')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0)
+}
+
+/** Read a listing JSON file; missing or unparseable ⇒ undefined (unusable). */
+function readListing(file: string): unknown {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as unknown
+  } catch {
+    return undefined
+  }
+}
+
+export interface LoadValueDiffFetchPlanOptions {
+  overlapDatesFile: string
+  stagingListingFile: string
+  prodListingFile: string
+}
+
+/**
+ * fs glue for {@link planValueDiffFetch} (CLI `value-diff-plan`). A missing
+ * or unparseable listing file makes the plan fetch every overlap date.
+ */
+export function loadValueDiffFetchPlan(
+  opts: LoadValueDiffFetchPlanOptions
+): ValueDiffFetchPlan {
+  return planValueDiffFetch(
+    readDateList(opts.overlapDatesFile),
+    readListing(opts.stagingListingFile),
+    readListing(opts.prodListingFile)
+  )
+}
+
+/**
+ * Count hash-equal dates that were not downloaded on either side as
+ * unchanged overlap dates, exactly as {@link diffSnapshots} would have.
+ */
+function withHashEqualDates(
+  report: ValueDiffReport,
+  staging: DateDigest[],
+  prod: DateDigest[],
+  hashEqualDates: string[]
+): ValueDiffReport {
+  const loaded = new Set([...staging, ...prod].map(d => d.date))
+  const extra = [...new Set(hashEqualDates)].filter(d => !loaded.has(d))
+  if (extra.length === 0) return report
+  return {
+    ...report,
+    unchanged: [...report.unchanged, ...extra].sort(),
+    overlap: report.overlap + extra.length,
+  }
 }
 
 export interface RunValueDiffResult {
@@ -65,7 +133,12 @@ export function loadDateDigests(root: string): DateDigest[] {
 export function runValueDiff(opts: RunValueDiffOptions): RunValueDiffResult {
   const staging = loadDateDigests(opts.stagingDir)
   const prod = loadDateDigests(opts.prodDir)
-  const report = diffSnapshots(staging, prod)
+  const report = withHashEqualDates(
+    diffSnapshots(staging, prod),
+    staging,
+    prod,
+    opts.hashEqualDates ?? []
+  )
   const decision = evaluatePromote(
     report,
     {
