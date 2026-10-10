@@ -6,10 +6,14 @@
 # $SHIM_ROOT/.meta/<bucket>/<path> so it never shows up as an object.
 #
 # Implements only what scripts/pipeline/*.sh and scripts/pull-awards-history.sh
-# call: `storage ls <prefix>/**` (or a single-segment `*` glob), `storage rsync -r <src> <dst>` and
-# `storage cp [--content-type=..] [--cache-control=..] [-r] [-Z] <src>... <dst>`.
+# call: `storage ls <prefix>/**` (or a single-segment `*` glob),
+# `storage rsync -r <src> <dst>`,
+# `storage cp [--content-type=..] [--cache-control=..] [--custom-metadata=k=v,..]
+# [-r] [-Z] <src>... <dst>` and `storage objects list <prefix>** --format=json`.
 # Error texts are the ones Google Cloud SDK 583.0.0 prints (probed read-only
-# against the staging bucket, 2026-10-09).
+# against the staging bucket, 2026-10-09). The `objects list` JSON keys are a
+# subset of the real ones recorded in ../gcloud-objects-list/ (#1731); a test
+# pins that, so the shim cannot drift from the SDK (lesson from #1726).
 #
 # Env:
 #   SHIM_ROOT              required: the directory standing in for GCS
@@ -67,9 +71,10 @@ download_object() {
   fi
 }
 
-# Upload one local file to an object, recording its metadata.
+# Upload one local file to an object, recording its metadata. A re-upload
+# replaces the metadata wholesale, as a real upload does.
 upload_object() {
-  local src="$1" url="$2" gz="$3" ctype="$4" cache="$5"
+  local src="$1" url="$2" gz="$3" ctype="$4" cache="$5" custom="${6:-}"
   local obj meta
   obj="$(local_of "${url}")"
   meta="$(meta_of "${url}")"
@@ -83,8 +88,41 @@ upload_object() {
     [ "${gz}" = "1" ] && echo 'content-encoding=gzip'
     [ -n "${ctype}" ] && echo "content-type=${ctype}"
     [ -n "${cache}" ] && echo "cache-control=${cache}"
+    if [ -n "${custom}" ]; then
+      local kv kvs
+      IFS=',' read -r -a kvs <<<"${custom}"
+      for kv in "${kvs[@]}"; do echo "x-goog-meta-${kv}"; done
+    fi
     true
   } >"${meta}"
+}
+
+# One `objects list --format=json` entry, with keys named as gcloud 583
+# prints them (custom_fields only when the object has custom metadata).
+object_json() {
+  local f="$1" b="$2" name="$3" meta line
+  local enc="" ctype="" cache="" custom=""
+  meta="${SHIM_ROOT}/.meta/${b}/${name}"
+  if [ -f "${meta}" ]; then
+    while IFS= read -r line; do
+      case "${line}" in
+        content-encoding=*) enc="${line#content-encoding=}" ;;
+        content-type=*) ctype="${line#content-type=}" ;;
+        cache-control=*) cache="${line#cache-control=}" ;;
+        x-goog-meta-*)
+          line="${line#x-goog-meta-}"
+          custom+="${custom:+, }\"${line%%=*}\": \"${line#*=}\""
+          ;;
+      esac
+    done <"${meta}"
+  fi
+  printf '{"bucket": "%s", "name": "%s", "size": %s' \
+    "${b}" "${name}" "$(wc -c <"${f}" | tr -d ' ')"
+  [ -n "${cache}" ] && printf ', "cache_control": "%s"' "${cache}"
+  [ -n "${enc}" ] && printf ', "content_encoding": "%s"' "${enc}"
+  [ -n "${ctype}" ] && printf ', "content_type": "%s"' "${ctype}"
+  [ -n "${custom}" ] && printf ', "custom_fields": {%s}' "${custom}"
+  printf '}'
 }
 
 case "${CMD}" in
@@ -149,7 +187,7 @@ case "${CMD}" in
     ;;
 
   cp)
-    recursive=0 gz=0 ctype="" cache=""
+    recursive=0 gz=0 ctype="" cache="" custom=""
     args=()
     for a in "$@"; do
       case "${a}" in
@@ -157,6 +195,7 @@ case "${CMD}" in
         -Z) gz=1 ;;
         --content-type=*) ctype="${a#--content-type=}" ;;
         --cache-control=*) cache="${a#--cache-control=}" ;;
+        --custom-metadata=*) custom="${a#--custom-metadata=}" ;;
         -*)
           echo "gcloud shim: unsupported cp flag ${a}" >&2
           exit 2
@@ -186,14 +225,41 @@ case "${CMD}" in
         base="$(basename "${src}")"
         while IFS= read -r f; do
           rel="${f#"${src%/}/"}"
-          upload_object "${f}" "${dst%/}/${base}/${rel}" "${gz}" "${ctype}" "${cache}"
+          upload_object "${f}" "${dst%/}/${base}/${rel}" "${gz}" "${ctype}" "${cache}" "${custom}"
         done < <(find "${src}" -type f)
       elif [[ "${dst}" == */ ]]; then
-        upload_object "${src}" "${dst}$(basename "${src}")" "${gz}" "${ctype}" "${cache}"
+        upload_object "${src}" "${dst}$(basename "${src}")" "${gz}" "${ctype}" "${cache}" "${custom}"
       else
-        upload_object "${src}" "${dst}" "${gz}" "${ctype}" "${cache}"
+        upload_object "${src}" "${dst}" "${gz}" "${ctype}" "${cache}" "${custom}"
       fi
     done
+    ;;
+
+  objects)
+    if [ "${1:-}" != "list" ] || [ "${3:-}" != "--format=json" ]; then
+      echo "gcloud shim: unsupported: storage objects $*" >&2
+      exit 2
+    fi
+    url="${2:?}"
+    b="$(bucket_of "${url}")"
+    if [ ! -d "${SHIM_ROOT}/${b}" ]; then
+      # Real 583 behaviour: the error on stderr AND `[]` on stdout, exit 1.
+      echo "ERROR: (gcloud.storage.objects.list) gs://${b} not found: 404." >&2
+      echo '[]'
+      exit 1
+    fi
+    prefix="${url%\*\*}"
+    dir="$(local_of "${prefix}")"
+    sep=''
+    printf '['
+    if [ -d "${dir}" ]; then
+      while IFS= read -r f; do
+        printf '%s' "${sep}"
+        object_json "${f}" "${b}" "${f#"${SHIM_ROOT}/${b}/"}"
+        sep=', '
+      done < <(find "${dir}" -type f | LC_ALL=C sort)
+    fi
+    printf ']\n'
     ;;
 
   *)

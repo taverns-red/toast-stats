@@ -1,0 +1,42 @@
+[
+  {
+    "bucket": "toast-stats-data-ca",
+    "cache_control": "public, max-age=3600,no-transform",
+    "content_encoding": "gzip",
+    "content_type": "application/json",
+    "crc32c_hash": "FwaGSA==",
+    "creation_time": "2026-06-10T14:29:38+0000",
+    "etag": "CPmTqpbx/JQDEAE=",
+    "generation": "1781101778078201",
+    "md5_hash": "XTFnccLZreidhp2OCsI/Vg==",
+    "metageneration": 1,
+    "name": "time-series/district_61/2020-2021.json",
+    "noncurrent_time": "2026-06-11T13:41:59+0000",
+    "size": 731,
+    "storage_class": "STANDARD",
+    "storage_class_update_time": "2026-06-10T14:29:38+0000",
+    "storage_url": "gs://toast-stats-data-ca/time-series/district_61/2020-2021.json#1781101778078201",
+    "update_time": "2026-06-10T14:29:38+0000"
+  },
+  {
+    "bucket": "toast-stats-data-ca",
+    "cache_control": "public, max-age=3600, no-transform",
+    "content_encoding": "gzip",
+    "content_type": "application/json",
+    "crc32c_hash": "QSwsSQ==",
+    "creation_time": "2026-10-10T14:06:02+0000",
+    "custom_fields": {
+      "goog-reserved-file-mtime": "1791640477"
+    },
+    "etag": "CLHKzrjPr5cDEAE=",
+    "generation": "1791641162851633",
+    "md5_hash": "grD3FclH7OhHMNMQPgia3Q==",
+    "metageneration": 1,
+    "name": "time-series/district_61/2020-2021.json",
+    "size": 730,
+    "storage_class": "STANDARD",
+    "storage_class_update_time": "2026-10-10T14:06:02+0000",
+    "storage_url": "gs://toast-stats-data-ca/time-series/district_61/2020-2021.json#1791641162851633",
+    "update_time": "2026-10-10T14:06:02+0000"
+  }
+]

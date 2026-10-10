@@ -21,6 +21,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as zlib from 'node:zlib'
+import { createHash } from 'node:crypto'
 
 const REPO = process.cwd()
 const SYNC = path.join(REPO, 'scripts/pipeline/sync-stores.sh')
@@ -393,6 +394,149 @@ describe('publish-stores.sh (#1722)', () => {
     const r = run(PUBLISH, ['club-race'])
     expect(r.status).not.toBe(0)
     expect(calls()).toEqual([])
+  })
+
+  describe('time-series: one upload path, changed files only (#1731, E2-1)', () => {
+    const A = 'district_61/2025-2026.json'
+    const B = 'district_61/2026-2027.json'
+    const sha = (b: Buffer): string =>
+      createHash('sha256').update(b).digest('hex')
+    const tsUploads = (): string[] =>
+      calls().filter(l => /^storage cp .*gs:\/\/[^ ]+\/time-series\//.test(l))
+
+    it('tags each object with x-goog-meta-sha256 of its uncompressed content', () => {
+      seedLocal('time-series', A, doc(60))
+      const r = run(PUBLISH, ['time-series'])
+      expect(r.status, r.stderr).toBe(0)
+      expect(readMeta(`time-series/${A}`)).toContain(
+        `x-goog-meta-sha256=${sha(doc(60))}`
+      )
+    })
+
+    it('never rsyncs time-series: the -Z upload is the only write', () => {
+      seedLocal('time-series', A, doc(60))
+      expect(run(PUBLISH, ['time-series']).status).toBe(0)
+      expect(
+        calls().filter(l => /^storage rsync .*time-series/.test(l))
+      ).toEqual([])
+    })
+
+    it('does not re-upload an unchanged file on the next run', () => {
+      seedLocal('time-series', A, doc(60))
+      seedLocal('time-series', B, doc(61))
+      expect(run(PUBLISH, ['time-series']).status).toBe(0)
+      const before = readObject(`time-series/${A}`)
+      fs.writeFileSync(log, '')
+      fs.writeFileSync(summary, '')
+
+      const r = run(PUBLISH, ['time-series'])
+      expect(r.status, r.stderr).toBe(0)
+      expect(tsUploads()).toEqual([])
+      expect(readObject(`time-series/${A}`).equals(before)).toBe(true)
+      expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+        /0 uploaded, 2 unchanged/
+      )
+    })
+
+    it('uploads only the changed file, as exactly one gzip layer', () => {
+      seedLocal('time-series', A, doc(60))
+      seedLocal('time-series', B, doc(61))
+      expect(run(PUBLISH, ['time-series']).status).toBe(0)
+      fs.writeFileSync(log, '')
+      fs.writeFileSync(summary, '')
+      seedLocal('time-series', B, doc(62))
+
+      const r = run(PUBLISH, ['time-series'])
+      expect(r.status, r.stderr).toBe(0)
+      const ups = tsUploads()
+      expect(ups).toHaveLength(1)
+      expect(ups[0]).toContain(`gs://${BUCKET}/time-series/${B}`)
+      const once = zlib.gunzipSync(readObject(`time-series/${B}`))
+      expect(once.equals(doc(62))).toBe(true)
+      const meta = readMeta(`time-series/${B}`)
+      expect(meta).toContain('content-encoding=gzip')
+      expect(meta).toContain('content-type=application/json')
+      expect(meta).toContain('cache-control=public, max-age=3600')
+      expect(meta).toContain(`x-goog-meta-sha256=${sha(doc(62))}`)
+      expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+        /1 uploaded, 1 unchanged/
+      )
+    })
+
+    it('uploads an existing object that has no sha metadata yet (first run)', () => {
+      putObject(`time-series/${A}`, doc(60), 1)
+      seedLocal('time-series', A, doc(60))
+      const r = run(PUBLISH, ['time-series'])
+      expect(r.status, r.stderr).toBe(0)
+      expect(tsUploads()).toHaveLength(1)
+      expect(readMeta(`time-series/${A}`)).toContain(
+        `x-goog-meta-sha256=${sha(doc(60))}`
+      )
+    })
+
+    it('fails closed, uploading nothing, when the remote listing fails', () => {
+      seedLocal('time-series', A, doc(60))
+      const r = run(PUBLISH, ['time-series'], {
+        SHIM_FAIL_MATCH: '^objects list ',
+      })
+      expect(r.status).not.toBe(0)
+      expect(tsUploads()).toEqual([])
+    })
+
+    it('fails when the bucket is missing (gcloud prints [] but exits 1)', () => {
+      seedLocal('time-series', A, doc(60))
+      fs.rmSync(path.join(root, BUCKET), { recursive: true })
+      const r = run(PUBLISH, ['time-series'])
+      expect(r.status).not.toBe(0)
+      expect(tsUploads()).toEqual([])
+    })
+
+    it('fails on a transport error during an upload', () => {
+      seedLocal('time-series', A, doc(60))
+      seedLocal('time-series', B, doc(61))
+      const r = run(PUBLISH, ['time-series'], {
+        SHIM_FAIL_MATCH: `^cp .*time-series/${B}$`,
+      })
+      expect(r.status).not.toBe(0)
+    })
+
+    it("the shim's objects-list keys are a subset of the real SDK's", () => {
+      seedLocal('time-series', A, doc(60))
+      expect(run(PUBLISH, ['time-series']).status).toBe(0)
+      const r = spawnSync(
+        path.join(SHIM_DIR, 'gcloud'),
+        [
+          'storage',
+          'objects',
+          'list',
+          `gs://${BUCKET}/time-series/**`,
+          '--format=json',
+        ],
+        { encoding: 'utf-8', env: { ...process.env, SHIM_ROOT: root } }
+      )
+      expect(r.status, r.stderr).toBe(0)
+      const shimEntries = JSON.parse(r.stdout) as Record<string, unknown>[]
+      expect(shimEntries).toHaveLength(1)
+      const realKeys = new Set(
+        ['staging-live.json', 'prod-noncurrent-and-custom-fields.json'].flatMap(
+          f =>
+            (
+              JSON.parse(
+                fs.readFileSync(
+                  path.join(SHIM_DIR, '../gcloud-objects-list', f),
+                  'utf-8'
+                )
+              ) as Record<string, unknown>[]
+            ).flatMap(e => Object.keys(e))
+        )
+      )
+      for (const k of Object.keys(shimEntries[0])) {
+        expect(realKeys.has(k), k).toBe(true)
+      }
+      expect(shimEntries[0].custom_fields).toEqual({
+        sha256: sha(doc(60)),
+      })
+    })
   })
 
   for (const decompress of ['0', '1']) {
