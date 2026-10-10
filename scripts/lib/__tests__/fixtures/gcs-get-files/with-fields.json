@@ -1,0 +1,42 @@
+{
+  "_captured": "2026-10-10, @google-cloud/storage 8.2.0, read-only listing of gs://toast-stats-data-staging with the gate's exact call: bucket.getFiles({ prefix, fields: 'items(name,size,crc32c,md5Hash,contentEncoding),nextPageToken' }). Each element was JSON.stringify'd as returned. Listing metadata only - no object contents were read.",
+  "_findings": [
+    "With `fields` set, getFiles returns the raw JSON-API items as plain Objects (constructor Object, no `.metadata`, no File methods) - bucket.js getFiles: `if (query.fields) return file`.",
+    "Without `fields`, items are File instances and the same values live under `.metadata`.",
+    "`size` is a decimal string, not a number.",
+    "`contentEncoding` is ABSENT (not null/empty) on objects stored without one; present as 'gzip' on time-series objects.",
+    "With delimiter + autoPaginate:false, the third tuple element is the raw response { kind, nextPageToken?, prefixes }."
+  ],
+  "items": [
+    {
+      "name": "config/club-index.json",
+      "size": "997213",
+      "md5Hash": "mpP3Zr0v2SotgY18XPsv7Q==",
+      "crc32c": "CZ7t0w=="
+    },
+    {
+      "name": "config/district-snapshot-index.json",
+      "size": "482043",
+      "md5Hash": "8gxzPjPHc/orG1T9kAmdcA==",
+      "crc32c": "17aIsw=="
+    },
+    {
+      "name": "v1/dates.json",
+      "size": "3858",
+      "md5Hash": "ABXlhzc7Eypz0oZA6kVjUg==",
+      "crc32c": "psSQWQ=="
+    },
+    {
+      "name": "time-series/district_61/2016-2017.json",
+      "size": "549",
+      "md5Hash": "c5v+MFDvDXcNrnBEya3uyQ==",
+      "contentEncoding": "gzip",
+      "crc32c": "YmYvrg=="
+    }
+  ],
+  "subPrefixResponse": {
+    "kind": "storage#objects",
+    "nextPageToken": "<redacted>",
+    "prefixes": ["snapshots/2017-01-31/", "snapshots/2017-02-28/"]
+  }
+}
