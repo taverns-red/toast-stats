@@ -125,6 +125,25 @@ export async function listFlat(
   return files.map(toMeta)
 }
 
+/**
+ * Read-only probe: list one prefix through the gate's own listing path
+ * (same `fields`, same toMeta) and return what came back. Throws if the SDK
+ * shape no longer converts, or if nothing was listed (nothing proven).
+ */
+export async function selfCheckListing(
+  bucket: GateBucket,
+  prefix: string
+): Promise<{ count: number; sample: GcsObjectMeta }> {
+  const listed = await listFlat(bucket, prefix)
+  if (listed.length === 0) {
+    throw new Error(`self-check listed no objects under ${prefix}`)
+  }
+  return {
+    count: listed.length,
+    sample: listed.find(o => o.contentEncoding) ?? listed[0]!,
+  }
+}
+
 /** Immediate sub-prefixes ("directories") under `prefix`. */
 export async function listSubPrefixes(
   bucket: GateBucket,

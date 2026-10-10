@@ -21,6 +21,9 @@
  *
  * Env: GCS_BUCKET (staging), GCS_BUCKET_PRODUCTION,
  *      CONTENT_GATE_FILE (default /tmp/content-gate.json)
+ *
+ * `--self-check` (GCS_BUCKET only): list one small staging prefix through
+ * the gate's listing path and exit non-zero if the SDK shape won't convert.
  */
 
 import { appendFileSync, writeFileSync } from 'node:fs'
@@ -32,10 +35,12 @@ import {
 } from './lib/promotionContentGate.js'
 import {
   runContentGate,
+  selfCheckListing,
   type GateBucket,
 } from './lib/promotionContentGateIo.js'
 
 const DEFAULT_RESULT_FILE = '/tmp/content-gate.json'
+const SELF_CHECK_PREFIX = 'config/'
 
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)
@@ -91,13 +96,38 @@ async function main(): Promise<void> {
   emitOutput('content_promote', String(result.promote))
 }
 
-main()
-  .catch(err => {
-    // Last resort: never leave the output unset — an empty output must not
-    // read as anything but a hold.
-    log(`[content-gate] unexpected: ${String(err)}`)
-    emitOutput('content_promote', 'false')
+/**
+ * `--self-check`: read-only probe of the listing path against GCS_BUCKET
+ * (one small prefix, metadata only, no object reads, no step outputs).
+ * Exits non-zero if the SDK's getFiles shape no longer converts — the #1726
+ * failure class — so a gate change can be proven against the real SDK
+ * before it meets a promotion.
+ */
+async function selfCheck(): Promise<void> {
+  const name = process.env.GCS_BUCKET
+  if (!name) throw new Error('GCS_BUCKET must be set')
+  const bucket = new Storage().bucket(name) as unknown as GateBucket
+  const report = await selfCheckListing(bucket, SELF_CHECK_PREFIX)
+  log(
+    `[content-gate] self-check OK — ${report.count} object(s) under ` +
+      `gs://${name}/${SELF_CHECK_PREFIX}; sample ${JSON.stringify(report.sample)}`
+  )
+}
+
+if (process.argv.includes('--self-check')) {
+  selfCheck().catch(err => {
+    log(`[content-gate] self-check FAILED: ${String(err)}`)
+    process.exitCode = 1
   })
-  .finally(() => {
-    process.exitCode = 0
-  })
+} else {
+  main()
+    .catch(err => {
+      // Last resort: never leave the output unset — an empty output must not
+      // read as anything but a hold.
+      log(`[content-gate] unexpected: ${String(err)}`)
+      emitOutput('content_promote', 'false')
+    })
+    .finally(() => {
+      process.exitCode = 0
+    })
+}
