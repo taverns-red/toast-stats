@@ -2,7 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
-- `fake-sdk-return-shapes-must-be-recorded-from-the-real-sdk.md` — A test double for a third-party SDK call must be pinned to a shape recorded from the real call with the same options, or the tests prove the plan instead of reality  (2026-10-10)
+- `fake-sdk-return-shapes-must-be-recorded-from-the-real-sdk.md` — Test fixtures and fakes for an external SDK or CLI must be recorded from the real system (same call, same options, same version), never hand-written from assumptions, or the tests prove the plan instead of reality  (2026-10-10)
 - `a-store-round-tripped-through-gzip-encoding-needs-a-download-normaliser-and-an-upload-guard.md` — A store that is downloaded and re-uploaded with `-Z` depends on the download tool inflating Content-Encoding gzip; normalise on download, refuse gzip bytes on upload, never let `| tee` drop the exit code — and never accept an op-list or count comparison as proof the content is right: decode, parse and check what lands  (2026-10-09)
 - `a-component-joining-two-queries-must-hold-its-skeleton-until-every-height-bearing-input-settles.md` — A component built from two independent queries must stay in its skeleton until every input that changes its height has settled; rendering on the first one paints a partial state whose height differs, and the race only loses on slow runners  (2026-10-06)
 - `a-coverage-report-without-include-only-measures-what-a-test-imported.md` — Without coverage.include, vitest reports only files some test imported — an untested file leaves the denominator and counts as covered; set include and guard the denominator against the tracked file list  (2026-10-06)
