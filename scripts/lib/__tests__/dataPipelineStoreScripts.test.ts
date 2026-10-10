@@ -8,22 +8,27 @@
  * has no inline store transfer left to drift, it pulls each store before the
  * first command that reads it, and it publishes after the last one.
  *
- * Modes migrate one PR at a time (rescrape-historical last). PENDING_MODES
- * lists the ones still on inline bash; it only ever shrinks.
+ * Modes migrated one PR at a time; rescrape-historical was last (#1738,
+ * with plan E2-5), so every mode is now on the scripts.
  */
 
 import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
+import { PROMOTED_PREFIXES } from '../promotionContentGate.js'
 
 const WORKFLOW_PATH = path.resolve(
   process.cwd(),
   '.github/workflows/data-pipeline.yml'
 )
 
-const MIGRATED_MODES = ['daily', 'rebuild', 'rescrape'] as const
-const PENDING_MODES = ['rescrape-historical']
+const MIGRATED_MODES = [
+  'daily',
+  'rebuild',
+  'rescrape',
+  'rescrape-historical',
+] as const
 
 const DIR_STORES = ['time-series', 'club-trends', 'club-race'] as const
 const AWARDS = 'district-awards-history'
@@ -138,19 +143,19 @@ describe('data-pipeline.yml store scripts wiring (#1722)', () => {
     }
   }
 
-  it('no stateful-store read swallows its failure with `|| true`, outside the pending modes', () => {
+  it('no stateful-store read swallows its failure with `|| true`', () => {
     const offenders = new Set<string>()
     for (const step of steps) {
       const mode = modeOf(step)
-      if (!mode || PENDING_MODES.includes(mode)) continue
+      if (!mode) continue
       if (logicalLines(step.run).some(swallowedRead)) offenders.add(mode)
     }
     expect([...offenders]).toEqual([])
   })
 
-  it('every pending mode still exists (so the list can only shrink)', () => {
+  it('every migrated mode still exists', () => {
     const modes = new Set(steps.map(modeOf))
-    for (const mode of PENDING_MODES) expect(modes.has(mode)).toBe(true)
+    for (const mode of MIGRATED_MODES) expect(modes.has(mode)).toBe(true)
   })
 })
 
@@ -175,11 +180,44 @@ describe('daily scopes the club-trends pull to the resolved PY (#1728, E2-2)', (
     )
   })
 
-  for (const mode of ['rebuild', 'rescrape'] as const) {
+  for (const mode of ['rebuild', 'rescrape', 'rescrape-historical'] as const) {
     it(`${mode} still pulls the whole club-trends store`, () => {
       expect(
         modeLines(mode).some(l => /CLUB_TRENDS_PROGRAM_YEARS/.test(l))
       ).toBe(false)
     })
   }
+})
+
+describe('club-trends/ and club-race/ are pipeline-internal (#1738, E2-5, D3)', () => {
+  const INTERNAL = ['club-trends', 'club-race'] as const
+  const promote = steps.find(s => s.name === 'Promote staging to production')
+
+  it('the content gate does not treat them as promoted', () => {
+    for (const store of INTERNAL) {
+      expect(PROMOTED_PREFIXES).not.toContain(`${store}/`)
+    }
+  })
+
+  it('promotion never copies them to prod', () => {
+    expect(promote, 'no promote step').toBeDefined()
+    const lines = logicalLines(promote!.run)
+    for (const store of INTERNAL) {
+      expect(lines.filter(l => l.includes(`${store}/`))).toEqual([])
+    }
+  })
+
+  it('no step uploads them gzip-encoded or with CDN headers', () => {
+    const offenders = steps.flatMap(step =>
+      logicalLines(step.run).filter(
+        l =>
+          /gcloud storage (?:cp|rsync)\b/.test(l) &&
+          /(?:^|\s)(?:-Z|--gzip-in-flight-all|--cache-control|--content-type)\b/.test(
+            l
+          ) &&
+          INTERNAL.some(store => inlineTransfer(l, store))
+      )
+    )
+    expect(offenders).toEqual([])
+  })
 })

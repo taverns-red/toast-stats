@@ -2,7 +2,7 @@
  * Pre-promotion content gate — pure decision logic (#1715, plan S1-4).
  *
  * The count gate checks two integers and the value gate digests one file per
- * date; promotion then rsyncs six prefixes wholesale. Three corrupt
+ * date; promotion then rsyncs the promoted prefixes wholesale. Three corrupt
  * promotions passed that way (#1702: nested-gzip time-series; #1704: every
  * district's `priorYearAvgClubSize` null). This gate reads the objects
  * promotion is about to copy — staging objects that differ from prod — the
@@ -93,14 +93,13 @@ const DISTRICT_ANALYTICS =
 
 /**
  * The prefixes `Promote staging to production` rsyncs. A workflow contract
- * test keeps this list and the rsync calls identical.
+ * test keeps this list and the rsync calls identical. club-trends/ and
+ * club-race/ are pipeline-internal and never promoted (#1738, D3).
  */
 export const PROMOTED_PREFIXES = [
   'v1/',
   'snapshots/',
   'time-series/',
-  'club-trends/',
-  'club-race/',
   'config/',
 ] as const
 

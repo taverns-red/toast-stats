@@ -80,17 +80,18 @@ describe('rescrape-historical — guarded, upserting, never backwards (#1670)', 
     const guardBranch = loop.slice(guardAt, loop.indexOf('fi', guardAt))
 
     it('syncs time-series/ and club-trends/ from GCS before rebuilding, failing closed (R2, R9)', () => {
+      // Through the fail-closed store script (#1722, #1738); its behaviour is
+      // tested in storeSyncScripts.test.ts.
+      const line = run
+        .split('\n')
+        .find(l => l.includes('scripts/pipeline/sync-stores.sh'))
+      expect(line, 'store sync').toBeDefined()
+      expect(line).not.toContain('|| true')
+      const at = run.indexOf(line!)
+      expect(at).toBeLessThan(loopAt)
+      const call = run.slice(at, run.indexOf('\n\n', at))
       for (const store of ['time-series', 'club-trends']) {
-        const line = run
-          .split('\n')
-          .find(l =>
-            l.includes(
-              `gcloud storage rsync -r "gs://\${GCS_BUCKET}/${store}/"`
-            )
-          )
-        expect(line, `${store} sync`).toBeDefined()
-        expect(line).not.toContain('|| true')
-        expect(run.indexOf(line!)).toBeLessThan(loopAt)
+        expect(call).toMatch(new RegExp(`\\s${store}(\\s|$)`))
       }
     })
 
@@ -122,8 +123,9 @@ describe('rescrape-historical — guarded, upserting, never backwards (#1670)', 
     const upload = stepNamed(
       '[rescrape-historical] Upload upserted stores and raw-csv'
     ).run!
-    expect(upload).toContain('./cache/time-series/')
-    expect(upload).toContain('./cache/club-trends/')
+    expect(upload).toMatch(
+      /bash scripts\/pipeline\/publish-stores\.sh "\$\{GCS_BUCKET\}" \\\s+time-series club-trends club-race district-awards-history/
+    )
   })
 })
 

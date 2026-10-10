@@ -176,8 +176,9 @@ describe('gsutil → gcloud storage migration guard (#1412)', () => {
       const toProd = rsyncs.filter(i =>
         i.text.includes('gs://${GCS_BUCKET_PRODUCTION}/')
       )
-      // 6 promote layers + 2 prod-reconcile manifest syncs (v1/, config/).
-      expect(toProd).toHaveLength(8)
+      // 4 promote layers + 2 prod-reconcile manifest syncs (v1/, config/).
+      // club-trends/ and club-race/ are internal, never promoted (#1738, D3).
+      expect(toProd).toHaveLength(6)
       for (const i of toProd) {
         expect(i.flags, `${i.file}:${i.n}`).toEqual(['-r'])
         expect(i.text, `${i.file}:${i.n}`).toMatch(
