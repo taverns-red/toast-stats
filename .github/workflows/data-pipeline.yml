@@ -376,7 +376,16 @@ jobs:
           # peels gzip layers on disk under either gcloud rsync behaviour
           # (#1702, #1722). District awards history is pulled before the
           # transform, in its own step (#1704).
-          bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
+          #
+          # Club-trends is keyed by program year and daily writes one PY, so
+          # pull only the PYs this run can write (#1728, E2-2): the PY the
+          # discovery resolver chose (#1284; in July it can still be the
+          # prior PY), the PYs of the raw and snapshot dates, and the prior
+          # PY for any July date. No verdict (manual districts) -> `all`.
+          CLUB_TRENDS_PROGRAM_YEARS="$(npx tsx scripts/club-trends-sync-scope.ts --program-year "${{ steps.daily-config.outputs.program_year }}" --date "${DATE}" --date "${{ steps.daily-scrape.outputs.snapshot_date }}")"
+          echo "Club-trends program years to pull: ${CLUB_TRENDS_PROGRAM_YEARS}"
+          CLUB_TRENDS_PROGRAM_YEARS="${CLUB_TRENDS_PROGRAM_YEARS}" \
+            bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
             time-series club-trends club-race
 
           # Previous year snapshots for YoY comparison

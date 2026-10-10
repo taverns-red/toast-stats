@@ -6,7 +6,16 @@
 # Env:   GCLOUD     the gcloud binary (default `gcloud`; tests point it at a
 #                   shim over a temp dir, decision D10)
 #        CACHE_DIR  the runner cache (default ./cache)
-#        GITHUB_STEP_SUMMARY  per-store counts are appended here
+#        GITHUB_STEP_SUMMARY  per-store counts and MB on disk are appended here
+#        CLUB_TRENDS_PROGRAM_YEARS
+#                   optional (#1728, E2-2): space- or comma-separated
+#                   `YYYY-YYYY` labels. club-trends then pulls only
+#                   club-trends/{PY}/ for each, under the same contract as a
+#                   whole store. Unset, empty or `all`: the whole store.
+#                   Daily derives it from the resolved PY with
+#                   scripts/club-trends-sync-scope.ts (#1284: July carries the
+#                   prior PY). Pushing a partial pull is safe: publish rsyncs
+#                   without deleting unmatched remote objects.
 #
 # Stores follow sync → upsert → save → push (R9). A store that loads empty
 # when it is not empty remotely is pushed back over the accumulated copy (the
@@ -50,6 +59,23 @@ for store in "$@"; do
   esac
 done
 
+# Validate the club-trends scope before pulling anything: a label becomes a
+# path segment, so only consecutive `YYYY-YYYY` is accepted.
+CLUB_TRENDS_PYS=()
+case "${CLUB_TRENDS_PROGRAM_YEARS:-all}" in
+  all | "") ;;
+  *)
+    for py in ${CLUB_TRENDS_PROGRAM_YEARS//,/ }; do
+      if [[ ! "${py}" =~ ^([0-9]{4})-([0-9]{4})$ ]] ||
+        [ "$((10#${BASH_REMATCH[2]}))" -ne "$((10#${BASH_REMATCH[1]} + 1))" ]; then
+        echo "::error::sync-stores: bad CLUB_TRENDS_PROGRAM_YEARS entry '${py}' (want YYYY-YYYY or all)" >&2
+        exit 2
+      fi
+      CLUB_TRENDS_PYS+=("${py}")
+    done
+    ;;
+esac
+
 normalize() {
   "${TSX}" "${REPO}/scripts/store-encoding.ts" normalize "$@"
 }
@@ -66,11 +92,18 @@ sync_awards() {
   fi
 }
 
+# Size of a directory in MB, one decimal (what the step summary reports).
+mb_of() {
+  du -sk "$1" | awk '{ printf "%.1f", $1 / 1024 }'
+}
+
+# Pull one prefix: a whole store (`time-series`) or one PY of it
+# (`club-trends/2026-2027`). Each prefix gets the full fail-closed contract.
 sync_dir() {
   local store="$1"
   local src="gs://${BUCKET}/${store}/"
   local dest="${CACHE_DIR}/${store}"
-  local err listing remote local_count
+  local err listing remote local_count mb
   err="$(mktemp)"
   mkdir -p "${dest}"
 
@@ -102,14 +135,19 @@ sync_dir() {
     exit 1
   fi
 
+  mb="$(mb_of "${dest}")"
   normalize "${dest}"
-  echo "${store}: ${local_count} files (remote ${remote})" >&2
-  echo "- **${store} files**: ${local_count} (remote ${remote})" >>"${SUMMARY}"
+  echo "${store}: ${local_count} files (remote ${remote}), ${mb} MB" >&2
+  echo "- **${store} files**: ${local_count} (remote ${remote}), ${mb} MB" >>"${SUMMARY}"
 }
 
 for store in "$@"; do
   if [ "${store}" = "district-awards-history" ]; then
     sync_awards
+  elif [ "${store}" = "club-trends" ] && [ "${#CLUB_TRENDS_PYS[@]}" -gt 0 ]; then
+    for py in "${CLUB_TRENDS_PYS[@]}"; do
+      sync_dir "club-trends/${py}"
+    done
   else
     sync_dir "${store}"
   fi

@@ -225,6 +225,108 @@ describe('sync-stores.sh (#1722)', () => {
     const r = run(SYNC, ['snapshots'])
     expect(r.status).not.toBe(0)
   })
+
+  it('reports MB downloaded per store in the step summary', () => {
+    putObject('club-race/2026-2027/first-reached.json', doc(1))
+    const r = run(SYNC, ['club-race'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /club-race files\*\*: 1 \(remote 1\), [0-9]+\.[0-9]{1} MB/
+    )
+  })
+})
+
+describe('sync-stores.sh club-trends PY scope (#1728, E2-2)', () => {
+  function seedPys(): void {
+    putObject('club-trends/2024-2025/district_61.json', doc(1))
+    putObject('club-trends/2025-2026/district_61.json', doc(2))
+    putObject('club-trends/2025-2026/district_62.json', doc(3))
+    putObject('club-trends/2026-2027/district_61.json', doc(4))
+  }
+
+  it('pulls only the listed PY prefix', () => {
+    seedPys()
+    const r = run(SYNC, ['club-trends'], {
+      CLUB_TRENDS_PROGRAM_YEARS: '2026-2027',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(localFiles('club-trends')).toEqual(['2026-2027/district_61.json'])
+    const c = calls()
+    expect(c).toContain(`storage ls gs://${BUCKET}/club-trends/2026-2027/**`)
+    expect(
+      c.some(l => l.startsWith(`storage rsync -r gs://${BUCKET}/club-trends/ `))
+    ).toBe(false)
+    expect(fs.readFileSync(summary, 'utf-8')).toContain(
+      'club-trends/2026-2027 files**: 1 (remote 1)'
+    )
+  })
+
+  it('July: pulls the prior and the new PY, nothing older', () => {
+    seedPys()
+    const r = run(SYNC, ['club-trends'], {
+      CLUB_TRENDS_PROGRAM_YEARS: '2025-2026 2026-2027',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(localFiles('club-trends')).toEqual([
+      '2025-2026/district_61.json',
+      '2025-2026/district_62.json',
+      '2026-2027/district_61.json',
+    ])
+  })
+
+  it('a PY with no objects yet is a first run for that PY, not a failure', () => {
+    putObject('club-trends/2025-2026/district_61.json', doc(2))
+    const r = run(SYNC, ['club-trends'], {
+      CLUB_TRENDS_PROGRAM_YEARS: '2026-2027',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(fs.existsSync(path.join(cache, 'club-trends'))).toBe(true)
+    expect(localFiles('club-trends')).toEqual([])
+  })
+
+  it('stays fail-closed on a short download of a scoped PY', () => {
+    seedPys()
+    const r = run(SYNC, ['club-trends'], {
+      CLUB_TRENDS_PROGRAM_YEARS: '2025-2026',
+      SHIM_DOWNLOAD_SKIP: 'district_62',
+    })
+    expect(r.status).not.toBe(0)
+  })
+
+  it('stays fail-closed on a listing error for a scoped PY', () => {
+    seedPys()
+    const r = run(SYNC, ['club-trends'], {
+      CLUB_TRENDS_PROGRAM_YEARS: '2026-2027',
+      SHIM_FAIL_MATCH: '^ls ',
+    })
+    expect(r.status).not.toBe(0)
+  })
+
+  it('"all" pulls the whole store, as before', () => {
+    seedPys()
+    const r = run(SYNC, ['club-trends'], { CLUB_TRENDS_PROGRAM_YEARS: 'all' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(localFiles('club-trends')).toHaveLength(4)
+  })
+
+  for (const bad of ['2026', '2026-2028', '../time-series', '2026-2027,x']) {
+    it(`refuses a malformed PY list (${bad}) with a usage error`, () => {
+      seedPys()
+      const r = run(SYNC, ['club-trends'], { CLUB_TRENDS_PROGRAM_YEARS: bad })
+      expect(r.status).toBe(2)
+      expect(localFiles('club-trends')).toEqual([])
+    })
+  }
+
+  it('does not scope any other store', () => {
+    putObject('time-series/2024-2025/district_61.json', doc(1))
+    putObject('time-series/2026-2027/district_61.json', doc(2))
+    const r = run(SYNC, ['time-series'], {
+      CLUB_TRENDS_PROGRAM_YEARS: '2026-2027',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(localFiles('time-series')).toHaveLength(2)
+  })
 })
 
 describe('publish-stores.sh (#1722)', () => {
