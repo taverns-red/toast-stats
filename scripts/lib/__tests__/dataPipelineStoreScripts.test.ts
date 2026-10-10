@@ -153,3 +153,33 @@ describe('data-pipeline.yml store scripts wiring (#1722)', () => {
     for (const mode of PENDING_MODES) expect(modes.has(mode)).toBe(true)
   })
 })
+
+describe('daily scopes the club-trends pull to the resolved PY (#1728, E2-2)', () => {
+  const SCOPE_RE =
+    /npx tsx scripts\/club-trends-sync-scope\.ts\b.*--program-year\s+"\$\{\{\s*steps\.daily-config\.outputs\.program_year\s*\}\}"/
+
+  it('daily derives CLUB_TRENDS_PROGRAM_YEARS from the discovery resolver, before the pull', () => {
+    const lines = modeLines('daily')
+    const scope = lines.findIndex(
+      l => /CLUB_TRENDS_PROGRAM_YEARS=/.test(l) && SCOPE_RE.test(l)
+    )
+    const pull = lines.findIndex(
+      l => SYNC_RE.test(l) && names(l, 'club-trends')
+    )
+    expect(scope, 'no resolver-derived scope in daily').toBeGreaterThanOrEqual(
+      0
+    )
+    expect(scope).toBeLessThan(pull)
+    expect(lines[pull]).toMatch(
+      /CLUB_TRENDS_PROGRAM_YEARS="\$\{CLUB_TRENDS_PROGRAM_YEARS\}"/
+    )
+  })
+
+  for (const mode of ['rebuild', 'rescrape'] as const) {
+    it(`${mode} still pulls the whole club-trends store`, () => {
+      expect(
+        modeLines(mode).some(l => /CLUB_TRENDS_PROGRAM_YEARS/.test(l))
+      ).toBe(false)
+    })
+  }
+})
