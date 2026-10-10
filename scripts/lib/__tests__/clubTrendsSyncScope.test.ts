@@ -16,6 +16,8 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import { spawnSync } from 'node:child_process'
+import * as path from 'node:path'
 import {
   clubTrendsProgramYears,
   isProgramYear,
@@ -86,5 +88,40 @@ describe('isProgramYear', () => {
     expect(isProgramYear('2026-2028')).toBe(false)
     expect(isProgramYear('2026')).toBe(false)
     expect(isProgramYear('../2026-2027')).toBe(false)
+  })
+})
+
+describe('scripts/club-trends-sync-scope.ts runner', () => {
+  const TSX = path.resolve(process.cwd(), 'node_modules/.bin/tsx')
+  const RUNNER = path.resolve(
+    process.cwd(),
+    'scripts/club-trends-sync-scope.ts'
+  )
+  const run = (args: string[]) =>
+    spawnSync(TSX, [RUNNER, ...args], { encoding: 'utf-8' })
+
+  it('prints the July set space-separated for sync-stores.sh', () => {
+    const r = run([
+      '--program-year',
+      '2025-2026',
+      '--date',
+      '2026-07-14',
+      '--date',
+      '2026-06-30',
+    ])
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).toBe('2025-2026 2026-2027\n')
+  })
+
+  it('prints "all" when discovery was skipped (manual districts)', () => {
+    const r = run(['--program-year', 'unknown', '--date', '2026-10-09'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).toBe('all\n')
+  })
+
+  it('exits 2 on a malformed date', () => {
+    const r = run(['--program-year', '2026-2027', '--date', 'yesterday'])
+    expect(r.status).toBe(2)
+    expect(r.stdout).toBe('')
   })
 })
