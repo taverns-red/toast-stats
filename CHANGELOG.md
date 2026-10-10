@@ -1,5 +1,51 @@
 # Changelog
 
+## [2.45.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.44.1...toast-stats-v2.45.0) (2026-10-10)
+
+
+### Features
+
+* **canary:** CDN schema canary covers time-series/** and config/** ([#1710](https://github.com/taverns-red/toast-stats/issues/1710)) ([#1712](https://github.com/taverns-red/toast-stats/issues/1712)) ([1bb2df0](https://github.com/taverns-red/toast-stats/commit/1bb2df00d8ac5d58aeb81a4e60a96d05b9ee5309))
+* **pipeline:** pre-promotion content gate holds corrupt staging objects ([#1715](https://github.com/taverns-red/toast-stats/issues/1715)) ([#1716](https://github.com/taverns-red/toast-stats/issues/1716)) ([d456ff2](https://github.com/taverns-red/toast-stats/commit/d456ff2a675c5937fcd1ad431da1bb355f8faa86))
+
+
+### Bug Fixes
+
+* **pipeline:** content gate reads the real getFiles shape ([#1715](https://github.com/taverns-red/toast-stats/issues/1715)) ([#1727](https://github.com/taverns-red/toast-stats/issues/1727)) ([d2985d3](https://github.com/taverns-red/toast-stats/commit/d2985d3dbc2e3fa5acdea0c22ae81b18f7bc16bb))
+* **pipeline:** daily store sync/publish via tested fail-closed scripts ([#1722](https://github.com/taverns-red/toast-stats/issues/1722)) ([#1723](https://github.com/taverns-red/toast-stats/issues/1723)) ([f01625b](https://github.com/taverns-red/toast-stats/commit/f01625b33469170ef481e606998ba7b44c20c29f))
+* **pipeline:** fail per-date modes on failed dates unless allow_partial; logger context; counters ([#1708](https://github.com/taverns-red/toast-stats/issues/1708)) ([#1713](https://github.com/taverns-red/toast-stats/issues/1713)) ([f46b475](https://github.com/taverns-red/toast-stats/commit/f46b47536daa4ad513384d57602e5bad90c43476))
+* **pipeline:** peel stacked gzip layers off synced stores and fail on store errors ([#1702](https://github.com/taverns-red/toast-stats/issues/1702)) ([#1703](https://github.com/taverns-red/toast-stats/issues/1703)) ([fd158a2](https://github.com/taverns-red/toast-stats/commit/fd158a28c0277a3cf76afad8d8acc4edac4a0dff))
+* **pipeline:** pull awards history before every transform, fail-closed ([#1704](https://github.com/taverns-red/toast-stats/issues/1704)) ([#1707](https://github.com/taverns-red/toast-stats/issues/1707)) ([faa38df](https://github.com/taverns-red/toast-stats/commit/faa38df6904e66b8a0c99f0821f1457895887deb))
+* **pipeline:** rebuild store sync/publish via tested fail-closed scripts ([#1722](https://github.com/taverns-red/toast-stats/issues/1722)) ([#1724](https://github.com/taverns-red/toast-stats/issues/1724)) ([376feba](https://github.com/taverns-red/toast-stats/commit/376febaaab3e37f1d66103114dc1f358bf64fb80))
+* **pipeline:** rescrape store sync/publish via tested fail-closed scripts ([#1722](https://github.com/taverns-red/toast-stats/issues/1722)) ([#1725](https://github.com/taverns-red/toast-stats/issues/1725)) ([26a961e](https://github.com/taverns-red/toast-stats/commit/26a961eb730f170af6ae914cf82c77c24d9865f7))
+
+
+### Performance
+
+* **pipeline:** daily pulls only the resolved PY of club-trends ([#1728](https://github.com/taverns-red/toast-stats/issues/1728)) ([#1734](https://github.com/taverns-red/toast-stats/issues/1734)) ([96900c2](https://github.com/taverns-red/toast-stats/commit/96900c244bbe5fcfa82833aff71e4231b49df731))
+* **pipeline:** publish time-series once, changed files only, sha256 metadata ([#1731](https://github.com/taverns-red/toast-stats/issues/1731)) ([#1735](https://github.com/taverns-red/toast-stats/issues/1735)) ([b9cf144](https://github.com/taverns-red/toast-stats/commit/b9cf144b847d3ebaf7788191dba41a162004c258))
+* **pipeline:** rank-history pull as one listing + parallel download, fail-closed ([#1733](https://github.com/taverns-red/toast-stats/issues/1733)) ([#1736](https://github.com/taverns-red/toast-stats/issues/1736)) ([a2f7a29](https://github.com/taverns-red/toast-stats/commit/a2f7a29cca4ea3695fbd2adcf784d52d0dff5099))
+* **pipeline:** stop promoting internal club-trends/club-race; historical on store scripts ([#1738](https://github.com/taverns-red/toast-stats/issues/1738)) ([#1739](https://github.com/taverns-red/toast-stats/issues/1739)) ([f23bd70](https://github.com/taverns-red/toast-stats/commit/f23bd70b7bca8d86d834526c56a323e73e942ae1))
+* **pipeline:** value gate fetches only hash-differing dates ([#1730](https://github.com/taverns-red/toast-stats/issues/1730)) ([#1737](https://github.com/taverns-red/toast-stats/issues/1737)) ([b6ab9fd](https://github.com/taverns-red/toast-stats/commit/b6ab9fd6bad9b7e1b854ba97735df93dfe6e712a))
+
+
+### Documentation
+
+* **lessons:** op-list and count parity is not evidence of correct content ([#1702](https://github.com/taverns-red/toast-stats/issues/1702)) ([#1706](https://github.com/taverns-red/toast-stats/issues/1706)) ([18bf31a](https://github.com/taverns-red/toast-stats/commit/18bf31af4b8b72b6daa0fd518574cdaa535f68e7))
+* **lessons:** record external SDK/CLI fixtures from the real system ([#1726](https://github.com/taverns-red/toast-stats/issues/1726)) ([#1732](https://github.com/taverns-red/toast-stats/issues/1732)) ([a17fd92](https://github.com/taverns-red/toast-stats/commit/a17fd92c031e9eb9edb31563b4745464167740e1))
+* **pipeline:** correct [#1412](https://github.com/taverns-red/toast-stats/issues/1412) dry-run claim; drop prod --delete-unmatched hints ([#1709](https://github.com/taverns-red/toast-stats/issues/1709)) ([#1711](https://github.com/taverns-red/toast-stats/issues/1711)) ([4cc00a8](https://github.com/taverns-red/toast-stats/commit/4cc00a81bb8e85bb5f7565986b32e20d00727bb4))
+
+
+### Dependencies
+
+* **deps:** bump the patch-and-minor group across 1 directory with 5 updates ([#1656](https://github.com/taverns-red/toast-stats/issues/1656)) ([3b055a7](https://github.com/taverns-red/toast-stats/commit/3b055a78e72a5cf4c79463ca956a0f731b31f6d2))
+
+
+### Continuous Integration
+
+* **diag:** one-off read-only probe for runner rsync gzip decode ([#1717](https://github.com/taverns-red/toast-stats/issues/1717)) ([#1718](https://github.com/taverns-red/toast-stats/issues/1718)) ([9ea985d](https://github.com/taverns-red/toast-stats/commit/9ea985d06d3db3b55bac76257c2dadc4a19fe644))
+* pin setup-gcloud to 588.0.0 and log gcloud version ([#1720](https://github.com/taverns-red/toast-stats/issues/1720)) ([#1721](https://github.com/taverns-red/toast-stats/issues/1721)) ([c9e6450](https://github.com/taverns-red/toast-stats/commit/c9e645030503f0529cab368d585bea1b85051537))
+
 ## [2.44.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.44.0...toast-stats-v2.44.1) (2026-10-07)
 
 

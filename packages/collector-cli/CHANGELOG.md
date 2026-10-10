@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.11.3](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.11.2...collector-cli-v1.11.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* **pipeline:** fail per-date modes on failed dates unless allow_partial; logger context; counters ([#1708](https://github.com/taverns-red/toast-stats/issues/1708)) ([#1713](https://github.com/taverns-red/toast-stats/issues/1713)) ([f46b475](https://github.com/taverns-red/toast-stats/commit/f46b47536daa4ad513384d57602e5bad90c43476))
+* **pipeline:** peel stacked gzip layers off synced stores and fail on store errors ([#1702](https://github.com/taverns-red/toast-stats/issues/1702)) ([#1703](https://github.com/taverns-red/toast-stats/issues/1703)) ([fd158a2](https://github.com/taverns-red/toast-stats/commit/fd158a28c0277a3cf76afad8d8acc4edac4a0dff))
+
+
+### Performance
+
+* **pipeline:** value gate fetches only hash-differing dates ([#1730](https://github.com/taverns-red/toast-stats/issues/1730)) ([#1737](https://github.com/taverns-red/toast-stats/issues/1737)) ([b6ab9fd](https://github.com/taverns-red/toast-stats/commit/b6ab9fd6bad9b7e1b854ba97735df93dfe6e712a))
+
+
+### Dependencies
+
+* **deps:** bump the patch-and-minor group across 1 directory with 5 updates ([#1656](https://github.com/taverns-red/toast-stats/issues/1656)) ([3b055a7](https://github.com/taverns-red/toast-stats/commit/3b055a78e72a5cf4c79463ca956a0f731b31f6d2))
+
 ## [1.11.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.11.1...collector-cli-v1.11.2) (2026-10-07)
 
 

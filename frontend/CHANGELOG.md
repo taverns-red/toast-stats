@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.26.2](https://github.com/taverns-red/toast-stats/compare/frontend-v3.26.1...frontend-v3.26.2) (2026-10-10)
+
+
+### Dependencies
+
+* **deps:** bump the patch-and-minor group across 1 directory with 5 updates ([#1656](https://github.com/taverns-red/toast-stats/issues/1656)) ([3b055a7](https://github.com/taverns-red/toast-stats/commit/3b055a78e72a5cf4c79463ca956a0f731b31f6d2))
+
 ## [3.26.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.26.0...frontend-v3.26.1) (2026-10-07)
 
 
