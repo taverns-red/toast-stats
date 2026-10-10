@@ -74,10 +74,10 @@ toast-stats-data-{staging|ca}/
 │   ├── index-metadata.json
 │   └── {YYYY}-{YYYY}.json                # One file per program year
 │
-├── club-trends/{YYYY-YYYY}/              # Incremental club trends (per PY)
+├── club-trends/{YYYY-YYYY}/              # INTERNAL: incremental club trends (per PY)
 │   └── district_{id}.json                # All clubs for that district
 │
-├── club-race/{YYYY-YYYY}/                # Crossing-date store (#1556, per PY)
+├── club-race/{YYYY-YYYY}/                # INTERNAL: crossing-date store (#1556, per PY)
 │   └── first-reached.json                # First snapshot date each club met each tier
 │
 ├── v1/                                    # CDN manifests (short TTL)
@@ -95,7 +95,14 @@ toast-stats-data-{staging|ca}/
 
 Production is never written directly. Each run processes into **staging**; a two-gate promotion
 step then decides whether to `rsync` staging → prod (`v1/`, `snapshots/`, `time-series/`,
-`club-trends/`, `club-race/`, `config/` — additive, no `-d`).
+`config/` — additive, no `-d`).
+
+**Pipeline-internal stores (#1738, decision D3).** `club-trends/` and `club-race/` are working
+state for `compute-analytics`, not CDN products: no frontend or MCP code reads them (the frontend
+reads the per-snapshot `club-trends-index` and `global-club-race.json` projections instead). They
+live in staging only and are **not promoted**. Every mode uploads them with `gcloud storage rsync`
+via `scripts/pipeline/publish-stores.sh` — no `-Z`, no CDN headers. The copies already in the prod
+bucket from earlier promotions are left in place; deleting them is a separate decision.
 
 The bucket-to-bucket rsync compares stored hashes, so it copies only objects whose bytes changed.
 `time-series/` relies on that (#1731). `scripts/pipeline/publish-stores.sh` uploads a time-series

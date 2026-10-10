@@ -1330,23 +1330,14 @@ jobs:
           # ClubTrendsStore replace a point by date, keep the rest). Rebuilt
           # from an empty runner instead, a single-PY run wrote an
           # index-metadata.json listing only that PY and replaced that PY's
-          # daily points with its 12 month-ends. Fail closed: no `|| true` —
-          # a failed pull must stop the run, not publish a partial store.
-          # Club-race (#1556) keeps the daily-resolution crossings the live
-          # pipeline captured via its min-on-rebuild upsert.
-          mkdir -p ./cache/time-series ./cache/club-trends ./cache/club-race
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/"
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/"
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "./cache/club-race/"
-          # District awards history (#1704): the transform loads it for Club
-          # Strength / Leadership Excellence and upserts each PY's year-end
-          # tier; without the pull every rebuilt date had no award history.
-          bash scripts/pull-awards-history.sh "${GCS_BUCKET}"
-
-          # Peel the gzip layers a non-decompressing download leaves on (#1702).
-          npx tsx scripts/store-encoding.ts normalize \
-            ./cache/time-series ./cache/club-trends ./cache/club-race \
-            ./cache/district-awards-history.json
+          # daily points with its 12 month-ends. Club-race (#1556) keeps the
+          # daily-resolution crossings the live pipeline captured via its
+          # min-on-rebuild upsert. District awards history (#1704): the
+          # transform loads it for Club Strength / Leadership Excellence.
+          # Fail-closed pull + count floor + gzip normalise: see the script
+          # (#1722, #1738). Whole club-trends store, like rebuild/rescrape.
+          bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
+            time-series club-trends club-race district-awards-history
 
           RAW_DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
           DATE_COUNT=$(echo "${RAW_DATES}" | grep -c . || true)
@@ -1459,35 +1450,13 @@ jobs:
         run: |
           echo "## ⬆️ Upload stores (#1670)" >> "$GITHUB_STEP_SUMMARY"
 
-          # Double-encoding guard (#1702): anything still gzip on disk would get
-          # another layer from the -Z upload below. Fail before any push.
-          npx tsx scripts/store-encoding.ts check ./cache/time-series ./cache/club-trends ./cache/club-race
-
-          # Time-series and club-trends were pulled from GCS before the
-          # rebuild and upserted per date, so these carry every other year.
-          echo "Uploading time-series..."
-          gcloud storage cp \
-            --content-type="application/json" \
-            --cache-control="public, max-age=3600" \
-            -r -Z ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
-
-          echo "Uploading club-trends..."
-          gcloud storage cp \
-            --content-type="application/json" \
-            --cache-control="public, max-age=3600" \
-            -r -Z ./cache/club-trends/* "gs://${GCS_BUCKET}/club-trends/"
-
-          # Club-race crossing store (#1556): internal state, rsync back
-          echo "Syncing club-race back to GCS..."
-          gcloud storage rsync -r "./cache/club-race/" "gs://${GCS_BUCKET}/club-race/"
-
-          # District awards history (#1704): pulled before the rebuild loop and
-          # upserted per date, so this carries every other PY.
-          if [ -f "./cache/district-awards-history.json" ]; then
-            echo "Syncing district-awards-history back to GCS..."
-            gcloud storage cp "./cache/district-awards-history.json" \
-              "gs://${GCS_BUCKET}/district-awards-history.json"
-          fi
+          # Pulled before the rebuild loop and upserted per date, so these
+          # carry every other year. The script checks for double encoding
+          # before any push (#1702), publishes time-series once with sha
+          # metadata (#1731), and rsyncs club-trends / club-race as internal
+          # state with no -Z and no CDN headers (#1738, D3) — like every mode.
+          bash scripts/pipeline/publish-stores.sh "${GCS_BUCKET}" \
+            time-series club-trends club-race district-awards-history
 
           echo "Uploading raw-csv..."
           gcloud storage rsync -r "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
@@ -2329,7 +2298,7 @@ jobs:
 
       # Content gate (#1715, plan S1-4, decision D8 — HOLD, not warn). The two
       # gates above read two integers and one file per date; promotion then
-      # rsyncs six prefixes unread, and three corrupt promotions passed
+      # rsyncs four prefixes unread, and three corrupt promotions passed
       # (#1702 nested gzip, #1704 null priorYearAvgClubSize). This reads the
       # staging objects promotion would copy (changed vs prod — not the
       # bucket), decoded the way a browser does, and checks bytes, parse and
@@ -2352,7 +2321,7 @@ jobs:
         run: |
           echo "Promoting staging → production..."
 
-          # These six writes ARE production. Moved off gsutil (#1412) after a
+          # These four writes ARE production. Moved off gsutil (#1412) after a
           # per-layer `--dry-run` diff staging→prod showed gcloud and gsutil
           # plan the identical copy set. Additive by design: never add
           # `--delete-unmatched-destination-objects` (gsutil `-d`) here.
@@ -2366,11 +2335,9 @@ jobs:
           # Sync time-series
           gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "gs://${GCS_BUCKET_PRODUCTION}/time-series/"
 
-          # Sync club-trends
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-trends/" "gs://${GCS_BUCKET_PRODUCTION}/club-trends/"
-
-          # Sync club-race crossing store (#1556)
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/club-race/" "gs://${GCS_BUCKET_PRODUCTION}/club-race/"
+          # club-trends and club-race are pipeline-internal stores (#1738, D3):
+          # nothing on the CDN reads them, so they stay in staging. Prod's
+          # existing copies are left in place (deleting them is separate).
 
           # Sync config (snapshot index)
           gcloud storage rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"
