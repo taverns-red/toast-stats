@@ -63,14 +63,41 @@ export async function mapLimit<T, R>(
   return out
 }
 
+const optString = (v: unknown): string | undefined =>
+  typeof v === 'string' ? v : undefined
+
+/**
+ * One listed object → GcsObjectMeta, whichever shape the SDK handed back.
+ * With `fields` set (as the gate always lists), @google-cloud/storage 8.2.0
+ * returns the raw JSON-API item — `{ name, size, md5Hash, crc32c,
+ * contentEncoding? }` — not a File, so there is no `.metadata`
+ * (fixtures/gcs-get-files/with-fields.json). Without `fields` it is a File
+ * whose values live under `.metadata`. Read the metadata object when present,
+ * else the item itself; `size` is a decimal string, `contentEncoding` is
+ * absent when unset. A nameless item throws (fail closed) rather than being
+ * diffed as garbage.
+ */
 export function toMeta(f: unknown): GcsObjectMeta {
-  const file = f as { name: string; metadata: Record<string, never> }
+  const item = (f ?? {}) as Record<string, unknown>
+  const wrapped = item.metadata
+  const src =
+    wrapped && typeof wrapped === 'object'
+      ? (wrapped as Record<string, unknown>)
+      : item
+  const name = optString(item.name) ?? optString(src.name)
+  if (!name) {
+    throw new Error(
+      `listed object has no name: ${JSON.stringify(f)?.slice(0, 120)}`
+    )
+  }
+  const size = src.size
   return {
-    name: file.name,
-    size: file.metadata.size,
-    crc32c: file.metadata.crc32c,
-    md5Hash: file.metadata.md5Hash,
-    contentEncoding: file.metadata.contentEncoding,
+    name,
+    size:
+      typeof size === 'string' || typeof size === 'number' ? size : undefined,
+    crc32c: optString(src.crc32c),
+    md5Hash: optString(src.md5Hash),
+    contentEncoding: optString(src.contentEncoding),
   }
 }
 
