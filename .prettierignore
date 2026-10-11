@@ -18,3 +18,8 @@ tasks/lessons/
 # Frozen archive captures — reformatting a byte-frozen fixture triples its
 # size and buries any real diff (#1466)
 scripts/lib/__tests__/fixtures/global-rollup/*.json
+
+# Byte-frozen golden fixtures generated from the retired inline generators
+# (#1743) — reformatting them would break the parity they pin
+scripts/manifests/__tests__/fixtures/input/
+scripts/manifests/__tests__/fixtures/expected/
