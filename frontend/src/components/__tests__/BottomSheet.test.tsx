@@ -2,7 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { BottomSheet, SWIPE_CLOSE_PX } from '../BottomSheet'
+import { BottomSheet } from '../BottomSheet'
+import { SWIPE_CLOSE_PX } from '../../utils/contextBar'
 
 afterEach(() => cleanup())
 

@@ -1,0 +1,350 @@
+/* Phone context bar + bottom sheet (#1831, mobile epic #1827 Phase 1,
+   review §5.1). Below 768 one sticky 44px row replaces the entity header
+   stack; from 768 up it is hidden and the desktop header is unchanged.
+   Semantic tokens only (--surface, --line, --ink…) so dark mode follows the
+   [data-theme] remaps at the CSS layer (R10). Imported after app-shell.css in
+   the same `brand` layer, so the <768 header collapse below wins by order. */
+
+@layer brand {
+  /* ---------- The bar ---------- */
+
+  .context-bar {
+    position: sticky;
+    top: 56px; /* under .app-shell-top-bar (56px, z-index 40) */
+    z-index: 35;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    /* Full-bleed across the district page's 24px gutter. */
+    margin: 0 -24px 8px;
+    padding: 0 max(8px, env(safe-area-inset-right, 0px)) 0
+      max(4px, env(safe-area-inset-left, 0px));
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--sans);
+  }
+
+  .context-bar__back,
+  .context-bar__back-spacer {
+    flex: none;
+    width: 44px;
+  }
+
+  .context-bar__back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    border-radius: var(--rds-radius-sm, 6px);
+    color: var(--ink);
+    font-size: 28px;
+    line-height: 1;
+    text-decoration: none;
+  }
+
+  .context-bar__back-spacer {
+    width: 8px;
+  }
+
+  .context-bar__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  /* The chip never shrinks below its text: the title ellipsises first, so
+     the PY/date is never clipped (Lesson 134). */
+  .context-bar__chip {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background-color: var(--surface-2);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .context-bar__caret {
+    color: var(--ink-3);
+  }
+
+  .context-bar__back:focus-visible,
+  .context-bar__chip:focus-visible,
+  .bottom-sheet__close:focus-visible,
+  .context-sheet__action:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+
+  @media (min-width: 768px) {
+    .context-bar {
+      display: none;
+    }
+  }
+
+  /* ---------- <768: the bar replaces the district header stack ---------- */
+
+  @media (max-width: 767px) {
+    /* The bar sits flush under the top bar. */
+    .district-detail-page {
+      padding-top: 0;
+    }
+
+    .district-detail-page-header {
+      margin: 0;
+      gap: 0;
+    }
+
+    .district-detail-page-header__lede,
+    .district-detail-page-header__actions {
+      display: none;
+    }
+
+    /* The H1 stays in the DOM for a11y/SEO, visually hidden (never
+       display:none, which would drop it from the accessibility tree). */
+    .district-detail-page-header__title {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* The one-crumb breadcrumb duplicated the bar's back crumb. */
+    .district-detail-page-header ~ .subpage-breadcrumb {
+      display: none;
+    }
+  }
+
+  /* ---------- Bottom sheet ---------- */
+
+  .bottom-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .bottom-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.55);
+  }
+
+  .bottom-sheet {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-height: 85dvh;
+    border-radius: 16px 16px 0 0;
+    background-color: var(--surface);
+    color: var(--ink);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.18);
+    animation: bottom-sheet-in 200ms ease-out;
+  }
+
+  @keyframes bottom-sheet-in {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bottom-sheet {
+      animation: none;
+    }
+  }
+
+  /* Grab handle: the swipe-to-close target. touch-action:none so the drag
+     is ours, not a page scroll. The close button is the visible alternative. */
+  .bottom-sheet__handle {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 4px;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .bottom-sheet__grip {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: var(--line);
+  }
+
+  .bottom-sheet__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 8px 8px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .bottom-sheet__title {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .bottom-sheet__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+
+  .bottom-sheet__body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px 16px 16px;
+  }
+
+  /* ---------- Context sheet content ---------- */
+
+  .context-sheet__section {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .context-sheet__section:last-child {
+    border-bottom: 0;
+  }
+
+  .context-sheet__controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .context-sheet__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .context-sheet__label {
+    color: var(--ink-2);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  /* 16px: below this iOS Safari zooms the page on focus. */
+  .context-sheet__select {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background-color: var(--surface);
+    color: var(--ink);
+    font-size: 16px;
+  }
+
+  .context-sheet__freshness {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 14px;
+  }
+
+  .context-sheet__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .context-sheet__action {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background-color: var(--surface-2);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .context-sheet__status {
+    flex-basis: 100%;
+    color: var(--ink-2);
+    font-size: 14px;
+  }
+
+  .context-sheet__status:empty {
+    display: none;
+  }
+
+  .context-sheet__heading {
+    margin: 0 0 4px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .context-sheet__about {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .context-sheet__trail ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 16px;
+  }
+
+  .context-sheet__trail li + li::before {
+    content: '›';
+    margin-right: 8px;
+    color: var(--ink-3);
+  }
+
+  /* `inline-flex` centres the label in the 44px a[href] floor (#1387). */
+  .context-sheet__trail a {
+    display: inline-flex;
+    align-items: center;
+    color: var(--link);
+  }
+
+  .context-sheet__trail [aria-current='page'] {
+    color: var(--ink);
+    font-weight: 600;
+  }
+}
