@@ -52,15 +52,18 @@ const VIEWPORT = { width: 375, height: 812 } // iPhone-class portrait
 // a loud red, not a silent pass. Routes the #885 audit found clean (no family
 // control) carry no sentinel — they still get the ≥1 non-vacuity floor.
 const CHIP_SELECT = '[data-testid$="-chip-select"]' // family A (shared toolbar)
+// #1831: below 768 the district header's toolbar (family A) is replaced by the
+// phone context bar; its PY/date chip is the required control at 375 there.
+const CONTEXT_CHIP = '[data-testid="context-bar-chip"]'
 const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/', mustRender: CHIP_SELECT }, // families A + B
-  { path: '/district/61', mustRender: CHIP_SELECT },
-  { path: '/district/61/clubs', mustRender: CHIP_SELECT },
+  { path: '/district/61', mustRender: CONTEXT_CHIP },
+  { path: '/district/61/clubs', mustRender: CONTEXT_CHIP },
   { path: '/district/61/changes', mustRender: CHIP_SELECT },
-  { path: '/district/61/divisions', mustRender: CHIP_SELECT },
-  { path: '/district/61/rankings', mustRender: CHIP_SELECT },
-  { path: '/district/61/trends', mustRender: CHIP_SELECT },
-  { path: '/district/61/analytics', mustRender: CHIP_SELECT },
+  { path: '/district/61/divisions', mustRender: CONTEXT_CHIP },
+  { path: '/district/61/rankings', mustRender: CONTEXT_CHIP },
+  { path: '/district/61/trends', mustRender: CONTEXT_CHIP },
+  { path: '/district/61/analytics', mustRender: CONTEXT_CHIP },
   { path: '/district/61/division/A' },
   { path: '/district/61/club/01479548' },
   { path: '/club/01479548' },
