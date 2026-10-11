@@ -464,8 +464,13 @@ describe('process-dates.sh rescrape: scrape + transform stage', () => {
     ])
     // The raw goes up after the snapshot, never before it.
     const calls = lines(shimLog)
-    const snap = calls.findIndex(l => l.includes('/snapshots/2026-09-10/'))
-    const raw = calls.findIndex(l => l.includes('/raw-csv/2026-09-10/'))
+    // Uploads only: the hydration download (#1756) reads raw-csv first.
+    const snap = calls.findIndex(l =>
+      l.endsWith(`gs://${BUCKET}/snapshots/2026-09-10/`)
+    )
+    const raw = calls.findIndex(l =>
+      l.endsWith(`gs://${BUCKET}/raw-csv/2026-09-10/`)
+    )
     expect(snap).toBeGreaterThanOrEqual(0)
     expect(raw).toBeGreaterThan(snap)
   })
@@ -540,6 +545,138 @@ describe('process-dates.sh rescrape: guard, compute and upload', () => {
       SHIM_FAIL_MATCH: '^rsync .*gs://test-bucket/raw-csv/',
     })
     expect(r.status).not.toBe(0)
+  })
+})
+
+describe('process-dates.sh rescrape: hydrate the date from staging (#1756)', () => {
+  // A `districts=` subset re-derives its own districts, but the date-level
+  // artifacts (rankings, manifest, metadata, awards, global totals, club
+  // race, raw metadata) describe every district of the date. The runner
+  // pulls the date's other districts from staging first, so the CLI computes
+  // them from a complete set; the CLI refuses them when it still cannot.
+  const DATE = '2026-10-10'
+  const env = { DISTRICTS: '61' }
+  let diskLog: string
+
+  beforeEach(() => {
+    diskLog = path.join(tmp, 'disk.log')
+  })
+
+  function stageDate(date: string): void {
+    putObject(`raw-csv/${date}/all-districts.csv`, 'REGION,DISTRICT\n')
+    putObject(`raw-csv/${date}/metadata.json`, '{"date":"x"}')
+    for (const id of ['61', '62', '63']) {
+      putObject(
+        `raw-csv/${date}/district-${id}/club-performance.csv`,
+        'Club,Goals\n'
+      )
+      putObject(
+        `snapshots/${date}/district_${id}.json`,
+        `{"districtId":"${id}"}`,
+        true
+      )
+    }
+    putObject(`snapshots/${date}/all-districts-rankings.json`, '{}', true)
+    putObject(
+      `snapshots/${date}/analytics/district_62_analytics.json`,
+      '{"districtId":"62"}',
+      true
+    )
+  }
+
+  function seenBy(command: string): string[] {
+    return lines(diskLog)
+      .filter(l => l.startsWith(`${command}: `))
+      .map(l => l.slice(command.length + 2))
+  }
+
+  it("pulls the other districts' raw, snapshots and analytics before the scrape", () => {
+    stageDate(DATE)
+    const r = run('rescrape', [DATE], { ...env, STUB_DISK_LOG: diskLog })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+
+    const atScrape = seenBy('scrape')
+    for (const file of [
+      `raw-csv/${DATE}/district-62/club-performance.csv`,
+      `raw-csv/${DATE}/district-63/club-performance.csv`,
+      `snapshots/${DATE}/district_62.json`,
+      `snapshots/${DATE}/district_63.json`,
+      `snapshots/${DATE}/analytics/district_62_analytics.json`,
+    ]) {
+      expect(atScrape, file).toContain(file)
+    }
+    // ...and they are still there when compute rolls the date up.
+    expect(seenBy('compute-analytics')).toContain(
+      `snapshots/${DATE}/district_63.json`
+    )
+  })
+
+  it('hydrates plain JSON under gcloud 588 (rsync inflates the -Z objects)', () => {
+    stageDate(DATE)
+    const copy = path.join(tmp, 'hydrated.json')
+    run('rescrape', [DATE], {
+      ...env,
+      STUB_COPY_ON_COMPUTE: `snapshots/${DATE}/district_62.json=${copy}`,
+    })
+    expect(JSON.parse(fs.readFileSync(copy, 'utf-8'))).toEqual({
+      districtId: '62',
+    })
+  })
+
+  it("never rewrites the other districts' staged objects (I-2)", () => {
+    stageDate(DATE)
+    const staged = path.join(root, BUCKET, `snapshots/${DATE}/district_62.json`)
+    const before = fs.readFileSync(staged)
+    run('rescrape', [DATE], env)
+    const uploads = lines(shimLog)
+      .filter(l => l.startsWith('storage cp') && l.includes(`/${DATE}/`))
+      .join('\n')
+    expect(uploads).toContain('district_61.json')
+    expect(uploads).not.toContain('district_62.json')
+    expect(uploads).not.toContain('district_62_analytics.json')
+    expect(fs.readFileSync(staged)).toEqual(before)
+  })
+
+  it('still runs a date staging has never seen: the CLI refuses what it cannot cover', () => {
+    const r = run('rescrape', [DATE], env)
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toContain('Could not hydrate')
+    expect(objectExists(`snapshots/${DATE}/district_61.json`)).toBe(true)
+  })
+
+  it('leaves no hydrated directory behind, even when the scrape remaps the date', () => {
+    stageDate('2026-07-02')
+    const r = run('rescrape', ['2026-07-02'], {
+      ...env,
+      STUB_REMAP: '2026-07-02=2026-06-30',
+    })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(objectExists('snapshots/2026-06-30/district_61.json')).toBe(true)
+    expect(localDateDirs('snapshots')).toEqual([])
+    expect(localDateDirs('raw-csv')).toEqual([])
+  })
+
+  it('leaves no hydrated directory behind when the scrape fails', () => {
+    stageDate(DATE)
+    const r = run('rescrape', [DATE], {
+      ...env,
+      STUB_SCRAPE_FAIL: `^${DATE}$`,
+    })
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(localDateDirs('snapshots')).toEqual([])
+    expect(localDateDirs('raw-csv')).toEqual([])
+  })
+
+  it('does not hydrate in rebuild: it pulls the whole raw and transforms it all', () => {
+    putRaw('2026-09-10')
+    run('rebuild', ['2026-09-10'])
+    expect(
+      lines(shimLog).some(l =>
+        l.startsWith(`storage rsync -r gs://${BUCKET}/snapshots/`)
+      )
+    ).toBe(false)
   })
 })
 

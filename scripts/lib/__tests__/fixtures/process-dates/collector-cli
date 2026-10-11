@@ -34,10 +34,22 @@
 #   STUB_COMPUTE_FAIL    optional: ERE; a compute of a matching date fails
 #   STUB_MERGE_FAIL      optional: ERE; a merge into a matching snapshot
 #                        date (the --snapshot-dir basename) fails
+#   STUB_DISK_LOG        optional: before acting, each call appends
+#                        `<command>: <path>` for every file under $CACHE_DIR
+#                        here — what the real CLI would have read (#1756)
+#   STUB_COPY_ON_COMPUTE optional: `<path under CACHE_DIR>=<dest>`; compute
+#                        copies that file to <dest>, the bytes it would parse
 set -euo pipefail
 
 : "${CACHE_DIR:?CACHE_DIR must be set}"
 if [ -n "${STUB_LOG:-}" ]; then printf 'collector-cli %s\n' "$*" >>"${STUB_LOG}"; fi
+if [ -n "${STUB_DISK_LOG:-}" ] && [ -d "${CACHE_DIR}" ]; then
+  (cd "${CACHE_DIR}" && find . -type f | sed "s|^\./|${1:-}: |" | LC_ALL=C sort) \
+    >>"${STUB_DISK_LOG}"
+fi
+if [ "${1:-}" = "compute-analytics" ] && [ -n "${STUB_COPY_ON_COMPUTE:-}" ]; then
+  cp "${CACHE_DIR}/${STUB_COPY_ON_COMPUTE%%=*}" "${STUB_COPY_ON_COMPUTE#*=}" || true
+fi
 
 CMD="${1:?}"
 shift
