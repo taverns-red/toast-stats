@@ -2,8 +2,9 @@
  * Identity histories in the pipeline (#1782, epic #1781; ADR-015 parity).
  *
  * One script, scripts/pipeline/build-identity-history.sh, builds the
- * club-district history from the runner's club-race store and uploads it to
- * STAGING `derived/` — a prefix promotion never copies, until scoped
+ * club-district history from the runner's club-race store (#1782) and the
+ * district → region history from the staged all-districts rankings (#1820),
+ * and uploads both to STAGING `derived/` — a prefix promotion never copies, until scoped
  * promotion (#1763, ADR-015 step 5) lists it in the run manifest and moves
  * it under `config/`. It is not a daily-only stage: daily calls it after its
  * upload, and process-dates.sh (rebuild, rescrape, rescrape-historical) calls
@@ -24,10 +25,12 @@ import { createHash } from 'node:crypto'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import * as zlib from 'node:zlib'
 import { parse } from 'yaml'
 import {
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
+  DistrictRegionHistorySchema,
 } from '@taverns-red/shared-contracts'
 import { prodWriteReasons, type Workflow } from '../prodWriteGuard.js'
 import { PROMOTED_PREFIXES } from '../promotionContentGate.js'
@@ -44,8 +47,13 @@ const CLUB_RACE = path.join(
   REPO,
   'scripts/lib/__tests__/fixtures/identity-history/club-race'
 )
+const RANKINGS = path.join(
+  REPO,
+  'scripts/lib/__tests__/fixtures/identity-history/snapshots'
+)
 const BUCKET = 'test-bucket'
 const PREFIX = 'derived/club-district-history/'
+const REGION = 'derived/district-region-history.json'
 
 let tmp: string
 let root: string
@@ -96,6 +104,43 @@ function seedClubRace(): void {
   fs.cpSync(CLUB_RACE, path.join(cache, 'club-race'), { recursive: true })
 }
 
+/**
+ * Stage the recorded rankings at snapshots/<date>/, as the daily and
+ * process-dates uploads leave them: `-Z` (Content-Encoding: gzip).
+ */
+function seedRankings(extraDates: Record<string, string> = {}): void {
+  const put = (date: string, from: string) => {
+    const obj = `snapshots/${date}/all-districts-rankings.json`
+    const dest = path.join(root, BUCKET, obj)
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.writeFileSync(
+      dest,
+      zlib.gzipSync(
+        fs.readFileSync(
+          path.join(RANKINGS, from, 'all-districts-rankings.json')
+        )
+      )
+    )
+    const meta = path.join(root, '.meta', BUCKET, obj)
+    fs.mkdirSync(path.dirname(meta), { recursive: true })
+    fs.writeFileSync(
+      meta,
+      'content-encoding=gzip\ncontent-type=application/json\n'
+    )
+  }
+  for (const date of fs.readdirSync(RANKINGS)) put(date, date)
+  for (const [date, from] of Object.entries(extraDates)) put(date, from)
+}
+
+function seedAll(): void {
+  seedClubRace()
+  seedRankings()
+}
+
+function derivedObjects(): string[] {
+  return allObjects().filter(o => o.startsWith('derived/'))
+}
+
 function allObjects(): string[] {
   const dir = path.join(root, BUCKET)
   return fs
@@ -123,10 +168,10 @@ function lines(file: string): string[] {
 
 describe('build-identity-history.sh: club-district history to staging derived/', () => {
   it('uploads the schema-valid index and one shard per club-id suffix', () => {
-    seedClubRace()
+    seedAll()
     const r = runScript()
     expect(r.status, r.stderr).toBe(0)
-    expect(allObjects()).toEqual(
+    expect(derivedObjects().filter(o => o.startsWith(PREFIX))).toEqual(
       ['02', '07', '45', '68', '77', '99', 'index']
         .map(k => `${PREFIX}${k}.json`)
         .sort()
@@ -145,15 +190,17 @@ describe('build-identity-history.sh: club-district history to staging derived/',
   })
 
   it('uploads plain JSON with a JSON content type (internal, no -Z)', () => {
-    seedClubRace()
+    seedAll()
     expect(runScript().status).toBe(0)
-    const meta = readMeta(`${PREFIX}index.json`)
-    expect(meta).not.toContain('content-encoding=gzip')
-    expect(meta).toContain('content-type=application/json')
+    for (const obj of [`${PREFIX}index.json`, `${PREFIX}77.json`, REGION]) {
+      const meta = readMeta(obj)
+      expect(meta, obj).not.toContain('content-encoding=gzip')
+      expect(meta, obj).toContain('content-type=application/json')
+    }
   })
 
   it('prints one JSON summary line on stdout (R4) and reports gzip sizes', () => {
-    seedClubRace()
+    seedAll()
     const r = runScript()
     const out = r.stdout.trim().split('\n')
     expect(out).toHaveLength(1)
@@ -170,16 +217,20 @@ describe('build-identity-history.sh: club-district history to staging derived/',
   })
 
   it('refuses (exit 1, nothing uploaded) when the club-race store was never synced', () => {
+    seedRankings()
     const r = runScript()
     expect(r.status).toBe(1)
-    expect(allObjects()).toEqual([])
+    expect(derivedObjects()).toEqual([])
   })
 
   it('writes nothing outside derived/', () => {
-    seedClubRace()
-    runScript()
-    expect(allObjects().every(o => o.startsWith('derived/'))).toBe(true)
-    const writes = lines(shimLog).filter(l => /^storage (cp|rsync)/.test(l))
+    seedAll()
+    const before = allObjects().filter(o => !o.startsWith('derived/'))
+    expect(runScript().status).toBe(0)
+    expect(allObjects().filter(o => !o.startsWith('derived/'))).toEqual(before)
+    const writes = lines(shimLog).filter(
+      l => /^storage (cp|rsync)/.test(l) && /\sgs:\/\/\S+$/.test(l)
+    )
     expect(writes.length).toBeGreaterThan(0)
     for (const w of writes) {
       const dest = w.split(' ').at(-1) ?? ''
@@ -202,6 +253,62 @@ describe('build-identity-history.sh: club-district history to staging derived/',
         createHash('sha256').update(bytes).digest('hex')
       )
     }
+  })
+})
+
+describe('build-identity-history.sh: district → region history (#1820)', () => {
+  it('uploads a schema-valid region history from the staged rankings', () => {
+    seedAll()
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    const history = DistrictRegionHistorySchema.parse(readObject(REGION))
+    expect(history.asOf).toBe('2026-10-10')
+    expect(history.districts['61']?.spans).toEqual([
+      { from: '2017-06-30', to: '2017-06-30', region: '06' },
+      { from: '2025-06-30', to: null, region: '05' },
+    ])
+    expect(history.districts['01']?.spans.at(-1)?.to).toBe('2026-06-30')
+    expect(JSON.parse(r.stdout.trim()).districtRegionHistory).toMatchObject({
+      districts: 5,
+      conflicts: 0,
+    })
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /district.region history.*5 districts/i
+    )
+  })
+
+  it('reads only the first and last snapshot of each program year', () => {
+    // 2026-09-30 sits inside 2026-27, between its first (07-26) and last
+    // (10-10) dates: listed, never downloaded.
+    seedClubRace()
+    seedRankings({ '2026-09-30': '2026-10-10' })
+    expect(runScript().status).toBe(0)
+    const reads = lines(shimLog).filter(l =>
+      /^storage cp gs:\/\/\S+\/snapshots\//.test(l)
+    )
+    expect(reads.map(l => /snapshots\/([\d-]+)\//.exec(l)?.[1])).toEqual([
+      '2017-06-30',
+      '2025-06-30',
+      '2026-06-30',
+      '2026-07-26',
+      '2026-10-10',
+    ])
+  })
+
+  it('reads gzip-stored rankings under gcloud 568 too (bytes as stored)', () => {
+    seedAll()
+    const r = runScript({ SHIM_DOWNLOAD_DECOMPRESS: '0' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(
+      DistrictRegionHistorySchema.parse(readObject(REGION)).districts['201']
+    ).toBeDefined()
+  })
+
+  it('fails (exit 1) without uploading a region history when no rankings are staged', () => {
+    seedClubRace()
+    const r = runScript()
+    expect(r.status).toBe(1)
+    expect(derivedObjects()).not.toContain(REGION)
   })
 })
 
