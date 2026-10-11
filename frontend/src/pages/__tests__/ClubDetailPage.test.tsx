@@ -355,6 +355,66 @@ describe('ClubDetailPage (#208)', () => {
     ).toBeInTheDocument()
   })
 
+  // #1783 — where-it-meets line. One page mount proves the wiring and the
+  // never-email/phone rule end to end; the absent case is covered by every
+  // other test in this file (none set FAC fields) plus the explicit check.
+  it('renders the where-it-meets line and never renders email or phone (#1783)', () => {
+    const mockedHook = vi.mocked(useDistrictAnalytics)
+    mockedHook.mockReturnValueOnce({
+      data: {
+        districtId: '61',
+        allClubs: [
+          {
+            ...baseMockClub,
+            address: {
+              street: '790 Edgar Street ',
+              city: 'Kingston',
+              region: 'ON',
+              postalCode: 'K7M 9G5',
+              country: 'Canada',
+            },
+            email: 'officer@example.com',
+            phone: '+16135550000',
+            website: 'https://example.org/',
+            meetingDay: 'Tuesday',
+            meetingTime: '7:30 pm',
+            allowsVirtualAttendance: true,
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    const { container } = renderWithRoute()
+
+    expect(screen.getByText('Tuesday · 7:30 pm')).toBeInTheDocument()
+    expect(screen.getByText('Online or hybrid')).toBeInTheDocument()
+    expect(
+      screen.getByText('790 Edgar Street, Kingston, ON')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /contact on toastmasters\.org/i })
+    ).toHaveAttribute(
+      'href',
+      'https://www.toastmasters.org/Find-a-Club/00000606'
+    )
+
+    const html = container.innerHTML
+    expect(html).not.toContain('officer@example.com')
+    expect(html).not.toContain('6135550000')
+    expect(container.querySelector('a[href^="mailto:"]')).toBeNull()
+    expect(container.querySelector('a[href^="tel:"]')).toBeNull()
+  })
+
+  it('omits the where-it-meets line when the snapshot has no FAC data (#1783)', () => {
+    const { container } = renderWithRoute()
+    expect(container.querySelector('.club-meets')).toBeNull()
+    expect(
+      screen.queryByRole('link', { name: /contact on toastmasters\.org/i })
+    ).not.toBeInTheDocument()
+  })
+
   it('renders DCP Goals Progress section', () => {
     renderWithRoute()
 
