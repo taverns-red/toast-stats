@@ -84,7 +84,8 @@ export function ClubEducationPanel({
 
             {summary.total === 0 ? (
               <p className="club-edu__note">
-                No education awards recorded in {pyDisplay} yet.
+                No education awards recorded in {pyDisplay}
+                {summary.isArchive ? '.' : ' yet.'}
               </p>
             ) : (
               <>
