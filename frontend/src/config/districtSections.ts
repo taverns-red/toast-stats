@@ -36,6 +36,21 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   { label: 'Action List', segment: 'action-list' },
 ]
 
+/* #1832 (mobile epic #1827, review §5.1) — on a phone held upright the
+   sections move to a bottom bar: these four (chosen by real usage), then a
+   "More" sheet holding the rest in config order. Landscape phones and ≥768
+   keep the full scroll-row. */
+export const PHONE_SECTION_BAR_QUERY =
+  '(max-width: 767px) and (orientation: portrait)'
+
+/** Segments shown directly in the phone bottom bar, in bar order. */
+export const DISTRICT_BAR_PRIMARY_SEGMENTS: readonly string[] = [
+  '',
+  'clubs',
+  'divisions',
+  'trends',
+]
+
 /** Build the URL for a district section. Empty segment = the Overview hub. */
 export function buildDistrictSectionUrl(
   districtId: string,

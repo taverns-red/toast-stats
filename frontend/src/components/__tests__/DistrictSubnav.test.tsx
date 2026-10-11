@@ -1,9 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { axe, toHaveNoViolations } from 'jest-axe'
 import { DistrictSubnav } from '../DistrictSubnav'
-import { DISTRICT_SECTIONS } from '../../config/districtSections'
+import {
+  DISTRICT_SECTIONS,
+  PHONE_SECTION_BAR_QUERY,
+} from '../../config/districtSections'
 
 expect.extend(toHaveNoViolations)
 
@@ -115,5 +118,79 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
   it('has no axe violations', async () => {
     const { container } = renderAt('/district/61/clubs')
     expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+/* #1832 — below 768 in portrait the top scroll-row gives way to the bottom
+   section bar: 4 primary routes + More (the rest, in the shared sheet). The
+   switch is a media query in JS so only ONE "District sections" landmark is
+   ever in the DOM. Landscape phones and >=768 keep the #1849 scroll-row. */
+describe('DistrictSubnav on a phone (#1832)', () => {
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  const stubViewport = (phone: boolean) => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query: string) => ({
+        matches: phone && query === PHONE_SECTION_BAR_QUERY,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    )
+  }
+
+  it('the phone query is portrait and below 768 only', () => {
+    expect(PHONE_SECTION_BAR_QUERY).toBe(
+      '(max-width: 767px) and (orientation: portrait)'
+    )
+  })
+
+  it('renders the bottom bar, not the scroll-row: Overview · Clubs · Divisions · Trends · More', () => {
+    stubViewport(true)
+    renderAt('/district/61')
+    const navs = screen.getAllByRole('navigation', {
+      name: 'District sections',
+    })
+    expect(navs).toHaveLength(1)
+    expect(navs[0]).toHaveAttribute('data-testid', 'district-section-bar')
+    expect(screen.queryByTestId('district-subnav')).not.toBeInTheDocument()
+    expect(
+      Array.from(navs[0]!.querySelectorAll('a')).map(a => a.textContent)
+    ).toEqual(['Overview', 'Clubs', 'Divisions', 'Trends'])
+    expect(screen.getByRole('button', { name: /^More/ })).toBeInTheDocument()
+  })
+
+  it('More holds every other section, in config order, so all 9 are within 2 taps', () => {
+    stubViewport(true)
+    renderAt('/district/61')
+    fireEvent.click(screen.getByRole('button', { name: /^More/ }))
+    const sheet = screen.getByRole('dialog', { name: 'More sections' })
+    expect(
+      Array.from(sheet.querySelectorAll('a')).map(a => [
+        a.textContent,
+        a.getAttribute('href'),
+      ])
+    ).toEqual([
+      ['What Changed', '/district/61/changes'],
+      ['Grid', '/district/61/grid'],
+      ['Analytics', '/district/61/analytics'],
+      ['Rankings', '/district/61/rankings'],
+      ['Action List', '/district/61/action-list'],
+    ])
+  })
+
+  it('keeps the scroll-row on landscape phones and >=768', () => {
+    stubViewport(false)
+    renderAt('/district/61')
+    expect(screen.getByTestId('district-subnav')).toBeInTheDocument()
+    expect(screen.queryByTestId('district-section-bar')).not.toBeInTheDocument()
   })
 })
