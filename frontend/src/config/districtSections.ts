@@ -36,6 +36,9 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   { label: 'Action List', segment: 'action-list' },
 ]
 
+/* #1832 — stub (red). */
+export const PHONE_SECTION_BAR_QUERY = ''
+
 /** Build the URL for a district section. Empty segment = the Overview hub. */
 export function buildDistrictSectionUrl(
   districtId: string,

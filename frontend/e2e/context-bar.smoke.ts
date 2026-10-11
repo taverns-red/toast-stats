@@ -11,10 +11,10 @@ import { test, expect, type Page } from '@playwright/test'
  * — jsdom has no layout. The bar is mounted once and hidden ≥768 by CSS, so
  * every locator is `:visible`-scoped (Lesson 149).
  *
- * Budget: everything above the section nav — top bar 56 + bar 44 + gap — ends
- * by 110px, so the first page-specific row starts there. (When the bottom
- * section bar #1832 replaces the top subnav, page content itself starts
- * there too.)
+ * Budget: top bar 56 + bar 44 + gap ends by 110px, so the first
+ * page-specific row starts there. Since #1832 the phone's section nav is the
+ * bottom bar (fixed, out of flow), so that row is the page content itself:
+ * the element after the section-bar nav in the DOM.
  */
 
 const ROUTES = [
@@ -29,7 +29,7 @@ const ROUTES = [
   '/district/61/action-list',
 ] as const
 
-const SECTION_NAV_TOP_MAX = 110
+const FIRST_ROW_TOP_MAX = 110
 
 async function load(page: Page, path: string): Promise<void> {
   await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
@@ -70,7 +70,13 @@ for (const width of [375, 390]) {
           lede: box('[data-testid="district-detail-lede"]'),
           toolbar: box('[role="toolbar"][aria-label="Data controls"]'),
           crumb: box('[data-testid="subpage-breadcrumb"]'),
-          subnav: box('[data-testid="district-subnav"]'),
+          firstRow: (() => {
+            const next = document.querySelector(
+              '[data-testid="district-section-bar"]'
+            )?.nextElementSibling
+            if (!next) return null
+            return { top: Math.round(next.getBoundingClientRect().top) }
+          })(),
           docOverflow: document.documentElement.scrollWidth - window.innerWidth,
         }
       })
@@ -97,7 +103,7 @@ for (const width of [375, 390]) {
       expect(m.crumb?.height ?? 0, ctx).toBe(0)
 
       // First page-specific row starts within the budget.
-      expect(m.subnav?.top ?? 999, ctx).toBeLessThanOrEqual(SECTION_NAV_TOP_MAX)
+      expect(m.firstRow?.top ?? 999, ctx).toBeLessThanOrEqual(FIRST_ROW_TOP_MAX)
 
       expect(m.docOverflow, ctx).toBeLessThanOrEqual(0)
     })
