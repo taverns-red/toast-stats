@@ -135,6 +135,11 @@ const measure = (page: Page, tableName: string) =>
       scrollerHidden: Math.max(0, scroller.scrollWidth - scroller.clientWidth),
       columns: ths.length,
       multiLineHeaders: headerLines.filter(h => h.lines > 1),
+      // One line is not enough: an ellipsized label hides the metric name.
+      truncatedHeaders: ths
+        .map(th => th.querySelector('.sortable-header__label') ?? th)
+        .filter(el => el.scrollWidth > el.clientWidth + 1)
+        .map(el => el.textContent?.trim()),
       tinyTargets: targets
         .map(t => ({ t: t.textContent?.trim(), ...rect(t).toJSON() }))
         .filter(r => r.height < 44 - 0.5),
@@ -159,11 +164,16 @@ for (const theme of THEMES) {
         await unmask(page)
         await page.waitForTimeout(500)
 
-        for (const step of ['default', 'swapped'] as const) {
-          if (step === 'swapped')
-            await page.getByRole('button', { name: r.swapChip }).click()
+        // Every metric must fit as a column: the default pair, then each
+        // chip in turn, ending on `swapChip` (the screenshot state).
+        const chips = (
+          await page.locator('.priority-columns__chip').allTextContents()
+        ).filter(c => c !== r.swapChip)
+        for (const step of ['default', ...chips, r.swapChip]) {
+          if (step !== 'default')
+            await page.getByRole('button', { name: step, exact: true }).click()
           // Awards resolve separately from rankings; wait for the chips.
-          if (step === 'swapped' && r.forceTiers)
+          if (step === 'Tier' && r.forceTiers)
             await page.locator('.priority-columns__tier').first().waitFor()
           const m = await measure(page, r.table)
           expect(m, `${r.path} ${step}`).not.toBeNull()
@@ -184,7 +194,11 @@ for (const theme of THEMES) {
           expect(m!.tinyTargets, `${r.path} ${step} <44px targets`).toEqual([])
           expect(m!.smallText, `${r.path} ${step} <14px text`).toEqual([])
           expect(m!.chipClips, `${r.path} ${step} clipped chips`).toBe(0)
-          if (step === 'swapped' && r.forceTiers)
+          expect(
+            m!.truncatedHeaders,
+            `${r.path} ${step} ellipsized headers`
+          ).toEqual([])
+          if (step === 'Tier' && r.forceTiers)
             expect(m!.chips, `${r.path} tier chips measured`).toBeGreaterThan(0)
         }
         if (process.env['SHOTS_DIR'])

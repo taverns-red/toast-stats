@@ -63,15 +63,15 @@
   }
 
   .priority-columns__col-identity {
-    width: 44%;
+    width: 40%;
   }
 
   .priority-columns__col-metric {
-    width: 28%;
+    width: 30%;
   }
 
   .priority-columns__table th {
-    padding: 0 6px;
+    padding: 0 4px;
     border-bottom: 1px solid var(--line);
     background-color: var(--surface-2);
     color: var(--ink-2);
@@ -92,7 +92,7 @@
   .priority-columns__table th .sortable-header__btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     width: 100%;
     min-height: 44px;
     max-width: 100%;
