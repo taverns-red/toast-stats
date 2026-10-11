@@ -87,7 +87,9 @@ export interface PruneLayerScope {
 export const PRUNE_LAYER_SCOPE: PruneLayerScope = {
   pruned: ['raw-csv', 'snapshots'],
   retained: ['time-series', 'club-trends', 'club-race', 'v1/rank-history'],
-  note: 'Derived layers retained by design (#1132) — trend surfaces keep full daily resolution',
+  // D5 (#1741): v1/rank-history is not a retained store — it is rebuilt from
+  // the surviving snapshots, so only the accumulating stores stay daily.
+  note: 'Layers prune never deletes (#1132) — time-series, club-trends and club-race keep full daily resolution; v1/rank-history is rebuilt from the surviving snapshots each run, so it thins to their dates (D5)',
 }
 
 /**

@@ -330,7 +330,10 @@ describe('PruneService', () => {
           'club-race',
           'v1/rank-history',
         ],
-        note: 'Derived layers retained by design (#1132) — trend surfaces keep full daily resolution',
+        // D5 (#1741): rank-history is rebuilt from the surviving snapshots,
+        // so it thins after a prune — only the accumulating stores keep
+        // full daily resolution.
+        note: 'Layers prune never deletes (#1132) — time-series, club-trends and club-race keep full daily resolution; v1/rank-history is rebuilt from the surviving snapshots each run, so it thins to their dates (D5)',
       }
       expect(dryRun.layerScope).toEqual(expectedScope)
       expect(execute.layerScope).toEqual(expectedScope)
