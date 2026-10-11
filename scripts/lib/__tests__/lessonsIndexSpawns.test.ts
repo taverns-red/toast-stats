@@ -7,7 +7,9 @@
  * and crossed the test timeout under parallel load — and got slower with every
  * lesson added. A wall-clock assertion would be flaky in its own right, so
  * this pins the cause instead: the number of external processes the script
- * spawns must not grow with the number of lessons.
+ * spawns must not grow with the number of lessons. relevant-lessons.sh had the
+ * same per-lesson `fm` fork in its newest-lesson pick (its 600-lesson #1667
+ * test hit ~13s under parallel load), so it is pinned here too.
  */
 import { describe, it, expect, afterAll } from 'vitest'
 import { execFileSync } from 'node:child_process'
@@ -23,10 +25,22 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 
 const ROOT = process.cwd()
-const SCRIPT = path.join(ROOT, 'scripts/lessons-index.sh')
+const INDEX_SCRIPT = path.join(ROOT, 'scripts/lessons-index.sh')
+const LOADER_SCRIPT = path.join(ROOT, 'scripts/relevant-lessons.sh')
 
 /** Every external the script could plausibly reach for, per lesson or not. */
-const SHIMMED = ['awk', 'basename', 'dirname', 'sort', 'find', 'cat', 'sed']
+const SHIMMED = [
+  'awk',
+  'basename',
+  'dirname',
+  'sort',
+  'find',
+  'cat',
+  'sed',
+  'grep',
+  'wc',
+  'tr',
+]
 
 const work = mkdtempSync(path.join(os.tmpdir(), 'ts-lessons-spawns-'))
 afterAll(() => rmSync(work, { recursive: true, force: true }))
@@ -52,6 +66,7 @@ for (const cmd of SHIMMED) {
 const corpus = (n: number): string => {
   const dir = path.join(work, `corpus-${n}`)
   mkdirSync(path.join(dir, 'lessons'), { recursive: true })
+  writeFileSync(path.join(dir, 'INDEX.md'), '# index\n')
   for (let i = 0; i < n; i++) {
     const day = String((i % 28) + 1).padStart(2, '0')
     writeFileSync(
@@ -62,26 +77,40 @@ const corpus = (n: number): string => {
   return dir
 }
 
-const spawnsFor = (lessonsDir: string): number => {
+const bodyFile = path.join(work, 'body.txt')
+writeFileSync(bodyFile, 'chore: no manifest\n')
+
+const spawnsFor = (script: string, args: string[], lessonsDir: string) => {
   writeFileSync(spawnLog, '')
-  execFileSync('bash', [SCRIPT, '--stdout'], {
+  execFileSync('bash', [script, ...args], {
     cwd: ROOT,
     encoding: 'utf8',
     env: {
       ...process.env,
       LESSONS_DIR: lessonsDir,
+      ISSUE_BODY_FILE: bodyFile,
       PATH: `${shimDir}:${process.env.PATH}`,
     },
   })
   return readFileSync(spawnLog, 'utf8').split('\n').filter(Boolean).length
 }
 
-describe('lessons-index.sh spawn count is independent of corpus size (#1748)', () => {
-  it('spawns the same number of processes for 5 lessons as for 40', () => {
-    const small = spawnsFor(corpus(5))
-    const large = spawnsFor(corpus(40))
+describe('lesson scripts spawn a corpus-size-independent process count (#1748)', () => {
+  it('lessons-index.sh spawns the same for 5 lessons as for 40', () => {
+    const small = spawnsFor(INDEX_SCRIPT, ['--stdout'], corpus(5))
+    const large = spawnsFor(INDEX_SCRIPT, ['--stdout'], corpus(40))
     expect(small).toBeGreaterThan(0) // the shims are actually on PATH
     expect(large, `5 lessons: ${small} spawns, 40 lessons: ${large}`).toBe(
+      small
+    )
+  })
+
+  it('relevant-lessons.sh (large-corpus path) spawns the same for 20 as for 60', () => {
+    // Both above SMALL_CORPUS (15), so both take the newest-by-date pick.
+    const small = spawnsFor(LOADER_SCRIPT, ['999'], corpus(20))
+    const large = spawnsFor(LOADER_SCRIPT, ['999'], corpus(60))
+    expect(small).toBeGreaterThan(0)
+    expect(large, `20 lessons: ${small} spawns, 60 lessons: ${large}`).toBe(
       small
     )
   })
