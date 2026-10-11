@@ -14,6 +14,12 @@
  *   - numeric    ⇄ `min..max`, open end omitted (`?membersNeeded=2..`, `?m=..20`)
  *   - categorical⇄ comma-joined values        (`?distinguished=President,Select`)
  *
+ * Facet forms (#1836, the phone "Filter & sort" sheet):
+ *   - `status` may carry several comma-joined aliases (`?status=thriving,intervention`)
+ *   - division/area chips are an exact-match set, written to their own keys so
+ *     they never collide with the desktop text match on the same field:
+ *     `?divisions=Division A,Division C`, `?areas=Area A1`
+ *
  * Reserved params (`py`, `date`, `sort`, `dir`) are never read or written here.
  */
 import {
@@ -26,6 +32,12 @@ import {
 /** name is carried by `search`, not its own key. */
 const SEARCH_PARAM = 'search'
 const STATUS_PARAM = 'status'
+
+/** Exact-match facet keys for the text-configured division/area fields. */
+const FACET_PARAMS: Partial<Record<SortField, string>> = {
+  division: 'divisions',
+  area: 'areas',
+}
 
 /**
  * "Close to Distinguished" preset (#979). The preset is a separate pipeline
@@ -74,6 +86,7 @@ export const FILTER_PARAM_KEYS: string[] = [
   SEARCH_PARAM,
   STATUS_PARAM,
   ...FILTERABLE.map(c => c.field).filter(f => f !== 'name' && f !== 'status'),
+  ...Object.values(FACET_PARAMS),
 ]
 
 const parseNumericRange = (
@@ -106,12 +119,15 @@ const serializeNumericRange = (value: (number | null)[]): string | null => {
 export function paramsToFilterState(params: URLSearchParams): FilterState {
   const state: FilterState = {}
 
-  const status = statusUrlToInternal(params.get(STATUS_PARAM))
-  if (status) {
+  const statuses = (params.get(STATUS_PARAM) ?? '')
+    .split(',')
+    .map(statusUrlToInternal)
+    .filter((s): s is string => s !== null)
+  if (statuses.length) {
     state['status'] = {
       field: 'status',
       type: 'categorical',
-      value: [status],
+      value: statuses,
       operator: 'in',
     }
   }
@@ -163,6 +179,23 @@ export function paramsToFilterState(params: URLSearchParams): FilterState {
     }
   }
 
+  // Facet keys win over the text form of the same field: the sheet writes
+  // only the facet key, so both present means a hand-edited URL.
+  for (const [field, key] of Object.entries(FACET_PARAMS) as [
+    SortField,
+    string,
+  ][]) {
+    const values = (params.get(key) ?? '').split(',').filter(Boolean)
+    if (values.length) {
+      state[field] = {
+        field,
+        type: 'categorical',
+        value: values,
+        operator: 'in',
+      }
+    }
+  }
+
   return state
 }
 
@@ -180,10 +213,10 @@ export function filterStateToParams(
       const values = Array.isArray(filter.value)
         ? (filter.value as string[])
         : []
-      if (values.length === 1 && values[0]) {
-        const alias = statusInternalToUrl(values[0])
-        if (alias) out.push([STATUS_PARAM, alias])
-      }
+      const aliases = values
+        .map(statusInternalToUrl)
+        .filter((a): a is string => a !== null)
+      if (aliases.length) out.push([STATUS_PARAM, aliases.join(',')])
       continue
     }
 
@@ -206,7 +239,8 @@ export function filterStateToParams(
         ? (filter.value as string[])
         : []
       const present = values.filter(Boolean)
-      if (present.length) out.push([field, present.join(',')])
+      if (present.length)
+        out.push([FACET_PARAMS[field] ?? field, present.join(',')])
     }
   }
 

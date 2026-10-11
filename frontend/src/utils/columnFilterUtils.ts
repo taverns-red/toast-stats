@@ -120,6 +120,12 @@ export function applyFilter(
           return divisionName.includes(searchTerm)
         })
       }
+      // Phone facet chips (#1836): an exact-match set, not a text match.
+      if (filter.type === 'categorical' && Array.isArray(filter.value)) {
+        const selected = filter.value as string[]
+        if (selected.length === 0) return clubs
+        return clubs.filter(club => selected.includes(club.divisionName))
+      }
       break
 
     case 'area':
@@ -133,6 +139,12 @@ export function applyFilter(
           }
           return areaName.includes(searchTerm)
         })
+      }
+      // Phone facet chips (#1836): exact match, so "A1" never selects "A12".
+      if (filter.type === 'categorical' && Array.isArray(filter.value)) {
+        const selected = filter.value as string[]
+        if (selected.length === 0) return clubs
+        return clubs.filter(club => selected.includes(club.areaName))
       }
       break
 
