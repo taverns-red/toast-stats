@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Stand-in for `tsx scripts/guard-snapshot-upload.ts <date> <snapshotsDir>`
+# (#1742). Same argv and exit codes as the real guard (#1621):
+#   0 upload allowed · 3 refused (remote close) · 1 metadata unreadable
+# The local metadata must exist, as the real guard reads it first.
+# Env: STUB_LOG, STUB_GUARD_REFUSE (ERE → 3), STUB_GUARD_ERROR (ERE → 1)
+set -euo pipefail
+DATE="${1:?}"
+DIR="${2:?}"
+if [ -n "${STUB_LOG:-}" ]; then printf 'guard %s\n' "${DATE}" >>"${STUB_LOG}"; fi
+if [ ! -f "${DIR}/${DATE}/metadata.json" ]; then
+  echo "guard-snapshot-upload failed: ENOENT ${DIR}/${DATE}/metadata.json" >&2
+  exit 1
+fi
+if [ -n "${STUB_GUARD_REFUSE:-}" ] && [[ "${DATE}" =~ ${STUB_GUARD_REFUSE} ]]; then
+  echo "snapshot upload guard ${DATE}: REFUSE — remote is a close" >&2
+  exit 3
+fi
+if [ -n "${STUB_GUARD_ERROR:-}" ] && [[ "${DATE}" =~ ${STUB_GUARD_ERROR} ]]; then
+  echo "guard-snapshot-upload failed: 503" >&2
+  exit 1
+fi
+echo "snapshot upload guard ${DATE}: ALLOW" >&2

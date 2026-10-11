@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Stand-in for `tsx scripts/resolve-rebuild-source.ts <date>` (#1742). Same
+# contract as the real resolver (#1608): the source raw date is the only
+# stdout; a non-zero exit means GCS could not be read.
+# Env: STUB_LOG, STUB_RESOLVE (`D=S[,D=S]`), STUB_RESOLVE_FAIL (ERE → exit 1)
+set -euo pipefail
+DATE="${1:?}"
+if [ -n "${STUB_LOG:-}" ]; then printf 'resolve %s\n' "${DATE}" >>"${STUB_LOG}"; fi
+if [ -n "${STUB_RESOLVE_FAIL:-}" ] && [[ "${DATE}" =~ ${STUB_RESOLVE_FAIL} ]]; then
+  echo "resolve-rebuild-source failed: 503" >&2
+  exit 1
+fi
+for pair in ${STUB_RESOLVE//,/ }; do
+  if [ "${pair%%=*}" = "${DATE}" ]; then
+    echo "${pair#*=}"
+    exit 0
+  fi
+done
+echo "${DATE}"
