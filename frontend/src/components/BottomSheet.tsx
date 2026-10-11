@@ -29,6 +29,8 @@ export interface BottomSheetProps {
   closeLabel?: string
   /** DOM id for the dialog, so a trigger can point `aria-controls` at it. */
   id?: string
+  /** 'full' fills the viewport (#1834's full-table sheet). Default: partial. */
+  variant?: 'default' | 'full'
 }
 
 export const BottomSheet: React.FC<BottomSheetProps> = ({
