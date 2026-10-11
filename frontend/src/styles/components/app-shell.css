@@ -2373,6 +2373,169 @@
     }
   }
 
+  /* #1783/#1790 — §3.2 panel slot (Education, then Compliance). One column
+     on phones; side by side from 768px, a lone panel spanning the row. */
+  .club-panels-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--rt-space-4);
+    margin-bottom: var(--rt-space-4);
+  }
+
+  @media (min-width: 768px) {
+    .club-panels-grid {
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+  }
+
+  /* #1790 — Education panel internals. Text uses the remapping --ink-*
+     tokens (Lesson 093); bar fills are decoration — every value is printed
+     beside its label — so the fixed --rt-* hues are safe in both themes. */
+  .club-edu__note {
+    margin: 0;
+    font-family: var(--rt-font-body);
+    font-size: var(--rt-text-sm);
+    color: var(--ink-2);
+  }
+
+  .club-edu__kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--rt-space-2);
+    margin: 0 0 var(--rt-space-4);
+  }
+
+  .club-edu__kpi dt {
+    font-family: var(--rt-font-body);
+    font-size: var(--rt-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .club-edu__kpi dd {
+    margin: var(--rt-space-1) 0 0;
+    font-family: var(--rt-font-display);
+    font-size: var(--rt-text-lg);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .club-edu__stack {
+    display: flex;
+    height: 10px;
+    overflow: hidden;
+    border-radius: var(--rt-radius-sm);
+    background-color: var(--line);
+  }
+
+  .club-edu__seg {
+    flex-basis: 0;
+    min-width: 4px;
+  }
+
+  .club-edu__seg--pathways {
+    background-color: var(--rt-stats);
+  }
+
+  .club-edu__seg--legacy {
+    background-color: var(--ink-3);
+  }
+
+  .club-edu__seg--dtm {
+    background-color: var(--rt-good);
+  }
+
+  .club-edu__legend {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rt-space-1) var(--rt-space-4);
+    margin: var(--rt-space-2) 0 var(--rt-space-4);
+    padding: 0;
+    font-family: var(--rt-font-body);
+    font-size: var(--rt-text-sm);
+    color: var(--ink-2);
+  }
+
+  .club-edu__legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--rt-space-1);
+  }
+
+  .club-edu__swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  .club-edu__subhead {
+    margin: 0 0 var(--rt-space-2);
+    font-family: var(--rt-font-body);
+    font-size: var(--rt-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .club-edu__levels,
+  .club-edu__paths {
+    list-style: none;
+    margin: 0 0 var(--rt-space-4);
+    padding: 0;
+    font-family: var(--rt-font-body);
+    font-size: var(--rt-text-sm);
+    color: var(--ink);
+  }
+
+  .club-edu__levels:last-child,
+  .club-edu__paths:last-child {
+    margin-bottom: 0;
+  }
+
+  .club-edu__level {
+    display: grid;
+    grid-template-columns: 4.5em 1fr 2.5em;
+    align-items: center;
+    gap: var(--rt-space-2);
+    padding: 2px 0;
+  }
+
+  .club-edu__bar {
+    height: 8px;
+    border-radius: var(--rt-radius-sm);
+    background-color: var(--line);
+    overflow: hidden;
+  }
+
+  .club-edu__bar-fill {
+    display: block;
+    height: 100%;
+    background-color: var(--rt-stats);
+  }
+
+  .club-edu__level-val {
+    text-align: right;
+    font-weight: 600;
+  }
+
+  .club-edu__paths {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rt-space-2);
+  }
+
+  .club-edu__paths li {
+    padding: 2px var(--rt-space-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink-2);
+  }
+
   /* Panel with a bordered header + padded body (reference .panel/.panel-h/
      .panel-body). Club-prefixed to avoid colliding with any global panel. */
   .club-panel {
