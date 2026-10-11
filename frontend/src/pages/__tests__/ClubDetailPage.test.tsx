@@ -415,6 +415,64 @@ describe('ClubDetailPage (#208)', () => {
     ).not.toBeInTheDocument()
   })
 
+  // #1790 — Education panel in the §3.2 panel slot, fed by the reports
+  // sidecar the analytics hook already fetched for the page's date (R3).
+  it('renders the Education panel from the reports ledger, after the trend row (#1790)', () => {
+    const mockedHook = vi.mocked(useDistrictAnalytics)
+    mockedHook.mockReturnValueOnce({
+      data: {
+        districtId: '61',
+        allClubs: [baseMockClub],
+        districtReports: {
+          districtId: '61',
+          programYear: '2025-2026',
+          generatedAt: '2025-10-16T09:00:00.000Z',
+          sections: {
+            educationAchievements: {
+              sources: [
+                {
+                  reportType: 'education-achievements',
+                  tableId: 'c757d313-f815-4b22-93dc-b839d04cec7b',
+                  asOf: 'October 15, 2025',
+                },
+              ],
+              records: [
+                {
+                  club: '606',
+                  division: 'A',
+                  area: 'A1',
+                  name: 'St Lawrence Toastmasters',
+                  location: 'Ottawa',
+                  award: 'PM1Presentation Mastery Level 1',
+                  achievementCount: 4,
+                },
+              ],
+            },
+          },
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    const { container } = renderWithRoute()
+    const panel = screen.getByRole('region', { name: 'Education' })
+    expect(within(panel).getByText('Awards').nextSibling).toHaveTextContent('4')
+    const trendGrid = container.querySelector('.club-trend-grid') as HTMLElement
+    expect(trendGrid.compareDocumentPosition(panel)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    )
+  })
+
+  it('says education is not available when the date has no reports file (#1790)', () => {
+    renderWithRoute()
+    expect(
+      within(screen.getByRole('region', { name: 'Education' })).getByText(
+        /not available for this date/i
+      )
+    ).toBeInTheDocument()
+  })
+
   it('renders DCP Goals Progress section', () => {
     renderWithRoute()
 
