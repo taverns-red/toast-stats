@@ -1,6 +1,7 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { CLUBS_SECTIONS } from '../../config/clubsSections'
+import { fadeEdgeAttrs, useSubnavScroll } from '../../hooks/useSubnavScroll'
 
 /* #1556 — `/clubs` secondary route-nav, mirroring DistrictSubnav (ADR-005 §3):
    a lateral nav of REAL sibling routes, `nav[aria-label]` of its own,
@@ -10,22 +11,28 @@ import { CLUBS_SECTIONS } from '../../config/clubsSections'
    route-nav" primitive (horizontal-scroll link row, 44px targets, active =
    colour AND bottom rule), and a second copy would drift. */
 
-export const ClubsSubnav: React.FC = () => (
-  <nav
-    aria-label="Clubs worldwide sections"
-    className="district-subnav clubs-subnav"
-    data-testid="clubs-subnav"
-  >
-    <ul className="district-subnav__list">
-      {CLUBS_SECTIONS.map(({ label, path, end }) => (
-        <li key={path} className="district-subnav__item">
-          <NavLink to={path} end={end} className="district-subnav__link">
-            {label}
-          </NavLink>
-        </li>
-      ))}
-    </ul>
-  </nav>
-)
+export const ClubsSubnav: React.FC = () => {
+  // #1829 — same active-link centring + fade cues as DistrictSubnav.
+  const { ref, edges } = useSubnavScroll<HTMLElement>()
+  return (
+    <nav
+      ref={ref}
+      aria-label="Clubs worldwide sections"
+      className="district-subnav clubs-subnav"
+      data-testid="clubs-subnav"
+      {...fadeEdgeAttrs(edges)}
+    >
+      <ul className="district-subnav__list">
+        {CLUBS_SECTIONS.map(({ label, path, end }) => (
+          <li key={path} className="district-subnav__item">
+            <NavLink to={path} end={end} className="district-subnav__link">
+              {label}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
 
 export default ClubsSubnav

@@ -18,13 +18,61 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
+    /* #1829 — a keyboard-focused link scrolls clear of the edge fade. */
+    --subnav-fade: 32px;
+    scroll-padding-inline: var(--subnav-fade);
+  }
+
+  /* #1829 — fade cues on whichever edge has more links (flags set by
+     useSubnavScroll). A mask, not an overlay: it fades the nav's own pixels,
+     so it is correct on any theme surface with no colour token, and it is
+     purely decorative (no DOM node for assistive tech to meet). */
+  .district-subnav[data-fade-end] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - var(--subnav-fade)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - var(--subnav-fade)),
+      transparent
+    );
+  }
+
+  .district-subnav[data-fade-start] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--subnav-fade)
+    );
+    mask-image: linear-gradient(to right, transparent, #000 var(--subnav-fade));
+  }
+
+  .district-subnav[data-fade-start][data-fade-end] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--subnav-fade),
+      #000 calc(100% - var(--subnav-fade)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--subnav-fade),
+      #000 calc(100% - var(--subnav-fade)),
+      transparent
+    );
   }
 
   .district-subnav__list {
     display: flex;
     gap: 2px;
     margin: 0;
-    padding: 0;
+    /* #1829 — 8px edge padding so the first/last link is not flush with the
+       fade. */
+    padding: 0 8px;
     list-style: none;
     /* Keep items on one row so the container scrolls instead of wrapping. */
     min-width: max-content;
