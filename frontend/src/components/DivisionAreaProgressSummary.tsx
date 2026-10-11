@@ -29,7 +29,7 @@
  * - Semantic HTML with appropriate ARIA labels
  */
 
-import React, { useMemo } from 'react'
+import React, { useCallback, useId, useMemo, useState } from 'react'
 import { DivisionPerformance, AreaPerformance } from '../utils/divisionStatus'
 import { calculateAreaGapAnalysis } from '../utils/areaGapAnalysis'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
@@ -47,6 +47,9 @@ import {
 } from '../utils/divisionProgressText'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { Chevron } from './MobileRowList'
+import { DivisionRecognitionChip } from './DivisionRecognitionChip'
 
 /**
  * Area performance data with parent division context
@@ -71,6 +74,13 @@ export interface DivisionAreaProgressSummaryProps {
   divisions: DivisionPerformance[]
   /** Loading state indicator */
   isLoading?: boolean
+  /**
+   * Divisions open in the phone disclosures (#1862). Page-owned so the open
+   * set can live in the URL (R3). Omitted → local state, all collapsed.
+   */
+  openDivisions?: readonly string[] | undefined
+  /** Called with the next open set when a division header is tapped. */
+  onOpenDivisionsChange?: ((next: string[]) => void) | undefined
 }
 
 /**
@@ -167,7 +177,30 @@ const getDivisionRecognitionLabel = (
  */
 export const DivisionAreaProgressSummary: React.FC<
   DivisionAreaProgressSummaryProps
-> = ({ divisions, isLoading = false }) => {
+> = ({
+  divisions,
+  isLoading = false,
+  openDivisions,
+  onOpenDivisionsChange,
+}) => {
+  // Below 768 every division narrative + every area narrative stacked to
+  // ~21,700 px for D61 (#1862). On phones each division is a collapsed
+  // disclosure; the narratives inside are unchanged.
+  const isMobile = useIsMobile(768)
+  const baseId = useId()
+  const [localOpen, setLocalOpen] = useState<string[]>([])
+  const openIds = openDivisions ?? localOpen
+  const toggleDivision = useCallback(
+    (id: string) => {
+      const next = openIds.includes(id)
+        ? openIds.filter(d => d !== id)
+        : [...openIds, id]
+      if (onOpenDivisionsChange) onOpenDivisionsChange(next)
+      else setLocalOpen(next)
+    },
+    [openIds, onOpenDivisionsChange]
+  )
+
   /**
    * Process divisions and areas: calculate gap analysis, generate progress text
    *
@@ -326,7 +359,13 @@ export const DivisionAreaProgressSummary: React.FC<
       </header>
 
       {/* Division Groups */}
-      <div className="divide-y divide-gray-100">
+      <div
+        className={
+          isMobile
+            ? 'progress-summary-mobile__list'
+            : 'divide-y divide-gray-100'
+        }
+      >
         {divisionGroups.map(group => {
           // Calculate division gap analysis for badge display
           const divisionGapAnalysis = calculateDivisionGapAnalysis({
@@ -345,20 +384,8 @@ export const DivisionAreaProgressSummary: React.FC<
             divisionGapAnalysis.meetsNoNetLossRequirement
           )
 
-          return (
-            <section
-              key={group.divisionId}
-              className="p-6"
-              aria-labelledby={`division-${group.divisionId}-heading`}
-            >
-              {/* Division Header */}
-              <h4
-                id={`division-${group.divisionId}-heading`}
-                className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-4"
-              >
-                Division {group.divisionId}
-              </h4>
-
+          const body = (
+            <>
               {/* Division Progress Narrative - Requirements: 10.5, 10.6, 11.2, 11.4, 11.5 */}
               <article
                 className="bg-tm-loyal-blue/10 rounded-lg p-4 border-2 border-tm-loyal-blue/30 mb-4"
@@ -431,6 +458,66 @@ export const DivisionAreaProgressSummary: React.FC<
                   )
                 })}
               </div>
+            </>
+          )
+
+          if (isMobile) {
+            const isOpen = openIds.includes(group.divisionId)
+            const panelId = `${baseId}-div-${group.divisionId}`
+            const areaCount = group.areas.length
+            return (
+              <section
+                key={group.divisionId}
+                className="mobile-row-group progress-summary-mobile"
+              >
+                <h4 className="mobile-row-group__heading">
+                  <button
+                    type="button"
+                    className="mobile-row-group__toggle"
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    onClick={() => toggleDivision(group.divisionId)}
+                  >
+                    <Chevron
+                      className={`mobile-row-group__chevron${
+                        isOpen ? ' mobile-row-group__chevron--open' : ''
+                      }`}
+                    />
+                    <span className="mobile-row-group__label">
+                      Division {group.divisionId}
+                    </span>
+                    <DivisionRecognitionChip division={group.division} />
+                    <span className="mobile-row-group__summary">
+                      {areaCount} area{areaCount === 1 ? '' : 's'}
+                    </span>
+                  </button>
+                </h4>
+                <div
+                  id={panelId}
+                  hidden={!isOpen}
+                  className="progress-summary-mobile__panel"
+                >
+                  {isOpen && body}
+                </div>
+              </section>
+            )
+          }
+
+          return (
+            <section
+              key={group.divisionId}
+              className="p-6"
+              aria-labelledby={`division-${group.divisionId}-heading`}
+            >
+              {/* Division Header */}
+              <h4
+                id={`division-${group.divisionId}-heading`}
+                className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-4"
+              >
+                Division {group.divisionId}
+              </h4>
+
+              {body}
             </section>
           )
         })}

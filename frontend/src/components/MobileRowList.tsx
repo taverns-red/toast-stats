@@ -75,7 +75,7 @@ interface MobileRowListProps {
 export const INITIAL_VISIBLE_ROWS = 50
 export const SHOW_MORE_STEP = 25
 
-const Chevron: React.FC<{ className: string }> = ({ className }) => (
+export const Chevron: React.FC<{ className: string }> = ({ className }) => (
   <svg
     className={className}
     width="16"
