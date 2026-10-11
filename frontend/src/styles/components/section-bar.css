@@ -150,3 +150,12 @@
     box-shadow: inset 4px 0 0 var(--link);
   }
 }
+
+/* With the section nav moved to the bottom edge, the block that followed the
+   old top row (e.g. .club-grid-page, .action-list-page: 16px margin-top)
+   would start 16px lower than on other routes. The gap under the context bar
+   is the bar's own; keyed on this primitive, not per page. Unlayered with
+   (0,1,1) specificity because those page rules are unlayered (0,1,0). */
+nav.section-bar + * {
+  margin-top: 0;
+}

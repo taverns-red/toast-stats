@@ -53,6 +53,13 @@ describe('section-bar.css (#1832)', () => {
     )
   })
 
+  it('drops the top margin a page kept for the old top row (grid, action list)', () => {
+    // Keyed on the new primitive, not on each page (Lesson: key a responsive
+    // replacement on the primitive): the gap under the context bar is the
+    // bar's own 8px, so content starts at the same offset on every route.
+    expect(rule('.section-bar + *')).toMatch(/margin-top:\s*0/)
+  })
+
   it('items are ≥44px targets with a ≥12px label under the icon', () => {
     const link = rule('.section-bar__link')
     expect(link).toMatch(/min-height:\s*44px/)

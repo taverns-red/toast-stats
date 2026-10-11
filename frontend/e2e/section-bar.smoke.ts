@@ -179,7 +179,8 @@ test('More opens the shared sheet; a section is two taps and a real route', asyn
     'Action List',
   ])
   await sheet.getByRole('link', { name: 'Rankings' }).click()
-  await expect(page).toHaveURL(/\/district\/61\/rankings$/)
+  // The app may append its URL state (?date=…); the path is what matters.
+  await expect(page).toHaveURL(/\/district\/61\/rankings(\?|$)/)
   await expect(sheet).toBeHidden()
   await expect(page.locator(`${BAR} button`)).toHaveAttribute(
     'data-active',
@@ -187,7 +188,7 @@ test('More opens the shared sheet; a section is two taps and a real route', asyn
   )
   // The back button returns to the hub (routes, not tabs).
   await page.goBack()
-  await expect(page).toHaveURL(/\/district\/61$/)
+  await expect(page).toHaveURL(/\/district\/61(\?|$)/)
   await expect(
     page.locator(BAR).getByRole('link', { name: 'Overview' })
   ).toHaveAttribute('aria-current', 'page')
