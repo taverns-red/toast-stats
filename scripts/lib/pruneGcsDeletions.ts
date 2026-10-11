@@ -24,10 +24,15 @@
 export const PRUNE_DELETABLE_LAYERS = ['raw-csv', 'snapshots'] as const
 
 /**
- * Derived layers retained by design — operator ruling on #1132. The trend
- * surfaces are the product; they keep full daily resolution. Listed here so
- * the scope guard's error and the runner's report can name them, never as a
- * deletion input.
+ * Layers prune never deletes from. Listed here so the scope guard's error and
+ * the runner's report can name them, never as a deletion input.
+ *
+ * The three accumulating stores keep full daily resolution by design
+ * (operator ruling on #1132): the trend surfaces are the product.
+ * `v1/rank-history` is NOT one of them (decision D5, #1741). Every run
+ * rebuilds it from the surviving `snapshots/<date>/all-districts-rankings.json`,
+ * so after a prune it thins to the surviving dates. Prune leaves the objects
+ * alone, but nothing keeps their daily points.
  */
 export const PRUNE_RETAINED_LAYERS = [
   'time-series',
@@ -35,6 +40,7 @@ export const PRUNE_RETAINED_LAYERS = [
   // The club-race crossing store (#1556): a pruned daily snapshot's
   // reachedOn survives ONLY here, so it is the retention rule's reason.
   'club-race',
+  // Derived, not retained (D5): rebuilt from the remaining snapshots each run.
   'v1/rank-history',
 ] as const
 
