@@ -1,8 +1,17 @@
 # ADR-009: Full-range re-derive promote semantics (value-aware gate + seed-from-prod)
 
-**Status**: Accepted — amended 2026-06-03 (D3, closing-period auto-allow, #1084)
+**Status**: Accepted (D2 superseded by [ADR-015](015-canonical-pipeline-modes-as-parameters.md), 2026-10-11) — amended 2026-06-03 (D3, closing-period auto-allow, #1084)
 **Date**: 2026-05-31
 **Issue**: #1034 (epic #1031 — rerun pipeline 2017→now; Sprint 1 investigation #1033)
+
+> **Status note (2026-10-11):** D2 (seed staging from prod, then let the
+> whole-prefix additive rsync promote) is **superseded by
+> [ADR-015](015-canonical-pipeline-modes-as-parameters.md) P6**: promotion
+> copies only the run manifest's objects, for the dates the gates passed. This
+> adopts this ADR's own "scoped per-date promote" alternative. The 2026-10-11
+> mode-parity audit showed that the gates D2 relied on cover about one artifact
+> in fifteen per date (epic #1760, migration step #1763). D1, D3 and D4 are
+> unchanged.
 
 ## Context
 
@@ -63,7 +72,7 @@ verdict is "do not promote." It is **ANDed with** the existing count gate in
 so the operator promotes a re-derive only after reviewing the surfaced changed
 dates in the run summary.
 
-### D2 — Partial-range rebuild seeds staging from prod, then overlays the rebuild
+### D2 — Partial-range rebuild seeds staging from prod, then overlays the rebuild (superseded by ADR-015 P6, 2026-10-11)
 
 For the full-range execution (Sprint 3), **seed the staging bucket from prod
 first, then run the rebuild over it** (rebuild writes only raw-csv-backed dates).
