@@ -43,6 +43,8 @@ import { ClubDCPGoalsPanel } from '../components/ClubDCPGoalsPanel'
 import { useClubGoalTimeline } from '../hooks/useClubGoalTimeline'
 import { buildClubMeetingInfo } from '../utils/clubMeetingInfo'
 import { ClubWhereItMeets } from '../components/clubs/ClubWhereItMeets'
+import { summarizeClubEducation } from '../utils/clubEducation'
+import { ClubEducationPanel } from '../components/clubs/ClubEducationPanel'
 
 // ── DCP Status Card ────────────────────────────────────────────────────────
 // Re-skinned to club-reference.html (#619): a `.club-panel` with a bordered
@@ -324,6 +326,12 @@ const ClubDetailPage: React.FC = () => {
   // recognition rungs existed (#1406). Resolved before the projection memo
   // because that memo now depends on it.
   const programYear = effectiveProgramYear ?? selectedProgramYear
+
+  // #1790 — this club's slice of the education ledger for the page's date.
+  const educationSummary = useMemo(
+    () => summarizeClubEducation(analytics?.districtReports, clubId ?? ''),
+    [analytics, clubId]
+  )
 
   // Compute DCP projection
   const projection: ClubDCPProjection | null = useMemo(() => {
@@ -1004,9 +1012,18 @@ const ClubDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* #1783 — §3.2 panel slot: the club's own panels (Education +
-              Compliance, #1790) render here, between the trend row and the
-              callouts. Empty slots render nothing, so no reserved height. */}
+          {/* #1783 — §3.2 panel slot: the club's own panels render here,
+              between the trend row and the callouts. #1790 — Education from
+              the reports ledger the analytics hook already fetched for the
+              page's date (R3); always rendered, so the loaded page never
+              shifts when the sidecar is absent ("not available" copy). The
+              Compliance panel (#1790) joins this grid next. */}
+          <div className="club-panels-grid">
+            <ClubEducationPanel
+              summary={educationSummary}
+              programYearLabel={programYear.label}
+            />
+          </div>
 
           {/* Risk Factors */}
           {club.riskFactors.length > 0 && (
