@@ -1004,18 +1004,9 @@ const ClubDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* Worldwide standing (#1556) — cohort percentile for any club; a
-              rank only when the club has reached a tier. */}
-          <WorldwideStandingCard
-            race={globalRace}
-            clubId={normalizeClubId(club.clubId)}
-            goalsMet={
-              club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]
-                ?.goalsAchieved ?? 0
-            }
-            members={latestMembership}
-            reached={raceReachedById.get(normalizeClubId(club.clubId)) ?? null}
-          />
+          {/* #1783 — §3.2 panel slot: the club's own panels (Education +
+              Compliance, #1790) render here, between the trend row and the
+              callouts. Empty slots render nothing, so no reserved height. */}
 
           {/* Risk Factors */}
           {club.riskFactors.length > 0 && (
@@ -1079,6 +1070,22 @@ const ClubDetailPage: React.FC = () => {
             clubRecord={clubRawRecord}
             isLoading={isLoadingStats}
             timelineRows={goalTimelineRows}
+          />
+
+          {/* Worldwide standing (#1556) — cohort percentile for any club; a
+              rank only when the club has reached a tier. #1783 moved it below
+              the DCP goals grid per the §3.2 layout: the club's own numbers
+              first, the worldwide comparison last. The mini-map (#1784, not
+              built yet) slots in after it. */}
+          <WorldwideStandingCard
+            race={globalRace}
+            clubId={normalizeClubId(club.clubId)}
+            goalsMet={
+              club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]
+                ?.goalsAchieved ?? 0
+            }
+            members={latestMembership}
+            reached={raceReachedById.get(normalizeClubId(club.clubId)) ?? null}
           />
 
           {/* Bottom back-link (#618) — the redesign reintroduces a footer
