@@ -143,6 +143,36 @@
       border: 0;
     }
 
+    /* Entity pages (division, area, region, clubs-world…) share
+       .districts-page-header inside a plain .app-shell__page. Keyed on the bar
+       so the landing's own header (no bar) is untouched. */
+    .app-shell__page:has(> .context-bar) {
+      padding-top: 0;
+    }
+
+    .context-bar ~ .districts-page-header {
+      margin: 0;
+      gap: 0;
+    }
+
+    .context-bar ~ .districts-page-header .districts-page-header__lede,
+    .context-bar ~ .districts-page-header .districts-page-header__actions,
+    .context-bar ~ .districts-page-header .districts-page-header__eyebrow {
+      display: none;
+    }
+
+    .context-bar ~ .districts-page-header .districts-page-header__title {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     /* The one-crumb breadcrumb duplicated the bar's back crumb. */
     .context-bar ~ .subpage-breadcrumb {
       display: none;

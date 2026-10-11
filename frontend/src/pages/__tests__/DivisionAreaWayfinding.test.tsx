@@ -10,7 +10,7 @@
  */
 import React from 'react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, cleanup, within } from '@testing-library/react'
+import { render, cleanup, within, waitFor } from '@testing-library/react'
 import {
   MemoryRouter,
   Routes,
@@ -157,6 +157,37 @@ describe('DivisionPage wayfinding (#1017)', () => {
     const current = within(nav).getByText('Division A')
     expect(current).toHaveAttribute('aria-current', 'page')
     expect(current.closest('a')).toBeNull()
+  })
+})
+
+describe('DivisionPage phone context bar (#1831)', () => {
+  it('backs up one level to the district and shows the PY · date chip', () => {
+    const { getByTestId } = renderDivision()
+    const bar = getByTestId('context-bar')
+    expect(
+      within(bar).getByRole('link', { name: 'Back to District 61' })
+    ).toHaveAttribute('href', '/district/61')
+    expect(bar).toHaveTextContent('Division A')
+    expect(getByTestId('context-bar-chip')).toHaveTextContent(
+      'PY 25–26 · Mar 15'
+    )
+  })
+
+  it('opens a sheet with PY/date controls, About and the full trail', async () => {
+    const { getByTestId, getByRole } = renderDivision()
+    getByTestId('context-bar-chip').click()
+    const sheet = await waitFor(() =>
+      getByRole('dialog', { name: 'Division A' })
+    )
+    expect(within(sheet).getByLabelText('Program year')).toHaveValue('2025')
+    expect(within(sheet).getByLabelText('Snapshot date')).toBeInTheDocument()
+    expect(within(sheet).getByText(/1 club across 1 area/)).toBeInTheDocument()
+    const trail = within(sheet).getByRole('navigation', { name: 'Breadcrumb' })
+    expect(
+      within(trail)
+        .getAllByRole('listitem')
+        .map(li => li.textContent)
+    ).toEqual(['Districts', 'District 61', 'Division A'])
   })
 })
 

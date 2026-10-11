@@ -62,6 +62,25 @@ describe('context-bar.css (#1831)', () => {
     expect(below).toMatch(/\.context-bar\s*~\s*h1[\s\S]*?clip/)
   })
 
+  it('collapses the shared entity header (.districts-page-header) after a bar below 768', () => {
+    const below = mediaBlocks(css, /max-width:\s*767px/).join('\n')
+    for (const part of ['__lede', '__actions', '__eyebrow']) {
+      expect(below, part).toMatch(
+        new RegExp(
+          `\\.context-bar\\s*~\\s*\\.districts-page-header\\s+\\.districts-page-header${part}[\\s\\S]*?display:\\s*none`
+        )
+      )
+    }
+    // Title visually hidden, kept for AT.
+    expect(below).toMatch(
+      /\.context-bar\s*~\s*\.districts-page-header\s+\.districts-page-header__title[^{]*\{[^}]*clip/
+    )
+    // The bar sits flush under the top bar on a plain page container too.
+    expect(below).toMatch(
+      /\.app-shell__page:has\(>\s*\.context-bar\)\s*\{[^}]*padding-top:\s*0/
+    )
+  })
+
   it('gives sheet selects a 16px font (no iOS focus zoom)', () => {
     expect(css).toMatch(/\.context-sheet__select\s*\{[^}]*font-size:\s*16px/)
   })
