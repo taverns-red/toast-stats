@@ -10,7 +10,8 @@ if [ -n "${STUB_RESOLVE_FAIL:-}" ] && [[ "${DATE}" =~ ${STUB_RESOLVE_FAIL} ]]; t
   echo "resolve-rebuild-source failed: 503" >&2
   exit 1
 fi
-for pair in ${STUB_RESOLVE//,/ }; do
+MAP="${STUB_RESOLVE:-}"
+for pair in ${MAP//,/ }; do
   if [ "${pair%%=*}" = "${DATE}" ]; then
     echo "${pair#*=}"
     exit 0

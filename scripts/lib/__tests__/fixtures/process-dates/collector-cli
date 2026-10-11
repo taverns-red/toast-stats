@@ -42,8 +42,8 @@ done
 matches() { [ -n "${1:-}" ] && [[ "${DATE}" =~ $1 ]]; }
 
 remapped() {
-  local pair
-  for pair in ${STUB_REMAP//,/ }; do
+  local pair map="${STUB_REMAP:-}"
+  for pair in ${map//,/ }; do
     if [ "${pair%%=*}" = "${DATE}" ]; then
       echo "${pair#*=}"
       return

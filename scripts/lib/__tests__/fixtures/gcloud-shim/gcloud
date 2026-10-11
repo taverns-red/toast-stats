@@ -208,12 +208,28 @@ case "${CMD}" in
     for src in "${args[@]}"; do
       if is_gs "${src}"; then
         require_bucket "${src}"
-        if [ ! -f "$(local_of "${src}")" ]; then
+        # A single-segment wildcard (`snapshots/D/district_*.json`, the
+        # prior-year pull of the per-date loop, #1742) expands like `ls`.
+        matched=()
+        if [[ "${src}" == *'*'* ]]; then
+          while IFS= read -r f; do
+            [ -f "${f}" ] && matched+=("gs://${f#"${SHIM_ROOT}/"}")
+          done < <(compgen -G "$(local_of "${src}")" | LC_ALL=C sort)
+        elif [ -f "$(local_of "${src}")" ]; then
+          matched=("${src}")
+        fi
+        if [ "${#matched[@]}" -eq 0 ]; then
           echo "ERROR: (gcloud.storage.cp) The following URLs matched no objects or files:" >&2
           echo "${src}" >&2
           exit 1
         fi
-        download_object "${src}" "${dst}"
+        for url in "${matched[@]}"; do
+          if [[ "${dst}" == */ ]] || [ -d "${dst}" ]; then
+            download_object "${url}" "${dst%/}/$(basename "${url}")"
+          else
+            download_object "${url}" "${dst}"
+          fi
+        done
         continue
       fi
       require_bucket "${dst}"
