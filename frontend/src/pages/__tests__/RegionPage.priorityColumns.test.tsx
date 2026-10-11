@@ -19,7 +19,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import RegionPage from '../RegionPage'
-import { fetchCdnRankings } from '../../services/cdn'
+import { fetchCdnCompetitiveAwards, fetchCdnRankings } from '../../services/cdn'
 
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => true }))
 
@@ -157,5 +157,25 @@ describe('RegionPage priority columns below 768 (#1834)', () => {
     expect(
       within(full).getAllByTestId('region-rank-cell')[0]!.className
     ).toMatch(/region-rankings__sticky-col/)
+  })
+})
+
+describe('RegionPage priority Tier column (#1834, Lesson 134)', () => {
+  it('shows a short tier label that fits a third of a phone, full name for AT', async () => {
+    vi.mocked(fetchCdnCompetitiveAwards).mockResolvedValueOnce({
+      distinguishedDistrict: {
+        '7': { districtId: '7', currentTier: 'Presidents' },
+      },
+    } as never)
+    renderRegion()
+    await priorityTable()
+    fireEvent.click(screen.getByRole('button', { name: 'Tier' }))
+    const chip = await screen.findByTestId('priority-tier-7')
+    expect(chip.textContent).toContain('Pres.')
+    expect(chip.textContent).not.toContain("President's")
+    expect(chip).toHaveAttribute('title', "President's Distinguished")
+    expect(chip.querySelector('.sr-only')?.textContent).toBe(
+      "President's Distinguished"
+    )
   })
 })
