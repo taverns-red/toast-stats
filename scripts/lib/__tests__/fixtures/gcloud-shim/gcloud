@@ -27,6 +27,11 @@
 #                          the runner's old `latest`) (#1702).
 #   SHIM_DOWNLOAD_SKIP     optional: ERE; an rsync download silently skips
 #                          objects whose relative path matches (a short read)
+#   SHIM_UPLOAD_LOG        optional: every object an upload writes is appended
+#                          as `<object path>\t<sha256 of the uploaded,
+#                          uncompressed bytes>` (bucket name stripped), so a
+#                          test can compare what really went up with what the
+#                          run manifest says went up (#1762)
 set -euo pipefail
 
 : "${SHIM_ROOT:?SHIM_ROOT must be set}"
@@ -95,6 +100,11 @@ upload_object() {
     fi
     true
   } >"${meta}"
+  if [ -n "${SHIM_UPLOAD_LOG:-}" ]; then
+    local sum rel="${url#gs://}"
+    sum="$({ sha256sum "${src}" 2>/dev/null || shasum -a 256 "${src}"; } | awk '{print $1}')"
+    printf '%s\t%s\n' "${rel#*/}" "${sum}" >>"${SHIM_UPLOAD_LOG}"
+  fi
 }
 
 # One `objects list --format=json` entry, with keys named as gcloud 583
@@ -233,6 +243,21 @@ case "${CMD}" in
         continue
       fi
       require_bucket "${dst}"
+      # A quoted local wildcard (`-r "/tmp/rank-history-out/*.json"`): gcloud
+      # expands it itself; so does the shim.
+      if [[ "${src}" == *'*'* ]]; then
+        matched=()
+        while IFS= read -r f; do matched+=("${f}"); done < <(compgen -G "${src}" | LC_ALL=C sort)
+        if [ "${#matched[@]}" -eq 0 ]; then
+          echo "ERROR: (gcloud.storage.cp) The following URLs matched no objects or files:" >&2
+          echo "${src}" >&2
+          exit 1
+        fi
+        for f in "${matched[@]}"; do
+          upload_object "${f}" "${dst%/}/$(basename "${f}")" "${gz}" "${ctype}" "${cache}" "${custom}"
+        done
+        continue
+      fi
       if [ -d "${src}" ]; then
         if [ "${recursive}" != 1 ]; then
           echo "gcloud shim: ${src} is a directory; -r required" >&2

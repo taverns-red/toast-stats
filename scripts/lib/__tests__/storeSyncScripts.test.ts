@@ -35,6 +35,8 @@ let root: string
 let cache: string
 let log: string
 let summary: string
+let manifest: string
+let uploadLog: string
 
 function gzipTimes(data: Buffer, layers: number): Buffer {
   let out = data
@@ -80,6 +82,8 @@ function run(
       SHIM_LOG: log,
       CACHE_DIR: cache,
       GITHUB_STEP_SUMMARY: summary,
+      RUN_MANIFEST_FILE: manifest,
+      SHIM_UPLOAD_LOG: uploadLog,
       ...env,
     },
   })
@@ -111,6 +115,8 @@ beforeEach(() => {
   cache = path.join(tmp, 'cache')
   log = path.join(tmp, 'gcloud.log')
   summary = path.join(tmp, 'summary.md')
+  manifest = path.join(tmp, 'run', 'written.jsonl')
+  uploadLog = path.join(tmp, 'uploads.log')
   fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
 })
 
@@ -370,6 +376,56 @@ describe('publish-stores.sh (#1722)', () => {
       readObject('club-race/2026-2027/first-reached.json').equals(doc(2))
     ).toBe(true)
     expect(readObject('district-awards-history.json').equals(doc(3))).toBe(true)
+  })
+
+  it('records every object it pushed in the run manifest with its sha256, and nothing else (#1762)', () => {
+    seedLocal('time-series', 'district_61/2026-2027.json', doc(61))
+    seedLocal('time-series', 'district_61/index-metadata.json', doc(62))
+    seedLocal('club-trends', '2026-2027/district_61.json', doc(1))
+    seedLocal('club-race', '2026-2027/first-reached.json', doc(2))
+    fs.writeFileSync(path.join(cache, 'district-awards-history.json'), doc(3))
+    // Unchanged in the bucket: E2-1 skips it, so it must not be recorded.
+    putObject('time-series/district_61/index-metadata.json', doc(62), 1)
+    fs.writeFileSync(
+      path.join(
+        root,
+        '.meta',
+        BUCKET,
+        'time-series/district_61/index-metadata.json'
+      ),
+      [
+        'content-encoding=gzip',
+        'content-type=application/json',
+        'cache-control=public, max-age=3600',
+        `x-goog-meta-sha256=${createHash('sha256').update(doc(62)).digest('hex')}`,
+        '',
+      ].join('\n')
+    )
+    const r = run(PUBLISH, [
+      'time-series',
+      'club-trends',
+      'club-race',
+      'district-awards-history',
+    ])
+    expect(r.status, r.stderr).toBe(0)
+    const read = (f: string) =>
+      fs.existsSync(f)
+        ? fs.readFileSync(f, 'utf-8').split('\n').filter(Boolean)
+        : []
+    const uploaded = read(uploadLog)
+      .map(l => l.replace('\t', ' '))
+      .sort()
+    const entries = read(manifest).map(
+      l => JSON.parse(l) as { path: string; sha256: string; stage: string }
+    )
+    expect(uploaded).toHaveLength(4)
+    expect(entries.map(e => `${e.path} ${e.sha256}`).sort()).toEqual(uploaded)
+    expect(entries.map(e => e.path)).not.toContain(
+      'time-series/district_61/index-metadata.json'
+    )
+    expect(new Set(entries.map(e => e.stage))).toEqual(
+      new Set(['publish-stores'])
+    )
   })
 
   it('refuses gzip bytes on disk before pushing anything', () => {
