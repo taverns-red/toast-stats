@@ -228,6 +228,59 @@ describe('ClubsTable < 768 — Filter & sort sheet (#1836)', () => {
   })
 })
 
+describe('ClubsTable < 768 — one-row toolbar (#1836, toolbar ≤ 100 px)', () => {
+  it('puts the Filter & sort trigger in the sticky search row', () => {
+    render(<ClubsTable clubs={CLUBS} districtId="61" />)
+    const trigger = screen.getByRole('button', { name: /filter & sort/i })
+    expect(trigger.closest('.clubs-mobile-sticky-search')).not.toBeNull()
+    expect(
+      screen.getAllByRole('button', { name: /filter & sort/i })
+    ).toHaveLength(1)
+  })
+
+  it('moves the Close to Distinguished preset into the sheet', () => {
+    const onPresetChange = vi.fn()
+    render(
+      <ClubsTable
+        clubs={CLUBS}
+        districtId="61"
+        onPresetChange={onPresetChange}
+      />
+    )
+    expect(
+      screen.queryByRole('button', { name: /close to distinguished/i })
+    ).toBeNull()
+    const sheet = openSheet()
+    const quick = within(sheet).getByRole('group', { name: 'Quick filter' })
+    const chip = within(quick).getByRole('button', {
+      name: /close to distinguished/i,
+    })
+    expect(chip).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(chip)
+    expect(onPresetChange).toHaveBeenCalledTimes(1)
+    expect(onPresetChange).toHaveBeenCalledWith(true)
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('counts an active preset on the trigger and clears it with "Clear all"', () => {
+    const onPresetChange = vi.fn()
+    render(
+      <ClubsTable
+        clubs={CLUBS}
+        districtId="61"
+        initialPresetActive
+        onPresetChange={onPresetChange}
+      />
+    )
+    expect(
+      screen.getByRole('button', { name: /filter & sort/i })
+    ).toHaveAccessibleName('Filter & sort, 1 active')
+    const sheet = openSheet()
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Clear all' }))
+    expect(onPresetChange).toHaveBeenCalledWith(false)
+  })
+})
+
 describe('ClubsTable ≥ 768 — existing filter UI (#1836)', () => {
   it('keeps the desktop Filters panel', () => {
     stubMobile(false)
