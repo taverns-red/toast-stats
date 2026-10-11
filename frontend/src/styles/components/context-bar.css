@@ -147,7 +147,8 @@
     /* Entity pages (division, area, region, clubs-world…) share
        .districts-page-header inside a plain .app-shell__page. Keyed on the bar
        so the landing's own header (no bar) is untouched. */
-    .app-shell__page:has(> .context-bar) {
+    .app-shell__page:has(> .context-bar),
+    .districts-page:has(> .context-bar) {
       padding-top: 0;
     }
 

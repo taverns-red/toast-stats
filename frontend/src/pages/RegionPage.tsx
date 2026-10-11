@@ -14,6 +14,9 @@ import { computeTiedRanks } from '../utils/tieRankingUtils'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { DataControlsBar } from '../components/DataControlsBar'
+import { ContextBar } from '../components/ContextBar'
+import { ContextSheetControls } from '../components/ContextSheetControls'
+import { formatFreshnessLine } from '../utils/contextBar'
 import type { DistinguishedDistrictTier } from '../services/cdn'
 import {
   getDistinguishedCountdown,
@@ -407,6 +410,34 @@ const RegionPage: React.FC = () => {
     // .district-detail-page (ADR-006 §1). The empty-state branch above
     // stays on .app-shell__page since it's prose, not a data grid.
     <div className="districts-page">
+      {/* Phone context bar (#1831): below 768 it replaces this header; PY and
+          date are this page's own state (R3), set through the same setters. */}
+      <ContextBar
+        title={`Region ${region}`}
+        back={{ label: 'Regions', to: '/regions' }}
+        programYear={selectedProgramYear}
+        date={effectiveDate}
+        controls={
+          <ContextSheetControls
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={cachedDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            freshness={formatFreshnessLine({
+              asOfDate: data?.asOfDate,
+              snapshotDate: effectiveDate,
+              isLatest: isLatestSnapshot,
+            })}
+          />
+        }
+        about={`${regionDistricts.length} district${regionDistricts.length === 1 ? '' : 's'} in this region. Tap a district to drill into its clubs.`}
+        trail={[
+          { label: 'Regions', to: '/regions' },
+          { label: `Region ${region}` },
+        ]}
+      />
       <header className="districts-page-header">
         <div className="districts-page-header__intro">
           <p className="districts-page-header__eyebrow">
