@@ -66,7 +66,7 @@ export interface PriorityColumnsTableProps<Row, F extends string> {
 
 /** Resolve `?cols=` to exactly two known, distinct metric ids, topping up
  *  from the defaults when the URL names fewer than two. */
-export function resolveColumns(
+function resolveColumns(
   raw: string | null,
   known: readonly string[],
   defaults: readonly [string, string]
@@ -83,7 +83,19 @@ export function resolveColumns(
   return [picked[0]!, picked[1]!]
 }
 
-export function PriorityColumnsTable<Row, F extends string>({
+/** ≥768 returns the caller's full table and touches nothing else — no URL
+ *  hooks, so a desktop render needs no Router (callers such as
+ *  ClubHistoryTable stay usable outside one). The phone view below reads
+ *  `?cols=` and does need a Router. */
+export function PriorityColumnsTable<Row, F extends string>(
+  props: PriorityColumnsTableProps<Row, F>
+): React.JSX.Element {
+  const isMobile = useIsMobile(768)
+  if (!isMobile) return <>{props.fullTable}</>
+  return <PhonePriorityColumns<Row, F> {...props} />
+}
+
+function PhonePriorityColumns<Row, F extends string>({
   label,
   rows,
   rowKey,
@@ -100,7 +112,6 @@ export function PriorityColumnsTable<Row, F extends string>({
   fullTableTitle,
   colsParam = 'cols',
 }: PriorityColumnsTableProps<Row, F>): React.JSX.Element {
-  const isMobile = useIsMobile(768)
   const [searchParams, setSearchParams] = useSearchParams()
   const [sheetOpen, setSheetOpen] = useState(false)
   const chipsLabelId = useId()
@@ -135,8 +146,6 @@ export function PriorityColumnsTable<Row, F extends string>({
     },
     [chosen, colsParam, defaultMetricIds, setSearchParams]
   )
-
-  if (!isMobile) return <>{fullTable}</>
 
   const shown = chosen.map(id => metrics.find(m => m.id === id)!)
   const sortState = sort ?? { field: null, direction: 'asc' as SortDirection }
