@@ -28,6 +28,8 @@ vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
   fetchCdnRankingsForDate: vi.fn(),
   fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(null),
+  // useCompetitiveAwards resolves "latest" through this when no date is set.
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2026-05-12'),
   fetchCdnManifest: vi
     .fn()
     .mockResolvedValue({ latestSnapshotDate: '2026-05-12', generatedAt: 'x' }),
@@ -171,8 +173,10 @@ describe('RegionPage priority Tier column (#1834, Lesson 134)', () => {
     await priorityTable()
     fireEvent.click(screen.getByRole('button', { name: 'Tier' }))
     const chip = await screen.findByTestId('priority-tier-7')
-    expect(chip.textContent).toContain('Pres.')
-    expect(chip.textContent).not.toContain("President's")
+    // The visible label is short; the full name is screen-reader-only text.
+    expect(chip.querySelector('[aria-hidden="true"]')?.textContent).toBe(
+      'Pres.'
+    )
     expect(chip).toHaveAttribute('title', "President's Distinguished")
     expect(chip.querySelector('.sr-only')?.textContent).toBe(
       "President's Distinguished"

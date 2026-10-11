@@ -279,15 +279,31 @@ const ValueWithDelta: React.FC<{ value: number; delta: number }> = ({
   </>
 )
 
-const TierLabel: React.FC<{ tier: DistinguishedDistrictTier | null }> = ({
-  tier,
-}) => {
+/* A phone metric column is ~80px of content: "Distinguished" at 14px is
+   ~95px and would clip (Lesson 134). The chip shows a short label; the full
+   tier name rides along as the tooltip and the screen-reader text. */
+const TIER_SHORT: Record<AchievedTier, { short: string; full: string }> = {
+  Distinguished: { short: 'Dist.', full: 'Distinguished' },
+  Select: { short: 'Select', full: 'Select Distinguished' },
+  Presidents: { short: 'Pres.', full: "President's Distinguished" },
+  Smedley: { short: 'Smedley', full: 'Smedley Distinguished' },
+}
+
+const TierLabel: React.FC<{
+  tier: DistinguishedDistrictTier | null
+  districtId: string
+}> = ({ tier, districtId }) => {
   if (!tier || tier === 'NotDistinguished' || tier === 'Unknown')
     return <span className="text-gray-400">—</span>
-  const config = TIER_DISPLAY[tier]
+  const { short, full } = TIER_SHORT[tier]
   return (
-    <span className={`priority-columns__tier ${config.className}`}>
-      {config.label}
+    <span
+      data-testid={`priority-tier-${districtId}`}
+      className={`priority-columns__tier ${TIER_DISPLAY[tier].className}`}
+      title={full}
+    >
+      <span aria-hidden="true">{short}</span>
+      <span className="sr-only">{full}</span>
     </span>
   )
 }
@@ -518,6 +534,7 @@ const RegionPage: React.FC = () => {
       title: 'Current Distinguished District tier',
       render: d => (
         <TierLabel
+          districtId={d.districtId}
           tier={
             awards?.distinguishedDistrict?.[d.districtId]?.currentTier ?? null
           }
