@@ -1,0 +1,686 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "global-totals"
+  },
+  "date": "2026-10-10",
+  "programYear": "2026-2027",
+  "generatedAt": "2026-10-11T09:04:37.893Z",
+  "districts": {
+    "total": 94,
+    "numbered": 93,
+    "includesUndistricted": true,
+    "excludedDistricts": [],
+    "missingDistricts": [],
+    "duplicateClubs": []
+  },
+  "membership": {
+    "totalMembership": 204552,
+    "totalPayments": 287349,
+    "paidClubs": 11589,
+    "activeClubs": 14466,
+    "clubsCounted": 14513,
+    "avgClubSize": 17.650530675640695
+  },
+  "distinguishedClubs": {
+    "distinguishedOrBetter": 0,
+    "select": 0,
+    "presidents": 0,
+    "smedley": 0,
+    "base": 0,
+    "percentOfPaidClubs": 0
+  },
+  "distinguishedDistricts": {
+    "distinguishedOrBetter": 0,
+    "byTier": {
+      "Distinguished": 0,
+      "Select": 0,
+      "Presidents": 0,
+      "Smedley": 0,
+      "NotDistinguished": 93,
+      "Unknown": 0
+    },
+    "undefinedVerdictDistricts": []
+  },
+  "clubMovement": {
+    "newClubsStillActive": 213,
+    "suspendedClubs": 47
+  },
+  "clubsByCountry": {
+    "countries": [
+      {
+        "country": "United States",
+        "clubs": 5662
+      },
+      {
+        "country": "India",
+        "clubs": 1096
+      },
+      {
+        "country": "Canada",
+        "clubs": 922
+      },
+      {
+        "country": "China",
+        "clubs": 712
+      },
+      {
+        "country": "Australia",
+        "clubs": 576
+      },
+      {
+        "country": "Malaysia",
+        "clubs": 350
+      },
+      {
+        "country": "Mexico",
+        "clubs": 297
+      },
+      {
+        "country": "United Kingdom",
+        "clubs": 263
+      },
+      {
+        "country": "Saudi Arabia",
+        "clubs": 230
+      },
+      {
+        "country": "Singapore",
+        "clubs": 214
+      },
+      {
+        "country": "Japan",
+        "clubs": 201
+      },
+      {
+        "country": "New Zealand",
+        "clubs": 201
+      },
+      {
+        "country": "United Arab Emirates",
+        "clubs": 201
+      },
+      {
+        "country": "Philippines",
+        "clubs": 187
+      },
+      {
+        "country": "Taiwan",
+        "clubs": 183
+      },
+      {
+        "country": "Sri Lanka",
+        "clubs": 178
+      },
+      {
+        "country": "South Africa",
+        "clubs": 151
+      },
+      {
+        "country": "Qatar",
+        "clubs": 136
+      },
+      {
+        "country": "Germany",
+        "clubs": 108
+      },
+      {
+        "country": "Ireland",
+        "clubs": 106
+      },
+      {
+        "country": "Cote d'Ivoire",
+        "clubs": 100
+      },
+      {
+        "country": "Oman",
+        "clubs": 82
+      },
+      {
+        "country": "Korea (Republic of)",
+        "clubs": 79
+      },
+      {
+        "country": "Nigeria",
+        "clubs": 79
+      },
+      {
+        "country": "Hong Kong",
+        "clubs": 68
+      },
+      {
+        "country": "Nepal",
+        "clubs": 66
+      },
+      {
+        "country": "Poland",
+        "clubs": 66
+      },
+      {
+        "country": "Bahrain",
+        "clubs": 64
+      },
+      {
+        "country": "Indonesia",
+        "clubs": 63
+      },
+      {
+        "country": "Kenya",
+        "clubs": 59
+      },
+      {
+        "country": "Switzerland",
+        "clubs": 57
+      },
+      {
+        "country": "France",
+        "clubs": 51
+      },
+      {
+        "country": "Pakistan",
+        "clubs": 50
+      },
+      {
+        "country": "Netherlands",
+        "clubs": 49
+      },
+      {
+        "country": "Togo",
+        "clubs": 48
+      },
+      {
+        "country": "Spain",
+        "clubs": 43
+      },
+      {
+        "country": "Bahamas",
+        "clubs": 42
+      },
+      {
+        "country": "Burkina Faso",
+        "clubs": 42
+      },
+      {
+        "country": "Portugal",
+        "clubs": 40
+      },
+      {
+        "country": "Zimbabwe",
+        "clubs": 39
+      },
+      {
+        "country": "Italy",
+        "clubs": 35
+      },
+      {
+        "country": "Kuwait",
+        "clubs": 35
+      },
+      {
+        "country": "Bangladesh",
+        "clubs": 34
+      },
+      {
+        "country": "Benin",
+        "clubs": 31
+      },
+      {
+        "country": "Haiti",
+        "clubs": 31
+      },
+      {
+        "country": "Thailand",
+        "clubs": 29
+      },
+      {
+        "country": "Belgium",
+        "clubs": 28
+      },
+      {
+        "country": "Jamaica",
+        "clubs": 28
+      },
+      {
+        "country": "Brazil",
+        "clubs": 25
+      },
+      {
+        "country": "Ghana",
+        "clubs": 23
+      },
+      {
+        "country": "Czech Republic",
+        "clubs": 21
+      },
+      {
+        "country": "Guinea",
+        "clubs": 21
+      },
+      {
+        "country": "Papua New Guinea",
+        "clubs": 21
+      },
+      {
+        "country": "Viet Nam",
+        "clubs": 21
+      },
+      {
+        "country": "Romania",
+        "clubs": 20
+      },
+      {
+        "country": "Trinidad And Tobago",
+        "clubs": 20
+      },
+      {
+        "country": "Uganda",
+        "clubs": 19
+      },
+      {
+        "country": "Curacao",
+        "clubs": 18
+      },
+      {
+        "country": "Hungary",
+        "clubs": 18
+      },
+      {
+        "country": "Mali",
+        "clubs": 18
+      },
+      {
+        "country": "Mauritius",
+        "clubs": 18
+      },
+      {
+        "country": "Turkey",
+        "clubs": 18
+      },
+      {
+        "country": "Sweden",
+        "clubs": 17
+      },
+      {
+        "country": "Niger",
+        "clubs": 16
+      },
+      {
+        "country": "Senegal",
+        "clubs": 16
+      },
+      {
+        "country": "Guyana",
+        "clubs": 15
+      },
+      {
+        "country": "Austria",
+        "clubs": 14
+      },
+      {
+        "country": "Barbados",
+        "clubs": 14
+      },
+      {
+        "country": "Jordan",
+        "clubs": 14
+      },
+      {
+        "country": "Congo",
+        "clubs": 13
+      },
+      {
+        "country": "Zambia",
+        "clubs": 13
+      },
+      {
+        "country": "Cambodia",
+        "clubs": 12
+      },
+      {
+        "country": "Greece",
+        "clubs": 12
+      },
+      {
+        "country": "Macau",
+        "clubs": 12
+      },
+      {
+        "country": "Slovakia (Slovak Republic)",
+        "clubs": 12
+      },
+      {
+        "country": "Cameroon",
+        "clubs": 11
+      },
+      {
+        "country": "Ethiopia",
+        "clubs": 11
+      },
+      {
+        "country": "Denmark",
+        "clubs": 10
+      },
+      {
+        "country": "Luxembourg",
+        "clubs": 10
+      },
+      {
+        "country": "Mozambique",
+        "clubs": 10
+      },
+      {
+        "country": "Madagascar",
+        "clubs": 9
+      },
+      {
+        "country": "Egypt",
+        "clubs": 8
+      },
+      {
+        "country": "Finland",
+        "clubs": 8
+      },
+      {
+        "country": "Malawi",
+        "clubs": 8
+      },
+      {
+        "country": "Russian Federation",
+        "clubs": 8
+      },
+      {
+        "country": "Iraq",
+        "clubs": 7
+      },
+      {
+        "country": "Lebanon",
+        "clubs": 7
+      },
+      {
+        "country": "Sint Maarten",
+        "clubs": 7
+      },
+      {
+        "country": "Tanzania-United Republic",
+        "clubs": 7
+      },
+      {
+        "country": "Botswana",
+        "clubs": 6
+      },
+      {
+        "country": "Grenada",
+        "clubs": 6
+      },
+      {
+        "country": "Mongolia",
+        "clubs": 6
+      },
+      {
+        "country": "Namibia",
+        "clubs": 6
+      },
+      {
+        "country": "Norway",
+        "clubs": 6
+      },
+      {
+        "country": "Angola",
+        "clubs": 5
+      },
+      {
+        "country": "Aruba",
+        "clubs": 5
+      },
+      {
+        "country": "Gabon",
+        "clubs": 5
+      },
+      {
+        "country": "Kazakhstan",
+        "clubs": 5
+      },
+      {
+        "country": "Lithuania",
+        "clubs": 5
+      },
+      {
+        "country": "Morocco",
+        "clubs": 5
+      },
+      {
+        "country": "Rwanda",
+        "clubs": 5
+      },
+      {
+        "country": "Ukraine",
+        "clubs": 5
+      },
+      {
+        "country": "Antigua And Barbuda",
+        "clubs": 4
+      },
+      {
+        "country": "Bonaire, Sint Eustatius and Saba",
+        "clubs": 4
+      },
+      {
+        "country": "Cayman Islands",
+        "clubs": 4
+      },
+      {
+        "country": "Israel",
+        "clubs": 4
+      },
+      {
+        "country": "Palestine",
+        "clubs": 4
+      },
+      {
+        "country": "Saint Lucia, West Indies",
+        "clubs": 4
+      },
+      {
+        "country": "Albania",
+        "clubs": 3
+      },
+      {
+        "country": "Brunei Darussalam",
+        "clubs": 3
+      },
+      {
+        "country": "Bulgaria",
+        "clubs": 3
+      },
+      {
+        "country": "Colombia",
+        "clubs": 3
+      },
+      {
+        "country": "Lesotho",
+        "clubs": 3
+      },
+      {
+        "country": "Maldives",
+        "clubs": 3
+      },
+      {
+        "country": "Saint Kitts And Nevis",
+        "clubs": 3
+      },
+      {
+        "country": "St Vincent And Grenadines",
+        "clubs": 3
+      },
+      {
+        "country": "Virgin Islands (British)",
+        "clubs": 3
+      },
+      {
+        "country": "Argentina",
+        "clubs": 2
+      },
+      {
+        "country": "Bermuda",
+        "clubs": 2
+      },
+      {
+        "country": "Burundi",
+        "clubs": 2
+      },
+      {
+        "country": "Chile",
+        "clubs": 2
+      },
+      {
+        "country": "Costa Rica",
+        "clubs": 2
+      },
+      {
+        "country": "Cyprus",
+        "clubs": 2
+      },
+      {
+        "country": "Democratic Republic of the Congo",
+        "clubs": 2
+      },
+      {
+        "country": "Eswatini",
+        "clubs": 2
+      },
+      {
+        "country": "Malta",
+        "clubs": 2
+      },
+      {
+        "country": "Martinique",
+        "clubs": 2
+      },
+      {
+        "country": "Moldova - Republic Of",
+        "clubs": 2
+      },
+      {
+        "country": "Peru",
+        "clubs": 2
+      },
+      {
+        "country": "Slovenia",
+        "clubs": 2
+      },
+      {
+        "country": "Tunisia",
+        "clubs": 2
+      },
+      {
+        "country": "Yemen",
+        "clubs": 2
+      },
+      {
+        "country": "Algeria",
+        "clubs": 1
+      },
+      {
+        "country": "Anguilla",
+        "clubs": 1
+      },
+      {
+        "country": "Belize",
+        "clubs": 1
+      },
+      {
+        "country": "Bhutan",
+        "clubs": 1
+      },
+      {
+        "country": "Bolivia",
+        "clubs": 1
+      },
+      {
+        "country": "Bosnia And Herzegovina",
+        "clubs": 1
+      },
+      {
+        "country": "British Indian Ocean Terr",
+        "clubs": 1
+      },
+      {
+        "country": "Cabo Verde",
+        "clubs": 1
+      },
+      {
+        "country": "Djibouti",
+        "clubs": 1
+      },
+      {
+        "country": "Dominica",
+        "clubs": 1
+      },
+      {
+        "country": "Ecuador",
+        "clubs": 1
+      },
+      {
+        "country": "Estonia",
+        "clubs": 1
+      },
+      {
+        "country": "Fiji",
+        "clubs": 1
+      },
+      {
+        "country": "French Guiana",
+        "clubs": 1
+      },
+      {
+        "country": "Gambia",
+        "clubs": 1
+      },
+      {
+        "country": "Lao People Demo Republic",
+        "clubs": 1
+      },
+      {
+        "country": "Latvia",
+        "clubs": 1
+      },
+      {
+        "country": "Mauritania",
+        "clubs": 1
+      },
+      {
+        "country": "Montserrat",
+        "clubs": 1
+      },
+      {
+        "country": "Myanmar",
+        "clubs": 1
+      },
+      {
+        "country": "Panama",
+        "clubs": 1
+      },
+      {
+        "country": "San Marino",
+        "clubs": 1
+      },
+      {
+        "country": "Serbia",
+        "clubs": 1
+      },
+      {
+        "country": "Sierra Leone",
+        "clubs": 1
+      },
+      {
+        "country": "Syria",
+        "clubs": 1
+      },
+      {
+        "country": "Turks And Caicos Islands",
+        "clubs": 1
+      }
+    ],
+    "unknown": 342
+  }
+}

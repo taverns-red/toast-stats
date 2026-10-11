@@ -1,0 +1,53 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "global-totals"
+  },
+  "date": "2026-10-10",
+  "programYear": "2026-2027",
+  "generatedAt": "2026-10-11T09:04:37.893Z",
+  "districts": {
+    "total": 94,
+    "numbered": 93,
+    "includesUndistricted": true,
+    "excludedDistricts": [],
+    "missingDistricts": [],
+    "duplicateClubs": []
+  },
+  "membership": {
+    "totalMembership": 204552,
+    "totalPayments": 287349,
+    "paidClubs": 11589,
+    "activeClubs": 14466,
+    "clubsCounted": 14513,
+    "avgClubSize": 17.650530675640695
+  },
+  "distinguishedClubs": {
+    "distinguishedOrBetter": 0,
+    "select": 0,
+    "presidents": 0,
+    "smedley": 0,
+    "base": 0,
+    "percentOfPaidClubs": 0
+  },
+  "distinguishedDistricts": {
+    "distinguishedOrBetter": 0,
+    "byTier": {
+      "Distinguished": 0,
+      "Select": 0,
+      "Presidents": 0,
+      "Smedley": 0,
+      "NotDistinguished": 93,
+      "Unknown": 0
+    },
+    "undefinedVerdictDistricts": []
+  },
+  "clubMovement": {
+    "newClubsStillActive": 213,
+    "suspendedClubs": 47
+  },
+  "clubsByCountry": {
+    "countries": [],
+    "unknown": 14513
+  }
+}

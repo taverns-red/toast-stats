@@ -285,3 +285,54 @@ describe('content gate holds promotion through the promotion-held flow', () => {
     expect(r.gate).toBe('none')
   })
 })
+
+// ── Per-date completeness gate (#1761, ADR-015 P5.2, D8: hold) ─────────────
+
+describe('completeness gate holds promotion through the promotion-held flow', () => {
+  const FAILURES = [
+    {
+      path: 'snapshots/2026-10-10/district_02.json',
+      reason: '2026-10-10: clubs[] record dropped keys address, coordinates',
+    },
+  ]
+
+  it('is blocked by the completeness gate alone, with the gate named', () => {
+    const r = evaluatePromotion({
+      countPromote: true,
+      valuePromote: true,
+      valueDiff: CLEAN_DIFF,
+      contentPromote: true,
+      completenessPromote: false,
+      completenessFailures: FAILURES,
+    })
+    expect(r.blocked).toBe(true)
+    expect(r.gate).toBe('completeness')
+    expect(buildPromotionHeldTitle(r)).toMatch(/completeness gate/)
+    const body = buildPromotionHeldBody(r, { now: new Date(0) })
+    expect(body).toContain('Completeness gate')
+    expect(body).toContain('snapshots/2026-10-10/district_02.json')
+    expect(body).toContain('allow_value_changes')
+  })
+
+  it('names the completeness gate alongside another refusing gate', () => {
+    const r = evaluatePromotion({
+      countPromote: true,
+      valuePromote: false,
+      valueDiff: CLEAN_DIFF,
+      completenessPromote: false,
+      completenessFailures: FAILURES,
+    })
+    expect(r.gate).toBe('value')
+    expect(buildPromotionHeldTitle(r)).toMatch(/value gate.*completeness gate/)
+  })
+
+  it('omitted = not evaluated, leaving the decision unchanged', () => {
+    const r = evaluatePromotion({
+      countPromote: true,
+      valuePromote: true,
+      valueDiff: CLEAN_DIFF,
+    })
+    expect(r.promoted).toBe(true)
+    expect(r.completenessPromote).toBe(true)
+  })
+})
