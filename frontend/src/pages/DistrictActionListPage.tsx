@@ -364,7 +364,7 @@ const closeMobileRow =
     id: c.clubId,
     to: clubTo(districtId, c),
     title: c.clubName,
-    meta: `${areaLabel(c)} \u00b7 Needs ${formatCloseNeeds(c)}`,
+    meta: `${c.divisionId}/${c.areaId} \u00b7 ${formatCloseNeeds(c)}`,
   })
 
 const visitMobileRow =
