@@ -162,7 +162,13 @@ for (const width of [375, 390]) {
           header && header.getBoundingClientRect().height > 0
             ? header
             : (header?.nextElementSibling ?? null)
-        while (next && next.getBoundingClientRect().height === 0)
+        // Skip collapsed boxes and fixed chrome (the #1832 bottom section
+        // bar is out of flow, so it is not the first content row).
+        while (
+          next &&
+          (next.getBoundingClientRect().height === 0 ||
+            getComputedStyle(next).position === 'fixed')
+        )
           next = next.nextElementSibling
         return {
           bar: r(document.querySelector('[data-testid="context-bar"]')),
