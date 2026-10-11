@@ -492,7 +492,8 @@ jobs:
           if [ -z "${SNAPSHOT_DATE}" ]; then
             SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.date }}"
           fi
-          if ! bash scripts/pipeline/gcs-upload.sh daily-raw-fac rsync -r "./cache/find-a-club/${SNAPSHOT_DATE}/" "gs://${GCS_BUCKET}/raw-fac/${SNAPSHOT_DATE}/"; then
+          if ! bash scripts/pipeline/gcs-upload.sh daily-raw-fac rsync -r \
+            "./cache/find-a-club/${SNAPSHOT_DATE}/" "gs://${GCS_BUCKET}/raw-fac/${SNAPSHOT_DATE}/"; then
             echo "::warning::Could not persist raw-fac/${SNAPSHOT_DATE}/; a re-derivation of ${SNAPSHOT_DATE} will be unenriched"
             exit 1
           fi
@@ -591,7 +592,8 @@ jobs:
 
           # Internal state: rsync (no CDN metadata needed)
           # raw-csv keyed by collection date (DATE), not snapshot date
-          bash scripts/pipeline/gcs-upload.sh daily-upload rsync -r "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
+          bash scripts/pipeline/gcs-upload.sh daily-upload rsync -r \
+            "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
 
           # Stateful stores (#1722): the double-encoding check runs before
           # any store push (#1702), then rsync for internal state, the awards
@@ -1176,7 +1178,8 @@ jobs:
             time-series club-trends club-race district-awards-history
 
           echo "Uploading raw-csv..."
-          bash scripts/pipeline/gcs-upload.sh historical-raw-csv rsync -r "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
+          bash scripts/pipeline/gcs-upload.sh historical-raw-csv rsync -r \
+            "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
 
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
