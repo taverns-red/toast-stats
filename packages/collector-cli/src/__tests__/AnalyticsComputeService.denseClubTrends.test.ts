@@ -16,6 +16,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import { AnalyticsComputeService } from '../services/AnalyticsComputeService.js'
+import { ClubTrendsStore } from '../services/ClubTrendsStore.js'
 import type {
   DistrictStatistics,
   PreComputedAnalyticsFile,
@@ -390,5 +391,101 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
     expect(club1).toBeDefined()
     // First run produces exactly 1 data point (the current date's membership)
     expect(club1!.membershipTrend.length).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('AnalyticsComputeService - club trends capped at the snapshot date (#1759, ADR-015 P4)', () => {
+  let testCache: { path: string; cleanup: () => Promise<void> }
+
+  beforeEach(async () => {
+    testCache = createIsolatedCacheDir()
+    await fs.mkdir(testCache.path, { recursive: true })
+  })
+
+  afterEach(async () => {
+    await testCache.cleanup()
+  })
+
+  // Month-ends of the 2023-2024 program year, as the pipeline keeps them.
+  const PY_DATES = [
+    '2023-07-31',
+    '2023-08-31',
+    '2023-09-30',
+    '2023-10-31',
+    '2023-11-30',
+    '2023-12-31',
+    '2024-01-31',
+    '2024-02-29',
+    '2024-03-31',
+    '2024-04-30',
+    '2024-05-31',
+    '2024-06-30',
+  ]
+  const TARGET = '2024-01-31'
+
+  /** A store that already spans the whole PY, built through its own API. */
+  async function seedFullYearStore(districtId: string): Promise<void> {
+    const store = ClubTrendsStore.create(districtId, '2023-2024')
+    PY_DATES.forEach((date, i) =>
+      store.upsertFromSnapshot(
+        date,
+        createSampleDistrictStatistics(districtId, date, {
+          clubOneMembership: 20 + i,
+          clubOneGoals: Math.min(i, 10),
+        })
+      )
+    )
+    await store.save(testCache.path)
+  }
+
+  it('re-deriving 2024-01-31 from a full-PY store sees no later point', async () => {
+    const districtId = '1'
+    await seedFullYearStore(districtId)
+    await writeDistrictSnapshot(
+      testCache.path,
+      TARGET,
+      districtId,
+      createSampleDistrictStatistics(districtId, TARGET, {
+        clubOneMembership: 26,
+        clubOneGoals: 6,
+      })
+    )
+
+    const result = await new AnalyticsComputeService({
+      cacheDir: testCache.path,
+    }).computeDistrictAnalytics(TARGET, districtId, { force: true })
+    expect(result.success).toBe(true)
+
+    const index = await readClubTrendsIndex(testCache.path, TARGET, districtId)
+    for (const club of Object.values(index.data.clubs)) {
+      expect(club.membershipTrend.map(p => p.date)).toEqual(
+        PY_DATES.slice(0, 7)
+      )
+      expect(club.dcpGoalsTrend.at(-1)?.date).toBe(TARGET)
+    }
+  })
+
+  it('keeps the later points in the store itself', async () => {
+    const districtId = '1'
+    await seedFullYearStore(districtId)
+    await writeDistrictSnapshot(
+      testCache.path,
+      TARGET,
+      districtId,
+      createSampleDistrictStatistics(districtId, TARGET)
+    )
+
+    await new AnalyticsComputeService({
+      cacheDir: testCache.path,
+    }).computeDistrictAnalytics(TARGET, districtId, { force: true })
+
+    const store = await ClubTrendsStore.load(
+      testCache.path,
+      '2023-2024',
+      districtId
+    )
+    expect(store?.getClub('1234')?.membershipTrend.map(p => p.date)).toEqual(
+      PY_DATES
+    )
   })
 })
