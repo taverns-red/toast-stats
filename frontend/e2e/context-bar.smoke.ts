@@ -92,9 +92,9 @@ for (const width of [375, 390]) {
       // hidden) for a11y/SEO.
       expect(m.h1Text, ctx).toMatch(/District 61/)
       expect(m.h1?.height ?? 99, ctx).toBeLessThanOrEqual(1)
-      expect(m.lede?.display ?? 'none', ctx).toBe('none')
-      expect(m.toolbar?.display ?? 'none', ctx).toBe('none')
-      expect(m.crumb?.display ?? 'none', ctx).toBe('none')
+      expect(m.lede?.height ?? 0, ctx).toBe(0)
+      expect(m.toolbar?.height ?? 0, ctx).toBe(0)
+      expect(m.crumb?.height ?? 0, ctx).toBe(0)
 
       // First page-specific row starts within the budget.
       expect(m.subnav?.top ?? 999, ctx).toBeLessThanOrEqual(SECTION_NAV_TOP_MAX)
@@ -113,6 +113,10 @@ test('chip opens an accessible bottom sheet with 16px selects; Escape closes it'
   await chip.click()
   const sheet = page.getByRole('dialog', { name: 'District 61' })
   await expect(sheet).toBeVisible()
+  // Measure after the slide-in settles (the transform moves the box).
+  await sheet.evaluate(el =>
+    Promise.all(el.getAnimations().map(a => a.finished))
+  )
 
   const fonts = await sheet
     .locator('select')
