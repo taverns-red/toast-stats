@@ -238,6 +238,17 @@ describe('ClubsTable < 768 — one-row toolbar (#1836, toolbar ≤ 100 px)', () 
     ).toHaveLength(1)
   })
 
+  it('keeps the shared row readable at 375: short visible labels, full names', () => {
+    render(<ClubsTable clubs={CLUBS} districtId="61" />)
+    const trigger = screen.getByRole('button', { name: /filter & sort/i })
+    // Visible "Filter" is contained in the accessible name (WCAG 2.5.3).
+    expect(trigger).toHaveTextContent(/^Filter$/)
+    const search = screen.getByRole('searchbox', {
+      name: 'Search clubs by name',
+    })
+    expect(search).toHaveAttribute('placeholder', 'Search clubs')
+  })
+
   it('moves the Close to Distinguished preset into the sheet', () => {
     const onPresetChange = vi.fn()
     render(
