@@ -15,8 +15,9 @@ import { test, expect, type Page } from '@playwright/test'
  * bounding box (Lesson 134), not toBeVisible: scroll to 1200 and ask
  * `elementFromPoint` what is at the viewport centre — it must not be inside
  * the strip. Then sweep every element below 768 for a sticky/fixed box taller
- * than 64px (review §7 "Overview readable while scrolling"). At 1280 the
- * strip must still be sticky — #572's desktop intent is unchanged.
+ * than 64px (review §7 "Overview readable while scrolling"); the same sweep
+ * runs at 768 (vertical stickiness only). At 1280 the strip must still be
+ * sticky — #572's desktop intent is unchanged.
  */
 
 const PATHS = ['/district/61', '/district/80'] as const
@@ -105,6 +106,42 @@ for (const path of PATHS) {
     expect(tall, tall.join('\n')).toEqual([])
   })
 }
+
+/* #1828 follow-up: at 768–979 the strip is one card per row and 576px tall,
+ * so pinned at 768 it still covered the tablet Overview. The pin now starts
+ * at 1024. Only vertical stickiness is swept (a table's sticky first column
+ * has top:auto and pins sideways, not over the content below). */
+test('no vertically sticky element taller than 64px on /district/61 at 768px', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 768, height: 1024 })
+  await loadOverview(page, '/district/61')
+  await page.evaluate(y => window.scrollTo(0, y), SCROLL_Y)
+  await page.waitForTimeout(400)
+
+  const tall = await page.evaluate(max => {
+    const out: string[] = []
+    for (const el of Array.from(document.querySelectorAll('body *'))) {
+      const cs = getComputedStyle(el)
+      if (cs.position !== 'sticky' && cs.position !== 'fixed') continue
+      if (cs.position === 'sticky' && cs.top === 'auto' && cs.bottom === 'auto')
+        continue
+      const r = el.getBoundingClientRect()
+      if (r.width === 0 || r.height === 0) continue
+      if (r.bottom <= 0 || r.top >= window.innerHeight) continue
+      if (r.height > max) {
+        const cls =
+          typeof el.className === 'string'
+            ? el.className.split(' ').slice(0, 3).join('.')
+            : ''
+        out.push(`${el.tagName.toLowerCase()}.${cls} ${Math.round(r.height)}px`)
+      }
+    }
+    return out
+  }, MAX_STICKY_HEIGHT)
+
+  expect(tall, tall.join('\n')).toEqual([])
+})
 
 test('KPI strip stays sticky under the top bar at 1280px (#572 desktop intent)', async ({
   page,
