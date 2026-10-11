@@ -120,12 +120,21 @@ export class ClubTrendsStore {
    * If the date already exists, the entry is overwritten (idempotent re-runs).
    * Clubs that disappear from the district roster are preserved in the store
    * so historical trend lines remain intact.
+   *
+   * Order-independent (#1741): a rebuild may walk dates in any order, so the
+   * identity fields come from the LATEST date seen for the club, never from
+   * whichever date was processed last. An older date only fills a field the
+   * latest left at its 'Unknown…' placeholder, which is what an in-order run
+   * keeps through its `|| existing` fallback.
    */
   upsertFromSnapshot(date: string, snapshot: DistrictStatistics): void {
     for (const club of snapshot.clubs) {
       const existing = this.data.clubs[club.clubId]
 
-      if (!existing) {
+      if (existing && date < latestDate(existing)) {
+        fillPlaceholders(existing, club)
+        upsertTrendPoints(existing, date, club)
+      } else if (!existing) {
         // First time we've seen this club
         this.data.clubs[club.clubId] = {
           clubId: club.clubId,
@@ -146,26 +155,7 @@ export class ClubTrendsStore {
         existing.areaId = club.areaId || existing.areaId
         existing.areaName = club.areaName || existing.areaName
         existing.membershipBase = club.membershipBase
-
-        // Upsert the membership trend point
-        const mIdx = existing.membershipTrend.findIndex(p => p.date === date)
-        if (mIdx >= 0) {
-          existing.membershipTrend[mIdx]!.count = club.membershipCount
-        } else {
-          existing.membershipTrend.push({ date, count: club.membershipCount })
-        }
-
-        // Upsert the DCP goals trend point
-        const dIdx = existing.dcpGoalsTrend.findIndex(p => p.date === date)
-        if (dIdx >= 0) {
-          existing.dcpGoalsTrend[dIdx]!.goalsAchieved = club.dcpGoals
-        } else {
-          existing.dcpGoalsTrend.push({ date, goalsAchieved: club.dcpGoals })
-        }
-
-        // Keep trend arrays sorted by date ascending
-        existing.membershipTrend.sort((a, b) => a.date.localeCompare(b.date))
-        existing.dcpGoalsTrend.sort((a, b) => a.date.localeCompare(b.date))
+        upsertTrendPoints(existing, date, club)
       }
     }
 
@@ -205,8 +195,64 @@ export class ClubTrendsStore {
       this.data.districtId
     )
     await fs.mkdir(path.dirname(filePath), { recursive: true })
-    await fs.writeFile(filePath, JSON.stringify(this.data, null, 2), 'utf-8')
+    // Clubs keyed in sorted order, so the bytes do not depend on which date
+    // first introduced each club (#1741).
+    const clubs: ClubTrendsStoreData['clubs'] = {}
+    for (const clubId of Object.keys(this.data.clubs).sort()) {
+      clubs[clubId] = this.data.clubs[clubId]!
+    }
+    await fs.writeFile(
+      filePath,
+      JSON.stringify({ ...this.data, clubs }, null, 2),
+      'utf-8'
+    )
   }
+}
+
+type StoredClub = ClubTrendsStoreData['clubs'][string]
+type ClubSnapshot = DistrictStatistics['clubs'][number]
+
+/** The latest date already in the club's trend (arrays are kept sorted). */
+function latestDate(entry: StoredClub): string {
+  return entry.membershipTrend[entry.membershipTrend.length - 1]?.date ?? ''
+}
+
+/** An older date only fills fields the latest date left as placeholders. */
+function fillPlaceholders(entry: StoredClub, club: ClubSnapshot): void {
+  if (entry.divisionId === 'Unknown' && club.divisionId) {
+    entry.divisionId = club.divisionId
+  }
+  if (entry.divisionName === 'Unknown Division' && club.divisionName) {
+    entry.divisionName = club.divisionName
+  }
+  if (entry.areaId === 'Unknown' && club.areaId) entry.areaId = club.areaId
+  if (entry.areaName === 'Unknown Area' && club.areaName) {
+    entry.areaName = club.areaName
+  }
+}
+
+/** Upsert the date's membership and DCP points, keeping both sorted. */
+function upsertTrendPoints(
+  entry: StoredClub,
+  date: string,
+  club: ClubSnapshot
+): void {
+  const mIdx = entry.membershipTrend.findIndex(p => p.date === date)
+  if (mIdx >= 0) {
+    entry.membershipTrend[mIdx]!.count = club.membershipCount
+  } else {
+    entry.membershipTrend.push({ date, count: club.membershipCount })
+  }
+
+  const dIdx = entry.dcpGoalsTrend.findIndex(p => p.date === date)
+  if (dIdx >= 0) {
+    entry.dcpGoalsTrend[dIdx]!.goalsAchieved = club.dcpGoals
+  } else {
+    entry.dcpGoalsTrend.push({ date, goalsAchieved: club.dcpGoals })
+  }
+
+  entry.membershipTrend.sort((a, b) => a.date.localeCompare(b.date))
+  entry.dcpGoalsTrend.sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /**

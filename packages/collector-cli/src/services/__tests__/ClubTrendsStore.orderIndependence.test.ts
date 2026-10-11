@@ -79,13 +79,16 @@ function snapshotFor(date: string): DistrictStatistics {
   return { ...recorded, snapshotDate: date, clubs: byDate[date]! }
 }
 
-async function storeBytesFor(order: string[]): Promise<string> {
+async function storeBytesFor(
+  order: string[],
+  snapshotOn: (date: string) => DistrictStatistics = snapshotFor
+): Promise<string> {
   const cacheDir = await fs.mkdtemp(
     path.join(os.tmpdir(), 'club-trends-order-')
   )
   try {
     for (const date of order) {
-      await updateClubTrendsStore(cacheDir, date, DISTRICT, snapshotFor(date))
+      await updateClubTrendsStore(cacheDir, date, DISTRICT, snapshotOn(date))
     }
     return await fs.readFile(
       ClubTrendsStore.getPath(cacheDir, PY, DISTRICT),
@@ -141,5 +144,41 @@ describe('ClubTrendsStore order independence (#1741)', () => {
       { date: D2, count: 15 },
       { date: D3, count: 18 },
     ])
+  })
+
+  it("keeps an older date's division when the latest snapshot omits it", async () => {
+    // The latest snapshot carries no division/area for the club. An in-order
+    // run keeps the earlier values (`|| existing`); out of order, the older
+    // date must fill the placeholders the same way.
+    const blankAtLatest = (date: string): DistrictStatistics => {
+      const snap = snapshotFor(date)
+      if (date !== D3) return snap
+      return {
+        ...snap,
+        clubs: snap.clubs.map((c, i) =>
+          i === 0
+            ? {
+                ...c,
+                divisionId: '',
+                divisionName: '',
+                areaId: '',
+                areaName: '',
+              }
+            : c
+        ),
+      }
+    }
+    const inOrder = await storeBytesFor([D1, D2, D3], blankAtLatest)
+    const outOfOrder = await storeBytesFor([D3, D2, D1], blankAtLatest)
+    expect(outOfOrder).toBe(inOrder)
+    const saved = JSON.parse(outOfOrder) as {
+      clubs: Record<string, Record<string, unknown>>
+    }
+    expect(saved.clubs[recorded.clubs[0]!.clubId]).toMatchObject({
+      divisionId: 'A',
+      divisionName: 'Division A',
+      areaId: '01',
+      areaName: 'Area 01',
+    })
   })
 })
