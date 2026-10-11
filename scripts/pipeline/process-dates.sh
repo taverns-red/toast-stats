@@ -2,7 +2,7 @@
 # The per-date loop shared by the dispatch-only data modes (#1742, plan P3-1).
 #
 # Usage: scripts/pipeline/process-dates.sh <bucket> <mode> [<date>...]
-#   <mode>: rebuild
+#   <mode>: rebuild | rescrape
 #   <date>: YYYY-MM-DD, processed in the order given
 #
 # Each date goes through the same stages, one date at a time to stay inside
@@ -13,8 +13,13 @@
 #   2. raw       rebuild: rsync raw-csv/<source>/ down. A transfer error fails
 #                the date (it used to end in `|| true` and transform whatever
 #                had landed).
-#   3. prev-year best effort: snapshots/<date - 1y>/district_*.json for YoY.
-#   4. transform collector-cli transform --date <source> --force.
+#   3. prev-year rebuild: best effort, snapshots/<date - 1y>/district_*.json
+#                for YoY. (rescrape never pulled it.)
+#   4. transform rebuild: collector-cli transform --date <source> --force.
+#                rescrape: collector-cli scrape --date <date> --transform
+#                --districts $DISTRICTS, which requests the date's own as-of
+#                and fails rather than store another day's data (#1669). A
+#                failed scrape's leftovers are dropped so nothing publishes.
 #   5. remap     the transform can write a different date than it was given
 #                (a close lands on its month-end, #193): the date it actually
 #                wrote is the one guarded, computed and uploaded.
@@ -27,7 +32,8 @@
 #   8. upload    snapshots/<date>/*.json and analytics/*.json, `-Z` with the
 #                CDN headers. An upload error aborts the loop (exit 1), as the
 #                inline loop's `set -e` did: the step fails before any store
-#                push.
+#                push. rescrape then rsyncs the re-collected raw-csv/<date>/
+#                up, replacing the old copy.
 #   9. cleanup   the date's raw, snapshot and prior-year directories, so no
 #                later step reads a rebuilt date as "latest" (#295, #1670).
 # The GCS-backed stores (time-series, club-trends, club-race, awards history)
@@ -41,6 +47,7 @@
 #   COLLECTOR_CLI          collector-cli command (default `npx collector-cli`)
 #   RESOLVE_REBUILD_SOURCE resolver command (default: tsx resolve-rebuild-source.ts)
 #   GUARD_SNAPSHOT_UPLOAD  guard command (default: tsx guard-snapshot-upload.ts)
+#   DISTRICTS              rescrape: required, comma-separated district ids
 #   GITHUB_STEP_SUMMARY    date counts and store counters are appended here
 #
 # Output: stdout is ONE JSON line, {"succeeded":N,"refused":N,"failed":N}
@@ -61,6 +68,12 @@ shift 2
 
 case "${MODE}" in
   rebuild) ;;
+  rescrape)
+    if [[ ! "${DISTRICTS:-}" =~ ^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$ ]]; then
+      echo "::error::process-dates: rescrape needs DISTRICTS (comma-separated ids), got '${DISTRICTS:-}'" >&2
+      exit 2
+    fi
+    ;;
   *)
     echo "::error::process-dates: unknown mode '${MODE}'" >&2
     exit 2
@@ -172,7 +185,9 @@ process_one() {
   fi
 
   # 3. prev-year
-  prev="$(prior_year "${date}")"
+  if [ "${MODE}" = "rebuild" ]; then
+    prev="$(prior_year "${date}")"
+  fi
   if [ -n "${prev}" ] && [ ! -d "${SNAPSHOTS}/${prev}" ]; then
     mkdir -p "${SNAPSHOTS}/${prev}"
     "${GCLOUD}" storage cp \
@@ -183,11 +198,25 @@ process_one() {
   before="$(snapshot_dates)"
 
   # 4. transform
-  echo "Transforming ${source}..."
-  if ! "${COLLECTOR[@]}" transform --date "${source}" --force --verbose; then
-    echo "::warning::Transform failed for ${source}"
-    cleanup_date "${source}" "" "${prev}"
-    return 0
+  if [ "${MODE}" = "rescrape" ]; then
+    echo "Scraping and transforming ${date}..."
+    if ! "${COLLECTOR[@]}" scrape --date "${date}" --transform --force \
+      --verbose --districts "${DISTRICTS}"; then
+      echo "::warning::Scrape/transform failed for ${date}; nothing uploaded for it"
+      local leftover
+      for leftover in $(comm -13 <(echo "${before}") <(snapshot_dates)); do
+        rm -rf "${SNAPSHOTS:?}/${leftover}"
+      done
+      cleanup_date "${source}" "" "${prev}"
+      return 0
+    fi
+  else
+    echo "Transforming ${source}..."
+    if ! "${COLLECTOR[@]}" transform --date "${source}" --force --verbose; then
+      echo "::warning::Transform failed for ${source}"
+      cleanup_date "${source}" "" "${prev}"
+      return 0
+    fi
   fi
 
   # 5. remap
@@ -226,6 +255,10 @@ process_one() {
     if [ "${compute_ok}" = 1 ]; then OUTCOME=published; else OUTCOME=compute-failed; fi
   else
     echo "::warning::No snapshot directory found for ${date} (expected ${actual})"
+  fi
+  if [ "${MODE}" = "rescrape" ] && [ -d "${RAW}/${date}" ]; then
+    echo "Uploading raw-csv/${date}/..."
+    "${GCLOUD}" storage rsync -r "${RAW}/${date}/" "gs://${BUCKET}/raw-csv/${date}/"
   fi
 
   # 9. cleanup
