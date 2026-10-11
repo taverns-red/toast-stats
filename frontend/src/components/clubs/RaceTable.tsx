@@ -8,6 +8,8 @@ import type {
 import { RosetteIcon } from '../recognition/recognitionRegistry'
 import { raceTierTitle } from '../../utils/raceTierRoute'
 import { reachWindowCopy } from '../../utils/reachWindowCopy'
+import { useIsMobile } from '../../hooks/useIsMobile'
+import { MobileRowList, type MobileRow } from '../MobileRowList'
 
 /* #1556 — the full "first to reach" table for one tier. Every row is a club
    that HAS reached (the artifact carries no other club), so the table has no
@@ -79,6 +81,7 @@ export const RaceTable: React.FC<RaceTableProps> = ({
   highlightClubId,
 }) => {
   const title = raceTierTitle(tier)
+  const isMobile = useIsMobile(768)
   const ranked = rows
     .filter(row => row.tiers[tier])
     .sort(
@@ -86,6 +89,67 @@ export const RaceTable: React.FC<RaceTableProps> = ({
         a.tiers[tier]!.rank - b.tiers[tier]!.rank ||
         a.clubName.localeCompare(b.clubName)
     )
+
+  // Phones (#1833): compact rows instead of the 7-column card-table. Rank +
+  // club on line 1; district, reach window and goals on line 2; TI's rosette
+  // as the chip when official. `race-row-<id>` stays the scroll target for
+  // `?highlight=`, and the list reveals far enough to render it.
+  if (isMobile) {
+    const mobileRows: MobileRow[] = ranked.map(row => {
+      const standing = row.tiers[tier]!
+      const current = row.current
+      const reached = reachWindowCopy(
+        standing.reachedOn,
+        standing.observedAfter
+      )
+      const unconfirmed =
+        current !== null &&
+        LEVEL_ORDER[current.activeMembersLevel] > LEVEL_ORDER[current.level]
+      const meta = [
+        `D${row.districtId}`,
+        reached,
+        current ? `${current.goalsMet}/10 goals` : null,
+        unconfirmed ? 'unconfirmed' : null,
+      ]
+        .filter(Boolean)
+        .join(' \u00b7 ')
+      return {
+        id: row.clubId,
+        domId: `race-row-${row.clubId}`,
+        current: highlightClubId === row.clubId,
+        to: `/district/${row.districtId}/club/${row.clubId}`,
+        title: `${standing.rank}. ${row.clubName}`,
+        chip: row.official ? (
+          <span
+            className="race-official"
+            data-testid={`race-official-${row.clubId}`}
+          >
+            <RosetteIcon className="race-official__icon" />
+            {raceTierTitle(CODE_TO_TIER[row.official.code])}
+          </span>
+        ) : undefined,
+        meta,
+        ariaLabel: `${standing.rank}. ${row.clubName}, District ${
+          row.districtId
+        }, reached ${reached}${
+          current
+            ? `, ${current.goalsMet} of 10 goals, ${current.members} members (${signed(
+                current.netGrowth
+              )})`
+            : ''
+        }${row.official ? ', officially recognised' : ''}`,
+      }
+    })
+    return (
+      <MobileRowList
+        label={`First to ${title}`}
+        noun="clubs"
+        rows={mobileRows}
+        chipPlacement="meta"
+        revealRowId={highlightClubId}
+      />
+    )
+  }
 
   return (
     <div className="race-table__scroll">
