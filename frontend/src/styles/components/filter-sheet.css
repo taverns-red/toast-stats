@@ -1,0 +1,118 @@
+/* Filter & sort sheet content (#1836, mobile epic #1827 Phase 1, review §5.4).
+   The sheet frame (overlay, handle, header, scrolling body) is the shared
+   BottomSheet in context-bar.css; this styles only what goes inside it.
+   Semantic tokens only (--surface, --line, --ink…) so dark mode follows the
+   [data-theme] remaps at the CSS layer (R10). Pressed chips and the apply
+   button invert ink/surface, which remap together, so contrast holds in both
+   themes without a per-theme override. */
+
+@layer brand {
+  .filter-sheet__section {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .filter-sheet__label {
+    display: block;
+    margin: 0 0 8px;
+    color: var(--ink-2);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .filter-sheet__sort {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* 16px: below this iOS Safari zooms the page on focus. */
+  .filter-sheet__select {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background-color: var(--surface);
+    color: var(--ink);
+    font-size: 16px;
+  }
+
+  /* 44px chips, 8px apart (review §5.6). */
+  .filter-sheet__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-sheet__chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background-color: var(--surface);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .filter-sheet__chip[aria-pressed='true'] {
+    border-color: var(--ink);
+    background-color: var(--ink);
+    color: var(--surface);
+    font-weight: 600;
+  }
+
+  /* Sticky footer: the body scrolls, the actions stay. The negative margins
+     cancel the body's 16px side/bottom padding so it spans edge to edge and
+     pins flush to the sheet's bottom. */
+  .filter-sheet__footer {
+    position: sticky;
+    bottom: -16px;
+    display: flex;
+    gap: 12px;
+    margin: 0 -16px -16px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--line);
+    background-color: var(--surface);
+  }
+
+  .filter-sheet__clear,
+  .filter-sheet__apply {
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .filter-sheet__clear {
+    border: 1px solid var(--line);
+    background-color: var(--surface);
+    color: var(--ink);
+  }
+
+  .filter-sheet__clear:disabled {
+    color: var(--ink-3);
+    cursor: default;
+  }
+
+  .filter-sheet__apply {
+    flex: 1;
+    border: 1px solid var(--ink);
+    background-color: var(--ink);
+    color: var(--surface);
+  }
+
+  .filter-sheet__chip:focus-visible,
+  .filter-sheet__select:focus-visible,
+  .filter-sheet__clear:focus-visible,
+  .filter-sheet__apply:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+}
