@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { DistrictDetailHeader } from '../DistrictDetailHeader'
@@ -191,5 +191,93 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
       screen.queryByTestId('freshness-pill-skeleton')
     ).not.toBeInTheDocument()
     expect(screen.getByTestId('freshness-pill')).toBeInTheDocument()
+  })
+})
+
+describe('DistrictDetailHeader phone context bar (#1831)', () => {
+  const renderAt = (path: string, overrides: Partial<typeof baseProps> = {}) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <DistrictDetailHeader {...baseProps} {...overrides} />
+      </MemoryRouter>
+    )
+
+  it('backs up to Districts from the district hub', () => {
+    renderAt('/district/61')
+    const bar = screen.getByTestId('context-bar')
+    expect(
+      within(bar).getByRole('link', { name: 'Back to Districts' })
+    ).toHaveAttribute('href', '/')
+  })
+
+  it('backs up ONE level — to the district hub — from a section route', () => {
+    renderAt('/district/61/clubs')
+    const bar = screen.getByTestId('context-bar')
+    expect(
+      within(bar).getByRole('link', { name: 'Back to District 61' })
+    ).toHaveAttribute('href', '/district/61')
+  })
+
+  it('shows the selected PY and the viewed date in the chip (R3 props)', () => {
+    renderAt('/district/61', {
+      selectedDate: snap('2026-04-12'),
+      availableDates: [snap('2026-04-12'), snap('2026-04-26')],
+    })
+    expect(screen.getByTestId('context-bar-chip')).toHaveTextContent(
+      'PY 25–26 · Apr 12'
+    )
+  })
+
+  it('falls back to the latest snapshot date when no date is selected', () => {
+    renderAt('/district/61')
+    expect(screen.getByTestId('context-bar-chip')).toHaveTextContent(
+      'PY 25–26 · Apr 26'
+    )
+  })
+
+  it('keeps the H1 in the DOM for a11y/SEO', () => {
+    renderAt('/district/61/clubs')
+    expect(
+      screen.getByRole('heading', { level: 1, name: /District 61/ })
+    ).toBeInTheDocument()
+  })
+
+  it('sheet: PY/date drive the same setters, plus actions, About and the full trail', async () => {
+    const setPy = vi.fn()
+    const onDate = vi.fn()
+    const py2425 = getProgramYear(2024)
+    renderAt('/district/61/clubs', {
+      setSelectedProgramYear: setPy,
+      onDateChange: onDate,
+      availableProgramYears: [py2526, py2425],
+    })
+    await userEvent.click(screen.getByTestId('context-bar-chip'))
+    const sheet = screen.getByRole('dialog', { name: 'District 61' })
+
+    await userEvent.selectOptions(
+      within(sheet).getByLabelText('Program year'),
+      '2024'
+    )
+    expect(setPy).toHaveBeenCalledWith(py2425)
+    await userEvent.selectOptions(
+      within(sheet).getByLabelText('Snapshot date'),
+      '2026-04-26'
+    )
+    expect(onDate).toHaveBeenCalledWith('2026-04-26')
+
+    expect(
+      within(sheet).getByRole('button', { name: 'Export CSV' })
+    ).toBeInTheDocument()
+    expect(
+      within(sheet).getByRole('button', { name: 'Copy link' })
+    ).toBeInTheDocument()
+    expect(within(sheet).getByText(/Membership, payments/)).toBeInTheDocument()
+
+    const trail = within(sheet).getByRole('navigation', { name: 'Breadcrumb' })
+    expect(
+      within(trail)
+        .getAllByRole('listitem')
+        .map(li => li.textContent)
+    ).toEqual(['Districts', 'District 61', 'Clubs'])
   })
 })

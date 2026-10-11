@@ -1,5 +1,12 @@
 import React from 'react'
+import { useLocation } from 'react-router-dom'
 import { DataControlsBar } from './DataControlsBar'
+import { ContextBar, type ContextCrumb } from './ContextBar'
+import { ContextSheetControls } from './ContextSheetControls'
+import { DistrictSheetActions } from './DistrictSheetActions'
+import { DISTRICT_SECTIONS } from '../config/districtSections'
+import { computeFreshness } from '../utils/dataFreshness'
+import { formatDisplayDate } from '../utils/dateFormatting'
 import { HeaderActionsMenu } from './HeaderActionsMenu'
 import { ProgramYearTitleSuffix } from './ProgramYearTitleSuffix'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
@@ -34,6 +41,16 @@ interface DistrictDetailHeaderProps {
   freshnessPending?: boolean
 }
 
+const LEDE =
+  'Membership, payments, divisions, and ranking trend for the selected program year.'
+
+/** The section segment after /district/:id ('' on the hub). */
+function sectionSegment(pathname: string, districtId: string): string {
+  const prefix = `/district/${districtId}`
+  if (!pathname.startsWith(prefix)) return ''
+  return pathname.slice(prefix.length).replace(/^\/+|\/+$/g, '')
+}
+
 export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
   districtId,
   districtName,
@@ -59,8 +76,59 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
     (!selectedDate || selectedDate === latestSnapshotDate) &&
     !!latestSnapshotDate &&
     latestSnapshotDate === globalLatestSnapshot
+
+  // Phone context bar (#1831): one level back — the hub backs up to the
+  // districts list, every section backs up to the hub. The section label is
+  // read from the route (navigation state, not data), never from a response.
+  const { pathname } = useLocation()
+  const segment = sectionSegment(pathname, districtId)
+  const section = segment
+    ? DISTRICT_SECTIONS.find(s => s.segment === segment)
+    : undefined
+  const hubUrl = `/district/${districtId}`
+  const back = segment
+    ? { label: districtName, to: hubUrl }
+    : { label: 'Districts', to: '/' }
+  const trail: ContextCrumb[] = section
+    ? [
+        { label: 'Districts', to: '/' },
+        { label: districtName, to: hubUrl },
+        { label: section.label },
+      ]
+    : [{ label: 'Districts', to: '/' }, { label: districtName }]
+  const freshness = computeFreshness({
+    asOfDate: isLatest ? globalAsOfDate : undefined,
+    snapshotDate: viewedDate,
+    isLatest,
+  })
+  const freshnessLine = freshness.displayDate
+    ? freshness.reconcilingMonthLabel
+      ? `As of ${formatDisplayDate(freshness.displayDate)} · ${freshness.reconcilingMonthLabel} month-end reconciliation`
+      : `Data fresh · ${formatDisplayDate(freshness.displayDate)}`
+    : undefined
+
   return (
     <>
+      <ContextBar
+        title={districtName}
+        back={back}
+        programYear={selectedProgramYear}
+        date={viewedDate}
+        controls={
+          <ContextSheetControls
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={availableDates}
+            selectedDate={selectedDate}
+            onDateChange={onDateChange}
+            freshness={freshnessLine}
+          />
+        }
+        actions={<DistrictSheetActions districtId={districtId} />}
+        about={LEDE}
+        trail={trail}
+      />
       {/* Breadcrumb removed per #442 — duplicated the AppShell's active
           'Districts' nav tab and the H1 below. The active nav + H1 give
           the user their location without redundant chrome. The
@@ -79,8 +147,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
             className="district-detail-page-header__lede"
             data-testid="district-detail-lede"
           >
-            Membership, payments, divisions, and ranking trend for the selected
-            program year.
+            {LEDE}
           </p>
         </div>
 

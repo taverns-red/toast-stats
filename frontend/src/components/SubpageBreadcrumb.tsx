@@ -54,7 +54,7 @@ export const SubpageBreadcrumb: React.FC<SubpageBreadcrumbProps> = ({
   return (
     <nav
       aria-label="Breadcrumb"
-      className="mb-4 font-tm-body text-sm"
+      className="subpage-breadcrumb mb-4 font-tm-body text-sm"
       data-testid="subpage-breadcrumb"
     >
       <ol className="flex flex-wrap items-center gap-2">
