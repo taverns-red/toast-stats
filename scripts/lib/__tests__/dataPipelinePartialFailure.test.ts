@@ -107,7 +107,7 @@ const GATE_CALL = /bash scripts\/partial-failure-gate\.sh "([a-z-]+)" /
 function delegatesLoop(run: string, mode: string): boolean {
   return codeLines(run).some(l =>
     new RegExp(
-      String.raw`COUNTS=\$\(bash scripts/pipeline/process-dates\.sh "\$\{GCS_BUCKET\}" ${mode} `
+      String.raw`COUNTS=\$\((?:[A-Z_]+="[^"]*" )*bash scripts/pipeline/process-dates\.sh "\$\{GCS_BUCKET\}" ${mode} `
     ).test(l)
   )
 }
