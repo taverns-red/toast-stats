@@ -12,6 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const read = (p: string) => readFileSync(resolve(__dirname, p), 'utf-8')
 const css = read('../components/context-bar.css')
 const indexCss = read('../../index.css')
+const clubHistoryCss = read('../components/club-history.css')
 
 /** Body of the first `@media (<query>) { … }` block matching `query`. */
 const mediaBlocks = (src: string, query: RegExp): string[] =>
@@ -20,6 +21,12 @@ const mediaBlocks = (src: string, query: RegExp): string[] =>
       `@media\\s*\\(${query.source}\\)\\s*\\{[\\s\\S]*?\\n {2}\\}`,
       'g'
     )
+  ) ?? []
+
+/** Same, for an unlayered file whose @media blocks close at column 0. */
+const topLevelMediaBlocks = (src: string, query: RegExp): string[] =>
+  src.match(
+    new RegExp(`@media\\s*\\(${query.source}\\)\\s*\\{[\\s\\S]*?\\n\\}`, 'g')
   ) ?? []
 
 describe('context-bar.css (#1831)', () => {
@@ -92,6 +99,25 @@ describe('context-bar.css (#1831)', () => {
   it('bleeds the bar across whatever gutter the host page sets', () => {
     const bar = css.match(/\n {2}\.context-bar\s*\{[^}]*\}/)?.[0] ?? ''
     expect(bar).toMatch(/var\(--context-bar-bleed,\s*24px\)/)
+  })
+
+  it('collapses the club history header after a bar below 768 (unlayered file, so the rules live there)', () => {
+    const below = topLevelMediaBlocks(
+      clubHistoryCss,
+      /max-width:\s*767px/
+    ).join('\n')
+    expect(below).toMatch(
+      /\.club-history-page:has\(>\s*\.context-bar\)\s*\{[^}]*padding-top:\s*0/
+    )
+    expect(below).toMatch(
+      /\.context-bar\s*~\s*\.club-history-page__header\s+\.club-history-page__sub[\s\S]*?display:\s*none/
+    )
+    expect(below).toMatch(
+      /\.context-bar\s*~\s*\.club-history-page__header\s+\.club-history-page__export[\s\S]*?display:\s*none/
+    )
+    expect(below).toMatch(
+      /\.context-bar\s*~\s*\.club-history-page__header\s+\.club-history-page__title[^{]*\{[^}]*clip/
+    )
   })
 
   it('gives sheet selects a 16px font (no iOS focus zoom)', () => {
