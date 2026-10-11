@@ -74,10 +74,10 @@ describe('rescrape-historical — guarded, upserting, never backwards (#1670)', 
     const run = stepNamed(
       '[rescrape-historical] Rebuild, guard and publish one date at a time'
     ).run!
-    const loopAt = run.indexOf('for RAW_DATE in')
-    const loop = run.slice(loopAt)
-    const guardAt = loop.indexOf('scripts/guard-snapshot-upload.ts')
-    const guardBranch = loop.slice(guardAt, loop.indexOf('fi', guardAt))
+    // The loop runs in scripts/pipeline/process-dates.sh (#1742). Its
+    // transform → guard → compute → upload order, and the refused/failed
+    // skip, run for real in processDates.test.ts; this pins the hand-off.
+    const loopAt = run.indexOf('bash scripts/pipeline/process-dates.sh')
 
     it('syncs time-series/ and club-trends/ from GCS before rebuilding, failing closed (R2, R9)', () => {
       // Through the fail-closed store script (#1722, #1738); its behaviour is
@@ -97,25 +97,16 @@ describe('rescrape-historical — guarded, upserting, never backwards (#1670)', 
 
     it('transforms one raw date at a time instead of the all-at-once rebuild', () => {
       expect(run).not.toContain('collector-cli rebuild')
-      expect(loop).toContain('npx collector-cli transform --date "${RAW_DATE}"')
+      expect(run).toContain(
+        'bash scripts/pipeline/process-dates.sh "${GCS_BUCKET}" rescrape-historical ${RAW_DATES}'
+      )
     })
 
-    it('guards each snapshot before computing analytics or uploading it', () => {
-      expect(guardAt).toBeGreaterThan(-1)
-      expect(loop.indexOf('collector-cli compute-analytics')).toBeGreaterThan(
-        guardAt
+    it('leaves no inline transform, compute or upload in the step to drift back', () => {
+      expect(run).not.toMatch(
+        /collector-cli\s+(?:transform|compute-analytics)\b/
       )
-      // The upload destination, not the read-only previous-year YoY fetch.
-      const uploadAt = loop.indexOf(
-        '"gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"'
-      )
-      expect(uploadAt).toBeGreaterThan(guardAt)
-    })
-
-    it('skips a refused (exit 3) or unverifiable snapshot', () => {
-      expect(guardBranch).toContain('-ne 0')
-      expect(guardBranch).toContain('continue')
-      expect(guardBranch).not.toContain('gcloud storage cp')
+      expect(run).not.toMatch(/gcloud storage cp\b/)
     })
   })
 
