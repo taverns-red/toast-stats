@@ -119,6 +119,14 @@ on:
         required: false
         type: boolean
         default: false
+      skip_promotion:
+        description: >-
+          Staging-only proof run (#1754): run everything through the count, value and content
+          gates and report them, then write NOTHING to production (no promotion, CDN purge,
+          prune reconcile, reports mirror) and file no promotion-held issue.
+        required: false
+        type: boolean
+        default: false
 
 # Prevent overlapping pipeline runs
 concurrency:
@@ -161,9 +169,14 @@ jobs:
       # Literally the string 'unknown' when a manual `districts` override
       # skipped discovery (#1343) — `place-reports` guards for it.
       program_year: ${{ steps.daily-config.outputs.program_year }}
-      # Both promotion gates open ⇒ this run already rsynced staging → prod,
+      # The promote step ran ⇒ this run already rsynced staging → prod,
       # BEFORE the sidecars landed. `place-reports` mirrors them explicitly.
-      promoted: ${{ steps.diff.outputs.promote == 'true' && steps.valuediff.outputs.value_promote == 'true' }}
+      # Keyed off the step's outcome, not a re-statement of its gates, so a
+      # content-gate hold (#1715) or skip_promotion (#1754) also reads false.
+      promoted: ${{ steps.promote.outcome == 'success' }}
+      # 'true' | 'false' — a staging-only proof run (#1754). Downstream jobs
+      # gate their prod writes on it.
+      skip_promotion: ${{ steps.mode.outputs.skip_promotion }}
       # #1419: 'none' | 'auto' | 'manual'. The `closing-registry-pr` job below
       # keys off 'auto'; the red-alert steps in this job key off 'manual'.
       registry_remediation: ${{ steps.registrycheck.outputs.remediation }}
@@ -226,6 +239,8 @@ jobs:
           # Guarded by scripts/lib/workflowBooleanInputGuard.ts.
           DRY_RUN="${{ inputs.dry_run }}"
           RECONCILE_PROD="${{ inputs.reconcile_prod }}"
+          # Staging-only proof run (#1754). Never true on a schedule (no inputs).
+          SKIP_PROMOTION="${{ inputs.skip_promotion }}"
           if [ "${MODE}" = "prune" ] && [ "${{ github.event_name }}" = "schedule" ]; then
             # Scheduled prunes always reconcile prod in the same run —
             # a staging-only scheduled prune would freeze promotion until
@@ -236,7 +251,11 @@ jobs:
           echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
           echo "dry_run=${DRY_RUN:-false}" >> "$GITHUB_OUTPUT"
           echo "reconcile_prod=${RECONCILE_PROD:-false}" >> "$GITHUB_OUTPUT"
+          echo "skip_promotion=${SKIP_PROMOTION:-false}" >> "$GITHUB_OUTPUT"
           echo "## 🔧 Pipeline Mode: \`${MODE}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${SKIP_PROMOTION:-false}" = "true" ]; then
+            echo "- 🧪 **skip_promotion**: staging-only run — nothing will be written to production." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       # ════════════════════════════════════════════════════════
       # DAILY MODE
@@ -1652,7 +1671,8 @@ jobs:
         if: >-
           steps.mode.outputs.mode == 'prune' &&
           steps.mode.outputs.reconcile_prod == 'true' &&
-          steps.mode.outputs.dry_run != 'true'
+          steps.mode.outputs.dry_run != 'true' &&
+          steps.mode.outputs.skip_promotion != 'true'
         run: |
           DELETED=0
           while IFS= read -r PREFIX; do
@@ -1896,12 +1916,35 @@ jobs:
           CONTENT_GATE_FILE: /tmp/content-gate.json
         run: npx tsx scripts/promotion-content-gate.ts
 
+      # ── skip_promotion (#1754) ──
+      # A staging-only proof run stops here: the three gates above have run
+      # and their verdicts are reported below, but every step that writes to
+      # production, purges the CDN or touches the promotion-held issue is
+      # conditioned on `skip_promotion != 'true'`. Enforced by
+      # scripts/lib/__tests__/dataPipelineSkipPromotion.test.ts, which finds
+      # prod-writing steps by what they run, so a new one must carry it too.
+      - name: Promotion skipped (skip_promotion)
+        id: skippromotion
+        if: steps.mode.outputs.skip_promotion == 'true'
+        run: |
+          echo "promotion skipped (skip_promotion) — production data unchanged."
+          {
+            echo "## 🧪 promotion skipped (skip_promotion)"
+            echo "Staging-only proof run (#1754): no promotion, no CDN purge, no prod reconcile, no promotion-held issue."
+            echo "Gate verdicts (empty = the gate did not run in this mode):"
+            echo "- Count gate (additive): **${{ steps.diff.outputs.promote }}**"
+            echo "- Value gate: **${{ steps.valuediff.outputs.value_promote }}**"
+            echo "- Content gate (#1715): **${{ steps.contentgate.outputs.content_promote }}**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Promote staging to production
+        id: promote
         if: >-
           steps.diff.outputs.promote == 'true'
           && steps.valuediff.outputs.value_promote == 'true'
           && steps.contentgate.outputs.content_promote == 'true'
           && steps.mode.outputs.mode != 'prune'
+          && steps.mode.outputs.skip_promotion != 'true'
         run: |
           echo "Promoting staging → production..."
 
@@ -1942,6 +1985,7 @@ jobs:
           && steps.valuediff.outputs.value_promote == 'true'
           && steps.contentgate.outputs.content_promote == 'true'
           && steps.mode.outputs.mode != 'prune'
+          && steps.mode.outputs.skip_promotion != 'true'
         continue-on-error: true
         run: |
           echo "Invalidating Cloud CDN cache (toast-stats-cdn-url-map, cdn.taverns.red)..."
@@ -1961,6 +2005,7 @@ jobs:
           || steps.valuediff.outputs.value_promote == 'false'
           || steps.contentgate.outputs.content_promote == 'false')
           && steps.mode.outputs.mode != 'prune'
+          && steps.mode.outputs.skip_promotion != 'true'
         run: |
           echo "::error::Promotion BLOCKED — count, value or content gate refused. Production data unchanged."
           echo "## ❌ Promotion Blocked" >> "$GITHUB_STEP_SUMMARY"
@@ -1980,7 +2025,8 @@ jobs:
       # ════════════════════════════════════════════════════════
       - name: Evaluate promotion alert (#1073)
         id: promoalert
-        if: steps.mode.outputs.mode != 'prune'
+        # An intentional skip (#1754) is not a hold: no alert, no auto-close.
+        if: steps.mode.outputs.mode != 'prune' && steps.mode.outputs.skip_promotion != 'true'
         env:
           COUNT_PROMOTE: ${{ steps.diff.outputs.promote }}
           VALUE_PROMOTE: ${{ steps.valuediff.outputs.value_promote }}
@@ -1990,7 +2036,7 @@ jobs:
         run: npx tsx scripts/promotion-alert.ts
 
       - name: Ensure promotion-held label exists
-        if: steps.promoalert.outputs.blocked == 'true'
+        if: steps.promoalert.outputs.blocked == 'true' && steps.mode.outputs.skip_promotion != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -2000,7 +2046,7 @@ jobs:
             2>/dev/null || echo "Label already exists"
 
       - name: File or refresh promotion-held issue
-        if: steps.promoalert.outputs.blocked == 'true'
+        if: steps.promoalert.outputs.blocked == 'true' && steps.mode.outputs.skip_promotion != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -2021,7 +2067,7 @@ jobs:
           fi
 
       - name: Auto-close promotion-held issue on a promoting run
-        if: steps.promoalert.outputs.promoted == 'true'
+        if: steps.promoalert.outputs.promoted == 'true' && steps.mode.outputs.skip_promotion != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -2684,30 +2730,38 @@ jobs:
           {
             echo "- ✅ Placed **${COUNT}** datasets into \`staging:snapshots/${SNAPSHOT_DATE}/\`"
           } >> "$GITHUB_STEP_SUMMARY"
+          echo "placed=true" >> "$GITHUB_OUTPUT"
 
-          # ── PROD PATH — explicit mirror, chosen over the next-day rsync ──
-          # This job runs AFTER `pipeline` has already promoted, so the
-          # sidecars miss that run's `gcloud storage rsync -r snapshots/`. The
-          # alternative — let tomorrow's promotion sweep them up — means the
-          # frontend reads a day-old overlay, a miniature repeat of the silent
-          # staleness this issue exists to fix. So mirror explicitly, gated on
-          # the same two gates that let `pipeline` promote.
-          if [ "${{ needs.pipeline.outputs.promoted }}" = "true" ]; then
-            gcloud storage cp \
-              --content-type="application/json" \
-              --cache-control="public, max-age=3600, must-revalidate" \
-              -Z \
-              /tmp/daily-reports/*.json \
-              "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"
-            echo "- ✅ Mirrored to \`prod:snapshots/${SNAPSHOT_DATE}/\` (this run promoted)" \
-              >> "$GITHUB_STEP_SUMMARY"
-          else
+          if [ "${{ needs.pipeline.outputs.promoted }}" != "true" ]; then
             echo "::warning::[reports] This run did not promote, so the reports" \
               "stay staging-only. They reach prod with the next promoting run's" \
               "snapshots/ rsync."
-            echo "- ⏸️ Promotion was held — reports are staging-only until the next promoting run." \
+            echo "- ⏸️ Promotion was held or skipped — reports are staging-only until the next promoting run." \
               >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      # ── PROD PATH — explicit mirror, chosen over the next-day rsync ──
+      # This job runs AFTER `pipeline` has already promoted, so the sidecars
+      # miss that run's `gcloud storage rsync -r snapshots/`. The alternative —
+      # let tomorrow's promotion sweep them up — means the frontend reads a
+      # day-old overlay, a miniature repeat of the silent staleness this issue
+      # exists to fix. So mirror explicitly, only when `pipeline` promoted.
+      # Its own step so the skip_promotion guard (#1754) sits on the `if:`.
+      - name: '[reports] Mirror placed datasets into prod'
+        if: >-
+          steps.place.outputs.placed == 'true'
+          && needs.pipeline.outputs.promoted == 'true'
+          && needs.pipeline.outputs.skip_promotion != 'true'
+        run: |
+          SNAPSHOT_DATE="${{ needs.pipeline.outputs.snapshot_date }}"
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=3600, must-revalidate" \
+            -Z \
+            /tmp/daily-reports/*.json \
+            "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"
+          echo "- ✅ Mirrored to \`prod:snapshots/${SNAPSHOT_DATE}/\` (this run promoted)" \
+            >> "$GITHUB_STEP_SUMMARY"
 
       # Best-effort teardown of the run-scoped hand-off prefix so `incoming/`
       # never accumulates. Runs on every path, including a refused placement:
