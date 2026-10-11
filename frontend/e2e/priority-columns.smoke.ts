@@ -16,7 +16,9 @@ import { test, expect, type Page } from '@playwright/test'
 interface Route {
   path: string
   /** Accessible name of the priority table. */
-  table: string
+  table: string | RegExp
+  /** Accessible name of the full table at ≥768, when it differs. */
+  wideTable?: string | RegExp
   /** A chip that is not a default, to prove swapping keeps the fit. */
   swapChip: string
   /** Rewrite the live competitive-awards.json so every district holds a
@@ -31,6 +33,13 @@ const ROUTES: readonly Route[] = [
     table: 'Region 05 district rankings',
     swapChip: 'Tier',
     forceTiers: true,
+  },
+  {
+    // The review's clipped-chip page ("President's Disting…", Lesson 134).
+    path: '/district/61/club/7238597/history',
+    table: /program-year history/,
+    wideTable: /performance by program year/,
+    swapChip: 'Members',
   },
 ]
 
@@ -86,11 +95,11 @@ const unmask = (page: Page) =>
     content: 'html,body{overflow-x:visible !important}',
   })
 
-const measure = (page: Page, tableName: string) =>
-  page.evaluate(name => {
+const measure = (page: Page) =>
+  page.evaluate(() => {
     const vw = document.documentElement.clientWidth
     const table = document.querySelector(
-      `table[aria-label="${name}"]`
+      'table.priority-columns__table'
     ) as HTMLTableElement | null
     if (!table) return null
     const rect = (el: Element) => el.getBoundingClientRect()
@@ -149,7 +158,7 @@ const measure = (page: Page, tableName: string) =>
       chipClips: chipClips.length,
       chips: table.querySelectorAll('.priority-columns__tier').length,
     }
-  }, tableName)
+  })
 
 for (const theme of THEMES) {
   for (const width of PHONES) {
@@ -175,7 +184,7 @@ for (const theme of THEMES) {
           // Awards resolve separately from rankings; wait for the chips.
           if (step === 'Tier' && r.forceTiers)
             await page.locator('.priority-columns__tier').first().waitFor()
-          const m = await measure(page, r.table)
+          const m = await measure(page)
           expect(m, `${r.path} ${step}`).not.toBeNull()
           expect(m!.columns, `${r.path} ${step} columns`).toBe(3)
           expect(
@@ -233,14 +242,14 @@ for (const theme of THEMES) {
       for (const r of ROUTES) {
         await page.goto(r.path, { waitUntil: 'networkidle', timeout: 60_000 })
         await page
-          .getByRole('table', { name: r.table })
+          .getByRole('table', { name: r.wideTable ?? r.table })
           .first()
           .waitFor({ state: 'visible' })
         expect(await page.locator('.priority-columns__table').count()).toBe(0)
         expect(await page.locator('.priority-columns__chip').count()).toBe(0)
         if (process.env['SHOTS_DIR']) {
           await page
-            .getByRole('table', { name: r.table })
+            .getByRole('table', { name: r.wideTable ?? r.table })
             .first()
             .scrollIntoViewIfNeeded()
           await page.screenshot({

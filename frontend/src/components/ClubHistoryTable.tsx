@@ -20,6 +20,10 @@ import type { ClubHistoryRow, ClubTierCode } from '../utils/clubHistory'
 import { EM_DASH } from '../utils/clubHistory'
 import { SortableHeader } from './SortableHeader'
 import type { SortDirection } from '../hooks/useUrlSort'
+import {
+  PriorityColumnsTable,
+  type PriorityMetric,
+} from './PriorityColumnsTable'
 
 type SortField = 'year' | 'dcpGoals' | 'tier' | 'membershipNet' | 'status'
 
@@ -45,6 +49,82 @@ function signedNet(value: number | null): string {
   if (value == null) return EM_DASH
   return value > 0 ? `+${value}` : String(value)
 }
+
+/* Phone tier chip (#1834): a phone metric column holds ~80px of content, so
+   "President's Distinguished" can never fit (it clipped as "President's
+   Disting…" — Lesson 134). The chip shows a short label; the full name is
+   the tooltip and the screen-reader text. */
+const TIER_SHORT: Record<ClubTierCode, string> = {
+  D: 'Dist.',
+  S: 'Select',
+  P: 'Pres.',
+  M: 'Smedley',
+}
+
+const PHONE_METRICS: PriorityMetric<ClubHistoryRow, SortField>[] = [
+  {
+    id: 'dcpGoals',
+    label: 'DCP',
+    title: 'DCP goals met, of 10',
+    sortField: 'dcpGoals',
+    render: r => (r.dcpGoals == null ? EM_DASH : `${r.dcpGoals} / 10`),
+  },
+  {
+    id: 'tier',
+    label: 'Tier',
+    title: 'Distinguished tier',
+    sortField: 'tier',
+    render: r =>
+      r.tierCode ? (
+        <span
+          className={`priority-columns__tier ${TIER_MODIFIER[r.tierCode]}`}
+          title={r.tierLabel}
+        >
+          <span aria-hidden="true">{TIER_SHORT[r.tierCode]}</span>
+          <span className="sr-only">{r.tierLabel}</span>
+        </span>
+      ) : (
+        <span className="club-history-muted">{EM_DASH}</span>
+      ),
+  },
+  {
+    id: 'membership',
+    label: 'Members',
+    title: 'Membership, base → end of year, with net change',
+    sortField: 'membershipNet',
+    render: r =>
+      r.membershipBase == null && r.membershipEnd == null ? (
+        EM_DASH
+      ) : (
+        <>
+          <span className="block">
+            {num(r.membershipBase)} → {num(r.membershipEnd)}
+          </span>
+          <span
+            className={`block ${
+              r.membershipNet != null && r.membershipNet < 0
+                ? 'club-history-net club-history-net--neg'
+                : 'club-history-net club-history-net--pos'
+            }`}
+          >
+            {signedNet(r.membershipNet)}
+          </span>
+        </>
+      ),
+  },
+  {
+    id: 'renewals',
+    label: 'Renewals',
+    title: 'Renewals, October / April',
+    render: r => `${num(r.octoberRenewals)} / ${num(r.aprilRenewals)}`,
+  },
+  {
+    id: 'status',
+    label: 'Status',
+    sortField: 'status',
+    render: r => r.clubStatus ?? EM_DASH,
+  },
+]
 
 export interface ClubHistoryTableProps {
   rows: ClubHistoryRow[]
@@ -108,121 +188,150 @@ export function ClubHistoryTable({
     })
   }, [rows, sortField, sortDirection])
 
-  return (
-    <div
-      role="region"
-      aria-label={`${clubName} program-year history`}
-      tabIndex={0}
-      className="club-history-scroll"
-    >
-      <table className="club-history-table">
-        <caption className="sr-only">
-          {clubName} performance by program year
-        </caption>
-        <thead>
-          <tr>
-            <SortableHeader<SortField>
-              field="year"
-              label="Program Year"
-              currentSort={currentSort}
-              onSort={handleSort}
-              thClassName="club-history-th"
-              buttonClassName="club-history-sort"
-            />
-            <SortableHeader<SortField>
-              field="dcpGoals"
-              label="DCP Goals"
-              currentSort={currentSort}
-              onSort={handleSort}
-              thClassName="club-history-th club-history-th--num"
-              buttonClassName="club-history-sort club-history-sort--num"
-              numeric
-            />
-            <SortableHeader<SortField>
-              field="tier"
-              label="Distinguished"
-              currentSort={currentSort}
-              onSort={handleSort}
-              thClassName="club-history-th"
-              buttonClassName="club-history-sort"
-            />
-            <SortableHeader<SortField>
-              field="membershipNet"
-              label="Membership (base → end)"
-              currentSort={currentSort}
-              onSort={handleSort}
-              thClassName="club-history-th club-history-th--num"
-              buttonClassName="club-history-sort club-history-sort--num"
-              numeric
-            />
-            <th scope="col" className="club-history-th club-history-th--num">
-              Renewals (Oct / Apr)
+  const fullTable = (
+    <table className="club-history-table">
+      <caption className="sr-only">
+        {clubName} performance by program year
+      </caption>
+      <thead>
+        <tr>
+          <SortableHeader<SortField>
+            field="year"
+            label="Program Year"
+            currentSort={currentSort}
+            onSort={handleSort}
+            thClassName="club-history-th"
+            buttonClassName="club-history-sort"
+          />
+          <SortableHeader<SortField>
+            field="dcpGoals"
+            label="DCP Goals"
+            currentSort={currentSort}
+            onSort={handleSort}
+            thClassName="club-history-th club-history-th--num"
+            buttonClassName="club-history-sort club-history-sort--num"
+            numeric
+          />
+          <SortableHeader<SortField>
+            field="tier"
+            label="Distinguished"
+            currentSort={currentSort}
+            onSort={handleSort}
+            thClassName="club-history-th"
+            buttonClassName="club-history-sort"
+          />
+          <SortableHeader<SortField>
+            field="membershipNet"
+            label="Membership (base → end)"
+            currentSort={currentSort}
+            onSort={handleSort}
+            thClassName="club-history-th club-history-th--num"
+            buttonClassName="club-history-sort club-history-sort--num"
+            numeric
+          />
+          <th scope="col" className="club-history-th club-history-th--num">
+            Renewals (Oct / Apr)
+          </th>
+          <SortableHeader<SortField>
+            field="status"
+            label="Status"
+            currentSort={currentSort}
+            onSort={handleSort}
+            thClassName="club-history-th"
+            buttonClassName="club-history-sort"
+          />
+        </tr>
+      </thead>
+      <tbody>
+        {sortedRows.map(row => (
+          <tr key={row.startYear}>
+            <th scope="row" className="club-history-td club-history-td--year">
+              {clubId ? (
+                <Link
+                  to={`/club/${clubId}?py=${row.startYear}`}
+                  className="club-history-year-link"
+                >
+                  {row.label}
+                </Link>
+              ) : (
+                row.label
+              )}
             </th>
-            <SortableHeader<SortField>
-              field="status"
-              label="Status"
-              currentSort={currentSort}
-              onSort={handleSort}
-              thClassName="club-history-th"
-              buttonClassName="club-history-sort"
-            />
-          </tr>
-        </thead>
-        <tbody>
-          {sortedRows.map(row => (
-            <tr key={row.startYear}>
-              <th scope="row" className="club-history-td club-history-td--year">
-                {clubId ? (
-                  <Link
-                    to={`/club/${clubId}?py=${row.startYear}`}
-                    className="club-history-year-link"
-                  >
-                    {row.label}
-                  </Link>
-                ) : (
-                  row.label
-                )}
-              </th>
-              <td className="club-history-td club-history-td--num">
-                {row.dcpGoals == null ? EM_DASH : `${row.dcpGoals} / 10`}
-              </td>
-              <td className="club-history-td">
-                {row.tierCode ? (
+            <td className="club-history-td club-history-td--num">
+              {row.dcpGoals == null ? EM_DASH : `${row.dcpGoals} / 10`}
+            </td>
+            <td className="club-history-td">
+              {row.tierCode ? (
+                <span
+                  className={`club-history-tier ${TIER_MODIFIER[row.tierCode]}`}
+                >
+                  {row.tierLabel}
+                </span>
+              ) : (
+                <span className="club-history-muted">{EM_DASH}</span>
+              )}
+            </td>
+            <td className="club-history-td club-history-td--num">
+              {row.membershipBase == null && row.membershipEnd == null ? (
+                EM_DASH
+              ) : (
+                <>
+                  {num(row.membershipBase)} → {num(row.membershipEnd)}{' '}
                   <span
-                    className={`club-history-tier ${TIER_MODIFIER[row.tierCode]}`}
+                    className={
+                      row.membershipNet != null && row.membershipNet < 0
+                        ? 'club-history-net club-history-net--neg'
+                        : 'club-history-net club-history-net--pos'
+                    }
                   >
-                    {row.tierLabel}
+                    ({signedNet(row.membershipNet)})
                   </span>
-                ) : (
-                  <span className="club-history-muted">{EM_DASH}</span>
-                )}
-              </td>
-              <td className="club-history-td club-history-td--num">
-                {row.membershipBase == null && row.membershipEnd == null ? (
-                  EM_DASH
-                ) : (
-                  <>
-                    {num(row.membershipBase)} → {num(row.membershipEnd)}{' '}
-                    <span
-                      className={
-                        row.membershipNet != null && row.membershipNet < 0
-                          ? 'club-history-net club-history-net--neg'
-                          : 'club-history-net club-history-net--pos'
-                      }
-                    >
-                      ({signedNet(row.membershipNet)})
-                    </span>
-                  </>
-                )}
-              </td>
-              <td className="club-history-td club-history-td--num">
-                {num(row.octoberRenewals)} / {num(row.aprilRenewals)}
-              </td>
-              <td className="club-history-td">{row.clubStatus ?? EM_DASH}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                </>
+              )}
+            </td>
+            <td className="club-history-td club-history-td--num">
+              {num(row.octoberRenewals)} / {num(row.aprilRenewals)}
+            </td>
+            <td className="club-history-td">{row.clubStatus ?? EM_DASH}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+
+  // Below 768 (#1834): year + 2 chosen metrics, no side-scroll, the tier as
+  // a short chip that fits its cell (Lesson 134); the complete table moves
+  // into the full-screen sheet. ≥768 renders the scroll region unchanged.
+  return (
+    <PriorityColumnsTable<ClubHistoryRow, SortField>
+      label={`${clubName} program-year history`}
+      rows={sortedRows}
+      rowKey={r => String(r.startYear)}
+      identityHeader="Year"
+      identitySortField="year"
+      renderIdentity={r =>
+        clubId ? (
+          <Link to={`/club/${clubId}?py=${r.startYear}`}>{r.label}</Link>
+        ) : (
+          r.label
+        )
+      }
+      metrics={PHONE_METRICS}
+      defaultMetricIds={['dcpGoals', 'tier']}
+      sort={currentSort}
+      onSort={handleSort}
+      fullTableTitle={`${clubName} — all columns`}
+      sheetTable={fullTable}
+      fullTable={
+        <div
+          role="region"
+          aria-label={`${clubName} program-year history`}
+          tabIndex={0}
+          className="club-history-scroll"
+        >
+          {fullTable}
+        </div>
+      }
+    />
   )
 }
