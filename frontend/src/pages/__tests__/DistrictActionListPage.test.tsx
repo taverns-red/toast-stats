@@ -978,7 +978,11 @@ describe('DistrictActionListPage — phone rows (#1833)', () => {
     const closeRow = within(close).getByTestId('mobile-row')
     expect(closeRow).toHaveAttribute('href', '/district/61/club/close-1')
     expect(closeRow).toHaveTextContent('Rising Club')
-    expect(closeRow).toHaveTextContent('Needs 2 members + 1 DCP goal')
+    // The gap is the point of the row, so it leads line 2 after a short
+    // "A/01" area tag — the preview cut "Area A/04 · Needs 2 members + 2 …".
+    expect(closeRow.querySelector('.mobile-row__meta')).toHaveTextContent(
+      /^A\/\w+ · 2 members \+ 1 DCP goal$/
+    )
 
     const visits = await openSection('section-visits')
     const visitRow = within(visits).getByTestId('mobile-row')
