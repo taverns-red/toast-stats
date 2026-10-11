@@ -181,15 +181,17 @@ describe('ClubsTable < 768 px — compact rows (#1833)', () => {
   })
 
   it('the mobile sort control writes through onSortChange (URL state)', () => {
+    // Sort moved into the Filter & sort sheet (#1836).
     const onSortChange = vi.fn()
     render(
       <ClubsTable clubs={CLUBS} districtId="61" onSortChange={onSortChange} />
     )
-    fireEvent.change(screen.getByLabelText('Sort clubs'), {
+    fireEvent.click(screen.getByRole('button', { name: /filter & sort/i }))
+    fireEvent.change(screen.getByLabelText('Sort by'), {
       target: { value: 'membership' },
     })
     expect(onSortChange).toHaveBeenCalledWith('membership', 'asc')
-    fireEvent.click(screen.getByRole('button', { name: /sort direction/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Descending' }))
     expect(onSortChange).toHaveBeenLastCalledWith('membership', 'desc')
   })
 

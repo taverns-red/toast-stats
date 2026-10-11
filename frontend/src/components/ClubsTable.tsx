@@ -16,6 +16,7 @@ import { LoadingSkeleton } from './LoadingSkeleton'
 import { useColumnFilters } from '../hooks/useColumnFilters'
 import { ColumnHeader } from './ColumnHeader'
 import { FiltersPanel } from './filters/FiltersPanel'
+import { FilterSheet, type FilterSheetFacet } from './filters/FilterSheet'
 import { ActiveFiltersBar } from './ActiveFiltersBar'
 import { ColumnGroupsMenu } from './ColumnGroupsMenu'
 import { describeActiveFilters } from '../utils/clubFilterDescribe'
@@ -347,6 +348,80 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     clearAllFiltersInternal()
     onFilterChange?.({})
   }, [clearAllFiltersInternal, onFilterChange])
+
+  // ── Phone Filter & sort sheet (#1836) ─────────────────────────────────
+  // Below 768 the column-filter drawer becomes the shared FilterSheet with
+  // facet chips. The search is its own sticky field, so the sheet's count and
+  // "Clear all" leave the `name` filter alone. Same filter state, another entry
+  // point (R11); every change still leaves through onFilterChange (URL).
+  const nameFilter = filterState['name'] ?? null
+  const sheetActiveCount = activeFilterCount - (nameFilter ? 1 : 0)
+  const clearSheetFilters = useCallback(() => {
+    clearAllFiltersInternal()
+    if (nameFilter) setFilterInternal('name', nameFilter)
+    onFilterChange?.(nameFilter ? { name: nameFilter } : {})
+  }, [clearAllFiltersInternal, setFilterInternal, nameFilter, onFilterChange])
+
+  const sheetFacets = useMemo((): FilterSheetFacet[] => {
+    const selectedOf = (field: SortField): string[] => {
+      const f = filterState[field]
+      return f?.type === 'categorical' && Array.isArray(f.value)
+        ? (f.value as string[])
+        : []
+    }
+    const setFacet = (field: SortField) => (next: string[]) =>
+      setFilter(
+        field,
+        next.length
+          ? { field, type: 'categorical', value: next, operator: 'in' }
+          : null
+      )
+    const byNatural = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    const options = (values: string[], prefix: RegExp) =>
+      [...new Set(values)]
+        .filter(Boolean)
+        .sort(byNatural)
+        .map(v => ({ value: v, label: v.replace(prefix, '') }))
+
+    const divisions = selectedOf('division')
+    const areaSource = divisions.length
+      ? clubs.filter(c => divisions.includes(c.divisionName))
+      : clubs
+    return [
+      {
+        id: 'status',
+        label: 'Status',
+        options: [
+          { value: 'thriving', label: 'Thriving' },
+          { value: 'vulnerable', label: 'Vulnerable' },
+          { value: 'intervention-required', label: 'Intervention required' },
+        ],
+        selected: selectedOf('status'),
+        onChange: setFacet('status'),
+      },
+      {
+        id: 'division',
+        label: 'Division',
+        options: options(
+          clubs.map(c => c.divisionName),
+          /^Division\s+/i
+        ),
+        selected: divisions,
+        onChange: setFacet('division'),
+      },
+      {
+        id: 'area',
+        label: 'Area',
+        options: options(
+          areaSource.map(c => c.areaName),
+          /^Area\s+/i
+        ),
+        selected: selectedOf('area'),
+        onChange: setFacet('area'),
+      },
+    ]
+  }, [clubs, filterState, setFilter])
 
   // Visible-search → `name` text filter (#814). Empty/whitespace clears the
   // filter rather than writing `?search=` junk to the URL.
@@ -699,6 +774,13 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     onSortChange?.(newField, newDirection)
   }
 
+  // The sheet sets field and direction together — one URL write (#1836).
+  const setSort = (field: string, direction: SortDirection) => {
+    setSortField(field as SortField)
+    setSortDirection(direction)
+    onSortChange?.(field as SortField, direction)
+  }
+
   // Show the right-edge scroll-cue ONLY when the table actually overflows to
   // the right. A permanent fade would wash out the right-aligned numeric
   // columns on a wide desktop where the full set fits and nothing scrolls — a
@@ -803,6 +885,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             onClick={() => setIsFiltersOpen(true)}
             aria-haspopup="dialog"
             aria-expanded={isFiltersOpen}
+            {...(isMobile
+              ? {
+                  'aria-label':
+                    sheetActiveCount > 0
+                      ? `Filter & sort, ${sheetActiveCount} active`
+                      : 'Filter & sort',
+                }
+              : {})}
           >
             <svg
               className="w-4 h-4"
@@ -818,10 +908,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
               />
             </svg>
-            <span>Filters</span>
-            {activeFilterCount > 0 && (
+            <span>{isMobile ? 'Filter & sort' : 'Filters'}</span>
+            {(isMobile ? sheetActiveCount : activeFilterCount) > 0 && (
               <span className="clubs-filters-trigger__badge">
-                {activeFilterCount}
+                {isMobile ? sheetActiveCount : activeFilterCount}
               </span>
             )}
           </button>
@@ -977,35 +1067,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       {!isLoading && sortedClubs.length > 0 && isMobile && (
         // Bleed the rows to the panel edge (its 18 px padding) at < 768.
         <div className="pb-4 clubs-mobile-rows">
-          <div className="flex items-center gap-2 mb-3 px-4">
-            <label
-              htmlFor="mobile-sort"
-              className="text-sm clubs-text-muted font-medium"
-            >
-              Sort by:
-            </label>
-            <select
-              id="mobile-sort"
-              value={sortField}
-              onChange={e => handleSort(e.target.value as SortField)}
-              className="text-base clubs-mobile-select rounded-md"
-              aria-label="Sort clubs"
-            >
-              {COLUMN_CONFIGS.filter(c => c.sortable).map(config => (
-                <option key={config.field} value={config.field}>
-                  {config.label}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => handleSort(sortField)}
-              className="text-base clubs-sort-dir px-1"
-              aria-label={`Sort direction: ${sortDirection === 'asc' ? 'ascending' : 'descending'}`}
-            >
-              {sortDirection === 'asc' ? '↑' : '↓'}
-            </button>
-          </div>
+          {/* Sort lives in the Filter & sort sheet (#1836). */}
           {mobileGroups ? (
             <MobileRowList
               label="Clubs by division"
@@ -1126,14 +1188,35 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           state the search box and ActiveFiltersBar write to (R11) — one
           mechanism, multiple entry points. (The quick-filter chip row that
           was a third entry point was removed in #902.) */}
-      <FiltersPanel
-        isOpen={isFiltersOpen}
-        onClose={closeFilters}
-        getFilter={getFilter}
-        setFilter={setFilter}
-        clearAllFilters={clearAllFilters}
-        activeFilterCount={activeFilterCount}
-      />
+      {isMobile ? (
+        <FilterSheet
+          isOpen={isFiltersOpen}
+          onClose={closeFilters}
+          resultCount={sortedClubs.length}
+          resultNoun={{ one: 'club', other: 'clubs' }}
+          activeCount={sheetActiveCount}
+          onClearAll={clearSheetFilters}
+          sort={{
+            options: COLUMN_CONFIGS.filter(c => c.sortable).map(c => ({
+              value: c.field,
+              label: c.label,
+            })),
+            field: sortField,
+            direction: sortDirection,
+            onChange: setSort,
+          }}
+          facets={sheetFacets}
+        />
+      ) : (
+        <FiltersPanel
+          isOpen={isFiltersOpen}
+          onClose={closeFilters}
+          getFilter={getFilter}
+          setFilter={setFilter}
+          clearAllFilters={clearAllFilters}
+          activeFilterCount={activeFilterCount}
+        />
+      )}
     </div>
   )
 }
