@@ -28,6 +28,41 @@
   @media (max-width: 639px) {
     .clubs-page {
       padding: 20px 16px 40px;
+      /* #1831: the context bar bleeds across this 16px gutter. */
+      --context-bar-bleed: 16px;
+    }
+  }
+
+  /* Phone context bar (#1831). This file's `components` layer outranks the
+     brand layer context-bar.css lives in, so the clubs-world collapse lives
+     here: below 768 the bar replaces the eyebrow, title (kept for AT,
+     visually hidden), body copy and data chips. */
+  @media (max-width: 767px) {
+    .clubs-page:has(> .context-bar) {
+      padding-top: 0;
+    }
+
+    .context-bar ~ .clubs-page__header {
+      margin: 0;
+      gap: 0;
+    }
+
+    .context-bar ~ .clubs-page__header .placeholder-page__eyebrow,
+    .context-bar ~ .clubs-page__header .placeholder-page__body,
+    .context-bar ~ .clubs-page__header .districts-page-header__actions {
+      display: none;
+    }
+
+    .context-bar ~ .clubs-page__header .placeholder-page__title {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
   }
 

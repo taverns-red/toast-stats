@@ -4,6 +4,7 @@ import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import { useGlobalClubRace } from '../hooks/useGlobalClubRace'
 import { DataControlsBar } from '../components/DataControlsBar'
+import { ClubsWorldContextBar } from '../components/clubs/ClubsWorldContextBar'
 import { ClubsSubnav } from '../components/clubs/ClubsSubnav'
 import { RacePodium } from '../components/clubs/RacePodium'
 import { RaceChart } from '../components/clubs/RaceChart'
@@ -102,6 +103,21 @@ const ClubsWorldPage: React.FC = () => {
 
   return (
     <div className="clubs-page">
+      {/* Phone context bar (#1831): below 768 it replaces this header. */}
+      <ClubsWorldContextBar
+        title="Clubs worldwide"
+        about="The race to Distinguished: which clubs in the world reached each tier first, and when. Only clubs that have reached a line appear here."
+        trail={[{ label: 'Clubs worldwide' }]}
+        selectedProgramYear={selectedProgramYear}
+        setSelectedProgramYear={setSelectedProgramYear}
+        availableProgramYears={availableProgramYears}
+        cachedDates={cachedDates}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        effectiveDate={effectiveDate}
+        asOfDate={globalAsOfDate}
+        isLatestSnapshot={isLatestSnapshot}
+      />
       <header className="districts-page-header clubs-page__header">
         <div className="districts-page-header__intro">
           <p className="placeholder-page__eyebrow">

@@ -4,7 +4,8 @@
 
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
@@ -200,5 +201,27 @@ describe('ClubsRacePage (#1556)', () => {
     expect(
       screen.getByText(/race is not available for this date/i)
     ).toBeInTheDocument()
+  })
+})
+
+describe('ClubsRacePage — phone context bar (#1831)', () => {
+  beforeEach(() => vi.mocked(useGlobalClubRace).mockReset())
+
+  it('backs up one level to the worldwide overview, trail in the sheet', async () => {
+    mockHook({ race: RACE, snapshotDate: '2026-09-11' })
+    renderAt('/clubs/race/select')
+    const back = screen.getByTestId('context-bar-back')
+    expect(back).toHaveAttribute('href', '/clubs')
+    expect(back).toHaveAccessibleName('Back to Clubs worldwide')
+    await userEvent.click(screen.getByTestId('context-bar-chip'))
+    const sheet = screen.getByRole('dialog', {
+      name: 'First to Select Distinguished',
+    })
+    const trail = within(sheet).getByRole('navigation', { name: 'Breadcrumb' })
+    expect(
+      within(trail)
+        .getAllByRole('listitem')
+        .map(li => li.textContent)
+    ).toEqual(['Clubs worldwide', 'First to Select Distinguished'])
   })
 })
