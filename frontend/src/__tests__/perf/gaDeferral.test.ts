@@ -18,9 +18,9 @@ import { resolve } from 'path'
 const html = readFileSync(resolve(__dirname, '../../..', 'index.html'), 'utf-8')
 
 function gaInlineScript(): string {
-  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
-    m => m[1] ?? ''
-  )
+  const scripts = [
+    ...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/gi),
+  ].map(m => m[1] ?? '')
   const ga = scripts.find(s => s.includes('googletagmanager.com/gtag/js'))
   if (!ga) throw new Error('GA inline script not found in index.html')
   return ga
