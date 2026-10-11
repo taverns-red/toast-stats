@@ -516,3 +516,48 @@ describe('DistrictClubsPage (#570 — Phase 2)', () => {
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 })
+
+// #1833: below 768 the clubs list is grouped by division, collapsed. The open
+// set is page-owned URL state (`?open=`), so it survives the round-trip to a
+// club page and back, and a shared link opens the same divisions.
+describe('DistrictClubsPage phone rows — open divisions in the URL (#1833)', () => {
+  beforeEach(() => {
+    // The #1104 error test above pins a rejecting return value with
+    // mockReturnValue; reset to the factory's healthy implementation.
+    vi.mocked(useDistrictAnalytics).mockReset()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    )
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('opens the divisions named in ?open= and writes toggles back to it', async () => {
+    const { router } = renderAt('/district/61/clubs?open=A')
+    const a = await screen.findByRole('button', { name: /Division A/ })
+    expect(a).toHaveAttribute('aria-expanded', 'true')
+    const b = screen.getByRole('button', { name: /Division B/ })
+    expect(b).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(b)
+    await waitFor(() =>
+      expect(router.state.location.search).toContain('open=A%2CB')
+    )
+    expect(screen.getByRole('button', { name: /Division B/ })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+  })
+})

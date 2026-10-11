@@ -43,7 +43,16 @@ import {
   buildClubsDeltaColumns,
   CLUBS_DELTA_COLUMN_IDS,
 } from './clubsDeltaColumns'
-import ClubCard from './ClubCard'
+import {
+  MobileRowList,
+  type MobileRow,
+  type MobileRowGroup,
+} from './MobileRowList'
+import { StatusChip } from './StatusChip'
+import {
+  getClubHealthStatusLabel,
+  getClubHealthStatusShortLabel,
+} from '../utils/clubHealthStatus'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useDebounce } from '../hooks/useDebounce'
 
@@ -210,6 +219,23 @@ interface ClubsTableProps {
    * Omitted → the ladder's default.
    */
   programYear?: string | undefined
+  /**
+   * Division groups open in the phone row list (#1833). Owned by the page so
+   * the open set lives in the URL and survives the club page round-trip (R3).
+   * Omitted → local state, every group collapsed.
+   */
+  openGroups?: readonly string[] | undefined
+  /** Called with the next open-group set when a division header is tapped. */
+  onOpenGroupsChange?: ((next: string[]) => void) | undefined
+}
+
+/** Signed net change with a true minus sign; `null` when the base is unknown. */
+function formatNet(club: ProcessedClubTrend): string | null {
+  if (club.membershipBase == null) return null
+  const net = club.latestMembership - club.membershipBase
+  if (net > 0) return `+${net}`
+  if (net < 0) return `\u2212${Math.abs(net)}`
+  return '\u00b10'
 }
 
 /**
@@ -261,6 +287,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   referenceDate,
   snapshotDiff,
   programYear,
+  openGroups,
+  onOpenGroupsChange,
 }) => {
   const [sortField, setSortField] = useState<SortField>(
     initialSortField ?? 'name'
@@ -517,7 +545,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   }, [hiddenGroups])
 
   // CC-7 (#872): build the club-detail href once; the sticky name cell renders
-  // it as a real <Link> (via table.meta), and the mobile ClubCard reuses it.
+  // it as a real <Link> (via table.meta), and the phone rows (#1833) reuse it.
   const clubLinkTo = useCallback(
     (club: ProcessedClubTrend) => `/district/${districtId}/club/${club.clubId}`,
     [districtId]
@@ -550,6 +578,106 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     () => rowModel.rows.map(r => r.original),
     [rowModel]
   )
+
+  // ── Phone rows (#1833) ────────────────────────────────────────────────
+  // Below 768 the ClubCard stack became MobileRowList compact rows. The DEFAULT
+  // view (no search / filter / preset, default name sort) groups by division,
+  // collapsed, with counts — the browse view. Anything the user narrows or
+  // re-orders becomes one flat result list in `sortedClubs` order, so search
+  // and sort keep meaning what they say. Both views read the existing pipeline
+  // output (R11); nothing here filters or sorts on its own.
+  const isDefaultMobileView =
+    !hasActiveFilters &&
+    !presetActive &&
+    sortField === 'name' &&
+    sortDirection === 'asc'
+
+  const toMobileRow = useCallback(
+    (club: ProcessedClubTrend): MobileRow => {
+      const members = club.latestMembership
+      const net = formatNet(club)
+      const memberText = `${members} member${members === 1 ? '' : 's'}`
+      return {
+        id: club.clubId,
+        to: clubLinkTo(club),
+        state: clubLinkState,
+        title: club.clubName,
+        chip: (
+          <StatusChip
+            status={club.currentStatus}
+            label={getClubHealthStatusShortLabel(club.currentStatus)}
+          />
+        ),
+        // Two numbers fit beside the chip at 375 px; net change rides in the
+        // accessible name (and on the club page).
+        meta: `${memberText} · ${club.latestDcpGoals}/10 DCP`,
+        ariaLabel: `${club.clubName} — ${getClubHealthStatusLabel(
+          club.currentStatus
+        )}, ${memberText}${net ? `, net ${net}` : ''}, ${
+          club.latestDcpGoals
+        } of 10 DCP goals`,
+      }
+    },
+    [clubLinkTo, clubLinkState]
+  )
+
+  const mobileRows = useMemo(
+    () =>
+      isMobile && !isDefaultMobileView ? sortedClubs.map(toMobileRow) : [],
+    [isMobile, isDefaultMobileView, sortedClubs, toMobileRow]
+  )
+
+  const mobileGroups = useMemo<MobileRowGroup[] | undefined>(() => {
+    if (!isMobile || !isDefaultMobileView) return undefined
+    const byDivision = new Map<
+      string,
+      { label: string; rows: MobileRow[]; x: number; v: number }
+    >()
+    for (const club of sortedClubs) {
+      const id = club.divisionId || 'none'
+      let g = byDivision.get(id)
+      if (!g) {
+        g = { label: club.divisionName || 'No division', rows: [], x: 0, v: 0 }
+        byDivision.set(id, g)
+      }
+      g.rows.push(toMobileRow(club))
+      if (club.currentStatus === 'intervention-required') g.x++
+      else if (club.currentStatus === 'vulnerable') g.v++
+    }
+    return [...byDivision.entries()]
+      .sort(([, a], [, b]) =>
+        a.label.localeCompare(b.label, undefined, { numeric: true })
+      )
+      .map(([id, g]) => {
+        const summary = [g.x ? `\u2717 ${g.x}` : '', g.v ? `\u26a0 ${g.v}` : '']
+          .filter(Boolean)
+          .join(' \u00b7 ')
+        return {
+          id,
+          label: g.label,
+          rows: g.rows,
+          ...(summary ? { summary } : {}),
+        }
+      })
+  }, [isMobile, isDefaultMobileView, sortedClubs, toMobileRow])
+
+  const [localOpenGroups, setLocalOpenGroups] = useState<string[]>([])
+  const openGroupIds = openGroups ?? localOpenGroups
+  const handleToggleGroup = useCallback(
+    (id: string) => {
+      const next = openGroupIds.includes(id)
+        ? openGroupIds.filter(g => g !== id)
+        : [...openGroupIds, id]
+      if (onOpenGroupsChange) onOpenGroupsChange(next)
+      else setLocalOpenGroups(next)
+    },
+    [openGroupIds, onOpenGroupsChange]
+  )
+
+  const searchValue =
+    typeof getFilter('name')?.value === 'string'
+      ? (getFilter('name')!.value as string)
+      : ''
 
   // No pagination (#667): the full sorted+filtered set renders in a single
   // sticky-header scroll container. Sort / filter / search span every row;
@@ -656,14 +784,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             it stays in sync with that dropdown and URL-syncs through the parent
             (DistrictClubsPage maps `name` ⇄ `?search=`). */}
         <div className="clubs-filter-toolbar">
-          <ClubSearchBox
-            value={
-              typeof getFilter('name')?.value === 'string'
-                ? (getFilter('name')!.value as string)
-                : ''
-            }
-            onSearchChange={handleSearchChange}
-          />
+          {/* Below 768 the search lives in the sticky bar above the rows
+              (#1833) — one box, never two. */}
+          {!isMobile && (
+            <ClubSearchBox
+              value={searchValue}
+              onSearchChange={handleSearchChange}
+            />
+          )}
           {/* Discoverable entry to the Filters drawer (#816). The hidden
               per-column header dropdowns are gone; this button + its
               active-count badge is the single, visible way into precise
@@ -701,11 +829,15 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               the Filters trigger so the two table-shape controls live together;
               uses the same .clubs-filters-trigger styling for a single visual
               language. */}
-          <ColumnGroupsMenu
-            groups={availableColumnGroups}
-            isGroupHidden={isGroupHidden}
-            onToggle={toggleGroup}
-          />
+          {/* Column groups shape the table; the phone rows have no columns
+              (#1833), so the control would be dead there. */}
+          {!isMobile && (
+            <ColumnGroupsMenu
+              groups={availableColumnGroups}
+              isGroupHidden={isGroupHidden}
+              onToggle={toggleGroup}
+            />
+          )}
           {/* Close-to-Distinguished preset (#903) — moved into the toolbar
               cluster, directly after Columns (#967). One action-oriented toggle
               in place of the retired quick-filter row, sharing the canonical
@@ -756,6 +888,18 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           clearAllFilters={clearAllFilters}
         />
       </div>
+
+      {/* Phone search (#1833): sticky directly above the list. Its parent is
+          the whole panel, so it pins while the rows scroll and stays put
+          (with the no-results state below it) when a search matches nothing. */}
+      {isMobile && !isLoading && clubs.length > 0 && (
+        <div className="clubs-mobile-sticky-search">
+          <ClubSearchBox
+            value={searchValue}
+            onSearchChange={handleSearchChange}
+          />
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && <LoadingSkeleton variant="table" count={5} />}
@@ -829,30 +973,22 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         </div>
       )}
 
-      {/* Mobile Card View (#217) */}
+      {/* Phone rows (#1833) — replaces the #217 ClubCard stack. */}
       {!isLoading && sortedClubs.length > 0 && isMobile && (
-        <div className="p-4">
-          {/* Mobile sort dropdown */}
-          <div className="flex items-center gap-2 mb-3">
+        // Bleed the rows to the panel edge (its 18 px padding) at < 768.
+        <div className="pb-4 clubs-mobile-rows">
+          <div className="flex items-center gap-2 mb-3 px-4">
             <label
               htmlFor="mobile-sort"
-              className="text-xs clubs-text-muted font-medium"
+              className="text-sm clubs-text-muted font-medium"
             >
               Sort by:
             </label>
             <select
               id="mobile-sort"
               value={sortField}
-              onChange={e => {
-                const field = e.target.value as SortField
-                if (field === sortField) {
-                  setSortDirection(d => (d === 'asc' ? 'desc' : 'asc'))
-                } else {
-                  setSortField(field)
-                  setSortDirection('asc')
-                }
-              }}
-              className="text-xs clubs-mobile-select rounded-md"
+              onChange={e => handleSort(e.target.value as SortField)}
+              className="text-base clubs-mobile-select rounded-md"
               aria-label="Sort clubs"
             >
               {COLUMN_CONFIGS.filter(c => c.sortable).map(config => (
@@ -863,26 +999,32 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             </select>
             <button
               type="button"
-              onClick={() =>
-                setSortDirection(d => (d === 'asc' ? 'desc' : 'asc'))
-              }
-              className="text-xs clubs-sort-dir px-1"
+              onClick={() => handleSort(sortField)}
+              className="text-base clubs-sort-dir px-1"
               aria-label={`Sort direction: ${sortDirection === 'asc' ? 'ascending' : 'descending'}`}
             >
               {sortDirection === 'asc' ? '↑' : '↓'}
             </button>
           </div>
-          {/* Card list — all clubs, no pagination (#667) */}
-          <div className="space-y-3">
-            {sortedClubs.map(club => (
-              <ClubCard
-                key={club.clubId}
-                club={club}
-                to={clubLinkTo(club)}
-                state={clubLinkState}
-              />
-            ))}
-          </div>
+          {mobileGroups ? (
+            <MobileRowList
+              label="Clubs by division"
+              noun="clubs"
+              groups={mobileGroups}
+              chipPlacement="meta"
+              flush
+              openGroupIds={openGroupIds}
+              onToggleGroup={handleToggleGroup}
+            />
+          ) : (
+            <MobileRowList
+              label="Clubs"
+              noun="clubs"
+              rows={mobileRows}
+              chipPlacement="meta"
+              flush
+            />
+          )}
         </div>
       )}
 

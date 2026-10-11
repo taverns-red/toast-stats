@@ -21,6 +21,7 @@ import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ClubsTable } from '../components/ClubsTable'
+import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { ProspectiveClubsPanel } from '../components/ProspectiveClubsPanel'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay } from '../components/ErrorDisplay'
@@ -120,6 +121,13 @@ const DistrictClubsPage: React.FC = () => {
     },
     [setSearchParams]
   )
+
+  // Open division groups in the phone row list (#1833). Page-owned URL state
+  // (`?open=A,B`) so a club page round-trip — whose back link carries
+  // location.search — and a shared link restore the same open divisions.
+  // useUrlStringSet writes functionally (lesson 070), so it composes with the
+  // sort/filter/preset writers above.
+  const [openGroups, setOpenGroups] = useUrlStringSet('open')
 
   const handleFilterChange = useCallback(
     (state: FilterState) => {
@@ -330,6 +338,8 @@ const DistrictClubsPage: React.FC = () => {
                   onPresetChange={handlePresetChange}
                   snapshotDiff={snapshotDiff}
                   programYear={effectiveProgramYear?.label}
+                  openGroups={openGroups}
+                  onOpenGroupsChange={setOpenGroups}
                 />
                 <ProspectiveClubsPanel clubs={analytics?.prospectiveClubs} />
               </>

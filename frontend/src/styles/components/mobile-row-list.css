@@ -1,0 +1,230 @@
+/* MobileRowList (#1833, mobile epic #1827 Phase 1) — compact rows for
+   browse-one-entity data on phones (review §5.2 / §5.6). Theme-aware tokens
+   only (--surface, --line, --ink, --ink-3), so dark mode remaps with no
+   per-component override (R10). Contract pinned by MobileRowList.test.tsx:
+   rows 56–64 px, ≥ 44 px controls, ≥ 14 px text, a chip that never shrinks
+   (the title ellipsizes instead — Lesson 134). */
+
+.mobile-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-row-list__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--rds-radius-md, 8px);
+  background-color: var(--surface);
+  overflow: hidden;
+}
+
+.mobile-row-list__rows > li + li {
+  border-top: 1px solid var(--line);
+}
+
+.mobile-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  max-height: 64px;
+  padding: 8px 12px;
+  color: inherit;
+  text-decoration: none;
+  background-color: var(--surface);
+}
+
+.mobile-row:hover {
+  background-color: var(--surface-3);
+}
+
+.mobile-row:focus-visible {
+  outline: 2px solid var(--loyal-600);
+  outline-offset: -2px;
+}
+
+.mobile-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mobile-row__line1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobile-row__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+  color: var(--ink);
+}
+
+.mobile-row__line2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobile-row__chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.mobile-row__chip .clubs-status-pill {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.mobile-row__meta {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.mobile-row__trailing {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.mobile-row__chevron {
+  flex-shrink: 0;
+  color: var(--ink-3);
+}
+
+/* ── Groups: collapsed-by-default disclosure headers with counts ────────── */
+
+.mobile-row-group__heading {
+  margin: 0;
+}
+
+.mobile-row-group__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--rds-radius-md, 8px);
+  background-color: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-row-group__toggle:hover {
+  background-color: var(--surface-3);
+}
+
+.mobile-row-group__toggle:focus-visible {
+  outline: 2px solid var(--loyal-600);
+  outline-offset: 2px;
+}
+
+.mobile-row-group__toggle[aria-expanded='true'] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.mobile-row-group [id] > .mobile-row-list__rows {
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.mobile-row-group__chevron {
+  flex-shrink: 0;
+  color: var(--ink-3);
+  transition: transform 150ms ease;
+}
+
+.mobile-row-group__chevron--open {
+  transform: rotate(90deg);
+}
+
+.mobile-row-group__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.mobile-row-group__summary {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.mobile-row-group__count {
+  flex-shrink: 0;
+  min-width: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background-color: var(--surface-3);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 24px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-row-group__chevron {
+    transition: none;
+  }
+}
+
+/* ── "Show 25 more" ──────────────────────────────────────────────────────── */
+
+.mobile-row-list__more {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--rds-radius-md, 8px);
+  background-color: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mobile-row-list__more:hover {
+  background-color: var(--surface-3);
+}
+
+.mobile-row-list__more-count {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+/* Flush: rows bleed to the panel edge (#1833) — no side borders or radius,
+   so a 375 px phone gives the name and numbers every pixel. */
+.mobile-row-list--flush .mobile-row-list__rows,
+.mobile-row-list--flush .mobile-row-group__toggle,
+.mobile-row-list--flush .mobile-row-list__more {
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+}

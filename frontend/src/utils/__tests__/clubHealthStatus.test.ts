@@ -9,6 +9,7 @@ import type { ClubHealthStatus } from '../../hooks/useDistrictAnalytics'
 import {
   getClubHealthStatusLabel,
   getClubHealthStatusPillModifier,
+  getClubHealthStatusShortLabel,
 } from '../clubHealthStatus'
 
 describe('clubHealthStatus', () => {
@@ -27,6 +28,20 @@ describe('clubHealthStatus', () => {
     (status, label, modifier) => {
       expect(getClubHealthStatusLabel(status)).toBe(label)
       expect(getClubHealthStatusPillModifier(status)).toBe(modifier)
+    }
+  )
+
+  // #1833: the compact mobile row has ~300 px for name + chip at 375 px; the
+  // 2-word label would leave the club name ~90 px. One word per status, still
+  // distinct and still paired with the glyph, so meaning never rests on colour.
+  it.each([
+    ['thriving', 'Thriving'],
+    ['vulnerable', 'Vulnerable'],
+    ['intervention-required', 'Intervention'],
+  ] as Array<[ClubHealthStatus, string]>)(
+    'short label for %s is "%s"',
+    (status, label) => {
+      expect(getClubHealthStatusShortLabel(status)).toBe(label)
     }
   )
 })

@@ -22,6 +22,20 @@ export function getClubHealthStatusLabel(status: ClubHealthStatus): string {
   }
 }
 
+/**
+ * One-word label for space-constrained surfaces (#1833): the compact mobile
+ * row has ~300 px for name + chip at 375 px, and "Intervention Required" would
+ * leave the club name ~90 px. Always rendered with the status glyph, so the
+ * meaning never rests on colour (WCAG 1.4.1); the full label stays the default.
+ */
+export function getClubHealthStatusShortLabel(
+  status: ClubHealthStatus
+): string {
+  return status === 'intervention-required'
+    ? 'Intervention'
+    : getClubHealthStatusLabel(status)
+}
+
 export function getClubHealthStatusPillModifier(
   status: ClubHealthStatus
 ): string {
