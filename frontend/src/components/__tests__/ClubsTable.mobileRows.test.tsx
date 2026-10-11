@@ -112,12 +112,16 @@ describe('ClubsTable < 768 px — compact rows (#1833)', () => {
     expect(rows).toHaveLength(2)
     const alpha = rows[0]!
     expect(alpha).toHaveAttribute('href', '/district/61/club/1')
-    expect(alpha).toHaveTextContent('Alpha Speakers')
-    expect(alpha).toHaveTextContent('✗')
-    expect(alpha).toHaveTextContent('Intervention')
-    expect(alpha).toHaveTextContent('8 members')
-    expect(alpha).toHaveTextContent('−10')
-    expect(alpha).toHaveTextContent('5/10 DCP')
+    // Line 1 is the name alone — at 375 px it needs the full row width.
+    expect(alpha.querySelector('.mobile-row__line1')).toHaveTextContent(
+      /^Alpha Speakers$/
+    )
+    // Line 2: glyph + one-word status, then members and DCP.
+    const line2 = alpha.querySelector('.mobile-row__line2')!
+    expect(line2).toHaveTextContent('✗ Intervention')
+    expect(line2).toHaveTextContent('8 members · 5/10 DCP')
+    // Net change stays in the accessible name.
+    expect(alpha).toHaveAccessibleName(/net −10/)
   })
 
   it('asks the page to toggle a group (URL-owned open set)', () => {

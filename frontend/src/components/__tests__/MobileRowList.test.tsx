@@ -72,6 +72,31 @@ describe('MobileRowList — flat rows', () => {
   })
 })
 
+describe('MobileRowList — layout options', () => {
+  it("chipPlacement='meta' moves the chip to line 2 so a long name keeps line 1", () => {
+    const { container } = render(
+      <MobileRowList
+        label="Clubs"
+        rows={makeRows(1)}
+        noun="clubs"
+        chipPlacement="meta"
+      />
+    )
+    const line1 = container.querySelector('.mobile-row__line1')!
+    const line2 = container.querySelector('.mobile-row__line2')!
+    expect(line1).toHaveTextContent(/^Club 0$/)
+    expect(within(line2 as HTMLElement).getByTestId('chip')).toBeInTheDocument()
+    expect(line2).toHaveTextContent('0 members')
+  })
+
+  it('flush drops the side chrome so rows can bleed to the panel edge', () => {
+    const { container } = render(
+      <MobileRowList label="Clubs" rows={makeRows(1)} noun="clubs" flush />
+    )
+    expect(container.querySelector('.mobile-row-list--flush')).not.toBeNull()
+  })
+})
+
 describe('MobileRowList — groups', () => {
   const groups = [
     { id: 'A', label: 'Division A', rows: makeRows(3, 'A'), summary: '✗ 1' },
