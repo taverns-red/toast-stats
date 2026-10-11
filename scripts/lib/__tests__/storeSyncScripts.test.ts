@@ -413,7 +413,7 @@ describe('publish-stores.sh (#1722)', () => {
         ? fs.readFileSync(f, 'utf-8').split('\n').filter(Boolean)
         : []
     const uploaded = read(uploadLog)
-      .map(l => l.replace('\t', ' '))
+      .map(l => l.replaceAll('\t', ' '))
       .sort()
     const entries = read(manifest).map(
       l => JSON.parse(l) as { path: string; sha256: string; stage: string }

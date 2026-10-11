@@ -79,7 +79,7 @@ function uploaded(): string[] {
     .readFileSync(uploadLog, 'utf-8')
     .split('\n')
     .filter(Boolean)
-    .map(l => l.replace('\t', ' '))
+    .map(l => l.replaceAll('\t', ' '))
     .sort()
 }
 

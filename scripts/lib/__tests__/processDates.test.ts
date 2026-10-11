@@ -432,7 +432,7 @@ describe('process-dates.sh: run manifest (#1762, ADR-015 P5)', () => {
   // What the shim really wrote vs what the manifest says was written.
   const uploaded = () =>
     lines(uploadLog)
-      .map(l => l.replace('\t', ' '))
+      .map(l => l.replaceAll('\t', ' '))
       .sort()
   const recorded = () =>
     entries()
