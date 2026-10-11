@@ -40,7 +40,7 @@ permissions:
 jobs:
   preview:
     name: Deploy preview channel
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Skip PRs from forks — WIF tokens are not issued to fork branches,
     # and we don't want to leak credentials to untrusted code anyway.
     # Fork contributors fall back to local-checkout for visual review.

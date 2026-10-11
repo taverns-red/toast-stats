@@ -39,7 +39,7 @@ jobs:
   # Quality Gates - Must pass before any other jobs
   quality-gates:
     name: Quality Gates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       typescript-errors: ${{ steps.typescript.outputs.total_errors }}
       lint-errors: ${{ steps.lint.outputs.total_errors }}
@@ -166,7 +166,7 @@ jobs:
   # Security Scanning
   security:
     name: Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: quality-gates
 
     steps:
@@ -190,7 +190,7 @@ jobs:
   # Test Suite
   test:
     name: Test Suite
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: quality-gates
 
     steps:
@@ -257,10 +257,17 @@ jobs:
       - name: Run scripts/lib tests
         run: npm run test:scripts
 
+      - name: Runner toolchain probe (#1740)
+        # The pipeline's coreutils/findutils/jq/gzip come from the runner
+        # image, not a setup action. Ubuntu 26.04 ships uutils coreutils and
+        # jq 1.8; this runs the exact command forms data-pipeline/deploy use
+        # on the same label, so an image bump is proven here, pre-merge.
+        run: scripts/runner-toolchain-probe.sh
+
   # Build Applications
   build:
     name: Build Applications
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: [quality-gates, test]
 
     steps:

@@ -29,7 +29,7 @@ permissions:
 jobs:
   cleanup:
     name: Delete preview channel
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Same guards as pr-preview.yml's deploy job. Forks never get a WIF token;
     # Dependabot gets no secret access — and neither ever had a preview channel
     # (their deploy job is skipped), so there is nothing to reap. Running the
