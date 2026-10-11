@@ -4,6 +4,7 @@ import {
   DISTRICT_SECTIONS,
   buildDistrictSectionUrl,
 } from '../config/districtSections'
+import { fadeEdgeAttrs, useSubnavScroll } from '../hooks/useSubnavScroll'
 
 /* #678 (epic #674 Sprint 4) — District secondary route-nav primitive.
 
@@ -39,11 +40,15 @@ interface DistrictSubnavProps {
 export const DistrictSubnav: React.FC<DistrictSubnavProps> = ({
   districtId,
 }) => {
+  // #1829 — keep the active link in view + flag edges for the fade cues.
+  const { ref, edges } = useSubnavScroll<HTMLElement>()
   return (
     <nav
+      ref={ref}
       aria-label="District sections"
       className="district-subnav"
       data-testid="district-subnav"
+      {...fadeEdgeAttrs(edges)}
     >
       <ul className="district-subnav__list">
         {DISTRICT_SECTIONS.map(({ label, segment }) => {

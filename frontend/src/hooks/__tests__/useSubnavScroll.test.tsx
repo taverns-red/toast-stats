@@ -5,6 +5,9 @@ import { MemoryRouter } from 'react-router-dom'
 import { DistrictSubnav } from '../../components/DistrictSubnav'
 import { ClubsSubnav } from '../../components/clubs/ClubsSubnav'
 import { centeredScrollLeft } from '../useSubnavScroll'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
 /**
  * #1829 (epic #1827) — the section nav is a horizontal scroll-row; at 375px
@@ -137,7 +140,7 @@ describe('centeredScrollLeft (#1829)', () => {
       centeredScrollLeft({
         navLeft: 0,
         navWidth: 300,
-        linkLeft: 0,
+        linkLeft: -120, // the first link, scrolled 120px out of view
         linkWidth: 80,
         scrollLeft: 120,
         scrollWidth: 1000,
@@ -220,5 +223,35 @@ describe('section nav keeps the active link in view (#1829)', () => {
       screen.getByTestId('clubs-subnav'),
       expect.objectContaining({ left: expect.any(Number) })
     )
+  })
+})
+
+describe('section nav fade-cue CSS contract (#1829)', () => {
+  const css = readFileSync(
+    resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      '../../styles/components/district-subnav.css'
+    ),
+    'utf8'
+  ).replace(/\/\*[\s\S]*?\*\//g, '')
+
+  it('draws a theme-agnostic mask fade on each flagged edge', () => {
+    for (const sel of [
+      '.district-subnav[data-fade-end]',
+      '.district-subnav[data-fade-start]',
+      '.district-subnav[data-fade-start][data-fade-end]',
+    ]) {
+      const i = css.indexOf(`${sel} {`)
+      expect(i, sel).toBeGreaterThan(-1)
+      const rule = css.slice(i, css.indexOf('}', i))
+      expect(rule).toMatch(/(^|\s)mask-image:\s*linear-gradient/)
+      expect(rule).toMatch(/-webkit-mask-image:\s*linear-gradient/)
+    }
+  })
+
+  it('pads the row 8px so the end links are not flush with the fade', () => {
+    const i = css.indexOf('.district-subnav__list {')
+    const rule = css.slice(i, css.indexOf('}', i))
+    expect(rule).toMatch(/padding:\s*0 8px/)
   })
 })
