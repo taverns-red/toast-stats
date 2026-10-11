@@ -108,7 +108,9 @@ const rowTint = (
 const ClubSearchBox: React.FC<{
   value: string
   onSearchChange: (value: string) => void
-}> = ({ value, onSearchChange }) => {
+  /** Shorter on phones, where the field shares its row (#1836). */
+  placeholder?: string
+}> = ({ value, onSearchChange, placeholder = 'Search clubs by name…' }) => {
   const [input, setInput] = useState(value)
   const debounced = useDebounce(input, 300)
 
@@ -150,7 +152,7 @@ const ClubSearchBox: React.FC<{
       <input
         type="search"
         className="clubs-search__input"
-        placeholder="Search clubs by name…"
+        placeholder={placeholder}
         aria-label="Search clubs by name"
         value={input}
         onChange={e => setInput(e.target.value)}
@@ -872,7 +874,9 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
         />
       </svg>
-      <span>{isMobile ? 'Filter & sort' : 'Filters'}</span>
+      {/* "Filter" fits beside the search at 375; the accessible name
+          (aria-label) is the full "Filter & sort" and contains it. */}
+      <span>{isMobile ? 'Filter' : 'Filters'}</span>
       {(isMobile ? sheetActiveCount : activeFilterCount) > 0 && (
         <span className="clubs-filters-trigger__badge">
           {isMobile ? sheetActiveCount : activeFilterCount}
@@ -1016,6 +1020,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           <ClubSearchBox
             value={searchValue}
             onSearchChange={handleSearchChange}
+            placeholder="Search clubs"
           />
           {filtersTrigger}
         </div>
