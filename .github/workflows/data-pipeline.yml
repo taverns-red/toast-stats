@@ -470,6 +470,29 @@ jobs:
             | "| \(.districtId) | \(.clubCount) | \(.snapshotClubCount) | \(if .extraInFac > 0 then "+" else "" end)\(.extraInFac) |"' \
             /tmp/fac-output.json >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Daily Step 3b': persist the raw FAC fetch (ADR-015 P2, #1758) ──
+      # The FAC JSON used to live only on this runner, so a rebuild or
+      # rescrape of the date could only produce an unenriched snapshot
+      # (audit D-1). Kept under staging raw-fac/<snapshotDate>/ for
+      # scripts/pipeline/process-dates.sh to merge back. Internal: plain
+      # JSON (no -Z), staging only, never promoted. Non-blocking like the
+      # fetch; a failure is a warning (the daily fallback is #1770).
+      - name: '[daily] Persist raw Find-A-Club'
+        if: steps.mode.outputs.mode == 'daily' && steps.daily-fac-fetch.outcome == 'success'
+        id: daily-fac-persist
+        continue-on-error: true
+        run: |
+          SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.snapshot_date }}"
+          if [ -z "${SNAPSHOT_DATE}" ]; then
+            SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.date }}"
+          fi
+          if ! gcloud storage rsync -r "./cache/find-a-club/${SNAPSHOT_DATE}/" "gs://${GCS_BUCKET}/raw-fac/${SNAPSHOT_DATE}/"; then
+            echo "::warning::Could not persist raw-fac/${SNAPSHOT_DATE}/; a re-derivation of ${SNAPSHOT_DATE} will be unenriched"
+            exit 1
+          fi
+          FAC_FILES=$(find "./cache/find-a-club/${SNAPSHOT_DATE}" -name 'district_*.json' | wc -l | tr -d ' ')
+          echo "- **Raw FAC persisted**: ${FAC_FILES} files → raw-fac/${SNAPSHOT_DATE}/" >> "$GITHUB_STEP_SUMMARY"
+
       # ── Daily Step 3c: Find-A-Club snapshot merge (#429) ──
       # Joins the raw FAC JSON written above into each district
       # snapshot (charterDate / coordinates / address / contact /

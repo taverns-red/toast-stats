@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Stand-in for `tsx scripts/validate-snapshots.ts <snapshot-dir>` (#1758, D-9).
+# Same argv and exit codes as the real gate (#1125): 0 every district file
+# (and global-totals.json) matches the shared contracts · 1 a file violates
+# them, or the directory is missing (it never passes vacuously).
+# Env: STUB_LOG (appends `validate <dir>`), STUB_VALIDATE_FAIL (ERE on the
+# directory's basename, the snapshot date → exit 1)
+set -euo pipefail
+DIR="${1:?}"
+if [ -n "${STUB_LOG:-}" ]; then printf 'validate %s\n' "${DIR}" >>"${STUB_LOG}"; fi
+if [ ! -d "${DIR}" ]; then
+  echo "FAIL: snapshot directory does not exist: ${DIR}" >&2
+  exit 1
+fi
+if [ -n "${STUB_VALIDATE_FAIL:-}" ] && [[ "$(basename "${DIR}")" =~ ${STUB_VALIDATE_FAIL} ]]; then
+  echo "::error::district_61.json: schema violation" >&2
+  exit 1
+fi
+echo "PASS: all district snapshots valid" >&2

@@ -7,7 +7,8 @@
  * helpers (fixtures/process-dates/), which reproduce only their documented
  * argv, exit-code and on-disk contracts. Each describe block is one stage of
  * the loop: resolve → fetch raw → prev-year → transform → date remap →
- * closing guard → compute → upload → cleanup → counters.
+ * closing guard → enrich (persisted FAC) → compute → validate → upload →
+ * cleanup → counters.
  *
  * The S1-3 contract (#1708) the loop must keep: a failed date is counted and
  * the loop goes on (per-date uploads are intended; the partial-failure gate
@@ -64,6 +65,7 @@ function run(
       COLLECTOR_CLI: path.join(STUBS, 'collector-cli'),
       GUARD_SNAPSHOT_UPLOAD: path.join(STUBS, 'guard-snapshot-upload'),
       RESOLVE_REBUILD_SOURCE: path.join(STUBS, 'resolve-rebuild-source'),
+      VALIDATE_SNAPSHOTS: path.join(STUBS, 'validate-snapshots'),
       STUB_LOG: stubLog,
       ...env,
     },
@@ -589,5 +591,158 @@ describe('process-dates.sh rescrape-historical: closing guard (#1621, #1708)', (
       STUB_GUARD_ERROR: '^2024-06-30$',
     })
     expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+  })
+})
+
+/**
+ * The persisted Find-A-Club fetch (ADR-015 P2, #1758). The fixture is a real
+ * `fetch-find-a-club --districts 61` output (2026-10-11), trimmed to two
+ * clubs: the runner and the stub only rely on its file name and its
+ * top-level `Clubs` array.
+ */
+const FAC_FIXTURE = fs.readFileSync(
+  path.join(STUBS, 'raw-fac/district_61.json'),
+  'utf-8'
+)
+
+function putRawFac(date: string): void {
+  putObject(`raw-fac/${date}/district_61.json`, FAC_FIXTURE)
+}
+
+function uploadedSnapshot(date: string): Record<string, unknown> {
+  const obj = path.join(root, BUCKET, `snapshots/${date}/district_61.json`)
+  return JSON.parse(zlib.gunzipSync(fs.readFileSync(obj)).toString('utf-8'))
+}
+
+describe('process-dates.sh: enrich stage, persisted FAC (#1758, D-1)', () => {
+  it('the fixture is the recorded fetch-find-a-club shape', () => {
+    const fac = JSON.parse(FAC_FIXTURE) as Record<string, unknown>
+    expect(fac.district).toBe('61')
+    expect(Array.isArray(fac.Clubs)).toBe(true)
+    expect(Object.keys((fac.Clubs as object[])[0]!)).toEqual(
+      expect.arrayContaining(['Address', 'Identification', 'MeetingDay'])
+    )
+  })
+
+  it('merges raw-fac/<date>/ after the guard and before compute', () => {
+    putRaw('2026-09-10')
+    putRawFac('2026-09-10')
+    const r = run('rebuild', ['2026-09-10'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    const stubs = lines(stubLog)
+    const guard = stubs.indexOf('guard 2026-09-10')
+    const merge = stubs.findIndex(l =>
+      /^collector-cli merge-find-a-club --fac-dir \S+ --snapshot-dir \S+\/snapshots\/2026-09-10 --verbose$/.test(
+        l
+      )
+    )
+    const compute = stubs.findIndex(l => l.includes(' compute-analytics '))
+    expect(merge, stubs.join('\n')).toBeGreaterThan(guard)
+    expect(compute).toBeGreaterThan(merge)
+    // What was published is the merged snapshot.
+    expect(uploadedSnapshot('2026-09-10').facMergedClubs).toBe(2)
+    expect(summaryText()).toContain('- **Dates enriched from raw-fac**: 1')
+    expect(summaryText()).toContain('- **Dates unenriched (no raw-fac)**: 0')
+  })
+
+  it('keys the persisted FAC by the date the transform wrote (remap)', () => {
+    putRawFac('2026-06-30')
+    const r = run('rescrape', ['2026-07-02'], {
+      DISTRICTS: '61',
+      STUB_REMAP: '2026-07-02=2026-06-30',
+    })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(uploadedSnapshot('2026-06-30').facMergedClubs).toBe(2)
+  })
+
+  it('with no raw-fac for the date: no merge, published, counted unenriched', () => {
+    putRaw('2026-09-10')
+    const r = run('rebuild', ['2026-09-10'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(lines(stubLog).some(l => l.includes('merge-find-a-club'))).toBe(
+      false
+    )
+    expect(uploadedSnapshot('2026-09-10').facMergedClubs).toBeUndefined()
+    expect(summaryText()).toContain('- **Dates unenriched (no raw-fac)**: 1')
+    expect(summaryText()).toContain('- **Dates enriched from raw-fac**: 0')
+  })
+
+  it('fails the date, uploading nothing, when raw-fac cannot be read', () => {
+    // A transport error is not "no FAC": publishing unenriched over an
+    // enriched date is the D-1 strip this stage exists to stop.
+    putRaw('2026-09-10')
+    putRawFac('2026-09-10')
+    const r = run('rebuild', ['2026-09-10'], {
+      SHIM_FAIL_MATCH: 'raw-fac/',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(objectsUnder('snapshots')).toEqual([])
+  })
+
+  it('fails the date, uploading nothing, when the merge fails', () => {
+    putRaw('2026-09-09')
+    putRaw('2026-09-10')
+    putRawFac('2026-09-09')
+    putRawFac('2026-09-10')
+    const r = run('rebuild', ['2026-09-09', '2026-09-10'], {
+      STUB_MERGE_FAIL: '^2026-09-09$',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 1 })
+    expect(objectsUnder('snapshots/2026-09-09')).toEqual([])
+    expect(uploadedSnapshot('2026-09-10').facMergedClubs).toBe(2)
+  })
+
+  it('leaves no FAC directory behind in the cache', () => {
+    putRaw('2026-09-10')
+    putRawFac('2026-09-10')
+    run('rebuild', ['2026-09-10'])
+    expect(localDateDirs('find-a-club')).toEqual([])
+    expect(localDateDirs('raw-fac')).toEqual([])
+  })
+})
+
+describe('process-dates.sh: snapshot schema gate before upload (#1758, D-9)', () => {
+  it('validates the date after compute and before the snapshot upload', () => {
+    putRaw('2026-09-10')
+    putRawFac('2026-09-10')
+    // One log for the stubs and the shim, so the order is comparable.
+    const r = run('rebuild', ['2026-09-10'], { STUB_LOG: shimLog })
+    expect(r.status, r.stderr).toBe(0)
+    const calls = lines(shimLog)
+    const compute = calls.findIndex(l => l.includes(' compute-analytics '))
+    const validate = calls.findIndex(l =>
+      /^validate \S+\/snapshots\/2026-09-10$/.test(l)
+    )
+    const upload = calls.findIndex(l =>
+      l.includes(`gs://${BUCKET}/snapshots/2026-09-10/`)
+    )
+    expect(validate, calls.join('\n')).toBeGreaterThan(compute)
+    expect(upload).toBeGreaterThan(validate)
+  })
+
+  it('fails a date that violates the contracts, uploads nothing, goes on', () => {
+    putRaw('2026-09-09')
+    putRaw('2026-09-10')
+    const r = run('rebuild', ['2026-09-09', '2026-09-10'], {
+      STUB_VALIDATE_FAIL: '^2026-09-09$',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 1 })
+    expect(objectsUnder('snapshots/2026-09-09')).toEqual([])
+    expect(objectExists('snapshots/2026-09-10/district_61.json')).toBe(true)
+  })
+
+  it('also gates rescrape (it uploaded unvalidated before)', () => {
+    const r = run('rescrape', ['2026-09-10'], {
+      DISTRICTS: '61',
+      STUB_VALIDATE_FAIL: '^2026-09-10$',
+    })
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(objectsUnder('snapshots')).toEqual([])
+    expect(objectsUnder('raw-csv')).toEqual([])
   })
 })

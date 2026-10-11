@@ -1,0 +1,158 @@
+{
+  "Clubs": [
+    {
+      "Address": {
+        "Id": null,
+        "Street": "110 Laurier Ave West",
+        "AdditionalLines": null,
+        "City": "Ottawa",
+        "County": null,
+        "PrimaryRegion": {
+          "Value": "ON",
+          "Guid": null,
+          "Name": null,
+          "Valid": true
+        },
+        "PrimaryRegionDescription": "Ontario",
+        "Country": null,
+        "PostalCode": "K1P 1J1",
+        "Coordinates": {
+          "Longitude": -75.68998,
+          "Latitude": 45.42081
+        },
+        "TimeZone": null,
+        "ValidationDetails": null
+      },
+      "AllowsVirtualAttendance": true,
+      "CharterDate": "/Date(541580400000)/",
+      "Classification": {
+        "Club": null,
+        "Area": {
+          "Id": null,
+          "Name": "24",
+          "MembershipStatus": null
+        },
+        "Division": {
+          "Id": null,
+          "Name": "C",
+          "MembershipStatus": null
+        },
+        "Region": null,
+        "District": {
+          "Id": null,
+          "Name": "61",
+          "MembershipStatus": null
+        }
+      },
+      "CountryName": "Canada",
+      "Distance": 0,
+      "Email": "vpm-180@toastmasterclubs.org",
+      "FacebookLink": "https://www.facebook.com/people/Causeurs-Sussex-Speakers-Toastmasters-Club-page/100081212779036/",
+      "Identification": {
+        "Id": {
+          "DisplayFriendlyFormat": "180",
+          "Value": "00000180",
+          "Guid": null,
+          "Name": "Causeurs Ottawa Speakers Club",
+          "Valid": true
+        },
+        "Name": "Causeurs Ottawa Speakers Club",
+        "MembershipStatus": null
+      },
+      "IsProspective": false,
+      "Location": "Online",
+      "MeetingDay": "Fri",
+      "MeetingTime": "12:00 - 1:00 p.m. (EST)",
+      "Note": "",
+      "HasUpcomingEvent": true,
+      "Phone": null,
+      "Restriction": [],
+      "TwitterLink": null,
+      "Website": "http://causeurssussexspeakers.toastmastersclubs.org/"
+    },
+    {
+      "Address": {
+        "Id": null,
+        "Street": "4020 St-Ambroise,  ",
+        "AdditionalLines": null,
+        "City": "Montreal",
+        "County": null,
+        "PrimaryRegion": {
+          "Value": "QC",
+          "Guid": null,
+          "Name": null,
+          "Valid": true
+        },
+        "PrimaryRegionDescription": "Quebec",
+        "Country": null,
+        "PostalCode": "H4C 2C7",
+        "Coordinates": {
+          "Longitude": -73.58062,
+          "Latitude": 45.4752
+        },
+        "TimeZone": null,
+        "ValidationDetails": null
+      },
+      "AllowsVirtualAttendance": false,
+      "CharterDate": "/Date(-667933200000)/",
+      "Classification": {
+        "Club": null,
+        "Area": {
+          "Id": null,
+          "Name": "62",
+          "MembershipStatus": null
+        },
+        "Division": {
+          "Id": null,
+          "Name": "G",
+          "MembershipStatus": null
+        },
+        "Region": null,
+        "District": {
+          "Id": null,
+          "Name": "61",
+          "MembershipStatus": null
+        }
+      },
+      "CountryName": "Canada",
+      "Distance": 0,
+      "Email": "sl.toastmasters@gmail.com",
+      "FacebookLink": null,
+      "Identification": {
+        "Id": {
+          "DisplayFriendlyFormat": "606",
+          "Value": "00000606",
+          "Guid": null,
+          "Name": "St Lawrence Toastmasters Club",
+          "Valid": true
+        },
+        "Name": "St Lawrence Toastmasters Club",
+        "MembershipStatus": null
+      },
+      "IsProspective": false,
+      "Location": "Restaurant L'Ambroisie (TEL: 514-932-0641)",
+      "MeetingDay": "Tuesday",
+      "MeetingTime": "7:00 pm - 9:00 pm",
+      "Note": "",
+      "HasUpcomingEvent": false,
+      "Phone": "+15149958762",
+      "Restriction": [],
+      "TwitterLink": null,
+      "Website": "http://www.toastmastersmontreal.com/"
+    }
+  ],
+  "IsAdvanced": false,
+  "longitude": -104.9878,
+  "latitude": 39.6478,
+  "advanced": 0,
+  "country": null,
+  "district": "61",
+  "radius": 5000,
+  "zoom": 0,
+  "day": null,
+  "time": null,
+  "status": null,
+  "q": null,
+  "n": null,
+  "autocomplete": false
+}

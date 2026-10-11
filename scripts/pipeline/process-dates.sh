@@ -30,15 +30,27 @@
 #   6. guard     never publish over a remote close (#1621,
 #                scripts/guard-snapshot-upload.ts). Exit 3 is the guard
 #                working: REFUSED. Any other non-zero (unreadable GCS): FAILED.
-#   7. compute   collector-cli compute-analytics. A failure is counted, but
+#   7. enrich    the daily Find-A-Club fetch persisted under
+#                raw-fac/<actual>/ (ADR-015 P2, #1758) is pulled and
+#                merged into the snapshots with collector-cli
+#                merge-find-a-club, so a re-derived date keeps the daily's
+#                enrichment. No raw-fac for the date (historical dates, FAC
+#                started 2026-05-15): processed unenriched and counted. An
+#                unreadable raw-fac or a failed merge FAILS the date: an
+#                unenriched upload over an enriched date is the D-1 strip.
+#   8. compute   collector-cli compute-analytics. A failure is counted, but
 #                the snapshots still upload (#1708); its JSON feeds the store
 #                counters either way.
-#   8. upload    snapshots/<date>/*.json and analytics/*.json, `-Z` with the
+#   9. validate  scripts/validate-snapshots.ts on the date's directory
+#                (#1125, D-9): the merge rewrites snapshots in place, so the
+#                final files are checked against shared-contracts. A
+#                violation FAILS the date: nothing of it is uploaded.
+#  10. upload    snapshots/<date>/*.json and analytics/*.json, `-Z` with the
 #                CDN headers. An upload error aborts the loop (exit 1), as the
 #                inline loop's `set -e` did: the step fails before any store
 #                push. rescrape then rsyncs the re-collected raw-csv/<date>/
 #                up, replacing the old copy.
-#   9. cleanup   the date's raw, snapshot and prior-year directories, so no
+#  11. cleanup   the date's raw, snapshot and prior-year directories, so no
 #                later step reads a rebuilt date as "latest" (#295, #1670).
 #                rescrape-historical keeps its raw: the next step uploads it.
 # The GCS-backed stores (time-series, club-trends, club-race, awards history)
@@ -52,6 +64,7 @@
 #   COLLECTOR_CLI          collector-cli command (default `npx collector-cli`)
 #   RESOLVE_REBUILD_SOURCE resolver command (default: tsx resolve-rebuild-source.ts)
 #   GUARD_SNAPSHOT_UPLOAD  guard command (default: tsx guard-snapshot-upload.ts)
+#   VALIDATE_SNAPSHOTS     schema gate command (default: tsx validate-snapshots.ts)
 #   DISTRICTS              rescrape: required, comma-separated district ids
 #   GITHUB_STEP_SUMMARY    date counts and store counters are appended here
 #
@@ -103,6 +116,7 @@ export GCS_BUCKET="${BUCKET}"
 read -r -a COLLECTOR <<<"${COLLECTOR_CLI:-npx collector-cli}"
 read -r -a RESOLVE <<<"${RESOLVE_REBUILD_SOURCE:-${TSX} ${REPO}/scripts/resolve-rebuild-source.ts}"
 read -r -a GUARD <<<"${GUARD_SNAPSHOT_UPLOAD:-${TSX} ${REPO}/scripts/guard-snapshot-upload.ts}"
+read -r -a VALIDATE <<<"${VALIDATE_SNAPSHOTS:-${TSX} ${REPO}/scripts/validate-snapshots.ts}"
 
 # stdout is reserved for the result line; fd 3 keeps it.
 exec 3>&1 1>&2
@@ -122,6 +136,8 @@ trap cleanup_work EXIT
 SUCCEEDED=0
 FAILED=0
 REFUSED=0
+ENRICHED=0
+UNENRICHED=0
 
 # The snapshot date directories present in the cache, one per line, sorted.
 snapshot_dates() {
@@ -156,6 +172,39 @@ upload_snapshot() {
       "${dir}/analytics"/*.json \
       "gs://${BUCKET}/snapshots/${actual}/analytics/"
   fi
+}
+
+# Merge the persisted Find-A-Club fetch for <date> into its snapshots, if
+# daily persisted one. Sets ENRICH to enriched | unenriched | failed.
+enrich_snapshot() {
+  local actual="$1" fac="${WORK}/raw-fac/$1" err="${WORK}/raw-fac-ls.err"
+  ENRICH=failed
+  if ! "${GCLOUD}" storage ls "gs://${BUCKET}/raw-fac/${actual}/**" \
+    >/dev/null 2>"${err}"; then
+    if grep -q 'matched no objects' "${err}"; then
+      echo "No raw-fac/${actual}/; ${actual} is processed unenriched"
+      ENRICH=unenriched
+      return 0
+    fi
+    cat "${err}"
+    echo "::warning::Could not list raw-fac/${actual}/; not publishing ${actual} unenriched"
+    return 0
+  fi
+  mkdir -p "${fac}"
+  if ! "${GCLOUD}" storage rsync -r "gs://${BUCKET}/raw-fac/${actual}/" "${fac}/"; then
+    echo "::warning::Could not download raw-fac/${actual}/; not publishing ${actual} unenriched"
+    rm -rf "${fac}"
+    return 0
+  fi
+  echo "Merging raw-fac/${actual}/ into snapshots/${actual}/..."
+  if "${COLLECTOR[@]}" merge-find-a-club --fac-dir "${fac}" \
+    --snapshot-dir "${SNAPSHOTS}/${actual}" --verbose; then
+    ENRICH=enriched
+  else
+    echo "::warning::Find-A-Club merge failed for ${actual}; nothing uploaded for it"
+  fi
+  rm -rf "${fac}"
+  return 0
 }
 
 # Process one date. Sets OUTCOME to published | compute-failed | refused |
@@ -243,7 +292,18 @@ process_one() {
     return 0
   fi
 
-  # 7. compute
+  # 7. enrich
+  enrich_snapshot "${actual}"
+  case "${ENRICH}" in
+    enriched) ENRICHED=$((ENRICHED + 1)) ;;
+    unenriched) UNENRICHED=$((UNENRICHED + 1)) ;;
+    *)
+      cleanup_date "${source}" "${actual}" "${prev}"
+      return 0
+      ;;
+  esac
+
+  # 8. compute
   echo "Computing analytics for ${actual}..."
   local compute_ok=1
   if ! "${COLLECTOR[@]}" compute-analytics --date "${actual}" \
@@ -254,7 +314,14 @@ process_one() {
   jq -c . "${COMPUTE_JSON}" >>"${COUNTERS_JSONL}" ||
     echo "::warning::No compute JSON for ${actual}; the counters omit it"
 
-  # 8. upload
+  # 9. validate
+  if ! "${VALIDATE[@]}" "${SNAPSHOTS}/${actual}"; then
+    echo "::warning::Snapshot schema gate failed for ${actual}; nothing uploaded for it"
+    cleanup_date "${source}" "${actual}" "${prev}"
+    return 0
+  fi
+
+  # 10. upload
   if [ -d "${SNAPSHOTS}/${actual}" ]; then
     upload_snapshot "${actual}"
     if [ "${compute_ok}" = 1 ]; then OUTCOME=published; else OUTCOME=compute-failed; fi
@@ -266,7 +333,7 @@ process_one() {
     "${GCLOUD}" storage rsync -r "${RAW}/${date}/" "gs://${BUCKET}/raw-csv/${date}/"
   fi
 
-  # 9. cleanup
+  # 11. cleanup
   cleanup_date "${source}" "${actual}" "${prev}"
 }
 
@@ -308,6 +375,8 @@ done
   echo "- **Dates succeeded**: ${SUCCEEDED}"
   echo "- **Refused by the upload guard**: ${REFUSED}"
   echo "- **Dates failed**: ${FAILED}"
+  echo "- **Dates enriched from raw-fac**: ${ENRICHED}"
+  echo "- **Dates unenriched (no raw-fac)**: ${UNENRICHED}"
   jq -rs -f "${REPO}/scripts/compute-counters.jq" "${COUNTERS_JSONL}"
 } >>"${SUMMARY}"
 
