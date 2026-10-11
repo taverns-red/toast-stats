@@ -17,6 +17,7 @@ import { useColumnFilters } from '../hooks/useColumnFilters'
 import { ColumnHeader } from './ColumnHeader'
 import { FiltersPanel } from './filters/FiltersPanel'
 import { FilterSheet, type FilterSheetFacet } from './filters/FilterSheet'
+import { PRESET_CLOSE_TO_DISTINGUISHED } from '../utils/clubFilterUrl'
 import { ActiveFiltersBar } from './ActiveFiltersBar'
 import { ColumnGroupsMenu } from './ColumnGroupsMenu'
 import { describeActiveFilters } from '../utils/clubFilterDescribe'
@@ -349,80 +350,6 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     onFilterChange?.({})
   }, [clearAllFiltersInternal, onFilterChange])
 
-  // ── Phone Filter & sort sheet (#1836) ─────────────────────────────────
-  // Below 768 the column-filter drawer becomes the shared FilterSheet with
-  // facet chips. The search is its own sticky field, so the sheet's count and
-  // "Clear all" leave the `name` filter alone. Same filter state, another entry
-  // point (R11); every change still leaves through onFilterChange (URL).
-  const nameFilter = filterState['name'] ?? null
-  const sheetActiveCount = activeFilterCount - (nameFilter ? 1 : 0)
-  const clearSheetFilters = useCallback(() => {
-    clearAllFiltersInternal()
-    if (nameFilter) setFilterInternal('name', nameFilter)
-    onFilterChange?.(nameFilter ? { name: nameFilter } : {})
-  }, [clearAllFiltersInternal, setFilterInternal, nameFilter, onFilterChange])
-
-  const sheetFacets = useMemo((): FilterSheetFacet[] => {
-    const selectedOf = (field: SortField): string[] => {
-      const f = filterState[field]
-      return f?.type === 'categorical' && Array.isArray(f.value)
-        ? (f.value as string[])
-        : []
-    }
-    const setFacet = (field: SortField) => (next: string[]) =>
-      setFilter(
-        field,
-        next.length
-          ? { field, type: 'categorical', value: next, operator: 'in' }
-          : null
-      )
-    const byNatural = (a: string, b: string) =>
-      a.localeCompare(b, undefined, { numeric: true })
-    const options = (values: string[], prefix: RegExp) =>
-      [...new Set(values)]
-        .filter(Boolean)
-        .sort(byNatural)
-        .map(v => ({ value: v, label: v.replace(prefix, '') }))
-
-    const divisions = selectedOf('division')
-    const areaSource = divisions.length
-      ? clubs.filter(c => divisions.includes(c.divisionName))
-      : clubs
-    return [
-      {
-        id: 'status',
-        label: 'Status',
-        options: [
-          { value: 'thriving', label: 'Thriving' },
-          { value: 'vulnerable', label: 'Vulnerable' },
-          { value: 'intervention-required', label: 'Intervention required' },
-        ],
-        selected: selectedOf('status'),
-        onChange: setFacet('status'),
-      },
-      {
-        id: 'division',
-        label: 'Division',
-        options: options(
-          clubs.map(c => c.divisionName),
-          /^Division\s+/i
-        ),
-        selected: divisions,
-        onChange: setFacet('division'),
-      },
-      {
-        id: 'area',
-        label: 'Area',
-        options: options(
-          areaSource.map(c => c.areaName),
-          /^Area\s+/i
-        ),
-        selected: selectedOf('area'),
-        onChange: setFacet('area'),
-      },
-    ]
-  }, [clubs, filterState, setFilter])
-
   // Visible-search → `name` text filter (#814). Empty/whitespace clears the
   // filter rather than writing `?search=` junk to the URL.
   const handleSearchChange = useCallback(
@@ -484,6 +411,106 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       })
     )
   }, [filteredClubs, presetActive, programYear])
+
+  // ── Phone Filter & sort sheet (#1836) ─────────────────────────────────
+  // Below 768 the column-filter drawer becomes the shared FilterSheet with
+  // facet chips. The search is its own sticky field, so the sheet's count and
+  // "Clear all" leave the `name` filter alone. Same filter state, another entry
+  // point (R11); every change still leaves through onFilterChange (URL).
+  const nameFilter = filterState['name'] ?? null
+  // The preset is a sheet chip too, so it counts and clears with the rest.
+  const sheetActiveCount =
+    activeFilterCount - (nameFilter ? 1 : 0) + (presetActive ? 1 : 0)
+  const clearSheetFilters = useCallback(() => {
+    clearAllFiltersInternal()
+    if (nameFilter) setFilterInternal('name', nameFilter)
+    onFilterChange?.(nameFilter ? { name: nameFilter } : {})
+    if (presetActive) handlePresetToggle()
+  }, [
+    clearAllFiltersInternal,
+    setFilterInternal,
+    nameFilter,
+    onFilterChange,
+    presetActive,
+    handlePresetToggle,
+  ])
+
+  const sheetFacets = useMemo((): FilterSheetFacet[] => {
+    const selectedOf = (field: SortField): string[] => {
+      const f = filterState[field]
+      return f?.type === 'categorical' && Array.isArray(f.value)
+        ? (f.value as string[])
+        : []
+    }
+    const setFacet = (field: SortField) => (next: string[]) =>
+      setFilter(
+        field,
+        next.length
+          ? { field, type: 'categorical', value: next, operator: 'in' }
+          : null
+      )
+    const byNatural = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    const options = (values: string[], prefix: RegExp) =>
+      [...new Set(values)]
+        .filter(Boolean)
+        .sort(byNatural)
+        .map(v => ({ value: v, label: v.replace(prefix, '') }))
+
+    const divisions = selectedOf('division')
+    const areaSource = divisions.length
+      ? clubs.filter(c => divisions.includes(c.divisionName))
+      : clubs
+    return [
+      {
+        // The "Close to Distinguished" preset (#903) is its own pipeline step
+        // with its own URL key (?preset=), not a column filter (R11).
+        id: 'preset',
+        label: 'Quick filter',
+        options: [
+          {
+            value: PRESET_CLOSE_TO_DISTINGUISHED,
+            label: '🎯 Close to Distinguished',
+          },
+        ],
+        selected: presetActive ? [PRESET_CLOSE_TO_DISTINGUISHED] : [],
+        onChange: next => {
+          if (next.length > 0 !== presetActive) handlePresetToggle()
+        },
+      },
+      {
+        id: 'status',
+        label: 'Status',
+        options: [
+          { value: 'thriving', label: 'Thriving' },
+          { value: 'vulnerable', label: 'Vulnerable' },
+          { value: 'intervention-required', label: 'Intervention required' },
+        ],
+        selected: selectedOf('status'),
+        onChange: setFacet('status'),
+      },
+      {
+        id: 'division',
+        label: 'Division',
+        options: options(
+          clubs.map(c => c.divisionName),
+          /^Division\s+/i
+        ),
+        selected: divisions,
+        onChange: setFacet('division'),
+      },
+      {
+        id: 'area',
+        label: 'Area',
+        options: options(
+          areaSource.map(c => c.areaName),
+          /^Area\s+/i
+        ),
+        selected: selectedOf('area'),
+        onChange: setFacet('area'),
+      },
+    ]
+  }, [clubs, filterState, setFilter, presetActive, handlePresetToggle])
 
   const nameSortedClubs = useMemo(
     () =>
@@ -811,6 +838,49 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     }
   }, [sortedClubs, isMobile])
 
+  // Discoverable entry to the Filters drawer (#816) / phone Filter & sort
+  // sheet (#1836). One button, placed by viewport: in the toolbar from 768
+  // up, in the sticky search row below it, so the phone toolbar is one row.
+  const filtersTrigger = (
+    <button
+      ref={filtersTriggerRef}
+      type="button"
+      className="clubs-filters-trigger"
+      onClick={() => setIsFiltersOpen(true)}
+      aria-haspopup="dialog"
+      aria-expanded={isFiltersOpen}
+      {...(isMobile
+        ? {
+            'aria-label':
+              sheetActiveCount > 0
+                ? `Filter & sort, ${sheetActiveCount} active`
+                : 'Filter & sort',
+          }
+        : {})}
+    >
+      <svg
+        className="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
+        />
+      </svg>
+      <span>{isMobile ? 'Filter & sort' : 'Filters'}</span>
+      {(isMobile ? sheetActiveCount : activeFilterCount) > 0 && (
+        <span className="clubs-filters-trigger__badge">
+          {isMobile ? sheetActiveCount : activeFilterCount}
+        </span>
+      )}
+    </button>
+  )
+
   return (
     <div className="redesign-panel">
       {/* Header with Export and Results Count */}
@@ -865,84 +935,43 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             second UI entry point onto the EXISTING `name` text filter (R11), so
             it stays in sync with that dropdown and URL-syncs through the parent
             (DistrictClubsPage maps `name` ⇄ `?search=`). */}
-        <div className="clubs-filter-toolbar">
-          {/* Below 768 the search lives in the sticky bar above the rows
-              (#1833) — one box, never two. */}
-          {!isMobile && (
+        {/* Below 768 the search and the trigger live in the sticky row above
+            the rows (#1833, #1836) and the preset lives in the sheet, so the
+            toolbar row would be empty there. */}
+        {!isMobile && (
+          <div className="clubs-filter-toolbar">
             <ClubSearchBox
               value={searchValue}
               onSearchChange={handleSearchChange}
             />
-          )}
-          {/* Discoverable entry to the Filters drawer (#816). The hidden
-              per-column header dropdowns are gone; this button + its
-              active-count badge is the single, visible way into precise
-              column filtering. */}
-          <button
-            ref={filtersTriggerRef}
-            type="button"
-            className="clubs-filters-trigger"
-            onClick={() => setIsFiltersOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={isFiltersOpen}
-            {...(isMobile
-              ? {
-                  'aria-label':
-                    sheetActiveCount > 0
-                      ? `Filter & sort, ${sheetActiveCount} active`
-                      : 'Filter & sort',
-                }
-              : {})}
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
-              />
-            </svg>
-            <span>{isMobile ? 'Filter & sort' : 'Filters'}</span>
-            {(isMobile ? sheetActiveCount : activeFilterCount) > 0 && (
-              <span className="clubs-filters-trigger__badge">
-                {isMobile ? sheetActiveCount : activeFilterCount}
-              </span>
-            )}
-          </button>
-          {/* Column-group show/hide (#819, ADR-006 §4). Same toolbar slot as
+            {filtersTrigger}
+            {/* Column-group show/hide (#819, ADR-006 §4). Same toolbar slot as
               the Filters trigger so the two table-shape controls live together;
               uses the same .clubs-filters-trigger styling for a single visual
               language. */}
-          {/* Column groups shape the table; the phone rows have no columns
+            {/* Column groups shape the table; the phone rows have no columns
               (#1833), so the control would be dead there. */}
-          {!isMobile && (
             <ColumnGroupsMenu
               groups={availableColumnGroups}
               isGroupHidden={isGroupHidden}
               onToggle={toggleGroup}
             />
-          )}
-          {/* Close-to-Distinguished preset (#903) — moved into the toolbar
+            {/* Close-to-Distinguished preset (#903) — moved into the toolbar
               cluster, directly after Columns (#967). One action-oriented toggle
               in place of the retired quick-filter row, sharing the canonical
               predicate with the club-detail banner. It carries the shared
               .clubs-filters-trigger treatment so it reads as one toolbar
               language; .clubs-preset-chip adds only the pressed-state amber. */}
-          <button
-            type="button"
-            className="clubs-filters-trigger clubs-preset-chip"
-            aria-pressed={presetActive}
-            onClick={handlePresetToggle}
-          >
-            🎯 Close to Distinguished
-          </button>
-        </div>
+            <button
+              type="button"
+              className="clubs-filters-trigger clubs-preset-chip"
+              aria-pressed={presetActive}
+              onClick={handlePresetToggle}
+            >
+              🎯 Close to Distinguished
+            </button>
+          </div>
+        )}
 
         {/* Preset feedback line — distinct from the table's "Showing N of M"
             summary, and a polite live region for the toggle. Sits below the
@@ -988,6 +1017,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             value={searchValue}
             onSearchChange={handleSearchChange}
           />
+          {filtersTrigger}
         </div>
       )}
 
