@@ -24,16 +24,17 @@ const topGrowthClubs = read('components/TopGrowthClubs.tsx')
 
 describe('District breakpoint reconciliation (#682)', () => {
   describe('district-narrative.css KPI strip', () => {
-    it('uses 980px as the desktop layout threshold, not 1024px or 768px', () => {
+    it('uses 980px as the desktop layout threshold; 1024px only for the sticky pin', () => {
       expect(narrativeCss).toContain('min-width: 980px')
-      expect(narrativeCss).not.toContain('min-width: 1024px')
-      // #1828: 768 is the phone boundary (ADR-006), used ONLY to gate the
-      // strip's sticky pin — never for its layout (cards grid, toggle).
-      const at768 = narrativeCss.match(
-        /@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\n {2}\}/g
+      expect(narrativeCss).not.toContain('min-width: 768px')
+      // #1828: the strip's sticky pin is gated on 1024 (no sticky element
+      // taller than 64px below 1024) — used ONLY for that pin, never for its
+      // layout (cards grid, toggle), which stays on 980.
+      const at1024 = narrativeCss.match(
+        /@media\s*\(min-width:\s*1024px\)\s*\{[\s\S]*?\n {2}\}/g
       )
-      expect(at768).toHaveLength(1)
-      const body = at768?.[0] ?? ''
+      expect(at1024).toHaveLength(1)
+      const body = at1024?.[0] ?? ''
       expect(body).not.toMatch(/__cards|__toggle|grid-template-columns/)
       expect(body).toMatch(/\.district-kpi-strip\s*\{[^}]*position:\s*sticky/)
     })

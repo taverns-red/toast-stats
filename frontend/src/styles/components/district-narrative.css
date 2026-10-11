@@ -17,14 +17,14 @@
     }
   }
 
-  /* ---------- KPI strip: static on phones, sticky from 768 ---------- */
+  /* ---------- KPI strip: in flow below 1024, sticky from 1024 ---------- */
 
   /* #1828 (mobile review S2): below 768 the expanded strip is ~860px tall at
      375, so pinning it covered the whole Overview once the reader scrolled.
-     Phones get it in normal flow; #572's sticky pin is gated to >=768, where
-     the strip is short enough to sit under the top bar. `relative` (no
-     offsets) keeps it in flow while still being the loading shimmer's
-     containing block. */
+     At 768-979 it is still 576px (one card per row), so the pin was moved
+     up to >=1024 — no sticky element taller than 64px below 1024. #572's
+     desktop pin is unchanged there. `relative` (no offsets) keeps it in flow
+     while still being the loading shimmer's containing block. */
   .district-kpi-strip {
     position: relative;
     margin: 0 0 16px;
@@ -39,7 +39,7 @@
     gap: 12px;
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     .district-kpi-strip {
       position: sticky;
       top: 56px; /* sits under .app-shell-top-bar (56px) */
@@ -179,7 +179,7 @@
      inert copy of its loaded body (`__ghost`) so the reserved height comes
      from the same rules as the loaded strip; the shimmer is laid over it. */
   .district-kpi-strip--loading {
-    /* The strip's own position (relative <768, sticky >=768) makes it the
+    /* The strip's own position (relative <1024, sticky >=1024) makes it the
        containing block for the absolutely-positioned shimmer. */
     overflow: hidden;
   }
