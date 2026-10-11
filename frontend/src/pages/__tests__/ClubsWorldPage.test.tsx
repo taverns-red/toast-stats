@@ -4,6 +4,7 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
@@ -384,5 +385,30 @@ describe('ClubsWorldPage — exclusive tile counts (#1570)', () => {
       // reachedOn 2026-08-14, no earlier observation → "by 14 Aug 2026".
       expect(presidents).toHaveTextContent('by 14 Aug 2026')
     })
+  })
+})
+
+describe('ClubsWorldPage — phone context bar (#1831)', () => {
+  beforeEach(() => vi.mocked(useGlobalClubRace).mockReset())
+
+  it('is a root page: no back crumb, title and PY · date chip', () => {
+    mockHook({ race: race(), snapshotDate: '2026-09-11' })
+    renderPage()
+    const bar = screen.getByTestId('context-bar')
+    expect(within(bar).queryByTestId('context-bar-back')).toBeNull()
+    expect(bar).toHaveTextContent('Clubs worldwide')
+    expect(screen.getByTestId('context-bar-chip')).toHaveTextContent(
+      /^PY \d\d–\d\d · /
+    )
+  })
+
+  it('opens a sheet with PY/date controls and About', async () => {
+    mockHook({ race: race(), snapshotDate: '2026-09-11' })
+    renderPage()
+    await userEvent.click(screen.getByTestId('context-bar-chip'))
+    const sheet = screen.getByRole('dialog', { name: 'Clubs worldwide' })
+    expect(within(sheet).getByLabelText('Program year')).toBeInTheDocument()
+    expect(within(sheet).getByLabelText('Snapshot date')).toBeInTheDocument()
+    expect(within(sheet).getByText(/race to Distinguished/)).toBeInTheDocument()
   })
 })

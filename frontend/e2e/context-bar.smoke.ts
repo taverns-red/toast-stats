@@ -114,7 +114,7 @@ for (const width of [375, 390]) {
  * collapsed header directly, so the first content row itself must start
  * within the budget. `back` is the one-level-up target. Each rollout PR adds
  * its page here. */
-const ENTITY_ROUTES: { path: string; name: RegExp; back: string }[] = [
+const ENTITY_ROUTES: { path: string; name: RegExp; back?: string }[] = [
   { path: '/district/61/division/A', name: /Division A/, back: '/district/61' },
   {
     path: '/district/61/division/A/area/01',
@@ -127,6 +127,13 @@ const ENTITY_ROUTES: { path: string; name: RegExp; back: string }[] = [
     back: '/district/61/club/7238597',
   },
   { path: '/region/05', name: /Region 05/, back: '/regions' },
+  // Root page: no back crumb.
+  { path: '/clubs', name: /Clubs worldwide/ },
+  {
+    path: '/clubs/race/distinguished',
+    name: /First to Distinguished/,
+    back: '/clubs',
+  },
 ]
 const ENTITY_CONTENT_TOP_MAX = 120
 
@@ -187,9 +194,9 @@ for (const width of [375, 390]) {
         ENTITY_CONTENT_TOP_MAX
       )
       expect(m.docOverflow, ctx).toBeLessThanOrEqual(0)
-      await expect(
-        bar.locator('[data-testid="context-bar-back"]')
-      ).toHaveAttribute('href', back)
+      const backLink = bar.locator('[data-testid="context-bar-back"]')
+      if (back) await expect(backLink).toHaveAttribute('href', back)
+      else await expect(backLink).toHaveCount(0)
     })
   }
 }
