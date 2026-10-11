@@ -142,9 +142,19 @@ for (const theme of ['light', 'dark'] as const) {
         expect(m.contentTop ?? 999, ctx).toBeLessThanOrEqual(CONTENT_TOP_MAX)
         expect(m.docOverflow, ctx).toBeLessThanOrEqual(0)
 
-        // Nothing at the end of the page sits under the bar.
+        // Nothing at the end of the page sits under the bar. `html` has
+        // scroll-behavior: smooth (index.css), so scroll instantly and wait
+        // until the page is at its end before measuring (WebKit animates).
         await page.evaluate(() =>
-          window.scrollTo(0, document.documentElement.scrollHeight)
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'instant',
+          })
+        )
+        await page.waitForFunction(
+          () =>
+            Math.ceil(window.scrollY + window.innerHeight) >=
+            document.documentElement.scrollHeight - 1
         )
         const end = await page.evaluate(bar => {
           const root = document.getElementById('root')!.getBoundingClientRect()
