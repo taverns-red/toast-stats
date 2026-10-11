@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { screen, render, cleanup, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
@@ -237,5 +238,59 @@ describe('ClubHistoryPage gap reporting (#1437)', () => {
     })
     renderPage()
     expect(screen.getByText(/no completed program years/i)).toBeInTheDocument()
+  })
+})
+
+describe('ClubHistoryPage phone context bar (#1831)', () => {
+  beforeEach(() =>
+    mockedHistory.mockReturnValue({
+      rows: [row],
+      gaps: [],
+      clubName: 'Sunrise Speakers',
+      isLoading: false,
+      isError: false,
+      error: null,
+    })
+  )
+
+  it('backs up one level to the club and labels the chip About (no PY state)', () => {
+    renderPage()
+    expect(screen.getByTestId('context-bar-back')).toHaveAttribute(
+      'href',
+      '/district/61/club/00001234'
+    )
+    expect(screen.getByTestId('context-bar-back')).toHaveAccessibleName(
+      'Back to Sunrise Speakers'
+    )
+    expect(screen.getByTestId('context-bar')).toHaveTextContent(
+      'Sunrise Speakers — History'
+    )
+    expect(screen.getByTestId('context-bar-chip')).toHaveTextContent('About')
+  })
+
+  it('sheet holds Export CSV, About and the full trail', async () => {
+    renderPage()
+    await userEvent.click(screen.getByTestId('context-bar-chip'))
+    const sheet = screen.getByRole('dialog', {
+      name: 'Sunrise Speakers — History',
+    })
+    expect(
+      within(sheet).getByRole('button', { name: 'Export CSV' })
+    ).toBeInTheDocument()
+    expect(
+      within(sheet).getByText(/Multi-year performance/)
+    ).toBeInTheDocument()
+    const trail = within(sheet).getByRole('navigation', { name: 'Breadcrumb' })
+    expect(
+      within(trail)
+        .getAllByRole('listitem')
+        .map(li => li.textContent)
+    ).toEqual([
+      'Districts',
+      'District 61',
+      'Clubs',
+      'Sunrise Speakers',
+      'History',
+    ])
   })
 })
