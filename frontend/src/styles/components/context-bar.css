@@ -16,8 +16,9 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    /* Full-bleed across the district page's 24px gutter. */
-    margin: 0 -24px 8px;
+    /* Full-bleed across the host page's gutter (24px by default; a page with
+       a different gutter sets --context-bar-bleed). */
+    margin: 0 calc(-1 * var(--context-bar-bleed, 24px)) 8px;
     padding: 0 max(8px, env(safe-area-inset-right, 0px)) 0
       max(4px, env(safe-area-inset-left, 0px));
     background-color: var(--surface);
@@ -171,6 +172,12 @@
       clip: rect(0, 0, 0, 0);
       white-space: nowrap;
       border: 0;
+    }
+
+    /* Club page (review §6.3): the hero stays as the page content; only its
+       PY/date chips move into the bar. */
+    .context-bar ~ .club-hero .club-hero__controls {
+      display: none;
     }
 
     /* The one-crumb breadcrumb duplicated the bar's back crumb. */
