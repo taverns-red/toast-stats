@@ -104,6 +104,75 @@ for (const width of [375, 390]) {
   }
 }
 
+/* Entity pages (#1831 rollout). No section nav: page content follows the
+ * collapsed header directly, so the first content row itself must start
+ * within the budget. `back` is the one-level-up target. Each rollout PR adds
+ * its page here. */
+const ENTITY_ROUTES: { path: string; name: RegExp; back: string }[] = [
+  { path: '/district/61/division/A', name: /Division A/, back: '/district/61' },
+]
+const ENTITY_CONTENT_TOP_MAX = 120
+
+for (const width of [375, 390]) {
+  for (const { path, name, back } of ENTITY_ROUTES) {
+    test(`context bar replaces the entity header on ${path} at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 812 })
+      await load(page, path)
+      const bar = page.locator('[data-testid="context-bar"]')
+      await expect(bar).toBeVisible()
+
+      const m = await page.evaluate(() => {
+        const r = (el: Element | null) => {
+          if (!el) return null
+          const b = el.getBoundingClientRect()
+          return { top: Math.round(b.top), height: Math.round(b.height) }
+        }
+        const header = document.querySelector(
+          '.context-bar ~ header, .context-bar ~ * header'
+        )
+        // First visible element after the (collapsed) header.
+        let next = header?.nextElementSibling ?? null
+        while (next && next.getBoundingClientRect().height === 0)
+          next = next.nextElementSibling
+        return {
+          bar: r(document.querySelector('[data-testid="context-bar"]')),
+          barPos: getComputedStyle(
+            document.querySelector('[data-testid="context-bar"]')!
+          ).position,
+          h1: r(document.querySelector('h1')),
+          h1Text: document.querySelector('h1')?.textContent ?? '',
+          crumb: r(document.querySelector('.subpage-breadcrumb')),
+          toolbar: r(
+            document.querySelector(
+              '[role="toolbar"][aria-label="Data controls"]'
+            )
+          ),
+          contentTop: next
+            ? Math.round(next.getBoundingClientRect().top)
+            : null,
+          docOverflow: document.documentElement.scrollWidth - window.innerWidth,
+        }
+      })
+      const ctx = JSON.stringify(m)
+      expect(m.barPos, ctx).toBe('sticky')
+      expect(m.bar, ctx).toEqual({ top: 56, height: 44 })
+      expect(m.h1Text, ctx).toMatch(name)
+      expect(m.h1?.height ?? 99, ctx).toBeLessThanOrEqual(1)
+      expect(m.crumb?.height ?? 0, ctx).toBe(0)
+      expect(m.toolbar?.height ?? 0, ctx).toBe(0)
+      expect(m.contentTop ?? 999, ctx).toBeLessThanOrEqual(
+        ENTITY_CONTENT_TOP_MAX
+      )
+      expect(m.docOverflow, ctx).toBeLessThanOrEqual(0)
+      await expect(
+        bar.locator('[data-testid="context-bar-back"]')
+      ).toHaveAttribute('href', back)
+    })
+  }
+}
+
 test('chip opens an accessible bottom sheet with 16px selects; Escape closes it', async ({
   page,
 }) => {
