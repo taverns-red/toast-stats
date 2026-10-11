@@ -41,6 +41,8 @@ import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { ClubDCPGoalsPanel } from '../components/ClubDCPGoalsPanel'
 import { useClubGoalTimeline } from '../hooks/useClubGoalTimeline'
+import { buildClubMeetingInfo } from '../utils/clubMeetingInfo'
+import { ClubWhereItMeets } from '../components/clubs/ClubWhereItMeets'
 
 // ── DCP Status Card ────────────────────────────────────────────────────────
 // Re-skinned to club-reference.html (#619): a `.club-panel` with a bordered
@@ -610,6 +612,11 @@ const ClubDetailPage: React.FC = () => {
                   </>
                 )}
               </p>
+              {/* #1783 — where it meets (FAC enrichment for the viewed date;
+                  omitted when the snapshot has none). Never email/phone. The
+                  lineage chip (#1805) joins the sub-line above once the
+                  club-district-history artifact (#1782) is promoted. */}
+              <ClubWhereItMeets info={buildClubMeetingInfo(club)} />
               {/* #1229 — deep link to the per-club multi-year history view. */}
               <Link
                 to={`/district/${districtId}/club/${clubId}/history`}
@@ -997,18 +1004,9 @@ const ClubDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* Worldwide standing (#1556) — cohort percentile for any club; a
-              rank only when the club has reached a tier. */}
-          <WorldwideStandingCard
-            race={globalRace}
-            clubId={normalizeClubId(club.clubId)}
-            goalsMet={
-              club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]
-                ?.goalsAchieved ?? 0
-            }
-            members={latestMembership}
-            reached={raceReachedById.get(normalizeClubId(club.clubId)) ?? null}
-          />
+          {/* #1783 — §3.2 panel slot: the club's own panels (Education +
+              Compliance, #1790) render here, between the trend row and the
+              callouts. Empty slots render nothing, so no reserved height. */}
 
           {/* Risk Factors */}
           {club.riskFactors.length > 0 && (
@@ -1072,6 +1070,22 @@ const ClubDetailPage: React.FC = () => {
             clubRecord={clubRawRecord}
             isLoading={isLoadingStats}
             timelineRows={goalTimelineRows}
+          />
+
+          {/* Worldwide standing (#1556) — cohort percentile for any club; a
+              rank only when the club has reached a tier. #1783 moved it below
+              the DCP goals grid per the §3.2 layout: the club's own numbers
+              first, the worldwide comparison last. The mini-map (#1784, not
+              built yet) slots in after it. */}
+          <WorldwideStandingCard
+            race={globalRace}
+            clubId={normalizeClubId(club.clubId)}
+            goalsMet={
+              club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]
+                ?.goalsAchieved ?? 0
+            }
+            members={latestMembership}
+            reached={raceReachedById.get(normalizeClubId(club.clubId)) ?? null}
           />
 
           {/* Bottom back-link (#618) — the redesign reintroduces a footer

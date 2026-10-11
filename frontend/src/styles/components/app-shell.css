@@ -2067,6 +2067,63 @@
     color: rgba(255, 255, 255, 0.4);
   }
 
+  /* #1783 — where-it-meets line. Sits on the fixed loyal-blue hero, which is
+     the same in both themes, so the white-alpha text needs no dark remap
+     (same treatment as .club-hero__sub). New component → --rt-* tokens for
+     type and spacing; the --rt-stats accent is the link underline only
+     (decorative, never the sole signal — links keep the ↗ glyph). */
+  .club-meets {
+    list-style: none;
+    margin: var(--rt-space-3) 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--rt-space-4);
+    font-family: var(--rt-font-body);
+    font-size: var(--rt-text-sm);
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .club-meets__item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--rt-space-1);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .club-meets__ico {
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+
+  /* The global touch-target rule gives every a[href] a 44–48px min-height
+     as a block; inline-flex + centre keeps that tap target while the text
+     sits on the same line as its plain-text siblings. */
+  .club-meets__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--rt-space-1);
+    color: #ffffff;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--rt-stats);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  .club-meets__link:hover {
+    text-decoration-color: #ffffff;
+  }
+
+  .club-meets__link:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+    border-radius: var(--rt-radius-sm);
+  }
+
   .club-hero__pills {
     display: flex;
     flex-wrap: wrap;
@@ -5819,9 +5876,18 @@
     min-height: 88px;
   }
 
- Cmd-K / Ctrl-K modal. Centered
-     dialog over a translucent backdrop. */
-  .command-palette__backdrop {
+  Cmd-K
+    /
+    Ctrl-K
+    modal.
+    Centered
+    dialog
+    over
+    a
+    translucent
+    backdrop.
+    */
+    .command-palette__backdrop {
     position: fixed;
     inset: 0;
     z-index: 90;
