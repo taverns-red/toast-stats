@@ -40,6 +40,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   children,
   closeLabel = 'Close',
   id,
+  variant = 'default',
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -118,7 +119,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       <div
         ref={sheetRef}
         id={id}
-        className="bottom-sheet"
+        className={`bottom-sheet${variant === 'full' ? ' bottom-sheet--full' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
