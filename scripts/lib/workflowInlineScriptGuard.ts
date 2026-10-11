@@ -233,3 +233,109 @@ export function formatBacktickViolations(
     )
     .join('\n')
 }
+
+/**
+ * ── No new inline node scripts (#1743, plan P3-3) ──
+ *
+ * Logic in a `node -e "…"` block cannot be unit-tested and sits inside a
+ * bash string (the #1549 class above). The pipeline's manifest generators
+ * moved to scripts/manifests/ for that reason. Every inline node script left
+ * in a workflow is listed here with the reason it stays; anything else fails
+ * the repo sweep. Put new logic in scripts/ with a test rather than growing
+ * this list.
+ */
+export interface AllowedInlineNodeScript {
+  /** Workflow file name, e.g. `data-pipeline.yml`. */
+  file: string
+  /** A substring of the script body that identifies this one block. */
+  fingerprint: string
+  reason: string
+}
+
+export const ALLOWED_INLINE_NODE_SCRIPTS: readonly AllowedInlineNodeScript[] = [
+  {
+    file: 'data-pipeline.yml',
+    fingerprint: 'Use the 15th of each month as a representative date',
+    reason:
+      'rescrape program-year date list; lives in the per-date-loop region ' +
+      'that P3-1 is extracting — drop this entry when that lands',
+  },
+  {
+    file: 'ci-gate.yml',
+    fingerprint: "require('./package.json').devDependencies.tsx",
+    reason: 'one-expression version read, no logic',
+  },
+  {
+    file: 'docs.yml',
+    fingerprint: "require('./package.json').devDependencies.prettier",
+    reason: 'one-expression version read, no logic',
+  },
+]
+
+export interface InlineNodeScript {
+  /** 1-based line of the `node -e` / `-p` / `--eval` / `--print` flag. */
+  line: number
+  opener: string
+  /** The script text, from the opening quote to the closing one. */
+  body: string
+}
+
+/** `node … -e|-p|--eval|--print` followed by a quoted script argument. */
+const NODE_EVAL =
+  /(?:^|[\s;&|(=])node(?:js)?(?:\s+-[A-Za-z-]+(?:=\S+)?)*?\s+(?:-e|-p|--eval|--print)\s+(["'])/
+
+/** The closing single quote: bash has no escapes inside '…'. */
+function findClosingSingleQuote(
+  lines: string[],
+  start: Position
+): Position | null {
+  for (let i = start.line; i < lines.length; i++) {
+    const col = lines[i].indexOf("'", i === start.line ? start.col : 0)
+    if (col >= 0) return { line: i, col }
+  }
+  return null
+}
+
+function sliceBetween(lines: string[], from: Position, to: Position): string {
+  if (from.line === to.line) return lines[from.line].slice(from.col, to.col)
+  return [
+    lines[from.line].slice(from.col),
+    ...lines.slice(from.line + 1, to.line),
+    lines[to.line].slice(0, to.col),
+  ].join('\n')
+}
+
+/** Every inline node script in a workflow, outside shell/YAML comments. */
+export function findInlineNodeScripts(source: string): InlineNodeScript[] {
+  const lines = source.split('\n')
+  const found: InlineNodeScript[] = []
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*#/.test(lines[i])) continue
+    const m = NODE_EVAL.exec(lines[i])
+    if (!m) continue
+    const open: Position = { line: i, col: m.index + m[0].length }
+    const close =
+      m[1] === '"'
+        ? findClosingDoubleQuote(lines, open)
+        : findClosingSingleQuote(lines, open)
+    const end = close ?? { line: lines.length - 1, col: Infinity }
+    found.push({
+      line: i + 1,
+      opener: lines[i].trim(),
+      body: sliceBetween(lines, open, end),
+    })
+    i = end.line
+  }
+  return found
+}
+
+/** Inline node scripts in `file` that match no allow-list entry. */
+export function findUnallowedInlineNodeScripts(
+  file: string,
+  source: string
+): InlineNodeScript[] {
+  const allowed = ALLOWED_INLINE_NODE_SCRIPTS.filter(a => a.file === file)
+  return findInlineNodeScripts(source).filter(
+    s => !allowed.some(a => s.body.includes(a.fingerprint))
+  )
+}
