@@ -24,11 +24,15 @@ import {
 interface StatusChipProps {
   status: ClubHealthStatus
   className?: string
+  /** Label override (e.g. the one-word short label in a compact row, #1833).
+   *  Defaults to the shared full label. */
+  label?: string
 }
 
 export const StatusChip: React.FC<StatusChipProps> = ({
   status,
   className,
+  label,
 }) => {
   const modifier = getClubHealthStatusPillModifier(status)
   return (
@@ -38,7 +42,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({
       }`}
     >
       <span aria-hidden="true">{getClubHealthStatusIcon(status)}</span>{' '}
-      {getClubHealthStatusLabel(status)}
+      {label ?? getClubHealthStatusLabel(status)}
     </span>
   )
 }

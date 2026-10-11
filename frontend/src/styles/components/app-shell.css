@@ -4497,6 +4497,28 @@
     flex: 1 1 16rem;
   }
 
+  /* Phone search (#1833): pinned under the 56 px top bar directly above the
+     compact rows, so search is always one tap away in a 160-club list. The
+     offset is a var so the context bar (#1831) can raise it without a fork. */
+  .clubs-mobile-sticky-search {
+    position: sticky;
+    top: var(--mobile-sticky-top, 56px);
+    z-index: 5;
+    padding: 8px 16px;
+    margin-bottom: 8px;
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .clubs-mobile-sticky-search .clubs-search {
+    margin-bottom: 0;
+    max-width: none;
+  }
+
+  .clubs-mobile-sticky-search .clubs-search__input {
+    font-size: 16px;
+  }
+
   /* Discoverable entry to the drawer. 44px min-height = touch target (WCAG
      2.5.5). */
   .clubs-filters-trigger {
