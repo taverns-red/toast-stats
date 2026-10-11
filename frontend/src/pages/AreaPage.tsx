@@ -16,6 +16,9 @@ import { generateAreaProgressText } from '../utils/areaProgressText'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
 import { AreaPerformanceTable } from '../components/AreaPerformanceTable'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
+import { ContextBar } from '../components/ContextBar'
+import { ContextSheetControls } from '../components/ContextSheetControls'
+import { formatFreshnessLine } from '../utils/contextBar'
 import type { AreaWithDivision } from '../components/DivisionAreaProgressSummary'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
@@ -153,8 +156,47 @@ const AreaPage: React.FC = () => {
     ? renderRecognitionBadge(areaPerformance.recognitionState)
     : undefined
 
+  const lede =
+    clubs.length === 0
+      ? 'Area recognition standing for this program year.'
+      : `${clubs.length} club${clubs.length === 1 ? '' : 's'} in this area.`
+  const viewedDate = effectiveEndDate ?? latestSnapshotDate
+  const districtUrl = `/district/${districtId}`
+  const divisionUrl = `/district/${districtId}/division/${divId}`
+
   return (
     <div className="app-shell__page">
+      {/* Phone context bar (#1831): below 768 it replaces the breadcrumb and
+          the header (the recognition badge stays); PY/date are this page's
+          own state (R3). */}
+      <ContextBar
+        title={areaName}
+        back={{ label: divisionName, to: divisionUrl }}
+        programYear={effectiveProgramYear ?? selectedProgramYear}
+        date={viewedDate}
+        controls={
+          <ContextSheetControls
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={effectiveProgramYear ?? selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={availableDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            freshness={formatFreshnessLine({
+              asOfDate: globalAsOfDate,
+              snapshotDate: viewedDate,
+              isLatest: isLatestGlobal,
+            })}
+          />
+        }
+        about={lede}
+        trail={[
+          { label: 'Districts', to: '/' },
+          { label: `District ${districtId}`, to: districtUrl },
+          { label: divisionName, to: divisionUrl },
+          { label: areaName },
+        ]}
+      />
       {/* District › Division › Area wayfinding via the shared SubpageBreadcrumb
           (Lesson 085) — replaces the ad-hoc eyebrow link so the full trail, link
           affordance, and aria-current on the leaf are consistent (#1017). */}
@@ -182,11 +224,7 @@ const AreaPage: React.FC = () => {
               </span>
             )}
           </div>
-          <p className="districts-page-header__lede">
-            {clubs.length === 0
-              ? 'Area recognition standing for this program year.'
-              : `${clubs.length} club${clubs.length === 1 ? '' : 's'} in this area.`}
-          </p>
+          <p className="districts-page-header__lede">{lede}</p>
         </div>
         <div className="districts-page-header__actions">
           <DataControlsBar
