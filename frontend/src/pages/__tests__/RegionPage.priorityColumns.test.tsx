@@ -110,7 +110,7 @@ describe('RegionPage priority columns below 768 (#1834)', () => {
     const headers = within(table)
       .getAllByRole('columnheader')
       .map(th => th.textContent?.trim())
-    expect(headers).toEqual(['Rank · District', 'Paid clubs', 'Payments'])
+    expect(headers).toEqual(['District', 'Paid clubs', 'Payments'])
     expect(
       screen.queryByRole('region', { name: /scroll horizontally/i })
     ).toBeNull()
@@ -139,7 +139,7 @@ describe('RegionPage priority columns below 768 (#1834)', () => {
     const headers = within(await priorityTable())
       .getAllByRole('columnheader')
       .map(th => th.textContent?.trim())
-    expect(headers).toEqual(['Rank · District', 'Payments', 'Tier'])
+    expect(headers).toEqual(['District', 'Payments', 'Tier'])
     expect(screen.getByTestId('where').textContent).toContain(
       'cols=payments%2Ctier'
     )
