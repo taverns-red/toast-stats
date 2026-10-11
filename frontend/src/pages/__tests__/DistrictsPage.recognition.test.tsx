@@ -19,7 +19,7 @@ import {
   fetchCdnRankings,
   fetchCdnRankingsForDate,
   fetchCdnRankingsForDateExact,
-  fetchCdnSnapshotIndex,
+  fetchCdnDates,
   fetchCdnCompetitiveAwards,
 } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
@@ -258,8 +258,8 @@ describe('DistrictsPage Club Growth Achievement badge (#1537)', () => {
    */
   const setupCheckpoint = () => {
     setup()
-    vi.mocked(fetchCdnSnapshotIndex).mockResolvedValue({
-      '102': ['2026-09-29', '2026-09-30'],
+    vi.mocked(fetchCdnDates).mockResolvedValue({
+      dates: ['2026-09-29', '2026-09-30'],
     } as never)
     const today = {
       rankings: [
