@@ -37,6 +37,9 @@ import {
   formatCspDueDate,
 } from '../utils/cspDeadlines'
 import { ActionTable, type ActionTableColumn } from '../components/ActionTable'
+import type { MobileRow } from '../components/MobileRowList'
+import { StatusChip } from '../components/StatusChip'
+import { getClubHealthStatusShortLabel } from '../utils/clubHealthStatus'
 import { arrayToCSV, downloadCSV, generateFilename } from '../utils/csvExport'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
@@ -348,6 +351,63 @@ const cspColumns = (
   },
 ]
 
+/* Phone rows (#1833): below 768 each section is MobileRowList compact rows.
+   Line 1 is the subject (club or area), line 2 carries the facts the table's
+   other columns held; the whole row links to the subject's routed page. */
+const clubTo = (districtId: string, row: ClubRow) =>
+  `/district/${districtId}/club/${row.clubId}`
+const areaLabel = (row: ClubRow) => `Area ${row.divisionId}/${row.areaId}`
+
+const closeMobileRow =
+  (districtId: string) =>
+  (c: CloseToDistinguishedItem): MobileRow => ({
+    id: c.clubId,
+    to: clubTo(districtId, c),
+    title: c.clubName,
+    meta: `${areaLabel(c)} \u00b7 Needs ${formatCloseNeeds(c)}`,
+  })
+
+const visitMobileRow =
+  (districtId: string) =>
+  (g: VisitGapArea): MobileRow => ({
+    id: `${g.divisionId}-${g.areaId}`,
+    to: `/district/${districtId}/division/${g.divisionId}/area/${g.areaId}`,
+    title: `Area ${g.areaId}`,
+    meta: `${g.missingClubs.length} unvisited \u00b7 Round ${g.currentRound} \u00b7 due ${g.deadline}`,
+  })
+
+const interventionMobileRow =
+  (districtId: string) =>
+  (i: InterventionItem): MobileRow => ({
+    id: i.clubId,
+    to: clubTo(districtId, i),
+    title: i.clubName,
+    chip: (
+      <StatusChip
+        status="intervention-required"
+        label={getClubHealthStatusShortLabel('intervention-required')}
+      />
+    ),
+    meta: areaLabel(i),
+  })
+
+const cspMobileRow =
+  (districtId: string) =>
+  (c: CspNotSubmittedItem): MobileRow => ({
+    id: c.clubId,
+    to: clubTo(districtId, c),
+    title: c.clubName,
+    chip: (
+      <StatusChip
+        status={c.currentStatus}
+        label={getClubHealthStatusShortLabel(c.currentStatus)}
+      />
+    ),
+    meta: `${areaLabel(c)} \u00b7 Due ${formatCspDueDate(c.cspDueDate)}${
+      c.cspOverdue ? ' \u00b7 overdue' : ''
+    }`,
+  })
+
 const DistrictActionListPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -584,6 +644,7 @@ const DistrictActionListPage: React.FC = () => {
           rows={sections.closeToDistinguished}
           rowKey={c => c.clubId}
           testId="table-close"
+          mobileRow={closeMobileRow(districtId ?? '')}
         />
       ),
     },
@@ -607,6 +668,7 @@ const DistrictActionListPage: React.FC = () => {
           rows={sections.visitGaps}
           rowKey={g => `${g.divisionId}-${g.areaId}`}
           testId="table-visits"
+          mobileRow={visitMobileRow(districtId ?? '')}
         />
       ),
     },
@@ -629,6 +691,7 @@ const DistrictActionListPage: React.FC = () => {
           rows={sections.interventionRequired}
           rowKey={i => i.clubId}
           testId="table-intervention"
+          mobileRow={interventionMobileRow(districtId ?? '')}
         />
       ),
     },
@@ -653,6 +716,7 @@ const DistrictActionListPage: React.FC = () => {
           rows={sections.cspNotSubmitted}
           rowKey={c => c.clubId}
           testId="table-csp"
+          mobileRow={cspMobileRow(districtId ?? '')}
         />
       ),
     },

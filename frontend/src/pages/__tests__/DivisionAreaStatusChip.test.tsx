@@ -128,12 +128,12 @@ afterEach(() => {
 })
 
 describe('Division/Area status chip at <768px (#871 CC-4)', () => {
-  it('DivisionPage de-tables to a card list with a status chip on mobile', () => {
+  it('DivisionPage de-tables to compact rows (#1833) with a status chip on mobile', () => {
     mockUseIsMobile.mockReturnValue(true)
     const { container } = renderDivision()
     // de-tabled: no wide table that would clip the chip at 375px
     expect(container.querySelector('table')).toBeNull()
-    expect(container.querySelector('.clubs-card')).not.toBeNull()
+    expect(container.querySelector('.mobile-row')).not.toBeNull()
     const pill = container.querySelector('.clubs-status-pill')
     expect(pill).not.toBeNull()
     expect(pill).toHaveClass('clubs-status-pill--vulnerable')
@@ -150,7 +150,7 @@ describe('Division/Area status chip at <768px (#871 CC-4)', () => {
     expect(container.textContent).toContain('vulnerable')
   })
 
-  it('AreaPage de-tables to a card list with a status chip on mobile', () => {
+  it('AreaPage de-tables to compact rows (#1833) with a status chip on mobile', () => {
     mockUseIsMobile.mockReturnValue(true)
     const { container } = renderArea()
     expect(container.querySelector('table')).toBeNull()
