@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
-  fetchCdnSnapshotIndex,
+  fetchCdnDates,
   fetchCdnRankings,
   fetchCdnRankingsForDate,
 } from '../services/cdn'
@@ -216,25 +216,21 @@ const DistrictsPage: React.FC = () => {
   const [isHistoryRegionExpanded, setIsHistoryRegionExpanded] =
     useUrlBoolean('historyExpanded')
 
-  // Fetch cached dates from CDN snapshot index (#233)
-  // Uses the same data source as DistrictDetailPage for consistency
+  // Every snapshot date (#233). This page needs only the UNION across
+  // districts, which is exactly `v1/dates.json` (~4 KB); it used to fetch the
+  // 473 KB per-district `config/district-snapshot-index.json` and union it back
+  // down on every landing visit (#1830). Shares the app-wide ['available-dates']
+  // cache that useUrlProgramYear's default program year already reads.
   const { data: cachedDatesData, isPending: isDatesPending } = useQuery({
-    queryKey: ['cached-dates-from-index'],
-    queryFn: async () => {
-      const index = await fetchCdnSnapshotIndex()
-      // Union of all district dates
-      const dateSet = new Set<string>()
-      for (const dates of Object.values(index)) {
-        for (const d of dates) dateSet.add(d)
-      }
-      return { dates: [...dateSet].sort() }
-    },
+    queryKey: ['available-dates'],
+    queryFn: fetchCdnDates,
+    staleTime: 15 * 60 * 1000,
   })
 
-  // The union of every district's snapshot dates, drawn from the pipeline's own
-  // snapshot index — this page's mint for the brand (#1323). It hand-rolls the
-  // PY derivation that useProgramYearControls packages for the other aggregate
-  // pages, so it mints here rather than inheriting one.
+  // Every snapshot date the pipeline published — this page's mint for the
+  // brand (#1323). It hand-rolls the PY derivation that useProgramYearControls
+  // packages for the other aggregate pages, so it mints here rather than
+  // inheriting one.
   const allCachedDates = React.useMemo(
     () => snapshotDatesFrom(cachedDatesData),
     [cachedDatesData]

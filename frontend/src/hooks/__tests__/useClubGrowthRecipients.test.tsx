@@ -21,20 +21,20 @@ import {
   fetchCdnRankings,
   fetchCdnRankingsForDate,
   fetchCdnRankingsForDateExact,
-  fetchCdnSnapshotIndex,
+  fetchCdnDates,
   type CdnRankingsData,
 } from '../../services/cdn'
 import { getProgramYear } from '../../utils/programYear'
 import { snap } from '../../test-utils/snapshotDate'
 
 vi.mock('../../services/cdn', () => ({
-  fetchCdnSnapshotIndex: vi.fn(),
+  fetchCdnDates: vi.fn(),
   fetchCdnRankingsForDateExact: vi.fn(),
   fetchCdnRankingsForDate: vi.fn(),
   fetchCdnRankings: vi.fn(),
 }))
 
-const mockedIndex = vi.mocked(fetchCdnSnapshotIndex)
+const mockedIndex = vi.mocked(fetchCdnDates)
 const mockedExact = vi.mocked(fetchCdnRankingsForDateExact)
 const mockedFalling = vi.mocked(fetchCdnRankingsForDate)
 const mockedLatest = vi.mocked(fetchCdnRankings)
@@ -101,7 +101,9 @@ beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   mockedFalling.mockResolvedValue(TODAY)
   mockedLatest.mockResolvedValue(TODAY)
-  mockedIndex.mockResolvedValue({ '61': ['2026-09-29', '2026-09-30'] })
+  mockedIndex.mockResolvedValue({
+    dates: ['2026-09-29', '2026-09-30'],
+  } as never)
   mockedExact.mockImplementation(async date =>
     date === '2026-09-30' ? SEP_FILE : null
   )

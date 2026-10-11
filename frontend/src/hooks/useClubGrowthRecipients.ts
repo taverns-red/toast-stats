@@ -21,17 +21,16 @@
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
+  fetchCdnDates,
   fetchCdnRankingsForDateExact,
-  fetchCdnSnapshotIndex,
   type CdnRankingsData,
 } from '../services/cdn'
+import { snapshotDatesFrom } from '../types/snapshotDate'
 import {
-  availableSnapshotDates,
   checkpointRankingsQueryKey,
   clubGrowthCheckpointDates,
   isUncollectedCharterCount,
   resolveCheckpointPlan,
-  snapshotIndexQueryKey,
   type ClubGrowthCheckpointId,
 } from './useClubGrowthMilestones'
 import {
@@ -209,15 +208,20 @@ export function useClubGrowthRecipients(
     [programYear]
   )
 
+  // The availability set is the GLOBAL date list — this hook judges every
+  // district from one all-districts file per checkpoint, so it never needs the
+  // per-district breakdown. `v1/dates.json` (~4 KB) IS that union; the 473 KB
+  // `config/district-snapshot-index.json` was fetched only to union it back
+  // down (#1830). Shares the app-wide ['available-dates'] cache.
   const indexQuery = useQuery({
-    queryKey: snapshotIndexQueryKey,
-    queryFn: fetchCdnSnapshotIndex,
-    staleTime: 60 * 60 * 1000,
+    queryKey: ['available-dates'],
+    queryFn: fetchCdnDates,
+    staleTime: 15 * 60 * 1000,
     enabled: applicable,
   })
 
   const availableDates = useMemo(
-    () => (indexQuery.data ? availableSnapshotDates(indexQuery.data) : null),
+    () => (indexQuery.data ? snapshotDatesFrom(indexQuery.data) : null),
     [indexQuery.data]
   )
 
