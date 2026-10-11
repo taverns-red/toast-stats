@@ -1,10 +1,21 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import {
+  DISTRICT_BAR_PRIMARY_SEGMENTS,
   DISTRICT_SECTIONS,
+  PHONE_SECTION_BAR_QUERY,
   buildDistrictSectionUrl,
+  type DistrictSection,
 } from '../config/districtSections'
 import { fadeEdgeAttrs, useSubnavScroll } from '../hooks/useSubnavScroll'
+import { useMediaQuery } from '../hooks/useMediaQuery'
+import { SectionBar, type SectionBarItem } from './SectionBar'
+import {
+  ClubsIcon,
+  DivisionsIcon,
+  OverviewIcon,
+  TrendsIcon,
+} from './SectionBarIcons'
 
 /* #678 (epic #674 Sprint 4) — District secondary route-nav primitive.
 
@@ -37,9 +48,51 @@ interface DistrictSubnavProps {
   districtId: string
 }
 
+const BAR_ICONS: Record<string, React.ReactNode> = {
+  '': <OverviewIcon />,
+  clubs: <ClubsIcon />,
+  divisions: <DivisionsIcon />,
+  trends: <TrendsIcon />,
+}
+
+/* #1832 — on a phone held upright the sections are a bottom bar (4 + More)
+   instead of the scroll-row. A JS media switch, not two CSS-toggled navs, so
+   only one "District sections" landmark is ever in the DOM. */
 export const DistrictSubnav: React.FC<DistrictSubnavProps> = ({
   districtId,
 }) => {
+  const phone = useMediaQuery(PHONE_SECTION_BAR_QUERY)
+  return phone ? (
+    <DistrictSectionBar districtId={districtId} />
+  ) : (
+    <DistrictSectionRow districtId={districtId} />
+  )
+}
+
+const DistrictSectionBar: React.FC<DistrictSubnavProps> = ({ districtId }) => {
+  const toItem = ({ label, segment }: DistrictSection): SectionBarItem => ({
+    label,
+    to: buildDistrictSectionUrl(districtId, segment),
+    end: segment === '',
+    icon: BAR_ICONS[segment],
+  })
+  const primary = DISTRICT_BAR_PRIMARY_SEGMENTS.flatMap(segment =>
+    DISTRICT_SECTIONS.filter(s => s.segment === segment).map(toItem)
+  )
+  const more = DISTRICT_SECTIONS.filter(
+    s => !DISTRICT_BAR_PRIMARY_SEGMENTS.includes(s.segment)
+  ).map(toItem)
+  return (
+    <SectionBar
+      label="District sections"
+      primary={primary}
+      more={more}
+      testId="district-section-bar"
+    />
+  )
+}
+
+const DistrictSectionRow: React.FC<DistrictSubnavProps> = ({ districtId }) => {
   // #1829 — keep the active link in view + flag edges for the fade cues.
   const { ref, edges } = useSubnavScroll<HTMLElement>()
   return (
