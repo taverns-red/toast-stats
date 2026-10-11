@@ -70,6 +70,12 @@ import {
   calculateProgramYear,
   getPriorProgramYear,
 } from '../utils/CachePaths.js'
+import { parseDistrictIdsFromSummaryCsv } from '../utils/programYearResolver.js'
+import {
+  DATE_LEVEL_ERROR_ID,
+  dateLevelRefusal,
+  missingDistricts,
+} from '../utils/dateLevelCoverage.js'
 import { DistrictAwardsHistoryStore } from './DistrictAwardsHistoryStore.js'
 
 /**
@@ -1374,6 +1380,69 @@ export class TransformService {
   }
 
   /**
+   * The date's district set: the DISTRICT column of its own all-districts
+   * CSV (#1756). A date with no readable CSV falls back to the raw
+   * directories present — the date's data, still never the requested list.
+   */
+  private async dateLevelDistrictSet(date: string): Promise<string[]> {
+    const csv = await this.readCSVFile(
+      path.join(this.getRawCsvDir(date), 'all-districts.csv')
+    )
+    const fromCsv = parseDistrictIdsFromSummaryCsv(csv)
+    if (fromCsv.length > 0) return fromCsv
+    this.logger.warn(
+      'No readable all-districts CSV — date-level district set taken from the raw directories',
+      { date }
+    )
+    return this.discoverAvailableDistricts(date)
+  }
+
+  /**
+   * The districts of the date's set each kind of date-level artifact lacks.
+   *
+   * - `roster` (metadata.json, manifest.json): a district with neither a
+   *   snapshot file on disk (written now or hydrated) nor a failure recorded
+   *   by this run. A recorded failure is reported as such, not as absent.
+   * - `rankings` (all-districts-rankings.json, competitive-awards.json): a
+   *   district with no raw `club-performance.csv`. Its 20-plus, charter and
+   *   suspension counts would otherwise publish as a measured 0.
+   */
+  private async dateLevelShortfall(
+    sourceDate: string,
+    snapshotDate: string,
+    dateSet: readonly string[],
+    failedDistrictIds: readonly string[]
+  ): Promise<{ roster: string[]; rankings: string[] }> {
+    const withSnapshot: string[] = []
+    const withRaw: string[] = []
+    for (const districtId of dateSet) {
+      const raw = path.join(
+        this.getRawCsvDir(sourceDate),
+        `district-${districtId}`,
+        'club-performance.csv'
+      )
+      if (
+        await fs.access(raw).then(
+          () => true,
+          () => false
+        )
+      ) {
+        withRaw.push(districtId)
+      }
+      if (
+        failedDistrictIds.includes(districtId) ||
+        (await this.getDistrictManifestEntry(snapshotDate, districtId)) !== null
+      ) {
+        withSnapshot.push(districtId)
+      }
+    }
+    return {
+      roster: missingDistricts(dateSet, withSnapshot),
+      rankings: missingDistricts(dateSet, withRaw),
+    }
+  }
+
+  /**
    * Check if snapshot already exists for a district
    */
   async snapshotExists(date: string, districtId: string): Promise<boolean> {
@@ -2292,11 +2361,54 @@ export class TransformService {
       }
     }
 
-    // Collect manifest entries for all district files (including previously existing ones)
+    // Date-level artifacts (metadata, manifest, rankings, awards) describe the
+    // date's whole district set, not this run's districts (#1756, ADR-015
+    // P3). A subset run writes them only when the other districts' inputs
+    // were hydrated onto disk; otherwise they are refused, never defaulted.
+    const failedDistrictIds = results
+      .filter(r => !r.success)
+      .map(r => r.districtId)
+    const dateSet = await this.dateLevelDistrictSet(date)
+    const shortfall = await this.dateLevelShortfall(
+      date,
+      snapshotDate,
+      dateSet,
+      failedDistrictIds
+    )
+    // Rankings and awards are written only after metadata and manifest, so a
+    // short roster refuses all four.
+    const refused = [
+      ...(shortfall.roster.length > 0
+        ? ['metadata.json', 'manifest.json']
+        : []),
+      ...(shortfall.roster.length > 0 || shortfall.rankings.length > 0
+        ? ['all-districts-rankings.json', 'competitive-awards.json']
+        : []),
+    ]
+    if (refused.length > 0) {
+      const missing = [...new Set([...shortfall.roster, ...shortfall.rankings])]
+      const message = dateLevelRefusal(
+        refused.join(', '),
+        snapshotDate,
+        dateSet.length,
+        missing
+      )
+      this.logger.error(message, { date, snapshotDate, ...shortfall })
+      errors.push({
+        districtId: DATE_LEVEL_ERROR_ID,
+        error: message,
+        timestamp: new Date().toISOString(),
+      })
+    }
+
+    // Collect manifest entries for all district files (including previously
+    // existing ones, e.g. hydrated from staging) across the date's set.
     const districtEntries: DistrictManifestEntry[] = []
     const allSuccessfulDistricts: string[] = []
 
-    for (const districtId of districtsToTransform) {
+    for (const districtId of [
+      ...new Set([...dateSet, ...districtsToTransform]),
+    ]) {
       const entry = await this.getDistrictManifestEntry(
         snapshotDate,
         districtId
@@ -2308,12 +2420,9 @@ export class TransformService {
     }
 
     // Write metadata and manifest if we have any successful districts
-    if (allSuccessfulDistricts.length > 0) {
+    if (shortfall.roster.length === 0 && allSuccessfulDistricts.length > 0) {
       try {
-        // Collect failed districts and error messages for metadata
-        const failedDistrictIds = results
-          .filter(r => !r.success)
-          .map(r => r.districtId)
+        // Collect error messages for metadata
         const errorMessages = errors.map(e => `${e.districtId}: ${e.error}`)
         const processingDuration = Date.now() - startTime
 
@@ -2339,11 +2448,12 @@ export class TransformService {
 
         // Calculate and write all-districts rankings (Requirement 2.4)
         // Read rankings from source date, write to snapshot date
+        // Refused above when a district's raw is missing (#1756).
         try {
-          const rankings = await this.calculateAllDistrictsRankings(
-            date,
-            snapshotDate
-          )
+          const rankings =
+            shortfall.rankings.length === 0
+              ? await this.calculateAllDistrictsRankings(date, snapshotDate)
+              : null
           if (rankings) {
             const rankingsPath = await this.writeAllDistrictsRankingsToDate(
               snapshotDate,
@@ -2372,7 +2482,7 @@ export class TransformService {
                 { date, error: msg }
               )
             }
-          } else {
+          } else if (shortfall.rankings.length === 0) {
             this.logger.warn(
               'Could not calculate all-districts rankings (no CSV data)',
               { date }
