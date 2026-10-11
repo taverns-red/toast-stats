@@ -170,6 +170,16 @@ describe('MobileRowList CSS contract (review §5.2 / §5.6)', () => {
     return Number(m[2])
   }
 
+  // The PR #1871 preview overflowed the Action List by 120 px at 375 in a
+  // desktop-engine viewport: nowrap titles/meta set the list's min-content
+  // width, and a min-content-sized ancestor grew to fit. Inline-size
+  // containment makes the list's intrinsic width ignore its content, so the
+  // ellipsis engages instead of the page widening.
+  it('the list never widens its ancestors (inline-size containment)', () => {
+    const root = rule('.mobile-row-list')
+    expect(root).toMatch(/contain:\s*inline-size/)
+  })
+
   it('rows are 56–64 px tall', () => {
     const row = rule('.mobile-row')
     expect(px(row, 'min-height')).toBeGreaterThanOrEqual(56)
