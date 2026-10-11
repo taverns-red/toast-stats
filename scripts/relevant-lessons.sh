@@ -81,9 +81,6 @@ fi
 #     (#42). Small corpus → emit all (cheaper than judging). Large corpus → emit
 #     the INDEX.md catalog for the session to judge + the single newest-by-date
 #     lesson as a recent-change floor.
-fm() {  # read a scalar frontmatter value: fm <file> <key>
-  awk -v k="$2" 'NR==1&&$0=="---"{f=1;next} f&&$0=="---"{exit} f&&index($0,k":")==1{v=$0;sub("^"k":[[:space:]]*","",v);print v;exit}' "$1"
-}
 SMALL_CORPUS="${SMALL_CORPUS:-15}"
 if [[ -d "$LESSONS_DIR/lessons" ]]; then
   count=$(find "$LESSONS_DIR/lessons" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
@@ -98,9 +95,21 @@ if [[ -d "$LESSONS_DIR/lessons" ]]; then
     # The consumer must drain sort's output: `head -1` exits early, and once
     # sort's output outgrows the pipe buffer, pipefail turns its SIGPIPE into
     # exit 141 (#1667). awk reads to EOF, so real sort failures still surface.
-    newest="$(while IFS= read -r f; do
-                [[ -n "$f" ]] && printf '%s\t%s\n' "$(fm "$f" date)" "$f"
-              done < <(find "$LESSONS_DIR/lessons" -maxdepth 1 -name '*.md') \
+    # Every lesson's `date` is read in ONE awk pass (#1748) — a per-file awk
+    # fork made this O(lessons) in process spawns and timed out under load.
+    # Frontmatter is the block between a first-line `---` and the next `---`;
+    # the value is the first `date:` line in it (empty when absent).
+    newest="$(find "$LESSONS_DIR/lessons" -maxdepth 1 -name '*.md' \
+              | awk '$0 != "" {
+                  f = $0; d = ""; n = 0
+                  while ((getline line < f) > 0) {
+                    if (++n == 1) { if (line == "---") continue; else break }
+                    if (line == "---") break
+                    if (index(line, "date:") == 1) { d = line; sub(/^date:[[:space:]]*/, "", d); break }
+                  }
+                  close(f)
+                  printf "%s\t%s\n", d, f
+                }' \
               | sort -r | awk 'NR==1{sub(/^[^\t]*\t/, ""); print}')"
     [[ -n "$newest" ]] && emit "$newest"
   fi
