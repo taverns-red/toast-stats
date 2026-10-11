@@ -67,6 +67,9 @@
 #   VALIDATE_SNAPSHOTS     schema gate command (default: tsx validate-snapshots.ts)
 #   DISTRICTS              rescrape: required, comma-separated district ids
 #   GITHUB_STEP_SUMMARY    date counts and store counters are appended here
+#   TOUCHED_DATES_FILE     optional: each published (post-remap) date is
+#                          appended, one per line, for the per-date
+#                          completeness gate (#1761)
 #
 # Output: stdout is ONE JSON line, {"succeeded":N,"refused":N,"failed":N}
 # (R4); everything else, including the CLI's own output, goes to stderr.
@@ -324,6 +327,9 @@ process_one() {
   # 10. upload
   if [ -d "${SNAPSHOTS}/${actual}" ]; then
     upload_snapshot "${actual}"
+    if [ -n "${TOUCHED_DATES_FILE:-}" ]; then
+      echo "${actual}" >>"${TOUCHED_DATES_FILE}"
+    fi
     if [ "${compute_ok}" = 1 ]; then OUTCOME=published; else OUTCOME=compute-failed; fi
   else
     echo "::warning::No snapshot directory found for ${date} (expected ${actual})"

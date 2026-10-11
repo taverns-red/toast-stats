@@ -137,6 +137,9 @@ env:
   # Daily pipeline writes to staging first; promotion copies to production (#316)
   GCS_BUCKET: 'toast-stats-data-staging'
   GCS_BUCKET_PRODUCTION: 'toast-stats-data-ca'
+  # Dates this run published, one per line (#1761): appended by
+  # process-dates.sh and the backfill loop, read by the completeness gate.
+  TOUCHED_DATES_FILE: '/tmp/touched-dates.txt'
 
 permissions:
   contents: read
@@ -938,6 +941,7 @@ jobs:
                 -Z \
                 "${SNAPSHOT_DIR}/global-totals.json" \
                 "gs://${GCS_BUCKET}/snapshots/${DATE}/global-totals.json"
+              echo "${DATE}" >> "${TOUCHED_DATES_FILE}"
 
               ROW=$(jq -r '"| \(.date) | \(.districts) | \(.clubs) | \(.payments) | \(.membership) | \(.excludedDistricts) | \(.duplicateClubs) |"' \
                     /tmp/global-totals-summary.json)
@@ -1939,6 +1943,24 @@ jobs:
           CONTENT_GATE_FILE: /tmp/content-gate.json
         run: npx tsx scripts/promotion-content-gate.ts
 
+      # Per-date completeness gate (#1761, ADR-015 P5.2, D8 — HOLD, not warn).
+      # For each date this run touched (the daily snapshot_date, plus every
+      # date the per-date loops published into TOUCHED_DATES_FILE), staging
+      # must hold at least what prod holds for that date: object count,
+      # district counts, global-totals clubs/countries, and the key set of a
+      # sampled club record per district. FAC loss (#1758) and subset rollups
+      # (D-2) passed the three gates above. allow_value_changes overrides,
+      # as for the value gate. Reads listings plus a bounded sample; read-only.
+      # Runs under skip_promotion too, so a proof run reports its verdict.
+      - name: Completeness gate touched dates (#1761)
+        id: completenessgate
+        if: steps.mode.outputs.mode != 'prune'
+        env:
+          GATE_DATES: ${{ steps.daily-scrape.outputs.snapshot_date }}
+          ALLOW_VALUE_CHANGES: ${{ inputs.allow_value_changes }}
+          COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
+        run: npx tsx scripts/date-completeness-gate.ts
+
       # ── skip_promotion (#1754) ──
       # A staging-only proof run stops here: the three gates above have run
       # and their verdicts are reported below, but every step that writes to
@@ -1958,6 +1980,7 @@ jobs:
             echo "- Count gate (additive): **${{ steps.diff.outputs.promote }}**"
             echo "- Value gate: **${{ steps.valuediff.outputs.value_promote }}**"
             echo "- Content gate (#1715): **${{ steps.contentgate.outputs.content_promote }}**"
+            echo "- Completeness gate (#1761): **${{ steps.completenessgate.outputs.completeness_promote }}**"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Promote staging to production
@@ -1966,6 +1989,7 @@ jobs:
           steps.diff.outputs.promote == 'true'
           && steps.valuediff.outputs.value_promote == 'true'
           && steps.contentgate.outputs.content_promote == 'true'
+          && steps.completenessgate.outputs.completeness_promote == 'true'
           && steps.mode.outputs.mode != 'prune'
           && steps.mode.outputs.skip_promotion != 'true'
         run: |
@@ -2007,6 +2031,7 @@ jobs:
           steps.diff.outputs.promote == 'true'
           && steps.valuediff.outputs.value_promote == 'true'
           && steps.contentgate.outputs.content_promote == 'true'
+          && steps.completenessgate.outputs.completeness_promote == 'true'
           && steps.mode.outputs.mode != 'prune'
           && steps.mode.outputs.skip_promotion != 'true'
         continue-on-error: true
@@ -2026,15 +2051,17 @@ jobs:
         if: >-
           (steps.diff.outputs.promote == 'false'
           || steps.valuediff.outputs.value_promote == 'false'
-          || steps.contentgate.outputs.content_promote == 'false')
+          || steps.contentgate.outputs.content_promote == 'false'
+          || steps.completenessgate.outputs.completeness_promote == 'false')
           && steps.mode.outputs.mode != 'prune'
           && steps.mode.outputs.skip_promotion != 'true'
         run: |
-          echo "::error::Promotion BLOCKED — count, value or content gate refused. Production data unchanged."
+          echo "::error::Promotion BLOCKED — count, value, content or completeness gate refused. Production data unchanged."
           echo "## ❌ Promotion Blocked" >> "$GITHUB_STEP_SUMMARY"
           echo "- Count gate (additive): **${{ steps.diff.outputs.promote }}**" >> "$GITHUB_STEP_SUMMARY"
           echo "- Value gate: **${{ steps.valuediff.outputs.value_promote }}**" >> "$GITHUB_STEP_SUMMARY"
           echo "- Content gate (#1715): **${{ steps.contentgate.outputs.content_promote }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Completeness gate (#1761): **${{ steps.completenessgate.outputs.completeness_promote }}**" >> "$GITHUB_STEP_SUMMARY"
           echo "Production data is **unchanged**. Review the diffs above." >> "$GITHUB_STEP_SUMMARY"
           echo "For a reviewed re-derive, re-run with **allow_value_changes = true**." >> "$GITHUB_STEP_SUMMARY"
           echo "For a reviewed district/date REDUCTION (e.g. a TI consolidation), re-run with **allow_subtractive = true**." >> "$GITHUB_STEP_SUMMARY"
@@ -2056,6 +2083,8 @@ jobs:
           VALUE_DIFF_FILE: /tmp/value-diff.json
           CONTENT_PROMOTE: ${{ steps.contentgate.outputs.content_promote }}
           CONTENT_GATE_FILE: /tmp/content-gate.json
+          COMPLETENESS_PROMOTE: ${{ steps.completenessgate.outputs.completeness_promote }}
+          COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
         run: npx tsx scripts/promotion-alert.ts
 
       - name: Ensure promotion-held label exists
