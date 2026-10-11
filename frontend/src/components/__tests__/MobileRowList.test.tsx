@@ -194,6 +194,7 @@ describe('MobileRowList CSS contract (review §5.2 / §5.6)', () => {
       '.mobile-row-list__more',
       // The shared status pill is 11 px elsewhere; in a row it is data (§5.6).
       '.mobile-row__chip .clubs-status-pill',
+      '.mobile-chip',
     ]) {
       expect(px(rule(sel), 'font-size'), sel).toBeGreaterThanOrEqual(14)
     }
