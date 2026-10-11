@@ -281,6 +281,31 @@ export async function updateClubTrendsStore(
 }
 
 /**
+ * The store's clubs as of `date`: every trend point after `date` dropped,
+ * and clubs with no point on or before it left out (ADR-015 P4, #1759).
+ * A store spans its whole program year, so a re-derivation of a past date
+ * would otherwise compute that date's analytics from its future. `date` is
+ * the snapshot's logical date (YYYY-MM-DD), so string order is date order.
+ * Returns copies; the store is not modified.
+ */
+export function clubTrendsAsOf(
+  clubs: ClubTrendsStoreData['clubs'],
+  date: string
+): ClubTrendsStoreData['clubs'] {
+  const capped: ClubTrendsStoreData['clubs'] = {}
+  for (const [clubId, entry] of Object.entries(clubs)) {
+    const membershipTrend = entry.membershipTrend.filter(p => p.date <= date)
+    if (membershipTrend.length === 0) continue
+    capped[clubId] = {
+      ...entry,
+      membershipTrend,
+      dcpGoalsTrend: entry.dcpGoalsTrend.filter(p => p.date <= date),
+    }
+  }
+  return capped
+}
+
+/**
  * Convert a ClubTrendsStore entry into a partial ClubTrend with the
  * accumulated trend arrays pre-populated. Health assessment fields are
  * intentionally left at defaults — they are filled in by

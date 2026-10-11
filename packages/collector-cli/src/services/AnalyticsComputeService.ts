@@ -881,7 +881,8 @@ export class AnalyticsComputeService {
       // accumulates one data point per pipeline run. The store is synced from
       // GCS before analytics compute and pushed back after (see data-pipeline.yml
       // Step 3c and Step 5).
-      const { updateClubTrendsStore } = await import('./ClubTrendsStore.js')
+      const { updateClubTrendsStore, clubTrendsAsOf } =
+        await import('./ClubTrendsStore.js')
       const clubTrendsStore = await updateClubTrendsStore(
         this.cacheDir,
         date,
@@ -927,7 +928,10 @@ export class AnalyticsComputeService {
       // Compute analytics using shared AnalyticsComputer.
       // preloadedClubTrends supplies the accumulated full-year trend arrays
       // from the ClubTrendsStore, giving ClubHealthAnalyticsModule dense
-      // multi-point trend data without loading historical snapshots.
+      // multi-point trend data without loading historical snapshots. The
+      // store spans the whole program year, so it is capped at `date` (the
+      // snapshot's logical date): a re-derived past date must not see its
+      // future (ADR-015 P4, #1759).
       // Requirement 5.2 (per-metric-rankings): Pass allDistrictsRankings via options
       const computationResult =
         await this.analyticsComputer.computeDistrictAnalytics(
@@ -935,7 +939,7 @@ export class AnalyticsComputeService {
           snapshots,
           {
             allDistrictsRankings: allDistrictsRankings ?? undefined,
-            preloadedClubTrends: clubTrendsStore.clubs,
+            preloadedClubTrends: clubTrendsAsOf(clubTrendsStore.clubs, date),
           }
         )
 
