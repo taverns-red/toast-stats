@@ -17,6 +17,14 @@
 #       prints the ComputeAnalyticsResult JSON (with the #1708 store counters)
 #       on stdout, logs on stderr (R4). Exits 1 on a failed compute, still
 #       printing its JSON, as the real CLI does.
+#   merge-find-a-club --fac-dir F --snapshot-dir S --verbose
+#       for every district_<id>.json present in BOTH F and S (the real CLI's
+#       default discovery), reads the FAC file, which must have the recorded
+#       `fetch-find-a-club` shape (a top-level `Clubs` array, see
+#       raw-fac/district_61.json), and rewrites the snapshot in place with a
+#       `facMergedClubs` marker. Prints the real summary JSON on stdout
+#       (totalDistricts, succeeded, failed, totalMatched, ...) and exits 1
+#       when a district failed (PARTIAL_FAILURE), as the real CLI does.
 # Env:
 #   CACHE_DIR            required, as for the real CLI
 #   STUB_LOG             optional: argv of each call is appended here
@@ -24,6 +32,8 @@
 #   STUB_TRANSFORM_FAIL  optional: ERE; a transform of a matching date fails
 #   STUB_SCRAPE_FAIL     optional: ERE; a scrape of a matching date fails
 #   STUB_COMPUTE_FAIL    optional: ERE; a compute of a matching date fails
+#   STUB_MERGE_FAIL      optional: ERE; a merge into a matching snapshot
+#                        date (the --snapshot-dir basename) fails
 set -euo pipefail
 
 : "${CACHE_DIR:?CACHE_DIR must be set}"
@@ -32,15 +42,30 @@ if [ -n "${STUB_LOG:-}" ]; then printf 'collector-cli %s\n' "$*" >>"${STUB_LOG}"
 CMD="${1:?}"
 shift
 DATE=""
+FAC_DIR=""
+SNAP_DIR=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --date)
       DATE="$2"
       shift 2
       ;;
+    --fac-dir)
+      FAC_DIR="$2"
+      shift 2
+      ;;
+    --snapshot-dir)
+      SNAP_DIR="$2"
+      shift 2
+      ;;
     *) shift ;;
   esac
 done
+if [ "${CMD}" = "merge-find-a-club" ]; then
+  : "${FAC_DIR:?--fac-dir is required}"
+  : "${SNAP_DIR:?--snapshot-dir is required}"
+  DATE="$(basename "${SNAP_DIR}")"
+fi
 : "${DATE:?--date is required}"
 
 matches() { [ -n "${1:-}" ] && [[ "${DATE}" =~ $1 ]]; }
@@ -109,6 +134,30 @@ case "${CMD}" in
     printf '{"success":%s,"date":"%s","requestedDate":"%s","districtsSucceeded":["61"],"districtsFailed":[],"timeSeries":{"written":1,"failed":0},"clubTrends":{"written":2,"failed":0},"clubRace":{"written":1,"failed":0}}\n' \
       "${ok}" "${DATE}" "${DATE}"
     exit "${status}"
+    ;;
+  merge-find-a-club)
+    total=0 ok=0 failed=0 matched=0
+    for fac in "${FAC_DIR}"/district_*.json; do
+      [ -f "${fac}" ] || continue
+      id="$(basename "${fac}" .json)"
+      snap="${SNAP_DIR}/${id}.json"
+      [ -f "${snap}" ] || continue
+      total=$((total + 1))
+      if matches "${STUB_MERGE_FAIL:-}" ||
+        ! clubs="$(jq -e '.Clubs | arrays | length' "${fac}")"; then
+        echo "[ERROR] ${id}: merge failed" >&2
+        failed=$((failed + 1))
+        continue
+      fi
+      jq -c --argjson n "${clubs}" '. + {facMergedClubs: $n}' "${snap}" >"${snap}.tmp"
+      mv "${snap}.tmp" "${snap}"
+      echo "[INFO] ${id}: matched=${clubs}" >&2
+      ok=$((ok + 1))
+      matched=$((matched + clubs))
+    done
+    printf '{"totalDistricts":%d,"succeeded":%d,"failed":%d,"totalMatched":%d,"totalSnapshotOnly":0,"totalFacOnly":0,"results":[]}\n' \
+      "${total}" "${ok}" "${failed}" "${matched}"
+    [ "${failed}" -eq 0 ] || exit 1
     ;;
   *)
     echo "collector-cli stub: unsupported command ${CMD}" >&2
