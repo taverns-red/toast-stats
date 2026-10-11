@@ -258,3 +258,29 @@
   background-color: #e5e7eb;
   color: #374151;
 }
+
+/* ── Progress summary on phones (#1862) — division disclosures reuse the
+   group toggle; the opened panel holds the unchanged narratives. */
+
+.progress-summary-mobile__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.progress-summary-mobile .mobile-row-group__toggle {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.progress-summary-mobile .mobile-chip {
+  flex-shrink: 0;
+}
+
+.progress-summary-mobile__panel {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 var(--rds-radius-md, 8px) var(--rds-radius-md, 8px);
+}

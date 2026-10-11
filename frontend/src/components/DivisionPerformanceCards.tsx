@@ -26,35 +26,11 @@ import { DivisionPerformanceCard } from './DivisionPerformanceCard'
 import { logger } from '../utils/logger'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { MobileRowList, type MobileRow } from './MobileRowList'
-import { calculateDivisionGapAnalysis } from '../utils/divisionGapAnalysis'
+import {
+  DivisionRecognitionChip,
+  divisionChip,
+} from './DivisionRecognitionChip'
 import type { DivisionPerformance } from '../utils/divisionStatus'
-
-/** Recognition chip for a division row (#1833): glyph + text + tone, so the
- *  status never rests on colour. Net loss outranks the tier, matching the
- *  desktop DivisionSummary badge. */
-function divisionChip(division: DivisionPerformance): {
-  glyph: string
-  label: string
-  tone: 'good' | 'bad' | 'neutral'
-} {
-  const gap = calculateDivisionGapAnalysis({
-    clubBase: division.clubBase,
-    paidClubs: division.paidClubs,
-    distinguishedClubs: division.distinguishedClubs,
-  })
-  if (!gap.meetsNoNetLossRequirement)
-    return { glyph: '\u2717', label: 'Net loss', tone: 'bad' }
-  switch (division.status) {
-    case 'presidents-distinguished':
-      return { glyph: '\u2605', label: "President's", tone: 'good' }
-    case 'select-distinguished':
-      return { glyph: '\u2605', label: 'Select', tone: 'good' }
-    case 'distinguished':
-      return { glyph: '\u2605', label: 'Distinguished', tone: 'good' }
-    default:
-      return { glyph: '\u25cb', label: 'Not distinguished', tone: 'neutral' }
-  }
-}
 
 function signed(n: number): string {
   if (n > 0) return `+${n}`
@@ -74,11 +50,7 @@ function toDivisionRow(
     id: division.divisionId,
     to: `/district/${districtId}/division/${division.divisionId}`,
     title: `Division ${division.divisionId}`,
-    chip: (
-      <span className={`mobile-chip mobile-chip--${chip.tone}`}>
-        <span aria-hidden="true">{chip.glyph}</span> {chip.label}
-      </span>
-    ),
+    chip: <DivisionRecognitionChip division={division} />,
     meta: [paid, net, dist].join(' \u00b7 '),
     ariaLabel: `Division ${division.divisionId} — ${chip.label}, ${paid}, net ${net}, ${dist}`,
   }
