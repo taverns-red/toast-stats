@@ -2078,7 +2078,8 @@
     padding: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--rt-space-1) var(--rt-space-4);
+    align-items: center;
+    gap: 0 var(--rt-space-4);
     font-family: var(--rt-font-body);
     font-size: var(--rt-text-sm);
     line-height: 1.4;
@@ -2098,7 +2099,13 @@
     opacity: 0.8;
   }
 
+  /* The global touch-target rule gives every a[href] a 44–48px min-height
+     as a block; inline-flex + centre keeps that tap target while the text
+     sits on the same line as its plain-text siblings. */
   .club-meets__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--rt-space-1);
     color: #ffffff;
     font-weight: 600;
     text-decoration: underline;
