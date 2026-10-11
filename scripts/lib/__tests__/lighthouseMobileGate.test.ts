@@ -106,11 +106,28 @@ describe('lighthouserc.mobile.js (#1830)', () => {
       }
     })
 
-    it('CLS budget is the 0.1 target on every route', () => {
-      for (const entry of matrix) {
-        expect(
-          entry.assertions['cumulative-layout-shift']![1].maxNumericValue
-        ).toBeLessThanOrEqual(0.1)
+    it('asserts exactly the declared per-route budgets', () => {
+      const keys = Object.keys(rc.ROUTES)
+      for (const [i, entry] of matrix.entries()) {
+        const b = rc.BUDGETS[keys[i]!]
+        const max = (audit: string) =>
+          entry.assertions[audit]![1].maxNumericValue
+        expect(max('largest-contentful-paint')).toBe(b.lcpMs)
+        expect(max('cumulative-layout-shift')).toBe(b.cls)
+        expect(max('resource-summary:script:size')).toBe(b.scriptBytes)
+        expect(max('resource-summary:total:size')).toBe(b.totalBytes)
+      }
+    })
+
+    it('every budget still gates something: below the pre-#1830 baseline', () => {
+      // Prod before #1830 (Lighthouse mobile): club 15.1 s / 2.36 MB. A budget
+      // at or above the old numbers would gate nothing.
+      for (const b of Object.values(
+        rc.BUDGETS as Record<string, Record<string, number>>
+      )) {
+        expect(b.lcpMs).toBeLessThan(15000)
+        expect(b.totalBytes).toBeLessThan(2.36 * 1024 * 1024)
+        expect(b.cls).toBeLessThanOrEqual(0.2)
       }
     })
 
