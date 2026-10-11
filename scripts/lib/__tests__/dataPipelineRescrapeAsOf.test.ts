@@ -38,34 +38,31 @@ function load(): Workflow {
   return parse(fs.readFileSync(WORKFLOW_PATH, 'utf-8')) as Workflow
 }
 
-function rescrapeLoop(): string {
+function rescrapeStep(): string {
   const step = Object.values(load().jobs)
     .flatMap(job => job.steps ?? [])
     .find(s => s.name === '[rescrape] Re-collect and process dates')
   if (!step?.run) throw new Error('[rescrape] Re-collect step not found')
-  const run = step.run
-  return run.slice(run.indexOf('for DATE in ${DATES}; do'))
+  return step.run
 }
 
+// The per-date loop runs in scripts/pipeline/process-dates.sh (#1742). Its
+// failed-scrape path runs for real in processDates.test.ts: the date is
+// counted failed, nothing is uploaded for it, and its local raw-csv and
+// snapshot leftovers are removed so later steps cannot publish them. This
+// guard pins the hand-off.
 describe('data-pipeline rescrape — a date whose as-of is wrong is never uploaded (#1669)', () => {
-  const loop = rescrapeLoop()
-  const scrapeAt = loop.indexOf('if ! npx collector-cli scrape ${SCRAPE_ARGS}')
-  const failureBranch = loop.slice(scrapeAt, loop.indexOf('fi', scrapeAt))
-  const firstUpload = loop.indexOf('gcloud storage')
+  const run = rescrapeStep()
 
-  it('scrapes before any upload in the per-date loop', () => {
-    expect(scrapeAt).toBeGreaterThan(-1)
-    expect(firstUpload).toBeGreaterThan(scrapeAt)
+  it('runs every date through process-dates.sh in rescrape mode, with the district list', () => {
+    expect(run).toMatch(
+      /DISTRICTS="\$\{DISTRICTS\}" bash scripts\/pipeline\/process-dates\.sh "\$\{GCS_BUCKET\}" rescrape /
+    )
   })
 
-  it('skips the date on a failed scrape, before reaching an upload', () => {
-    expect(failureBranch).toContain('continue')
-    expect(failureBranch).not.toContain('gcloud storage')
-  })
-
-  it('clears the failed date’s local raw-csv and snapshot so later steps cannot publish it', () => {
-    expect(failureBranch).toMatch(/rm -rf "\.\/cache\/raw-csv\/\$\{DATE\}"/)
-    expect(failureBranch).toContain('${LEFTOVER_DIRS}')
+  it('has no inline scrape or upload left in the step to drift back', () => {
+    expect(run).not.toMatch(/collector-cli\s+scrape\b/)
+    expect(run).not.toMatch(/gcloud storage (?:cp|rsync)\b/)
   })
 
   it('documents what rescrape + dates does on the dispatch input', () => {

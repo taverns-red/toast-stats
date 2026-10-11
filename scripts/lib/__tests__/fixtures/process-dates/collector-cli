@@ -9,6 +9,9 @@
 #       where <A> is D, or the date STUB_REMAP maps it to (`D=A,...`): the
 #       transform remaps a closing collection onto its month-end (#193).
 #       Like the real CLI it also logs on stdout.
+#   scrape --date D --transform --force --verbose --districts X
+#       writes raw-csv/D, then the snapshot as transform does. With
+#       STUB_SCRAPE_FAIL it still leaves both behind and exits 1.
 #   compute-analytics --date A --force-analytics --verbose
 #       writes $CACHE_DIR/snapshots/A/analytics/district_61_analytics.json and
 #       prints the ComputeAnalyticsResult JSON (with the #1708 store counters)
@@ -19,6 +22,7 @@
 #   STUB_LOG             optional: argv of each call is appended here
 #   STUB_REMAP           optional: `D=A[,D=A]` transform date remaps
 #   STUB_TRANSFORM_FAIL  optional: ERE; a transform of a matching date fails
+#   STUB_SCRAPE_FAIL     optional: ERE; a scrape of a matching date fails
 #   STUB_COMPUTE_FAIL    optional: ERE; a compute of a matching date fails
 set -euo pipefail
 
@@ -52,7 +56,30 @@ remapped() {
   echo "${DATE}"
 }
 
+write_snapshot() {
+  local actual dir
+  actual="$(remapped)"
+  dir="${CACHE_DIR}/snapshots/${actual}"
+  mkdir -p "${dir}"
+  printf '{"snapshotDate":"%s","sourceDate":"%s"}\n' "${actual}" "${DATE}" \
+    >"${dir}/metadata.json"
+  printf '{"districtId":"61","asOf":"%s"}\n' "${actual}" >"${dir}/district_61.json"
+}
+
 case "${CMD}" in
+  scrape)
+    # scrape --date D --transform --force --verbose --districts X: collects
+    # raw-csv/D from the dashboard, then transforms it. A failure part way
+    # (STUB_SCRAPE_FAIL) leaves what it had written, as a crash would.
+    echo "[INFO] scrape ${DATE}"
+    mkdir -p "${CACHE_DIR}/raw-csv/${DATE}/district-61"
+    printf 'Club,Goals\n' >"${CACHE_DIR}/raw-csv/${DATE}/district-61/club-performance.csv"
+    write_snapshot
+    if matches "${STUB_SCRAPE_FAIL:-}"; then
+      echo "[ERROR] scrape failed for ${DATE}" >&2
+      exit 1
+    fi
+    ;;
   transform)
     echo "[INFO] transform ${DATE}"
     raw="${CACHE_DIR}/raw-csv/${DATE}"
@@ -64,12 +91,7 @@ case "${CMD}" in
       echo "[ERROR] transform failed for ${DATE}" >&2
       exit 1
     fi
-    actual="$(remapped)"
-    dir="${CACHE_DIR}/snapshots/${actual}"
-    mkdir -p "${dir}"
-    printf '{"snapshotDate":"%s","sourceDate":"%s"}\n' "${actual}" "${DATE}" \
-      >"${dir}/metadata.json"
-    printf '{"districtId":"61","asOf":"%s"}\n' "${actual}" >"${dir}/district_61.json"
+    write_snapshot
     ;;
   compute-analytics)
     dir="${CACHE_DIR}/snapshots/${DATE}"
