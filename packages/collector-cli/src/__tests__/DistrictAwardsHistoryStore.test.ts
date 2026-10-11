@@ -135,3 +135,67 @@ describe('DistrictAwardsHistoryStore (#333)', () => {
     )
   })
 })
+
+describe('DistrictAwardsHistoryStore date guard (#1764, ADR-015 P4)', () => {
+  // Real shape: district 61's 2023-2024 entry from the staging store
+  // (gs://toast-stats-data-staging/district-awards-history.json, 2026-10-11).
+  const yearEnd2324: DistrictYearSummary = {
+    programYear: '2023-2024',
+    distinguishedTier: 'NotDistinguished',
+    avgClubSize: 16.162650602409638,
+    totalMembership: 2683,
+    activeClubs: 166,
+    snapshotDate: '2024-06-30',
+  }
+  const midYear2324: DistrictYearSummary = {
+    programYear: '2023-2024',
+    distinguishedTier: 'Distinguished',
+    avgClubSize: 15.1,
+    totalMembership: 2500,
+    activeClubs: 165,
+    snapshotDate: '2024-01-31',
+  }
+
+  it('rebuilding a mid-year past date leaves the year-end summary unchanged', () => {
+    const store = DistrictAwardsHistoryStore.create()
+    store.upsertYearSummary('61', yearEnd2324)
+
+    const accepted = store.upsertYearSummary('61', midYear2324)
+
+    expect(store.getYearSummary('61', '2023-2024')).toEqual(yearEnd2324)
+    expect(accepted).toBe(false)
+  })
+
+  it('a later snapshot of the in-progress PY replaces the stored one (#1609)', () => {
+    const store = DistrictAwardsHistoryStore.create()
+    store.upsertYearSummary('61', {
+      ...midYear2324,
+      programYear: '2026-2027',
+      snapshotDate: '2026-10-09',
+    })
+    const later: DistrictYearSummary = {
+      ...midYear2324,
+      programYear: '2026-2027',
+      snapshotDate: '2026-10-10',
+      distinguishedTier: 'Select',
+    }
+
+    expect(store.upsertYearSummary('61', later)).toBe(true)
+    expect(store.getYearSummary('61', '2026-2027')).toEqual(later)
+  })
+
+  it('re-deriving the same date replaces the entry (idempotent re-run)', () => {
+    const store = DistrictAwardsHistoryStore.create()
+    store.upsertYearSummary('61', yearEnd2324)
+    const rederived = { ...yearEnd2324, totalMembership: 2690 }
+
+    expect(store.upsertYearSummary('61', rederived)).toBe(true)
+    expect(store.getYearSummary('61', '2023-2024')).toEqual(rederived)
+  })
+
+  it('a mid-year summary for a PY with no entry is accepted', () => {
+    const store = DistrictAwardsHistoryStore.create()
+    expect(store.upsertYearSummary('61', midYear2324)).toBe(true)
+    expect(store.getYearSummary('61', '2023-2024')).toEqual(midYear2324)
+  })
+})

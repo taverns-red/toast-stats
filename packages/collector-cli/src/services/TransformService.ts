@@ -1940,6 +1940,7 @@ export class TransformService {
 
     // ── Read totalMembership + compute avgClubSize per district (#333) ──
     const districtAvgClubSizes = new Map<string, number>()
+    const keptNewerSummary: string[] = []
 
     for (const ranking of rankings.rankings) {
       try {
@@ -1958,8 +1959,9 @@ export class TransformService {
           ranking.activeClubs > 0 ? totalMembership / ranking.activeClubs : 0
         districtAvgClubSizes.set(ranking.districtId, avgClubSize)
 
-        // Upsert into history store
-        historyStore.upsertYearSummary(ranking.districtId, {
+        // Upsert into history store. A summary older than the stored one
+        // for this PY is dropped (ADR-015 P4, #1764).
+        const accepted = historyStore.upsertYearSummary(ranking.districtId, {
           programYear,
           distinguishedTier:
             distinguishedDistrict[ranking.districtId]?.currentTier ??
@@ -1969,9 +1971,16 @@ export class TransformService {
           activeClubs: ranking.activeClubs,
           snapshotDate,
         })
+        if (!accepted) keptNewerSummary.push(ranking.districtId)
       } catch {
         // Skip districts with unreadable snapshots
       }
+    }
+    if (keptNewerSummary.length > 0) {
+      this.logger.warn(
+        'Awards history kept a newer summary; this date did not overwrite it',
+        { snapshotDate, programYear, districts: keptNewerSummary.length }
+      )
     }
 
     // ── Save history store (#333) ──

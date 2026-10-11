@@ -64,19 +64,32 @@ export class DistrictAwardsHistoryStore {
     })
   }
 
-  upsertYearSummary(districtId: string, summary: DistrictYearSummary): void {
+  /**
+   * Store `summary` as its program year's entry, unless the stored entry
+   * comes from a later snapshot (ADR-015 P4, #1764). A rebuild of a
+   * mid-year past date must not regress that year's year-end summary; the
+   * in-progress year still updates on every newer date (#1609).
+   * `snapshotDate` is the logical date (YYYY-MM-DD), so string order is
+   * date order.
+   *
+   * @returns false when the summary was older than the stored one and was
+   *   dropped; true when it was stored.
+   */
+  upsertYearSummary(districtId: string, summary: DistrictYearSummary): boolean {
     if (!this.data.districts[districtId]) {
       this.data.districts[districtId] = []
     }
     const entries = this.data.districts[districtId]!
     const idx = entries.findIndex(e => e.programYear === summary.programYear)
     if (idx >= 0) {
+      if (summary.snapshotDate < entries[idx]!.snapshotDate) return false
       entries[idx] = summary
     } else {
       entries.push(summary)
     }
     entries.sort((a, b) => a.programYear.localeCompare(b.programYear))
     this.data.updatedAt = new Date().toISOString()
+    return true
   }
 
   getHistory(districtId: string): DistrictYearSummary[] {

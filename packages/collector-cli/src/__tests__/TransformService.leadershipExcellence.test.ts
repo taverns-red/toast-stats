@@ -132,3 +132,59 @@ describe('TransformService — Leadership Excellence (#1609)', () => {
     expect(qualifying).toEqual([])
   })
 })
+
+describe('TransformService — awards history date guard (#1764, ADR-015 P4)', () => {
+  let tempDir: string
+
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'transform-ah-test-'))
+    await seedHistory(tempDir)
+  })
+
+  afterEach(async () => {
+    await fs.rm(tempDir, { recursive: true, force: true })
+  })
+
+  it('transforming 2024-01-31 leaves the 2023-2024 year-end entry unchanged', async () => {
+    const before = (await DistrictAwardsHistoryStore.load(
+      tempDir
+    ))!.getYearSummary('104', '2023-2024')
+    await writeRaw(tempDir, '2024-01-31', {
+      date: '2024-01-31',
+      isClosingPeriod: false,
+    })
+
+    await new TransformService({ cacheDir: tempDir }).transform({
+      date: '2024-01-31',
+      force: true,
+    })
+
+    const after = (await DistrictAwardsHistoryStore.load(
+      tempDir
+    ))!.getYearSummary('104', '2023-2024')
+    expect(after).toEqual(before)
+    expect(after?.snapshotDate).toBe('2024-06-30')
+  })
+
+  it('a June close collected in July updates its own PY by logical date (#1622)', async () => {
+    await writeRaw(tempDir, '2024-07-20', {
+      date: '2024-07-20',
+      isClosingPeriod: true,
+      dataMonth: '2024-06',
+    })
+
+    await new TransformService({ cacheDir: tempDir }).transform({
+      date: '2024-07-20',
+      force: true,
+    })
+
+    const store = (await DistrictAwardsHistoryStore.load(tempDir))!
+    const yearEnd = store.getYearSummary('104', '2023-2024')
+    expect(yearEnd?.snapshotDate).toBe('2024-06-30')
+    expect(yearEnd?.totalMembership).not.toBe(2000)
+    // The collection date's PY (2024-2025) keeps its seeded year-end entry.
+    expect(store.getYearSummary('104', '2024-2025')?.snapshotDate).toBe(
+      '2025-06-30'
+    )
+  })
+})
