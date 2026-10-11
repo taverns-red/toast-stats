@@ -411,3 +411,102 @@ describe('process-dates.sh: counters in the step summary (#1708)', () => {
     expect(md).toContain('- **Club-trends stores**: 4 written, 0 failed')
   })
 })
+
+describe('process-dates.sh rescrape: scrape + transform stage', () => {
+  const env = { DISTRICTS: '61,62' }
+
+  it('requires DISTRICTS (usage, exit 2)', () => {
+    expect(run('rescrape', ['2026-09-10']).status).toBe(2)
+  })
+
+  it('scrapes the date with the district list and publishes it with its raw', () => {
+    const r = run('rescrape', ['2026-09-10'], env)
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(lines(stubLog)).toContain(
+      'collector-cli scrape --date 2026-09-10 --transform --force --verbose --districts 61,62'
+    )
+    expect(objectExists('snapshots/2026-09-10/district_61.json')).toBe(true)
+    expect(objectsUnder('raw-csv/2026-09-10')).toEqual([
+      'district-61/club-performance.csv',
+    ])
+    // The raw goes up after the snapshot, never before it.
+    const calls = lines(shimLog)
+    const snap = calls.findIndex(l => l.includes('/snapshots/2026-09-10/'))
+    const raw = calls.findIndex(l => l.includes('/raw-csv/2026-09-10/'))
+    expect(snap).toBeGreaterThanOrEqual(0)
+    expect(raw).toBeGreaterThan(snap)
+  })
+
+  it('does not pull a prior-year snapshot (rescrape never did)', () => {
+    putObject('snapshots/2025-09-10/district_61.json', '{"d":61}', true)
+    run('rescrape', ['2026-09-10'], env)
+    expect(lines(shimLog).some(l => l.includes('snapshots/2025-09-10/'))).toBe(
+      false
+    )
+  })
+
+  it('counts a failed scrape, drops what it left, uploads nothing, and goes on (#1669)', () => {
+    const r = run('rescrape', ['2026-09-09', '2026-09-10'], {
+      ...env,
+      STUB_SCRAPE_FAIL: '^2026-09-09$',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 1 })
+    expect(objectsUnder('snapshots/2026-09-09')).toEqual([])
+    expect(objectsUnder('raw-csv/2026-09-09')).toEqual([])
+    expect(localDateDirs('snapshots')).toEqual([])
+    expect(localDateDirs('raw-csv')).toEqual([])
+  })
+
+  it('publishes a remapped scrape under the date it wrote', () => {
+    const r = run('rescrape', ['2026-07-02'], {
+      ...env,
+      STUB_REMAP: '2026-07-02=2026-06-30',
+    })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(objectExists('snapshots/2026-06-30/district_61.json')).toBe(true)
+    expect(objectsUnder('raw-csv/2026-07-02')).toHaveLength(1)
+  })
+})
+
+describe('process-dates.sh rescrape: guard, compute and upload', () => {
+  const env = { DISTRICTS: '61' }
+
+  it('counts guard exit 3 as REFUSED and uploads neither snapshot nor raw', () => {
+    const r = run('rescrape', ['2026-06-30'], {
+      ...env,
+      STUB_GUARD_REFUSE: '^2026-06-30$',
+    })
+    expect(r.counts).toEqual({ succeeded: 0, refused: 1, failed: 0 })
+    expect(objectsUnder('snapshots')).toEqual([])
+    expect(objectsUnder('raw-csv')).toEqual([])
+    expect(localDateDirs('raw-csv')).toEqual([])
+  })
+
+  it('counts any other guard exit as FAILED', () => {
+    const r = run('rescrape', ['2026-06-30'], {
+      ...env,
+      STUB_GUARD_ERROR: '^2026-06-30$',
+    })
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+  })
+
+  it('still uploads snapshot and raw on a failed compute, counting it failed', () => {
+    const r = run('rescrape', ['2026-09-10'], {
+      ...env,
+      STUB_COMPUTE_FAIL: '^2026-09-10$',
+    })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 1 })
+    expect(objectExists('snapshots/2026-09-10/district_61.json')).toBe(true)
+    expect(objectsUnder('raw-csv/2026-09-10')).toHaveLength(1)
+  })
+
+  it('aborts on a failed raw upload', () => {
+    const r = run('rescrape', ['2026-09-10'], {
+      ...env,
+      SHIM_FAIL_MATCH: '^rsync .*gs://test-bucket/raw-csv/',
+    })
+    expect(r.status).not.toBe(0)
+  })
+})
