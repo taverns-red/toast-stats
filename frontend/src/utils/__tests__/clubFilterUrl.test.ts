@@ -251,3 +251,62 @@ describe('clubFilterUrl — "Close to Distinguished" preset (#979)', () => {
     expect(FILTER_PARAM_KEYS).not.toContain(PRESET_PARAM)
   })
 })
+
+describe('clubFilterUrl — facet params for the phone filter sheet (#1836)', () => {
+  it('reads a comma-joined ?status as a multi-value status filter', () => {
+    const state = paramsToFilterState(params('status=thriving,intervention'))
+    expect(state['status']?.value).toEqual([
+      'thriving',
+      'intervention-required',
+    ])
+  })
+
+  it('writes every selected status, not only a single one', () => {
+    const rec = toRecord({
+      status: {
+        field: 'status',
+        type: 'categorical',
+        value: ['vulnerable', 'intervention-required'],
+        operator: 'in',
+      },
+    })
+    expect(rec['status']).toBe('vulnerable,intervention')
+  })
+
+  it('reads ?divisions and ?areas as exact-match division/area facets', () => {
+    const state = paramsToFilterState(
+      params('divisions=Division A,Division C&areas=Area A1')
+    )
+    expect(state['division']).toEqual({
+      field: 'division',
+      type: 'categorical',
+      value: ['Division A', 'Division C'],
+      operator: 'in',
+    })
+    expect(state['area']).toEqual({
+      field: 'area',
+      type: 'categorical',
+      value: ['Area A1'],
+      operator: 'in',
+    })
+  })
+
+  it('writes division/area facets to ?divisions / ?areas, text to ?division', () => {
+    const rec = toRecord({
+      division: {
+        field: 'division',
+        type: 'categorical',
+        value: ['Division A', 'Division C'],
+        operator: 'in',
+      },
+      area: { field: 'area', type: 'text', value: 'A1', operator: 'contains' },
+    })
+    expect(rec).toEqual({ divisions: 'Division A,Division C', area: 'A1' })
+  })
+
+  it('lists the facet keys in FILTER_PARAM_KEYS so a removed facet is cleared', () => {
+    expect(FILTER_PARAM_KEYS).toEqual(
+      expect.arrayContaining(['divisions', 'areas'])
+    )
+  })
+})
