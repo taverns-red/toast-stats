@@ -24,6 +24,65 @@ import React from 'react'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DivisionPerformanceCard } from './DivisionPerformanceCard'
 import { logger } from '../utils/logger'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { MobileRowList, type MobileRow } from './MobileRowList'
+import { calculateDivisionGapAnalysis } from '../utils/divisionGapAnalysis'
+import type { DivisionPerformance } from '../utils/divisionStatus'
+
+/** Recognition chip for a division row (#1833): glyph + text + tone, so the
+ *  status never rests on colour. Net loss outranks the tier, matching the
+ *  desktop DivisionSummary badge. */
+function divisionChip(division: DivisionPerformance): {
+  glyph: string
+  label: string
+  tone: 'good' | 'bad' | 'neutral'
+} {
+  const gap = calculateDivisionGapAnalysis({
+    clubBase: division.clubBase,
+    paidClubs: division.paidClubs,
+    distinguishedClubs: division.distinguishedClubs,
+  })
+  if (!gap.meetsNoNetLossRequirement)
+    return { glyph: '\u2717', label: 'Net loss', tone: 'bad' }
+  switch (division.status) {
+    case 'presidents-distinguished':
+      return { glyph: '\u2605', label: "President's", tone: 'good' }
+    case 'select-distinguished':
+      return { glyph: '\u2605', label: 'Select', tone: 'good' }
+    case 'distinguished':
+      return { glyph: '\u2605', label: 'Distinguished', tone: 'good' }
+    default:
+      return { glyph: '\u25cb', label: 'Not distinguished', tone: 'neutral' }
+  }
+}
+
+function signed(n: number): string {
+  if (n > 0) return `+${n}`
+  if (n < 0) return `\u2212${Math.abs(n)}`
+  return '\u00b10'
+}
+
+function toDivisionRow(
+  division: DivisionPerformance,
+  districtId: string
+): MobileRow {
+  const chip = divisionChip(division)
+  const paid = `${division.paidClubs}/${division.clubBase} paid`
+  const net = signed(division.netGrowth)
+  const dist = `${division.distinguishedClubs}/${division.requiredDistinguishedClubs} distinguished`
+  return {
+    id: division.divisionId,
+    to: `/district/${districtId}/division/${division.divisionId}`,
+    title: `Division ${division.divisionId}`,
+    chip: (
+      <span className={`mobile-chip mobile-chip--${chip.tone}`}>
+        <span aria-hidden="true">{chip.glyph}</span> {chip.label}
+      </span>
+    ),
+    meta: [paid, net, dist].join(' \u00b7 '),
+    ariaLabel: `Division ${division.divisionId} — ${chip.label}, ${paid}, net ${net}, ${dist}`,
+  }
+}
 
 /**
  * Props for the DivisionPerformanceCards component
@@ -75,6 +134,9 @@ export const DivisionPerformanceCards: React.FC<
   snapshotTimestamp,
   districtId,
 }) => {
+  // Below 768 the divisions list is compact rows (#1833); the inline area
+  // tables live on each routed division page instead.
+  const isMobile = useIsMobile(768)
   // Extract division performance data from snapshot
   const divisions = React.useMemo(() => {
     if (isLoading || !districtSnapshot) {
@@ -197,20 +259,30 @@ export const DivisionPerformanceCards: React.FC<
   // `snapshotTimestamp` stays required; it gates the visit round below.
   return (
     <div className="space-y-6">
-      {/* Division Performance Cards */}
-      <div
-        className="space-y-6"
-        role="region"
-        aria-label="Division performance cards"
-      >
-        {divisions.map(division => (
-          <DivisionPerformanceCard
-            key={division.divisionId}
-            division={division}
-            districtId={districtId}
-          />
-        ))}
-      </div>
+      {isMobile && districtId ? (
+        <MobileRowList
+          label="Divisions"
+          noun="divisions"
+          rows={divisions.map(d => toDivisionRow(d, districtId))}
+        />
+      ) : (
+        <>
+          {/* Division Performance Cards */}
+          <div
+            className="space-y-6"
+            role="region"
+            aria-label="Division performance cards"
+          >
+            {divisions.map(division => (
+              <DivisionPerformanceCard
+                key={division.divisionId}
+                division={division}
+                districtId={districtId}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Summary Footer */}
       <div className="redesign-panel">
