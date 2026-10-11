@@ -103,14 +103,31 @@
       }
     </script>
 
-    <!-- Google Analytics 4 (#314) — production only, no PII collected -->
+    <!-- Google Analytics 4 (#314) — production only, no PII collected.
+         #1830: the gtag() queue is set up now so no event is dropped, but the
+         ~176 KB library is injected only after `load`, when idle — it used to
+         compete with the app's own chunks and data on every cold mobile load. -->
     <script>
       // Only load GA on production hostname (not localhost / preview)
       if (window.location.hostname === 'ts.taverns.red') {
-        var gaScript = document.createElement('script');
-        gaScript.async = true;
-        gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-CDWQYHC2Z3';
-        document.head.appendChild(gaScript);
+        var loadGa = function () {
+          var gaScript = document.createElement('script');
+          gaScript.async = true;
+          gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-CDWQYHC2Z3';
+          document.head.appendChild(gaScript);
+        };
+        var loadGaWhenIdle = function () {
+          if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(loadGa, { timeout: 4000 });
+          } else {
+            window.setTimeout(loadGa, 1);
+          }
+        };
+        if (document.readyState === 'complete') {
+          loadGaWhenIdle();
+        } else {
+          window.addEventListener('load', loadGaWhenIdle);
+        }
         window.dataLayer = window.dataLayer || [];
         function gtag() { window.dataLayer.push(arguments); }
         window.gtag = gtag;
