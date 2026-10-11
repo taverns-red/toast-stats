@@ -81,8 +81,15 @@ function escapeRegExp(literal: string): string {
 
 const SYNC_RE = /scripts\/pipeline\/sync-stores\.sh\b/
 const PUBLISH_RE = /scripts\/pipeline\/publish-stores\.sh\b/
-const TRANSFORM_RE = /npx\s+collector-cli\s+(?:scrape|transform)\b/
-const COMPUTE_RE = /npx\s+collector-cli\s+compute-analytics\b/
+// scripts/pipeline/process-dates.sh runs both transform and compute for each
+// date (#1742), so a call to it is a reader of every store.
+const PER_DATE_LOOP = String.raw`|scripts\/pipeline\/process-dates\.sh\b`
+const TRANSFORM_RE = new RegExp(
+  String.raw`npx\s+collector-cli\s+(?:scrape|transform)\b` + PER_DATE_LOOP
+)
+const COMPUTE_RE = new RegExp(
+  String.raw`npx\s+collector-cli\s+compute-analytics\b` + PER_DATE_LOOP
+)
 
 function names(line: string, store: string): boolean {
   return new RegExp(`(^|\\s)${escapeRegExp(store)}(\\s|$)`).test(line)

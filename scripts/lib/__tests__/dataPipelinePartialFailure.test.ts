@@ -98,6 +98,25 @@ function computeFailureBranches(run: string): string[] {
 
 const GATE_CALL = /bash scripts\/partial-failure-gate\.sh "([a-z-]+)" /
 
+/**
+ * A mode whose loop runs in scripts/pipeline/process-dates.sh (#1742). The
+ * count-don't-abort, counters and refused-vs-failed behaviour is exercised for
+ * real in processDates.test.ts; here only the hand-off is pinned: the step
+ * captures the script's counts and feeds `.failed` to the gate.
+ */
+function delegatesLoop(run: string, mode: string): boolean {
+  return codeLines(run).some(l =>
+    new RegExp(
+      String.raw`COUNTS=\$\(bash scripts/pipeline/process-dates\.sh "\$\{GCS_BUCKET\}" ${mode} `
+    ).test(l)
+  )
+}
+
+function isLoopStep(step: Step, mode: string): boolean {
+  const run = step.run ?? ''
+  return computeFailureBranches(run).length > 0 || delegatesLoop(run, mode)
+}
+
 describe('data-pipeline.yml: per-date modes fail on compute failure (#1708)', () => {
   it('declares allow_partial as a boolean dispatch input defaulting to false', () => {
     const input = workflow.on.workflow_dispatch.inputs.allow_partial
@@ -109,7 +128,10 @@ describe('data-pipeline.yml: per-date modes fail on compute failure (#1708)', ()
   it('finds a compute-analytics loop for every per-date mode (non-vacuous)', () => {
     const modes = pipelineSteps
       .filter(s => typeof s.run === 'string')
-      .filter(s => computeFailureBranches(s.run as string).length > 0)
+      .filter(s => {
+        const mode = stepMode(s)
+        return mode !== undefined && isLoopStep(s, mode)
+      })
       .map(stepMode)
     expect(new Set(modes)).toEqual(new Set(PER_DATE_MODES))
   })
@@ -117,14 +139,21 @@ describe('data-pipeline.yml: per-date modes fail on compute failure (#1708)', ()
   for (const mode of PER_DATE_MODES) {
     describe(mode, () => {
       const modeSteps = pipelineSteps.filter(s => stepMode(s) === mode)
-      const loopIndex = modeSteps.findIndex(
-        s => computeFailureBranches(s.run ?? '').length > 0
-      )
+      const loopIndex = modeSteps.findIndex(s => isLoopStep(s, mode))
       const loop = modeSteps[loopIndex]
+      const delegated = delegatesLoop(loop.run ?? '', mode)
       const gateIndex = modeSteps.findIndex(s => GATE_CALL.test(s.run ?? ''))
       const gate = modeSteps[gateIndex]
 
       it('counts every compute failure into FAILED', () => {
+        if (delegated) {
+          // The script's counts are the only source of FAILED.
+          expect(codeLines(loop.run ?? '')).toContain(
+            'FAILED=$(jq -r .failed <<<"${COUNTS}")'
+          )
+          expect(loop.run).not.toMatch(/collector-cli\s+compute-analytics\b/)
+          return
+        }
         const branches = computeFailureBranches(loop.run ?? '')
         expect(branches.length).toBeGreaterThan(0)
         for (const body of branches) {
@@ -133,6 +162,16 @@ describe('data-pipeline.yml: per-date modes fail on compute failure (#1708)', ()
       })
 
       it('captures the compute JSON for the counters instead of discarding stdout', () => {
+        if (delegated) {
+          // process-dates.sh writes the counters itself (processDates.test.ts).
+          expect(
+            fs.readFileSync(
+              path.resolve(process.cwd(), 'scripts/pipeline/process-dates.sh'),
+              'utf-8'
+            )
+          ).toMatch(/scripts\/compute-counters\.jq/)
+          return
+        }
         for (const line of codeLines(loop.run ?? '')) {
           if (!/collector-cli compute-analytics\b/.test(line)) continue
           expect(line).toMatch(/>\s*"\$\{COMPUTE_JSON\}"/)
