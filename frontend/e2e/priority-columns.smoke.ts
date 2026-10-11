@@ -41,6 +41,11 @@ const ROUTES: readonly Route[] = [
     wideTable: /performance by program year/,
     swapChip: 'Members',
   },
+  {
+    path: '/regions',
+    table: 'Region rankings',
+    swapChip: 'Dist. clubs',
+  },
 ]
 
 const TIERS = ['Distinguished', 'Select', 'Presidents', 'Smedley']
