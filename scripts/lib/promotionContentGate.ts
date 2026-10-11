@@ -19,6 +19,7 @@
  * No I/O here — `scripts/promotion-content-gate.ts` lists, reads and emits.
  */
 
+import { createHash } from 'node:crypto'
 import { gunzipSync } from 'node:zlib'
 import { ProgramYearIndexFileSchema } from '@taverns-red/shared-contracts'
 import {
@@ -29,6 +30,7 @@ import {
   type DecodeResult,
 } from './cdnSchemaCanary.js'
 import { summarizeZodIssues } from './zodIssueSummary.js'
+import { latestByPath, type RunManifestEntry } from './runManifest.js'
 import {
   isGzipped,
   peelGzipLayers,
@@ -67,6 +69,8 @@ export interface PlannedCheck {
   kind: ObjectKind
   /** Also read the prod copy (time-series last-point regression). */
   compareWithProd?: boolean
+  /** A run-manifest object: its served bytes must hash to this (#1762). */
+  expectedSha256?: string
 }
 
 export interface CheckContext {
@@ -273,6 +277,93 @@ export function planContentChecks(
   }
 }
 
+export interface ManifestCheckPlan extends ContentCheckPlan {
+  /** Manifest objects under the promoted prefixes: every one is read. */
+  manifestCount: number
+}
+
+const isPromoted = (path: string) =>
+  PROMOTED_PREFIXES.some(prefix => path.startsWith(prefix))
+
+/**
+ * Plan with the run manifest (#1762, ADR-015 P5, D-13): EVERY object the run
+ * wrote under a promoted prefix is read — no sampling — and must hash to
+ * what the run uploaded; each program-year file is compared with prod.
+ * Objects outside the promoted prefixes (raw-csv, raw-fac, internal stores)
+ * are never promoted and are not read.
+ *
+ * Until scoped promotion (#1763) lands, promotion still copies every changed
+ * object in the promoted prefixes, including ones an earlier, held run left
+ * in staging. Those are not in this run's manifest, so they keep the
+ * bounded, sampled plan of `planContentChecks`.
+ */
+export function planManifestChecks(
+  written: readonly RunManifestEntry[],
+  changed: readonly GcsObjectMeta[],
+  opts: { random?: () => number; caps?: Partial<SamplingCaps> } = {}
+): ManifestCheckPlan {
+  const promoted = [...latestByPath(written).values()].filter(e =>
+    isPromoted(e.path)
+  )
+  const writtenPaths = new Set(promoted.map(e => e.path))
+  const checks: PlannedCheck[] = []
+  let notJson = 0
+  for (const e of promoted) {
+    const kind = classifyObject(e.path)
+    if (kind === null) {
+      notJson++
+      continue
+    }
+    checks.push({
+      path: e.path,
+      kind,
+      expectedSha256: e.sha256,
+      ...(kind === 'time-series-program-year' ? { compareWithProd: true } : {}),
+    })
+  }
+  const carried = planContentChecks(
+    changed.filter(o => !writtenPaths.has(o.name)),
+    opts
+  )
+  return {
+    checks: [...checks, ...carried.checks],
+    changedCount: changed.length,
+    notJson: notJson + carried.notJson,
+    sampledOut: carried.sampledOut,
+    crossCheckLatest:
+      carried.crossCheckLatest ||
+      checks.some(c => c.kind === 'latest' || c.kind === 'snapshot-index'),
+    manifestCount: promoted.length,
+  }
+}
+
+/**
+ * The bytes a browser gets back: one `Content-Encoding: gzip` layer peeled.
+ * The run manifest hashes exactly these (gcs-upload.sh hashes the file
+ * before `-Z` compresses it).
+ */
+function servedBytes(object: StoredObject): Uint8Array {
+  return object.contentEncoding === 'gzip' && isGzipped(object.bytes)
+    ? gunzipSync(object.bytes)
+    : object.bytes
+}
+
+function checkWrittenHash(
+  object: StoredObject,
+  expected: string
+): string | null {
+  let actual: string
+  try {
+    actual = createHash('sha256').update(servedBytes(object)).digest('hex')
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return `Content-Encoding gzip body: ${message}`
+  }
+  return actual === expected
+    ? null
+    : `served bytes have sha256 ${actual.slice(0, 12)}…, but the run manifest says this run uploaded ${expected.slice(0, 12)}… (rewritten since, or corrupted in transit)`
+}
+
 /**
  * Decode stored bytes exactly as a browser receives them: peel ONE gzip layer
  * when the object is served `Content-Encoding: gzip`, then hand the body to
@@ -412,6 +503,10 @@ export function checkObject(
   prod: StoredObject | null,
   ctx: CheckContext
 ): string | null {
+  if (check.expectedSha256 !== undefined) {
+    const hash = checkWrittenHash(object, check.expectedSha256)
+    if (hash !== null) return hash
+  }
   const decoded = decodeStoredObject(object)
   if (!decoded.ok) return decoded.reason
   const value = decoded.value
@@ -471,6 +566,8 @@ export interface ContentGateInput {
   results: CheckResult[]
   notJson?: number
   sampledOut?: number
+  /** Run-manifest objects under the promoted prefixes (all read, #1762). */
+  manifestCount?: number
   /** Set when the gate could not list or read: fail closed. */
   error?: string
 }
@@ -482,6 +579,7 @@ export interface ContentGateResult {
   failures: Array<{ path: string; reason: string }>
   notJson: number
   sampledOut: number
+  manifestCount: number
   reason: string
 }
 
@@ -496,6 +594,7 @@ export function evaluateContentGate(
     checked: input.results,
     notJson: input.notJson ?? 0,
     sampledOut: input.sampledOut ?? 0,
+    manifestCount: input.manifestCount ?? 0,
   }
 
   if (input.error) {
@@ -540,7 +639,7 @@ export function buildContentGateSummary(result: ContentGateResult): string {
     '## 🧪 Content gate (staging objects promotion would copy, #1715)',
     '',
     `- **Result**: ${result.promote ? '✅ pass' : '❌ **HOLD**'} — ${result.reason}`,
-    `- Changed objects vs production: ${result.changedCount} · checked: ${result.checked.length} · not JSON: ${result.notJson} · outside the sample: ${result.sampledOut}`,
+    `- Written by this run (run manifest, every one read): ${result.manifestCount} · changed objects vs production: ${result.changedCount} · checked: ${result.checked.length} · not JSON: ${result.notJson} · not written by this run and outside the sample: ${result.sampledOut}`,
     '',
     '| Kind | Checked | Failed | Asserted |',
     '| --- | ---: | ---: | --- |',

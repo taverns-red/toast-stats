@@ -131,7 +131,8 @@ describe('data-pipeline.yml worldwide-rollup backfill (#1498)', () => {
     // override flag is never passed by default.
     expect(run()).not.toContain('--allow-missing-districts')
     expect(run()).toMatch(
-      /if npx tsx scripts\/build-global-totals\.ts[\s\S]*?; then[\s\S]*?gcloud storage/
+      // The upload goes through gcs-upload.sh (run manifest, #1762).
+      /if npx tsx scripts\/build-global-totals\.ts[\s\S]*?; then[\s\S]*?scripts\/pipeline\/gcs-upload\.sh [\w-]+ cp/
     )
   })
 

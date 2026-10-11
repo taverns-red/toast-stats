@@ -46,7 +46,6 @@ export const DISTRICT_SAMPLE_BUDGET = 200
 /** …but never fewer than this per date. */
 export const MIN_DISTRICTS_PER_DATE = 3
 
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 const DISTRICT_FILE = /^district_([A-Za-z0-9]+)\.json$/
 
 export interface DistrictShape {
@@ -85,25 +84,6 @@ export interface CompletenessGateResult {
   districtsSampled: number
   failures: Array<{ path: string; reason: string }>
   reason: string
-}
-
-/**
- * Union of the touched dates from any number of sources (a step output, the
- * lines of a file), split on whitespace or commas, deduped and sorted.
- * Anything that is not YYYY-MM-DD throws: the runner then fails closed.
- */
-export function parseTouchedDates(...sources: string[]): string[] {
-  const out = new Set<string>()
-  for (const source of sources) {
-    for (const token of source.split(/[\s,]+/)) {
-      if (!token) continue
-      if (!DATE_PATTERN.test(token)) {
-        throw new Error(`not a touched date: '${token}'`)
-      }
-      out.add(token)
-    }
-  }
-  return [...out].sort()
 }
 
 /** Districts to sample per date so the whole run stays within budget. */

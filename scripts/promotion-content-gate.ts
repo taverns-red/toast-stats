@@ -6,9 +6,12 @@
  *   1. list the promoted prefixes in staging and production (metadata only),
  *   2. keep the staging objects promotion would copy (new, or different
  *      bytes) — never the whole bucket,
- *   3. read a bounded sample of those from staging (stored bytes plus
- *      Content-Encoding, decoded the way a browser does) and check bytes,
- *      parse and shape,
+ *   3. read EVERY object this run wrote under a promoted prefix, from the
+ *      run manifest (#1762, ADR-015 P5), plus a bounded sample of the
+ *      changed objects it did not write (an earlier held run's leftovers,
+ *      which whole-prefix promotion still copies until #1763) — stored bytes
+ *      plus Content-Encoding, decoded the way a browser does — and check the
+ *      manifest hash, bytes, parse and shape,
  *   4. emit `content_promote` and write the result for the promotion-held
  *      alert. Nothing is written to any bucket.
  *
@@ -19,14 +22,14 @@
  * output so the promotion-held steps stay reachable. Any error FAILS CLOSED
  * (content_promote=false).
  *
- * Env: GCS_BUCKET (staging), GCS_BUCKET_PRODUCTION,
+ * Env: GCS_BUCKET (staging), GCS_BUCKET_PRODUCTION, RUN_MANIFEST_FILE,
  *      CONTENT_GATE_FILE (default /tmp/content-gate.json)
  *
  * `--self-check` (GCS_BUCKET only): list one small staging prefix through
  * the gate's listing path and exit non-zero if the SDK shape won't convert.
  */
 
-import { appendFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { Storage } from '@google-cloud/storage'
 import {
   buildContentGateSummary,
@@ -38,6 +41,7 @@ import {
   selfCheckListing,
   type GateBucket,
 } from './lib/promotionContentGateIo.js'
+import { parseRunManifest, type RunManifestEntry } from './lib/runManifest.js'
 
 const DEFAULT_RESULT_FILE = '/tmp/content-gate.json'
 const SELF_CHECK_PREFIX = 'config/'
@@ -51,17 +55,31 @@ function emitOutput(key: string, value: string): void {
   if (out) appendFileSync(out, `${key}=${value}\n`)
 }
 
+/**
+ * The run manifest (#1762): required. Missing, unreadable, empty or
+ * malformed throws, and the gate fails closed — a run whose writes were not
+ * recorded cannot show what it is about to promote.
+ */
+function readRunManifest(): RunManifestEntry[] {
+  const file = process.env.RUN_MANIFEST_FILE
+  if (!file) throw new Error('RUN_MANIFEST_FILE must be set')
+  return parseRunManifest(readFileSync(file, 'utf-8'))
+}
+
 async function run(): Promise<ContentGateResult> {
   const stagingName = process.env.GCS_BUCKET
   const prodName = process.env.GCS_BUCKET_PRODUCTION
   if (!stagingName || !prodName) {
     throw new Error('GCS_BUCKET and GCS_BUCKET_PRODUCTION must be set')
   }
+  const manifest = readRunManifest()
+  log(`[content-gate] run manifest: ${manifest.length} line(s)`)
   const storage = new Storage()
   return runContentGate(
     storage.bucket(stagingName) as unknown as GateBucket,
     storage.bucket(prodName) as unknown as GateBucket,
-    log
+    log,
+    { manifest }
   )
 }
 
