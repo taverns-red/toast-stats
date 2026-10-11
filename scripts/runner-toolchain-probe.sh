@@ -72,7 +72,7 @@ for i in 1 2 3; do echo "{\"n\":${i}}" >"${work}/t/${i}.json"; done
 check 'find -type f | wc -l' 3 "$(find "${work}/t" -type f | wc -l | tr -d ' ')"
 check 'find -print -quit' 1 "$(find "${work}/t" -type f -print -quit | wc -l | tr -d ' ')"
 # shellcheck disable=SC2016 # $0/$1 are expanded by the child sh, by design
-check 'xargs -0 -n 2 -P'"a:1 b:2" "$(printf 'a\0001\000b\0002\000' | xargs -0 -n 2 -P 4 sh -c 'echo "$0:$1"' | sort | tr '\n' ' ' | sed 's/ $//')"
+check 'xargs -0 -n 2 -P' "a:1 b:2" "$(printf 'a\0001\000b\0002\000' | xargs -0 -n 2 -P 4 sh -c 'echo "$0:$1"' | sort | tr '\n' ' ' | sed 's/ $//')"
 check 'xargs -P -I {}' "1 2 3" "$(printf '1\n2\n3\n' | xargs -P 16 -I {} bash -c 'echo {}' | sort | tr '\n' ' ' | sed 's/ $//')"
 check "du -sk | awk printf" 1 "$(du -sk "${work}/t" | awk '{ printf "%.1f", $1 / 1024 }' | grep -cE '^[0-9]+\.[0-9]$')"
 
