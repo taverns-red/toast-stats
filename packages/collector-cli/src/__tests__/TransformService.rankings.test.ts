@@ -151,7 +151,10 @@ district-99,Region 3,150,140,7.14%,1500,1400,7.14%,150,15,8,3`
 U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
 
       await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
+      // Raw for every district the CSV names: a missing one refuses the
+      // rankings file rather than publishing its counts as 0 (#1756).
       await createDistrictDir(rawCsvDir, '42')
+      await createDistrictDir(rawCsvDir, 'U')
 
       const result = await transformService.transform({
         date,
@@ -190,7 +193,7 @@ U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
 3,Region 3,150,145,3.45%,1500,1450,3.45%,150,40,20,15`
 
       await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
-      await createDistrictDir(rawCsvDir, '1')
+      for (const id of ['1', '2', '3']) await createDistrictDir(rawCsvDir, id)
 
       const result = await transformService.transform({
         date,
@@ -252,7 +255,7 @@ U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
 2,Region 2,200,190,5.26%,2000,1900,5.26%,200,20,10,5`
 
       await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
-      await createDistrictDir(rawCsvDir, '1')
+      for (const id of ['1', '2']) await createDistrictDir(rawCsvDir, id)
 
       const result = await transformService.transform({
         date,

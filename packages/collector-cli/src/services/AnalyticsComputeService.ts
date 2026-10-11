@@ -55,6 +55,7 @@ import {
 } from './ClubRaceStore.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
 import { validateDistrictId } from '../utils/validateDistrictId.js'
+import { dateLevelRefusal } from '../utils/dateLevelCoverage.js'
 import type { CacheMetadata } from '../types/collector.js'
 import {
   ClosingPeriodDetector,
@@ -1585,19 +1586,22 @@ export class AnalyticsComputeService {
    * copies `snapshots/${DATE}/*.json` wholesale, so no upload wiring is
    * needed, and the #1125 schema gate validates the file before it goes.
    *
-   * Two failure modes, deliberately different:
+   * Three failure modes, deliberately different:
    *
    * - **No rankings file** → skip, quietly. Without it there is no
    *   authoritative district set for the date, and `rollUpGlobal` refuses an
    *   unscoped rollup rather than emitting a plausible wrong number (#1466).
    *   That is a legitimate state for historical dates, not an error.
+   * - **A listed district with no file** → refused, recorded in `errors`
+   *   (#1756). Summing what is on disk would publish a subset as the world.
    * - **Anything else** → recorded in `errors`, which fails the run. A rollup
    *   that throws on a directory that HAS a district set means the directory
    *   is broken, and a broken worldwide number must not be published quietly.
    *
    * The two are reported SEPARATELY — `path: undefined, failed: false` for a
-   * skip, `failed: true` for a throw — because "no rollup" and "broken rollup"
-   * must not collapse into one indistinguishable state at the exit code.
+   * skip, `failed: true` for a throw or a refusal — because "no rollup" and
+   * "broken rollup" must not collapse into one indistinguishable state at
+   * the exit code.
    *
    * @returns the path written (undefined if none) and whether it failed.
    */
@@ -1626,6 +1630,26 @@ export class AnalyticsComputeService {
         districts: input.districts,
         rankings,
       })
+
+      // A listed district with no file would be summed as nothing: one
+      // district's clubs published as the world's (#1756). Refuse, like the
+      // sibling runner scripts/build-global-totals.ts.
+      const missing = totals.districts.missingDistricts
+      if (missing.length > 0) {
+        const message = dateLevelRefusal(
+          GLOBAL_TOTALS_FILE_NAME,
+          snapshotDate,
+          rankings.length,
+          missing
+        )
+        this.logger.error(message, { snapshotDate, missing })
+        errors.push({
+          districtId: 'N/A',
+          error: message,
+          timestamp: new Date().toISOString(),
+        })
+        return { failed: true }
+      }
 
       const outputPath = path.join(snapshotDir, GLOBAL_TOTALS_FILE_NAME)
       await fs.writeFile(
@@ -1670,10 +1694,10 @@ export class AnalyticsComputeService {
    * the store back after, exactly like `club-trends/`.
    *
    * Scope is the date's own `all-districts-rankings.json` district set
-   * (#1465) — a stray district file in the directory is not read, and a
-   * listed district whose file is missing simply leaves its clubs untouched
-   * (the store never records an absence). No rankings file → skipped quietly,
-   * like the rollup.
+   * (#1465) — a stray district file in the directory is not read. A listed
+   * district whose file is missing refuses the fold (#1756): a subset would
+   * mark the date observed over a fraction of the world's clubs. No rankings
+   * file → skipped quietly, like the rollup.
    *
    * The program year is resolved ONCE here from the (closing-period
    * remapped) snapshot date and threaded into the store; the store refuses a
@@ -1717,6 +1741,30 @@ export class AnalyticsComputeService {
           await fs.readFile(path.join(snapshotDir, fileName), 'utf-8')
         ) as { data?: { clubs?: ClubStatistics[] } }
         districts.push({ districtId, clubs: parsed.data?.clubs ?? [] })
+      }
+
+      // Folding a subset would mark the date observed and project a race
+      // scanned over one district's clubs (#1756): refuse the fold instead.
+      const seen = new Set(
+        districts.map(d => canonicalDistrictId(d.districtId))
+      )
+      const missing = rankings
+        .map(row => row.districtId)
+        .filter(id => !seen.has(canonicalDistrictId(id)))
+      if (missing.length > 0) {
+        const message = dateLevelRefusal(
+          'club-race/first-reached.json',
+          snapshotDate,
+          rankings.length,
+          missing
+        )
+        this.logger.error(message, { snapshotDate, missing })
+        errors.push({
+          districtId: 'N/A',
+          error: message,
+          timestamp: new Date().toISOString(),
+        })
+        return { failed: true }
       }
 
       const programYear = programYearForSnapshotDate(snapshotDate)

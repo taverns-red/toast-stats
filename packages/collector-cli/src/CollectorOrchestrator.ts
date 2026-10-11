@@ -42,7 +42,15 @@ import {
   buildMetadataPath,
   calculateProgramYear,
 } from './utils/CachePaths.js'
-import { resolveActiveProgramYear } from './utils/programYearResolver.js'
+import {
+  parseDistrictIdsFromSummaryCsv,
+  resolveActiveProgramYear,
+} from './utils/programYearResolver.js'
+import {
+  DATE_LEVEL_ERROR_ID,
+  dateLevelRefusal,
+  missingDistricts,
+} from './utils/dateLevelCoverage.js'
 import { parseFooterAsOfDate } from './utils/csvFooterParser.js'
 import { verifyBackfillCsv } from './utils/backfillContentGuard.js'
 import { assertCsvBody } from './utils/csvBodyGuard.js'
@@ -907,12 +915,53 @@ export class CollectorOrchestrator {
       }
     }
 
-    // Write metadata.json for this date
+    // Write metadata.json for this date. It describes the date's WHOLE
+    // district set (#1756, ADR-015 P2): written only when a raw directory for
+    // every district the districtsummary lists is on disk — scraped now or
+    // hydrated from staging — and then listing all of them. An unreadable
+    // summary leaves the set undecided; the run's own districts stand in.
     try {
       const succeededDistricts = results
         .filter(r => r.success)
         .map(r => r.districtId)
-      if (succeededDistricts.length > 0) {
+      const dateSet = parseDistrictIdsFromSummaryCsv(districtSummaryCsv)
+      let metadataDistricts = succeededDistricts
+      let missing: string[] = []
+      if (dateSet.length > 0 && succeededDistricts.length > 0) {
+        const onDisk: string[] = []
+        for (const districtId of dateSet) {
+          const clubCsv = buildCsvPath(
+            this.config.cacheDir,
+            date,
+            CSVType.CLUB_PERFORMANCE,
+            districtId
+          )
+          if (
+            await fs.access(clubCsv).then(
+              () => true,
+              () => false
+            )
+          ) {
+            onDisk.push(districtId)
+          }
+        }
+        missing = missingDistricts(dateSet, onDisk)
+        metadataDistricts = onDisk
+      }
+      if (missing.length > 0) {
+        const message = dateLevelRefusal(
+          'raw-csv metadata.json',
+          date,
+          dateSet.length,
+          missing
+        )
+        logger.error(message, { date, missing })
+        errors.push({
+          districtId: DATE_LEVEL_ERROR_ID,
+          error: message,
+          timestamp: new Date().toISOString(),
+        })
+      } else if (succeededDistricts.length > 0) {
         // undefined = no footer decided it; the key is then OMITTED from
         // metadata.json so downstream resolution (CSV footer → registry)
         // stays undecided instead of trusting a laundered false (#1129)
@@ -985,7 +1034,7 @@ export class CollectorOrchestrator {
           csvFiles: {
             allDistricts: allDistrictsResult.success,
             districts: Object.fromEntries(
-              succeededDistricts.map(id => [
+              metadataDistricts.map(id => [
                 id,
                 {
                   districtPerformance: true,
@@ -1002,7 +1051,7 @@ export class CollectorOrchestrator {
         await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2), 'utf-8')
         logger.info('Wrote metadata.json', {
           date,
-          districts: succeededDistricts.length,
+          districts: metadataDistricts.length,
         })
       }
     } catch (metaError) {

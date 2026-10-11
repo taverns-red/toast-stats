@@ -626,6 +626,10 @@ describe('TransformService', () => {
         )
       }
 
+      // District 2 is hydrated the way process-dates.sh does it: its
+      // snapshot is already on disk, so the date's set is covered (#1756).
+      await transformService.transform({ date, districts: ['2'] })
+
       const result = await transformService.transform({
         date,
         districts: ['1', '3'],
@@ -761,8 +765,17 @@ describe('TransformService', () => {
       expect(result.districtsProcessed).toEqual(['1', '2'])
       expect(result.districtsSucceeded).toEqual(['1'])
       expect(result.districtsFailed).toEqual(['2'])
-      expect(result.errors).toHaveLength(1)
-      expect(result.errors[0]?.districtId).toBe('2')
+      const districtErrors = result.errors.filter(
+        e => e.districtId !== 'date-level'
+      )
+      expect(districtErrors).toHaveLength(1)
+      expect(districtErrors[0]?.districtId).toBe('2')
+      // District 2 has no club-performance.csv, so the rankings that would
+      // count its clubs as 0 are refused, and counted (#1756).
+      const refusal = result.errors.filter(e => e.districtId === 'date-level')
+      expect(refusal).toHaveLength(1)
+      expect(refusal[0]?.error).toContain('all-districts-rankings.json')
+      expect(refusal[0]?.error).not.toContain('manifest.json')
     })
 
     it('should skip already transformed districts when force is false', async () => {
