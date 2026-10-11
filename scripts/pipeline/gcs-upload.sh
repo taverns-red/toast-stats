@@ -74,6 +74,13 @@ for s in "${SRCS[@]}"; do
     echo "::error::gcs-upload: '${s}' is a bucket source; this wrapper records uploads only" >&2
     exit 2
   fi
+  # Checked before the upload, so nothing goes up that cannot be recorded.
+  # (Flags take `--flag=value`: a separate value word would read as a source
+  # and fail here.)
+  if [[ "${s}" != *'*'* ]] && [ ! -e "${s}" ]; then
+    echo "::error::gcs-upload: source '${s}' does not exist" >&2
+    exit 2
+  fi
 done
 DST_PATH="${DST#gs://"${DST_BUCKET}"}"
 DST_PATH="${DST_PATH#/}"

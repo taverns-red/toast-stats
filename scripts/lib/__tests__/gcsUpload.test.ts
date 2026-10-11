@@ -218,6 +218,20 @@ describe('gcs-upload.sh: the manifest is exactly what went up (#1762)', () => {
     expect(uploaded()).toEqual([])
   })
 
+  it('refuses a missing source before uploading anything (a space-separated flag value reads as one)', () => {
+    const f = writeLocal('x.json', '1')
+    const r = run([
+      'a',
+      'cp',
+      '--content-type',
+      'application/json',
+      f,
+      `gs://${BUCKET}/v1/x.json`,
+    ])
+    expect(r.status).toBe(2)
+    expect(uploaded()).toEqual([])
+  })
+
   it('refuses a download: it records uploads only', () => {
     const r = run(['a', 'cp', `gs://${BUCKET}/v1/x.json`, local])
     expect(r.status).toBe(2)
