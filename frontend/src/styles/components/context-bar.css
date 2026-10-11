@@ -21,7 +21,9 @@
     padding: 0 max(8px, env(safe-area-inset-right, 0px)) 0
       max(4px, env(safe-area-inset-left, 0px));
     background-color: var(--surface);
-    border-bottom: 1px solid var(--line);
+    /* Inset line, not a border: the bar stays exactly 44px tall around a
+       44px hit area. */
+    box-shadow: inset 0 -1px 0 var(--line);
     font-family: var(--sans);
   }
 
@@ -61,22 +63,33 @@
   }
 
   /* The chip never shrinks below its text: the title ellipsises first, so
-     the PY/date is never clipped (Lesson 134). */
+     the PY/date is never clipped (Lesson 134). The button is a transparent
+     44px hit area; the pill inside carries the visual at 32px so it sits
+     inside the bar rather than filling it edge to edge. */
   .context-bar__chip {
     flex: none;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
     min-height: 44px;
-    padding: 0 12px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background-color: var(--surface-2);
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--ink);
     font-size: 14px;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
+  }
+
+  .context-bar__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background-color: var(--surface-2);
   }
 
   .context-bar__caret {

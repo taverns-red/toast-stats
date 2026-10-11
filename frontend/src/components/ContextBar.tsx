@@ -100,9 +100,13 @@ export const ContextBar: React.FC<ContextBarProps> = ({
         aria-label={`${chipText}. Page options`}
         onClick={() => setOpen(true)}
       >
-        <span>{chipText}</span>
-        <span aria-hidden="true" className="context-bar__caret">
-          ▾
+        {/* The button is the 44px hit area; the pill inside is the visual,
+            so the chip sits inside the 44px bar instead of filling it. */}
+        <span className="context-bar__pill">
+          <span>{chipText}</span>
+          <span aria-hidden="true" className="context-bar__caret">
+            ▾
+          </span>
         </span>
       </button>
 
