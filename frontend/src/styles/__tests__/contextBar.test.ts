@@ -86,6 +86,10 @@ describe('context-bar.css (#1831)', () => {
     expect(below).toMatch(
       /\.app-shell__page:has\(>\s*\.context-bar\)\s*\{[^}]*padding-top:\s*0/
     )
+    // …and on the wide data-grid container (region, clubs-world).
+    expect(below).toMatch(
+      /\.districts-page:has\(>\s*\.context-bar\)[^{]*\{[^}]*padding-top:\s*0/
+    )
   })
 
   it('moves the club hero PY/date chips into the bar below 768 (hero H1 stays visible)', () => {

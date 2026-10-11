@@ -126,6 +126,7 @@ const ENTITY_ROUTES: { path: string; name: RegExp; back: string }[] = [
     name: /History/,
     back: '/district/61/club/7238597',
   },
+  { path: '/region/05', name: /Region 05/, back: '/regions' },
 ]
 const ENTITY_CONTENT_TOP_MAX = 120
 
