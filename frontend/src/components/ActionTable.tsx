@@ -1,4 +1,6 @@
 import React from 'react'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { MobileRowList, type MobileRow } from './MobileRowList'
 
 /* #1577 — the compact, aligned table the four Area Director Actions sections
    render into.
@@ -38,6 +40,12 @@ export interface ActionTableProps<T> {
   rowKey: (row: T) => string
   /** `data-testid` for the `<table>` itself. */
   testId?: string
+  /**
+   * Phone row for one item (#1833). When supplied, below 768 px the section
+   * renders MobileRowList compact rows — the whole row links to the item's
+   * routed page — instead of the card-table. Omitted → the table everywhere.
+   */
+  mobileRow?: (row: T) => MobileRow
 }
 
 export function ActionTable<T>({
@@ -46,7 +54,19 @@ export function ActionTable<T>({
   rows,
   rowKey,
   testId,
+  mobileRow,
 }: ActionTableProps<T>): React.ReactElement {
+  const isMobile = useIsMobile(768)
+  if (isMobile && mobileRow) {
+    return (
+      <MobileRowList
+        label={caption}
+        noun="items"
+        rows={rows.map(mobileRow)}
+        chipPlacement="meta"
+      />
+    )
+  }
   return (
     <div className="action-table__scroll">
       <table className="action-table" data-testid={testId}>

@@ -42,14 +42,17 @@ const CLUBS: ClubTrend[] = [
 ]
 
 describe('ClubMiniList (#871 CC-4)', () => {
-  it('renders one card per club with a StatusChip (not raw enum)', () => {
+  // #1833: the 125 px cards became MobileRowList compact rows — name on line
+  // 1, then the glyph + one-word status chip and the members / tier meta.
+  it('renders one compact row per club with a StatusChip (not raw enum)', () => {
     const { container } = render(<ClubMiniList clubs={CLUBS} clubTo={clubTo} />)
-    const card = container.querySelector('.clubs-card')
-    expect(card).not.toBeNull()
+    const row = container.querySelector('.mobile-row')
+    expect(row).not.toBeNull()
+    expect(container.querySelector('.clubs-card')).toBeNull()
     expect(screen.getByText('Limestone City Club')).toBeInTheDocument()
     const pill = container.querySelector('.clubs-status-pill')
     expect(pill).toHaveClass('clubs-status-pill--intervention')
-    expect(pill).toHaveTextContent('Intervention Required')
+    expect(pill).toHaveTextContent('✗ Intervention')
     // no raw enum leaks
     expect(container.textContent).not.toContain('intervention-required')
     // members + distinguished meta preserved from the table columns

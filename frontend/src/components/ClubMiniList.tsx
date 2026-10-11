@@ -16,10 +16,13 @@
  * build the href (the pages own the districtId). */
 
 import React from 'react'
-import { Link } from 'react-router-dom'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
-import { getClubHealthStatusLabel } from '../utils/clubHealthStatus'
+import {
+  getClubHealthStatusLabel,
+  getClubHealthStatusShortLabel,
+} from '../utils/clubHealthStatus'
 import { StatusChip } from './StatusChip'
+import { MobileRowList } from './MobileRowList'
 
 interface ClubMiniListProps {
   clubs: ClubTrend[]
@@ -27,38 +30,43 @@ interface ClubMiniListProps {
   clubTo: (club: ClubTrend) => string
 }
 
+/* #1833: the stacked cards (~125 px each) became MobileRowList compact rows —
+   name on line 1; glyph + one-word status chip, members and tier on line 2;
+   the whole row links to the club page. */
 export const ClubMiniList: React.FC<ClubMiniListProps> = ({
   clubs,
   clubTo,
 }) => (
-  <div className="flex flex-col gap-3">
-    {clubs.map(c => {
+  <MobileRowList
+    label="Clubs"
+    noun="clubs"
+    chipPlacement="meta"
+    rows={clubs.map(c => {
       const members = c.membershipTrend[c.membershipTrend.length - 1]?.count
+      const memberText = `${members ?? '\u2014'} member${members === 1 ? '' : 's'}`
       const distinguished =
         c.distinguishedLevel === 'NotDistinguished'
           ? null
           : c.distinguishedLevel
-      return (
-        <Link
-          key={c.clubId}
-          to={clubTo(c)}
-          className="clubs-card"
-          aria-label={`${c.clubName} — ${getClubHealthStatusLabel(
-            c.currentStatus
-          )}, ${members ?? 0} members`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="clubs-card__name">{c.clubName}</h3>
-            <StatusChip status={c.currentStatus} className="flex-shrink-0" />
-          </div>
-          <div className="clubs-card__stat-label" style={{ marginTop: 8 }}>
-            {members ?? '—'} member{members === 1 ? '' : 's'}
-            {distinguished ? ` · ${distinguished}` : ''}
-          </div>
-        </Link>
-      )
+      return {
+        id: c.clubId,
+        to: clubTo(c),
+        title: c.clubName,
+        chip: (
+          <StatusChip
+            status={c.currentStatus}
+            label={getClubHealthStatusShortLabel(c.currentStatus)}
+          />
+        ),
+        meta: distinguished
+          ? `${memberText} \u00b7 ${distinguished}`
+          : memberText,
+        ariaLabel: `${c.clubName} \u2014 ${getClubHealthStatusLabel(
+          c.currentStatus
+        )}, ${members ?? 0} members${distinguished ? `, ${distinguished}` : ''}`,
+      }
     })}
-  </div>
+  />
 )
 
 export default ClubMiniList

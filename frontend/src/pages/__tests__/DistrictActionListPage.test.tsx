@@ -943,3 +943,57 @@ describe('DistrictActionListPage — compact tables (#1577)', () => {
     ])
   })
 })
+
+// #1833: below 768 every section renders MobileRowList compact rows — the whole
+// row links to the club (or area) page, and the row carries the section's key
+// facts on line 2.
+describe('DistrictActionListPage — phone rows (#1833)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
+    )
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    )
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('renders each section as row links with its key facts', async () => {
+    renderAt('/district/61/action-list')
+    const close = await openSection('section-close')
+    const closeRow = within(close).getByTestId('mobile-row')
+    expect(closeRow).toHaveAttribute('href', '/district/61/club/close-1')
+    expect(closeRow).toHaveTextContent('Rising Club')
+    // The gap is the point of the row, so it leads line 2 after a short
+    // "A/01" area tag — the preview cut "Area A/04 · Needs 2 members + 2 …".
+    expect(closeRow.querySelector('.mobile-row__meta')).toHaveTextContent(
+      /^A\/\w+ · 2 members \+ 1 DCP goal$/
+    )
+
+    const visits = await openSection('section-visits')
+    const visitRow = within(visits).getByTestId('mobile-row')
+    expect(visitRow).toHaveAttribute('href', '/district/61/division/A/area/A1')
+    expect(visitRow).toHaveTextContent('Area A1')
+    expect(visitRow).toHaveTextContent('1 unvisited')
+
+    const intervention = await openSection('section-intervention')
+    const intRow = within(intervention).getByTestId('mobile-row')
+    expect(intRow).toHaveAttribute('href', '/district/61/club/int-1')
+    expect(intRow).toHaveTextContent('✗ Intervention')
+    expect(within(intervention).queryByRole('table')).toBeNull()
+  })
+})
