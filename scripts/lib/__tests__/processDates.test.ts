@@ -502,11 +502,92 @@ describe('process-dates.sh rescrape: guard, compute and upload', () => {
     expect(objectsUnder('raw-csv/2026-09-10')).toHaveLength(1)
   })
 
-  it('aborts on a failed raw upload', () => {
+  it('aborts on a failed raw upload (rescrape)', () => {
     const r = run('rescrape', ['2026-09-10'], {
       ...env,
       SHIM_FAIL_MATCH: '^rsync .*gs://test-bucket/raw-csv/',
     })
     expect(r.status).not.toBe(0)
+  })
+})
+
+/** rescrape-historical: the raw was downloaded locally by the step before. */
+function putLocalRaw(date: string): void {
+  const dir = path.join(cache, 'raw-csv', date, 'district-61')
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, 'club-performance.csv'), 'Club,Goals\n')
+}
+
+describe('process-dates.sh rescrape-historical: local raw → transform', () => {
+  it('transforms the local raw without fetching it, and publishes the snapshot', () => {
+    putLocalRaw('2024-07-03')
+    const r = run('rescrape-historical', ['2024-07-03'], {
+      STUB_REMAP: '2024-07-03=2024-06-30',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(lines(stubLog)).toContain(
+      'collector-cli transform --date 2024-07-03 --force --verbose'
+    )
+    expect(lines(stubLog).some(l => l.startsWith('resolve '))).toBe(false)
+    expect(lines(shimLog).some(l => l.includes('raw-csv'))).toBe(false)
+    expect(objectExists('snapshots/2024-06-30/district_61.json')).toBe(true)
+  })
+
+  it('keeps the local raw for the step that uploads it, and no snapshot dirs', () => {
+    putLocalRaw('2024-07-03')
+    putLocalRaw('2024-08-02')
+    const r = run('rescrape-historical', ['2024-07-03', '2024-08-02'], {
+      STUB_TRANSFORM_FAIL: '^2024-08-02$',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(localDateDirs('raw-csv').sort()).toEqual([
+      '2024-07-03',
+      '2024-08-02',
+    ])
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('pulls the prior-year district snapshots for YoY', () => {
+    putLocalRaw('2024-07-03')
+    putObject('snapshots/2023-07-03/district_61.json', '{"d":61}', true)
+    run('rescrape-historical', ['2024-07-03'])
+    expect(
+      lines(shimLog).some(l =>
+        l.startsWith(
+          `storage cp gs://${BUCKET}/snapshots/2023-07-03/district_*.json`
+        )
+      )
+    ).toBe(true)
+  })
+
+  it('counts a failed transform and goes on', () => {
+    putLocalRaw('2024-07-03')
+    putLocalRaw('2024-08-02')
+    const r = run('rescrape-historical', ['2024-07-03', '2024-08-02'], {
+      STUB_TRANSFORM_FAIL: '^2024-07-03$',
+    })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 1 })
+  })
+})
+
+describe('process-dates.sh rescrape-historical: closing guard (#1621, #1708)', () => {
+  it('counts exit 3 as REFUSED and publishes nothing for the date', () => {
+    putLocalRaw('2024-06-30')
+    const r = run('rescrape-historical', ['2024-06-30'], {
+      STUB_GUARD_REFUSE: '^2024-06-30$',
+    })
+    expect(r.counts).toEqual({ succeeded: 0, refused: 1, failed: 0 })
+    expect(objectsUnder('snapshots')).toEqual([])
+  })
+
+  it('counts an unreadable GCS (exit 1) as FAILED, as the other modes do', () => {
+    // The inline loop counted every non-zero guard exit as refused, so an
+    // unreadable bucket let the run promote; it now fails the gate (#1742).
+    putLocalRaw('2024-06-30')
+    const r = run('rescrape-historical', ['2024-06-30'], {
+      STUB_GUARD_ERROR: '^2024-06-30$',
+    })
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
   })
 })

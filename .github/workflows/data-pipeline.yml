@@ -1090,98 +1090,17 @@ jobs:
             time-series club-trends club-race district-awards-history
 
           RAW_DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
-          DATE_COUNT=$(echo "${RAW_DATES}" | grep -c . || true)
           echo "## 🔨 Historical rebuild (#1670)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Raw dates to process**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-          # Per-date compute JSON for the store counters (#1708)
-          COMPUTE_JSON=/tmp/compute-analytics.json
-          COUNTERS_JSONL=/tmp/compute-counters.jsonl
-          : > "${COUNTERS_JSONL}"
-
-          SUCCEEDED=0
-          FAILED=0
-          REFUSED=0
-          INDEX=0
-
-          for RAW_DATE in ${RAW_DATES}; do
-            INDEX=$((INDEX + 1))
-            echo ""
-            echo "[${INDEX}/${DATE_COUNT}] Processing raw ${RAW_DATE}"
-
-            # Previous-year snapshot for YoY, as in rebuild mode.
-            PREV_YEAR_DATE=$(date -d "${RAW_DATE} - 1 year" +%Y-%m-%d 2>/dev/null || echo "")
-            if [ -n "${PREV_YEAR_DATE}" ] && [ ! -d "./cache/snapshots/${PREV_YEAR_DATE}" ]; then
-              mkdir -p "./cache/snapshots/${PREV_YEAR_DATE}"
-              gcloud storage cp \
-                "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR_DATE}/district_*.json" \
-                "./cache/snapshots/${PREV_YEAR_DATE}/" 2>/dev/null || true
-            fi
-
-            BEFORE_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
-
-            if ! npx collector-cli transform --date "${RAW_DATE}" --force --verbose 2>&1; then
-              echo "::warning::Transform failed for ${RAW_DATE}"
-              FAILED=$((FAILED + 1))
-              continue
-            fi
-
-            # The transform remaps a close onto its month-end (#193).
-            AFTER_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
-            ACTUAL_DATE=$(comm -13 <(echo "$BEFORE_DIRS") <(echo "$AFTER_DIRS") \
-                          | head -1 | grep -oP '\d{4}-\d{2}-\d{2}' || true)
-            ACTUAL_DATE="${ACTUAL_DATE:-$RAW_DATE}"
-
-            # Never publish over a remote close (#1621/#1626). Refusal (exit 3)
-            # or an unreadable GCS (exit 1): skip the date entirely.
-            GUARD_STATUS=0
-            npx tsx scripts/guard-snapshot-upload.ts "${ACTUAL_DATE}" || GUARD_STATUS=$?
-            if [ "${GUARD_STATUS}" -ne 0 ]; then
-              echo "::warning::Not publishing ${ACTUAL_DATE}: upload guard exit ${GUARD_STATUS} (3 = closing snapshot)"
-              REFUSED=$((REFUSED + 1))
-              rm -rf "./cache/snapshots/${ACTUAL_DATE}" \
-                ${PREV_YEAR_DATE:+"./cache/snapshots/${PREV_YEAR_DATE}"}
-              continue
-            fi
-
-            # stdout is the JSON summary (R4); stderr still goes to the log.
-            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" \
-              --force-analytics --verbose > "${COMPUTE_JSON}"; then
-              echo "::warning::Compute failed for ${ACTUAL_DATE}"
-              FAILED=$((FAILED + 1))
-            fi
-            jq -c . "${COMPUTE_JSON}" >> "${COUNTERS_JSONL}" \
-              || echo "::warning::No compute JSON for ${ACTUAL_DATE}; the counters omit it"
-
-            SNAPSHOT_DIR="./cache/snapshots/${ACTUAL_DATE}"
-            if [ -d "${SNAPSHOT_DIR}" ]; then
-              echo "Uploading snapshots/${ACTUAL_DATE}/..."
-              gcloud storage cp \
-                --content-type="application/json" \
-                --cache-control="public, max-age=3600, must-revalidate" \
-                -Z \
-                "${SNAPSHOT_DIR}"/*.json \
-                "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"
-              if [ -d "${SNAPSHOT_DIR}/analytics" ]; then
-                gcloud storage cp \
-                  --content-type="application/json" \
-                  --cache-control="public, max-age=3600, must-revalidate" \
-                  -Z \
-                  "${SNAPSHOT_DIR}/analytics"/*.json \
-                  "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/analytics/"
-              fi
-              SUCCEEDED=$((SUCCEEDED + 1))
-            fi
-
-            # Keep no snapshot dirs locally: the manifest step must not read a
-            # historical date as "latest" (#1670, #295).
-            rm -rf "${SNAPSHOT_DIR}" ${PREV_YEAR_DATE:+"./cache/snapshots/${PREV_YEAR_DATE}"}
-          done
-
-          echo "- **Snapshots published**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Refused by the upload guard**: ${REFUSED}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
-          jq -rs -f scripts/compute-counters.jq "${COUNTERS_JSONL}" >> "$GITHUB_STEP_SUMMARY"
+          # One raw date at a time: prior year, transform, guard (#1621/#1626:
+          # exit 3 refused, anything else failed), compute, upload the
+          # snapshot, drop it locally (#1670, #295). The raw stays for the
+          # upload step below. The script prints {"succeeded","refused",
+          # "failed"} and writes the summary and store counters (#1708).
+          # Per-stage tests: processDates.test.ts.
+          # shellcheck disable=SC2086 # RAW_DATES is a whitespace-separated list
+          COUNTS=$(bash scripts/pipeline/process-dates.sh "${GCS_BUCKET}" rescrape-historical ${RAW_DATES})
+          FAILED=$(jq -r .failed <<<"${COUNTS}")
 
           # The store upload step runs the partial-failure gate (#1708) after
           # it pushes the upserted stores, so hand it the count.
