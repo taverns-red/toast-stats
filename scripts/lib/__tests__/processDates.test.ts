@@ -68,6 +68,7 @@ function run(
       GUARD_SNAPSHOT_UPLOAD: path.join(STUBS, 'guard-snapshot-upload'),
       RESOLVE_REBUILD_SOURCE: path.join(STUBS, 'resolve-rebuild-source'),
       VALIDATE_SNAPSHOTS: path.join(STUBS, 'validate-snapshots'),
+      BUILD_IDENTITY_HISTORY: path.join(STUBS, 'build-identity-history'),
       STUB_LOG: stubLog,
       RUN_MANIFEST_FILE: manifest,
       SHIM_UPLOAD_LOG: uploadLog,

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Stand-in for `bash scripts/pipeline/build-identity-history.sh <bucket>`
+# (#1782): process-dates.sh runs it once after its date loop. Same argv and
+# exit codes as the real script: 0 built and uploaded · 1 refused or failed.
+# Env: STUB_LOG (appends `identity <bucket>`), STUB_IDENTITY_FAIL ("1" → exit 1)
+set -euo pipefail
+BUCKET="${1:?}"
+if [ -n "${STUB_LOG:-}" ]; then printf 'identity %s\n' "${BUCKET}" >>"${STUB_LOG}"; fi
+if [ "${STUB_IDENTITY_FAIL:-0}" = "1" ]; then
+  echo "::error::build-identity-history: club-race store missing" >&2
+  exit 1
+fi
