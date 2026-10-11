@@ -64,7 +64,11 @@ for (const path of PATHS) {
       }
     })
 
-    expect(probe.position, JSON.stringify(probe)).toBe('static')
+    // In flow: `relative` (no offsets) is the base rule — it keeps the strip
+    // the loading shimmer's containing block — never sticky/fixed.
+    expect(['static', 'relative'], JSON.stringify(probe)).toContain(
+      probe.position
+    )
     expect(probe.centreInStrip, JSON.stringify(probe)).toBe(false)
   })
 

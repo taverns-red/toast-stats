@@ -53,8 +53,18 @@ describe('district-narrative.css (#572)', () => {
     expect(base).not.toBeNull()
     expect(base?.[0]).not.toMatch(/position:\s*sticky/)
     expect(base?.[0]).not.toMatch(/\btop:/)
-    const stickyRules = css.match(/position:\s*sticky/g) ?? []
+    const code = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const stickyRules = code.match(/position:\s*sticky/g) ?? []
     expect(stickyRules).toHaveLength(1)
+  })
+
+  it('keeps the strip a containing block below 768px for the loading shimmer (#1647, #1828)', () => {
+    // The loading skeleton's shimmer is `position: absolute; inset: …` over
+    // the ghost body. Sticky used to supply the containing block; with the
+    // pin gated to ≥768 the base rule must supply it (relative, no offsets —
+    // visually static) or the shimmer escapes to an ancestor on phones.
+    const base = css.match(/\n {2}\.district-kpi-strip\s*\{[^}]*\}/)
+    expect(base?.[0]).toMatch(/position:\s*relative/)
   })
 
   it('hides the strip toggle chevron at the 980px desktop threshold (#682)', () => {
