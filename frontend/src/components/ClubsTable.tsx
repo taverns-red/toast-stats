@@ -608,9 +608,9 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             label={getClubHealthStatusShortLabel(club.currentStatus)}
           />
         ),
-        meta: [memberText, net, `${club.latestDcpGoals}/10 DCP`]
-          .filter(Boolean)
-          .join(' · '),
+        // Two numbers fit beside the chip at 375 px; net change rides in the
+        // accessible name (and on the club page).
+        meta: `${memberText} · ${club.latestDcpGoals}/10 DCP`,
         ariaLabel: `${club.clubName} — ${getClubHealthStatusLabel(
           club.currentStatus
         )}, ${memberText}${net ? `, net ${net}` : ''}, ${
@@ -975,8 +975,9 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
 
       {/* Phone rows (#1833) — replaces the #217 ClubCard stack. */}
       {!isLoading && sortedClubs.length > 0 && isMobile && (
-        <div className="px-4 pb-4">
-          <div className="flex items-center gap-2 mb-3">
+        // Bleed the rows to the panel edge (its 18 px padding) at < 768.
+        <div className="pb-4 clubs-mobile-rows">
+          <div className="flex items-center gap-2 mb-3 px-4">
             <label
               htmlFor="mobile-sort"
               className="text-sm clubs-text-muted font-medium"
@@ -1010,11 +1011,19 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               label="Clubs by division"
               noun="clubs"
               groups={mobileGroups}
+              chipPlacement="meta"
+              flush
               openGroupIds={openGroupIds}
               onToggleGroup={handleToggleGroup}
             />
           ) : (
-            <MobileRowList label="Clubs" noun="clubs" rows={mobileRows} />
+            <MobileRowList
+              label="Clubs"
+              noun="clubs"
+              rows={mobileRows}
+              chipPlacement="meta"
+              flush
+            />
           )}
         </div>
       )}

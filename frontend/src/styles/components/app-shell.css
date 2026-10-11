@@ -4519,6 +4519,15 @@
     font-size: 16px;
   }
 
+  /* Phone rows bleed through the .redesign-panel's 18 px padding (#1833). */
+  .clubs-mobile-rows {
+    margin-inline: -18px;
+  }
+
+  .clubs-mobile-sticky-search {
+    margin-inline: -18px;
+  }
+
   /* Discoverable entry to the drawer. 44px min-height = touch target (WCAG
      2.5.5). */
   .clubs-filters-trigger {

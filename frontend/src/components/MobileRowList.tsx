@@ -62,6 +62,14 @@ interface MobileRowListProps {
   openGroupIds?: readonly string[]
   /** Called with a group id when its header is tapped (controlled mode). */
   onToggleGroup?: (id: string) => void
+  /**
+   * Where the chip sits. `'title'` (default) puts it beside the name on line 1
+   * — right for short names (divisions). `'meta'` leads line 2 with it so a
+   * long name (clubs) keeps the whole first line at 375 px.
+   */
+  chipPlacement?: 'title' | 'meta'
+  /** Drop side borders/radius so the list can bleed to its panel's edges. */
+  flush?: boolean
 }
 
 export const INITIAL_VISIBLE_ROWS = 50
@@ -86,33 +94,46 @@ const Chevron: React.FC<{ className: string }> = ({ className }) => (
   </svg>
 )
 
-const RowItem: React.FC<{ row: MobileRow }> = ({ row }) => (
-  <li>
-    <Link
-      to={row.to}
-      state={row.state}
-      className="mobile-row"
-      data-testid="mobile-row"
-      aria-label={row.ariaLabel}
-    >
-      <span className="mobile-row__body">
-        <span className="mobile-row__line1">
-          <span className="mobile-row__title">{row.title}</span>
-          {row.chip != null && (
-            <span className="mobile-row__chip">{row.chip}</span>
+type ChipPlacement = 'title' | 'meta'
+
+const RowItem: React.FC<{ row: MobileRow; chipPlacement: ChipPlacement }> = ({
+  row,
+  chipPlacement,
+}) => {
+  const chip = row.chip != null && (
+    <span className="mobile-row__chip">{row.chip}</span>
+  )
+  return (
+    <li>
+      <Link
+        to={row.to}
+        state={row.state}
+        className="mobile-row"
+        data-testid="mobile-row"
+        aria-label={row.ariaLabel}
+      >
+        <span className="mobile-row__body">
+          <span className="mobile-row__line1">
+            <span className="mobile-row__title">{row.title}</span>
+            {chipPlacement === 'title' && chip}
+          </span>
+          {(row.meta != null || chipPlacement === 'meta') && (
+            <span className="mobile-row__line2">
+              {chipPlacement === 'meta' && chip}
+              {row.meta != null && (
+                <span className="mobile-row__meta">{row.meta}</span>
+              )}
+            </span>
           )}
         </span>
-        {row.meta != null && (
-          <span className="mobile-row__meta">{row.meta}</span>
+        {row.trailing != null && (
+          <span className="mobile-row__trailing">{row.trailing}</span>
         )}
-      </span>
-      {row.trailing != null && (
-        <span className="mobile-row__trailing">{row.trailing}</span>
-      )}
-      <Chevron className="mobile-row__chevron" />
-    </Link>
-  </li>
-)
+        <Chevron className="mobile-row__chevron" />
+      </Link>
+    </li>
+  )
+}
 
 /** A list of rows with the 50 → +25 "show more" step. */
 const RowBlock: React.FC<{
@@ -120,7 +141,8 @@ const RowBlock: React.FC<{
   noun: string
   label?: string
   id?: string
-}> = ({ rows, noun, label, id }) => {
+  chipPlacement: ChipPlacement
+}> = ({ rows, noun, label, id, chipPlacement }) => {
   const [visible, setVisible] = useState(INITIAL_VISIBLE_ROWS)
   const remaining = rows.length - visible
   const next = Math.min(SHOW_MORE_STEP, remaining)
@@ -128,7 +150,7 @@ const RowBlock: React.FC<{
     <>
       <ul className="mobile-row-list__rows" aria-label={label} id={id}>
         {rows.slice(0, visible).map(row => (
-          <RowItem key={row.id} row={row} />
+          <RowItem key={row.id} row={row} chipPlacement={chipPlacement} />
         ))}
       </ul>
       {remaining > 0 && (
@@ -155,7 +177,10 @@ export const MobileRowList: React.FC<MobileRowListProps> = ({
   groups,
   openGroupIds,
   onToggleGroup,
+  chipPlacement = 'title',
+  flush = false,
 }) => {
+  const rootClass = `mobile-row-list${flush ? ' mobile-row-list--flush' : ''}`
   const baseId = useId()
   const [localOpen, setLocalOpen] = useState<readonly string[]>([])
   const controlled = openGroupIds !== undefined
@@ -177,14 +202,19 @@ export const MobileRowList: React.FC<MobileRowListProps> = ({
 
   if (!groups) {
     return (
-      <div className="mobile-row-list">
-        <RowBlock rows={rows} noun={noun} label={label} />
+      <div className={rootClass}>
+        <RowBlock
+          rows={rows}
+          noun={noun}
+          label={label}
+          chipPlacement={chipPlacement}
+        />
       </div>
     )
   }
 
   return (
-    <div className="mobile-row-list" role="group" aria-label={label}>
+    <div className={rootClass} role="group" aria-label={label}>
       {groups.map((group, i) => {
         const isOpen = open.includes(group.id)
         const panelId = `${baseId}-g${i}`
@@ -221,6 +251,7 @@ export const MobileRowList: React.FC<MobileRowListProps> = ({
                   rows={group.rows}
                   noun={noun}
                   label={`${group.label} ${noun}`}
+                  chipPlacement={chipPlacement}
                 />
               )}
             </div>

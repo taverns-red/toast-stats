@@ -73,6 +73,13 @@
   color: var(--ink);
 }
 
+.mobile-row__line2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .mobile-row__chip {
   flex-shrink: 0;
   white-space: nowrap;
@@ -84,6 +91,7 @@
 }
 
 .mobile-row__meta {
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -209,4 +217,14 @@
 .mobile-row-list__more-count {
   font-weight: 400;
   color: var(--ink-3);
+}
+
+/* Flush: rows bleed to the panel edge (#1833) — no side borders or radius,
+   so a 375 px phone gives the name and numbers every pixel. */
+.mobile-row-list--flush .mobile-row-list__rows,
+.mobile-row-list--flush .mobile-row-group__toggle,
+.mobile-row-list--flush .mobile-row-list__more {
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
 }
