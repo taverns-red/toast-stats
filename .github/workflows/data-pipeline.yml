@@ -626,6 +626,12 @@ jobs:
           echo "- **Snapshot date**: ${SNAPSHOT_DATE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Snapshot/analytics files**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
+          # Identity histories (#1782): the same script process-dates.sh runs
+          # after its loop (ADR-015 P1, no daily-only stage). Staging derived/
+          # only until #1763; a failure leaves the previous copy, not a red run.
+          bash scripts/pipeline/build-identity-history.sh "${GCS_BUCKET}" \
+            || echo "::warning::Identity histories were not rebuilt (#1782); the previous derived/ copy stands"
+
       # ════════════════════════════════════════════════════════
       # CLOSING-DATE REGISTRY FRESHNESS (#1128, epic #1098)
       # The committed docs/month-end-closing-dates.json feeds historical

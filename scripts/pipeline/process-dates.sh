@@ -61,6 +61,13 @@
 #                directories, so no later step reads a rebuilt date as
 #                "latest" (#295, #1670).
 #                rescrape-historical keeps its raw: the next step uploads it.
+# After the loop, once per run:
+#  12. identity  scripts/pipeline/build-identity-history.sh <bucket> (#1782):
+#                the club-district history from the club-race store, to
+#                staging derived/ (never promoted until #1763). Daily runs
+#                the same script, so no mode builds it differently (ADR-015
+#                P1). A failure is a warning and a summary line, never a
+#                failed run: the previous derived/ copy stands.
 # The GCS-backed stores (time-series, club-trends, club-race, awards history)
 # are NOT handled here: the caller pulls them with sync-stores.sh before and
 # pushes them with publish-stores.sh after, then runs
@@ -73,6 +80,8 @@
 #   RESOLVE_REBUILD_SOURCE resolver command (default: tsx resolve-rebuild-source.ts)
 #   GUARD_SNAPSHOT_UPLOAD  guard command (default: tsx guard-snapshot-upload.ts)
 #   VALIDATE_SNAPSHOTS     schema gate command (default: tsx validate-snapshots.ts)
+#   BUILD_IDENTITY_HISTORY identity build command (default: bash
+#                          scripts/pipeline/build-identity-history.sh)
 #   DISTRICTS              rescrape: required, comma-separated district ids
 #   GITHUB_STEP_SUMMARY    date counts and store counters are appended here
 #   RUN_MANIFEST_FILE      required by any upload: every object uploaded is
@@ -128,6 +137,7 @@ read -r -a COLLECTOR <<<"${COLLECTOR_CLI:-npx collector-cli}"
 read -r -a RESOLVE <<<"${RESOLVE_REBUILD_SOURCE:-${TSX} ${REPO}/scripts/resolve-rebuild-source.ts}"
 read -r -a GUARD <<<"${GUARD_SNAPSHOT_UPLOAD:-${TSX} ${REPO}/scripts/guard-snapshot-upload.ts}"
 read -r -a VALIDATE <<<"${VALIDATE_SNAPSHOTS:-${TSX} ${REPO}/scripts/validate-snapshots.ts}"
+read -r -a IDENTITY <<<"${BUILD_IDENTITY_HISTORY:-bash ${REPO}/scripts/pipeline/build-identity-history.sh}"
 # Every upload goes through the wrapper, so it lands in the run manifest.
 export GCLOUD
 UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" "process-dates:${MODE}")
@@ -440,12 +450,20 @@ for date in "$@"; do
   fi
 done
 
+# 12. identity — once, after every date is uploaded (#1782).
+IDENTITY_STATUS=built
+if ! "${IDENTITY[@]}" "${BUCKET}"; then
+  echo "::warning::Identity histories were not rebuilt (#1782); the previous derived/ copy stands"
+  IDENTITY_STATUS="FAILED (see the step log)"
+fi
+
 {
   echo "- **Dates succeeded**: ${SUCCEEDED}"
   echo "- **Refused by the upload guard**: ${REFUSED}"
   echo "- **Dates failed**: ${FAILED}"
   echo "- **Dates enriched from raw-fac**: ${ENRICHED}"
   echo "- **Dates unenriched (no raw-fac)**: ${UNENRICHED}"
+  echo "- **Identity histories**: ${IDENTITY_STATUS}"
   jq -rs -f "${REPO}/scripts/compute-counters.jq" "${COUNTERS_JSONL}"
 } >>"${SUMMARY}"
 
