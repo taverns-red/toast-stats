@@ -5,7 +5,13 @@
  * re-query when the PY changes, and honor a `?py=` deep link.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import {
+  render,
+  screen,
+  cleanup,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
@@ -167,6 +173,46 @@ describe('RegionPage — program year selector (#1301)', () => {
     mockedForDate.mockClear()
 
     await userEvent.selectOptions(screen.getByTestId('py-chip-select'), '2025')
+    await waitFor(() =>
+      expect(mockedForDate).toHaveBeenCalledWith('2026-05-01')
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('loc-search').textContent).toContain('py=2025')
+    )
+  })
+})
+
+describe('RegionPage — phone context bar (#1831)', () => {
+  it('backs up to the regions list and shows the PY · date chip', async () => {
+    renderAt('/region/07')
+    await screen.findByRole('table', { name: /region 07 district rankings/i })
+    const back = screen.getByTestId('context-bar-back')
+    expect(back).toHaveAttribute('href', '/regions')
+    expect(back).toHaveAccessibleName('Back to Regions')
+    expect(screen.getByTestId('context-bar')).toHaveTextContent('Region 07')
+    await waitFor(() =>
+      expect(screen.getByTestId('context-bar-chip')).toHaveTextContent(
+        'PY 26–27 · Aug 1'
+      )
+    )
+  })
+
+  it('the sheet PY select re-queries and writes ?py= like the desktop chip', async () => {
+    renderAt('/region/07')
+    await screen.findByRole('table', { name: /region 07 district rankings/i })
+    mockedForDate.mockClear()
+    await userEvent.click(screen.getByTestId('context-bar-chip'))
+    const sheet = screen.getByRole('dialog', { name: 'Region 07' })
+    const trail = within(sheet).getByRole('navigation', { name: 'Breadcrumb' })
+    expect(
+      within(trail)
+        .getAllByRole('listitem')
+        .map(li => li.textContent)
+    ).toEqual(['Regions', 'Region 07'])
+    await userEvent.selectOptions(
+      within(sheet).getByLabelText('Program year'),
+      '2025'
+    )
     await waitFor(() =>
       expect(mockedForDate).toHaveBeenCalledWith('2026-05-01')
     )

@@ -53,8 +53,9 @@ describe('full-width data-table page policy (#810, ADR-006 §1)', () => {
     // `--page-max-wide` (same policy as `.districts-page` /
     // `.district-detail-page`). The empty-state branch (no districts in
     // region) is prose and may keep the narrow cap.
+    // #1831: the phone context bar sits between the wrapper and its header.
     expect(regionPageTsx).toMatch(
-      /<div className="(?:districts-page|district-detail-page|region-page)">\s*\n\s*<header className="districts-page-header">/
+      /<div className="(?:districts-page|district-detail-page|region-page)">\s*\n(?:\s*\{\/\*[\s\S]*?\*\/\}\s*\n)?\s*<ContextBar[\s\S]*?\/>\s*\n\s*<header className="districts-page-header">/
     )
   })
 
