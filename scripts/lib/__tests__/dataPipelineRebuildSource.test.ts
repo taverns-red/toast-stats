@@ -37,27 +37,32 @@ function rebuildStreamStep(): Step {
   return step
 }
 
+// The loop moved into scripts/pipeline/process-dates.sh (#1742). Its resolve
+// stage runs for real in processDates.test.ts: the closing raw is fetched and
+// transformed, and an unresolvable date fails closed instead of falling back
+// to the same-named (possibly pre-close) raw. This guard pins the wiring.
+const SCRIPT = path.resolve(process.cwd(), 'scripts/pipeline/process-dates.sh')
+
 describe('data-pipeline rebuild — month-end source resolution (#1608)', () => {
   const run = rebuildStreamStep().run!
+  const script = fs.readFileSync(SCRIPT, 'utf-8')
 
-  it('resolves the raw source date before syncing', () => {
-    const resolveAt = run.indexOf('scripts/resolve-rebuild-source.ts')
-    const syncAt = run.indexOf('raw-csv/${SOURCE_DATE}/')
-    expect(resolveAt).toBeGreaterThan(-1)
-    expect(syncAt).toBeGreaterThan(resolveAt)
-  })
-
-  it('transforms the resolved source date, never the raw requested date', () => {
-    expect(run).toMatch(/collector-cli transform --date "\$\{SOURCE_DATE\}"/)
-    expect(run).not.toMatch(/collector-cli transform --date "\$\{DATE\}"/)
-  })
-
-  it('does not publish when source resolution fails (fail closed)', () => {
-    // The resolver exits non-zero when GCS metadata cannot be read; the loop
-    // must count it as a failure and skip the date rather than fall back to
-    // the same-named (possibly pre-close) raw.
+  it('runs every date through process-dates.sh in rebuild mode', () => {
     expect(run).toMatch(
-      /if ! SOURCE_DATE=\$\(npx tsx scripts\/resolve-rebuild-source\.ts "\$\{DATE\}"\)/
+      /bash scripts\/pipeline\/process-dates\.sh "\$\{GCS_BUCKET\}" rebuild /
     )
+  })
+
+  it('has no inline transform left in the step to drift back', () => {
+    expect(run).not.toMatch(/collector-cli\s+transform\b/)
+  })
+
+  it('defaults the script to the real resolver', () => {
+    expect(script).toContain('${REPO}/scripts/resolve-rebuild-source.ts')
+    expect(
+      fs.existsSync(
+        path.resolve(process.cwd(), 'scripts/resolve-rebuild-source.ts')
+      )
+    ).toBe(true)
   })
 })

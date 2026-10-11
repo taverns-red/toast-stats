@@ -40,34 +40,61 @@ function stepRun(namePrefix: string): string {
 
 const GUARD = 'scripts/guard-snapshot-upload.ts "${ACTUAL_DATE}"'
 
-describe.each([
-  ['rescrape', '[rescrape] Re-collect and process dates'],
-  ['rebuild', '[rebuild] Stream rebuild'],
-])('data-pipeline %s — remote closing-snapshot guard (#1621)', (_, name) => {
-  const run = stepRun(name)
-
-  it('guards the resolved snapshot date after the transform', () => {
-    const guardAt = run.indexOf(GUARD)
-    const actualDateAt = run.indexOf('ACTUAL_DATE="${ACTUAL_DATE:-')
-    expect(guardAt).toBeGreaterThan(-1)
-    expect(guardAt).toBeGreaterThan(actualDateAt)
-  })
-
-  it('runs before analytics are computed and before any snapshot upload', () => {
-    const guardAt = run.indexOf(GUARD)
-    expect(guardAt).toBeGreaterThan(-1)
-    expect(guardAt).toBeLessThan(run.indexOf('collector-cli compute-analytics'))
-    expect(guardAt).toBeLessThan(
-      run.indexOf('"gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"')
+// Modes whose loop runs in scripts/pipeline/process-dates.sh (#1742). There
+// the guard's order (after the transform, before compute and upload) and its
+// skip-on-refusal are exercised for real in processDates.test.ts.
+describe.each([['rebuild', '[rebuild] Stream rebuild']])(
+  'data-pipeline %s — remote closing-snapshot guard (#1621, via process-dates.sh)',
+  (mode, name) => {
+    const run = stepRun(name)
+    const script = fs.readFileSync(
+      path.resolve(process.cwd(), 'scripts/pipeline/process-dates.sh'),
+      'utf-8'
     )
-  })
 
-  it('skips the date when the guard refuses or fails (fail closed)', () => {
-    const guardBlock = run.slice(run.indexOf(GUARD))
-    const continueAt = guardBlock.indexOf('continue')
-    expect(continueAt).toBeGreaterThan(-1)
-    expect(continueAt).toBeLessThan(
-      guardBlock.indexOf('collector-cli compute-analytics')
-    )
-  })
-})
+    it('delegates the per-date loop to process-dates.sh', () => {
+      expect(run).toContain(
+        `bash scripts/pipeline/process-dates.sh "\${GCS_BUCKET}" ${mode} `
+      )
+      expect(run).not.toMatch(/collector-cli\s+compute-analytics\b/)
+    })
+
+    it('defaults the script to the real guard', () => {
+      expect(script).toContain('${REPO}/scripts/guard-snapshot-upload.ts')
+    })
+  }
+)
+
+describe.each([['rescrape', '[rescrape] Re-collect and process dates']])(
+  'data-pipeline %s — remote closing-snapshot guard (#1621)',
+  (_, name) => {
+    const run = stepRun(name)
+
+    it('guards the resolved snapshot date after the transform', () => {
+      const guardAt = run.indexOf(GUARD)
+      const actualDateAt = run.indexOf('ACTUAL_DATE="${ACTUAL_DATE:-')
+      expect(guardAt).toBeGreaterThan(-1)
+      expect(guardAt).toBeGreaterThan(actualDateAt)
+    })
+
+    it('runs before analytics are computed and before any snapshot upload', () => {
+      const guardAt = run.indexOf(GUARD)
+      expect(guardAt).toBeGreaterThan(-1)
+      expect(guardAt).toBeLessThan(
+        run.indexOf('collector-cli compute-analytics')
+      )
+      expect(guardAt).toBeLessThan(
+        run.indexOf('"gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"')
+      )
+    })
+
+    it('skips the date when the guard refuses or fails (fail closed)', () => {
+      const guardBlock = run.slice(run.indexOf(GUARD))
+      const continueAt = guardBlock.indexOf('continue')
+      expect(continueAt).toBeGreaterThan(-1)
+      expect(continueAt).toBeLessThan(
+        guardBlock.indexOf('collector-cli compute-analytics')
+      )
+    })
+  }
+)

@@ -75,7 +75,9 @@ function downloadsStore(run: string, file: string): boolean {
 
 // Every collector-cli command that runs TransformService, which loads and
 // saves the awards-history store (TransformService.writeCompetitiveAwardsToDate).
-const TRANSFORM_RE = /npx\s+collector-cli\s+(?:scrape|transform)\b/
+// A call to scripts/pipeline/process-dates.sh transforms each date (#1742).
+const TRANSFORM_RE =
+  /npx\s+collector-cli\s+(?:scrape|transform)\b|scripts\/pipeline\/process-dates\.sh\b/
 
 /** Position of a match across the whole workflow: [stepIndex, charOffset]. */
 type Pos = [number, number]
