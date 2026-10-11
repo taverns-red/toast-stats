@@ -17,12 +17,16 @@
     }
   }
 
-  /* ---------- Sticky KPI strip ---------- */
+  /* ---------- KPI strip: static on phones, sticky from 768 ---------- */
 
+  /* #1828 (mobile review S2): below 768 the expanded strip is ~860px tall at
+     375, so pinning it covered the whole Overview once the reader scrolled.
+     Phones get it in normal flow; #572's sticky pin is gated to >=768, where
+     the strip is short enough to sit under the top bar. `relative` (no
+     offsets) keeps it in flow while still being the loading shimmer's
+     containing block. */
   .district-kpi-strip {
-    position: sticky;
-    top: 56px; /* sits under .app-shell-top-bar (56px) */
-    z-index: 30; /* below topbar (40) */
+    position: relative;
     margin: 0 0 16px;
     padding: 12px 16px;
     border-radius: 12px;
@@ -33,6 +37,14 @@
     display: flex;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  @media (min-width: 768px) {
+    .district-kpi-strip {
+      position: sticky;
+      top: 56px; /* sits under .app-shell-top-bar (56px) */
+      z-index: 30; /* below topbar (40) */
+    }
   }
 
   @supports (backdrop-filter: blur(1px)) or
@@ -167,7 +179,8 @@
      inert copy of its loaded body (`__ghost`) so the reserved height comes
      from the same rules as the loaded strip; the shimmer is laid over it. */
   .district-kpi-strip--loading {
-    /* `position: sticky` already makes the strip the containing block. */
+    /* The strip's own position (relative <768, sticky >=768) makes it the
+       containing block for the absolutely-positioned shimmer. */
     overflow: hidden;
   }
 
