@@ -6041,18 +6041,9 @@
     min-height: 88px;
   }
 
-  Cmd-K
-    /
-    Ctrl-K
-    modal.
-    Centered
-    dialog
-    over
-    a
-    translucent
-    backdrop.
-    */
-    .command-palette__backdrop {
+  /* Universal CommandPalette (#422). Cmd-K / Ctrl-K modal. Centered
+     dialog over a translucent backdrop. */
+  .command-palette__backdrop {
     position: fixed;
     inset: 0;
     z-index: 90;
