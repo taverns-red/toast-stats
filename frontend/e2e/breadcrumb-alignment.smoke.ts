@@ -44,9 +44,10 @@ const ROUTE = '/district/61/club/01479548'
 
 /* 320px is the app's supported floor (`body { min-width: 320px }`); 1350px is
    where the touch-target floor rises from 44px to 48px. */
+/* #1831: below 768 the club page's breadcrumb is replaced by the phone
+   context bar (its trail lives in the bar's sheet), so the alignment
+   contract is measured where the breadcrumb renders: 768 and up. */
 const VIEWPORTS = [
-  { label: '320px', width: 320, height: 812 },
-  { label: '375px', width: 375, height: 812 },
   { label: '768px', width: 768, height: 1024 },
   { label: '1350px', width: 1350, height: 900 },
 ]
@@ -197,7 +198,7 @@ for (const theme of THEMES) {
     page,
   }) => {
     test.setTimeout(90_000)
-    await page.setViewportSize({ width: 375, height: 812 })
+    await page.setViewportSize({ width: 768, height: 1024 })
     await loadBreadcrumb(page, theme)
 
     await page.evaluate(() => {

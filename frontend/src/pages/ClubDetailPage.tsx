@@ -23,6 +23,9 @@ import { formatCharterDate } from '../utils/formatCharterDate'
 import { getClubAnniversary } from '../utils/clubAnniversary'
 import { ClubAnniversaryBadge } from '../components/ClubAnniversaryBadge'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
+import { ContextBar } from '../components/ContextBar'
+import { ContextSheetControls } from '../components/ContextSheetControls'
+import { formatFreshnessLine } from '../utils/contextBar'
 import {
   isProvisionallyDistinguished,
   getConfirmedLevel,
@@ -617,7 +620,47 @@ const ClubDetailPage: React.FC = () => {
         {/* #618 — page container locked to the reference 1280px max-width
             with 24px padding (16px ≤640px), replacing Tailwind's `container`
             (which widens to 1536px at 2xl). */}
-        <div className="mx-auto max-w-[1280px] px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto max-w-[1280px] px-4 pb-4 sm:px-6 sm:pb-6 md:pt-6 [--context-bar-bleed:16px] sm:[--context-bar-bleed:24px]">
+          {/* Phone context bar (#1831, review §6.3): below 768 it replaces the
+              breadcrumb and the hero's PY/date chips (no top padding there, so
+              it sits under the top bar); the hero stays as the page content.
+              PY/date are this page's own state (R3). */}
+          <ContextBar
+            title={club.clubName}
+            back={{
+              label: 'Clubs',
+              to: `/district/${districtId}/clubs${fromClubsSearch}`,
+            }}
+            programYear={effectiveProgramYear ?? selectedProgramYear}
+            date={effectiveEndDate ?? latestSnapshotDate}
+            controls={
+              <ContextSheetControls
+                availableProgramYears={availableProgramYears}
+                selectedProgramYear={
+                  effectiveProgramYear ?? selectedProgramYear
+                }
+                onProgramYearChange={setSelectedProgramYear}
+                availableDates={availableDates}
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+                freshness={formatFreshnessLine({
+                  asOfDate: globalAsOfDate,
+                  snapshotDate: effectiveEndDate ?? latestSnapshotDate,
+                  isLatest: isLatestGlobal,
+                })}
+              />
+            }
+            about="This club's membership, DCP goals, recognition and education for the selected program year."
+            trail={[
+              { label: 'Districts', to: '/' },
+              { label: districtName, to: `/district/${districtId}` },
+              {
+                label: 'Clubs',
+                to: `/district/${districtId}/clubs${fromClubsSearch}`,
+              },
+              { label: club.clubName },
+            ]}
+          />
           {/* Breadcrumbs (#577) — leading 'Home' crumb removed per #442
               (the AppShell's 'Districts' active nav is the top-level
               signal). Trail: District › Clubs › <club>. The Clubs crumb

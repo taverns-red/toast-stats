@@ -188,6 +188,45 @@ for (const width of [375, 390]) {
   }
 }
 
+/* Club page (#1831, review §6.3): the hero IS the page content, so its H1
+ * stays visible; the bar takes over the breadcrumb and the hero's PY/date
+ * chips, and backs up to the clubs list. */
+for (const width of [375, 390]) {
+  test(`context bar on the club page at ${width}px: hero starts under the bar`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 812 })
+    await load(page, '/district/61/club/7238597')
+    const bar = page.locator('[data-testid="context-bar"]')
+    await expect(bar).toBeVisible()
+    await page.locator('.club-hero').waitFor({ state: 'visible' })
+    const m = await page.evaluate(() => {
+      const r = (sel: string) => {
+        const el = document.querySelector(sel)
+        if (!el) return null
+        const b = el.getBoundingClientRect()
+        return { top: Math.round(b.top), height: Math.round(b.height) }
+      }
+      return {
+        bar: r('[data-testid="context-bar"]'),
+        crumb: r('.subpage-breadcrumb'),
+        controls: r('.club-hero__controls'),
+        hero: r('.club-hero'),
+        docOverflow: document.documentElement.scrollWidth - window.innerWidth,
+      }
+    })
+    const ctx = JSON.stringify(m)
+    expect(m.bar, ctx).toEqual({ top: 56, height: 44 })
+    expect(m.crumb?.height ?? 0, ctx).toBe(0)
+    expect(m.controls?.height ?? 0, ctx).toBe(0)
+    expect(m.hero?.top ?? 999, ctx).toBeLessThanOrEqual(ENTITY_CONTENT_TOP_MAX)
+    expect(m.docOverflow, ctx).toBeLessThanOrEqual(0)
+    await expect(
+      bar.locator('[data-testid="context-bar-back"]')
+    ).toHaveAttribute('href', /^\/district\/61\/clubs/)
+  })
+}
+
 test('chip opens an accessible bottom sheet with 16px selects; Escape closes it', async ({
   page,
 }) => {

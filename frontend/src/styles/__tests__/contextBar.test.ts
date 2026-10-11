@@ -81,6 +81,19 @@ describe('context-bar.css (#1831)', () => {
     )
   })
 
+  it('moves the club hero PY/date chips into the bar below 768 (hero H1 stays visible)', () => {
+    const below = mediaBlocks(css, /max-width:\s*767px/).join('\n')
+    expect(below).toMatch(
+      /\.context-bar\s*~\s*\.club-hero\s+\.club-hero__controls[^{]*\{[^}]*display:\s*none/
+    )
+    expect(below).not.toMatch(/\.club-hero__title[^{]*\{[^}]*clip/)
+  })
+
+  it('bleeds the bar across whatever gutter the host page sets', () => {
+    const bar = css.match(/\n {2}\.context-bar\s*\{[^}]*\}/)?.[0] ?? ''
+    expect(bar).toMatch(/var\(--context-bar-bleed,\s*24px\)/)
+  })
+
   it('gives sheet selects a 16px font (no iOS focus zoom)', () => {
     expect(css).toMatch(/\.context-sheet__select\s*\{[^}]*font-size:\s*16px/)
   })

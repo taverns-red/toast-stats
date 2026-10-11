@@ -7,7 +7,13 @@
  * `?py=` deep link (data-driven default from Sprint 1).
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { screen, render, cleanup, waitFor } from '@testing-library/react'
+import {
+  screen,
+  render,
+  cleanup,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
@@ -157,6 +163,43 @@ describe('ClubDetailPage — program year selector (#1302)', () => {
     await waitFor(() => expect(lastAnalyticsEndDate()).toBe('2026-08-01'))
 
     await userEvent.selectOptions(screen.getByTestId('py-chip-select'), '2025')
+    await waitFor(() => expect(lastAnalyticsEndDate()).toBe('2026-05-01'))
+    await waitFor(() =>
+      expect(screen.getByTestId('loc-search').textContent).toContain('py=2025')
+    )
+  })
+})
+
+describe('ClubDetailPage — phone context bar (#1831)', () => {
+  it('backs up one level to the clubs list and shows the PY · date chip', async () => {
+    renderAt('/district/61/club/00000606')
+    const back = await screen.findByTestId('context-bar-back')
+    expect(back).toHaveAttribute('href', '/district/61/clubs')
+    expect(back).toHaveAccessibleName('Back to Clubs')
+    expect(screen.getByTestId('context-bar')).toHaveTextContent(
+      'St Lawrence Toastmasters'
+    )
+    expect(screen.getByTestId('context-bar-chip')).toHaveTextContent(
+      'PY 26–27 · Aug 1'
+    )
+  })
+
+  it('the sheet PY select re-queries and writes ?py= like the desktop chip', async () => {
+    renderAt('/district/61/club/00000606')
+    await userEvent.click(await screen.findByTestId('context-bar-chip'))
+    const sheet = screen.getByRole('dialog', {
+      name: 'St Lawrence Toastmasters',
+    })
+    const trail = within(sheet).getByRole('navigation', { name: 'Breadcrumb' })
+    expect(
+      within(trail)
+        .getAllByRole('listitem')
+        .map(li => li.textContent)
+    ).toEqual(['Districts', 'District 61', 'Clubs', 'St Lawrence Toastmasters'])
+    await userEvent.selectOptions(
+      within(sheet).getByLabelText('Program year'),
+      '2025'
+    )
     await waitFor(() => expect(lastAnalyticsEndDate()).toBe('2026-05-01'))
     await waitFor(() =>
       expect(screen.getByTestId('loc-search').textContent).toContain('py=2025')
