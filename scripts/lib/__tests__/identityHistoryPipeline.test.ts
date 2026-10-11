@@ -214,9 +214,10 @@ describe('derived/ is staging-only until #1763', () => {
 describe('process-dates.sh builds the history in every mode (ADR-015 P1)', () => {
   function runProcessDates(
     mode: string,
-    env: Record<string, string> = {}
-  ): ReturnType<typeof spawnSync> {
-    return spawnSync('bash', [PROCESS_DATES, BUCKET, mode], {
+    env: Record<string, string> = {},
+    dates: string[] = []
+  ) {
+    return spawnSync('bash', [PROCESS_DATES, BUCKET, mode, ...dates], {
       cwd: REPO,
       encoding: 'utf-8',
       env: shimEnv({
@@ -235,7 +236,7 @@ describe('process-dates.sh builds the history in every mode (ADR-015 P1)', () =>
   for (const mode of ['rebuild', 'rescrape', 'rescrape-historical']) {
     it(`${mode}: invokes it exactly once, with the bucket`, () => {
       const r = runProcessDates(mode)
-      expect(r.status, String(r.stderr)).toBe(0)
+      expect(r.status, r.stderr).toBe(0)
       expect(lines(stubLog).filter(l => l.startsWith('identity '))).toEqual([
         `identity ${BUCKET}`,
       ])
@@ -254,22 +255,7 @@ describe('process-dates.sh builds the history in every mode (ADR-015 P1)', () =>
       ),
       'Club,Goals\n'
     )
-    const r = spawnSync(
-      'bash',
-      [PROCESS_DATES, BUCKET, 'rebuild', '2026-09-10'],
-      {
-        cwd: REPO,
-        encoding: 'utf-8',
-        env: shimEnv({
-          COLLECTOR_CLI: path.join(STUBS, 'collector-cli'),
-          GUARD_SNAPSHOT_UPLOAD: path.join(STUBS, 'guard-snapshot-upload'),
-          RESOLVE_REBUILD_SOURCE: path.join(STUBS, 'resolve-rebuild-source'),
-          VALIDATE_SNAPSHOTS: path.join(STUBS, 'validate-snapshots'),
-          BUILD_IDENTITY_HISTORY: path.join(STUBS, 'build-identity-history'),
-          STUB_LOG: stubLog,
-        }),
-      }
-    )
+    const r = runProcessDates('rebuild', {}, ['2026-09-10'])
     expect(r.status, r.stderr).toBe(0)
     const stubs = lines(stubLog)
     const compute = stubs.findIndex(l => l.includes(' compute-analytics '))
@@ -285,12 +271,12 @@ describe('process-dates.sh builds the history in every mode (ADR-015 P1)', () =>
   it('a failed build is reported but does not fail the run or its counts', () => {
     const r = runProcessDates('rebuild', { STUB_IDENTITY_FAIL: '1' })
     expect(r.status).toBe(0)
-    expect(JSON.parse(String(r.stdout))).toEqual({
+    expect(JSON.parse(r.stdout)).toEqual({
       succeeded: 0,
       refused: 0,
       failed: 0,
     })
-    expect(String(r.stderr)).toMatch(/::warning::.*identity histor/i)
+    expect(r.stderr).toMatch(/::warning::.*identity histor/i)
     expect(fs.readFileSync(summary, 'utf-8')).toMatch(
       /identity histories.*FAILED/i
     )
