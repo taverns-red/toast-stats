@@ -11,10 +11,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const read = (p: string) => readFileSync(resolve(__dirname, p), 'utf-8')
 const css = read('../components/filter-sheet.css')
 const indexCss = read('../../index.css')
+/** Escape every regex metacharacter, backslash included. */
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const rule = (sel: string) =>
-  css.match(
-    new RegExp(`\\n {2}${sel.replace(/[.[\]'=]/g, '\\$&')}\\s*\\{[^}]*\\}`)
-  )?.[0] ?? ''
+  css.match(new RegExp(`\\n {2}${escapeRegExp(sel)}\\s*\\{[^}]*\\}`))?.[0] ?? ''
 
 describe('filter-sheet.css (#1836)', () => {
   it('is imported by index.css', () => {
