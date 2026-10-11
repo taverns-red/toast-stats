@@ -24,10 +24,18 @@ const topGrowthClubs = read('components/TopGrowthClubs.tsx')
 
 describe('District breakpoint reconciliation (#682)', () => {
   describe('district-narrative.css KPI strip', () => {
-    it('uses 980px as the desktop threshold, not 1024px or 768px', () => {
+    it('uses 980px as the desktop layout threshold, not 1024px or 768px', () => {
       expect(narrativeCss).toContain('min-width: 980px')
       expect(narrativeCss).not.toContain('min-width: 1024px')
-      expect(narrativeCss).not.toContain('min-width: 768px')
+      // #1828: 768 is the phone boundary (ADR-006), used ONLY to gate the
+      // strip's sticky pin — never for its layout (cards grid, toggle).
+      const at768 = narrativeCss.match(
+        /@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\n {2}\}/g
+      )
+      expect(at768).toHaveLength(1)
+      const body = at768?.[0] ?? ''
+      expect(body).not.toMatch(/__cards|__toggle|grid-template-columns/)
+      expect(body).toMatch(/\.district-kpi-strip\s*\{[^}]*position:\s*sticky/)
     })
 
     it('makes 2-col (2×2) the mobile base, no 640px intermediate (#866)', () => {

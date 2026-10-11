@@ -277,3 +277,14 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/no-horizontal-scroll.smoke.ts
+
+      # District KPI strip never pinned over the Overview on a phone (#1828,
+      # mobile review S2). At 375 on /district/61 and /district/80 the strip
+      # is in flow and not under the viewport centre at scroll 1200, and no
+      # sticky/fixed element is taller than 64px; at 1280 it stays sticky
+      # (#572). Both engines: position is width-driven, not touch-driven.
+      - name: Cross-engine district KPI strip mobile guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/district-kpi-strip-mobile.smoke.ts

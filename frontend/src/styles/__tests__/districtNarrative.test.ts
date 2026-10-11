@@ -34,9 +34,37 @@ describe('district-narrative.css (#572)', () => {
     expect(reducedBlock?.[0]).toMatch(/scroll-behavior:\s*auto/)
   })
 
-  it('pins the KPI strip with position:sticky under the topbar', () => {
-    expect(css).toMatch(/\.district-kpi-strip\s*\{[^}]*position:\s*sticky/)
-    expect(css).toMatch(/\.district-kpi-strip\s*\{[^}]*top:\s*56px/)
+  it('pins the KPI strip with position:sticky under the topbar at ≥768px only (#572, #1828)', () => {
+    // #572's desktop intent: the strip pins under the 56px top bar. #1828
+    // gates that behind 768px — the gated block must carry both declarations.
+    const gated = css.match(
+      /@media\s*\(min-width:\s*768px\)\s*\{\s*\.district-kpi-strip\s*\{[^}]*\}/
+    )
+    expect(gated).not.toBeNull()
+    expect(gated?.[0]).toMatch(/position:\s*sticky/)
+    expect(gated?.[0]).toMatch(/top:\s*56px/)
+  })
+
+  it('keeps the KPI strip static below 768px — never pinned over the Overview (#1828)', () => {
+    // At 375 the expanded strip is ~860px tall; pinned, it covered the whole
+    // Overview once scrolled (mobile review S2). The ungated base rule must
+    // not position it, and no ungated rule may make it sticky.
+    const base = css.match(/\n {2}\.district-kpi-strip\s*\{[^}]*\}/)
+    expect(base).not.toBeNull()
+    expect(base?.[0]).not.toMatch(/position:\s*sticky/)
+    expect(base?.[0]).not.toMatch(/\btop:/)
+    const code = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const stickyRules = code.match(/position:\s*sticky/g) ?? []
+    expect(stickyRules).toHaveLength(1)
+  })
+
+  it('keeps the strip a containing block below 768px for the loading shimmer (#1647, #1828)', () => {
+    // The loading skeleton's shimmer is `position: absolute; inset: …` over
+    // the ghost body. Sticky used to supply the containing block; with the
+    // pin gated to ≥768 the base rule must supply it (relative, no offsets —
+    // visually static) or the shimmer escapes to an ancestor on phones.
+    const base = css.match(/\n {2}\.district-kpi-strip\s*\{[^}]*\}/)
+    expect(base?.[0]).toMatch(/position:\s*relative/)
   })
 
   it('hides the strip toggle chevron at the 980px desktop threshold (#682)', () => {
