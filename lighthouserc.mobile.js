@@ -46,39 +46,47 @@ const TARGET = {
 }
 
 /**
- * Per-route budgets. Where a value is looser than TARGET, it is the measured
- * Lighthouse-mobile median (3 runs, 2026-10-11, the #1853 preview with #1850
- * and #1853 applied) plus about 15% headroom, and RATCHET_ISSUE tracks
- * bringing it down. Lower these as the levers there land (#1852 gzip CDN JSON,
- * #1837 subnav CLS). NEVER raise one to make a run pass.
+ * Per-route budgets. Where a value is looser than TARGET, it is a measured
+ * value plus ~15% headroom and RATCHET_ISSUE tracks bringing it down. Lower
+ * these as the levers there land (#1852 gzip CDN JSON, #1837 subnav CLS).
+ * NEVER raise one to make a run pass.
+ *
+ * Calibration (2026-10-11, preview with #1850 + #1853 applied): LCP budgets
+ * come from the GitHub ubuntu runner itself (PR #1858's first run), not a
+ * laptop. Lantern's simulated LCP scales with the host's observed CPU, and the
+ * runner read ~1.4-1.7x a local run (`/` 4.7 s vs 3.2 s). LHCI asserts the
+ * best of the 3 runs, so each LCP budget is the runner's best + ~15%.
+ * `/district/61` is bimodal on the runner (5.7 s / 8.1 s / 8.1 s). Byte and
+ * CLS budgets are host-independent and match local runs.
  */
 const RATCHET_ISSUE = '#1856'
 const KB = 1024
 const BUDGETS = {
-  // measured 3240 ms / 0 / 149 KB / 408 KB
+  // runner best 4661 ms (runs 4888/4661/4877) / 0 / 148 KB / 408 KB
   landing: {
-    lcpMs: 3800,
+    lcpMs: 5400,
     cls: 0.1,
     scriptBytes: 300 * KB,
     totalBytes: 500 * KB,
   },
-  // measured 4749 ms / 0 / 308 KB / 1206 KB
+  // runner best 5720 ms (5720/8107/8117) / 0 / 310 KB / 1211 KB
   district: {
-    lcpMs: 5500,
+    lcpMs: 6600,
     cls: 0.1,
     scriptBytes: 350 * KB,
     totalBytes: 1350 * KB,
   },
-  // measured 4843 ms / 0.172 / 306 KB / 1279 KB
+  // runner best 5043 ms (5043/7901/8053) / 0.173 / 307 KB / 1280 KB
   clubs: {
     lcpMs: 5500,
     cls: 0.2,
     scriptBytes: 350 * KB,
     totalBytes: 1400 * KB,
   },
-  // measured 8008 ms / 0 / 189 KB / 1186 KB (prod before #1830: 15.1 s, 2.36 MB)
+  // runner best 8120 ms (8870/8870/8120) / 0.001 / 192 KB / 1189 KB
+  // (prod before #1830, Lighthouse mobile: 15.1 s, 2.36 MB)
   club: { lcpMs: 9000, cls: 0.1, scriptBytes: 300 * KB, totalBytes: 1300 * KB },
-  // measured 4363 ms / 0.04 / 164 KB / 310 KB
+  // runner best 4354 ms (4358/4354/4357) / 0.04 / 165 KB / 312 KB
   regions: {
     lcpMs: 5000,
     cls: 0.1,
