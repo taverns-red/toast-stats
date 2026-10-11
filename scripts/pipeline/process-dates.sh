@@ -2,8 +2,10 @@
 # The per-date loop shared by the dispatch-only data modes (#1742, plan P3-1).
 #
 # Usage: scripts/pipeline/process-dates.sh <bucket> <mode> [<date>...]
-#   <mode>: rebuild | rescrape
-#   <date>: YYYY-MM-DD, processed in the order given
+#   <mode>: rebuild | rescrape | rescrape-historical
+#   <date>: YYYY-MM-DD, processed in the order given. rescrape-historical
+#           takes the raw dates the previous step downloaded into
+#           $CACHE_DIR/raw-csv/ and leaves them there for its upload step.
 #
 # Each date goes through the same stages, one date at a time to stay inside
 # the runner's disk (~14 GB free):
@@ -13,9 +15,11 @@
 #   2. raw       rebuild: rsync raw-csv/<source>/ down. A transfer error fails
 #                the date (it used to end in `|| true` and transform whatever
 #                had landed).
-#   3. prev-year rebuild: best effort, snapshots/<date - 1y>/district_*.json
-#                for YoY. (rescrape never pulled it.)
-#   4. transform rebuild: collector-cli transform --date <source> --force.
+#   3. prev-year rebuild, rescrape-historical: best effort,
+#                snapshots/<date - 1y>/district_*.json for YoY. (rescrape
+#                never pulled it.)
+#   4. transform rebuild, rescrape-historical: collector-cli transform
+#                --date <source> --force.
 #                rescrape: collector-cli scrape --date <date> --transform
 #                --districts $DISTRICTS, which requests the date's own as-of
 #                and fails rather than store another day's data (#1669). A
@@ -36,6 +40,7 @@
 #                up, replacing the old copy.
 #   9. cleanup   the date's raw, snapshot and prior-year directories, so no
 #                later step reads a rebuilt date as "latest" (#295, #1670).
+#                rescrape-historical keeps its raw: the next step uploads it.
 # The GCS-backed stores (time-series, club-trends, club-race, awards history)
 # are NOT handled here: the caller pulls them with sync-stores.sh before and
 # pushes them with publish-stores.sh after, then runs
@@ -67,7 +72,7 @@ MODE="${2:-}"
 shift 2
 
 case "${MODE}" in
-  rebuild) ;;
+  rebuild | rescrape-historical) ;;
   rescrape)
     if [[ ! "${DISTRICTS:-}" =~ ^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$ ]]; then
       echo "::error::process-dates: rescrape needs DISTRICTS (comma-separated ids), got '${DISTRICTS:-}'" >&2
@@ -185,7 +190,7 @@ process_one() {
   fi
 
   # 3. prev-year
-  if [ "${MODE}" = "rebuild" ]; then
+  if [ "${MODE}" != "rescrape" ]; then
     prev="$(prior_year "${date}")"
   fi
   if [ -n "${prev}" ] && [ ! -d "${SNAPSHOTS}/${prev}" ]; then
@@ -267,7 +272,8 @@ process_one() {
 
 cleanup_date() {
   local source="$1" actual="$2" prev="$3"
-  rm -rf "${RAW:?}/${source}"
+  # rescrape-historical's raw belongs to the step after this one.
+  if [ "${MODE}" != "rescrape-historical" ]; then rm -rf "${RAW:?}/${source}"; fi
   if [ -n "${actual}" ]; then rm -rf "${SNAPSHOTS:?}/${actual}"; fi
   if [ -n "${prev}" ]; then rm -rf "${SNAPSHOTS:?}/${prev}"; fi
   return 0
