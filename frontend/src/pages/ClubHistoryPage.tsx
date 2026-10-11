@@ -14,6 +14,7 @@ import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useClubHistory } from '../hooks/useClubHistory'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
+import { ContextBar } from '../components/ContextBar'
 import { ClubHistoryTable } from '../components/ClubHistoryTable'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState, ErrorDisplay } from '../components/ErrorDisplay'
@@ -51,8 +52,38 @@ export default function ClubHistoryPage() {
 
   const clubDetailPath = `/district/${districtId}/club/${clubId}`
 
+  const exportCsv = () =>
+    exportClubHistory(rows, districtId || '', clubId || '', heading)
+
   return (
     <div className="club-history-page">
+      {/* Phone context bar (#1831): below 768 it replaces the breadcrumb and
+          the header. No PY state here (one row per program year), so the chip
+          opens About, Export and the trail. */}
+      <ContextBar
+        title={`${heading} — History`}
+        back={{ label: heading, to: clubDetailPath }}
+        chipLabel="About"
+        actions={
+          rows.length > 0 ? (
+            <button
+              type="button"
+              className="context-sheet__action"
+              onClick={exportCsv}
+            >
+              Export CSV
+            </button>
+          ) : undefined
+        }
+        about="Multi-year performance by program year. Each row is the club's settled value at the close of that program year."
+        trail={[
+          { label: 'Districts', to: '/' },
+          { label: districtName, to: `/district/${districtId}` },
+          { label: 'Clubs', to: `/district/${districtId}/clubs` },
+          { label: heading, to: clubDetailPath },
+          { label: 'History' },
+        ]}
+      />
       <SubpageBreadcrumb
         crumbs={[
           { label: districtName, to: `/district/${districtId}` },
@@ -74,9 +105,7 @@ export default function ClubHistoryPage() {
           <button
             type="button"
             className="club-history-page__export"
-            onClick={() =>
-              exportClubHistory(rows, districtId || '', clubId || '', heading)
-            }
+            onClick={exportCsv}
           >
             Export CSV
           </button>
