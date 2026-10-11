@@ -116,6 +116,11 @@ for (const width of [375, 390]) {
  * its page here. */
 const ENTITY_ROUTES: { path: string; name: RegExp; back: string }[] = [
   { path: '/district/61/division/A', name: /Division A/, back: '/district/61' },
+  {
+    path: '/district/61/division/A/area/01',
+    name: /Area 01/,
+    back: '/district/61/division/A',
+  },
 ]
 const ENTITY_CONTENT_TOP_MAX = 120
 
@@ -138,8 +143,12 @@ for (const width of [375, 390]) {
         const header = document.querySelector(
           '.context-bar ~ header, .context-bar ~ * header'
         )
-        // First visible element after the (collapsed) header.
-        let next = header?.nextElementSibling ?? null
+        // First visible content after the bar: what is left of the collapsed
+        // header (e.g. the area's recognition badge) or else the next element.
+        let next: Element | null =
+          header && header.getBoundingClientRect().height > 0
+            ? header
+            : (header?.nextElementSibling ?? null)
         while (next && next.getBoundingClientRect().height === 0)
           next = next.nextElementSibling
         return {

@@ -191,6 +191,34 @@ describe('DivisionPage phone context bar (#1831)', () => {
   })
 })
 
+describe('AreaPage phone context bar (#1831)', () => {
+  it('backs up one level to the division and shows the PY · date chip', () => {
+    const { getByTestId } = renderArea()
+    const bar = getByTestId('context-bar')
+    expect(
+      within(bar).getByRole('link', { name: 'Back to Division A' })
+    ).toHaveAttribute('href', '/district/61/division/A')
+    expect(bar).toHaveTextContent('Area 10')
+    expect(getByTestId('context-bar-chip')).toHaveTextContent(
+      'PY 25–26 · Mar 15'
+    )
+  })
+
+  it('opens a sheet with PY/date controls, About and the full trail', async () => {
+    const { getByTestId, getByRole } = renderArea()
+    getByTestId('context-bar-chip').click()
+    const sheet = await waitFor(() => getByRole('dialog', { name: 'Area 10' }))
+    expect(within(sheet).getByLabelText('Program year')).toHaveValue('2025')
+    expect(within(sheet).getByText(/1 club in this area/)).toBeInTheDocument()
+    const trail = within(sheet).getByRole('navigation', { name: 'Breadcrumb' })
+    expect(
+      within(trail)
+        .getAllByRole('listitem')
+        .map(li => li.textContent)
+    ).toEqual(['Districts', 'District 61', 'Division A', 'Area 10'])
+  })
+})
+
 describe('AreaPage wayfinding (#1017)', () => {
   it('renders District (link) › Division (link) › Area (current)', () => {
     const { getByRole } = renderArea()
