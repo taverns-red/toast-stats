@@ -9,6 +9,11 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* nowrap title/meta would otherwise set the list's min-content width and
+     widen a min-content-sized ancestor (PR #1871: +120 px at 375). */
+  contain: inline-size;
+  width: 100%;
+  min-width: 0;
 }
 
 .mobile-row-list__rows {
