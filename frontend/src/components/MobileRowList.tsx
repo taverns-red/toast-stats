@@ -39,6 +39,10 @@ export interface MobileRow {
   trailing?: React.ReactNode
   /** Accessible name override; defaults to the row's text content. */
   ariaLabel?: string
+  /** DOM id on the row link (e.g. a deep-link scroll target). */
+  domId?: string
+  /** Marks the row as the current item (`aria-current` + highlight). */
+  current?: boolean
 }
 
 export interface MobileRowGroup {
@@ -70,6 +74,11 @@ interface MobileRowListProps {
   chipPlacement?: 'title' | 'meta'
   /** Drop side borders/radius so the list can bleed to its panel's edges. */
   flush?: boolean
+  /**
+   * Row id that must be rendered even past the 50-row cap (e.g. a
+   * `?highlight=` deep link) — the list reveals far enough to include it.
+   */
+  revealRowId?: string | undefined
 }
 
 export const INITIAL_VISIBLE_ROWS = 50
@@ -108,9 +117,11 @@ const RowItem: React.FC<{ row: MobileRow; chipPlacement: ChipPlacement }> = ({
       <Link
         to={row.to}
         state={row.state}
-        className="mobile-row"
+        className={`mobile-row${row.current ? ' mobile-row--current' : ''}`}
         data-testid="mobile-row"
         aria-label={row.ariaLabel}
+        id={row.domId}
+        aria-current={row.current ? 'true' : undefined}
       >
         <span className="mobile-row__body">
           <span className="mobile-row__line1">
@@ -142,8 +153,15 @@ const RowBlock: React.FC<{
   label?: string
   id?: string
   chipPlacement: ChipPlacement
-}> = ({ rows, noun, label, id, chipPlacement }) => {
-  const [visible, setVisible] = useState(INITIAL_VISIBLE_ROWS)
+  revealRowId?: string | undefined
+}> = ({ rows, noun, label, id, chipPlacement, revealRowId }) => {
+  const [shown, setVisible] = useState(INITIAL_VISIBLE_ROWS)
+  // A deep-linked row past the cap is revealed (derived, so it also holds
+  // when the rows arrive after the first render).
+  const revealIndex = revealRowId
+    ? rows.findIndex(r => r.id === revealRowId)
+    : -1
+  const visible = Math.max(shown, revealIndex + 1)
   const remaining = rows.length - visible
   const next = Math.min(SHOW_MORE_STEP, remaining)
   return (
@@ -157,7 +175,7 @@ const RowBlock: React.FC<{
         <button
           type="button"
           className="mobile-row-list__more"
-          onClick={() => setVisible(v => v + SHOW_MORE_STEP)}
+          onClick={() => setVisible(visible + SHOW_MORE_STEP)}
         >
           Show {next} more {noun}
           <span className="mobile-row-list__more-count">
@@ -179,6 +197,7 @@ export const MobileRowList: React.FC<MobileRowListProps> = ({
   onToggleGroup,
   chipPlacement = 'title',
   flush = false,
+  revealRowId,
 }) => {
   const rootClass = `mobile-row-list${flush ? ' mobile-row-list--flush' : ''}`
   const baseId = useId()
@@ -208,6 +227,7 @@ export const MobileRowList: React.FC<MobileRowListProps> = ({
           noun={noun}
           label={label}
           chipPlacement={chipPlacement}
+          revealRowId={revealRowId}
         />
       </div>
     )
