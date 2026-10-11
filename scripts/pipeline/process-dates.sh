@@ -18,6 +18,12 @@
 #   3. prev-year rebuild, rescrape-historical: best effort,
 #                snapshots/<date - 1y>/district_*.json for YoY. (rescrape
 #                never pulled it.)
+#   3b. hydrate  rescrape: rsync raw-csv/<date>/ and snapshots/<date>/ (with
+#                analytics/) down from staging, so the date-level artifacts
+#                are computed over the date's whole district set, not just
+#                $DISTRICTS (#1756, ADR-015 P3). Best effort: the CLI refuses
+#                the date-level artifacts it cannot cover. Hydrated files left
+#                byte-identical are not uploaded again (stage 10).
 #   4. transform rebuild, rescrape-historical: collector-cli transform
 #                --date <source> --force.
 #                rescrape: collector-cli scrape --date <date> --transform
@@ -50,8 +56,9 @@
 #                inline loop's `set -e` did: the step fails before any store
 #                push. rescrape then rsyncs the re-collected raw-csv/<date>/
 #                up, replacing the old copy.
-#  11. cleanup   the date's raw, snapshot and prior-year directories, so no
-#                later step reads a rebuilt date as "latest" (#295, #1670).
+#  11. cleanup   the date's raw, snapshot, hydrated and prior-year
+#                directories, so no later step reads a rebuilt date as
+#                "latest" (#295, #1670).
 #                rescrape-historical keeps its raw: the next step uploads it.
 # The GCS-backed stores (time-series, club-trends, club-race, awards history)
 # are NOT handled here: the caller pulls them with sync-stores.sh before and
@@ -141,6 +148,7 @@ FAILED=0
 REFUSED=0
 ENRICHED=0
 UNENRICHED=0
+HYDRATED=""
 
 # The snapshot date directories present in the cache, one per line, sorted.
 snapshot_dates() {
@@ -156,23 +164,69 @@ prior_year() {
     true
 }
 
+# The *.json files under $1 as `cksum` lines with ./-relative paths, sorted.
+json_cksums() {
+  (cd "$1" && find . -type f -name '*.json' -exec cksum {} + | LC_ALL=C sort)
+}
+
+# rescrape: pull the date's other districts from staging before the scrape
+# (#1756, ADR-015 P3) — raw-csv/<date>/ for the transform's per-district
+# counts, snapshots/<date>/ (district files + analytics/) for the date-level
+# rollups — so they are computed from the whole district set, the subset
+# re-derived. A date staging has never seen cannot be hydrated; the CLI then
+# refuses the date-level artifacts it cannot cover, never writes defaults.
+# HYDRATED names the snapshot directory created here, for cleanup.
+hydrate() {
+  local date="$1"
+  mkdir -p "${RAW}/${date}"
+  if ! "${GCLOUD}" storage rsync -r \
+    "gs://${BUCKET}/raw-csv/${date}/" "${RAW}/${date}/"; then
+    echo "::warning::Could not hydrate raw-csv/${date}/ from staging; date-level artifacts are refused unless the scrape covers every district"
+  fi
+  if [ ! -d "${SNAPSHOTS}/${date}" ]; then
+    mkdir -p "${SNAPSHOTS}/${date}"
+    HYDRATED="${date}"
+    if ! "${GCLOUD}" storage rsync -r \
+      "gs://${BUCKET}/snapshots/${date}/" "${SNAPSHOTS}/${date}/"; then
+      echo "::warning::Could not hydrate snapshots/${date}/ from staging; date-level artifacts are refused unless the scrape covers every district"
+    fi
+    json_cksums "${SNAPSHOTS}/${date}" >"${WORK}/hydrated.cksum"
+  fi
+}
+
+# Upload snapshots/<actual>/ — the files this run wrote or changed. A file
+# hydrated from staging and left byte-identical is not uploaded again, so a
+# subset run never rewrites another district's object (I-2).
 upload_snapshot() {
   local actual="$1" dir="${SNAPSHOTS}/$1"
-  local count
-  count="$(find "${dir}" -name '*.json' | wc -l | tr -d ' ')"
-  echo "Uploading snapshots/${actual}/ (${count} files)..."
-  "${GCLOUD}" storage cp \
-    --content-type="application/json" \
-    --cache-control="public, max-age=3600, must-revalidate" \
-    -Z \
-    "${dir}"/*.json \
-    "gs://${BUCKET}/snapshots/${actual}/"
-  if [ -d "${dir}/analytics" ]; then
+  local top=() analytics=() rel
+  : >"${WORK}/before.cksum"
+  if [ "${actual}" = "${HYDRATED}" ]; then
+    cp "${WORK}/hydrated.cksum" "${WORK}/before.cksum"
+  fi
+  while IFS= read -r rel; do
+    case "${rel}" in
+      ./analytics/*.json) analytics+=("${dir}/${rel#./}") ;;
+      ./*/*) ;;
+      *) top+=("${dir}/${rel#./}") ;;
+    esac
+  done < <(json_cksums "${dir}" | LC_ALL=C comm -13 "${WORK}/before.cksum" - |
+    awk '{print $3}')
+  echo "Uploading snapshots/${actual}/ (${#top[@]} files, ${#analytics[@]} analytics)..."
+  if [ "${#top[@]}" -gt 0 ]; then
     "${GCLOUD}" storage cp \
       --content-type="application/json" \
       --cache-control="public, max-age=3600, must-revalidate" \
       -Z \
-      "${dir}/analytics"/*.json \
+      "${top[@]}" \
+      "gs://${BUCKET}/snapshots/${actual}/"
+  fi
+  if [ "${#analytics[@]}" -gt 0 ]; then
+    "${GCLOUD}" storage cp \
+      --content-type="application/json" \
+      --cache-control="public, max-age=3600, must-revalidate" \
+      -Z \
+      "${analytics[@]}" \
       "gs://${BUCKET}/snapshots/${actual}/analytics/"
   fi
 }
@@ -216,6 +270,7 @@ process_one() {
   local date="$1"
   local source prev before actual guard_status
   OUTCOME=failed
+  HYDRATED=""
   source="${date}"
   prev=""
 
@@ -251,6 +306,12 @@ process_one() {
       "gs://${BUCKET}/snapshots/${prev}/district_*.json" \
       "${SNAPSHOTS}/${prev}/" 2>/dev/null ||
       echo "No prior-year snapshot for ${prev}; YoY omitted"
+  fi
+
+  # 3b. hydrate (rescrape) — before `before`, so a hydrated date directory
+  # is not mistaken for the transform's output by the remap below.
+  if [ "${MODE}" = "rescrape" ]; then
+    hydrate "${date}"
   fi
   before="$(snapshot_dates)"
 
@@ -349,6 +410,7 @@ cleanup_date() {
   if [ "${MODE}" != "rescrape-historical" ]; then rm -rf "${RAW:?}/${source}"; fi
   if [ -n "${actual}" ]; then rm -rf "${SNAPSHOTS:?}/${actual}"; fi
   if [ -n "${prev}" ]; then rm -rf "${SNAPSHOTS:?}/${prev}"; fi
+  if [ -n "${HYDRATED}" ]; then rm -rf "${SNAPSHOTS:?}/${HYDRATED}"; fi
   return 0
 }
 
