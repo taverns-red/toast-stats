@@ -59,6 +59,10 @@ export interface DistrictProgramYearControls {
   effectiveEndDate: SnapshotDate | null
   /** True once a program year AND an end date have resolved. */
   hasValidDates: boolean
+  /** True while the district's snapshot dates have not settled (to data or an
+   * error). Lets a page tell "dates still loading" apart from "this district
+   * has no dates" — both read `hasValidDates: false` (#1830). */
+  isDatesPending: boolean
   /** The district's overall most-recent snapshot date (for the freshness pill). */
   latestSnapshotDate: SnapshotDate | undefined
   /** True when the effective end date is the district's newest snapshot — the
@@ -78,7 +82,8 @@ export function useDistrictProgramYearControls(
     setSelectedDate,
   } = useUrlProgramYear()
 
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId || '')
+  const { data: cachedDatesData, isPending: isDatesPending = false } =
+    useDistrictCachedDates(districtId || '')
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || EMPTY_DATES,
     [cachedDatesData?.dates]
@@ -172,6 +177,7 @@ export function useDistrictProgramYearControls(
     effectiveProgramYear,
     effectiveEndDate,
     hasValidDates,
+    isDatesPending,
     latestSnapshotDate,
     isLatestSnapshot,
   }

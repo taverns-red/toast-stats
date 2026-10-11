@@ -215,6 +215,7 @@ const ClubDetailPage: React.FC = () => {
     effectiveProgramYear,
     effectiveEndDate,
     hasValidDates,
+    isDatesPending,
     latestSnapshotDate,
     isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId, { selfHeal: false })
@@ -276,11 +277,20 @@ const ClubDetailPage: React.FC = () => {
   // `fetchCdnClubIndex` helper and query key, so a warm cache is reused rather
   // than refetched. `enabled` keeps the happy path (club present in this
   // district) free of any extra CDN request.
+  //
+  // #1830 — the index is ~975 KB on the wire, so "the club is absent" must be
+  // a SETTLED answer, not the absence of one: while the district's dates load,
+  // the analytics query is disabled (no data, `isLoading` false), which used to
+  // satisfy `!club && !isLoading` and pull the whole index on every cold visit.
+  // Absent means: analytics loaded without the club, or the district has no
+  // snapshot dates at all (analytics will never load).
+  const isClubAbsentSettled =
+    !club && (!!analytics || (!isDatesPending && !hasValidDates))
   const { data: clubIndex, isError: isClubIndexError } = useQuery({
     queryKey: ['club-index'],
     queryFn: fetchCdnClubIndex,
     staleTime: 15 * 60 * 1000,
-    enabled: !!clubId && !club && !isLoading && !isError,
+    enabled: !!clubId && isClubAbsentSettled && !isLoading && !isError,
   })
 
   // Where the index says this club lives now — null unless the index both
