@@ -5,8 +5,7 @@ import { ContextBar, type ContextCrumb } from './ContextBar'
 import { ContextSheetControls } from './ContextSheetControls'
 import { DistrictSheetActions } from './DistrictSheetActions'
 import { DISTRICT_SECTIONS } from '../config/districtSections'
-import { computeFreshness } from '../utils/dataFreshness'
-import { formatDisplayDate } from '../utils/dateFormatting'
+import { formatFreshnessLine } from '../utils/contextBar'
 import { HeaderActionsMenu } from './HeaderActionsMenu'
 import { ProgramYearTitleSuffix } from './ProgramYearTitleSuffix'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
@@ -96,16 +95,11 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
         { label: section.label },
       ]
     : [{ label: 'Districts', to: '/' }, { label: districtName }]
-  const freshness = computeFreshness({
+  const freshnessLine = formatFreshnessLine({
     asOfDate: isLatest ? globalAsOfDate : undefined,
     snapshotDate: viewedDate,
     isLatest,
   })
-  const freshnessLine = freshness.displayDate
-    ? freshness.reconcilingMonthLabel
-      ? `As of ${formatDisplayDate(freshness.displayDate)} · ${freshness.reconcilingMonthLabel} month-end reconciliation`
-      : `Data fresh · ${formatDisplayDate(freshness.displayDate)}`
-    : undefined
 
   return (
     <>

@@ -13,6 +13,9 @@ import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { calculateDivisionGapAnalysis } from '../utils/divisionGapAnalysis'
 import { generateDivisionProgressText } from '../utils/divisionProgressText'
 import { DivisionPerformanceCard } from '../components/DivisionPerformanceCard'
+import { ContextBar } from '../components/ContextBar'
+import { ContextSheetControls } from '../components/ContextSheetControls'
+import { formatFreshnessLine } from '../utils/contextBar'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
@@ -151,8 +154,44 @@ const DivisionPage: React.FC = () => {
     a.areaId.localeCompare(b.areaId)
   )
 
+  const lede =
+    clubs.length === 0
+      ? 'Division recognition standing for this program year.'
+      : `${clubs.length} club${clubs.length === 1 ? '' : 's'} across ${areas.length} area${areas.length === 1 ? '' : 's'} in this division.`
+  const viewedDate = effectiveEndDate ?? latestSnapshotDate
+  const districtUrl = `/district/${districtId}`
+
   return (
     <div className="app-shell__page">
+      {/* Phone context bar (#1831): below 768 it replaces the breadcrumb and
+          the header below; PY/date are this page's own state (R3). */}
+      <ContextBar
+        title={divisionName}
+        back={{ label: `District ${districtId}`, to: districtUrl }}
+        programYear={effectiveProgramYear ?? selectedProgramYear}
+        date={viewedDate}
+        controls={
+          <ContextSheetControls
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={effectiveProgramYear ?? selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={availableDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            freshness={formatFreshnessLine({
+              asOfDate: globalAsOfDate,
+              snapshotDate: viewedDate,
+              isLatest: isLatestGlobal,
+            })}
+          />
+        }
+        about={lede}
+        trail={[
+          { label: 'Districts', to: '/' },
+          { label: `District ${districtId}`, to: districtUrl },
+          { label: divisionName },
+        ]}
+      />
       {/* District › Division wayfinding via the shared SubpageBreadcrumb every
           routed sub-page uses (Lesson 085) — replaces the ad-hoc eyebrow link so
           the trail, link affordance, and aria-current are consistent (#1017). */}
@@ -165,11 +204,7 @@ const DivisionPage: React.FC = () => {
       <header className="districts-page-header">
         <div className="districts-page-header__intro">
           <h1 className="districts-page-header__title">{divisionName}</h1>
-          <p className="districts-page-header__lede">
-            {clubs.length === 0
-              ? 'Division recognition standing for this program year.'
-              : `${clubs.length} club${clubs.length === 1 ? '' : 's'} across ${areas.length} area${areas.length === 1 ? '' : 's'} in this division.`}
-          </p>
+          <p className="districts-page-header__lede">{lede}</p>
         </div>
         <div className="districts-page-header__actions">
           <DataControlsBar
