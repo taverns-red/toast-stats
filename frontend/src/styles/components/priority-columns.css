@@ -63,11 +63,11 @@
   }
 
   .priority-columns__col-identity {
-    width: 40%;
+    width: 36%;
   }
 
   .priority-columns__col-metric {
-    width: 30%;
+    width: 32%;
   }
 
   .priority-columns__table th {
