@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-url-codec-that-only-writes-the-single-value-case-silently-drops-a-multi-select.md` — A URL codec that serialises only the single-value case drops a multi-select on reload with no error — when a new UI makes multi-select the norm, round-trip test the multi case first  (2026-10-11)
 - `ismobile-emulation-hides-horizontal-overflow-measure-in-a-plain-viewport.md` — Playwright's isMobile emulation widens the layout viewport to fit the content, so scrollWidth − innerWidth reads 0 on a page that overflows; measure overflow in a plain setViewportSize viewport, and give nowrap row lists inline-size containment so they cannot widen a min-content-sized ancestor  (2026-10-11)
 - `key-a-responsive-replacement-on-the-new-primitive-not-the-old-header.md` — When a mobile primitive replaces a shared header, key its hide/collapse CSS on the primitive (`.context-bar ~ …`), not on the header — sibling pages that bypass the header are otherwise skipped  (2026-10-11)
 - `a-gcs-listing-can-include-noncurrent-generations-filter-them-before-comparing.md` — '`gcloud storage objects list` on the prod bucket returns noncurrent generations next to the live object (marked by `noncurrent_time`), so any listing-keyed comparison must drop them or it compares a stale hash'  (2026-10-10)
