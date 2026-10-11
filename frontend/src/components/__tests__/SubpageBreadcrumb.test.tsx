@@ -25,6 +25,17 @@ describe('SubpageBreadcrumb (#577)', () => {
     ).toBeInTheDocument()
   })
 
+  it('carries the subpage-breadcrumb class the phone context bar hides it by (#1831)', () => {
+    renderWithRouter(
+      <SubpageBreadcrumb
+        crumbs={[{ label: 'District 61', to: '/district/61' }]}
+      />
+    )
+    expect(screen.getByTestId('subpage-breadcrumb')).toHaveClass(
+      'subpage-breadcrumb'
+    )
+  })
+
   it('renders a linked crumb pointing at its target', () => {
     renderWithRouter(
       <SubpageBreadcrumb
