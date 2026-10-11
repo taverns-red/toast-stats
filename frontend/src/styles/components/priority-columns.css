@@ -159,6 +159,13 @@
     white-space: nowrap;
   }
 
+  /* The shared district-number chip (DistrictChipAndName) is 13px in the
+     desktop tables; on the phone it is data, so 14px (review §7). */
+  .priority-columns__identity .districts-rankings-table__district-chip {
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+
   .priority-columns__full {
     align-self: flex-start;
     display: inline-flex;
