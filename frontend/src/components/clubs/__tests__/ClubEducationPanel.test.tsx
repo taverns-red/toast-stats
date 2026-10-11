@@ -75,6 +75,21 @@ describe('ClubEducationPanel', () => {
     ).toHaveTextContent('—')
   })
 
+  it('does not say "yet" for a completed year from the archive', () => {
+    renderPanel({
+      ...SUMMARY,
+      isArchive: true,
+      asOf: '',
+      total: 0,
+      byProgram: { Pathways: 0, Legacy: 0, DTM: 0 },
+      pathwaysLevels: [0, 0, 0, 0, 0],
+      paths: [],
+      membersWithAward: null,
+    })
+    const note = screen.getByText(/no education awards recorded in 2026–2027/i)
+    expect(note).not.toHaveTextContent(/yet/i)
+  })
+
   it('says "not available" — never 0 — when the date has no ledger', () => {
     renderPanel({ available: false })
     const panel = screen.getByRole('region', { name: 'Education' })
