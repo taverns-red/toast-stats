@@ -19,6 +19,10 @@ interface Route {
   table: string
   /** A chip that is not a default, to prove swapping keeps the fit. */
   swapChip: string
+  /** Rewrite the live competitive-awards.json so every district holds a
+   *  tier (cycling all four). Early in a program year no district has one,
+   *  so real data alone would never put a chip in the cell to measure. */
+  forceTiers?: boolean
 }
 
 const ROUTES: readonly Route[] = [
@@ -26,8 +30,30 @@ const ROUTES: readonly Route[] = [
     path: '/region/05',
     table: 'Region 05 district rankings',
     swapChip: 'Tier',
+    forceTiers: true,
   },
 ]
+
+const TIERS = ['Distinguished', 'Select', 'Presidents', 'Smedley']
+
+const forceTiers = (page: Page) =>
+  page.route('**/competitive-awards.json', async route => {
+    const res = await route.fetch()
+    const body = await res.json()
+    Object.values(
+      (body.distinguishedDistrict ?? {}) as Record<
+        string,
+        { currentTier: string }
+      >
+    ).forEach((d, i) => {
+      d.currentTier = TIERS[i % TIERS.length]!
+    })
+    await route.fulfill({
+      status: res.status(),
+      json: body,
+      headers: { 'access-control-allow-origin': '*' },
+    })
+  })
 const PHONES = [375, 390]
 const WIDE = [768, 1280]
 const THEMES = ['light', 'dark'] as const
@@ -116,6 +142,7 @@ const measure = (page: Page, tableName: string) =>
         el => `${el.className} "${el.textContent?.trim()}" ${fs(el)}px`
       ),
       chipClips: chipClips.length,
+      chips: table.querySelectorAll('.priority-columns__tier').length,
     }
   }, tableName)
 
@@ -125,6 +152,7 @@ for (const theme of THEMES) {
       test.setTimeout(120_000)
       await prep(page, theme, width)
       for (const r of ROUTES) {
+        if (r.forceTiers) await forceTiers(page)
         await page.goto(r.path, { waitUntil: 'networkidle', timeout: 60_000 })
         const table = page.getByRole('table', { name: r.table })
         await table.waitFor({ state: 'visible' })
@@ -134,6 +162,9 @@ for (const theme of THEMES) {
         for (const step of ['default', 'swapped'] as const) {
           if (step === 'swapped')
             await page.getByRole('button', { name: r.swapChip }).click()
+          // Awards resolve separately from rankings; wait for the chips.
+          if (step === 'swapped' && r.forceTiers)
+            await page.locator('.priority-columns__tier').first().waitFor()
           const m = await measure(page, r.table)
           expect(m, `${r.path} ${step}`).not.toBeNull()
           expect(m!.columns, `${r.path} ${step} columns`).toBe(3)
@@ -153,6 +184,8 @@ for (const theme of THEMES) {
           expect(m!.tinyTargets, `${r.path} ${step} <44px targets`).toEqual([])
           expect(m!.smallText, `${r.path} ${step} <14px text`).toEqual([])
           expect(m!.chipClips, `${r.path} ${step} clipped chips`).toBe(0)
+          if (step === 'swapped' && r.forceTiers)
+            expect(m!.chips, `${r.path} tier chips measured`).toBeGreaterThan(0)
         }
         if (process.env['SHOTS_DIR'])
           await page.locator('.priority-columns').screenshot({
