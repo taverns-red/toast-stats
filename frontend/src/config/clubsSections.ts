@@ -26,6 +26,14 @@ const SHORT_LABELS: Record<ClubRaceTier, string> = {
 
 export const CLUBS_HUB_PATH = '/clubs'
 
+/* #1832 — the phone bottom bar shows the hub + the first two races; the
+   others sit in its "More" sheet, in this order. */
+export const CLUBS_BAR_PRIMARY_PATHS: readonly string[] = [
+  CLUBS_HUB_PATH,
+  raceTierUrl('Distinguished'),
+  raceTierUrl('Select'),
+]
+
 export const CLUBS_SECTIONS: readonly ClubsSection[] = [
   { label: 'Overview', path: CLUBS_HUB_PATH, end: true },
   ...RACE_TIER_ROUTES.map(({ tier }) => ({
