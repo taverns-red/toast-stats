@@ -49,6 +49,13 @@ describe('ContextBar (#1831)', () => {
     )
   })
 
+  it('shows a plain label chip on a page with no PY/date state (e.g. What Changed)', () => {
+    renderBar({ programYear: undefined, date: undefined, chipLabel: 'About' })
+    const chip = screen.getByTestId('context-bar-chip')
+    expect(chip).toHaveTextContent('About')
+    expect(chip).not.toHaveTextContent('PY')
+  })
+
   it('does not duplicate the page H1 for assistive tech (name is aria-hidden)', () => {
     renderBar({})
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull()

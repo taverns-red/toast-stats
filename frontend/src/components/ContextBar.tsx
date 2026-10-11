@@ -37,10 +37,13 @@ export interface ContextBarProps {
   title: string
   /** One level up. Omitted on a root page. */
   back?: { label: string; to: string } | undefined
-  /** The selected program year (R3: a prop, owned by the page). */
-  programYear: ProgramYear
+  /** The selected program year (R3: a prop, owned by the page). Omit on a
+   * page with no PY/date state; the chip then shows `chipLabel`. */
+  programYear?: ProgramYear | undefined
   /** The snapshot date being viewed; undefined renders "Latest". */
   date?: string | undefined
+  /** Chip text when there is no program year (default "Page info"). */
+  chipLabel?: string
   /** PY / date controls rendered at the top of the sheet. */
   controls?: React.ReactNode
   /** Page actions (Export, Share…) rendered under the controls. */
@@ -56,6 +59,7 @@ export const ContextBar: React.FC<ContextBarProps> = ({
   back,
   programYear,
   date,
+  chipLabel = 'Page info',
   controls,
   actions,
   about,
@@ -65,7 +69,9 @@ export const ContextBar: React.FC<ContextBarProps> = ({
   const close = useCallback(() => setOpen(false), [])
   const sheetId = useId()
   const dateLabel = date ? formatShortDate(date) : 'Latest'
-  const chipText = `${formatPyCompact(programYear)} · ${dateLabel}`
+  const chipText = programYear
+    ? `${formatPyCompact(programYear)} · ${dateLabel}`
+    : chipLabel
 
   return (
     <div className="context-bar" data-testid="context-bar">

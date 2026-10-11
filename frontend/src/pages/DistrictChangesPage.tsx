@@ -8,6 +8,7 @@ import { useUrlDatePair } from '../hooks/useUrlDatePair'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
+import { ContextBar } from '../components/ContextBar'
 import { DatePairPicker } from '../components/DatePairPicker'
 import { DatePairPresetChips } from '../components/DatePairPresetChips'
 import { KpiDeltaCard } from '../components/KpiDeltaCard'
@@ -153,6 +154,20 @@ const DistrictChangesPage: React.FC = () => {
     <ErrorBoundary>
       <div className="district-detail-page-root">
         <div className="district-detail-page">
+          {/* Phone context bar (#1831). This page has no PY/date state (its
+              window is the from/to pair below), so the chip opens About and
+              the trail only. */}
+          <ContextBar
+            title={districtName}
+            back={{ label: districtName, to: `/district/${districtId}` }}
+            chipLabel="About"
+            about="What changed in this district between two snapshot dates: membership, payments, DCP goals, distinguished status, and clubs added, removed or transferred."
+            trail={[
+              { label: 'Districts', to: '/' },
+              { label: districtName, to: `/district/${districtId}` },
+              { label: 'What Changed' },
+            ]}
+          />
           <h1 className="district-changes__title">{districtName}</h1>
 
           <SubpageBreadcrumb

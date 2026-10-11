@@ -50,13 +50,16 @@ describe('context-bar.css (#1831)', () => {
       /\.district-detail-page-header__actions[\s\S]*?display:\s*none/
     )
     expect(below).toMatch(
-      /\.district-detail-page-header\s*~\s*\.subpage-breadcrumb[\s\S]*?display:\s*none/
+      /\.context-bar\s*~\s*\.subpage-breadcrumb[\s\S]*?display:\s*none/
     )
     // The H1 is visually hidden (clip pattern), never display:none.
     const title =
-      below.match(/\.district-detail-page-header__title\s*\{[^}]*\}/)?.[0] ?? ''
+      below.match(/\.district-detail-page-header__title[^{]*\{[^}]*\}/)?.[0] ??
+      ''
     expect(title).toMatch(/clip/)
     expect(title).not.toMatch(/display:\s*none/)
+    // A page whose H1 is a sibling of the bar (What Changed) gets the same.
+    expect(below).toMatch(/\.context-bar\s*~\s*h1[\s\S]*?clip/)
   })
 
   it('gives sheet selects a 16px font (no iOS focus zoom)', () => {

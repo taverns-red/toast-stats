@@ -117,7 +117,8 @@
 
     /* The H1 stays in the DOM for a11y/SEO, visually hidden (never
        display:none, which would drop it from the accessibility tree). */
-    .district-detail-page-header__title {
+    .district-detail-page-header__title,
+    .context-bar ~ h1 {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -130,7 +131,7 @@
     }
 
     /* The one-crumb breadcrumb duplicated the bar's back crumb. */
-    .district-detail-page-header ~ .subpage-breadcrumb {
+    .context-bar ~ .subpage-breadcrumb {
       display: none;
     }
   }
