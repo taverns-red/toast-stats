@@ -50,6 +50,10 @@ export interface DivisionAreaRecognitionPanelProps {
   divisions: DivisionPerformance[]
   /** Loading state indicator */
   isLoading?: boolean
+  /** Phone progress-summary open divisions, page-owned (#1862, R3). */
+  openDivisions?: readonly string[] | undefined
+  /** Called with the next open-division set (#1862). */
+  onOpenDivisionsChange?: ((next: string[]) => void) | undefined
 }
 
 /**
@@ -81,7 +85,12 @@ export interface DivisionAreaRecognitionPanelProps {
  */
 export const DivisionAreaRecognitionPanel: React.FC<
   DivisionAreaRecognitionPanelProps
-> = ({ divisions, isLoading = false }) => {
+> = ({
+  divisions,
+  isLoading = false,
+  openDivisions,
+  onOpenDivisionsChange,
+}) => {
   /**
    * Extract all areas from divisions with their parent division context
    *
@@ -226,7 +235,12 @@ export const DivisionAreaRecognitionPanel: React.FC<
       />
 
       {/* Area Progress Summary - Requirements 5, 6, 10.2, 10.3 */}
-      <DivisionAreaProgressSummary divisions={divisions} isLoading={false} />
+      <DivisionAreaProgressSummary
+        divisions={divisions}
+        isLoading={false}
+        openDivisions={openDivisions}
+        onOpenDivisionsChange={onOpenDivisionsChange}
+      />
 
       {/* Summary Footer - Requirement 1.3: Consistent styling */}
       <div className="redesign-panel">

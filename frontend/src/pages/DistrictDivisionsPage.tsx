@@ -5,6 +5,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -105,6 +106,11 @@ const DistrictDivisionsPage: React.FC = () => {
       'divisions'
     )
 
+  // Open divisions in the phone progress summary (#1862): `?summary=A,B`,
+  // page-owned so a shared link or a division-page round trip restores them.
+  const [openSummaryDivisions, setOpenSummaryDivisions] =
+    useUrlStringSet('summary')
+
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
   useDocumentTitle(districtName ? `${districtName} Divisions` : null)
@@ -162,6 +168,8 @@ const DistrictDivisionsPage: React.FC = () => {
                   effectiveEndDate
                 )}
                 isLoading={isLoadingStatistics}
+                openDivisions={openSummaryDivisions}
+                onOpenDivisionsChange={setOpenSummaryDivisions}
               />
             ) : (
               isLoadingStatistics && (
