@@ -138,7 +138,7 @@ permissions:
 jobs:
   pipeline:
     name: "${{ inputs.mode || 'daily' }} pipeline"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
     timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape' || inputs.mode == 'rescrape-historical') && 240 || (inputs.mode == 'backfill-global-totals' && 120 || 30) }}
 
@@ -2386,7 +2386,7 @@ jobs:
   # offers, which is why this is a separate job rather than a step.
   closing-registry-pr:
     name: 'closing-registry auto-PR'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: pipeline
     # R17 — every value has an explicit outcome: 'auto' → run;
     # 'none' / 'manual' / '' (non-daily mode, or a crashed check step whose
@@ -2571,7 +2571,7 @@ jobs:
 
   daily-reports:
     name: 'daily district reports fetch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Mirrors the daily gate on the Playwright step, minus the quarterly-prune
     # cron (#1148), which is the one scheduled event that is NOT a daily run.
     # R17: every value of `mode` has an explicit outcome — daily/'' → run,
@@ -2812,7 +2812,7 @@ jobs:
   # ══════════════════════════════════════════════════════════
   place-reports:
     name: 'place daily reports into the snapshot'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: [pipeline, daily-reports]
     if: always() && needs.pipeline.outputs.snapshot_date != ''
     timeout-minutes: 15

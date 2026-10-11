@@ -39,7 +39,7 @@ jobs:
   # Quality Gates - Must pass before any other jobs
   quality-gates:
     name: Quality Gates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       typescript-errors: ${{ steps.typescript.outputs.total_errors }}
       lint-errors: ${{ steps.lint.outputs.total_errors }}
@@ -166,7 +166,7 @@ jobs:
   # Security Scanning
   security:
     name: Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: quality-gates
 
     steps:
@@ -190,7 +190,7 @@ jobs:
   # Test Suite
   test:
     name: Test Suite
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: quality-gates
 
     steps:
@@ -267,7 +267,7 @@ jobs:
   # Build Applications
   build:
     name: Build Applications
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: [quality-gates, test]
 
     steps:

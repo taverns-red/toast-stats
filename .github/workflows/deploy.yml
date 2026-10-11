@@ -46,7 +46,7 @@ jobs:
   # release PR (the integration gate). See ADR-004.
   deploy-frontend:
     name: Deploy Frontend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout code
@@ -159,7 +159,7 @@ jobs:
   # ──────────────────────────────────────────────
   post-deploy-verify:
     name: Post-Deploy Verification
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: [deploy-frontend]
 
     steps:

@@ -51,7 +51,7 @@ jobs:
     # context nothing reports -- which blocks, not opens -- so the failure is
     # loud, but fix both together). Guarded by ciGate.test.ts.
     name: CI Gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # The poll must outlast the slowest real gate (Test Suite ~15 min, then
     # Build Applications) plus queue time, with headroom. The script's own
     # deadline (below) fires first and produces a readable verdict; this is
