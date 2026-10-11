@@ -10,8 +10,8 @@
  * loop through the gcloud shim with the 588 pin's download semantics (one
  * gzip layer inflated), the new pull through a fake of the
  * `@google-cloud/storage` 8.2.0 surface it uses — and then runs the
- * workflow's own rank-history builder (extracted from data-pipeline.yml, not
- * copied) over each. The `v1/rank-history/*.json` outputs must be identical.
+ * workflow's own rank-history builder (scripts/manifests/rankHistory.ts since
+ * #1743; extracted from data-pipeline.yml before that) over each. The `v1/rank-history/*.json` outputs must be identical.
  *
  * Fake SDK shapes, observed read-only against staging on 2026-10-10:
  *  - `getFiles({ prefix, matchGlob })` resolved to a 3-tuple whose first
@@ -33,6 +33,7 @@ import {
   rankingsDate,
   type RankHistoryBucket,
 } from '../rankHistoryPull.js'
+import { writeRankHistory } from '../../manifests/rankHistory.js'
 
 const REPO = process.cwd()
 const WORKFLOW = path.join(REPO, '.github/workflows/data-pipeline.yml')
@@ -160,35 +161,13 @@ function fakeBucket(
   }
 }
 
-/** The workflow's rank-history builder, extracted verbatim from the YAML. */
-function workflowBuilder(srcDir: string, outDir: string): string {
-  const lines = fs.readFileSync(WORKFLOW, 'utf-8').split('\n')
-  const at = lines.findIndex(l =>
-    l.includes("const srcDir = '/tmp/rank-history-src';")
-  )
-  expect(at, 'rank-history builder not found in data-pipeline.yml').toBe(
-    lines.findLastIndex(l =>
-      l.includes("const srcDir = '/tmp/rank-history-src';")
-    )
-  )
-  expect(at).toBeGreaterThan(0)
-  let start = at
-  while (start > 0 && lines[start]!.trim() !== 'node -e "') start--
-  let end = at
-  while (end < lines.length && lines[end]!.trim() !== '"') end++
-  return lines
-    .slice(start + 1, end)
-    .join('\n')
-    .replace("'/tmp/rank-history-src'", JSON.stringify(srcDir))
-    .replace("'/tmp/rank-history-out'", JSON.stringify(outDir))
-}
-
+/**
+ * The workflow's rank-history builder. It was an inline `node -e` block
+ * extracted from the YAML here until #1743 moved it, byte-identical, into
+ * scripts/manifests/rankHistory.ts; the workflow now calls that module.
+ */
 function build(srcDir: string, outDir: string): void {
-  fs.mkdirSync(outDir, { recursive: true })
-  const r = spawnSync('node', ['-e', workflowBuilder(srcDir, outDir)], {
-    encoding: 'utf-8',
-  })
-  expect(r.status, r.stderr).toBe(0)
+  writeRankHistory(srcDir, outDir, () => {})
 }
 
 function runLegacy(src: string): void {

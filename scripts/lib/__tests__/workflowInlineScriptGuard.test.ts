@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
 import * as path from 'node:path'
 import {
+  ALLOWED_INLINE_NODE_SCRIPTS,
+  findInlineNodeScripts,
+  findUnallowedInlineNodeScripts,
   findInlineScriptBlocks,
   findInlineScriptBacktickSubstitutions,
   formatBacktickViolations,
@@ -176,4 +179,78 @@ describe('bounding regression: the neighbouring prune steps stay unflagged (#154
       covering.map(b => `${b.openerLine}-${b.endLine} ${b.opener}`).join('\n')
     ).toEqual([])
   })
+})
+
+/**
+ * No new inline node scripts (#1743, plan P3-3).
+ *
+ * The manifest generators that were `node -e "…"` blocks now live in
+ * scripts/manifests/ with tests. A new inline block would be untestable and
+ * exposed to bash expansion (#1549), so every inline node script in a
+ * workflow must be on ALLOWED_INLINE_NODE_SCRIPTS. Move new logic into
+ * scripts/ instead of extending the list.
+ */
+describe('findInlineNodeScripts', () => {
+  const SAMPLE = `
+    run: |
+      # a comment that mentions node -e "is inert"
+      node -e "
+        console.log('multi-line')
+      "
+      V="$(node -p "require('./package.json').version")"
+      node --eval 'console.log(1)'
+      node scripts/thing.js --out x
+      npx tsx scripts/manifests/build-cdn-manifests.ts --out x
+`
+
+  it('finds -e, -p and --eval scripts and bounds their bodies (sentinel)', () => {
+    const found = findInlineNodeScripts(SAMPLE)
+    expect(found.map(f => f.line)).toEqual([4, 7, 8])
+    expect(found[0].body).toContain("console.log('multi-line')")
+    expect(found[0].body).not.toContain('package.json')
+    expect(found[1].body).toContain("require('./package.json').version")
+    expect(found[2].body).toContain('console.log(1)')
+  })
+
+  it('reports a script that matches no allow-list fingerprint', () => {
+    const bad = findUnallowedInlineNodeScripts('data-pipeline.yml', SAMPLE)
+    expect(bad).toHaveLength(3)
+  })
+
+  it('accepts a script whose body carries an allow-listed fingerprint', () => {
+    const allowed = ALLOWED_INLINE_NODE_SCRIPTS[0]
+    const src = `
+    run: |
+      X=$(node -e "
+        // ${allowed.fingerprint}
+      ")
+`
+    expect(findUnallowedInlineNodeScripts(allowed.file, src)).toEqual([])
+    expect(
+      findUnallowedInlineNodeScripts(`not-${allowed.file}`, src)
+    ).toHaveLength(1)
+  })
+})
+
+describe('repo sweep: no workflow adds an inline node script', () => {
+  const workflowsDir = path.resolve(__dirname, '../../../.github/workflows')
+
+  for (const file of readdirSync(workflowsDir).filter(f =>
+    /\.ya?ml$/.test(f)
+  )) {
+    it(`${file} has only allow-listed inline node scripts`, () => {
+      const source = readFileSync(path.join(workflowsDir, file), 'utf-8')
+      const bad = findUnallowedInlineNodeScripts(file, source)
+      expect(
+        bad,
+        bad
+          .map(
+            b =>
+              `${file}:${b.line} inline node script (${b.opener}) — move ` +
+              'it into scripts/ with a test (#1743)'
+          )
+          .join('\n')
+      ).toEqual([])
+    })
+  }
 })

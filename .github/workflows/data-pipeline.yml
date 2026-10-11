@@ -1361,43 +1361,18 @@ jobs:
           fi
           echo "Latest snapshot date: ${LATEST_DATE}"
 
-          # v1/latest.json (short TTL, 5 min)
-          node -e "
-            const fs = require('fs');
-            const manifest = {
-              _format: { version: '1.0.0', type: 'manifest' },
-              latestSnapshotDate: '${LATEST_DATE}',
-              generatedAt: new Date().toISOString()
-            };
-            fs.writeFileSync('/tmp/latest.json', JSON.stringify(manifest, null, 2));
-            console.log('Generated v1/latest.json for ${LATEST_DATE}');
-          "
-          gcloud storage cp \
-            --content-type="application/json" \
-            --cache-control="public, max-age=300" \
-            /tmp/latest.json "gs://${GCS_BUCKET}/v1/latest.json"
+          # Inputs first (R2), then ONE generator process, then the uploads in
+          # their original order. latest/dates/rankings/rank-history were four
+          # inline node -e blocks until #1743; build-cdn-manifests.ts is pinned
+          # byte for byte against them (scripts/manifests/__tests__) and pays a
+          # single tsx start-up. Any failure now fails the step before the
+          # first manifest is uploaded, not part-way through the uploads.
 
-          # v1/dates.json (medium TTL, 15 min)
+          # v1/dates.json source: the full date listing.
           gcloud storage ls "gs://${GCS_BUCKET}/snapshots/" | \
             grep -oP '\d{4}-\d{2}-\d{2}' | sort -u > /tmp/all-dates.txt
-          node -e "
-            const fs = require('fs');
-            const dates = fs.readFileSync('/tmp/all-dates.txt', 'utf-8')
-              .trim().split('\n').filter(Boolean);
-            const data = {
-              _format: { version: '1.0.0', type: 'dates-index' },
-              dates, count: dates.length,
-              generatedAt: new Date().toISOString()
-            };
-            fs.writeFileSync('/tmp/dates.json', JSON.stringify(data, null, 2));
-            console.log('Generated v1/dates.json with ' + dates.length + ' dates');
-          "
-          gcloud storage cp \
-            --content-type="application/json" \
-            --cache-control="public, max-age=900" \
-            /tmp/dates.json "gs://${GCS_BUCKET}/v1/dates.json"
 
-          # v1/rankings.json (short TTL, 5 min)
+          # v1/rankings.json source.
           # In rebuild mode, local snapshots are cleaned per-date — fetch from GCS
           RANKINGS_SRC="./cache/snapshots/${LATEST_DATE}/all-districts-rankings.json"
           if [ ! -f "${RANKINGS_SRC}" ]; then
@@ -1405,28 +1380,8 @@ jobs:
             gcloud storage cp "gs://${GCS_BUCKET}/snapshots/${LATEST_DATE}/all-districts-rankings.json" \
               "${RANKINGS_SRC}" 2>/dev/null || true
           fi
-          if [ -f "${RANKINGS_SRC}" ]; then
-            node -e "
-              const fs = require('fs');
-              const src = JSON.parse(fs.readFileSync('${RANKINGS_SRC}', 'utf-8'));
-              const data = {
-                _format: { version: '1.0.0', type: 'rankings' },
-                rankings: src.rankings,
-                date: src.metadata.sourceCsvDate || '${LATEST_DATE}',
-                generatedAt: new Date().toISOString()
-              };
-              fs.writeFileSync('/tmp/rankings.json', JSON.stringify(data, null, 2));
-              console.log('Generated v1/rankings.json with ' + src.rankings.length + ' districts');
-            "
-            gcloud storage cp \
-              --content-type="application/json" \
-              --cache-control="public, max-age=300" \
-              /tmp/rankings.json "gs://${GCS_BUCKET}/v1/rankings.json"
-          else
-            echo "::warning::all-districts-rankings.json not found, skipping v1/rankings.json"
-          fi
 
-          # v1/rank-history/{districtId}.json
+          # v1/rank-history/{districtId}.json source.
           # Issue #186: Download rankings into date-prefixed filenames
           # to avoid overwriting (all files are named all-districts-rankings.json)
           # #1733 (E2-3): one listing + one parallel download, fail-closed;
@@ -1438,46 +1393,42 @@ jobs:
           RANK_FILE_COUNT=$(ls /tmp/rank-history-src/*.json 2>/dev/null | wc -l | tr -d ' ')
           echo "Downloaded ${RANK_FILE_COUNT} historical rankings files"
 
+          GEN_ARGS=()
+          if [ -f "${RANKINGS_SRC}" ]; then
+            GEN_ARGS+=(--rankings-src "${RANKINGS_SRC}" --rankings-out /tmp/rankings.json)
+          fi
           if [ "${RANK_FILE_COUNT}" -gt "0" ]; then
-            node -e "
-              const fs = require('fs');
-              const path = require('path');
-              const srcDir = '/tmp/rank-history-src';
-              const outDir = '/tmp/rank-history-out';
-              const index = new Map();
-              const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.json'));
-              for (const file of files) {
-                try {
-                  const data = JSON.parse(fs.readFileSync(path.join(srcDir, file), 'utf-8'));
-                  // Use the snapshot date (filename) not sourceCsvDate (raw-csv date) (#302)
-                  const date = path.basename(file, '.json');
-                  if (!date || !data.rankings) continue;
-                  for (const r of data.rankings) {
-                    if (!index.has(r.districtId)) {
-                      index.set(r.districtId, { districtId: r.districtId, districtName: r.districtName, history: [] });
-                    }
-                    const entry = index.get(r.districtId);
-                    if (entry.districtName === 'District ' + r.districtId) entry.districtName = r.districtName;
-                    entry.history.push({
-                      date, aggregateScore: r.aggregateScore,
-                      clubsRank: r.clubsRank, paymentsRank: r.paymentsRank,
-                      distinguishedRank: r.distinguishedRank,
-                      totalDistricts: data.metadata.totalDistricts,
-                      overallRank: r.overallRank ?? 0
-                    });
-                  }
-                } catch (e) { console.error('Skipping ' + file + ': ' + e.message); }
-              }
-              let totalPoints = 0;
-              for (const [id, entry] of index) {
-                entry.history.sort((a, b) => a.date.localeCompare(b.date));
-                const seen = new Set();
-                entry.history = entry.history.filter(p => { if (seen.has(p.date)) return false; seen.add(p.date); return true; });
-                totalPoints += entry.history.length;
-                fs.writeFileSync(path.join(outDir, id + '.json'), JSON.stringify(entry));
-              }
-              console.log('Generated rank history for ' + index.size + ' districts (' + totalPoints + ' total points)');
-            "
+            GEN_ARGS+=(--rank-history-src /tmp/rank-history-src --rank-history-out /tmp/rank-history-out)
+          fi
+          npx tsx scripts/manifests/build-cdn-manifests.ts \
+            --latest-date "${LATEST_DATE}" --latest-out /tmp/latest.json \
+            --dates-file /tmp/all-dates.txt --dates-out /tmp/dates.json \
+            "${GEN_ARGS[@]}"
+
+          # v1/latest.json (short TTL, 5 min)
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=300" \
+            /tmp/latest.json "gs://${GCS_BUCKET}/v1/latest.json"
+
+          # v1/dates.json (medium TTL, 15 min)
+          gcloud storage cp \
+            --content-type="application/json" \
+            --cache-control="public, max-age=900" \
+            /tmp/dates.json "gs://${GCS_BUCKET}/v1/dates.json"
+
+          # v1/rankings.json (short TTL, 5 min)
+          if [ -f "${RANKINGS_SRC}" ]; then
+            gcloud storage cp \
+              --content-type="application/json" \
+              --cache-control="public, max-age=300" \
+              /tmp/rankings.json "gs://${GCS_BUCKET}/v1/rankings.json"
+          else
+            echo "::warning::all-districts-rankings.json not found, skipping v1/rankings.json"
+          fi
+
+          # v1/rank-history/{districtId}.json
+          if [ "${RANK_FILE_COUNT}" -gt "0" ]; then
             gcloud storage cp \
               --content-type="application/json" \
               --cache-control="public, max-age=300" \
@@ -1595,38 +1546,13 @@ jobs:
             echo "Generating snapshot index from GCS..."
             gcloud storage ls "gs://${GCS_BUCKET}/snapshots/*/district_*.json" \
               > /tmp/snapshot-files.txt 2>/dev/null || true
-            node -e "
-              const fs = require('fs');
-              const lines = fs.readFileSync('/tmp/snapshot-files.txt', 'utf-8').trim().split('\n').filter(Boolean);
-              const index = {};
-              // Parse GCS paths: gs://bucket/snapshots/YYYY-MM-DD/district_XX.json
-              for (const line of lines) {
-                // NB: this whole script is a double-quoted bash string, so
-                // keep every comment free of backticks -- bash runs backticked
-                // text as command substitution before node ever parses it
-                // (#1549). Use plain identifiers below, not code spans.
-                //
-                // The /^[A-Z0-9]+$/i guard is load-bearing, not decorative.
-                // The \w in the capture group also matches an underscore, so
-                // without the guard the daily-reports sidecar file
-                // district_61_reports.json enters the index as a phantom
-                // district called 61_reports (#1428). Equivalent to
-                // DISTRICT_SNAPSHOT_OBJECT_PATTERN in
-                // @taverns-red/shared-contracts src/naming/snapshotFileNames.ts,
-                // which inline JS in YAML cannot import. Do not drop it.
-                const match = line.match(/snapshots\/(\d{4}-\d{2}-\d{2})\/district_(\w+)\.json$/);
-                if (match && match[1] && match[2] && /^[A-Z0-9]+$/i.test(match[2])) {
-                  const [, date, id] = match;
-                  if (!index[id]) index[id] = [];
-                  if (!index[id].includes(date)) index[id].push(date);
-                }
-              }
-              for (const id of Object.keys(index)) index[id].sort();
-              const dates = [...new Set(lines.map(l => l.match(/snapshots\/(\d{4}-\d{2}-\d{2})\//)?.[1]).filter(Boolean))];
-              const out = { generatedAt: new Date().toISOString(), districts: index };
-              fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(out, null, 2));
-              console.log('Generated snapshot index: ' + Object.keys(index).length + ' districts, ' + dates.length + ' dates');
-            "
+            # Builder: scripts/manifests/snapshotIndex.ts (inline node -e until
+            # #1743). It keeps the district-id guard that stops the
+            # district_{id}_reports.json sidecar becoming a phantom
+            # "61_reports" district (#1428).
+            npx tsx scripts/manifests/build-snapshot-index.ts \
+              --from-listing /tmp/snapshot-files.txt \
+              --out /tmp/district-snapshot-index.json
             ;;
           daily)
             # Daily: merge today's snapshot date into existing index
@@ -1637,23 +1563,12 @@ jobs:
             gcloud storage cp "${INDEX_PATH}" /tmp/district-snapshot-index.json 2>/dev/null || \
               echo '{"generatedAt":"","districts":{}}' > /tmp/district-snapshot-index.json
 
-            node -e "
-              const fs = require('fs');
-              const raw = JSON.parse(fs.readFileSync('/tmp/district-snapshot-index.json', 'utf-8'));
-              // Normalize: old flat format → new nested format
-              const districts = (raw.districts && typeof raw.districts === 'object' && !Array.isArray(raw.districts))
-                ? raw.districts : raw;
-              const date = '${DATE}';
-              for (const id of '${DISTRICT_LIST}'.split(',').map(d => d.trim())) {
-                const dateSet = new Set(districts[id] || []);
-                dateSet.add(date);
-                districts[id] = [...dateSet].sort();
-              }
-              // Always write new nested format
-              const out = { generatedAt: new Date().toISOString(), districts };
-              fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(out, null, 2));
-              console.log('Updated index for ' + Object.keys(districts).length + ' districts with date ' + date);
-            "
+            # Builder: scripts/manifests/snapshotIndex.ts (inline node -e until
+            # #1743). Accepts the legacy flat index and writes the nested one.
+            npx tsx scripts/manifests/build-snapshot-index.ts \
+              --merge /tmp/district-snapshot-index.json \
+              --date "${DATE}" \
+              --districts "${DISTRICT_LIST}"
             ;;
           *)
             echo "::error::Update district-snapshot-index has no case for mode '${MODE}' (R17)"
