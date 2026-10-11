@@ -41,6 +41,8 @@ import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { ClubDCPGoalsPanel } from '../components/ClubDCPGoalsPanel'
 import { useClubGoalTimeline } from '../hooks/useClubGoalTimeline'
+import { buildClubMeetingInfo } from '../utils/clubMeetingInfo'
+import { ClubWhereItMeets } from '../components/clubs/ClubWhereItMeets'
 
 // ── DCP Status Card ────────────────────────────────────────────────────────
 // Re-skinned to club-reference.html (#619): a `.club-panel` with a bordered
@@ -610,6 +612,11 @@ const ClubDetailPage: React.FC = () => {
                   </>
                 )}
               </p>
+              {/* #1783 — where it meets (FAC enrichment for the viewed date;
+                  omitted when the snapshot has none). Never email/phone. The
+                  lineage chip (#1805) joins the sub-line above once the
+                  club-district-history artifact (#1782) is promoted. */}
+              <ClubWhereItMeets info={buildClubMeetingInfo(club)} />
               {/* #1229 — deep link to the per-club multi-year history view. */}
               <Link
                 to={`/district/${districtId}/club/${clubId}/history`}
