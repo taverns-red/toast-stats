@@ -198,6 +198,22 @@ describe('ClubDetailPage — Worldwide standing (#1556)', () => {
     expect(card).toHaveTextContent('on 12 Aug')
   })
 
+  // #1783 — §3.2 layout: the trend row is followed by the club's own panels
+  // and callouts; worldwide standing closes the page after the DCP goals grid.
+  it('places the card after the DCP Goals Progress panel (#1783 layout)', async () => {
+    mockRace(RACE)
+    renderPage()
+    const card = await screen.findByRole('region', {
+      name: 'Worldwide standing',
+    })
+    const dcpGoals = screen
+      .getByText('DCP Goals Progress')
+      .closest('.club-panel') as HTMLElement
+    expect(dcpGoals.compareDocumentPosition(card)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    )
+  })
+
   it('omits the card when the race artifact is not available for the date', async () => {
     mockRace(null)
     renderPage()
