@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `ismobile-emulation-hides-horizontal-overflow-measure-in-a-plain-viewport.md` — Playwright's isMobile emulation widens the layout viewport to fit the content, so scrollWidth − innerWidth reads 0 on a page that overflows; measure overflow in a plain setViewportSize viewport, and give nowrap row lists inline-size containment so they cannot widen a min-content-sized ancestor  (2026-10-11)
 - `key-a-responsive-replacement-on-the-new-primitive-not-the-old-header.md` — When a mobile primitive replaces a shared header, key its hide/collapse CSS on the primitive (`.context-bar ~ …`), not on the header — sibling pages that bypass the header are otherwise skipped  (2026-10-11)
 - `a-gcs-listing-can-include-noncurrent-generations-filter-them-before-comparing.md` — '`gcloud storage objects list` on the prod bucket returns noncurrent generations next to the live object (marked by `noncurrent_time`), so any listing-keyed comparison must drop them or it compares a stale hash'  (2026-10-10)
 - `fake-sdk-return-shapes-must-be-recorded-from-the-real-sdk.md` — Test fixtures and fakes for an external SDK or CLI must be recorded from the real system (same call, same options, same version), never hand-written from assumptions, or the tests prove the plan instead of reality  (2026-10-10)
