@@ -414,6 +414,36 @@ describe('process-dates.sh: counters in the step summary (#1708)', () => {
   })
 })
 
+describe('process-dates.sh: touched-dates record for the completeness gate (#1761)', () => {
+  it('appends each published date — remapped, compute-failed included; never a refused or failed one', () => {
+    putRaw('2026-08-02')
+    putRaw('2026-09-09')
+    putRaw('2026-06-30')
+    const touched = path.join(tmp, 'touched-dates.txt')
+    fs.writeFileSync(touched, '2026-10-10\n')
+    const r = run(
+      'rebuild',
+      ['2026-06-30', '2026-08-02', '2026-09-09', '2026-09-10'],
+      {
+        TOUCHED_DATES_FILE: touched,
+        STUB_REMAP: '2026-08-02=2026-07-31',
+        STUB_GUARD_REFUSE: '^2026-06-30$',
+        STUB_COMPUTE_FAIL: '^2026-09-09$',
+      }
+    )
+    expect(r.status, r.stderr).toBe(0)
+    // 2026-09-10 has no raw → failed; 2026-06-30 refused.
+    expect(lines(touched)).toEqual(['2026-10-10', '2026-07-31', '2026-09-09'])
+  })
+
+  it('writes nothing when TOUCHED_DATES_FILE is unset', () => {
+    putRaw('2026-09-10')
+    const r = run('rebuild', ['2026-09-10'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(fs.readdirSync(tmp).some(n => n.includes('touched'))).toBe(false)
+  })
+})
+
 describe('process-dates.sh rescrape: scrape + transform stage', () => {
   const env = { DISTRICTS: '61,62' }
 

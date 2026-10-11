@@ -1,0 +1,24 @@
+{
+  "snapshotId": "2026-10-10",
+  "createdAt": "2026-10-11T09:02:18.667Z",
+  "districts": [
+    {
+      "districtId": "02",
+      "fileName": "district_02.json",
+      "status": "success",
+      "fileSize": 697933,
+      "lastModified": "2026-10-11T09:02:17.219Z"
+    },
+    {
+      "districtId": "03",
+      "fileName": "district_03.json",
+      "status": "success",
+      "fileSize": 485363,
+      "lastModified": "2026-10-11T09:02:17.269Z"
+    }
+  ],
+  "totalDistricts": 94,
+  "successfulDistricts": 94,
+  "failedDistricts": 0,
+  "writeComplete": true
+}

@@ -52,7 +52,8 @@ export interface ValueDiffOutput {
 }
 
 /** Which gate(s) refused promotion. */
-export type BlockingGate = 'count' | 'value' | 'both' | 'content' | 'none'
+export type BlockingGate =
+  'count' | 'value' | 'both' | 'content' | 'completeness' | 'none'
 
 /** One object the #1715 content gate refused. */
 export interface ContentGateFailure {
@@ -79,6 +80,13 @@ export interface PromotionAlertInput {
   contentPromote?: boolean
   /** Objects the content gate refused, surfaced in the alert. */
   contentFailures?: ContentGateFailure[]
+  /**
+   * `steps.completenessgate.outputs.completeness_promote` — the #1761
+   * per-date completeness gate. Omitted = not evaluated (treated as pass).
+   */
+  completenessPromote?: boolean
+  /** Regressions the completeness gate found, surfaced in the alert. */
+  completenessFailures?: ContentGateFailure[]
 }
 
 export interface PromotionAlertResult {
@@ -102,6 +110,8 @@ export interface PromotionAlertResult {
   valuePromote: boolean
   contentPromote: boolean
   contentFailures: ContentGateFailure[]
+  completenessPromote: boolean
+  completenessFailures: ContentGateFailure[]
   /** value-gate reasons, surfaced verbatim in the alert. */
   reasons: string[]
 }
@@ -122,11 +132,19 @@ export function evaluatePromotion(
 ): PromotionAlertResult {
   const { countPromote, valuePromote, valueDiff } = input
   const contentPromote = input.contentPromote ?? true
-  // count/value keep their classification; the content gate is named on its
-  // own only when it is the sole refusal (the title/body name it either way).
+  const completenessPromote = input.completenessPromote ?? true
+  // count/value keep their classification; the content and completeness
+  // gates are named on their own only when they are the sole refusal (the
+  // title/body name them either way).
   const countValueGate = classifyGate(countPromote, valuePromote)
   const gate: BlockingGate =
-    countValueGate === 'none' && !contentPromote ? 'content' : countValueGate
+    countValueGate !== 'none'
+      ? countValueGate
+      : !contentPromote
+        ? 'content'
+        : !completenessPromote
+          ? 'completeness'
+          : 'none'
   const promoted = gate === 'none'
 
   const changed = valueDiff?.report.changed ?? []
@@ -148,6 +166,8 @@ export function evaluatePromotion(
     valuePromote,
     contentPromote,
     contentFailures: input.contentFailures ?? [],
+    completenessPromote,
+    completenessFailures: input.completenessFailures ?? [],
     reasons: valueDiff?.reasons ?? [],
   }
 }
@@ -162,6 +182,7 @@ const GATE_LABEL: Record<Exclude<BlockingGate, 'none'>, string> = {
   count: 'count gate',
   both: 'count gate + value gate',
   content: 'content gate',
+  completeness: 'completeness gate',
 }
 
 /** Title for the `promotion-held` alert issue. */
@@ -171,6 +192,9 @@ export function buildPromotionHeldTitle(result: PromotionAlertResult): string {
     result.gate === 'both' ? 'count + value gates' : GATE_LABEL[result.gate]
   if (!result.contentPromote && result.gate !== 'content') {
     label += ' + content gate'
+  }
+  if (!result.completenessPromote && result.gate !== 'completeness') {
+    label += ' + completeness gate'
   }
   return `🚫 Promotion held — prod stale (${label})`
 }
@@ -201,8 +225,23 @@ export function buildPromotionHeldBody(
     `| Count gate (additive) | ${result.countPromote ? '✅ pass' : '❌ **blocked**'} |`,
     `| Value gate (#1034) | ${result.valuePromote ? '✅ pass' : '❌ **blocked**'} |`,
     `| Content gate (#1715) | ${result.contentPromote ? '✅ pass' : '❌ **blocked**'} |`,
+    `| Completeness gate (#1761) | ${result.completenessPromote ? '✅ pass' : '❌ **blocked**'} |`,
     '',
   ]
+  const cell = (s: string) => s.replaceAll('|', '\\|')
+  const failureTable = (failures: ContentGateFailure[], header: string) => {
+    lines.push(`| ${header} | Reason |`, '| --- | --- |')
+    for (const f of failures.slice(0, MAX_REASONS)) {
+      lines.push(`| ${cell(f.path)} | ${cell(f.reason)} |`)
+    }
+    if (failures.length > MAX_REASONS) {
+      lines.push(
+        '',
+        `_…and ${failures.length - MAX_REASONS} more — full list in the run's Step Summary._`
+      )
+    }
+    lines.push('')
+  }
 
   // Content-gate framing leads: an unreadable or wrong-shaped object would
   // break the site the moment it reached prod (#1702, #1704).
@@ -214,18 +253,22 @@ export function buildPromotionHeldBody(
       ''
     )
     if (result.contentFailures.length > 0) {
-      lines.push('| Object | Reason |', '| --- | --- |')
-      const cell = (s: string) => s.replaceAll('|', '\\|')
-      for (const f of result.contentFailures.slice(0, MAX_REASONS)) {
-        lines.push(`| ${cell(f.path)} | ${cell(f.reason)} |`)
-      }
-      if (result.contentFailures.length > MAX_REASONS) {
-        lines.push(
-          '',
-          `_…and ${result.contentFailures.length - MAX_REASONS} more — full list in the run's Step Summary._`
-        )
-      }
-      lines.push('')
+      failureTable(result.contentFailures, 'Object')
+    }
+  }
+
+  // A touched date with less than production already has (#1761, D-1/D-2).
+  if (!result.completenessPromote) {
+    lines.push(
+      '### 📏 Completeness gate blocked — a date this run touched has less than production',
+      '',
+      'For at least one date the run wrote, staging has fewer objects, fewer districts or clubs, fewer countries, or club records missing keys production has (e.g. Find-a-Club fields after a non-daily re-run, #1758). Promoting would replace the richer production copy.',
+      '',
+      '**Clear path:** fix the run (or re-run the date in a mode that produces the full shape). If the reduction is intended and reviewed, re-run with `allow_value_changes=true`.',
+      ''
+    )
+    if (result.completenessFailures.length > 0) {
+      failureTable(result.completenessFailures, 'Object')
     }
   }
 

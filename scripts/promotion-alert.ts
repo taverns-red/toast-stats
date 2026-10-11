@@ -20,6 +20,9 @@
  *                     anything but "true" holds (fail closed)
  *   CONTENT_GATE_FILE — the content gate's JSON result, for the failing
  *                     objects listed in the alert
+ *   COMPLETENESS_PROMOTE — `steps.completenessgate.outputs.completeness_promote`
+ *                     (#1761); anything but "true" holds (fail closed)
+ *   COMPLETENESS_GATE_FILE — the completeness gate's JSON result
  *
  * Always exits 0; the workflow decides whether to open/refresh or close the
  * issue based on the `blocked`/`promoted` outputs. A missing/garbage
@@ -69,8 +72,8 @@ function readValueDiff(path: string): ValueDiffOutput | null {
   }
 }
 
-/** The content gate's failing objects; empty on any read/parse failure. */
-function readContentFailures(path: string | undefined): ContentGateFailure[] {
+/** A gate result file's `failures`; empty on any read/parse failure. */
+function readGateFailures(path: string | undefined): ContentGateFailure[] {
   if (!path) return []
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf8')) as {
@@ -81,7 +84,7 @@ function readContentFailures(path: string | undefined): ContentGateFailure[] {
       : []
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    log(`Could not read content gate result at ${path}: ${message}`)
+    log(`Could not read gate result at ${path}: ${message}`)
     return []
   }
 }
@@ -90,12 +93,13 @@ function main(): void {
   const countPromote = process.env.COUNT_PROMOTE === 'true'
   const valuePromote = process.env.VALUE_PROMOTE === 'true'
   const contentPromote = process.env.CONTENT_PROMOTE === 'true'
+  const completenessPromote = process.env.COMPLETENESS_PROMOTE === 'true'
   const valueDiffFile = process.env.VALUE_DIFF_FILE || DEFAULT_VALUE_DIFF_FILE
   const now = new Date()
 
   log(
     `Gate outputs — count_promote=${countPromote} value_promote=${valuePromote} ` +
-      `content_promote=${contentPromote}`
+      `content_promote=${contentPromote} completeness_promote=${completenessPromote}`
   )
   const valueDiff = readValueDiff(valueDiffFile)
   const result = evaluatePromotion({
@@ -103,7 +107,9 @@ function main(): void {
     valuePromote,
     valueDiff,
     contentPromote,
-    contentFailures: readContentFailures(process.env.CONTENT_GATE_FILE),
+    contentFailures: readGateFailures(process.env.CONTENT_GATE_FILE),
+    completenessPromote,
+    completenessFailures: readGateFailures(process.env.COMPLETENESS_GATE_FILE),
   })
 
   log(
