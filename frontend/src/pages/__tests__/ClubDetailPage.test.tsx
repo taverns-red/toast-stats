@@ -473,6 +473,102 @@ describe('ClubDetailPage (#208)', () => {
     ).toBeInTheDocument()
   })
 
+  // #1790 — Compliance panel beside Education; stat strip gains Awards and
+  // Coach. With no reports file every row and both cells say so.
+  it('renders the Compliance panel and Awards/Coach stat cells (#1790)', () => {
+    const mockedHook = vi.mocked(useDistrictAnalytics)
+    mockedHook.mockReturnValueOnce({
+      data: {
+        districtId: '61',
+        allClubs: [baseMockClub],
+        districtReports: {
+          districtId: '61',
+          programYear: '2025-2026',
+          generatedAt: '2025-10-16T09:00:00.000Z',
+          sections: {
+            officerList: {
+              sources: [
+                {
+                  reportType: 'officer-list',
+                  tableId: 'x',
+                  asOf: 'October 15, 2025',
+                },
+              ],
+              records: [
+                {
+                  club: '606',
+                  clubName: 'St Lawrence Toastmasters',
+                  division: 'A',
+                  area: 'A1',
+                  listStatus: 'Received - 06/20/2025',
+                  electionCadence: 'annual',
+                  officerListSubmitted: true,
+                },
+              ],
+            },
+            educationAchievements: {
+              sources: [
+                {
+                  reportType: 'education-achievements',
+                  tableId: 'y',
+                  asOf: 'October 15, 2025',
+                },
+              ],
+              records: [
+                {
+                  club: '606',
+                  division: 'A',
+                  area: 'A1',
+                  name: '',
+                  location: '',
+                  award: 'PM1Presentation Mastery Level 1',
+                  achievementCount: 4,
+                },
+              ],
+            },
+            coaches: {
+              sources: [
+                {
+                  reportType: 'coaches',
+                  tableId: 'z',
+                  asOf: 'October 15, 2025',
+                },
+              ],
+              records: [],
+            },
+          },
+        },
+      },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    const { container } = renderWithRoute()
+    const panel = screen.getByRole('region', { name: 'Compliance' })
+    expect(panel).toHaveTextContent('Received Jun 20, 2025')
+    expect(panel).toHaveTextContent('No coach')
+
+    const grid = container.querySelector('.club-stats-grid') as HTMLElement
+    const cell = (label: string) =>
+      within(grid).getByText(label).nextElementSibling
+    expect(cell('Awards')).toHaveTextContent('4')
+    expect(cell('Coach')).toHaveTextContent('None')
+  })
+
+  it('shows "—" for Awards and Coach when the date has no reports file (#1790)', () => {
+    const { container } = renderWithRoute()
+    const grid = container.querySelector('.club-stats-grid') as HTMLElement
+    expect(
+      within(grid).getByText('Awards').nextElementSibling
+    ).toHaveTextContent('—')
+    expect(
+      within(grid).getByText('Coach').nextElementSibling
+    ).toHaveTextContent('—')
+    expect(
+      screen.getByRole('region', { name: 'Compliance' })
+    ).toHaveTextContent(/not available for this date/i)
+  })
+
   it('renders DCP Goals Progress section', () => {
     renderWithRoute()
 

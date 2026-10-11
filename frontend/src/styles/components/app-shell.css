@@ -2264,9 +2264,11 @@
      on desktop, 4 at ≤640px, 2 at ≤420px. Surface cards with hairline
      borders; values in the display face. All colours via tokens so the
      dark-mode cascade (redesign.css) applies without per-element overrides. */
+  /* #1790 — ten cells (Awards + Coach added): 5 × 2 from 421px up so no
+     row is left with orphans; 2 columns on phones (unchanged below). */
   .club-stats-grid {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     margin-bottom: 20px;
   }
@@ -2280,7 +2282,9 @@
   }
 
   .club-stat__label {
-    font-size: 10.5px;
+    /* 12px uppercase eyebrow — the one size the mobile review allows
+       below 14px (2026-10-11 §5.6/§6.3); was 10.5px. */
+    font-size: 12px;
     font-weight: 600;
     color: var(--ink-3);
     text-transform: uppercase;
@@ -2312,10 +2316,6 @@
   }
 
   @media (max-width: 640px) {
-    .club-stats-grid {
-      grid-template-columns: repeat(4, 1fr);
-    }
-
     .club-stat__val {
       font-size: 16px;
     }
@@ -2386,6 +2386,79 @@
     .club-panels-grid {
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     }
+  }
+
+  /* #1790 — Compliance panel: a row list (mobile review §6.3). Each row is
+     glyph + label/status line + source line; state colours reinforce the
+     glyph and words, and use the remapping --green/--gold-ink/--red tokens. */
+  .club-compliance__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-family: var(--rt-font-body);
+    font-size: 0.875rem;
+    color: var(--ink);
+  }
+
+  .club-compliance__row {
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: var(--rt-space-2);
+    align-items: start;
+    padding: var(--rt-space-2) 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .club-compliance__row:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .club-compliance__glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    font-weight: 700;
+    color: var(--ink-3);
+    background-color: var(--line);
+  }
+
+  .club-compliance__row--ok .club-compliance__glyph {
+    color: var(--green-600);
+  }
+
+  .club-compliance__row--warn .club-compliance__glyph {
+    color: var(--gold-ink); /* text-safe gold in both themes (#1360) */
+  }
+
+  .club-compliance__row--bad .club-compliance__glyph {
+    color: var(--red-600);
+  }
+
+  .club-compliance__line {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0 var(--rt-space-3);
+    min-height: 1.5rem;
+    align-items: center;
+  }
+
+  .club-compliance__label {
+    font-weight: 600;
+  }
+
+  .club-compliance__value {
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+
+  .club-compliance__source {
+    margin-top: 2px;
+    color: var(--ink-3);
   }
 
   /* #1790 — Education panel internals. Text uses the remapping --ink-*

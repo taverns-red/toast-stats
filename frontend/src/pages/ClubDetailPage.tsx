@@ -45,6 +45,11 @@ import { buildClubMeetingInfo } from '../utils/clubMeetingInfo'
 import { ClubWhereItMeets } from '../components/clubs/ClubWhereItMeets'
 import { summarizeClubEducation } from '../utils/clubEducation'
 import { ClubEducationPanel } from '../components/clubs/ClubEducationPanel'
+import {
+  summarizeClubCompliance,
+  summarizeClubCoach,
+} from '../utils/clubCompliance'
+import { ClubCompliancePanel } from '../components/clubs/ClubCompliancePanel'
 
 // ── DCP Status Card ────────────────────────────────────────────────────────
 // Re-skinned to club-reference.html (#619): a `.club-panel` with a bordered
@@ -332,6 +337,18 @@ const ClubDetailPage: React.FC = () => {
     return records.find(r => clubIdsMatch(r['Club Number'], clubId)) ?? null
   }, [districtStats, clubId])
 
+  // #1790 — the club's dashboard divisionPerformance row (round 1/2 visit
+  // awards), from the same raw snapshot as clubRawRecord.
+  const clubDivisionRecord = useMemo(() => {
+    if (!districtStats || !clubId) return null
+    const raw = districtStats as unknown as Record<string, unknown>
+    const statsData = raw['data'] as Record<string, unknown> | undefined
+    const records = (statsData?.['divisionPerformance'] ??
+      raw['divisionPerformance']) as
+      Array<Record<string, string | number | null>> | undefined
+    return records?.find(r => clubIdsMatch(r['Club'], clubId)) ?? null
+  }, [districtStats, clubId])
+
   // The program year the page is showing — the authority for which
   // recognition rungs existed (#1406). Resolved before the projection memo
   // because that memo now depends on it.
@@ -340,6 +357,25 @@ const ClubDetailPage: React.FC = () => {
   // #1790 — this club's slice of the education ledger for the page's date.
   const educationSummary = useMemo(
     () => summarizeClubEducation(analytics?.districtReports, clubId ?? ''),
+    [analytics, clubId]
+  )
+
+  // #1790 — compliance rows and coach, against the page's PY and pinned
+  // date (R3) so a historical date shows what was true then.
+  const complianceRows = useMemo(
+    () =>
+      summarizeClubCompliance({
+        reports: analytics?.districtReports,
+        clubId: clubId ?? '',
+        divisionRecord: clubDivisionRecord,
+        charterDate: club?.charterDate,
+        programYear: programYear.label,
+        snapshotDate: effectiveEndDate ?? programYear.endDate,
+      }),
+    [analytics, clubId, clubDivisionRecord, club, programYear, effectiveEndDate]
+  )
+  const coachSummary = useMemo(
+    () => summarizeClubCoach(analytics?.districtReports, clubId ?? ''),
     [analytics, clubId]
   )
 
@@ -792,6 +828,33 @@ const ClubDetailPage: React.FC = () => {
                       ? 'Club Success Plan submitted'
                       : 'Club Success Plan not submitted — required for Distinguished',
               },
+              // #1790 — ledger award count ("—" when the date has no
+              // ledger, never 0) and coach status in words.
+              {
+                label: 'Awards',
+                value: educationSummary.available
+                  ? educationSummary.total
+                  : '—',
+                valClass: educationSummary.available ? '' : 'muted',
+                title: educationSummary.available
+                  ? 'Education awards this program year (ledger)'
+                  : 'Education awards not available for this date',
+              },
+              {
+                label: 'Coach',
+                value:
+                  coachSummary === null
+                    ? '—'
+                    : coachSummary.status === 'active'
+                      ? 'Active'
+                      : coachSummary.status === 'awarded'
+                        ? 'Awarded'
+                        : 'None',
+                valClass: coachSummary === null ? 'muted' : '',
+                title:
+                  coachSummary?.label ??
+                  'Coach data not available for this date',
+              },
             ].map(stat => (
               <div
                 key={stat.label}
@@ -1026,13 +1089,14 @@ const ClubDetailPage: React.FC = () => {
               between the trend row and the callouts. #1790 — Education from
               the reports ledger the analytics hook already fetched for the
               page's date (R3); always rendered, so the loaded page never
-              shifts when the sidecar is absent ("not available" copy). The
-              Compliance panel (#1790) joins this grid next. */}
+              shifts when the sidecar is absent ("not available" copy).
+              Compliance (#1790) sits beside it from 768px. */}
           <div className="club-panels-grid">
             <ClubEducationPanel
               summary={educationSummary}
               programYearLabel={programYear.label}
             />
+            <ClubCompliancePanel rows={complianceRows} coach={coachSummary} />
           </div>
 
           {/* Risk Factors */}
