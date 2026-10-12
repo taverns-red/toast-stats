@@ -31,10 +31,11 @@ const HEALTH_FILLS = [
 async function findPins(
   page: Page,
   png: Buffer,
-  skipBottom: number
+  skipBottom: number,
+  cssWidth: number
 ): Promise<Array<{ x: number; y: number }>> {
   return page.evaluate(
-    async ({ b64, fills, skipBottom }) => {
+    async ({ b64, fills, skipBottom, cssWidth }) => {
       const img = new Image()
       img.src = `data:image/png;base64,${b64}`
       await img.decode()
@@ -44,6 +45,8 @@ async function findPins(
       const ctx = c.getContext('2d')!
       ctx.drawImage(img, 0, 0)
       const { data, width, height } = ctx.getImageData(0, 0, c.width, c.height)
+      // Screenshots are in device pixels (WebKit's profile is 2x).
+      const k = width / cssWidth
       const hit = (x: number, y: number) => {
         const i = (y * width + x) * 4
         return fills.some(
@@ -54,9 +57,9 @@ async function findPins(
         )
       }
       const found: Array<{ x: number; y: number }> = []
-      for (let y = 20; y < height - skipBottom; y += 2) {
-        let x = 20
-        while (x < width - 20) {
+      for (let y = 20 * k; y < height - skipBottom * k; y += 2) {
+        let x = 20 * k
+        while (x < width - 20 * k) {
           if (!hit(x, y)) {
             x++
             continue
@@ -65,20 +68,23 @@ async function findPins(
           while (end < width && hit(end, y)) end++
           const run = end - x
           const cx = Math.round((x + end) / 2)
-          if (run >= 5 && run <= 14) {
+          if (run >= 5 * k && run <= 14 * k) {
             let top = y
             let bottom = y
             while (top > 0 && hit(cx, top - 1)) top--
             while (bottom < height - 1 && hit(cx, bottom + 1)) bottom++
-            if (bottom - top <= 14)
-              found.push({ x: cx, y: Math.round((top + bottom) / 2) })
+            if (bottom - top <= 14 * k)
+              found.push({
+                x: Math.round(cx / k),
+                y: Math.round((top + bottom) / 2 / k),
+              })
           }
           x = end
         }
       }
       return found
     },
-    { b64: png.toString('base64'), fills: HEALTH_FILLS, skipBottom }
+    { b64: png.toString('base64'), fills: HEALTH_FILLS, skipBottom, cssWidth }
   )
 }
 
@@ -129,7 +135,13 @@ for (const theme of ['light', 'dark'] as const) {
       await expect
         .poll(
           async () => {
-            pins = await findPins(page, await region.screenshot(), skipBottom)
+            const box = (await region.boundingBox())!
+            pins = await findPins(
+              page,
+              await region.screenshot(),
+              skipBottom,
+              box.width
+            )
             return pins.length
           },
           { timeout: 30_000, intervals: [1_000, 2_000] }

@@ -59,7 +59,14 @@ const SUITES: readonly Suite[] = [
     contentTopMax: 110,
     more: {
       from: '/district/61',
-      links: ['What Changed', 'Grid', 'Analytics', 'Rankings', 'Action List'],
+      links: [
+        'What Changed',
+        'Grid',
+        'Map',
+        'Analytics',
+        'Rankings',
+        'Action List',
+      ],
       pick: 'Rankings',
       to: /\/district\/61\/rankings(\?|$)/,
       back: /\/district\/61(\?|$)/,
