@@ -19,6 +19,8 @@ interface Route {
   table: string | RegExp
   /** Accessible name of the full table at ≥768, when it differs. */
   wideTable?: string | RegExp
+  /** Or: the name of the full table's scroll region at ≥768. */
+  wideRegion?: RegExp
   /** The chip to end on (the screenshot state); default: the last chip. */
   swapChip?: string
   /** Rewrite the live competitive-awards.json so every district holds a
@@ -46,6 +48,16 @@ const ROUTES: readonly Route[] = [
     path: '/history',
     table: 'Worldwide scoreboard by program year',
     wideTable: /Worldwide totals/,
+  },
+  {
+    path: '/district/61/division/A',
+    table: /Division A area performance/,
+    wideRegion: /area performance — scroll/,
+  },
+  {
+    path: '/district/61/division/A/area/01',
+    table: 'Area performance',
+    wideRegion: /Area performance — scroll/,
   },
   {
     path: '/regions',
@@ -106,27 +118,30 @@ const unmask = (page: Page) =>
     content: 'html,body{overflow-x:visible !important}',
   })
 
+// Every priority table on the page (the Divisions page has one per
+// division, all driven by the same ?cols=), aggregated.
 const measure = (page: Page) =>
   page.evaluate(() => {
     const vw = document.documentElement.clientWidth
-    const table = document.querySelector(
-      'table.priority-columns__table'
-    ) as HTMLTableElement | null
-    if (!table) return null
+    const tables = [
+      ...document.querySelectorAll('table.priority-columns__table'),
+    ] as HTMLTableElement[]
+    if (tables.length === 0) return null
     const rect = (el: Element) => el.getBoundingClientRect()
     const fs = (el: Element) => parseFloat(getComputedStyle(el).fontSize)
-    const ths = [...table.querySelectorAll('thead th')]
+    const all = (sel: string) =>
+      tables.flatMap(t => [...t.querySelectorAll(sel)])
+    const ths = all('thead th')
     const targets = [
       ...document.querySelectorAll(
         '.priority-columns__chip, .priority-columns__full, .priority-columns__identity a, .priority-columns__table th button'
       ),
     ]
-    const small = [...table.querySelectorAll('td, td *, th button')].filter(
+    const small = all('td, td *, th button').filter(
       el => el.textContent?.trim() && fs(el) < 14
     )
-    const chipClips = [
-      ...table.querySelectorAll('.priority-columns__tier'),
-    ].filter(chip => {
+    const chipEls = all('.priority-columns__tier, .priority-columns__badge')
+    const chipClips = chipEls.filter(chip => {
       const c = rect(chip)
       const td = rect(chip.closest('td')!)
       return c.right > td.right + 0.5 || c.left < td.left - 0.5
@@ -147,13 +162,15 @@ const measure = (page: Page) =>
       text: th.textContent?.trim(),
       lines: lineCount(th.querySelector('.sortable-header__label') ?? th),
     }))
-    const scroller = table.parentElement!
     return {
       docOverflow: document.documentElement.scrollWidth - vw,
-      tableRight: rect(table).right - vw,
-      tableHidden: Math.max(0, table.scrollWidth - table.clientWidth),
-      scrollerHidden: Math.max(0, scroller.scrollWidth - scroller.clientWidth),
-      columns: ths.length,
+      tableRight: Math.max(...tables.map(t => rect(t).right - vw)),
+      tableHidden: Math.max(
+        ...tables.map(t => Math.max(0, t.scrollWidth - t.clientWidth))
+      ),
+      columns: [
+        ...new Set(tables.map(t => t.querySelectorAll('thead th').length)),
+      ],
       multiLineHeaders: headerLines.filter(h => h.lines > 1),
       // One line is not enough: an ellipsized label hides the metric name.
       truncatedHeaders: ths
@@ -167,9 +184,9 @@ const measure = (page: Page) =>
         el => `${el.className} "${el.textContent?.trim()}" ${fs(el)}px`
       ),
       chipClips: chipClips.length,
-      chips: table.querySelectorAll('.priority-columns__tier').length,
+      chips: all('.priority-columns__tier').length,
       // Data is never hidden: a metric cell's content must fit its box.
-      clippedCells: [...table.querySelectorAll('td.priority-columns__metric')]
+      clippedCells: all('td.priority-columns__metric')
         .filter(td => td.scrollWidth > td.clientWidth + 1)
         .map(td => td.textContent?.trim()),
     }
@@ -183,7 +200,7 @@ for (const theme of THEMES) {
       for (const r of ROUTES) {
         if (r.forceTiers) await forceTiers(page)
         await page.goto(r.path, { waitUntil: 'networkidle', timeout: 60_000 })
-        const table = page.getByRole('table', { name: r.table })
+        const table = page.getByRole('table', { name: r.table }).first()
         await table.waitFor({ state: 'visible' })
         await unmask(page)
         await page.waitForTimeout(500)
@@ -192,20 +209,23 @@ for (const theme of THEMES) {
         // chip in turn, ending on `swapChip` (the screenshot state).
         const chips = (
           await page.locator('.priority-columns__chip').allTextContents()
-        ).filter(c => c !== r.swapChip)
+        ).filter((c, i, arr) => c !== r.swapChip && arr.indexOf(c) === i)
         for (const step of [
           'default',
           ...chips,
           ...(r.swapChip ? [r.swapChip] : []),
         ]) {
           if (step !== 'default')
-            await page.getByRole('button', { name: step, exact: true }).click()
+            await page
+              .getByRole('button', { name: step, exact: true })
+              .first()
+              .click()
           // Awards resolve separately from rankings; wait for the chips.
           if (step === 'Tier' && r.forceTiers)
             await page.locator('.priority-columns__tier').first().waitFor()
           const m = await measure(page)
           expect(m, `${r.path} ${step}`).not.toBeNull()
-          expect(m!.columns, `${r.path} ${step} columns`).toBe(3)
+          expect(m!.columns, `${r.path} ${step} columns`).toEqual([3])
           expect(
             m!.docOverflow,
             `${r.path} ${step} doc overflow`
@@ -231,12 +251,18 @@ for (const theme of THEMES) {
             expect(m!.chips, `${r.path} tier chips measured`).toBeGreaterThan(0)
         }
         if (process.env['SHOTS_DIR'])
-          await page.locator('.priority-columns').screenshot({
-            path: `${process.env['SHOTS_DIR']}/${r.path.replace(/\//g, '_')}-${width}-${theme}.png`,
-          })
+          await page
+            .locator('.priority-columns')
+            .first()
+            .screenshot({
+              path: `${process.env['SHOTS_DIR']}/${r.path.replace(/\//g, '_')}-${width}-${theme}.png`,
+            })
 
         // Full table: a full-screen sheet holding a focusable labelled region.
-        await page.getByRole('button', { name: /full table/i }).click()
+        await page
+          .getByRole('button', { name: /full table/i })
+          .first()
+          .click()
         const dialog = page.getByRole('dialog')
         await dialog.waitFor({ state: 'visible' })
         const box = (await dialog.boundingBox())!
@@ -262,14 +288,18 @@ for (const theme of THEMES) {
       for (const r of ROUTES) {
         await page.goto(r.path, { waitUntil: 'networkidle', timeout: 60_000 })
         await page
-          .getByRole('table', { name: r.wideTable ?? r.table })
+          .getByRole(r.wideRegion ? 'region' : 'table', {
+            name: r.wideRegion ?? r.wideTable ?? r.table,
+          })
           .first()
           .waitFor({ state: 'visible' })
         expect(await page.locator('.priority-columns__table').count()).toBe(0)
         expect(await page.locator('.priority-columns__chip').count()).toBe(0)
         if (process.env['SHOTS_DIR']) {
           await page
-            .getByRole('table', { name: r.wideTable ?? r.table })
+            .getByRole(r.wideRegion ? 'region' : 'table', {
+              name: r.wideRegion ?? r.wideTable ?? r.table,
+            })
             .first()
             .scrollIntoViewIfNeeded()
           await page.screenshot({
