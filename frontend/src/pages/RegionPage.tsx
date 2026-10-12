@@ -898,7 +898,7 @@ const RegionPage: React.FC = () => {
         label={`Region ${region} district rankings`}
         rows={regionDistricts}
         rowKey={d => d.districtId}
-        identityHeader="Rank · District"
+        identityHeader="District"
         identitySortField="aggregate"
         renderIdentity={d => (
           <RegionIdentity
