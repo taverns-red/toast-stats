@@ -59,7 +59,10 @@ function row(
   }
 }
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
 describe('CdnRankingsData rows carry newCharteredClubs (#1475)', () => {
   it('round-trips the field the wire has always published', async () => {
@@ -144,17 +147,27 @@ describe('fetchCdnRankingsForDate — the falling-back variant is unchanged', ()
   })
 
   it('is a thin fallback wrapper over the exact fetch', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    // #1779 — the comparison must not depend on both calls landing in the same
+    // wall-clock millisecond. Pin the clock and step it 1ms between the calls
+    // so the "under load" timing that flaked the pre-push run is the DEFAULT
+    // here, not a scheduling accident. The fixture carries `calculatedAt`, as
+    // real rankings files do, so `generatedAt` is the file's own stamp rather
+    // than the `new Date()` fallback.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-11T12:00:00.000Z'))
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
       okResponse({
-        metadata: { sourceCsvDate: '2026-10-05' },
+        metadata: {
+          sourceCsvDate: '2026-10-05',
+          calculatedAt: '2026-10-05T00:00:00Z',
+        },
         rankings: [row('61', 5)],
       })
     )
 
-    const [exact, falling] = await Promise.all([
-      fetchCdnRankingsForDateExact(snap('2026-09-30')),
-      fetchCdnRankingsForDate(snap('2026-09-30')),
-    ])
+    const exact = await fetchCdnRankingsForDateExact(snap('2026-09-30'))
+    vi.setSystemTime(Date.now() + 1)
+    const falling = await fetchCdnRankingsForDate(snap('2026-09-30'))
 
     expect(falling).toEqual(exact)
   })
