@@ -22,6 +22,7 @@
   .districts-methodology-callout__link,
   .ddp-criteria__source .methodology-link,
   .wws__link,
+  .race-basis a[href^='/methodology'],
   .worldwide-standing__note a,
   .club-history-page__back a,
   [data-testid='district-csp-line'] a,
