@@ -143,13 +143,15 @@ describe('DistrictsPage rankings priority columns below 768 (#1834)', () => {
     await userEvent.click(
       within(table()).getByRole('button', { name: /Sort by Paid clubs/ })
     )
-    // Ascending paid clubs: D1 (101) first.
-    expect(rowIds()[0]).toBe('1')
-    const desc = within(table()).getByRole('button', {
-      name: /Sort by Paid clubs/,
-    })
-    await userEvent.click(desc)
+    // The page sorts Paid Clubs by its clubs RANK (1 = best): ascending puts
+    // the best rank first — D3 holds clubsRank 23, D1 holds 25.
     expect(rowIds()[0]).toBe('3')
+    await userEvent.click(
+      within(table()).getByRole('button', { name: /Sort by Paid clubs/ })
+    )
+    expect(rowIds()[0]).toBe('1')
+    const th = [...table().querySelectorAll('thead th')][2]!
+    expect(th).toHaveAttribute('aria-sort', 'descending')
   })
 
   it('opens the complete rankings table in the full-screen sheet', async () => {

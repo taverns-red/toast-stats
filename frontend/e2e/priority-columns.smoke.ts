@@ -60,6 +60,12 @@ const ROUTES: readonly Route[] = [
     wideRegion: /Area performance — scroll/,
   },
   {
+    // The landing rankings: was a column-shedding scroll + top-20 cap.
+    path: '/',
+    table: 'District rankings',
+    swapChip: 'Dist. clubs',
+  },
+  {
     path: '/regions',
     table: 'Region rankings',
     swapChip: 'Dist. clubs',
