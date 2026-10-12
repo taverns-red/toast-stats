@@ -1,0 +1,17 @@
+/* chart-legend.css (#1904)
+   Recharts colours each legend label with its series' stroke
+   (DefaultLegendContent sets an inline `color: entry.color`). A stroke colour
+   is chosen to be told apart from its neighbours, not to be read as text: the
+   Trends payments chart's cool-gray year (#A9B2B1) is 2.17:1 on white, and
+   true-maroon would fail on the dark surface. Labels take neutral ink in both
+   themes and the swatch keeps the series colour — the rule #1616 set for the
+   club race chart, applied once here for every chart (R10).
+
+   `!important` is required, not a shortcut: the colour arrives as an inline
+   style, and only an important declaration outranks one. */
+
+@layer components {
+  .recharts-legend-item-text {
+    color: var(--ink-2) !important;
+  }
+}
