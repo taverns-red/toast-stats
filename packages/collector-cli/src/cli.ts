@@ -2116,6 +2116,116 @@ export function createCLI(): Command {
       }
     )
 
+  // Education ledger history (#1802): the archive ledger with Date kept per
+  // month, into raw-education-ledger/<PY>/district_<id>.json in the LOCAL
+  // cache. Run in CI by the data-pipeline `backfill-education-ledger` mode,
+  // which uploads each PY to staging; never promoted from there.
+  program
+    .command('backfill-education-ledger-history')
+    .description(
+      'Backfill the dated education ledger (per club, award, month) from the ' +
+        'Educational Achievement Archive, one request per (PY, district) (#1802)'
+    )
+    .requiredOption(
+      '--program-years <list>',
+      'Comma-separated program years, 2003-2004 or later, e.g. 2003-2004,2004-2005'
+    )
+    .option(
+      '--districts <list>',
+      'Comma-separated district IDs for every PY (default: each PY’s own list from history)',
+      parseDistrictList
+    )
+    .option(
+      '--rate-ms <ms>',
+      'Min ms between requests (default 1100, as the daily reports fetch)',
+      (value: string) => parseInt(value, 10),
+      1100
+    )
+    .option('--force', 'Re-fetch pairs that already have a valid file', false)
+    .option('--dry-run', 'Fetch and parse, write nothing', false)
+    .option('-v, --verbose', 'Log progress to stderr', false)
+    .option('-c, --config <path>', 'Alternative configuration file path')
+    .action(
+      async (options: {
+        programYears: string
+        districts?: string[]
+        rateMs: number
+        force: boolean
+        dryRun: boolean
+        verbose: boolean
+        config?: string
+      }) => {
+        const {
+          DailyReportFetcher,
+          EARLIEST_LEDGER_PROGRAM_YEAR,
+          fetchYearEndDistrictSummary,
+          programYearEndDate,
+          runEducationLedgerHistoryBackfill,
+        } = await import('./services/index.js')
+
+        const programYears = options.programYears
+          .split(',')
+          .map(py => py.trim())
+          .filter(py => py.length > 0)
+        // Fail fast on a malformed or too-early PY, before any request.
+        for (const py of programYears) {
+          try {
+            programYearEndDate(py)
+            if (py < EARLIEST_LEDGER_PROGRAM_YEAR) {
+              throw new Error(
+                `Program year ${py} predates the archive (earliest ${EARLIEST_LEDGER_PROGRAM_YEAR})`
+              )
+            }
+          } catch (err) {
+            console.error(
+              `Error: ${err instanceof Error ? err.message : String(err)}`
+            )
+            process.exit(ExitCode.COMPLETE_FAILURE)
+          }
+        }
+        if (!Number.isFinite(options.rateMs) || options.rateMs < 1100) {
+          console.error(
+            'Error: --rate-ms must be at least 1100 (the endpoint is rate-sensitive)'
+          )
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+
+        const { cacheDir } = resolveConfiguration({
+          configPath: options.config,
+        })
+        const log = options.verbose
+          ? (line: string) => console.error(line)
+          : undefined
+        log?.(
+          `[INFO] Ledger history: ${programYears.length} PYs → ${cacheDir}/raw-education-ledger` +
+            (options.dryRun ? ' (DRY RUN)' : '')
+        )
+
+        const summary = await runEducationLedgerHistoryBackfill({
+          cacheDir,
+          programYears,
+          districts: options.districts,
+          // Spacing is done by the run (one request per pair), not the fetcher.
+          fetcher: new DailyReportFetcher({ requestIntervalMs: 0 }),
+          fetchSummaryCsv: py => fetchYearEndDistrictSummary(py),
+          rateMs: options.rateMs,
+          sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+          force: options.force,
+          dryRun: options.dryRun,
+          log,
+        })
+
+        const exitCode =
+          summary.failed === 0
+            ? ExitCode.SUCCESS
+            : summary.succeeded === 0
+              ? ExitCode.COMPLETE_FAILURE
+              : ExitCode.PARTIAL_FAILURE
+        // Structured JSON to stdout (R4), exit after it drains (#1182).
+        emitJsonAndExit(summary, exitCode)
+      }
+    )
+
   // One-off import of a prior PY's distinct members per club from a TI
   // Education Achievements CSV export (#1603). Operator-run, local cache only;
   // see docs/runbooks/education-members-import.md.

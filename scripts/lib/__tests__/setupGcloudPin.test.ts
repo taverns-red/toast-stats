@@ -94,7 +94,8 @@ describe('setup-gcloud steps (#1720)', () => {
 
   it('finds the setup-gcloud steps (guard is not vacuous)', () => {
     expect(sites.length).toBeGreaterThanOrEqual(4)
-    expect(sites.filter(s => s.file === 'data-pipeline.yml').length).toBe(4)
+    // One per job; education-ledger-history (#1802) is the fifth.
+    expect(sites.filter(s => s.file === 'data-pipeline.yml').length).toBe(5)
   })
 
   it('pins an exact Cloud SDK version >= 576.0.0 on every step', () => {

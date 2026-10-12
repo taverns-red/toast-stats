@@ -16,7 +16,11 @@
  * This module is pure — no I/O, no pipeline wiring (that is a later sprint).
  */
 
-import { isCountedEducationAward } from '@taverns-red/shared-contracts'
+import {
+  educationAwardProgram,
+  isCountedEducationAward,
+  type EducationLedgerMonthRecord,
+} from '@taverns-red/shared-contracts'
 
 // ─── Typed per-report KEEP shapes ───────────────────────────────────────────
 
@@ -540,6 +544,134 @@ export function countMembersPerClub(
     club,
     membersWithAward: members.size,
   }))
+}
+
+// ─── Education ledger by month (#1802) ───────────────────────────────────────
+
+/** The archive headers the dated ledger needs; any missing one is drift. */
+const LEDGER_HEADERS = [
+  'Club',
+  'Division',
+  'Area',
+  'Award',
+  'Date',
+  'Name',
+  'Location',
+] as const
+
+/** TI's ledger Date: `MM/DD/YYYY`. */
+const LEDGER_DATE = /^(\d{2})\/(\d{2})\/(\d{4})$/
+
+/**
+ * The award cell is `<div class="awrd-tooltip">CODE<span class="tooltiptext">
+ * Title</span></div>`; the code is the cell's text with the tooltip removed.
+ */
+function awardCodeOf(cellHtml: string): string {
+  return cellText(
+    cellHtml.replace(/<span[^>]*class="tooltiptext"[^>]*>[\s\S]*?<\/span>/i, '')
+  )
+}
+
+export interface ParsedEducationLedger {
+  /** The body was empty: TI has no ledger for this district and year. */
+  empty: boolean
+  /** One record per (club, award, yearMonth), first-appearance order. */
+  records: EducationLedgerMonthRecord[]
+  /** Raw achievement rows (the records' counts sum to this). */
+  achievements: number
+}
+
+/**
+ * Parse an Educational Achievement Archive response into the month-granular
+ * ledger (#1802), keeping each achievement's `Date` as `yearMonth`.
+ *
+ * Unlike the per-(club, award) aggregation above, `Date` IS kept here, as
+ * part of the group key at month granularity (Lesson 153 still holds: the
+ * key decides what survives, and a month is shared by many achievements, so
+ * groups do not collapse back to one row each). Only the KEEP headers are
+ * read; a `Member` column, if TI ever adds one, is never touched.
+ *
+ * - An empty (or whitespace) body is `empty`: TI's shape for a district that
+ *   did not exist that year.
+ * - A non-empty body with no table, a missing header, or an unparseable Date
+ *   throws: an error page or layout drift must never be recorded as "no data"
+ *   or turned into a guessed month.
+ */
+export function parseEducationLedgerByMonth(
+  html: string
+): ParsedEducationLedger {
+  if (html.trim() === '') return { empty: true, records: [], achievements: 0 }
+
+  const tableInner = html.match(/<table[^>]*>([\s\S]*?)<\/table>/i)?.[1]
+  if (!tableInner) {
+    throw new Error(
+      'parseEducationLedgerByMonth: non-empty body has no ledger table (error page or layout drift)'
+    )
+  }
+  const trs = tableInner.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) ?? []
+  const rawCells = (tr: string): string[] =>
+    (tr.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/gi) ?? []).map(c =>
+      c.replace(/^<t[dh][^>]*>/i, '').replace(/<\/t[dh]>$/i, '')
+    )
+  const headers = rawCells(trs[0] ?? '').map(cellText)
+  const idx = Object.fromEntries(
+    LEDGER_HEADERS.map(h => [h, headers.indexOf(h)])
+  ) as Record<(typeof LEDGER_HEADERS)[number], number>
+  const missing = LEDGER_HEADERS.filter(h => idx[h] === -1)
+  if (missing.length > 0) {
+    throw new Error(
+      `parseEducationLedgerByMonth: missing header(s) ${missing.join(', ')} (layout drift)`
+    )
+  }
+
+  const groups = new Map<string, EducationLedgerMonthRecord>()
+  let achievements = 0
+  trs.slice(1).forEach((tr, i) => {
+    const cells = rawCells(tr)
+    const text = (h: (typeof LEDGER_HEADERS)[number]): string =>
+      cellText(cells[idx[h]] ?? '')
+    const date = LEDGER_DATE.exec(text('Date'))
+    if (!date) {
+      throw new Error(
+        `parseEducationLedgerByMonth: row ${i + 1} has an unparseable Date "${text('Date')}" (expected MM/DD/YYYY)`
+      )
+    }
+    const month = Number(date[1])
+    if (month < 1 || month > 12) {
+      throw new Error(
+        `parseEducationLedgerByMonth: row ${i + 1} has month ${date[1]} out of range`
+      )
+    }
+    const yearMonth = `${date[3]}-${date[1]}`
+    const awardCode = awardCodeOf(cells[idx.Award] ?? '')
+    const record: EducationLedgerMonthRecord = {
+      club: text('Club'),
+      division: text('Division'),
+      area: text('Area'),
+      name: text('Name'),
+      location: text('Location'),
+      award: text('Award'),
+      awardCode,
+      program: educationAwardProgram(awardCode),
+      yearMonth,
+      achievementCount: 1,
+    }
+    const key = [
+      record.club,
+      record.division,
+      record.area,
+      record.name,
+      record.location,
+      record.award,
+      yearMonth,
+    ].join('\u0000')
+    achievements += 1
+    const existing = groups.get(key)
+    if (existing) existing.achievementCount += 1
+    else groups.set(key, record)
+  })
+
+  return { empty: false, records: [...groups.values()], achievements }
 }
 
 /**

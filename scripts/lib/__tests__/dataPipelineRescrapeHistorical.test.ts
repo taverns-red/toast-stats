@@ -140,7 +140,12 @@ describe('Update district-snapshot-index — an explicit case per mode (R17, #16
   const modes = workflow.on.workflow_dispatch.inputs.mode.options
 
   it('names every mode that reaches the step', () => {
-    for (const mode of modes.filter(m => m !== 'backfill-global-totals')) {
+    // backfill-education-ledger never reaches it: the pipeline job is
+    // skipped for that mode, which runs in its own job (#1802).
+    const reaching = modes.filter(
+      m => m !== 'backfill-global-totals' && m !== 'backfill-education-ledger'
+    )
+    for (const mode of reaching) {
       expect(run, mode).toMatch(new RegExp(`\\b${mode}\\b[|)]`))
     }
   })
