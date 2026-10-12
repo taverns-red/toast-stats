@@ -394,6 +394,19 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/clubs-mobile-rows.smoke.ts
 
+      # Phone divisions page as collapsed division rows (#1844, mobile review
+      # §3, §7 "divisions page height"). At 375 and 390, light and dark: one
+      # 56–64px row per division linking to its routed page (chip whole by
+      # bounding box, text ≥14px), no inline area table, no "N/A N/A N/A",
+      # page ≤ 6,000px (was 28,083), zero overflow with the body mask off;
+      # the progress summary starts collapsed and ?summary= round-trips. 768
+      # and 1280 keep the desktop division cards. Both engines.
+      - name: Cross-engine phone divisions rows guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/divisions-mobile-rows.smoke.ts
+
       # Club grid on phones (#1845). At 375, light and dark: tiles are
       # buttons ≥44px that open the club sheet (name, status, link), the grid
       # has 0 title-only tooltips, legend chips are ≥14px and the document
