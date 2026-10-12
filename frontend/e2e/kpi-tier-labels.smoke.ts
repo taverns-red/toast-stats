@@ -153,7 +153,7 @@ async function settle(page: Page): Promise<void> {
     () =>
       document
         .getAnimations()
-        .every(a => a.playState !== 'running' && a.playState !== 'pending'),
+        .every(a => a.playState !== 'running' && !a.pending),
     undefined,
     { timeout: 10_000 }
   )
