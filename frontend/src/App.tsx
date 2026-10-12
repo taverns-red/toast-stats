@@ -7,6 +7,7 @@ import { DarkModeProvider } from './contexts/DarkModeContext'
 import DistrictsPage from './pages/DistrictsPage'
 import AppShell from './components/AppShell'
 import ErrorPage from './components/ErrorPage'
+import { DistrictHubRouteFallback } from './components/DistrictHubRouteFallback'
 
 // Code-split: DistrictDetailPage (816 lines + recharts) loads on navigation (#169)
 const DistrictDetailPage = React.lazy(
@@ -144,7 +145,13 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId',
           element: (
-            <Suspense fallback={<DistrictRouteFallback />}>
+            <Suspense
+              fallback={
+                <DistrictHubRouteFallback
+                  fallback={<DistrictRouteFallback />}
+                />
+              }
+            >
               <DistrictDetailPage />
             </Suspense>
           ),
