@@ -157,6 +157,35 @@ describe('ClubsTable ≥ 768 — Trend column (#1792)', () => {
     expect(new Set(ys)).toEqual(new Set([8]))
   })
 
+  it('starts the line at the base, so its shape agrees with the net', () => {
+    // TI's July counts restart below the PY base, so a series alone can
+    // rise while the club is down on its base — the line would contradict
+    // the net printed beside it. Anchoring the first point at the base keeps
+    // shape and number telling the same story.
+    render(
+      <ClubsTable
+        clubs={[
+          club('9', 'Echo Club', {
+            membershipBase: 26,
+            membershipTrend: series(16, 17, 18), // rising series, net −8
+          }),
+        ]}
+        districtId="61"
+      />
+    )
+    const svg = screen.getByRole('img', {
+      name: 'Membership 26 → 18 this program year, net −8',
+    })
+    const ys = svg
+      .querySelector('polyline')!
+      .getAttribute('points')!
+      .split(' ')
+      .map(p => Number(p.split(',')[1]))
+    // Four points (base + 3); the first (26, the max) is the highest point.
+    expect(ys).toHaveLength(4)
+    expect(Math.min(...ys)).toBe(ys[0])
+  })
+
   it('sorts by net change from the Trend header, no-base clubs last', () => {
     const onSortChange = vi.fn()
     const { container } = render(
@@ -213,7 +242,14 @@ describe('ClubsTable < 768 — row sparkline (#1792)', () => {
       )
     }
     expect(rows[0]).toHaveAccessibleName(/net \+2/)
-    expect(within(rows[0]!).getByText('+2')).toBeInTheDocument()
+    // Members and net sit under the sparkline ("20 (+2)"), so line 2 keeps
+    // its full width for the chip and DCP at 375 (measured: with the count
+    // on line 2 every D61 row ellipsized by up to 60 px).
+    const trend = rows[0]!.querySelector('.clubs-row-trend__net')
+    expect(trend).toHaveTextContent('20 (+2)')
+    expect(rows[3]!.querySelector('.clubs-row-trend__net')).toHaveTextContent(
+      /^9$/
+    )
   })
 
   it('offers "Net change" in the Filter & sort sheet', () => {

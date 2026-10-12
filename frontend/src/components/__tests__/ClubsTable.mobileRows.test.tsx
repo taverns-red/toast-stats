@@ -116,10 +116,15 @@ describe('ClubsTable < 768 px — compact rows (#1833)', () => {
     expect(alpha.querySelector('.mobile-row__line1')).toHaveTextContent(
       /^Alpha Speakers$/
     )
-    // Line 2: glyph + one-word status, then members and DCP.
+    // Line 2: glyph + one-word status, then DCP.
     const line2 = alpha.querySelector('.mobile-row__line2')!
     expect(line2).toHaveTextContent('✗ Intervention')
-    expect(line2).toHaveTextContent('8 members · 5/10 DCP')
+    expect(line2).toHaveTextContent(/^✗ Intervention\s*5\/10 DCP$/)
+    // Members ride under the trend sparkline (#1792); the name keeps them.
+    expect(alpha.querySelector('.clubs-row-trend__net')).toHaveTextContent(
+      '8 (−10)'
+    )
+    expect(alpha).toHaveAccessibleName(/8 members/)
     // Net change stays in the accessible name.
     expect(alpha).toHaveAccessibleName(/net −10/)
   })
