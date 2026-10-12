@@ -266,10 +266,10 @@ const AreaPage: React.FC = () => {
           the same status / paid / distinguished / R1-R2 visit / Gap-to-D-S-P
           metrics on the same computation as the overview. */}
       <div style={{ marginBottom: 24 }}>
-        {areaPerformance ? (
-          <AreaPerformanceTable areas={[areaPerformance]} />
+        {isBodyPending ? (
+          <LoadingSkeleton variant="table" count={2} />
         ) : (
-          isBodyPending && <LoadingSkeleton variant="table" count={2} />
+          areaPerformance && <AreaPerformanceTable areas={[areaPerformance]} />
         )}
       </div>
 

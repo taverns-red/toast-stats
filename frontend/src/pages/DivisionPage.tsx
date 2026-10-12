@@ -246,10 +246,12 @@ const DivisionPage: React.FC = () => {
           page shows the same status / Gap-to-D-S-P / per-area visit metrics on
           the same computation as the overview. */}
       <div style={{ marginBottom: 24 }}>
-        {divisionPerformance ? (
-          <DivisionPerformanceCard division={divisionPerformance} />
+        {isBodyPending ? (
+          <LoadingSkeleton variant="table" count={3} />
         ) : (
-          isBodyPending && <LoadingSkeleton variant="table" count={3} />
+          divisionPerformance && (
+            <DivisionPerformanceCard division={divisionPerformance} />
+          )
         )}
       </div>
 
