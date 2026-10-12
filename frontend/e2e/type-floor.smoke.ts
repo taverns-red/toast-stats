@@ -40,6 +40,7 @@ const ROUTES = [
   '/regions',
   '/region/05',
   '/history',
+  '/history/countries',
   '/methodology',
   '/awards',
   '/clubs',

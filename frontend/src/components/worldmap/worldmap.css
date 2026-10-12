@@ -144,7 +144,7 @@
 }
 
 .wm-map__zoom-btn--text {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .wm-map__zoom-btn:disabled {
@@ -240,7 +240,7 @@
   flex-basis: 100%;
   margin: 0;
   color: var(--wm-text-2);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .wm-table-scroll {
@@ -277,7 +277,7 @@
   height: 40px;
   background: var(--wm-surface);
   color: var(--wm-text-2);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 

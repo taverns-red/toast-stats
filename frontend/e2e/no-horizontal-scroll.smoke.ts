@@ -22,6 +22,7 @@ const ROUTES = [
   '/',
   '/club/9750',
   '/awards',
+  '/history/countries', // #1797: SVG map + ranked table
   '/district/61',
   '/district/61/analytics',
 ]
