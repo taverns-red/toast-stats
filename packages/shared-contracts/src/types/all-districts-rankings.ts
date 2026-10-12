@@ -99,7 +99,9 @@ export interface DistrictRanking {
    * Parsed from the `Susp MM/DD/YY` branch of the same
    * `Charter Date/Suspend Date` column that feeds `newCharteredClubs`.
    * Optional and forward-looking — historical rankings files carry no
-   * suspension count.
+   * suspension count. Absent means UNKNOWN, never zero: the date's source
+   * carried no `Susp` value at all (TM's 2023-24 exports), or the district
+   * had no district-performance.csv (#1757). Readers render it as unknown.
    */
   suspendedClubs?: number
   /** Payment breakdown from All Districts CSV (#327) */

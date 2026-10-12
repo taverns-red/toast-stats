@@ -109,7 +109,10 @@ export const DistrictRankingSchema = z.object({
    * Parsed from the `Susp MM/DD/YY` branch of the same
    * `Charter Date/Suspend Date` column that feeds `newCharteredClubs`.
    * Optional and forward-looking: historical rankings files were rebuilt
-   * without raw CSVs (R2) and carry no suspension count at all.
+   * without raw CSVs (R2) and carry no suspension count at all. Absent
+   * means UNKNOWN, never zero: the date's source carried no `Susp` value at
+   * all (TM's 2023-24 exports), or the district had no
+   * district-performance.csv (#1757).
    */
   suspendedClubs: z.number().optional(),
 
