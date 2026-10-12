@@ -1,11 +1,13 @@
-// /clubs podium district chip (#1617)
+// /clubs podium district chip (#1617, #1839)
 //
-// The "D80" chip beside each podium club is an `a[href]`, so the base layer's
-// 44px touch-target floor (`min-height`/`min-width: 44px`, base.css) made it a
-// 44px circle under its 999px radius. The chip must render as a compact pill
-// while its HIT AREA stays ≥44px: the visual box opts out of the floor, and an
-// absolutely positioned ::before restores a 44px target around it. jsdom does
-// no layout, so the contract is pinned on the stylesheet itself.
+// The "D80" chip beside each podium club is an `a[href]`. #1617 kept it a
+// compact pill (not a 44px circle under its 999px radius) with a ≥44px hit
+// area. #1839 inverts how: the LINK's own box is the 44px target and the
+// visible 23px pill is drawn by ::before. #1617's version (a 23px link with a
+// 44px ::before overlay) had a real 44px hit area but a 40×23 link box, which
+// is what tap audits and assistive tech measure — the 2.48.0 prod sweep
+// flagged all 12. jsdom does no layout, so the contract is pinned on the
+// stylesheet; e2e/touch-targets.smoke.ts measures the rendered box.
 
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
@@ -33,25 +35,33 @@ function rule(sel: string): Record<string, string> {
   )
 }
 
-describe('/clubs podium district chip (#1617)', () => {
-  it('the visible chip opts out of the 44px floor, so it is a pill, not a circle', () => {
+describe('/clubs podium district chip (#1617, #1839)', () => {
+  it('the link itself is the ≥44px target, with its label centred', () => {
     const chip = rule('.race-podium__district')
-    expect(chip['min-height']).toBe('0')
-    expect(chip['min-width']).toBe('0')
-    expect(chip['border-radius']).toBe('999px')
-    // Anchors the hit-area pseudo-element to the chip.
+    expect(chip['min-height']).toBe('44px')
+    expect(chip['min-width']).toBe('44px')
+    expect(chip['display']).toBe('inline-flex')
+    expect(chip['align-items']).toBe('center')
+    expect(chip['justify-content']).toBe('center')
+    // Anchors the pill pseudo-element to the link.
     expect(chip['position']).toBe('relative')
+    // The link box carries no pill chrome — that would be a 44px circle.
+    expect(chip['border-radius']).toBeUndefined()
+    expect(chip['border']).toBeUndefined()
   })
 
-  it('keeps a ≥44px hit area centred on the chip', () => {
-    const hit = rule('.race-podium__district::before')
-    expect(hit['content']).toBe("''")
-    expect(hit['position']).toBe('absolute')
-    expect(hit['height']).toBe('44px')
-    expect(hit['width']).toBe('max(100%, 44px)')
-    expect(hit['top']).toBe('50%')
-    expect(hit['left']).toBe('50%')
-    expect(hit['transform']).toBe('translate(-50%, -50%)')
+  it('draws the compact pill with ::before, centred and click-through', () => {
+    const pill = rule('.race-podium__district::before')
+    expect(pill['content']).toBe("''")
+    expect(pill['position']).toBe('absolute')
+    expect(pill['border-radius']).toBe('999px')
+    expect(pill['left']).toBe('0')
+    expect(pill['right']).toBe('0')
+    expect(pill['top']).toBe('50%')
+    expect(pill['transform']).toBe('translateY(-50%)')
+    // Shorter than the 44px link: a pill, not a circle.
+    expect(pill['height']).toBe('calc(1.4em + 0.25rem + 2px)')
+    expect(pill['pointer-events']).toBe('none')
   })
 
   it('the podium row still reserves 44px so the hit area is not clipped', () => {
