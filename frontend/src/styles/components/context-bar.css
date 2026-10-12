@@ -10,7 +10,9 @@
 
   .context-bar {
     position: sticky;
-    top: 56px; /* under .app-shell-top-bar (56px, z-index 40) */
+    /* Under .app-shell-top-bar (56px + top inset, z-index 40); at the top
+       inset in short landscape, where the top bar scrolls away (safe-area.css). */
+    top: var(--app-top-offset, 56px);
     z-index: 35;
     height: 44px;
     display: flex;
@@ -19,8 +21,9 @@
     /* Full-bleed across the host page's gutter (24px by default; a page with
        a different gutter sets --context-bar-bleed). */
     margin: 0 calc(-1 * var(--context-bar-bleed, 24px)) 8px;
-    padding: 0 max(8px, env(safe-area-inset-right, 0px)) 0
-      max(4px, env(safe-area-inset-left, 0px));
+    /* No safe-area term: .app-shell__main already sits inside the side
+       insets (safe-area.css), so the bleed stops at the safe edge. */
+    padding: 0 8px 0 4px;
     background-color: var(--surface);
     /* Inset line, not a border: the bar stays exactly 44px tall around a
        44px hit area. */
@@ -105,15 +108,21 @@
     outline-offset: 2px;
   }
 
-  @media (min-width: 768px) {
+  /* Hidden from 768 up, except on a phone on its side (short landscape,
+     #1847), which keeps the phone chrome: the exact complement of the
+     collapse query below. */
+  @media (min-width: 768px) and (min-height: 501px),
+    (min-width: 768px) and (orientation: portrait) {
     .context-bar {
       display: none;
     }
   }
 
-  /* ---------- <768: the bar replaces the district header stack ---------- */
+  /* ---------- Phones: the bar replaces the district header stack ----------
+     Below 768, and in short landscape (812×375 etc., #1847), where the
+     desktop stack put first data at 326px (Overview) and 700px (Clubs). */
 
-  @media (max-width: 767px) {
+  @media (max-width: 767px), (orientation: landscape) and (max-height: 500px) {
     /* The bar sits flush under the top bar. */
     .district-detail-page {
       padding-top: 0;
@@ -124,6 +133,9 @@
       gap: 0;
     }
 
+    /* The eyebrow is already hidden <768 (app-shell.css); landscape needs
+       it here. The lede lives on in the bar's sheet ("about"). */
+    .district-detail-page-header__eyebrow,
     .district-detail-page-header__lede,
     .district-detail-page-header__actions {
       display: none;

@@ -344,6 +344,19 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/district-overview-hub-mobile.smoke.ts
 
+      # Safe-area + landscape (#1847, mobile review S11 / §4.2). viewport-fit
+      # =cover; with iPhone insets emulated (Chromium CDP) the top bar clears
+      # the notch, the section bar's targets and the sheets clear the home
+      # indicator, sheets stay inside the visible viewport; at 812x375 and
+      # iPhone landscape profiles the context bar replaces the header stack,
+      # the top bar scrolls away, first data <= 200px. Light + dark, both
+      # engines (WebKit at inset 0).
+      - name: Cross-engine safe-area and landscape guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/safe-area-landscape.smoke.ts
+
       # Priority-column comparison tables (#1834, mobile review §5.2). At
       # 375/390, light and dark: identity + 2 chosen metrics, zero hidden
       # columns and zero document overflow with the body mask off, one-line

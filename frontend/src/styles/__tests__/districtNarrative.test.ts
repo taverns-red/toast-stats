@@ -44,7 +44,8 @@ describe('district-narrative.css (#572)', () => {
     )
     expect(gated).not.toBeNull()
     expect(gated?.[0]).toMatch(/position:\s*sticky/)
-    expect(gated?.[0]).toMatch(/top:\s*56px/)
+    // The offset token is 56px + the top inset (#1847, safe-area.css).
+    expect(gated?.[0]).toMatch(/top:\s*var\(--app-top-offset,\s*56px\)/)
   })
 
   it('keeps the KPI strip static below 1024px — never pinned over the Overview (#1828)', () => {

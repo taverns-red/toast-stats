@@ -15,11 +15,13 @@ const indexCss = read('../../index.css')
 const clubHistoryCss = read('../components/club-history.css')
 const clubsRaceCss = read('../components/clubs-race.css')
 
-/** Body of the first `@media (<query>) { … }` block matching `query`. */
+/** Every `@media (<query>)… { … }` block whose first feature matches `query`
+    (a query list such as `…, (orientation: landscape) and …` is allowed,
+    #1847). */
 const mediaBlocks = (src: string, query: RegExp): string[] =>
   src.match(
     new RegExp(
-      `@media\\s*\\(${query.source}\\)\\s*\\{[\\s\\S]*?\\n {2}\\}`,
+      `@media\\s*\\(${query.source}\\)[^{]*\\{[\\s\\S]*?\\n {2}\\}`,
       'g'
     )
   ) ?? []
@@ -27,7 +29,7 @@ const mediaBlocks = (src: string, query: RegExp): string[] =>
 /** Same, for an unlayered file whose @media blocks close at column 0. */
 const topLevelMediaBlocks = (src: string, query: RegExp): string[] =>
   src.match(
-    new RegExp(`@media\\s*\\(${query.source}\\)\\s*\\{[\\s\\S]*?\\n\\}`, 'g')
+    new RegExp(`@media\\s*\\(${query.source}\\)[^{]*\\{[\\s\\S]*?\\n\\}`, 'g')
   ) ?? []
 
 describe('context-bar.css (#1831)', () => {
@@ -40,7 +42,9 @@ describe('context-bar.css (#1831)', () => {
   it('is a 44px sticky row under the 56px top bar (≤64px sticky budget)', () => {
     const bar = css.match(/\n {2}\.context-bar\s*\{[^}]*\}/)?.[0] ?? ''
     expect(bar).toMatch(/position:\s*sticky/)
-    expect(bar).toMatch(/top:\s*56px/)
+    // 56px under the top bar; the token drops to the top inset in short
+    // landscape, where the top bar scrolls away (#1847, safe-area.css).
+    expect(bar).toMatch(/top:\s*var\(--app-top-offset,\s*56px\)/)
     expect(bar).toMatch(/height:\s*44px/)
   })
 

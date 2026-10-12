@@ -1,0 +1,110 @@
+/* Safe-area insets and short-landscape chrome (#1847, mobile epic #1827,
+   review S11 / §4.2 / §7 item 20).
+
+   index.html opts in with `viewport-fit=cover`, so the page now paints under
+   the notch, the status bar and the home indicator, and env(safe-area-inset-*)
+   reports real values. Every edge the app paints to pads itself clear:
+
+   - the sticky top bar grows by the top inset (0 in Safari's browser mode,
+     non-zero only when the page owns the status-bar area) and keeps its
+     controls out of the side notches;
+   - the page content and footer sit inside the side insets (landscape);
+   - viewport-fixed sheets pad their sides and bottom (the bottom section bar
+     already does, section-bar.css).
+
+   Everything resolves to 0 on devices without a notch, so desktop and
+   Android-without-cutout layouts are unchanged.
+
+   Imported after every chrome sheet it touches, in the same `brand` layer, so
+   these declarations win by order without raising specificity. */
+
+@layer brand {
+  :root {
+    /* The top bar's rendered height, and the offset sticky chrome pins
+       under. Short landscape drops the offset to the top inset (below). */
+    --app-top-bar-h: calc(56px + env(safe-area-inset-top, 0px));
+    --app-top-offset: var(--app-top-bar-h);
+  }
+
+  .app-shell-top-bar {
+    height: var(--app-top-bar-h);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .app-shell-top-bar {
+      padding-left: max(24px, env(safe-area-inset-left, 0px));
+      padding-right: max(24px, env(safe-area-inset-right, 0px));
+    }
+  }
+
+  /* The hamburger panel (<768) spans the bar edge to edge. */
+  @media (max-width: 767px) {
+    .app-shell-nav {
+      padding-left: max(8px, env(safe-area-inset-left, 0px));
+      padding-right: max(8px, env(safe-area-inset-right, 0px));
+    }
+  }
+
+  /* Margins, not padding: each page keeps its own gutters inside the safe
+     area, and the full-bleed context bar (negative margins) bleeds to the
+     safe edge rather than under the notch. */
+  .app-shell__main {
+    margin-left: env(safe-area-inset-left, 0px);
+    margin-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* The footer's surface runs edge to edge; its text stays inside. */
+  .app-shell-footer {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* ---------- Viewport-fixed sheets ---------- */
+
+  .bottom-sheet {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* The full-table sheet is 100dvh tall: its header starts under the status
+     bar / notch. */
+  .bottom-sheet.bottom-sheet--full {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .jump-to-sheet {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Full-screen chart sheet (inset: 0; height: 100%). */
+  .chart-expand-sheet {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* ---------- Short landscape (a phone on its side) ----------
+
+     At 812×375 the 56px sticky top bar is 15% of the height. The phone
+     chrome takes over (context-bar.css shows the 44px context bar and folds
+     the header stack into its sheet); here the top bar scrolls away with the
+     page so only the context bar stays pinned. Same query as the Overview
+     hub's 4×1 tile row (district-hub.css, DISTRICT_HUB_QUERY). */
+  @media (orientation: landscape) and (max-height: 500px) {
+    :root {
+      --app-top-offset: env(safe-area-inset-top, 0px);
+    }
+
+    .app-shell-top-bar {
+      position: relative;
+    }
+  }
+}

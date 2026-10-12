@@ -303,7 +303,7 @@
    brand-layer collapse rules in context-bar.css; the club-history collapse
    lives here. Below 768 the bar replaces the breadcrumb and this header (the
    H1 stays in the DOM, visually hidden; Export moves into the bar's sheet). */
-@media (max-width: 767px) {
+@media (max-width: 767px), (orientation: landscape) and (max-height: 500px) {
   .club-history-page:has(> .context-bar) {
     padding-top: 0;
   }
