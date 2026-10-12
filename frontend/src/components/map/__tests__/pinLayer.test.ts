@@ -15,7 +15,12 @@ import {
   type StyleSpecification,
 } from '@maplibre/maplibre-gl-style-spec'
 import type { ClubTrend } from '../../../hooks/useDistrictAnalytics'
-import { buildModeModel } from '../pinModes'
+import {
+  buildModeModel as baseModel,
+  isTerritoryMode,
+  type MapColorMode,
+} from '../pinModes'
+import { territoryModel } from '../pinTerritory'
 import {
   PIN_SOURCE_ID,
   buildPinFeatures,
@@ -24,6 +29,10 @@ import {
   parseIconId,
   pinSourceSpec,
 } from '../pinLayer'
+
+// Health/tier come from pinModes; division/area from the on-demand module.
+const buildModeModel = (mode: MapColorMode, clubs: readonly ClubTrend[]) =>
+  isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode)
 
 const club = (o: Partial<ClubTrend>): ClubTrend =>
   ({
@@ -70,7 +79,7 @@ describe('buildPinFeatures', () => {
   })
 })
 
-function styleWith(mode: Parameters<typeof buildModeModel>[0]) {
+function styleWith(mode: MapColorMode) {
   const model = buildModeModel(mode, CLUBS)
   return {
     model,
@@ -106,7 +115,7 @@ describe('clubPinLayers', () => {
 
 /** Evaluate a layer's icon-image for a feature, as MapLibre would. */
 function iconFor(
-  mode: Parameters<typeof buildModeModel>[0],
+  mode: MapColorMode,
   layerId: string,
   properties: Record<string, unknown>,
   zoom = 8

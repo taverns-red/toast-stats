@@ -1,13 +1,10 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
-import {
-  useDistrictAnalytics,
-  type ClubTrend,
-} from '../hooks/useDistrictAnalytics'
+import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useDarkMode } from '../contexts/DarkModeContext'
@@ -22,7 +19,6 @@ import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { BottomSheet } from '../components/BottomSheet'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
-import { MapClubSummary } from '../components/map/MapClubSummary'
 import { PinSwatch } from '../components/map/PinSwatch'
 import { useClubPins } from '../components/map/useClubPins'
 import { buildPinFeatures } from '../components/map/pinLayer'
@@ -31,6 +27,7 @@ import {
   MAP_COLOR_MODES,
   applyFacets,
   buildModeModel,
+  isTerritoryMode,
   facetValues,
   legendChips,
   parseMapColorMode,
@@ -54,6 +51,23 @@ import '../components/map/districtMap.css'
 
 const CHIP_PEEK = 5
 
+// The club lists are data-dependent: their chunk is fetched on mount, in
+// parallel with the data, not on the route's first load.
+const loadLists = () => import('../components/map/MapClubLists')
+const MapLists = React.lazy(() =>
+  loadLists().then(m => ({ default: m.MapLists }))
+)
+const ClubLinks = React.lazy(() =>
+  loadLists().then(m => ({ default: m.ClubLinks }))
+)
+
+// Only a tap needs the club summary, so it loads on the first selection.
+const MapClubSummary = React.lazy(() =>
+  import('../components/map/MapClubSummary').then(m => ({
+    default: m.MapClubSummary,
+  }))
+)
+
 class MapErrorBoundary extends React.Component<
   { fallback: React.ReactNode; children: React.ReactNode },
   { failed: boolean }
@@ -75,8 +89,8 @@ const Chips: React.FC<{
   limit?: number | undefined
   onMore?: (() => void) | undefined
 }> = ({ model, chips, pressed, onToggle, limit, onMore }) => {
-  const [all, setAll] = useState(false)
-  const cut = limit !== undefined && !all && chips.length > limit + 1
+  // The phone peek shows the top few; "N more" opens the full legend.
+  const cut = limit !== undefined && chips.length > limit + 1
   const shown = cut ? chips.slice(0, limit) : chips
   return (
     <div
@@ -107,7 +121,7 @@ const Chips: React.FC<{
         <button
           type="button"
           className="map-legend__chip map-legend__more"
-          onClick={onMore ?? (() => setAll(true))}
+          onClick={onMore}
         >
           {chips.length - shown.length} more
         </button>
@@ -133,7 +147,7 @@ const ModeButtons: React.FC<{
         {previews && (
           <span className="map-modes__preview" aria-hidden="true">
             {(m.id === 'health' || m.id === 'tier'
-              ? buildModeModel(m.id, []).categories.slice(0, 5)
+              ? buildModeModel(m.id).categories.slice(0, 5)
               : CATEGORICAL8.slice(0, 5).map(fill => ({
                   key: fill,
                   label: '',
@@ -150,47 +164,6 @@ const ModeButtons: React.FC<{
     ))}
   </div>
 )
-
-const ClubLinks: React.FC<{
-  clubs: ClubTrend[]
-  districtId: string
-  model?: ModeModel
-  label: string
-}> = ({ clubs, districtId, model, label }) => (
-  <ul className="map-list" aria-label={label}>
-    {clubs.map(c => {
-      const cat = model?.categoryOf(c)
-      return (
-        <li key={c.clubId}>
-          <Link to={`/district/${districtId}/club/${c.clubId}`}>
-            {cat && <PinSwatch category={cat} />}
-            <span className="map-list__name">{c.clubName}</span>
-            <span className="map-list__meta">
-              {cat
-                ? cat.label
-                : [c.divisionId, c.areaId].filter(Boolean).join(' / ')}
-            </span>
-          </Link>
-        </li>
-      )
-    })}
-  </ul>
-)
-
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
-  title,
-  children,
-}) => {
-  const id = React.useId()
-  return (
-    <section className="map-panel__section" aria-labelledby={id}>
-      <h3 id={id} className="map-panel__heading">
-        {title}
-      </h3>
-      {children}
-    </section>
-  )
-}
 
 const DistrictMapPage: React.FC = () => {
   const { districtId = '' } = useParams<{ districtId: string }>()
@@ -242,7 +215,23 @@ const DistrictMapPage: React.FC = () => {
 
   const allClubs = useMemo(() => analytics?.allClubs ?? [], [analytics])
   const prospective = analytics?.prospectiveClubs ?? []
-  const model = useMemo(() => buildModeModel(mode, allClubs), [mode, allClubs])
+  // Division and area load after the first render (a split chunk); until
+  // then a territory deep link draws no pins rather than the wrong colours.
+  const [territory, setTerritory] = useState<
+    typeof import('../components/map/pinTerritory') | null
+  >(null)
+  React.useEffect(() => {
+    void import('../components/map/pinTerritory').then(setTerritory)
+    void loadLists()
+  }, [])
+  const pending = isTerritoryMode(mode) && !territory
+  const model = useMemo(
+    () =>
+      isTerritoryMode(mode) && territory
+        ? territory.territoryModel(mode, allClubs)
+        : buildModeModel(isTerritoryMode(mode) ? 'health' : mode),
+    [mode, allClubs, territory]
+  )
   const filtered = useMemo(
     () => applyFacets(allClubs, searchParams),
     [allClubs, searchParams]
@@ -257,8 +246,8 @@ const DistrictMapPage: React.FC = () => {
   }, [model, allClubs, searchParams, facetParam])
   const pressed = facetParam ? facetValues(searchParams, facetParam) : []
   const data = useMemo(
-    () => buildPinFeatures(filtered, model),
-    [filtered, model]
+    () => buildPinFeatures(pending ? [] : filtered, model),
+    [filtered, model, pending]
   )
   const unmapped = filtered.filter(c => !c.coordinates)
   const noLocation = allClubs.length > 0 && allClubs.every(c => !c.coordinates)
@@ -272,21 +261,18 @@ const DistrictMapPage: React.FC = () => {
     fitKey: `${districtId}|${effectiveEndDate}`,
   })
 
-  const setMode = useCallback(
-    (m: MapColorMode) => {
-      setSearchParams(
-        prev => {
-          const next = new URLSearchParams(prev)
-          if (m === 'health') next.delete('color')
-          else next.set('color', m)
-          return next
-        },
-        { replace: true }
-      )
-      setSheet(null)
-    },
-    [setSearchParams]
-  )
+  const setMode = (m: MapColorMode) => {
+    setSearchParams(
+      prev => {
+        const next = new URLSearchParams(prev)
+        if (m === 'health') next.delete('color')
+        else next.set('color', m)
+        return next
+      },
+      { replace: true }
+    )
+    setSheet(null)
+  }
   const toggleChip = (chip: LegendChip) => {
     if (!model.facet) return
     const { param, valueOf } = model.facet
@@ -312,18 +298,20 @@ const DistrictMapPage: React.FC = () => {
   const legend = (limit?: number, onMore?: () => void) => (
     <div className="map-legend">
       <p className="map-legend__title">
-        <strong>{model.title}</strong>
+        <strong>{pending ? modeLabel : model.title}</strong>
         {effectiveEndDate && <span> · as of {effectiveEndDate}</span>}
       </p>
-      <Chips
-        model={model}
-        chips={chips}
-        pressed={pressed}
-        onToggle={toggleChip}
-        limit={limit}
-        onMore={onMore}
-      />
-      {model.kind !== 'categorical' && limit === undefined && (
+      {pending ? null : (
+        <Chips
+          model={model}
+          chips={chips}
+          pressed={pressed}
+          onToggle={toggleChip}
+          limit={limit}
+          onMore={onMore}
+        />
+      )}
+      {!pending && model.kind !== 'categorical' && limit === undefined && (
         <p className="map-legend__note">
           Clusters show the{' '}
           {model.kind === 'ordinal' ? 'middle level' : 'most common status'}
@@ -336,35 +324,13 @@ const DistrictMapPage: React.FC = () => {
     </div>
   )
   const lists = (
-    <>
-      <Section title={`Not on the map (${unmapped.length})`}>
-        <p className="map-panel__note">
-          {unmapped.length
-            ? 'No Find-a-Club location'
-            : 'Every club in view has a location.'}
-        </p>
-        <ClubLinks
-          clubs={unmapped}
-          districtId={districtId}
-          label="Clubs not on the map"
-        />
-      </Section>
-      <Section title={`Prospective (${prospective.length})`}>
-        <p className="map-panel__note">
-          Not yet chartered, so not pinned: Find-a-Club lists their town only.
-        </p>
-        <ul className="map-list" aria-label="Prospective clubs">
-          {prospective.map(p => (
-            <li key={p.clubId}>
-              <span className="map-list__name">{p.clubName}</span>
-              <span className="map-list__meta">
-                {[p.city, p.region].filter(Boolean).join(', ')}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Section>
-    </>
+    <React.Suspense fallback={null}>
+      <MapLists
+        unmapped={unmapped}
+        prospective={prospective}
+        districtId={districtId}
+      />
+    </React.Suspense>
   )
 
   const listFallback = (
@@ -422,14 +388,16 @@ const DistrictMapPage: React.FC = () => {
           {listView ? (
             <div className="district-map__listview">
               {legend()}
-              <ClubLinks
-                clubs={[...filtered].sort((a, b) =>
-                  a.clubName.localeCompare(b.clubName)
-                )}
-                districtId={districtId}
-                model={model}
-                label="Clubs"
-              />
+              <React.Suspense fallback={null}>
+                <ClubLinks
+                  clubs={[...filtered].sort((a, b) =>
+                    a.clubName.localeCompare(b.clubName)
+                  )}
+                  districtId={districtId}
+                  model={pending ? undefined : model}
+                  label="Clubs"
+                />
+              </React.Suspense>
             </div>
           ) : (
             <div className="district-map__body">
@@ -484,12 +452,17 @@ const DistrictMapPage: React.FC = () => {
                 <aside className="map-panel" aria-label="Map legend and lists">
                   {legend()}
                   {selected.length > 0 && (
-                    <Section title="Selected">
-                      <MapClubSummary
-                        clubs={selected}
-                        districtId={districtId}
-                      />
-                    </Section>
+                    <section
+                      className="map-panel__section"
+                      aria-label="Selected club"
+                    >
+                      <React.Suspense fallback={null}>
+                        <MapClubSummary
+                          clubs={selected}
+                          districtId={districtId}
+                        />
+                      </React.Suspense>
+                    </section>
                   )}
                   {lists}
                 </aside>
@@ -521,7 +494,9 @@ const DistrictMapPage: React.FC = () => {
               title={selected.length > 1 ? 'Clubs here' : 'Club details'}
               closeLabel="Close club details"
             >
-              <MapClubSummary clubs={selected} districtId={districtId} />
+              <React.Suspense fallback={null}>
+                <MapClubSummary clubs={selected} districtId={districtId} />
+              </React.Suspense>
             </BottomSheet>
           </>
         )}

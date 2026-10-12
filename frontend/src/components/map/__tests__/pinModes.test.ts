@@ -12,12 +12,18 @@ import {
   CATEGORICAL8,
   MAP_COLOR_MODES,
   applyFacets,
-  assignTerritoryColours,
-  buildModeModel,
+  buildModeModel as baseModel,
+  isTerritoryMode,
   legendChips,
   parseMapColorMode,
   toggleFacetValue,
+  type MapColorMode,
 } from '../pinModes'
+import { assignTerritoryColours, territoryModel } from '../pinTerritory'
+
+// Health/tier come from pinModes; division/area from the on-demand module.
+const buildModeModel = (mode: MapColorMode, clubs: readonly ClubTrend[]) =>
+  isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode)
 
 const club = (o: Partial<ClubTrend>): ClubTrend =>
   ({

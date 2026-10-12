@@ -14,8 +14,8 @@ import { PinSwatch } from './PinSwatch'
    meeting links or passcodes. Co-located clubs (same building) are listed
    together, since zooming never separates them. */
 
-const HEALTH = buildModeModel('health', [])
-const TIER = buildModeModel('tier', [])
+const HEALTH = buildModeModel('health')
+const TIER = buildModeModel('tier')
 
 const Fact: React.FC<{ term: string; cat: PinCategory }> = ({ term, cat }) => (
   <div className="map-club__fact">
