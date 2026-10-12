@@ -11,14 +11,17 @@
  * - every family the app loaded from Google is still declared (ops#37 blocks
  *   dropping any), from same-origin woff2 files with Google's own subsets and
  *   unicode-ranges, so nothing is fetched cross-origin;
- * - only the first-screen faces are preloaded, and each preloaded family has
- *   a metric-matched fallback face (Lesson 81: a preload without one swapped
- *   JetBrains Mono in late and took CLS from 0.012 to 0.199);
+ * - no font is preloaded. Measured (#1905 PR): preloading the two first-screen
+ *   latin files (64 KB) made them compete with the app's JS on the 1.6 Mbps
+ *   profile, so real-browser FCP got ~330 ms worse on all three routes. The
+ *   first-screen families keep their metric-matched fallbacks, so the swap
+ *   cannot move layout (Lesson 81: JetBrains Mono, with no fallback, took
+ *   CLS from 0.012 to 0.199);
  * - JetBrains Mono stays undeclared and unpreloaded (Phase 2, ops#37).
  */
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'fs'
-import { resolve, dirname } from 'path'
+import { resolve } from 'path'
 
 const FRONTEND = resolve(__dirname, '../../..')
 const SRC = resolve(FRONTEND, 'src')
@@ -122,7 +125,9 @@ describe('self-hosted web fonts (#1905)', () => {
       expect(f.display).toBe('swap')
       expect(f.unicodeRange).not.toBe('')
       expect(f.url).toMatch(/\.woff2$/)
-      expect(existsSync(resolve(dirname(WEB_FONTS), f.url))).toBe(true)
+      // Root-absolute (/src/...) so Vite resolves it from any importer.
+      expect(f.url).toMatch(/^\/src\/assets\/fonts\//)
+      expect(existsSync(resolve(FRONTEND, f.url.slice(1)))).toBe(true)
     }
   })
 
@@ -132,30 +137,17 @@ describe('self-hosted web fonts (#1905)', () => {
   })
 
   describe('preloads', () => {
-    const preloads = [
+    const fontPreloads = [
       ...html.matchAll(/<link\b[^>]*\brel="preload"[^>]*>/g),
-    ].map(m => m[0])
-    const fontPreloads = preloads.filter(l => /\bas="font"/.test(l))
+    ]
+      .map(m => m[0])
+      .filter(l => /\bas="font"/.test(l))
 
-    it('preloads at most the two first-screen faces (Montserrat + Source Sans 3, latin)', () => {
-      expect(fontPreloads.length).toBeGreaterThan(0)
-      expect(fontPreloads.length).toBeLessThanOrEqual(2)
-      for (const l of fontPreloads) {
-        expect(l).toMatch(/type="font\/woff2"/)
-        expect(l).toMatch(/\bcrossorigin\b/)
-        expect(l).toMatch(/(montserrat|source-sans-3)-latin\.woff2/)
-      }
+    it('preloads no font: on the 1.6 Mbps profile a preload delays the JS and FCP', () => {
+      expect(fontPreloads).toEqual([])
     })
 
-    it('preloads the exact file the @font-face uses (no double download)', () => {
-      for (const l of fontPreloads) {
-        const href = l.match(/href="([^"]+)"/)?.[1] ?? ''
-        const file = href.slice(href.lastIndexOf('/') + 1)
-        expect(declared.some(f => f.url.endsWith(`/${file}`))).toBe(true)
-      }
-    })
-
-    it('every preloaded family has a metric-matched fallback in its stack (Lesson 81)', () => {
+    it('the first-screen families keep a metric-matched fallback in their stack (Lesson 81)', () => {
       const fallbacks = readFileSync(
         resolve(SRC, 'styles/tokens/font-fallbacks.css'),
         'utf-8'
@@ -164,12 +156,11 @@ describe('self-hosted web fonts (#1905)', () => {
         resolve(SRC, 'styles/tokens/redesign.css'),
         'utf-8'
       )
-      for (const l of fontPreloads) {
-        const family = /montserrat/.test(l) ? 'Montserrat' : 'Source Sans 3'
+      for (const family of ['Montserrat', 'Source Sans 3']) {
         expect(fallbacks).toContain(`font-family: '${family} Fallback'`)
-        expect(fallbacks).toMatch(/size-adjust:/)
         expect(tokens).toContain(`'${family}', '${family} Fallback'`)
       }
+      expect(fallbacks).toMatch(/size-adjust:/)
     })
   })
 })
