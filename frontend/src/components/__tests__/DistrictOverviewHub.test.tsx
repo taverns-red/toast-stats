@@ -19,7 +19,8 @@ import {
 } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom'
-import { DistrictOverviewHub, nextTierText } from '../DistrictOverviewHub'
+import { DistrictOverviewHub } from '../DistrictOverviewHub'
+import { nextTierText } from '../../utils/districtHub'
 import type { DistrictKpiStripData } from '../DistrictKpiStrip'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 
@@ -170,7 +171,7 @@ describe('DistrictOverviewHub', () => {
   it('lists what needs attention, linking into the Action List sections', () => {
     render(<DistrictOverviewHub {...baseProps} />)
     const block = screen.getByRole('region', { name: 'Needs attention' })
-    const rows = within(block).getAllByTestId('district-hub-attention-row')
+    const rows = within(block).getAllByTestId('mobile-row')
     expect(rows.length).toBeLessThanOrEqual(3)
     const hrefs = rows.map(r => r.getAttribute('href'))
     expect(hrefs).toContain('/district/61/action-list#action-close')
@@ -190,7 +191,7 @@ describe('DistrictOverviewHub', () => {
     render(<DistrictOverviewHub {...baseProps} programYear="2024-2025" />)
     const block = screen.getByRole('region', { name: 'Needs attention' })
     const hrefs = within(block)
-      .getAllByTestId('district-hub-attention-row')
+      .getAllByTestId('mobile-row')
       .map(r => r.getAttribute('href'))
     expect(hrefs).not.toContain('/district/61/action-list#action-csp')
   })
@@ -217,6 +218,10 @@ describe('DistrictOverviewHub', () => {
     expect(hub).toHaveAttribute('aria-busy', 'true')
     expect(screen.getAllByTestId('district-hub-tile')).toHaveLength(4)
     // Same row count as the loaded CSP-tracked year: close, intervention, CSP.
-    expect(screen.getAllByTestId('district-hub-attention-row')).toHaveLength(3)
+    expect(
+      within(screen.getByTestId('district-hub-attention')).getAllByTestId(
+        'mobile-row'
+      )
+    ).toHaveLength(3)
   })
 })

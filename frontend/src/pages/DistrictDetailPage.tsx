@@ -42,6 +42,9 @@ import {
   DistrictKpiStrip,
   type DistrictKpiStripData,
 } from '../components/DistrictKpiStrip'
+import { DistrictOverviewHub } from '../components/DistrictOverviewHub'
+import { DISTRICT_HUB_QUERY } from '../utils/districtHub'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 
 // Synthetic rankings used when performance-targets CDN data is missing
 // and the inline analytics rollup is the only source. Stable module-level
@@ -383,6 +386,10 @@ const DistrictDetailPageInner: React.FC = () => {
   // Sticky KPI strip data (#572). Prefer the usePerformanceTargets CDN
   // hook; fall back to inline analytics so existing snapshots keep
   // working while the targets pipeline is catching up.
+  // #1842 — phones (upright, or landscape with a short viewport) get the
+  // Overview hub; tablets and desktops keep the KPI strip and CTA row.
+  const isHubLayout = useMediaQuery(DISTRICT_HUB_QUERY)
+
   const kpiStripData: DistrictKpiStripData | null = useMemo(() => {
     if (!analytics) return null
     // Hold the skeleton until the targets read settles (#1685). Rendering on
@@ -652,9 +659,24 @@ const DistrictDetailPageInner: React.FC = () => {
           {/* Sticky KPI strip (#572). Sits above the narrative so the
               4 numbers stay pinned as the user scrolls; mobile gets a
               collapse chevron. */}
-          {districtId && (hasOverviewData || isLoadingOverview) && (
-            <DistrictKpiStrip kpis={kpiStripData} />
-          )}
+          {districtId &&
+            (hasOverviewData || isLoadingOverview) &&
+            (isHubLayout ? (
+              /* #1842 — phones get the Overview hub instead of the strip:
+                 2×2 tiles, Needs attention, sections as rows. */
+              <DistrictOverviewHub
+                districtId={districtId}
+                programYear={
+                  (effectiveProgramYear ?? selectedProgramYear).label
+                }
+                snapshotDate={effectiveEndDate ?? undefined}
+                kpis={kpiStripData}
+                clubs={kpiStripData ? (analytics?.allClubs ?? null) : null}
+                interventionClubs={analytics?.interventionRequiredClubs ?? null}
+              />
+            ) : (
+              <DistrictKpiStrip kpis={kpiStripData} />
+            ))}
 
           {/* Narrative content. #571 retired the tab strip; #679 (ADR-005)
               trimmed the hub to a lean Overview — the inline Divisions and
@@ -776,7 +798,8 @@ const DistrictDetailPageInner: React.FC = () => {
                 Trends/Analytics/Divisions/Vs-world content moved to its own
                 routes (#679, #680, ADR-005); these CTAs are a secondary path
                 alongside the subnav. */}
-            {districtId && (
+            {/* On the phone hub the sections are rows in the hub (#1842). */}
+            {districtId && !isHubLayout && (
               <nav
                 aria-label="District subviews"
                 className="flex flex-wrap gap-2 pt-2"

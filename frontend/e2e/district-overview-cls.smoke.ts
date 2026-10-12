@@ -129,10 +129,12 @@ test.describe('district overview CLS on a cold load (#1647)', () => {
 
           // Sanity gate before the number is read: an all-zeros CLS almost
           // always means the page never left its loading state. The loaded KPI
-          // strip is the last above-the-fold block to resolve.
+          // strip (the phone hub below 768, #1842) is the last above-the-fold
+          // block to resolve.
           await page
             .locator(
-              'section.district-kpi-strip:not(.district-kpi-strip--loading)'
+              'section.district-kpi-strip:not(.district-kpi-strip--loading), ' +
+                'section.district-hub:not(.district-hub--loading)'
             )
             .waitFor({ state: 'visible', timeout: 60_000 })
           await page.evaluate(() => document.fonts.ready.then(() => undefined))

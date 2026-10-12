@@ -23,12 +23,19 @@ import { test, expect, type Page } from '@playwright/test'
 const PATHS = ['/district/61', '/district/80'] as const
 const MAX_STICKY_HEIGHT = 64
 const SCROLL_Y = 1200
+/* #1842: below 768 the Overview's KPI block is the phone hub
+ * (`district-hub-mobile`), not the strip. The guard is the same for both:
+ * the block is in flow and never under the viewport centre once scrolled. */
+const KPI_BLOCK = '.district-kpi-strip, [data-testid="district-hub-mobile"]'
+const KPI_BLOCK_LOADED =
+  '.district-kpi-strip:not(.district-kpi-strip--loading), ' +
+  '[data-testid="district-hub-mobile"]:not(.district-hub--loading)'
 
 async function loadOverview(page: Page, path: string): Promise<void> {
   await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
   // Wait for the loaded strip (not its skeleton) so we test the real height.
   await page
-    .locator('.district-kpi-strip:not(.district-kpi-strip--loading)')
+    .locator(KPI_BLOCK_LOADED)
     .waitFor({ state: 'attached', timeout: 30_000 })
   await page.waitForTimeout(500)
 }
@@ -50,8 +57,8 @@ for (const path of PATHS) {
     await page.evaluate(y => window.scrollTo(0, y), SCROLL_Y)
     await page.waitForTimeout(400)
 
-    const probe = await page.evaluate(() => {
-      const strip = document.querySelector('.district-kpi-strip')
+    const probe = await page.evaluate(sel => {
+      const strip = document.querySelector(sel)
       const centre = document.elementFromPoint(
         window.innerWidth / 2,
         window.innerHeight / 2
@@ -63,7 +70,7 @@ for (const path of PATHS) {
         stripBottom: r ? Math.round(r.bottom) : null,
         centreInStrip: !!(strip && centre && strip.contains(centre)),
       }
-    })
+    }, KPI_BLOCK)
 
     // In flow: `relative` (no offsets) is the base rule — it keeps the strip
     // the loading shimmer's containing block — never sticky/fixed.
