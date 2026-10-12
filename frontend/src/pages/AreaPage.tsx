@@ -231,7 +231,7 @@ const AreaPage: React.FC = () => {
         <div className="districts-page-header__intro">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="districts-page-header__title">{areaName}</h1>
-            {badge && (
+            {badge ? (
               <span
                 className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
                 aria-label={`Area ${areaPerformance?.areaId ?? areaId} recognition: ${badge.label}`}
@@ -239,6 +239,19 @@ const AreaPage: React.FC = () => {
               >
                 {badge.label}
               </span>
+            ) : (
+              /* #1896: every valid area gets a badge once the snapshot lands;
+                 below 768 it is the header's only visible content, so hold
+                 its box (same padding, type and border) while loading. */
+              isBodyPending && (
+                <span
+                  aria-hidden="true"
+                  data-testid="area-badge-placeholder"
+                  className="px-2 py-1 text-xs font-medium rounded-full border border-transparent bg-gray-200 text-transparent animate-pulse"
+                >
+                  Distinguished
+                </span>
+              )
             )}
           </div>
           <p className="districts-page-header__lede">{lede}</p>
