@@ -232,8 +232,10 @@ export type DistrictAnalyticsWithReports = DistrictAnalytics & {
 export const useDistrictAnalytics = (
   districtId: string | null,
   startDate?: string,
-  endDate?: SnapshotDate
+  endDate?: SnapshotDate,
+  options: { enabled?: boolean } = {}
 ) => {
+  const { enabled = true } = options
   // Validate date range - don't make request if startDate > endDate
   const hasValidDateRange = !startDate || !endDate || startDate <= endDate
 
@@ -276,7 +278,7 @@ export const useDistrictAnalytics = (
       // the page never issues a second reports request.
       return { ...analytics, districtReports: reports }
     },
-    enabled: !!districtId && hasValidDateRange,
+    enabled: enabled && !!districtId && hasValidDateRange,
     staleTime: 10 * 60 * 1000, // 10 minutes - cache analytics calculations longer
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache for common date ranges
     retry: (failureCount, error: unknown) => {
