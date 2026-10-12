@@ -14,8 +14,10 @@ import { test, expect, type Page } from '@playwright/test'
  * context bar yet, so its content-top is reported, not budgeted, here.
  *
  * Measured on the deployed preview (BASE_URL) by bounding box (Lesson 134):
- * every label inside its item and the bar, every item ≥44px, and the end of
- * the page clear of the bar.
+ * every label inside its item and the bar and never clipped, every item
+ * ≥44px with ≥8px between items, labels ≥14px (review §7), and the end of
+ * the page clear of the bar. 320 is the narrowest phone checked: the longest
+ * labels ("Divisions", "Distinguished") must fit there unclipped.
  */
 
 interface Suite {
@@ -96,7 +98,7 @@ async function load(page: Page, path: string): Promise<void> {
 for (const s of SUITES) {
   const { bar: BAR, subnav: SUBNAV } = s
   for (const theme of ['light', 'dark'] as const) {
-    for (const width of [375, 390]) {
+    for (const width of [320, 375, 390]) {
       for (const path of s.routes) {
         test(`bottom bar on ${path} at ${width}px (${theme})`, async ({
           page,
@@ -143,6 +145,10 @@ for (const s of SUITES) {
                     const label = el.querySelector('.section-bar__label')
                     return {
                       text: label?.textContent ?? '',
+                      // Clipped/ellipsized label: content wider than its box.
+                      clipped: label
+                        ? label.scrollWidth > label.clientWidth + 0.5
+                        : true,
                       box: rect(el),
                       label: rect(label),
                       labelPx: label
@@ -187,15 +193,35 @@ for (const s of SUITES) {
             m.items.map(i => i.text),
             ctx
           ).toEqual(s.labels)
+          // Review §7: ≥8px between adjacent tap targets (#1832).
+          for (let k = 1; k < m.items.length; k++) {
+            expect(
+              m.items[k]!.box!.left - m.items[k - 1]!.box!.right,
+              ctx
+            ).toBeGreaterThanOrEqual(8)
+          }
           for (const i of m.items) {
+            expect(i.clipped, ctx).toBe(false)
+            expect(i.box!.left, ctx).toBeGreaterThanOrEqual(0)
+            expect(i.box!.right, ctx).toBeLessThanOrEqual(width)
             expect(i.box!.width, ctx).toBeGreaterThanOrEqual(44)
             expect(i.box!.height, ctx).toBeGreaterThanOrEqual(44)
             // Label wholly inside its item and inside the bar (Lesson 134).
             expect(i.label!.left, ctx).toBeGreaterThanOrEqual(i.box!.left)
             expect(i.label!.right, ctx).toBeLessThanOrEqual(i.box!.right)
             expect(i.label!.bottom, ctx).toBeLessThanOrEqual(m.bar!.bottom)
-            expect(i.labelPx, ctx).toBeGreaterThanOrEqual(12)
+            // Review §7: ≥14px; these are not uppercase eyebrows (#1832).
+            expect(i.labelPx, ctx).toBeGreaterThanOrEqual(14)
             expect(i.contrast, ctx).toBeGreaterThanOrEqual(4.5)
+          }
+
+          // The accessible name is the visible label: the bold-width reserve
+          // (label::after, alt text '') must not leak into it (WCAG 2.5.3).
+          for (const name of s.labels.slice(0, -1)) {
+            await expect(
+              page.locator(BAR).getByRole('link', { name, exact: true }),
+              name
+            ).toHaveCount(1)
           }
 
           // Page content now starts under the context bar (where it exists).

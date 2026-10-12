@@ -71,6 +71,21 @@ describe('SectionBar (#1832)', () => {
     expect(items[items.length - 1]).toBe(moreButton())
   })
 
+  it('each label carries its own text in data-label (the bold-width reserve)', () => {
+    renderAt('/d')
+    const labels = Array.from(bar().querySelectorAll('.section-bar__label'))
+    expect(labels.map(l => l.getAttribute('data-label'))).toEqual([
+      'Overview',
+      'Clubs',
+      'Divisions',
+      'Trends',
+      'More',
+    ])
+    expect(labels.map(l => l.textContent)).toEqual(
+      labels.map(l => l.getAttribute('data-label'))
+    )
+  })
+
   it('marks the active primary route with aria-current="page" (end on the hub)', () => {
     renderAt('/d/divisions')
     expect(screen.getByRole('link', { name: 'Divisions' })).toHaveAttribute(
