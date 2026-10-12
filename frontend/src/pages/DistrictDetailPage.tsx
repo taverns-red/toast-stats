@@ -61,7 +61,14 @@ const NULL_RANKINGS = {
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
 
-import GlobalRankingsTab from '../components/GlobalRankingsTab'
+// Lazy (#1901): this tab renders only in the "limited data" branch for
+// untracked districts, and it is the page's only static path to Recharts
+// (via FullYearRankingChart). Imported statically, it made the hub, and its
+// LCP caption, wait for the 116 KB charts chunk on every visit.
+// `routeChartsGraph.test.ts` keeps Recharts off this route's static graph.
+const GlobalRankingsTab = React.lazy(
+  () => import('../components/GlobalRankingsTab')
+)
 
 const DistrictDetailPageInner: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
@@ -587,11 +594,13 @@ const DistrictDetailPageInner: React.FC = () => {
             )}
 
             {/* Global Rankings tab for untracked districts */}
-            <GlobalRankingsTab
-              districtId={districtId}
-              districtName={districtName}
-              selectedProgramYear={selectedProgramYear}
-            />
+            <React.Suspense fallback={null}>
+              <GlobalRankingsTab
+                districtId={districtId}
+                districtName={districtName}
+                selectedProgramYear={selectedProgramYear}
+              />
+            </React.Suspense>
           </div>
         </div>
       </ErrorBoundary>
