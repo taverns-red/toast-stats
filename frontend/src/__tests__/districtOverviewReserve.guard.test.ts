@@ -43,8 +43,10 @@ describe('district overview slot reservation wiring (#1647)', () => {
   })
 
   it('renders the KPI strip and Overview stack while the overview loads', () => {
+    // #1842: the slot holds the phone hub or the desktop strip — both render
+    // their own structural skeleton under the same loading gate.
     expect(page).toMatch(
-      /districtId\s*&&\s*\(hasOverviewData\s*\|\|\s*isLoadingOverview\)\s*&&\s*\(\s*<DistrictKpiStrip/
+      /districtId\s*&&\s*\(hasOverviewData\s*\|\|\s*isLoadingOverview\)\s*&&\s*\(\s*isHubLayout\s*\?\s*\(\s*<DistrictOverviewHub[\s\S]*?\)\s*:\s*\(\s*<DistrictKpiStrip/
     )
     expect(page).toMatch(
       /districtId\s*&&\s*\(hasOverviewData\s*\|\|\s*isLoadingOverview\)\s*&&\s*\(\s*<section aria-label="District overview">/

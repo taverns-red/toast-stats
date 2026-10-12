@@ -311,6 +311,17 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/section-bar.smoke.ts
 
+      # District Overview hub (#1842, mobile review §5.5). At 375, light and
+      # dark: 2x2 KPI tiles (block <= 300px, was 860px) starting at the hub's
+      # left edge (no side toggle), Needs attention above the section bar,
+      # page <= 4,000px, no info tooltips; a tile opens its sheet; landscape
+      # phones get 4x1; 1280 keeps the desktop strip. Both engines.
+      - name: Cross-engine district Overview hub guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/district-overview-hub-mobile.smoke.ts
+
       # Priority-column comparison tables (#1834, mobile review §5.2). At
       # 375/390, light and dark: identity + 2 chosen metrics, zero hidden
       # columns and zero document overflow with the body mask off, one-line

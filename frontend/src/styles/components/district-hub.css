@@ -1,0 +1,181 @@
+/* District Overview hub for phones (#1842, mobile epic #1827 Phase 2, review
+   §5.5). Mounted only under DISTRICT_HUB_QUERY (phones upright, and short
+   landscape viewports), so nothing here needs a width media query except the
+   landscape 4×1 tile row. Theme-aware tokens only (--surface, --line, --ink*),
+   so dark mode remaps with no per-component override (R10).
+
+   Geometry contract (e2e/district-overview-hub-mobile.smoke.ts at 375):
+   2×2 tiles that start at the hub's left edge (no side toggle column), the
+   tile block ≤ 300px, "Needs attention" above the bottom section bar. */
+
+@layer brand {
+  .district-hub {
+    margin: 0 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .district-hub__tiles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    .district-hub__tiles {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .district-hub__tile-item {
+    display: flex;
+    min-width: 0;
+  }
+
+  .district-hub__tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md, 8px);
+    background-color: var(--surface);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .district-hub__tile:disabled {
+    cursor: default;
+    color: var(--ink);
+  }
+
+  .district-hub__tile:not(:disabled):hover {
+    background-color: var(--surface-3);
+  }
+
+  .district-hub__tile:focus-visible {
+    outline: 2px solid var(--loyal-600);
+    outline-offset: 2px;
+  }
+
+  /* One line: the tile shows a short label; the full name is sr-only text
+     and the sheet's heading. */
+  .district-hub__tile-title {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .district-hub__tile-value {
+    font-size: 24px;
+    line-height: 30px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .district-hub__tile-value--up {
+    color: var(--green-600);
+  }
+
+  .district-hub__tile-value--down {
+    color: var(--red-600);
+  }
+
+  .district-hub__tile-line {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* "2,560 to Distinguished" does not fit one line of a 160px tile at 14px;
+     ellipsizing it hid the tier. Two lines, always reserved, so every tile
+     (and the loading dash) is the same height. */
+  .district-hub__tile-line--delta {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    min-height: 40px;
+    white-space: normal;
+  }
+
+  .district-hub__block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .district-hub__block-title {
+    margin: 0;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .district-hub__count {
+    display: inline-block;
+    min-width: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .district-hub__more-link {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    min-height: 44px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--loyal-600);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  [data-theme='dark'] .district-hub__more-link {
+    color: var(--ink);
+  }
+
+  .district-hub__sheet-about {
+    margin: 0 0 12px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-2);
+  }
+
+  .district-hub__sheet-legend {
+    margin: 12px 0 0;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-3);
+  }
+}
