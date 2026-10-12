@@ -22,7 +22,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import DivisionPage from '../DivisionPage'
 import AreaPage from '../AreaPage'
-import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import {
+  useDistrictAnalytics,
+  type ClubTrend,
+} from '../../hooks/useDistrictAnalytics'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }))
@@ -67,6 +70,20 @@ vi.mock('../../hooks/useDistrictAnalytics', async () => {
   >('../../hooks/useDistrictAnalytics')
   return { ...actual, useDistrictAnalytics: vi.fn() }
 })
+
+const CLUB: ClubTrend = {
+  clubId: '123456',
+  clubName: 'Ottawa Club',
+  divisionId: 'A',
+  divisionName: 'Division A',
+  areaId: '01',
+  areaName: 'Area 01',
+  distinguishedLevel: 'Select',
+  currentStatus: 'thriving',
+  riskFactors: [],
+  membershipTrend: [{ date: '2026-08-01', count: 25 }],
+  dcpGoalsTrend: [{ date: '2026-08-01', goalsAchieved: 8 }],
+}
 
 const mockedDates = vi.mocked(useDistrictCachedDates)
 const mockedAnalytics = vi.mocked(useDistrictAnalytics)
@@ -174,5 +191,22 @@ describe.each(PAGES)('$name loading state (#1896)', page => {
     } as unknown as AnalyticsResult)
     renderPage(page)
     expect(screen.getByText(page.error)).toBeInTheDocument()
+  })
+
+  it('holds the clubs skeleton until the snapshot read settles too', () => {
+    // Analytics landed, the recognition snapshot has not: rendering the club
+    // list now and the taller recognition card later would push the list
+    // down (0.25 CLS at 375 on the preview).
+    datesLoaded()
+    mockedAnalytics.mockReturnValue({
+      data: { allClubs: [CLUB] },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as AnalyticsResult)
+    renderPage(page)
+
+    expect(screen.queryByText('Ottawa Club')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('status').length).toBeGreaterThan(0)
   })
 })
