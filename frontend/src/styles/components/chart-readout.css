@@ -1,0 +1,51 @@
+/* Tap-to-pin chart readout line (#1835). Rendered only on devices without
+   hover, directly under a chart. The slot is reserved (two lines) before the
+   first tap so pinning a value never shifts layout. Values and labels wear
+   ink tokens; the series colour appears only on the swatch. Theme-aware
+   tokens only, so dark mode remaps with no override (R10). */
+
+@layer components {
+  .chart-readout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    min-height: 48px;
+    margin: 8px 0 0;
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chart-readout__label {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .chart-readout__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .chart-readout__swatch {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background-color: var(--ink-3);
+  }
+
+  .chart-readout__value {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .chart-readout__hint {
+    color: var(--ink-3);
+  }
+}
