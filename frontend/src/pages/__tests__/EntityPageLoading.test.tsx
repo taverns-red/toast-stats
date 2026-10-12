@@ -86,6 +86,31 @@ const CLUB: ClubTrend = {
   dcpGoalsTrend: [{ date: '2026-08-01', goalsAchieved: 8 }],
 }
 
+/* A real-shape divisions snapshot: Division A, Area 01, one club. */
+const SNAPSHOT = {
+  asOfDate: '2026-08-01',
+  divisionPerformance: [
+    {
+      Division: 'A',
+      Area: '01',
+      'Club Number': '123456',
+      'Club Name': 'Ottawa Club',
+      'Division Club Base': '1',
+      'Area Club Base': '1',
+      'Nov Visit award': '1',
+      'May Visit award': '0',
+    },
+  ],
+  clubPerformance: [
+    {
+      'Club Number': '123456',
+      'Club Name': 'Ottawa Club',
+      'Club Status': 'Active',
+      'Club Distinguished Status': 'Select Distinguished',
+    },
+  ],
+}
+
 const mockedDates = vi.mocked(useDistrictCachedDates)
 const mockedAnalytics = vi.mocked(useDistrictAnalytics)
 const mockedStatistics = vi.mocked(useDistrictStatistics)
@@ -223,5 +248,21 @@ describe.each(PAGES)('$name loading state (#1896)', page => {
 
     expect(screen.queryByText('Ottawa Club')).not.toBeInTheDocument()
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0)
+  })
+
+  it('holds the recognition skeleton until the analytics read settles too', () => {
+    // The snapshot landed first: painting the (much taller) recognition card
+    // above the clubs skeleton pushed that skeleton off-screen on the
+    // preview (0.15 at 375). Both slots stay skeletons until both reads land.
+    datesLoaded()
+    analytics({ isLoading: true })
+    mockedStatistics.mockReturnValue({
+      data: SNAPSHOT,
+      isLoading: false,
+      error: null,
+    } as unknown as StatisticsResult)
+    renderPage(page)
+
+    expect(screen.getAllByLabelText('Loading table')).toHaveLength(2)
   })
 })
