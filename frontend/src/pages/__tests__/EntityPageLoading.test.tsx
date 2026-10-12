@@ -266,3 +266,17 @@ describe.each(PAGES)('$name loading state (#1896)', page => {
     expect(screen.getAllByLabelText('Loading table')).toHaveLength(2)
   })
 })
+
+describe('AreaPage header badge slot (#1896)', () => {
+  it('reserves the recognition badge while the reads are pending', () => {
+    // At 375 the header shows only the badge: absent while loading, it grew
+    // the header 0→29px when the snapshot landed (0.028 on the preview).
+    datesLoaded()
+    analytics({ isLoading: true })
+    renderPage(PAGES[1])
+    expect(screen.getByTestId('area-badge-placeholder')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    )
+  })
+})
