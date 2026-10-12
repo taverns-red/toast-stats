@@ -4,6 +4,7 @@ import {
   criticalPathChunks,
   forbiddenOnCriticalPath,
   htmlCriticalRoots,
+  ROUTE_ONLY_CHUNK_PREFIXES,
   staticImports,
 } from '../criticalPath'
 
@@ -77,5 +78,13 @@ describe('criticalPath (#1830)', () => {
     expect(
       forbiddenOnCriticalPath(criticalPathChunks(html, read), ['charts-'])
     ).toEqual(['charts-xzsG-m48.js'])
+  })
+})
+
+describe('ROUTE_ONLY_CHUNK_PREFIXES (#1786)', () => {
+  it('keeps the MapLibre basemap chunk off every route’s critical path', () => {
+    expect(ROUTE_ONLY_CHUNK_PREFIXES).toEqual(
+      expect.arrayContaining(['charts-', 'maplibre-'])
+    )
   })
 })
