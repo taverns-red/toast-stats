@@ -311,6 +311,17 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/context-bar.smoke.ts
 
+      # Landing first screen on phones (#1846, mobile review §7 item 19). At
+      # 375/390, light and dark: the context bar replaces the header stack,
+      # search precedes the first KPI, the first KPI starts by 300px, the
+      # orientation copy is in the sheet, and each chip row fades only the
+      # edges that still hide chips. 768/1280 keep the inline header.
+      - name: Cross-engine landing first-screen guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/landing-first-screen.smoke.ts
+
       # Phone bottom section bar (#1832, mobile review §5.1). At 375/390 in
       # portrait, light and dark, on all 9 district routes: a 56px fixed bar
       # (4 routes + More), labels inside their 44px+ items, content under the

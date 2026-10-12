@@ -56,7 +56,9 @@ const CHIP_SELECT = '[data-testid$="-chip-select"]' // family A (shared toolbar)
 // phone context bar; its PY/date chip is the required control at 375 there.
 const CONTEXT_CHIP = '[data-testid="context-bar-chip"]'
 const ROUTES: { path: string; mustRender?: string }[] = [
-  { path: '/', mustRender: CHIP_SELECT }, // families A + B
+  // #1846: below 768 the landing's toolbar (family A) moved into the context
+  // sheet; its region chips (family B) are the required content control.
+  { path: '/', mustRender: '.districts-toolbar__region-chip' },
   { path: '/district/61', mustRender: CONTEXT_CHIP },
   { path: '/district/61/clubs', mustRender: CONTEXT_CHIP },
   { path: '/district/61/changes', mustRender: CHIP_SELECT },

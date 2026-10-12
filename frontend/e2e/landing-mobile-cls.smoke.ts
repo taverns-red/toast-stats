@@ -67,12 +67,14 @@ test('landing / loading shell holds the KPI strip at the loaded y (390px)', asyn
   await page
     .locator('table[aria-label="District rankings"]')
     .waitFor({ state: 'visible', timeout: 30_000 })
-  // The freshness pill renders only once the cached-dates query (not gated
-  // above) resolves; measure the settled 3-chip toolbar, not a 2-chip
-  // intermediate that wraps one row shorter.
-  await page
-    .locator('[data-testid="freshness-pill"]')
-    .waitFor({ state: 'visible', timeout: 30_000 })
+  // #1846: below 768 the header toolbar (freshness pill · PY · date ·
+  // Export/Share) moved into the context bar's sheet, so the 44px bar — the
+  // same element in the shell and the loaded tree — is all that sits above
+  // the hero stack. Settle on the loaded KPI value instead of the pill,
+  // which is now hidden at this width.
+  await expect(page.getByTestId('kpi-paid-clubs')).toHaveText(/\d/, {
+    timeout: 30_000,
+  })
   const loadedY = await kpiStripY(page)
 
   expect(

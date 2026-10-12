@@ -1220,15 +1220,35 @@
       overscroll-behavior-x: contain;
       /* The mask fade is the affordance, so the scrollbar itself is noise. */
       scrollbar-width: none;
-      /* Signals "there is more to the right" without adding an element — an
-         extra node here would be one more thing that can shift. */
+      /* Keep a chip scrolled into view clear of the edge fades. */
+      scroll-padding-inline: 40px;
+    }
+
+    /* #1846 — edge-aware fade cues. useScrollEdges marks the edges that
+       still hide chips; only those fade, so the row says "more this way" and
+       a row scrolled to its end stops fading. Attributes on the scroller, not
+       an extra element — a cue that adds a node is one more thing that can
+       shift. A row that fits gets no fade at all. */
+    .districts-toolbar__scroller[data-more-after] {
       mask-image: linear-gradient(
         to right,
-        #000 calc(100% - 28px),
+        #000 calc(100% - 40px),
         transparent
       );
-      /* Keep a chip scrolled into view clear of that fade. */
-      scroll-padding-inline-end: 32px;
+    }
+
+    .districts-toolbar__scroller[data-more-before] {
+      mask-image: linear-gradient(to right, transparent, #000 40px);
+    }
+
+    .districts-toolbar__scroller[data-more-before][data-more-after] {
+      mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 40px,
+        #000 calc(100% - 40px),
+        transparent
+      );
     }
 
     .districts-toolbar__scroller::-webkit-scrollbar {

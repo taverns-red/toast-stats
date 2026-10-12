@@ -6,6 +6,7 @@ import {
   type TierRecognitionId,
 } from './recognitionRegistry'
 import type { RecognitionFilterState } from './recognitionFilter'
+import { useScrollEdges } from '../../hooks/useScrollEdges'
 
 /**
  * Recognition chip row (#1362) — the toolbar control that makes the #1361
@@ -51,6 +52,8 @@ export const RecognitionFilterBar: React.FC<RecognitionFilterBarProps> = ({
   onChange,
   disabled = false,
 }) => {
+  // #1846 — fade only the edges that still hide chips (phone scroller).
+  const scrollerEdges = useScrollEdges<HTMLDivElement>()
   const chipClass = (active: boolean) =>
     'districts-toolbar__recognition-chip' +
     (active ? ' districts-toolbar__recognition-chip--active' : '')
@@ -81,7 +84,7 @@ export const RecognitionFilterBar: React.FC<RecognitionFilterBarProps> = ({
       {/* #1359 gap (c) — below 768px the chips lay out on one scrolling line
           rather than wrapping. The label stays outside the scroller so it is
           not swept away by the horizontal scroll. */}
-      <div className="districts-toolbar__scroller">
+      <div className="districts-toolbar__scroller" {...scrollerEdges}>
         <span
           className="districts-toolbar__chip-group"
           role="group"
