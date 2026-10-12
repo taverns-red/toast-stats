@@ -95,6 +95,7 @@ const NOT_PROSE_LINKS = [
   '.districts-methodology-callout__link', // landing / awards / history "Methodology"
   '.methodology-link', // divisions "How it works" (65×17)
   '.wws__link', // history worldwide scoreboard methodology link
+  '.race-basis a[href^="/methodology"]', // /clubs + race pages "Methodology" (79×21)
   '.worldwide-standing__note a', // club page "Clubs worldwide" (120×18)
   '.club-history-page__back a', // club history "← Back to …" (17px)
   '.club-history-year-link', // club history year links (64×21)
