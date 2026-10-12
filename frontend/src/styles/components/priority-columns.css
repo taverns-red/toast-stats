@@ -259,6 +259,14 @@
     padding: 0;
   }
 
+  /* The landing rankings table sheds columns below 600/768/1280 by CSS
+     (#1358). In the full-table sheet every column is the point. */
+  .districts-rankings-table__sheet .districts-rankings-table__col--compact,
+  .districts-rankings-table__sheet .districts-rankings-table__col--tablet,
+  .districts-rankings-table__sheet .districts-rankings-table__col--desktop {
+    display: table-cell;
+  }
+
   /* The one scroller: both axes, so the caller's sticky identity column
      pins against it. */
   .priority-columns__sheet-region {

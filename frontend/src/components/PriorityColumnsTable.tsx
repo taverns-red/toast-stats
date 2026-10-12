@@ -68,6 +68,10 @@ export interface PriorityColumnsTableProps<Row, F extends string> {
   /** Rows that belong to named groups get a full-width heading row
    *  (`scope="colgroup"`) whenever the group changes. */
   groupOf?: (row: Row) => { key: string; title: React.ReactNode }
+  /** data-testid for each body row (tests and smokes key on it). */
+  rowTestId?: (row: Row) => string
+  /** Shown as one full-width row when `rows` is empty (say why, #1362). */
+  empty?: React.ReactNode
 }
 
 /** Resolve `?cols=` to exactly two known, distinct metric ids, topping up
@@ -119,6 +123,8 @@ function PhonePriorityColumns<Row, F extends string>({
   colsParam = 'cols',
   identityWraps = false,
   groupOf,
+  rowTestId,
+  empty,
 }: PriorityColumnsTableProps<Row, F>): React.JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams()
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -225,6 +231,11 @@ function PhonePriorityColumns<Row, F extends string>({
           </tr>
         </thead>
         <tbody>
+          {rows.length === 0 && empty != null && (
+            <tr>
+              <td colSpan={3}>{empty}</td>
+            </tr>
+          )}
           {rows.flatMap((row, i) => {
             const group = groupOf?.(row)
             const prev = i > 0 && groupOf ? groupOf(rows[i - 1]!) : null
@@ -240,7 +251,7 @@ function PhonePriorityColumns<Row, F extends string>({
                 </tr>
               ) : null
             const tr = (
-              <tr key={rowKey(row)}>
+              <tr key={rowKey(row)} data-testid={rowTestId?.(row)}>
                 <td
                   className={`priority-columns__identity${
                     identityWraps ? ' priority-columns__identity--wrap' : ''
