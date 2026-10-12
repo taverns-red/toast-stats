@@ -1,6 +1,8 @@
 import React from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { ChartSkeleton } from './ChartSkeleton'
+import { TOUCH_QUERY } from './charts/ChartReadout'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 
 /* Loading skeleton for a trend chart wrapped in ChartSparklineExpand (#1837).
  *
@@ -36,6 +38,9 @@ export const TrendChartSkeleton: React.FC<TrendChartSkeletonProps> = ({
   shape = 'auto',
 }) => {
   const isMobile = useIsMobile(breakpoint)
+  // Without hover the loaded chart carries the tap-to-pin readout line
+  // under the plot (#1835); reserve it so the chart lands without a shift.
+  const touch = useMediaQuery(TOUCH_QUERY)
 
   if (isMobile && shape === 'auto') {
     return (
@@ -83,6 +88,7 @@ export const TrendChartSkeleton: React.FC<TrendChartSkeletonProps> = ({
           </div>
         )}
         <ChartSkeleton height={plotHeight} />
+        {touch && <p className="chart-readout">&nbsp;</p>}
         <div className="mt-4 text-xs">&nbsp;</div>
       </div>
     </div>
