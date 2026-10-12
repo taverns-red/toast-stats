@@ -85,6 +85,26 @@ done
 DST_PATH="${DST#gs://"${DST_BUCKET}"}"
 DST_PATH="${DST_PATH#/}"
 
+# v1/ and config/ stay identity-encoded (#1852). Cloud CDN dynamic
+# compression (compression-mode AUTOMATIC on the backend bucket) compresses
+# them at the edge, and it skips any response that already has a
+# Content-Encoding or whose Cache-Control has no-transform. `-Z` sets both.
+# Stored identity also means every pipeline reader of these objects
+# (`gcloud storage cat|cp`, the gates, the daily index merge) gets plain
+# bytes back on any gcloud version: no #1702 decode dependency.
+case "${DST_PATH}" in
+  v1/* | config/* | v1 | config)
+    for a in "${ARGS[@]:0:${#ARGS[@]}-1}"; do
+      case "${a}" in
+        -Z | --gzip-* | --content-encoding=* | *no-transform*)
+          echo "::error::gcs-upload: '${a}' on ${DST_PATH}: v1/ and config/ are stored identity and compressed by Cloud CDN at the edge; an encoded or no-transform upload disables that and changes the bytes pipeline readers get (#1852, #1702)" >&2
+          exit 2
+          ;;
+      esac
+    done
+    ;;
+esac
+
 GCLOUD="${GCLOUD:-gcloud}"
 "${GCLOUD}" storage "${VERB}" "${ARGS[@]}"
 
