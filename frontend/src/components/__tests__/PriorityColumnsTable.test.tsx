@@ -222,3 +222,37 @@ describe('PriorityColumnsTable (#1834)', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 })
+
+describe('PriorityColumnsTable row groups (#1834)', () => {
+  it('renders a full-width colgroup heading row each time the group changes', () => {
+    render(
+      <MemoryRouter>
+        <PriorityColumnsTable<Row, F>
+          label="Grouped"
+          rows={ROWS}
+          rowKey={r => r.id}
+          identityHeader="Metric"
+          renderIdentity={r => r.name}
+          identityWraps
+          groupOf={r =>
+            r.id === '3'
+              ? { key: 'b', title: 'Group B' }
+              : { key: 'a', title: 'Group A' }
+          }
+          metrics={METRICS}
+          defaultMetricIds={['clubs', 'payments']}
+          fullTableTitle="All"
+          fullTable={<table aria-label="full" />}
+        />
+      </MemoryRouter>
+    )
+    const t = screen.getByRole('table', { name: 'Grouped' })
+    const groupHeads = within(t)
+      .getAllByRole('columnheader')
+      .filter(th => th.getAttribute('scope') === 'colgroup')
+    expect(groupHeads.map(th => th.textContent)).toEqual(['Group A', 'Group B'])
+    groupHeads.forEach(th => expect(th).toHaveAttribute('colspan', '3'))
+    const identity = within(t).getByText('Alpha').closest('td')!
+    expect(identity.className).toContain('priority-columns__identity--wrap')
+  })
+})

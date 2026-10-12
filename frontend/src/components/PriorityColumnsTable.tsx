@@ -62,6 +62,12 @@ export interface PriorityColumnsTableProps<Row, F extends string> {
   fullTableTitle: string
   /** URL param for the chosen metrics. Default 'cols'. */
   colsParam?: string
+  /** Let the identity wrap (long labels with a basis line) instead of
+   *  ellipsizing on one line. */
+  identityWraps?: boolean
+  /** Rows that belong to named groups get a full-width heading row
+   *  (`scope="colgroup"`) whenever the group changes. */
+  groupOf?: (row: Row) => { key: string; title: React.ReactNode }
 }
 
 /** Resolve `?cols=` to exactly two known, distinct metric ids, topping up

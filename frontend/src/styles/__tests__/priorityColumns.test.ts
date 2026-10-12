@@ -48,6 +48,19 @@ describe('priority-columns.css (#1834)', () => {
     expect(id).toMatch(/text-overflow:\s*ellipsis/)
   })
 
+  it('metric cells wrap rather than clip a value that is wider than the column', () => {
+    const td = rule('.priority-columns__table td.priority-columns__metric')
+    expect(td).toMatch(/white-space:\s*normal/)
+    expect(td).toMatch(/overflow-wrap:\s*anywhere/)
+    expect(td).not.toMatch(/text-overflow:\s*ellipsis/)
+  })
+
+  it('a wrapping identity (long metric labels) is opt-in', () => {
+    expect(rule('.priority-columns__identity--wrap')).toMatch(
+      /white-space:\s*normal/
+    )
+  })
+
   it('data cells are ≥14px', () => {
     expect(
       px(rule('.priority-columns__table td'), 'font-size')
