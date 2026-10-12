@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { BottomSheet } from '../BottomSheet'
 import { SWIPE_CLOSE_PX } from '../../utils/contextBar'
 
@@ -72,6 +72,38 @@ describe('BottomSheet (#1831)', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(opener).toHaveFocus()
+  })
+
+  it('returns focus to returnFocusRef when the opener was never focused (WebKit click, #1920)', async () => {
+    // Safari/WebKit does not focus a <button> on mouse click or tap, so
+    // document.activeElement at open is <body>. fireEvent.click mirrors that:
+    // it dispatches the click without moving focus.
+    const RefHarness = () => {
+      const [open, setOpen] = useState(false)
+      const triggerRef = useRef<HTMLButtonElement>(null)
+      return (
+        <>
+          <button ref={triggerRef} type="button" onClick={() => setOpen(true)}>
+            Open
+          </button>
+          <BottomSheet
+            isOpen={open}
+            onClose={() => setOpen(false)}
+            title="District 61"
+            returnFocusRef={triggerRef}
+          >
+            <p>Body</p>
+          </BottomSheet>
+        </>
+      )
+    }
+    render(<RefHarness />)
+    const trigger = screen.getByRole('button', { name: 'Open' })
+    fireEvent.click(trigger)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(trigger).toHaveFocus()
   })
 
   it('closes from the visible close button and from the backdrop', async () => {
