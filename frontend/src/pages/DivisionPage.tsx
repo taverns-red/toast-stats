@@ -18,6 +18,7 @@ import { ContextSheetControls } from '../components/ContextSheetControls'
 import { formatFreshnessLine } from '../utils/contextBar'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import { EmptyState } from '../components/ErrorDisplay'
 import { ClubMiniList } from '../components/ClubMiniList'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -46,6 +47,7 @@ const DivisionPage: React.FC = () => {
     effectiveProgramYear,
     effectiveEndDate,
     hasValidDates,
+    isDatesPending,
     latestSnapshotDate,
     isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId)
@@ -59,7 +61,7 @@ const DivisionPage: React.FC = () => {
       isLatestSnapshot,
     })
 
-  const { data, isLoading, error } = useDistrictAnalytics(
+  const { data, error } = useDistrictAnalytics(
     hasValidDates ? (districtId ?? null) : null,
     undefined,
     effectiveEndDate ?? undefined
@@ -101,11 +103,19 @@ const DivisionPage: React.FC = () => {
     return generateDivisionProgressText(divisionPerformance, gapAnalysis)
   }, [divisionPerformance])
 
-  if (isLoading) {
-    return <LoadingSkeleton variant="card" />
-  }
+  // #1896: loading keeps the page (context bar, header, data slots) inside the
+  // root that reserves the area under the top bar, as the #1837 subpages do.
+  // The bare card skeleton this replaced was short enough at 1280px to put
+  // the shell footer on screen, and the landed page pushed it off (0.059).
+  // Pending spans the date-index window too: the analytics query is disabled
+  // there and reports isLoading false with no data, which flashed the
+  // error state below.
+  const isPending = isDistrictSlotPending(
+    { hasData: !!data, isError: !!error },
+    { hasValidDates, datesSettled: !isDatesPending }
+  )
 
-  if (error || !data) {
+  if (!isPending && (error || !data)) {
     return (
       <EmptyState
         title="Could not load division"
@@ -127,7 +137,7 @@ const DivisionPage: React.FC = () => {
     throw new Response(null, { status: 404, statusText: 'Division not found' })
   }
 
-  const clubs = data.allClubs.filter(
+  const clubs = (data?.allClubs ?? []).filter(
     c => c.divisionId.toUpperCase() === normalizedDivId
   )
 
@@ -162,7 +172,7 @@ const DivisionPage: React.FC = () => {
   const districtUrl = `/district/${districtId}`
 
   return (
-    <div className="app-shell__page">
+    <div className="app-shell__page district-detail-page-root">
       {/* Phone context bar (#1831): below 768 it replaces the breadcrumb and
           the header below; PY/date are this page's own state (R3). */}
       <ContextBar
@@ -232,7 +242,9 @@ const DivisionPage: React.FC = () => {
         {divisionPerformance ? (
           <DivisionPerformanceCard division={divisionPerformance} />
         ) : (
-          isLoadingSnapshot && <LoadingSkeleton variant="table" count={3} />
+          (isPending || isLoadingSnapshot) && (
+            <LoadingSkeleton variant="table" count={3} />
+          )
         )}
       </div>
 
@@ -257,7 +269,10 @@ const DivisionPage: React.FC = () => {
       {/* No analytics-club rows for this division (suspended/migrated clubs).
           The recognition card above still renders from the snapshot — don't
           hide it behind an empty club list (#1015). */}
-      {clubs.length === 0 && (
+      {/* The division's clubs, reserved while the analytics read is pending. */}
+      {isPending && <LoadingSkeleton variant="table" count={4} />}
+
+      {!isPending && clubs.length === 0 && (
         <p className="placeholder-page__body">
           No clubs are currently listed in this division.{' '}
           <Link to={`/district/${districtId}`}>
