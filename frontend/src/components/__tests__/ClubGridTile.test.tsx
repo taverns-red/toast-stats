@@ -4,8 +4,8 @@
  * the only signal (WCAG 1.4.1), so every assertion here also pins the textual
  * status + DCP carried in the accessible name.
  */
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom'
 import { ClubGridTile } from '../ClubGridTile'
@@ -107,5 +107,55 @@ describe('ClubGridTile', () => {
     const link = screen.getByRole('link')
     expect(link.className).toContain('club-grid-tile--suspended')
     expect(link.getAttribute('aria-label')).toContain('Suspended')
+  })
+
+  it('keeps the hover title on the desktop link (desktop unchanged)', () => {
+    renderTile()
+    expect(screen.getByRole('link')).toHaveAttribute('title')
+  })
+})
+
+/* #1845 — phones: a tile is a button that opens the club sheet. The full name
+ * is one tap away, so there is no title-only tooltip (a phone has no hover). */
+describe('ClubGridTile — phone (onSelect)', () => {
+  const renderPhoneTile = (onSelect = vi.fn()) => {
+    const utils = render(
+      <MemoryRouter>
+        <ClubGridTile
+          club={club()}
+          districtId="61"
+          colorMode="health"
+          onSelect={onSelect}
+        />
+      </MemoryRouter>
+    )
+    return { onSelect, container: utils.container }
+  }
+
+  it('renders a button that opens a dialog, not a link', () => {
+    renderPhoneTile()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    const btn = screen.getByRole('button', { name: /Test Speakers/ })
+    expect(btn).toHaveAttribute('aria-haspopup', 'dialog')
+  })
+
+  it('carries no title attribute (0 title-only tooltips)', () => {
+    const { container } = renderPhoneTile()
+    expect(container.querySelectorAll('[title]')).toHaveLength(0)
+  })
+
+  it('keeps status + DCP in the accessible name', () => {
+    renderPhoneTile()
+    const name = screen.getByRole('button').getAttribute('aria-label') ?? ''
+    expect(name).toContain('Thriving')
+    expect(name).toContain('7/10')
+  })
+
+  it('calls onSelect with the club on tap', () => {
+    const { onSelect } = renderPhoneTile()
+    fireEvent.click(screen.getByRole('button'))
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ clubId: '123' })
+    )
   })
 })

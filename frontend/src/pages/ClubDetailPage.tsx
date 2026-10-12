@@ -19,9 +19,6 @@ import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { calculateProgramYearDay } from '../utils/programYear'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { formatDisplayDate } from '../utils/dateFormatting'
-import { formatCharterDate } from '../utils/formatCharterDate'
-import { getClubAnniversary } from '../utils/clubAnniversary'
-import { ClubAnniversaryBadge } from '../components/ClubAnniversaryBadge'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { ContextBar } from '../components/ContextBar'
 import { ContextSheetControls } from '../components/ContextSheetControls'
@@ -44,8 +41,8 @@ import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { ClubDCPGoalsPanel } from '../components/ClubDCPGoalsPanel'
 import { useClubGoalTimeline } from '../hooks/useClubGoalTimeline'
-import { buildClubMeetingInfo } from '../utils/clubMeetingInfo'
-import { ClubWhereItMeets } from '../components/clubs/ClubWhereItMeets'
+import { ClubHero, type ClubHeroSource } from '../components/clubs/ClubHero'
+import { useAfterPaint } from '../hooks/useAfterPaint'
 import { summarizeClubEducation } from '../utils/clubEducation'
 import { ClubEducationPanel } from '../components/clubs/ClubEducationPanel'
 import {
@@ -245,31 +242,60 @@ const ClubDetailPage: React.FC = () => {
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
 
-  // Fetch district analytics to get this club's data
-  const {
-    data: analytics,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useDistrictAnalytics(
-    hasValidDates ? districtId || null : null,
-    effectiveProgramYear?.startDate,
-    effectiveEndDate ?? undefined
-  )
-
-  // Fetch raw district statistics for per-goal DCP data (#242)
+  // Fetch raw district statistics for per-goal DCP data (#242). Since #1901
+  // it also feeds the hero's first paint (see `snapshotHeroClub`).
   const { data: districtStats, isLoading: isLoadingStats } =
     useDistrictStatistics(
       hasValidDates ? districtId || null : null,
       effectiveEndDate ?? undefined
     )
 
+  // #1901 — hero first, analytics after. The analytics file is the whole
+  // district's trends (~150 KB on the wire, 3.65 MB decoded); under applied
+  // mobile throttling the h1 waited on it until ~6.7 s. The snapshot read
+  // above is smaller, already needed, and carries the hero's fields, so the
+  // analytics read starts only once that read has settled and its hero (or
+  // the skeleton, when the club is not in the snapshot) has painted.
+  const analyticsReady = useAfterPaint(hasValidDates && !isLoadingStats)
+
+  // Fetch district analytics to get this club's data
+  const {
+    data: analytics,
+    isLoading: isLoadingAnalytics,
+    isError,
+    error,
+    refetch,
+  } = useDistrictAnalytics(
+    hasValidDates ? districtId || null : null,
+    effectiveProgramYear?.startDate,
+    effectiveEndDate ?? undefined,
+    { enabled: analyticsReady }
+  )
+  // Held counts as loading: the gate is part of the analytics read. A
+  // settled read (data or error) is never "held".
+  const isLoading =
+    isLoadingAnalytics ||
+    (hasValidDates && !analyticsReady && !analytics && !isError)
+
   // Find the club
   const club: ClubTrend | null = useMemo(() => {
     if (!analytics || !clubId) return null
     return analytics.allClubs.find(c => clubIdsMatch(c.clubId, clubId)) ?? null
   }, [analytics, clubId])
+
+  // #1901 — the same club in the district snapshot's transformed `clubs[]`.
+  // It carries the values analytics copies into ClubTrend (name, area,
+  // division, charter date, meeting fields), so the hero can paint before
+  // analytics arrives. The analytics-derived pills wait for analytics.
+  const snapshotHeroClub: ClubHeroSource | null = useMemo(() => {
+    if (!districtStats || !clubId) return null
+    const raw = districtStats as unknown as Record<string, unknown>
+    const statsData = (raw['data'] ?? raw) as Record<string, unknown>
+    const clubs = statsData['clubs'] as ClubHeroSource[] | undefined
+    if (!Array.isArray(clubs)) return null
+    const found = clubs.find(c => clubIdsMatch(c.clubId, clubId))
+    return found && typeof found.clubName === 'string' ? found : null
+  }, [districtStats, clubId])
 
   // Worldwide standing (#1556): the race artifact for the SAME pinned date
   // this page reads (Lesson 59). Absent artifact → no card, never an error.
@@ -504,7 +530,113 @@ const ClubDetailPage: React.FC = () => {
   // default while the club is still loading or absent.
   useDocumentTitle(club ? `${club.clubName} — ${districtName}` : null)
 
+  // The page top: context bar, breadcrumb and hero. Shared by the full
+  // render and the hero-first render (#1901), so the h1 and everything
+  // above it keep one geometry while analytics loads in behind them.
+  const renderTop = (
+    heroClub: ClubHeroSource,
+    statusPills?: React.ReactNode
+  ) => (
+    <>
+      {/* Phone context bar (#1831, review §6.3): below 768 it replaces the
+          breadcrumb and the hero's PY/date chips (no top padding there, so
+          it sits under the top bar); the hero stays as the page content.
+          PY/date are this page's own state (R3). */}
+      <ContextBar
+        title={heroClub.clubName}
+        back={{
+          label: 'Clubs',
+          to: `/district/${districtId}/clubs${fromClubsSearch}`,
+        }}
+        programYear={effectiveProgramYear ?? selectedProgramYear}
+        date={effectiveEndDate ?? latestSnapshotDate}
+        controls={
+          <ContextSheetControls
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={effectiveProgramYear ?? selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={availableDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            freshness={formatFreshnessLine({
+              asOfDate: globalAsOfDate,
+              snapshotDate: effectiveEndDate ?? latestSnapshotDate,
+              isLatest: isLatestGlobal,
+            })}
+          />
+        }
+        about="This club's membership, DCP goals, recognition and education for the selected program year."
+        trail={[
+          { label: 'Districts', to: '/' },
+          { label: districtName, to: `/district/${districtId}` },
+          {
+            label: 'Clubs',
+            to: `/district/${districtId}/clubs${fromClubsSearch}`,
+          },
+          { label: heroClub.clubName },
+        ]}
+      />
+      {/* Breadcrumbs (#577) — leading 'Home' crumb removed per #442
+          (the AppShell's 'Districts' active nav is the top-level
+          signal). Trail: District › Clubs › <club>. The Clubs crumb
+          restores the user's prior filtered list (filter round-trip). */}
+      <SubpageBreadcrumb
+        crumbs={[
+          { label: districtName, to: `/district/${districtId}` },
+          {
+            label: 'Clubs',
+            to: `/district/${districtId}/clubs${fromClubsSearch}`,
+          },
+          { label: heroClub.clubName },
+        ]}
+      />
+
+      <ClubHero
+        clubId={clubId ?? ''}
+        districtId={districtId}
+        club={heroClub}
+        statusPills={statusPills}
+        controls={
+          <DataControlsBar
+            latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
+            asOfDate={globalAsOfDate}
+            isLatest={isLatestGlobal}
+            availableProgramYears={availableProgramYears}
+            // Show the DERIVED (healed) year so the chip is honest even
+            // when `?py=` names a year without data. selfHeal is off here
+            // to protect the #577 navigation state.
+            selectedProgramYear={effectiveProgramYear ?? selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={availableDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
+        }
+      />
+    </>
+  )
+
   // ── Loading state ────────────────────────────────────────────────────────
+
+  // #1901 — hero first: the snapshot's hero while analytics loads behind it.
+  // The same element tree as the full render down to the hero (ErrorBoundary
+  // included), so React keeps the hero's DOM when analytics lands and nothing
+  // above the fold moves. The tree differs from the plain skeleton below, so
+  // that skeleton's nodes are replaced rather than pushed down (no CLS).
+  if (isLoading && snapshotHeroClub) {
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen" aria-busy="true">
+          <div className="mx-auto max-w-[1280px] px-4 pb-4 sm:px-6 sm:pb-6 md:pt-6 [--context-bar-bleed:16px] sm:[--context-bar-bleed:24px]">
+            {renderTop(snapshotHeroClub)}
+            <div className="mt-6">
+              <LoadingSkeleton variant="chart" height="400px" />
+            </div>
+          </div>
+        </div>
+      </ErrorBoundary>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -621,146 +753,9 @@ const ClubDetailPage: React.FC = () => {
             with 24px padding (16px ≤640px), replacing Tailwind's `container`
             (which widens to 1536px at 2xl). */}
         <div className="mx-auto max-w-[1280px] px-4 pb-4 sm:px-6 sm:pb-6 md:pt-6 [--context-bar-bleed:16px] sm:[--context-bar-bleed:24px]">
-          {/* Phone context bar (#1831, review §6.3): below 768 it replaces the
-              breadcrumb and the hero's PY/date chips (no top padding there, so
-              it sits under the top bar); the hero stays as the page content.
-              PY/date are this page's own state (R3). */}
-          <ContextBar
-            title={club.clubName}
-            back={{
-              label: 'Clubs',
-              to: `/district/${districtId}/clubs${fromClubsSearch}`,
-            }}
-            programYear={effectiveProgramYear ?? selectedProgramYear}
-            date={effectiveEndDate ?? latestSnapshotDate}
-            controls={
-              <ContextSheetControls
-                availableProgramYears={availableProgramYears}
-                selectedProgramYear={
-                  effectiveProgramYear ?? selectedProgramYear
-                }
-                onProgramYearChange={setSelectedProgramYear}
-                availableDates={availableDates}
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-                freshness={formatFreshnessLine({
-                  asOfDate: globalAsOfDate,
-                  snapshotDate: effectiveEndDate ?? latestSnapshotDate,
-                  isLatest: isLatestGlobal,
-                })}
-              />
-            }
-            about="This club's membership, DCP goals, recognition and education for the selected program year."
-            trail={[
-              { label: 'Districts', to: '/' },
-              { label: districtName, to: `/district/${districtId}` },
-              {
-                label: 'Clubs',
-                to: `/district/${districtId}/clubs${fromClubsSearch}`,
-              },
-              { label: club.clubName },
-            ]}
-          />
-          {/* Breadcrumbs (#577) — leading 'Home' crumb removed per #442
-              (the AppShell's 'Districts' active nav is the top-level
-              signal). Trail: District › Clubs › <club>. The Clubs crumb
-              restores the user's prior filtered list (filter round-trip). */}
-          <SubpageBreadcrumb
-            crumbs={[
-              { label: districtName, to: `/district/${districtId}` },
-              {
-                label: 'Clubs',
-                to: `/district/${districtId}/clubs${fromClubsSearch}`,
-              },
-              { label: club.clubName },
-            ]}
-          />
-
-          {/* Redesigned hero per handoff (#23 follow-up). Loyal-blue panel
-              with charter-style eyebrow + h1 + sub-line + right-side
-              health & DCP tier pills.
-
-              #432: append ' · Chartered <Month YYYY>' to the eyebrow when
-              the daily Find-A-Club enrichment (#430) populated charterDate
-              on the ClubTrend. Silently skipped when absent so the
-              eyebrow stays clean. */}
-          <header className="club-hero">
-            <div className="club-hero__intro">
-              <p className="club-hero__eyebrow">
-                Club #{clubId}
-                {(() => {
-                  const formatted = formatCharterDate(club.charterDate)
-                  return formatted ? ` · Chartered ${formatted}` : ''
-                })()}
-              </p>
-              <h1 className="club-hero__title">{club.clubName}</h1>
-              <p className="club-hero__sub">
-                <span>{club.areaName}</span>
-                <span aria-hidden="true" className="club-hero__sub-divider">
-                  ·
-                </span>
-                <span>{club.divisionName}</span>
-                {districtId && (
-                  <>
-                    <span aria-hidden="true" className="club-hero__sub-divider">
-                      ·
-                    </span>
-                    <span>District {districtId}</span>
-                  </>
-                )}
-              </p>
-              {/* #1783 — where it meets (FAC enrichment for the viewed date;
-                  omitted when the snapshot has none). Never email/phone. The
-                  lineage chip (#1805) joins the sub-line above once the
-                  club-district-history artifact (#1782) is promoted. */}
-              <ClubWhereItMeets info={buildClubMeetingInfo(club)} />
-              {/* #1229 — deep link to the per-club multi-year history view. */}
-              <Link
-                to={`/district/${districtId}/club/${clubId}/history`}
-                className="club-hero__history-link"
-              >
-                View multi-year history →
-              </Link>
-              {/* #1302 — PY selector replaces the URL-edit / back workaround.
-                  The page already filtered trends by `?py=`; this surfaces the
-                  control so users can switch year (and snapshot date) directly. */}
-              <div className="club-hero__controls">
-                <DataControlsBar
-                  latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
-                  asOfDate={globalAsOfDate}
-                  isLatest={isLatestGlobal}
-                  availableProgramYears={availableProgramYears}
-                  // Show the DERIVED (healed) year so the chip is honest even
-                  // when `?py=` names a year without data — selfHeal is off here
-                  // to protect the #577 navigation state, so nothing writes it
-                  // back to the URL until the user explicitly changes it.
-                  selectedProgramYear={
-                    effectiveProgramYear ?? selectedProgramYear
-                  }
-                  onProgramYearChange={setSelectedProgramYear}
-                  availableDates={availableDates}
-                  selectedDate={selectedDate}
-                  onDateChange={setSelectedDate}
-                />
-              </div>
-            </div>
-
-            <div className="club-hero__pills">
-              {/* #445 — anniversary badge surfaces years chartered, milestones,
-                  and an upcoming countdown when within ±30 days. Returns null
-                  when charterDate is missing so layout stays clean. */}
-              {(() => {
-                if (!club.charterDate) return null
-                const charterLabel = formatCharterDate(club.charterDate)
-                return (
-                  <ClubAnniversaryBadge
-                    anniversary={getClubAnniversary(club.charterDate)}
-                    {...(charterLabel
-                      ? { charterDateLabel: charterLabel }
-                      : {})}
-                  />
-                )
-              })()}
+          {renderTop(
+            club,
+            <>
               <span
                 className={
                   'club-hero__pill ' +
@@ -810,8 +805,8 @@ const ClubDetailPage: React.FC = () => {
                       })()}
                   </span>
                 )}
-            </div>
-          </header>
+            </>
+          )}
 
           {/* 8-stat strip (#618) — pixel-perfect to club-reference.html.
               Dedicated `.club-stats-grid` lays out 8 columns on desktop,

@@ -85,6 +85,15 @@ export {
   type EducationArchiveBackfillResult,
 } from './EducationArchiveBackfill.js'
 export {
+  EARLIEST_LEDGER_PROGRAM_YEAR,
+  backfillEducationLedgerHistory,
+  fetchYearEndDistrictSummary,
+  ledgerHistoryFilePath,
+  resolveLedgerDistricts,
+  runEducationLedgerHistoryBackfill,
+  type RunEducationLedgerHistorySummary,
+} from './EducationLedgerHistory.js'
+export {
   formatReportAsOf,
   importEducationMembers,
   parseEducationExportCsv,

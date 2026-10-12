@@ -168,12 +168,25 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 0.5rem;
+  /* #1845: a tap target in both dimensions (≥44px; 72px tall for 2 lines). */
   min-height: 72px;
+  min-width: 44px;
   padding: 0.5rem 0.625rem;
   border-radius: var(--radius-md, 8px);
   border: 1px solid rgba(0, 0, 0, 0.06);
   text-decoration: none;
   overflow: hidden;
+}
+
+/* #1845: on phones the tile is a <button> that opens the club sheet. Reset
+   the UA button chrome so it reads exactly like the desktop <a> tile. */
+button.club-grid-tile {
+  appearance: none;
+  width: 100%;
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .club-grid-tile:focus-visible {
@@ -284,4 +297,72 @@
 [data-theme='dark'] .club-grid-legend__swatch.club-grid-tile--tier-none {
   background-color: #2a3340;
   color: #cbd5e1;
+}
+
+/* ── Phones (#1845): legend chips at 14px + the club sheet ─────────────── */
+
+@media (max-width: 767.98px) {
+  /* The swatch glyph is 14px on phones (mobile-type-floor.css); grow the
+     chip so the glyph keeps its padding. */
+  .club-grid-legend__swatch {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+/* Sheet content. The frame (overlay, handle, header, scrolling body) is the
+   shared BottomSheet in context-bar.css. Semantic tokens only, so dark mode
+   follows the [data-theme] remaps (R10); the swatches reuse the tile fills. */
+.club-grid-sheet__location {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.club-grid-sheet__facts {
+  margin: 8px 0 16px;
+}
+
+.club-grid-sheet__fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+}
+
+.club-grid-sheet__fact dt {
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.club-grid-sheet__fact dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.club-grid-sheet__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--loyal-500);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.club-grid-sheet__link:focus-visible {
+  outline: 2px solid var(--loyal-400);
+  outline-offset: 2px;
 }

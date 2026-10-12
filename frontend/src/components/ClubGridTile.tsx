@@ -18,6 +18,8 @@ export interface ClubGridTileProps {
   colorMode: GridColorMode
   /** Optional router location state to carry to the destination. */
   linkState?: unknown
+  /** Phones (#1845): render a button that hands the club to this callback. */
+  onSelect?: ((club: ClubTrend) => void) | undefined
 }
 
 export const ClubGridTile: React.FC<ClubGridTileProps> = ({
@@ -25,6 +27,7 @@ export const ClubGridTile: React.FC<ClubGridTileProps> = ({
   districtId,
   colorMode,
   linkState,
+  onSelect,
 }) => {
   const visual = getTileVisual(club, colorMode)
   const location = [club.divisionName, club.areaName]
@@ -33,15 +36,10 @@ export const ClubGridTile: React.FC<ClubGridTileProps> = ({
   const ariaLabel =
     `${club.clubName}${location ? `, ${location}` : ''}. ` +
     `${visual.statusLabel}. DCP ${visual.signalText}.`
+  const className = `club-grid-tile ${visual.modifierClass}`
 
-  return (
-    <Link
-      to={`/district/${districtId}/club/${club.clubId}`}
-      state={linkState}
-      className={`club-grid-tile ${visual.modifierClass}`}
-      aria-label={ariaLabel}
-      title={ariaLabel}
-    >
+  const content = (
+    <>
       <span className="club-grid-tile__name">{club.clubName}</span>
       <span className="club-grid-tile__signal">
         <span className="club-grid-tile__glyph" aria-hidden="true">
@@ -51,6 +49,34 @@ export const ClubGridTile: React.FC<ClubGridTileProps> = ({
           {visual.signalText}
         </span>
       </span>
+    </>
+  )
+
+  // Phones (#1845): there is no hover, so the full name lives one tap away in
+  // the club sheet — no `title` tooltip (review §2 S8).
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        className={className}
+        aria-label={ariaLabel}
+        aria-haspopup="dialog"
+        onClick={() => onSelect(club)}
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <Link
+      to={`/district/${districtId}/club/${club.clubId}`}
+      state={linkState}
+      className={className}
+      aria-label={ariaLabel}
+      title={ariaLabel}
+    >
+      {content}
     </Link>
   )
 }

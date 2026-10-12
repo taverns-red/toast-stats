@@ -165,3 +165,141 @@ explicit added-file list from step 5 instead of the wildcard.)
 - **Schema/`program year` mismatch error** — the existing local file at that
   date is malformed or from a different PY; the command fails closed per pair.
   Inspect the file before retrying.
+
+---
+
+# Dated ledger history, 2003-04 → 2018-19 (#1802)
+
+**Issue:** #1802 (epic #1781) · **Consumers:** #1801 (rollup), #1807 (trend)
+**Posture:** CI only (never a local run, never a local mirror), STAGING only,
+operator-dispatched. Nothing promotes `raw-education-ledger/`; the rollup that
+reads it is promoted after ADR-015 step 5 (#1763).
+
+## What is different from the PY-level backfill above
+
+The PY-level backfill counts per (club, award) for the whole year and drops
+`Date` (Lesson 153). The ledger history keeps `Date` at month granularity:
+one record per (club, award, yearMonth), so a month-end total within any past
+year is `yearMonth <= asOf` (`ledgerRecordsThroughMonth` in shared-contracts).
+It writes a dedicated raw store, not the reports dataset:
+
+```
+raw-education-ledger/<PY>/district_<id>.json   (EducationLedgerHistoryFileSchema)
+```
+
+- `status: "ok"`: TI returned the ledger. `status: "no-data"`: TI returned 0
+  bytes, so the district did not exist that year. No file means the pair was
+  not fetched. Read both of the last two as "not available", never as 0.
+- Each record has `club, division, area, name (club name), location, award,
+awardCode, program, yearMonth, achievementCount`. The schema is strict:
+  there is no member and no day-level date. The archive has no Member column,
+  and if one ever appears it is never projected.
+- `program` is `Pathways` (level codes), `Legacy` (CC, ACB/ACS/ACG, CTM,
+  ATM/ATMB/S/G, CL, AL, ALB/ALS, LDREXC), `DTM`, or `Other` (for example
+  `PWMENTORPGM`, or the blank code TI shows for a pending award). The run
+  summary lists every `Other` code so unmapped vocabulary is visible.
+- Division and area are as of that year. Club 1009147 was B/13 in 2009-10
+  and D/34 in 2018-19.
+
+Note: the PY-level datasets already exist at `snapshots/2017-06-30`,
+`2018-06-30` and `2019-06-30` (PYs 2016-17 → 2018-19, written 2026-09-01) as
+well as 2020 → 2025, all without `Date`. The ledger history refetches
+2016-17 → 2018-19 to get their months. The same command can later refetch
+2019-20 → 2025-26 to give one uniform dated store: about 7 × 120 more
+requests, not part of #1802.
+
+## URL patterns per program year (probed 2026-10-12)
+
+The probes were single anonymous GETs at least 3 s apart, with the collectors'
+user agents.
+
+| What          | URL                                                                                                                                                       | Years                                                                        |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Ledger        | `https://www.toastmasters.org/api/sitecore/DistrictReports/GetDistrictReport?tableID=a30b93f3-081e-42c8-9a36-137acb24be69&district=<D>&year=<PY>&sortBy=` | 2003-04 onward. The year list comes from the response's own `#programYears`. |
+| District list | `https://dashboards.toastmasters.org/<PY>/export.aspx?type=CSV&report=districtsummary~6/30/<endYear>~~<PY>`                                               | 2008-09 onward                                                               |
+
+Observations:
+
+- **One ledger URL for every year.** There is no older or legacy endpoint.
+  Every year has the same 7 headers: `Club, Division, Area, Award, Date, Name,
+Location`. The award cell is
+  `<div class="awrd-tooltip">CODE<span class="tooltiptext">Title</span></div>`.
+- **Date precision.** In 2003-04, every Date is the 1st of the month: month
+  precision only, kept as month. 2009-10 and 2018-19 have day precision.
+- **Sample sizes (D61).**
+
+  | PY      | Size    | Rows  | Months    |
+  | ------- | ------- | ----- | --------- |
+  | 2003-04 | 1.42 MB | 733   | Aug → Jun |
+  | 2005-06 | ≈1.4 MB | 806   | Jul → Jun |
+  | 2009-10 | 1.62 MB | 834   |           |
+  | 2018-19 | 3.08 MB | 1,581 |           |
+
+  Other districts sampled:
+
+  | District | PY      | Size    | Result                                               |
+  | -------- | ------- | ------- | ---------------------------------------------------- |
+  | D02      | 2010-11 | 1.64 MB | Same bytes as `district=2`, so zero-padded ids work. |
+  | DF       | 2005-06 | 1.38 MB |                                                      |
+  | DU       | 2005-06 | 0.49 MB |                                                      |
+  | D228     | 2010-11 | 0 bytes | The district did not exist yet.                      |
+
+- **District lists from 2008-09 on.** The year-end districtsummary for
+  2008-09 has 82 districts, max 86; 2013-14 has 92, max 94; 2018-19 has 117,
+  max 116. Use the form with the as-of slot **empty**: with `~6/30/2009~` as
+  the as-of, 2008-09 returned a header with zero rows.
+- **No district list before 2008-09.** For 2003-04 → 2007-08 the dashboard
+  302s to `/error.aspx`. The candidates for those years are the 2008-09 list
+  plus every number from 01 to its maximum (88 ids). A candidate that did not
+  exist returns 0 bytes and is recorded `no-data`.
+
+## Request budget (default 16 PYs)
+
+- **Ledger requests:**
+  - 2008-09 → 2018-19: 11 PYs, about 82 → 117 districts, ≈ 1,090 requests.
+  - 2003-04 → 2007-08: 5 PYs × 88 candidates = 440 requests.
+- **District-list requests:** 16, one per PY. The job runs the CLI once per
+  PY, so each of the 5 years before 2008-09 re-reads the 2008-09 list.
+- **Total:** ≈ **1,550 requests**, ≈ 2–2.5 GB transferred.
+- **Time:** at least 1.1 s between requests plus 1–2.5 s per download, so
+  ≈ **75–90 min** in one job. The job timeout is 240 min.
+- **Output:** ≈ 140 KB per district-year (D61 2005-06: 662 records,
+  142 KB), ≈ 150–200 MB in staging.
+
+## Dispatch (operator: Ron)
+
+The workflow holds the shared `data-pipeline` concurrency group for the whole
+run. Dispatch after the day's daily run has finished; a daily dispatched
+meanwhile queues behind it.
+
+```bash
+gh workflow run data-pipeline.yml --ref main -f mode=backfill-education-ledger
+# optional: -f program_year=2003-2004,2004-2005   (subset; default is all 16)
+# optional: -f districts=61                         (explicit list for every PY)
+# optional: -f force=true                           (re-fetch existing files)
+```
+
+A pilot with `-f program_year=2003-2004,2018-2019 -f districts=61` makes 2
+requests. Re-dispatching the same inputs only fetches the missing pairs:
+existing valid files are skipped, and every PY is uploaded as soon as it
+finishes.
+
+## Review before anything reads it
+
+- Read the step summary table. `Failed` should be 0. `No data` should be
+  plausible (young districts in old years; most of the 88 candidates for
+  2003-04 → 2007-08). `Other codes` lists the vocabulary to map. The run
+  manifest is at `runs/<run_id>/written.jsonl`.
+- Spot-check one file with a single-object read; do not mirror the prefix
+  locally:
+
+  ```bash
+  gcloud storage cat gs://toast-stats-data-staging/raw-education-ledger/2009-2010/district_61.json \
+    | jq '{status, records: (.records|length),
+           achievements: ([.records[].achievementCount]|add),
+           months: ([.records[].yearMonth]|unique)}'
+  ```
+
+- **Rollback:**
+  `gcloud storage rm -r gs://toast-stats-data-staging/raw-education-ledger/`.
+  Staging only; nothing else references the prefix yet.
