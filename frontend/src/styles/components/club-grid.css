@@ -68,7 +68,8 @@
    they do not swap panels — so they are aria-pressed toggle buttons, never
    role="tab" (lesson 128). */
 .club-grid-toggle__btn {
-  min-height: 36px;
+  /* #1839: 44px floor (was 36px — the only sub-44 controls on the grid). */
+  min-height: 44px;
   padding: 0.375rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 600;

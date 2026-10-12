@@ -270,6 +270,7 @@ const DivisionPage: React.FC = () => {
       {areas.map(area => (
         <section key={area.areaId} style={{ marginBottom: 32 }}>
           <h2
+            data-testid="division-area-heading"
             style={{
               fontFamily: 'var(--serif)',
               fontSize: 18,

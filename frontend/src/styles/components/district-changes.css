@@ -226,8 +226,22 @@
 }
 
 .changes-group__item {
-  padding: 0.5rem 1rem;
+  /* #1839: the club name is the row's 44px tap target, so the row drops its
+     block padding; a link-less row (an entity-less event) keeps 0.75rem. */
+  padding: 0 1rem;
   font-family: var(--sans);
   color: var(--ink-2);
   border-top: 1px solid var(--line);
+}
+
+.changes-group__item:not(:has(a)) {
+  padding-block: 0.75rem;
+}
+
+/* inline-flex lets the base layer's 44px min-height apply (it is ignored on
+   an inline box) and centres the name in it (was 22px tall). */
+.changes-group__item .clubs-name-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }

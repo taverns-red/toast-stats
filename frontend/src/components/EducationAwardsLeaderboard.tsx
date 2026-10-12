@@ -207,7 +207,11 @@ const LeaderboardCard: React.FC<CardProps> = ({
   const source = provenance(ranking)
 
   return (
-    <section aria-labelledby={titleId} className="redesign-panel">
+    <section
+      aria-labelledby={titleId}
+      className="redesign-panel"
+      data-testid="education-awards-leaderboard"
+    >
       <h3 id={titleId} className="redesign-panel__header !mb-1">
         {spec.title}
       </h3>

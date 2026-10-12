@@ -1,0 +1,41 @@
+/* Inline call-to-action links at a 44px tap target (#1839, epic #1827).
+ *
+ * These links render `display: inline` inside a line of text, so the base
+ * layer's `a[href] { min-height: 44px }` floor never applies (min-height is
+ * ignored on inline boxes). They are not prose, though: each is a sentence's
+ * closing action ("See which clubs →", "Clubs worldwide"), a standalone
+ * "Methodology"/"How it works" link, a back link, or a club name in a table
+ * cell. The 2.48.0 prod sweep measured them 17–43px tall.
+ *
+ * Vertical padding on an INLINE box does not change the line box, so the
+ * text around the link does not move, but it does extend the link's border
+ * box — the area the browser hit-tests and `getBoundingClientRect` reports.
+ * An inline box's content area is ~1.2em tall (17–18px at 14–15px), so 14px
+ * a side takes it to ≥44px. Unlike `inline-flex`, the link still wraps across
+ * lines like the text it sits in (the history and analytics links wrap to two
+ * lines at 375).
+ *
+ * Guarded by e2e/touch-targets.smoke.ts (NOT_PROSE_LINKS), both engines.
+ * Row, heading and pill links get a real 44px row in their own CSS instead,
+ * because stacked rows would otherwise overlap each other's hit areas. */
+@layer brand {
+  .districts-methodology-callout__link,
+  .ddp-criteria__source .methodology-link,
+  .wws__link,
+  .race-basis a[href^='/methodology'],
+  .worldwide-standing__note a,
+  .club-history-page__back a,
+  [data-testid='district-csp-line'] a,
+  [data-testid='education-awards-leaderboard'] td a {
+    padding-block: 14px;
+  }
+
+  /* Heading and row links: a real 44px box. inline-flex lets the base
+     layer's 44px min-height apply and centres the text in it. */
+  [data-testid='division-area-heading'] a,
+  .awards-page-card__district {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
