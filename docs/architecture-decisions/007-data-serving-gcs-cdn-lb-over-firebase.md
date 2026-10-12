@@ -40,6 +40,54 @@ Keep data on a **regional GCS bucket fronted by Cloud CDN via a global external 
 
 Reasons 1–5 justify _keeping_ the architecture; they were not all captured in writing when the stack was first built (the original recorded decision, ADR-001/#168/#173, was about deleting the Express proxy for latency). This ADR is therefore partly reconstructed. If Canadian data residency is **not** a hard requirement, a future ADR could supersede this one and move the data CDN to Firebase Hosting to drop the forwarding-rule fee — but that trade was judged not worth pursuing as of 2026-05-30.
 
+## Addendum (2026-10-12, #1852): compression on the wire
+
+Two storage classes reach the browser through `cdn.taverns.red`:
+
+| Prefixes                     | Stored                                             | How the wire bytes get compressed                                 |
+| ---------------------------- | -------------------------------------------------- | ----------------------------------------------------------------- |
+| `snapshots/`, `time-series/` | gzip (`gcloud storage cp -Z`, adds `no-transform`) | Served pre-encoded, `Content-Encoding: gzip`                      |
+| `v1/`, `config/`             | identity                                           | **Cloud CDN dynamic compression** on the backend bucket (br/gzip) |
+
+**Decision.** Compress `v1/` and `config/` at the edge with dynamic compression
+(`compression-mode: AUTOMATIC` on backend bucket `toast-stats-cdn-backend`),
+not by uploading them with `-Z`. Per the Cloud CDN docs
+(docs.cloud.google.com/cdn/docs/dynamic-compression) it is supported on
+backend buckets, covers `application/json`, prefers brotli (10–20 % smaller
+than gzip), caches the compressed variant, bills egress on compressed bytes,
+and skips responses that already carry a `Content-Encoding`, carry
+`no-transform`, or are under 1 KiB or over 10 MiB. So the `-Z` prefixes are
+untouched, and every `v1/`/`config/` object is in range except
+`v1/latest.json` (152 B).
+
+**Why not `-Z`.** The stored bytes of `v1/` and `config/` are read back by
+the pipeline itself: `gcloud storage cat` of `v1/latest.json`, `dates.json`
+and `rankings.json` in the manifest step and the count and value gates, the
+daily download → merge → re-upload of `config/district-snapshot-index.json`,
+the content gate's SDK reads, and the staging→prod rsync. Gzip at rest would
+make each of those depend on the gcloud/SDK decode behaviour that caused
+#1702 (568 kept gzip, 576+ inflates), and GCS's decompressive transcoding
+"invalidates integrity checking" (Cloud Storage transcoding docs). Edge
+compression changes none of the stored bytes.
+
+**Guard.** `scripts/pipeline/gcs-upload.sh` refuses `-Z`, `--gzip-*`,
+`--content-encoding=` and `no-transform` for `v1/` and `config/`
+destinations: any of them would silently switch edge compression off for that
+object.
+
+**Apply / roll back** (infra, outside the pipeline; Ron runs it):
+
+```bash
+gcloud compute backend-buckets update toast-stats-cdn-backend --compression-mode=AUTOMATIC
+gcloud compute backend-buckets update toast-stats-cdn-backend --compression-mode=DISABLED   # rollback
+```
+
+**Verify:** `npx tsx scripts/cdn-compression-check.ts` (read-only; exit 0 when
+every frontend-fetched `v1/`/`config/` object comes back br/gzip and decodes
+to one layer of JSON). Cached identity entries age out within their
+`max-age` (300–900 s). Staging has no CDN (ADR-002), so preview channels stay
+uncompressed for these prefixes.
+
 ## Related
 
 - [ADR-001](001-cdn-only-frontend.md) — CDN-only frontend (Express proxy removal)

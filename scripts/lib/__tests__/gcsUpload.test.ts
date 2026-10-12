@@ -237,3 +237,120 @@ describe('gcs-upload.sh: the manifest is exactly what went up (#1762)', () => {
     expect(r.status).toBe(2)
   })
 })
+
+// #1852: v1/ and config/ are stored identity and compressed at the edge by
+// Cloud CDN dynamic compression (compression-mode AUTOMATIC on the backend
+// bucket). The CDN skips any response that already has a Content-Encoding
+// and any whose Cache-Control has no-transform, and `-Z` sets both. So a
+// `-Z` or no-transform upload under these prefixes silently turns edge
+// compression off for that object AND changes the bytes every pipeline
+// reader (gcloud storage cat/cp, the gates, the daily index merge) gets
+// back: the #1702 class. The wrapper refuses it before anything goes up.
+describe('gcs-upload.sh: v1/ and config/ stay identity-encoded (#1852)', () => {
+  const refused: Array<[string, string[], string]> = [
+    ['-Z to v1/', ['-Z'], 'v1/rankings.json'],
+    [
+      '--gzip-local-all to config/',
+      ['--gzip-local-all'],
+      'config/club-index.json',
+    ],
+    ['--gzip-in-flight-all to v1/', ['--gzip-in-flight-all'], 'v1/dates.json'],
+    ['--gzip-local=json to config/', ['--gzip-local=json'], 'config/x.json'],
+    [
+      'a no-transform Cache-Control to config/',
+      ['--cache-control=public, max-age=300, no-transform'],
+      'config/district-snapshot-index.json',
+    ],
+    [
+      '--content-encoding=gzip to v1/',
+      ['--content-encoding=gzip'],
+      'v1/latest.json',
+    ],
+  ]
+
+  for (const [name, flags, object] of refused) {
+    it(`refuses ${name}: nothing uploaded, nothing recorded`, () => {
+      const f = writeLocal(path.basename(object), '{"a":1}')
+      const r = run([
+        'cdn-manifests',
+        'cp',
+        '--content-type=application/json',
+        ...flags,
+        f,
+        `gs://${BUCKET}/${object}`,
+      ])
+      expect(r.status).toBe(2)
+      expect(r.stderr).toMatch(/#1852/)
+      expect(uploaded()).toEqual([])
+      expect(manifestEntries()).toEqual([])
+    })
+  }
+
+  it('refuses -Z on a wildcard cp into v1/rank-history/', () => {
+    writeLocal('rh/61.json', '{"a":1}')
+    const r = run([
+      'cdn-manifests',
+      'cp',
+      '-Z',
+      '-r',
+      path.join(local, 'rh/*.json'),
+      `gs://${BUCKET}/v1/rank-history/`,
+    ])
+    expect(r.status).toBe(2)
+    expect(uploaded()).toEqual([])
+  })
+
+  it('refuses -Z on an rsync into config/', () => {
+    writeLocal('cfg/a.json', '{"a":1}')
+    const r = run([
+      'x',
+      'rsync',
+      '-r',
+      '-Z',
+      path.join(local, 'cfg/'),
+      `gs://${BUCKET}/config/`,
+    ])
+    expect(r.status).toBe(2)
+    expect(uploaded()).toEqual([])
+  })
+
+  it('allows the real v1/ upload shape: identity bytes, no no-transform', () => {
+    const f = writeLocal('rankings.json', '{"rankings":[]}')
+    const r = run([
+      'cdn-manifests',
+      'cp',
+      '--content-type=application/json',
+      '--cache-control=public, max-age=300',
+      f,
+      `gs://${BUCKET}/v1/rankings.json`,
+    ])
+    expect(r.status, r.stderr).toBe(0)
+    const stored = fs.readFileSync(path.join(root, BUCKET, 'v1/rankings.json'))
+    expect(stored.toString('utf-8')).toBe('{"rankings":[]}')
+  })
+
+  it('still allows -Z outside v1/ and config/ (snapshots/, time-series/)', () => {
+    const f = writeLocal('ts.json', '{"a":1}')
+    const r = run([
+      'publish-stores',
+      'cp',
+      '--cache-control=public, max-age=3600',
+      '-Z',
+      f,
+      `gs://${BUCKET}/time-series/district_61/2026-2027.json`,
+    ])
+    expect(r.status, r.stderr).toBe(0)
+  })
+
+  it('a path that only contains "v1/" further down is not the v1/ prefix', () => {
+    const f = writeLocal('d.json', '{"a":1}')
+    const r = run([
+      'x',
+      'cp',
+      '-Z',
+      f,
+      `gs://${BUCKET}/snapshots/2026-10-10/v1/d.json`,
+    ])
+    expect(r.status, r.stderr).toBe(0)
+  })
+})

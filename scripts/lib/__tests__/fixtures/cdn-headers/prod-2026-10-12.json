@@ -1,0 +1,67 @@
+{
+  "_captured": "2026-10-12T14:14Z, read-only: curl -s -D - -o /dev/null -H 'Accept-Encoding: br, gzip' https://cdn.taverns.red/<path>. Backend bucket toast-stats-cdn-backend had no compressionMode set (dynamic compression off). Headers lower-cased; repeated x-goog-hash and the volatile x-guploader-uploadid / alt-svc dropped. wireBytes is content-length.",
+  "_note": "No response with edge (dynamic) compression could be recorded yet: it is off on prod and staging has no CDN (ADR-002). The edge-compressed case in cdnCompression.test.ts follows the documented behaviour (docs.cloud.google.com/cdn/docs/dynamic-compression); scripts/cdn-compression-check.ts against prod after the switch is the recording that confirms it.",
+  "identityLarge": {
+    "path": "config/district-snapshot-index.json",
+    "status": 200,
+    "wireBytes": 485803,
+    "headers": {
+      "x-goog-generation": "1791796461963476",
+      "x-goog-metageneration": "1",
+      "x-goog-stored-content-encoding": "identity",
+      "x-goog-stored-content-length": "485803",
+      "x-goog-storage-class": "STANDARD",
+      "accept-ranges": "bytes",
+      "content-length": "485803",
+      "server": "UploadServer",
+      "age": "294",
+      "last-modified": "Mon, 12 Oct 2026 09:14:21 GMT",
+      "etag": "\"6854bb721b20dfe5eeef19a7781adab1\"",
+      "content-type": "application/json",
+      "vary": "Origin",
+      "cache-control": "public,max-age=300"
+    }
+  },
+  "identitySmall": {
+    "path": "v1/latest.json",
+    "status": 200,
+    "wireBytes": 152,
+    "headers": {
+      "x-goog-generation": "1791796194262358",
+      "x-goog-metageneration": "1",
+      "x-goog-stored-content-encoding": "identity",
+      "x-goog-stored-content-length": "152",
+      "x-goog-storage-class": "STANDARD",
+      "accept-ranges": "bytes",
+      "content-length": "152",
+      "server": "UploadServer",
+      "age": "294",
+      "last-modified": "Mon, 12 Oct 2026 09:09:54 GMT",
+      "etag": "\"1be503a71c292af05f0b8b52d430607e\"",
+      "content-type": "application/json",
+      "vary": "Origin",
+      "cache-control": "public,max-age=300"
+    }
+  },
+  "storedGzip": {
+    "path": "snapshots/2026-10-11/manifest.json",
+    "status": 200,
+    "wireBytes": 1595,
+    "headers": {
+      "content-type": "application/json",
+      "last-modified": "Mon, 12 Oct 2026 09:14:12 GMT",
+      "etag": "\"248c19ab281f667138cc63cb824549b4\"",
+      "x-goog-generation": "1791796452676858",
+      "x-goog-metageneration": "1",
+      "x-goog-stored-content-encoding": "gzip",
+      "x-goog-stored-content-length": "1595",
+      "content-encoding": "gzip",
+      "x-goog-storage-class": "STANDARD",
+      "accept-ranges": "bytes",
+      "content-length": "1595",
+      "vary": "Origin",
+      "server": "UploadServer",
+      "cache-control": "public,max-age=3600,must-revalidate,no-transform"
+    }
+  }
+}
