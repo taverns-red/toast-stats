@@ -206,6 +206,22 @@ export {
   type ClubRaceOfficialCode,
 } from './schemas/club-race-store.schema.js'
 
+// Club-district history — derived/club-district-history/ (#1782)
+export {
+  ClubDistrictSpanSchema,
+  ClubDistrictHistoryClubSchema,
+  ClubDistrictDuplicateSchema,
+  ClubDistrictHistoryIndexSchema,
+  ClubDistrictHistoryShardSchema,
+  CLUB_DISTRICT_HISTORY_VERSION,
+  clubDistrictHistoryShardKey,
+  type ClubDistrictSpan,
+  type ClubDistrictHistoryClub,
+  type ClubDistrictDuplicate,
+  type ClubDistrictHistoryIndex,
+  type ClubDistrictHistoryShard,
+} from './schemas/club-district-history.schema.js'
+
 // Worldwide club race artifact — snapshots/{date}/global-club-race.json (#1556)
 export {
   GlobalClubRaceSchema,

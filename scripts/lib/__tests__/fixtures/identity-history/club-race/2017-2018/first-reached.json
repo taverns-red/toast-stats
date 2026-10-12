@@ -1,0 +1,117 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "club-race-store"
+  },
+  "programYear": "2017-2018",
+  "updatedAt": "2026-10-04T22:08:57.206Z",
+  "observedDates": ["2018-06-30"],
+  "clubs": {
+    "977": {
+      "clubId": "977",
+      "clubName": "Professional Women Toastmasters",
+      "districtId": "01",
+      "lastSeen": "2018-06-30",
+      "reached": {
+        "Distinguished": {
+          "on": "2018-06-30",
+          "after": null
+        },
+        "Select": {
+          "on": "2018-06-30",
+          "after": null
+        },
+        "President": {
+          "on": "2018-06-30",
+          "after": null
+        }
+      },
+      "official": {
+        "on": "2018-06-30",
+        "after": null,
+        "code": "P"
+      }
+    },
+    "3045": {
+      "clubId": "3045",
+      "clubName": "Limestone City Club",
+      "districtId": "61",
+      "lastSeen": "2018-06-30",
+      "reached": {}
+    },
+    "368": {
+      "clubId": "368",
+      "clubName": "First Speakers",
+      "districtId": "60",
+      "lastSeen": "2018-06-30",
+      "reached": {}
+    },
+    "699": {
+      "clubId": "699",
+      "clubName": "Excelsior Toastmasters",
+      "districtId": "05",
+      "lastSeen": "2018-06-30",
+      "reached": {
+        "Distinguished": {
+          "on": "2018-06-30",
+          "after": null
+        }
+      },
+      "official": {
+        "on": "2018-06-30",
+        "after": null,
+        "code": "D"
+      }
+    },
+    "2": {
+      "clubId": "2",
+      "clubName": "Anaheim Club",
+      "districtId": "100",
+      "lastSeen": "2018-06-30",
+      "reached": {
+        "Distinguished": {
+          "on": "2018-06-30",
+          "after": null
+        },
+        "Select": {
+          "on": "2018-06-30",
+          "after": null
+        },
+        "President": {
+          "on": "2018-06-30",
+          "after": null
+        }
+      },
+      "official": {
+        "on": "2018-06-30",
+        "after": null,
+        "code": "P"
+      }
+    },
+    "7": {
+      "clubId": "7",
+      "clubName": "San Diego Toastmasters 7",
+      "districtId": "05",
+      "lastSeen": "2018-06-30",
+      "reached": {
+        "Distinguished": {
+          "on": "2018-06-30",
+          "after": null
+        },
+        "Select": {
+          "on": "2018-06-30",
+          "after": null
+        },
+        "President": {
+          "on": "2018-06-30",
+          "after": null
+        }
+      },
+      "official": {
+        "on": "2018-06-30",
+        "after": null,
+        "code": "P"
+      }
+    }
+  }
+}
