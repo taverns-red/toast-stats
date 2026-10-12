@@ -7,15 +7,17 @@
  *   npx tsx scripts/check-critical-path.ts [distDir]
  *
  * Prints the critical-path chunks with their gzip sizes as JSON on stdout
- * (R4: diagnostics on stderr) and exits 1 when a forbidden chunk (the Recharts
- * `charts-*` group) is reachable from index.html without a dynamic import.
+ * (R4: diagnostics on stderr) and exits 1 when a route-only chunk (`ROUTE_ONLY_CHUNK_PREFIXES`:
+ * Recharts `charts-*`, MapLibre `maplibre-*`) is reachable from index.html without a dynamic import.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
-import { criticalPathChunks, forbiddenOnCriticalPath } from './lib/criticalPath'
-
-const FORBIDDEN = ['charts-']
+import {
+  criticalPathChunks,
+  forbiddenOnCriticalPath,
+  ROUTE_ONLY_CHUNK_PREFIXES,
+} from './lib/criticalPath'
 
 const dist = resolve(process.argv[2] ?? 'frontend/dist')
 const indexPath = join(dist, 'index.html')
@@ -36,7 +38,7 @@ const sized = chunks.map(name => {
   return { name, gzipBytes: src === null ? 0 : gzipSync(src).length }
 })
 const totalGzipBytes = sized.reduce((n, c) => n + c.gzipBytes, 0)
-const forbidden = forbiddenOnCriticalPath(chunks, FORBIDDEN)
+const forbidden = forbiddenOnCriticalPath(chunks, ROUTE_ONLY_CHUNK_PREFIXES)
 
 process.stdout.write(
   JSON.stringify({ chunks: sized, totalGzipBytes, forbidden }, null, 2) + '\n'

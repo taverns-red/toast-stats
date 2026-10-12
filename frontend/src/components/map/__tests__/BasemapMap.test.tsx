@@ -99,9 +99,14 @@ describe('BasemapMap', () => {
     )
   })
 
-  it('registers the pmtiles protocol and the bundled worker once', () => {
-    render(<BasemapMap ariaLabel="A" pmtilesUrl={URL} />)
-    render(<BasemapMap ariaLabel="B" pmtilesUrl={URL} />)
+  it('registers the pmtiles protocol and the bundled worker once', async () => {
+    // A fresh module instance: registration is per page, not per test.
+    vi.resetModules()
+    const { default: Fresh } = await import('../BasemapMap')
+    hoisted.addProtocol.mockClear()
+    hoisted.setWorkerUrl.mockClear()
+    render(<Fresh ariaLabel="A" pmtilesUrl={URL} />)
+    render(<Fresh ariaLabel="B" pmtilesUrl={URL} />)
     expect(hoisted.addProtocol).toHaveBeenCalledTimes(1)
     expect(hoisted.addProtocol.mock.calls[0]![0]).toBe('pmtiles')
     expect(hoisted.setWorkerUrl).toHaveBeenCalledTimes(1)

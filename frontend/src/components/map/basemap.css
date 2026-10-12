@@ -1,0 +1,9 @@
+/* #1786: the map box before MapLibre arrives, and behind its canvas.
+   Land colour per theme (docs/design/map-pin-colour-modes.md §6.3). */
+.basemap-surface {
+  background: var(--rt-paper);
+}
+
+[data-theme='dark'] .basemap-surface {
+  background: var(--rt-bg-2);
+}
