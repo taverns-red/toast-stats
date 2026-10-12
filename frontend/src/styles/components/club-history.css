@@ -200,11 +200,23 @@
   text-align: left;
 }
 
+/* #1839: a linked year cell's 44px link is the row's height, so the cell
+   drops its block padding — the row stays ~44px instead of growing to 64. */
+.club-history-td--year:has(.club-history-year-link) {
+  padding-block: 0;
+}
+
 /* #1302 — the year label deep-links into ClubDetailPage for that program year.
-   Reads as a link (accent colour, underline on hover/focus) without disturbing
-   the sticky identity column's weight/alignment. */
+   Reads as a link (link colour, underline on hover/focus) without disturbing
+   the sticky identity column's weight/alignment.
+   #1839: --link, not the amber brand accent. --rt-stats (#D4873F) is 2.86:1
+   on white — a fill/accent colour, never text; --link remaps for dark mode.
+   The row is the target: an inline-flex 44px box (the year cell grows to fit). */
 .club-history-year-link {
-  color: var(--rt-stats, var(--accent, currentColor));
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--link);
   text-decoration: none;
   font-weight: inherit;
 }

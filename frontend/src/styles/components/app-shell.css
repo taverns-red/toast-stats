@@ -5181,7 +5181,9 @@
     font-family: var(--mono);
     font-size: 10px;
     letter-spacing: 0.06em;
-    color: var(--green-600);
+    /* #1839: --green-700, the ink for text on a tinted surface (#1660) —
+       --green-600 is 4.27:1 on the active chip's tint. */
+    color: var(--green-700);
     text-transform: uppercase;
   }
 
@@ -6017,7 +6019,10 @@
     grid-template-columns: 36px 1fr auto auto;
     align-items: center;
     gap: 8px;
-    padding: 8px 18px;
+    /* #1839: the district link is the row's 44px target (tap-targets.css),
+       so the row carries no block padding of its own. */
+    padding: 0 18px;
+    min-height: 44px;
     border-bottom: 1px solid var(--line-2);
     font-family: var(--sans);
     font-size: 13px;
@@ -6347,7 +6352,10 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 16px;
-    color: var(--rt-stats, #d4873f);
+    /* #1839: --rt-stats-focus (#b5651d, 4.3:1 on white) — raw --rt-stats is
+       2.86:1, under even the 3:1 large-text bar. Dark remaps it to
+       --rt-stats (5.81:1 on the dark surface). */
+    color: var(--rt-stats-focus, #b5651d);
   }
 
   .error-page__code {

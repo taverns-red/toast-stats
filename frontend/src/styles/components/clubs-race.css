@@ -144,6 +144,10 @@
 
   .clubs-section__title a {
     color: var(--link);
+    /* #1839: a heading link, not prose — 44px tall (was 22px). */
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 
   .clubs-podiums {
@@ -223,33 +227,39 @@
     font-weight: 500;
   }
 
-  /* #1617 — a compact pill. As an `a[href]` it inherits the base layer's
-     44px touch-target floor, which under the 999px radius drew a 44px
-     circle; the visible box opts out and the centred ::before below keeps
-     the ≥44px hit area (the row reserves 44px, so it is never clipped). */
+  /* #1617 — a compact pill with a ≥44px hit area.
+     #1839: the hit area is now the link's OWN box (44px tall, ≥44px wide),
+     and the visible 23px pill is drawn by ::before, centred in it. #1617 had
+     it the other way round (23px link, 44px ::before overlay), which gave a
+     real 44px hit area but a 40×23 link box — what the tap audits measure
+     and what assistive tech reports. Same pixels on screen either way. */
   .race-podium__district {
     position: relative;
     flex-shrink: 0;
-    min-height: 0;
-    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 0.5rem;
     font-family: var(--mono);
     font-size: 0.75rem;
     line-height: 1.4;
     color: var(--ink-2);
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-    border: 1px solid var(--line);
     text-decoration: none;
   }
 
   .race-podium__district::before {
     content: '';
     position: absolute;
+    left: 0;
+    right: 0;
     top: 50%;
-    left: 50%;
-    width: max(100%, 44px);
-    height: 44px;
-    transform: translate(-50%, -50%);
+    height: calc(1.4em + 0.25rem + 2px);
+    transform: translateY(-50%);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    pointer-events: none;
   }
 
   .race-podium__empty {

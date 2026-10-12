@@ -210,6 +210,15 @@
 
 /* ─── Brand Component Overrides ─── */
 
+/* #1839: dark remaps --tm-loyal-blue to the light #5dade2, so the primary
+   button's white label drops to 2.46:1 (404 "Go home", the skip link once
+   focused). A dark label on the light fill is ~7.6:1. Hover/active stay on
+   the remapped light blue (--tm-loyal-blue-90/-80), so the label holds. */
+[data-theme='dark'] .tm-btn-primary,
+[data-theme='dark'] .tm-skip-link {
+  color: var(--bg);
+}
+
 [data-theme='dark'] .tm-card {
   background-color: var(--surface-card);
   color: var(--text-body);
