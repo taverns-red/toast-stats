@@ -345,6 +345,21 @@ describe('promote-run-manifest failure modes', () => {
     expect((await run(['--execute'])).status).not.toBe(0)
     expect(tree(PROD)).toEqual(before)
   })
+
+  it('a gate that could not run holds everything but exits 0, so the promotion-held flow still runs', async () => {
+    // The shape scripts/date-completeness-gate.ts writes on an error.
+    writeInputs({
+      promote: false,
+      heldDates: [],
+      failures: [{ path: '(gate)', reason: 'boom' }],
+    })
+    const before = tree(PROD)
+    const r = await run(['--execute'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(tree(PROD)).toEqual(before)
+    expect(r.outputs.objects_copied).toBe('0')
+    expect(r.outputs.complete).toBe('false')
+  })
 })
 
 describe('promote-run-manifest --dry-run', () => {
