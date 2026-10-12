@@ -85,16 +85,16 @@ const LANDSCAPE_PROFILES: readonly Profile[] = [
   },
 ]
 
-/** What the chrome budget is measured against on each route. The Overview
- *  hub's first data is its KPI tiles. On Clubs the chrome's share ends where
- *  the page content starts (the block after the section scroll-row); the
- *  table card's own header above its first row is page content, reported in
- *  the PR rather than budgeted here. */
+/** What the budget is measured against on each route. The Overview hub's
+ *  first data is its KPI tiles. On Clubs it is the first club row (#1912),
+ *  whichever layout renders it: a desktop table row or a phone row group /
+ *  row. Before #1912 this measured where page content started (169px) and
+ *  the card's own header put the first row at 483px. */
 const LANDSCAPE_ROUTES = [
   { path: '/district/61', firstData: '.district-hub__tile' },
   {
     path: '/district/61/clubs',
-    firstData: '[data-testid="district-subnav"] + *',
+    firstData: 'table tbody tr, .mobile-row-group, [data-testid="mobile-row"]',
   },
 ] as const
 
@@ -261,6 +261,24 @@ for (const theme of ['light', 'dark'] as const) {
             expect(b.right, `${sel} right`).toBeLessThanOrEqual(
               vw - insets.right + 0.5
             )
+          }
+
+          // Clubs (#1912): moving the card header out of the first screen
+          // must not lose a function. Search and Filter & sort are on the
+          // first screen; the CSV export stays reachable.
+          if (r.path.endsWith('/clubs')) {
+            const vis = (sel: string) => page.locator(`${sel}:visible`).first()
+            for (const sel of [
+              'input[aria-label="Search clubs by name"]',
+              'button[aria-haspopup="dialog"].clubs-filters-trigger',
+            ]) {
+              const b = await boxOf(page, sel)
+              expect(b, sel).not.toBeNull()
+              expect(b!.bottom, `${sel} on first screen`).toBeLessThanOrEqual(
+                vh
+              )
+            }
+            await expect(vis('button:has-text("Export Clubs")')).toBeAttached()
           }
 
           // The top bar scrolls away; only the 44px context bar sticks.
