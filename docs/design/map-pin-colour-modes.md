@@ -3,7 +3,7 @@
 **Date:** 2026-10-12
 **Epic:** #1781. **Consumers:** #1784 (district map, core modes), #1787 (extended modes), #1788 (filters + side panel), #1808 / #1809 (region / world explorers), #1800 (per-region shards — this doc sets their field list), #1786 (basemap — this doc sets its land/water colours).
 **Source:** `.routine-tmp/feature-design-2026-10-11.md` §2.1 and **§7 Decisions (2026-10-11)**, items 2, 11 and 12.
-**Status:** Proposed. Waiting for Ron's review. Decisions that need Ron are collected in [§11](#11-decisions-for-ron).
+**Status:** Approved 2026-10-12. The decisions are recorded in [§11](#11-decisions-2026-10-12).
 
 Every data claim below was checked against the shared-contracts Zod schemas on `origin/main` @ `d1aa0b81`. Each was also checked against one CDN object read with a single `curl --compressed` (D61, snapshot date **2026-10-11**):
 
@@ -115,8 +115,8 @@ There are two deliberate departures from the shipped pills:
 
 Ron's list includes three more items, which this design handles differently:
 
-- **"Vulnerable / intervention".** This is **not a separate mode**. It is the health mode with its legend filtered: the "Needs attention" chip writes `?status=vulnerable,intervention` (the existing Clubs-table contract). A separate mode would show the same three colours under a second name. _(Needs Ron's confirmation; see §11.)_
-- **"Prospective".** This is **a layer toggle (`?prospective=1`), not a colour mode.** Prospective clubs are not in `clubs[]`. They come from `prospectiveClubs[]` (`ProspectiveClubSchema`), which has **no coordinates**: only `city`, `region` and `country` (D61: 8 of 8 without coordinates). Until the collector keeps FAC `Address.Coordinates` for prospective rows, they appear only in the sheet's "Not on the map" list under "Prospective (8)". _(Pipeline follow-up for Ron; see §11.)_
+- **"Vulnerable / intervention".** This is **not a separate mode**. It is the health mode with its legend filtered: the "Needs attention" chip writes `?status=vulnerable,intervention` (the existing Clubs-table contract). A separate mode would show the same three colours under a second name. _(Decided 2026-10-12; see §11.)_
+- **"Prospective".** This is **not a colour mode and not a map layer.** Prospective clubs are not in `clubs[]`. They come from `prospectiveClubs[]` (`ProspectiveClubSchema`), which has **no coordinates**: only `city`, `region` and `country` (D61: 8 of 8 without coordinates). They are shown as a count and a list in the side panel / sheet under "Prospective (8)", and there is no pipeline geocoding. _(Decided 2026-10-12; see §11.)_
 - **"Club status / health"** is covered by two modes: `health` (the default) and `status`, the operational TI status.
 
 ### 4.3 Legend copy
@@ -234,7 +234,7 @@ Eight hues cannot identify 34 areas or 94 districts, so **colour separates and l
   - `?divisions=` / `?areas=` for division and area
   - `?search=`
   - Modes without an existing key get one named after the mode (`?size=`, `?dcp=`, `?csp=` …).
-- **Other parameters:** `?view=list` (#1784) and `?prospective=1`.
+- **Other parameters:** `?view=list` (#1784).
 
 ## 10. Mobile (375) and responsive layout
 
@@ -246,13 +246,15 @@ Eight hues cannot identify 34 areas or 94 districts, so **colour separates and l
 
 The existing `BottomSheet` is **modal** (`aria-modal`, `variant: 'default' | 'full'`). The map's legend sheet must leave the map interactive at peek and half, so #1784 needs a non-modal detent variant (a `role="region"` landmark rather than a dialog). The mode **picker** keeps using the modal sheet.
 
-## 11. Decisions for Ron
+## 11. Decisions (2026-10-12)
 
-1. **URL key: `?color=` or `?mode=`.** #1784, #1785, #1808 and #1809 say `?mode=`. This doc recommends **`?color=`** because the club grid already ships it (`?color=tier`), and because `?view=list` makes "mode" ambiguous. If Ron agrees, the four issue bodies need updating.
-2. **Health filter key: `?status=` or `?health=`.** #1784 says `?health=`. This doc recommends reusing the Clubs table's **`?status=`** (health values, with `intervention` as the alias), so one link filters both the map and the list.
-3. **Fold "vulnerable / intervention" into health** (legend filter plus a "Needs attention" chip) instead of a separate mode.
-4. **Prospective clubs cannot be pinned today**, because `prospectiveClubs[]` has no coordinates. Should a pipeline issue keep FAC coordinates for prospective rows, or is a list-only display enough?
-5. **Distinguished pins use light blue for "Distinguished"** instead of the table pill's green, so the tier ramp is ordinal and green keeps meaning "healthy". Accept, or keep green and accept a non-monotone ramp?
+Approved 2026-10-12. Ron decided items 4 and 5. Items 1–3 follow the orchestrator's default, which is to stay consistent with the keys the site already uses.
+
+1. **URL key: `?color=`**, not `?mode=`. It matches the shipped club grid (`?color=tier`) and avoids confusion with `?view=list`. The #1784 and #1788 issue bodies were updated to match.
+2. **Health filter key: `?status=`**, not `?health=`. It is the Clubs table's key (health values, with `intervention` as the alias), so one link filters both the map and the list.
+3. **"Vulnerable / intervention" is folded into the health legend.** It is a legend filter plus a "Needs attention" chip, not a separate mode.
+4. **Prospective clubs (Ron):** shown as a **count and a list in the map's side panel / sheet**. There is **no pipeline geocoding**, and they are not pinned.
+5. **Distinguished pins use light blue `#7FB8D9` (Ron).** The tier ramp stays ordinal, and green keeps meaning "healthy".
 
 ## 12. UX persona review (ron-ux, recorded)
 
