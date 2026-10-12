@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.47.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.46.0...toast-stats-v2.47.0) (2026-10-12)
+
+
+### Features
+
+* **club:** never display a club's online meeting link ([#1879](https://github.com/taverns-red/toast-stats/issues/1879)) ([#1882](https://github.com/taverns-red/toast-stats/issues/1882)) ([fdc6799](https://github.com/taverns-red/toast-stats/commit/fdc679956727e8fbe608d553feb659b6ef507a53))
+* **mobile:** priority columns on the Division/Area area table ([#1834](https://github.com/taverns-red/toast-stats/issues/1834)) ([#1881](https://github.com/taverns-red/toast-stats/issues/1881)) ([c7642f6](https://github.com/taverns-red/toast-stats/commit/c7642f660b08ef887237b9557706e7c32b49d1f3))
+
 ## [2.46.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.45.0...toast-stats-v2.46.0) (2026-10-12)
 
 
