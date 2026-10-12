@@ -23,12 +23,25 @@ import '@testing-library/jest-dom'
 import { DistrictHubRouteFallback } from '../DistrictHubRouteFallback'
 import { DistrictOverviewHub } from '../DistrictOverviewHub'
 import { DISTRICT_HUB_QUERY } from '../../utils/districtHub'
+import { PHONE_SECTION_BAR_QUERY } from '../../config/districtSections'
 
 const originalMatchMedia = window.matchMedia
 
-function mockHubLayout(matches: boolean) {
+/** `hub`: the hub layout query; `portraitPhone`: the phone section-bar query
+ *  (upright phones). Short landscape phones match the first only. */
+function mockLayout({
+  hub,
+  portraitPhone,
+}: {
+  hub: boolean
+  portraitPhone: boolean
+}) {
+  const answers: Record<string, boolean> = {
+    [DISTRICT_HUB_QUERY]: hub,
+    [PHONE_SECTION_BAR_QUERY]: portraitPhone,
+  }
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-    matches: query === DISTRICT_HUB_QUERY ? matches : false,
+    matches: answers[query] ?? false,
     media: query,
     onchange: null,
     addEventListener: vi.fn(),
@@ -39,7 +52,7 @@ function mockHubLayout(matches: boolean) {
   }))
 }
 
-beforeEach(() => mockHubLayout(true))
+beforeEach(() => mockLayout({ hub: true, portraitPhone: true }))
 afterEach(() => {
   cleanup()
   window.matchMedia = originalMatchMedia
@@ -72,7 +85,18 @@ describe('DistrictHubRouteFallback (#1901)', () => {
   })
 
   it('keeps the generic fallback on tablets and desktops', () => {
-    mockHubLayout(false)
+    mockLayout({ hub: false, portraitPhone: false })
+    render(<DistrictHubRouteFallback fallback={generic} />)
+
+    expect(screen.getByTestId('generic-fallback')).toBeInTheDocument()
+    expect(screen.queryByTestId('district-hub-tile')).not.toBeInTheDocument()
+  })
+
+  it('keeps the generic fallback on short landscape phones', () => {
+    // The hub layout applies there too, but the page puts the 45 px section
+    // row above the hub instead of the bottom bar, so fallback tiles would
+    // sit 61 px too high and jump when the page mounted (measured 812×375).
+    mockLayout({ hub: true, portraitPhone: false })
     render(<DistrictHubRouteFallback fallback={generic} />)
 
     expect(screen.getByTestId('generic-fallback')).toBeInTheDocument()
