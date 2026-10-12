@@ -60,6 +60,9 @@
 @import './styles/components/mobile-row-list.css';
 @import './styles/components/district-hub.css';
 @import './styles/components/priority-columns.css';
+/* Safe-area insets + short-landscape chrome (#1847) — after the chrome
+   sheets it pads (app-shell, context-bar, section-bar, chart sheet). */
+@import './styles/components/safe-area.css';
 @import './styles/components/tooltip.css';
 @import './styles/components/worldwide-scoreboard.css';
 @import './styles/components/tap-targets.css';

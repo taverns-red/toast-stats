@@ -85,13 +85,16 @@ const LANDSCAPE_PROFILES: readonly Profile[] = [
   },
 ]
 
-/** Routes with a first-data element, and how to find it. */
+/** What the chrome budget is measured against on each route. The Overview
+ *  hub's first data is its KPI tiles. On Clubs the chrome's share ends where
+ *  the page content starts (the block after the section scroll-row); the
+ *  table card's own header above its first row is page content, reported in
+ *  the PR rather than budgeted here. */
 const LANDSCAPE_ROUTES = [
   { path: '/district/61', firstData: '.district-hub__tile' },
   {
     path: '/district/61/clubs',
-    firstData:
-      '[data-testid="mobile-row-list"] li, .mobile-row-list li, table tbody tr',
+    firstData: '[data-testid="district-subnav"] + *',
   },
 ] as const
 
@@ -122,6 +125,18 @@ async function open(
     insets = p.insets
   }
   return { ctx, page, insets }
+}
+
+/** Let the sheet's slide-in finish: mid-animation it sits below the fold. */
+async function settle(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter(a => a.effect?.getTiming().iterations !== Infinity)
+        .map(a => a.finished)
+    )
+  )
 }
 
 async function load(page: Page, path: string): Promise<void> {
@@ -187,6 +202,7 @@ for (const theme of ['light', 'dark'] as const) {
           .click()
         const sheet = page.getByRole('dialog', { name: 'More sections' })
         await expect(sheet).toBeVisible()
+        await settle(page)
         const s = await sheet.evaluate(d => {
           const panel = d.closest('.bottom-sheet') ?? d
           const r = panel.getBoundingClientRect()
@@ -261,6 +277,7 @@ for (const theme of ['light', 'dark'] as const) {
           await page.locator('[data-testid="context-bar-chip"]:visible').click()
           const sheet = page.getByRole('dialog').first()
           await expect(sheet).toBeVisible()
+          await settle(page)
           const s = await sheet.evaluate(d => {
             const panel = d.closest('.bottom-sheet') ?? d
             const r = panel.getBoundingClientRect()

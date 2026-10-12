@@ -82,11 +82,12 @@ describe('safe-area.css — the shell pads itself clear of the notch (#1847)', (
   })
 
   it('insets the page content and footer horizontally (landscape notch)', () => {
-    const body = safeArea.match(
-      /\.app-shell__main,\s*\.app-shell-footer\s*\{[^}]*\}/
-    )?.[0]
-    expect(body).toMatch(/margin-left:\s*env\(safe-area-inset-left/)
-    expect(body).toMatch(/margin-right:\s*env\(safe-area-inset-right/)
+    const main = rule(safeArea, '.app-shell__main')
+    expect(main).toMatch(/margin-left:\s*env\(safe-area-inset-left/)
+    expect(main).toMatch(/margin-right:\s*env\(safe-area-inset-right/)
+    const footer = rule(safeArea, '.app-shell-footer')
+    expect(footer).toMatch(/padding-left:\s*env\(safe-area-inset-left/)
+    expect(footer).toMatch(/padding-right:\s*env\(safe-area-inset-right/)
   })
 
   it('pads every viewport-fixed sheet on the sides and the bottom', () => {

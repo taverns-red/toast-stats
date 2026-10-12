@@ -37,7 +37,7 @@
      brand layer context-bar.css lives in, so the clubs-world collapse lives
      here: below 768 the bar replaces the eyebrow, title (kept for AT,
      visually hidden), body copy and data chips. */
-  @media (max-width: 767px) {
+  @media (max-width: 767px), (orientation: landscape) and (max-height: 500px) {
     .clubs-page:has(> .context-bar) {
       padding-top: 0;
     }

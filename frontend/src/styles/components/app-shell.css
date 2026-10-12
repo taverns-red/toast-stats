@@ -416,7 +416,7 @@
     top: calc(100% + 6px);
     right: 0;
     width: min(420px, 92vw);
-    max-height: 60vh;
+    max-height: 60dvh;
     overflow: hidden;
     background-color: var(--surface);
     border: 1px solid var(--line);
@@ -426,7 +426,7 @@
   }
 
   .header-search__dropdown .command-palette__results {
-    max-height: 60vh;
+    max-height: 60dvh;
   }
 
   .app-shell-avatar {
@@ -5622,15 +5622,14 @@
   /* The bar is sticky (not fixed) so it reserves its own space in normal flow
      and never overlaps the content it sits above — it pins just under the
      56px-tall sticky top bar as the reader scrolls. The blurred surface masks
-     prose scrolling beneath it. Horizontal safe-area padding keeps the chip
-     clear of a landscape notch. */
+     prose scrolling beneath it. No safe-area term: .app-shell__main already
+     sits inside the side insets (safe-area.css, #1847). */
   .jump-to-bar {
     position: sticky;
-    top: 56px;
+    top: var(--app-top-offset, 56px);
     z-index: 30;
     margin: -8px -24px 24px;
-    padding: 8px max(24px, env(safe-area-inset-left)) 8px
-      max(24px, env(safe-area-inset-right));
+    padding: 8px 24px;
     background-color: rgba(var(--rds-surface-rgb), 0.85);
     -webkit-backdrop-filter: saturate(140%) blur(8px);
     backdrop-filter: saturate(140%) blur(8px);
@@ -5690,7 +5689,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    max-height: 80vh;
+    max-height: 80dvh;
     background-color: var(--surface);
     border-top-left-radius: var(--rds-radius-lg);
     border-top-right-radius: var(--rds-radius-lg);
@@ -6209,12 +6208,12 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding-top: 12vh;
+    padding-top: 12dvh;
   }
 
   .command-palette {
     width: min(640px, 92vw);
-    max-height: 70vh;
+    max-height: 70dvh;
     display: flex;
     flex-direction: column;
     background-color: var(--surface);

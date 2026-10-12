@@ -42,7 +42,7 @@
   @media (min-width: 1024px) {
     .district-kpi-strip {
       position: sticky;
-      top: 56px; /* sits under .app-shell-top-bar (56px) */
+      top: var(--app-top-offset, 56px); /* under .app-shell-top-bar */
       z-index: 30; /* below topbar (40) */
     }
   }
