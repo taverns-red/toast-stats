@@ -222,6 +222,19 @@ export {
   type ClubDistrictHistoryShard,
 } from './schemas/club-district-history.schema.js'
 
+// District → region history — derived/district-region-history.json (#1820)
+export {
+  DistrictRegionSpanSchema,
+  DistrictRegionHistoryDistrictSchema,
+  DistrictRegionConflictSchema,
+  DistrictRegionHistorySchema,
+  DISTRICT_REGION_HISTORY_VERSION,
+  type DistrictRegionSpan,
+  type DistrictRegionHistoryDistrict,
+  type DistrictRegionConflict,
+  type DistrictRegionHistory,
+} from './schemas/district-region-history.schema.js'
+
 // Worldwide club race artifact — snapshots/{date}/global-club-race.json (#1556)
 export {
   GlobalClubRaceSchema,
