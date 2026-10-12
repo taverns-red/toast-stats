@@ -323,6 +323,16 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/priority-columns.smoke.ts
 
+      # Landing scroll budget (#864, #1834). At 375/414, both engines, `/` must
+      # stay ≤ 8,000px tall with the phone rankings in their default 25-row
+      # reveal. It was a local-only smoke; running it here flags growth (more
+      # districts, a new section) before it lands instead of after.
+      - name: Cross-engine landing scroll budget against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/landing-mobile-scroll.smoke.ts
+
       # Lighthouse MOBILE gate (#1830, mobile epic #1827). lighthouserc.js is
       # desktop-only on `/` against localhost fixtures; this runs Lighthouse's
       # mobile profile (simulated 150 ms RTT / 1.6 Mbps / 4x CPU) on the five

@@ -220,6 +220,13 @@
     text-align: center;
   }
 
+  /* Show-more step under a long list (the MobileRowList buttons). */
+  .priority-columns__reveal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
   .priority-columns__full {
     align-self: flex-start;
     display: inline-flex;

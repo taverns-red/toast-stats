@@ -72,6 +72,8 @@ export interface PriorityColumnsTableProps<Row, F extends string> {
   rowTestId?: (row: Row) => string
   /** Shown as one full-width row when `rows` is empty (say why, #1362). */
   empty?: React.ReactNode
+  /** Rendered under the table, above "Full table" (e.g. a show-more step). */
+  footer?: React.ReactNode
 }
 
 /** Resolve `?cols=` to exactly two known, distinct metric ids, topping up
@@ -125,6 +127,7 @@ function PhonePriorityColumns<Row, F extends string>({
   groupOf,
   rowTestId,
   empty,
+  footer,
 }: PriorityColumnsTableProps<Row, F>): React.JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams()
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -270,6 +273,8 @@ function PhonePriorityColumns<Row, F extends string>({
           })}
         </tbody>
       </table>
+
+      {footer}
 
       <button
         type="button"
