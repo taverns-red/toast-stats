@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-disabled-dependent-query-reports-not-loading-so-isloading-skeletons-paint-nothing.md` — A dependent TanStack query that is disabled while its key is unresolved reports isLoading false, so an `isLoading && <Skeleton/>` arm paints nothing for that whole window; gate the skeleton on the full dependency chain  (2026-10-12)
 - `a-gate-must-cover-what-the-copy-step-copies-not-only-what-this-run-wrote.md` — Narrowing a pre-promotion gate to "what this run wrote" is only safe once promotion copies only that too; until then the gate must keep checking whatever else the copy step will carry, such as a held run's leftovers  (2026-10-11)
 - `a-url-codec-that-only-writes-the-single-value-case-silently-drops-a-multi-select.md` — A URL codec that serialises only the single-value case drops a multi-select on reload with no error — when a new UI makes multi-select the norm, round-trip test the multi case first  (2026-10-11)
 - `ismobile-emulation-hides-horizontal-overflow-measure-in-a-plain-viewport.md` — Playwright's isMobile emulation widens the layout viewport to fit the content, so scrollWidth − innerWidth reads 0 on a page that overflows; measure overflow in a plain setViewportSize viewport, and give nowrap row lists inline-size containment so they cannot widen a min-content-sized ancestor  (2026-10-11)
