@@ -407,6 +407,58 @@ describe('ClubDetailPage (#208)', () => {
     expect(container.querySelector('a[href^="tel:"]')).toBeNull()
   })
 
+  // #1879 — and never a meeting link. Live shape: TI's FAC carries the Zoom
+  // link (sometimes with MtgID + Passcode) in address.street, not website
+  // (D61 clubs 1009147 and 7396993, snapshot 2026-10-10).
+  it('never renders a meeting link, meeting ID or passcode (#1879)', () => {
+    const mockedHook = vi.mocked(useDistrictAnalytics)
+    mockedHook.mockReturnValueOnce({
+      data: {
+        districtId: '61',
+        allClubs: [
+          {
+            ...baseMockClub,
+            address: {
+              street:
+                'https://us06web.zoom.us/j/829949991, MtgID: 829 9499 910 Passcode:826900',
+              city: 'Ottawa',
+              region: 'ON',
+              postalCode: 'K1Y1M7',
+              country: 'Canada',
+            },
+            website:
+              'https://1009147.toastmastersclubs.org/agenda-02291132.html',
+            meetingDay: 'Mondays',
+            meetingTime: '18:30 - 20:00  Ottawa EST',
+            allowsVirtualAttendance: true,
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    const { container } = renderWithRoute()
+
+    expect(screen.getByText('Meets online')).toBeInTheDocument()
+    expect(screen.getByText('Ottawa, ON')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /club website/i })).toHaveAttribute(
+      'href',
+      'https://1009147.toastmastersclubs.org/agenda-02291132.html'
+    )
+    expect(
+      screen.getByRole('link', { name: /contact on toastmasters\.org/i })
+    ).toBeInTheDocument()
+
+    const html = container.innerHTML
+    expect(html).not.toMatch(
+      /zoom\.us|teams\.microsoft|teams\.live|meet\.google|webex\.com|gotomeeting|meet\.goto|meet\.jit\.si/i
+    )
+    expect(html).not.toContain('829949991')
+    expect(html).not.toContain('826900')
+    expect(html).not.toMatch(/passcode|mtgid/i)
+  })
+
   it('omits the where-it-meets line when the snapshot has no FAC data (#1783)', () => {
     const { container } = renderWithRoute()
     expect(container.querySelector('.club-meets')).toBeNull()

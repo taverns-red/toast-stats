@@ -9,15 +9,22 @@ import { normalizeClubId } from '@taverns-red/shared-contracts'
  * NEVER email or phone — TI publishes those on its own club page, which is
  * what the contact link points at. `email`/`phone` are accepted on the input
  * type only because the ClubTrend carries them; nothing here reads them.
+ *
+ * NEVER an online meeting link, meeting ID or passcode either (Ron,
+ * 2026-10-12, #1879) — see `containsMeetingAccess`. Every surface that shows
+ * a club's meeting details (hero, map popup, lists) MUST build them here.
  */
 export interface ClubMeetingInfo {
   /** Free-text day (TI's field, verbatim) and time, joined with " · ". */
   schedule: string | null
-  /** "Online or hybrid" / "In person", from allowsVirtualAttendance. */
+  /**
+   * "Meets online" when TI's street is a meeting link; else "Online or
+   * hybrid" / "In person" from allowsVirtualAttendance.
+   */
   mode: string | null
-  /** Street, city, region — no postal code or country. */
+  /** Street, city, region — no postal code, country or meeting link. */
   place: string | null
-  /** The club's own site, http(s) only. */
+  /** The club's own site, http(s) only, never a meeting host. */
   websiteUrl: string | null
   /** The club's page on toastmasters.org. */
   contactUrl: string | null
@@ -59,8 +66,35 @@ function clean(value: string | undefined): string | null {
   return text.length > 0 ? text : null
 }
 
-function safeHttpUrl(value: string | undefined): string | null {
+/**
+ * #1879 — Ron's rule (2026-10-12): NEVER display a club's online meeting
+ * link. Any URL on a meeting host gives direct entry to the meeting and may
+ * carry a passcode; the "Contact on toastmasters.org" link is the way in.
+ *
+ * TI's Find-A-Club puts the link wherever the club typed it — on prod it is
+ * `address.street` (D61 1009147: `https://us02web.zoom.us/j/…`; 7396993 adds
+ * `MtgID: … Passcode:…`), not `website`. So every free-text field passes
+ * through this check, not just the website. Matches with or without a scheme.
+ */
+const MEETING_HOST =
+  /(?:^|[^a-z0-9.-])(?:[a-z0-9-]+\.)*(?:zoom\.us|zoomgov\.com|zoom\.com|teams\.microsoft\.com|teams\.live\.com|meet\.google\.com|webex\.com|gotomeeting\.com|gotomeet\.me|meet\.goto\.com|meet\.jit\.si|8x8\.vc|whereby\.com|bluejeans\.com)(?![a-z0-9-])/i
+
+/** Meeting credentials typed next to (or instead of) the link. */
+const MEETING_CREDENTIAL =
+  /\b(?:passcode|password|pwd\s*[:=]|mtg\s*id|meeting\s*id)\b|[?&]pwd=/i
+
+export function containsMeetingAccess(value: string): boolean {
+  return MEETING_HOST.test(value) || MEETING_CREDENTIAL.test(value)
+}
+
+/** `clean`, then null if the text would give entry to a meeting. */
+function publicText(value: string | undefined): string | null {
   const text = clean(value)
+  return text !== null && containsMeetingAccess(text) ? null : text
+}
+
+function safeHttpUrl(value: string | undefined): string | null {
+  const text = publicText(value)
   if (!text) return null
   try {
     const url = new URL(text)
@@ -82,20 +116,25 @@ function safeHttpUrl(value: string | undefined): string | null {
 export function buildClubMeetingInfo(
   club: ClubMeetingSource
 ): ClubMeetingInfo | null {
-  const day = clean(club.meetingDay)
-  const time = clean(club.meetingTime)
+  const day = publicText(club.meetingDay)
+  const time = publicText(club.meetingTime)
   const schedule = [day, time].filter(Boolean).join(' · ') || null
 
-  const mode =
-    club.allowsVirtualAttendance === true
+  // A street that is a meeting link means the club's meeting place is online.
+  const rawStreet = clean(club.address?.street)
+  const meetsAtLink = rawStreet !== null && containsMeetingAccess(rawStreet)
+
+  const mode = meetsAtLink
+    ? 'Meets online'
+    : club.allowsVirtualAttendance === true
       ? 'Online or hybrid'
       : club.allowsVirtualAttendance === false
         ? 'In person'
         : null
 
-  const street = clean(club.address?.street)?.replace(/,$/, '') ?? null
+  const street = meetsAtLink ? null : (rawStreet?.replace(/,$/, '') ?? null)
   const place =
-    [street, clean(club.address?.city), clean(club.address?.region)]
+    [street, publicText(club.address?.city), publicText(club.address?.region)]
       .filter(Boolean)
       .join(', ') || null
 
