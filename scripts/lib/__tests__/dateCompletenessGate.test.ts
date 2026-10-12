@@ -335,6 +335,35 @@ describe('evaluate + summary', () => {
     expect(r.reason).toMatch(/no dates/)
   })
 
+  it('names the held dates, so scoped promotion (#1763) can hold only them', () => {
+    const other = '2026-10-11'
+    const held = evaluateCompletenessGate({
+      dates: [DATE, other],
+      regressions: [
+        { date: DATE, path: `${dir}global-totals.json`, reason: 'x' },
+        { date: DATE, path: `${dir}manifest.json`, reason: 'y' },
+      ],
+      allowValueChanges: false,
+    })
+    expect(held.heldDates).toEqual([DATE])
+    // An override promotes every date; an error names none (hold all).
+    expect(
+      evaluateCompletenessGate({
+        dates: [DATE],
+        regressions: [{ date: DATE, path: dir, reason: 'x' }],
+        allowValueChanges: true,
+      }).heldDates
+    ).toEqual([])
+    expect(
+      evaluateCompletenessGate({
+        dates: [DATE],
+        regressions: [],
+        allowValueChanges: false,
+        error: 'boom',
+      }).heldDates
+    ).toEqual([])
+  })
+
   it('the summary names each held date and reason', () => {
     const r = evaluateCompletenessGate({
       dates: [DATE],
