@@ -1,4 +1,4 @@
-import React, { useCallback, useId, useState } from 'react'
+import React, { useCallback, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BottomSheet } from './BottomSheet'
 import { formatShortDate } from '../utils/dateFormatting'
@@ -66,6 +66,7 @@ export const ContextBar: React.FC<ContextBarProps> = ({
   trail,
 }) => {
   const [open, setOpen] = useState(false)
+  const chipRef = useRef<HTMLButtonElement>(null)
   const close = useCallback(() => setOpen(false), [])
   const sheetId = useId()
   const dateLabel = date ? formatShortDate(date) : 'Latest'
@@ -91,6 +92,7 @@ export const ContextBar: React.FC<ContextBarProps> = ({
         {title}
       </span>
       <button
+        ref={chipRef}
         type="button"
         className="context-bar__chip"
         data-testid="context-bar-chip"
@@ -116,6 +118,7 @@ export const ContextBar: React.FC<ContextBarProps> = ({
         onClose={close}
         title={title}
         closeLabel="Close page options"
+        returnFocusRef={chipRef}
       >
         {controls && <div className="context-sheet__section">{controls}</div>}
         {actions && (
