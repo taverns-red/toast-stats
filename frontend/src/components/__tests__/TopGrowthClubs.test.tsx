@@ -51,13 +51,21 @@ function panelFor(title: string): HTMLElement {
 }
 
 describe('TopGrowthClubs', () => {
-  it('renders only a skeleton while loading', () => {
+  // #1837: the skeleton reproduces both ranked panels (chrome + 10 row boxes
+  // each), so the cards rendered below it don't paint high and get pushed
+  // off-screen when the data lands. It carries no club data.
+  it('renders only a panel-shaped skeleton while loading', () => {
     const { container } = render(
       <TopGrowthClubs topGrowthClubs={growth} topDCPClubs={dcp} isLoading />
     )
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
-    expect(screen.queryByText('Top Growth Clubs')).toBeNull()
+    expect(
+      screen.getByRole('status', { name: 'Loading top clubs' })
+    ).toBeInTheDocument()
+    expect(container.querySelectorAll('[data-skeleton-row]')).toHaveLength(20)
+    expect(
+      screen.queryByRole('heading', { name: 'Top Growth Clubs' })
+    ).toBeNull()
     expect(screen.queryByText('Alpha Speakers')).toBeNull()
   })
 

@@ -3885,9 +3885,19 @@
 
   /* District detail page redesign chrome (#358). Same Lesson 49/50 caveat
      as .districts-page-root: NO min-height: 100vh — AppShell already owns
-     the viewport wrapper. */
+     the viewport wrapper, and 100vh under the 56px top bar would force a
+     scroll past the chrome.
+
+     #1837: the root does reserve the viewport area BELOW the top bar. Every
+     loaded district page runs far past the fold, but its loading states
+     (route chunk, date index) are short, so at 1280px the footer painted at
+     the viewport bottom and was pushed off when the content landed — a
+     0.04–0.06 shift on every subpage. Filling exactly the space under the
+     top bar keeps the footer just below the fold from first paint; nothing
+     is added above it, so no extra scroll beyond the footer itself. */
   .district-detail-page-root {
     background-color: var(--bg);
+    min-height: calc(100vh - 56px);
   }
 
   .district-detail-page {

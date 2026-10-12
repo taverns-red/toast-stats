@@ -137,7 +137,10 @@ describe('DivisionPerformanceCards', () => {
       ).toBeInTheDocument()
     })
 
-    it('should show spinner animation during loading', () => {
+    // #1837: a short spinner panel let the static DDP criteria below it sit
+    // at the top until the list landed above it. The skeleton reproduces
+    // the loaded list's structure instead — card panels at desktop widths.
+    it('reserves the card list with card-shaped skeleton panels while loading', () => {
       const { container } = render(
         <DivisionPerformanceCards
           snapshotTimestamp="2026-06-30"
@@ -146,8 +149,12 @@ describe('DivisionPerformanceCards', () => {
         />
       )
 
-      const spinner = container.querySelector('.animate-spin')
-      expect(spinner).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', { name: 'Loading division performance' })
+      ).toBeInTheDocument()
+      expect(
+        container.querySelectorAll('[data-skeleton-card]').length
+      ).toBeGreaterThanOrEqual(2)
     })
 
     it('should not call extractDivisionPerformance when loading', () => {

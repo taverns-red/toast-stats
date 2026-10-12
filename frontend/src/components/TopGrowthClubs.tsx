@@ -20,6 +20,79 @@ interface TopGrowthClubsProps {
   isLoading: boolean
 }
 
+/* Loading skeleton (#1837). The loaded block is two ranked panels of up to 10
+ * rows each plus the highlights panel — 2,400–2,700px tall — and the
+ * education card renders directly below it from a separate query. The old
+ * 32px-bar placeholder (or nothing at all, during the date-index window) let
+ * that card paint near the top and then be pushed off-screen when this block
+ * landed (CLS 0.24 at 375px, 0.30 at 1280px). The skeleton reuses each panel's
+ * own chrome and row box (padding, border, the 2xl value line), so its rows
+ * size by the same rules as the loaded ones (Lesson 107, Lesson 158). Only the
+ * row count is pinned: both lists are capped at 10 and a district always has
+ * more than 10 clubs. */
+const SKELETON_RANKED_ROWS = 10
+
+const SkeletonRankedPanel: React.FC<{ title: string; blurb: string }> = ({
+  title,
+  blurb,
+}) => (
+  <div className="redesign-panel">
+    <div className="flex items-center gap-2 mb-4">
+      <span className="w-6 h-6" />
+      <h3 className="text-xl font-semibold text-gray-900 font-tm-headline">
+        {title}
+      </h3>
+    </div>
+    <p className="text-sm text-gray-600 mb-4 font-tm-body">{blurb}</p>
+    <div className="space-y-3">
+      {Array.from({ length: SKELETON_RANKED_ROWS }, (_, i) => (
+        <div
+          key={i}
+          data-skeleton-row=""
+          className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold font-tm-headline">
+              <span className="animate-pulse bg-gray-200 rounded-sm inline-block w-40">
+                &nbsp;
+              </span>
+            </p>
+            <p className="text-sm font-tm-body">
+              <span className="animate-pulse bg-gray-200 rounded-sm inline-block w-20">
+                &nbsp;
+              </span>
+            </p>
+          </div>
+          <div className="text-right ml-4 shrink-0">
+            <p className="text-2xl font-bold font-tm-headline">
+              <span className="animate-pulse bg-gray-200 rounded-sm inline-block w-10">
+                &nbsp;
+              </span>
+            </p>
+            <p className="text-xs font-tm-body">&nbsp;</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
+const TopGrowthClubsSkeleton: React.FC = () => (
+  <div className="space-y-6" role="status" aria-label="Loading top clubs">
+    <span className="sr-only">Loading top clubs…</span>
+    <div className="space-y-6" aria-hidden="true">
+      <SkeletonRankedPanel
+        title="Top Growth Clubs"
+        blurb="Clubs with the highest membership growth over the analyzed period"
+      />
+      <SkeletonRankedPanel
+        title="Top DCP Goal Achievement"
+        blurb="Clubs with the highest DCP goal achievement"
+      />
+    </div>
+  </div>
+)
+
 export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
   topGrowthClubs,
   topDCPClubs,
@@ -42,14 +115,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
   )
 
   if (isLoading) {
-    return (
-      <div className="redesign-panel">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    )
+    return <TopGrowthClubsSkeleton />
   }
 
   const getDistinguishedBadge = (

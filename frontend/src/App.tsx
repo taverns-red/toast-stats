@@ -104,6 +104,21 @@ function PageLoadingFallback(): React.JSX.Element {
   )
 }
 
+/* District route fallback (#1837). Every `/district/:id/*` page renders far
+ * past the fold once loaded, but the bare spinner fallback is ~100px tall, so
+ * at 1280px the shell footer painted at the bottom of the viewport while the
+ * route chunk loaded and was then pushed off-screen when the page mounted
+ * (0.04–0.06 CLS on its own). Rendering the fallback inside the page's own
+ * root gives it the same reserved minimum height as the page
+ * (`.district-detail-page-root` in app-shell.css). */
+function DistrictRouteFallback(): React.JSX.Element {
+  return (
+    <div className="district-detail-page-root">
+      <PageLoadingFallback />
+    </div>
+  )
+}
+
 // Create router configuration (ready for v7 future flags when available)
 const router = createBrowserRouter(
   [
@@ -123,7 +138,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictDetailPage />
             </Suspense>
           ),
@@ -131,7 +146,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/changes',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictChangesPage />
             </Suspense>
           ),
@@ -139,7 +154,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/clubs',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictClubsPage />
             </Suspense>
           ),
@@ -147,7 +162,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/divisions',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictDivisionsPage />
             </Suspense>
           ),
@@ -155,7 +170,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/rankings',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictRankingsPage />
             </Suspense>
           ),
@@ -163,7 +178,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/grid',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictGridPage />
             </Suspense>
           ),
@@ -171,7 +186,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/action-list',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictActionListPage />
             </Suspense>
           ),
@@ -179,7 +194,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/trends',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictTrendsPage />
             </Suspense>
           ),
@@ -187,7 +202,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/analytics',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictAnalyticsPage />
             </Suspense>
           ),
@@ -195,7 +210,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/club/:clubId',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <ClubDetailPage />
             </Suspense>
           ),
@@ -203,7 +218,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/club/:clubId/history',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <ClubHistoryPage />
             </Suspense>
           ),
@@ -285,7 +300,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/division/:divId',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <DivisionPage />
             </Suspense>
           ),
@@ -293,7 +308,7 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId/division/:divId/area/:areaId',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
+            <Suspense fallback={<DistrictRouteFallback />}>
               <AreaPage />
             </Suspense>
           ),

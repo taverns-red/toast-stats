@@ -45,6 +45,7 @@ import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 /* District Action List Page (#1231, epic #1228 Sprint 3 — the epic's close).
@@ -447,7 +448,8 @@ const DistrictActionListPage: React.FC = () => {
     d => d.id === districtId
   )
 
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId || '')
+  const { data: cachedDatesData, isPending: isDatesPending } =
+    useDistrictCachedDates(districtId || '')
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
@@ -504,18 +506,25 @@ const DistrictActionListPage: React.FC = () => {
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
 
-  const { data: analytics, isLoading: analyticsLoading } = useDistrictAnalytics(
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    isError: isAnalyticsError,
+  } = useDistrictAnalytics(
     hasValidDates ? districtId || null : null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined
   )
 
-  const { data: districtStatistics, isLoading: statsLoading } =
-    useDistrictStatistics(
-      hasValidDates ? districtId || null : null,
-      effectiveEndDate ?? undefined,
-      'divisions'
-    )
+  const {
+    data: districtStatistics,
+    isLoading: statsLoading,
+    isError: isStatsError,
+  } = useDistrictStatistics(
+    hasValidDates ? districtId || null : null,
+    effectiveEndDate ?? undefined,
+    'divisions'
+  )
 
   // The visit-round gate keys on the date this page pinned its snapshot query
   // to (#1321), never the wall clock.
@@ -572,11 +581,28 @@ const DistrictActionListPage: React.FC = () => {
   )
 
   const isLoading = analyticsLoading || statsLoading
+  // #1837: both queries are disabled until the date index resolves, and a
+  // disabled query reports `isLoading: false` — so the page rendered four
+  // empty, collapsed sections for that window, and the loaded first section
+  // then expanded over them (CLS 0.23 at 375px). The sections are built from
+  // BOTH reads, so the skeleton holds until each has settled: rendering on
+  // the first one paints sections the second one then resizes.
+  const datesState = { hasValidDates, datesSettled: !isDatesPending }
+  const isAwaitingData =
+    isDistrictSlotPending(
+      { hasData: !!analytics, isError: !!isAnalyticsError },
+      datesState
+    ) ||
+    isDistrictSlotPending(
+      { hasData: !!districtStatistics, isError: !!isStatsError },
+      datesState
+    )
   const totalItems =
     sections.closeToDistinguished.length +
     sections.visitGaps.length +
     sections.interventionRequired.length +
     sections.cspNotSubmitted.length
+  const showSectionsSkeleton = isAwaitingData || (isLoading && totalItems === 0)
 
   /* Render order (#1569) — computed from the page's own program year and
      pinned date via `cspActionable`, never a clock, so a pinned historical
@@ -609,7 +635,7 @@ const DistrictActionListPage: React.FC = () => {
      the default or a stored preference has it collapsed — otherwise the
      overview's number points at something invisible. */
   const { hash } = useLocation()
-  const sectionsRendered = !(isLoading && totalItems === 0)
+  const sectionsRendered = !showSectionsSkeleton
   React.useEffect(() => {
     const target = hash.replace(/^#/, '') as ActionSectionId
     if (!sectionsRendered || !sectionOrder.includes(target)) return
@@ -841,7 +867,7 @@ const DistrictActionListPage: React.FC = () => {
               </button>
             </div>
 
-            {isLoading && totalItems === 0 ? (
+            {showSectionsSkeleton ? (
               <LoadingSkeleton variant="table" count={3} />
             ) : (
               <div className="action-list-sections">

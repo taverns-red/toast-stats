@@ -20,6 +20,7 @@ import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards
 import DistinguishedProgramCriteriaExplainer from '../components/DistinguishedProgramCriteriaExplainer'
 import { DivisionAreaRecognitionPanel } from '../components/DivisionAreaRecognitionPanel'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 /* District Divisions Page (#571, epic #568 Phase 3).
@@ -42,7 +43,8 @@ const DistrictDivisionsPage: React.FC = () => {
     d => d.id === districtId
   )
 
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId || '')
+  const { data: cachedDatesData, isPending: isDatesPending } =
+    useDistrictCachedDates(districtId || '')
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
@@ -99,12 +101,24 @@ const DistrictDivisionsPage: React.FC = () => {
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
 
-  const { data: districtStatistics, isLoading: isLoadingStatistics } =
-    useDistrictStatistics(
-      hasValidDates ? districtId || null : null,
-      effectiveEndDate ?? undefined,
-      'divisions'
-    )
+  const {
+    data: districtStatistics,
+    isLoading: isLoadingStatistics,
+    isError: isStatisticsError,
+  } = useDistrictStatistics(
+    hasValidDates ? districtId || null : null,
+    effectiveEndDate ?? undefined,
+    'divisions'
+  )
+
+  // #1837: reserve both data slots from first paint until the statistics
+  // settle — including the date-index window, where the query is disabled and
+  // reports `isLoading: false`. Rendering nothing there put the static DDP
+  // criteria at the top and landed the division list above it (CLS 0.20).
+  const isSlotPending = isDistrictSlotPending(
+    { hasData: !!districtStatistics, isError: !!isStatisticsError },
+    { hasValidDates, datesSettled: !isDatesPending }
+  )
 
   // Open divisions in the phone progress summary (#1862): `?summary=A,B`,
   // page-owned so a shared link or a division-page round trip restores them.
@@ -155,8 +169,23 @@ const DistrictDivisionsPage: React.FC = () => {
                 snapshotTimestamp={effectiveEndDate}
                 districtId={districtId}
               />
+            ) : isSlotPending ? (
+              <DivisionPerformanceCards
+                districtSnapshot={undefined}
+                isLoading
+                snapshotTimestamp={effectiveEndDate ?? ''}
+                districtId={districtId}
+              />
             ) : (
-              isLoadingStatistics && <LoadingSkeleton variant="card" />
+              isStatisticsError && (
+                // Same panel chrome as the loaded list, so a failed read does
+                // not collapse the slot either (Lesson 125).
+                <DivisionPerformanceCards
+                  districtSnapshot={undefined}
+                  snapshotTimestamp={effectiveEndDate ?? ''}
+                  districtId={districtId}
+                />
+              )
             )}
 
             <DistinguishedProgramCriteriaExplainer />
@@ -172,9 +201,7 @@ const DistrictDivisionsPage: React.FC = () => {
                 onOpenDivisionsChange={setOpenSummaryDivisions}
               />
             ) : (
-              isLoadingStatistics && (
-                <LoadingSkeleton variant="table" count={3} />
-              )
+              isSlotPending && <LoadingSkeleton variant="table" count={3} />
             )}
           </div>
         </div>
