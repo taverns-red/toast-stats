@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   useTable,
   flexRender,
@@ -56,6 +57,8 @@ import {
   getClubHealthStatusShortLabel,
 } from '../utils/clubHealthStatus'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useMediaQuery } from '../hooks/useMediaQuery'
+import { SHORT_LANDSCAPE_QUERY } from '../utils/contextBar'
 import { useDebounce } from '../hooks/useDebounce'
 
 // The column model — order, headers, responsive priority (sticky key column +
@@ -300,6 +303,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   programYear,
   openGroups,
   onOpenGroupsChange,
+  compactToolbarTarget,
 }) => {
   const [sortField, setSortField] = useState<SortField>(
     initialSortField ?? 'name'
@@ -324,7 +328,15 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // browsed one-at-a-time, so card-collapse at true mobile is the right pattern
   // (lesson 105) — but the old 640px value made the table→card swap a cliff
   // with no tablet tier. The tablet tier is what #812 adds.
-  const isMobile = useIsMobile(768)
+  const isPhoneWidth = useIsMobile(768)
+  // A phone on its side (#1912): with the context bar's toolbar slot the
+  // table takes the phone layout too — rows + Filter & sort sheet, search
+  // and trigger in the sticky bar, total + exports below the rows — so the
+  // first row starts by 200px at 812×375 (it was 483px).
+  const isShortLandscape = useMediaQuery(SHORT_LANDSCAPE_QUERY)
+  const compactToolbar =
+    isShortLandscape && compactToolbarTarget ? compactToolbarTarget : null
+  const isMobile = isPhoneWidth || compactToolbar !== null
 
   // Use column filters hook with optional URL-initialized state (#272)
   const {
@@ -892,121 +904,135 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     </button>
   )
 
+  const exportGroup = (
+    <div className="clubs-export-group">
+      <ExportButton
+        onExport={() =>
+          exportClubPerformance(
+            sortedClubs.map(club => ({
+              clubId: club.clubId,
+              clubName: club.clubName,
+              divisionName: club.divisionName,
+              areaName: club.areaName,
+              membershipTrend: club.membershipTrend,
+              dcpGoalsTrend: club.dcpGoalsTrend,
+              currentStatus: club.currentStatus,
+              distinguishedLevel: club.distinguishedLevel,
+              riskFactors: club.riskFactors,
+              octoberRenewals: club.octoberRenewals,
+              aprilRenewals: club.aprilRenewals,
+              newMembers: club.newMembers,
+            })),
+            districtId
+          )
+        }
+        label="Export Clubs"
+        disabled={sortedClubs.length === 0}
+      />
+      {/* Diff CSV export (#795). A SIBLING of the clubs export — the diff
+          rows are from/to/Δ across two snapshots, not current-snapshot
+          fields, so a single combined CSV would conflate two datasets
+          (lesson 117). Shown only when a snapshot diff is loaded. */}
+      {snapshotDiff && (
+        <ExportButton
+          onExport={() => exportSnapshotDiff(snapshotDiff)}
+          label="Export Changes"
+          disabled={
+            snapshotDiff.clubs.bothPresent.length === 0 &&
+            snapshotDiff.clubs.onlyInFrom.length === 0 &&
+            snapshotDiff.clubs.onlyInTo.length === 0
+          }
+        />
+      )}
+    </div>
+  )
+
+  const resultCount = (
+    <div>
+      {sortedClubs.length === clubs.length ? (
+        <>Total: {clubs.length} clubs</>
+      ) : (
+        <>
+          Showing {sortedClubs.length} of {clubs.length} clubs
+        </>
+      )}
+    </div>
+  )
+
   return (
     <div className="redesign-panel">
-      {/* Header with Export and Results Count */}
-      <div className="p-6 clubs-panel-header">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold clubs-panel-title">All Clubs</h3>
-          <div className="clubs-export-group">
-            <ExportButton
-              onExport={() =>
-                exportClubPerformance(
-                  sortedClubs.map(club => ({
-                    clubId: club.clubId,
-                    clubName: club.clubName,
-                    divisionName: club.divisionName,
-                    areaName: club.areaName,
-                    membershipTrend: club.membershipTrend,
-                    dcpGoalsTrend: club.dcpGoalsTrend,
-                    currentStatus: club.currentStatus,
-                    distinguishedLevel: club.distinguishedLevel,
-                    riskFactors: club.riskFactors,
-                    octoberRenewals: club.octoberRenewals,
-                    aprilRenewals: club.aprilRenewals,
-                    newMembers: club.newMembers,
-                  })),
-                  districtId
-                )
-              }
-              label="Export Clubs"
-              disabled={sortedClubs.length === 0}
-            />
-            {/* Diff CSV export (#795). A SIBLING of the clubs export — the diff
-                rows are from/to/Δ across two snapshots, not current-snapshot
-                fields, so a single combined CSV would conflate two datasets
-                (lesson 117). Shown only when a snapshot diff is loaded. */}
-            {snapshotDiff && (
-              <ExportButton
-                onExport={() => exportSnapshotDiff(snapshotDiff)}
-                label="Export Changes"
-                disabled={
-                  snapshotDiff.clubs.bothPresent.length === 0 &&
-                  snapshotDiff.clubs.onlyInFrom.length === 0 &&
-                  snapshotDiff.clubs.onlyInTo.length === 0
-                }
-              />
-            )}
+      {/* Header with Export and Results Count. In short landscape (#1912)
+          the title stays as a visually hidden heading; the total and the
+          exports move below the rows (the compact footer). */}
+      {compactToolbar ? (
+        <h3 className="sr-only">All Clubs</h3>
+      ) : (
+        <div className="p-6 clubs-panel-header">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold clubs-panel-title">All Clubs</h3>
+            {exportGroup}
           </div>
-        </div>
 
-        {/* Visible name search (#814, epic #818 Sprint 1). Recognition over
+          {/* Visible name search (#814, epic #818 Sprint 1). Recognition over
             recall: a prominent box at the top of the table replaces the search
             that was buried in the hidden "Club" column-header dropdown. A
             second UI entry point onto the EXISTING `name` text filter (R11), so
             it stays in sync with that dropdown and URL-syncs through the parent
             (DistrictClubsPage maps `name` ⇄ `?search=`). */}
-        {/* Below 768 the search and the trigger live in the sticky row above
+          {/* Below 768 the search and the trigger live in the sticky row above
             the rows (#1833, #1836) and the preset lives in the sheet, so the
             toolbar row would be empty there. */}
-        {!isMobile && (
-          <div className="clubs-filter-toolbar">
-            <ClubSearchBox
-              value={searchValue}
-              onSearchChange={handleSearchChange}
-            />
-            {filtersTrigger}
-            {/* Column-group show/hide (#819, ADR-006 §4). Same toolbar slot as
+          {!isMobile && (
+            <div className="clubs-filter-toolbar">
+              <ClubSearchBox
+                value={searchValue}
+                onSearchChange={handleSearchChange}
+              />
+              {filtersTrigger}
+              {/* Column-group show/hide (#819, ADR-006 §4). Same toolbar slot as
               the Filters trigger so the two table-shape controls live together;
               uses the same .clubs-filters-trigger styling for a single visual
               language. */}
-            {/* Column groups shape the table; the phone rows have no columns
+              {/* Column groups shape the table; the phone rows have no columns
               (#1833), so the control would be dead there. */}
-            <ColumnGroupsMenu
-              groups={availableColumnGroups}
-              isGroupHidden={isGroupHidden}
-              onToggle={toggleGroup}
-            />
-            {/* Close-to-Distinguished preset (#903) — moved into the toolbar
+              <ColumnGroupsMenu
+                groups={availableColumnGroups}
+                isGroupHidden={isGroupHidden}
+                onToggle={toggleGroup}
+              />
+              {/* Close-to-Distinguished preset (#903) — moved into the toolbar
               cluster, directly after Columns (#967). One action-oriented toggle
               in place of the retired quick-filter row, sharing the canonical
               predicate with the club-detail banner. It carries the shared
               .clubs-filters-trigger treatment so it reads as one toolbar
               language; .clubs-preset-chip adds only the pressed-state amber. */}
-            <button
-              type="button"
-              className="clubs-filters-trigger clubs-preset-chip"
-              aria-pressed={presetActive}
-              onClick={handlePresetToggle}
-            >
-              🎯 Close to Distinguished
-            </button>
-          </div>
-        )}
+              <button
+                type="button"
+                className="clubs-filters-trigger clubs-preset-chip"
+                aria-pressed={presetActive}
+                onClick={handlePresetToggle}
+              >
+                🎯 Close to Distinguished
+              </button>
+            </div>
+          )}
 
-        {/* Preset feedback line — distinct from the table's "Showing N of M"
+          {/* Preset feedback line — distinct from the table's "Showing N of M"
             summary, and a polite live region for the toggle. Sits below the
             single toolbar row rather than in its own control row (#967). */}
-        {presetActive && (
-          <p className="clubs-preset-count" aria-live="polite">
-            {presetFilteredClubs.length} of {filteredClubs.length} clubs need a
-            nudge to Distinguished
-          </p>
-        )}
+          {presetActive && (
+            <p className="clubs-preset-count" aria-live="polite">
+              {presetFilteredClubs.length} of {filteredClubs.length} clubs need
+              a nudge to Distinguished
+            </p>
+          )}
 
-        {/* Results Count and Quick Filters */}
-        <div className="flex flex-wrap items-center gap-4 text-sm clubs-text-muted">
-          <div>
-            {sortedClubs.length === clubs.length ? (
-              <>Total: {clubs.length} clubs</>
-            ) : (
-              <>
-                Showing {sortedClubs.length} of {clubs.length} clubs
-              </>
-            )}
+          {/* Results Count and Quick Filters */}
+          <div className="flex flex-wrap items-center gap-4 text-sm clubs-text-muted">
+            {resultCount}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Active-filters summary bar (#817). Visible, removable summary of the
           full filter set — including drawer-only filters the preset chips
@@ -1022,16 +1048,34 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       {/* Phone search (#1833): sticky directly above the list. Its parent is
           the whole panel, so it pins while the rows scroll and stays put
           (with the no-results state below it) when a search matches nothing. */}
-      {isMobile && !isLoading && clubs.length > 0 && (
-        <div className="clubs-mobile-sticky-search">
-          <ClubSearchBox
-            value={searchValue}
-            onSearchChange={handleSearchChange}
-            placeholder="Search clubs"
-          />
-          {filtersTrigger}
-        </div>
-      )}
+      {/* Short landscape (#1912): the same row lives in the context bar's
+          toolbar slot instead, which is already sticky, so it costs the first
+          screen no height. A portal keeps it in this component's state. */}
+      {isMobile &&
+        !isLoading &&
+        clubs.length > 0 &&
+        (compactToolbar ? (
+          createPortal(
+            <div className="clubs-compact-toolbar">
+              <ClubSearchBox
+                value={searchValue}
+                onSearchChange={handleSearchChange}
+                placeholder="Search clubs"
+              />
+              {filtersTrigger}
+            </div>,
+            compactToolbar
+          )
+        ) : (
+          <div className="clubs-mobile-sticky-search">
+            <ClubSearchBox
+              value={searchValue}
+              onSearchChange={handleSearchChange}
+              placeholder="Search clubs"
+            />
+            {filtersTrigger}
+          </div>
+        ))}
 
       {/* Loading State */}
       {isLoading && <LoadingSkeleton variant="table" count={5} />}
@@ -1129,6 +1173,23 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               flush
             />
           )}
+        </div>
+      )}
+
+      {/* Compact footer (#1912): the header's total, preset feedback and
+          CSV exports, below the rows so the first row leads the screen. */}
+      {compactToolbar && !isLoading && clubs.length > 0 && (
+        <div className="clubs-panel-footer">
+          <div className="clubs-panel-footer__count text-sm clubs-text-muted">
+            {resultCount}
+            {presetActive && (
+              <p className="clubs-preset-count" aria-live="polite">
+                {presetFilteredClubs.length} of {filteredClubs.length} clubs
+                need a nudge to Distinguished
+              </p>
+            )}
+          </div>
+          {exportGroup}
         </div>
       )}
 
