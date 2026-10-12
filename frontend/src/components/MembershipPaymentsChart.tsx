@@ -434,7 +434,7 @@ export const MembershipPaymentsChart: React.FC<
               <XAxis
                 dataKey="programYearDay"
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '11px' }}
+                style={{ fontSize: '12px' }}
                 angle={-45}
                 textAnchor="end"
                 height={80}
@@ -449,7 +449,7 @@ export const MembershipPaymentsChart: React.FC<
               />
               <YAxis
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '11px' }}
+                style={{ fontSize: '12px' }}
                 label={{
                   value: 'YTD Payments',
                   angle: -90,

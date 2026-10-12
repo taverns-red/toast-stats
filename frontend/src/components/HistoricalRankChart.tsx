@@ -305,7 +305,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
               <XAxis
                 dataKey="date"
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '10px' }}
+                style={{ fontSize: '12px' }}
                 angle={-45}
                 textAnchor="end"
                 height={80}
@@ -320,7 +320,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
               />
               <YAxis
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '10px' }}
+                style={{ fontSize: '12px' }}
                 width={50}
                 reversed={selectedMetric !== 'aggregate'}
                 label={

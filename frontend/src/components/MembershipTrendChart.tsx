@@ -398,7 +398,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
               <XAxis
                 dataKey="date"
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '11px' }}
+                style={{ fontSize: '12px' }}
                 angle={-45}
                 textAnchor="end"
                 height={80}
@@ -407,7 +407,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
               />
               <YAxis
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '11px' }}
+                style={{ fontSize: '12px' }}
                 label={{
                   value: 'Total Members',
                   angle: -90,
@@ -437,7 +437,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                     value: milestone.label,
                     position: 'top',
                     fill: 'var(--tm-true-maroon)',
-                    fontSize: 10,
+                    fontSize: 12,
                   }}
                 />
               ))}
