@@ -9,15 +9,22 @@ import { normalizeClubId } from '@taverns-red/shared-contracts'
  * NEVER email or phone — TI publishes those on its own club page, which is
  * what the contact link points at. `email`/`phone` are accepted on the input
  * type only because the ClubTrend carries them; nothing here reads them.
+ *
+ * NEVER an online meeting link, meeting ID or passcode either (Ron,
+ * 2026-10-12, #1879) — see `containsMeetingAccess`. Every surface that shows
+ * a club's meeting details (hero, map popup, lists) MUST build them here.
  */
 export interface ClubMeetingInfo {
   /** Free-text day (TI's field, verbatim) and time, joined with " · ". */
   schedule: string | null
-  /** "Online or hybrid" / "In person", from allowsVirtualAttendance. */
+  /**
+   * "Meets online" when TI's street is a meeting link; else "Online or
+   * hybrid" / "In person" from allowsVirtualAttendance.
+   */
   mode: string | null
-  /** Street, city, region — no postal code or country. */
+  /** Street, city, region — no postal code, country or meeting link. */
   place: string | null
-  /** The club's own site, http(s) only. */
+  /** The club's own site, http(s) only, never a meeting host. */
   websiteUrl: string | null
   /** The club's page on toastmasters.org. */
   contactUrl: string | null

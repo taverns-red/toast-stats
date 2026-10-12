@@ -3,8 +3,8 @@ import type { ClubMeetingInfo } from '../../utils/clubMeetingInfo'
 /**
  * #1783 — the club hero's "where it meets" line: schedule · mode · place ·
  * website · "Contact on toastmasters.org". Presentational only; the
- * never-email/phone rule is enforced upstream in `buildClubMeetingInfo`,
- * whose output type has no field that could carry either.
+ * never-email/phone rule and the never-a-meeting-link rule (#1879) are
+ * enforced upstream in `buildClubMeetingInfo` — render only its output.
  *
  * Renders nothing for `null` (no FAC enrichment for the viewed date).
  * Styled by `.club-meets*` in app-shell.css with `--rt-*` tokens.
