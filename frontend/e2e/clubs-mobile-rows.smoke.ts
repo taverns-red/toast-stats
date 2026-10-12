@@ -56,6 +56,8 @@ interface RowGeometry {
     trendW: number
     trendH: number
     trendInside: boolean
+    /** Line 2 (chip + DCP) must not ellipsize beside the trend. */
+    metaClipped: boolean
   }[]
 }
 
@@ -78,6 +80,7 @@ async function measure(page: Page): Promise<RowGeometry> {
         const chip = row.querySelector('.mobile-row__chip')
         const c = chip?.getBoundingClientRect()
         const spark = row.querySelector('.mobile-row__trailing svg')
+        const meta = row.querySelector('.mobile-row__meta')
         const t = spark?.getBoundingClientRect()
         return {
           text: (row.textContent ?? '') + ' ' + row.getAttribute('aria-label'),
@@ -97,6 +100,7 @@ async function measure(page: Page): Promise<RowGeometry> {
                 .concat(chip)
                 .some(el => el.scrollWidth > el.clientWidth + 0.5)
             : true,
+          metaClipped: meta ? meta.scrollWidth > meta.clientWidth + 0.5 : false,
           trendW: Math.round(t?.width ?? 0),
           trendH: Math.round(t?.height ?? 0),
           trendInside: t
@@ -133,6 +137,7 @@ function expectRows(g: RowGeometry, min = 1): void {
     // Trend sparkline (#1792): on at 375, 60×16, unclipped by the row.
     expect([r.trendW, r.trendH], rc).toEqual([60, 16])
     expect(r.trendInside, rc).toBe(true)
+    expect(r.metaClipped, rc).toBe(false)
     expect(r.titlePx, rc).toBeGreaterThanOrEqual(14)
     expect(r.metaPx, rc).toBeGreaterThanOrEqual(14)
     // Privacy: no email, URL/meeting link or phone number in a row.

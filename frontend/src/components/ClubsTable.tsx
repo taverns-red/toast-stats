@@ -728,17 +728,18 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             label={getClubHealthStatusShortLabel(club.currentStatus)}
           />
         ),
-        // Two numbers fit beside the chip at 375 px; net change rides in the
-        // accessible name (and on the club page).
-        meta: `${memberText} · ${club.latestDcpGoals}/10 DCP`,
+        // Line 2 keeps the chip and DCP; the member count rides under the
+        // trend sparkline with its net (#1792) — measured at 375, the count
+        // beside a 60 px trend ellipsized every row by up to 60 px.
+        meta: `${club.latestDcpGoals}/10 DCP`,
         // The row's trend (#1792): the same 60×16 sparkline as the desktop
-        // Trend column, with the signed net under it. The link's accessible
-        // name already says it, so the visual pair is hidden from AT.
+        // Trend column, then "members (net)". The link's accessible name
+        // already says all of it, so the visual pair is hidden from AT.
         trailing: (
           <span className="clubs-row-trend" aria-hidden="true">
             <ClubTrendSparkline club={club} />
             <span className="clubs-row-trend__net tabular-nums">
-              {net ?? '\u2014'}
+              {net ? `${members} (${net})` : members}
             </span>
           </span>
         ),

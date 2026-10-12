@@ -35,16 +35,22 @@ export function describeMembershipTrend(club: TrendInput): string {
 /**
  * Per-club membership sparkline for the Clubs table and its phone rows
  * (#1792). Reads the PYTD series the page already holds
- * (`analytics.allClubs[].membershipTrend`) — no fetch of its own. The plot is
+ * (`analytics.allClubs[].membershipTrend`), anchored at `membershipBase` —
+ * no fetch of its own. The plot is
  * the dependency-free `Sparkline` (flat series → midline, never inverted).
  */
 export const ClubTrendSparkline: React.FC<{ club: TrendInput }> = ({
   club,
 }) => {
-  const data = useMemo(
-    () => club.membershipTrend.map(p => p.count),
-    [club.membershipTrend]
-  )
+  // The line starts at the program-year base when there is one: TI's July
+  // counts restart below it, so the series alone can rise while the club is
+  // down on its base — the shape would contradict the net beside it.
+  const data = useMemo(() => {
+    const counts = club.membershipTrend.map(p => p.count)
+    return club.membershipBase == null
+      ? counts
+      : [club.membershipBase, ...counts]
+  }, [club.membershipTrend, club.membershipBase])
   return (
     <Sparkline
       data={data}
