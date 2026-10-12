@@ -11,28 +11,28 @@ import {
  * validated against (docs/design/map-pin-colour-modes.md §6.3); changing them
  * means re-running that validator, so they are pinned here. */
 
-const URL = 'https://cdn.example.test/basemap/world.pmtiles'
+const ARCHIVE_URL = 'https://cdn.example.test/basemap/world.pmtiles'
 
 describe('buildBasemapStyle', () => {
   it.each(['light', 'dark'] as const)(
     'is a valid MapLibre style in %s',
     theme => {
-      const style = buildBasemapStyle({ theme, pmtilesUrl: URL })
+      const style = buildBasemapStyle({ theme, pmtilesUrl: ARCHIVE_URL })
       expect(validateStyleMin(style)).toEqual([])
     }
   )
 
   it('reads the tiles through the pmtiles:// protocol from the given URL', () => {
-    const style = buildBasemapStyle({ theme: 'light', pmtilesUrl: URL })
+    const style = buildBasemapStyle({ theme: 'light', pmtilesUrl: ARCHIVE_URL })
     const source = style.sources[BASEMAP_SOURCE_ID]
     expect(source).toMatchObject({
       type: 'vector',
-      url: `pmtiles://${URL}`,
+      url: `pmtiles://${ARCHIVE_URL}`,
     })
   })
 
   it('carries the ODbL + Protomaps attribution on the source', () => {
-    const style = buildBasemapStyle({ theme: 'dark', pmtilesUrl: URL })
+    const style = buildBasemapStyle({ theme: 'dark', pmtilesUrl: ARCHIVE_URL })
     const source = style.sources[BASEMAP_SOURCE_ID] as { attribution?: string }
     expect(source.attribution).toBe(BASEMAP_ATTRIBUTION)
     expect(BASEMAP_ATTRIBUTION).toContain('© ')
@@ -45,16 +45,17 @@ describe('buildBasemapStyle', () => {
 
   it('makes no third-party request: no glyphs, no sprite, no symbol layers', () => {
     for (const theme of ['light', 'dark'] as const) {
-      const style = buildBasemapStyle({ theme, pmtilesUrl: URL })
+      const style = buildBasemapStyle({ theme, pmtilesUrl: ARCHIVE_URL })
       expect(style.glyphs).toBeUndefined()
       expect(style.sprite).toBeUndefined()
       expect(style.layers.some(l => l.type === 'symbol')).toBe(false)
       // Every network URL in the style is the one we were given.
       const urls = JSON.stringify(style).match(/https?:\/\/[^"\\]+/g) ?? []
-      const network = urls.filter(
-        u => !u.includes('openstreetmap.org') && !u.includes('github.com')
-      )
-      expect(new Set(network)).toEqual(new Set([URL]))
+      // The attribution's two links are hrefs the viewer may click, not
+      // requests the map makes; match their hosts exactly.
+      const creditHosts = new Set(['www.openstreetmap.org', 'github.com'])
+      const network = urls.filter(u => !creditHosts.has(new URL(u).hostname))
+      expect(new Set(network)).toEqual(new Set([ARCHIVE_URL]))
     }
   })
 
@@ -64,7 +65,7 @@ describe('buildBasemapStyle', () => {
       dark: { land: '#1A1816', water: '#1E2A33' },
     })
     for (const theme of ['light', 'dark'] as const) {
-      const style = buildBasemapStyle({ theme, pmtilesUrl: URL })
+      const style = buildBasemapStyle({ theme, pmtilesUrl: ARCHIVE_URL })
       const paint = (id: string) =>
         style.layers.find(l => l.id === id) as
           { paint?: Record<string, unknown> } | undefined
