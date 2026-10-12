@@ -66,6 +66,20 @@ describe('CountryRankTable', () => {
     expect(screen.getByText(/not on map/i)).toBeInTheDocument()
   })
 
+  it('prints every share with one decimal so the column aligns', () => {
+    const even = buildChoroplethView(
+      [{ country: 'India', clubs: 40 }],
+      10,
+      50,
+      () => 'polygon'
+    )
+    render(
+      <CountryRankTable view={even} selectedId={null} onSelect={vi.fn()} />
+    )
+    expect(screen.getByTestId('wm-row-356')).toHaveTextContent('80.0%')
+    expect(screen.getByTestId('wm-row-unknown')).toHaveTextContent('20.0%')
+  })
+
   it('can show only the top rows, still closing with Unknown', () => {
     render(
       <CountryRankTable

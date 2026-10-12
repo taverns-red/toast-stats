@@ -282,7 +282,7 @@ export const WorldChoropleth: React.FC<WorldChoroplethProps> = ({
             {markerRows.map(row => {
               const m = markerById.get(row.isoId!)!
               const isSel = row.isoId === selectedId
-              const r = (isSel ? 6 : 4) * unit
+              const r = (isSel ? 7 : 4) * unit
               return (
                 <g
                   key={m.id}
@@ -386,7 +386,8 @@ const Readout: React.FC<{
         <strong className="wm-readout__name">{row.name}</strong>
         <span className="wm-readout__value">
           {NUM.format(row.clubs)} {row.clubs === 1 ? 'club' : 'clubs'} ·{' '}
-          {row.sharePct}% of clubs · #{row.rank} of {countries} countries
+          {row.sharePct.toFixed(1)}% of clubs · #{row.rank} of {countries}{' '}
+          countries
         </span>
       </>
     )}

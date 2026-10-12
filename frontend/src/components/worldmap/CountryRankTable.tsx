@@ -91,7 +91,7 @@ export const CountryRankTable: React.FC<CountryRankTableProps> = ({
                 )}
               </th>
               <td className="wm-table__num">{NUM.format(row.clubs)}</td>
-              <td className="wm-table__num">{row.sharePct}%</td>
+              <td className="wm-table__num">{row.sharePct.toFixed(1)}%</td>
             </tr>
           )
         })}
@@ -101,7 +101,7 @@ export const CountryRankTable: React.FC<CountryRankTableProps> = ({
             Unknown
           </th>
           <td className="wm-table__num">{NUM.format(view.unknown.clubs)}</td>
-          <td className="wm-table__num">{view.unknown.sharePct}%</td>
+          <td className="wm-table__num">{view.unknown.sharePct.toFixed(1)}%</td>
         </tr>
       </tbody>
     </table>
