@@ -68,6 +68,7 @@ export const ContextBar: React.FC<ContextBarProps> = ({
   actions,
   about,
   trail,
+  toolsRef,
 }) => {
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
@@ -94,6 +95,13 @@ export const ContextBar: React.FC<ContextBarProps> = ({
       <span className="context-bar__title" aria-hidden="true">
         {title}
       </span>
+      {toolsRef && (
+        <div
+          ref={toolsRef}
+          className="context-bar__tools"
+          data-testid="context-bar-tools"
+        />
+      )}
       <button
         type="button"
         className="context-bar__chip"

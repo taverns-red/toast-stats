@@ -4563,6 +4563,44 @@
     font-size: 16px;
   }
 
+  /* Short landscape (#1912): the same search + Filter & sort row, portalled
+     into the context bar's toolbar slot (context-bar.css). One 44px row:
+     search grows, the trigger keeps its width; 16px input (no iOS zoom). */
+  .clubs-compact-toolbar {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .clubs-compact-toolbar .clubs-search {
+    flex: 1 1 auto;
+    min-width: 8rem;
+    margin-bottom: 0;
+    max-width: none;
+  }
+
+  .clubs-compact-toolbar .clubs-filters-trigger {
+    flex: 0 0 auto;
+  }
+
+  .clubs-compact-toolbar .clubs-search__input {
+    font-size: 16px;
+  }
+
+  /* Short landscape (#1912): the header's total and CSV exports, below the
+     rows so the first row leads the screen. */
+  .clubs-panel-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+
   /* Phone rows bleed through the .redesign-panel's 18 px padding (#1833). */
   .clubs-mobile-rows {
     margin-inline: -18px;
