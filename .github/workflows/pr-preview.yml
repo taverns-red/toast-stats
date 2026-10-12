@@ -347,6 +347,16 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/form-controls-16px.smoke.ts
 
+      # AA text contrast (#1839). 0 failures, light and dark, on the 404 page
+      # (amber code, dark "Go home") and the club-history table at 768
+      # (amber year links); the dark skip link is measured on both. Both
+      # engines.
+      - name: Cross-engine AA contrast guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/contrast-aa.smoke.ts
+
       # Landing scroll budget (#864, #1834). At 375/414, both engines, `/` must
       # stay ≤ 8,000px tall with the phone rankings in their default 25-row
       # reveal. It was a local-only smoke; running it here flags growth (more
