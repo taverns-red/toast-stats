@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ContextBar } from '../ContextBar'
@@ -124,6 +130,18 @@ describe('ContextBar (#1831)', () => {
     renderBar({})
     const chip = screen.getByTestId('context-bar-chip')
     await userEvent.click(chip)
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(chip).toHaveFocus()
+  })
+
+  it('returns focus to the chip even when the click did not focus it (WebKit/Safari, #1920)', async () => {
+    // WebKit never focuses a button on click/tap, so the opener captured at
+    // open is <body>. fireEvent.click reproduces that (no focus move).
+    renderBar({})
+    const chip = screen.getByTestId('context-bar-chip')
+    fireEvent.click(chip)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(chip).toHaveFocus()

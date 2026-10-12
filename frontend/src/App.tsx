@@ -74,6 +74,12 @@ const ClubsRacePage = React.lazy(() => import('./pages/ClubsRacePage'))
 // Code-split: McpPage — public MCP-server install page (#1165, epic #1162)
 const McpPage = React.lazy(() => import('./pages/McpPage'))
 
+// Code-split: unlisted basemap preview (#1786) — removed when #1784's
+// /district/:id/map lands and takes over the basemap smoke.
+const BasemapPreviewPage = React.lazy(
+  () => import('./pages/BasemapPreviewPage')
+)
+
 // Code-split: RegionPage — /region/:n landing (#423)
 const RegionPage = React.lazy(() => import('./pages/RegionPage'))
 
@@ -278,6 +284,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <McpPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'dev/basemap',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <BasemapPreviewPage />
             </Suspense>
           ),
         },

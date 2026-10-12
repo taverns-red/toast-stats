@@ -46,6 +46,13 @@ export default defineConfig({
               test: /node_modules[\\/]recharts[\\/]/,
               priority: 10,
             },
+            {
+              // #1786: the basemap renderer. Map routes only — reached
+              // through LazyBasemapMap's dynamic import, never preloaded.
+              name: 'maplibre',
+              test: /node_modules[\\/](maplibre-gl|@maplibre|@mapbox|pmtiles|@protomaps)[\\/]/,
+              priority: 10,
+            },
           ],
         },
       },

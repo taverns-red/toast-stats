@@ -70,6 +70,16 @@ export function criticalPathChunks(
   return [...seen].sort()
 }
 
+/**
+ * Named chunk groups (`frontend/vite.config.ts`) that only some routes need,
+ * so none may be reachable from index.html without a dynamic import:
+ * `charts` (Recharts, #1830) and `maplibre` (the basemap renderer, #1786).
+ */
+export const ROUTE_ONLY_CHUNK_PREFIXES: readonly string[] = [
+  'charts-',
+  'maplibre-',
+]
+
 /** Chunks on the critical path whose name matches a forbidden prefix. */
 export function forbiddenOnCriticalPath(
   chunks: readonly string[],

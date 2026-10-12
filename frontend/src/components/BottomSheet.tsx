@@ -31,6 +31,10 @@ export interface BottomSheetProps {
   id?: string
   /** 'full' fills the viewport (#1834's full-table sheet). Default: partial. */
   variant?: 'default' | 'full'
+  /** The trigger to restore focus to on close. WebKit/Safari never focuses a
+      <button> on click or tap, so `document.activeElement` at open is <body>
+      and focus would be lost (#1920). Falls back to the active element. */
+  returnFocusRef?: React.RefObject<HTMLElement | null>
 }
 
 export const BottomSheet: React.FC<BottomSheetProps> = ({
@@ -41,6 +45,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   closeLabel = 'Close',
   id,
   variant = 'default',
+  returnFocusRef,
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -63,7 +68,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   // Focus in on open, trap Tab, restore to the opener without scrolling.
   useEffect(() => {
     if (!isOpen) return
-    const opener = document.activeElement as HTMLElement | null
+    const opener =
+      returnFocusRef?.current ?? (document.activeElement as HTMLElement | null)
     closeButtonRef.current?.focus()
 
     const sheet = sheetRef.current
@@ -86,7 +92,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       sheet?.removeEventListener('keydown', handleTab)
       opener?.focus?.({ preventScroll: true })
     }
-  }, [isOpen])
+  }, [isOpen, returnFocusRef])
 
   // Lock background scroll while open.
   useEffect(() => {

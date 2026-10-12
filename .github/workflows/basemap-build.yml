@@ -1,0 +1,259 @@
+# Basemap build (manual, one-off). See #1786, ADR-016 and docs/runbooks/basemap.md.
+#
+# What it does:
+# - target=staging: builds the self-hosted world basemap (a Protomaps v4
+#   PMTiles extract) on a GitHub runner and uploads it to the STAGING data
+#   bucket.
+# - target=prod-copy: copies that exact object to the prod bucket, server
+#   side (no re-upload).
+#
+# Only Ron dispatches it. It never runs on a schedule or a push, and the data
+# pipeline never touches basemap/.
+#
+# Upload rules. These are load-bearing, and
+# scripts/lib/__tests__/basemapWorkflow.test.ts guards them:
+# - No gzip (`-Z`/`--gzip-*`). GCS would ignore Range and serve the whole
+#   multi-GB object on every request (decompressive transcoding).
+# - No parallel composite upload. Cloud CDN needs a strong validator (MD5 ETag).
+# - `--no-clobber`. Objects are immutable and dated, and an overwrite would
+#   mix two builds in cached CDN chunks. A refresh is a new build date.
+# - application/octet-stream plus `no-transform`. Cloud CDN dynamic
+#   compression (backend compressionMode AUTOMATIC) never touches the archive.
+#
+# The archive is not a pipeline artifact, so it is not recorded in
+# runs/<id>/written.jsonl. That manifest feeds the pipeline's content and
+# completeness gates. Provenance (bytes, sha256, source build, run) goes to
+# the job summary instead.
+#
+# Disk: a standard ubuntu-26.04 runner. The "Free runner disk" step removes
+# preinstalled toolchains this job never uses. The space check sizes the
+# archive with the CLI's own dry-run before downloading anything, and fails
+# with "use a larger runner" if no volume has the archive size + 15% + 1 GB.
+name: Basemap build (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_date:
+        description: 'Protomaps daily build, YYYYMMDD (kept for 7 days at build.protomaps.com)'
+        required: true
+        type: string
+      maxzoom:
+        description: 'Max zoom of the world extract (ADR-016 recommends 10, about 3.8 GB)'
+        required: true
+        default: '10'
+        type: string
+      target:
+        description: 'staging = build + upload to staging; prod-copy = copy the staging object to prod'
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - prod-copy
+
+concurrency:
+  group: basemap-build
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation
+
+env:
+  GCS_BUCKET: 'toast-stats-data-staging'
+  GCS_BUCKET_PRODUCTION: 'toast-stats-data-ca'
+  CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED: 'False'
+  PMTILES_VERSION: '1.31.2'
+  # sha256 of go-pmtiles_1.31.2_Linux_x86_64.tar.gz (GitHub release asset),
+  # computed 2026-10-12. Bump both together.
+  PMTILES_SHA256: '3ed7dbf4ec2e6dfe5e25b6f70d1ffc932729f93c86db353bf514dd71010a312f'
+
+jobs:
+  basemap:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate inputs
+        env:
+          BUILD_DATE: ${{ inputs.build_date }}
+          MAXZOOM: ${{ inputs.maxzoom }}
+        run: |
+          if ! [[ "$BUILD_DATE" =~ ^[0-9]{8}$ ]]; then
+            echo "::error::build_date must be YYYYMMDD"; exit 1
+          fi
+          if ! [[ "$MAXZOOM" =~ ^[0-9]+$ ]] || ((MAXZOOM > 12)); then
+            echo "::error::maxzoom must be 0..12"; exit 1
+          fi
+          echo "OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
+          echo "NAME=world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720), same as data-pipeline.yml.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
+
+      # ── target=staging: build on the runner, upload to staging ──────────
+      - name: Free runner disk
+        if: inputs.target == 'staging'
+        run: |
+          df -h
+          # Preinstalled toolchains this job never uses.
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h
+
+      - name: Install the pmtiles CLI (pinned, checksum-verified)
+        if: inputs.target == 'staging'
+        run: |
+          curl -fsSL -o /tmp/pmtiles.tgz \
+            "https://github.com/protomaps/go-pmtiles/releases/download/v${PMTILES_VERSION}/go-pmtiles_${PMTILES_VERSION}_Linux_x86_64.tar.gz"
+          echo "${PMTILES_SHA256}  /tmp/pmtiles.tgz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf /tmp/pmtiles.tgz -C "$RUNNER_TEMP/bin" pmtiles
+          echo "PMTILES=$RUNNER_TEMP/bin/pmtiles" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/bin/pmtiles" version
+
+      - name: Refuse to overwrite an existing staging object
+        if: inputs.target == 'staging'
+        run: |
+          if gcloud storage objects describe "gs://${GCS_BUCKET}/${OBJ}" > /dev/null 2>&1; then
+            echo "::error::gs://${GCS_BUCKET}/${OBJ} already exists; objects are immutable, use a new build_date"
+            exit 1
+          fi
+
+      - name: Pick a build volume with enough space
+        if: inputs.target == 'staging'
+        env:
+          BUILD_DATE: ${{ inputs.build_date }}
+          MAXZOOM: ${{ inputs.maxzoom }}
+        run: |
+          # Archive size from the CLI's own dry-run, e.g. "archive size of 3.8 GB".
+          SIZE_LINE=$(DRY_RUN=1 scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" 2>&1 | grep 'archive size of')
+          echo "$SIZE_LINE"
+          NEED=$(echo "$SIZE_LINE" | sed -E 's/.*archive size of ([0-9.]+) ([kMGT]?B).*/\1 \2/' |
+            awk '{m=1; if($2=="kB")m=1e3; if($2=="MB")m=1e6; if($2=="GB")m=1e9; if($2=="TB")m=1e12;
+                  printf "%.0f\n", $1*m*1.15+1e9}')
+          if ! [[ "$NEED" =~ ^[0-9]+$ ]]; then
+            echo "::error::could not read the dry-run size"; exit 1
+          fi
+          BEST=""
+          BEST_FREE=0
+          for d in /mnt "$RUNNER_TEMP"; do
+            if [[ -d "$d" ]]; then
+              FREE=$(df -B1 --output=avail "$d" | tail -1 | tr -d ' ')
+              echo "$d: ${FREE} bytes free"
+              if ((FREE > BEST_FREE)); then BEST="$d"; BEST_FREE=$FREE; fi
+            fi
+          done
+          echo "need ${NEED} bytes; using ${BEST} (${BEST_FREE} free)"
+          if ((BEST_FREE < NEED)); then
+            echo "::error::not enough disk on the runner (${BEST_FREE} < ${NEED}); use a larger runner"
+            exit 1
+          fi
+          sudo mkdir -p "$BEST/basemap"
+          sudo chown "$(id -u):$(id -g)" "$BEST/basemap"
+          echo "BUILD_DIR=$BEST/basemap" >> "$GITHUB_ENV"
+
+      - name: Build the archive
+        if: inputs.target == 'staging'
+        env:
+          BUILD_DATE: ${{ inputs.build_date }}
+          MAXZOOM: ${{ inputs.maxzoom }}
+        run: |
+          scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" "$BUILD_DIR" > "$BUILD_DIR/build.json"
+          cat "$BUILD_DIR/build.json"
+          jq -e --arg obj "$OBJ" '.object == $obj' "$BUILD_DIR/build.json"
+
+      - name: Upload to staging
+        if: inputs.target == 'staging'
+        run: |
+          gcloud storage cp "$BUILD_DIR/$NAME" "gs://${GCS_BUCKET}/${OBJ}" \
+            --no-clobber \
+            --content-type=application/octet-stream \
+            --cache-control="public, max-age=86400, no-transform"
+
+      - name: Verify the staging object and its range response
+        if: inputs.target == 'staging'
+        env:
+          BUILD_DATE: ${{ inputs.build_date }}
+        run: |
+          gcloud storage objects describe "gs://${GCS_BUCKET}/${OBJ}" --format=json > /tmp/obj.json
+          jq '{size, content_type, cache_control, content_encoding, md5_hash, component_count}' /tmp/obj.json
+          BYTES=$(jq -r .bytes "$BUILD_DIR/build.json")
+          jq -e --argjson b "$BYTES" '(.size|tonumber) == $b
+            and .content_type == "application/octet-stream"
+            and .cache_control == "public, max-age=86400, no-transform"
+            and (.content_encoding // "") == ""
+            and (.md5_hash // "") != ""
+            and (.component_count // null) == null' /tmp/obj.json
+          curl -fsS -o /dev/null -D /tmp/h.txt -H 'Range: bytes=0-16383' -H 'Accept-Encoding: gzip, br' \
+            "https://storage.googleapis.com/${GCS_BUCKET}/${OBJ}"
+          cat /tmp/h.txt
+          grep -qiE '^HTTP/[0-9.]+ 206' /tmp/h.txt
+          grep -qi "^content-range: bytes 0-16383/${BYTES}" /tmp/h.txt
+          if grep -qi '^content-encoding:' /tmp/h.txt; then
+            echo "::error::range response carries a content-encoding"; exit 1
+          fi
+          {
+            echo "### Basemap uploaded to staging"
+            echo "- object: gs://${GCS_BUCKET}/${OBJ}"
+            echo "- source: https://build.protomaps.com/${BUILD_DATE}.pmtiles (pmtiles ${PMTILES_VERSION})"
+            echo "- bytes: ${BYTES}"
+            echo "- sha256: $(jq -r .sha256 "$BUILD_DIR/build.json")"
+            echo "- md5 (GCS): $(jq -r .md5_hash /tmp/obj.json)"
+            echo ""
+            echo "Next: dispatch again with target=prod-copy and the same build_date and maxzoom."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── target=prod-copy: server-side copy of the verified staging object ─
+      - name: Copy the staging object to prod (server side)
+        if: inputs.target == 'prod-copy'
+        run: |
+          gcloud storage objects describe "gs://${GCS_BUCKET}/${OBJ}" --format=json > /tmp/src.json
+          jq -e '.content_type == "application/octet-stream"
+            and (.content_encoding // "") == ""
+            and (.component_count // null) == null' /tmp/src.json
+          gcloud storage cp "gs://${GCS_BUCKET}/${OBJ}" "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" \
+            --no-clobber \
+            --content-type=application/octet-stream \
+            --cache-control="public, max-age=86400, no-transform"
+
+      - name: Verify the prod object and the CDN range response
+        if: inputs.target == 'prod-copy'
+        run: |
+          gcloud storage objects describe "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" --format=json > /tmp/dst.json
+          jq '{size, content_type, cache_control, content_encoding, md5_hash, component_count}' /tmp/dst.json
+          jq -e --slurpfile s /tmp/src.json '.size == $s[0].size and .md5_hash == $s[0].md5_hash
+            and .cache_control == "public, max-age=86400, no-transform"
+            and (.content_encoding // "") == ""
+            and (.component_count // null) == null' /tmp/dst.json
+          BYTES=$(jq -r .size /tmp/dst.json)
+          for _ in 1 2; do
+            curl -fsS -o /dev/null -D /tmp/h.txt -H 'Range: bytes=0-16383' -H 'Accept-Encoding: gzip, br' \
+              -H 'Origin: https://ts.taverns.red' "https://cdn.taverns.red/${OBJ}"
+            cat /tmp/h.txt
+            grep -qiE '^HTTP/[0-9.]+ 206' /tmp/h.txt
+            grep -qi "^content-range: bytes 0-16383/${BYTES}" /tmp/h.txt
+            grep -qi '^access-control-allow-origin: https://ts.taverns.red' /tmp/h.txt
+            if grep -qi '^content-encoding:' /tmp/h.txt; then
+              echo "::error::CDN range response carries a content-encoding"; exit 1
+            fi
+          done
+          {
+            echo "### Basemap copied to prod"
+            echo "https://cdn.taverns.red/${OBJ}: ${BYTES} bytes, md5 matches staging,"
+            echo "and the CDN answers 206 with no content-encoding."
+          } >> "$GITHUB_STEP_SUMMARY"
