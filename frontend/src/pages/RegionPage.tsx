@@ -4,7 +4,7 @@
    React-Query cache). */
 
 import React from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
@@ -25,6 +25,10 @@ import {
 import { DistrictChipAndName } from '../components/DistrictChipAndName'
 import { useUrlSort } from '../hooks/useUrlSort'
 import { SortableHeader } from '../components/SortableHeader'
+import {
+  PriorityColumnsTable,
+  type PriorityMetric,
+} from '../components/PriorityColumnsTable'
 
 const REGION_SORT_FIELDS = [
   'aggregate',
@@ -255,6 +259,74 @@ const DistinguishedCells: React.FC<{
   )
 }
 
+/* Phone priority-column cells (#1834). Same tones and sign rules as the
+   full table's KpiCard / SignedDeltaTd (lesson 102: a signed current − base,
+   never a clamped gap). */
+const ValueWithDelta: React.FC<{ value: number; delta: number }> = ({
+  value,
+  delta,
+}) => (
+  <>
+    <span className="block">{value.toLocaleString()}</span>
+    <span
+      className={`block font-semibold ${
+        delta >= 0 ? 'text-green-700' : 'text-tm-true-maroon'
+      }`}
+    >
+      {delta >= 0 ? '+' : ''}
+      {delta.toLocaleString()}
+    </span>
+  </>
+)
+
+/* A phone metric column is ~80px of content: "Distinguished" at 14px is
+   ~95px and would clip (Lesson 134). The chip shows a short label; the full
+   tier name rides along as the tooltip and the screen-reader text. */
+const TIER_SHORT: Record<AchievedTier, { short: string; full: string }> = {
+  Distinguished: { short: 'Dist.', full: 'Distinguished' },
+  Select: { short: 'Select', full: 'Select Distinguished' },
+  Presidents: { short: 'Pres.', full: "President's Distinguished" },
+  Smedley: { short: 'Smedley', full: 'Smedley Distinguished' },
+}
+
+const TierLabel: React.FC<{
+  tier: DistinguishedDistrictTier | null
+  districtId: string
+}> = ({ tier, districtId }) => {
+  if (!tier || tier === 'NotDistinguished' || tier === 'Unknown')
+    return <span className="text-gray-400">—</span>
+  const { short, full } = TIER_SHORT[tier]
+  return (
+    <span
+      data-testid={`priority-tier-${districtId}`}
+      className={`priority-columns__tier ${TIER_DISPLAY[tier].className}`}
+      title={full}
+    >
+      <span aria-hidden="true">{short}</span>
+      <span className="sr-only">{full}</span>
+    </span>
+  )
+}
+
+const RegionIdentity: React.FC<{
+  districtId: string
+  districtName: string
+  rank: { rank: number; isTied: boolean }
+}> = ({ districtId, districtName, rank }) => (
+  <Link to={`/district/${districtId}`}>
+    <span className="font-semibold tabular-nums">
+      #{rank.rank}
+      {rank.isTied && <span className="sr-only"> (tied)</span>}
+      {rank.isTied && <span aria-hidden="true">=</span>}
+    </span>
+    <DistrictChipAndName
+      districtId={districtId}
+      name={districtName}
+      nameClassName="truncate text-sm font-medium"
+    />
+  </Link>
+)
+
 const RegionPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const navigate = useNavigate()
@@ -404,6 +476,331 @@ const RegionPage: React.FC = () => {
     }
   )
 
+  // Phone priority columns (#1834): the metrics a visitor can pick 2 of.
+  // Each reads the same fields as the full table's cells, so the two views
+  // never disagree.
+  const regionMetrics: PriorityMetric<DistrictRanking, RegionSortField>[] = [
+    {
+      id: 'score',
+      label: 'Score',
+      title: 'Aggregate ranking score',
+      sortField: 'aggregate',
+      render: d => d.aggregateScore,
+    },
+    {
+      id: 'world',
+      label: 'World',
+      title: 'World rank',
+      sortField: 'world-rank',
+      render: d => `#${d.overallRank}`,
+    },
+    {
+      id: 'clubs',
+      label: 'Paid clubs',
+      title: 'Paid clubs, with signed change vs base',
+      sortField: 'clubs',
+      render: d => (
+        <ValueWithDelta
+          value={d.paidClubs ?? 0}
+          delta={
+            awards?.distinguishedDistrict?.[d.districtId]?.netClubGrowth ??
+            (d.paidClubs ?? 0) - (d.paidClubBase ?? 0)
+          }
+        />
+      ),
+    },
+    {
+      id: 'payments',
+      label: 'Payments',
+      title: 'Membership payments, with signed change vs base',
+      sortField: 'payments',
+      render: d => (
+        <ValueWithDelta
+          value={d.totalPayments ?? 0}
+          delta={(d.totalPayments ?? 0) - (d.paymentBase ?? 0)}
+        />
+      ),
+    },
+    {
+      id: 'distinguished',
+      label: 'Dist. clubs',
+      title: 'Distinguished clubs',
+      sortField: 'distinguished',
+      render: d => (d.distinguishedClubs ?? 0).toLocaleString(),
+    },
+    {
+      id: 'tier',
+      label: 'Tier',
+      title: 'Current Distinguished District tier',
+      render: d => (
+        <TierLabel
+          districtId={d.districtId}
+          tier={
+            awards?.distinguishedDistrict?.[d.districtId]?.currentTier ?? null
+          }
+        />
+      ),
+    },
+  ]
+
+  const rankingsTable = (
+    <table
+      className="districts-rankings-table"
+      aria-label={`Region ${region} district rankings`}
+    >
+      {/* Two-tier header (#687). The four liked single columns span
+            both rows; each metric is a base→current→Δ group with a
+            colspan group label over Base / Current / Δ sub-headers. */}
+      <thead>
+        <tr>
+          <th
+            rowSpan={2}
+            scope="col"
+            className="region-rankings__sticky-col region-rankings__sticky-col--rank px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
+          >
+            Region Rank
+          </th>
+          <th
+            rowSpan={2}
+            scope="col"
+            className="region-rankings__sticky-col region-rankings__sticky-col--district px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
+          >
+            District
+          </th>
+          <SortableHeader<RegionSortField>
+            field="world-rank"
+            label="World Rank"
+            currentSort={sort}
+            onSort={toggleSort}
+            thClassName="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
+            rowSpan={2}
+          />
+          <SortableHeader<RegionSortField>
+            field="aggregate"
+            label="Score"
+            currentSort={sort}
+            onSort={toggleSort}
+            thClassName="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
+            numeric
+            rowSpan={2}
+          />
+          {/* Three base→current→Δ metric groups (Amy's request). The
+                group banner is the click target for sorting by the
+                column's CURRENT value (#851) — Base/Δ stay non-sortable
+                sub-headers below. */}
+          <SortableHeader<RegionSortField>
+            field="clubs"
+            label="Paid Clubs"
+            currentSort={sort}
+            onSort={toggleSort}
+            thClassName="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-[var(--line)]"
+            colSpan={3}
+            scope="colgroup"
+          />
+          <SortableHeader<RegionSortField>
+            field="payments"
+            label="Membership Payments"
+            currentSort={sort}
+            onSort={toggleSort}
+            thClassName="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-[var(--line)]"
+            colSpan={3}
+            scope="colgroup"
+          />
+          <SortableHeader<RegionSortField>
+            field="distinguished"
+            label="Distinguished Clubs"
+            currentSort={sort}
+            onSort={toggleSort}
+            thClassName="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-[var(--line)]"
+            colSpan={3}
+            scope="colgroup"
+          />
+          {/* Remaining-to-minimum-Distinguished columns (#688, epic
+                #683 F4). Replaces the former percentage-point gap
+                columns — Amy wants the absolute count, not the %.
+                One banner over three sub-columns in spreadsheet order:
+                paid clubs / payments / distinguished clubs. */}
+          <th
+            colSpan={3}
+            scope="colgroup"
+            className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-[var(--line)]"
+            title="Absolute count of each metric still needed to reach the minimum Distinguished tier"
+          >
+            Remaining to Distinguished
+          </th>
+          <th
+            rowSpan={2}
+            scope="col"
+            className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom border-l border-[var(--line)]"
+          >
+            Education / Training
+          </th>
+          {/* CGD = Club Growth Director — TI officer award. Renamed
+                from "Club Growth" to disambiguate from the % Club
+                Growth prerequisite that used to sit to its left. */}
+          <th
+            rowSpan={2}
+            scope="col"
+            className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
+            title="Club Growth Director — officer award"
+          >
+            CGD
+          </th>
+          {/* Current Distinguished tier when achieved; em-dash
+                for districts still below. */}
+          <th
+            rowSpan={2}
+            scope="col"
+            className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
+          >
+            Tier
+          </th>
+        </tr>
+        {/* Sub-header row: Base / Current / Δ under each metric group,
+              then the three Remaining-to-Distinguished sub-columns. */}
+        <tr>
+          {['Paid Clubs', 'Membership Payments', 'Distinguished Clubs'].flatMap(
+            group =>
+              ['Base', 'Current', 'Δ'].map((sub, j) => (
+                <th
+                  key={`${group}-${sub}`}
+                  scope="col"
+                  title={`${group} — ${sub === 'Δ' ? 'change vs base' : sub}`}
+                  className={`px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider${
+                    j === 0 ? ' border-l border-[var(--line)]' : ''
+                  }`}
+                >
+                  {sub}
+                </th>
+              ))
+          )}
+          {/* #688: absolute count still needed for each metric, in
+                Amy's spreadsheet order. The group banner above carries
+                the "remaining to Distinguished" framing. */}
+          {[
+            { label: 'Clubs', title: 'Paid clubs still needed' },
+            {
+              label: 'Payments',
+              title: 'Membership payments still needed',
+            },
+            {
+              label: 'Dist. Clubs',
+              title: 'Distinguished clubs still needed',
+            },
+          ].map((col, j) => (
+            <th
+              key={`remaining-${col.label}`}
+              scope="col"
+              title={col.title}
+              className={`px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider${
+                j === 0 ? ' border-l border-[var(--line)]' : ''
+              }`}
+            >
+              {col.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {regionDistricts.map(d => {
+          // Always-by-score rank, independent of the visible sort.
+          const rank = rankByDistrictId.get(d.districtId)!
+          return (
+            <tr
+              key={d.districtId}
+              className="cursor-pointer"
+              onClick={() => navigate(`/district/${d.districtId}`)}
+            >
+              <td
+                data-testid="region-rank-cell"
+                className="region-rankings__sticky-col region-rankings__sticky-col--rank px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 tabular-nums"
+              >
+                #{rank.rank}
+                {rank.isTied && (
+                  <span className="ml-1 text-xs text-gray-600 font-normal">
+                    (tied)
+                  </span>
+                )}
+              </td>
+              <td
+                data-testid="region-district-cell"
+                className="region-rankings__sticky-col region-rankings__sticky-col--district px-6 py-4 whitespace-nowrap"
+              >
+                <DistrictChipAndName
+                  districtId={d.districtId}
+                  name={d.districtName}
+                  ariaHidden
+                />
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                #{d.overallRank}
+              </td>
+              <td
+                data-testid="score-cell"
+                className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums"
+              >
+                {d.aggregateScore}
+              </td>
+              {/* Paid Clubs: base → current → signed net growth (#1).
+                    Net growth prefers the snapshot field, falling back
+                    to paidClubs − paidClubBase (lesson 102). */}
+              <MetricValueTd
+                testid="paid-base"
+                value={d.paidClubBase ?? 0}
+                groupStart
+              />
+              <MetricValueTd testid="paid-current" value={d.paidClubs ?? 0} />
+              <SignedDeltaTd
+                testid="countdown-netClubGrowth"
+                value={
+                  awards?.distinguishedDistrict?.[d.districtId]
+                    ?.netClubGrowth ??
+                  (d.paidClubs ?? 0) - (d.paidClubBase ?? 0)
+                }
+              />
+              {/* Membership Payments: base → current → signed Δ. */}
+              <MetricValueTd
+                testid="payments-base"
+                value={d.paymentBase ?? 0}
+                groupStart
+              />
+              <MetricValueTd
+                testid="payments-current"
+                value={d.totalPayments ?? 0}
+              />
+              <SignedDeltaTd
+                testid="payments-delta"
+                value={(d.totalPayments ?? 0) - (d.paymentBase ?? 0)}
+              />
+              {/* Distinguished Clubs: year-cumulative, so base = 0 and
+                    Δ = current (lesson 57). */}
+              <MetricValueTd testid="dist-base" value={0} groupStart />
+              <MetricValueTd
+                testid="dist-current"
+                value={d.distinguishedClubs ?? 0}
+              />
+              <SignedDeltaTd
+                testid="dist-delta"
+                value={d.distinguishedClubs ?? 0}
+              />
+              <DistinguishedCells
+                districtId={d.districtId}
+                awards={awards ?? null}
+                ranking={{
+                  paidClubBase: d.paidClubBase ?? 0,
+                  paymentBase: d.paymentBase ?? 0,
+                  paidClubs: d.paidClubs ?? 0,
+                  totalPayments: d.totalPayments ?? 0,
+                  distinguishedClubs: d.distinguishedClubs ?? 0,
+                }}
+              />
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+
   return (
     // #848 — data-grid surface (19-column rankings table); uses the wide
     // --page-max-wide cap, same policy as .districts-page /
@@ -497,288 +894,53 @@ const RegionPage: React.FC = () => {
         />
       </div>
 
-      <div className="districts-rankings-table-wrap">
-        {/* Intentional, documented horizontal scroll (#689, epic #683 F-mobile).
-            A 19-column ranking table can't fit a phone; collapsing to cards
-            would destroy the cross-row comparison that is the table's whole
-            purpose (ron-ux). Instead the scroll is made non-trap:
-            role=region + tabIndex + aria-label make it keyboard-operable
-            (WCAG 2.1.1 / axe scrollable-region-focusable); the sticky identity
-            columns keep each row labelled; the scroll-cue overlay signals more
-            columns to the right. */}
-        <div
-          className="overflow-x-auto region-rankings__scroll"
-          role="region"
-          tabIndex={0}
-          aria-label={`Region ${region} district rankings — scroll horizontally to see all metrics`}
-        >
-          <table
-            className="districts-rankings-table"
-            aria-label={`Region ${region} district rankings`}
-          >
-            {/* Two-tier header (#687). The four liked single columns span
-                both rows; each metric is a base→current→Δ group with a
-                colspan group label over Base / Current / Δ sub-headers. */}
-            <thead>
-              <tr>
-                <th
-                  rowSpan={2}
-                  scope="col"
-                  className="region-rankings__sticky-col region-rankings__sticky-col--rank px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
-                >
-                  Region Rank
-                </th>
-                <th
-                  rowSpan={2}
-                  scope="col"
-                  className="region-rankings__sticky-col region-rankings__sticky-col--district px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
-                >
-                  District
-                </th>
-                <SortableHeader<RegionSortField>
-                  field="world-rank"
-                  label="World Rank"
-                  currentSort={sort}
-                  onSort={toggleSort}
-                  thClassName="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
-                  rowSpan={2}
-                />
-                <SortableHeader<RegionSortField>
-                  field="aggregate"
-                  label="Score"
-                  currentSort={sort}
-                  onSort={toggleSort}
-                  thClassName="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
-                  numeric
-                  rowSpan={2}
-                />
-                {/* Three base→current→Δ metric groups (Amy's request). The
-                    group banner is the click target for sorting by the
-                    column's CURRENT value (#851) — Base/Δ stay non-sortable
-                    sub-headers below. */}
-                <SortableHeader<RegionSortField>
-                  field="clubs"
-                  label="Paid Clubs"
-                  currentSort={sort}
-                  onSort={toggleSort}
-                  thClassName="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-[var(--line)]"
-                  colSpan={3}
-                  scope="colgroup"
-                />
-                <SortableHeader<RegionSortField>
-                  field="payments"
-                  label="Membership Payments"
-                  currentSort={sort}
-                  onSort={toggleSort}
-                  thClassName="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-[var(--line)]"
-                  colSpan={3}
-                  scope="colgroup"
-                />
-                <SortableHeader<RegionSortField>
-                  field="distinguished"
-                  label="Distinguished Clubs"
-                  currentSort={sort}
-                  onSort={toggleSort}
-                  thClassName="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-[var(--line)]"
-                  colSpan={3}
-                  scope="colgroup"
-                />
-                {/* Remaining-to-minimum-Distinguished columns (#688, epic
-                    #683 F4). Replaces the former percentage-point gap
-                    columns — Amy wants the absolute count, not the %.
-                    One banner over three sub-columns in spreadsheet order:
-                    paid clubs / payments / distinguished clubs. */}
-                <th
-                  colSpan={3}
-                  scope="colgroup"
-                  className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-[var(--line)]"
-                  title="Absolute count of each metric still needed to reach the minimum Distinguished tier"
-                >
-                  Remaining to Distinguished
-                </th>
-                <th
-                  rowSpan={2}
-                  scope="col"
-                  className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom border-l border-[var(--line)]"
-                >
-                  Education / Training
-                </th>
-                {/* CGD = Club Growth Director — TI officer award. Renamed
-                    from "Club Growth" to disambiguate from the % Club
-                    Growth prerequisite that used to sit to its left. */}
-                <th
-                  rowSpan={2}
-                  scope="col"
-                  className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
-                  title="Club Growth Director — officer award"
-                >
-                  CGD
-                </th>
-                {/* Current Distinguished tier when achieved; em-dash
-                    for districts still below. */}
-                <th
-                  rowSpan={2}
-                  scope="col"
-                  className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
-                >
-                  Tier
-                </th>
-              </tr>
-              {/* Sub-header row: Base / Current / Δ under each metric group,
-                  then the three Remaining-to-Distinguished sub-columns. */}
-              <tr>
-                {[
-                  'Paid Clubs',
-                  'Membership Payments',
-                  'Distinguished Clubs',
-                ].flatMap(group =>
-                  ['Base', 'Current', 'Δ'].map((sub, j) => (
-                    <th
-                      key={`${group}-${sub}`}
-                      scope="col"
-                      title={`${group} — ${sub === 'Δ' ? 'change vs base' : sub}`}
-                      className={`px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider${
-                        j === 0 ? ' border-l border-[var(--line)]' : ''
-                      }`}
-                    >
-                      {sub}
-                    </th>
-                  ))
-                )}
-                {/* #688: absolute count still needed for each metric, in
-                    Amy's spreadsheet order. The group banner above carries
-                    the "remaining to Distinguished" framing. */}
-                {[
-                  { label: 'Clubs', title: 'Paid clubs still needed' },
-                  {
-                    label: 'Payments',
-                    title: 'Membership payments still needed',
-                  },
-                  {
-                    label: 'Dist. Clubs',
-                    title: 'Distinguished clubs still needed',
-                  },
-                ].map((col, j) => (
-                  <th
-                    key={`remaining-${col.label}`}
-                    scope="col"
-                    title={col.title}
-                    className={`px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider${
-                      j === 0 ? ' border-l border-[var(--line)]' : ''
-                    }`}
-                  >
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {regionDistricts.map(d => {
-                // Always-by-score rank, independent of the visible sort.
-                const rank = rankByDistrictId.get(d.districtId)!
-                return (
-                  <tr
-                    key={d.districtId}
-                    className="cursor-pointer"
-                    onClick={() => navigate(`/district/${d.districtId}`)}
-                  >
-                    <td
-                      data-testid="region-rank-cell"
-                      className="region-rankings__sticky-col region-rankings__sticky-col--rank px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 tabular-nums"
-                    >
-                      #{rank.rank}
-                      {rank.isTied && (
-                        <span className="ml-1 text-xs text-gray-600 font-normal">
-                          (tied)
-                        </span>
-                      )}
-                    </td>
-                    <td
-                      data-testid="region-district-cell"
-                      className="region-rankings__sticky-col region-rankings__sticky-col--district px-6 py-4 whitespace-nowrap"
-                    >
-                      <DistrictChipAndName
-                        districtId={d.districtId}
-                        name={d.districtName}
-                        ariaHidden
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      #{d.overallRank}
-                    </td>
-                    <td
-                      data-testid="score-cell"
-                      className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums"
-                    >
-                      {d.aggregateScore}
-                    </td>
-                    {/* Paid Clubs: base → current → signed net growth (#1).
-                        Net growth prefers the snapshot field, falling back
-                        to paidClubs − paidClubBase (lesson 102). */}
-                    <MetricValueTd
-                      testid="paid-base"
-                      value={d.paidClubBase ?? 0}
-                      groupStart
-                    />
-                    <MetricValueTd
-                      testid="paid-current"
-                      value={d.paidClubs ?? 0}
-                    />
-                    <SignedDeltaTd
-                      testid="countdown-netClubGrowth"
-                      value={
-                        awards?.distinguishedDistrict?.[d.districtId]
-                          ?.netClubGrowth ??
-                        (d.paidClubs ?? 0) - (d.paidClubBase ?? 0)
-                      }
-                    />
-                    {/* Membership Payments: base → current → signed Δ. */}
-                    <MetricValueTd
-                      testid="payments-base"
-                      value={d.paymentBase ?? 0}
-                      groupStart
-                    />
-                    <MetricValueTd
-                      testid="payments-current"
-                      value={d.totalPayments ?? 0}
-                    />
-                    <SignedDeltaTd
-                      testid="payments-delta"
-                      value={(d.totalPayments ?? 0) - (d.paymentBase ?? 0)}
-                    />
-                    {/* Distinguished Clubs: year-cumulative, so base = 0 and
-                        Δ = current (lesson 57). */}
-                    <MetricValueTd testid="dist-base" value={0} groupStart />
-                    <MetricValueTd
-                      testid="dist-current"
-                      value={d.distinguishedClubs ?? 0}
-                    />
-                    <SignedDeltaTd
-                      testid="dist-delta"
-                      value={d.distinguishedClubs ?? 0}
-                    />
-                    <DistinguishedCells
-                      districtId={d.districtId}
-                      awards={awards ?? null}
-                      ranking={{
-                        paidClubBase: d.paidClubBase ?? 0,
-                        paymentBase: d.paymentBase ?? 0,
-                        paidClubs: d.paidClubs ?? 0,
-                        totalPayments: d.totalPayments ?? 0,
-                        distinguishedClubs: d.distinguishedClubs ?? 0,
-                      }}
-                    />
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        {/* Right-edge fade: a discoverability cue that the table scrolls for
-            more columns. Themed (transparent → --surface, remaps in dark),
-            pointer-events:none so it never blocks taps or scrolling. */}
-        <div className="region-rankings__scroll-cue" aria-hidden="true" />
-      </div>
+      <PriorityColumnsTable<DistrictRanking, RegionSortField>
+        label={`Region ${region} district rankings`}
+        rows={regionDistricts}
+        rowKey={d => d.districtId}
+        identityHeader="District"
+        identitySortField="aggregate"
+        renderIdentity={d => (
+          <RegionIdentity
+            districtId={d.districtId}
+            districtName={d.districtName}
+            rank={rankByDistrictId.get(d.districtId)!}
+          />
+        )}
+        metrics={regionMetrics}
+        defaultMetricIds={['clubs', 'payments']}
+        sort={sort}
+        onSort={toggleSort}
+        fullTableTitle={`Region ${region} — all columns`}
+        sheetTable={rankingsTable}
+        sheetRegionClassName="region-rankings__scroll"
+        fullTable={
+          <div className="districts-rankings-table-wrap">
+            {/* ≥768 only: below that, PriorityColumnsTable shows rank +
+                district + 2 chosen metrics and this table moves into its
+                full-screen sheet (#1834). At tablet widths the scroll is
+                intentional and documented (#689, epic #683): collapsing to
+                cards would destroy the cross-row comparison that is the
+                table's whole purpose (ron-ux). The scroll is made non-trap:
+                role=region + tabIndex + aria-label make it keyboard-operable
+                (WCAG 2.1.1 / axe scrollable-region-focusable); the sticky identity
+                columns keep each row labelled; the scroll-cue overlay signals more
+                columns to the right. */}
+            <div
+              className="overflow-x-auto region-rankings__scroll"
+              role="region"
+              tabIndex={0}
+              aria-label={`Region ${region} district rankings — scroll horizontally to see all metrics`}
+            >
+              {rankingsTable}
+            </div>
+            {/* Right-edge fade: a discoverability cue that the table scrolls for
+                more columns. Themed (transparent → --surface, remaps in dark),
+                pointer-events:none so it never blocks taps or scrolling. */}
+            <div className="region-rankings__scroll-cue" aria-hidden="true" />
+          </div>
+        }
+      />
     </div>
   )
 }

@@ -107,3 +107,25 @@ describe('BottomSheet (#1831)', () => {
     expect(document.body.style.overflow).toBe('')
   })
 })
+
+describe('BottomSheet full variant (#1834)', () => {
+  it('defaults to the partial-height sheet', () => {
+    render(
+      <BottomSheet isOpen onClose={vi.fn()} title="Sheet">
+        x
+      </BottomSheet>
+    )
+    expect(screen.getByRole('dialog').className).not.toContain(
+      'bottom-sheet--full'
+    )
+  })
+
+  it('variant="full" marks the dialog for the full-screen layout', () => {
+    render(
+      <BottomSheet isOpen onClose={vi.fn()} title="Sheet" variant="full">
+        x
+      </BottomSheet>
+    )
+    expect(screen.getByRole('dialog').className).toContain('bottom-sheet--full')
+  })
+})

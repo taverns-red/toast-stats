@@ -57,6 +57,7 @@
 @import './styles/components/club-grid.css';
 @import './styles/components/action-list.css';
 @import './styles/components/mobile-row-list.css';
+@import './styles/components/priority-columns.css';
 @import './styles/components/tooltip.css';
 @import './styles/components/worldwide-scoreboard.css';
 @import './styles/responsive.css';

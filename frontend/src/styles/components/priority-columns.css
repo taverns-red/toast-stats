@@ -1,0 +1,215 @@
+/* PriorityColumnsTable (#1834, mobile epic #1827 Phase 1, review §5.2).
+   Only rendered below 768 (the component returns the caller's full table
+   from 768 up), so no media query is needed here. Fit is structural: a
+   fixed-layout 100%-wide table with three columns cannot overflow; the
+   identity cell ellipsizes instead of widening the table (a scale can't buy
+   room for labels — only flow layout can). Semantic tokens only, so dark
+   mode follows the [data-theme] remaps (R10). Contract pinned by
+   styles/__tests__/priorityColumns.test.ts; measured by bounding box in
+   e2e/priority-columns.smoke.ts. */
+
+@layer brand {
+  .priority-columns {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .priority-columns__chips-label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--ink-3);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Wraps rather than scrolling sideways: a blind scroll-row hides options
+     the same way the old table hid columns. */
+  .priority-columns__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .priority-columns__chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background-color: var(--surface);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .priority-columns__chip[aria-pressed='true'] {
+    border-color: var(--ink);
+    background-color: var(--ink);
+    color: var(--surface);
+    font-weight: 600;
+  }
+
+  .priority-columns__table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--line);
+    background-color: var(--surface);
+  }
+
+  .priority-columns__col-identity {
+    width: 36%;
+  }
+
+  .priority-columns__col-metric {
+    width: 32%;
+  }
+
+  .priority-columns__table th {
+    padding: 0 4px;
+    border-bottom: 1px solid var(--line);
+    background-color: var(--surface-2);
+    color: var(--ink-2);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 44px;
+  }
+
+  .priority-columns__table th.priority-columns__th--metric {
+    text-align: right;
+  }
+
+  /* The shared SortableHeader's button fills its cell: a 44px target. */
+  .priority-columns__table th .sortable-header__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    min-height: 44px;
+    max-width: 100%;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .priority-columns__table th .sortable-header__btn--numeric {
+    justify-content: flex-end;
+  }
+
+  .priority-columns__table th .sortable-header__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .priority-columns__table th .sortable-header__btn--active {
+    color: var(--ink);
+  }
+
+  .priority-columns__table td {
+    padding: 6px;
+    border-bottom: 1px solid var(--line-2, var(--line));
+    color: var(--ink);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    vertical-align: middle;
+  }
+
+  .priority-columns__identity {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .priority-columns__table td.priority-columns__metric {
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Identity links are the row's tap target. */
+  .priority-columns__identity a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  /* A tier/status chip in a metric cell: compact padding, 14px text, never
+     shrunk (Lesson 134 — verified by bounding box in the smoke). */
+  .priority-columns__tier {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* The shared district-number chip (DistrictChipAndName) is 13px in the
+     desktop tables; on the phone it is data, so 14px (review §7). */
+  .priority-columns__identity .districts-rankings-table__district-chip {
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+
+  .priority-columns__full {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background-color: var(--surface);
+    color: var(--link);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .priority-columns__chip:focus-visible,
+  .priority-columns__full:focus-visible,
+  .priority-columns__table th .sortable-header__btn:focus-visible,
+  .priority-columns__identity a:focus-visible,
+  .priority-columns__sheet-region:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Full-table sheet: BottomSheet variant="full" ---------- */
+
+  .bottom-sheet.bottom-sheet--full {
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .bottom-sheet--full .bottom-sheet__body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  /* The one scroller: both axes, so the caller's sticky identity column
+     pins against it. */
+  .priority-columns__sheet-region {
+    height: 100%;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+}

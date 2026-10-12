@@ -29,6 +29,8 @@ export interface BottomSheetProps {
   closeLabel?: string
   /** DOM id for the dialog, so a trigger can point `aria-controls` at it. */
   id?: string
+  /** 'full' fills the viewport (#1834's full-table sheet). Default: partial. */
+  variant?: 'default' | 'full'
 }
 
 export const BottomSheet: React.FC<BottomSheetProps> = ({
@@ -38,6 +40,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   children,
   closeLabel = 'Close',
   id,
+  variant = 'default',
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -116,7 +119,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       <div
         ref={sheetRef}
         id={id}
-        className="bottom-sheet"
+        className={`bottom-sheet${variant === 'full' ? ' bottom-sheet--full' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

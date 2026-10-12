@@ -311,6 +311,18 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/section-bar.smoke.ts
 
+      # Priority-column comparison tables (#1834, mobile review §5.2). At
+      # 375/390, light and dark: identity + 2 chosen metrics, zero hidden
+      # columns and zero document overflow with the body mask off, one-line
+      # headers, 44px targets, 14px text, tier chips inside their cells by
+      # bounding box; "Full table" opens a full-screen labelled region. 768
+      # and 1280 keep the full table. Both engines.
+      - name: Cross-engine priority-columns guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/priority-columns.smoke.ts
+
       # Lighthouse MOBILE gate (#1830, mobile epic #1827). lighthouserc.js is
       # desktop-only on `/` against localhost fixtures; this runs Lighthouse's
       # mobile profile (simulated 150 ms RTT / 1.6 Mbps / 4x CPU) on the five
