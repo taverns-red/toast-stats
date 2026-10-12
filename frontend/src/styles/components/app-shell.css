@@ -305,6 +305,24 @@
     .app-shell-nav__link {
       padding: 8px 12px;
       font-size: 13.5px;
+      /* #1917: a link label never wraps; at 768 "How it works" broke onto
+         two lines (57px against its siblings' 44px). */
+      white-space: nowrap;
+    }
+  }
+
+  /* #1917 — tablet (768–1023): the six nav links need ~448px at the desktop
+     12px padding but get ~406px beside the search field, so they wrapped.
+     8px link padding and a 16px bar gap free ~64px and leave a 30px margin
+     before the search field at 768. ≥1024 keeps the desktop spacing. */
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    .app-shell-top-bar {
+      gap: 16px;
+    }
+
+    .app-shell-nav__link {
+      padding-left: 8px;
+      padding-right: 8px;
     }
   }
 
@@ -596,6 +614,23 @@
       flex-direction: row;
       align-items: flex-start;
       justify-content: space-between;
+    }
+  }
+
+  /* #1917 — the landing's action cluster (freshness pill · PY · date ·
+     Export · Share) is ~616px of unwrapped chips. Inline beside the intro on
+     a tablet it left the intro 88px wide at 768 (140px at 820): a two-line
+     title, the lede at one word per line, a 671px-tall header. Below 1024 the
+     landing header stacks instead, the same as on a phone, so the intro gets
+     the full measure and the cluster sits on one row under it. Stacking is
+     width-driven, not data-driven, so the loading shell's actions skeleton
+     stacks too and the KPI strip lands at the same y in both states. Scoped
+     to .districts-page-root (the landing only): the Regions, Awards, Clubs
+     and Division headers carry shorter clusters and keep a 290px+ intro. */
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    .districts-page-root .districts-page-header {
+      flex-direction: column;
+      align-items: stretch;
     }
   }
 
