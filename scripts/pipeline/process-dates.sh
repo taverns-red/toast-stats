@@ -55,7 +55,8 @@
 #                CDN headers. An upload error aborts the loop (exit 1), as the
 #                inline loop's `set -e` did: the step fails before any store
 #                push. rescrape then rsyncs the re-collected raw-csv/<date>/
-#                up, replacing the old copy.
+#                up, replacing the old copy. Every object uploaded is
+#                recorded in the run manifest (gcs-upload.sh, #1762).
 #  11. cleanup   the date's raw, snapshot, hydrated and prior-year
 #                directories, so no later step reads a rebuilt date as
 #                "latest" (#295, #1670).
@@ -74,9 +75,9 @@
 #   VALIDATE_SNAPSHOTS     schema gate command (default: tsx validate-snapshots.ts)
 #   DISTRICTS              rescrape: required, comma-separated district ids
 #   GITHUB_STEP_SUMMARY    date counts and store counters are appended here
-#   TOUCHED_DATES_FILE     optional: each published (post-remap) date is
-#                          appended, one per line, for the per-date
-#                          completeness gate (#1761)
+#   RUN_MANIFEST_FILE      required by any upload: every object uploaded is
+#                          appended (scripts/pipeline/gcs-upload.sh, #1762);
+#                          the completeness gate takes its dates from it
 #
 # Output: stdout is ONE JSON line, {"succeeded":N,"refused":N,"failed":N}
 # (R4); everything else, including the CLI's own output, goes to stderr.
@@ -127,6 +128,9 @@ read -r -a COLLECTOR <<<"${COLLECTOR_CLI:-npx collector-cli}"
 read -r -a RESOLVE <<<"${RESOLVE_REBUILD_SOURCE:-${TSX} ${REPO}/scripts/resolve-rebuild-source.ts}"
 read -r -a GUARD <<<"${GUARD_SNAPSHOT_UPLOAD:-${TSX} ${REPO}/scripts/guard-snapshot-upload.ts}"
 read -r -a VALIDATE <<<"${VALIDATE_SNAPSHOTS:-${TSX} ${REPO}/scripts/validate-snapshots.ts}"
+# Every upload goes through the wrapper, so it lands in the run manifest.
+export GCLOUD
+UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" "process-dates:${MODE}")
 
 # stdout is reserved for the result line; fd 3 keeps it.
 exec 3>&1 1>&2
@@ -214,7 +218,7 @@ upload_snapshot() {
     awk '{print $3}')
   echo "Uploading snapshots/${actual}/ (${#top[@]} files, ${#analytics[@]} analytics)..."
   if [ "${#top[@]}" -gt 0 ]; then
-    "${GCLOUD}" storage cp \
+    "${UPLOAD[@]}" cp \
       --content-type="application/json" \
       --cache-control="public, max-age=3600, must-revalidate" \
       -Z \
@@ -222,7 +226,7 @@ upload_snapshot() {
       "gs://${BUCKET}/snapshots/${actual}/"
   fi
   if [ "${#analytics[@]}" -gt 0 ]; then
-    "${GCLOUD}" storage cp \
+    "${UPLOAD[@]}" cp \
       --content-type="application/json" \
       --cache-control="public, max-age=3600, must-revalidate" \
       -Z \
@@ -388,16 +392,13 @@ process_one() {
   # 10. upload
   if [ -d "${SNAPSHOTS}/${actual}" ]; then
     upload_snapshot "${actual}"
-    if [ -n "${TOUCHED_DATES_FILE:-}" ]; then
-      echo "${actual}" >>"${TOUCHED_DATES_FILE}"
-    fi
     if [ "${compute_ok}" = 1 ]; then OUTCOME=published; else OUTCOME=compute-failed; fi
   else
     echo "::warning::No snapshot directory found for ${date} (expected ${actual})"
   fi
   if [ "${MODE}" = "rescrape" ] && [ -d "${RAW}/${date}" ]; then
     echo "Uploading raw-csv/${date}/..."
-    "${GCLOUD}" storage rsync -r "${RAW}/${date}/" "gs://${BUCKET}/raw-csv/${date}/"
+    "${UPLOAD[@]}" rsync -r "${RAW}/${date}/" "gs://${BUCKET}/raw-csv/${date}/"
   fi
 
   # 11. cleanup

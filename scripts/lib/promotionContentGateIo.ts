@@ -21,12 +21,14 @@ import {
   diffChangedObjects,
   evaluateContentGate,
   planContentChecks,
+  planManifestChecks,
   type CheckContext,
   type CheckResult,
   type ContentGateResult,
   type GcsObjectMeta,
   type StoredObject,
 } from './promotionContentGate.js'
+import type { RunManifestEntry } from './runManifest.js'
 
 export const CONCURRENCY = 16
 export const LIST_FIELDS =
@@ -230,12 +232,19 @@ async function readContext(
   }
 }
 
-/** List, diff, sample, read and decide. Throws on listing errors. */
+/**
+ * List, diff, plan, read and decide. Throws on listing errors.
+ *
+ * With `manifest` (the run manifest, #1762) every object the run wrote
+ * under a promoted prefix is read and hash-checked; changed objects the run
+ * did not write are still sampled (promotion copies whole prefixes until
+ * #1763). Without it, the #1715 diff-and-sample plan.
+ */
 export async function runContentGate(
   staging: GateBucket,
   prod: GateBucket,
   log: (msg: string) => void = () => {},
-  opts: { random?: () => number } = {}
+  opts: { random?: () => number; manifest?: readonly RunManifestEntry[] } = {}
 ): Promise<ContentGateResult> {
   const started = Date.now()
   const [stagingObjects, prodObjects] = await Promise.all([
@@ -248,9 +257,15 @@ export async function runContentGate(
   )
 
   const changed = diffChangedObjects(stagingObjects, prodObjects)
-  const plan = planContentChecks(changed, { random: opts.random })
+  const plan = opts.manifest
+    ? planManifestChecks(opts.manifest, changed, { random: opts.random })
+    : {
+        ...planContentChecks(changed, { random: opts.random }),
+        manifestCount: 0,
+      }
   log(
-    `[content-gate] ${plan.changedCount} changed; checking ${plan.checks.length} ` +
+    `[content-gate] ${plan.manifestCount} written by this run (all read); ` +
+      `${plan.changedCount} changed; checking ${plan.checks.length} ` +
       `(${plan.sampledOut} outside the sample, ${plan.notJson} not JSON)`
   )
 
@@ -262,6 +277,13 @@ export async function runContentGate(
     plan.checks,
     CONCURRENCY,
     async check => {
+      if (check.expectedSha256 !== undefined && !stagingMeta.has(check.path)) {
+        return {
+          path: check.path,
+          kind: check.kind,
+          failure: 'listed in the run manifest but missing from staging',
+        }
+      }
       try {
         const object = await readStored(
           staging,
@@ -315,5 +337,6 @@ export async function runContentGate(
     results,
     notJson: plan.notJson,
     sampledOut: plan.sampledOut,
+    manifestCount: plan.manifestCount,
   })
 }

@@ -137,9 +137,12 @@ env:
   # Daily pipeline writes to staging first; promotion copies to production (#316)
   GCS_BUCKET: 'toast-stats-data-staging'
   GCS_BUCKET_PRODUCTION: 'toast-stats-data-ca'
-  # Dates this run published, one per line (#1761): appended by
-  # process-dates.sh and the backfill loop, read by the completeness gate.
-  TOUCHED_DATES_FILE: '/tmp/touched-dates.txt'
+  # The run manifest (#1762, ADR-015 P5): one JSON line per object this run
+  # uploaded to staging, appended by scripts/pipeline/gcs-upload.sh (every
+  # staging upload goes through it) and publish-stores.sh; published to
+  # runs/<github_run_id>/written.jsonl. The content gate reads every object
+  # in it; the completeness gate takes its dates from it.
+  RUN_MANIFEST_FILE: '/tmp/run-manifest/written.jsonl'
 
 permissions:
   contents: read
@@ -489,7 +492,8 @@ jobs:
           if [ -z "${SNAPSHOT_DATE}" ]; then
             SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.date }}"
           fi
-          if ! gcloud storage rsync -r "./cache/find-a-club/${SNAPSHOT_DATE}/" "gs://${GCS_BUCKET}/raw-fac/${SNAPSHOT_DATE}/"; then
+          if ! bash scripts/pipeline/gcs-upload.sh daily-raw-fac rsync -r \
+            "./cache/find-a-club/${SNAPSHOT_DATE}/" "gs://${GCS_BUCKET}/raw-fac/${SNAPSHOT_DATE}/"; then
             echo "::warning::Could not persist raw-fac/${SNAPSHOT_DATE}/; a re-derivation of ${SNAPSHOT_DATE} will be unenriched"
             exit 1
           fi
@@ -588,7 +592,8 @@ jobs:
 
           # Internal state: rsync (no CDN metadata needed)
           # raw-csv keyed by collection date (DATE), not snapshot date
-          gcloud storage rsync -r "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
+          bash scripts/pipeline/gcs-upload.sh daily-upload rsync -r \
+            "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
 
           # Stateful stores (#1722): the double-encoding check runs before
           # any store push (#1702), then rsync for internal state, the awards
@@ -598,7 +603,7 @@ jobs:
 
           # CDN-served: snapshots + analytics (immutable, gzipped)
           # Use SNAPSHOT_DATE for the actual snapshot directory (#309)
-          gcloud storage cp \
+          bash scripts/pipeline/gcs-upload.sh daily-upload cp \
             --content-type="application/json" \
             --cache-control="public, max-age=3600, must-revalidate" \
             -Z \
@@ -607,7 +612,7 @@ jobs:
 
           # Analytics subdirectory
           if [ -d "./cache/snapshots/${SNAPSHOT_DATE}/analytics" ]; then
-            gcloud storage cp \
+            bash scripts/pipeline/gcs-upload.sh daily-upload cp \
               --content-type="application/json" \
               --cache-control="public, max-age=3600, must-revalidate" \
               -Z \
@@ -935,13 +940,12 @@ jobs:
                  --snapshot-dir "${SNAPSHOT_DIR}" --date "${DATE}" \
                  > /tmp/global-totals-summary.json; then
               # Same CDN headers as every other published snapshot object.
-              gcloud storage cp \
+              bash scripts/pipeline/gcs-upload.sh backfill-global-totals cp \
                 --content-type="application/json" \
                 --cache-control="public, max-age=3600, must-revalidate" \
                 -Z \
                 "${SNAPSHOT_DIR}/global-totals.json" \
                 "gs://${GCS_BUCKET}/snapshots/${DATE}/global-totals.json"
-              echo "${DATE}" >> "${TOUCHED_DATES_FILE}"
 
               ROW=$(jq -r '"| \(.date) | \(.districts) | \(.clubs) | \(.payments) | \(.membership) | \(.excludedDistricts) | \(.duplicateClubs) |"' \
                     /tmp/global-totals-summary.json)
@@ -1174,7 +1178,8 @@ jobs:
             time-series club-trends club-race district-awards-history
 
           echo "Uploading raw-csv..."
-          gcloud storage rsync -r "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
+          bash scripts/pipeline/gcs-upload.sh historical-raw-csv rsync -r \
+            "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
 
           TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
@@ -1276,6 +1281,33 @@ jobs:
           echo "## 🗑️ GCS Cleanup" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Prefixes deleted from GCS**: ${DELETED}" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Prune Step 4: run-manifest retention (#1762, ADR-015 Consequences) ──
+      # runs/<github_run_id>/written.jsonl is derived and never read by a
+      # later run; keep 90 days of them for audits. Selection is
+      # scripts/lib/runManifest.ts (expiredRunPrefixes), staging only, and
+      # dry_run only lists. A listing error skips retention (it fails
+      # nothing else) rather than deleting on a guess.
+      - name: '[prune] Expire run manifests older than 90 days'
+        if: steps.mode.outputs.mode == 'prune'
+        env:
+          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
+        run: |
+          if ! gcloud storage objects list "gs://${GCS_BUCKET}/runs/**" --format=json > /tmp/runs-listing.json; then
+            echo "::warning::Could not list gs://${GCS_BUCKET}/runs/; run-manifest retention skipped"
+            exit 0
+          fi
+          npx tsx scripts/expire-run-manifests.ts /tmp/runs-listing.json > /tmp/runs-expired.txt
+          EXPIRED=$(grep -c . /tmp/runs-expired.txt || true)
+          while IFS= read -r PREFIX; do
+            [[ "${PREFIX}" =~ ^runs/[0-9A-Za-z_-]+/$ ]] || { echo "::error::refusing to delete '${PREFIX}'"; exit 1; }
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "[dry-run] would delete gs://${GCS_BUCKET}/${PREFIX}"
+            else
+              gcloud storage rm -r "gs://${GCS_BUCKET}/${PREFIX}"
+            fi
+          done < /tmp/runs-expired.txt
+          echo "- **Run manifests expired (>90 days)**: ${EXPIRED}$([ "${DRY_RUN}" = "true" ] && echo ' (dry run)')" >> "$GITHUB_STEP_SUMMARY"
+
       # ════════════════════════════════════════════════════════
       # SHARED: CDN Manifests (daily + rebuild)
       # ════════════════════════════════════════════════════════
@@ -1371,20 +1403,20 @@ jobs:
             "${GEN_ARGS[@]}"
 
           # v1/latest.json (short TTL, 5 min)
-          gcloud storage cp \
+          bash scripts/pipeline/gcs-upload.sh cdn-manifests cp \
             --content-type="application/json" \
             --cache-control="public, max-age=300" \
             /tmp/latest.json "gs://${GCS_BUCKET}/v1/latest.json"
 
           # v1/dates.json (medium TTL, 15 min)
-          gcloud storage cp \
+          bash scripts/pipeline/gcs-upload.sh cdn-manifests cp \
             --content-type="application/json" \
             --cache-control="public, max-age=900" \
             /tmp/dates.json "gs://${GCS_BUCKET}/v1/dates.json"
 
           # v1/rankings.json (short TTL, 5 min)
           if [ -f "${RANKINGS_SRC}" ]; then
-            gcloud storage cp \
+            bash scripts/pipeline/gcs-upload.sh cdn-manifests cp \
               --content-type="application/json" \
               --cache-control="public, max-age=300" \
               /tmp/rankings.json "gs://${GCS_BUCKET}/v1/rankings.json"
@@ -1394,7 +1426,7 @@ jobs:
 
           # v1/rank-history/{districtId}.json
           if [ "${RANK_FILE_COUNT}" -gt "0" ]; then
-            gcloud storage cp \
+            bash scripts/pipeline/gcs-upload.sh cdn-manifests cp \
               --content-type="application/json" \
               --cache-control="public, max-age=300" \
               -r "/tmp/rank-history-out/*.json" \
@@ -1473,7 +1505,7 @@ jobs:
             --out /tmp/global-history.json > /tmp/gh-summary.json
 
           # Same TTL class as v1/rankings.json above.
-          gcloud storage cp \
+          bash scripts/pipeline/gcs-upload.sh global-history cp \
             --content-type=application/json \
             --cache-control="public, max-age=300" \
             /tmp/global-history.json "gs://${GCS_BUCKET}/v1/global-history.json"
@@ -1541,10 +1573,10 @@ jobs:
             ;;
           esac
 
-          gcloud storage cp \
+          bash scripts/pipeline/gcs-upload.sh snapshot-index cp \
             --content-type="application/json" \
             --cache-control="public, max-age=300" \
-            /tmp/district-snapshot-index.json "${INDEX_PATH}"
+            /tmp/district-snapshot-index.json "gs://${GCS_BUCKET}/config/district-snapshot-index.json"
 
           echo "## 📋 District Snapshot Index" >> "$GITHUB_STEP_SUMMARY"
           DISTRICT_COUNT=$(jq '.districts | keys | length' /tmp/district-snapshot-index.json)
@@ -1595,7 +1627,7 @@ jobs:
             --snapshot-date "${LATEST_DATE}" \
             --expect "${EXPECTED}"
 
-          gcloud storage cp \
+          bash scripts/pipeline/gcs-upload.sh club-index cp \
             --content-type="application/json" \
             --cache-control="public, max-age=300" \
             /tmp/club-index.json "gs://${GCS_BUCKET}/config/club-index.json"
@@ -1646,7 +1678,7 @@ jobs:
             --snapshot-date "${LATEST_DATE}" \
             --expect "${EXPECTED}"
 
-          gcloud storage cp \
+          bash scripts/pipeline/gcs-upload.sh divisions-areas-index cp \
             --content-type="application/json" \
             --cache-control="public, max-age=300" \
             /tmp/divisions-areas-index.json "gs://${GCS_BUCKET}/config/divisions-areas-index.json"
@@ -1927,12 +1959,40 @@ jobs:
 
           echo "value_promote=${VALUE_PROMOTE}" >> "$GITHUB_OUTPUT"
 
+      # Run manifest (#1762, ADR-015 P5): publish what this run uploaded to
+      # staging, runs/<github_run_id>/written.jsonl (internal: runs/ is not
+      # a promoted prefix). The gates below read the local copy. Runs after
+      # a failed step too, so a partial run still leaves its record; a run
+      # that uploaded nothing has nothing to publish.
+      - name: Publish run manifest (#1762)
+        id: runmanifest
+        if: ${{ !cancelled() }}
+        run: |
+          if [ ! -s "${RUN_MANIFEST_FILE}" ]; then
+            echo "No uploads recorded in ${RUN_MANIFEST_FILE}; nothing to publish"
+            exit 0
+          fi
+          gcloud storage cp --content-type="application/x-ndjson" \
+            "${RUN_MANIFEST_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl"
+          {
+            echo "## 🧾 Run manifest (#1762)"
+            echo "- **Objects written**: $(wc -l < "${RUN_MANIFEST_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/written.jsonl\`"
+            echo ""
+            echo "| Stage | Objects |"
+            echo "| --- | ---: |"
+            jq -rs 'group_by(.stage)[] | "| \(.[0].stage) | \(length) |"' "${RUN_MANIFEST_FILE}"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # Content gate (#1715, plan S1-4, decision D8 — HOLD, not warn). The two
       # gates above read two integers and one file per date; promotion then
       # rsyncs four prefixes unread, and three corrupt promotions passed
-      # (#1702 nested gzip, #1704 null priorYearAvgClubSize). This reads the
-      # staging objects promotion would copy (changed vs prod — not the
-      # bucket), decoded the way a browser does, and checks bytes, parse and
+      # (#1702 nested gzip, #1704 null priorYearAvgClubSize). This reads
+      # EVERY object this run wrote under a promoted prefix (the run
+      # manifest, #1762 — no sampling, hash-checked against what was
+      # uploaded) plus a bounded sample of changed objects the run did not
+      # write (whole-prefix promotion still copies those until #1763),
+      # decoded the way a browser does, and checks bytes, parse and
       # shape. Logic: scripts/lib/promotionContentGate.ts. Read-only. Stays
       # green and fails CLOSED through `content_promote`, like the value gate,
       # so the promotion-held steps below stay reachable.
@@ -1944,8 +2004,8 @@ jobs:
         run: npx tsx scripts/promotion-content-gate.ts
 
       # Per-date completeness gate (#1761, ADR-015 P5.2, D8 — HOLD, not warn).
-      # For each date this run touched (the daily snapshot_date, plus every
-      # date the per-date loops published into TOUCHED_DATES_FILE), staging
+      # For each snapshot date this run wrote (from the run manifest, #1762:
+      # every `snapshots/<date>/` object any stage uploaded), staging
       # must hold at least what prod holds for that date: object count,
       # district counts, global-totals clubs/countries, and the key set of a
       # sampled club record per district. FAC loss (#1758) and subset rollups
@@ -1956,7 +2016,6 @@ jobs:
         id: completenessgate
         if: steps.mode.outputs.mode != 'prune'
         env:
-          GATE_DATES: ${{ steps.daily-scrape.outputs.snapshot_date }}
           ALLOW_VALUE_CHANGES: ${{ inputs.allow_value_changes }}
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
         run: npx tsx scripts/date-completeness-gate.ts

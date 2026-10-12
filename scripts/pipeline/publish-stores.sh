@@ -22,6 +22,8 @@
 #      unchanged content used to give every object a new crc32c each run and
 #      the promotion rsync re-copied all of them; skipped objects now keep
 #      their generation and hash, so promotion skips them too.
+#   5. every object pushed is appended to $RUN_MANIFEST_FILE (required) with
+#      the sha256 of its uncompressed bytes (#1762, ADR-015 P5).
 # Any listing or transfer error fails the script.
 #
 # Env (time-series): PUBLISH_PARALLEL  concurrent uploads (default 16)
@@ -42,6 +44,13 @@ GCLOUD="${GCLOUD:-gcloud}"
 CACHE_DIR="${CACHE_DIR:-./cache}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
+# Every push is recorded in the run manifest (#1762): the time-series plan
+# carries the sha256 it uploads with; the rest go through gcs-upload.sh.
+UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" publish-stores)
+if [ -z "${RUN_MANIFEST_FILE:-}" ]; then
+  echo "::error::publish-stores: RUN_MANIFEST_FILE is not set; refusing unrecorded pushes (#1762)" >&2
+  exit 2
+fi
 
 dirs=()
 for store in "$@"; do
@@ -107,6 +116,14 @@ publish_time_series() {
         --custom-metadata="sha256=$1" \
         -Z "${CACHE_DIR}/time-series/$2" "gs://${BUCKET}/time-series/$2"' _ \
       <"${plan}"
+    # Record them with the sha they were uploaded with (#1762): the
+    # manifest's hash and E2-1's are the same hash.
+    mkdir -p "$(dirname "${RUN_MANIFEST_FILE}")"
+    tr '\0' '\n' <"${plan}" | paste - - |
+      jq -Rc '
+        split("\t") as [$sha, $rel]
+        | {path: ("time-series/" + $rel), sha256: $sha, date: null,
+           stage: "publish-stores"}' >>"${RUN_MANIFEST_FILE}"
   fi
   rm -rf "${work}"
   summary "time-series publish: ${uploads} uploaded, $((total - uploads)) unchanged"
@@ -116,7 +133,7 @@ export GCLOUD CACHE_DIR BUCKET
 for store in "$@"; do
   if [ "${store}" = "district-awards-history" ]; then
     if [ -f "${CACHE_DIR}/district-awards-history.json" ]; then
-      "${GCLOUD}" storage cp "${CACHE_DIR}/district-awards-history.json" \
+      "${UPLOAD[@]}" cp "${CACHE_DIR}/district-awards-history.json" \
         "gs://${BUCKET}/district-awards-history.json"
     else
       echo "publish-stores: no district-awards-history.json produced; nothing to push" >&2
@@ -131,6 +148,6 @@ for store in "$@"; do
   if [ "${store}" = "time-series" ]; then
     publish_time_series
   else
-    "${GCLOUD}" storage rsync -r "${CACHE_DIR}/${store}/" "gs://${BUCKET}/${store}/"
+    "${UPLOAD[@]}" rsync -r "${CACHE_DIR}/${store}/" "gs://${BUCKET}/${store}/"
   fi
 done

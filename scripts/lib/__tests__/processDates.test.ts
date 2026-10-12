@@ -38,6 +38,8 @@ let cache: string
 let shimLog: string
 let stubLog: string
 let summary: string
+let manifest: string
+let uploadLog: string
 
 interface Result {
   status: number | null
@@ -67,6 +69,8 @@ function run(
       RESOLVE_REBUILD_SOURCE: path.join(STUBS, 'resolve-rebuild-source'),
       VALIDATE_SNAPSHOTS: path.join(STUBS, 'validate-snapshots'),
       STUB_LOG: stubLog,
+      RUN_MANIFEST_FILE: manifest,
+      SHIM_UPLOAD_LOG: uploadLog,
       ...env,
     },
   })
@@ -133,6 +137,8 @@ beforeEach(() => {
   shimLog = path.join(tmp, 'gcloud.log')
   stubLog = path.join(tmp, 'stubs.log')
   summary = path.join(tmp, 'summary.md')
+  manifest = path.join(tmp, 'run', 'written.jsonl')
+  uploadLog = path.join(tmp, 'uploads.log')
   fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
 })
 
@@ -414,33 +420,79 @@ describe('process-dates.sh: counters in the step summary (#1708)', () => {
   })
 })
 
-describe('process-dates.sh: touched-dates record for the completeness gate (#1761)', () => {
-  it('appends each published date — remapped, compute-failed included; never a refused or failed one', () => {
+describe('process-dates.sh: run manifest (#1762, ADR-015 P5)', () => {
+  interface Entry {
+    path: string
+    sha256: string
+    date: string | null
+    stage: string
+  }
+  const entries = (): Entry[] =>
+    lines(manifest).map(l => JSON.parse(l) as Entry)
+  // What the shim really wrote vs what the manifest says was written.
+  const uploaded = () =>
+    lines(uploadLog)
+      .map(l => l.replaceAll('\t', ' '))
+      .sort()
+  const recorded = () =>
+    entries()
+      .map(e => `${e.path} ${e.sha256}`)
+      .sort()
+
+  it('rebuild: every object the shim wrote is in the manifest with its sha256, and nothing else', () => {
     putRaw('2026-08-02')
     putRaw('2026-09-09')
     putRaw('2026-06-30')
-    const touched = path.join(tmp, 'touched-dates.txt')
-    fs.writeFileSync(touched, '2026-10-10\n')
     const r = run(
       'rebuild',
       ['2026-06-30', '2026-08-02', '2026-09-09', '2026-09-10'],
       {
-        TOUCHED_DATES_FILE: touched,
         STUB_REMAP: '2026-08-02=2026-07-31',
         STUB_GUARD_REFUSE: '^2026-06-30$',
         STUB_COMPUTE_FAIL: '^2026-09-09$',
       }
     )
     expect(r.status, r.stderr).toBe(0)
-    // 2026-09-10 has no raw → failed; 2026-06-30 refused.
-    expect(lines(touched)).toEqual(['2026-10-10', '2026-07-31', '2026-09-09'])
+    expect(uploaded().length).toBeGreaterThan(0)
+    expect(recorded()).toEqual(uploaded())
+    // Dated by the object's own (post-remap) date; refused/failed dates
+    // wrote nothing, so they are not in it.
+    expect([...new Set(entries().map(e => e.date))].sort()).toEqual([
+      '2026-07-31',
+      '2026-09-09',
+    ])
+    expect(new Set(entries().map(e => e.stage))).toEqual(
+      new Set(['process-dates:rebuild'])
+    )
   })
 
-  it('writes nothing when TOUCHED_DATES_FILE is unset', () => {
-    putRaw('2026-09-10')
-    const r = run('rebuild', ['2026-09-10'])
+  it('rescrape: the re-collected raw and the re-derived snapshots are recorded; hydrated files left unchanged are not', () => {
+    const DATE = '2026-10-10'
+    putObject(`raw-csv/${DATE}/all-districts.csv`, 'REGION,DISTRICT\n')
+    for (const id of ['61', '62']) {
+      putObject(
+        `snapshots/${DATE}/district_${id}.json`,
+        `{"districtId":"${id}"}`,
+        true
+      )
+    }
+    const r = run('rescrape', [DATE], { DISTRICTS: '61' })
     expect(r.status, r.stderr).toBe(0)
-    expect(fs.readdirSync(tmp).some(n => n.includes('touched'))).toBe(false)
+    expect(uploaded().length).toBeGreaterThan(0)
+    expect(recorded()).toEqual(uploaded())
+    const paths = entries().map(e => e.path)
+    expect(paths).not.toContain(`snapshots/${DATE}/district_62.json`)
+    expect(paths.some(p => p.startsWith(`raw-csv/${DATE}/`))).toBe(true)
+  })
+
+  it('rescrape-historical: the snapshots it publishes are recorded (its raw goes up in a later step)', () => {
+    putLocalRaw('2024-07-03')
+    const r = run('rescrape-historical', ['2024-07-03'], {
+      STUB_REMAP: '2024-07-03=2024-06-30',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(uploaded().length).toBeGreaterThan(0)
+    expect(recorded()).toEqual(uploaded())
   })
 })
 

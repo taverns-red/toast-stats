@@ -56,17 +56,12 @@ describe('data-pipeline per-date completeness gate (#1761)', () => {
     expect(gate?.['continue-on-error']).toBeUndefined()
   })
 
-  it('reads the daily snapshot date and the loop-published dates', () => {
-    expect(gate?.env?.GATE_DATES).toBe(
-      '${{ steps.daily-scrape.outputs.snapshot_date }}'
-    )
-    // Job-wide, so process-dates.sh and the backfill loop append to the
-    // same file the gate reads.
-    expect(workflow.env?.TOUCHED_DATES_FILE).toBeTruthy()
-    const backfill = byName(
-      '[backfill] Build global-totals.json one date at a time'
-    )
-    expect(backfill?.run).toMatch(/>>\s*"\$\{TOUCHED_DATES_FILE\}"/)
+  it('reads its dates from the job-wide run manifest (#1762)', () => {
+    // Every stage that uploads a snapshot date (daily, the per-date loop,
+    // the backfill) records it there; dataPipelineRunManifest.test.ts pins
+    // that no staging upload bypasses it.
+    expect(workflow.env?.RUN_MANIFEST_FILE).toBeTruthy()
+    expect(gate?.env?.RUN_MANIFEST_FILE).toBeUndefined()
   })
 
   it('honours allow_value_changes', () => {

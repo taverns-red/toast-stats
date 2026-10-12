@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { gzipSync } from 'node:zlib'
+import { gunzipSync, gzipSync } from 'node:zlib'
 import { createHash } from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -330,6 +330,152 @@ describe('runContentGate end to end over the real SDK shape', () => {
     })
     expect(result.promote).toBe(false)
     expect(result.failures.map(f => f.path)).toContain(PY)
+  })
+})
+
+describe('runContentGate reads every object in the run manifest (#1762, D-13)', () => {
+  const DATE = '2026-10-10'
+  const sha256 = (s: Stored) => {
+    const body =
+      s.contentEncoding === 'gzip' ? gunzipSync(Buffer.from(s.bytes)) : s.bytes
+    return createHash('sha256').update(body).digest('hex')
+  }
+  const entry = (p: string, s: Stored) => ({
+    path: p,
+    sha256: sha256(s),
+    date: /^snapshots\/(\d{4}-\d{2}-\d{2})\//.exec(p)?.[1] ?? null,
+    stage: 'daily-upload',
+  })
+
+  /**
+   * A full run's worth of changed district snapshots, 400 > the old
+   * 150-object generic sample; the corrupt one sorts LAST, so a sampler
+   * fed `random = () => 0` (always the first of the pool) never picks it.
+   */
+  function fullRun(corrupt: Stored) {
+    const written: Record<string, Stored> = {}
+    for (let i = 100; i < 500; i++) {
+      written[`snapshots/${DATE}/district_${i}.json`] = gz({ districtId: i })
+    }
+    const CORRUPT = `snapshots/${DATE}/district_Z99.json`
+    written[CORRUPT] = corrupt
+    const { staging, prod } = buckets(written)
+    const manifest = Object.entries(written).map(([p, s]) => entry(p, s))
+    return { staging, prod, manifest, CORRUPT }
+  }
+
+  const nestedGzip: Stored = {
+    bytes: gzipSync(gzipSync(Buffer.from('{"districtId":"Z99"}'))),
+    contentEncoding: 'gzip',
+  }
+
+  it('control: the old sampler never reads the corrupt object, so it passes', async () => {
+    const { staging, prod } = fullRun(nestedGzip)
+    const result = await runContentGate(staging, prod, () => {}, {
+      random: () => 0,
+    })
+    expect(result.promote).toBe(true)
+    expect(result.sampledOut).toBeGreaterThan(0)
+  })
+
+  it('holds: a corrupt manifest object is read even outside the old sample', async () => {
+    const { staging, prod, manifest, CORRUPT } = fullRun(nestedGzip)
+    const result = await runContentGate(staging, prod, () => {}, {
+      random: () => 0,
+      manifest,
+    })
+    expect(result.promote).toBe(false)
+    expect(result.failures.map(f => f.path)).toEqual([CORRUPT])
+    const checked = new Set(result.checked.map(c => c.path))
+    for (const m of manifest) expect(checked.has(m.path), m.path).toBe(true)
+    expect(result.manifestCount).toBe(manifest.length)
+  })
+
+  it('passes a clean run with every manifest object checked', async () => {
+    const { staging, prod, manifest } = fullRun(gz({ districtId: 'Z99' }))
+    const result = await runContentGate(staging, prod, () => {}, {
+      random: () => 0,
+      manifest,
+    })
+    expect(result.failures).toEqual([])
+    expect(result.promote).toBe(true)
+  })
+
+  it('holds when the staged bytes are not what the run wrote (sha256 mismatch)', async () => {
+    const p = `snapshots/${DATE}/district_61.json`
+    const { staging, prod } = buckets({ [p]: gz({ districtId: '61' }) })
+    const manifest = [
+      { ...entry(p, gz({ districtId: '61' })), sha256: 'f'.repeat(64) },
+    ]
+    const result = await runContentGate(staging, prod, () => {}, { manifest })
+    expect(result.promote).toBe(false)
+    expect(result.failures[0]).toMatchObject({ path: p })
+    expect(result.failures[0]?.reason).toMatch(/sha256/)
+  })
+
+  it('holds when a manifest object is missing from staging', async () => {
+    const p = `snapshots/${DATE}/district_404.json`
+    const { staging, prod } = buckets()
+    const result = await runContentGate(staging, prod, () => {}, {
+      manifest: [entry(p, gz({}))],
+    })
+    expect(result.promote).toBe(false)
+    expect(result.failures.map(f => f.path)).toEqual([p])
+  })
+
+  it('reads written objects even when they equal prod (the run wrote them)', async () => {
+    const { staging, prod } = buckets()
+    const p = 'config/club-index.json'
+    const result = await runContentGate(staging, prod, () => {}, {
+      manifest: [entry(p, plain({ clubs: {} }))],
+    })
+    expect(result.checked.map(c => c.path)).toContain(p)
+  })
+
+  it('compares every written program-year file with prod (not only the newest)', async () => {
+    const OLD = 'time-series/district_61/2025-2026.json'
+    const { staging, prod } = buckets({
+      [OLD]: gz({ ...programYearFile('2026-05-31'), programYear: '2025-2026' }),
+    })
+    const manifest = [
+      entry(PY, gz(programYearFile('2026-09-30', '2026-10-08'))),
+      entry(
+        OLD,
+        gz({ ...programYearFile('2026-05-31'), programYear: '2025-2026' })
+      ),
+    ]
+    const result = await runContentGate(staging, prod, () => {}, { manifest })
+    const checked = result.checked.map(c => c.path)
+    expect(checked).toContain(OLD)
+    expect(checked).toContain(PY)
+  })
+
+  it('does not read written objects outside the promoted prefixes (raw-csv, stores)', async () => {
+    const { staging, prod } = buckets()
+    const result = await runContentGate(staging, prod, () => {}, {
+      manifest: [
+        entry(
+          'raw-csv/2026-10-10/district-61/club-performance.csv',
+          plain('x')
+        ),
+        entry('club-trends/district_61.json', plain({})),
+      ],
+    })
+    const checked = result.checked.map(c => c.path)
+    expect(checked.some(p => p.startsWith('raw-csv/'))).toBe(false)
+    expect(checked.some(p => p.startsWith('club-trends/'))).toBe(false)
+  })
+
+  it('still samples changed objects the run did not write: promotion copies whole prefixes until #1763', async () => {
+    // A held run's corrupt leftover is in staging, not in this run's manifest.
+    const LEFTOVER = 'snapshots/2026-10-08/district_61.json'
+    const { staging, prod } = buckets({ [LEFTOVER]: nestedGzip })
+    const result = await runContentGate(staging, prod, () => {}, {
+      random: () => 0,
+      manifest: [entry('v1/latest.json', plain(latest('2026-10-08')))],
+    })
+    expect(result.promote).toBe(false)
+    expect(result.failures.map(f => f.path)).toContain(LEFTOVER)
   })
 })
 

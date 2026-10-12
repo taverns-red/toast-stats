@@ -48,11 +48,24 @@ function workflowFiles(): string[] {
   return fs.readdirSync(WORKFLOW_DIR).filter(f => /\.ya?ml$/.test(f))
 }
 
+/**
+ * scripts/pipeline/gcs-upload.sh (#1762) runs `gcloud storage <cp|rsync>`
+ * with exactly the arguments it is given, then records the upload in the run
+ * manifest; its call sites are gcloud calls and held to the same rules.
+ */
+const asGcloud = (src: string) =>
+  src
+    .replace(
+      /bash scripts\/pipeline\/gcs-upload\.sh [\w:-]+ (cp|rsync) /g,
+      'gcloud storage $1 '
+    )
+    .replace(/"\$\{UPLOAD\[@\]\}" (cp|rsync) /g, 'gcloud storage $1 ')
+
 /** Workflows plus scripts/pipeline/*.sh, as [label, source] pairs. */
 function sources(): Array<[string, string]> {
   const out: Array<[string, string]> = workflowFiles().map(f => [
     f,
-    fs.readFileSync(path.join(WORKFLOW_DIR, f), 'utf-8'),
+    asGcloud(fs.readFileSync(path.join(WORKFLOW_DIR, f), 'utf-8')),
   ])
   for (const f of fs.readdirSync(PIPELINE_SCRIPT_DIR)) {
     if (!f.endsWith('.sh')) continue
@@ -60,7 +73,7 @@ function sources(): Array<[string, string]> {
     // The scripts call "${GCLOUD}" so tests can substitute a shim (D10).
     out.push([
       `scripts/pipeline/${f}`,
-      src.replace(/"\$\{GCLOUD\}" storage /g, 'gcloud storage '),
+      asGcloud(src).replace(/"\$\{GCLOUD\}" storage /g, 'gcloud storage '),
     ])
   }
   return out

@@ -7,12 +7,12 @@
  * any regression unless allow_value_changes. Nothing is written to any
  * bucket.
  *
- * Touched dates (step 4 moves this to the run manifest):
- *   GATE_DATES          the daily `snapshot_date` step output (may be empty)
- *   TOUCHED_DATES_FILE  one date per line, appended by process-dates.sh and
- *                       the backfill loop for each date they published
+ * Touched dates: the snapshot dates in the run manifest (RUN_MANIFEST_FILE,
+ * #1762, ADR-015 P5) — every `snapshots/<date>/` object this run uploaded,
+ * whichever stage wrote it. Missing, empty or malformed fails closed.
  *
  * Env: GCS_BUCKET (staging), GCS_BUCKET_PRODUCTION, ALLOW_VALUE_CHANGES,
+ *      RUN_MANIFEST_FILE,
  *      COMPLETENESS_GATE_FILE (default /tmp/completeness-gate.json)
  *
  * Always exits 0: the decision flows through `completeness_promote`, like
@@ -20,21 +20,16 @@
  * Any error FAILS CLOSED (completeness_promote=false). Logs go to stderr (R4).
  */
 
-import {
-  appendFileSync,
-  existsSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs'
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { Storage } from '@google-cloud/storage'
 import {
   buildCompletenessGateSummary,
   evaluateCompletenessGate,
-  parseTouchedDates,
   runCompletenessGate,
   type CompletenessGateResult,
 } from './lib/dateCompletenessGate.js'
 import type { GateBucket } from './lib/promotionContentGateIo.js'
+import { manifestSnapshotDates, parseRunManifest } from './lib/runManifest.js'
 
 const DEFAULT_RESULT_FILE = '/tmp/completeness-gate.json'
 
@@ -48,11 +43,9 @@ function emitOutput(key: string, value: string): void {
 }
 
 function touchedDates(): string[] {
-  const file = process.env.TOUCHED_DATES_FILE
-  // An absent file means no loop published a date (daily, or every date
-  // failed — the partial-failure gate owns that). Unreadable is an error.
-  const fromFile = file && existsSync(file) ? readFileSync(file, 'utf-8') : ''
-  return parseTouchedDates(process.env.GATE_DATES ?? '', fromFile)
+  const file = process.env.RUN_MANIFEST_FILE
+  if (!file) throw new Error('RUN_MANIFEST_FILE must be set')
+  return manifestSnapshotDates(parseRunManifest(readFileSync(file, 'utf-8')))
 }
 
 async function run(

@@ -23,7 +23,6 @@ import {
   compareDateProfiles,
   districtShape,
   evaluateCompletenessGate,
-  parseTouchedDates,
   perDateSampleSize,
   runCompletenessGate,
   sampleDistricts,
@@ -311,18 +310,6 @@ describe('districtShape', () => {
 
   it('is null for something that is not a district snapshot', () => {
     expect(districtShape({ nope: true })).toBeNull()
-  })
-})
-
-describe('parseTouchedDates', () => {
-  it('unions, dedupes and sorts dates from several sources', () => {
-    expect(
-      parseTouchedDates('2026-10-10', '2026-09-30\n2026-10-10\n', '')
-    ).toEqual(['2026-09-30', '2026-10-10'])
-  })
-
-  it('throws on anything that is not a date (fail closed)', () => {
-    expect(() => parseTouchedDates('2026-10-1x')).toThrow()
   })
 })
 
