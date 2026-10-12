@@ -23,6 +23,8 @@
 # to be deleted.
 #
 # Env:   GCLOUD     the gcloud binary (default `gcloud`; tests use a shim, D10)
+#        RUN_MANIFEST_FILE  required: every upload is recorded in it
+#                   (scripts/pipeline/gcs-upload.sh, #1762)
 #        CACHE_DIR  the runner cache (default ./cache)
 #        TSX        tsx binary (default: the repo's node_modules/.bin/tsx)
 #        GITHUB_STEP_SUMMARY  counts and sizes are appended here
@@ -66,10 +68,15 @@ while IFS= read -r f; do
   shards+=("${f}")
 done < <(find "${OUT}" -maxdepth 1 -type f -name '[0-9][0-9].json' | LC_ALL=C sort)
 
+# Through the wrapper, so every object lands in the run manifest (#1762,
+# ADR-015 P5). derived/ is outside PROMOTED_PREFIXES: recorded as written,
+# never read by the content gate, never promoted.
+export GCLOUD
+UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" identity cp --content-type="application/json")
 if [ "${#shards[@]}" -gt 0 ]; then
-  "${GCLOUD}" storage cp --content-type="application/json" "${shards[@]}" "${DEST}"
+  "${UPLOAD[@]}" "${shards[@]}" "${DEST}"
 fi
-"${GCLOUD}" storage cp --content-type="application/json" "${OUT}/index.json" "${DEST}"
+"${UPLOAD[@]}" "${OUT}/index.json" "${DEST}"
 
 jq -r '.clubDistrictHistory |
   "- **Club-district history** (staging derived/, #1782): \(.clubs) clubs, \(.shards) shards, \(.duplicates) duplicates; " +
