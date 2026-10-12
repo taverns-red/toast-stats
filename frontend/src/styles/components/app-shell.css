@@ -5000,6 +5000,11 @@
        the DARKER stripe band (--yellow-600 #c9b748) too — the worst case as
        text crosses the 6px stripe (was 4.27:1 on that band). */
     color: #534213;
+    /* #1904: a solid base under the stripes. Without it the pill's own
+       background is transparent, so wherever the gradient is not painted
+       (forced colours, an images-off mode, or any check that reads the
+       background colour) the dark text sits on the dark-mode row: 1.82:1. */
+    background-color: var(--yellow-500);
     background-image: repeating-linear-gradient(
       45deg,
       var(--yellow-500) 0,

@@ -10,6 +10,13 @@ import { test, expect, type Page } from '@playwright/test'
  *    loyal-blue (#5DADE2) is 2.46:1 — the 404 "Go home" and every page's
  *    skip link once focused.
  *
+ * #1904 extends it to 768 and 1280 (the 2.49.0 prod sweep): dark mode's
+ * striped "projected" tier pill on the Clubs table (1.82:1 — dark ink with no
+ * background-color under its gradient stripes, so the text lands on the dark
+ * row wherever the stripe image is not painted) and the Trends chart legend,
+ * whose recharts text inherits each series' stroke colour (cool gray
+ * #A9B2B1 on white, 2.17:1).
+ *
  * Method mirrors the review's `summarize.mjs contrast`: every visible text
  * node's colour, alpha-blended over the first opaque ancestor background,
  * against 4.5:1 (3:1 for ≥24px, or ≥18.66px bold). Both themes, both engines.
@@ -107,6 +114,20 @@ const CASES: { path: string; width: number; ready: string }[] = [
     width: 768,
     ready: '.club-history-year-link',
   },
+  // #1904: the projected tier pill (dark) and the chart legend text, at the
+  // tablet and desktop widths #1839's 375 gate did not cover.
+  ...[768, 1280].flatMap(width => [
+    {
+      path: '/district/61/clubs',
+      width,
+      ready: '.clubs-tier-pill--projected',
+    },
+    {
+      path: '/district/61/trends',
+      width,
+      ready: '.recharts-legend-item-text',
+    },
+  ]),
 ]
 
 for (const theme of ['light', 'dark'] as const) {
