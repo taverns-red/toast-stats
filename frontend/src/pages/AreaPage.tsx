@@ -21,6 +21,7 @@ import { ContextSheetControls } from '../components/ContextSheetControls'
 import { formatFreshnessLine } from '../utils/contextBar'
 import type { AreaWithDivision } from '../components/DivisionAreaProgressSummary'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import { EmptyState } from '../components/ErrorDisplay'
 import { ClubMiniList } from '../components/ClubMiniList'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -50,6 +51,7 @@ const AreaPage: React.FC = () => {
     effectiveProgramYear,
     effectiveEndDate,
     hasValidDates,
+    isDatesPending,
     latestSnapshotDate,
     isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId)
@@ -63,7 +65,7 @@ const AreaPage: React.FC = () => {
       isLatestSnapshot,
     })
 
-  const { data, isLoading, error } = useDistrictAnalytics(
+  const { data, error } = useDistrictAnalytics(
     hasValidDates ? (districtId ?? null) : null,
     undefined,
     effectiveEndDate ?? undefined
@@ -117,11 +119,26 @@ const AreaPage: React.FC = () => {
     return generateAreaProgressText(areaWithDivision, gapAnalysis)
   }, [matched])
 
-  if (isLoading) {
-    return <LoadingSkeleton variant="card" />
-  }
+  // #1896: loading keeps the page (context bar, header, data slots) inside the
+  // root that reserves the area under the top bar, as the #1837 subpages do.
+  // The bare card skeleton this replaced was short enough at 1280px to put
+  // the shell footer on screen, and the landed page pushed it off (0.059).
+  // Pending spans the date-index window too: the analytics query is disabled
+  // there and reports isLoading false with no data, which flashed the
+  // error state below.
+  const isPending = isDistrictSlotPending(
+    { hasData: !!data, isError: !!error },
+    { hasValidDates, datesSettled: !isDatesPending }
+  )
+  // The recognition slot reads a second query (the snapshot) that resolves on
+  // its own. Hold every data slot's skeleton until BOTH reads settle: swapping
+  // one skeleton for the taller loaded card while the clubs skeleton still sat
+  // below it pushed that skeleton off-screen (0.25 at 375 on the preview).
+  // The date-index window is already inside `isPending`; once the dates
+  // resolve, the snapshot query is enabled and reports `isLoading` itself.
+  const isBodyPending = isPending || isLoadingSnapshot
 
-  if (error || !data) {
+  if (!isPending && (error || !data)) {
     return (
       <EmptyState
         title="Could not load area"
@@ -142,7 +159,7 @@ const AreaPage: React.FC = () => {
     throw new Response(null, { status: 404, statusText: 'Area not found' })
   }
 
-  const clubs = data.allClubs.filter(
+  const clubs = (data?.allClubs ?? []).filter(
     c =>
       c.divisionId.toUpperCase() === normalizedDivId &&
       c.areaId.toUpperCase() === normalizedAreaId
@@ -165,7 +182,7 @@ const AreaPage: React.FC = () => {
   const divisionUrl = `/district/${districtId}/division/${divId}`
 
   return (
-    <div className="app-shell__page">
+    <div className="app-shell__page district-detail-page-root">
       {/* Phone context bar (#1831): below 768 it replaces the breadcrumb and
           the header (the recognition badge stays); PY/date are this page's
           own state (R3). */}
@@ -214,7 +231,7 @@ const AreaPage: React.FC = () => {
         <div className="districts-page-header__intro">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="districts-page-header__title">{areaName}</h1>
-            {badge && (
+            {badge ? (
               <span
                 className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
                 aria-label={`Area ${areaPerformance?.areaId ?? areaId} recognition: ${badge.label}`}
@@ -222,6 +239,19 @@ const AreaPage: React.FC = () => {
               >
                 {badge.label}
               </span>
+            ) : (
+              /* #1896: every valid area gets a badge once the snapshot lands;
+                 below 768 it is the header's only visible content, so hold
+                 its box (same padding, type and border) while loading. */
+              isBodyPending && (
+                <span
+                  aria-hidden="true"
+                  data-testid="area-badge-placeholder"
+                  className="px-2 py-1 text-xs font-medium rounded-full border border-transparent bg-gray-200 text-transparent animate-pulse"
+                >
+                  Distinguished
+                </span>
+              )
             )}
           </div>
           <p className="districts-page-header__lede">{lede}</p>
@@ -249,17 +279,17 @@ const AreaPage: React.FC = () => {
           the same status / paid / distinguished / R1-R2 visit / Gap-to-D-S-P
           metrics on the same computation as the overview. */}
       <div style={{ marginBottom: 24 }}>
-        {areaPerformance ? (
-          <AreaPerformanceTable areas={[areaPerformance]} />
+        {isBodyPending ? (
+          <LoadingSkeleton variant="table" count={2} />
         ) : (
-          isLoadingSnapshot && <LoadingSkeleton variant="table" count={2} />
+          areaPerformance && <AreaPerformanceTable areas={[areaPerformance]} />
         )}
       </div>
 
       {/* Scoped narrative — the same per-area progress prose the overview's
           Division and Area Progress Summary shows (#974/#976), generated from
           the snapshot-derived recognition source of truth. */}
-      {areaNarrative && (
+      {!isBodyPending && areaNarrative && (
         <article
           className="bg-gray-50 rounded-lg p-4 border border-gray-200"
           style={{ marginBottom: 24 }}
@@ -278,7 +308,10 @@ const AreaPage: React.FC = () => {
       {/* No analytics-club rows for this area (suspended/migrated clubs, or a
           casing skew). The recognition surface above still renders from the
           snapshot — don't hide it behind an empty club list (Lesson 147). */}
-      {clubs.length === 0 && (
+      {/* The area's clubs, reserved until both reads settle. */}
+      {isBodyPending && <LoadingSkeleton variant="table" count={4} />}
+
+      {!isBodyPending && clubs.length === 0 && (
         <p className="placeholder-page__body">
           No clubs are currently listed in this area.{' '}
           <Link to={`/district/${districtId}/division/${divId}`}>
@@ -291,7 +324,8 @@ const AreaPage: React.FC = () => {
       {/* CC-4 (#871): the 4-col table overflows 375px and clips the Status
           chip, so mobile de-tables to a stacked card list; desktop keeps the
           table unchanged. */}
-      {clubs.length > 0 &&
+      {!isBodyPending &&
+        clubs.length > 0 &&
         (isMobile ? (
           <ClubMiniList
             clubs={clubs}
