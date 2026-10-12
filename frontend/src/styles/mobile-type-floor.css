@@ -1,0 +1,148 @@
+/* Phone type floor (#1840, epic #1827 — mobile review §2 S6, §7).
+ *
+ * Below 768: 16px body (index.css ≤640 rule), a 14px floor for data, links,
+ * pills, chips and captions, and 12px ONLY for uppercase eyebrows/labels.
+ * Desktop sizes are unchanged.
+ *
+ * Why one file, unlayered, after every component sheet: the small sizes come
+ * from three places — Tailwind's `text-xs` (12px) and `text-[11px]`
+ * utilities (utilities layer), and ~80 component rules at 10–13px (brand
+ * layer and unlayered sheets). An unlayered rule outranks every layered one,
+ * and loading last lets equal-specificity selectors win against the other
+ * unlayered sheets, so the phone scale lives in one place instead of a
+ * media query bolted onto each component (R10).
+ *
+ * Guarded by e2e/type-floor.smoke.ts: ≤15% of visible characters under 14px
+ * on every route at 375, and nothing visible under 12px. Both engines.
+ */
+@media (max-width: 767.98px) {
+  /* 1. Tailwind's `text-xs` reads this token. On phones it carries data,
+     captions, chips and links far more than eyebrows, so it becomes the
+     14px floor; uppercase uses are pulled back to 12px in (3). */
+  :root {
+    --text-xs: 14px;
+  }
+
+  /* 2. Arbitrary sub-12 utilities. */
+  .text-\[11px\],
+  .text-\[9px\] {
+    font-size: 14px;
+  }
+
+  /* 3. Uppercase eyebrows and labels: 12px (tracked caps read larger). */
+  .uppercase:is(.text-xs, .text-\[11px\], .text-\[9px\]),
+  .placeholder-page__eyebrow,
+  .districts-page-header__eyebrow,
+  .districts-kpi-card__label,
+  .districts-toolbar__label,
+  .region-finder__label,
+  .methodology-toc__title,
+  .clubs-kpi__label,
+  .history-year-card__metric-label,
+  .history-year-card__top-label,
+  .history-page-year-chip__live,
+  .club-hero__eyebrow,
+  .club-stat__label,
+  .club-edu__subhead,
+  .club-edu__kpi dt,
+  .gap-section h3,
+  .dcp-subhead,
+  .dcp-cell__lab,
+  .club-growth-recipients__tier-heading,
+  .club-grid-area__title {
+    font-size: 12px;
+  }
+
+  /* 4. Data, links, pills, chips, captions and prose: 14px. */
+  /* Landing */
+  .districts-page-header__orientation,
+  .districts-orientation__count,
+  .districts-methodology-callout,
+  .districts-methodology-callout__link,
+  .districts-toolbar__recognition-chip,
+  .districts-toolbar__region-chip,
+  .districts-toolbar__region-state,
+  .districts-action-btn,
+  .recognition-legend__toggle,
+  .chart-spark__hint,
+  .priority-columns__chips-label,
+  .page-header__title-py,
+  /* Divisions — DDP criteria explainer */
+  .ddp-criteria,
+  .ddp-criteria__body,
+  .ddp-criteria__summary,
+  .ddp-criteria__source,
+  .ddp-criteria__level-name,
+  .ddp-criteria code,
+  /* Grid */
+  .club-grid-tile__name,
+  .club-grid-tile__dcp,
+  .club-grid-legend__label,
+  .club-grid-toggle__btn,
+  .club-grid-toggle__label,
+  /* Club page */
+  .goal-name,
+  .goal-gap,
+  .goal-num,
+  .goal-timeline__note,
+  .club-panel__meta,
+  .gap-row__val,
+  .gap-row__tier,
+  .club-hero__history-link,
+  .club-hero__pill,
+  .club-back-link,
+  .dcp-cell__val,
+  .dcp-progress-h__lab,
+  .dcp-progress-h__val,
+  .timeline-row .date,
+  /* Club history */
+  .club-history-page__gaps,
+  /* Regions */
+  .region-finder__chip,
+  /* History */
+  .history-year-card__top-region,
+  .history-year-card__frozen,
+  .history-year-card__top-name,
+  .history-year-card__top-rank,
+  .history-page-year-chip,
+  .wws__metric-label,
+  .wws__cell,
+  .wws__num,
+  .wws__legend-marker,
+  .wws__legend-item,
+  /* Awards */
+  .awards-page-card__description,
+  .awards-page-card__row,
+  .awards-page-card__district,
+  .awards-page-card__rank,
+  .awards-page-card__region,
+  .awards-page-card__empty,
+  .awards-page-card__achieved,
+  .awards-page-card__methodology-link,
+  .club-growth-recipients__heading,
+  .club-growth-recipients__provenance,
+  .club-growth-recipients__tiers,
+  .club-growth-recipients__py,
+  /* Clubs worldwide */
+  .race-chart__caption,
+  .race-podium__when,
+  .race-podium__tie,
+  .race-podium__district,
+  .clubs-kpi__note,
+  .clubs-kpis__total,
+  /* Action list */
+  .action-list-scope__label,
+  .action-list-section__count {
+    font-size: 14px;
+  }
+
+  /* 5. Decorative glyphs (swatch icons, carets, kbd) — at least 12px. */
+  .club-grid-legend__swatch,
+  .recognition-legend__caret,
+  .jump-to-chip__caret,
+  .methodology-toc__num,
+  .goal-row .check,
+  kbd {
+    font-size: 12px;
+  }
+}

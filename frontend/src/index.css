@@ -64,6 +64,8 @@
 @import './styles/components/tap-targets.css';
 @import './styles/responsive.css';
 @import './styles/dark-mode.css';
+/* Phone type floor (#1840) — after every component sheet; see the file. */
+@import './styles/mobile-type-floor.css';
 @import './styles/print.css';
 
 /* Toggle-scoped dark variant (#710).

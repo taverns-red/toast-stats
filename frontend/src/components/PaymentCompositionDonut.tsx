@@ -116,7 +116,7 @@ const PaymentCompositionDonut: React.FC<PaymentCompositionDonutProps> = ({
             x="60"
             y="74"
             textAnchor="middle"
-            fontSize="10"
+            fontSize="12"
             fill="rgba(0,0,0,0.5)"
           >
             payments
