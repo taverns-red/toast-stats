@@ -336,6 +336,17 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/clubs-mobile-rows.smoke.ts
 
+      # Form controls ≥16px below 768 (#1838). Every input/select at 375 and
+      # 767 (incl. the transparent chip-select overlays and the context-bar
+      # and Filter & sort sheets) has a computed font-size ≥16px, so iOS
+      # Safari does not zoom on focus; selects keep their 44px box. Both
+      # engines (WebKit resolves form-control fonts differently, L111).
+      - name: Cross-engine form-control 16px guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/form-controls-16px.smoke.ts
+
       # Landing scroll budget (#864, #1834). At 375/414, both engines, `/` must
       # stay ≤ 8,000px tall with the phone rankings in their default 25-row
       # reveal. It was a local-only smoke; running it here flags growth (more
