@@ -130,6 +130,13 @@ const AreaPage: React.FC = () => {
     { hasData: !!data, isError: !!error },
     { hasValidDates, datesSettled: !isDatesPending }
   )
+  // The recognition slot reads a second query (the snapshot) that resolves on
+  // its own. Hold every data slot's skeleton until BOTH reads settle: swapping
+  // one skeleton for the taller loaded card while the clubs skeleton still sat
+  // below it pushed that skeleton off-screen (0.25 at 375 on the preview).
+  // The date-index window is already inside `isPending`; once the dates
+  // resolve, the snapshot query is enabled and reports `isLoading` itself.
+  const isBodyPending = isPending || isLoadingSnapshot
 
   if (!isPending && (error || !data)) {
     return (
@@ -262,16 +269,14 @@ const AreaPage: React.FC = () => {
         {areaPerformance ? (
           <AreaPerformanceTable areas={[areaPerformance]} />
         ) : (
-          (isPending || isLoadingSnapshot) && (
-            <LoadingSkeleton variant="table" count={2} />
-          )
+          isBodyPending && <LoadingSkeleton variant="table" count={2} />
         )}
       </div>
 
       {/* Scoped narrative — the same per-area progress prose the overview's
           Division and Area Progress Summary shows (#974/#976), generated from
           the snapshot-derived recognition source of truth. */}
-      {areaNarrative && (
+      {!isBodyPending && areaNarrative && (
         <article
           className="bg-gray-50 rounded-lg p-4 border border-gray-200"
           style={{ marginBottom: 24 }}
@@ -290,10 +295,10 @@ const AreaPage: React.FC = () => {
       {/* No analytics-club rows for this area (suspended/migrated clubs, or a
           casing skew). The recognition surface above still renders from the
           snapshot — don't hide it behind an empty club list (Lesson 147). */}
-      {/* The area's clubs, reserved while the analytics read is pending. */}
-      {isPending && <LoadingSkeleton variant="table" count={4} />}
+      {/* The area's clubs, reserved until both reads settle. */}
+      {isBodyPending && <LoadingSkeleton variant="table" count={4} />}
 
-      {!isPending && clubs.length === 0 && (
+      {!isBodyPending && clubs.length === 0 && (
         <p className="placeholder-page__body">
           No clubs are currently listed in this area.{' '}
           <Link to={`/district/${districtId}/division/${divId}`}>
@@ -306,7 +311,8 @@ const AreaPage: React.FC = () => {
       {/* CC-4 (#871): the 4-col table overflows 375px and clips the Status
           chip, so mobile de-tables to a stacked card list; desktop keeps the
           table unchanged. */}
-      {clubs.length > 0 &&
+      {!isBodyPending &&
+        clubs.length > 0 &&
         (isMobile ? (
           <ClubMiniList
             clubs={clubs}
