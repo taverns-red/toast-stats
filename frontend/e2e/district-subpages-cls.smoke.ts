@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /* CLS budget for the routed district subpages `/district/:id/*` (#1837).
  *
@@ -31,6 +31,16 @@ import { test, expect } from '@playwright/test'
  */
 
 const CLS_BUDGET = 0.1
+
+/* The division and area entity pages (#1896) are held to 0.05, the issue's
+ * acceptance bar: they are short pages, so a loading state that drops the page
+ * chrome lets the shell footer show and then pushes it off (0.059 at 1280). */
+const ENTITY_CLS_BUDGET = 0.05
+
+const ENTITY_PAGES = [
+  '/district/61/division/A',
+  '/district/61/division/A/area/01',
+] as const
 
 const VIEWPORTS = [
   { name: 'phone', width: 375, height: 812 },
@@ -110,6 +120,54 @@ const INSTALL_OBSERVER = () => {
   }).observe({ type: 'layout-shift', buffered: true })
 }
 
+/* Cold, throttled load of `path`; returns the summed CLS and a readable
+ * per-entry breakdown. `ready` proves the page left its loading state. */
+async function measureCls(
+  page: Page,
+  path: string,
+  vp: (typeof VIEWPORTS)[number],
+  ready: string
+): Promise<{ total: number; breakdown: string }> {
+  await page.setViewportSize({ width: vp.width, height: vp.height })
+
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Network.enable')
+  await cdp.send('Network.setCacheDisabled', { cacheDisabled: true })
+  await cdp.send('Network.emulateNetworkConditions', LIGHTHOUSE_MOBILE_NETWORK)
+  await cdp.send('Emulation.setCPUThrottlingRate', {
+    rate: LIGHTHOUSE_MOBILE_CPU_SLOWDOWN,
+  })
+
+  await page.addInitScript(INSTALL_OBSERVER)
+  // `networkidle`, not `load`: the data reads chain off the date index
+  // after `load`, and a page still waiting on them renders no
+  // placeholder at all on prod — the very bug — so the pending-selector
+  // wait below would pass on a page that never loaded.
+  await page.goto(path, { waitUntil: 'networkidle', timeout: 120_000 })
+
+  // Sanity gate: the page rendered and every placeholder resolved.
+  await page.locator(ready).first().waitFor({
+    state: 'attached',
+    timeout: 60_000,
+  })
+  await page.waitForFunction(
+    sel => document.querySelector(sel) === null,
+    PENDING_SELECTOR,
+    { timeout: 120_000 }
+  )
+  await page.evaluate(() => document.fonts.ready.then(() => undefined))
+  // Let late independent queries land before sampling.
+  await page.waitForTimeout(3_000)
+
+  const entries = await page.evaluate(() => window.__clsEntries ?? [])
+  const total = Number(entries.reduce((a, e) => a + e.value, 0).toFixed(5))
+  const breakdown = entries
+    .filter(e => e.value > 0.0005)
+    .map(e => `  t=${e.t}ms value=${e.value}\n    ${e.sources.join('\n    ')}`)
+    .join('\n')
+  return { total, breakdown }
+}
+
 test.describe('district subpages CLS on a throttled cold load (#1837)', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
@@ -123,56 +181,46 @@ test.describe('district subpages CLS on a throttled cold load (#1837)', () => {
         page,
       }) => {
         test.setTimeout(180_000)
-        await page.setViewportSize({ width: vp.width, height: vp.height })
-
-        const cdp = await page.context().newCDPSession(page)
-        await cdp.send('Network.enable')
-        await cdp.send('Network.setCacheDisabled', { cacheDisabled: true })
-        await cdp.send(
-          'Network.emulateNetworkConditions',
-          LIGHTHOUSE_MOBILE_NETWORK
+        const { total, breakdown } = await measureCls(
+          page,
+          path,
+          vp,
+          '.district-detail-page'
         )
-        await cdp.send('Emulation.setCPUThrottlingRate', {
-          rate: LIGHTHOUSE_MOBILE_CPU_SLOWDOWN,
-        })
-
-        await page.addInitScript(INSTALL_OBSERVER)
-        // `networkidle`, not `load`: the data reads chain off the date index
-        // after `load`, and a page still waiting on them renders no
-        // placeholder at all on prod — the very bug — so the pending-selector
-        // wait below would pass on a page that never loaded.
-        await page.goto(path, { waitUntil: 'networkidle', timeout: 120_000 })
-
-        // Sanity gate: the page rendered and every placeholder resolved.
-        await page
-          .locator('.district-detail-page')
-          .waitFor({ state: 'attached', timeout: 60_000 })
-        await page.waitForFunction(
-          sel => document.querySelector(sel) === null,
-          PENDING_SELECTOR,
-          { timeout: 120_000 }
-        )
-        await page.evaluate(() => document.fonts.ready.then(() => undefined))
-        // Let late independent queries land before sampling.
-        await page.waitForTimeout(3_000)
-
-        const entries = await page.evaluate(() => window.__clsEntries ?? [])
-        const total = Number(
-          entries.reduce((a, e) => a + e.value, 0).toFixed(5)
-        )
-        const breakdown = entries
-          .filter(e => e.value > 0.0005)
-          .map(
-            e =>
-              `  t=${e.t}ms value=${e.value}\n    ${e.sources.join('\n    ')}`
-          )
-          .join('\n')
-
         expect(
           total,
           `${path} CLS at ${vp.width}px is ${total} (budget ${CLS_BUDGET}) on ${page.url()}\n` +
             `Largest contributors — read the sources, not the total:\n${breakdown}`
         ).toBeLessThan(CLS_BUDGET)
+      })
+    }
+  }
+})
+
+test.describe('division and area entity pages CLS (#1896)', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'layout-shift + CDP throttling are Chromium-only'
+  )
+
+  for (const vp of VIEWPORTS) {
+    for (const path of ENTITY_PAGES) {
+      test(`${path} at ${vp.width}px stays inside the 0.05 CLS budget`, async ({
+        page,
+      }) => {
+        test.setTimeout(180_000)
+        // The loaded page's own heading; the loading state has no h1.
+        const { total, breakdown } = await measureCls(
+          page,
+          path,
+          vp,
+          'h1.districts-page-header__title'
+        )
+        expect(
+          total,
+          `${path} CLS at ${vp.width}px is ${total} (budget ${ENTITY_CLS_BUDGET}) on ${page.url()}\n` +
+            `Largest contributors — read the sources, not the total:\n${breakdown}`
+        ).toBeLessThan(ENTITY_CLS_BUDGET)
       })
     }
   }

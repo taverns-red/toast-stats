@@ -41,6 +41,20 @@ describe('district subpages CLS gate (#1837)', () => {
       }
     })
 
+    it('covers the division and area entity pages at 0.05 (#1896)', () => {
+      // Both nested entity routes from App.tsx, measured on real D61 ids.
+      expect(read(APP)).toContain(
+        `path: 'district/:districtId/division/:divId'`
+      )
+      expect(read(APP)).toContain(
+        `path: 'district/:districtId/division/:divId/area/:areaId'`
+      )
+      expect(spec).toContain(`'/district/61/division/A'`)
+      expect(spec).toContain(`'/district/61/division/A/area/01'`)
+      expect(spec).toMatch(/ENTITY_CLS_BUDGET\s*=\s*0\.05\b/)
+      expect(spec).toMatch(/toBeLessThan\(ENTITY_CLS_BUDGET\)/)
+    })
+
     it('covers both phone clubs-list shapes: grouped and flat (#1833)', () => {
       expect(spec).toContain(`'clubs'`)
       expect(spec).toMatch(/'clubs\?sort=name&dir=desc'/)
