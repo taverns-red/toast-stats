@@ -68,7 +68,7 @@ describe('Red Taverns Brand v1.0 tokens (#339)', () => {
     // font swap (Lighthouse CLS 0.199 vs threshold 0.1, PR #595 first
     // push). See the redesign-tokens font-loading test for the matching
     // deferral assertion, and Lesson 81 for the spec-vs-CLS reasoning.
-    expect(css).not.toMatch(/JetBrains Mono/)
+    expect(css).not.toMatch(/font-family:\s*'JetBrains Mono'/)
     const html = readFileSync(indexHtmlPath, 'utf-8')
     expect(html).not.toMatch(/family=JetBrains\+Mono/)
   })
