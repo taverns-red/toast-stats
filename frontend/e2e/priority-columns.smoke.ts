@@ -19,8 +19,8 @@ interface Route {
   table: string | RegExp
   /** Accessible name of the full table at ≥768, when it differs. */
   wideTable?: string | RegExp
-  /** A chip that is not a default, to prove swapping keeps the fit. */
-  swapChip: string
+  /** The chip to end on (the screenshot state); default: the last chip. */
+  swapChip?: string
   /** Rewrite the live competitive-awards.json so every district holds a
    *  tier (cycling all four). Early in a program year no district has one,
    *  so real data alone would never put a chip in the cell to measure. */
@@ -40,6 +40,12 @@ const ROUTES: readonly Route[] = [
     table: /program-year history/,
     wideTable: /performance by program year/,
     swapChip: 'Members',
+  },
+  {
+    // Metrics x program years: the priority columns are years.
+    path: '/history',
+    table: 'Worldwide scoreboard by program year',
+    wideTable: /Worldwide totals/,
   },
   {
     path: '/regions',
@@ -109,7 +115,7 @@ const measure = (page: Page) =>
     if (!table) return null
     const rect = (el: Element) => el.getBoundingClientRect()
     const fs = (el: Element) => parseFloat(getComputedStyle(el).fontSize)
-    const ths = [...table.querySelectorAll('th')]
+    const ths = [...table.querySelectorAll('thead th')]
     const targets = [
       ...document.querySelectorAll(
         '.priority-columns__chip, .priority-columns__full, .priority-columns__identity a, .priority-columns__table th button'
@@ -162,6 +168,10 @@ const measure = (page: Page) =>
       ),
       chipClips: chipClips.length,
       chips: table.querySelectorAll('.priority-columns__tier').length,
+      // Data is never hidden: a metric cell's content must fit its box.
+      clippedCells: [...table.querySelectorAll('td.priority-columns__metric')]
+        .filter(td => td.scrollWidth > td.clientWidth + 1)
+        .map(td => td.textContent?.trim()),
     }
   })
 
@@ -183,7 +193,11 @@ for (const theme of THEMES) {
         const chips = (
           await page.locator('.priority-columns__chip').allTextContents()
         ).filter(c => c !== r.swapChip)
-        for (const step of ['default', ...chips, r.swapChip]) {
+        for (const step of [
+          'default',
+          ...chips,
+          ...(r.swapChip ? [r.swapChip] : []),
+        ]) {
           if (step !== 'default')
             await page.getByRole('button', { name: step, exact: true }).click()
           // Awards resolve separately from rankings; wait for the chips.
@@ -208,6 +222,7 @@ for (const theme of THEMES) {
           expect(m!.tinyTargets, `${r.path} ${step} <44px targets`).toEqual([])
           expect(m!.smallText, `${r.path} ${step} <14px text`).toEqual([])
           expect(m!.chipClips, `${r.path} ${step} clipped chips`).toBe(0)
+          expect(m!.clippedCells, `${r.path} ${step} clipped cells`).toEqual([])
           expect(
             m!.truncatedHeaders,
             `${r.path} ${step} ellipsized headers`

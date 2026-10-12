@@ -51,10 +51,9 @@ const renderAt = (url = '/history') =>
 
 const table = () =>
   screen.getByRole('table', { name: 'Worldwide scoreboard by program year' })
-const headers = () =>
-  within(table())
-    .getAllByRole('columnheader')
-    .map(th => th.textContent?.trim())
+// Column headers only — group headings are colgroup headers in the body.
+const colHeads = (t: HTMLElement) => [...t.querySelectorAll('thead th')]
+const headers = () => colHeads(table()).map(th => th.textContent?.trim())
 
 describe('WorldwideScoreboard priority columns below 768 (#1834)', () => {
   it('fixture has at least three years to choose between', () => {
@@ -73,10 +72,13 @@ describe('WorldwideScoreboard priority columns below 768 (#1834)', () => {
 
   it('keeps every group heading as a full-width row', () => {
     renderAt()
-    for (const g of model.groups) {
-      const heading = within(table()).getByText(g.title)
-      expect(heading.closest('th')).toHaveAttribute('colspan', '3')
-    }
+    const groupHeads = [
+      ...table().querySelectorAll('tbody th[scope="colgroup"]'),
+    ]
+    expect(groupHeads.map(th => th.textContent)).toEqual(
+      model.groups.map(g => g.title)
+    )
+    groupHeads.forEach(th => expect(th).toHaveAttribute('colspan', '3'))
   })
 
   it('renders each chosen year’s cell for a metric, absent markers intact', () => {
@@ -104,8 +106,6 @@ describe('WorldwideScoreboard priority columns below 768 (#1834)', () => {
     fireEvent.click(screen.getByRole('button', { name: /full table/i }))
     const dialog = screen.getByRole('dialog', { name: /Worldwide scoreboard/ })
     const full = within(within(dialog).getByRole('region')).getByRole('table')
-    expect(within(full).getAllByRole('columnheader')).toHaveLength(
-      model.years.length + 1
-    )
+    expect(colHeads(full)).toHaveLength(model.years.length + 1)
   })
 })

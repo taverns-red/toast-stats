@@ -9,6 +9,17 @@ import {
   buildCountryRows,
   buildScoreboardModel,
 } from '../utils/globalHistoryView'
+import type { ScoreboardGroup, ScoreboardRow } from '../utils/globalHistoryView'
+import {
+  PriorityColumnsTable,
+  type PriorityMetric,
+} from './PriorityColumnsTable'
+
+/** A metric row tagged with its group, for the phone priority view. */
+interface PhoneRow {
+  group: ScoreboardGroup
+  row: ScoreboardRow
+}
 
 /**
  * The worldwide scoreboard on `/history` (#1500, epic #1496 Sprint 4).
@@ -170,99 +181,154 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
 
   const colCount = model.years.length + 1
 
+  const yearTable = (
+    <table className="wws__table">
+      <caption className="sr-only">
+        Worldwide totals for each completed program year, newest first.
+        Membership is the June-30 basis unless a row says otherwise. Cells
+        reading “n/a”, “not on file” or “from 2026-27” are absent values, not
+        zeros.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col" className="wws__metric-head">
+            Metric
+          </th>
+          {model.years.map(y => (
+            <th
+              key={y.programYear}
+              scope="col"
+              className="wws__year-head"
+              data-testid={`wws-year-head-${y.programYear}`}
+              title={`Program year ${y.programYear}, frozen at ${y.yearEndDate}`}
+            >
+              {y.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      {model.groups.map(group => (
+        <tbody key={group.key} data-testid={`wws-group-${group.key}`}>
+          <tr className="wws__group-row">
+            <th scope="colgroup" colSpan={colCount}>
+              <span className="wws__group-title">{group.title}</span>
+              {group.note && (
+                <span className="wws__group-note">{group.note}</span>
+              )}
+            </th>
+          </tr>
+          {group.rows.map(row => (
+            <tr
+              key={row.key}
+              data-testid={`wws-row-${row.key}`}
+              className={row.indented ? 'wws__row wws__row--sub' : 'wws__row'}
+            >
+              <th scope="row" className="wws__metric">
+                <span className="wws__metric-label">{row.label}</span>
+                {row.basis && <span className="wws__basis">{row.basis}</span>}
+              </th>
+              {row.cells.map((cell, i) => {
+                const year = model.years[i]
+                if (!year) return null
+                return (
+                  <td
+                    key={year.programYear}
+                    className={
+                      cell.absence ? 'wws__cell wws__cell--absent' : 'wws__cell'
+                    }
+                    data-testid={`wws-cell-${row.key}-${year.programYear}`}
+                    {...(cell.absence ? { 'data-absence': cell.absence } : {})}
+                    {...(cell.note ? { title: cell.note } : {})}
+                  >
+                    <span className="wws__cell-text">{cell.text}</span>
+                    {cell.note && <span className="sr-only">{cell.note}</span>}
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+        </tbody>
+      ))}
+    </table>
+  )
+
+  // Phone view (#1834): one row per metric, tagged with its group; one
+  // pickable column per program year.
+  const phoneRows: PhoneRow[] = model.groups.flatMap(group =>
+    group.rows.map(row => ({ group, row }))
+  )
+  const yearMetrics: PriorityMetric<PhoneRow, never>[] = model.years.map(
+    (y, i) => ({
+      id: y.programYear,
+      label: y.label,
+      title: `Program year ${y.programYear}, frozen at ${y.yearEndDate}`,
+      render: ({ row }) => {
+        const cell = row.cells[i]
+        if (!cell) return null
+        return (
+          <span
+            className={cell.absence ? 'wws__cell--absent' : undefined}
+            {...(cell.absence ? { 'data-absence': cell.absence } : {})}
+            {...(cell.note ? { title: cell.note } : {})}
+          >
+            {cell.text}
+            {cell.note && <span className="sr-only">{cell.note}</span>}
+          </span>
+        )
+      },
+    })
+  )
+
   return (
     <Shell>
       <div data-testid="worldwide-scoreboard" className="wws__body">
         <MethodologyLink />
 
-        {/* A wide numeric table scrolls inside its own container so the page
-            body never scrolls horizontally at 375px. tabIndex makes the
-            scroll region keyboard-reachable, which is why it needs a name. */}
-        <div
-          className="wws__scroll"
-          role="region"
-          aria-label="Worldwide scoreboard by program year"
-          tabIndex={0}
-        >
-          <table className="wws__table">
-            <caption className="sr-only">
-              Worldwide totals for each completed program year, newest first.
-              Membership is the June-30 basis unless a row says otherwise. Cells
-              reading “n/a”, “not on file” or “from 2026-27” are absent values,
-              not zeros.
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col" className="wws__metric-head">
-                  Metric
-                </th>
-                {model.years.map(y => (
-                  <th
-                    key={y.programYear}
-                    scope="col"
-                    className="wws__year-head"
-                    data-testid={`wws-year-head-${y.programYear}`}
-                    title={`Program year ${y.programYear}, frozen at ${y.yearEndDate}`}
-                  >
-                    {y.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            {model.groups.map(group => (
-              <tbody key={group.key} data-testid={`wws-group-${group.key}`}>
-                <tr className="wws__group-row">
-                  <th scope="colgroup" colSpan={colCount}>
-                    <span className="wws__group-title">{group.title}</span>
-                    {group.note && (
-                      <span className="wws__group-note">{group.note}</span>
-                    )}
-                  </th>
-                </tr>
-                {group.rows.map(row => (
-                  <tr
-                    key={row.key}
-                    data-testid={`wws-row-${row.key}`}
-                    className={
-                      row.indented ? 'wws__row wws__row--sub' : 'wws__row'
-                    }
-                  >
-                    <th scope="row" className="wws__metric">
-                      <span className="wws__metric-label">{row.label}</span>
-                      {row.basis && (
-                        <span className="wws__basis">{row.basis}</span>
-                      )}
-                    </th>
-                    {row.cells.map((cell, i) => {
-                      const year = model.years[i]
-                      if (!year) return null
-                      return (
-                        <td
-                          key={year.programYear}
-                          className={
-                            cell.absence
-                              ? 'wws__cell wws__cell--absent'
-                              : 'wws__cell'
-                          }
-                          data-testid={`wws-cell-${row.key}-${year.programYear}`}
-                          {...(cell.absence
-                            ? { 'data-absence': cell.absence }
-                            : {})}
-                          {...(cell.note ? { title: cell.note } : {})}
-                        >
-                          <span className="wws__cell-text">{cell.text}</span>
-                          {cell.note && (
-                            <span className="sr-only">{cell.note}</span>
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            ))}
-          </table>
-        </div>
+        {/* Below 768 (#1834) the priority columns are YEARS: metric + the
+            two newest program years (?cols=), group headings as full-width
+            rows, the complete table in the full-screen sheet. ≥768: a wide
+            numeric table scrolls inside its own container so the page body
+            never scrolls horizontally. tabIndex makes the scroll region
+            keyboard-reachable, which is why it needs a name. */}
+        <PriorityColumnsTable<PhoneRow, never>
+          label="Worldwide scoreboard by program year"
+          rows={phoneRows}
+          rowKey={r => r.row.key}
+          identityHeader="Metric"
+          identityWraps
+          groupOf={r => ({ key: r.group.key, title: r.group.title })}
+          renderIdentity={r => (
+            <span
+              className={
+                r.row.indented
+                  ? 'priority-columns__label priority-columns__label--indented'
+                  : 'priority-columns__label'
+              }
+            >
+              <span className="block">{r.row.label}</span>
+              {r.row.basis && (
+                <span className="priority-columns__sub">{r.row.basis}</span>
+              )}
+            </span>
+          )}
+          metrics={yearMetrics}
+          defaultMetricIds={[
+            model.years[0]!.programYear,
+            (model.years[1] ?? model.years[0])!.programYear,
+          ]}
+          fullTableTitle="Worldwide scoreboard — all years"
+          sheetTable={yearTable}
+          fullTable={
+            <div
+              className="wws__scroll"
+              role="region"
+              aria-label="Worldwide scoreboard by program year"
+              tabIndex={0}
+            >
+              {yearTable}
+            </div>
+          }
+        />
 
         <ul className="wws__legend" data-testid="wws-legend">
           {ABSENCE_LEGEND.map(item => (

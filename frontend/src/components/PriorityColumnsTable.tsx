@@ -117,6 +117,8 @@ function PhonePriorityColumns<Row, F extends string>({
   sheetRegionClassName,
   fullTableTitle,
   colsParam = 'cols',
+  identityWraps = false,
+  groupOf,
 }: PriorityColumnsTableProps<Row, F>): React.JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams()
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -223,18 +225,38 @@ function PhonePriorityColumns<Row, F extends string>({
           </tr>
         </thead>
         <tbody>
-          {rows.map(row => (
-            <tr key={rowKey(row)}>
-              <td className="priority-columns__identity">
-                {renderIdentity(row)}
-              </td>
-              {shown.map(m => (
-                <td key={m.id} className="priority-columns__metric">
-                  {m.render(row)}
+          {rows.flatMap((row, i) => {
+            const group = groupOf?.(row)
+            const prev = i > 0 && groupOf ? groupOf(rows[i - 1]!) : null
+            const heading =
+              group && group.key !== prev?.key ? (
+                <tr
+                  key={`group-${group.key}`}
+                  className="priority-columns__group"
+                >
+                  <th scope="colgroup" colSpan={3}>
+                    {group.title}
+                  </th>
+                </tr>
+              ) : null
+            const tr = (
+              <tr key={rowKey(row)}>
+                <td
+                  className={`priority-columns__identity${
+                    identityWraps ? ' priority-columns__identity--wrap' : ''
+                  }`}
+                >
+                  {renderIdentity(row)}
                 </td>
-              ))}
-            </tr>
-          ))}
+                {shown.map(m => (
+                  <td key={m.id} className="priority-columns__metric">
+                    {m.render(row)}
+                  </td>
+                ))}
+              </tr>
+            )
+            return heading ? [heading, tr] : [tr]
+          })}
         </tbody>
       </table>
 
