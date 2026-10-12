@@ -66,6 +66,12 @@ const ROUTES: readonly Route[] = [
     swapChip: 'Dist. clubs',
   },
   {
+    // A ?district= row pins to the top with its rank on a second line; the
+    // chip beside the star must stay whole (Lesson 134).
+    path: '/?district=61',
+    table: 'District rankings',
+  },
+  {
     path: '/regions',
     table: 'Region rankings',
     swapChip: 'Dist. clubs',
@@ -146,11 +152,29 @@ const measure = (page: Page) =>
     const small = all('td, td *, th button').filter(
       el => el.textContent?.trim() && fs(el) < 14
     )
-    const chipEls = all('.priority-columns__tier, .priority-columns__badge')
+    const chipEls = all(
+      '.priority-columns__tier, .priority-columns__badge, .districts-rankings-table__district-chip'
+    )
+    // A chip is clipped when it pokes past its cell, when it was squeezed
+    // below its own content width, or when a clipping ancestor inside the
+    // cell (an overflow:hidden link) cuts it off.
     const chipClips = chipEls.filter(chip => {
       const c = rect(chip)
-      const td = rect(chip.closest('td')!)
-      return c.right > td.right + 0.5 || c.left < td.left - 0.5
+      const td = chip.closest('td')!
+      if (c.right > rect(td).right + 0.5 || c.left < rect(td).left - 0.5)
+        return true
+      if (chip.scrollWidth > chip.clientWidth + 1) return true
+      for (
+        let el = chip.parentElement;
+        el && el !== td;
+        el = el.parentElement
+      ) {
+        if (getComputedStyle(el).overflow !== 'visible') {
+          const r = rect(el)
+          if (c.right > r.right + 0.5 || c.left < r.left - 0.5) return true
+        }
+      }
+      return false
     })
     // Line count of each header's text: distinct line-box tops of a Range
     // over the label (cell height says nothing — cells are 44px tall).
