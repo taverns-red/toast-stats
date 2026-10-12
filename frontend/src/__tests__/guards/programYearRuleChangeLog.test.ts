@@ -64,6 +64,10 @@ const ACKNOWLEDGED_SITES: Record<string, string> = {
     'the deep-link codec — it quotes an entry anchor (`#py-2026-2027-…`) as a doc example',
   'packages/collector-cli/src/cli.ts':
     'a `--program-years` CLI help example; arg parsing, not a rule',
+  'packages/collector-cli/src/services/EducationLedgerHistory.ts':
+    'names the TI archive’s year coverage (2003-04 →) and where each year’s district list comes from (#1802); data availability, not a rule',
+  'packages/shared-contracts/src/education/educationAwardProgram.ts':
+    'tags awards by code (Legacy/Pathways); the 2003-04 → 2018-19 range only says where the vocabulary was recorded (#1802)',
   'frontend/src/hooks/useTimeSeries.ts':
     'a `@param … e.g. "2021-2022"` doc example next to unrelated prose',
   'packages/collector-cli/src/services/TimeSeriesIndexWriter.ts':
