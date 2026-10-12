@@ -848,7 +848,7 @@ const DistrictsPage: React.FC = () => {
               District Rankings
               <ProgramYearTitleSuffix programYear={selectedProgramYear} />
             </h1>
-            <p className="districts-page-header__lede">
+            <p className="districts-page-header__lede districts-page-header__lede--keep">
               Compare district performance across paid clubs, payments, and
               distinguished clubs.
             </p>
@@ -1585,7 +1585,7 @@ const DistrictsPage: React.FC = () => {
               District Rankings
               <ProgramYearTitleSuffix programYear={selectedProgramYear} />
             </h1>
-            <p className="districts-page-header__lede">
+            <p className="districts-page-header__lede districts-page-header__lede--keep">
               Compare district performance across paid clubs, payments, and
               distinguished clubs.
             </p>

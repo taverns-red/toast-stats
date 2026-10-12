@@ -166,6 +166,14 @@
       display: none;
     }
 
+    /* Landing (#1846): the one-line lede stays as the page's visible
+       subtitle. It paints with the loading shell, so it holds LCP early
+       (with the whole header hidden, LCP waited for data: ~2.47s vs 2.5s). */
+    .context-bar ~ .districts-page-header .districts-page-header__lede--keep {
+      display: block;
+      margin: 0 0 12px;
+    }
+
     .context-bar ~ .districts-page-header .districts-page-header__title {
       position: absolute;
       width: 1px;

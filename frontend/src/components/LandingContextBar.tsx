@@ -10,7 +10,8 @@ import type { SnapshotDate } from '../types/snapshotDate'
 
    Below 768 the landing's header stack — title, lede, the 4-line orientation
    paragraph, freshness/PY/date chips and Export/Share — put the first KPI at
-   y=532 of 812. This bar replaces that stack (CSS keyed on `.context-bar ~
+   y=532 of 812. This bar replaces that stack (the one-line lede stays as a
+   subtitle) (CSS keyed on `.context-bar ~
    .districts-page-header`), so search and the KPI lead the first screen. The
    orientation copy, the PY/date controls and the actions move into its sheet.
 
@@ -35,9 +36,6 @@ export interface LandingContextBarProps {
    *  (the loading/error shell). */
   onExportCsv?: (() => void) | undefined
 }
-
-const LEDE =
-  'Compare district performance across paid clubs, payments, and distinguished clubs.'
 
 const LandingSheetActions: React.FC<{
   onExportCsv?: (() => void) | undefined
@@ -111,11 +109,7 @@ export const LandingContextBar: React.FC<LandingContextBarProps> = ({
       />
     }
     actions={<LandingSheetActions onExportCsv={onExportCsv} />}
-    about={
-      <>
-        {LEDE} {orientation}
-      </>
-    }
+    about={orientation}
   />
 )
 
