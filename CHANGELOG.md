@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.46.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.45.0...toast-stats-v2.46.0) (2026-10-12)
+
+
+### Features
+
+* **mobile:** priority columns on history worldwide, club history, regions leaderboard ([#1834](https://github.com/taverns-red/toast-stats/issues/1834)) ([#1877](https://github.com/taverns-red/toast-stats/issues/1877)) ([af34dfd](https://github.com/taverns-red/toast-stats/commit/af34dfdfa4e935cd0c5f451090ac302dc41272ac))
+
 ## [2.45.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.44.1...toast-stats-v2.45.0) (2026-10-12)
 
 
