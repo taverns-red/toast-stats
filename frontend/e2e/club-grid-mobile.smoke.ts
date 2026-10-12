@@ -9,7 +9,8 @@ import { test, expect, type Page } from '@playwright/test'
  * club page. Measured on the deployed preview (BASE_URL) by bounding box and
  * computed style (Lesson 134), with the `body{overflow-x:hidden}` mask off:
  *
- *  - 0 visible `[title]` elements on the route (title-only tooltips),
+ *  - 0 visible `[title]` elements in the grid (title-only tooltips; the
+ *    app-shell search button's title is site-wide chrome with an aria-label),
  *  - every tile ≥ 44×44 px, legend chips (swatch + label) ≥ 14 px,
  *  - tapping a tile opens a dialog named by the club, with a club-page link,
  *  - zero document horizontal overflow.
@@ -49,7 +50,9 @@ for (const theme of ['light', 'dark'] as const) {
         )
         const px = (el: Element) => parseFloat(getComputedStyle(el).fontSize)
         return {
-          titled: Array.from(document.querySelectorAll('[title]'))
+          titled: Array.from(
+            document.querySelectorAll('.club-grid-page [title]')
+          )
             .filter(visible)
             .map(el => el.outerHTML.slice(0, 120)),
           tileCount: tiles.length,
