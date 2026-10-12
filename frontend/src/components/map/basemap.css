@@ -7,3 +7,23 @@
 [data-theme='dark'] .basemap-surface {
   background: var(--rt-bg-2);
 }
+
+/* The ODbL credit must stay legible in both themes. MapLibre's default is a
+   half-white strip that turns grey-on-grey over the dark land colour. */
+.basemap-surface .maplibregl-ctrl-attrib {
+  background: rgb(244 241 235 / 0.9);
+  color: #3d3b38;
+}
+
+.basemap-surface .maplibregl-ctrl-attrib a {
+  color: #3d3b38;
+}
+
+[data-theme='dark'] .basemap-surface .maplibregl-ctrl-attrib {
+  background: rgb(26 24 22 / 0.9);
+  color: #f4f1eb;
+}
+
+[data-theme='dark'] .basemap-surface .maplibregl-ctrl-attrib a {
+  color: #f4f1eb;
+}

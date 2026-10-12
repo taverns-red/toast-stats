@@ -333,6 +333,18 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/section-bar.smoke.ts
 
+      # Self-hosted basemap (#1786, ADR-016). At 375, light and dark, on the
+      # unlisted /dev/basemap page: MapLibre draws the Protomaps archive read
+      # with HTTP range requests (served from the committed z0 fixture until
+      # the real object is uploaded), inside the viewport with no sideways
+      # scroll, ODbL credit visible and expanded, no CSP/worker error on the
+      # deployed headers. Both engines.
+      - name: Cross-engine basemap guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/basemap-375.smoke.ts
+
       # District Overview hub (#1842, mobile review §5.5). At 375, light and
       # dark: 2x2 KPI tiles (block <= 300px, was 860px) starting at the hub's
       # left edge (no side toggle), Needs attention above the section bar,
