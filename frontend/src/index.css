@@ -18,6 +18,8 @@
 @import 'tailwindcss/theme' layer(theme);
 @import 'tailwindcss/preflight' layer(base);
 @import 'tailwindcss/utilities' layer(utilities);
+/* Self-hosted web fonts (#1905) — replaces the Google Fonts links. */
+@import './styles/tokens/web-fonts.css';
 /* Metric-matched @font-face fallbacks for the display=swap reflow (#1373).
    Imported before the token files whose stacks name them. */
 @import './styles/tokens/font-fallbacks.css';
