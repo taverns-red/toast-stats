@@ -85,8 +85,12 @@ async function openBasemap(
     if (msg.type() === 'error' && ours.test(msg.text())) errors.push(msg.text())
   })
   page.on('requestfailed', req => {
-    if (ours.test(req.url()))
-      errors.push(`${req.url()} ${req.failure()?.errorText}`)
+    // On the map page the view jumps to the district once its clubs load,
+    // and MapLibre cancels the tile reads it no longer needs. A cancel is
+    // not a failure; a CSP or CORS block is.
+    const why = req.failure()?.errorText ?? ''
+    if (/ERR_ABORTED|cancelled/i.test(why)) return
+    if (ours.test(req.url())) errors.push(`${req.url()} ${why}`)
   })
   page.on('pageerror', err => {
     if (ours.test(`${err.message} ${err.stack ?? ''}`)) errors.push(err.message)
