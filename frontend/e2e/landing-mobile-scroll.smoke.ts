@@ -39,12 +39,13 @@ async function landingScrollHeight(page: Page): Promise<number> {
     .locator('table[aria-label="District rankings"]')
     .waitFor({ state: 'visible', timeout: 30_000 })
 
-  // The mobile top-N cap must be active — this is the state whose scroll length
-  // the epic shrank. If it isn't visible we'd be measuring the desktop fallback
-  // and the budget would be meaningless.
-  await expect(
-    page.locator('[data-testid="mobile-show-all-districts"]')
-  ).toBeVisible({ timeout: 10_000 })
+  // The phone rankings view must be active, or we'd be measuring the desktop
+  // fallback and the budget would be meaningless. #1834 replaced the top-20
+  // cap (#863) with the priority-columns table (every row, ~57px each vs the
+  // capped view's ~120px), so the phone table is the marker now.
+  await expect(page.locator('.priority-columns__table')).toBeVisible({
+    timeout: 10_000,
+  })
 
   // Let any secondary, separately-resolving section settle before measuring.
   await page.waitForTimeout(1_000)
