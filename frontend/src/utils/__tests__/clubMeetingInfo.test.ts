@@ -138,3 +138,122 @@ describe('buildClubMeetingInfo', () => {
     ).toBeNull()
   })
 })
+
+/**
+ * #1879 — Ron's rule (2026-10-12): never display a club's online meeting link
+ * (Zoom, Teams, Meet, Webex, GoTo, Jitsi, any direct-entry URL, which may
+ * carry a passcode). Show the mode instead; the contact link is the way in.
+ *
+ * Fixtures are the live records from
+ * snapshots/2026-10-10/analytics/district_61_analytics.json (read 2026-10-11).
+ * TI's FAC carries the link in `address.street`, not `website`.
+ */
+const LOS_AMIGOS_ONLINE = {
+  clubId: '1009147',
+  address: {
+    street: 'https://us02web.zoom.us/j/877614736',
+    city: 'Ottawa',
+    region: 'ON',
+    postalCode: 'K1Y1M7',
+    country: 'Canada',
+  },
+  website: 'https://1009147.toastmastersclubs.org/agenda-02291132.html',
+  meetingDay: 'Mondays',
+  meetingTime: '18:30 - 20:00  Ottawa EST',
+  allowsVirtualAttendance: true,
+  coordinates: { lat: 45.39933, lng: -75.72548 },
+}
+
+const PASSCODE_IN_STREET = {
+  clubId: '7396993',
+  address: {
+    street:
+      'https://us06web.zoom.us/j/829949991, MtgID: 829 9499 910 Passcode:826900',
+    city: 'Ottawa',
+    region: 'ON',
+  },
+  meetingDay: 'Thursday',
+  meetingTime: '7:00PM-8:00PM Zoom opens at 6:45pm',
+  allowsVirtualAttendance: true,
+}
+
+const MEETING_LINKS = [
+  'https://us02web.zoom.us/j/877614736',
+  'https://zoom.us/j/123456789?pwd=abc',
+  'https://teams.microsoft.com/l/meetup-join/19%3ameeting_x',
+  'https://teams.live.com/meet/9876',
+  'https://meet.google.com/abc-defg-hij',
+  'https://acme.webex.com/meet/club',
+  'https://global.gotomeeting.com/join/123456789',
+  'https://meet.goto.com/123456789',
+  'https://meet.jit.si/OurClub',
+]
+
+describe('buildClubMeetingInfo — never a meeting link (#1879)', () => {
+  it('drops a Zoom link that TI carries in the street, keeping city and region', () => {
+    const info = buildClubMeetingInfo(LOS_AMIGOS_ONLINE)
+    expect(info?.place).toBe('Ottawa, ON')
+    expect(JSON.stringify(info)).not.toContain('zoom.us')
+  })
+
+  it('says the club meets online when its location is a meeting link', () => {
+    expect(buildClubMeetingInfo(LOS_AMIGOS_ONLINE)?.mode).toBe('Meets online')
+  })
+
+  it('keeps a normal club website and the contact link', () => {
+    const info = buildClubMeetingInfo(LOS_AMIGOS_ONLINE)
+    expect(info?.websiteUrl).toBe(
+      'https://1009147.toastmastersclubs.org/agenda-02291132.html'
+    )
+    expect(info?.contactUrl).toBe(
+      'https://www.toastmasters.org/Find-a-Club/01009147'
+    )
+  })
+
+  it('never carries a meeting ID or passcode', () => {
+    const info = buildClubMeetingInfo(PASSCODE_IN_STREET)
+    const serialised = JSON.stringify(info)
+    expect(serialised).not.toContain('829949991')
+    expect(serialised).not.toContain('826900')
+    expect(serialised).not.toMatch(/passcode|mtgid/i)
+    // A plain mention of Zoom with no link is not a way in, so it stays.
+    expect(info?.schedule).toBe('Thursday · 7:00PM-8:00PM Zoom opens at 6:45pm')
+  })
+
+  it.each(MEETING_LINKS)('drops %s from every field', link => {
+    const info = buildClubMeetingInfo({
+      ...LIVE_SHAPE,
+      address: { ...LIVE_SHAPE.address, street: link },
+      website: link,
+      meetingDay: `Tuesday ${link}`,
+      meetingTime: link,
+    })
+    const host = new URL(link).hostname
+    expect(JSON.stringify(info)).not.toContain(host)
+    expect(info?.websiteUrl).toBeNull()
+  })
+
+  it('drops a scheme-less meeting link too', () => {
+    const info = buildClubMeetingInfo({
+      ...LIVE_SHAPE,
+      address: { ...LIVE_SHAPE.address, street: 'zoom.us/j/877614736' },
+    })
+    expect(info?.place).toBe('Kingston, ON')
+  })
+
+  it('keeps an address that only mentions online meetings in words', () => {
+    // Live D61 values (clubs 676481, 5833, 654417): no link, nothing to join.
+    for (const street of [
+      'Zoom Only',
+      'Virtual, Note: Currently meeting with zoom.',
+      'Contact us for Zoom Details',
+    ]) {
+      expect(
+        buildClubMeetingInfo({
+          ...LIVE_SHAPE,
+          address: { street, city: 'Ottawa', region: 'ON' },
+        })?.place
+      ).toBe(`${street}, Ottawa, ON`)
+    }
+  })
+})
