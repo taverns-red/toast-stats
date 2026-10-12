@@ -36,17 +36,22 @@
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Review §7: ≥8px between tap targets (#1832). The 4px edge inset keeps
+     the outer items off the screen edge without spending a full gap. */
   .section-bar__list {
     display: flex;
+    gap: 8px;
     height: 56px;
     margin: 0;
-    padding: 0;
+    padding: 0 4px;
     list-style: none;
   }
 
+  /* Items size to their label and share the leftover width. Equal widths
+     (flex-basis 0) clip "Divisions" and "Distinguished" at 320 once the gap
+     and the 14px type land; min-width stays auto so a label never clips. */
   .section-bar__item {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 1 1 auto;
     margin: 0;
   }
 
@@ -59,6 +64,7 @@
     gap: 2px;
     width: 100%;
     height: 56px;
+    min-width: 44px;
     min-height: 44px;
     padding: 0 2px;
     border: 0;
@@ -82,14 +88,27 @@
     border-radius: 999px;
   }
 
+  /* Review §7: 14px text; 12px is for uppercase eyebrows only (#1832). */
   .section-bar__label {
-    max-width: 100%;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     white-space: nowrap;
-    text-overflow: ellipsis;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
-    line-height: 16px;
+    line-height: 18px;
+  }
+
+  /* A hidden bold copy sizes the label at its active width, so the bolder
+     active label does not shift its neighbours from route to route. The
+     empty alt text keeps it out of the accessible name. */
+  .section-bar__label::after {
+    content: attr(data-label);
+    content: attr(data-label) / '';
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    font-weight: 700;
   }
 
   /* Active: filled pill behind the icon + bold label (shape and weight, not

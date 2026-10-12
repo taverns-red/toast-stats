@@ -77,7 +77,9 @@ export const SectionBar: React.FC<SectionBarProps> = ({
                 className="section-bar__link"
               >
                 <span className="section-bar__icon">{item.icon}</span>
-                <span className="section-bar__label">{item.label}</span>
+                <span className="section-bar__label" data-label={item.label}>
+                  {item.label}
+                </span>
               </NavLink>
             </li>
           ))}
@@ -100,7 +102,9 @@ export const SectionBar: React.FC<SectionBarProps> = ({
               <span className="section-bar__icon">
                 <MoreIcon />
               </span>
-              <span className="section-bar__label">More</span>
+              <span className="section-bar__label" data-label="More">
+                More
+              </span>
             </button>
           </li>
         </ul>
