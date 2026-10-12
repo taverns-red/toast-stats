@@ -27,6 +27,7 @@ import {
   type ClubTrend,
 } from '../../hooks/useDistrictAnalytics'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
+import { useDistrictStatistics } from '../../hooks/useMembershipData'
 
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }))
 
@@ -87,9 +88,11 @@ const CLUB: ClubTrend = {
 
 const mockedDates = vi.mocked(useDistrictCachedDates)
 const mockedAnalytics = vi.mocked(useDistrictAnalytics)
+const mockedStatistics = vi.mocked(useDistrictStatistics)
 
 type DatesResult = ReturnType<typeof useDistrictCachedDates>
 type AnalyticsResult = ReturnType<typeof useDistrictAnalytics>
+type StatisticsResult = ReturnType<typeof useDistrictStatistics>
 
 const datesPending = () =>
   mockedDates.mockReturnValue({
@@ -114,6 +117,12 @@ afterEach(() => cleanup())
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
+  // Default: the snapshot read has nothing yet and is not the subject.
+  mockedStatistics.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    error: null,
+  } as unknown as StatisticsResult)
 })
 
 const PAGES = [
@@ -204,6 +213,12 @@ describe.each(PAGES)('$name loading state (#1896)', page => {
       error: null,
       refetch: vi.fn(),
     } as unknown as AnalyticsResult)
+    // The snapshot query is enabled (dates resolved) and in flight.
+    mockedStatistics.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as unknown as StatisticsResult)
     renderPage(page)
 
     expect(screen.queryByText('Ottawa Club')).not.toBeInTheDocument()
