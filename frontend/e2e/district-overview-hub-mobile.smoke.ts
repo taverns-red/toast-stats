@@ -72,6 +72,12 @@ for (const scheme of ['light', 'dark'] as const) {
         infoButtons: hub
           ? hub.querySelectorAll('button[aria-label="More info"]').length
           : -1,
+        // Visible h2 texts outside the hub, in page order (#1842 follow-up).
+        h2s: [...document.querySelectorAll('h2')]
+          .filter(
+            h => !hub?.contains(h) && h.getBoundingClientRect().height > 0
+          )
+          .map(h => h.textContent?.trim() ?? ''),
         pageH: document.documentElement.scrollHeight,
         overflowX: document.documentElement.scrollWidth - window.innerWidth,
       }
@@ -101,6 +107,10 @@ for (const scheme of ['light', 'dark'] as const) {
       PHONE.height - SECTION_BAR_H
     )
     expect(m.infoButtons, msg).toBe(0)
+    // The hub IS the overview: no "Overview" heading stranded below its
+    // section rows; the panel after it is titled for what it is.
+    expect(m.h2s, msg).not.toContain('Overview')
+    expect(m.h2s[0], msg).toBe('Details')
     expect(m.pageH, msg).toBeLessThanOrEqual(PAGE_MAX_H)
     expect(m.overflowX, msg).toBeLessThanOrEqual(0)
   })

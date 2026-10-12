@@ -129,6 +129,11 @@ interface DistrictOverviewProps {
    * targets are still authoritative for downstream consumers).
    */
   performanceTargets?: DistrictPerformanceTargets | undefined
+  /**
+   * The panel heading. "Overview" by default; the page passes "Details" on
+   * the phone hub, where the hub above it already is the overview (#1842).
+   */
+  heading?: string
 }
 
 export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
@@ -298,9 +303,10 @@ const GhostPanel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
  * it while the snapshot dates are still resolving, so the slot exists from the
  * first paint rather than inserting above everything once the dates land.
  */
-export const DistrictOverviewSkeleton: React.FC<{ programYear: string }> = ({
-  programYear,
-}) => (
+export const DistrictOverviewSkeleton: React.FC<{
+  programYear: string
+  heading?: string
+}> = ({ programYear }) => (
   <div
     className="redesign-panel"
     aria-busy="true"
