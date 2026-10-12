@@ -68,6 +68,10 @@ export interface PriorityColumnsTableProps<Row, F extends string> {
   /** Rows that belong to named groups get a full-width heading row
    *  (`scope="colgroup"`) whenever the group changes. */
   groupOf?: (row: Row) => { key: string; title: React.ReactNode }
+  /** data-testid for each body row (tests and smokes key on it). */
+  rowTestId?: (row: Row) => string
+  /** Shown as one full-width row when `rows` is empty (say why, #1362). */
+  empty?: React.ReactNode
 }
 
 /** Resolve `?cols=` to exactly two known, distinct metric ids, topping up
