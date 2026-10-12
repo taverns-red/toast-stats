@@ -6,6 +6,10 @@ import {
   calculateDistinguishedPercentage,
 } from '../utils/areaGapAnalysis'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
+import {
+  PriorityColumnsTable,
+  type PriorityMetric,
+} from './PriorityColumnsTable'
 
 /**
  * Props for the AreaPerformanceTable component
@@ -56,6 +60,132 @@ const formatGap = (
   }
   return `+${distinguishedClubsNeeded}`
 }
+
+/* Phone recognition chip (#1834): a phone metric column holds ~80px, so
+   "President's Distinguished (Provisional)" can't fit (Lesson 134). The
+   chip shows a short label; the full one is tooltip + screen-reader text. */
+const shortBadgeLabel = (label: string): string =>
+  label
+    .replace("President's Distinguished", 'Pres.')
+    .replace('Select Distinguished', 'Select')
+    .replace('Not Distinguished', 'Not dist.')
+    .replace(/^Distinguished/, 'Dist.')
+    .replace('(Provisional)', '(prov.)')
+
+const gapCell = (gap: {
+  distinguishedClubsNeeded: number
+  achieved: boolean
+  achievable: boolean
+}) => formatGap(gap.distinguishedClubsNeeded, gap.achieved, gap.achievable)
+
+const visitCell = (v: AreaPerformance['firstRoundVisits']) => (
+  <span className={`font-medium ${getVisitStatusStyle(v.meetsThreshold)}`}>
+    {formatVisitStatus(v.completed, v.required, v.meetsThreshold)}
+  </span>
+)
+
+const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
+  {
+    id: 'paid',
+    label: 'Paid',
+    title: 'Paid clubs / club base (≥ club base required)',
+    render: a => (
+      <>
+        <span className="block">
+          {a.paidClubs}/{a.clubBase}
+        </span>
+        <span className="block">
+          {calculatePaidClubsPercentage(a.clubBase, a.paidClubs)}%
+        </span>
+      </>
+    ),
+  },
+  {
+    id: 'dist',
+    label: 'Dist.',
+    title: 'Distinguished clubs / club base',
+    render: a => (
+      <>
+        <span className="block">
+          {a.distinguishedClubs}/{a.clubBase}
+        </span>
+        <span className="block">
+          {calculateDistinguishedPercentage(a.clubBase, a.distinguishedClubs)}%
+        </span>
+      </>
+    ),
+  },
+  {
+    id: 'visit1',
+    label: 'Visit 1',
+    title: 'First-round visits (75% of club base)',
+    render: a => visitCell(a.firstRoundVisits),
+  },
+  {
+    id: 'visit2',
+    label: 'Visit 2',
+    title: 'Second-round visits (75% of club base)',
+    render: a => visitCell(a.secondRoundVisits),
+  },
+  {
+    id: 'award',
+    label: 'Award',
+    title: 'Area recognition',
+    render: a => {
+      const badge = renderRecognitionBadge(a.recognitionState)
+      return (
+        <span
+          className={`priority-columns__badge border ${badge.className}`}
+          title={
+            badge.tooltip ? `${badge.label}. ${badge.tooltip}` : badge.label
+          }
+        >
+          <span aria-hidden="true">{shortBadgeLabel(badge.label)}</span>
+          <span className="sr-only">{badge.label}</span>
+        </span>
+      )
+    },
+  },
+  {
+    id: 'gapD',
+    label: 'Gap D',
+    title: 'Distinguished clubs still needed for Distinguished (50% of base)',
+    render: a =>
+      gapCell(
+        calculateAreaGapAnalysis({
+          clubBase: a.clubBase,
+          paidClubs: a.paidClubs,
+          distinguishedClubs: a.distinguishedClubs,
+        }).distinguishedGap
+      ),
+  },
+  {
+    id: 'gapS',
+    label: 'Gap S',
+    title: 'Distinguished clubs still needed for Select (50% + 1)',
+    render: a =>
+      gapCell(
+        calculateAreaGapAnalysis({
+          clubBase: a.clubBase,
+          paidClubs: a.paidClubs,
+          distinguishedClubs: a.distinguishedClubs,
+        }).selectGap
+      ),
+  },
+  {
+    id: 'gapP',
+    label: 'Gap P',
+    title: "Distinguished clubs still needed for President's (base+1, 50%+1)",
+    render: a =>
+      gapCell(
+        calculateAreaGapAnalysis({
+          clubBase: a.clubBase,
+          paidClubs: a.paidClubs,
+          distinguishedClubs: a.distinguishedClubs,
+        }).presidentsGap
+      ),
+  },
+]
 
 /**
  * AreaPerformanceTable Component
@@ -117,327 +247,346 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
     a.areaId.localeCompare(b.areaId)
   )
 
+  const fullTable = (
+    <table className="w-full table-auto border-collapse">
+      <thead className="bg-tm-cool-gray-10 border-b-2 border-tm-loyal-blue">
+        <tr>
+          {/* Area column header */}
+          <th
+            scope="col"
+            className="px-4 py-3 text-left font-semibold text-gray-900 font-tm-headline"
+            style={{ fontSize: '14px', minHeight: '44px' }}
+          >
+            Area
+          </th>
+
+          {/* Paid/Base column header - Requirement 9.2 */}
+          <th
+            scope="col"
+            className="px-4 py-3 text-center font-tm-headline"
+            style={{ minHeight: '44px' }}
+          >
+            <div
+              className="font-semibold text-gray-900"
+              style={{ fontSize: '14px' }}
+            >
+              Paid / Base
+            </div>
+            <div
+              className="font-normal text-gray-500"
+              style={{ fontSize: '11px' }}
+            >
+              (≥ club base required)
+            </div>
+          </th>
+
+          {/* Distinguished column header - Requirement 9.3 */}
+          <th
+            scope="col"
+            className="px-4 py-3 text-center font-tm-headline"
+            style={{ minHeight: '44px' }}
+          >
+            <div
+              className="font-semibold text-gray-900"
+              style={{ fontSize: '14px' }}
+            >
+              Distinguished
+            </div>
+            <div
+              className="font-normal text-gray-500"
+              style={{ fontSize: '11px' }}
+            >
+              (of club base)
+            </div>
+          </th>
+
+          {/* First Round Visits column header */}
+          <th
+            scope="col"
+            className="px-4 py-3 text-center font-tm-headline"
+            style={{ minHeight: '44px' }}
+          >
+            <div
+              className="font-semibold text-gray-900"
+              style={{ fontSize: '14px' }}
+            >
+              First Round Visits
+            </div>
+            <div
+              className="font-normal text-gray-500"
+              style={{ fontSize: '11px' }}
+            >
+              (75% of club base)
+            </div>
+          </th>
+
+          {/* Second Round Visits column header */}
+          <th
+            scope="col"
+            className="px-4 py-3 text-center font-tm-headline"
+            style={{ minHeight: '44px' }}
+          >
+            <div
+              className="font-semibold text-gray-900"
+              style={{ fontSize: '14px' }}
+            >
+              Second Round Visits
+            </div>
+            <div
+              className="font-normal text-gray-500"
+              style={{ fontSize: '11px' }}
+            >
+              (75% of club base)
+            </div>
+          </th>
+
+          {/* Recognition column header - Requirement 9.5 */}
+          <th
+            scope="col"
+            className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
+            style={{ fontSize: '14px', minHeight: '44px' }}
+          >
+            Recognition
+          </th>
+
+          {/* Gap to D column header - Requirement 9.6 */}
+          <th
+            scope="col"
+            className="px-4 py-3 text-center font-tm-headline"
+            style={{ minHeight: '44px' }}
+          >
+            <div
+              className="font-semibold text-gray-900"
+              style={{ fontSize: '14px' }}
+            >
+              Gap to D
+            </div>
+            <div
+              className="font-normal text-gray-500"
+              style={{ fontSize: '11px' }}
+            >
+              (50% of base)
+            </div>
+          </th>
+
+          {/* Gap to S column header - Requirement 9.6 */}
+          <th
+            scope="col"
+            className="px-4 py-3 text-center font-tm-headline"
+            style={{ minHeight: '44px' }}
+          >
+            <div
+              className="font-semibold text-gray-900"
+              style={{ fontSize: '14px' }}
+            >
+              Gap to S
+            </div>
+            <div
+              className="font-normal text-gray-500"
+              style={{ fontSize: '11px' }}
+            >
+              (50% + 1)
+            </div>
+          </th>
+
+          {/* Gap to P column header - Requirement 9.6 */}
+          <th
+            scope="col"
+            className="px-4 py-3 text-center font-tm-headline"
+            style={{ minHeight: '44px' }}
+          >
+            <div
+              className="font-semibold text-gray-900"
+              style={{ fontSize: '14px' }}
+            >
+              Gap to P
+            </div>
+            <div
+              className="font-normal text-gray-500"
+              style={{ fontSize: '11px' }}
+            >
+              (base+1, 50%+1)
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody className="bg-white divide-y divide-gray-200">
+        {/* Render row for each area */}
+        {sortedAreas.map(area => {
+          // Calculate gap analysis for this area
+          const gapAnalysis = calculateAreaGapAnalysis({
+            clubBase: area.clubBase,
+            paidClubs: area.paidClubs,
+            distinguishedClubs: area.distinguishedClubs,
+          })
+
+          // Calculate percentages
+          const paidPercentage = calculatePaidClubsPercentage(
+            area.clubBase,
+            area.paidClubs
+          )
+          const distinguishedPercentage = calculateDistinguishedPercentage(
+            area.clubBase,
+            area.distinguishedClubs
+          )
+
+          // Source-of-truth recognition badge (#832) — visit-deadline gate
+          // lives in `deriveAreaRecognitionState`; this is a pure presenter.
+          const badge = renderRecognitionBadge(area.recognitionState)
+
+          return (
+            <tr
+              key={area.areaId}
+              className="hover:bg-gray-50 transition-colors"
+            >
+              {/* Area Identifier */}
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div
+                  className="font-medium text-gray-900 font-tm-body"
+                  style={{ fontSize: '14px' }}
+                >
+                  {area.areaId}
+                </div>
+              </td>
+
+              {/* Paid/Base with percentage - Requirement 9.2 */}
+              <td
+                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+                style={{ fontSize: '14px' }}
+              >
+                <span className="text-gray-900 tabular-nums">
+                  {area.paidClubs}/{area.clubBase} {paidPercentage}%
+                </span>
+              </td>
+
+              {/* Distinguished with percentage - Requirement 9.3 */}
+              <td
+                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+                style={{ fontSize: '14px' }}
+              >
+                <span className="text-gray-900 tabular-nums">
+                  {area.distinguishedClubs}/{area.clubBase}{' '}
+                  {distinguishedPercentage}%
+                </span>
+              </td>
+
+              {/* First Round Visit Status */}
+              <td
+                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+                style={{ fontSize: '14px' }}
+              >
+                <span
+                  className={`font-medium tabular-nums ${getVisitStatusStyle(area.firstRoundVisits.meetsThreshold)}`}
+                >
+                  {formatVisitStatus(
+                    area.firstRoundVisits.completed,
+                    area.firstRoundVisits.required,
+                    area.firstRoundVisits.meetsThreshold
+                  )}
+                </span>
+              </td>
+
+              {/* Second Round Visit Status */}
+              <td
+                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+                style={{ fontSize: '14px' }}
+              >
+                <span
+                  className={`font-medium tabular-nums ${getVisitStatusStyle(area.secondRoundVisits.meetsThreshold)}`}
+                >
+                  {formatVisitStatus(
+                    area.secondRoundVisits.completed,
+                    area.secondRoundVisits.required,
+                    area.secondRoundVisits.meetsThreshold
+                  )}
+                </span>
+              </td>
+
+              {/* Recognition Badge - Requirement 9.5 */}
+              <td className="px-4 py-3 whitespace-nowrap text-center">
+                <span
+                  className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
+                  aria-label={`Recognition status: ${badge.label}`}
+                  title={badge.tooltip}
+                >
+                  {badge.label}
+                </span>
+              </td>
+
+              {/* Gap to D - Requirement 9.6 */}
+              <td
+                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+                style={{ fontSize: '14px' }}
+              >
+                <span className="text-gray-900 tabular-nums">
+                  {formatGap(
+                    gapAnalysis.distinguishedGap.distinguishedClubsNeeded,
+                    gapAnalysis.distinguishedGap.achieved,
+                    gapAnalysis.distinguishedGap.achievable
+                  )}
+                </span>
+              </td>
+
+              {/* Gap to S - Requirement 9.6 */}
+              <td
+                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+                style={{ fontSize: '14px' }}
+              >
+                <span className="text-gray-900 tabular-nums">
+                  {formatGap(
+                    gapAnalysis.selectGap.distinguishedClubsNeeded,
+                    gapAnalysis.selectGap.achieved,
+                    gapAnalysis.selectGap.achievable
+                  )}
+                </span>
+              </td>
+
+              {/* Gap to P - Requirement 9.6 */}
+              <td
+                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+                style={{ fontSize: '14px' }}
+              >
+                <span className="text-gray-900 tabular-nums">
+                  {formatGap(
+                    gapAnalysis.presidentsGap.distinguishedClubsNeeded,
+                    gapAnalysis.presidentsGap.achieved,
+                    gapAnalysis.presidentsGap.achievable
+                  )}
+                </span>
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+
+  // Below 768 (#1834): area + 2 chosen metrics, no side-scroll; the complete
+  // 9-column table moves into the full-screen sheet. ≥768 is unchanged.
   return (
-    // role=region + tabIndex + aria-label make the horizontal scroll
-    // keyboard-operable (WCAG 2.1.1, axe scrollable-region-focusable, #1660),
-    // as RegionsLeaderboard's does (#689).
-    <div
-      className="overflow-x-auto"
-      role="region"
-      tabIndex={0}
-      aria-label={`${label} — scroll horizontally to see all columns`}
-    >
-      <table className="w-full table-auto border-collapse">
-        <thead className="bg-tm-cool-gray-10 border-b-2 border-tm-loyal-blue">
-          <tr>
-            {/* Area column header */}
-            <th
-              scope="col"
-              className="px-4 py-3 text-left font-semibold text-gray-900 font-tm-headline"
-              style={{ fontSize: '14px', minHeight: '44px' }}
-            >
-              Area
-            </th>
-
-            {/* Paid/Base column header - Requirement 9.2 */}
-            <th
-              scope="col"
-              className="px-4 py-3 text-center font-tm-headline"
-              style={{ minHeight: '44px' }}
-            >
-              <div
-                className="font-semibold text-gray-900"
-                style={{ fontSize: '14px' }}
-              >
-                Paid / Base
-              </div>
-              <div
-                className="font-normal text-gray-500"
-                style={{ fontSize: '11px' }}
-              >
-                (≥ club base required)
-              </div>
-            </th>
-
-            {/* Distinguished column header - Requirement 9.3 */}
-            <th
-              scope="col"
-              className="px-4 py-3 text-center font-tm-headline"
-              style={{ minHeight: '44px' }}
-            >
-              <div
-                className="font-semibold text-gray-900"
-                style={{ fontSize: '14px' }}
-              >
-                Distinguished
-              </div>
-              <div
-                className="font-normal text-gray-500"
-                style={{ fontSize: '11px' }}
-              >
-                (of club base)
-              </div>
-            </th>
-
-            {/* First Round Visits column header */}
-            <th
-              scope="col"
-              className="px-4 py-3 text-center font-tm-headline"
-              style={{ minHeight: '44px' }}
-            >
-              <div
-                className="font-semibold text-gray-900"
-                style={{ fontSize: '14px' }}
-              >
-                First Round Visits
-              </div>
-              <div
-                className="font-normal text-gray-500"
-                style={{ fontSize: '11px' }}
-              >
-                (75% of club base)
-              </div>
-            </th>
-
-            {/* Second Round Visits column header */}
-            <th
-              scope="col"
-              className="px-4 py-3 text-center font-tm-headline"
-              style={{ minHeight: '44px' }}
-            >
-              <div
-                className="font-semibold text-gray-900"
-                style={{ fontSize: '14px' }}
-              >
-                Second Round Visits
-              </div>
-              <div
-                className="font-normal text-gray-500"
-                style={{ fontSize: '11px' }}
-              >
-                (75% of club base)
-              </div>
-            </th>
-
-            {/* Recognition column header - Requirement 9.5 */}
-            <th
-              scope="col"
-              className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
-              style={{ fontSize: '14px', minHeight: '44px' }}
-            >
-              Recognition
-            </th>
-
-            {/* Gap to D column header - Requirement 9.6 */}
-            <th
-              scope="col"
-              className="px-4 py-3 text-center font-tm-headline"
-              style={{ minHeight: '44px' }}
-            >
-              <div
-                className="font-semibold text-gray-900"
-                style={{ fontSize: '14px' }}
-              >
-                Gap to D
-              </div>
-              <div
-                className="font-normal text-gray-500"
-                style={{ fontSize: '11px' }}
-              >
-                (50% of base)
-              </div>
-            </th>
-
-            {/* Gap to S column header - Requirement 9.6 */}
-            <th
-              scope="col"
-              className="px-4 py-3 text-center font-tm-headline"
-              style={{ minHeight: '44px' }}
-            >
-              <div
-                className="font-semibold text-gray-900"
-                style={{ fontSize: '14px' }}
-              >
-                Gap to S
-              </div>
-              <div
-                className="font-normal text-gray-500"
-                style={{ fontSize: '11px' }}
-              >
-                (50% + 1)
-              </div>
-            </th>
-
-            {/* Gap to P column header - Requirement 9.6 */}
-            <th
-              scope="col"
-              className="px-4 py-3 text-center font-tm-headline"
-              style={{ minHeight: '44px' }}
-            >
-              <div
-                className="font-semibold text-gray-900"
-                style={{ fontSize: '14px' }}
-              >
-                Gap to P
-              </div>
-              <div
-                className="font-normal text-gray-500"
-                style={{ fontSize: '11px' }}
-              >
-                (base+1, 50%+1)
-              </div>
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {/* Render row for each area */}
-          {sortedAreas.map(area => {
-            // Calculate gap analysis for this area
-            const gapAnalysis = calculateAreaGapAnalysis({
-              clubBase: area.clubBase,
-              paidClubs: area.paidClubs,
-              distinguishedClubs: area.distinguishedClubs,
-            })
-
-            // Calculate percentages
-            const paidPercentage = calculatePaidClubsPercentage(
-              area.clubBase,
-              area.paidClubs
-            )
-            const distinguishedPercentage = calculateDistinguishedPercentage(
-              area.clubBase,
-              area.distinguishedClubs
-            )
-
-            // Source-of-truth recognition badge (#832) — visit-deadline gate
-            // lives in `deriveAreaRecognitionState`; this is a pure presenter.
-            const badge = renderRecognitionBadge(area.recognitionState)
-
-            return (
-              <tr
-                key={area.areaId}
-                className="hover:bg-gray-50 transition-colors"
-              >
-                {/* Area Identifier */}
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div
-                    className="font-medium text-gray-900 font-tm-body"
-                    style={{ fontSize: '14px' }}
-                  >
-                    {area.areaId}
-                  </div>
-                </td>
-
-                {/* Paid/Base with percentage - Requirement 9.2 */}
-                <td
-                  className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                  style={{ fontSize: '14px' }}
-                >
-                  <span className="text-gray-900 tabular-nums">
-                    {area.paidClubs}/{area.clubBase} {paidPercentage}%
-                  </span>
-                </td>
-
-                {/* Distinguished with percentage - Requirement 9.3 */}
-                <td
-                  className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                  style={{ fontSize: '14px' }}
-                >
-                  <span className="text-gray-900 tabular-nums">
-                    {area.distinguishedClubs}/{area.clubBase}{' '}
-                    {distinguishedPercentage}%
-                  </span>
-                </td>
-
-                {/* First Round Visit Status */}
-                <td
-                  className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                  style={{ fontSize: '14px' }}
-                >
-                  <span
-                    className={`font-medium tabular-nums ${getVisitStatusStyle(area.firstRoundVisits.meetsThreshold)}`}
-                  >
-                    {formatVisitStatus(
-                      area.firstRoundVisits.completed,
-                      area.firstRoundVisits.required,
-                      area.firstRoundVisits.meetsThreshold
-                    )}
-                  </span>
-                </td>
-
-                {/* Second Round Visit Status */}
-                <td
-                  className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                  style={{ fontSize: '14px' }}
-                >
-                  <span
-                    className={`font-medium tabular-nums ${getVisitStatusStyle(area.secondRoundVisits.meetsThreshold)}`}
-                  >
-                    {formatVisitStatus(
-                      area.secondRoundVisits.completed,
-                      area.secondRoundVisits.required,
-                      area.secondRoundVisits.meetsThreshold
-                    )}
-                  </span>
-                </td>
-
-                {/* Recognition Badge - Requirement 9.5 */}
-                <td className="px-4 py-3 whitespace-nowrap text-center">
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
-                    aria-label={`Recognition status: ${badge.label}`}
-                    title={badge.tooltip}
-                  >
-                    {badge.label}
-                  </span>
-                </td>
-
-                {/* Gap to D - Requirement 9.6 */}
-                <td
-                  className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                  style={{ fontSize: '14px' }}
-                >
-                  <span className="text-gray-900 tabular-nums">
-                    {formatGap(
-                      gapAnalysis.distinguishedGap.distinguishedClubsNeeded,
-                      gapAnalysis.distinguishedGap.achieved,
-                      gapAnalysis.distinguishedGap.achievable
-                    )}
-                  </span>
-                </td>
-
-                {/* Gap to S - Requirement 9.6 */}
-                <td
-                  className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                  style={{ fontSize: '14px' }}
-                >
-                  <span className="text-gray-900 tabular-nums">
-                    {formatGap(
-                      gapAnalysis.selectGap.distinguishedClubsNeeded,
-                      gapAnalysis.selectGap.achieved,
-                      gapAnalysis.selectGap.achievable
-                    )}
-                  </span>
-                </td>
-
-                {/* Gap to P - Requirement 9.6 */}
-                <td
-                  className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                  style={{ fontSize: '14px' }}
-                >
-                  <span className="text-gray-900 tabular-nums">
-                    {formatGap(
-                      gapAnalysis.presidentsGap.distinguishedClubsNeeded,
-                      gapAnalysis.presidentsGap.achieved,
-                      gapAnalysis.presidentsGap.achievable
-                    )}
-                  </span>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+    <PriorityColumnsTable<AreaPerformance, never>
+      label={label}
+      rows={sortedAreas}
+      rowKey={a => a.areaId}
+      identityHeader="Area"
+      renderIdentity={a => <span className="font-semibold">{a.areaId}</span>}
+      metrics={PHONE_METRICS}
+      defaultMetricIds={['paid', 'award']}
+      fullTableTitle={`${label} — all columns`}
+      sheetTable={fullTable}
+      fullTable={
+        // role=region + tabIndex + aria-label make the horizontal scroll
+        // keyboard-operable (WCAG 2.1.1, axe scrollable-region-focusable,
+        // #1660), as RegionsLeaderboard's does (#689).
+        <div
+          className="overflow-x-auto"
+          role="region"
+          tabIndex={0}
+          aria-label={`${label} — scroll horizontally to see all columns`}
+        >
+          {fullTable}
+        </div>
+      }
+    />
   )
 }
