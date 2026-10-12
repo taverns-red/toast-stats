@@ -1,28 +1,55 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /**
  * Smoke tests for staging environment (#316)
  *
  * These tests run against the deployed staging site to verify
- * critical user paths before promoting to production.
+ * critical user paths before promoting to production. They must also pass
+ * against prod (`BASE_URL=https://ts.taverns.red`) — #1920.
  *
  * Run: npx playwright test --config frontend/playwright.config.ts
  */
+
+/* The district's H1. Since the phone context bar (#1831) and the subpage
+   breadcrumb, the text "District 61" appears in several places, so match the
+   one level-1 heading rather than bare text (#1920). */
+const districtHeading = (page: Page) =>
+  page.getByRole('heading', { level: 1, name: 'District 61' })
+
+/* The PY 2026–27 realignment renumbered the world into 94 districts (from
+   128). The old `>= 100` floor predated it. Keep a floor that still catches a
+   truncated rankings file (#1920). */
+const MIN_DISTRICTS = 90
+
+/* The data CDN the deployed site actually reads. Staging builds point at the
+   staging bucket and prod builds at cdn.taverns.red (VITE_CDN_BASE_URL), so
+   hardcoding the staging bucket checked the wrong data when BASE_URL was prod
+   (#1920). CDN_BASE_URL still overrides. */
+async function deployedCdnBase(page: Page): Promise<string> {
+  const fromEnv = process.env['CDN_BASE_URL']
+  if (fromEnv) return fromEnv
+  const [req] = await Promise.all([
+    page.waitForRequest(r => r.url().endsWith('/v1/latest.json')),
+    page.goto('/'),
+  ])
+  return req.url().replace(/\/v1\/latest\.json$/, '')
+}
 
 test.describe('Landing Page', () => {
   test('loads and shows rankings table with districts', async ({ page }) => {
     await page.goto('/')
     await expect(
       page.getByRole('heading', {
-        name: /Toastmasters District Rankings/i,
+        level: 1,
+        name: /District Rankings/i,
       })
     ).toBeVisible()
 
-    // Rankings table should have at least 100 districts
+    // Rankings table lists the districts
     const rows = page.locator('table tbody tr')
     await expect(rows.first()).toBeVisible({ timeout: 10_000 })
     const count = await rows.count()
-    expect(count).toBeGreaterThanOrEqual(50)
+    expect(count).toBeGreaterThanOrEqual(MIN_DISTRICTS)
   })
 
   test('rankings show non-zero aggregate scores', async ({ page }) => {
@@ -39,17 +66,20 @@ test.describe('Landing Page', () => {
 test.describe('District Detail Page', () => {
   test('loads overview with stats', async ({ page }) => {
     await page.goto('/district/61')
-    await expect(page.getByText('District 61')).toBeVisible()
-    await expect(page.getByText('Paid Clubs')).toBeVisible({
-      timeout: 10_000,
-    })
-    await expect(page.getByText('Membership Payments')).toBeVisible()
-    await expect(page.getByText('Distinguished Clubs')).toBeVisible()
+    await expect(districtHeading(page)).toBeVisible()
+    // The KPI cards' headings. Bare text also matches the gap tiles and the
+    // composition chart's heading (#1920).
+    const kpi = (name: string) =>
+      page.getByRole('heading', { name, exact: true })
+    await expect(kpi('Paid Clubs')).toBeVisible({ timeout: 10_000 })
+    await expect(kpi('Membership Payments')).toBeVisible()
+    await expect(kpi('Distinguished Clubs')).toBeVisible()
   })
 
-  test('clubs tab loads with club data', async ({ page }) => {
-    await page.goto('/district/61?tab=clubs')
-    await expect(page.getByText('District 61')).toBeVisible()
+  test('clubs subpage loads with club data', async ({ page }) => {
+    // Routed subpage since ADR-005; `?tab=clubs` is a legacy URL.
+    await page.goto('/district/61/clubs')
+    await expect(districtHeading(page)).toBeVisible()
     // Wait for clubs table
     const clubRows = page.locator('table tbody tr, [role="row"]')
     await expect(clubRows.first()).toBeVisible({ timeout: 10_000 })
@@ -72,7 +102,7 @@ test.describe('District Detail Page', () => {
   test('program year selector switches data', async ({ page }) => {
     // Load with a historical program year
     await page.goto('/district/61?py=2024')
-    await expect(page.getByText('District 61')).toBeVisible()
+    await expect(districtHeading(page)).toBeVisible()
     // Should show historical data banner or different date
     await page.waitForTimeout(2000)
   })
@@ -90,24 +120,20 @@ test.describe('Club Detail Page', () => {
 })
 
 test.describe('Data Integrity', () => {
-  test('v1/latest.json returns valid date', async ({ request }) => {
-    const baseUrl =
-      process.env['CDN_BASE_URL'] ||
-      'https://storage.googleapis.com/toast-stats-data-staging'
+  test('v1/latest.json returns valid date', async ({ page, request }) => {
+    const baseUrl = await deployedCdnBase(page)
     const response = await request.get(`${baseUrl}/v1/latest.json`)
     expect(response.ok()).toBeTruthy()
     const data = await response.json()
     expect(data.latestSnapshotDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
-  test('v1/rankings.json has districts', async ({ request }) => {
-    const baseUrl =
-      process.env['CDN_BASE_URL'] ||
-      'https://storage.googleapis.com/toast-stats-data-staging'
+  test('v1/rankings.json has districts', async ({ page, request }) => {
+    const baseUrl = await deployedCdnBase(page)
     const response = await request.get(`${baseUrl}/v1/rankings.json`)
     expect(response.ok()).toBeTruthy()
     const data = await response.json()
-    expect(data.rankings.length).toBeGreaterThanOrEqual(100)
+    expect(data.rankings.length).toBeGreaterThanOrEqual(MIN_DISTRICTS)
   })
 })
 
