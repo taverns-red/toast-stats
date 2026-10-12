@@ -5,8 +5,9 @@ import { test, expect, type Page } from '@playwright/test'
  *
  *  - the map region and its canvas render, inside the viewport, with no
  *    sideways page scroll;
- *  - pins drew: the pin layer reports rendered pins/clusters
- *    (`data-rendered-pins`, written on MapLibre's `idle`);
+ *  - pins drew: a screenshot of the map holds single pins in the health
+ *    fills (found in the page's own 2D canvas, so no test-only hooks in
+ *    the app);
  *  - no CSP, worker or tile error on the deployed headers (Lesson 122: only
  *    the preview proves the CSP);
  *  - legend chips are ≥ 44 px tall with ≥ 14 px text, and toggle `?status=`;
@@ -16,6 +17,70 @@ import { test, expect, type Page } from '@playwright/test'
  */
 
 const MAP = '/district/61/map'
+
+/* The health fills (spec §3.3) as drawn on the canvas. */
+const HEALTH_FILLS = [
+  [0x2a, 0x8f, 0x6e],
+  [0xe0, 0xa0, 0x30],
+  [0xc9, 0x3d, 0x3d],
+]
+
+/* Find single pins in a screenshot: horizontal runs of a health fill 5–14
+ * px long (a pin is 14 px; clusters are 32 px and up) whose vertical run is
+ * short too. Returns their centres in CSS px, clear of the bottom strip. */
+async function findPins(
+  page: Page,
+  png: Buffer,
+  skipBottom: number
+): Promise<Array<{ x: number; y: number }>> {
+  return page.evaluate(
+    async ({ b64, fills, skipBottom }) => {
+      const img = new Image()
+      img.src = `data:image/png;base64,${b64}`
+      await img.decode()
+      const c = document.createElement('canvas')
+      c.width = img.width
+      c.height = img.height
+      const ctx = c.getContext('2d')!
+      ctx.drawImage(img, 0, 0)
+      const { data, width, height } = ctx.getImageData(0, 0, c.width, c.height)
+      const hit = (x: number, y: number) => {
+        const i = (y * width + x) * 4
+        return fills.some(
+          ([r, g, b]) =>
+            Math.abs(data[i]! - r!) < 12 &&
+            Math.abs(data[i + 1]! - g!) < 12 &&
+            Math.abs(data[i + 2]! - b!) < 12
+        )
+      }
+      const found: Array<{ x: number; y: number }> = []
+      for (let y = 20; y < height - skipBottom; y += 2) {
+        let x = 20
+        while (x < width - 20) {
+          if (!hit(x, y)) {
+            x++
+            continue
+          }
+          let end = x
+          while (end < width && hit(end, y)) end++
+          const run = end - x
+          const cx = Math.round((x + end) / 2)
+          if (run >= 5 && run <= 14) {
+            let top = y
+            let bottom = y
+            while (top > 0 && hit(cx, top - 1)) top--
+            while (bottom < height - 1 && hit(cx, bottom + 1)) bottom++
+            if (bottom - top <= 14)
+              found.push({ x: cx, y: Math.round((top + bottom) / 2) })
+          }
+          x = end
+        }
+      }
+      return found
+    },
+    { b64: png.toString('base64'), fills: HEALTH_FILLS, skipBottom }
+  )
+}
 
 async function open(
   page: Page,
@@ -58,10 +123,16 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(region.locator('canvas.maplibregl-canvas')).toBeVisible({
         timeout: 30_000,
       })
+      // Pins drew (tiles, pins and icons settle within a few seconds).
+      const skipBottom = width < 768 ? 200 : 40
+      let pins: Array<{ x: number; y: number }> = []
       await expect
         .poll(
-          async () => Number(await region.getAttribute('data-rendered-pins')),
-          { timeout: 30_000 }
+          async () => {
+            pins = await findPins(page, await region.screenshot(), skipBottom)
+            return pins.length
+          },
+          { timeout: 30_000, intervals: [1_000, 2_000] }
         )
         .toBeGreaterThan(0)
 
@@ -90,16 +161,8 @@ for (const theme of ['light', 'dark'] as const) {
       // ODbL credit visible in both themes.
       await expect(region.locator('.maplibregl-ctrl-attrib')).toBeVisible()
 
-      // Tap a single pin (the layer reports one clear of the edges).
-      await expect
-        .poll(() => region.getAttribute('data-pin-sample'), {
-          timeout: 20_000,
-        })
-        .toMatch(/^\d+,\d+$/)
-      const [x, y] = (await region.getAttribute('data-pin-sample'))!
-        .split(',')
-        .map(Number) as [number, number]
-      await region.click({ position: { x, y } })
+      // Tap a single pin found in the screenshot.
+      await region.click({ position: pins[0]! })
       const summary =
         width < 768
           ? page.getByRole('dialog', { name: /Club details|Clubs here/ })

@@ -1,7 +1,7 @@
 /**
  * Draw pin and cluster icons from their id (#1784, spec §3.1 and §8).
  *
- * MapLibre asks for a missing image by id (`styleimagemissing`); this draws
+ * MapLibre asks for a missing image by id (its missing-image resolver); this draws
  * it on a 2D canvas at the device pixel ratio. No glyphs, no sprite, no
  * network: the text on clusters and territory badges uses the page's own
  * self-hosted font.

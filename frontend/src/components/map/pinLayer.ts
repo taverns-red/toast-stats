@@ -4,7 +4,7 @@
  *
  * The basemap has no glyphs or sprite (ADR-016: no third-party requests), so
  * every icon, cluster counts included, is an image drawn on demand from its
- * id (`pinImages.ts`, on `styleimagemissing`). The layer expressions build
+ * id (`pinImages.ts`, from the map's missing-image resolver). The layer expressions build
  * that id from feature properties; `parseIconId` reads it back. Pure: no
  * MapLibre runtime import, so it costs the route only its own bytes.
  */

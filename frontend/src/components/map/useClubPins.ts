@@ -81,12 +81,12 @@ export function useClubPins(map: MapLibreMap | null, opts: ClubPinsOptions) {
   // Draw icons on demand, add/refresh the source and layers, refit.
   useEffect(() => {
     if (!map) return
-    const onMissing = (e: { id: string }) => {
-      const spec = parseIconId(e.id)
-      if (!spec || map.hasImage(e.id)) return
+    const onMissing = (id: string) => {
+      const spec = parseIconId(id)
+      if (!spec || map.hasImage(id)) return
       const dpr = Math.min(3, Math.ceil(window.devicePixelRatio || 1))
       const icon = drawIcon(spec, dpr)
-      if (icon) map.addImage(e.id, icon, { pixelRatio: dpr })
+      if (icon) map.addImage(id, icon, { pixelRatio: dpr })
     }
     const sync = () => {
       const o = latest.current
@@ -127,39 +127,14 @@ export function useClubPins(map: MapLibreMap | null, opts: ClubPinsOptions) {
         sync()
       }
     }
-    const onIdle = () => {
-      if (!map.getLayer(PIN_LAYER_ID)) return
-      // Evidence for the preview smoke that pins drew, and where one is.
-      const drawn = map.queryRenderedFeatures({
-        layers: [CLUSTER_LAYER_ID, PIN_LAYER_ID],
-      })
-      const { clientWidth: w, clientHeight: h } = map.getContainer()
-      // A single pin clear of the edges and the phone's legend strip.
-      const at = drawn
-        .filter(f => !f.properties['cluster'])
-        .map(f =>
-          map.project(
-            (f.geometry as { coordinates: [number, number] }).coordinates
-          )
-        )
-        .find(p => p.x > 30 && p.x < w - 30 && p.y > 30 && p.y < h - 180)
-      const box = map.getContainer().parentElement
-      box?.setAttribute('data-rendered-pins', String(drawn.length))
-      if (at)
-        box?.setAttribute(
-          'data-pin-sample',
-          `${Math.round(at.x)},${Math.round(at.y)}`
-        )
-      else box?.removeAttribute('data-pin-sample')
-    }
-    map.on('styleimagemissing', onMissing)
+    // MapLibre 6: images are resolved here; adding one from the
+    // `styleimagemissing` event is too late (it fires once already missing).
+    map.setMissingStyleImageResolver(onMissing)
     map.on('styledata', onStyle)
-    map.on('idle', onIdle)
     sync()
     return () => {
-      map.off('styleimagemissing', onMissing)
+      map.setMissingStyleImageResolver(null)
       map.off('styledata', onStyle)
-      map.off('idle', onIdle)
     }
     // `sync` reads the latest options; these are the triggers.
   }, [map, opts.data, opts.model, opts.theme, opts.selectedIds, opts.fitKey])
