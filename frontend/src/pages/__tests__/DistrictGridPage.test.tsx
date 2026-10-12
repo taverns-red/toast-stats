@@ -11,6 +11,7 @@ import React, { Suspense } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -101,6 +102,11 @@ const CLUBS: ClubTrend[] = [
 ]
 
 let mockClubs: ClubTrend[] = CLUBS
+let mockIsMobile = false
+
+vi.mock('../../hooks/useIsMobile', () => ({
+  useIsMobile: () => mockIsMobile,
+}))
 
 vi.mock('../../hooks/useDistrictAnalytics', async importOriginal => {
   const actual =
@@ -245,5 +251,52 @@ describe('DistrictGridPage — legend + suspended handling', () => {
     const tile = await screen.findByRole('link', { name: /Gamma Voices/ })
     expect(tile.className).toContain('club-grid-tile--suspended')
     expect(tile.getAttribute('aria-label')).toContain('Suspended')
+  })
+})
+
+/* #1845 — phones: names on tap. Below 768 a tile is a button that opens the
+ * shared BottomSheet with the full club name, status and a link; the route
+ * carries 0 title-only tooltips. ≥768 keeps the tile as a link (desktop
+ * unchanged — covered by the suites above, which run at the desktop default). */
+describe('DistrictGridPage — phone: club name on tap (#1845)', () => {
+  afterEach(() => {
+    mockIsMobile = false
+  })
+
+  it('renders tiles as buttons with no title-only tooltips', async () => {
+    mockIsMobile = true
+    const { container } = renderAt('/district/61/grid')
+    await screen.findByRole('button', { name: /Alpha Speakers/ })
+    expect(
+      screen.queryByRole('link', { name: /Alpha Speakers/ })
+    ).not.toBeInTheDocument()
+    expect(container.querySelectorAll('.club-grid-tile[title]')).toHaveLength(0)
+  })
+
+  it('opens a sheet with the club name, status and link on tap', async () => {
+    mockIsMobile = true
+    renderAt('/district/61/grid')
+    fireEvent.click(await screen.findByRole('button', { name: /Beta Orators/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Beta Orators' })
+    expect(within(dialog).getByText('Vulnerable')).toBeInTheDocument()
+    expect(
+      within(dialog).getByRole('link', { name: /open club page/i })
+    ).toHaveAttribute('href', '/district/61/club/102')
+  })
+
+  it('closes the sheet and keeps the colour mode in the URL', async () => {
+    mockIsMobile = true
+    renderAt('/district/61/grid?color=tier')
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Alpha Speakers/ })
+    )
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: /close/i }))
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    )
+    expect(
+      screen.getByRole('button', { name: /tier/i, pressed: true })
+    ).toBeInTheDocument()
   })
 })

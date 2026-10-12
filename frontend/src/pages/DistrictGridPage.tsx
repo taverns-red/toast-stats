@@ -20,6 +20,8 @@ import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ClubGridTile } from '../components/ClubGridTile'
 import { ClubGridLegend } from '../components/ClubGridLegend'
+import { ClubGridSheet } from '../components/ClubGridSheet'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
 
@@ -102,6 +104,12 @@ const DistrictGridPage: React.FC = () => {
   // entry path (typed URL, shared link, back button, toggle click) converges —
   // never on the toggle handler alone (L124/144 / R17).
   const colorMode = parseColorMode(searchParams.get('color'))
+
+  // Phones (#1845): a tile opens the club sheet instead of relying on a hover
+  // tooltip. ≥768 keeps the tile as a link (desktop unchanged).
+  const isPhone = useIsMobile()
+  const [selectedClub, setSelectedClub] = React.useState<ClubTrend | null>(null)
+  const closeSheet = React.useCallback(() => setSelectedClub(null), [])
 
   const setColorMode = (mode: GridColorMode) => {
     setSearchParams(
@@ -234,8 +242,11 @@ const DistrictGridPage: React.FC = () => {
             <header className="club-grid-page__intro">
               <h2 className="club-grid-page__title">Club Grid</h2>
               <p className="club-grid-page__subtitle">
-                Every club at a glance, grouped by division and area. Each tile
-                links to the club. Colour by{' '}
+                Every club at a glance, grouped by division and area.{' '}
+                {isPhone
+                  ? 'Tap a tile for the club’s details.'
+                  : 'Each tile links to the club.'}{' '}
+                Colour by{' '}
                 {colorMode === 'tier' ? 'Distinguished tier' : 'club health'}.
               </p>
             </header>
@@ -307,6 +318,7 @@ const DistrictGridPage: React.FC = () => {
                               club={club}
                               districtId={districtId}
                               colorMode={colorMode}
+                              onSelect={isPhone ? setSelectedClub : undefined}
                             />
                           ))}
                         </div>
@@ -316,6 +328,12 @@ const DistrictGridPage: React.FC = () => {
                 ))}
               </div>
             )}
+
+            <ClubGridSheet
+              club={isPhone ? selectedClub : null}
+              districtId={districtId}
+              onClose={closeSheet}
+            />
           </div>
         </div>
       </div>
