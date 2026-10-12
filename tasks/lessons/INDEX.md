@@ -3,6 +3,7 @@
 
 ## lessons (manifest-pinned + session-judged)
 - `a-disabled-dependent-query-reports-not-loading-so-isloading-skeletons-paint-nothing.md` — A dependent TanStack query that is disabled while its key is unresolved reports isLoading false, so an `isLoading && <Skeleton/>` arm paints nothing for that whole window; gate the skeleton on the full dependency chain  (2026-10-12)
+- `a-range-served-object-must-carry-no-content-encoding-and-range-needs-no-cors-change.md` — A byte-range-served object must not be compressed or transcoded anywhere on its path; a single-range Range header needs no CORS change  (2026-10-12)
 - `a-valid-header-is-not-data-require-a-row-before-trusting-a-ti-export.md` — A TI export that passes the header check can still have zero rows (e.g. a past PY's districtsummary with the as-of slot filled), so a list resolver must require at least one row, and an empty body only means "no data" when it is truly empty  (2026-10-12)
 - `a-gate-must-cover-what-the-copy-step-copies-not-only-what-this-run-wrote.md` — Narrowing a pre-promotion gate to "what this run wrote" is only safe once promotion copies only that too; until then the gate must keep checking whatever else the copy step will carry, such as a held run's leftovers  (2026-10-11)
 - `a-pre-push-hook-tests-the-working-tree-not-the-commit-being-pushed.md` — A pre-push hook tests the working tree, not the commit being pushed — never switch branches or edit files while a detached push runs  (2026-10-11)
