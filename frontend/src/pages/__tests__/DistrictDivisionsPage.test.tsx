@@ -18,6 +18,8 @@ import '@testing-library/jest-dom'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import DistrictDetailPage from '../DistrictDetailPage'
+import { useDistrictCachedDates } from '../../hooks/useDistrictData'
+import { useDistrictStatistics } from '../../hooks/useMembershipData'
 
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: vi.fn(() => ({
@@ -101,8 +103,13 @@ vi.mock('../../components/LazyCharts', () => ({
 vi.mock('../../components/GlobalRankingsTab', () => ({ default: () => null }))
 
 vi.mock('../../components/DivisionPerformanceCards', () => ({
-  DivisionPerformanceCards: () => (
-    <div data-testid="division-performance-cards">division cards</div>
+  DivisionPerformanceCards: (props: { isLoading?: boolean }) => (
+    <div
+      data-testid="division-performance-cards"
+      data-loading={String(props.isLoading === true)}
+    >
+      division cards
+    </div>
   ),
 }))
 
@@ -207,5 +214,39 @@ describe('DistrictDivisionsPage (#571 — Phase 3)', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/district/61/divisions')
     })
+  })
+
+  /* #1837 — the statistics query is disabled until the per-district date
+   * index resolves, and a disabled query reports `isLoading: false`, so the
+   * `isLoading && <Skeleton/>` arm painted nothing for that window: the static
+   * DDP criteria sat at the top and the division list landed above it
+   * (CLS 0.20 at 375px). */
+  it('reserves the division cards slot while the date index is still in flight', async () => {
+    const datesMock = vi.mocked(useDistrictCachedDates)
+    const statsMock = vi.mocked(useDistrictStatistics)
+    const restoreDates = datesMock.getMockImplementation()
+    const restoreStats = statsMock.getMockImplementation()
+    datesMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isPending: true,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    statsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isPending: true,
+      isError: false,
+    } as unknown as ReturnType<typeof useDistrictStatistics>)
+    try {
+      renderAt('/district/61/divisions')
+      const cards = await screen.findByTestId('division-performance-cards')
+      expect(cards).toHaveAttribute('data-loading', 'true')
+      expect(
+        screen.getByRole('status', { name: 'Loading table' })
+      ).toBeInTheDocument()
+    } finally {
+      if (restoreDates) datesMock.mockImplementation(restoreDates)
+      if (restoreStats) statsMock.mockImplementation(restoreStats)
+    }
   })
 })

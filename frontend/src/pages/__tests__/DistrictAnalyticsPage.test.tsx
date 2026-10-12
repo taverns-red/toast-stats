@@ -49,6 +49,7 @@ vi.mock('../../hooks/useDistrictData', () => ({
 const topGrowthProps: Array<{
   topGrowthClubs: unknown[]
   topDCPClubs?: unknown[]
+  isLoading?: boolean
 }> = []
 
 vi.mock('../../hooks/useDistrictAnalytics', () => ({
@@ -115,6 +116,7 @@ vi.mock('../../components/TopGrowthClubs', () => ({
   TopGrowthClubs: (props: {
     topGrowthClubs: unknown[]
     topDCPClubs?: unknown[]
+    isLoading?: boolean
   }) => {
     topGrowthProps.push(props)
     return (
@@ -350,5 +352,38 @@ describe('DistrictAnalyticsPage (#680 — ADR-005)', () => {
     renderAt('/district/61/analytics?py=2023')
     await screen.findByTestId('education-awards-leaderboard')
     expect(leaderboardProps.at(-1)!.isPriorProgramYear).toBe(true)
+  })
+
+  /* #1837 — the analytics query is disabled until the per-district date
+   * index resolves, and a disabled query reports `isLoading: false`, so the
+   * `isLoading && <Skeleton/>` arm painted nothing for that window. The
+   * education card (a separate query) then rendered at the top and the
+   * Top Growth block landed above it (CLS 0.24 at 375px, 0.30 at 1280px). */
+  it('reserves the Top Growth slot while the date index is still in flight', async () => {
+    const datesMock = vi.mocked(useDistrictCachedDates)
+    const analyticsMock = vi.mocked(useDistrictAnalytics)
+    const restoreDates = datesMock.getMockImplementation()
+    const restoreAnalytics = analyticsMock.getMockImplementation()
+    datesMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isPending: true,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    analyticsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isPending: true,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    try {
+      renderAt('/district/61/analytics')
+      await screen.findByTestId('top-growth-clubs')
+      expect(topGrowthProps.at(-1)!.isLoading).toBe(true)
+    } finally {
+      if (restoreDates) datesMock.mockImplementation(restoreDates)
+      if (restoreAnalytics) analyticsMock.mockImplementation(restoreAnalytics)
+    }
   })
 })

@@ -997,3 +997,47 @@ describe('DistrictActionListPage — phone rows (#1833)', () => {
     expect(within(intervention).queryByRole('table')).toBeNull()
   })
 })
+
+/* #1837 — the page's data queries are disabled until the per-district date
+ * index resolves, and a disabled query reports `isLoading: false`. The page
+ * used to render four empty, collapsed sections for that whole window, and
+ * the loaded first section then expanded over them (CLS 0.23 at 375px). */
+describe('DistrictActionListPage — date index in flight (#1837)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isPending: true,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isPending: true,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+  })
+  afterEach(() => {
+    cleanup()
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
+    )
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: analyticsData,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+  })
+
+  it('reserves the sections slot with the loading skeleton, not empty sections', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('action-list-page')
+    expect(
+      screen.getByRole('status', { name: 'Loading table' })
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('section-close')).toBeNull()
+  })
+})
