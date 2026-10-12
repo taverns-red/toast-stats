@@ -13,9 +13,10 @@
 #                 raw-fac/<d>/ in staging, d before <date> (#1758): the daily
 #                 degrades to the last good FAC rather than to nothing.
 #   3. none       the district is merged unenriched, counted and flagged
-#                 (::warning::). The completeness gate (#1761) then holds the
-#                 date against an enriched prod; nothing ships unenriched
-#                 silently.
+#                 (::warning:: and the step summary), so nothing ships
+#                 unenriched silently. If prod already holds an enriched
+#                 copy of the date, the completeness gate (#1761) holds it;
+#                 a new daily date has no prod copy to compare against.
 # The fallback files are merged, never persisted: raw-fac/<date>/ only ever
 # holds what <date>'s own fetch returned.
 #
@@ -133,7 +134,7 @@ if [ "${FALLBACK_N}" -gt 0 ]; then
   echo "::warning::Find-A-Club fetch incomplete for ${DATE}: ${FALLBACK_N} district(s) enriched from the persisted raw-fac/${FALLBACK_DATE}/ (#1770)"
 fi
 if [ "${#UNENRICHED[@]}" -gt 0 ]; then
-  echo "::warning::${#UNENRICHED[@]} district(s) of ${DATE} have no Find-A-Club, fresh or persisted, and are published unenriched: ${UNENRICHED[*]}. The completeness gate holds the date against an enriched prod (#1770)"
+  echo "::warning::${#UNENRICHED[@]} district(s) of ${DATE} have no Find-A-Club, fresh or persisted, and are published unenriched: ${UNENRICHED[*]} (#1770)"
 fi
 
 {

@@ -522,8 +522,8 @@ jobs:
       # upload. Runs on every daily and fails closed (#1770, ADR-015 P2,
       # audit D-10): a district the fetch missed takes the most recent
       # persisted raw-fac/ before the date; one with no FAC at all is
-      # published unenriched, counted and flagged, and the completeness
-      # gate (#1761) holds the date against an enriched prod. A merge or
+      # published unenriched, counted and flagged (the completeness gate,
+      # #1761, holds it only where prod already has the date). A merge or
       # GCS failure fails the run before upload (D7). FAC-only clubs (ATOs /
       # prospective, #489) are counted but NOT merged into clubPerformance.
       # Logic and tests: scripts/pipeline/daily-fac-merge.sh,
