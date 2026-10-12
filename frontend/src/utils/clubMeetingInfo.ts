@@ -1,4 +1,6 @@
-import { normalizeClubId } from '@taverns-red/shared-contracts'
+import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
+
+export { toastmastersClubPageUrl }
 
 /**
  * #1783 — the club hero's "where it meets" line, built only from the
@@ -46,17 +48,6 @@ export interface ClubMeetingSource {
   meetingTime?: string
   allowsVirtualAttendance?: boolean
   coordinates?: { lat: number; lng: number }
-}
-
-/**
- * The club's public page on toastmasters.org. Verified live 2026-10-11:
- * `/Find-a-Club/<8-digit padded id>` resolves to the club; an unknown id
- * renders TI's "Club not found" page.
- */
-export function toastmastersClubPageUrl(clubId: string): string | null {
-  const id = normalizeClubId(clubId)
-  if (!/^\d{1,8}$/.test(id)) return null
-  return `https://www.toastmasters.org/Find-a-Club/${id.padStart(8, '0')}`
 }
 
 /** Trim and collapse internal runs of whitespace; empty → null. */

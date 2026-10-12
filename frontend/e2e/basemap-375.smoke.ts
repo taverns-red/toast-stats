@@ -4,8 +4,8 @@ import { resolve } from 'node:path'
 
 /* Self-hosted basemap at 375 px (#1786, ADR-016).
  *
- * The unlisted /dev/basemap page draws the Protomaps basemap through
- * MapLibre + the pmtiles protocol. Until Ron uploads the real archive
+ * The district club map (/district/61/map, #1784) draws the Protomaps
+ * basemap through MapLibre + the pmtiles protocol. Until Ron uploads the real archive
  * (operator step in the PR), every `*.pmtiles` request is answered from the
  * committed z0 fixture by a handler that honours HTTP Range exactly as GCS
  * and Cloud CDN do (206 + Content-Range, Accept-Ranges, a strong ETag). Set
@@ -109,7 +109,7 @@ async function openBasemap(
     }
   }, theme)
   await page.setViewportSize({ width: 375, height: 812 })
-  await page.goto('/dev/basemap')
+  await page.goto('/district/61/map')
   return { seen, errors }
 }
 
@@ -120,7 +120,9 @@ for (const theme of ['light', 'dark'] as const) {
     const { seen, errors } = await openBasemap(page, theme)
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
-    const region = page.getByRole('region', { name: 'World basemap' })
+    const region = page.getByRole('region', {
+      name: 'Club map, coloured by club health',
+    })
     await expect(region).toBeVisible()
     const canvas = region.locator('canvas.maplibregl-canvas')
     await expect(canvas).toBeVisible({ timeout: 15_000 })

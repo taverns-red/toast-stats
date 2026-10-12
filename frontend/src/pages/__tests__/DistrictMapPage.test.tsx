@@ -134,7 +134,7 @@ const DistrictMapPage = React.lazy(() => import('../DistrictMapPage'))
 
 const Search: React.FC = () => {
   const loc = useLocation()
-  return <output data-testid="search">{loc.search}</output>
+  return <div data-testid="search">{loc.search}</div>
 }
 
 const renderAt = (url: string) => {
@@ -161,8 +161,11 @@ const renderAt = (url: string) => {
   )
 }
 
+// The query string as a reader sees it ('+' and %XX decoded).
 const search = () =>
-  decodeURIComponent(screen.getByTestId('search').textContent ?? '')
+  decodeURIComponent(
+    (screen.getByTestId('search').textContent ?? '').replace(/\+/g, ' ')
+  )
 
 afterEach(() => {
   cleanup()

@@ -334,7 +334,7 @@ jobs:
         run: npx playwright test --config playwright.config.ts e2e/section-bar.smoke.ts
 
       # Self-hosted basemap (#1786, ADR-016). At 375, light and dark, on the
-      # unlisted /dev/basemap page: MapLibre draws the Protomaps archive read
+      # district club map (/district/61/map, #1784): MapLibre draws the Protomaps archive read
       # with HTTP range requests (served from the committed z0 fixture until
       # the real object is uploaded), inside the viewport with no sideways
       # scroll, ODbL credit visible and expanded, no CSP/worker error on the
@@ -344,6 +344,17 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/basemap-375.smoke.ts
+
+      # District club map (#1784). At 375 and 1280, light and dark, on real
+      # D61 data and the real basemap: the pin layer reports rendered pins,
+      # legend chips are >= 44px / 14px and write ?status=, tapping a pin
+      # opens the club summary (sheet at 375, side panel at 1280) with no
+      # contact details, and no CSP/worker/WebGL error. Both engines.
+      - name: Cross-engine district map guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/district-map.smoke.ts
 
       # District Overview hub (#1842, mobile review §5.5). At 375, light and
       # dark: 2x2 KPI tiles (block <= 300px, was 860px) starting at the hub's
