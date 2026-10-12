@@ -1,11 +1,18 @@
 import React from 'react'
 import { DistrictHubTiles } from './DistrictHubTiles'
 import { useMediaQuery } from '../hooks/useMediaQuery'
-import { DISTRICT_HUB_QUERY } from '../utils/districtHub'
+import { PHONE_SECTION_BAR_QUERY } from '../config/districtSections'
 
-/* `/district/:id` route fallback (#1901). On phones it paints the hub's tile
-   skeleton under an empty context-bar slot, laid out exactly as the page's
-   own loading state. Elsewhere it renders the generic district fallback.
+/* `/district/:id` route fallback (#1901). On upright phones it paints the
+   hub's tile skeleton under an empty context-bar slot, laid out exactly as
+   the page's own loading state. Elsewhere it renders the generic district
+   fallback.
+
+   Upright phones only (PHONE_SECTION_BAR_QUERY), not the whole hub layout:
+   there the section nav is the fixed bottom bar, so the hub sits directly
+   under the context bar. Short landscape phones also get the hub, but under
+   the 45 px section row, so tiles painted here would jump when the page
+   mounted.
 
    Why: the hub's LCP element is the static Net change caption in its loading
    skeleton. Behind a plain spinner fallback, that caption painted only once
@@ -29,8 +36,8 @@ export interface DistrictHubRouteFallbackProps {
 export function DistrictHubRouteFallback({
   fallback,
 }: DistrictHubRouteFallbackProps): React.JSX.Element {
-  const isHubLayout = useMediaQuery(DISTRICT_HUB_QUERY)
-  if (!isHubLayout) return <>{fallback}</>
+  const isUprightPhone = useMediaQuery(PHONE_SECTION_BAR_QUERY)
+  if (!isUprightPhone) return <>{fallback}</>
   return (
     <div className="district-detail-page-root">
       <div className="district-detail-page">
