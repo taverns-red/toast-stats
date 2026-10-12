@@ -62,11 +62,17 @@ export interface PriorityColumnsTableProps<Row, F extends string> {
   fullTableTitle: string
   /** URL param for the chosen metrics. Default 'cols'. */
   colsParam?: string
+  /** Let the identity wrap (long labels with a basis line) instead of
+   *  ellipsizing on one line. */
+  identityWraps?: boolean
+  /** Rows that belong to named groups get a full-width heading row
+   *  (`scope="colgroup"`) whenever the group changes. */
+  groupOf?: (row: Row) => { key: string; title: React.ReactNode }
 }
 
 /** Resolve `?cols=` to exactly two known, distinct metric ids, topping up
  *  from the defaults when the URL names fewer than two. */
-export function resolveColumns(
+function resolveColumns(
   raw: string | null,
   known: readonly string[],
   defaults: readonly [string, string]
@@ -83,7 +89,19 @@ export function resolveColumns(
   return [picked[0]!, picked[1]!]
 }
 
-export function PriorityColumnsTable<Row, F extends string>({
+/** ≥768 returns the caller's full table and touches nothing else — no URL
+ *  hooks, so a desktop render needs no Router (callers such as
+ *  ClubHistoryTable stay usable outside one). The phone view below reads
+ *  `?cols=` and does need a Router. */
+export function PriorityColumnsTable<Row, F extends string>(
+  props: PriorityColumnsTableProps<Row, F>
+): React.JSX.Element {
+  const isMobile = useIsMobile(768)
+  if (!isMobile) return <>{props.fullTable}</>
+  return <PhonePriorityColumns<Row, F> {...props} />
+}
+
+function PhonePriorityColumns<Row, F extends string>({
   label,
   rows,
   rowKey,
@@ -99,8 +117,9 @@ export function PriorityColumnsTable<Row, F extends string>({
   sheetRegionClassName,
   fullTableTitle,
   colsParam = 'cols',
+  identityWraps = false,
+  groupOf,
 }: PriorityColumnsTableProps<Row, F>): React.JSX.Element {
-  const isMobile = useIsMobile(768)
   const [searchParams, setSearchParams] = useSearchParams()
   const [sheetOpen, setSheetOpen] = useState(false)
   const chipsLabelId = useId()
@@ -135,8 +154,6 @@ export function PriorityColumnsTable<Row, F extends string>({
     },
     [chosen, colsParam, defaultMetricIds, setSearchParams]
   )
-
-  if (!isMobile) return <>{fullTable}</>
 
   const shown = chosen.map(id => metrics.find(m => m.id === id)!)
   const sortState = sort ?? { field: null, direction: 'asc' as SortDirection }
@@ -208,18 +225,38 @@ export function PriorityColumnsTable<Row, F extends string>({
           </tr>
         </thead>
         <tbody>
-          {rows.map(row => (
-            <tr key={rowKey(row)}>
-              <td className="priority-columns__identity">
-                {renderIdentity(row)}
-              </td>
-              {shown.map(m => (
-                <td key={m.id} className="priority-columns__metric">
-                  {m.render(row)}
+          {rows.flatMap((row, i) => {
+            const group = groupOf?.(row)
+            const prev = i > 0 && groupOf ? groupOf(rows[i - 1]!) : null
+            const heading =
+              group && group.key !== prev?.key ? (
+                <tr
+                  key={`group-${group.key}`}
+                  className="priority-columns__group"
+                >
+                  <th scope="colgroup" colSpan={3}>
+                    {group.title}
+                  </th>
+                </tr>
+              ) : null
+            const tr = (
+              <tr key={rowKey(row)}>
+                <td
+                  className={`priority-columns__identity${
+                    identityWraps ? ' priority-columns__identity--wrap' : ''
+                  }`}
+                >
+                  {renderIdentity(row)}
                 </td>
-              ))}
-            </tr>
-          ))}
+                {shown.map(m => (
+                  <td key={m.id} className="priority-columns__metric">
+                    {m.render(row)}
+                  </td>
+                ))}
+              </tr>
+            )
+            return heading ? [heading, tr] : [tr]
+          })}
         </tbody>
       </table>
 

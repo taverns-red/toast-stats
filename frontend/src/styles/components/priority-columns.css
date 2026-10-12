@@ -129,11 +129,51 @@
     white-space: nowrap;
   }
 
+  /* A value wider than its column wraps (at a space first, anywhere as a
+     last resort) rather than being clipped — data is never hidden. */
   .priority-columns__table td.priority-columns__metric {
     text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Opt-in for long identity labels (e.g. a metric name with its stated
+     basis underneath): wrap instead of ellipsizing. */
+  .priority-columns__identity--wrap {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* A wrapped identity label with a secondary line (e.g. a stated basis).
+     Secondary text stays 14px on the phone (review §7). */
+  .priority-columns__label {
+    display: block;
+    font-weight: 600;
+  }
+
+  .priority-columns__label--indented {
+    padding-left: 12px;
+    font-weight: 500;
+  }
+
+  .priority-columns__sub {
+    display: block;
+    margin-top: 2px;
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.35;
+  }
+
+  /* Full-width group heading row inside the priority table. */
+  .priority-columns__group th {
+    padding: 10px 6px 6px;
+    background-color: var(--surface-2);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    white-space: normal;
   }
 
   /* Identity links are the row's tap target. */

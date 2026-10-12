@@ -16,9 +16,11 @@ import { test, expect, type Page } from '@playwright/test'
 interface Route {
   path: string
   /** Accessible name of the priority table. */
-  table: string
-  /** A chip that is not a default, to prove swapping keeps the fit. */
-  swapChip: string
+  table: string | RegExp
+  /** Accessible name of the full table at ≥768, when it differs. */
+  wideTable?: string | RegExp
+  /** The chip to end on (the screenshot state); default: the last chip. */
+  swapChip?: string
   /** Rewrite the live competitive-awards.json so every district holds a
    *  tier (cycling all four). Early in a program year no district has one,
    *  so real data alone would never put a chip in the cell to measure. */
@@ -31,6 +33,24 @@ const ROUTES: readonly Route[] = [
     table: 'Region 05 district rankings',
     swapChip: 'Tier',
     forceTiers: true,
+  },
+  {
+    // The review's clipped-chip page ("President's Disting…", Lesson 134).
+    path: '/district/61/club/7238597/history',
+    table: /program-year history/,
+    wideTable: /performance by program year/,
+    swapChip: 'Members',
+  },
+  {
+    // Metrics x program years: the priority columns are years.
+    path: '/history',
+    table: 'Worldwide scoreboard by program year',
+    wideTable: /Worldwide totals/,
+  },
+  {
+    path: '/regions',
+    table: 'Region rankings',
+    swapChip: 'Dist. clubs',
   },
 ]
 
@@ -86,16 +106,16 @@ const unmask = (page: Page) =>
     content: 'html,body{overflow-x:visible !important}',
   })
 
-const measure = (page: Page, tableName: string) =>
-  page.evaluate(name => {
+const measure = (page: Page) =>
+  page.evaluate(() => {
     const vw = document.documentElement.clientWidth
     const table = document.querySelector(
-      `table[aria-label="${name}"]`
+      'table.priority-columns__table'
     ) as HTMLTableElement | null
     if (!table) return null
     const rect = (el: Element) => el.getBoundingClientRect()
     const fs = (el: Element) => parseFloat(getComputedStyle(el).fontSize)
-    const ths = [...table.querySelectorAll('th')]
+    const ths = [...table.querySelectorAll('thead th')]
     const targets = [
       ...document.querySelectorAll(
         '.priority-columns__chip, .priority-columns__full, .priority-columns__identity a, .priority-columns__table th button'
@@ -148,8 +168,12 @@ const measure = (page: Page, tableName: string) =>
       ),
       chipClips: chipClips.length,
       chips: table.querySelectorAll('.priority-columns__tier').length,
+      // Data is never hidden: a metric cell's content must fit its box.
+      clippedCells: [...table.querySelectorAll('td.priority-columns__metric')]
+        .filter(td => td.scrollWidth > td.clientWidth + 1)
+        .map(td => td.textContent?.trim()),
     }
-  }, tableName)
+  })
 
 for (const theme of THEMES) {
   for (const width of PHONES) {
@@ -169,13 +193,17 @@ for (const theme of THEMES) {
         const chips = (
           await page.locator('.priority-columns__chip').allTextContents()
         ).filter(c => c !== r.swapChip)
-        for (const step of ['default', ...chips, r.swapChip]) {
+        for (const step of [
+          'default',
+          ...chips,
+          ...(r.swapChip ? [r.swapChip] : []),
+        ]) {
           if (step !== 'default')
             await page.getByRole('button', { name: step, exact: true }).click()
           // Awards resolve separately from rankings; wait for the chips.
           if (step === 'Tier' && r.forceTiers)
             await page.locator('.priority-columns__tier').first().waitFor()
-          const m = await measure(page, r.table)
+          const m = await measure(page)
           expect(m, `${r.path} ${step}`).not.toBeNull()
           expect(m!.columns, `${r.path} ${step} columns`).toBe(3)
           expect(
@@ -194,6 +222,7 @@ for (const theme of THEMES) {
           expect(m!.tinyTargets, `${r.path} ${step} <44px targets`).toEqual([])
           expect(m!.smallText, `${r.path} ${step} <14px text`).toEqual([])
           expect(m!.chipClips, `${r.path} ${step} clipped chips`).toBe(0)
+          expect(m!.clippedCells, `${r.path} ${step} clipped cells`).toEqual([])
           expect(
             m!.truncatedHeaders,
             `${r.path} ${step} ellipsized headers`
@@ -233,14 +262,14 @@ for (const theme of THEMES) {
       for (const r of ROUTES) {
         await page.goto(r.path, { waitUntil: 'networkidle', timeout: 60_000 })
         await page
-          .getByRole('table', { name: r.table })
+          .getByRole('table', { name: r.wideTable ?? r.table })
           .first()
           .waitFor({ state: 'visible' })
         expect(await page.locator('.priority-columns__table').count()).toBe(0)
         expect(await page.locator('.priority-columns__chip').count()).toBe(0)
         if (process.env['SHOTS_DIR']) {
           await page
-            .getByRole('table', { name: r.table })
+            .getByRole('table', { name: r.wideTable ?? r.table })
             .first()
             .scrollIntoViewIfNeeded()
           await page.screenshot({
