@@ -4510,9 +4510,23 @@
     border-bottom: 1px solid var(--line);
   }
 
+  /* The Filter & sort trigger shares the sticky row (#1836), so the phone
+     toolbar is one 44px row: search grows, the trigger keeps its width. */
+  .clubs-mobile-sticky-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .clubs-mobile-sticky-search .clubs-search {
+    flex: 1 1 auto;
+    min-width: 0;
     margin-bottom: 0;
     max-width: none;
+  }
+
+  .clubs-mobile-sticky-search .clubs-filters-trigger {
+    flex: 0 0 auto;
   }
 
   .clubs-mobile-sticky-search .clubs-search__input {
