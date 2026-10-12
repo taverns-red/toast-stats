@@ -1,5 +1,50 @@
 # Changelog
 
+## [3.27.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.26.1...frontend-v3.27.0) (2026-10-12)
+
+
+### Features
+
+* **club:** Compliance panel + Awards/Coach stat cells ([#1790](https://github.com/taverns-red/toast-stats/issues/1790)) ([#1855](https://github.com/taverns-red/toast-stats/issues/1855)) ([10f140c](https://github.com/taverns-red/toast-stats/commit/10f140c62957695c7ef8af360e9266f0312a8bb5))
+* **club:** Education panel from the reports ledger (Legacy/Pathways/DTM) ([#1790](https://github.com/taverns-red/toast-stats/issues/1790)) ([#1826](https://github.com/taverns-red/toast-stats/issues/1826)) ([a04643c](https://github.com/taverns-red/toast-stats/commit/a04643cde72a2467da938efdd8f279780786ffa4))
+* **club:** hero where-it-meets line + Contact on toastmasters.org, 3.2 layout order ([#1783](https://github.com/taverns-red/toast-stats/issues/1783)) ([#1823](https://github.com/taverns-red/toast-stats/issues/1823)) ([b923d30](https://github.com/taverns-red/toast-stats/commit/b923d30c9c5eb96b123d607f3722dcef00267631))
+* **mobile:** action list and club mini-list use compact rows below 768 ([#1833](https://github.com/taverns-red/toast-stats/issues/1833)) ([#1871](https://github.com/taverns-red/toast-stats/issues/1871)) ([5261942](https://github.com/taverns-red/toast-stats/commit/5261942e30ebb95e182cc5c00eb12ab35b49560b))
+* **mobile:** area page gets the phone context bar ([#1831](https://github.com/taverns-red/toast-stats/issues/1831)) ([#1866](https://github.com/taverns-red/toast-stats/issues/1866)) ([1f4da98](https://github.com/taverns-red/toast-stats/commit/1f4da9879f77980f0e957ea65eba12f07f0c34be))
+* **mobile:** bottom section bar — 4 routes + More sheet on district routes below 768 ([#1832](https://github.com/taverns-red/toast-stats/issues/1832)) ([#1864](https://github.com/taverns-red/toast-stats/issues/1864)) ([10a9376](https://github.com/taverns-red/toast-stats/commit/10a9376eed1411301537b5f463095e043e38d242))
+* **mobile:** club history page gets the phone context bar ([#1831](https://github.com/taverns-red/toast-stats/issues/1831)) ([#1868](https://github.com/taverns-red/toast-stats/issues/1868)) ([f6dd19f](https://github.com/taverns-red/toast-stats/commit/f6dd19fec0235d7f399b26c34063dd93f895a903))
+* **mobile:** club page gets the phone context bar ([#1831](https://github.com/taverns-red/toast-stats/issues/1831)) ([#1867](https://github.com/taverns-red/toast-stats/issues/1867)) ([fbda9f8](https://github.com/taverns-red/toast-stats/commit/fbda9f8737a030c169ec38e55af2498fe13a01f7))
+* **mobile:** clubs-world bottom section bar — 3 routes + More below 768 ([#1832](https://github.com/taverns-red/toast-stats/issues/1832)) ([#1873](https://github.com/taverns-red/toast-stats/issues/1873)) ([11562cc](https://github.com/taverns-red/toast-stats/commit/11562cc74e10a70a470696bf55ed0073fb996349))
+* **mobile:** clubs-world pages get the phone context bar ([#1831](https://github.com/taverns-red/toast-stats/issues/1831)) ([#1870](https://github.com/taverns-red/toast-stats/issues/1870)) ([1512937](https://github.com/taverns-red/toast-stats/commit/151293771b1a2a588b1d4de64fc54a288383ac32))
+* **mobile:** division page gets the phone context bar ([#1831](https://github.com/taverns-red/toast-stats/issues/1831)) ([#1863](https://github.com/taverns-red/toast-stats/issues/1863)) ([74e0dd5](https://github.com/taverns-red/toast-stats/commit/74e0dd5565576a7d1eac67e7116e688a98888214))
+* **mobile:** divisions list as compact rows below 768 ([#1833](https://github.com/taverns-red/toast-stats/issues/1833)) ([#1861](https://github.com/taverns-red/toast-stats/issues/1861)) ([670a89a](https://github.com/taverns-red/toast-stats/commit/670a89a8c0e68b67df0a8fe1ca8f501a269c7a2e))
+* **mobile:** MobileRowList + grouped clubs list below 768 ([#1833](https://github.com/taverns-red/toast-stats/issues/1833)) ([#1859](https://github.com/taverns-red/toast-stats/issues/1859)) ([d53375a](https://github.com/taverns-red/toast-stats/commit/d53375ab16709ec9249699bd00d1a11e36661adb))
+* **mobile:** one-row phone toolbar on the clubs list — trigger beside search, preset in the sheet ([#1836](https://github.com/taverns-red/toast-stats/issues/1836)) ([#1876](https://github.com/taverns-red/toast-stats/issues/1876)) ([e5f2014](https://github.com/taverns-red/toast-stats/commit/e5f20142aefe44a808689e446359f1a0fd660ff8))
+* **mobile:** phone context bar + bottom sheet replace the district header stack below 768 ([#1831](https://github.com/taverns-red/toast-stats/issues/1831)) ([#1860](https://github.com/taverns-red/toast-stats/issues/1860)) ([8c58183](https://github.com/taverns-red/toast-stats/commit/8c58183146e1d3ca01d0eac5c596232f8e8c28b9))
+* **mobile:** PriorityColumnsTable primitive + region table adoption ([#1834](https://github.com/taverns-red/toast-stats/issues/1834)) ([#1875](https://github.com/taverns-red/toast-stats/issues/1875)) ([526d76a](https://github.com/taverns-red/toast-stats/commit/526d76a1f20f241e73092e27016d41d451e4c97d))
+* **mobile:** progress summary collapses per division below 768 ([#1862](https://github.com/taverns-red/toast-stats/issues/1862)) ([#1865](https://github.com/taverns-red/toast-stats/issues/1865)) ([2f660ac](https://github.com/taverns-red/toast-stats/commit/2f660ac43f37ef95facb14c78c8b8bf81c452100))
+* **mobile:** race table uses compact rows below 768 ([#1833](https://github.com/taverns-red/toast-stats/issues/1833)) ([#1872](https://github.com/taverns-red/toast-stats/issues/1872)) ([33f5add](https://github.com/taverns-red/toast-stats/commit/33f5add2a2955b723cebdcf8d1c19ead38e20ca0))
+* **mobile:** region page gets the phone context bar ([#1831](https://github.com/taverns-red/toast-stats/issues/1831)) ([#1869](https://github.com/taverns-red/toast-stats/issues/1869)) ([4c970bc](https://github.com/taverns-red/toast-stats/commit/4c970bc45db541d352a0c73b8be64a7209621354))
+* **mobile:** shared Filter & sort bottom sheet, adopted on the clubs list ([#1836](https://github.com/taverns-red/toast-stats/issues/1836)) ([#1874](https://github.com/taverns-red/toast-stats/issues/1874)) ([033122f](https://github.com/taverns-red/toast-stats/commit/033122f421aa0faca15ef68a864b334c56a77dee))
+
+
+### Bug Fixes
+
+* **mobile:** district KPI strip in flow below 768, never pinned over the Overview ([#1828](https://github.com/taverns-red/toast-stats/issues/1828)) ([#1848](https://github.com/taverns-red/toast-stats/issues/1848)) ([024e114](https://github.com/taverns-red/toast-stats/commit/024e11427f0fe17f18125522de1be03587001043))
+* **mobile:** district KPI strip pins only from 1024, in flow on tablets ([#1828](https://github.com/taverns-red/toast-stats/issues/1828)) ([#1857](https://github.com/taverns-red/toast-stats/issues/1857)) ([826e529](https://github.com/taverns-red/toast-stats/commit/826e529e0897268e1f20284f8a9f2eccc61d3e9b))
+* **mobile:** section nav centres the active link, with edge fade cues ([#1829](https://github.com/taverns-red/toast-stats/issues/1829)) ([#1849](https://github.com/taverns-red/toast-stats/issues/1849)) ([fd98361](https://github.com/taverns-red/toast-stats/commit/fd98361c0115164206ebbee8a89dc7fbd10140b0))
+* **shell:** restore the CommandPalette CSS comment opener ([#1851](https://github.com/taverns-red/toast-stats/issues/1851)) ([#1854](https://github.com/taverns-red/toast-stats/issues/1854)) ([75fe7a6](https://github.com/taverns-red/toast-stats/commit/75fe7a6b7cd2ca21fd34c7ec17f62ddd4841ebe7))
+
+
+### Performance
+
+* **mobile:** club route drops club-index.json; landing reads v1/dates.json ([#1830](https://github.com/taverns-red/toast-stats/issues/1830)) ([#1827](https://github.com/taverns-red/toast-stats/issues/1827)) ([#1850](https://github.com/taverns-red/toast-stats/issues/1850)) ([230c8fe](https://github.com/taverns-red/toast-stats/commit/230c8fe720e3b3379e71a805fd438f275d7eaa07))
+* **mobile:** GA after load, charts chunk route-only + critical-path CI check ([#1830](https://github.com/taverns-red/toast-stats/issues/1830)) ([#1827](https://github.com/taverns-red/toast-stats/issues/1827)) ([#1853](https://github.com/taverns-red/toast-stats/issues/1853)) ([50fdd33](https://github.com/taverns-red/toast-stats/commit/50fdd33fbc7858b5ee4c1bb6ebe3eaa5b34c24c3))
+
+
+### Dependencies
+
+* **deps:** bump the patch-and-minor group across 1 directory with 5 updates ([#1656](https://github.com/taverns-red/toast-stats/issues/1656)) ([3b055a7](https://github.com/taverns-red/toast-stats/commit/3b055a78e72a5cf4c79463ca956a0f731b31f6d2))
+
 ## [3.26.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.26.0...frontend-v3.26.1) (2026-10-07)
 
 

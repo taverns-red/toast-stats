@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.11.3](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.11.2...collector-cli-v1.11.3) (2026-10-12)
+
+
+### Bug Fixes
+
+* **awards:** date-guard upsertYearSummary so a mid-year rebuild keeps the year-end summary ([#1764](https://github.com/taverns-red/toast-stats/issues/1764)) ([#1760](https://github.com/taverns-red/toast-stats/issues/1760)) ([#1774](https://github.com/taverns-red/toast-stats/issues/1774)) ([dca489f](https://github.com/taverns-red/toast-stats/commit/dca489f9eefa9125f3bbc2aec596ec8a64f9a0d4))
+* **club-trends:** cap preloaded club trends at the snapshot date ([#1759](https://github.com/taverns-red/toast-stats/issues/1759)) ([#1760](https://github.com/taverns-red/toast-stats/issues/1760)) ([#1776](https://github.com/taverns-red/toast-stats/issues/1776)) ([9e70cf1](https://github.com/taverns-red/toast-stats/commit/9e70cf18ce928197a090e63dc679abb4cf309d62))
+* **collector-cli:** refuse date-level artifacts on a district shortfall ([#1756](https://github.com/taverns-red/toast-stats/issues/1756)) ([#1778](https://github.com/taverns-red/toast-stats/issues/1778)) ([edfb56c](https://github.com/taverns-red/toast-stats/commit/edfb56ca57fd5d6468a748f741a09bd09f494c2a))
+* **pipeline:** fail per-date modes on failed dates unless allow_partial; logger context; counters ([#1708](https://github.com/taverns-red/toast-stats/issues/1708)) ([#1713](https://github.com/taverns-red/toast-stats/issues/1713)) ([f46b475](https://github.com/taverns-red/toast-stats/commit/f46b47536daa4ad513384d57602e5bad90c43476))
+* **pipeline:** peel stacked gzip layers off synced stores and fail on store errors ([#1702](https://github.com/taverns-red/toast-stats/issues/1702)) ([#1703](https://github.com/taverns-red/toast-stats/issues/1703)) ([fd158a2](https://github.com/taverns-red/toast-stats/commit/fd158a28c0277a3cf76afad8d8acc4edac4a0dff))
+* **prune:** layerScope note says rank-history is derived, not daily (D5) ([#1749](https://github.com/taverns-red/toast-stats/issues/1749)) ([#1752](https://github.com/taverns-red/toast-stats/issues/1752)) ([a3b21dc](https://github.com/taverns-red/toast-stats/commit/a3b21dcaf41ce5b1793e8d1f618055a2eb38e45b))
+
+
+### Performance
+
+* **pipeline:** value gate fetches only hash-differing dates ([#1730](https://github.com/taverns-red/toast-stats/issues/1730)) ([#1737](https://github.com/taverns-red/toast-stats/issues/1737)) ([b6ab9fd](https://github.com/taverns-red/toast-stats/commit/b6ab9fd6bad9b7e1b854ba97735df93dfe6e712a))
+
+
+### Documentation
+
+* **pipeline:** store-contract table; order-independent ClubTrendsStore identity; rank-history derived ([#1741](https://github.com/taverns-red/toast-stats/issues/1741)) ([#1745](https://github.com/taverns-red/toast-stats/issues/1745)) ([2d06256](https://github.com/taverns-red/toast-stats/commit/2d06256e9afae3a11273fc270c7924c4d7e3c25b))
+
+
+### Dependencies
+
+* **deps:** bump the patch-and-minor group across 1 directory with 5 updates ([#1656](https://github.com/taverns-red/toast-stats/issues/1656)) ([3b055a7](https://github.com/taverns-red/toast-stats/commit/3b055a78e72a5cf4c79463ca956a0f731b31f6d2))
+
 ## [1.11.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.11.1...collector-cli-v1.11.2) (2026-10-07)
 
 
