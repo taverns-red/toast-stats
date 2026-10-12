@@ -126,7 +126,7 @@ const TrendTooltip = ({
       : undefined
 
   return (
-    <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
+    <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-[12.5rem] sm:max-w-[16rem]">
       <ul className="space-y-1">
         {lines.map(({ s, p }) => (
           <li
