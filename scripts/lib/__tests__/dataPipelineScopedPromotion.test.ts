@@ -62,6 +62,16 @@ describe('prodWriteGuard sees the manifest promoter (#1763)', () => {
   })
 })
 
+describe('topLevelConjuncts handles nested groups (#1763)', () => {
+  it('sees a top-level clause after a nested ((a && b) || (c)) group', () => {
+    const expr = `((a == 'x' && b == 'y') || (c != '' && c != '0')) && ${SKIP_CLAUSE_SAME_JOB}`
+    expect(topLevelConjuncts(expr)).toContain(SKIP_CLAUSE_SAME_JOB)
+    expect(
+      topLevelConjuncts(`((a) && ${SKIP_CLAUSE_SAME_JOB}) || b`)
+    ).not.toContain(SKIP_CLAUSE_SAME_JOB)
+  })
+})
+
 describe('data-pipeline promotion_scope input (#1763)', () => {
   it('is a choice of prefix|manifest, default prefix', () => {
     const input = workflow.on.workflow_dispatch.inputs.promotion_scope

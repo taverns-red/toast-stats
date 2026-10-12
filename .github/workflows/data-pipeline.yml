@@ -134,6 +134,18 @@ on:
         required: false
         type: boolean
         default: false
+      promotion_scope:
+        description: >-
+          How promotion copies staging to prod (#1763, ADR-015 step 5). prefix: rsync v1/, snapshots/,
+          time-series/, config/ wholesale (today's default). manifest: copy only this run's manifest
+          objects, per gate-passed date; a held date holds itself and the globals. Every run prints the
+          manifest plan either way.
+        required: false
+        type: choice
+        options:
+          - prefix
+          - manifest
+        default: prefix
 
 # Prevent overlapping pipeline runs
 concurrency:
@@ -189,7 +201,9 @@ jobs:
       # BEFORE the sidecars landed. `place-reports` mirrors them explicitly.
       # Keyed off the step's outcome, not a re-statement of its gates, so a
       # content-gate hold (#1715) or skip_promotion (#1754) also reads false.
-      promoted: ${{ steps.promote.outcome == 'success' }}
+      # A scoped promotion (#1763) counts only when it copied everything the
+      # run planned (no held date, globals promoted).
+      promoted: ${{ steps.promote.outcome == 'success' || steps.promotemanifest.outputs.complete == 'true' }}
       # 'true' | 'false' — a staging-only proof run (#1754). Downstream jobs
       # gate their prod writes on it.
       skip_promotion: ${{ steps.mode.outputs.skip_promotion }}
@@ -268,7 +282,12 @@ jobs:
           echo "dry_run=${DRY_RUN:-false}" >> "$GITHUB_OUTPUT"
           echo "reconcile_prod=${RECONCILE_PROD:-false}" >> "$GITHUB_OUTPUT"
           echo "skip_promotion=${SKIP_PROMOTION:-false}" >> "$GITHUB_OUTPUT"
+          # #1763: prefix (whole-prefix rsync) until PR 2 retires it; a
+          # schedule carries no inputs and so stays on prefix.
+          PROMOTION_SCOPE="${{ inputs.promotion_scope || 'prefix' }}"
+          echo "promotion_scope=${PROMOTION_SCOPE}" >> "$GITHUB_OUTPUT"
           echo "## 🔧 Pipeline Mode: \`${MODE}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Promotion scope: \`${PROMOTION_SCOPE}\`" >> "$GITHUB_STEP_SUMMARY"
           if [ "${SKIP_PROMOTION:-false}" = "true" ]; then
             echo "- 🧪 **skip_promotion**: staging-only run — nothing will be written to production." >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -2036,6 +2055,26 @@ jobs:
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
         run: npx tsx scripts/date-completeness-gate.ts
 
+      # Scoped promotion plan (#1763, ADR-015 P6) — the dry run, in every
+      # mode that promotes and under skip_promotion too, whichever
+      # promotion_scope is set: it prints exactly what a scoped promotion of
+      # this run would copy (one `copy` line per object, plus every `hold`
+      # and `skip` with its reason) and writes nothing. Logic and design
+      # decisions: scripts/lib/manifestPromotion.ts. Informational here, so a
+      # failure warns instead of failing the run; the execute step below
+      # fails closed on the same inputs.
+      - name: Plan scoped promotion (#1763)
+        id: promoteplan
+        if: steps.mode.outputs.mode != 'prune'
+        env:
+          COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
+        run: |
+          if npx tsx scripts/promote-run-manifest.ts --dry-run > /tmp/manifest-promotion-plan.tsv; then
+            cat /tmp/manifest-promotion-plan.tsv
+          else
+            echo "::warning::Scoped promotion plan could not be built (see the log above)"
+          fi
+
       # ── skip_promotion (#1754) ──
       # A staging-only proof run stops here: the three gates above have run
       # and their verdicts are reported below, but every step that writes to
@@ -2056,8 +2095,11 @@ jobs:
             echo "- Value gate: **${{ steps.valuediff.outputs.value_promote }}**"
             echo "- Content gate (#1715): **${{ steps.contentgate.outputs.content_promote }}**"
             echo "- Completeness gate (#1761): **${{ steps.completenessgate.outputs.completeness_promote }}**"
+            echo "- Scoped promotion plan (#1763): **${{ steps.promoteplan.outputs.objects_planned }}** object(s) would be copied; held dates: ${{ steps.promoteplan.outputs.held_dates }}; globals: ${{ steps.promoteplan.outputs.globals_promoted }} (full plan in the 'Plan scoped promotion' log)"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Whole-prefix promotion (promotion_scope=prefix, the default). PR 2 of
+      # #1763 deletes this step once a scoped promoting run has been reviewed.
       - name: Promote staging to production
         id: promote
         if: >-
@@ -2066,6 +2108,7 @@ jobs:
           && steps.contentgate.outputs.content_promote == 'true'
           && steps.completenessgate.outputs.completeness_promote == 'true'
           && steps.mode.outputs.mode != 'prune'
+          && steps.mode.outputs.promotion_scope != 'manifest'
           && steps.mode.outputs.skip_promotion != 'true'
         run: |
           echo "Promoting staging → production..."
@@ -2094,6 +2137,27 @@ jobs:
           echo "## ✅ Promotion Complete" >> "$GITHUB_STEP_SUMMARY"
           echo "Staging data synced to production bucket." >> "$GITHUB_STEP_SUMMARY"
 
+      # Scoped promotion (promotion_scope=manifest; #1763, ADR-015 P6). Copies
+      # this run's manifest objects under the promoted prefixes, server side,
+      # dates → globals → v1/ entry points. The count, value and content gates
+      # are run-level and must pass; the completeness gate is applied PER
+      # DATE inside the promoter (a held date holds itself and the globals,
+      # the other dates promote), so it only has to have produced a verdict.
+      # Additive: nothing in prod is deleted. Exits 1 on a failed copy.
+      - name: Promote run manifest to production (#1763)
+        id: promotemanifest
+        if: >-
+          steps.diff.outputs.promote == 'true'
+          && steps.valuediff.outputs.value_promote == 'true'
+          && steps.contentgate.outputs.content_promote == 'true'
+          && steps.completenessgate.outputs.completeness_promote != ''
+          && steps.mode.outputs.mode != 'prune'
+          && steps.mode.outputs.promotion_scope == 'manifest'
+          && steps.mode.outputs.skip_promotion != 'true'
+        env:
+          COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
+        run: npx tsx scripts/promote-run-manifest.ts --execute
+
       # Purge the Cloud CDN edge so freshly-promoted data is served immediately
       # (#1294). Without this, cdn.taverns.red keeps the previous objects until
       # their max-age TTL expires (~1h), making a successful promotion look
@@ -2101,12 +2165,16 @@ jobs:
       # hiccup, and the edge expires on its own TTL as a fallback. Note this
       # purges the EDGE only — an already-open browser tab still honours the
       # response's max-age until it reloads.
+      # A scoped promotion (#1763) that held a date still copied the others:
+      # purge after any scoped copy too.
       - name: Invalidate CDN cache after promotion (#1294)
         if: >-
-          steps.diff.outputs.promote == 'true'
+          ((steps.diff.outputs.promote == 'true'
           && steps.valuediff.outputs.value_promote == 'true'
           && steps.contentgate.outputs.content_promote == 'true'
-          && steps.completenessgate.outputs.completeness_promote == 'true'
+          && steps.completenessgate.outputs.completeness_promote == 'true')
+          || (steps.promotemanifest.outputs.objects_copied != ''
+          && steps.promotemanifest.outputs.objects_copied != '0'))
           && steps.mode.outputs.mode != 'prune'
           && steps.mode.outputs.skip_promotion != 'true'
         continue-on-error: true
@@ -2137,7 +2205,12 @@ jobs:
           echo "- Value gate: **${{ steps.valuediff.outputs.value_promote }}**" >> "$GITHUB_STEP_SUMMARY"
           echo "- Content gate (#1715): **${{ steps.contentgate.outputs.content_promote }}**" >> "$GITHUB_STEP_SUMMARY"
           echo "- Completeness gate (#1761): **${{ steps.completenessgate.outputs.completeness_promote }}**" >> "$GITHUB_STEP_SUMMARY"
-          echo "Production data is **unchanged**. Review the diffs above." >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.promotemanifest.outputs.objects_copied }}" != "" ] \
+            && [ "${{ steps.promotemanifest.outputs.objects_copied }}" != "0" ]; then
+            echo "Scoped promotion (#1763) copied **${{ steps.promotemanifest.outputs.objects_copied }}** object(s) for the passing date(s) **${{ steps.promotemanifest.outputs.promoted_dates }}**; held date(s) **${{ steps.promotemanifest.outputs.held_dates }}** and the globals are unchanged in production." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Production data is **unchanged**. Review the diffs above." >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "For a reviewed re-derive, re-run with **allow_value_changes = true**." >> "$GITHUB_STEP_SUMMARY"
           echo "For a reviewed district/date REDUCTION (e.g. a TI consolidation), re-run with **allow_subtractive = true**." >> "$GITHUB_STEP_SUMMARY"
 
