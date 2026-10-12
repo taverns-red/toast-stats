@@ -60,13 +60,40 @@ describe('section-bar.css (#1832)', () => {
     expect(rule('.section-bar + *')).toMatch(/margin-top:\s*0/)
   })
 
-  it('items are ≥44px targets with a ≥12px label under the icon', () => {
+  it('items are ≥44px targets with a ≥14px label under the icon', () => {
     const link = rule('.section-bar__link')
     expect(link).toMatch(/min-height:\s*44px/)
+    expect(link).toMatch(/min-width:\s*44px/)
     expect(link).toMatch(/flex-direction:\s*column/)
+    // Review §7: text ≥14px; 12px is for uppercase eyebrows only, and these
+    // labels are neither uppercase nor eyebrows (#1832, Ron 2026-10-12).
     const label = rule('.section-bar__label')
     const px = Number(label.match(/font-size:\s*(\d+)px/)?.[1])
-    expect(px).toBeGreaterThanOrEqual(12)
+    expect(px).toBeGreaterThanOrEqual(14)
+  })
+
+  it('separates the tap targets by ≥8px and never truncates a label', () => {
+    // Review §7: ≥8px between targets. Equal-width items (flex-basis 0)
+    // ellipsize "Divisions" and "Distinguished" at 320 once the gap and the
+    // 14px type land, so items size to their label and share the rest.
+    const gap = Number(
+      rule('.section-bar__list').match(/(?:column-)?gap:\s*(\d+)px/)?.[1]
+    )
+    expect(gap).toBeGreaterThanOrEqual(8)
+    const item = rule('.section-bar__item')
+    expect(item).toMatch(/flex:\s*1\s+1\s+auto/)
+    expect(item).not.toMatch(/min-width:\s*0/)
+    expect(rule('.section-bar__label')).not.toMatch(/text-overflow:\s*ellipsis/)
+  })
+
+  it('reserves the bold width so the active item does not move its neighbours', () => {
+    // A hidden bold copy of the label (data-label) sizes the label; its
+    // alt text is empty so the accessible name stays the visible label.
+    const after = rule('.section-bar__label::after')
+    expect(after).toMatch(/content:\s*attr\(data-label\)\s*\/\s*''/)
+    expect(after).toMatch(/font-weight:\s*700/)
+    expect(after).toMatch(/visibility:\s*hidden/)
+    expect(after).toMatch(/height:\s*0/)
   })
 
   it('marks the active item with a filled indicator and weight, not colour alone', () => {
