@@ -17,9 +17,11 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const read = (p: string) => readFileSync(join(__dirname, p), 'utf-8')
+// The phone block may be a query list: `(max-width: 767px), (orientation:
+// landscape) and (max-height: 500px)` also gives short landscape the bar (#1847).
 const below768 = (css: string) =>
   (
-    css.match(/@media\s*\(max-width:\s*767px\)\s*\{[\s\S]*?\n {2}\}/g) ?? []
+    css.match(/@media\s*\(max-width:\s*767px\)[^{]*\{[\s\S]*?\n {2}\}/g) ?? []
   ).join('\n')
 
 const page = read('../pages/DistrictsPage.tsx')
