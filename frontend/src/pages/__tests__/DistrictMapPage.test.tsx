@@ -9,7 +9,7 @@
  * lists, the empty state and the list view.
  */
 import React, { Suspense } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
   cleanup,
   fireEvent,
@@ -131,6 +131,17 @@ vi.mock('../../hooks/useDistrictAnalytics', async importOriginal => {
 })
 
 const DistrictMapPage = React.lazy(() => import('../DistrictMapPage'))
+
+// Compile the page's module graph (and its on-demand chunks) once, up front:
+// otherwise the first test's 1 s findBy window measures Vite's transform of
+// the whole graph, not the page (cold-start, not a slow render).
+beforeAll(async () => {
+  await Promise.all([
+    import('../DistrictMapPage'),
+    import('../../components/map/pinTerritory'),
+    import('../../components/map/MapClubLists'),
+  ])
+}, 60_000)
 
 const Search: React.FC = () => {
   const loc = useLocation()
