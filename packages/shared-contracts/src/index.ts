@@ -359,3 +359,21 @@ export {
 // Counted education award (#1592, #1599) — Pathways L1–L5 + DTM. The collector
 // counts distinct members per club by it; the frontend counts awards by it.
 export { isCountedEducationAward } from './education/countedEducationAward.js'
+
+// Education ledger history — raw-education-ledger/<PY>/district_<id>.json
+// (#1802): the archive ledger with Date kept per month, tagged by program.
+export {
+  educationAwardProgram,
+  type EducationAwardProgram,
+} from './education/educationAwardProgram.js'
+export {
+  EDUCATION_LEDGER_HISTORY_VERSION,
+  EDUCATION_LEDGER_HISTORY_PREFIX,
+  EducationAwardProgramSchema,
+  EducationLedgerMonthRecordSchema,
+  EducationLedgerHistoryFileSchema,
+  educationLedgerHistoryObjectPath,
+  ledgerRecordsThroughMonth,
+  type EducationLedgerMonthRecord,
+  type EducationLedgerHistoryFile,
+} from './schemas/education-ledger-history.schema.js'
