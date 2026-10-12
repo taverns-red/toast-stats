@@ -1,6 +1,6 @@
 # ADR-016: Self-hosted Protomaps basemap, served by HTTP range requests from our bucket and Cloud CDN
 
-- **Status:** Proposed (2026-10-12). The tile source was decided by Ron on 2026-10-11 (feature design §7.4). The extent, the upload and the CDN check await Ron.
+- **Status:** Accepted (2026-10-12, Ron). Ron decided the tile source on 2026-10-11 (feature design §7.4). On 2026-10-12 he approved the rest: the world z0–10 extent, the runner-built upload workflow, and the map-route budget.
 - **Date:** 2026-10-12
 - **Issue:** #1786 (epic #1781). Consumers: #1784 (district map), #1808 (region explorer), #1809 (world explorer). The land and water colours come from #1785 (`docs/design/map-pin-colour-modes.md` §6.3).
 - **Evidence:** every number below was measured or read on 2026-10-12. The commands are in [the runbook](../runbooks/basemap.md) and the PR body.
@@ -63,7 +63,11 @@ Constraints this decision has to satisfy:
   - pmtiles + basemaps ≈ 12 KB gzip, included in the chunk;
   - landing critical path unchanged: `check-critical-path` OK, 14 chunks, 174 KB gzip, `forbidden: []`.
 
-  The route's main-thread JS (≈ 292 KB plus the page) is just inside #1784's 300 KB budget. That leaves #1784 about 8 KB for its own code, so its pins and clustering must stay lean (MapLibre's built-in GeoJSON clustering adds no dependency). **Whether the worker counts needs Ron's decision.** #1784's AC says "route JS ≤ 300 KB gz incl. MapLibre", and the 144 KB gzip worker is MapLibre code. If it counts, the route is at about 436 KB, over budget before any pins. It cannot be removed: MapLibre parses tiles only in a worker, and the worker module is the published build. It is fetched in parallel when the map is created, runs off the main thread, and does not block interaction or parsing on the main thread. The proposal is to split the budget into main-thread route JS ≤ 300 KB gzip (about 8 KB left for #1784) and the MapLibre worker ≤ 150 KB gzip, both recorded in the #1784 PR. The alternative is a single on-the-wire budget of about 460 KB for map routes.
+  - **Map-route budget (Ron, 2026-10-12): main-thread JS ≤ 300 KB gzip and the MapLibre worker ≤ 150 KB gzip, on map routes only, enforced in CI.**
+    - `scripts/check-map-route-budget.ts` runs after the critical-path check in `lighthouse-ci.yml`. The logic is in `scripts/lib/mapRouteBudget.ts`.
+    - It charges each map route for the lazy chunks reachable from the chunk that lazy-imports `BasemapMap`. Chunks already on every route's critical path are not charged twice.
+    - Measured on this PR: 285 KiB main thread (`BasemapPreviewPage` + `BasemapMap` + `maplibre`) and 141 KiB worker. That leaves #1784 about 15 KiB of main-thread room, so its pins and clustering must stay lean. MapLibre's built-in GeoJSON clustering adds no dependency.
+    - The worker cannot be removed. MapLibre parses tiles only in a worker, and the worker module is the published build. It is fetched in parallel when the map is created and runs off the main thread.
 
 - **Code splitting.** `vite.config.ts` puts `maplibre-gl`, `@maplibre/*`, `@mapbox/*`, `pmtiles` and `@protomaps/*` in a named `maplibre` group. `ROUTE_ONLY_CHUNK_PREFIXES` (`scripts/lib/criticalPath.ts`) now lists `maplibre-`, so CI fails if any route preloads it. `LazyBasemapMap` (a dynamic import) is the only way in. Its fallback is a same-size land-coloured box, so the chunk arriving shifts nothing (Lesson 107).
 - **Worker.** MapLibre 6 resolves its worker relative to its own `import.meta.url`, and a bundle breaks that resolution. `BasemapMap` imports `maplibre-gl/dist/maplibre-gl-worker.mjs?url` and calls `setWorkerUrl`. The worker is then a same-origin, hashed asset loaded as a module worker. With no `worker-src` in our CSP, the browser falls back to `script-src 'self'`, which already allows it. **The CSP does not change.** The basemap smoke on the deployed preview fails on any CSP or worker console error.

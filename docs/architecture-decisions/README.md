@@ -32,7 +32,7 @@ Each ADR follows this template:
 | [009](009-full-range-rederive-promote-semantics.md)                | Full-range re-derive promote semantics (value-aware gate)                   | Accepted (D2 superseded by ADR-015)                                | May 2026  |
 | [010](010-scraped-record-contract-matches-fac-enriched-reality.md) | ScrapedRecordSchema matches FAC-enriched reality (extend, don't move)       | Accepted                                                           | June 2026 |
 | [015](015-canonical-pipeline-modes-as-parameters.md)               | One canonical pipeline: modes as parameters, run-scoped gates and promotion | Accepted (supersedes ADR-009 D2)                                   | Oct 2026  |
-| [016](016-self-hosted-protomaps-basemap.md)                        | Self-hosted Protomaps basemap via range requests on our bucket and CDN      | Proposed (tile source decided by Ron 2026-10-11)                   | Oct 2026  |
+| [016](016-self-hosted-protomaps-basemap.md)                        | Self-hosted Protomaps basemap via range requests on our bucket and CDN      | Accepted                                                           | Oct 2026  |
 
 ## When to Write an ADR
 

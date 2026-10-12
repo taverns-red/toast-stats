@@ -45,6 +45,12 @@ jobs:
         # from index.html without a dynamic import — every route pays for them.
         run: npx tsx scripts/check-critical-path.ts frontend/dist
 
+      - name: Map-route budget check
+        # #1786 / ADR-016 D2 (Ron, 2026-10-12): on map routes, main-thread JS
+        # must stay at or under 300 KB gzip and the MapLibre worker at or
+        # under 150 KB gzip.
+        run: npx tsx scripts/check-map-route-budget.ts frontend/dist
+
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12
         with:

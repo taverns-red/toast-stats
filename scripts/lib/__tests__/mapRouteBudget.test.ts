@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { gzipSync } from 'node:zlib'
+import { randomBytes } from 'node:crypto'
 import { MAP_ROUTE_BUDGET, mapRouteBudgetReport } from '../mapRouteBudget'
 
 /* #1786 — map-route budget, decided by Ron 2026-10-12: 300 KB gzip of
@@ -37,15 +38,9 @@ function build(sizes: {
   }
 }
 
-// Incompressible-enough payloads: random bytes as latin1 so gzip ≈ raw.
+// Incompressible payloads: random bytes, so gzip size ≈ raw size.
 function noise(n: number): string {
-  let s = ''
-  let x = 12345
-  for (let i = 0; i < n; i++) {
-    x = (x * 1103515245 + 12345) & 0x7fffffff
-    s += String.fromCharCode(33 + (x % 90))
-  }
-  return s
+  return randomBytes(n).toString('latin1')
 }
 
 describe('MAP_ROUTE_BUDGET', () => {
@@ -91,7 +86,7 @@ describe('mapRouteBudgetReport', () => {
       worker: 10,
     })
     const big = (n: string) =>
-      n === 'maplibre-CviuKSG-.js' ? noise(320 * 1024) : read(n)
+      n === 'maplibre-CviuKSG-.js' ? noise(310 * 1024) : read(n)
     const r = mapRouteBudgetReport(html, names, big)
     expect(r.violations).toEqual([
       expect.stringMatching(
@@ -108,7 +103,7 @@ describe('mapRouteBudgetReport', () => {
       worker: 10,
     })
     const big = (n: string) =>
-      n === 'maplibre-gl-worker-DxGNRm0a.mjs' ? noise(160 * 1024) : read(n)
+      n === 'maplibre-gl-worker-DxGNRm0a.mjs' ? noise(155 * 1024) : read(n)
     const r = mapRouteBudgetReport(html, names, big)
     expect(r.violations).toEqual([expect.stringMatching(/worker .* > 153600/)])
   })
