@@ -41,6 +41,11 @@ describe('district subpages CLS gate (#1837)', () => {
       }
     })
 
+    it('covers both phone clubs-list shapes: grouped and flat (#1833)', () => {
+      expect(spec).toContain(`'clubs'`)
+      expect(spec).toMatch(/'clubs\?sort=name&dir=desc'/)
+    })
+
     it('samples a phone and a desktop width', () => {
       expect(spec).toMatch(/width:\s*375/)
       expect(spec).toMatch(/width:\s*1280/)

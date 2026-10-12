@@ -46,6 +46,10 @@ const SUBPAGES = [
   'analytics',
   'rankings',
   'action-list',
+  // The phone clubs list has two shapes (#1833): grouped by division in the
+  // default view, one flat list once the user re-sorts or filters. The bare
+  // `clubs` entry above is the grouped view; this is the flat one.
+  'clubs?sort=name&dir=desc',
 ] as const
 
 /* Lighthouse's mobile profile, applied through CDP. */
