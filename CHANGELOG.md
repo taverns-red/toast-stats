@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.50.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.49.0...toast-stats-v2.50.0) (2026-10-12)
+
+
+### Features
+
+* **collector:** dated education ledger history backfill 2003-04 → 2018-19, staging only ([#1802](https://github.com/taverns-red/toast-stats/issues/1802)) ([#1908](https://github.com/taverns-red/toast-stats/issues/1908)) ([c62b07f](https://github.com/taverns-red/toast-stats/commit/c62b07fd6639a5515173e0ca83882ed8895ce245))
+* **mobile:** club grid — names on tap in a sheet, 44px tiles, 14px legend ([#1845](https://github.com/taverns-red/toast-stats/issues/1845)) ([#1902](https://github.com/taverns-red/toast-stats/issues/1902)) ([e05978b](https://github.com/taverns-red/toast-stats/commit/e05978b419b2ff6a2999eb35583e750f64b555f5))
+* **mobile:** landing first screen — search first, orientation in the context sheet, edge-aware chip fades ([#1846](https://github.com/taverns-red/toast-stats/issues/1846)) ([#1909](https://github.com/taverns-red/toast-stats/issues/1909)) ([984fa73](https://github.com/taverns-red/toast-stats/commit/984fa73cf4497e6bae4ac856c635ea82a7131d9f))
+* **mobile:** safe-area + landscape — viewport-fit=cover, inset-padded chrome, dvh sheets, phone chrome in landscape ([#1847](https://github.com/taverns-red/toast-stats/issues/1847)) ([#1907](https://github.com/taverns-red/toast-stats/issues/1907)) ([3f00a94](https://github.com/taverns-red/toast-stats/commit/3f00a947a4935d706c226ce221327e2062f0391e))
+
+
+### Bug Fixes
+
+* **a11y:** AA contrast for chart legends and the dark projected pill at 768/1280 ([#1904](https://github.com/taverns-red/toast-stats/issues/1904)) ([#1914](https://github.com/taverns-red/toast-stats/issues/1914)) ([38b4236](https://github.com/taverns-red/toast-stats/commit/38b4236b2d5e4380d7fac5b06f09ee93f3bc50ef))
+* **cls:** division/area pages keep their chrome while loading ([#1896](https://github.com/taverns-red/toast-stats/issues/1896)) ([#1915](https://github.com/taverns-red/toast-stats/issues/1915)) ([7fb331b](https://github.com/taverns-red/toast-stats/commit/7fb331b6e28a71bc4a26c94bd2822df6e9ef8f92))
+
+
+### Performance
+
+* **club:** paint the club hero from the district snapshot, load analytics after it ([#1901](https://github.com/taverns-red/toast-stats/issues/1901)) ([#1910](https://github.com/taverns-red/toast-stats/issues/1910)) ([beb4110](https://github.com/taverns-red/toast-stats/commit/beb411097e9a83f0928f08da173e45bfddd5169f))
+* **mobile:** load gtag after the first screen settles; 5 KB favicon set ([#1906](https://github.com/taverns-red/toast-stats/issues/1906)) ([#1916](https://github.com/taverns-red/toast-stats/issues/1916)) ([da6a566](https://github.com/taverns-red/toast-stats/commit/da6a566d05f8a210cdbacc816b685dfa205c36df))
+* **mobile:** self-host the web fonts, drop the Google Fonts chain ([#1905](https://github.com/taverns-red/toast-stats/issues/1905)) ([#1918](https://github.com/taverns-red/toast-stats/issues/1918)) ([aa310d5](https://github.com/taverns-red/toast-stats/commit/aa310d59f8e68f439beaac68388545f924a65d35))
+
+
+### Tests
+
+* **e2e:** kpi-tier-labels drives the hub sheets and ?py= ([#1903](https://github.com/taverns-red/toast-stats/issues/1903)) ([#1913](https://github.com/taverns-red/toast-stats/issues/1913)) ([174183b](https://github.com/taverns-red/toast-stats/commit/174183b7095f0455ce6a78144c492f4edce4ca82))
+
 ## [2.49.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.48.0...toast-stats-v2.49.0) (2026-10-12)
 
 

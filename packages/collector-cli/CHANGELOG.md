@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.11.3...collector-cli-v1.12.0) (2026-10-12)
+
+
+### Features
+
+* **collector:** dated education ledger history backfill 2003-04 → 2018-19, staging only ([#1802](https://github.com/taverns-red/toast-stats/issues/1802)) ([#1908](https://github.com/taverns-red/toast-stats/issues/1908)) ([c62b07f](https://github.com/taverns-red/toast-stats/commit/c62b07fd6639a5515173e0ca83882ed8895ce245))
+
 ## [1.11.3](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.11.2...collector-cli-v1.11.3) (2026-10-12)
 
 
