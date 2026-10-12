@@ -51,11 +51,11 @@ describe('LandingContextBar (#1846)', () => {
     expect(screen.queryByTestId('context-bar-back')).toBeNull()
   })
 
-  it('moves the orientation copy and the lede into the sheet', async () => {
+  it('moves the orientation copy into the sheet (the lede stays on the page)', async () => {
     renderBar()
     await userEvent.click(screen.getByTestId('context-bar-chip'))
     const sheet = screen.getByRole('dialog')
-    expect(sheet).toHaveTextContent(/compare district performance/i)
+    expect(sheet).not.toHaveTextContent(/compare district performance/i)
     expect(sheet).toHaveTextContent(
       'Each row below is one of the 94 Toastmasters districts.'
     )

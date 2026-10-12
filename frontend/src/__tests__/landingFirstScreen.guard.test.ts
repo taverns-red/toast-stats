@@ -31,6 +31,21 @@ describe('landing context bar (#1846)', () => {
     expect(page.match(/<LandingContextBar\b/g) ?? []).toHaveLength(2)
   })
 
+  it('keeps the one-line lede visible below 768 (the static LCP candidate)', () => {
+    // Measured on the PR preview: with the whole header hidden, LCP moved
+    // from the shell's orientation <p> (~1.65s) to post-data content
+    // (~2.47s, against the 2.5s gate). The lede paints with the shell, so
+    // it holds LCP early and names the page whose H1 is visually hidden.
+    expect(
+      page.match(
+        /districts-page-header__lede districts-page-header__lede--keep/g
+      ) ?? []
+    ).toHaveLength(2)
+    expect(contextBarCss).toMatch(
+      /\.context-bar\s*~\s*\.districts-page-header\s+\.districts-page-header__lede--keep\s*\{[^}]*display:\s*block/
+    )
+  })
+
   it('hides the orientation paragraph below 768 once the bar is present', () => {
     expect(contextBarCss).toMatch(
       /\.context-bar\s*~\s*\.districts-page-header\s+\.districts-page-header__orientation/
