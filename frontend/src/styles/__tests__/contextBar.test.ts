@@ -13,6 +13,7 @@ const read = (p: string) => readFileSync(resolve(__dirname, p), 'utf-8')
 const css = read('../components/context-bar.css')
 const indexCss = read('../../index.css')
 const clubHistoryCss = read('../components/club-history.css')
+const clubsRaceCss = read('../components/clubs-race.css')
 
 /** Body of the first `@media (<query>) { … }` block matching `query`. */
 const mediaBlocks = (src: string, query: RegExp): string[] =>
@@ -122,6 +123,29 @@ describe('context-bar.css (#1831)', () => {
     expect(below).toMatch(
       /\.context-bar\s*~\s*\.club-history-page__header\s+\.club-history-page__title[^{]*\{[^}]*clip/
     )
+  })
+
+  it('collapses the clubs-world header after a bar below 768 (rules live in the components-layer file)', () => {
+    const below = mediaBlocks(clubsRaceCss, /max-width:\s*767px/).join('\n')
+    expect(below).toMatch(
+      /\.clubs-page:has\(>\s*\.context-bar\)[^{]*\{[^}]*padding-top:\s*0/
+    )
+    for (const part of [
+      'placeholder-page__eyebrow',
+      'placeholder-page__body',
+      'districts-page-header__actions',
+    ]) {
+      expect(below, part).toMatch(
+        new RegExp(
+          `\\.context-bar\\s*~\\s*\\.clubs-page__header\\s+\\.${part}[\\s\\S]*?display:\\s*none`
+        )
+      )
+    }
+    expect(below).toMatch(
+      /\.context-bar\s*~\s*\.clubs-page__header\s+\.placeholder-page__title[^{]*\{[^}]*clip/
+    )
+    // The page's phone gutter is 16px below 640, so the bar bleeds 16px there.
+    expect(clubsRaceCss).toMatch(/--context-bar-bleed:\s*16px/)
   })
 
   it('gives sheet selects a 16px font (no iOS focus zoom)', () => {
