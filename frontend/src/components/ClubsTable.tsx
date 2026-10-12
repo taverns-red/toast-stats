@@ -231,6 +231,13 @@ interface ClubsTableProps {
   openGroups?: readonly string[] | undefined
   /** Called with the next open-group set when a division header is tapped. */
   onOpenGroupsChange?: ((next: string[]) => void) | undefined
+  /**
+   * The context bar's toolbar slot (#1912). In short landscape the table
+   * portals its search + Filter & sort into it, renders the phone rows, and
+   * moves the total + exports below them, so the first row clears 200px.
+   * Omitted (or outside short landscape) → the usual layout.
+   */
+  compactToolbarTarget?: HTMLElement | null | undefined
 }
 
 /** Signed net change with a true minus sign; `null` when the base is unknown. */
