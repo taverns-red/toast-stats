@@ -56,6 +56,90 @@ function toDivisionRow(
   }
 }
 
+/* Loading skeleton (#1837). It must occupy the loaded list's box, because the
+ * page renders the static DDP criteria directly below it: a short spinner
+ * panel put the criteria at the top and the list landed above it (CLS 0.20 at
+ * 375px). Built from the loaded state's own structure (Lesson 158) — the
+ * MobileRowList classes and row CSS below 768, card-sized panels above — so
+ * row heights, gaps and borders come from the same rules as the real list.
+ *
+ * Only the row COUNT is pinned: districts carry 6–9 divisions (prod 2026-10:
+ * D42 6, D61 8, D80 9), so 8 rows lands within a row or two of every one.
+ * Desktop cards are 471–563px each and every district has several, so two
+ * card-shaped panels (header + five area-row bars) push everything below
+ * them past a 900px fold just as the real list does. The CLS smoke
+ * (e2e/district-subpages-cls.smoke.ts) re-verifies this on every PR. */
+const SKELETON_DIVISION_ROWS = 8
+const SKELETON_DIVISION_CARDS = 2
+
+const skeletonBar = 'animate-pulse bg-gray-200 rounded-sm'
+
+const DivisionPerformanceCardsSkeleton: React.FC<{ isMobile: boolean }> = ({
+  isMobile,
+}) => (
+  <div
+    className="space-y-6"
+    role="status"
+    aria-label="Loading division performance"
+    data-testid="division-cards-skeleton"
+  >
+    <span className="sr-only">Loading division performance data...</span>
+    {isMobile ? (
+      <div className="mobile-row-list" aria-hidden="true">
+        <ul className="mobile-row-list__rows">
+          {Array.from({ length: SKELETON_DIVISION_ROWS }, (_, i) => (
+            <li key={i} data-skeleton-row="">
+              <div className="mobile-row">
+                <span className="mobile-row__body">
+                  <span className="mobile-row__line1">
+                    <span className="mobile-row__title">
+                      <span className={`${skeletonBar} inline-block w-24`}>
+                        &nbsp;
+                      </span>
+                    </span>
+                    <span className="mobile-row__chip">
+                      <span className="mobile-chip">
+                        <span className={`${skeletonBar} inline-block w-16`}>
+                          &nbsp;
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                  <span className="mobile-row__line2">
+                    <span className="mobile-row__meta">
+                      <span className={`${skeletonBar} inline-block w-48`}>
+                        &nbsp;
+                      </span>
+                    </span>
+                  </span>
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <div className="space-y-6" aria-hidden="true">
+        {Array.from({ length: SKELETON_DIVISION_CARDS }, (_, i) => (
+          <div key={i} className="redesign-panel" data-skeleton-card="">
+            <div className={`${skeletonBar} h-6 w-1/4 mb-4`} />
+            <div className={`${skeletonBar} h-4 w-1/2 mb-6`} />
+            {Array.from({ length: 5 }, (_, r) => (
+              <div key={r} className={`${skeletonBar} h-10 w-full mb-3`} />
+            ))}
+          </div>
+        ))}
+      </div>
+    )}
+    {/* The summary footer panel ("Showing N divisions with M areas"). */}
+    <div className="redesign-panel" aria-hidden="true">
+      <p className="font-tm-body text-center" style={{ fontSize: '14px' }}>
+        <span className={`${skeletonBar} inline-block w-48`}>&nbsp;</span>
+      </p>
+    </div>
+  </div>
+)
+
 /**
  * Props for the DivisionPerformanceCards component
  */
@@ -124,21 +208,7 @@ export const DivisionPerformanceCards: React.FC<
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className="redesign-panel">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-tm-loyal-blue mb-4"></div>
-            <p
-              className="font-tm-body text-gray-600"
-              style={{ fontSize: '14px' }}
-            >
-              Loading division performance data...
-            </p>
-          </div>
-        </div>
-      </div>
-    )
+    return <DivisionPerformanceCardsSkeleton isMobile={isMobile} />
   }
 
   // Error state - invalid or missing data

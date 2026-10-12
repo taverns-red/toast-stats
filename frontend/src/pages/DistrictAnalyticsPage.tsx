@@ -20,7 +20,7 @@ import { DistrictSubnav } from '../components/DistrictSubnav'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { EducationLevelsCard } from '../components/EducationLevelsCard'
 import { EducationAwardsLeaderboard } from '../components/EducationAwardsLeaderboard'
-import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import { ErrorDisplay } from '../components/ErrorDisplay'
 import ErrorBoundary from '../components/ErrorBoundary'
 
@@ -47,7 +47,8 @@ const DistrictAnalyticsPage: React.FC = () => {
     d => d.id === districtId
   )
 
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId || '')
+  const { data: cachedDatesData, isPending: isDatesPending } =
+    useDistrictCachedDates(districtId || '')
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
@@ -114,6 +115,16 @@ const DistrictAnalyticsPage: React.FC = () => {
     hasValidDates ? districtId || null : null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined
+  )
+
+  // #1837: the Top Growth slot is reserved from first paint until analytics
+  // settle — including the date-index window, where the query is disabled and
+  // reports `isLoading: false`. Rendering nothing there let the education
+  // card (a separate query) paint at the top and the Top Growth block land
+  // above it (CLS 0.24 at 375px, 0.30 at 1280px).
+  const isAnalyticsPending = isDistrictSlotPending(
+    { hasData: !!analytics, isError: !!isAnalyticsError },
+    { hasValidDates, datesSettled: !isDatesPending }
   )
 
   const { data: districtStatistics } = useDistrictStatistics(
@@ -231,7 +242,9 @@ const DistrictAnalyticsPage: React.FC = () => {
                 showDetails={true}
               />
             ) : (
-              isLoadingAnalytics && <LoadingSkeleton variant="card" />
+              isAnalyticsPending && (
+                <TopGrowthClubs topGrowthClubs={[]} isLoading />
+              )
             )}
 
             {/* Education-levels rollup (#426) — historically part of the

@@ -122,6 +122,27 @@ describe('DivisionPerformanceCards < 768 px — division rows (#1833)', () => {
     ).not.toBeInTheDocument()
   })
 
+  // #1837: the loading skeleton is the row list's own structure, so the DDP
+  // criteria below it start where they will sit once the rows land.
+  it('loads as MobileRowList-shaped placeholder rows, not a spinner panel', () => {
+    const { container } = render(
+      <DivisionPerformanceCards
+        districtSnapshot={undefined}
+        isLoading
+        snapshotTimestamp=""
+        districtId="61"
+      />
+    )
+    expect(
+      screen.getByRole('status', { name: 'Loading division performance' })
+    ).toBeInTheDocument()
+    expect(
+      container.querySelectorAll('.mobile-row-list__rows > li > .mobile-row')
+        .length
+    ).toBe(8)
+    expect(screen.queryAllByTestId('mobile-row')).toHaveLength(0)
+  })
+
   it('keeps the desktop cards at ≥ 768 px', () => {
     stubMobile(false)
     renderCards()

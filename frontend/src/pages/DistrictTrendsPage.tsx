@@ -31,6 +31,8 @@ import {
   LazyYearOverYearComparison as YearOverYearComparison,
 } from '../components/LazyCharts'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { TrendChartSkeleton } from '../components/TrendChartSkeleton'
+import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
 
@@ -57,7 +59,8 @@ const DistrictTrendsPage: React.FC = () => {
     d => d.id === districtId
   )
 
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId || '')
+  const { data: cachedDatesData, isPending: isDatesPending } =
+    useDistrictCachedDates(districtId || '')
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
@@ -114,11 +117,14 @@ const DistrictTrendsPage: React.FC = () => {
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
 
-  const { data: aggregatedAnalytics, isLoading: isLoadingAggregated } =
-    useAggregatedAnalytics(
-      hasValidDates ? districtId || null : null,
-      effectiveEndDate ?? undefined
-    )
+  const {
+    data: aggregatedAnalytics,
+    isLoading: isLoadingAggregated,
+    isError: isAggregatedError,
+  } = useAggregatedAnalytics(
+    hasValidDates ? districtId || null : null,
+    effectiveEndDate ?? undefined
+  )
 
   const { data: timeSeries } = useTimeSeries(
     hasValidDates ? districtId || null : null,
@@ -148,15 +154,34 @@ const DistrictTrendsPage: React.FC = () => {
     ? rosterDiscontinuity.message
     : null
 
-  const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
-    usePaymentsTrend(
-      hasValidDates ? districtId || null : null,
-      undefined,
-      effectiveEndDate ?? undefined,
-      effectiveProgramYear ?? undefined,
-      performanceTargets ?? null,
-      rosterDiscontinuity
-    )
+  const {
+    data: paymentsTrendData,
+    isLoading: isLoadingPaymentsTrend,
+    error: paymentsTrendError,
+  } = usePaymentsTrend(
+    hasValidDates ? districtId || null : null,
+    undefined,
+    effectiveEndDate ?? undefined,
+    effectiveProgramYear ?? undefined,
+    performanceTargets ?? null,
+    rosterDiscontinuity
+  )
+
+  // #1837: every chart slot is reserved from first paint until its query
+  // settles — including the date-index window, where the queries are
+  // disabled and report `isLoading: false`, so the old `isLoading &&` arms
+  // painted nothing. Skeletons take each chart's loaded shape
+  // (TrendChartSkeleton): the payments chart used to land first under a
+  // short membership placeholder and get pushed off-screen (0.05 at 1280).
+  const trendDates = { hasValidDates, datesSettled: !isDatesPending }
+  const isAggregatedPending = isDistrictSlotPending(
+    { hasData: !!aggregatedAnalytics, isError: !!isAggregatedError },
+    trendDates
+  )
+  const isPaymentsPending = isDistrictSlotPending(
+    { hasData: !!paymentsTrendData, isError: !!paymentsTrendError },
+    trendDates
+  )
 
   // #875 (epic #876, CC-3): the membership/payments charts are multi-series
   // Recharts that smear at 375px. Derive the collapsed-mobile sparkline series
@@ -266,8 +291,8 @@ const DistrictTrendsPage: React.FC = () => {
                 </div>
               </ChartSparklineExpand>
             ) : (
-              isLoadingAggregated && (
-                <LoadingSkeleton variant="chart" height="400px" />
+              isAggregatedPending && (
+                <TrendChartSkeleton label="membership trend" statTiles={4} />
               )
             )}
 
@@ -358,8 +383,12 @@ const DistrictTrendsPage: React.FC = () => {
                 </div>
               </ChartSparklineExpand>
             ) : (
-              isLoadingPaymentsTrend && (
-                <LoadingSkeleton variant="chart" height="450px" />
+              isPaymentsPending && (
+                <TrendChartSkeleton
+                  label="payments trend"
+                  statTiles={3}
+                  plotHeight={350}
+                />
               )
             )}
 
@@ -387,7 +416,7 @@ const DistrictTrendsPage: React.FC = () => {
                 />
               </div>
             ) : (
-              isLoadingAggregated && (
+              isAggregatedPending && (
                 <LoadingSkeleton variant="chart" height="300px" />
               )
             )}
