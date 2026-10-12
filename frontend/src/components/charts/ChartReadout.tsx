@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import type { TooltipContentProps, TooltipProps } from 'recharts'
+import type { TooltipContentProps } from 'recharts'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { parseLocalDate } from '../../utils/dateFormatting'
 
 /* Tap-to-pin chart readout (#1835, mobile epic #1827 Phase 1 item 13).
 
@@ -38,10 +39,10 @@ export interface ChartReading {
 }
 
 type TooltipValue = number | string
-type TooltipOverride = Pick<
-  TooltipProps<TooltipValue, string>,
-  'trigger' | 'content'
->
+/** What the readout overrides on a chart's <Tooltip>: nothing on hover
+ *  devices; a click trigger and the reporter content without hover. */
+type TooltipOverride =
+  Record<string, never> | { trigger: 'click'; content: React.ReactElement }
 
 export interface ChartReadoutHandle {
   /** True on a device without hover — the readout line is in use. */
@@ -49,7 +50,7 @@ export interface ChartReadoutHandle {
   /** The pinned point, or null before the first tap / key press. */
   reading: ChartReading | null
   /** Spread onto the chart's <Tooltip> after its own props. */
-  tooltipProps: Partial<TooltipOverride>
+  tooltipProps: TooltipOverride
 }
 
 const readingKey = (r: ChartReading) =>
@@ -92,7 +93,7 @@ const ReadoutReporter: React.FC<
 export function useChartReadout(): ChartReadoutHandle {
   const touch = useMediaQuery(TOUCH_QUERY)
   const [reading, setReading] = useState<ChartReading | null>(null)
-  const tooltipProps = useMemo<Partial<TooltipOverride>>(
+  const tooltipProps = useMemo<TooltipOverride>(
     () =>
       touch
         ? {
@@ -109,11 +110,21 @@ export interface ChartReadoutProps {
   readout: ChartReadoutHandle
   /** Formats the x label (e.g. a date) for the line. */
   labelFormatter?: (label: string) => string
+  /** Formats each series name (e.g. a district id → its name). */
+  nameFormatter?: (name: string) => string
   /** Formats each series value. Default: locale number. */
   valueFormatter?: (value: number | string, name: string) => string
   /** Shown before the first tap. */
   hint?: string
 }
+
+/** A snapshot date (YYYY-MM-DD) as the readout shows it: "Oct 10, 2026". */
+export const formatReadoutDate = (iso: string): string =>
+  parseLocalDate(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 
 const defaultValue = (v: number | string) =>
   typeof v === 'number' ? v.toLocaleString('en-US') : v
@@ -122,6 +133,7 @@ const defaultValue = (v: number | string) =>
 export const ChartReadout: React.FC<ChartReadoutProps> = ({
   readout,
   labelFormatter,
+  nameFormatter,
   valueFormatter,
   hint = 'Tap the chart to read a value',
 }) => {
@@ -146,7 +158,7 @@ export const ChartReadout: React.FC<ChartReadoutProps> = ({
                 aria-hidden="true"
                 style={row.color ? { backgroundColor: row.color } : undefined}
               />
-              {row.name}{' '}
+              {nameFormatter ? nameFormatter(row.name) : row.name}{' '}
               <span className="chart-readout__value">
                 {valueFormatter
                   ? valueFormatter(row.value, row.name)

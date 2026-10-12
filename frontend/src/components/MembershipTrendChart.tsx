@@ -19,6 +19,7 @@ import {
   pointNearDay,
   type TrendSeries,
 } from './membershipTrendChartData'
+import { useChartReadout, ChartReadout } from './charts/ChartReadout'
 
 /** A named set of data points for one program year */
 export interface YearTrendData {
@@ -160,6 +161,9 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   priorYearTrends,
   programYear,
 }) => {
+  // Tap-to-pin readout on devices without hover (#1835) — before early returns.
+  const readout = useChartReadout()
+
   if (isLoading) {
     return <LoadingSkeleton variant="chart" />
   }
@@ -442,6 +446,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                     currentDates={currentDates}
                   />
                 }
+                {...readout.tooltipProps}
               />
               <Legend
                 wrapperStyle={{ fontSize: '12px' }}
@@ -518,6 +523,10 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
           </ResponsiveContainer>
         </div>
       </div>
+      <ChartReadout
+        readout={readout}
+        labelFormatter={day => `Day ${Number(day) + 1} of the program year`}
+      />
 
       {/* Legend for highlights */}
       {periods.length > 0 && (

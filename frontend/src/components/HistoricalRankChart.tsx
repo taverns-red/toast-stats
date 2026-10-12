@@ -12,6 +12,11 @@ import {
 import type { RankHistoryResponse } from '../types/districts'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
+import {
+  useChartReadout,
+  ChartReadout,
+  formatReadoutDate,
+} from './charts/ChartReadout'
 
 interface HistoricalRankChartProps {
   data: RankHistoryResponse[]
@@ -94,6 +99,8 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   selectedProgramYear,
 }) => {
   const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate')
+  // Tap-to-pin readout on devices without hover (#1835) — before early returns.
+  const readout = useChartReadout()
   // Responsive tick interval for mobile (#237) — must be called before early returns
   const tickInterval = useResponsiveTickInterval(
     data?.reduce((count, d) => count + d.history.length, 0) ?? 0
@@ -343,6 +350,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 content={
                   <CustomTooltip data={data} selectedMetric={selectedMetric} />
                 }
+                {...readout.tooltipProps}
               />
               <Legend
                 wrapperStyle={{ fontSize: '12px' }}
@@ -378,6 +386,13 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
           </ResponsiveContainer>
         </div>
       </div>
+      <ChartReadout
+        readout={readout}
+        labelFormatter={formatReadoutDate}
+        nameFormatter={id =>
+          data.find(d => d.districtId === id)?.districtName ?? id
+        }
+      />
       <p id="rank-chart-desc" className="sr-only">
         {chartDescription}
       </p>
