@@ -148,24 +148,41 @@ describe('Redesign token system (#353)', () => {
     })
   })
 
-  describe('font loading via index.html', () => {
+  describe('font loading (self-hosted since #1905)', () => {
+    // #1905 moved the families from fonts.googleapis.com to same-origin woff2
+    // declared in styles/tokens/web-fonts.css. Those are variable faces with a
+    // weight RANGE, so a required weight must fall inside the latin face's.
+    const latinWeightRange = (family: string): [number, number] | null => {
+      const path = resolve(FRONTEND_SRC, 'styles/tokens/web-fonts.css')
+      if (!existsSync(path)) return null
+      for (const m of readFileSync(path, 'utf-8').matchAll(
+        /@font-face\s*\{([^}]*)\}/g
+      )) {
+        const body = m[1] ?? ''
+        if (!body.includes(`font-family: '${family}'`)) continue
+        if (!/unicode-range:\s*U\+0000-00FF/.test(body)) continue
+        const w = body.match(/font-weight:\s*(\d+)(?:\s+(\d+))?;/)
+        if (w) return [Number(w[1]), Number(w[2] ?? w[1])]
+      }
+      return null
+    }
+    const expectWeights = (family: string, weights: number[]) => {
+      const range = latinWeightRange(family)
+      expect(range).toBeTruthy()
+      const [lo, hi] = range ?? [0, 0]
+      for (const w of weights) {
+        expect(w).toBeGreaterThanOrEqual(lo)
+        expect(w).toBeLessThanOrEqual(hi)
+      }
+    }
+
     it('loads Montserrat with weights 500/600/700/800 (handoff requirement)', () => {
-      const html = readRoot('index.html')
-      // Handoff requires Montserrat 500;600;700;800 (currently only 500;700;900).
       // The redesign needs 600 (tabs/labels) and 800 (h1/brand mark) specifically.
-      const montserrat = html.match(/family=Montserrat:wght@([0-9;]+)/g)
-      expect(montserrat).toBeTruthy()
-      const allWeights = (montserrat ?? []).join(';')
-      expect(allWeights).toContain('600')
-      expect(allWeights).toContain('800')
+      expectWeights('Montserrat', [500, 600, 700, 800])
     })
 
     it('loads Source Sans 3 with weight 500 in addition to existing weights', () => {
-      const html = readRoot('index.html')
-      const sourceSans = html.match(/family=Source\+Sans\+3:wght@([0-9;]+)/g)
-      expect(sourceSans).toBeTruthy()
-      const allWeights = (sourceSans ?? []).join(';')
-      expect(allWeights).toContain('500')
+      expectWeights('Source Sans 3', [400, 500, 600, 700])
     })
 
     it('declares the --mono token but defers JetBrains Mono font preload (cost + CLS)', () => {
