@@ -52,6 +52,7 @@ import {
   type MobileRowGroup,
 } from './MobileRowList'
 import { StatusChip } from './StatusChip'
+import { ClubTrendSparkline, formatSignedNet } from './ClubTrendSparkline'
 import {
   getClubHealthStatusLabel,
   getClubHealthStatusShortLabel,
@@ -245,11 +246,7 @@ interface ClubsTableProps {
 
 /** Signed net change with a true minus sign; `null` when the base is unknown. */
 function formatNet(club: ProcessedClubTrend): string | null {
-  if (club.membershipBase == null) return null
-  const net = club.latestMembership - club.membershipBase
-  if (net > 0) return `+${net}`
-  if (net < 0) return `\u2212${Math.abs(net)}`
-  return '\u00b10'
+  return club.netChange == null ? null : formatSignedNet(club.netChange)
 }
 
 /**
@@ -734,6 +731,17 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         // Two numbers fit beside the chip at 375 px; net change rides in the
         // accessible name (and on the club page).
         meta: `${memberText} · ${club.latestDcpGoals}/10 DCP`,
+        // The row's trend (#1792): the same 60×16 sparkline as the desktop
+        // Trend column, with the signed net under it. The link's accessible
+        // name already says it, so the visual pair is hidden from AT.
+        trailing: (
+          <span className="clubs-row-trend" aria-hidden="true">
+            <ClubTrendSparkline club={club} />
+            <span className="clubs-row-trend__net tabular-nums">
+              {net ?? '\u2014'}
+            </span>
+          </span>
+        ),
         ariaLabel: `${club.clubName} — ${getClubHealthStatusLabel(
           club.currentStatus
         )}, ${memberText}${net ? `, net ${net}` : ''}, ${
@@ -1302,7 +1310,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           sort={{
             options: COLUMN_CONFIGS.filter(c => c.sortable).map(c => ({
               value: c.field,
-              label: c.label,
+              label: c.sortLabel ?? c.label,
             })),
             field: sortField,
             direction: sortDirection,

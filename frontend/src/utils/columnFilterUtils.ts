@@ -70,18 +70,25 @@ export function processClubs(
   referenceDate: Date = new Date(),
   programYear?: string
 ): ProcessedClubTrend[] {
-  return clubs.map(club => ({
-    ...club,
-    latestMembership: getLatestMembership(club),
-    latestDcpGoals: getLatestDcpGoals(club),
-    distinguishedOrder: getDistinguishedOrder(club),
-    membersNeeded: getMembersNeeded(club, programYear),
-    // #448 — Years Chartered column. null when charterDate is absent
-    // or invalid, which the table renders as em-dash and sorts to end.
-    yearsChartered: club.charterDate
-      ? (getClubAnniversary(club.charterDate, referenceDate)?.years ?? null)
-      : null,
-  }))
+  return clubs.map(club => {
+    const latestMembership = getLatestMembership(club)
+    return {
+      ...club,
+      latestMembership,
+      netChange:
+        club.membershipBase == null
+          ? null
+          : latestMembership - club.membershipBase,
+      latestDcpGoals: getLatestDcpGoals(club),
+      distinguishedOrder: getDistinguishedOrder(club),
+      membersNeeded: getMembersNeeded(club, programYear),
+      // #448 — Years Chartered column. null when charterDate is absent
+      // or invalid, which the table renders as em-dash and sorts to end.
+      yearsChartered: club.charterDate
+        ? (getClubAnniversary(club.charterDate, referenceDate)?.years ?? null)
+        : null,
+    }
+  })
 }
 
 // ========== Filter Application ==========

@@ -150,11 +150,12 @@ describe('ClubsTable priority-column responsive model (#812)', () => {
     const headers = Array.from(
       container.querySelectorAll('#clubs-table thead th')
     )
-    // Index-based: the desktop-only columns are 1,2,6,7,8,11,12 (0-based) in the
-    // COLUMN_CONFIGS order: Club, Div, Area, Status, Members, Needed, New, Oct,
-    // Apr, DCP, Tier, ClubStatus, Years.
-    const desktopOnlyIdx = [1, 2, 6, 7, 8, 11, 12]
-    const coreIdx = [0, 3, 4, 5, 9, 10]
+    // Index-based: the desktop-only columns are 1,2,7,8,9,12,13 (0-based) in the
+    // COLUMN_CONFIGS order: Club, Div, Area, Status, Members, Trend (#1792),
+    // Needed, New, Oct, Apr, DCP, Tier, ClubStatus, Years. Trend is core — the
+    // sparkline shows at every width.
+    const desktopOnlyIdx = [1, 2, 7, 8, 9, 12, 13]
+    const coreIdx = [0, 3, 4, 5, 6, 10, 11]
     desktopOnlyIdx.forEach(i => {
       expect(headers[i].className).toContain('clubs-table__col--desktop')
     })
@@ -176,7 +177,7 @@ describe('ClubsTable priority-column responsive model (#812)', () => {
     const cells = Array.from(
       container.querySelectorAll('#clubs-table tbody tr:first-child td')
     )
-    const desktopOnlyIdx = [1, 2, 6, 7, 8, 11, 12]
+    const desktopOnlyIdx = [1, 2, 7, 8, 9, 12, 13]
     desktopOnlyIdx.forEach(i => {
       expect(cells[i].className).toContain('clubs-table__col--desktop')
     })
