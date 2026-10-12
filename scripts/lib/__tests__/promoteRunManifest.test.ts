@@ -19,6 +19,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as zlib from 'node:zlib'
+import { runPromoteRunManifest } from '../promoteRunManifestRunner.js'
 
 const REPO = process.cwd()
 const CLI = path.join(REPO, 'scripts/promote-run-manifest.ts')
@@ -93,30 +94,45 @@ function writeInputs(gate: unknown): void {
   if (gate !== undefined) fs.writeFileSync(gateFile, JSON.stringify(gate))
 }
 
-function run(args: string[], env: Record<string, string> = {}) {
-  const r = spawnSync(TSX, [CLI, ...args], {
-    encoding: 'utf-8',
-    env: {
-      ...process.env,
-      GCLOUD: SHIM,
-      SHIM_ROOT: root,
-      SHIM_LOG: shimLog,
-      GCS_BUCKET: STG,
-      GCS_BUCKET_PRODUCTION: PROD,
-      RUN_MANIFEST_FILE: manifestFile,
-      COMPLETENESS_GATE_FILE: gateFile,
-      GITHUB_OUTPUT: outputFile,
-      GITHUB_STEP_SUMMARY: path.join(tmp, 'summary.md'),
-      ...env,
-    },
-  })
-  const outputs = Object.fromEntries(
+function runEnv(env: Record<string, string> = {}) {
+  return {
+    ...process.env,
+    GCLOUD: SHIM,
+    SHIM_ROOT: root,
+    SHIM_LOG: shimLog,
+    GCS_BUCKET: STG,
+    GCS_BUCKET_PRODUCTION: PROD,
+    RUN_MANIFEST_FILE: manifestFile,
+    COMPLETENESS_GATE_FILE: gateFile,
+    GITHUB_OUTPUT: outputFile,
+    GITHUB_STEP_SUMMARY: path.join(tmp, 'summary.md'),
+    ...env,
+  }
+}
+
+function readOutputs(): Record<string, string> {
+  return Object.fromEntries(
     (fs.existsSync(outputFile) ? fs.readFileSync(outputFile, 'utf-8') : '')
       .split('\n')
       .filter(Boolean)
       .map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)])
   )
-  return { ...r, outputs }
+}
+
+/**
+ * The runner in-process (only the bash shim is spawned): a `tsx` cold start
+ * per case timed the file out under a loaded suite (#1748 class). The CLI
+ * wiring itself is covered by one real spawn below.
+ */
+async function run(args: string[], env: Record<string, string> = {}) {
+  let stdout = ''
+  let stderr = ''
+  const status = await runPromoteRunManifest(args, {
+    env: runEnv(env),
+    out: s => (stdout += s),
+    err: s => (stderr += s),
+  })
+  return { status, stdout, stderr, outputs: readOutputs() }
 }
 
 const DATES_JSON = (dates: string[]) =>
@@ -179,10 +195,10 @@ afterEach(() => {
 })
 
 describe('promote-run-manifest --execute: one date held', () => {
-  it('copies only the passing date; the held date, globals and unread objects stay put', () => {
+  it('copies only the passing date; the held date, globals and unread objects stay put', async () => {
     writeInputs({ promote: false, heldDates: ['2026-10-10'] })
     const before = tree(PROD)
-    const r = run(['--execute'])
+    const r = await run(['--execute'])
     expect(r.status, r.stderr).toBe(0)
 
     // The passing date arrived, byte for byte, still one gzip layer.
@@ -224,10 +240,10 @@ describe('promote-run-manifest --execute: one date held', () => {
 })
 
 describe('promote-run-manifest --execute: no hold', () => {
-  it('copies both dates, time-series, v1/ and config/ — and nothing internal or unread', () => {
+  it('copies both dates, time-series, v1/ and config/ — and nothing internal or unread', async () => {
     writeInputs({ promote: true })
     const before = tree(PROD)
-    const r = run(['--execute'])
+    const r = await run(['--execute'])
     expect(r.status, r.stderr).toBe(0)
 
     const after = tree(PROD)
@@ -252,9 +268,9 @@ describe('promote-run-manifest --execute: no hold', () => {
     expect(r.outputs.objects_copied).toBe('8')
   })
 
-  it('writes the v1/ entry points in the last copy, after every date and global', () => {
+  it('writes the v1/ entry points in the last copy, after every date and global', async () => {
     writeInputs({ promote: true })
-    expect(run(['--execute']).status).toBe(0)
+    expect((await run(['--execute'])).status).toBe(0)
     const copies = fs
       .readFileSync(shimLog, 'utf-8')
       .split('\n')
@@ -268,22 +284,22 @@ describe('promote-run-manifest --execute: no hold', () => {
     )
   })
 
-  it('never rsyncs to prod and never deletes', () => {
+  it('never rsyncs to prod and never deletes', async () => {
     writeInputs({ promote: true })
-    expect(run(['--execute']).status).toBe(0)
+    expect((await run(['--execute'])).status).toBe(0)
     const log = fs.readFileSync(shimLog, 'utf-8')
     expect(log).not.toMatch(/^storage (rsync|rm|mv)\b/m)
   })
 
-  it('converges on a re-run (idempotent)', () => {
+  it('converges on a re-run (idempotent)', async () => {
     writeInputs({ promote: true })
-    expect(run(['--execute']).status).toBe(0)
+    expect((await run(['--execute'])).status).toBe(0)
     const once = tree(PROD)
-    expect(run(['--execute']).status).toBe(0)
+    expect((await run(['--execute'])).status).toBe(0)
     expect(tree(PROD)).toEqual(once)
   })
 
-  it('holds the globals when staging indexes a date prod lacks and this run does not promote', () => {
+  it('holds the globals when staging indexes a date prod lacks and this run does not promote', async () => {
     // An earlier, held run left 2026-09-30 in staging's index.
     put(
       STG,
@@ -291,7 +307,7 @@ describe('promote-run-manifest --execute: no hold', () => {
       DATES_JSON(['2026-09-30', '2026-10-01', '2026-10-10', '2026-10-11'])
     )
     writeInputs({ promote: true })
-    const r = run(['--execute'])
+    const r = await run(['--execute'])
     expect(r.status, r.stderr).toBe(0)
     expect(read(PROD, 'snapshots/2026-10-11/district_61.json')).not.toBeNull()
     expect(read(PROD, 'snapshots/2026-09-30/district_61.json')).toBeNull()
@@ -304,9 +320,9 @@ describe('promote-run-manifest --execute: no hold', () => {
 })
 
 describe('promote-run-manifest failure modes', () => {
-  it('a failed copy stops before the entry points and exits non-zero', () => {
+  it('a failed copy stops before the entry points and exits non-zero', async () => {
     writeInputs({ promote: true })
-    const r = run(['--execute'], { SHIM_FAIL_MATCH: 'time-series' })
+    const r = await run(['--execute'], { SHIM_FAIL_MATCH: 'time-series' })
     expect(r.status).not.toBe(0)
     expect(read(PROD, 'v1/latest.json')?.toString()).toBe(
       LATEST_JSON('2026-10-10')
@@ -314,28 +330,28 @@ describe('promote-run-manifest failure modes', () => {
     expect(r.outputs.complete).toBe('false')
   })
 
-  it('copies nothing when the completeness verdict is missing', () => {
+  it('copies nothing when the completeness verdict is missing', async () => {
     writeInputs(undefined)
     const before = tree(PROD)
-    const r = run(['--execute'])
+    const r = await run(['--execute'])
     expect(r.status).not.toBe(0)
     expect(tree(PROD)).toEqual(before)
   })
 
-  it('refuses a malformed manifest and copies nothing', () => {
+  it('refuses a malformed manifest and copies nothing', async () => {
     writeInputs({ promote: true })
     fs.appendFileSync(manifestFile, '{"path":\n')
     const before = tree(PROD)
-    expect(run(['--execute']).status).not.toBe(0)
+    expect((await run(['--execute'])).status).not.toBe(0)
     expect(tree(PROD)).toEqual(before)
   })
 })
 
 describe('promote-run-manifest --dry-run', () => {
-  it('prints exactly what would be copied and writes nothing', () => {
+  it('prints exactly what would be copied and writes nothing', async () => {
     writeInputs({ promote: false, heldDates: ['2026-10-10'] })
     const before = tree(PROD)
-    const r = run(['--dry-run'])
+    const r = await run(['--dry-run'])
     expect(r.status, r.stderr).toBe(0)
     expect(tree(PROD)).toEqual(before)
     const log = fs.existsSync(shimLog) ? fs.readFileSync(shimLog, 'utf-8') : ''
@@ -356,13 +372,41 @@ describe('promote-run-manifest --dry-run', () => {
     expect(r.outputs.objects_planned).toBe('2')
   })
 
-  it('needs no completeness file to preview against a published manifest', () => {
+  it('needs no completeness file to preview against a published manifest', async () => {
     writeInputs(undefined)
-    const r = run(['--dry-run', '--assume-pass'])
+    const r = await run(['--dry-run', '--assume-pass'])
     expect(r.status, r.stderr).toBe(0)
     expect(
       r.stdout.split('\n').filter(l => l.startsWith('copy\t'))
     ).toHaveLength(8)
+  })
+})
+
+describe('scripts/promote-run-manifest.ts (the CLI the workflow runs)', () => {
+  it('wires argv, env, stdout and the exit code to the runner', () => {
+    writeInputs({ promote: false, heldDates: ['2026-10-10'] })
+    const before = tree(PROD)
+    const dry = spawnSync(TSX, [CLI, '--dry-run'], {
+      encoding: 'utf-8',
+      env: runEnv(),
+    })
+    expect(dry.status, dry.stderr).toBe(0)
+    expect(dry.stdout.split('\n').filter(l => l.startsWith('copy\t'))).toEqual([
+      `copy\tdates\tgs://${STG}/snapshots/2026-10-11/district_61.json\tgs://${PROD}/snapshots/2026-10-11/district_61.json`,
+      `copy\tdates\tgs://${STG}/snapshots/2026-10-11/analytics/district_61_analytics.json\tgs://${PROD}/snapshots/2026-10-11/analytics/district_61_analytics.json`,
+    ])
+    expect(tree(PROD)).toEqual(before)
+  })
+})
+
+describe('promote-run-manifest usage', () => {
+  it.each([
+    [[]],
+    [['--dry-run', '--execute']],
+    [['--execute', '--assume-pass']],
+  ])('refuses %j with exit 2', async args => {
+    writeInputs({ promote: true })
+    expect((await run(args)).status).toBe(2)
   })
 })
 
