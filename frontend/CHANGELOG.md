@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.30.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.29.0...frontend-v3.30.0) (2026-10-12)
+
+
+### Features
+
+* **mobile:** landing rankings use priority columns; retire MOBILE_RANKINGS_CAP ([#1834](https://github.com/taverns-red/toast-stats/issues/1834)) ([#1883](https://github.com/taverns-red/toast-stats/issues/1883)) ([4a8e8c8](https://github.com/taverns-red/toast-stats/commit/4a8e8c85b2da775a340060651343b5843a9d554a))
+* **mobile:** phone rankings reveal 25 at a time (?rows=, ?district= pin); landing budget in CI ([#1834](https://github.com/taverns-red/toast-stats/issues/1834)) ([#1887](https://github.com/taverns-red/toast-stats/issues/1887)) ([a2fdcec](https://github.com/taverns-red/toast-stats/commit/a2fdcec87dea28c879dad97f06e9d622701294c6))
+
+
+### Bug Fixes
+
+* **mobile:** section bar labels 14px with 8px between targets ([#1832](https://github.com/taverns-red/toast-stats/issues/1832)) ([#1884](https://github.com/taverns-red/toast-stats/issues/1884)) ([4a2cb42](https://github.com/taverns-red/toast-stats/commit/4a2cb42f6c305af560d58dd90dddb4c8f2659ab7))
+
 ## [3.29.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.28.0...frontend-v3.29.0) (2026-10-12)
 
 
