@@ -49,6 +49,30 @@
     min-width: 44px;
   }
 
+  /* Form controls at ≥16px below 768 (#1838).
+   * iOS Safari zooms the page when a focused text field or <select> has a
+   * computed font-size under 16px. This is a floor, not a default, so it is
+   * `!important`: an important declaration in the LOWEST layer outranks every
+   * normal declaration in brand, utilities and unlayered CSS (cascade layers
+   * reverse for !important), so no `text-xs` or component class can undercut
+   * it. It includes the transparent chip-select overlays (PY/date pills): they
+   * take focus, so they zoom too, and their text is never painted.
+   * Checkbox/radio/range/file carry no text and are left alone.
+   * Guarded by e2e/form-controls-16px.smoke.ts in both engines. */
+  @media (max-width: 767.98px) {
+    select,
+    textarea,
+    input:not(
+      [type='checkbox'],
+      [type='radio'],
+      [type='range'],
+      [type='file'],
+      [type='hidden']
+    ) {
+      font-size: 16px !important;
+    }
+  }
+
   /* Focus indicator defaults
    * Provides WCAG AA compliant focus indicators for all interactive elements.
    * Uses :focus-visible to show focus only for keyboard navigation.
