@@ -21,6 +21,7 @@ export type SortField =
   | 'clubStatus'
   | 'membersNeeded'
   | 'yearsChartered'
+  | 'netChange'
 
 /**
  * Sort direction types
