@@ -18,6 +18,8 @@ export interface ClubGridTileProps {
   colorMode: GridColorMode
   /** Optional router location state to carry to the destination. */
   linkState?: unknown
+  /** Phones (#1845): render a button that hands the club to this callback. */
+  onSelect?: (club: ClubTrend) => void
 }
 
 export const ClubGridTile: React.FC<ClubGridTileProps> = ({
