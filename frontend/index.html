@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!-- #1906: 16/32/48 px tab icon (5 KB; was 410 KB) + home-screen icon. -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Toast Stats — Toastmasters District Performance</title>
     <meta
@@ -104,30 +106,20 @@
     </script>
 
     <!-- Google Analytics 4 (#314) — production only, no PII collected.
-         #1830: the gtag() queue is set up now so no event is dropped, but the
-         ~176 KB library is injected only after `load`, when idle — it used to
-         compete with the app's own chunks and data on every cold mobile load. -->
+         The gtag() queue is set up now, so config and the SPA's page_view
+         events are buffered in dataLayer from the first moment (Google
+         processes queued pushes in order once the library loads).
+         #1830 moved the ~176 KB library to `load` + idle. #1906: in this SPA
+         `load` fires before any CDN data, so gtag still raced the first
+         screen's LCP — and Lighthouse charges every request that finishes
+         before the observed LCP, which made mobile LCP bimodal. The library
+         now waits until the first screen has SETTLED: after `load`, no new
+         LCP candidate and no data fetch finishing for QUIET_MS, then idle.
+         It always loads: CAP_MS after `load`, the first pointer/key input
+         (LCP is final after input), or the tab going hidden. -->
     <script>
       // Only load GA on production hostname (not localhost / preview)
       if (window.location.hostname === 'ts.taverns.red') {
-        var loadGa = function () {
-          var gaScript = document.createElement('script');
-          gaScript.async = true;
-          gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-CDWQYHC2Z3';
-          document.head.appendChild(gaScript);
-        };
-        var loadGaWhenIdle = function () {
-          if ('requestIdleCallback' in window) {
-            window.requestIdleCallback(loadGa, { timeout: 4000 });
-          } else {
-            window.setTimeout(loadGa, 1);
-          }
-        };
-        if (document.readyState === 'complete') {
-          loadGaWhenIdle();
-        } else {
-          window.addEventListener('load', loadGaWhenIdle);
-        }
         window.dataLayer = window.dataLayer || [];
         function gtag() { window.dataLayer.push(arguments); }
         window.gtag = gtag;
@@ -137,6 +129,66 @@
           allow_google_signals: false,
           allow_ad_personalization_signals: false
         });
+        (function () {
+          var QUIET_MS = 2000;
+          var CAP_MS = 10000;
+          var loaded = false;
+          var afterLoad = false;
+          var quietTimer = 0;
+          var loadGa = function () {
+            if (loaded) return;
+            loaded = true;
+            window.clearTimeout(quietTimer);
+            var gaScript = document.createElement('script');
+            gaScript.async = true;
+            gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-CDWQYHC2Z3';
+            document.head.appendChild(gaScript);
+          };
+          var loadGaWhenIdle = function () {
+            if ('requestIdleCallback' in window) {
+              window.requestIdleCallback(loadGa, { timeout: 2000 });
+            } else {
+              loadGa();
+            }
+          };
+          // (Re)start the quiet window. A no-op before `load`: the window
+          // starts at `load`.
+          var rearm = function () {
+            if (loaded || !afterLoad) return;
+            window.clearTimeout(quietTimer);
+            quietTimer = window.setTimeout(loadGaWhenIdle, QUIET_MS);
+          };
+          try {
+            new window.PerformanceObserver(rearm).observe({
+              type: 'largest-contentful-paint',
+              buffered: true
+            });
+            new window.PerformanceObserver(function (list) {
+              var entries = list.getEntries();
+              for (var i = 0; i < entries.length; i++) {
+                var t = entries[i].initiatorType;
+                if (t === 'fetch' || t === 'xmlhttprequest') return rearm();
+              }
+            }).observe({ type: 'resource' });
+          } catch (e) {}
+          var onLoad = function () {
+            afterLoad = true;
+            rearm();
+            window.setTimeout(loadGa, CAP_MS);
+          };
+          if (document.readyState === 'complete') {
+            onLoad();
+          } else {
+            window.addEventListener('load', onLoad);
+          }
+          // Backstop in case `load` never fires (a hung subresource).
+          window.setTimeout(loadGa, 2 * CAP_MS);
+          window.addEventListener('pointerdown', loadGa, { once: true, passive: true, capture: true });
+          window.addEventListener('keydown', loadGa, { once: true, capture: true });
+          document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') loadGa();
+          });
+        })();
       }
     </script>
   </head>
