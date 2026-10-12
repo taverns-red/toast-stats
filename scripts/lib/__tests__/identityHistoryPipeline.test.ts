@@ -52,6 +52,7 @@ let cache: string
 let shimLog: string
 let stubLog: string
 let summary: string
+let manifest: string
 
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'identity-history-'))
@@ -60,6 +61,7 @@ beforeEach(() => {
   shimLog = path.join(tmp, 'gcloud.log')
   stubLog = path.join(tmp, 'stubs.log')
   summary = path.join(tmp, 'summary.md')
+  manifest = path.join(tmp, 'written.jsonl')
   fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
 })
 
@@ -76,6 +78,7 @@ function shimEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
     SHIM_DOWNLOAD_DECOMPRESS: '1',
     CACHE_DIR: cache,
     GITHUB_STEP_SUMMARY: summary,
+    RUN_MANIFEST_FILE: manifest,
     ...extra,
   }
 }
