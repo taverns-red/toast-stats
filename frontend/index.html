@@ -36,45 +36,22 @@
     />
     <meta name="twitter:image" content="https://ts.taverns.red/og-image.png" />
 
-    <!-- Google Fonts Preconnect for Performance -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <!-- Preload Critical Font Files. Montserrat + Source Sans 3 are served
-         as single variable WOFF2 files, so adding the redesign weights
-         (Montserrat 600/800, Source Sans 500) is free — no extra bytes.
-         JetBrains Mono is intentionally NOT preloaded yet; the --mono
-         token in tokens/redesign.css falls back to ui-monospace until
-         a consumer ships in #354 (AppShell). -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <!-- Web fonts are self-hosted (#1905): src/styles/tokens/web-fonts.css
+         declares Montserrat, Source Sans 3, Space Grotesk and Inter from
+         same-origin woff2, bundled with the app CSS. They used to come from
+         Google Fonts' CSS API, which meant two extra origins plus a CSS hop
+         before any woff2 was found.
 
-    <!-- Red Taverns Brand v1.0 fonts (#339 Phase 1). Loaded alongside the
-         existing Montserrat / Source Sans 3 because Phase 2 chrome
-         migration is blocked on ops#37 (the rename decision). Once the
-         rename ships, the legacy pair drops in the same PR that
-         re-skins components with --rt-* tokens.
+         Nothing is preloaded, on purpose. Measured on the 1.6 Mbps mobile
+         profile, preloading the two first-screen files (64 KB) made them
+         compete with the app's JS and cost about 330 ms of FCP. Montserrat
+         and Source Sans 3 have metric-matched fallbacks (font-fallbacks.css),
+         so the swap does not move layout.
 
-         JetBrains Mono preload intentionally OMITTED in Phase 1: the
-         redesign --mono token (`'JetBrains Mono', ui-monospace, ...`)
-         has 8 live consumers in app-shell.css. Preloading swaps the
-         text from ui-monospace to JetBrains Mono ~300ms in and pushes
-         CLS from 0.012 → 0.199 (Lighthouse failed PR #595 first push;
-         the lighthouserc threshold is 0.1). The brand spec requires
-         the font to be REACHABLE (it is, via the token file's
-         declaration), not necessarily PRELOADED. Re-enable in the
-         Phase 2 PR once consumers migrate to --rt-font-mono with
-         metric-matched fallbacks (or self-hosted with size-adjust). -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-
-    <!-- Fallback for JavaScript Disabled -->
-    <noscript>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap">
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap">
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
-    </noscript>
+         JetBrains Mono is still intentionally NOT loaded (Lesson 81). The
+         redesign --mono token has 8 live consumers in app-shell.css with no
+         metric-matched fallback. A late JetBrains Mono swap took CLS from
+         0.012 to 0.199 on PR #595. Phase 2 (ops#37) adds it with a fallback. -->
     
     <!-- Theme init (#1662): set data-theme before first paint so the canvas
          never flashes the wrong theme. Mirrors DarkModeContext.getInitialTheme;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
@@ -53,25 +53,29 @@ describe('Red Taverns Brand v1.0 tokens (#339)', () => {
     )
   })
 
-  it('index.html preloads two of the three brand v1.0 display/body fonts (JetBrains Mono deferred — see Lesson 81)', () => {
-    const html = readFileSync(indexHtmlPath, 'utf-8')
-    expect(html).toMatch(/family=Space\+Grotesk/)
-    expect(html).toMatch(/family=Inter/)
-    // JetBrains Mono preload is intentionally OMITTED in Phase 1. Live
+  // #1905: the brand fonts are self-hosted (web-fonts.css) instead of loaded
+  // from fonts.googleapis.com — same families, same weights, same origin.
+  const webFontsPath = resolve(__dirname, '../tokens/web-fonts.css')
+  const readWebFonts = () =>
+    existsSync(webFontsPath) ? readFileSync(webFontsPath, 'utf-8') : ''
+
+  it('declares two of the three brand v1.0 display/body fonts (JetBrains Mono deferred — see Lesson 81)', () => {
+    const css = readWebFonts()
+    expect(css).toMatch(/font-family:\s*'Space Grotesk'/)
+    expect(css).toMatch(/font-family:\s*'Inter'/)
+    // JetBrains Mono is intentionally NOT loaded in Phase 1. Live
     // `var(--mono)` consumers in app-shell.css would layout-shift on the
     // font swap (Lighthouse CLS 0.199 vs threshold 0.1, PR #595 first
     // push). See the redesign-tokens font-loading test for the matching
     // deferral assertion, and Lesson 81 for the spec-vs-CLS reasoning.
+    expect(css).not.toMatch(/font-family:\s*'JetBrains Mono'/)
+    const html = readFileSync(indexHtmlPath, 'utf-8')
     expect(html).not.toMatch(/family=JetBrains\+Mono/)
   })
 
-  it('index.html preconnects to Google Fonts hosts', () => {
+  it('index.html no longer connects to Google Fonts hosts (#1905: self-hosted)', () => {
     const html = readFileSync(indexHtmlPath, 'utf-8')
-    expect(html).toMatch(
-      /<link[^>]*rel="preconnect"[^>]*href="https:\/\/fonts\.googleapis\.com"/
-    )
-    expect(html).toMatch(
-      /<link[^>]*rel="preconnect"[^>]*href="https:\/\/fonts\.gstatic\.com"[^>]*crossorigin/
-    )
+    expect(html).not.toMatch(/fonts\.googleapis\.com/)
+    expect(html).not.toMatch(/fonts\.gstatic\.com/)
   })
 })
