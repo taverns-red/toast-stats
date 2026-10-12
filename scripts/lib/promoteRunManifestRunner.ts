@@ -210,7 +210,10 @@ export async function runPromoteRunManifest(
     log(`::error title=Scoped promotion::${plan.heldAll}`)
     emit('objects_copied', 0)
     emit('complete', false)
-    return 2
+    // A verdict that holds everything (the gate errored) is a hold: exit 0
+    // so the promotion-held steps still run. No verdict at all means the
+    // step ran out of order or the file was lost — fail the step.
+    return verdict === null ? 2 : 0
   }
 
   const concurrency = Number(env.PROMOTE_CONCURRENCY) || 4
