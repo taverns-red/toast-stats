@@ -108,6 +108,24 @@ describe('ContextBar (#1831)', () => {
     )
   })
 
+  it('renders a toolbar slot between title and chip only when toolsRef is given (#1912)', () => {
+    renderBar({})
+    expect(screen.queryByTestId('context-bar-tools')).toBeNull()
+    cleanup()
+    let slot: HTMLDivElement | null = null
+    renderBar({ toolsRef: el => (slot = el) })
+    const tools = screen.getByTestId('context-bar-tools')
+    expect(slot).toBe(tools)
+    const bar = screen.getByTestId('context-bar')
+    const kids = Array.from(bar.children)
+    expect(kids.indexOf(tools)).toBeLessThan(
+      kids.indexOf(screen.getByTestId('context-bar-chip'))
+    )
+    expect(kids.indexOf(tools)).toBeGreaterThan(
+      kids.findIndex(k => k.classList.contains('context-bar__title'))
+    )
+  })
+
   it('Escape closes the sheet and returns focus to the chip', async () => {
     renderBar({})
     const chip = screen.getByTestId('context-bar-chip')

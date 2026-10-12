@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import {
   useLocation,
   useNavigate,
@@ -57,6 +57,12 @@ const DistrictClubsPage: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
+  // The context bar's toolbar slot (#1912): in short landscape ClubsTable
+  // portals its search + Filter & sort there. State, not a ref, so the table
+  // re-renders once the slot mounts.
+  const [contextBarTools, setContextBarTools] = useState<HTMLDivElement | null>(
+    null
+  )
 
   // Sort URL state -- mirrors DistrictDetailPage's conventions so sort
   // field names line up with ClubsTable's existing SortField union.
@@ -297,6 +303,7 @@ const DistrictClubsPage: React.FC = () => {
             latestSnapshotDate={
               cachedDatesData?.dateRange?.endDate ?? availableDates[0]
             }
+            contextBarToolsRef={setContextBarTools}
           />
 
           <SubpageBreadcrumb
@@ -340,6 +347,7 @@ const DistrictClubsPage: React.FC = () => {
                   programYear={effectiveProgramYear?.label}
                   openGroups={openGroups}
                   onOpenGroupsChange={setOpenGroups}
+                  compactToolbarTarget={contextBarTools}
                 />
                 <ProspectiveClubsPanel clubs={analytics?.prospectiveClubs} />
               </>

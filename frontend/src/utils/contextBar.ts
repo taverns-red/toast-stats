@@ -9,6 +9,11 @@ import { formatDisplayDate } from './dateFormatting'
 export const formatPyCompact = (py: ProgramYear): string =>
   `PY ${String(py.year).slice(-2)}–${String(py.year + 1).slice(-2)}`
 
+/** A phone on its side (812×375 etc., #1847): same query as the CSS that
+ * gives short landscape the phone chrome (context-bar.css, safe-area.css). */
+export const SHORT_LANDSCAPE_QUERY =
+  '(orientation: landscape) and (max-height: 500px)'
+
 /** Downward drag on the bottom sheet's handle, in px, that dismisses it. */
 export const SWIPE_CLOSE_PX = 60
 

@@ -66,6 +66,22 @@
     font-size: 16px;
   }
 
+  /* Page toolbar slot (#1912), between the title and the chip. A page
+     portals compact controls into it (Clubs in short landscape: search +
+     Filter & sort), so they ride the sticky bar at no first-screen height.
+     Empty, it takes no space; the title ellipsises before the tools shrink
+     below their minimums. */
+  .context-bar__tools {
+    flex: 0 1 26rem;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .context-bar__tools:empty {
+    display: none;
+  }
+
   /* The chip never shrinks below its text: the title ellipsises first, so
      the PY/date is never clipped (Lesson 134). The button is a transparent
      44px hit area; the pill inside carries the visual at 32px so it sits

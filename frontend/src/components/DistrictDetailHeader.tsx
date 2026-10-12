@@ -38,6 +38,8 @@ interface DistrictDetailHeaderProps {
    * row to three and shifted the page.
    */
   freshnessPending?: boolean
+  /** The context bar's page-toolbar slot (#1912), forwarded to ContextBar. */
+  contextBarToolsRef?: ((el: HTMLDivElement | null) => void) | undefined
 }
 
 const LEDE =
@@ -60,6 +62,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
   onDateChange,
   availableDates,
   latestSnapshotDate,
+  contextBarToolsRef,
   freshnessPending = false,
 }) => {
   // Freshness parity (#1310): every district detail + subnav page shares this
@@ -122,6 +125,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
         actions={<DistrictSheetActions districtId={districtId} />}
         about={LEDE}
         trail={trail}
+        toolsRef={contextBarToolsRef}
       />
       {/* Breadcrumb removed per #442 — duplicated the AppShell's active
           'Districts' nav tab and the H1 below. The active nav + H1 give
