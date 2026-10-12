@@ -20,6 +20,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -183,6 +184,23 @@ describe('build-identity-history.sh: club-district history to staging derived/',
     for (const w of writes) {
       const dest = w.split(' ').at(-1) ?? ''
       expect(dest.startsWith(`gs://${BUCKET}/derived/`), w).toBe(true)
+    }
+  })
+
+  it('records every derived/ object in the run manifest, with the sha256 of its bytes (#1762, ADR-015 P5)', () => {
+    seedClubRace()
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    const recorded = lines(manifest).map(
+      l => JSON.parse(l) as { path: string; sha256: string; stage: string }
+    )
+    expect(recorded.map(e => e.path).sort()).toEqual(allObjects())
+    for (const e of recorded) {
+      expect(e.stage).toBe('identity')
+      const bytes = fs.readFileSync(path.join(root, BUCKET, e.path))
+      expect(e.sha256, e.path).toBe(
+        createHash('sha256').update(bytes).digest('hex')
+      )
     }
   })
 })
