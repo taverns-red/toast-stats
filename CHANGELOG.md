@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.49.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.48.0...toast-stats-v2.49.0) (2026-10-12)
+
+
+### Features
+
+* **mobile:** district Overview hub below 768 — 2x2 KPI tiles, Needs attention, sections as rows ([#1842](https://github.com/taverns-red/toast-stats/issues/1842)) ([#1893](https://github.com/taverns-red/toast-stats/issues/1893)) ([ea9bab4](https://github.com/taverns-red/toast-stats/commit/ea9bab453d70d78228852ae06d483f86dbba9e75))
+* **pipeline:** club-district history to staging derived/, built in every mode ([#1782](https://github.com/taverns-red/toast-stats/issues/1782)) ([#1824](https://github.com/taverns-red/toast-stats/issues/1824)) ([bf147c0](https://github.com/taverns-red/toast-stats/commit/bf147c086d8b1491501d06b600f41e0e12f20f54))
+* **pipeline:** district→region history per PY to staging derived/ ([#1820](https://github.com/taverns-red/toast-stats/issues/1820)) ([#1825](https://github.com/taverns-red/toast-stats/issues/1825)) ([97b8f2a](https://github.com/taverns-red/toast-stats/commit/97b8f2a870c3c474509187f3e944054dca120627))
+* **pipeline:** run manifest runs/&lt;run_id&gt;/written.jsonl; content gate reads every written object ([#1762](https://github.com/taverns-red/toast-stats/issues/1762)) ([#1822](https://github.com/taverns-red/toast-stats/issues/1822)) ([40ab8e6](https://github.com/taverns-red/toast-stats/commit/40ab8e613c71ee043771ad8ced3326cca1355cb2))
+
+
+### Bug Fixes
+
+* **cls:** reserve district subpage data slots + CLS gate on every subpage ([#1837](https://github.com/taverns-red/toast-stats/issues/1837)) ([#1897](https://github.com/taverns-red/toast-stats/issues/1897)) ([4bc8efe](https://github.com/taverns-red/toast-stats/commit/4bc8efedb902c49a42df031ec17bdd00235b994f))
+* **mobile:** ≥44px row/heading links and AA contrast fixes ([#1839](https://github.com/taverns-red/toast-stats/issues/1839)) ([#1894](https://github.com/taverns-red/toast-stats/issues/1894)) ([d4baa1c](https://github.com/taverns-red/toast-stats/commit/d4baa1c8f045534a854b444304905fe7224c980e))
+* **mobile:** form controls 16px below 768 — no iOS focus zoom ([#1838](https://github.com/taverns-red/toast-stats/issues/1838)) ([#1892](https://github.com/taverns-red/toast-stats/issues/1892)) ([a1a44b0](https://github.com/taverns-red/toast-stats/commit/a1a44b0f9b3e8edb6471b31d993b839d0a5e1075))
+* **mobile:** phone type floor — 14px data/links/pills, 12px eyebrows ([#1840](https://github.com/taverns-red/toast-stats/issues/1840)) ([#1898](https://github.com/taverns-red/toast-stats/issues/1898)) ([ab0beae](https://github.com/taverns-red/toast-stats/commit/ab0beae9f558062d24bcb534bc36a624f03653f6))
+* **mobile:** retitle the Overview panel 'Details' under the phone hub ([#1842](https://github.com/taverns-red/toast-stats/issues/1842)) ([#1899](https://github.com/taverns-red/toast-stats/issues/1899)) ([696c211](https://github.com/taverns-red/toast-stats/commit/696c211e41a808579c994a55b69439d3d9842e3f))
+
+
+### Performance
+
+* **cdn:** compress v1/ + config/ at the edge (Cloud CDN dynamic compression), keep stored bytes identity ([#1852](https://github.com/taverns-red/toast-stats/issues/1852)) ([#1900](https://github.com/taverns-red/toast-stats/issues/1900)) ([dbab94c](https://github.com/taverns-red/toast-stats/commit/dbab94cbde957e3dff4bdff4995cca8603e7fa7a))
+
+
+### Documentation
+
+* **design:** map pin colour-mode spec ([#1785](https://github.com/taverns-red/toast-stats/issues/1785)) ([#1895](https://github.com/taverns-red/toast-stats/issues/1895)) ([4134e3d](https://github.com/taverns-red/toast-stats/commit/4134e3db6bc09914ebc4906cfe8b91b82aba273a))
+
+
+### Tests
+
+* **frontend:** de-flake rankingsCheckpoint thin-wrapper test ([#1779](https://github.com/taverns-red/toast-stats/issues/1779)) ([#1889](https://github.com/taverns-red/toast-stats/issues/1889)) ([7155d40](https://github.com/taverns-red/toast-stats/commit/7155d40bc7fe42603d46e4685882f164190f468c))
+* **mobile:** 375 smoke for phone clubs rows + FilterSheet URL round-trip ([#1833](https://github.com/taverns-red/toast-stats/issues/1833)) ([#1890](https://github.com/taverns-red/toast-stats/issues/1890)) ([d1aa0b8](https://github.com/taverns-red/toast-stats/commit/d1aa0b81d09b5641f291d2d31f69832ff80c0525))
+
 ## [2.48.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.47.0...toast-stats-v2.48.0) (2026-10-12)
 
 

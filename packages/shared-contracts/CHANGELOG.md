@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.13.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.12.4...shared-contracts-v1.13.0) (2026-10-12)
+
+
+### Features
+
+* **pipeline:** club-district history to staging derived/, built in every mode ([#1782](https://github.com/taverns-red/toast-stats/issues/1782)) ([#1824](https://github.com/taverns-red/toast-stats/issues/1824)) ([bf147c0](https://github.com/taverns-red/toast-stats/commit/bf147c086d8b1491501d06b600f41e0e12f20f54))
+* **pipeline:** district→region history per PY to staging derived/ ([#1820](https://github.com/taverns-red/toast-stats/issues/1820)) ([#1825](https://github.com/taverns-red/toast-stats/issues/1825)) ([97b8f2a](https://github.com/taverns-red/toast-stats/commit/97b8f2a870c3c474509187f3e944054dca120627))
+
 ## [1.12.4](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.12.3...shared-contracts-v1.12.4) (2026-10-12)
 
 

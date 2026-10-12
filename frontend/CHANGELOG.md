@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.31.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.30.0...frontend-v3.31.0) (2026-10-12)
+
+
+### Features
+
+* **mobile:** district Overview hub below 768 — 2x2 KPI tiles, Needs attention, sections as rows ([#1842](https://github.com/taverns-red/toast-stats/issues/1842)) ([#1893](https://github.com/taverns-red/toast-stats/issues/1893)) ([ea9bab4](https://github.com/taverns-red/toast-stats/commit/ea9bab453d70d78228852ae06d483f86dbba9e75))
+
+
+### Bug Fixes
+
+* **cls:** reserve district subpage data slots + CLS gate on every subpage ([#1837](https://github.com/taverns-red/toast-stats/issues/1837)) ([#1897](https://github.com/taverns-red/toast-stats/issues/1897)) ([4bc8efe](https://github.com/taverns-red/toast-stats/commit/4bc8efedb902c49a42df031ec17bdd00235b994f))
+* **mobile:** ≥44px row/heading links and AA contrast fixes ([#1839](https://github.com/taverns-red/toast-stats/issues/1839)) ([#1894](https://github.com/taverns-red/toast-stats/issues/1894)) ([d4baa1c](https://github.com/taverns-red/toast-stats/commit/d4baa1c8f045534a854b444304905fe7224c980e))
+* **mobile:** form controls 16px below 768 — no iOS focus zoom ([#1838](https://github.com/taverns-red/toast-stats/issues/1838)) ([#1892](https://github.com/taverns-red/toast-stats/issues/1892)) ([a1a44b0](https://github.com/taverns-red/toast-stats/commit/a1a44b0f9b3e8edb6471b31d993b839d0a5e1075))
+* **mobile:** phone type floor — 14px data/links/pills, 12px eyebrows ([#1840](https://github.com/taverns-red/toast-stats/issues/1840)) ([#1898](https://github.com/taverns-red/toast-stats/issues/1898)) ([ab0beae](https://github.com/taverns-red/toast-stats/commit/ab0beae9f558062d24bcb534bc36a624f03653f6))
+* **mobile:** retitle the Overview panel 'Details' under the phone hub ([#1842](https://github.com/taverns-red/toast-stats/issues/1842)) ([#1899](https://github.com/taverns-red/toast-stats/issues/1899)) ([696c211](https://github.com/taverns-red/toast-stats/commit/696c211e41a808579c994a55b69439d3d9842e3f))
+
+
+### Tests
+
+* **frontend:** de-flake rankingsCheckpoint thin-wrapper test ([#1779](https://github.com/taverns-red/toast-stats/issues/1779)) ([#1889](https://github.com/taverns-red/toast-stats/issues/1889)) ([7155d40](https://github.com/taverns-red/toast-stats/commit/7155d40bc7fe42603d46e4685882f164190f468c))
+* **mobile:** 375 smoke for phone clubs rows + FilterSheet URL round-trip ([#1833](https://github.com/taverns-red/toast-stats/issues/1833)) ([#1890](https://github.com/taverns-red/toast-stats/issues/1890)) ([d1aa0b8](https://github.com/taverns-red/toast-stats/commit/d1aa0b81d09b5641f291d2d31f69832ff80c0525))
+
 ## [3.30.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.29.0...frontend-v3.30.0) (2026-10-12)
 
 
