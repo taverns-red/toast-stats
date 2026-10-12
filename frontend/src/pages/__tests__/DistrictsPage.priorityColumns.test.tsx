@@ -12,6 +12,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useLocation } from 'react-router-dom'
 import DistrictsPage from '../DistrictsPage'
 import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
@@ -186,5 +187,93 @@ describe('DistrictsPage rankings priority columns below 768 (#1834)', () => {
     await screen.findAllByTestId(/^district-row-/)
     expect(rowIds()).toHaveLength(25)
     expect(document.querySelector('.priority-columns__table')).toBeNull()
+  })
+})
+
+/* Progressive reveal (#1834 follow-up): the phone list shows 25 rows, then
+   "Show 25 more" / "Show all N" — the MobileRowList step pattern, not a hard
+   cap — with the reveal in ?rows= so back and deep links keep it. A district
+   named in ?district= (e.g. arriving from a district page) pins near the top
+   with its rank. Desktop always shows every row. */
+const Where = () => {
+  const { search } = useLocation()
+  return <output data-testid="where">{search}</output>
+}
+const where = () => screen.getByTestId('where').textContent ?? ''
+
+describe('DistrictsPage phone rankings reveal (#1834)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('shows 25 rows, then 25 more, then all — the reveal lives in ?rows=', async () => {
+    stubViewport(true)
+    setupRows(60)
+    renderWithProviders(
+      <>
+        <DistrictsPage />
+        <Where />
+      </>
+    )
+    await screen.findAllByTestId(/^district-row-/)
+    expect(rowIds()).toHaveLength(25)
+    await userEvent.click(
+      screen.getByRole('button', { name: /Show 25 more districts/ })
+    )
+    expect(rowIds()).toHaveLength(50)
+    expect(where()).toContain('rows=50')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Show all 60 districts' })
+    )
+    expect(rowIds()).toHaveLength(60)
+    expect(where()).toContain('rows=all')
+    expect(screen.queryByRole('button', { name: /Show .* more/ })).toBeNull()
+  })
+
+  it('a deep link with ?rows=all opens with every row', async () => {
+    stubViewport(true)
+    setupRows(60)
+    renderWithProviders(<DistrictsPage />, { initialEntries: ['/?rows=all'] })
+    await screen.findAllByTestId(/^district-row-/)
+    expect(rowIds()).toHaveLength(60)
+  })
+
+  it('pins the ?district= row near the top, with its rank, past the first 25', async () => {
+    stubViewport(true)
+    setupRows(60)
+    renderWithProviders(<DistrictsPage />, {
+      initialEntries: ['/?district=40'],
+    })
+    await screen.findAllByTestId(/^district-row-/)
+    expect(rowIds()[0]).toBe('40')
+    expect(rowIds()).toHaveLength(26) // the pinned row + the first 25
+    expect(
+      within(screen.getByTestId('district-row-40')).getByText('#40')
+    ).toBeInTheDocument()
+  })
+
+  it('an active search shows every match (search never hides results)', async () => {
+    stubViewport(true)
+    setupRows(60)
+    renderWithProviders(<DistrictsPage />)
+    await screen.findAllByTestId(/^district-row-/)
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /search districts/i }),
+      'District'
+    )
+    expect(rowIds()).toHaveLength(60)
+    expect(screen.queryByRole('button', { name: /Show .* more/ })).toBeNull()
+  })
+
+  it('desktop shows every row and no reveal buttons', async () => {
+    stubViewport(false)
+    setupRows(60)
+    renderWithProviders(<DistrictsPage />)
+    await screen.findAllByTestId(/^district-row-/)
+    expect(rowIds()).toHaveLength(60)
+    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull()
   })
 })

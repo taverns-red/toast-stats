@@ -58,6 +58,7 @@ import {
   PriorityColumnsTable,
   type PriorityMetric,
 } from '../components/PriorityColumnsTable'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { snapshotDatesFrom } from '../types/snapshotDate'
 
 // Columns in the rankings table head: District, Rank, Paid Clubs, Total
@@ -101,6 +102,9 @@ const LIST_OPTS = { parse: parseList, serialize: serializeList }
 /** The loading shell's reserve chips are disabled, so this never fires. */
 const noopRecognitionChange = () => {}
 
+/** Phone rankings reveal step — the MobileRowList "show more" rhythm. */
+const PHONE_ROWS_STEP = 25
+
 /** A ranking row with its global display rank (see displayRankings). */
 type RankedDistrict = DistrictRanking & { displayRank: number }
 
@@ -111,8 +115,10 @@ const PhoneDistrictIdentity: React.FC<{
   district: RankedDistrict
   isMine: boolean
   onToggleMine: () => void
-}> = ({ district, isMine, onToggleMine }) => (
-  <span className="flex items-center gap-1 min-w-0">
+  /** Set for a row pinned out of rank order: show where it really ranks. */
+  pinnedRank?: number | undefined
+}> = ({ district, isMine, onToggleMine, pinnedRank }) => (
+  <span className="flex flex-wrap items-center gap-x-1 min-w-0">
     <button
       type="button"
       onClick={onToggleMine}
@@ -148,6 +154,16 @@ const PhoneDistrictIdentity: React.FC<{
         nameClassName="truncate text-sm font-medium"
       />
     </Link>
+    {/* A pinned row sits out of rank order, so it says where it really
+        ranks — on its own line, so the chip is never squeezed (Lesson 134). */}
+    {pinnedRank != null && (
+      <span
+        className="basis-full text-sm text-gray-600 tabular-nums"
+        title="Pinned to the top — its global rank"
+      >
+        Pinned · <span className="font-semibold">#{pinnedRank}</span>
+      </span>
+    )}
   </span>
 )
 
@@ -584,9 +600,71 @@ const DistrictsPage: React.FC = () => {
   }, [filteredRankingsBySearch, myDistrictId])
 
   // Below 768 the rankings are a PriorityColumnsTable (#1834): district + 2
-  // chosen metrics, every row. It replaced the column-hiding scroll and the
-  // top-20 MOBILE_RANKINGS_CAP disclosure (#863).
+  // chosen metrics. It replaced the column-hiding scroll and the hard top-20
+  // MOBILE_RANKINGS_CAP (#863) with the MobileRowList step pattern: 25 rows,
+  // then "Show 25 more" / "Show all N". The reveal lives in ?rows= (a number
+  // or `all`) so back and deep links keep it; a search shows every match.
+  // A district named in ?district= (arriving from a district page) pins to
+  // the top — after my district — and shows its true rank. Desktop always
+  // renders every row.
   const visibleRankings = displayRankings
+  const isMobile = useIsMobile(768)
+  const [rowsParam, setRowsParam] = useUrlState('rows', String(PHONE_ROWS_STEP))
+  const [pinDistrictId] = useUrlState('district', '')
+  const isSearching = searchQuery.trim().length > 0
+  const phoneAllRows = React.useMemo(() => {
+    const pin = pinDistrictId
+      ? visibleRankings.find(d => d.districtId === pinDistrictId)
+      : undefined
+    if (!pin || pin.districtId === myDistrictId) return visibleRankings
+    const rest = visibleRankings.filter(d => d !== pin)
+    const at = rest[0]?.districtId === myDistrictId ? 1 : 0
+    return [...rest.slice(0, at), pin, ...rest.slice(at)]
+  }, [visibleRankings, pinDistrictId, myDistrictId])
+  const pinnedIds = new Set(
+    [myDistrictId, pinDistrictId].filter(
+      (id): id is string => !!id && phoneAllRows.some(d => d.districtId === id)
+    )
+  )
+  const phoneStep =
+    rowsParam === 'all'
+      ? Infinity
+      : Math.max(PHONE_ROWS_STEP, Number(rowsParam) || PHONE_ROWS_STEP)
+  const phoneVisible = isSearching
+    ? phoneAllRows.length
+    : Math.min(phoneAllRows.length, pinnedIds.size + phoneStep)
+  const phoneRows = phoneAllRows.slice(0, phoneVisible)
+  const phoneHidden = phoneAllRows.length - phoneVisible
+  const phoneReveal =
+    isMobile && phoneHidden > 0 ? (
+      <div className="priority-columns__reveal">
+        <button
+          type="button"
+          className="mobile-row-list__more"
+          onClick={() => {
+            const next = phoneVisible - pinnedIds.size + PHONE_ROWS_STEP
+            setRowsParam(
+              next >= phoneAllRows.length - pinnedIds.size
+                ? 'all'
+                : String(next)
+            )
+          }}
+        >
+          Show {Math.min(PHONE_ROWS_STEP, phoneHidden)} more districts
+          <span className="mobile-row-list__more-count">
+            {' '}
+            ({phoneHidden} hidden)
+          </span>
+        </button>
+        <button
+          type="button"
+          className="mobile-row-list__more"
+          onClick={() => setRowsParam('all')}
+        >
+          Show all {phoneAllRows.length} districts
+        </button>
+      </div>
+    ) : null
 
   // Type-ahead suggestions for the search bar (#435). Top 5 matches.
   const searchSuggestions = React.useMemo(() => {
@@ -1928,7 +2006,7 @@ const DistrictsPage: React.FC = () => {
               (#1358). */}
           <PriorityColumnsTable<RankedDistrict, SortFieldT>
             label="District rankings"
-            rows={visibleRankings}
+            rows={phoneRows}
             rowKey={d => d.districtId}
             rowTestId={d => `district-row-${d.districtId}`}
             identityHeader="District"
@@ -1941,8 +2019,12 @@ const DistrictsPage: React.FC = () => {
                     isMyDistrict(d.districtId) ? null : d.districtId
                   )
                 }
+                pinnedRank={
+                  pinnedIds.has(d.districtId) ? d.displayRank : undefined
+                }
               />
             )}
+            footer={phoneReveal}
             metrics={phoneRankingMetrics}
             defaultMetricIds={['rank', 'score']}
             sort={sort}

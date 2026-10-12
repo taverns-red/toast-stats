@@ -21,7 +21,12 @@ import { test, expect, type Page } from '@playwright/test'
  * any regression toward the old uncapped page (the un-capped list alone adds
  * ~14k px) breaches it loudly. Runs in BOTH engines via playwright.config
  * (smoke=Chromium, webkit=Safari) because the mobile state is width-driven
- * (useIsMobile -> matchMedia), not touch-driven. */
+ * (useIsMobile -> matchMedia), not touch-driven.
+ *
+ * #1834: the hard top-20 cap became the priority-columns list with a 25-row
+ * reveal step (?rows=). Showing all 94 rows put the page at 7,481px, just
+ * under budget; this guard now runs in CI (pr-preview.yml) so growth is
+ * flagged instead of silently eating the margin. */
 
 const SCROLL_BUDGET_PX = 8000
 
@@ -62,6 +67,6 @@ for (const vp of VIEWPORTS) {
     expect(
       scrollHeight,
       `landing / scrollHeight ${scrollHeight}px exceeds the ${SCROLL_BUDGET_PX}px mobile budget at ${vp.width}px — the #861-#863 mobile caps may have regressed`
-    ).toBeLessThan(SCROLL_BUDGET_PX)
+    ).toBeLessThanOrEqual(SCROLL_BUDGET_PX)
   })
 }
