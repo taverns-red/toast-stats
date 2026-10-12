@@ -99,6 +99,8 @@ const CASES: { path: string; width: number; ready: string }[] = [
     width: 375,
     ready: '.error-page__code',
   },
+  // The active year chip's green "· LIVE" on its tinted surface (4.27:1).
+  { path: '/history', width: 375, ready: '.history-page-year-chip__live' },
   // Year links render in the full table at 768+ (phone shows priority rows).
   {
     path: '/district/61/club/7238597/history',
