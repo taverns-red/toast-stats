@@ -1914,7 +1914,13 @@ const DistrictsPage: React.FC = () => {
                 // Delay so click on a suggestion can register before blur hides
                 window.setTimeout(() => setSearchFocused(false), 150)
               }}
-              placeholder="Search by district number or name… (press /)"
+              /* #1846 — a phone has no "/" key to press, and the hint was
+                 what truncated the placeholder at 375. */
+              placeholder={
+                isMobile
+                  ? 'Search by district number or name…'
+                  : 'Search by district number or name… (press /)'
+              }
               aria-label="Search districts by number or name"
               /* Gated on the listbox actually being mounted (#1360). It only
                  renders while focused with matches, and a dangling
