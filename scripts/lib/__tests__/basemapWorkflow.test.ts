@@ -1,0 +1,117 @@
+/**
+ * Workflow contract: the one-off basemap build/upload (#1786, ADR-016).
+ *
+ * The archive is read by HTTP range requests, so how it is uploaded is
+ * load-bearing:
+ * - a gzip upload (`-Z`, `--gzip-*`) makes GCS ignore `Range` and serve the
+ *   whole multi-GB object on every request (GCS transcoding docs);
+ * - a parallel composite upload loses the MD5, and Cloud CDN wants a strong
+ *   validator;
+ * - an overwrite would mix two builds in cached CDN chunks, so every copy is
+ *   `--no-clobber`.
+ * The workflow is manual-dispatch only and writes prod only by a server-side
+ * copy of the staging object. Sourced from the YAML so the guard cannot drift.
+ */
+import { describe, it, expect } from 'vitest'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import { parse } from 'yaml'
+
+const FILE = path.resolve(process.cwd(), '.github/workflows/basemap-build.yml')
+
+interface Step {
+  name?: string
+  if?: string
+  run?: string
+  env?: Record<string, string>
+}
+interface Workflow {
+  on: Record<string, unknown>
+  env?: Record<string, string>
+  jobs: Record<string, { steps: Step[]; env?: Record<string, string> }>
+}
+
+const raw = fs.existsSync(FILE) ? fs.readFileSync(FILE, 'utf-8') : ''
+const wf = (raw ? parse(raw) : { on: {}, jobs: {} }) as Workflow
+const steps = Object.values(wf.jobs).flatMap(j => j.steps)
+/** Each `gcloud storage cp …` command, continuation lines joined. */
+const cpCommands = steps.flatMap(s =>
+  (s.run ?? '')
+    .replace(/\\\n\s*/g, ' ')
+    .split('\n')
+    .filter(l => /\bgcloud storage cp\b/.test(l))
+    .map(cmd => ({ step: s, cmd }))
+)
+
+describe('basemap-build.yml (#1786)', () => {
+  it('exists and is manual-dispatch only', () => {
+    expect(raw).not.toBe('')
+    expect(Object.keys(wf.on)).toEqual(['workflow_dispatch'])
+  })
+
+  it('takes build date, maxzoom and a staging|prod-copy target', () => {
+    const inputs = (
+      wf.on['workflow_dispatch'] as { inputs: Record<string, any> }
+    ).inputs
+    expect(Object.keys(inputs).sort()).toEqual([
+      'build_date',
+      'maxzoom',
+      'target',
+    ])
+    expect(inputs['target'].type).toBe('choice')
+    expect(inputs['target'].options).toEqual(['staging', 'prod-copy'])
+    expect(inputs['target'].default).toBe('staging')
+  })
+
+  it('builds with the repo script, never an inline extract', () => {
+    expect(raw).toContain('scripts/basemap/build-basemap.sh')
+    expect(steps.some(s => /pmtiles"? extract/.test(s.run ?? ''))).toBe(false)
+  })
+
+  it('has the copy commands under test (guard is not vacuous)', () => {
+    expect(cpCommands.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('every copy: octet-stream, no-transform, no-clobber, never gzip', () => {
+    for (const { cmd } of cpCommands) {
+      expect(cmd).toContain('--content-type=application/octet-stream')
+      expect(cmd).toMatch(
+        /--cache-control="public, max-age=86400, no-transform"/
+      )
+      expect(cmd).toContain('--no-clobber')
+      expect(cmd).not.toMatch(/\s-[A-Za-z]*[Zz]\b|--gzip|\s-[jJ]\b/)
+    }
+  })
+
+  it('disables parallel composite upload for every copy', () => {
+    const value =
+      wf.env?.['CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED'] ??
+      Object.values(wf.jobs)[0]?.env?.[
+        'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED'
+      ]
+    expect(String(value)).toBe('False')
+  })
+
+  it('writes prod only by a server-side copy from staging, only for prod-copy', () => {
+    const prod = cpCommands.filter(({ cmd }) =>
+      /GCS_BUCKET_PRODUCTION/.test(cmd)
+    )
+    expect(prod.length).toBeGreaterThanOrEqual(1)
+    for (const { step, cmd } of prod) {
+      expect(step.if ?? '').toContain("inputs.target == 'prod-copy'")
+      expect(cmd).toMatch(
+        /gcloud storage cp "gs:\/\/\$\{GCS_BUCKET\}\/\$\{OBJ\}" "gs:\/\/\$\{GCS_BUCKET_PRODUCTION\}\/\$\{OBJ\}"/
+      )
+    }
+    const uploads = cpCommands.filter(({ cmd }) => !/cp "gs:\/\//.test(cmd))
+    for (const { step, cmd } of uploads) {
+      expect(cmd).not.toMatch(/GCS_BUCKET_PRODUCTION/)
+      expect(step.if ?? '').toContain("inputs.target == 'staging'")
+    }
+  })
+
+  it('only ever writes under basemap/', () => {
+    expect(raw).toMatch(/OBJ=.*basemap\/protomaps-v4\//)
+    expect(raw).not.toMatch(/gcloud storage (rm|rsync)/)
+  })
+})
