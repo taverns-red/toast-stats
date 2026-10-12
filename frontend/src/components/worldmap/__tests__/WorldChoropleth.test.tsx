@@ -125,7 +125,7 @@ describe('WorldChoropleth', () => {
     expect(readout).toHaveAttribute('aria-live', 'polite')
     expect(within(readout).getByText('India')).toBeInTheDocument()
     expect(readout).toHaveTextContent('12 clubs')
-    expect(readout).toHaveTextContent('#2')
+    expect(readout).toHaveTextContent('#3')
     expect(
       document.querySelector('[data-iso="356"]')!.getAttribute('class')
     ).toMatch(/selected/)

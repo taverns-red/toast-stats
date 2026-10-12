@@ -57,9 +57,8 @@ describe.each(['light', 'dark'] as const)('palette (%s)', theme => {
     expect(t.fills).toHaveLength(CHOROPLETH_BINS.length)
   })
 
-  it('sits on the same land and water as the basemap (ADR-016)', () => {
+  it('uses the basemap land for "no clubs" (ADR-016)', () => {
     expect(t.noClubs).toBe(BASEMAP_COLOURS[theme].land)
-    expect(t.water).toBe(BASEMAP_COLOURS[theme].water)
   })
 
   for (const v of VISIONS) {
@@ -83,10 +82,23 @@ describe.each(['light', 'dark'] as const)('palette (%s)', theme => {
     })
   }
 
-  it('every fill is distinct from the water around it (≥ ΔE 8)', () => {
-    for (const fill of t.fills) {
-      expect(deltaE(fill, t.water, 'normal')).toBeGreaterThanOrEqual(8)
-    }
+  // The light basemap's blue water (#C9D7E0) is only ΔE 4.4 from the second
+  // bin, so a coastline would vanish; the choropleth's light sea is a warm
+  // grey instead. Dark keeps the basemap water, which already clears it.
+  for (const v of VISIONS) {
+    it(`every fill is distinct from the water under ${v} (≥ ΔE 8)`, () => {
+      for (const fill of t.fills) {
+        expect(deltaE(fill, t.water, v)).toBeGreaterThanOrEqual(8)
+      }
+    })
+
+    it(`"no clubs" land is distinct from the water under ${v} (≥ ΔE 5, plus its hatch)`, () => {
+      expect(deltaE(t.noClubs, t.water, v)).toBeGreaterThanOrEqual(5)
+    })
+  }
+
+  it('dark mode keeps the basemap water', () => {
+    if (theme === 'dark') expect(t.water).toBe(BASEMAP_COLOURS.dark.water)
   })
 
   it('the selection ring clears 3:1 against every fill (WCAG 1.4.11)', () => {

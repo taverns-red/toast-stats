@@ -1,0 +1,373 @@
+/* Worldwide country choropleth (#1797). Brand tokens (--rt-*) with local
+   theme remaps under [data-theme='dark'] (R10). Map fills come from
+   choroplethScale.ts (validated there); only the chrome lives here. The table
+   also renders inside the portalled BottomSheet, so variables sit on :root. */
+:root {
+  --wm-surface: #ffffff;
+  --wm-text: var(--rt-ink);
+  --wm-text-2: var(--rt-ink-2);
+  --wm-rule: rgb(15 14 13 / 0.14);
+  --wm-border: rgb(15 14 13 / 0.22);
+  --wm-selected-bg: rgb(212 135 63 / 0.14);
+  --wm-focus: var(--rt-stats);
+}
+
+[data-theme='dark'] {
+  --wm-surface: var(--rt-bg-2);
+  --wm-text: var(--rt-ink-on-dk);
+  --wm-text-2: #cfc9bf;
+  --wm-rule: rgb(244 241 235 / 0.14);
+  --wm-border: rgb(244 241 235 / 0.28);
+  --wm-selected-bg: rgb(212 135 63 / 0.22);
+}
+
+.wm-page {
+  color: var(--wm-text);
+}
+
+.wm-page__crumb {
+  margin-bottom: var(--rt-space-3);
+  font-size: 15px;
+}
+
+.wm-page__crumb a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--wm-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Map beside the list from 1024 px; stacked below that. */
+.wm-layout {
+  display: grid;
+  gap: var(--rt-space-6);
+  margin-top: var(--rt-space-4);
+}
+
+@media (min-width: 1024px) {
+  .wm-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+    align-items: start;
+  }
+
+  .wm-table-scroll {
+    max-height: 640px;
+    overflow-y: auto;
+  }
+}
+
+.wm-layout__map,
+.wm-layout__list {
+  min-width: 0;
+}
+
+.wm-map {
+  margin: 0;
+}
+
+.wm-map__frame {
+  position: relative;
+  border: 1px solid var(--wm-border);
+  border-radius: var(--rt-radius-md);
+  overflow: hidden;
+}
+
+/* The same box before and after the geometry chunk arrives (no CLS). */
+.wm-map__svg,
+.wm-skeleton {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1000 / 449;
+  height: auto;
+}
+
+.wm-map__svg {
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wm-map__svg--zoomed {
+  touch-action: none;
+  cursor: grab;
+}
+
+.wm-country,
+.wm-marker {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .wm-country:hover {
+    filter: brightness(0.92);
+  }
+
+  [data-theme='dark'] .wm-country:hover {
+    filter: brightness(1.15);
+  }
+}
+
+.wm-skeleton {
+  border: 1px solid var(--wm-border);
+  border-radius: var(--rt-radius-md);
+  background: var(--rt-paper-2);
+}
+
+[data-theme='dark'] .wm-skeleton {
+  background: var(--rt-bg-3);
+}
+
+.wm-map__zoom {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wm-map__zoom-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--wm-border);
+  border-radius: var(--rt-radius-sm);
+  background: var(--wm-surface);
+  color: var(--wm-text);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wm-map__zoom-btn--text {
+  font-size: 13px;
+}
+
+.wm-map__zoom-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.wm-map__zoom-btn:focus-visible,
+.wm-table__select:focus-visible,
+.wm-all-btn:focus-visible,
+.wm-page__crumb a:focus-visible,
+.wm-table-scroll:focus-visible {
+  outline: 3px solid var(--wm-focus);
+  outline-offset: 2px;
+}
+
+/* At 375 the map is ~343 × 154 px: a column of three 44 px buttons would
+   overflow it, so they sit in a row over the Arctic, top right. */
+@media (max-width: 767px) {
+  .wm-map__zoom {
+    top: 6px;
+    right: 6px;
+    flex-direction: row;
+  }
+}
+
+.wm-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-height: 48px;
+  padding: var(--rt-space-3) 0;
+  font-size: 16px;
+  color: var(--wm-text);
+}
+
+.wm-readout__name {
+  font-family: var(--rt-font-display);
+  font-size: 18px;
+}
+
+.wm-readout__value {
+  font-variant-numeric: tabular-nums;
+}
+
+.wm-readout__hint {
+  color: var(--wm-text-2);
+  font-size: 15px;
+}
+
+.wm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  font-size: 14px;
+  color: var(--wm-text);
+}
+
+.wm-legend__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.wm-legend__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wm-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wm-legend__swatch,
+.wm-table__swatch {
+  display: inline-block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--wm-border);
+  border-radius: 3px;
+}
+
+.wm-legend__note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--wm-text-2);
+  font-size: 13px;
+}
+
+.wm-table-scroll {
+  border: 1px solid var(--wm-border);
+  border-radius: var(--rt-radius-md);
+}
+
+.wm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--rt-font-body);
+  font-size: 15px;
+  color: var(--wm-text);
+}
+
+.wm-table__caption {
+  padding: var(--rt-space-3);
+  text-align: left;
+  font-weight: 600;
+}
+
+.wm-table th,
+.wm-table td {
+  padding: 0 var(--rt-space-3);
+  border-top: 1px solid var(--wm-rule);
+  text-align: left;
+  font-weight: 400;
+}
+
+.wm-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 40px;
+  background: var(--wm-surface);
+  color: var(--wm-text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wm-table td {
+  height: 44px;
+}
+
+.wm-table .wm-table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wm-table .wm-table__rank {
+  width: 2.5em;
+  color: var(--wm-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.wm-table__select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wm-table__select:hover {
+  text-decoration: underline;
+}
+
+.wm-table__row--selected {
+  background: var(--wm-selected-bg);
+}
+
+.wm-table__row--selected .wm-table__select {
+  font-weight: 700;
+}
+
+.wm-table__note,
+.wm-table__row--unknown th,
+.wm-table__row--unknown td {
+  color: var(--wm-text-2);
+  font-style: italic;
+}
+
+.wm-table__unplaced {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.wm-all-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: var(--rt-space-3);
+  border: 1px solid var(--wm-border);
+  border-radius: var(--rt-radius-md);
+  background: var(--wm-surface);
+  color: var(--wm-text);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wm-unavailable {
+  margin-top: var(--rt-space-4);
+  padding: var(--rt-space-4);
+  border: 1px dashed var(--wm-border);
+  border-radius: var(--rt-radius-md);
+  color: var(--wm-text-2);
+}
+
+@media (max-width: 767px) {
+  .wm-table {
+    font-size: 15px;
+  }
+
+  .wm-table th,
+  .wm-table td {
+    padding: 0 var(--rt-space-2);
+  }
+}

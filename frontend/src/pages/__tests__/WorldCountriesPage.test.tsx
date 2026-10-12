@@ -42,7 +42,7 @@ vi.mock('../../hooks/useMediaQuery', () => ({
 
 function LocationProbe() {
   const loc = useLocation()
-  return <output data-testid="location">{loc.pathname + loc.search}</output>
+  return <div data-testid="location">{loc.pathname + loc.search}</div>
 }
 
 const renderAt = (url: string) =>
