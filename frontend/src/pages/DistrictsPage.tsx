@@ -59,6 +59,8 @@ import {
   type PriorityMetric,
 } from '../components/PriorityColumnsTable'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useScrollEdges } from '../hooks/useScrollEdges'
+import { LandingContextBar } from '../components/LandingContextBar'
 import { snapshotDatesFrom } from '../types/snapshotDate'
 
 // Columns in the rankings table head: District, Rank, Paid Clubs, Total
@@ -485,6 +487,11 @@ const DistrictsPage: React.FC = () => {
     return Array.from(uniqueRegions).sort()
   }, [rankings])
 
+  // #1846 — edge-aware fade for the phone region chip row (the Recognition
+  // row tracks its own). Keyed on the region count so the row re-measures
+  // when the regions land.
+  const regionScrollerEdges = useScrollEdges<HTMLDivElement>(regions.length)
+
   // Inflate the selection to all known regions on first data render (#416,
   // retained for #978). Beyond initializing the toolbar's selected state, this
   // post-data setState is load-bearing for CLS: the extra commit settles the
@@ -790,6 +797,26 @@ const DistrictsPage: React.FC = () => {
     })
   }
 
+  // #1846 — the phone context bar, mounted in the shell AND the loaded tree
+  // so the data landing never inserts it (CLS). The orientation copy is the
+  // desktop strip's sentence, worded for touch (no "/" shortcut, "Tap").
+  const landingContextBarProps = {
+    selectedProgramYear,
+    setSelectedProgramYear,
+    availableProgramYears,
+    cachedDates,
+    selectedDate,
+    setSelectedDate,
+    effectiveDate: effectiveRankingsDate,
+    asOfDate: data?.asOfDate,
+    isLatestSnapshot,
+    orientation: `Each row below is ${
+      kpiTotals.tracked > 0
+        ? `one of the ${kpiTotals.tracked} Toastmasters districts`
+        : 'a Toastmasters district'
+    } worldwide. Tap a district to drill into its clubs, divisions, and trends. Use the search bar to jump to a district by number or name. Star (★) a district to keep it pinned at the top across visits.`,
+  }
+
   // #826 / #488 — Shared shell: the loading skeleton, both isError
   // branches, and the loaded page all sit inside .districts-page-root
   // > .districts-page > [header + KPI strip] > [state-specific body].
@@ -807,6 +834,8 @@ const DistrictsPage: React.FC = () => {
   const renderShell = (body: React.ReactNode, reserveHeroSlots = false) => (
     <div className="districts-page-root">
       <div className="districts-page">
+        {/* Phone context bar (#1846): below 768 it replaces the header. */}
+        <LandingContextBar {...landingContextBarProps} />
         <div className="districts-page-header">
           <div className="districts-page-header__intro">
             {/* #890 — `--py` scopes the mobile hide to the landing only; the
@@ -1506,9 +1535,43 @@ const DistrictsPage: React.FC = () => {
     </div>
   )
 
+  // Shared by the desktop Export button and the phone sheet (#1846).
+  const exportRankingsCsv = () => {
+    const header = [
+      'Rank',
+      'District',
+      'Region',
+      'Paid Clubs',
+      'Total Payments',
+      'Distinguished Clubs',
+      'Aggregate Score',
+    ]
+    const rows: (string | number)[][] = sortedRankings.map((r, i) => [
+      i + 1,
+      `D${r.districtId}`,
+      r.region,
+      r.paidClubs,
+      r.totalPayments,
+      r.distinguishedClubs,
+      r.aggregateScore,
+    ])
+    const csv = arrayToCSV([header, ...rows])
+    const dateLabel = (effectiveRankingsDate ?? 'latest').replace(
+      /[^0-9a-z-]/gi,
+      ''
+    )
+    downloadCSV(csv, `district-rankings-${dateLabel}.csv`)
+  }
+
   return (
     <div className="districts-page-root">
       <div className="districts-page">
+        {/* Phone context bar (#1846): below 768 it replaces the header
+            below; the orientation copy and actions live in its sheet. */}
+        <LandingContextBar
+          {...landingContextBarProps}
+          onExportCsv={exportRankingsCsv}
+        />
         {/* Redesigned page header (#356) */}
         <div className="districts-page-header">
           <div className="districts-page-header__intro">
@@ -1593,34 +1656,7 @@ const DistrictsPage: React.FC = () => {
             <button
               type="button"
               className="districts-action-btn"
-              onClick={() => {
-                const header = [
-                  'Rank',
-                  'District',
-                  'Region',
-                  'Paid Clubs',
-                  'Total Payments',
-                  'Distinguished Clubs',
-                  'Aggregate Score',
-                ]
-                const rows: (string | number)[][] = sortedRankings.map(
-                  (r, i) => [
-                    i + 1,
-                    `D${r.districtId}`,
-                    r.region,
-                    r.paidClubs,
-                    r.totalPayments,
-                    r.distinguishedClubs,
-                    r.aggregateScore,
-                  ]
-                )
-                const csv = arrayToCSV([header, ...rows])
-                const dateLabel = (effectiveRankingsDate ?? 'latest').replace(
-                  /[^0-9a-z-]/gi,
-                  ''
-                )
-                downloadCSV(csv, `district-rankings-${dateLabel}.csv`)
-              }}
+              onClick={exportRankingsCsv}
             >
               <svg
                 width="13"
@@ -1787,7 +1823,10 @@ const DistrictsPage: React.FC = () => {
                     is also why this row could never be reserved exactly: the
                     shell cannot know the region count before the data lands,
                     but it can know that one line is one chip tall. */}
-                  <div className="districts-toolbar__scroller">
+                  <div
+                    className="districts-toolbar__scroller"
+                    {...regionScrollerEdges}
+                  >
                     <button
                       type="button"
                       onClick={() => setSelectedRegions(regions)}
