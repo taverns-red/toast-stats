@@ -118,7 +118,7 @@ const PhoneDistrictIdentity: React.FC<{
   /** Set for a row pinned out of rank order: show where it really ranks. */
   pinnedRank?: number | undefined
 }> = ({ district, isMine, onToggleMine, pinnedRank }) => (
-  <span className="flex items-center gap-1 min-w-0">
+  <span className="flex flex-wrap items-center gap-x-1 min-w-0">
     <button
       type="button"
       onClick={onToggleMine}
@@ -154,12 +154,14 @@ const PhoneDistrictIdentity: React.FC<{
         nameClassName="truncate text-sm font-medium"
       />
     </Link>
+    {/* A pinned row sits out of rank order, so it says where it really
+        ranks — on its own line, so the chip is never squeezed (Lesson 134). */}
     {pinnedRank != null && (
       <span
-        className="flex-shrink-0 font-semibold tabular-nums"
+        className="basis-full text-sm text-gray-600 tabular-nums"
         title="Pinned to the top — its global rank"
       >
-        #{pinnedRank}
+        Pinned · <span className="font-semibold">#{pinnedRank}</span>
       </span>
     )}
   </span>
