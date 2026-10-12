@@ -701,6 +701,9 @@ const DistrictDetailPageInner: React.FC = () => {
                     selectedDate={effectiveEndDate ?? undefined}
                     programYearStartDate={effectiveProgramYear.startDate}
                     performanceTargets={performanceTargets ?? undefined}
+                    /* On the phone hub the hub above IS the overview; this
+                       panel is the detail under it (#1842). */
+                    heading={isHubLayout ? 'Details' : 'Overview'}
                   />
                 ) : (
                   /* While the date index resolves, hold the Overview's slot
@@ -710,6 +713,7 @@ const DistrictDetailPageInner: React.FC = () => {
                   isLoadingOverview && (
                     <DistrictOverviewSkeleton
                       programYear={selectedProgramYear.label}
+                      heading={isHubLayout ? 'Details' : 'Overview'}
                     />
                   )
                 )}

@@ -141,6 +141,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   programYear,
   selectedDate,
   programYearStartDate,
+  heading = 'Overview',
 }) => {
   const {
     data: analytics,
@@ -175,12 +176,15 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
       ? cspLine(analytics.allClubs, { programYear, snapshotDate: selectedDate })
       : null
 
-  if (isLoading) return <DistrictOverviewSkeleton programYear={programYear} />
+  if (isLoading)
+    return (
+      <DistrictOverviewSkeleton programYear={programYear} heading={heading} />
+    )
 
   return (
     <div className="redesign-panel">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{heading}</h2>
         {analytics && clubCount > 0 && (
           <p className="mt-1 text-sm text-gray-600">
             {clubCount} club{clubCount === 1 ? '' : 's'}
@@ -306,14 +310,14 @@ const GhostPanel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 export const DistrictOverviewSkeleton: React.FC<{
   programYear: string
   heading?: string
-}> = ({ programYear }) => (
+}> = ({ programYear, heading = 'Overview' }) => (
   <div
     className="redesign-panel"
     aria-busy="true"
     data-testid="district-overview-skeleton"
   >
     <div className="mb-6">
-      <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
+      <h2 className="text-2xl font-bold text-gray-900">{heading}</h2>
       <p
         className="mt-1 text-sm"
         data-testid="district-overview-skeleton-subtitle"
