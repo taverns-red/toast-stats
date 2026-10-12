@@ -78,6 +78,8 @@
   .club-grid-tile__name,
   .club-grid-tile__dcp,
   .club-grid-legend__label,
+  /* #1845: legend chips at 14px (swatch glyph + label) */
+  .club-grid-legend__swatch,
   .club-grid-toggle__btn,
   .club-grid-toggle__label,
   /* Club page */
@@ -137,7 +139,6 @@
   }
 
   /* 5. Decorative glyphs (swatch icons, carets, kbd) — at least 12px. */
-  .club-grid-legend__swatch,
   .recognition-legend__caret,
   .jump-to-chip__caret,
   .methodology-toc__num,
