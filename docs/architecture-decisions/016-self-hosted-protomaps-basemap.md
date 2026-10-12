@@ -48,7 +48,7 @@ Constraints this decision has to satisfy:
   - `Content-Type: application/octet-stream`, which Protomaps' own build host also uses;
   - `Cache-Control: public, max-age=86400, no-transform`;
   - **no** `Content-Encoding`. The tiles inside the archive are already gzip-compressed (`pmtiles show`: `tile compression: gzip`).
-- **Build.** `scripts/basemap/build-basemap.sh <YYYYMMDD> [maxzoom]` extracts, runs `pmtiles verify`, and prints `{file, object, bytes, sha256}`. Built files are never committed. The repo holds only a 67 KB z0 fixture for tests.
+- **Build.** `scripts/basemap/build-basemap.sh <YYYYMMDD> [maxzoom]` extracts, runs `pmtiles verify`, and prints `{file, object, bytes, sha256}`. It runs on a GitHub runner from the manual-dispatch workflow `basemap-build.yml` (Ron, 2026-10-12: not on a laptop). Built files are never committed. The repo holds only a 67 KB z0 fixture for tests.
 
 ### D2. Renderer: MapLibre GL JS with the `pmtiles` protocol, lazy-loaded on map routes only
 
@@ -63,7 +63,7 @@ Constraints this decision has to satisfy:
   - pmtiles + basemaps ≈ 12 KB gzip, included in the chunk;
   - landing critical path unchanged: `check-critical-path` OK, 14 chunks, 174 KB gzip, `forbidden: []`.
 
-  The route's main-thread JS (≈ 292 KB plus the page) is just inside #1784's 300 KB budget. That leaves #1784 about 8 KB for its own code, so its pins and clustering must stay lean (MapLibre's built-in GeoJSON clustering adds no dependency). The worker is off the main thread and not counted in that budget; the PR records it so nobody has to rediscover it.
+  The route's main-thread JS (≈ 292 KB plus the page) is just inside #1784's 300 KB budget. That leaves #1784 about 8 KB for its own code, so its pins and clustering must stay lean (MapLibre's built-in GeoJSON clustering adds no dependency). **Whether the worker counts needs Ron's decision.** #1784's AC says "route JS ≤ 300 KB gz incl. MapLibre", and the 144 KB gzip worker is MapLibre code. If it counts, the route is at about 436 KB, over budget before any pins. It cannot be removed: MapLibre parses tiles only in a worker, and the worker module is the published build. It is fetched in parallel when the map is created, runs off the main thread, and does not block interaction or parsing on the main thread. The proposal is to split the budget into main-thread route JS ≤ 300 KB gzip (about 8 KB left for #1784) and the MapLibre worker ≤ 150 KB gzip, both recorded in the #1784 PR. The alternative is a single on-the-wire budget of about 460 KB for map routes.
 
 - **Code splitting.** `vite.config.ts` puts `maplibre-gl`, `@maplibre/*`, `@mapbox/*`, `pmtiles` and `@protomaps/*` in a named `maplibre` group. `ROUTE_ONLY_CHUNK_PREFIXES` (`scripts/lib/criticalPath.ts`) now lists `maplibre-`, so CI fails if any route preloads it. `LazyBasemapMap` (a dynamic import) is the only way in. Its fallback is a same-size land-coloured box, so the chunk arriving shifts nothing (Lesson 107).
 - **Worker.** MapLibre 6 resolves its worker relative to its own `import.meta.url`, and a bundle breaks that resolution. `BasemapMap` imports `maplibre-gl/dist/maplibre-gl-worker.mjs?url` and calls `setWorkerUrl`. The worker is then a same-origin, hashed asset loaded as a module worker. With no `worker-src` in our CSP, the browser falls back to `script-src 'self'`, which already allows it. **The CSP does not change.** The basemap smoke on the deployed preview fails on any CSP or worker console error.
@@ -84,7 +84,7 @@ Constraints this decision has to satisfy:
 
 - **Placement.** The archive goes on the data buckets: staging `toast-stats-data-staging` and prod `toast-stats-data-ca`. `config/basemap.ts` builds the URL from `VITE_CDN_BASE_URL`, so a preview reads the staging copy and prod reads `cdn.taverns.red`. `VITE_BASEMAP_PMTILES_URL` overrides the URL for dev.
   - The pipeline never touches `basemap/`. Promotion copies `v1/`, `snapshots/`, `time-series/` and `config/`. Prune and reconcile delete only `raw-csv/` and `snapshots/` (`data-pipeline.yml`).
-  - The upload is an operator step (Ron), not a pipeline stage.
+  - The upload is an operator step, not a pipeline stage. Ron dispatches `basemap-build.yml` twice: `target=staging` builds, uploads and verifies; `target=prod-copy` copies server side and checks the CDN's range response. The workflow does not record the object in the run manifest (`runs/<id>/written.jsonl`), which feeds the pipeline's gates.
 - **Ranges through Cloud CDN.** Per the Cloud CDN caching docs, an origin that supports byte ranges must answer with:
   - status 200 or 206, `Accept-Ranges: bytes`, and `Content-Length` (plus `Content-Range` on a 206);
   - `ETag` and `Last-Modified` with a **strong** validator.
@@ -127,7 +127,7 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
   - The fixed load-balancer charge (ADR-007) is unchanged.
 - **Map route cost.** 292 KB gzip of main-thread JS, plus a 144 KB gzip worker. That is the price of vector tiles; a raster stack would need a tile server or a pre-rendered pyramid.
 - **No place labels** until a glyph range is self-hosted (follow-up). Pins and side panels carry names.
-- **Operator steps.** The upload needs about 4.2 GB of free local disk, or a cloud shell with enough space.
+- **Operator steps.** Two manual workflow dispatches per refresh. The standard runner is used after it frees preinstalled toolchains. The workflow checks the space before downloading anything, and fails with "use a larger runner" if there is not enough.
 - **Detail.** Beyond z10 the geometry is over-zoomed, so minor streets are generalised. If directors need street-level detail, the regional-merge follow-up (D1) is the path.
 
 ## Alternatives considered

@@ -56,7 +56,11 @@ OUT="${OUT_DIR}/${NAME}"
 "$PMTILES" verify "$OUT" >&2
 
 BYTES=$(wc -c < "$OUT" | tr -d ' ')
-SHA=$(shasum -a 256 "$OUT" | cut -d' ' -f1)
+if command -v sha256sum > /dev/null; then
+  SHA=$(sha256sum "$OUT" | cut -d' ' -f1) # Linux runner
+else
+  SHA=$(shasum -a 256 "$OUT" | cut -d' ' -f1) # macOS
+fi
 # Structured result on stdout (R4); everything else went to stderr.
 printf '{"file":"%s","object":"basemap/protomaps-v4/%s","bytes":%s,"sha256":"%s"}\n' \
   "$OUT" "$NAME" "$BYTES" "$SHA"
