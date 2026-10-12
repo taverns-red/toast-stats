@@ -239,13 +239,14 @@ describe('build-identity-history.sh: club-district history to staging derived/',
   })
 
   it('records every derived/ object in the run manifest, with the sha256 of its bytes (#1762, ADR-015 P5)', () => {
-    seedClubRace()
+    seedAll()
     const r = runScript()
     expect(r.status, r.stderr).toBe(0)
     const recorded = lines(manifest).map(
       l => JSON.parse(l) as { path: string; sha256: string; stage: string }
     )
-    expect(recorded.map(e => e.path).sort()).toEqual(allObjects())
+    expect(recorded.map(e => e.path).sort()).toEqual(derivedObjects())
+    expect(derivedObjects()).toContain('derived/district-region-history.json')
     for (const e of recorded) {
       expect(e.stage).toBe('identity')
       const bytes = fs.readFileSync(path.join(root, BUCKET, e.path))
