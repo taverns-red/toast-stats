@@ -52,6 +52,10 @@ export interface ContextBarProps {
   about?: React.ReactNode
   /** The full breadcrumb trail, root first, current page last. */
   trail?: ContextCrumb[]
+  /** A page toolbar slot between the title and the chip (#1912). A page
+   * portals compact controls into it (Clubs: search + Filter & sort in short
+   * landscape); empty, it takes no space. Omitted → no slot. */
+  toolsRef?: ((el: HTMLDivElement | null) => void) | undefined
 }
 
 export const ContextBar: React.FC<ContextBarProps> = ({
