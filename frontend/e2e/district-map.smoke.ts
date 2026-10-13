@@ -310,6 +310,14 @@ for (const theme of ['light', 'dark'] as const) {
         surface.getByRole('button', { name: 'Online attendance possible' })
       ).toHaveAttribute('aria-pressed', 'true')
 
+      // Measure the sheet at rest (#1984). Mid bottom-sheet-in, WebKit maps
+      // each rect through the fractional translateY in float32, so a 44 px
+      // chip (offsetHeight 44 every frame) reads 43.99994 on some frames.
+      await surface.evaluate(el =>
+        Promise.all(
+          el.getAnimations({ subtree: true }).map(a => a.finished)
+        ).then(() => undefined)
+      )
       const m = await page.evaluate(() => {
         const chips = Array.from(
           document.querySelectorAll<HTMLElement>('.filter-sheet__chip')
