@@ -44,10 +44,17 @@ async function expectReadoutGeometry(page: Page, readout: Locator) {
   expect(g.px).toBeGreaterThanOrEqual(14)
 }
 
+/** The chart's plot surface — legend icons are `svg.recharts-surface` too. */
+const plotSurface = (scope: Locator) =>
+  scope.locator('.recharts-wrapper > svg.recharts-surface').first()
+
 /** Tap the middle of the chart's plot area. */
 async function tapPlot(page: Page, scope: Locator) {
-  const surface = scope.locator('svg.recharts-surface').first()
+  const surface = plotSurface(scope)
   await expect(surface).toBeVisible()
+  // The plot can sit below the fold of a scrolling sheet; a touch outside
+  // the viewport is a no-op.
+  await surface.scrollIntoViewIfNeeded()
   const box = await surface.boundingBox()
   if (!box) throw new Error('chart surface has no box')
   await page.touchscreen.tap(box.x + box.width * 0.6, box.y + box.height * 0.5)
@@ -68,6 +75,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(sheet).toBeVisible()
       const readout = sheet.locator(READOUT)
       await expect(readout).toHaveText(/Tap the chart to read a value/)
+      await plotSurface(sheet).scrollIntoViewIfNeeded()
       const before = await readout.boundingBox()
 
       await tapPlot(page, sheet)
@@ -80,13 +88,15 @@ for (const theme of ['light', 'dark'] as const) {
       expect(Math.round(after?.y ?? -1)).toBe(Math.round(before?.y ?? -2))
       await expectReadoutGeometry(page, readout)
 
-      // The keyboard moves the pin.
-      const pinned = await readout.textContent()
-      await sheet.locator('svg.recharts-surface').first().focus()
-      await page.keyboard.press('ArrowLeft')
-      await page.keyboard.press('ArrowLeft')
-      await expect(readout).not.toHaveText(pinned ?? '')
-      await expect(readout).toHaveText(DATED)
+      // The keyboard pins too, with no pointer at all (Recharts'
+      // accessibility layer): reload, focus the plot, arrow right.
+      await load(page, '/district/61/trends?chartExpanded=membership')
+      const sheet2 = page.getByRole('dialog')
+      const readout2 = sheet2.locator(READOUT)
+      await expect(readout2).toHaveText(/Tap the chart to read a value/)
+      await plotSurface(sheet2).focus()
+      await page.keyboard.press('ArrowRight')
+      await expect(readout2).toHaveText(DATED)
     })
 
     test('Clubs race chart: tap pins a snapshot inline', async ({ page }) => {
@@ -104,17 +114,20 @@ for (const theme of ['light', 'dark'] as const) {
   })
 }
 
-test('desktop keeps the hover tooltip and shows no readout line', async ({
-  browser,
-}) => {
-  const ctx = await browser.newContext({
+test.describe('hover device', () => {
+  test.use({
     viewport: { width: 1280, height: 900 },
+    hasTouch: false,
+    isMobile: false,
   })
-  const page = await ctx.newPage()
-  await load(page, '/clubs')
-  const figure = page.locator('figure.race-chart')
-  await figure.scrollIntoViewIfNeeded()
-  await expect(figure.locator('svg.recharts-surface').first()).toBeVisible()
-  await expect(figure.locator(READOUT)).toHaveCount(0)
-  await ctx.close()
+
+  test('desktop keeps the hover tooltip and shows no readout line', async ({
+    page,
+  }) => {
+    await load(page, '/clubs')
+    const figure = page.locator('figure.race-chart')
+    await figure.scrollIntoViewIfNeeded()
+    await expect(plotSurface(figure)).toBeVisible()
+    await expect(figure.locator(READOUT)).toHaveCount(0)
+  })
 })
