@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Phone clubs list as compact rows (#1833, mobile epic #1827 Phase 1,
  * review §4.1 "Clubs list", §7 "clubs page height").

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* District KPI strip must not pin over the Overview on a phone (#1828, epic
  * #1827, mobile review S2).

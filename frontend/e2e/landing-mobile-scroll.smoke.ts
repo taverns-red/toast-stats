@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Landing-page mobile scroll-length guard (#864, epic #865 "mobile UX audit").
  *

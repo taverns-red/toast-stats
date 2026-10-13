@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/test'
 
 /* Mobile CLS budget for the landing page, measured live (#1373).
  *

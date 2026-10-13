@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Phone context bar (#1831, mobile epic #1827 Phase 1, review §5.1).
  *

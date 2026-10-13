@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Club grid on phones (#1845, mobile epic #1827 Phase 2, review §2 S8 /
  * §7 item 18).

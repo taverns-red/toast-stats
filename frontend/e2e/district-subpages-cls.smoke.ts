@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* CLS budget for the routed district subpages `/district/:id/*` (#1837).
  *

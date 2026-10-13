@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* District club map (#1784) on the deployed preview (BASE_URL), at 375 and
  * 1280, light and dark. Real data (D61) and the real basemap archive.

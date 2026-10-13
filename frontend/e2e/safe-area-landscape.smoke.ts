@@ -5,7 +5,7 @@ import {
   type Browser,
   type BrowserContext,
   type Page,
-} from '@playwright/test'
+} from './fixtures/test'
 
 /* Safe-area and landscape (#1847, mobile epic #1827, review S11 / §4.2 / §7
  * item 20).

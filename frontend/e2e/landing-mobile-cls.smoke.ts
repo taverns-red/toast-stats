@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Mobile loading/error→loaded CLS guard for the landing page (#922).
  *

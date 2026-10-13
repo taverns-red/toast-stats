@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/test'
 
 /* Clubs-table Coach column (#1954), measured on the deployed preview.
  *

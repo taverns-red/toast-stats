@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Locator } from '@playwright/test'
+import { test, expect, type Page, type Locator } from './fixtures/test'
 import { MIN_TOUCH_TARGET_PX } from '../src/utils/touchTargetUtils'
 
 /* Tooltip viewport-collision tripwire (#1405).
