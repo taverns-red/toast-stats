@@ -210,7 +210,8 @@ for (const theme of ['light', 'dark'] as const) {
  * section at 1280; the list view applies the same set. */
 const shownOf = async (page: Page) => {
   const status = page.getByRole('status').filter({ hasText: /Showing/ })
-  await expect(status).toHaveText(/Showing \d+ of \d+ clubs/, {
+  // "of 0" is the line before the analytics land; wait for the real total.
+  await expect(status).toHaveText(/Showing \d+ of [1-9]\d* clubs/, {
     timeout: 30_000,
   })
   const [, n, m] = /Showing (\d+) of (\d+)/.exec(
@@ -266,13 +267,17 @@ for (const theme of ['light', 'dark'] as const) {
       await surface.getByRole('button', { name: 'Round 1' }).click()
       await expect(page).toHaveURL(/visit=r1/)
       await expect(page).toHaveURL(/online=yes/)
-      const both = await shownOf(page)
-      expect(both.n).toBeLessThanOrEqual(online.n)
+      // D61 has round-1 visits reported, so the set narrows.
+      await expect
+        .poll(async () => (await shownOf(page)).n, { timeout: 15_000 })
+        .toBeLessThan(online.n)
 
       await surface.getByRole('button', { name: 'Clear all' }).click()
       await expect(page).not.toHaveURL(/visit=|online=/)
       if (width < 768) await page.keyboard.press('Escape')
-      expect((await shownOf(page)).n).toBe(online.m)
+      await expect
+        .poll(async () => (await shownOf(page)).n, { timeout: 15_000 })
+        .toBe(online.m)
 
       // The list view applies the same filters.
       await page.goto(`${MAP}?view=list&online=yes`, {
