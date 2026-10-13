@@ -12,6 +12,8 @@
  *   - copies, syncs or moves INTO the production bucket
  *     (`gcloud storage cp|rsync|mv` whose destination is prod),
  *   - removes or updates a production object,
+ *   - runs the scoped promoter with `--execute` (#1763; it calls gcloud
+ *     itself, so the pattern above cannot see its writes),
  *   - invalidates the Cloud CDN, or
  *   - writes to the `promotion-held` issue flow (label/issue create, comment,
  *     close). An intentional skip must not open or close alerts.
@@ -86,6 +88,11 @@ export function prodWriteReasons(run: string): string[] {
           : PROD_REF.test(tokens[tokens.length - 1] ?? '')
       if (target) reasons.push(`gcloud storage ${verb} → production`)
     }
+    // The scoped promoter (#1763) writes prod through its own gcloud calls,
+    // invisible to the pattern above; its dry run only reads.
+    if (/promote-run-manifest\.ts\b.*--execute\b/.test(cmd)) {
+      reasons.push('manifest promotion → production')
+    }
     if (/invalidate-cdn-cache/.test(cmd)) reasons.push('CDN invalidation')
     if (
       /\bgh\s+(issue\s+(create|comment|close)|label\s+create)\b/.test(cmd) &&
@@ -100,11 +107,13 @@ export function prodWriteReasons(run: string): string[] {
 /** The top-level `&&` conjuncts of a GitHub expression. */
 export function topLevelConjuncts(expr: string): string[] {
   let flat = expr.replace(/\s+/g, ' ').trim()
-  // Collapse parenthesised groups so their inner `&&` are not split on.
+  // Collapse parenthesised groups, innermost first, so their inner `&&`
+  // are not split on. The placeholder has no parentheses, so an enclosing
+  // group collapses on the next pass (nested groups, #1763).
   let prev
   do {
     prev = flat
-    flat = flat.replace(/\([^()]*\)/g, '(…)')
+    flat = flat.replace(/\([^()]*\)/g, '⟨group⟩')
   } while (flat !== prev)
   if (/\|\|/.test(flat)) return [] // a top-level OR guarantees nothing
   return flat.split('&&').map(c => c.trim())
