@@ -44,6 +44,9 @@ type TooltipValue = number | string
 type TooltipOverride =
   Record<string, never> | { trigger: 'click'; content: React.ReactElement }
 
+/** Hover devices: the chart's own Tooltip props stand. */
+const NO_OVERRIDE: TooltipOverride = {}
+
 export interface ChartReadoutHandle {
   /** True on a device without hover — the readout line is in use. */
   touch: boolean
@@ -93,16 +96,13 @@ const ReadoutReporter: React.FC<
 export function useChartReadout(): ChartReadoutHandle {
   const touch = useMediaQuery(TOUCH_QUERY)
   const [reading, setReading] = useState<ChartReading | null>(null)
-  const tooltipProps = useMemo<TooltipOverride>(
-    () =>
-      touch
-        ? {
-            trigger: 'click',
-            content: <ReadoutReporter onReading={setReading} />,
-          }
-        : {},
-    [touch]
-  )
+  const tooltipProps = useMemo<TooltipOverride>(() => {
+    if (!touch) return NO_OVERRIDE
+    return {
+      trigger: 'click',
+      content: <ReadoutReporter onReading={setReading} />,
+    }
+  }, [touch])
   return { touch, reading, tooltipProps }
 }
 
