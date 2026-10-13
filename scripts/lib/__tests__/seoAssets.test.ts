@@ -22,6 +22,7 @@ const EXPECTED_PATHS = [
   '/',
   '/methodology',
   '/history',
+  '/history/countries', // #1797 — Clubs by country map
   '/regions',
   '/awards',
   '/mcp', // #1165 — public MCP-server install page

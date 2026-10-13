@@ -70,6 +70,7 @@ const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/district/61/club/01479548' },
   { path: '/club/01479548' },
   { path: '/history' },
+  { path: '/history/countries', mustRender: '.wm-table__select' }, // #1797
   { path: '/methodology' },
   { path: '/mcp' },
   { path: '/awards' },
