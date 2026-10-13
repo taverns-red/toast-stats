@@ -583,7 +583,7 @@ describe('ClubsTable', () => {
   describe('Table Column Structure', () => {
     // Years Chartered column was added in #448 (epic #443).
     // 12 → 13 reflects that new column; the Trend sparkline (#1792) → 14.
-    it('should render 14 columns in the table', () => {
+    it('should render 15 columns in the table', () => {
       const clubs = [createMockClub()]
 
       render(
@@ -596,10 +596,10 @@ describe('ClubsTable', () => {
 
       const headerRow = screen.getAllByRole('row')[0]
       const headerCells = headerRow.querySelectorAll('th')
-      expect(headerCells.length).toBe(14)
+      expect(headerCells.length).toBe(15) // + Coach (#1954)
     })
 
-    it('should render 14 cells per data row', () => {
+    it('should render 15 cells per data row', () => {
       const clubs = [createMockClub()]
 
       render(
@@ -612,7 +612,7 @@ describe('ClubsTable', () => {
 
       const dataRow = screen.getAllByRole('row')[1]
       const cells = dataRow.querySelectorAll('td')
-      expect(cells.length).toBe(14)
+      expect(cells.length).toBe(15) // + Coach (#1954)
     })
   })
 

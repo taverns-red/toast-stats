@@ -16,6 +16,7 @@ import {
   computeMembersToDistinguished,
 } from './membersToDistinguished'
 import { calculateClubProjection } from './dcpProjections'
+import { coachFilterValue } from './clubCoach'
 
 // ========== Data Processing Functions ==========
 
@@ -222,6 +223,16 @@ export function applyFilter(
         return clubs.filter(club => {
           return club.clubStatus && selectedValues.includes(club.clubStatus)
         })
+      }
+      break
+
+    case 'coach':
+      if (filter.type === 'categorical' && Array.isArray(filter.value)) {
+        const selectedValues = filter.value as string[]
+        if (selectedValues.length === 0) return clubs
+        return clubs.filter(club =>
+          selectedValues.includes(coachFilterValue(club))
+        )
       }
       break
 

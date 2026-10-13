@@ -67,6 +67,7 @@ const EXPECTED_HEADERS = [
   'DCP',
   'Tier',
   'Club Status',
+  'Coach',
   'Years',
 ]
 

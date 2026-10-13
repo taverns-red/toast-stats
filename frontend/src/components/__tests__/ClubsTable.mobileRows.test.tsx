@@ -129,6 +129,30 @@ describe('ClubsTable < 768 px — compact rows (#1833)', () => {
     expect(alpha).toHaveAccessibleName(/net −10/)
   })
 
+  it('leaves the phone row unchanged for a coached club (#1954)', () => {
+    // Measured on the preview at 375: line 2 (chip + DCP) has no room left —
+    // "· Coach" ellipsized to "· C…" beside a "⚠ Vulnerable" chip. A clipped
+    // flag is worse than none, so on phones coach status is reached through
+    // the Coach filter (?coach=Active) and sort instead.
+    render(
+      <ClubsTable
+        clubs={[
+          club('1', 'Alpha Speakers', 'A', {
+            coach: { status: 'active', since: '2026-07-25' },
+          }),
+        ]}
+        districtId="61"
+        openGroups={['A']}
+        onOpenGroupsChange={vi.fn()}
+      />
+    )
+    const [alpha] = screen.getAllByTestId('mobile-row')
+    expect(alpha!.querySelector('.mobile-row__line2')).toHaveTextContent(
+      /5\/10 DCP$/
+    )
+    expect(alpha).not.toHaveAccessibleName(/coach/i)
+  })
+
   it('asks the page to toggle a group (URL-owned open set)', () => {
     const onOpenGroupsChange = vi.fn()
     render(
