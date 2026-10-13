@@ -38,15 +38,18 @@ export interface Finding {
   cls: string
   w: number
   h: number
+  /** The allowlist selector this element matches, if any (#1841). */
+  allowedBy?: string
 }
 
 export async function measureInteractiveTargets(
   page: Page,
   selectors: readonly string[],
-  notProse: readonly string[]
+  notProse: readonly string[],
+  allowlist: readonly string[] = []
 ): Promise<Finding[]> {
   return page.evaluate(
-    ([sels, notProseSels]) => {
+    ([sels, notProseSels, allowSels]) => {
       const els = Array.from(document.querySelectorAll(sels.join(', ')))
       const out: Finding[] = []
       for (const el of els as HTMLElement[]) {
@@ -72,11 +75,12 @@ export async function measureInteractiveTargets(
           cls: (el.getAttribute('class') || '').slice(0, 90),
           w: Math.round(rect.width),
           h: Math.round(rect.height),
+          allowedBy: allowSels.find(s => el.matches(s)),
         })
       }
       return out
     },
-    [selectors, notProse] as const
+    [selectors, notProse, allowlist] as const
   )
 }
 
