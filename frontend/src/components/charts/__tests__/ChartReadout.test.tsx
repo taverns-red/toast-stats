@@ -4,11 +4,17 @@
  * On a device that cannot hover (`(hover: none)` — phones, tablets) a Recharts
  * tooltip never opens from a tap: the mobile review found
  * `.recharts-tooltip-wrapper` stayed `visibility: hidden` after a tap on the
- * Trends chart. The shared readout primitive switches the chart's Tooltip to
- * `trigger="click"`, drops the floating box, and renders a persistent value
- * line under the chart instead — driven by the same active-point state, so a
- * tap AND the keyboard (Recharts' accessibility layer: arrow keys) both pin a
- * value. On hover-capable devices the chart is untouched.
+ * Trends chart. The shared readout primitive drops the floating box and
+ * renders a persistent value line under the chart instead — driven by the
+ * chart's active-point state, so a tap AND the keyboard (Recharts'
+ * accessibility layer: arrow keys) both pin a value. On hover-capable
+ * devices the chart is untouched.
+ *
+ * A tap reaches the chart as the browser's compatibility sequence —
+ * mousemove, mousedown, mouseup, click at the tap point (measured in
+ * Chromium and WebKit touch emulation). The Tooltip keeps Recharts' hover
+ * trigger so that mousemove positions the pin: with `trigger="click"` the
+ * FIRST tap on a stacked AreaChart pinned index 0 in both engines.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
@@ -75,6 +81,14 @@ afterEach(() => {
 
 const settle = () => act(async () => new Promise(r => setTimeout(r, 30)))
 
+/** A tap, as a touch browser delivers it: compat mouse events at the point. */
+const tap = (el: Element, clientX: number, clientY: number) =>
+  act(async () => {
+    fireEvent.mouseMove(el, { clientX, clientY })
+    fireEvent.mouseDown(el, { clientX, clientY })
+    fireEvent.mouseUp(el, { clientX, clientY })
+  })
+
 describe('ChartReadout on a device without hover (#1835)', () => {
   it('reserves the readout line with a hint before any tap', () => {
     stubHover(false)
@@ -88,9 +102,9 @@ describe('ChartReadout on a device without hover (#1835)', () => {
     stubHover(false)
     const { container } = render(<Harness />)
     const wrapper = container.querySelector('.recharts-wrapper')!
-    await act(async () => {
-      fireEvent.click(wrapper, { clientX: 395, clientY: 100 })
-    })
+    // The compat sequence without its click: the mousemove alone positions
+    // the pin (a click trigger would ignore it).
+    await tap(wrapper, 395, 100)
     await settle()
     const line = screen.getByTestId('chart-readout')
     expect(line).toHaveTextContent('Snapshot 2026-10-01')
@@ -100,6 +114,21 @@ describe('ChartReadout on a device without hover (#1835)', () => {
     const swatches = line.querySelectorAll('.chart-readout__swatch')
     expect(swatches).toHaveLength(2)
     expect(swatches[0]).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('the pin outlives the pointer: leaving the chart keeps the value', async () => {
+    stubHover(false)
+    const { container } = render(<Harness />)
+    const wrapper = container.querySelector('.recharts-wrapper')!
+    await tap(wrapper, 395, 100)
+    await settle()
+    await act(async () => {
+      fireEvent.mouseLeave(wrapper)
+    })
+    await settle()
+    expect(screen.getByTestId('chart-readout')).toHaveTextContent(
+      'Snapshot 2026-10-01'
+    )
   })
 
   it('the keyboard moves the pinned value (no pointer needed)', async () => {

@@ -49,7 +49,7 @@ const plotSurface = (scope: Locator) =>
   scope.locator('.recharts-wrapper > svg.recharts-surface').first()
 
 /** Tap the middle of the chart's plot area. */
-async function tapPlot(page: Page, scope: Locator) {
+async function tapPlot(page: Page, scope: Locator, at = 0.6) {
   const surface = plotSurface(scope)
   await expect(surface).toBeVisible()
   // The plot can sit below the fold of a scrolling sheet; a touch outside
@@ -57,7 +57,7 @@ async function tapPlot(page: Page, scope: Locator) {
   await surface.scrollIntoViewIfNeeded()
   const box = await surface.boundingBox()
   if (!box) throw new Error('chart surface has no box')
-  await page.touchscreen.tap(box.x + box.width * 0.6, box.y + box.height * 0.5)
+  await page.touchscreen.tap(box.x + box.width * at, box.y + box.height * 0.5)
 }
 
 for (const theme of ['light', 'dark'] as const) {
@@ -110,6 +110,13 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(readout).toHaveText(DATED)
       await expect(page.locator('.recharts-default-tooltip')).toHaveCount(0)
       await expectReadoutGeometry(page, readout)
+
+      // The FIRST tap lands where it was made: a click trigger pinned
+      // index 0 on the first tap of this stacked AreaChart. A tap at the
+      // left edge must read differently from the first tap at 60 %.
+      const first = await readout.textContent()
+      await tapPlot(page, figure, 0.02)
+      await expect(readout).not.toHaveText(first ?? '')
     })
   })
 }
