@@ -6,6 +6,7 @@ import type {
 } from '../../hooks/useDistrictAnalytics'
 import type { LegendChip, ModeModel } from './pinModes'
 import { PinSwatch } from './PinSwatch'
+import { MobileRowList, type MobileRow } from '../MobileRowList'
 
 /* The map page's club lists (#1784): clubs not on the map, prospective
    clubs, and the `?view=list` list. Data-dependent, so the page loads this
@@ -39,6 +40,46 @@ export const ClubLinks: React.FC<{
     })}
   </ul>
 )
+
+/** The `?view=list` list (#1945): the shared MobileRowList rows the Clubs
+ *  page uses — 56–64 px whole-row links, ≥ 44 px targets, 50 then "Show 25
+ *  more". The chip is the club's pin (shape + words, never colour alone)
+ *  in the current colour mode; line 2 names its division and area. */
+export const ClubRows: React.FC<{
+  clubs: ClubTrend[]
+  districtId: string
+  model?: ModeModel | undefined
+  label: string
+}> = ({ clubs, districtId, model, label }) => {
+  const rows: MobileRow[] = clubs.map(c => {
+    const cat = model?.categoryOf(c)
+    return {
+      id: c.clubId,
+      to: `/district/${districtId}/club/${c.clubId}`,
+      title: c.clubName,
+      chip: cat && (
+        <span className="map-row-chip">
+          <PinSwatch category={cat} />
+          {cat.label}
+        </span>
+      ),
+      meta: [
+        c.divisionId && `Division ${c.divisionId}`,
+        c.areaId && `Area ${c.areaId}`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    }
+  })
+  return (
+    <MobileRowList
+      label={label}
+      noun="clubs"
+      chipPlacement="meta"
+      rows={rows}
+    />
+  )
+}
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
   title,
