@@ -224,7 +224,8 @@ export async function runPromoteRunManifest(
       plan.batches.filter(b => b.phase === phase),
       staging,
       prod,
-      // The two entry points go in one call; never race them.
+      // One call at a time: the shard indexes (#1782), then the two v1/
+      // entry points in one call; never race them.
       phase === 'entry' ? 1 : concurrency
     )
     copied += r.copied
