@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams, type To } from 'react-router-dom'
 import type {
   ClubTrend,
   ProspectiveClub,
@@ -59,7 +59,9 @@ export const MapLists: React.FC<{
   unmapped: ClubTrend[]
   prospective: ProspectiveClub[]
   districtId: string
-}> = ({ unmapped, prospective, districtId }) => (
+  /** Closes the phone sheet this may sit in before the sandbox opens. */
+  onSandbox?: () => void
+}> = ({ unmapped, prospective, districtId, onSandbox }) => (
   <>
     <Section title={`Not on the map (${unmapped.length})`}>
       <p className="map-panel__note">
@@ -88,8 +90,37 @@ export const MapLists: React.FC<{
         ))}
       </ul>
     </Section>
+    <SandboxEntry onOpen={onSandbox} />
   </>
 )
+
+/** The realignment sandbox's way in (#1819): kept behind the map (spec
+ *  §2.8), in this on-demand chunk so the map's first load carries none of
+ *  it. A push, so Back leaves the sandbox. */
+const SandboxEntry: React.FC<{ onOpen?: (() => void) | undefined }> = ({
+  onOpen,
+}) => {
+  const [params] = useSearchParams()
+  const next = new URLSearchParams(params)
+  next.delete('view')
+  next.delete('plan')
+  next.set('sandbox', '1')
+  return (
+    <Section title="Realignment">
+      <p className="map-panel__note">
+        Try moving clubs between areas and see the balance change. Nothing is
+        saved.
+      </p>
+      <Link
+        className="map-club__link"
+        to={{ search: `?${next}` }}
+        onClick={onOpen}
+      >
+        Open the realignment sandbox
+      </Link>
+    </Section>
+  )
+}
 
 /** Legend chips (#1784): aria-pressed toggles writing the mode facet. */
 export const LegendChips: React.FC<{
@@ -104,39 +135,80 @@ export const LegendChips: React.FC<{
   const cut = limit !== undefined && chips.length > limit + 1
   const shown = cut ? chips.slice(0, limit) : chips
   return (
-    <div
-      className="map-legend__chips"
-      role="group"
-      aria-label={`${model.title} legend`}
-    >
-      {shown.map(chip => {
-        const value = model.facet?.valueOf(chip) ?? chip.key
-        return (
+    <>
+      <div
+        className="map-legend__chips"
+        role="group"
+        aria-label={`${model.title} legend`}
+      >
+        {shown.map(chip => {
+          const value = model.facet?.valueOf(chip) ?? chip.key
+          return (
+            <button
+              key={chip.key}
+              type="button"
+              className="map-legend__chip"
+              aria-pressed={pressed.includes(value)}
+              onClick={() => onToggle(chip)}
+            >
+              <PinSwatch category={chip} />
+              {chip.code && (
+                <span className="map-legend__code">{chip.code}</span>
+              )}{' '}
+              <span>{chip.label}</span>{' '}
+              <span className="map-legend__count">{chip.count}</span>
+            </button>
+          )
+        })}
+        {cut && (
           <button
-            key={chip.key}
             type="button"
-            className="map-legend__chip"
-            aria-pressed={pressed.includes(value)}
-            onClick={() => onToggle(chip)}
+            className="map-legend__chip map-legend__more"
+            onClick={onMore}
           >
-            <PinSwatch category={chip} />
-            {chip.code && (
-              <span className="map-legend__code">{chip.code}</span>
-            )}{' '}
-            <span>{chip.label}</span>{' '}
-            <span className="map-legend__count">{chip.count}</span>
+            {chips.length - shown.length} more
           </button>
-        )
-      })}
-      {cut && (
-        <button
-          type="button"
-          className="map-legend__chip map-legend__more"
-          onClick={onMore}
-        >
-          {chips.length - shown.length} more
+        )}
+      </div>
+      {/* The full legend explains how clusters summarise their clubs. */}
+      {model.kind !== 'categorical' && limit === undefined && (
+        <p className="map-legend__note">
+          Clusters show the{' '}
+          {model.kind === 'ordinal' ? 'middle level' : 'most common status'}
+          {model.exceptionKey
+            ? '; a red square marks clusters with clubs needing intervention'
+            : ''}
+          .
+        </p>
+      )}
+    </>
+  )
+}
+
+/** The map's empty states: no club in this snapshot has a location
+ *  (enrichment-stripped dates), or, with `to`, the map can't be drawn
+ *  on this device and the list view stands in. */
+export const MapEmpty: React.FC<{
+  onLatest?: (() => void) | undefined
+  to?: To
+}> = ({ onLatest, to }) =>
+  to ? (
+    <div className="district-map__empty">
+      <p>The map can’t be shown on this device.</p>
+      <Link to={to}>Show the clubs as a list</Link>
+    </div>
+  ) : (
+    <div className="district-map__empty">
+      <p>
+        <strong>No location data for this date</strong>
+      </p>
+      <p>
+        This snapshot has no club locations. The list view still has every club.
+      </p>
+      {onLatest && (
+        <button type="button" className="map-pill" onClick={onLatest}>
+          Latest date
         </button>
       )}
     </div>
   )
-}

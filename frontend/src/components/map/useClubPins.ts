@@ -139,6 +139,23 @@ export function useClubPins(map: MapLibreMap | null, opts: ClubPinsOptions) {
     // `sync` reads the latest options; these are the triggers.
   }, [map, opts.data, opts.model, opts.theme, opts.selectedIds, opts.fitKey])
 
+  // Letting go of a map takes the pins along, so another user of the same
+  // map (the realignment sandbox, #1819) starts clean, and so does this
+  // hook when it gets the map back.
+  useEffect(() => {
+    if (!map) return
+    return () => {
+      built.current = null
+      try {
+        for (const id of PIN_LAYER_IDS)
+          if (map.getLayer(id)) map.removeLayer(id)
+        if (map.getSource(PIN_SOURCE_ID)) map.removeSource(PIN_SOURCE_ID)
+      } catch {
+        // The map is already gone.
+      }
+    }
+  }, [map])
+
   // Taps and the pointer cursor.
   useEffect(() => {
     if (!map) return
