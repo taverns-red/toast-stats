@@ -283,10 +283,20 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto(`${MAP}?view=list&online=yes`, {
         waitUntil: 'domcontentloaded',
       })
+      // The shared MobileRowList rows (#1945): 50, then "Show 25 more".
       const list = page.getByRole('list', { name: 'Clubs' })
-      await expect(list.getByRole('link')).toHaveCount(online.n, {
-        timeout: 30_000,
-      })
+      await expect(list.getByTestId('mobile-row')).toHaveCount(
+        Math.min(online.n, 50),
+        { timeout: 30_000 }
+      )
+      const more = page.getByRole('button', { name: /^Show \d+ more clubs/ })
+      while (await more.isVisible()) await more.click()
+      await expect(list.getByTestId('mobile-row')).toHaveCount(online.n)
+      // Rows are whole-row links of 56–64 px.
+      const h = (await list.getByTestId('mobile-row').first().boundingBox())!
+        .height
+      expect(h).toBeGreaterThanOrEqual(56)
+      expect(h).toBeLessThanOrEqual(64)
     })
   }
 }
