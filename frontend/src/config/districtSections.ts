@@ -31,6 +31,10 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   // (default), Distinguished level, division or area. Beside Grid: the same
   // whole-district view, laid out geographically.
   { label: 'Map', segment: 'map' },
+  // 'Growth' (#1794, epic #1781) — the Club Growth funnel: prospective →
+  // chartered → coached → suspended. After Map: another whole-district view,
+  // before the time-series sections.
+  { label: 'Growth', segment: 'growth' },
   { label: 'Trends', segment: 'trends' },
   { label: 'Analytics', segment: 'analytics' },
   { label: 'Rankings', segment: 'rankings' },
