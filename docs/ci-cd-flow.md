@@ -30,7 +30,7 @@ flowchart TD
     Deploy --> Staging["firebase hosting:staging<br/>⚠ unused site — remove (#708)"]
     Deploy --> Prod([🌐 ts.taverns.red · hosting:production])
 
-    subgraph Data["on: schedule daily 08:00 UTC + dispatch — independent of code"]
+    subgraph Data["on: workflow_dispatch (daily fired by launchd 05:00 America/Toronto) — independent of code"]
         Scrape["Data Pipeline · data-pipeline.yml<br/>scrape → compute analytics → upload"] --> CDN[(cdn.taverns.red)]
     end
     CDN -.->|fetched by frontend at runtime| Prod
