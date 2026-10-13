@@ -4,7 +4,7 @@
  * district snapshot already carries. No tiles, no MapLibre (review §6.3).
  */
 import { describe, it, expect } from 'vitest'
-import { projectClubLocator } from '../clubLocator'
+import { projectClubLocator, projectClubPoints } from '../clubLocator'
 
 const BOX = { width: 320, height: 180, pad: 12 }
 
@@ -79,5 +79,30 @@ describe('projectClubLocator', () => {
       BOX
     )!
     expect(out.points.map(p => p.id)).not.toContain('bad')
+  })
+})
+
+// #1943 — the district map's static preview draws every located club with no
+// focus, on the same projection as the club page's mini-map.
+describe('projectClubPoints', () => {
+  it('projects every located club into the padded box, with no focus', () => {
+    const pts = projectClubPoints(CLUBS, BOX)
+    expect(pts.map(p => p.id)).toEqual(['7238597', '1001', '1002', '1003'])
+    for (const p of pts) {
+      expect(p.x).toBeGreaterThanOrEqual(BOX.pad - 0.001)
+      expect(p.x).toBeLessThanOrEqual(BOX.width - BOX.pad + 0.001)
+      expect(p.y).toBeGreaterThanOrEqual(BOX.pad - 0.001)
+      expect(p.y).toBeLessThanOrEqual(BOX.height - BOX.pad + 0.001)
+    }
+  })
+
+  it('agrees with the locator projection point for point', () => {
+    expect(projectClubPoints(CLUBS, BOX)).toEqual(
+      projectClubLocator(CLUBS, '1001', BOX)!.points
+    )
+  })
+
+  it('is empty when no club has coordinates', () => {
+    expect(projectClubPoints([{ clubId: '1' }], BOX)).toEqual([])
   })
 })

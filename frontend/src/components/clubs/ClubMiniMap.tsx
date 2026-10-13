@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { projectClubLocator, type LocatorSource } from '../../utils/clubLocator'
+import { LocatorDots } from '../LocatorDots'
 
 /**
  * #1843 — the club page's static mini-map (review §6.3, feature design §3.2
@@ -42,7 +43,6 @@ export function ClubMiniMap({
   if (!locator?.focus) return null
   const { points, focus } = locator
   const districtLabel = `District ${districtId}`
-  const r = (n: number) => Math.round(n * 10) / 10
 
   return (
     <section
@@ -73,36 +73,15 @@ export function ClubMiniMap({
           to={`/district/${districtId}/map?club=${encodeURIComponent(clubId)}`}
           aria-label={`Open ${clubName} on the ${districtLabel} club map`}
         >
-          <svg
+          <LocatorDots
             className="club-minimap__svg"
-            viewBox={`0 0 ${BOX.width} ${BOX.height}`}
+            width={BOX.width}
+            height={BOX.height}
+            points={points}
+            focus={focus}
             role="img"
             aria-label={`${clubName} among ${points.length} ${districtLabel} clubs with a location`}
-          >
-            {points
-              .filter(p => p !== focus)
-              .map(p => (
-                <circle
-                  key={p.id}
-                  className="club-minimap__dot"
-                  cx={r(p.x)}
-                  cy={r(p.y)}
-                  r="2.5"
-                />
-              ))}
-            <circle
-              className="club-minimap__halo"
-              cx={r(focus.x)}
-              cy={r(focus.y)}
-              r="11"
-            />
-            <circle
-              className="club-minimap__pin"
-              cx={r(focus.x)}
-              cy={r(focus.y)}
-              r="6"
-            />
-          </svg>
+          />
           <span className="club-minimap__cta">
             Open the club map <span aria-hidden="true">›</span>
           </span>
