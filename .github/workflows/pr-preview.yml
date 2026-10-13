@@ -332,6 +332,26 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/landing-header-tablet.smoke.ts
 
+      # One GA page_view per load and per SPA navigation (#1946). The preview
+      # is served as ts.taverns.red so the real gtag runs; every collect
+      # request is answered locally with a 204, so no hit reaches GA.
+      - name: Cross-engine GA page_view count guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/ga-page-view.smoke.ts
+
+      # Worldwide country choropleth (#1797). At 375 and 1280, light and dark,
+      # on real staging data: the map draws (US in the top bin) with no
+      # sideways scroll, Unknown clubs stated, theme-aware sea, a tap writes
+      # ?country=, 375 opens the all-countries sheet, 1280 sets the table
+      # beside the map, and no console (CSP) error. Both engines.
+      - name: Cross-engine country map guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/world-countries.smoke.ts
+
       # Phone bottom section bar (#1832, mobile review §5.1). At 375/390 in
       # portrait, light and dark, on all 9 district routes: a 56px fixed bar
       # (4 routes + More), labels inside their 44px+ items, content under the

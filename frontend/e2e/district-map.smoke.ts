@@ -290,3 +290,106 @@ for (const theme of ['light', 'dark'] as const) {
     })
   }
 }
+
+/* Realignment sandbox (#1819): `?sandbox=1`, at 375 (bottom sheet) and
+ * 1280 (side panel), light and dark. The keyboard-operable list path moves
+ * a club, the plan lands in the URL and survives a reload (a shared link),
+ * the area table recounts, CSV exports, Done leaves. No contact details. */
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [375, 1280]) {
+    test(`realignment sandbox at ${width} (${theme})`, async ({ page }) => {
+      test.setTimeout(120_000)
+      await open(page, theme, width)
+      await page.goto(`${MAP}?sandbox=1`, { waitUntil: 'domcontentloaded' })
+      await expect(
+        page.getByRole('region', {
+          name: 'Club map, coloured by proposed area',
+        })
+      ).toBeVisible({ timeout: 30_000 })
+
+      const surface = async () => {
+        if (width >= 768)
+          return page.getByRole('region', { name: 'Realignment sandbox' })
+        await page.getByRole('button', { name: 'Open plan' }).click()
+        return page.getByRole('dialog', { name: 'Realignment plan' })
+      }
+      const summary = (p: Awaited<ReturnType<typeof surface>>) =>
+        p.getByRole('status', { name: 'Plan summary' })
+      let panel = await surface()
+      await expect(panel).toBeVisible({ timeout: 30_000 })
+      await expect(summary(panel)).toHaveText(/No clubs moved yet/)
+
+      await panel
+        .getByRole('button', { name: 'Assign clubs from a list' })
+        .click()
+      const pick = panel.getByRole('combobox', { name: /^Area for / }).first()
+      const current = await pick.inputValue()
+      const target = await pick.evaluate(
+        (el, cur) =>
+          Array.from((el as HTMLSelectElement).options).find(
+            o =>
+              o.value.includes('|') &&
+              !o.value.startsWith('new|') &&
+              o.value !== cur
+          )!.value,
+        current
+      )
+      await pick.selectOption(target)
+      await expect(page).toHaveURL(/[?&]plan=[A-Za-z0-9]+-[A-Za-z0-9]+-\d+/)
+      await expect(summary(panel)).toHaveText(/1 club moved/)
+      const [div, area] = target.split('|')
+      await expect(
+        panel
+          .getByRole('table', { name: /Areas/ })
+          .getByRole('row', { name: new RegExp(`^${div}${area}`) })
+      ).toContainText('(+1)')
+
+      // Touch targets, legibility, no sideways scroll, no contact details.
+      const m = await page.evaluate(() => {
+        const root = document.querySelector('.realign')!
+        const controls = Array.from(
+          root.querySelectorAll<HTMLElement>('button, select, a')
+        ).filter(el => el.getBoundingClientRect().width > 0)
+        return {
+          overflow:
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+          minHeight: Math.min(
+            ...controls.map(c => c.getBoundingClientRect().height)
+          ),
+          minFont: Math.min(
+            ...controls.map(c => parseFloat(getComputedStyle(c).fontSize))
+          ),
+          text: root.textContent ?? '',
+          hrefs: Array.from(root.querySelectorAll('a')).map(a => a.href),
+        }
+      })
+      expect(m.overflow).toBeLessThanOrEqual(0)
+      expect(m.minHeight).toBeGreaterThanOrEqual(44)
+      expect(m.minFont).toBeGreaterThanOrEqual(14)
+      expect(m.text).not.toMatch(/@[\w-]+\.\w/)
+      expect(m.hrefs.join(' ')).not.toMatch(/mailto:|tel:|zoom\.us|teams\./)
+
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        panel.getByRole('button', { name: 'Export CSV' }).click(),
+      ])
+      expect(download.suggestedFilename()).toMatch(
+        /^district-61-realignment-plan-\d{4}-\d{2}-\d{2}\.csv$/
+      )
+
+      // The link is the plan: a reload (or a shared link) restores it.
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      panel = await surface()
+      await expect(summary(panel)).toHaveText(/1 club moved/, {
+        timeout: 30_000,
+      })
+
+      await panel.getByRole('link', { name: 'Done' }).click()
+      await expect(page).not.toHaveURL(/sandbox=|plan=/)
+      await expect(
+        page.getByRole('region', { name: 'Club map, coloured by club health' })
+      ).toBeVisible()
+    })
+  }
+}

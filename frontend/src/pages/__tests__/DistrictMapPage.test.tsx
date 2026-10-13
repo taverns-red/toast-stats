@@ -145,6 +145,13 @@ const fetchSnapshot = vi.fn(async (_date: string, _districtId: string) => ({
     ],
   },
 }))
+// The sandbox's CSV export (#1819): capture instead of downloading.
+const downloadCSV = vi.fn()
+vi.mock('../../utils/csvExport', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../utils/csvExport')>()),
+  downloadCSV: (csv: string, name: string) => downloadCSV(csv, name),
+}))
+
 vi.mock('../../services/cdn', async importOriginal => ({
   ...(await importOriginal<typeof import('../../services/cdn')>()),
   fetchCdnDistrictSnapshot: (date: string, districtId: string) =>
@@ -164,6 +171,7 @@ beforeAll(async () => {
     import('../../components/map/mapFilters'),
     import('../../components/map/MapFilterPanel'),
     import('../../components/map/MapPhoneSheets'),
+    import('../../components/map/realign/RealignSandbox'),
   ])
 }, 60_000)
 
@@ -207,6 +215,7 @@ afterEach(() => {
   mockClubs = CLUBS
   mockIsMobile = false
   fetchSnapshot.mockClear()
+  downloadCSV.mockClear()
 })
 
 describe('DistrictMapPage — map and legend', () => {
@@ -418,5 +427,91 @@ describe('DistrictMapPage — filters (#1788)', () => {
     await screen.findByRole('button', { name: /^Filters/ })
     expect(screen.queryByRole('region', { name: 'Filters' })).toBeNull()
     expect(fetchSnapshot).not.toHaveBeenCalled()
+  })
+})
+
+describe('DistrictMapPage — realignment sandbox (#1819)', () => {
+  const sandbox = () =>
+    screen.findByRole('region', { name: 'Realignment sandbox' })
+  const summary = (within_: HTMLElement) =>
+    within(within_).getByRole('status', { name: 'Plan summary' })
+
+  it('is entered from the panel, a link that pushes ?sandbox=1', async () => {
+    renderAt('/district/61/map?color=tier')
+    fireEvent.click(
+      await screen.findByRole('link', { name: /Open the realignment sandbox/ })
+    )
+    const panel = await sandbox()
+    expect(search()).toContain('sandbox=1')
+    expect(summary(panel)).toHaveTextContent('No clubs moved yet')
+    // The map says what its pins now mean.
+    expect(
+      screen.getByRole('region', {
+        name: 'Club map, coloured by proposed area',
+      })
+    ).toBeInTheDocument()
+  })
+
+  it('list path: a labelled select moves a club, writing ?plan= and recounting areas', async () => {
+    renderAt('/district/61/map?sandbox=1')
+    const panel = await sandbox()
+    fireEvent.click(within(panel).getByText('Assign clubs from a list'))
+    const pick = within(panel).getByRole('combobox', {
+      name: 'Area for Alpha Speakers',
+    })
+    fireEvent.change(pick, { target: { value: 'B|12' } })
+    expect(search()).toContain('plan=B-12-101')
+    expect(summary(panel)).toHaveTextContent('1 club moved')
+    const areas = within(panel).getByRole('table', { name: /Areas/ })
+    // B12 has two clubs now (one more than today); A01 one fewer.
+    expect(within(areas).getByRole('row', { name: /^B12/ })).toHaveTextContent(
+      '2(+1)'
+    )
+    expect(within(areas).getByRole('row', { name: /^A01/ })).toHaveTextContent(
+      '1(−1)'
+    )
+  })
+
+  it('a shared ?plan= link restores the plan; Reset clears it', async () => {
+    renderAt('/district/61/map?sandbox=1&plan=B-12-101')
+    const panel = await sandbox()
+    expect(summary(panel)).toHaveTextContent('1 club moved')
+    const moved = within(panel).getByRole('list', { name: 'Moved clubs' })
+    expect(moved).toHaveTextContent('Alpha Speakers')
+    expect(moved).toHaveTextContent('A01 → B12')
+    fireEvent.click(within(panel).getByRole('button', { name: 'Reset' }))
+    expect(search()).not.toContain('plan=')
+    expect(search()).toContain('sandbox=1')
+  })
+
+  it('exports the proposed assignment as CSV, without contact details', async () => {
+    renderAt('/district/61/map?sandbox=1&plan=B-12-101')
+    const panel = await sandbox()
+    fireEvent.click(within(panel).getByRole('button', { name: 'Export CSV' }))
+    expect(downloadCSV).toHaveBeenCalledTimes(1)
+    const [csv, name] = downloadCSV.mock.calls[0] as [string, string]
+    expect(name).toBe('district-61-realignment-plan-2026-10-11.csv')
+    expect(csv).toContain('101,Alpha Speakers,A,A01,B,B12,yes')
+    expect(csv).not.toContain('gamma@example.org')
+    expect(csv).not.toContain('555-0100')
+  })
+
+  it('Done leaves the sandbox and drops the plan', async () => {
+    renderAt('/district/61/map?sandbox=1&plan=B-12-101&color=tier')
+    const panel = await sandbox()
+    fireEvent.click(within(panel).getByRole('link', { name: 'Done' }))
+    expect(search()).not.toContain('sandbox')
+    expect(search()).not.toContain('plan=')
+    expect(search()).toContain('color=tier')
+  })
+
+  it('phone: the plan opens in a bottom sheet from the bar under the map', async () => {
+    mockIsMobile = true
+    renderAt('/district/61/map?sandbox=1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Open plan' }))
+    const dialog = screen.getByRole('dialog', { name: 'Realignment plan' })
+    expect(
+      within(dialog).getByRole('table', { name: /Areas/ })
+    ).toBeInTheDocument()
   })
 })

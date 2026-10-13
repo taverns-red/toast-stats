@@ -6,8 +6,8 @@
  * single fallback — passing null/undefined keeps it, and unmounting a titled
  * page restores it so SPA back-navigation to the landing page is correct.
  *
- * document.title stays the single source of truth that useGoogleAnalytics
- * reads for page_view (no new runtime dependency / provider).
+ * document.title stays the single source of truth that gtag
+ * reads for page_view (#1946) (no new runtime dependency / provider).
  */
 
 import { describe, it, expect, afterEach } from 'vitest'

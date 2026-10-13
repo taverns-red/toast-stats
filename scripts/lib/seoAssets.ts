@@ -32,6 +32,7 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: '/' }, // Districts (landing)
   { path: '/methodology' },
   { path: '/history' },
+  { path: '/history/countries' }, // Clubs by country map (#1797)
   { path: '/regions' },
   { path: '/awards' },
   { path: '/mcp' }, // MCP-server install page (#1165)
