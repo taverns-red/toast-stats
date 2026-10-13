@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-layered-css-override-never-beats-an-unlayered-rule-whatever-its-specificity.md` — A layered CSS override never beats an unlayered rule, whatever its specificity — check which side of `@layer` both rules sit on, and pin the computed value in a test  (2026-10-13)
 - `a-disabled-dependent-query-reports-not-loading-so-isloading-skeletons-paint-nothing.md` — A dependent TanStack query that is disabled while its key is unresolved reports isLoading false, so an `isLoading && <Skeleton/>` arm paints nothing for that whole window; gate the skeleton on the full dependency chain  (2026-10-12)
 - `a-gzip-byte-budget-must-be-measured-with-the-ci-runtimes-zlib.md` — A gzip byte budget depends on the zlib build that compresses; measure near the line with CI's Node (npx -p node@<.nvmrc>), not the local one  (2026-10-12)
 - `a-lazy-routes-first-paint-can-wait-on-an-unrelated-query-via-the-suspense-reveal-throttle.md` — React 19 holds a Suspense reveal up to 300 ms after the fallback commits unless another update flushes it, so a lazy route's skeleton (and its LCP) can wait on an unrelated query; paint the LCP skeleton in the fallback, and read Lighthouse traces for frame starvation before trusting a slow run  (2026-10-12)
