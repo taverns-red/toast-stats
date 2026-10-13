@@ -21,6 +21,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { ClubsTable } from '../ClubsTable'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import * as csvExport from '../../utils/csvExport'
+import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
+import recordedReports from '../../__tests__/fixtures/d61-growth-reports.recorded.json'
+import { applyCoachOverlay, buildCoachLookup } from '../../utils/clubCoach'
+import { paramsToFilterState } from '../../utils/clubFilterUrl'
 
 // CC-7 (#872): ClubsTable now renders real <Link>s (desktop club-name cell +
 // mobile ClubCard), so every render needs a router context. Shadow `render`
@@ -348,6 +352,100 @@ describe('ClubsTable', () => {
   })
 
   describe('Export Functionality', () => {
+    /**
+     * #1978: the Coach (and Club Status) CSV columns were blank for every
+     * row because the table's export mapping dropped `coach`/`clubStatus`.
+     * Drives the real export (no spy) through the table, with coach status
+     * overlaid from the RECORDED D61 2026-10-11 reports sidecar.
+     */
+    describe('Coach and Club Status columns via the table (#1978)', () => {
+      let captured: string | null = null
+      const OriginalBlob = globalThis.Blob
+      beforeEach(() => {
+        captured = null
+        URL.createObjectURL = vi.fn(() => 'blob:mock')
+        URL.revokeObjectURL = vi.fn()
+        globalThis.Blob = class {
+          constructor(parts?: ConstructorParameters<typeof Blob>[0]) {
+            captured = (parts?.[0] as string | undefined) ?? null
+            return new OriginalBlob(parts)
+          }
+        } as unknown as typeof Blob
+      })
+      afterEach(() => {
+        globalThis.Blob = OriginalBlob
+      })
+
+      const coachedClubs = (): ClubTrend[] => {
+        const clubs = [
+          createMockClub({
+            clubId: '5046',
+            clubName: 'Alpha',
+            clubStatus: 'Active',
+          }),
+          createMockClub({
+            clubId: '4673',
+            clubName: 'Beta',
+            clubStatus: 'Active',
+          }),
+          createMockClub({
+            clubId: '3045',
+            clubName: 'Gamma',
+            clubStatus: 'Low',
+          }),
+        ]
+        applyCoachOverlay(
+          clubs,
+          buildCoachLookup(
+            recordedReports.cdn_2026_10_11 as unknown as DistrictReportsDataset
+          )
+        )
+        return clubs
+      }
+
+      const exportCsv = (
+        initialFilterState?: ReturnType<typeof paramsToFilterState>
+      ) => {
+        render(
+          <ClubsTable
+            clubs={coachedClubs()}
+            districtId="61"
+            isLoading={false}
+            initialFilterState={initialFilterState}
+          />
+        )
+        act(() => {
+          fireEvent.click(screen.getByRole('button', { name: /export clubs/i }))
+        })
+        const lines = captured!.split('\n')
+        const header = lines.find(l => l.startsWith('Club ID'))!.split(',')
+        const rows = lines
+          .slice(lines.indexOf(lines.find(l => l.startsWith('Club ID'))!) + 1)
+          .filter(Boolean)
+          .map(l => l.split(','))
+        const cell = (row: string[], name: string) => row[header.indexOf(name)]
+        return { rows, cell }
+      }
+
+      it('writes each club’s coach status and club status', () => {
+        const { rows, cell } = exportCsv()
+        const byId = new Map(rows.map(r => [r[0], r]))
+        expect(cell(byId.get('5046')!, 'Coach')).toBe('Active')
+        expect(cell(byId.get('4673')!, 'Coach')).toBe('Completed')
+        expect(cell(byId.get('3045')!, 'Coach')).toBe('')
+        expect(cell(byId.get('5046')!, 'Club Status')).toBe('Active')
+        expect(cell(byId.get('3045')!, 'Club Status')).toBe('Low')
+      })
+
+      it('respects an active ?coach=Active filter', () => {
+        const { rows, cell } = exportCsv(
+          paramsToFilterState(new URLSearchParams('coach=Active'))
+        )
+        expect(rows.map(r => r[0])).toEqual(['5046'])
+        expect(cell(rows[0]!, 'Coach')).toBe('Active')
+      })
+    })
+
     /**
      * Validates: Requirements 5.5
      * Export should respect filters and export only the currently filtered and sorted data
