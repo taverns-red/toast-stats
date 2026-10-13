@@ -1,8 +1,8 @@
 {
-  ".": "2.53.0",
-  "frontend": "3.35.0",
-  "packages/shared-contracts": "1.14.1",
-  "packages/collector-cli": "1.12.1",
+  ".": "2.54.0",
+  "frontend": "3.36.0",
+  "packages/shared-contracts": "1.15.0",
+  "packages/collector-cli": "1.13.0",
   "packages/analytics-core": "1.12.5",
   "packages/mcp-server": "0.1.9"
 }

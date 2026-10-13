@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.36.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.35.0...frontend-v3.36.0) (2026-10-13)
+
+
+### Features
+
+* **clubs:** coach flag on phone MobileRowList rows ([#1968](https://github.com/taverns-red/toast-stats/issues/1968)) ([#1988](https://github.com/taverns-red/toast-stats/issues/1988)) ([d64d747](https://github.com/taverns-red/toast-stats/commit/d64d74748a5d58a9ba3c3f4b519c82bbda4addf4))
+* **map:** Enter on a pin moves focus into the side panel ([#1967](https://github.com/taverns-red/toast-stats/issues/1967)) ([#1987](https://github.com/taverns-red/toast-stats/issues/1987)) ([534651d](https://github.com/taverns-red/toast-stats/commit/534651d8a0271b2203fd42c8611776245a10dfda))
+* **map:** extended pin colour modes — status, members, growth, DCP, club age ([#1787](https://github.com/taverns-red/toast-stats/issues/1787)) ([#1972](https://github.com/taverns-red/toast-stats/issues/1972)) ([2345616](https://github.com/taverns-red/toast-stats/commit/2345616f8e0a61707aeb5a700a1c4a212737914e))
+* **pipeline:** education rollup from the ledger — district, region, world per PY ([#1801](https://github.com/taverns-red/toast-stats/issues/1801)) ([#1973](https://github.com/taverns-red/toast-stats/issues/1973)) ([aa7bb5b](https://github.com/taverns-red/toast-stats/commit/aa7bb5bd4e0c61199ea15351418828b32fad66b9))
+
+
+### Bug Fixes
+
+* **clubs:** pass coach and club status to the clubs CSV export ([#1978](https://github.com/taverns-red/toast-stats/issues/1978)) ([#1981](https://github.com/taverns-red/toast-stats/issues/1981)) ([0541650](https://github.com/taverns-red/toast-stats/commit/0541650c403f70349bcc5bea418f4abe3e63c8d1))
+* **e2e:** measure map filter chips after the sheet settles ([#1984](https://github.com/taverns-red/toast-stats/issues/1984)) ([#1985](https://github.com/taverns-red/toast-stats/issues/1985)) ([46e3bfe](https://github.com/taverns-red/toast-stats/commit/46e3bfee94c4c74eff0a4411cf5a1896142e9032))
+* **education:** count the CES vintage path in the leaderboards — one Pathways vocabulary ([#1976](https://github.com/taverns-red/toast-stats/issues/1976)) ([#1980](https://github.com/taverns-red/toast-stats/issues/1980)) ([1aefc96](https://github.com/taverns-red/toast-stats/commit/1aefc9677ba75755959682a380f59bdbe09f580a))
+* **map:** realign area select honours the 44 px floor in WebKit ([#1974](https://github.com/taverns-red/toast-stats/issues/1974)) ([#1983](https://github.com/taverns-red/toast-stats/issues/1983)) ([8b08fad](https://github.com/taverns-red/toast-stats/commit/8b08fad535a2f584d05899ac9af19835b71b9712))
+* **smoke:** shared fixture stubs GA collect so smokes never send real hits ([#1979](https://github.com/taverns-red/toast-stats/issues/1979)) ([#1982](https://github.com/taverns-red/toast-stats/issues/1982)) ([85a5bbd](https://github.com/taverns-red/toast-stats/commit/85a5bbd35ab4912af340d4a59c4cf3e5bfc3f6ab))
+
 ## [3.35.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.34.0...frontend-v3.35.0) (2026-10-13)
 
 
