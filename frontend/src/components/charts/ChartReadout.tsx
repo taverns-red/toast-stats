@@ -109,6 +109,12 @@ export interface ChartReadoutProps {
   readout: ChartReadoutHandle
   /** Formats the x label (e.g. a date) for the line. */
   labelFormatter?: (label: string) => string
+  /**
+   * The chart describes the pinned x itself — for an axis that is not a
+   * date (e.g. program-year days), where each series is read at its own
+   * nearest point. Replaces the payload's label and rows; null keeps them.
+   */
+  describe?: (label: string) => ChartReading | null
   /** Formats each series name (e.g. a district id → its name). */
   nameFormatter?: (name: string) => string
   /** Formats each series value. Default: locale number. */
@@ -132,12 +138,18 @@ const defaultValue = (v: number | string) =>
 export const ChartReadout: React.FC<ChartReadoutProps> = ({
   readout,
   labelFormatter,
+  describe,
   nameFormatter,
   valueFormatter,
   hint = 'Tap the chart to read a value',
 }) => {
   if (!readout.touch) return null
-  const { reading } = readout
+  const reading =
+    readout.reading && describe
+      ? (describe(readout.reading.label) ?? readout.reading)
+      : readout.reading
+  // A described reading is already in display form.
+  const formatLabel = describe ? undefined : labelFormatter
   return (
     <p
       className="chart-readout"
@@ -148,7 +160,7 @@ export const ChartReadout: React.FC<ChartReadoutProps> = ({
       {reading ? (
         <>
           <span className="chart-readout__label">
-            {labelFormatter ? labelFormatter(reading.label) : reading.label}
+            {formatLabel ? formatLabel(reading.label) : reading.label}
           </span>
           {reading.rows.map(row => (
             <span key={row.key} className="chart-readout__item">
