@@ -22,11 +22,15 @@
 #                are computed over the date's whole district set, not just
 #                $DISTRICTS (#1756, ADR-015 P3). Best effort: the CLI refuses
 #                the date-level artifacts it cannot cover. Hydrated files left
-#                byte-identical are not uploaded again (stage 10).
+#                byte-identical are not uploaded again (stage 10). Runs
+#                for DISTRICTS=discover too, as it did for the full
+#                first-date list before #1766.
 #   4. transform rebuild, rescrape-historical: collector-cli transform
 #                --date <source> --force (FORCE_ARGS, always set: see FORCE).
 #                rescrape: collector-cli scrape --date <date> --transform
-#                --districts $DISTRICTS, which requests the date's own as-of
+#                with --districts $DISTRICTS, or --discover-districts when
+#                DISTRICTS=discover (the date's own set, #1766), which
+#                requests the date's own as-of
 #                and fails rather than store another day's data (#1669). A
 #                failed scrape's leftovers are dropped so nothing publishes.
 #   5. remap     the transform can write a different date than it was given
@@ -94,7 +98,10 @@
 #                          scripts/pipeline/build-identity-history.sh)
 #   BUILD_EDUCATION_ROLLUP education rollup command (default: bash
 #                          scripts/pipeline/build-education-rollup.sh)
-#   DISTRICTS              rescrape: required, comma-separated district ids
+#   DISTRICTS              rescrape: required. `discover` scrapes, per date,
+#                          the districts that date's own districtsummary lists
+#                          (scrape --discover-districts, #1766); otherwise a
+#                          comma-separated id list, the same for every date
 #   FORCE                  the `force` dispatch input: "true", "false" or ""
 #                          (a scheduled run); anything else is a usage error.
 #                          `force` means one thing in every mode: re-fetch and
@@ -127,8 +134,15 @@ shift 2
 case "${MODE}" in
   rebuild | rescrape-historical) ;;
   rescrape)
-    if [[ ! "${DISTRICTS:-}" =~ ^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$ ]]; then
-      echo "::error::process-dates: rescrape needs DISTRICTS (comma-separated ids), got '${DISTRICTS:-}'" >&2
+    # `discover`: each date scrapes the districts its own districtsummary
+    # lists (#1766, D-7). A list: those districts, hydrated (#1756). Empty is
+    # a usage error, never an implied discover (R17).
+    if [ "${DISTRICTS:-}" = "discover" ]; then
+      DISTRICT_ARGS=(--discover-districts)
+    elif [[ "${DISTRICTS:-}" =~ ^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$ ]]; then
+      DISTRICT_ARGS=(--districts "${DISTRICTS}")
+    else
+      echo "::error::process-dates: rescrape needs DISTRICTS ('discover' or comma-separated ids), got '${DISTRICTS:-}'" >&2
       exit 2
     fi
     ;;
@@ -385,7 +399,7 @@ process_one() {
   if [ "${MODE}" = "rescrape" ]; then
     echo "Scraping and transforming ${date}..."
     if ! "${COLLECTOR[@]}" scrape --date "${date}" --transform "${FORCE_ARGS[@]}" \
-      --verbose --districts "${DISTRICTS}"; then
+      --verbose "${DISTRICT_ARGS[@]}"; then
       echo "::warning::Scrape/transform failed for ${date}; nothing uploaded for it"
       local leftover
       for leftover in $(comm -13 <(echo "${before}") <(snapshot_dates)); do

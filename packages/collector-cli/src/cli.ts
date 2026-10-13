@@ -120,6 +120,12 @@ export function createCLI(): Command {
       'Comma-separated district IDs to scrape',
       parseDistrictList
     )
+    .option(
+      '--discover-districts',
+      "Scrape the districts the date's own districtsummary lists (#1766); " +
+        'not with --districts',
+      false
+    )
     .option('-f, --force', 'Force re-scrape even if cache exists', false)
     .option('-v, --verbose', 'Enable detailed logging output', false)
     .option(
@@ -159,7 +165,11 @@ export function createCLI(): Command {
 
       if (options.verbose) {
         console.error(`[INFO] Starting scrape for date: ${targetDate}`)
-        if (districts) {
+        if (options.discoverDistricts) {
+          console.error(
+            "[INFO] Districts: discover (the date's districtsummary)"
+          )
+        } else if (districts) {
           console.error(`[INFO] Districts: ${districts.join(', ')}`)
         } else {
           console.error('[INFO] Districts: all configured')
@@ -187,6 +197,7 @@ export function createCLI(): Command {
         result = await orchestrator.scrape({
           date: targetDate,
           districts,
+          discoverDistricts: options.discoverDistricts,
           force: options.force,
         })
       } catch (error) {
