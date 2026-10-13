@@ -164,6 +164,9 @@ describe('EducationRollupIndexSchema', () => {
           districtsNotAvailable: 1,
         },
       ],
+      omittedProgramYears: [
+        { programYear: '2016-2017', reason: 'no reports at any snapshot date' },
+      ],
       trend: {
         districts: {
           '61': {

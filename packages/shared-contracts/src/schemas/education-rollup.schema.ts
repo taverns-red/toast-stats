@@ -248,6 +248,11 @@ export const EducationRollupIndexSchema = z
         })
         .strict()
     ),
+    /** Program years with no rollup at all (e.g. no reports at any date),
+     *  ascending: "not available", never a zero year (#1807). */
+    omittedProgramYears: z.array(
+      z.object({ programYear: ProgramYear, reason: z.string() }).strict()
+    ),
     trend: z
       .object({
         /** District → PY → totals; null = not available that PY. A PY the
