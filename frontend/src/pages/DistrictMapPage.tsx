@@ -21,7 +21,12 @@ import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 import { useClubPins } from '../components/map/useClubPins'
-import { buildPinFeatures } from '../components/map/pinLayer'
+import {
+  CLUSTER_LAYER_ID,
+  PIN_LAYER_ID,
+  PIN_SOURCE_ID,
+  buildPinFeatures,
+} from '../components/map/pinLayer'
 import {
   MAP_COLOR_MODES,
   activeMapFilterCount,
@@ -87,6 +92,9 @@ const MapPhoneSheets = React.lazy(
 const Realign = React.lazy(
   () => import('../components/map/realign/RealignSandbox')
 )
+
+// The keyboard path between pins (#1940), once the map is up.
+const PinKeys = React.lazy(() => import('../components/map/MapPinKeys'))
 
 // Only a tap needs the club summary, so it loads on the first selection.
 const MapClubSummary = React.lazy(() =>
@@ -453,6 +461,22 @@ const DistrictMapPage: React.FC = () => {
                       cooperativeGestures={false}
                     />
                   </MapErrorBoundary>
+                )}
+                {map && !sandbox && !noLocation && !pending && (
+                  <React.Suspense fallback={null}>
+                    <PinKeys
+                      map={map}
+                      clubs={allClubs}
+                      model={model}
+                      selectedIds={selectedClubIds}
+                      onSelect={setSelectedIds}
+                      layers={{
+                        source: PIN_SOURCE_ID,
+                        cluster: CLUSTER_LAYER_ID,
+                        pin: PIN_LAYER_ID,
+                      }}
+                    />
+                  </React.Suspense>
                 )}
                 {isPhone && (
                   <div className="district-map__peek">

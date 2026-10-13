@@ -403,3 +403,67 @@ for (const theme of ['light', 'dark'] as const) {
     })
   }
 }
+
+/* Keyboard path between pins (#1940): the map canvas then one Tab stop for
+ * the pins; arrows move between them, each named by club and category (not
+ * colour) with a visible focus ring; Enter opens the club (a sheet at 375,
+ * the side panel at 1280); Escape closes it and focus returns to the pin;
+ * Tab moves on (no trap). */
+const CATEGORY =
+  /, (Thriving|Vulnerable|Intervention required|Suspended)(;|$)|^Group of \d+ clubs/
+
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [375, 1280]) {
+    test(`keyboard pins at ${width} (${theme})`, async ({ page }) => {
+      test.setTimeout(90_000)
+      const errors = await open(page, theme, width)
+      const pins = page.getByRole('toolbar', { name: /Club pins/ })
+      await expect(pins.getByRole('button').first()).toBeAttached({
+        timeout: 30_000,
+      })
+
+      // From the map canvas, Tab reaches the pins: past the attribution
+      // links in Chromium (WebKit's Tab skips links), one stop for all pins.
+      await page.locator('canvas.maplibregl-canvas').focus()
+      const focused = pins.locator('button:focus')
+      for (let i = 0; i < 6 && (await focused.count()) === 0; i++)
+        await page.keyboard.press('Tab')
+      await expect(focused).toHaveCount(1)
+      const ring = await focused.evaluate(el => {
+        const s = getComputedStyle(el)
+        return { opacity: s.opacity, outline: s.outlineStyle }
+      })
+      expect(ring).toEqual({ opacity: '1', outline: 'solid' })
+      expect(await focused.getAttribute('aria-label')).toMatch(CATEGORY)
+
+      // Arrow to the first single-club pin (clusters zoom instead).
+      const count = await pins.getByRole('button').count()
+      let name = (await focused.getAttribute('aria-label')) ?? ''
+      for (let i = 0; i < count && name.startsWith('Group of'); i++) {
+        await page.keyboard.press('ArrowRight')
+        name = (await focused.getAttribute('aria-label')) ?? ''
+      }
+      expect(name).toMatch(CATEGORY)
+      expect(name).not.toMatch(/^Group of/)
+      const pin = pins.getByRole('button', { name, exact: true })
+
+      await page.keyboard.press('Enter')
+      const summary =
+        width < 768
+          ? page.getByRole('dialog', { name: /Club details|Clubs here/ })
+          : page.getByRole('region', { name: 'Selected club' })
+      await expect(
+        summary.getByRole('link', { name: /Open club page/ }).first()
+      ).toBeVisible()
+
+      await page.keyboard.press('Escape')
+      await expect(summary).toHaveCount(0)
+      await expect(pin).toBeFocused()
+
+      // No trap: Tab leaves the pins.
+      await page.keyboard.press('Tab')
+      await expect(focused).toHaveCount(0)
+      expect(errors).toEqual([])
+    })
+  }
+}
