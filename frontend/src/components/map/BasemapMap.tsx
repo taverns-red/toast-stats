@@ -19,20 +19,37 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 // The worker is a self-contained ES module; `?url` makes Vite emit it as a
 // same-origin asset, so CSP `worker-src` falls back to `script-src 'self'`.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
-import { Protocol } from 'pmtiles'
+import { FetchSource, PMTiles, Protocol } from 'pmtiles'
 import { useDarkMode } from '../../contexts/DarkModeContext'
 import { basemapUrl } from '../../config/basemap'
 import { buildBasemapStyle, type BasemapTheme } from './basemapStyle'
+import { prefetchBasemapHead } from './basemapPrefetch'
+import { PrefetchedHeadSource } from './prefetchedHeadSource'
 
-let registered = false
+let protocol: Protocol | null = null
 
 /** One pmtiles protocol and one worker URL per page, however many maps. */
-function ensureRegistered(): void {
-  if (registered) return
-  registered = true
+function ensureRegistered(): Protocol {
+  if (protocol) return protocol
   setWorkerUrl(workerUrl)
-  const protocol = new Protocol()
+  protocol = new Protocol()
   addProtocol('pmtiles', protocol.tile)
+  return protocol
+}
+
+/** Each archive reads its head from the early prefetch (#1943). */
+function ensureArchive(url: string): void {
+  const p = ensureRegistered()
+  if (p.get(url)) return
+  p.add(
+    new PMTiles(
+      new PrefetchedHeadSource(
+        url,
+        prefetchBasemapHead(url),
+        new FetchSource(url)
+      )
+    )
+  )
 }
 
 export interface BasemapMapProps {
@@ -76,8 +93,8 @@ export default function BasemapMap({
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    ensureRegistered()
     const seed = seedRef.current
+    ensureArchive(seed.url)
     const map = new MapLibreMap({
       container,
       style: buildBasemapStyle({ theme: seed.theme, pmtilesUrl: seed.url }),
@@ -103,6 +120,7 @@ export default function BasemapMap({
     const styled = styledRef.current
     if (!map || !styled) return
     if (styled.theme === theme && styled.url === url) return
+    ensureArchive(url)
     map.setStyle(buildBasemapStyle({ theme, pmtilesUrl: url }))
     styledRef.current = { theme, url }
   }, [theme, url])
