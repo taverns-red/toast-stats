@@ -16,6 +16,7 @@ import {
   PROMOTED_PREFIXES,
   SNAPSHOT_INDEX_PATH,
   checkLatestAgreesWithIndex,
+  clubHistoryShardKeys,
   checkObject,
   decodeStoredObject,
   diffChangedObjects,
@@ -205,7 +206,8 @@ export async function readStored(
 
 async function readContext(
   staging: GateBucket,
-  meta: Map<string, GcsObjectMeta>
+  meta: Map<string, GcsObjectMeta>,
+  prodNames: Iterable<string>
 ): Promise<{ ctx: CheckContext; latest: StoredObject | null }> {
   const read = async (path: string) =>
     meta.has(path)
@@ -228,6 +230,10 @@ async function readContext(
       availableDates: Array.isArray(dateList)
         ? dateList.filter((x): x is string => typeof x === 'string')
         : [],
+      clubHistoryShards: {
+        staging: clubHistoryShardKeys(meta.keys()),
+        prod: clubHistoryShardKeys(prodNames),
+      },
     },
   }
 }
@@ -271,7 +277,11 @@ export async function runContentGate(
 
   const stagingMeta = new Map(stagingObjects.map(o => [o.name, o]))
   const prodMeta = new Map(prodObjects.map(o => [o.name, o]))
-  const { ctx, latest } = await readContext(staging, stagingMeta)
+  const { ctx, latest } = await readContext(
+    staging,
+    stagingMeta,
+    prodMeta.keys()
+  )
 
   const results: CheckResult[] = await mapLimit(
     plan.checks,

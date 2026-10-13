@@ -22,6 +22,9 @@
 import { createHash } from 'node:crypto'
 import { gunzipSync } from 'node:zlib'
 import {
+  ClubDistrictHistoryIndexSchema,
+  ClubDistrictHistoryShardSchema,
+  clubDistrictHistoryShardKey,
   DistrictRegionHistorySchema,
   ProgramYearIndexFileSchema,
 } from '@taverns-red/shared-contracts'
@@ -65,6 +68,8 @@ export type ObjectKind =
   | 'district-analytics'
   | 'snapshot-index'
   | 'district-region-history'
+  | 'club-district-history-index'
+  | 'club-district-history-shard'
   | 'latest'
   | 'json'
 
@@ -82,6 +87,11 @@ export interface CheckContext {
   latestSnapshotDate: string | null
   /** Staging `v1/dates.json` dates, empty when unreadable. */
   availableDates: string[]
+  /**
+   * Club-district history shard keys present under
+   * `config/club-district-history/` (#1782), from the two listings.
+   */
+  clubHistoryShards: { staging: readonly string[]; prod: readonly string[] }
 }
 
 export interface CheckResult {
@@ -116,6 +126,20 @@ export const DATES_PATH = 'v1/dates.json'
 export const SNAPSHOT_INDEX_PATH = 'config/district-snapshot-index.json'
 /** District → region per program year (#1820), built by build-identity-history.sh. */
 export const REGION_HISTORY_PATH = 'config/district-region-history.json'
+/** The club-district history (#1782): `index.json` plus one `NN.json` per shard. */
+export const CLUB_HISTORY_DIR = 'config/club-district-history/'
+export const CLUB_HISTORY_INDEX_PATH = `${CLUB_HISTORY_DIR}index.json`
+const CLUB_HISTORY_SHARD = /^config\/club-district-history\/(\d{2})\.json$/
+
+/** The shard keys in a listing (`config/club-district-history/NN.json`), sorted. */
+export function clubHistoryShardKeys(names: Iterable<string>): string[] {
+  const keys: string[] = []
+  for (const n of names) {
+    const m = CLUB_HISTORY_SHARD.exec(n)
+    if (m) keys.push(m[1]!)
+  }
+  return keys.sort()
+}
 
 /** The kind of content check an object gets; null = not JSON, not checked. */
 export function classifyObject(path: string): ObjectKind | null {
@@ -126,6 +150,8 @@ export function classifyObject(path: string): ObjectKind | null {
   if (DISTRICT_ANALYTICS.test(path)) return 'district-analytics'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
+  if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
+  if (CLUB_HISTORY_SHARD.test(path)) return 'club-district-history-shard'
   if (path === LATEST_PATH) return 'latest'
   return 'json'
 }
@@ -207,6 +233,9 @@ function sample<T extends { path: string }>(
  * - latest + snapshot index whenever either changed;
  * - the district-region history whenever it changed (one small object that
  *   every region page and rollup reads, #1820);
+ * - the club-district history index and every changed shard (#1782): at
+ *   most 101 small objects (~9 MB raw in all), and a broken shard is a
+ *   broken club page for 1% of clubs, so none is sampled out;
  * - a random sample of everything else (older program years, district
  *   snapshots, analytics, club stores), D61 always included.
  */
@@ -242,7 +271,9 @@ export function planContentChecks(
     } else if (
       c.kind === 'latest' ||
       c.kind === 'snapshot-index' ||
-      c.kind === 'district-region-history'
+      c.kind === 'district-region-history' ||
+      c.kind === 'club-district-history-index' ||
+      c.kind === 'club-district-history-shard'
     ) {
       checks.push(c)
     } else {
@@ -517,6 +548,60 @@ function checkRegionHistory(value: unknown): string | null {
     : null
 }
 
+/**
+ * config/club-district-history/index.json (#1782): the schema, at least one
+ * club and shard, every listed shard staged (promotion would publish an
+ * index naming a missing object), and no shard prod serves dropped (clubs
+ * are never removed from the history, so a shard key never disappears).
+ */
+function checkClubHistoryIndex(
+  value: unknown,
+  ctx: CheckContext
+): string | null {
+  const parsed = ClubDistrictHistoryIndexSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const { totalClubs, shards } = parsed.data
+  if (totalClubs === 0 || shards.length === 0) {
+    return 'no clubs or no shards — the club history folded nothing'
+  }
+  const staged = new Set(ctx.clubHistoryShards.staging)
+  const missing = shards.filter(k => !staged.has(k))
+  if (missing.length > 0) {
+    return `names shard ${missing.join(', ')}, not in staging (the index would dangle)`
+  }
+  const listed = new Set(shards)
+  const dropped = ctx.clubHistoryShards.prod.filter(k => !listed.has(k))
+  if (dropped.length > 0) {
+    return `drops shard ${dropped.join(', ')}, which prod serves (a shard key never disappears)`
+  }
+  return null
+}
+
+/**
+ * config/club-district-history/NN.json (#1782): the schema, `shard` equal to
+ * the file's key, at least one club, and every club in the shard its id maps
+ * to (the readers' `clubDistrictHistoryShardKey`).
+ */
+function checkClubHistoryShard(path: string, value: unknown): string | null {
+  const parsed = ClubDistrictHistoryShardSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const key = CLUB_HISTORY_SHARD.exec(path)?.[1]
+  if (parsed.data.shard !== key) {
+    return `holds shard ${parsed.data.shard} but is served as ${key}.json`
+  }
+  const ids = Object.keys(parsed.data.clubs)
+  if (ids.length === 0)
+    return 'no clubs — the writer only writes shards with clubs'
+  const stray = ids.find(id => clubDistrictHistoryShardKey(id) !== key)
+  return stray === undefined
+    ? null
+    : `club ${stray} belongs in shard ${clubDistrictHistoryShardKey(stray)}, not ${key}`
+}
+
 function checkLatest(value: unknown): string | null {
   const date = (value as { latestSnapshotDate?: unknown } | null)
     ?.latestSnapshotDate
@@ -557,6 +642,10 @@ export function checkObject(
       })
     case 'district-region-history':
       return checkRegionHistory(value)
+    case 'club-district-history-index':
+      return checkClubHistoryIndex(value, ctx)
+    case 'club-district-history-shard':
+      return checkClubHistoryShard(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
