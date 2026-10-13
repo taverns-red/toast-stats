@@ -68,6 +68,11 @@ const Chips = React.lazy(() =>
   loadLists().then(m => ({ default: m.LegendChips }))
 )
 
+// So do the empty states: no locations for the date, or no map (WebGL).
+const MapEmpty = React.lazy(() =>
+  loadLists().then(m => ({ default: m.MapEmpty }))
+)
+
 const MapFilterPanel = React.lazy(
   () => import('../components/map/MapFilterPanel')
 )
@@ -75,6 +80,11 @@ const MapFilterPanel = React.lazy(
 // Phones only: the mode picker, legend and club sheets (fetched on mount).
 const MapPhoneSheets = React.lazy(
   () => import('../components/map/MapPhoneSheets')
+)
+
+// The realignment sandbox (#1819): only with ?sandbox=1.
+const Realign = React.lazy(
+  () => import('../components/map/realign/RealignSandbox')
 )
 
 // Only a tap needs the club summary, so it loads on the first selection.
@@ -126,8 +136,9 @@ const DistrictMapPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const mode = parseMapColorMode(searchParams.get('color'))
   const listView = searchParams.get('view') === 'list'
+  const sandbox = searchParams.has('sandbox')
   const isPhone = useIsMobile()
-  const { isDark } = useDarkMode()
+  const theme = useDarkMode().isDark ? 'dark' : 'light'
   const [map, setMap] = useState<MapLibreMap | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [sheet, setSheet] = useState<'legend' | 'modes' | 'filters' | null>(
@@ -227,10 +238,11 @@ const DistrictMapPage: React.FC = () => {
   const unmapped = filtered.filter(c => !c.coordinates)
   const noLocation = allClubs.length > 0 && allClubs.every(c => !c.coordinates)
 
-  useClubPins(listView ? null : map, {
+  // The sandbox draws its own pins on this map.
+  useClubPins(listView || sandbox ? null : map, {
     data,
     model,
-    theme: isDark ? 'dark' : 'light',
+    theme,
     selectedIds,
     onSelect: setSelectedIds,
     fitKey: `${districtId}|${effectiveEndDate}`,
@@ -292,16 +304,6 @@ const DistrictMapPage: React.FC = () => {
           />
         </React.Suspense>
       )}
-      {!pending && model.kind !== 'categorical' && limit === undefined && (
-        <p className="map-legend__note">
-          Clusters show the{' '}
-          {model.kind === 'ordinal' ? 'middle level' : 'most common status'}
-          {model.exceptionKey
-            ? '; a red square marks clusters with clubs needing intervention'
-            : ''}
-          .
-        </p>
-      )}
     </div>
   )
   const lists = (
@@ -310,6 +312,7 @@ const DistrictMapPage: React.FC = () => {
         unmapped={unmapped}
         prospective={prospective}
         districtId={districtId}
+        onSandbox={() => setSheet(null)}
       />
     </React.Suspense>
   )
@@ -330,10 +333,9 @@ const DistrictMapPage: React.FC = () => {
   )
 
   const listFallback = (
-    <div className="district-map__empty">
-      <p>The map can’t be shown on this device.</p>
-      <Link to={viewHref('list')}>Show the clubs as a list</Link>
-    </div>
+    <React.Suspense fallback={null}>
+      <MapEmpty to={viewHref('list')} />
+    </React.Suspense>
   )
 
   return (
@@ -417,33 +419,22 @@ const DistrictMapPage: React.FC = () => {
             <div className="district-map__body">
               <div className="district-map__canvas">
                 {noLocation ? (
-                  <div className="district-map__empty">
-                    <p>
-                      <strong>No location data for this date</strong>
-                    </p>
-                    <p>
-                      This snapshot has no club locations. The list view still
-                      has every club.
-                    </p>
-                    {availableProgramYears[0] && (
-                      <button
-                        type="button"
-                        className="map-pill"
-                        onClick={() =>
+                  <React.Suspense fallback={null}>
+                    <MapEmpty
+                      onLatest={
+                        availableProgramYears[0] &&
+                        (() =>
                           setProgramYearAndDate(
                             availableProgramYears[0]!,
                             undefined
-                          )
-                        }
-                      >
-                        Latest date
-                      </button>
-                    )}
-                  </div>
+                          ))
+                      }
+                    />
+                  </React.Suspense>
                 ) : (
                   <MapErrorBoundary fallback={listFallback}>
                     <LazyBasemapMap
-                      ariaLabel={`Club map, coloured by ${modeLabel.toLowerCase()}`}
+                      ariaLabel={`Club map, coloured by ${sandbox ? 'proposed area' : modeLabel.toLowerCase()}`}
                       onReady={setMap}
                       cooperativeGestures={false}
                     />
@@ -481,6 +472,20 @@ const DistrictMapPage: React.FC = () => {
                   )}
                   {lists}
                 </aside>
+              )}
+              {sandbox && (
+                <React.Suspense fallback={null}>
+                  <Realign
+                    map={map}
+                    clubs={allClubs}
+                    districtId={districtId}
+                    date={effectiveEndDate}
+                    isPhone={isPhone}
+                    theme={theme}
+                    pins={useClubPins}
+                    features={buildPinFeatures}
+                  />
+                </React.Suspense>
               )}
             </div>
           )}

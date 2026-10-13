@@ -444,6 +444,12 @@ describe('DistrictMapPage — realignment sandbox (#1819)', () => {
     const panel = await sandbox()
     expect(search()).toContain('sandbox=1')
     expect(summary(panel)).toHaveTextContent('No clubs moved yet')
+    // The map says what its pins now mean.
+    expect(
+      screen.getByRole('region', {
+        name: 'Club map, coloured by proposed area',
+      })
+    ).toBeInTheDocument()
   })
 
   it('list path: a labelled select moves a club, writing ?plan= and recounting areas', async () => {
