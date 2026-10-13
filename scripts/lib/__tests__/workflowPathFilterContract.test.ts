@@ -33,6 +33,15 @@ const WORKFLOWS = path.join(ROOT, '.github/workflows')
  * `<workflow>: <repo-relative file>` -> reason it may fall outside the filter.
  */
 const EXEMPT: Record<string, string> = {
+  // docs.yml's `paths` must stay the exact mirror of ci.yml's `paths-ignore`
+  // (NON_CODE_GLOBS; ciGate.test.ts drift guard) so ci-gate can predict which
+  // checks a diff schedules. A change to these files is code, so ci.yml runs
+  // the same checks on it instead.
+  'docs.yml: .nvmrc':
+    'ci.yml runs on it and builds/lints/tests with the same Node version',
+  'docs.yml: scripts/lessons-index.sh':
+    "ci.yml runs on it; Test Suite's test:scripts runs the lessons INDEX " +
+    'drift check (lessonsModel.test.ts) that docs.yml duplicates',
   'docs.yml: package.json':
     'only read for the pinned prettier version; a package.json change is not ' +
     "in ci.yml's paths-ignore, so ci.yml's format check (which covers " +

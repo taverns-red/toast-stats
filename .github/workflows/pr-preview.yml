@@ -26,6 +26,7 @@ on:
       - '.github/workflows/pr-preview.yml'
       - 'scripts/check-hosting-site.sh'
       - 'lighthouserc.mobile.js' # the mobile gate below runs it (#1994)
+      - '.nvmrc' # setup-node reads it (#2005)
 
 # Cancel an in-flight preview build when a new push to the same PR
 # arrives — only the latest commit gets a deploy.
