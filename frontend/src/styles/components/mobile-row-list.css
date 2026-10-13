@@ -95,6 +95,21 @@
   white-space: nowrap;
 }
 
+/* A short word-flag after the name (#1968, "Coach"). Never shrinks — the
+   title ellipsizes first. Outlined, not filled, so it reads as a secondary
+   marker beside the status chip; theme tokens only (R10). */
+.mobile-row__badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--ink-3);
+}
+
 .mobile-row__chip .clubs-status-pill {
   font-size: 14px;
   line-height: 20px;

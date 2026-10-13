@@ -54,6 +54,36 @@ describe('MobileRowList — flat rows', () => {
     expect(first.querySelectorAll('a, button')).toHaveLength(0)
   })
 
+  // #1968 — a short flag (e.g. "Coach") rides line 1 right after the name,
+  // so line 2 (chip + numbers) keeps its full width at 375 px.
+  it('renders a title badge on line 1, after the name', () => {
+    render(
+      <MobileRowList
+        label="Clubs"
+        rows={[
+          {
+            ...makeRows(1)[0]!,
+            badge: <span data-testid="badge">Coach</span>,
+          },
+        ]}
+      />
+    )
+    const link = screen.getByRole('link')
+    const line1 = link.querySelector('.mobile-row__line1')!
+    const badge = line1.querySelector('.mobile-row__badge')
+    expect(badge).not.toBeNull()
+    expect(badge).toHaveTextContent('Coach')
+    expect(line1.firstElementChild).toHaveClass('mobile-row__title')
+    expect(link.querySelector('.mobile-row__line2')).not.toHaveTextContent(
+      'Coach'
+    )
+  })
+
+  it('renders no badge wrapper when a row has none', () => {
+    render(<MobileRowList label="Clubs" rows={makeRows(1)} />)
+    expect(document.querySelector('.mobile-row__badge')).toBeNull()
+  })
+
   // #1843 — an off-site row (a club's own website) opens in a new tab and
   // says so; it is still one whole-row link with the chevron.
   it('renders an external row as a new-tab anchor with an accessible hint', () => {
@@ -232,10 +262,17 @@ describe('MobileRowList CSS contract (review §5.2 / §5.6)', () => {
       '.mobile-row-list__more',
       // The shared status pill is 11 px elsewhere; in a row it is data (§5.6).
       '.mobile-row__chip .clubs-status-pill',
+      '.mobile-row__badge',
       '.mobile-chip',
     ]) {
       expect(px(rule(sel), 'font-size'), sel).toBeGreaterThanOrEqual(14)
     }
+  })
+
+  it('a title badge never shrinks or wraps either (#1968)', () => {
+    const badge = rule('.mobile-row__badge')
+    expect(badge).toMatch(/flex-shrink:\s*0/)
+    expect(badge).toMatch(/white-space:\s*nowrap/)
   })
 
   it('the chip never shrinks or wraps — the title ellipsizes instead (Lesson 134)', () => {

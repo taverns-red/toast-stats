@@ -717,6 +717,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       const members = club.latestMembership
       const net = formatNet(club)
       const memberText = `${members} member${members === 1 ? '' : 's'}`
+      const coached = club.coach?.status === 'active'
       return {
         id: club.clubId,
         to: clubLinkTo(club),
@@ -731,9 +732,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         // Line 2 keeps the chip and DCP; the member count rides under the
         // trend sparkline with its net (#1792) — measured at 375, the count
         // beside a 60 px trend ellipsized every row by up to 60 px.
-        // No coach flag here (#1954): at 375 line 2 has no room ("· Coach"
-        // clipped to "· C…"); phones reach coach status via ?coach=.
         meta: `${club.latestDcpGoals}/10 DCP`,
+        // Coach flag (#1968): line 2 has no room at 375 ("· Coach" clipped to
+        // "· C…", #1954), so an active coach rides line 1 after the name,
+        // which ellipsizes first. Completed engagements stay desktop-only.
+        badge: coached ? 'Coach' : undefined,
         // The row's trend (#1792): the same 60×16 sparkline as the desktop
         // Trend column, then "members (net)". The link's accessible name
         // already says all of it, so the visual pair is hidden from AT.
@@ -747,7 +750,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         ),
         ariaLabel: `${club.clubName} — ${getClubHealthStatusLabel(
           club.currentStatus
-        )}, ${memberText}${net ? `, net ${net}` : ''}, ${
+        )}${coached ? ', active coach' : ''}, ${memberText}${net ? `, net ${net}` : ''}, ${
           club.latestDcpGoals
         } of 10 DCP goals`,
       }
