@@ -21,7 +21,10 @@
 
 import { createHash } from 'node:crypto'
 import { gunzipSync } from 'node:zlib'
-import { ProgramYearIndexFileSchema } from '@taverns-red/shared-contracts'
+import {
+  DistrictRegionHistorySchema,
+  ProgramYearIndexFileSchema,
+} from '@taverns-red/shared-contracts'
 import {
   ANCHOR_DISTRICT,
   checkDistrictSnapshotIndex,
@@ -61,6 +64,7 @@ export type ObjectKind =
   | 'competitive-awards'
   | 'district-analytics'
   | 'snapshot-index'
+  | 'district-region-history'
   | 'latest'
   | 'json'
 
@@ -110,6 +114,8 @@ export const PROMOTED_PREFIXES = [
 export const LATEST_PATH = 'v1/latest.json'
 export const DATES_PATH = 'v1/dates.json'
 export const SNAPSHOT_INDEX_PATH = 'config/district-snapshot-index.json'
+/** District → region per program year (#1820), built by build-identity-history.sh. */
+export const REGION_HISTORY_PATH = 'config/district-region-history.json'
 
 /** The kind of content check an object gets; null = not JSON, not checked. */
 export function classifyObject(path: string): ObjectKind | null {
@@ -119,6 +125,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (AWARDS.test(path)) return 'competitive-awards'
   if (DISTRICT_ANALYTICS.test(path)) return 'district-analytics'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
+  if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === LATEST_PATH) return 'latest'
   return 'json'
 }
@@ -198,6 +205,8 @@ function sample<T extends { path: string }>(
  *   and its newest changed program-year file, compared with prod;
  * - the newest changed competitive-awards dates;
  * - latest + snapshot index whenever either changed;
+ * - the district-region history whenever it changed (one small object that
+ *   every region page and rollup reads, #1820);
  * - a random sample of everything else (older program years, district
  *   snapshots, analytics, club stores), D61 always included.
  */
@@ -230,7 +239,11 @@ export function planContentChecks(
       byDistrict.set(ts[1]!, list)
     } else if (c.kind === 'competitive-awards') {
       awards.push(c)
-    } else if (c.kind === 'latest' || c.kind === 'snapshot-index') {
+    } else if (
+      c.kind === 'latest' ||
+      c.kind === 'snapshot-index' ||
+      c.kind === 'district-region-history'
+    ) {
       checks.push(c)
     } else {
       rest.push(c)
@@ -488,6 +501,22 @@ function checkDistrictAnalytics(value: unknown): string | null {
   return null
 }
 
+/**
+ * config/district-region-history.json (#1820): the shared-contracts schema,
+ * and at least one district — the fold refuses empty input, so an empty
+ * history is a broken writer, not a quiet year. A conflict (a district in
+ * two regions in one PY) is reported data, not a failure.
+ */
+function checkRegionHistory(value: unknown): string | null {
+  const parsed = DistrictRegionHistorySchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  return Object.keys(parsed.data.districts).length === 0
+    ? 'no districts — the region history folded nothing'
+    : null
+}
+
 function checkLatest(value: unknown): string | null {
   const date = (value as { latestSnapshotDate?: unknown } | null)
     ?.latestSnapshotDate
@@ -526,6 +555,8 @@ export function checkObject(
         ok: true,
         body: JSON.stringify(value),
       })
+    case 'district-region-history':
+      return checkRegionHistory(value)
     case 'latest':
       return checkLatest(value)
     case 'json':
