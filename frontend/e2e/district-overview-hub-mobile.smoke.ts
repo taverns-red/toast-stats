@@ -119,6 +119,10 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(m.h2s[0], msg).toBe('Details')
     expect(m.sectionRowHeights.length, msg).toBeGreaterThan(0)
     expect(Math.min(...m.sectionRowHeights), msg).toBeGreaterThanOrEqual(44)
+    // Compact rows are what keep the hub inside its page budget; local macOS
+    // fonts leave ~30px of headroom that CI Linux does not, so pin the row
+    // height too or a dead override passes here and fails only in CI.
+    expect(Math.max(...m.sectionRowHeights), msg).toBeLessThanOrEqual(48)
     expect(m.pageH, msg).toBeLessThanOrEqual(PAGE_MAX_H)
     expect(m.overflowX, msg).toBeLessThanOrEqual(0)
   })

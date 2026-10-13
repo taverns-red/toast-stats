@@ -178,14 +178,17 @@
     line-height: 20px;
     color: var(--ink-3);
   }
+}
 
-  /* Section links (#1794): single-line nav rows, so the 56px two-line
-     club-row floor is not needed here. 48px keeps a ≥44px tap target and
-     lets the Growth section join the list without growing the hub past
-     its 4000px page budget (CI measured 4013 at 56px). */
-  [data-testid='district-hub-sections'] .mobile-row {
-    min-height: 48px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-  }
+/* Section links (#1794): single-line nav rows, so the 56px two-line
+   club-row floor is not needed here. 48px keeps a ≥44px tap target and lets
+   the Growth section join the list without growing the hub past its 4000px
+   page budget (CI measured 4013 at 56px). OUTSIDE `@layer brand` on purpose:
+   `.mobile-row` (mobile-row-list.css) is unlayered, and an unlayered rule
+   beats any layered one regardless of specificity — inside the layer this
+   override silently did nothing (CI still measured 56px rows). */
+[data-testid='district-hub-sections'] .mobile-row {
+  min-height: 48px;
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
