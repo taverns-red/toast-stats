@@ -933,6 +933,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               octoberRenewals: club.octoberRenewals,
               aprilRenewals: club.aprilRenewals,
               newMembers: club.newMembers,
+              clubStatus: club.clubStatus,
+              coach: club.coach,
             })),
             districtId
           )
