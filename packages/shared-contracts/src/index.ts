@@ -364,6 +364,8 @@ export { isCountedEducationAward } from './education/countedEducationAward.js'
 // (#1802): the archive ledger with Date kept per month, tagged by program.
 export {
   educationAwardProgram,
+  awardCodeFromAward,
+  pathwaysLevel,
   type EducationAwardProgram,
 } from './education/educationAwardProgram.js'
 export {
