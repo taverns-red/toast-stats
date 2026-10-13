@@ -218,7 +218,7 @@ export {
   type ClubRaceOfficialCode,
 } from './schemas/club-race-store.schema.js'
 
-// Club-district history — derived/club-district-history/ (#1782)
+// Club-district history — config/club-district-history/ (#1782)
 export {
   ClubDistrictSpanSchema,
   ClubDistrictHistoryClubSchema,

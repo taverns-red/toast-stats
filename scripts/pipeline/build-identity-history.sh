@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build the identity histories and upload them to STAGING (#1782, #1820;
-# epic #1781): the club history to derived/, the region history to config/.
+# Build the identity histories and upload them to STAGING config/ (#1782,
+# #1820; epic #1781), where promotion copies them with the run.
 #
 # Usage: scripts/pipeline/build-identity-history.sh <bucket>
 #
@@ -16,20 +16,22 @@
 #     last snapshot of every program year (~22 single-file reads). The run's
 #     own dates are already uploaded when this runs.
 #
-# Output (plain JSON, no -Z):
-#   gs://<bucket>/derived/club-district-history/{NN,index}.json
-#   gs://<bucket>/config/district-region-history.json
-# derived/ is NOT a promoted prefix: the club history stays in staging until
-# it moves under config/ (#1782). The region history (~42 KB) IS under a
-# promoted prefix (#1820): the content gate schema-checks it, and promotion
-# copies it with the run — whole-prefix rsync of config/, or as a global
-# object of the run manifest (promotion_scope=manifest, #1763), which holds
-# it whenever a date is held. Like its config/ siblings it is stored identity
-# with max-age=300; Cloud CDN compresses it at the edge (#1852). This script
+# Output (plain JSON, no -Z), all under the promoted config/ prefix:
+#   gs://<bucket>/config/club-district-history/{NN,index}.json  (#1782;
+#     100 shards + index, ~9.2 MB raw, ~1.1 MB gzip)
+#   gs://<bucket>/config/district-region-history.json            (#1820; ~42 KB)
+# The content gate schema-checks every one that changed (kinds
+# club-district-history-index/-shard and district-region-history), and
+# promotion copies them with the run — whole-prefix rsync of config/, or as
+# global objects of the run manifest (promotion_scope=manifest, #1763), which
+# holds them whenever a date is held and copies the club index after its
+# shards. Like their config/ siblings they are stored identity with
+# max-age=300; Cloud CDN compresses them at the edge (#1852). This script
 # still only ever writes to <bucket> (the #1755 prod-write guard checks it).
 # All inputs are read and both histories built before anything is uploaded;
 # shards go up before index.json, which names them. Clubs are never dropped
-# from the history, so a shard key never disappears.
+# from the history, so a shard key never disappears (the gate holds an index
+# that drops one prod serves).
 #
 # Env:   GCLOUD     the gcloud binary (default `gcloud`; tests use a shim, D10)
 #        RUN_MANIFEST_FILE  required: every upload is recorded in it
@@ -55,7 +57,7 @@ SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 BUILDER="${REPO}/scripts/build-identity-history.ts"
-DERIVED="gs://${BUCKET}/derived/"
+CLUB_DIR="gs://${BUCKET}/config/club-district-history/"
 
 if [ ! -d "${CACHE_DIR}/club-race" ]; then
   echo "::error::build-identity-history: ${CACHE_DIR}/club-race does not exist; the club-race store was never synced (R2)" >&2
@@ -100,21 +102,21 @@ while IFS= read -r f; do
 done < <(find "${OUT}" -maxdepth 1 -type f -name '[0-9][0-9].json' | LC_ALL=C sort)
 
 # Through the wrapper, so every object lands in the run manifest (#1762,
-# ADR-015 P5). derived/ is outside PROMOTED_PREFIXES: recorded as written,
-# never read by the content gate, never promoted. config/ is promoted.
+# ADR-015 P5), which the content gate reads in full and scoped promotion
+# copies from.
 export GCLOUD
-UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" identity cp --content-type="application/json")
+UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" identity cp
+  --content-type="application/json" --cache-control="public, max-age=300")
 if [ "${#shards[@]}" -gt 0 ]; then
-  "${UPLOAD[@]}" "${shards[@]}" "${DERIVED}club-district-history/"
+  "${UPLOAD[@]}" "${shards[@]}" "${CLUB_DIR}"
 fi
-"${UPLOAD[@]}" "${OUT}/index.json" "${DERIVED}club-district-history/"
-"${UPLOAD[@]}" --cache-control="public, max-age=300" \
-  "${WORK}/out/district-region-history.json" \
+"${UPLOAD[@]}" "${OUT}/index.json" "${CLUB_DIR}"
+"${UPLOAD[@]}" "${WORK}/out/district-region-history.json" \
   "gs://${BUCKET}/config/district-region-history.json"
 
 jq -r '
   (.clubDistrictHistory |
-    "- **Club-district history** (staging derived/, #1782): \(.clubs) clubs, \(.shards) shards, \(.duplicates) duplicates; " +
+    "- **Club-district history** (config/club-district-history/, promoted with the run, #1782): \(.clubs) clubs, \(.shards) shards, \(.duplicates) duplicates; " +
     "\(.rawBytes) B raw, \(.gzipBytes) B gzip (largest shard \(.maxShardGzipBytes) B gzip)"),
   (.districtRegionHistory |
     "- **District-region history** (config/, promoted with the run, #1820): \(.districts) districts, \(.programYears) PYs from \(.sourceDates) snapshots, \(.conflicts) conflicts; " +
