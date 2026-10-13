@@ -87,16 +87,23 @@ test.describe('District Detail Page', () => {
 
   test('date selector shows dates without gaps', async ({ page }) => {
     await page.goto('/district/61')
-    // Find and open date selector
-    const dateSelector = page.locator(
-      'select, [role="listbox"], [data-testid*="date"]'
+    // The snapshot-date chip (DataControlsBar). #1947: the old locator
+    // (`select, [role=listbox], [data-testid*=date]`) matched whichever
+    // <select> rendered first — in WebKit the PY chip, which has 0 options
+    // until the program-year query resolves — and counted once, without
+    // waiting. The readiness signal is the dates themselves: the chip always
+    // has "Latest in PY" (value ""), and gains one option per snapshot date
+    // when the dates query lands. Web-first assertions wait for that.
+    const dateOptions = page.locator(
+      '[data-testid="date-chip-select"] option:not([value=""])'
     )
-    if ((await dateSelector.count()) > 0) {
-      // Verify it has options
-      const options = dateSelector.first().locator('option')
-      const count = await options.count()
-      expect(count).toBeGreaterThan(0)
-    }
+    await expect(dateOptions.first()).toBeAttached({ timeout: 15_000 })
+    const dates = await dateOptions.evaluateAll(els =>
+      els.map(el => (el as HTMLOptionElement).value)
+    )
+    // Every option is an ISO date, newest first, with no duplicates.
+    for (const d of dates) expect(d).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(dates).toEqual([...new Set(dates)].sort().reverse())
   })
 
   test('program year selector switches data', async ({ page }) => {

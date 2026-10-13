@@ -21,6 +21,7 @@ export type SortField =
   | 'clubStatus'
   | 'membersNeeded'
   | 'yearsChartered'
+  | 'netChange'
 
 /**
  * Sort direction types
@@ -99,6 +100,9 @@ export interface ColumnConfig {
   filterable: boolean
   filterType: 'text' | 'numeric' | 'categorical'
   filterOptions?: string[]
+  /** Label in the phone sort sheet when the column header is too terse to
+   *  name the order on its own (e.g. "Trend" sorts by "Net change"). */
+  sortLabel?: string
   sortCustom?: (a: unknown, b: unknown) => number
   /** Show/hide group this column belongs to (ADR-006 §4, #819). */
   group: ColumnGroup
@@ -169,6 +173,10 @@ export interface ProcessedClubTrend extends ClubTrend {
   /** Whole years since charter, or null when charterDate is missing
    *  or invalid. Powers the Years Chartered column (#448) + sorting. */
   yearsChartered: number | null
+  /** Signed membership change this program year (latest − membershipBase),
+   *  null when the base is unknown. Powers the Trend column sort (#1792) —
+   *  a signed delta, never a clamped gap (Lesson 102). */
+  netChange: number | null
 }
 
 /**
@@ -220,6 +228,17 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     label: 'Members',
     sortable: true,
     filterable: true,
+    filterType: 'numeric',
+  },
+  {
+    // Membership-trend sparkline (#1792). Sorts by the signed net change; the
+    // sparkline itself is not a filter.
+    field: 'netChange',
+    group: 'membership',
+    label: 'Trend',
+    sortLabel: 'Net change',
+    sortable: true,
+    filterable: false,
     filterType: 'numeric',
   },
   {

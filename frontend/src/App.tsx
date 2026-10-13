@@ -65,6 +65,10 @@ const ClubRedirectPage = React.lazy(() => import('./pages/ClubRedirectPage'))
 
 // Code-split: HistoryPage placeholder (#355) — real content in #367
 const HistoryPage = React.lazy(() => import('./pages/HistoryPage'))
+// Code-split: worldwide country choropleth, a /history subpage (#1797)
+const WorldCountriesPage = React.lazy(
+  () => import('./pages/WorldCountriesPage')
+)
 
 // Code-split: MethodologyPage placeholder (#355) — real content in #368
 const MethodologyPage = React.lazy(() => import('./pages/MethodologyPage'))
@@ -268,6 +272,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <HistoryPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'history/countries',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <WorldCountriesPage />
             </Suspense>
           ),
         },

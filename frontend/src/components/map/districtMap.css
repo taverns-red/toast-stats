@@ -303,6 +303,29 @@
   color: var(--map-text-2);
 }
 
+/* Filters (#1788): the active-count badge on the trigger, and the panel
+   section's Clear all (the chips themselves are the shared filter sheet's). */
+.map-pill__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--map-pressed-bg);
+  color: var(--map-pressed-text);
+  font-size: 14px;
+}
+
+.map-filters .filter-sheet__clear {
+  margin-top: 12px;
+}
+
+.map-club__line {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
 .map-club__facts {
   display: grid;
   gap: 6px;
