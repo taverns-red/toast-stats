@@ -97,7 +97,12 @@ on:
         required: false
         type: string
       force:
-        description: 'Force re-scrape/recompute even if cache exists'
+        description: >-
+          Re-fetch and re-derive even if cached (#1771, ADR-015 P7). Daily: re-scrape instead of
+          reusing the raw CSVs already in staging. rebuild/rescrape/rescrape-historical and
+          backfill-global-totals always re-derive, so it changes nothing there.
+          backfill-education-ledger: re-fetch PY/district pairs already resumed from staging.
+          Prune: not used.
         required: false
         type: boolean
         default: false
@@ -122,7 +127,9 @@ on:
         type: boolean
         default: false
       allow_partial:
-        description: 'rebuild/rescrape/rescrape-historical: let a run with failed dates go on to promotion (#1708). Default fails it.'
+        description: >-
+          rebuild/rescrape/rescrape-historical/backfill-global-totals: let a run with failed
+          dates go on to promotion (#1708, #1771). Default fails it.
         required: false
         type: boolean
         default: false
@@ -870,6 +877,9 @@ jobs:
         if: steps.mode.outputs.mode == 'rebuild'
         env:
           ALLOW_PARTIAL: ${{ inputs.allow_partial }}
+          # The runner forces every re-derivation; it takes the input to log
+          # and validate it, so force reads the same everywhere (#1771).
+          FORCE: ${{ inputs.force }}
         run: |
           # Determine which dates to rebuild
           if [ -n "${{ inputs.dates }}" ]; then
@@ -923,6 +933,8 @@ jobs:
       # never writes, so an additive file cannot trip it.
       - name: '[backfill] Build global-totals.json one date at a time'
         if: steps.mode.outputs.mode == 'backfill-global-totals'
+        env:
+          ALLOW_PARTIAL: ${{ inputs.allow_partial }}
         run: |
           set -uo pipefail
 
@@ -998,10 +1010,18 @@ jobs:
           echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Uploaded to \`${GCS_BUCKET}\`; the promotion step below carries it to production." >> "$GITHUB_STEP_SUMMARY"
 
+          # Nothing built is a failed run whatever allow_partial says: there
+          # is nothing to promote.
           if [ "${SUCCEEDED}" -eq 0 ]; then
             echo "::error::No dates were backfilled"
             exit 1
           fi
+
+          # Fail the run (no promotion) on any failed date — a skipped date
+          # with no rankings file included — unless allow_partial (#1771,
+          # audit D-26; the #1708 rule every per-date mode follows). Last, so
+          # the per-date uploads above stand in staging.
+          bash scripts/partial-failure-gate.sh "backfill-global-totals" "${FAILED}"
 
       # ════════════════════════════════════════════════════════
       # RESCRAPE MODE
@@ -1031,6 +1051,9 @@ jobs:
         if: steps.mode.outputs.mode == 'rescrape'
         env:
           ALLOW_PARTIAL: ${{ inputs.allow_partial }}
+          # The runner forces every re-derivation; it takes the input to log
+          # and validate it, so force reads the same everywhere (#1771).
+          FORCE: ${{ inputs.force }}
         run: |
           # Determine dates to rescrape
           if [ -n "${{ inputs.dates }}" ]; then
@@ -1156,6 +1179,9 @@ jobs:
       - name: '[rescrape-historical] Rebuild, guard and publish one date at a time'
         id: historical-loop
         if: steps.mode.outputs.mode == 'rescrape-historical'
+        env:
+          # Always forced in the runner; passed so it is logged (#1771).
+          FORCE: ${{ inputs.force }}
         run: |
           # R2 + R9: the stores are GCS-backed. Pull them BEFORE rebuilding so
           # each date is UPSERTED into the history (TimeSeriesIndexWriter and
@@ -1344,11 +1370,15 @@ jobs:
       # SHARED: CDN Manifests (daily + rebuild)
       # ════════════════════════════════════════════════════════
 
-      # `backfill-global-totals` is excluded from all three shared manifest
-      # steps below (#1498). Every one of them is derived from district
+      # `backfill-global-totals` is excluded from all five shared manifest
+      # steps below (#1498; the divisions-areas index joined them in #1771,
+      # audit D-22). The five carry the SAME `if:`, character for character —
+      # pinned by dataPipelineSharedStepExclusions.test.ts, so an exclusion
+      # added to one is added to all. Four of them are derived from district
       # snapshots — v1/latest.json + v1/dates.json from the bucket's snapshot
-      # listing, district-snapshot-index and club-index from district_*.json —
-      # and that mode publishes exactly one ADDITIVE file per date and no
+      # listing, the district-snapshot, club and divisions-areas indexes from
+      # district_*.json; global-history picks up this mode's rollups on the
+      # next daily — and that mode publishes exactly one ADDITIVE file per date and no
       # district snapshot at all. Leaving it in was not merely wasteful: the
       # index step's `else` is the DAILY merge branch, so it ran with an empty
       # DATE and DISTRICT_LIST and wrote a phantom `"": [""]` entry straight
@@ -1673,7 +1703,9 @@ jobs:
       # scripts/lib/divisionsAreasIndex.ts (thin-glue step, Lesson 107).
       # Promotion rsyncs config/ wholesale, so this reaches prod with the run.
       - name: Generate divisions-areas index
-        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true'
+        if: >-
+          (steps.mode.outputs.mode != 'prune' || steps.mode.outputs.dry_run != 'true')
+          && steps.mode.outputs.mode != 'backfill-global-totals'
         run: |
           set -o pipefail
           LATEST_DATE=$(gcloud storage cat "gs://${GCS_BUCKET}/v1/latest.json" 2>/dev/null \

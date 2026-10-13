@@ -24,7 +24,7 @@
 #                the date-level artifacts it cannot cover. Hydrated files left
 #                byte-identical are not uploaded again (stage 10).
 #   4. transform rebuild, rescrape-historical: collector-cli transform
-#                --date <source> --force.
+#                --date <source> --force (FORCE_ARGS, always set: see FORCE).
 #                rescrape: collector-cli scrape --date <date> --transform
 #                --districts $DISTRICTS, which requests the date's own as-of
 #                and fails rather than store another day's data (#1669). A
@@ -95,6 +95,14 @@
 #   BUILD_EDUCATION_ROLLUP education rollup command (default: bash
 #                          scripts/pipeline/build-education-rollup.sh)
 #   DISTRICTS              rescrape: required, comma-separated district ids
+#   FORCE                  the `force` dispatch input: "true", "false" or ""
+#                          (a scheduled run); anything else is a usage error.
+#                          `force` means one thing in every mode: re-fetch and
+#                          re-derive even if cached (#1771, ADR-015 P7). Every
+#                          mode here IS a re-derivation, so all three are
+#                          forced whatever FORCE says (transform/scrape
+#                          --force, compute --force-analytics); the effective
+#                          value is logged. Decided once, in FORCE_ARGS below.
 #   GITHUB_STEP_SUMMARY    date counts and store counters are appended here
 #   RUN_MANIFEST_FILE      required by any upload: every object uploaded is
 #                          appended (scripts/pipeline/gcs-upload.sh, #1762);
@@ -127,6 +135,23 @@ case "${MODE}" in
   *)
     echo "::error::process-dates: unknown mode '${MODE}'" >&2
     exit 2
+    ;;
+esac
+
+case "${FORCE:-}" in
+  true | false | "") ;;
+  *)
+    echo "::error::process-dates: FORCE must be true, false or empty (the force input), got '${FORCE}'" >&2
+    exit 2
+    ;;
+esac
+
+# The one force decision (#1771). R17: an explicit case per mode, even though
+# today every mode lands on the same answer.
+case "${MODE}" in
+  rebuild | rescrape | rescrape-historical)
+    FORCE_ARGS=(--force)
+    echo "process-dates: force=always for ${MODE} (FORCE='${FORCE:-}')" >&2
     ;;
 esac
 
@@ -359,7 +384,7 @@ process_one() {
   # 4. transform
   if [ "${MODE}" = "rescrape" ]; then
     echo "Scraping and transforming ${date}..."
-    if ! "${COLLECTOR[@]}" scrape --date "${date}" --transform --force \
+    if ! "${COLLECTOR[@]}" scrape --date "${date}" --transform "${FORCE_ARGS[@]}" \
       --verbose --districts "${DISTRICTS}"; then
       echo "::warning::Scrape/transform failed for ${date}; nothing uploaded for it"
       local leftover
@@ -371,7 +396,7 @@ process_one() {
     fi
   else
     echo "Transforming ${source}..."
-    if ! "${COLLECTOR[@]}" transform --date "${source}" --force --verbose; then
+    if ! "${COLLECTOR[@]}" transform --date "${source}" "${FORCE_ARGS[@]}" --verbose; then
       echo "::warning::Transform failed for ${source}"
       cleanup_date "${source}" "" "${prev}"
       return 0

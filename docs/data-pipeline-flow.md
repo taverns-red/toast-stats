@@ -30,6 +30,26 @@ Complete data flow from Toastmasters dashboard scraping through GCS to Cloud CDN
 | `backfill-global-totals`    | Manual dispatch                                     | Builds `global-totals.json` for already-published dates, one at a time     |
 | `backfill-education-ledger` | Manual dispatch                                     | Fetches the education ledger history into staging only; no gates/promotion |
 
+#### `force` and `allow_partial` per mode (#1771, ADR-015 P7)
+
+`force` means one thing in every mode: **re-fetch and re-derive even if cached**. Where a
+mode re-derives by definition it is always forced, and `force` changes nothing. The per-date
+runner (`scripts/pipeline/process-dates.sh`) receives the input as `FORCE`, validates it and
+logs the effective value. `allow_partial` lets a run with failed dates go on to promotion; by
+default any failed date fails the run, after its per-date uploads to staging stand
+(`scripts/partial-failure-gate.sh`, #1708). Pinned by `dataPipelineForce.test.ts` and
+`dataPipelinePartialFailure.test.ts` / `dataPipelineBackfillPartialGate.test.ts`.
+
+| Mode                        | `force=true`                                                                                                                                                            | Failed dates                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `daily`                     | `scrape --force`: re-fetches the dashboard CSVs instead of reusing `raw-csv/{date}/` pre-synced from staging. Compute always re-derives (the runner holds no analytics) | Any failure fails the step                                                |
+| `rebuild`                   | Always forced in the runner (`transform --force`, `compute-analytics --force-analytics`); the raw is the stored `raw-csv/`, never re-fetched — that is the mode         | Gate; `allow_partial`                                                     |
+| `rescrape`                  | Always forced in the runner (`scrape --transform --force`, `--force-analytics`)                                                                                         | Gate; `allow_partial`                                                     |
+| `rescrape-historical`       | Always forced: `raw-csv/` is wiped and re-downloaded, then the runner transforms with `--force`                                                                         | Gate; `allow_partial`                                                     |
+| `backfill-global-totals`    | Always forced: every date is rebuilt from the production archive; no staging copy is read back                                                                          | Gate; `allow_partial` (#1771). A run where no date built fails regardless |
+| `backfill-education-ledger` | `--force`: re-fetches PY/district pairs that already have a valid file resumed from staging                                                                             | Any failed PY fails the run (no promotion in this mode)                   |
+| `prune`                     | Not used: prune neither fetches nor derives, so `force` is ignored                                                                                                      | n/a                                                                       |
+
 The workflow has no `schedule:` trigger. GitHub's cron fires late or drops events, so the
 daily run is dispatched by a launchd job on the operator Mac
 (`gh workflow run data-pipeline.yml --ref main -f mode=daily`, #1242; see
