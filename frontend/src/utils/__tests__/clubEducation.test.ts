@@ -36,6 +36,14 @@ describe('classifyEducationAward', () => {
       'Basic Training For Toastmasters',
       1,
     ],
+    // #1976: the vintage Communication Series path has a three-letter code.
+    [
+      'CES3CS: Entertaining + Storytelling Level 3',
+      'Pathways',
+      'CES',
+      'CS: Entertaining + Storytelling',
+      3,
+    ],
   ])('%s → Pathways level award', (award, program, code, pathName, level) => {
     expect(classifyEducationAward(award)).toEqual({
       program,

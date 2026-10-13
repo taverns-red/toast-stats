@@ -51,6 +51,7 @@ describe('isCountedEducationAward (#1592: Pathways L1–L5 + DTM)', () => {
       'VC3Visionary Communication Level 3',
       'PM5Presentation Mastery Level 5', // the path completion — counted once
       'BT1Basic Training For Toastmasters Level 1',
+      'CES1CS: Entertaining + Storytelling Level 1', // #1976
     ]) {
       expect(isCountedEducationAward(a)).toBe(true)
     }
