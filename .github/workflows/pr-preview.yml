@@ -322,6 +322,16 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/landing-first-screen.smoke.ts
 
+      # Landing header at tablet widths (#1917). At 768/820/1024, light and
+      # dark: the intro keeps ≥320px, the title stays on one line, intro and
+      # actions never overlap, nav links never wrap or run into the search,
+      # and the loading shell lands the KPI strip at its loaded y. Both engines.
+      - name: Cross-engine landing tablet header guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/landing-header-tablet.smoke.ts
+
       # Phone bottom section bar (#1832, mobile review §5.1). At 375/390 in
       # portrait, light and dark, on all 9 district routes: a 56px fixed bar
       # (4 routes + More), labels inside their 44px+ items, content under the
