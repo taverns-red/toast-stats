@@ -27,3 +27,18 @@
 [data-theme='dark'] .basemap-surface .maplibregl-ctrl-attrib a {
   color: #f4f1eb;
 }
+
+/* #1944: on touch screens each credit link is a 44px-tall tap target. The
+   credit stays expanded (never an icon), just taller. */
+@media (max-width: 767px), (pointer: coarse) {
+  .basemap-surface .maplibregl-ctrl-attrib {
+    padding: 0 4px;
+  }
+
+  .basemap-surface .maplibregl-ctrl-attrib a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+  }
+}
