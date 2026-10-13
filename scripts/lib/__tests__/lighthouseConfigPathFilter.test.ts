@@ -112,4 +112,12 @@ describe('Lighthouse config path filters (#1994)', () => {
       expect(missing).toEqual([])
     }
   )
+
+  it('every workflow that runs a Lighthouse config triggers on its own changes', () => {
+    const missing = workflows
+      .filter(w => configsRunBy(w.wf).length > 0)
+      .filter(w => !triggers(w.wf, `.github/workflows/${w.file}`))
+      .map(w => w.file)
+    expect(missing).toEqual([])
+  })
 })
