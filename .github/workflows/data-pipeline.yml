@@ -97,7 +97,11 @@ on:
         required: false
         type: string
       force:
-        description: 'Force re-scrape/recompute even if cache exists'
+        description: >-
+          Re-fetch and re-derive even if cached (#1771, ADR-015 P7). Daily: re-scrape instead of reusing the
+          raw CSVs already in staging. rebuild/rescrape/rescrape-historical/backfill-global-totals always
+          re-derive, so it changes nothing there. backfill-education-ledger: re-fetch PY/district pairs already resumed from staging.
+          Prune: not used.
         required: false
         type: boolean
         default: false
@@ -870,6 +874,9 @@ jobs:
         if: steps.mode.outputs.mode == 'rebuild'
         env:
           ALLOW_PARTIAL: ${{ inputs.allow_partial }}
+          # The runner forces every re-derivation; it takes the input to log
+          # and validate it, so force reads the same everywhere (#1771).
+          FORCE: ${{ inputs.force }}
         run: |
           # Determine which dates to rebuild
           if [ -n "${{ inputs.dates }}" ]; then
@@ -1041,6 +1048,9 @@ jobs:
         if: steps.mode.outputs.mode == 'rescrape'
         env:
           ALLOW_PARTIAL: ${{ inputs.allow_partial }}
+          # The runner forces every re-derivation; it takes the input to log
+          # and validate it, so force reads the same everywhere (#1771).
+          FORCE: ${{ inputs.force }}
         run: |
           # Determine dates to rescrape
           if [ -n "${{ inputs.dates }}" ]; then
@@ -1166,6 +1176,9 @@ jobs:
       - name: '[rescrape-historical] Rebuild, guard and publish one date at a time'
         id: historical-loop
         if: steps.mode.outputs.mode == 'rescrape-historical'
+        env:
+          # Always forced in the runner; passed so it is logged (#1771).
+          FORCE: ${{ inputs.force }}
         run: |
           # R2 + R9: the stores are GCS-backed. Pull them BEFORE rebuilding so
           # each date is UPSERTED into the history (TimeSeriesIndexWriter and
