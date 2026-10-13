@@ -53,6 +53,13 @@ export const test = base.extend<GaFixtures>({
           leaked.push(req.url())
         }
       })
+      await context.route(
+        url => isGaCollect(url),
+        async route => {
+          stubbed.push(route.request())
+          await route.fulfill({ status: 204, body: '' })
+        }
+      )
       await use(stubbed)
       expect(
         leaked,
