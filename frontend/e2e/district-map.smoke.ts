@@ -129,6 +129,16 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(region.locator('canvas.maplibregl-canvas')).toBeVisible({
         timeout: 30_000,
       })
+      // The static preview (#1943) fades out once the live map first idles.
+      // Until then its dots sit over the clusters and cut them into short
+      // runs that look like single pins, so scan only once it has gone. Its
+      // chunk can land after the canvas, so wait for it to finish, not
+      // merely for its absence.
+      const preview = page.getByTestId('map-preview')
+      await expect(preview).toHaveAttribute('data-state', 'painted', {
+        timeout: 30_000,
+      })
+      await expect(preview).toBeHidden()
       // Pins drew (tiles, pins and icons settle within a few seconds).
       const skipBottom = width < 768 ? 200 : 40
       let pins: Array<{ x: number; y: number }> = []

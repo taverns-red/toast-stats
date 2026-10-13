@@ -386,6 +386,16 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/district-map.smoke.ts
 
+      # District map static preview (#1943). With the maplibre chunk held
+      # back: the map box shows the clubs as dots with no MapLibre and no
+      # tile request, fills the reserved box (no shift), and fades out once
+      # the live map paints. 375 and 1280, light and dark. Both engines.
+      - name: Cross-engine district map preview guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/district-map-preview.smoke.ts
+
       # District Overview hub (#1842, mobile review §5.5). At 375, light and
       # dark: 2x2 KPI tiles (block <= 300px, was 860px) starting at the hub's
       # left edge (no side toggle), Needs attention above the section bar,
