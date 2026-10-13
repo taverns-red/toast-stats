@@ -316,6 +316,31 @@ describe('DistrictMapPage — clubs not on the map', () => {
   })
 })
 
+// #1843 — the club page's static mini-map links here with ?club=<id>.
+describe('DistrictMapPage — ?club= deep link', () => {
+  it('opens the linked club as the selected club', async () => {
+    renderAt('/district/61/map?club=102')
+    const panel = await screen.findByRole('region', { name: 'Selected club' })
+    expect(await within(panel).findByText(/Beta Orators/)).toBeVisible()
+  })
+
+  it('matches a zero-padded club id', async () => {
+    renderAt('/district/61/map?club=0000102')
+    const panel = await screen.findByRole('region', { name: 'Selected club' })
+    expect(await within(panel).findByText(/Beta Orators/)).toBeVisible()
+  })
+
+  it('selects nothing for an unknown club', async () => {
+    renderAt('/district/61/map?club=999')
+    await screen.findByRole('region', {
+      name: 'Club map, coloured by club health',
+    })
+    expect(
+      screen.queryByRole('region', { name: 'Selected club' })
+    ).not.toBeInTheDocument()
+  })
+})
+
 describe('DistrictMapPage — list view', () => {
   it('?view=list renders the same filtered set as a list', async () => {
     renderAt('/district/61/map?view=list&status=intervention')
