@@ -48,6 +48,11 @@ export interface ScrapeOptions {
   districts?: string[]
   /** Force re-scrape even if cache exists */
   force?: boolean
+  /**
+   * Take the district set from the scraped date's own districtsummary
+   * (#1766). Mutually exclusive with `districts`.
+   */
+  discoverDistricts?: boolean
 }
 
 /**
