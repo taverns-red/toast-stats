@@ -11,11 +11,14 @@ import { parseLocalDate } from '../../utils/dateFormatting'
 
    The shared primitive, for every Recharts chart:
    - `useChartReadout()` — on `(hover: none)` returns Tooltip props that
-     switch the trigger to `click` (a tap pins the nearest point; it stays
-     pinned) and replace the floating box with a reporter that renders
-     nothing and hands the active point up. Recharts' accessibility layer
-     drives the same active state from the arrow keys, so the keyboard pins
-     values too. On hover devices it returns `{}` — the chart is untouched.
+     replace the floating box with a reporter that renders nothing and hands
+     the active point up; the readout keeps the last point, so it stays
+     pinned. A tap reaches the chart as mousemove → mousedown → mouseup →
+     click at the tap point (Chromium and WebKit), so Recharts' default hover
+     trigger positions the pin; `trigger="click"` pinned index 0 on the first
+     tap of a stacked AreaChart. Recharts' accessibility layer drives the
+     same active state from the arrow keys, so the keyboard pins values too.
+     On hover devices it returns `{}` — the chart is untouched.
    - `<ChartReadout>` — the persistent value line under the chart. Its slot
      is reserved (a hint before the first tap) so pinning never shifts
      layout. Text wears ink; the series colour is only a swatch.
@@ -40,9 +43,8 @@ export interface ChartReading {
 
 type TooltipValue = number | string
 /** What the readout overrides on a chart's <Tooltip>: nothing on hover
- *  devices; a click trigger and the reporter content without hover. */
-type TooltipOverride =
-  Record<string, never> | { trigger: 'click'; content: React.ReactElement }
+ *  devices; the reporter content without hover. */
+type TooltipOverride = Record<string, never> | { content: React.ReactElement }
 
 /** Hover devices: the chart's own Tooltip props stand. */
 const NO_OVERRIDE: TooltipOverride = {}
@@ -98,10 +100,7 @@ export function useChartReadout(): ChartReadoutHandle {
   const [reading, setReading] = useState<ChartReading | null>(null)
   const tooltipProps = useMemo<TooltipOverride>(() => {
     if (!touch) return NO_OVERRIDE
-    return {
-      trigger: 'click',
-      content: <ReadoutReporter onReading={setReading} />,
-    }
+    return { content: <ReadoutReporter onReading={setReading} /> }
   }, [touch])
   return { touch, reading, tooltipProps }
 }
