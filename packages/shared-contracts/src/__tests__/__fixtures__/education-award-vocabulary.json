@@ -1,0 +1,222 @@
+{
+  "_recorded": "2026-10-13 from staging: raw-education-ledger/2003-2004/district_85.json, raw-education-ledger/2018-2019/district_111.json (award + awardCode split from the cell markup by the collector), snapshots/2020-06-30/district_111_reports.json (archive) and snapshots/2026-10-12/district_49_reports.json (daily) (award only)",
+  "ledgerPairs": [
+    {
+      "award": "ACBAdvanced Communicator Bronze",
+      "awardCode": "ACB"
+    },
+    {
+      "award": "ACGAdvanced Communicator Gold",
+      "awardCode": "ACG"
+    },
+    {
+      "award": "ACSAdvanced Communicator Silver",
+      "awardCode": "ACS"
+    },
+    {
+      "award": "ALAdvanced Leader",
+      "awardCode": "AL"
+    },
+    {
+      "award": "ALBAdvanced Leader Bronze",
+      "awardCode": "ALB"
+    },
+    {
+      "award": "ALSAdvanced Leader Silver",
+      "awardCode": "ALS"
+    },
+    {
+      "award": "ATMSAdvanced Toastmaster Silver",
+      "awardCode": "ATMS"
+    },
+    {
+      "award": "CCCompetent Communicator",
+      "awardCode": "CC"
+    },
+    {
+      "award": "CLCompetent Leader",
+      "awardCode": "CL"
+    },
+    {
+      "award": "CTMCompetent Toastmaster",
+      "awardCode": "CTM"
+    },
+    {
+      "award": "DL1Dynamic Leadership Level 1",
+      "awardCode": "DL1"
+    },
+    {
+      "award": "DL2Dynamic Leadership Level 2",
+      "awardCode": "DL2"
+    },
+    {
+      "award": "DTMDistinguished Toastmaster",
+      "awardCode": "DTM"
+    },
+    {
+      "award": "EC1Effective Coaching Level 1",
+      "awardCode": "EC1"
+    },
+    {
+      "award": "IP1Innovative Planning Level 1",
+      "awardCode": "IP1"
+    },
+    {
+      "award": "IP2Innovative Planning Level 2",
+      "awardCode": "IP2"
+    },
+    {
+      "award": "IP3Innovative Planning Level 3",
+      "awardCode": "IP3"
+    },
+    {
+      "award": "LD1Leadership Development Level 1",
+      "awardCode": "LD1"
+    },
+    {
+      "award": "LD2Leadership Development Level 2",
+      "awardCode": "LD2"
+    },
+    {
+      "award": "LD3Leadership Development Level 3",
+      "awardCode": "LD3"
+    },
+    {
+      "award": "LD4Leadership Development Level 4",
+      "awardCode": "LD4"
+    },
+    {
+      "award": "LD5Leadership Development Level 5",
+      "awardCode": "LD5"
+    },
+    {
+      "award": "LDREXCLeadership Excellence",
+      "awardCode": "LDREXC"
+    },
+    {
+      "award": "MS1Motivational Strategies Level 1",
+      "awardCode": "MS1"
+    },
+    {
+      "award": "PI1Persuasive Influence Level 1",
+      "awardCode": "PI1"
+    },
+    {
+      "award": "PI2Persuasive Influence Level 2",
+      "awardCode": "PI2"
+    },
+    {
+      "award": "PI3Persuasive Influence Level 3",
+      "awardCode": "PI3"
+    },
+    {
+      "award": "PI4Persuasive Influence Level 4",
+      "awardCode": "PI4"
+    },
+    {
+      "award": "PI5Persuasive Influence Level 5",
+      "awardCode": "PI5"
+    },
+    {
+      "award": "PM1Presentation Mastery Level 1",
+      "awardCode": "PM1"
+    },
+    {
+      "award": "PM2Presentation Mastery Level 2",
+      "awardCode": "PM2"
+    },
+    {
+      "award": "PWMENTORPGMPathways Mentor Program",
+      "awardCode": "PWMENTORPGM"
+    },
+    {
+      "award": "SR1Strategic Relationships Level 1",
+      "awardCode": "SR1"
+    },
+    {
+      "award": "SR2Strategic Relationships Level 2",
+      "awardCode": "SR2"
+    },
+    {
+      "award": "TC1Team Collaboration Level 1",
+      "awardCode": "TC1"
+    },
+    {
+      "award": "TC2Team Collaboration Level 2",
+      "awardCode": "TC2"
+    },
+    {
+      "award": "VC1Visionary Communication Level 1",
+      "awardCode": "VC1"
+    },
+    {
+      "award": "VC2Visionary Communication Level 2",
+      "awardCode": "VC2"
+    }
+  ],
+  "reportAwards": [
+    "ACBAdvanced Communicator Bronze",
+    "ACGAdvanced Communicator Gold",
+    "ACSAdvanced Communicator Silver",
+    "ALBAdvanced Leader Bronze",
+    "ALSAdvanced Leader Silver",
+    "CCCompetent Communicator",
+    "CES1CS: Entertaining + Storytelling Level 1",
+    "CLCompetent Leader",
+    "DL1Dynamic Leadership Level 1",
+    "DL2Dynamic Leadership Level 2",
+    "DL3Dynamic Leadership Level 3",
+    "DL4Dynamic Leadership Level 4",
+    "DL5Dynamic Leadership Level 5",
+    "DTMDistinguished Toastmaster",
+    "EC1Effective Coaching Level 1",
+    "EC2Effective Coaching Level 2",
+    "EC3Effective Coaching Level 3",
+    "EC4Effective Coaching Level 4",
+    "EH1Engaging Humor Level 1",
+    "EH2Engaging Humor Level 2",
+    "EH3Engaging Humor Level 3",
+    "EH4Engaging Humor Level 4",
+    "EH5Engaging Humor Level 5",
+    "IP1Innovative Planning Level 1",
+    "IP2Innovative Planning Level 2",
+    "IP3Innovative Planning Level 3",
+    "IP4Innovative Planning Level 4",
+    "IP5Innovative Planning Level 5",
+    "LD1Leadership Development Level 1",
+    "LD2Leadership Development Level 2",
+    "LD3Leadership Development Level 3",
+    "LD4Leadership Development Level 4",
+    "LD5Leadership Development Level 5",
+    "LDREXCLeadership Excellence",
+    "MS1Motivational Strategies Level 1",
+    "MS2Motivational Strategies Level 2",
+    "MS3Motivational Strategies Level 3",
+    "MS4Motivational Strategies Level 4",
+    "MS5Motivational Strategies Level 5",
+    "PI1Persuasive Influence Level 1",
+    "PI2Persuasive Influence Level 2",
+    "PI3Persuasive Influence Level 3",
+    "PI4Persuasive Influence Level 4",
+    "PI5Persuasive Influence Level 5",
+    "PM1Presentation Mastery Level 1",
+    "PM2Presentation Mastery Level 2",
+    "PM3Presentation Mastery Level 3",
+    "PM4Presentation Mastery Level 4",
+    "PM5Presentation Mastery Level 5",
+    "SR1Strategic Relationships Level 1",
+    "SR2Strategic Relationships Level 2",
+    "SR3Strategic Relationships Level 3",
+    "SR4Strategic Relationships Level 4",
+    "SR5Strategic Relationships Level 5",
+    "TC1Team Collaboration Level 1",
+    "TC2Team Collaboration Level 2",
+    "TC3Team Collaboration Level 3",
+    "TC4Team Collaboration Level 4",
+    "TC5Team Collaboration Level 5",
+    "VC1Visionary Communication Level 1",
+    "VC2Visionary Communication Level 2",
+    "VC3Visionary Communication Level 3",
+    "VC5Visionary Communication Level 5"
+  ]
+}

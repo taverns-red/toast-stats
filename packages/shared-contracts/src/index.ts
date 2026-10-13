@@ -376,6 +376,8 @@ export { isCountedEducationAward } from './education/countedEducationAward.js'
 // (#1802): the archive ledger with Date kept per month, tagged by program.
 export {
   educationAwardProgram,
+  awardCodeFromAward,
+  pathwaysLevel,
   type EducationAwardProgram,
 } from './education/educationAwardProgram.js'
 export {
@@ -389,3 +391,27 @@ export {
   type EducationLedgerMonthRecord,
   type EducationLedgerHistoryFile,
 } from './schemas/education-ledger-history.schema.js'
+
+// Education rollup — derived/education-rollup/{<PY>,index}.json (#1801):
+// ledger awards per district / region / world per PY; staging-only until #1763.
+export {
+  EDUCATION_ROLLUP_VERSION,
+  EDUCATION_ROLLUP_PREFIX,
+  EDUCATION_ROLLUP_INDEX_PATH,
+  EducationAwardTotalsSchema,
+  PathwaysMatrixSchema,
+  EducationAwardsBlockSchema,
+  EducationNotAvailableReasonSchema,
+  EducationRollupDistrictSchema,
+  EducationRollupAggregateSchema,
+  EducationRollupSourceSchema,
+  EducationRollupProgramYearSchema,
+  EducationRollupIndexSchema,
+  educationRollupObjectPath,
+  type EducationAwardTotals,
+  type EducationAwardsBlock,
+  type EducationRollupDistrict,
+  type EducationRollupAggregate,
+  type EducationRollupProgramYear,
+  type EducationRollupIndex,
+} from './schemas/education-rollup.schema.js'

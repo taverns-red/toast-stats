@@ -1,0 +1,178 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "education-rollup-index"
+  },
+  "asOf": "2026-10-12",
+  "programYears": [
+    {
+      "programYear": "2003-2004",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2003-2004.json",
+      "world": {
+        "awards": 29,
+        "pathways": 0,
+        "legacy": 28,
+        "dtm": 1,
+        "other": 0
+      },
+      "districtsAvailable": 1,
+      "districtsNotAvailable": 1
+    },
+    {
+      "programYear": "2018-2019",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2018-2019.json",
+      "world": {
+        "awards": 201,
+        "pathways": 95,
+        "legacy": 102,
+        "dtm": 3,
+        "other": 1
+      },
+      "districtsAvailable": 1,
+      "districtsNotAvailable": 1
+    },
+    {
+      "programYear": "2019-2020",
+      "source": "reports",
+      "sourceDate": "2020-06-30",
+      "path": "derived/education-rollup/2019-2020.json",
+      "world": {
+        "awards": 377,
+        "pathways": 294,
+        "legacy": 81,
+        "dtm": 2,
+        "other": 0
+      },
+      "districtsAvailable": 1,
+      "districtsNotAvailable": 2
+    },
+    {
+      "programYear": "2026-2027",
+      "source": "reports",
+      "sourceDate": "2026-10-12",
+      "path": "derived/education-rollup/2026-2027.json",
+      "world": {
+        "awards": 86,
+        "pathways": 85,
+        "legacy": 0,
+        "dtm": 1,
+        "other": 0
+      },
+      "districtsAvailable": 1,
+      "districtsNotAvailable": 1
+    }
+  ],
+  "omittedProgramYears": [
+    {
+      "programYear": "2020-2021",
+      "reason": "no reports at any of the program year's last 6 snapshot dates"
+    }
+  ],
+  "trend": {
+    "districts": {
+      "17": {
+        "2003-2004": null
+      },
+      "49": {
+        "2026-2027": {
+          "awards": 86,
+          "pathways": 85,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 0
+        }
+      },
+      "61": {
+        "2019-2020": null,
+        "2026-2027": null
+      },
+      "85": {
+        "2003-2004": {
+          "awards": 29,
+          "pathways": 0,
+          "legacy": 28,
+          "dtm": 1,
+          "other": 0
+        },
+        "2018-2019": null
+      },
+      "111": {
+        "2018-2019": {
+          "awards": 201,
+          "pathways": 95,
+          "legacy": 102,
+          "dtm": 3,
+          "other": 1
+        },
+        "2019-2020": {
+          "awards": 377,
+          "pathways": 294,
+          "legacy": 81,
+          "dtm": 2,
+          "other": 0
+        }
+      },
+      "F": {
+        "2019-2020": null
+      }
+    },
+    "regions": {
+      "14": {
+        "2018-2019": {
+          "awards": 0,
+          "pathways": 0,
+          "legacy": 0,
+          "dtm": 0,
+          "other": 0
+        }
+      },
+      "01": {
+        "2026-2027": {
+          "awards": 86,
+          "pathways": 85,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 0
+        }
+      },
+      "05": {
+        "2026-2027": {
+          "awards": 0,
+          "pathways": 0,
+          "legacy": 0,
+          "dtm": 0,
+          "other": 0
+        }
+      },
+      "08": {
+        "2018-2019": {
+          "awards": 201,
+          "pathways": 95,
+          "legacy": 102,
+          "dtm": 3,
+          "other": 1
+        },
+        "2019-2020": {
+          "awards": 377,
+          "pathways": 294,
+          "legacy": 81,
+          "dtm": 2,
+          "other": 0
+        }
+      },
+      "09": {
+        "2019-2020": {
+          "awards": 0,
+          "pathways": 0,
+          "legacy": 0,
+          "dtm": 0,
+          "other": 0
+        }
+      }
+    }
+  }
+}

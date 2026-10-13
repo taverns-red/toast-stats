@@ -73,6 +73,11 @@
 #                the same script, so no mode builds it differently (ADR-015
 #                P1). A failure is a warning and a summary line, never a
 #                failed run: the previous derived/ copy stands.
+#  13. education scripts/pipeline/build-education-rollup.sh <bucket> (#1801):
+#                the education rollup from the ledger history, the staged
+#                reports and the region history step 12 just wrote, to
+#                staging derived/education-rollup/ (never promoted until
+#                #1763). Same failure posture as step 12.
 # The GCS-backed stores (time-series, club-trends, club-race, awards history)
 # are NOT handled here: the caller pulls them with sync-stores.sh before and
 # pushes them with publish-stores.sh after, then runs
@@ -87,6 +92,8 @@
 #   VALIDATE_SNAPSHOTS     schema gate command (default: tsx validate-snapshots.ts)
 #   BUILD_IDENTITY_HISTORY identity build command (default: bash
 #                          scripts/pipeline/build-identity-history.sh)
+#   BUILD_EDUCATION_ROLLUP education rollup command (default: bash
+#                          scripts/pipeline/build-education-rollup.sh)
 #   DISTRICTS              rescrape: required, comma-separated district ids
 #   GITHUB_STEP_SUMMARY    date counts and store counters are appended here
 #   RUN_MANIFEST_FILE      required by any upload: every object uploaded is
@@ -143,6 +150,7 @@ read -r -a RESOLVE <<<"${RESOLVE_REBUILD_SOURCE:-${TSX} ${REPO}/scripts/resolve-
 read -r -a GUARD <<<"${GUARD_SNAPSHOT_UPLOAD:-${TSX} ${REPO}/scripts/guard-snapshot-upload.ts}"
 read -r -a VALIDATE <<<"${VALIDATE_SNAPSHOTS:-${TSX} ${REPO}/scripts/validate-snapshots.ts}"
 read -r -a IDENTITY <<<"${BUILD_IDENTITY_HISTORY:-bash ${REPO}/scripts/pipeline/build-identity-history.sh}"
+read -r -a EDUCATION <<<"${BUILD_EDUCATION_ROLLUP:-bash ${REPO}/scripts/pipeline/build-education-rollup.sh}"
 # Every upload goes through the wrapper, so it lands in the run manifest.
 export GCLOUD
 UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" "process-dates:${MODE}")
@@ -478,6 +486,14 @@ if ! "${IDENTITY[@]}" "${BUCKET}"; then
   IDENTITY_STATUS="FAILED (see the step log)"
 fi
 
+# 13. education — once, after the identity histories (#1801): it reads the
+# region history step 12 just wrote.
+EDUCATION_STATUS=built
+if ! "${EDUCATION[@]}" "${BUCKET}"; then
+  echo "::warning::Education rollup was not rebuilt (#1801); the previous derived/ copy stands"
+  EDUCATION_STATUS="FAILED (see the step log)"
+fi
+
 {
   echo "- **Dates succeeded**: ${SUCCEEDED}"
   echo "- **Refused by the upload guard**: ${REFUSED}"
@@ -487,6 +503,7 @@ fi
   echo "- **Dates with a prior-year snapshot (YoY)**: ${YOY_PRESENT}"
   echo "- **Dates without one (no YoY)**: ${YOY_ABSENT}"
   echo "- **Identity histories**: ${IDENTITY_STATUS}"
+  echo "- **Education rollup**: ${EDUCATION_STATUS}"
   jq -rs -f "${REPO}/scripts/compute-counters.jq" "${COUNTERS_JSONL}"
 } >>"${SUMMARY}"
 

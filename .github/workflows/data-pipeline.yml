@@ -652,6 +652,12 @@ jobs:
           bash scripts/pipeline/build-identity-history.sh "${GCS_BUCKET}" \
             || echo "::warning::Identity histories were not rebuilt (#1782); the previous derived/ copy stands"
 
+          # Education rollup (#1801): the same script process-dates.sh runs
+          # after the identity histories, whose region history it reads.
+          # Staging derived/ only until #1763; a failure leaves the previous copy.
+          bash scripts/pipeline/build-education-rollup.sh "${GCS_BUCKET}" \
+            || echo "::warning::Education rollup was not rebuilt (#1801); the previous derived/ copy stands"
+
       # ════════════════════════════════════════════════════════
       # CLOSING-DATE REGISTRY FRESHNESS (#1128, epic #1098)
       # The committed docs/month-end-closing-dates.json feeds historical

@@ -1,0 +1,898 @@
+{
+  "districtId": "49",
+  "programYear": "2026-2027",
+  "generatedAt": "2026-10-13T09:06:41.219Z",
+  "sections": {
+    "educationAchievements": {
+      "sources": [
+        {
+          "reportType": "education-achievements",
+          "tableId": "c757d313-f815-4b22-93dc-b839d04cec7b",
+          "asOf": "October 13, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1038715",
+          "division": "A",
+          "area": "4",
+          "name": "Windward Winners",
+          "location": "Kailua",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "1038715",
+          "division": "A",
+          "area": "4",
+          "name": "Windward Winners",
+          "location": "Kailua",
+          "award": "IP4Innovative Planning Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "1055548",
+          "division": "A",
+          "area": "1",
+          "name": "Na Hoku Kai Toastmasters",
+          "location": "Kailua",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "2076",
+          "division": "A",
+          "area": "1",
+          "name": "Downtown Business Associates Club",
+          "location": "Honolulu",
+          "award": "TC3Team Collaboration Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "2076",
+          "division": "A",
+          "area": "1",
+          "name": "Downtown Business Associates Club",
+          "location": "Honolulu",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2188240",
+          "division": "B",
+          "area": "5",
+          "name": "Prince Kuhio Toastmasters Club",
+          "location": "Everywhere",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "2805",
+          "division": "B",
+          "area": "5",
+          "name": "Pearl City Club",
+          "location": "Aiea",
+          "award": "PI5Persuasive Influence Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "2805",
+          "division": "B",
+          "area": "5",
+          "name": "Pearl City Club",
+          "location": "Aiea",
+          "award": "DL5Dynamic Leadership Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "2805",
+          "division": "B",
+          "area": "5",
+          "name": "Pearl City Club",
+          "location": "Aiea",
+          "award": "LD3Leadership Development Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "2805",
+          "division": "B",
+          "area": "5",
+          "name": "Pearl City Club",
+          "location": "Aiea",
+          "award": "LD4Leadership Development Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "28675838",
+          "division": "C",
+          "area": "10",
+          "name": "U.S. - Japan Tomodachi Toastmasters Club",
+          "location": "Honolulu",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28675838",
+          "division": "C",
+          "area": "10",
+          "name": "U.S. - Japan Tomodachi Toastmasters Club",
+          "location": "Honolulu",
+          "award": "LD4Leadership Development Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "28676549",
+          "division": "A",
+          "area": "1",
+          "name": "Hawaii Nihongo Toastmasters Club",
+          "location": "Honolulu",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678263",
+          "division": "B",
+          "area": "8",
+          "name": "Sunny Side Speakers",
+          "location": "Honolulu",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678263",
+          "division": "B",
+          "area": "8",
+          "name": "Sunny Side Speakers",
+          "location": "Honolulu",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "28679327",
+          "division": "C",
+          "area": "11",
+          "name": "DAGS Toastmasters Chapter",
+          "location": "Honolulu",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28679327",
+          "division": "C",
+          "area": "11",
+          "name": "DAGS Toastmasters Chapter",
+          "location": "Honolulu",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28679594",
+          "division": "A",
+          "area": "4",
+          "name": "HMSA Toastmasters",
+          "location": "Honolulu",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28679594",
+          "division": "A",
+          "area": "4",
+          "name": "HMSA Toastmasters",
+          "location": "Honolulu",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4012",
+          "division": "D",
+          "area": "13",
+          "name": "East-West Club",
+          "location": "Honolulu",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4012",
+          "division": "D",
+          "area": "13",
+          "name": "East-West Club",
+          "location": "Honolulu",
+          "award": "IP4Innovative Planning Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4012",
+          "division": "D",
+          "area": "13",
+          "name": "East-West Club",
+          "location": "Honolulu",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "4079",
+          "division": "A",
+          "area": "2",
+          "name": "City And County of Honolulu Toastmasters",
+          "location": "Honolulu",
+          "award": "EH1Engaging Humor Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4409",
+          "division": "C",
+          "area": "10",
+          "name": "Transportation Toastmasters Club",
+          "location": "Honolulu",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "4413485",
+          "division": "C",
+          "area": "12",
+          "name": "AI Online Toastmasters Club Hawaii",
+          "location": "Honolulu",
+          "award": "LD2Leadership Development Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4413485",
+          "division": "C",
+          "area": "12",
+          "name": "AI Online Toastmasters Club Hawaii",
+          "location": "Honolulu",
+          "award": "LD3Leadership Development Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4413485",
+          "division": "C",
+          "area": "12",
+          "name": "AI Online Toastmasters Club Hawaii",
+          "location": "Honolulu",
+          "award": "LD4Leadership Development Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4413485",
+          "division": "C",
+          "area": "12",
+          "name": "AI Online Toastmasters Club Hawaii",
+          "location": "Honolulu",
+          "award": "LD5Leadership Development Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "4413485",
+          "division": "C",
+          "area": "12",
+          "name": "AI Online Toastmasters Club Hawaii",
+          "location": "Honolulu",
+          "award": "LD1Leadership Development Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5190",
+          "division": "B",
+          "area": "7",
+          "name": "Honolulu Toastmasters",
+          "location": "Honolulu",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5190",
+          "division": "B",
+          "area": "7",
+          "name": "Honolulu Toastmasters",
+          "location": "Honolulu",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5190",
+          "division": "B",
+          "area": "7",
+          "name": "Honolulu Toastmasters",
+          "location": "Honolulu",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5190",
+          "division": "B",
+          "area": "7",
+          "name": "Honolulu Toastmasters",
+          "location": "Honolulu",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5190",
+          "division": "B",
+          "area": "7",
+          "name": "Honolulu Toastmasters",
+          "location": "Honolulu",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "520",
+          "division": "C",
+          "area": "11",
+          "name": "Hickam AFB Club #520",
+          "location": "Honolulu",
+          "award": "PI3Persuasive Influence Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "520",
+          "division": "C",
+          "area": "11",
+          "name": "Hickam AFB Club #520",
+          "location": "Honolulu",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5819533",
+          "division": "A",
+          "area": "4",
+          "name": "Emerging Leaders Toastmasters",
+          "location": "Honolulu",
+          "award": "VC5Visionary Communication Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "5826965",
+          "division": "A",
+          "area": "3",
+          "name": "Ke Ala Leo",
+          "location": "Kahului",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5826965",
+          "division": "A",
+          "area": "3",
+          "name": "Ke Ala Leo",
+          "location": "Kahului",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5826965",
+          "division": "A",
+          "area": "3",
+          "name": "Ke Ala Leo",
+          "location": "Kahului",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5826965",
+          "division": "A",
+          "area": "3",
+          "name": "Ke Ala Leo",
+          "location": "Kahului",
+          "award": "DL4Dynamic Leadership Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5826965",
+          "division": "A",
+          "area": "3",
+          "name": "Ke Ala Leo",
+          "location": "Kahului",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5826965",
+          "division": "A",
+          "area": "3",
+          "name": "Ke Ala Leo",
+          "location": "Kahului",
+          "award": "IP4Innovative Planning Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "600349",
+          "division": "C",
+          "area": "9",
+          "name": "Nuuanu Toastmasters Club",
+          "location": "Honolulu",
+          "award": "CES1CS: Entertaining + Storytelling Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "600349",
+          "division": "C",
+          "area": "9",
+          "name": "Nuuanu Toastmasters Club",
+          "location": "Honolulu",
+          "award": "SR3Strategic Relationships Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "601",
+          "division": "A",
+          "area": "1",
+          "name": "Aloha Toastmasters",
+          "location": "HONOLULU",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "601",
+          "division": "A",
+          "area": "1",
+          "name": "Aloha Toastmasters",
+          "location": "HONOLULU",
+          "award": "PI4Persuasive Influence Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "601",
+          "division": "A",
+          "area": "1",
+          "name": "Aloha Toastmasters",
+          "location": "HONOLULU",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "601",
+          "division": "A",
+          "area": "1",
+          "name": "Aloha Toastmasters",
+          "location": "HONOLULU",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "7165371",
+          "division": "C",
+          "area": "9",
+          "name": "Catalyst Club",
+          "location": "Kapolei",
+          "award": "MS5Motivational Strategies Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "720",
+          "division": "B",
+          "area": "8",
+          "name": "Kamehameha Toastmasters Club",
+          "location": "Honolulu",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "7234",
+          "division": "D",
+          "area": "13",
+          "name": "Waikiki Club",
+          "location": "Honolulu",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "7234",
+          "division": "D",
+          "area": "13",
+          "name": "Waikiki Club",
+          "location": "Honolulu",
+          "award": "EH1Engaging Humor Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7234",
+          "division": "D",
+          "area": "13",
+          "name": "Waikiki Club",
+          "location": "Honolulu",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7234",
+          "division": "D",
+          "area": "13",
+          "name": "Waikiki Club",
+          "location": "Honolulu",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7234",
+          "division": "D",
+          "area": "13",
+          "name": "Waikiki Club",
+          "location": "Honolulu",
+          "award": "IP5Innovative Planning Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "7234",
+          "division": "D",
+          "area": "13",
+          "name": "Waikiki Club",
+          "location": "Honolulu",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "7234",
+          "division": "D",
+          "area": "13",
+          "name": "Waikiki Club",
+          "location": "Honolulu",
+          "award": "EH2Engaging Humor Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7787643",
+          "division": "D",
+          "area": "13",
+          "name": "Pathways Central",
+          "location": "Honolulu",
+          "award": "MS3Motivational Strategies Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "7787643",
+          "division": "D",
+          "area": "13",
+          "name": "Pathways Central",
+          "location": "Honolulu",
+          "award": "MS5Motivational Strategies Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "7787643",
+          "division": "D",
+          "area": "13",
+          "name": "Pathways Central",
+          "location": "Honolulu",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7787643",
+          "division": "D",
+          "area": "13",
+          "name": "Pathways Central",
+          "location": "Honolulu",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7787643",
+          "division": "D",
+          "area": "13",
+          "name": "Pathways Central",
+          "location": "Honolulu",
+          "award": "DL3Dynamic Leadership Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "7828074",
+          "division": "D",
+          "area": "16",
+          "name": "Forever Achievers",
+          "location": "Honolulu",
+          "award": "PI4Persuasive Influence Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "7828074",
+          "division": "D",
+          "area": "16",
+          "name": "Forever Achievers",
+          "location": "Honolulu",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "7846934",
+          "division": "B",
+          "area": "7",
+          "name": "Walmart Pacific NW Toastmasters",
+          "location": "Mililani",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7854",
+          "division": "A",
+          "area": "3",
+          "name": "No Ka Oi Club",
+          "location": "Wailuku",
+          "award": "DTMDistinguished Toastmaster",
+          "achievementCount": 1
+        },
+        {
+          "club": "7854",
+          "division": "A",
+          "area": "3",
+          "name": "No Ka Oi Club",
+          "location": "Wailuku",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "7854",
+          "division": "A",
+          "area": "3",
+          "name": "No Ka Oi Club",
+          "location": "Wailuku",
+          "award": "EH5Engaging Humor Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "7905052",
+          "division": "A",
+          "area": "3",
+          "name": "InspireX Keynote Presentation Practice Club",
+          "location": "Paia",
+          "award": "TC1Team Collaboration Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7905052",
+          "division": "A",
+          "area": "3",
+          "name": "InspireX Keynote Presentation Practice Club",
+          "location": "Paia",
+          "award": "TC2Team Collaboration Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7905052",
+          "division": "A",
+          "area": "3",
+          "name": "InspireX Keynote Presentation Practice Club",
+          "location": "Paia",
+          "award": "TC3Team Collaboration Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "7905052",
+          "division": "A",
+          "area": "3",
+          "name": "InspireX Keynote Presentation Practice Club",
+          "location": "Paia",
+          "award": "TC4Team Collaboration Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "7905052",
+          "division": "A",
+          "area": "3",
+          "name": "InspireX Keynote Presentation Practice Club",
+          "location": "Paia",
+          "award": "TC5Team Collaboration Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "7910099",
+          "division": "C",
+          "area": "10",
+          "name": "Aloha Parliamentarians",
+          "location": "Honolulu",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7910099",
+          "division": "C",
+          "area": "10",
+          "name": "Aloha Parliamentarians",
+          "location": "Honolulu",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "828338",
+          "division": "A",
+          "area": "2",
+          "name": "DBEDT for Business Toastmasters Club",
+          "location": "Honolulu",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "828338",
+          "division": "A",
+          "area": "2",
+          "name": "DBEDT for Business Toastmasters Club",
+          "location": "Honolulu",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "8673",
+          "division": "D",
+          "area": "16",
+          "name": "Hawaiian Dredging Club",
+          "location": "Honolulu",
+          "award": "EC3Effective Coaching Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "8673",
+          "division": "D",
+          "area": "16",
+          "name": "Hawaiian Dredging Club",
+          "location": "Honolulu",
+          "award": "EC4Effective Coaching Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "8885",
+          "division": "C",
+          "area": "12",
+          "name": "Kona Toastmasters Club",
+          "location": "Kailua Kona",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        }
+      ]
+    },
+    "educationMembers": {
+      "sources": [
+        {
+          "reportType": "education-achievements",
+          "tableId": "c757d313-f815-4b22-93dc-b839d04cec7b",
+          "asOf": "October 13, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1038715",
+          "membersWithAward": 3
+        },
+        {
+          "club": "1055548",
+          "membersWithAward": 1
+        },
+        {
+          "club": "2076",
+          "membersWithAward": 2
+        },
+        {
+          "club": "2188240",
+          "membersWithAward": 2
+        },
+        {
+          "club": "2805",
+          "membersWithAward": 3
+        },
+        {
+          "club": "28675838",
+          "membersWithAward": 2
+        },
+        {
+          "club": "28676549",
+          "membersWithAward": 1
+        },
+        {
+          "club": "28678263",
+          "membersWithAward": 3
+        },
+        {
+          "club": "28679327",
+          "membersWithAward": 2
+        },
+        {
+          "club": "28679594",
+          "membersWithAward": 2
+        },
+        {
+          "club": "4012",
+          "membersWithAward": 3
+        },
+        {
+          "club": "4079",
+          "membersWithAward": 1
+        },
+        {
+          "club": "4409",
+          "membersWithAward": 1
+        },
+        {
+          "club": "4413485",
+          "membersWithAward": 1
+        },
+        {
+          "club": "5190",
+          "membersWithAward": 4
+        },
+        {
+          "club": "520",
+          "membersWithAward": 1
+        },
+        {
+          "club": "5819533",
+          "membersWithAward": 1
+        },
+        {
+          "club": "5826965",
+          "membersWithAward": 4
+        },
+        {
+          "club": "600349",
+          "membersWithAward": 1
+        },
+        {
+          "club": "601",
+          "membersWithAward": 3
+        },
+        {
+          "club": "7165371",
+          "membersWithAward": 1
+        },
+        {
+          "club": "720",
+          "membersWithAward": 1
+        },
+        {
+          "club": "7234",
+          "membersWithAward": 8
+        },
+        {
+          "club": "7787643",
+          "membersWithAward": 2
+        },
+        {
+          "club": "7828074",
+          "membersWithAward": 2
+        },
+        {
+          "club": "7846934",
+          "membersWithAward": 1
+        },
+        {
+          "club": "7854",
+          "membersWithAward": 3
+        },
+        {
+          "club": "7905052",
+          "membersWithAward": 1
+        },
+        {
+          "club": "7910099",
+          "membersWithAward": 2
+        },
+        {
+          "club": "828338",
+          "membersWithAward": 1
+        },
+        {
+          "club": "8673",
+          "membersWithAward": 1
+        },
+        {
+          "club": "8885",
+          "membersWithAward": 1
+        }
+      ]
+    },
+    "tripleCrown": {
+      "sources": [
+        {
+          "reportType": "triple-crown",
+          "tableId": "b546ef04-e602-4ffc-95c5-5a786aba36b7",
+          "asOf": "October 13, 2026"
+        }
+      ],
+      "summary": {
+        "achieverCount": 5
+      }
+    }
+  }
+}
