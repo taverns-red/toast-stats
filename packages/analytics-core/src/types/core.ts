@@ -373,18 +373,8 @@ export interface PreComputedAnalyticsFile<T> {
 export interface AnalyticsManifestEntry {
   filename: string
   districtId: string
-  type:
-    | 'analytics'
-    | 'membership'
-    | 'clubhealth'
-    | 'rankings'
-    | 'membership-analytics'
-    | 'vulnerable-clubs'
-    | 'leadership-insights'
-    | 'distinguished-analytics'
-    | 'year-over-year'
-    | 'performance-targets'
-    | 'club-trends-index'
+  /** The 8 other per-district types were retired in #1798. */
+  type: 'analytics' | 'rankings' | 'performance-targets'
   size: number
   checksum: string
 }

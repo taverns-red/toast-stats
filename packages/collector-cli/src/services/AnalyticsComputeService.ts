@@ -118,22 +118,8 @@ export interface DistrictComputeResult {
   districtId: string
   success: boolean
   analyticsPath?: string
-  membershipPath?: string
-  clubHealthPath?: string
-  /** Path to membership analytics file (NEW - Requirement 1.1) */
-  membershipAnalyticsPath?: string
-  /** Path to vulnerable clubs file (NEW - Requirement 3.1) */
-  vulnerableClubsPath?: string
-  /** Path to leadership insights file (NEW - Requirement 4.1) */
-  leadershipInsightsPath?: string
-  /** Path to distinguished club analytics file (NEW - Requirement 5.1) */
-  distinguishedAnalyticsPath?: string
-  /** Path to year-over-year file (NEW - Requirement 6.1) */
-  yearOverYearPath?: string
   /** Path to performance targets file (NEW - Requirement 7.1) */
   performanceTargetsPath?: string
-  /** Path to club trends index file (NEW - Requirement 2.1) */
-  clubTrendsIndexPath?: string
   /** Whether time-series data point was written (NEW - Requirement 4.1, 9.1) */
   timeSeriesWritten?: boolean
   /** Error message if time-series write failed (non-fatal) */
@@ -271,8 +257,7 @@ interface AnalyticsCheckResult {
  *
  * And writes analytics to:
  *   CACHE_DIR/snapshots/{date}/analytics/district_{id}_analytics.json
- *   CACHE_DIR/snapshots/{date}/analytics/district_{id}_membership.json
- *   CACHE_DIR/snapshots/{date}/analytics/district_{id}_clubhealth.json
+ *   CACHE_DIR/snapshots/{date}/analytics/district_{id}_performance-targets.json
  *   CACHE_DIR/snapshots/{date}/analytics/manifest.json
  *
  * And writes time-series data to:
@@ -979,75 +964,15 @@ export class AnalyticsComputeService {
         writeOptions
       )
 
-      const membershipPath = await this.analyticsWriter.writeMembershipTrends(
-        date,
-        districtId,
-        computationResult.membershipTrends,
-        writeOptions
-      )
-
-      const clubHealthPath = await this.analyticsWriter.writeClubHealth(
-        date,
-        districtId,
-        computationResult.clubHealth,
-        writeOptions
-      )
-
-      // NEW: Write extended analytics files (Requirements 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1)
-      const membershipAnalyticsPath =
-        await this.analyticsWriter.writeMembershipAnalytics(
-          date,
-          districtId,
-          computationResult.membershipAnalytics,
-          writeOptions
-        )
-
-      const vulnerableClubsPath =
-        await this.analyticsWriter.writeVulnerableClubs(
-          date,
-          districtId,
-          computationResult.vulnerableClubs,
-          writeOptions
-        )
-
-      const leadershipInsightsPath =
-        await this.analyticsWriter.writeLeadershipInsights(
-          date,
-          districtId,
-          computationResult.leadershipInsights,
-          writeOptions
-        )
-
-      const distinguishedAnalyticsPath =
-        await this.analyticsWriter.writeDistinguishedClubAnalytics(
-          date,
-          districtId,
-          computationResult.distinguishedClubAnalytics,
-          writeOptions
-        )
-
-      const yearOverYearPath = await this.analyticsWriter.writeYearOverYear(
-        date,
-        districtId,
-        computationResult.yearOverYear,
-        writeOptions
-      )
-
+      // Only `analytics` and `performance-targets` have readers. The other
+      // 8 per-district files (membership, clubhealth, …, club-trends-index)
+      // were re-serialisations of `analytics` or unconsumed, and are no
+      // longer written (#1798, utils/retiredAnalyticsFiles.ts).
       const performanceTargetsPath =
         await this.analyticsWriter.writePerformanceTargets(
           date,
           districtId,
           computationResult.performanceTargets,
-          writeOptions
-        )
-
-      // Club trends are now natively dense because all program-year snapshots
-      // are passed to AnalyticsComputer above. No post-processing needed.
-      const clubTrendsIndexPath =
-        await this.analyticsWriter.writeClubTrendsIndex(
-          date,
-          districtId,
-          computationResult.clubTrendsIndex,
           writeOptions
         )
 
@@ -1089,14 +1014,14 @@ export class AnalyticsComputeService {
         // The analytics were computed and written above using only 1-2 snapshots,
         // producing a paymentsTrend with just 1 data point. Now that the time-series
         // data point has been appended, read back the full accumulated trend and
-        // inject it into the analytics + membership JSON files on disk.
+        // inject it into the analytics JSON file on disk.
         try {
           const accumulatedTrend = await this.timeSeriesWriter.getPaymentsTrend(
             districtId,
             date
           )
           if (accumulatedTrend.length > 1) {
-            const patchFiles = [analyticsPath, membershipPath].filter(Boolean)
+            const patchFiles = [analyticsPath].filter(Boolean)
             for (const filePath of patchFiles) {
               const raw = await fs.readFile(filePath, 'utf-8')
               const json = JSON.parse(raw)
@@ -1143,15 +1068,7 @@ export class AnalyticsComputeService {
         date,
         districtId,
         analyticsPath,
-        membershipPath,
-        clubHealthPath,
-        membershipAnalyticsPath,
-        vulnerableClubsPath,
-        leadershipInsightsPath,
-        distinguishedAnalyticsPath,
-        yearOverYearPath,
         performanceTargetsPath,
-        clubTrendsIndexPath,
         timeSeriesWritten,
         sourceSnapshotChecksum,
       })
@@ -1160,15 +1077,7 @@ export class AnalyticsComputeService {
         districtId,
         success: true,
         analyticsPath,
-        membershipPath,
-        clubHealthPath,
-        membershipAnalyticsPath,
-        vulnerableClubsPath,
-        leadershipInsightsPath,
-        distinguishedAnalyticsPath,
-        yearOverYearPath,
         performanceTargetsPath,
-        clubTrendsIndexPath,
         timeSeriesWritten,
         timeSeriesError,
         clubTrendsUpdated: true,
@@ -1378,86 +1287,12 @@ export class AnalyticsComputeService {
           )
           manifestEntries.push(entry)
         }
-        if (result.membershipPath) {
-          analyticsLocations.push(result.membershipPath)
-          const entry = await this.analyticsWriter.createManifestEntry(
-            result.membershipPath,
-            districtId,
-            'membership'
-          )
-          manifestEntries.push(entry)
-        }
-        if (result.clubHealthPath) {
-          analyticsLocations.push(result.clubHealthPath)
-          const entry = await this.analyticsWriter.createManifestEntry(
-            result.clubHealthPath,
-            districtId,
-            'clubhealth'
-          )
-          manifestEntries.push(entry)
-        }
-
-        // NEW: Extended analytics files (Requirements 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 12.3)
-        if (result.membershipAnalyticsPath) {
-          analyticsLocations.push(result.membershipAnalyticsPath)
-          const entry = await this.analyticsWriter.createManifestEntry(
-            result.membershipAnalyticsPath,
-            districtId,
-            'membership-analytics'
-          )
-          manifestEntries.push(entry)
-        }
-        if (result.vulnerableClubsPath) {
-          analyticsLocations.push(result.vulnerableClubsPath)
-          const entry = await this.analyticsWriter.createManifestEntry(
-            result.vulnerableClubsPath,
-            districtId,
-            'vulnerable-clubs'
-          )
-          manifestEntries.push(entry)
-        }
-        if (result.leadershipInsightsPath) {
-          analyticsLocations.push(result.leadershipInsightsPath)
-          const entry = await this.analyticsWriter.createManifestEntry(
-            result.leadershipInsightsPath,
-            districtId,
-            'leadership-insights'
-          )
-          manifestEntries.push(entry)
-        }
-        if (result.distinguishedAnalyticsPath) {
-          analyticsLocations.push(result.distinguishedAnalyticsPath)
-          const entry = await this.analyticsWriter.createManifestEntry(
-            result.distinguishedAnalyticsPath,
-            districtId,
-            'distinguished-analytics'
-          )
-          manifestEntries.push(entry)
-        }
-        if (result.yearOverYearPath) {
-          analyticsLocations.push(result.yearOverYearPath)
-          const entry = await this.analyticsWriter.createManifestEntry(
-            result.yearOverYearPath,
-            districtId,
-            'year-over-year'
-          )
-          manifestEntries.push(entry)
-        }
         if (result.performanceTargetsPath) {
           analyticsLocations.push(result.performanceTargetsPath)
           const entry = await this.analyticsWriter.createManifestEntry(
             result.performanceTargetsPath,
             districtId,
             'performance-targets'
-          )
-          manifestEntries.push(entry)
-        }
-        if (result.clubTrendsIndexPath) {
-          analyticsLocations.push(result.clubTrendsIndexPath)
-          const entry = await this.analyticsWriter.createManifestEntry(
-            result.clubTrendsIndexPath,
-            districtId,
-            'club-trends-index'
           )
           manifestEntries.push(entry)
         }

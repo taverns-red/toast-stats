@@ -25,8 +25,6 @@ import {
   type DistrictStatistics,
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
-  type MembershipTrendData,
-  type ClubHealthData,
   type AnalyticsManifest,
 } from '@taverns-red/analytics-core'
 
@@ -1100,8 +1098,7 @@ describe('AnalyticsComputeService', () => {
       expect(result.success).toBe(true)
       expect(result.districtId).toBe(districtId)
       expect(result.analyticsPath).toBeDefined()
-      expect(result.membershipPath).toBeDefined()
-      expect(result.clubHealthPath).toBeDefined()
+      expect(result.performanceTargetsPath).toBeDefined()
       expect(result.skipped).toBeUndefined()
     })
 
@@ -1128,55 +1125,6 @@ describe('AnalyticsComputeService', () => {
       expect(analytics.metadata.districtId).toBe(districtId)
       expect(analytics.data.districtId).toBe(districtId)
       expect(analytics.data.totalMembership).toBe(48)
-    })
-
-    it('should write membership trends file', async () => {
-      const date = '2024-01-15'
-      const districtId = '1'
-      const stats = createSampleDistrictStatistics(districtId, date)
-
-      await writeDistrictSnapshot(testCache.path, date, districtId, stats)
-
-      const result = await analyticsComputeService.computeDistrictAnalytics(
-        date,
-        districtId
-      )
-
-      const membershipContent = await fs.readFile(
-        result.membershipPath!,
-        'utf-8'
-      )
-      const membership = JSON.parse(
-        membershipContent
-      ) as PreComputedAnalyticsFile<MembershipTrendData>
-
-      expect(membership.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(membership.data.membershipTrend).toBeDefined()
-      expect(membership.data.paymentsTrend).toBeDefined()
-    })
-
-    it('should write club health file', async () => {
-      const date = '2024-01-15'
-      const districtId = '1'
-      const stats = createSampleDistrictStatistics(districtId, date)
-
-      await writeDistrictSnapshot(testCache.path, date, districtId, stats)
-
-      const result = await analyticsComputeService.computeDistrictAnalytics(
-        date,
-        districtId
-      )
-
-      const healthContent = await fs.readFile(result.clubHealthPath!, 'utf-8')
-      const health = JSON.parse(
-        healthContent
-      ) as PreComputedAnalyticsFile<ClubHealthData>
-
-      expect(health.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(health.data.allClubs).toBeDefined()
-      expect(health.data.thrivingClubs).toBeDefined()
-      expect(health.data.vulnerableClubs).toBeDefined()
-      expect(health.data.interventionRequiredClubs).toBeDefined()
     })
 
     it('should skip computation when analytics exist and force is false', async () => {
@@ -1453,10 +1401,9 @@ describe('AnalyticsComputeService', () => {
       )
       const files = await fs.readdir(analyticsDir)
 
-      // Should have all three analytics files plus manifest
+      // The two consumed analytics files plus manifest (#1798)
       expect(files).toContain(`district_${districtId}_analytics.json`)
-      expect(files).toContain(`district_${districtId}_membership.json`)
-      expect(files).toContain(`district_${districtId}_clubhealth.json`)
+      expect(files).toContain(`district_${districtId}_performance-targets.json`)
       expect(files).toContain('manifest.json')
     })
 
@@ -1872,36 +1819,29 @@ describe('AnalyticsComputeService', () => {
         'analytics'
       )
 
-      // Read all three analytics files
+      // Read both written analytics files
       const analyticsContent = await fs.readFile(
         path.join(analyticsDir, `district_${districtId}_analytics.json`),
         'utf-8'
       )
-      const membershipContent = await fs.readFile(
-        path.join(analyticsDir, `district_${districtId}_membership.json`),
-        'utf-8'
-      )
-      const clubHealthContent = await fs.readFile(
-        path.join(analyticsDir, `district_${districtId}_clubhealth.json`),
+      const targetsContent = await fs.readFile(
+        path.join(
+          analyticsDir,
+          `district_${districtId}_performance-targets.json`
+        ),
         'utf-8'
       )
 
       const analytics = JSON.parse(
         analyticsContent
       ) as PreComputedAnalyticsFile<unknown>
-      const membership = JSON.parse(
-        membershipContent
-      ) as PreComputedAnalyticsFile<unknown>
-      const clubHealth = JSON.parse(
-        clubHealthContent
+      const targets = JSON.parse(
+        targetsContent
       ) as PreComputedAnalyticsFile<unknown>
 
-      // All should have the same sourceSnapshotChecksum
+      // Both should have the same sourceSnapshotChecksum
       expect(analytics.metadata.sourceSnapshotChecksum).toBeDefined()
-      expect(membership.metadata.sourceSnapshotChecksum).toBe(
-        analytics.metadata.sourceSnapshotChecksum
-      )
-      expect(clubHealth.metadata.sourceSnapshotChecksum).toBe(
+      expect(targets.metadata.sourceSnapshotChecksum).toBe(
         analytics.metadata.sourceSnapshotChecksum
       )
     })
@@ -1972,192 +1912,6 @@ describe('AnalyticsComputeService', () => {
       expect(manifest.totalFiles).toBe(2)
     })
 
-    it('should generate valid membership-analytics.json with correct structure', async () => {
-      const date = '2024-01-15'
-      const districtId = '1'
-      const stats = createSampleDistrictStatistics(districtId, date)
-
-      await writeDistrictSnapshot(testCache.path, date, districtId, stats)
-
-      await analyticsComputeService.compute({ date })
-
-      const filePath = path.join(
-        testCache.path,
-        'snapshots',
-        date,
-        'analytics',
-        `district_${districtId}_membership-analytics.json`
-      )
-      const content = await fs.readFile(filePath, 'utf-8')
-      const file = JSON.parse(content) as PreComputedAnalyticsFile<{
-        districtId: string
-        dateRange: { start: string; end: string }
-        totalMembership: number
-        membershipChange: number
-        growthRate: number
-        retentionRate: number
-      }>
-
-      expect(file.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(file.metadata.districtId).toBe(districtId)
-      expect(file.data.districtId).toBe(districtId)
-      expect(file.data.dateRange).toBeDefined()
-      expect(typeof file.data.totalMembership).toBe('number')
-      expect(typeof file.data.membershipChange).toBe('number')
-      expect(typeof file.data.growthRate).toBe('number')
-      expect(typeof file.data.retentionRate).toBe('number')
-    })
-
-    it('should generate valid vulnerable-clubs.json with correct structure', async () => {
-      const date = '2024-01-15'
-      const districtId = '1'
-      const stats = createSampleDistrictStatistics(districtId, date)
-
-      await writeDistrictSnapshot(testCache.path, date, districtId, stats)
-
-      await analyticsComputeService.compute({ date })
-
-      const filePath = path.join(
-        testCache.path,
-        'snapshots',
-        date,
-        'analytics',
-        `district_${districtId}_vulnerable-clubs.json`
-      )
-      const content = await fs.readFile(filePath, 'utf-8')
-      const file = JSON.parse(content) as PreComputedAnalyticsFile<{
-        districtId: string
-        computedAt: string
-        totalVulnerableClubs: number
-        interventionRequiredClubs: number
-        vulnerableClubs: unknown[]
-        interventionRequired: unknown[]
-      }>
-
-      expect(file.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(file.metadata.districtId).toBe(districtId)
-      expect(file.data.districtId).toBe(districtId)
-      expect(file.data.computedAt).toBeDefined()
-      expect(typeof file.data.totalVulnerableClubs).toBe('number')
-      expect(typeof file.data.interventionRequiredClubs).toBe('number')
-      expect(Array.isArray(file.data.vulnerableClubs)).toBe(true)
-      expect(Array.isArray(file.data.interventionRequired)).toBe(true)
-    })
-
-    it('should generate valid leadership-insights.json with correct structure', async () => {
-      const date = '2024-01-15'
-      const districtId = '1'
-      const stats = createSampleDistrictStatistics(districtId, date)
-
-      await writeDistrictSnapshot(testCache.path, date, districtId, stats)
-
-      await analyticsComputeService.compute({ date })
-
-      const filePath = path.join(
-        testCache.path,
-        'snapshots',
-        date,
-        'analytics',
-        `district_${districtId}_leadership-insights.json`
-      )
-      const content = await fs.readFile(filePath, 'utf-8')
-      const file = JSON.parse(content) as PreComputedAnalyticsFile<{
-        districtId: string
-        dateRange: { start: string; end: string }
-        officerCompletionRate: number
-        trainingCompletionRate: number
-        leadershipEffectivenessScore: number
-        topPerformingDivisions: unknown[]
-        areasNeedingSupport: unknown[]
-      }>
-
-      expect(file.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(file.metadata.districtId).toBe(districtId)
-      expect(file.data.districtId).toBe(districtId)
-      expect(file.data.dateRange).toBeDefined()
-      expect(typeof file.data.officerCompletionRate).toBe('number')
-      expect(typeof file.data.trainingCompletionRate).toBe('number')
-      expect(typeof file.data.leadershipEffectivenessScore).toBe('number')
-      expect(Array.isArray(file.data.topPerformingDivisions)).toBe(true)
-      expect(Array.isArray(file.data.areasNeedingSupport)).toBe(true)
-    })
-
-    it('should generate valid distinguished-analytics.json with correct structure', async () => {
-      const date = '2024-01-15'
-      const districtId = '1'
-      const stats = createSampleDistrictStatistics(districtId, date)
-
-      await writeDistrictSnapshot(testCache.path, date, districtId, stats)
-
-      await analyticsComputeService.compute({ date })
-
-      const filePath = path.join(
-        testCache.path,
-        'snapshots',
-        date,
-        'analytics',
-        `district_${districtId}_distinguished-analytics.json`
-      )
-      const content = await fs.readFile(filePath, 'utf-8')
-      const file = JSON.parse(content) as PreComputedAnalyticsFile<{
-        districtId: string
-        dateRange: { start: string; end: string }
-        distinguishedClubs: {
-          smedley: number
-          presidents: number
-          select: number
-          distinguished: number
-          total: number
-        }
-        distinguishedClubsList: unknown[]
-        distinguishedProjection: unknown
-        progressByLevel: unknown
-      }>
-
-      expect(file.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(file.metadata.districtId).toBe(districtId)
-      expect(file.data.districtId).toBe(districtId)
-      expect(file.data.dateRange).toBeDefined()
-      expect(file.data.distinguishedClubs).toBeDefined()
-      expect(typeof file.data.distinguishedClubs.total).toBe('number')
-      expect(Array.isArray(file.data.distinguishedClubsList)).toBe(true)
-      expect(file.data.distinguishedProjection).toBeDefined()
-      expect(file.data.progressByLevel).toBeDefined()
-    })
-
-    it('should generate valid year-over-year.json with correct structure', async () => {
-      const date = '2024-01-15'
-      const districtId = '1'
-      const stats = createSampleDistrictStatistics(districtId, date)
-
-      await writeDistrictSnapshot(testCache.path, date, districtId, stats)
-
-      await analyticsComputeService.compute({ date })
-
-      const filePath = path.join(
-        testCache.path,
-        'snapshots',
-        date,
-        'analytics',
-        `district_${districtId}_year-over-year.json`
-      )
-      const content = await fs.readFile(filePath, 'utf-8')
-      const file = JSON.parse(content) as PreComputedAnalyticsFile<{
-        districtId: string
-        currentDate: string
-        previousYearDate: string
-        dataAvailable: boolean
-        message?: string
-      }>
-
-      expect(file.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(file.metadata.districtId).toBe(districtId)
-      expect(file.data.districtId).toBe(districtId)
-      expect(file.data.currentDate).toBeDefined()
-      expect(file.data.previousYearDate).toBeDefined()
-      expect(typeof file.data.dataAvailable).toBe('boolean')
-    })
-
     it('should generate valid performance-targets.json with correct structure', async () => {
       const date = '2024-01-15'
       const districtId = '1'
@@ -2200,43 +1954,7 @@ describe('AnalyticsComputeService', () => {
       expect(file.data).not.toHaveProperty('projectedAchievement')
     })
 
-    it('should generate valid club-trends-index.json with correct structure', async () => {
-      const date = '2024-01-15'
-      const districtId = '1'
-      const stats = createSampleDistrictStatistics(districtId, date)
-
-      await writeDistrictSnapshot(testCache.path, date, districtId, stats)
-
-      await analyticsComputeService.compute({ date })
-
-      const filePath = path.join(
-        testCache.path,
-        'snapshots',
-        date,
-        'analytics',
-        `district_${districtId}_club-trends-index.json`
-      )
-      const content = await fs.readFile(filePath, 'utf-8')
-      const file = JSON.parse(content) as PreComputedAnalyticsFile<{
-        districtId: string
-        computedAt: string
-        clubs: Record<string, unknown>
-      }>
-
-      expect(file.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(file.metadata.districtId).toBe(districtId)
-      expect(file.data.districtId).toBe(districtId)
-      expect(file.data.computedAt).toBeDefined()
-      expect(file.data.clubs).toBeDefined()
-      expect(typeof file.data.clubs).toBe('object')
-
-      // Verify clubs from the sample data are indexed
-      expect(file.data.clubs['1234']).toBeDefined()
-      expect(file.data.clubs['5678']).toBeDefined()
-      expect(file.data.clubs['9012']).toBeDefined()
-    })
-
-    it('should return all new file paths in DistrictComputeResult', async () => {
+    it('returns only the written file paths in DistrictComputeResult (#1798)', async () => {
       const date = '2024-01-15'
       const districtId = '1'
       const stats = createSampleDistrictStatistics(districtId, date)
@@ -2249,37 +1967,17 @@ describe('AnalyticsComputeService', () => {
       )
 
       expect(result.success).toBe(true)
-
-      // Base paths (existing)
-      expect(result.analyticsPath).toBeDefined()
-      expect(result.membershipPath).toBeDefined()
-      expect(result.clubHealthPath).toBeDefined()
-
-      // Extended paths (NEW)
-      expect(result.membershipAnalyticsPath).toBeDefined()
-      expect(result.vulnerableClubsPath).toBeDefined()
-      expect(result.leadershipInsightsPath).toBeDefined()
-      expect(result.distinguishedAnalyticsPath).toBeDefined()
-      expect(result.yearOverYearPath).toBeDefined()
-      expect(result.performanceTargetsPath).toBeDefined()
-      expect(result.clubTrendsIndexPath).toBeDefined()
-
-      // Verify paths point to correct files
-      expect(result.membershipAnalyticsPath).toContain(
-        'membership-analytics.json'
+      expect(result.analyticsPath).toContain(
+        `district_${districtId}_analytics.json`
       )
-      expect(result.vulnerableClubsPath).toContain('vulnerable-clubs.json')
-      expect(result.leadershipInsightsPath).toContain(
-        'leadership-insights.json'
-      )
-      expect(result.distinguishedAnalyticsPath).toContain(
-        'distinguished-analytics.json'
-      )
-      expect(result.yearOverYearPath).toContain('year-over-year.json')
       expect(result.performanceTargetsPath).toContain(
-        'performance-targets.json'
+        `district_${districtId}_performance-targets.json`
       )
-      expect(result.clubTrendsIndexPath).toContain('club-trends-index.json')
+      const pathKeys = Object.keys(result).filter(k => k.endsWith('Path'))
+      expect(pathKeys.sort()).toEqual([
+        'analyticsPath',
+        'performanceTargetsPath',
+      ])
     })
 
     it('should store same sourceSnapshotChecksum in all analytics files', async () => {
@@ -2301,15 +1999,7 @@ describe('AnalyticsComputeService', () => {
       // Read all analytics files
       const fileNames = [
         `district_${districtId}_analytics.json`,
-        `district_${districtId}_membership.json`,
-        `district_${districtId}_clubhealth.json`,
-        `district_${districtId}_membership-analytics.json`,
-        `district_${districtId}_vulnerable-clubs.json`,
-        `district_${districtId}_leadership-insights.json`,
-        `district_${districtId}_distinguished-analytics.json`,
-        `district_${districtId}_year-over-year.json`,
         `district_${districtId}_performance-targets.json`,
-        `district_${districtId}_club-trends-index.json`,
       ]
 
       const checksums: string[] = []

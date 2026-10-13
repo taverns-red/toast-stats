@@ -25,8 +25,6 @@ import {
   ANALYTICS_SCHEMA_VERSION,
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
-  type MembershipTrendData,
-  type ClubHealthData,
   type AnalyticsManifest,
 } from '@taverns-red/analytics-core'
 
@@ -193,8 +191,9 @@ describe('Pipeline Integration Tests', () => {
       // Verify analytics files
       const analyticsFiles = await fs.readdir(analyticsDir)
       expect(analyticsFiles).toContain(`district_${districtId}_analytics.json`)
-      expect(analyticsFiles).toContain(`district_${districtId}_membership.json`)
-      expect(analyticsFiles).toContain(`district_${districtId}_clubhealth.json`)
+      expect(analyticsFiles).toContain(
+        `district_${districtId}_performance-targets.json`
+      )
       expect(analyticsFiles).toContain('manifest.json')
     })
 
@@ -248,10 +247,7 @@ describe('Pipeline Integration Tests', () => {
           `district_${districtId}_analytics.json`
         )
         expect(analyticsFiles).toContain(
-          `district_${districtId}_membership.json`
-        )
-        expect(analyticsFiles).toContain(
-          `district_${districtId}_clubhealth.json`
+          `district_${districtId}_performance-targets.json`
         )
       }
     })
@@ -447,7 +443,9 @@ describe('Pipeline Integration Tests', () => {
       expect(analytics.data.topPerformingAreas).toBeDefined()
     })
 
-    it('should create membership.json with correct structure', async () => {
+    // membership.json and clubhealth.json were retired (#1798); the same
+    // trends and health lists are carried by the analytics file.
+    it('analytics.json carries the membership trends', async () => {
       const date = '2024-01-15'
       const districtId = '1'
 
@@ -465,12 +463,12 @@ describe('Pipeline Integration Tests', () => {
         'snapshots',
         date,
         'analytics',
-        `district_${districtId}_membership.json`
+        `district_${districtId}_analytics.json`
       )
       const membershipContent = await fs.readFile(membershipPath, 'utf-8')
       const membership = JSON.parse(
         membershipContent
-      ) as PreComputedAnalyticsFile<MembershipTrendData>
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       // Verify metadata
       expect(membership.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
@@ -484,7 +482,7 @@ describe('Pipeline Integration Tests', () => {
       expect(Array.isArray(membership.data.paymentsTrend)).toBe(true)
     })
 
-    it('should create clubhealth.json with correct structure', async () => {
+    it('analytics.json carries the club health lists', async () => {
       const date = '2024-01-15'
       const districtId = '1'
 
@@ -502,12 +500,12 @@ describe('Pipeline Integration Tests', () => {
         'snapshots',
         date,
         'analytics',
-        `district_${districtId}_clubhealth.json`
+        `district_${districtId}_analytics.json`
       )
       const clubHealthContent = await fs.readFile(clubHealthPath, 'utf-8')
       const clubHealth = JSON.parse(
         clubHealthContent
-      ) as PreComputedAnalyticsFile<ClubHealthData>
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       // Verify metadata
       expect(clubHealth.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
@@ -570,20 +568,8 @@ describe('Pipeline Integration Tests', () => {
       expect(manifest.totalSize).toBeGreaterThan(0)
       expect(manifest.files.length).toBe(manifest.totalFiles)
 
-      // Valid file types including new extended analytics types
-      const validFileTypes = [
-        'analytics',
-        'membership',
-        'clubhealth',
-        'rankings',
-        'membership-analytics',
-        'vulnerable-clubs',
-        'leadership-insights',
-        'distinguished-analytics',
-        'year-over-year',
-        'performance-targets',
-        'club-trends-index',
-      ]
+      // Only the two consumed per-district types are written (#1798)
+      const validFileTypes = ['analytics', 'performance-targets']
 
       // Verify each file entry
       for (const file of manifest.files) {
@@ -970,8 +956,9 @@ describe('Pipeline Integration Tests', () => {
 
       // Verify analytics files exist
       expect(analyticsFiles).toContain(`district_${districtId}_analytics.json`)
-      expect(analyticsFiles).toContain(`district_${districtId}_membership.json`)
-      expect(analyticsFiles).toContain(`district_${districtId}_clubhealth.json`)
+      expect(analyticsFiles).toContain(
+        `district_${districtId}_performance-targets.json`
+      )
       expect(analyticsFiles).toContain('manifest.json')
 
       // Verify analytics were NOT written to the collection date directory
@@ -1134,10 +1121,7 @@ describe('Pipeline Integration Tests', () => {
           `district_${districtId}_analytics.json`
         )
         expect(analyticsFiles).toContain(
-          `district_${districtId}_membership.json`
-        )
-        expect(analyticsFiles).toContain(
-          `district_${districtId}_clubhealth.json`
+          `district_${districtId}_performance-targets.json`
         )
       }
     })
@@ -1355,8 +1339,9 @@ describe('Pipeline Integration Tests', () => {
 
       // Verify analytics files exist at requested date
       expect(analyticsFiles).toContain(`district_${districtId}_analytics.json`)
-      expect(analyticsFiles).toContain(`district_${districtId}_membership.json`)
-      expect(analyticsFiles).toContain(`district_${districtId}_clubhealth.json`)
+      expect(analyticsFiles).toContain(
+        `district_${districtId}_performance-targets.json`
+      )
       expect(analyticsFiles).toContain('manifest.json')
 
       // Verify analytics file content has correct metadata
@@ -1433,8 +1418,9 @@ describe('Pipeline Integration Tests', () => {
 
       // Verify analytics files exist at requested date
       expect(analyticsFiles).toContain(`district_${districtId}_analytics.json`)
-      expect(analyticsFiles).toContain(`district_${districtId}_membership.json`)
-      expect(analyticsFiles).toContain(`district_${districtId}_clubhealth.json`)
+      expect(analyticsFiles).toContain(
+        `district_${districtId}_performance-targets.json`
+      )
       expect(analyticsFiles).toContain('manifest.json')
     })
 
@@ -1572,10 +1558,7 @@ describe('Pipeline Integration Tests', () => {
           `district_${districtId}_analytics.json`
         )
         expect(analyticsFiles).toContain(
-          `district_${districtId}_membership.json`
-        )
-        expect(analyticsFiles).toContain(
-          `district_${districtId}_clubhealth.json`
+          `district_${districtId}_performance-targets.json`
         )
       }
     })
