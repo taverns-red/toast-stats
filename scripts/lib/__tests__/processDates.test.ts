@@ -1031,3 +1031,59 @@ describe('process-dates.sh: snapshot schema gate before upload (#1758, D-9)', ()
     expect(objectsUnder('raw-csv')).toEqual([])
   })
 })
+
+describe('process-dates.sh: force (#1771, ADR-015 P7)', () => {
+  // `force` means one thing: re-fetch and re-derive even if cached. Every
+  // mode this runner takes IS a re-derivation, so all three are forced
+  // whatever the input says; the runner takes the input anyway, validates
+  // it, and says which way it went, so the meaning is checked in one place.
+  const MODES: [string, () => void, Record<string, string>, RegExp][] = [
+    [
+      'rebuild',
+      () => putRaw('2026-09-10'),
+      {},
+      /^collector-cli transform --date 2026-09-10 --force --verbose$/,
+    ],
+    [
+      'rescrape',
+      () => {},
+      { DISTRICTS: '61' },
+      /^collector-cli scrape --date 2026-09-10 --transform --force --verbose --districts 61$/,
+    ],
+    [
+      'rescrape-historical',
+      () => putLocalRaw('2026-09-10'),
+      {},
+      /^collector-cli transform --date 2026-09-10 --force --verbose$/,
+    ],
+  ]
+
+  for (const [mode, seed, env, fetchCall] of MODES) {
+    for (const force of ['true', 'false', '']) {
+      it(`${mode}: forced with FORCE='${force}'`, () => {
+        seed()
+        const r = run(mode, ['2026-09-10'], { ...env, FORCE: force })
+        expect(r.status, r.stderr).toBe(0)
+        const stubs = lines(stubLog)
+        expect(
+          stubs.some(l => fetchCall.test(l)),
+          stubs.join('\n')
+        ).toBe(true)
+        expect(stubs).toContain(
+          'collector-cli compute-analytics --date 2026-09-10 --force-analytics --verbose'
+        )
+        expect(r.stderr).toContain(
+          `process-dates: force=always for ${mode} (FORCE='${force}')`
+        )
+      })
+    }
+  }
+
+  it('rejects a FORCE that is not a boolean input value (exit 2), before touching the bucket', () => {
+    putRaw('2026-09-10')
+    const r = run('rebuild', ['2026-09-10'], { FORCE: 'yes' })
+    expect(r.status).toBe(2)
+    expect(r.stderr).toMatch(/::error::process-dates: FORCE must be/)
+    expect(lines(shimLog)).toEqual([])
+  })
+})
