@@ -83,7 +83,11 @@ const club = (o: Partial<ClubTrend>): ClubTrend =>
   }) as ClubTrend
 
 const CLUBS: ClubTrend[] = [
-  club({ clubId: '101', clubName: 'Alpha Speakers' }),
+  club({
+    clubId: '101',
+    clubName: 'Alpha Speakers',
+    allowsVirtualAttendance: true,
+  }),
   club({
     clubId: '102',
     clubName: 'Beta Orators',
@@ -130,6 +134,23 @@ vi.mock('../../hooks/useDistrictAnalytics', async importOriginal => {
   }
 })
 
+// The raw district snapshot (visit awards, #1788), in the CDN's envelope.
+const fetchSnapshot = vi.fn(async (_date: string, _districtId: string) => ({
+  districtId: '61',
+  data: {
+    divisionPerformance: [
+      { Club: '00000101', 'Nov Visit award': '1', 'May Visit award': '0' },
+      { Club: '00000102', 'Nov Visit award': '0', 'May Visit award': '0' },
+      { Club: '00000103', 'Nov Visit award': '0', 'May Visit award': '0' },
+    ],
+  },
+}))
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnDistrictSnapshot: (date: string, districtId: string) =>
+    fetchSnapshot(date, districtId),
+}))
+
 const DistrictMapPage = React.lazy(() => import('../DistrictMapPage'))
 
 // Compile the page's module graph (and its on-demand chunks) once, up front:
@@ -140,6 +161,8 @@ beforeAll(async () => {
     import('../DistrictMapPage'),
     import('../../components/map/pinTerritory'),
     import('../../components/map/MapClubLists'),
+    import('../../components/map/mapFilters'),
+    import('../../components/map/MapFilterPanel'),
   ])
 }, 60_000)
 
@@ -182,6 +205,7 @@ afterEach(() => {
   cleanup()
   mockClubs = CLUBS
   mockIsMobile = false
+  fetchSnapshot.mockClear()
 })
 
 describe('DistrictMapPage — map and legend', () => {
@@ -307,5 +331,91 @@ describe('DistrictMapPage — phone', () => {
       within(dialog).getByRole('button', { name: /Distinguished level/ })
     )
     expect(search()).toContain('color=tier')
+  })
+})
+
+describe('DistrictMapPage — filters (#1788)', () => {
+  it('?online=yes keeps online-capable clubs on the map and in the list', async () => {
+    renderAt('/district/61/map?online=yes')
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Showing 1 of 3 clubs'
+      )
+    )
+    cleanup()
+    renderAt('/district/61/map?view=list&online=yes')
+    const list = await screen.findByRole('list', { name: /Clubs/ })
+    await vi.waitFor(() =>
+      expect(
+        within(list)
+          .getAllByRole('link')
+          .map(a => a.textContent)
+      ).toEqual([expect.stringContaining('Alpha Speakers')])
+    )
+  })
+
+  it('?visit=r1 reads the snapshot visit awards for the viewed date', async () => {
+    renderAt('/district/61/map?visit=r1&date=2026-10-11')
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Showing 2 of 3 clubs'
+      )
+    )
+    expect(fetchSnapshot).toHaveBeenCalledWith('2026-10-11', '61')
+  })
+
+  it('composes with the colour mode and the legend facets', async () => {
+    renderAt('/district/61/map?color=tier&online=yes&status=thriving')
+    await vi.waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Showing 1 of 3 clubs'
+      )
+    )
+    expect(
+      screen.getByRole('group', { name: /Distinguished level legend/ })
+    ).toBeInTheDocument()
+  })
+
+  it('desktop: Filters opens a panel section; a chip writes its key and keeps the mode', async () => {
+    renderAt('/district/61/map?color=tier')
+    const trigger = await screen.findByRole('button', { name: /^Filters/ })
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(trigger)
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    const panel = await screen.findByRole('region', { name: 'Filters' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    fireEvent.click(
+      within(panel).getByRole('button', { name: 'Online attendance possible' })
+    )
+    expect(search()).toContain('online=yes')
+    expect(search()).toContain('color=tier')
+    fireEvent.click(within(panel).getByRole('button', { name: 'Division B' }))
+    expect(search()).toContain('divisions=Division B')
+    expect(search()).toContain('online=yes')
+    expect(trigger).toHaveAccessibleName('Filters, 2 active')
+  })
+
+  it('phone: Filters opens the shared Filter & sort sheet; Clear all keeps mode and legend filters', async () => {
+    mockIsMobile = true
+    renderAt('/district/61/map?color=area&status=thriving&visit=r1&online=yes')
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Filters, 2 active' })
+    )
+    const sheet = await screen.findByRole('dialog', { name: 'Filter & sort' })
+    expect(
+      within(sheet).getByRole('button', { name: 'Round 1' })
+    ).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Clear all' }))
+    expect(search()).not.toContain('visit=')
+    expect(search()).not.toContain('online=')
+    expect(search()).toContain('color=area')
+    expect(search()).toContain('status=thriving')
+  })
+
+  it('loads no filter UI or snapshot until a filter needs it', async () => {
+    renderAt('/district/61/map')
+    await screen.findByRole('button', { name: /^Filters/ })
+    expect(screen.queryByRole('region', { name: 'Filters' })).toBeNull()
+    expect(fetchSnapshot).not.toHaveBeenCalled()
   })
 })

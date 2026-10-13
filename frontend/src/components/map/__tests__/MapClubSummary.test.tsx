@@ -75,4 +75,47 @@ describe('MapClubSummary', () => {
       screen.getAllByRole('link', { name: /Open club page/ })
     ).toHaveLength(2)
   })
+
+  it('shows members · goals and the meeting line (#1788), never a meeting link', () => {
+    render(
+      <MemoryRouter>
+        <MapClubSummary
+          clubs={[
+            club({
+              membershipTrend: [
+                { date: '2026-10-01', count: 10 },
+                { date: '2026-10-11', count: 14 },
+              ],
+              dcpGoalsTrend: [{ date: '2026-10-11', goalsAchieved: 3 }],
+              meetingDay: 'Tuesdays',
+              meetingTime: '7:00 PM Meeting ID 812 Passcode 999',
+              allowsVirtualAttendance: true,
+              address: { street: 'https://us02web.zoom.us/j/812' },
+            }),
+          ]}
+          districtId="61"
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('14 members · 3 goals')).toBeVisible()
+    // The time carries meeting credentials, so only the day is shown; a
+    // street that is a meeting link means the club meets online.
+    expect(screen.getByText('Tuesdays · Meets online')).toBeVisible()
+    const text = document.body.textContent ?? ''
+    expect(text).not.toContain('zoom.us')
+    expect(text).not.toContain('Passcode')
+  })
+
+  it('omits the meeting line without Find-a-Club data, and the counts without a trend', () => {
+    render(
+      <MemoryRouter>
+        <MapClubSummary
+          clubs={[club({ website: undefined })]}
+          districtId="61"
+        />
+      </MemoryRouter>
+    )
+    expect(screen.queryByText(/members/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Meets|In person|Online/)).not.toBeInTheDocument()
+  })
 })
