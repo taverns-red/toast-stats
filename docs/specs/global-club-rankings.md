@@ -136,16 +136,16 @@ per-date fact and must be read from that date's own rankings file, exactly as
 
 ### 2.2 There is NO all-clubs artifact — club data is sharded per district
 
-| What exists                                                       | Club-level?                                             | Global?                          |
-| ----------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------- |
-| `snapshots/{date}/district_{id}.json` (`PerDistrictDataSchema`)   | **Yes** — `data.clubs[]` + raw `data.clubPerformance[]` | No — 94 files                    |
-| `snapshots/{date}/all-districts-rankings.json`                    | No — one row per district                               | Yes                              |
-| `snapshots/{date}/global-totals.json` (#1498)                     | No — worldwide sums only                                | Yes                              |
-| `v1/global-history.json` (#1499)                                  | No — one row per completed PY                           | Yes                              |
-| `snapshots/{date}/competitive-awards.json` (#330)                 | No — district awards                                    | Yes                              |
-| `config/club-index.json`                                          | id → name/district only (search index)                  | Yes, 987 KB **identity-encoded** |
-| `snapshots/{date}/analytics/district_{id}_club-trends-index.json` | Yes — per-club goal + membership trend                  | No — per district                |
-| `time-series/district_{id}/{PY}.json`                             | No — district aggregates per date                       | No                               |
+| What exists                                                            | Club-level?                                             | Global?                          |
+| ---------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------- |
+| `snapshots/{date}/district_{id}.json` (`PerDistrictDataSchema`)        | **Yes** — `data.clubs[]` + raw `data.clubPerformance[]` | No — 94 files                    |
+| `snapshots/{date}/all-districts-rankings.json`                         | No — one row per district                               | Yes                              |
+| `snapshots/{date}/global-totals.json` (#1498)                          | No — worldwide sums only                                | Yes                              |
+| `v1/global-history.json` (#1499)                                       | No — one row per completed PY                           | Yes                              |
+| `snapshots/{date}/competitive-awards.json` (#330)                      | No — district awards                                    | Yes                              |
+| `config/club-index.json`                                               | id → name/district only (search index)                  | Yes, 987 KB **identity-encoded** |
+| `snapshots/{date}/analytics/district_{id}_analytics.json` `allClubs[]` | Yes — per-club goal + membership trend                  | No — per district                |
+| `time-series/district_{id}/{PY}.json`                                  | No — district aggregates per date                       | No                               |
 
 **Consequence:** a client-side global leaderboard would mean 94 requests per
 page view. Measured cost on 2026-09-11 (all 94 `district_*.json`, gzip on the
@@ -284,7 +284,7 @@ ship it uncompressed.
 Reference sizes (wire / decoded): `all-districts-rankings.json` 6.3 KB / 90.6 KB;
 `district_61.json` 52 KB / 761 KB; `district_F.json` 66 KB / 1.0 MB;
 `competitive-awards.json` 12.6 KB / 223 KB; `global-totals.json` 2.0 KB / 12 KB;
-`district_61_club-trends-index.json` 40 KB gz. Gzip ratio on these JSON files is
+`district_61_club-trends-index.json` 40 KB gz (retired in #1798). Gzip ratio on these JSON files is
 ~14×.
 
 ### 2.7 Where a new global artifact slots in (existing precedent)
