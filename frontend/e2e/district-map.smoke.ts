@@ -535,8 +535,14 @@ for (const theme of ['light', 'dark'] as const) {
         summary.getByRole('link', { name: /Open club page/ }).first()
       ).toBeVisible()
       // In the side panel, focus follows the club there (#1967).
-      if (width >= 768)
-        await expect(summary.getByRole('heading').first()).toBeFocused()
+      if (width >= 768) {
+        const heading = summary.getByRole('heading').first()
+        await expect(heading).toBeFocused()
+        // ...and its focus ring is not tucked under the sticky header.
+        const header = await page.getByRole('banner').first().boundingBox()
+        const box = await heading.boundingBox()
+        expect(box!.y).toBeGreaterThanOrEqual(header!.y + header!.height)
+      }
 
       await page.keyboard.press('Escape')
       await expect(summary).toHaveCount(0)
