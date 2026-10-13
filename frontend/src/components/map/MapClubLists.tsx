@@ -44,7 +44,8 @@ export const ClubLinks: React.FC<{
 /** The `?view=list` list (#1945): the shared MobileRowList rows the Clubs
  *  page uses — 56–64 px whole-row links, ≥ 44 px targets, 50 then "Show 25
  *  more". The chip is the club's pin (shape + words, never colour alone)
- *  in the current colour mode; line 2 names its division and area. */
+ *  in the current colour mode; line 2 is "Div C · Area 23", short enough
+ *  to sit beside the longest chip at 375. */
 export const ClubRows: React.FC<{
   clubs: ClubTrend[]
   districtId: string
@@ -64,7 +65,7 @@ export const ClubRows: React.FC<{
         </span>
       ),
       meta: [
-        c.divisionId && `Division ${c.divisionId}`,
+        c.divisionId && `Div ${c.divisionId}`,
         c.areaId && `Area ${c.areaId}`,
       ]
         .filter(Boolean)
