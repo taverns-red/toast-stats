@@ -3,7 +3,7 @@
  * active mode's words and a link to the club page. Never contact details,
  * meeting links or passcodes; "Contact on toastmasters.org" instead.
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom'
@@ -117,5 +117,34 @@ describe('MapClubSummary', () => {
     )
     expect(screen.queryByText(/members/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Meets|In person|Online/)).not.toBeInTheDocument()
+  })
+
+  it('autoFocus moves focus to the first club heading, once (#1967)', () => {
+    const onAutoFocused = vi.fn()
+    render(
+      <MemoryRouter>
+        <MapClubSummary
+          clubs={[club({}), club({ clubId: '5678', clubName: 'Second Club' })]}
+          districtId="61"
+          autoFocus
+          onAutoFocused={onAutoFocused}
+        />
+      </MemoryRouter>
+    )
+    const heading = screen.getByRole('heading', {
+      name: 'Limestone City Club',
+    })
+    expect(heading).toHaveFocus()
+    expect(heading).toHaveAttribute('tabindex', '-1')
+    expect(onAutoFocused).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves focus alone without autoFocus (a pointer tap)', () => {
+    render(
+      <MemoryRouter>
+        <MapClubSummary clubs={[club({})]} districtId="61" />
+      </MemoryRouter>
+    )
+    expect(document.body).toHaveFocus()
   })
 })
