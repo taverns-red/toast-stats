@@ -85,6 +85,7 @@ describe('daysBetween', () => {
 
 describe('buildClubGrowthFunnel — prospective', () => {
   const funnel = buildClubGrowthFunnel({
+    districtId: '61',
     reports: live,
     counts: KNOWN_ZERO,
     programYear: PY_2026,
@@ -119,6 +120,7 @@ describe('buildClubGrowthFunnel — prospective', () => {
 
   it('is unknown — not 0 — when the date has no prospective report', () => {
     const f = buildClubGrowthFunnel({
+      districtId: '61',
       reports: null,
       counts: KNOWN_ZERO,
       programYear: PY_2026,
@@ -132,6 +134,7 @@ describe('buildClubGrowthFunnel — prospective', () => {
 describe('buildClubGrowthFunnel — chartered this program year', () => {
   it('takes the count from the rankings row and the clubs from newClubs', () => {
     const f = buildClubGrowthFunnel({
+      districtId: '61',
       reports: withNewClubs(),
       counts: { chartered: 5, suspended: 3 },
       programYear: PY_2025,
@@ -154,6 +157,7 @@ describe('buildClubGrowthFunnel — chartered this program year', () => {
 
   it('drops new-club rows chartered outside the program year', () => {
     const f = buildClubGrowthFunnel({
+      districtId: '61',
       reports: withNewClubs(),
       counts: KNOWN_ZERO,
       programYear: PY_2026,
@@ -165,6 +169,7 @@ describe('buildClubGrowthFunnel — chartered this program year', () => {
 
   it('is unknown when the rankings count was not collected', () => {
     const f = buildClubGrowthFunnel({
+      districtId: '61',
       reports: live,
       counts: { chartered: null, suspended: null },
       programYear: PY_2026,
@@ -178,6 +183,7 @@ describe('buildClubGrowthFunnel — chartered this program year', () => {
 
 describe('buildClubGrowthFunnel — coached', () => {
   const funnel = buildClubGrowthFunnel({
+    districtId: '61',
     reports: live,
     counts: KNOWN_ZERO,
     programYear: PY_2026,
@@ -228,6 +234,7 @@ describe('buildClubGrowthFunnel — coached', () => {
 describe('buildClubGrowthFunnel — suspended (#1757)', () => {
   it('shows a measured count', () => {
     const f = buildClubGrowthFunnel({
+      districtId: '61',
       reports: live,
       counts: { chartered: 0, suspended: 2 },
       programYear: PY_2026,
@@ -238,6 +245,7 @@ describe('buildClubGrowthFunnel — suspended (#1757)', () => {
 
   it('renders unknown, never 0, when the count is not known', () => {
     const f = buildClubGrowthFunnel({
+      districtId: '61',
       reports: live,
       counts: { chartered: 0, suspended: null },
       programYear: PY_2026,
