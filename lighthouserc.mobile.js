@@ -58,37 +58,47 @@ const TARGET = {
  * best of the 3 runs, so each LCP budget is the runner's best + ~15%.
  * `/district/61` is bimodal on the runner (5.7 s / 8.1 s / 8.1 s). Byte and
  * CLS budgets are host-independent and match local runs.
+ *
+ * Ratchet 1 (2026-10-13, #1856): 8 PR-preview runs x 3 samples on the runner.
+ * Each budget is lowered to its TARGET where the worst per-run best passes it
+ * with margin; otherwise to that worst per-run best + ~10-15%. Comments show
+ * "median of 24 samples / worst per-run best". Still above target: every
+ * LCP (#1901 analytics payload gates /district/* and club; landing/regions
+ * floor is fonts + shell), and total bytes on /district/*. Clubs script is
+ * 323-334 KB (the charts chunk) against the 300 KB target.
  */
 const RATCHET_ISSUE = '#1856'
 const KB = 1024
 const BUDGETS = {
-  // runner best 4661 ms (runs 4888/4661/4877) / 0 / 148 KB / 408 KB
+  // LCP 3615 / 3610 ms; CLS 0; script 159 / 165 KB; total 388 / 396 KB
   landing: {
-    lcpMs: 5400,
+    lcpMs: 4200,
     cls: 0.1,
     scriptBytes: 300 * KB,
     totalBytes: 500 * KB,
   },
-  // runner best 5720 ms (5720/8107/8117) / 0 / 310 KB / 1211 KB
+  // LCP 3527 / 6015 ms (bimodal: one run's best was 5961); CLS 0.013;
+  // script 224 / 226 KB; total 1101 / 1104 KB
   district: {
     lcpMs: 6600,
     cls: 0.1,
-    scriptBytes: 350 * KB,
-    totalBytes: 1350 * KB,
+    scriptBytes: 300 * KB,
+    totalBytes: 1200 * KB,
   },
-  // runner best 5043 ms (5043/7901/8053) / 0.173 / 307 KB / 1280 KB
+  // LCP 4069 / 4169 ms (bimodal 3.5 / 8.0 s within a run); CLS 0 (max 0.04,
+  // #1837 landed); script 324 / 334 KB; total 1275 / 1286 KB
   clubs: {
-    lcpMs: 5500,
-    cls: 0.2,
+    lcpMs: 4800,
+    cls: 0.1,
     scriptBytes: 350 * KB,
     totalBytes: 1400 * KB,
   },
-  // runner best 8120 ms (8870/8870/8120) / 0.001 / 192 KB / 1189 KB
+  // LCP 6360 / 6613 ms; CLS 0.006; script 211 / 218 KB; total 1188 / 1197 KB
   // (prod before #1830, Lighthouse mobile: 15.1 s, 2.36 MB)
-  club: { lcpMs: 9000, cls: 0.1, scriptBytes: 300 * KB, totalBytes: 1300 * KB },
-  // runner best 4354 ms (4358/4354/4357) / 0.04 / 165 KB / 312 KB
+  club: { lcpMs: 7500, cls: 0.1, scriptBytes: 300 * KB, totalBytes: 1300 * KB },
+  // LCP 3054 / 3167 ms; CLS 0; script 175 / 179 KB; total 292 / 298 KB
   regions: {
-    lcpMs: 5000,
+    lcpMs: 3600,
     cls: 0.1,
     scriptBytes: 300 * KB,
     totalBytes: 500 * KB,
