@@ -402,3 +402,13 @@
   font-weight: 600;
   color: var(--map-text);
 }
+
+/* #1945: the list view's row chip is the club's pin and its category. */
+.map-row-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--map-text);
+}

@@ -61,8 +61,8 @@ const loadLists = () => import('../components/map/MapClubLists')
 const MapLists = React.lazy(() =>
   loadLists().then(m => ({ default: m.MapLists }))
 )
-const ClubLinks = React.lazy(() =>
-  loadLists().then(m => ({ default: m.ClubLinks }))
+const ClubRows = React.lazy(() =>
+  loadLists().then(m => ({ default: m.ClubRows }))
 )
 // The legend chips carry data counts, so they ride the same chunk.
 const Chips = React.lazy(() =>
@@ -425,7 +425,7 @@ const DistrictMapPage: React.FC = () => {
               {!isPhone && filterPanel}
               {legend()}
               <React.Suspense fallback={null}>
-                <ClubLinks
+                <ClubRows
                   clubs={[...filtered].sort((a, b) =>
                     a.clubName.localeCompare(b.clubName)
                   )}
