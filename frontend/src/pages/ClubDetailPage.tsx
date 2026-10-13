@@ -753,6 +753,10 @@ const ClubDetailPage: React.FC = () => {
 
   // ── Render ───────────────────────────────────────────────────────────────
 
+  // #1843 — the where-it-meets fields the rows and the mini-map reuse (the
+  // one builder that drops email, phone and meeting links).
+  const heroMeetingInfo = buildClubMeetingInfo(club)
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen">
@@ -1237,6 +1241,20 @@ const ClubDetailPage: React.FC = () => {
                   title: 'Multi-year history',
                   meta: 'Every program year for this club',
                 },
+                // The phone hero keeps "Contact on toastmasters.org" only;
+                // the club's own site is a row here. Same filtered URL as
+                // the hero (never a meeting link, #1879).
+                ...(heroMeetingInfo?.websiteUrl
+                  ? [
+                      {
+                        id: 'website',
+                        to: heroMeetingInfo.websiteUrl,
+                        title: 'Club website',
+                        meta: new URL(heroMeetingInfo.websiteUrl).hostname,
+                        external: true,
+                      },
+                    ]
+                  : []),
               ]}
             />
           </div>
@@ -1249,7 +1267,7 @@ const ClubDetailPage: React.FC = () => {
             clubId={clubId ?? club.clubId}
             clubName={club.clubName}
             clubs={analytics?.allClubs ?? []}
-            place={buildClubMeetingInfo(club)?.place}
+            place={heroMeetingInfo?.place}
           />
 
           {/* Bottom back-link (#618) — the redesign reintroduces a footer

@@ -116,6 +116,31 @@ for (const width of [375, 390]) {
   }
 }
 
+// The longest club name in D61 (51 characters) wraps to two lines at 22px;
+// the budget must hold for it too, not only for a short name.
+test(`club hero ≤ ${HERO_MAX_H}px for the longest D61 club name at 375`, async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/district/61/club/9127', {
+    waitUntil: 'networkidle',
+    timeout: 60_000,
+  })
+  await page
+    .locator('.club-hero__pill:not([data-testid="club-hero-pill-placeholder"])')
+    .first()
+    .waitFor({ state: 'visible', timeout: 30_000 })
+  await page.evaluate(() => document.fonts.ready.then(() => undefined))
+  const heroH = await page
+    .locator('.club-hero')
+    .evaluate(el => Math.round(el.getBoundingClientRect().height))
+  expect(heroH, `hero height ${heroH}px`).toBeLessThanOrEqual(HERO_MAX_H)
+  test.info().annotations.push({
+    type: 'hero-height-long-name',
+    description: `${heroH}px`,
+  })
+})
+
 for (const width of [375, 1280]) {
   test(`static mini-map links to the club map without MapLibre at ${width}`, async ({
     page,

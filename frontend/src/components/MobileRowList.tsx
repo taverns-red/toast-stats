@@ -114,36 +114,56 @@ const RowItem: React.FC<{ row: MobileRow; chipPlacement: ChipPlacement }> = ({
   const chip = row.chip != null && (
     <span className="mobile-row__chip">{row.chip}</span>
   )
+  const className = `mobile-row${row.current ? ' mobile-row--current' : ''}`
+  const body = (
+    <>
+      <span className="mobile-row__body">
+        <span className="mobile-row__line1">
+          <span className="mobile-row__title">{row.title}</span>
+          {chipPlacement === 'title' && chip}
+        </span>
+        {(row.meta != null || chipPlacement === 'meta') && (
+          <span className="mobile-row__line2">
+            {chipPlacement === 'meta' && chip}
+            {row.meta != null && (
+              <span className="mobile-row__meta">{row.meta}</span>
+            )}
+          </span>
+        )}
+      </span>
+      {row.trailing != null && (
+        <span className="mobile-row__trailing">{row.trailing}</span>
+      )}
+      <Chevron className="mobile-row__chevron" />
+    </>
+  )
   return (
     <li>
-      <Link
-        to={row.to}
-        state={row.state}
-        className={`mobile-row${row.current ? ' mobile-row--current' : ''}`}
-        data-testid="mobile-row"
-        aria-label={row.ariaLabel}
-        id={row.domId}
-        aria-current={row.current ? 'true' : undefined}
-      >
-        <span className="mobile-row__body">
-          <span className="mobile-row__line1">
-            <span className="mobile-row__title">{row.title}</span>
-            {chipPlacement === 'title' && chip}
-          </span>
-          {(row.meta != null || chipPlacement === 'meta') && (
-            <span className="mobile-row__line2">
-              {chipPlacement === 'meta' && chip}
-              {row.meta != null && (
-                <span className="mobile-row__meta">{row.meta}</span>
-              )}
-            </span>
-          )}
-        </span>
-        {row.trailing != null && (
-          <span className="mobile-row__trailing">{row.trailing}</span>
-        )}
-        <Chevron className="mobile-row__chevron" />
-      </Link>
+      {row.external ? (
+        <a
+          href={row.to}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={className}
+          data-testid="mobile-row"
+          aria-label={row.ariaLabel ?? `${row.title} (opens in a new tab)`}
+          id={row.domId}
+        >
+          {body}
+        </a>
+      ) : (
+        <Link
+          to={row.to}
+          state={row.state}
+          className={className}
+          data-testid="mobile-row"
+          aria-label={row.ariaLabel}
+          id={row.domId}
+          aria-current={row.current ? 'true' : undefined}
+        >
+          {body}
+        </Link>
+      )}
     </li>
   )
 }

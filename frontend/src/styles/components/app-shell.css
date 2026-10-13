@@ -2176,7 +2176,7 @@
     .club-hero__title {
       margin: 0 0 2px;
       font-size: 22px;
-      line-height: 1.2;
+      line-height: 1.15;
     }
 
     .club-meets {
@@ -2203,6 +2203,13 @@
     }
 
     .club-meets__facts .club-meets__ico {
+      display: none;
+    }
+
+    /* The website is a row below the panels on phones, so "Contact on
+       toastmasters.org" never wraps the link row to a second 44px line
+       (it did on the Linux runner: 213px). */
+    .club-meets__item--website {
       display: none;
     }
 

@@ -442,10 +442,14 @@ describe('ClubDetailPage (#208)', () => {
 
     expect(screen.getByText('Meets online')).toBeInTheDocument()
     expect(screen.getByText('Ottawa, ON')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /club website/i })).toHaveAttribute(
-      'href',
-      'https://1009147.toastmastersclubs.org/agenda-02291132.html'
-    )
+    // #1843: the hero link (≥768) and the phone row — both the filtered URL.
+    const sites = screen.getAllByRole('link', { name: /club website/i })
+    expect(sites).toHaveLength(2)
+    for (const site of sites)
+      expect(site).toHaveAttribute(
+        'href',
+        'https://1009147.toastmastersclubs.org/agenda-02291132.html'
+      )
     expect(
       screen.getByRole('link', { name: /contact on toastmasters\.org/i })
     ).toBeInTheDocument()

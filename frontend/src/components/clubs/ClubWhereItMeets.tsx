@@ -70,7 +70,7 @@ export function ClubWhereItMeets({ info }: { info: ClubMeetingInfo | null }) {
       {hasLinks && (
         <ul className="club-meets__links" aria-label="Club links">
           {info.websiteUrl && (
-            <li className="club-meets__item">
+            <li className="club-meets__item club-meets__item--website">
               <a
                 className="club-meets__link"
                 href={info.websiteUrl}
