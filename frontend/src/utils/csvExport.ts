@@ -7,6 +7,7 @@ import { distinguishedTierName } from './distinguishedTier'
 import { toClubHistoryCsvRows, type ClubHistoryRow } from './clubHistory'
 import { logger } from './logger'
 import type { SnapshotDate } from '../types/snapshotDate'
+import { coachFilterValue, type ClubCoach } from './clubCoach'
 
 /**
  * Converts a 2D array to CSV string
@@ -591,6 +592,7 @@ export const exportClubPerformance = (
     aprilRenewals?: number | undefined
     newMembers?: number | undefined
     clubStatus?: string
+    coach?: ClubCoach | undefined
   }>,
   districtId: string
 ): void => {
@@ -603,6 +605,7 @@ export const exportClubPerformance = (
     'Current DCP Goals',
     'Status',
     'Club Status',
+    'Coach',
     'Distinguished Level',
     'Oct Ren',
     'Apr Ren',
@@ -626,6 +629,8 @@ export const exportClubPerformance = (
       currentDcpGoals,
       club.currentStatus,
       club.clubStatus ?? '',
+      // Coach (#1954): Active / Completed / blank — status only.
+      club.coach ? coachFilterValue(club) : '',
       club.distinguishedLevel || 'None',
       club.octoberRenewals ?? '',
       club.aprilRenewals ?? '',

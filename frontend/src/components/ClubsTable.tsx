@@ -731,6 +731,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         // Line 2 keeps the chip and DCP; the member count rides under the
         // trend sparkline with its net (#1792) — measured at 375, the count
         // beside a 60 px trend ellipsized every row by up to 60 px.
+        // No coach flag here (#1954): at 375 line 2 has no room ("· Coach"
+        // clipped to "· C…"); phones reach coach status via ?coach=.
         meta: `${club.latestDcpGoals}/10 DCP`,
         // The row's trend (#1792): the same 60×16 sparkline as the desktop
         // Trend column, then "members (net)". The link's accessible name

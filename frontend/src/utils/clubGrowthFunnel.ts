@@ -304,7 +304,10 @@ function buildChartered(
   return { value, clubs }
 }
 
-function buildCoached(
+/** Distinct clubs with an active coach, and clubs whose coaching is completed
+ *  (latest engagement per club, newest first). Shared with the Clubs-table
+ *  Coach column (#1954) so both surfaces apply one dedupe rule. */
+export function buildCoached(
   districtId: string,
   records: readonly CoachRecord[]
 ): ClubGrowthFunnel['coached'] {

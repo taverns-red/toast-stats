@@ -19,6 +19,7 @@ export type SortField =
   | 'aprilRenewals'
   | 'newMembers'
   | 'clubStatus'
+  | 'coach'
   | 'membersNeeded'
   | 'yearsChartered'
   | 'netChange'
@@ -316,6 +317,16 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     filterable: true,
     filterType: 'categorical',
     filterOptions: ['Active', 'Suspended', 'Ineligible', 'Low'],
+  },
+  {
+    // Coach status from the daily Coaches report (#1954). Status only.
+    field: 'coach',
+    group: 'identity',
+    label: 'Coach',
+    sortable: true,
+    filterable: true,
+    filterType: 'categorical',
+    filterOptions: ['Active', 'Completed', 'None'],
   },
   {
     field: 'yearsChartered',
