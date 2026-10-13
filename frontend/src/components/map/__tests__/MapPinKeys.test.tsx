@@ -11,7 +11,8 @@ import '@testing-library/jest-dom'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { ClubTrend } from '../../../hooks/useDistrictAnalytics'
 import { buildModeModel } from '../pinModes'
-import { MapPinKeys, pinTargets, type RenderedPin } from '../MapPinKeys'
+import { MapPinKeys } from '../MapPinKeys'
+import { pinTargets, type RenderedPin } from '../pinTargets'
 
 const model = buildModeModel('health')
 const cat = (key: string) => model.categories.findIndex(c => c.key === key)

@@ -88,6 +88,9 @@ const Realign = React.lazy(
   () => import('../components/map/realign/RealignSandbox')
 )
 
+// The keyboard path between pins (#1940), once the map is up.
+const PinKeys = React.lazy(() => import('../components/map/MapPinKeys'))
+
 // Only a tap needs the club summary, so it loads on the first selection.
 const MapClubSummary = React.lazy(() =>
   import('../components/map/MapClubSummary').then(m => ({
@@ -453,6 +456,17 @@ const DistrictMapPage: React.FC = () => {
                       cooperativeGestures={false}
                     />
                   </MapErrorBoundary>
+                )}
+                {map && !sandbox && !noLocation && !pending && (
+                  <React.Suspense fallback={null}>
+                    <PinKeys
+                      map={map}
+                      clubs={allClubs}
+                      model={model}
+                      selectedIds={selectedClubIds}
+                      onSelect={setSelectedIds}
+                    />
+                  </React.Suspense>
                 )}
                 {isPhone && (
                   <div className="district-map__peek">
