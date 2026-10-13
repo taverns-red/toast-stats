@@ -50,6 +50,9 @@ import {
   summarizeClubCoach,
 } from '../utils/clubCompliance'
 import { ClubCompliancePanel } from '../components/clubs/ClubCompliancePanel'
+import { ClubMiniMap } from '../components/clubs/ClubMiniMap'
+import { MobileRowList } from '../components/MobileRowList'
+import { buildClubMeetingInfo } from '../utils/clubMeetingInfo'
 
 // ── DCP Status Card ────────────────────────────────────────────────────────
 // Re-skinned to club-reference.html (#619): a `.club-panel` with a bordered
@@ -299,8 +302,12 @@ const ClubDetailPage: React.FC = () => {
 
   // Worldwide standing (#1556): the race artifact for the SAME pinned date
   // this page reads (Lesson 59). Absent artifact → no card, never an error.
+  // #1843 — the card is at the bottom of the page, so its read waits for the
+  // same after-paint gate as analytics: before, it started with the hero's
+  // snapshot read (twice — "latest" and then the pinned date).
   const { race: globalRace, reachedById: raceReachedById } = useGlobalClubRace(
-    effectiveEndDate ?? undefined
+    effectiveEndDate ?? undefined,
+    { enabled: analyticsReady && !!effectiveEndDate }
   )
 
   // ── Moved-club lookup (#1441) ─────────────────────────────────────────────
@@ -745,6 +752,10 @@ const ClubDetailPage: React.FC = () => {
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
+
+  // #1843 — the where-it-meets fields the rows and the mini-map reuse (the
+  // one builder that drops email, phone and meeting links).
+  const heroMeetingInfo = buildClubMeetingInfo(club)
 
   return (
     <ErrorBoundary>
@@ -1204,8 +1215,8 @@ const ClubDetailPage: React.FC = () => {
           {/* Worldwide standing (#1556) — cohort percentile for any club; a
               rank only when the club has reached a tier. #1783 moved it below
               the DCP goals grid per the §3.2 layout: the club's own numbers
-              first, the worldwide comparison last. The mini-map (#1784, not
-              built yet) slots in after it. */}
+              first, the worldwide comparison last. The mini-map (#1843)
+              follows it. */}
           <WorldwideStandingCard
             race={globalRace}
             clubId={normalizeClubId(club.clubId)}
@@ -1215,6 +1226,48 @@ const ClubDetailPage: React.FC = () => {
             }
             members={latestMembership}
             reached={raceReachedById.get(normalizeClubId(club.clubId)) ?? null}
+          />
+
+          {/* #1843 — "View multi-year history" leaves the phone hero and
+              becomes a row here (review §6.3); ≥768 keeps the hero link and
+              hides this list (CSS). */}
+          <div className="club-more">
+            <MobileRowList
+              label="More about this club"
+              rows={[
+                {
+                  id: 'history',
+                  to: `/district/${districtId}/club/${clubId}/history`,
+                  title: 'Multi-year history',
+                  meta: 'Every program year for this club',
+                },
+                // The phone hero keeps "Contact on toastmasters.org" only;
+                // the club's own site is a row here. Same filtered URL as
+                // the hero (never a meeting link, #1879).
+                ...(heroMeetingInfo?.websiteUrl
+                  ? [
+                      {
+                        id: 'website',
+                        to: heroMeetingInfo.websiteUrl,
+                        title: 'Club website',
+                        meta: new URL(heroMeetingInfo.websiteUrl).hostname,
+                        external: true,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </div>
+
+          {/* #1843 — static mini-map: an inline SVG from the coordinates
+              analytics already carries (no MapLibre, no tiles), linking to
+              the district club map with this club selected. */}
+          <ClubMiniMap
+            districtId={districtId ?? ''}
+            clubId={clubId ?? club.clubId}
+            clubName={club.clubName}
+            clubs={analytics?.allClubs ?? []}
+            place={heroMeetingInfo?.place}
           />
 
           {/* Bottom back-link (#618) — the redesign reintroduces a footer

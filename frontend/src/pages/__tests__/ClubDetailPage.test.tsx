@@ -442,10 +442,14 @@ describe('ClubDetailPage (#208)', () => {
 
     expect(screen.getByText('Meets online')).toBeInTheDocument()
     expect(screen.getByText('Ottawa, ON')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /club website/i })).toHaveAttribute(
-      'href',
-      'https://1009147.toastmastersclubs.org/agenda-02291132.html'
-    )
+    // #1843: the hero link (≥768) and the phone row — both the filtered URL.
+    const sites = screen.getAllByRole('link', { name: /club website/i })
+    expect(sites).toHaveLength(2)
+    for (const site of sites)
+      expect(site).toHaveAttribute(
+        'href',
+        'https://1009147.toastmastersclubs.org/agenda-02291132.html'
+      )
     expect(
       screen.getByRole('link', { name: /contact on toastmasters\.org/i })
     ).toBeInTheDocument()
@@ -926,5 +930,65 @@ describe('Membership Trend + DCP Status re-skin (#619)', () => {
     expect(inSection.getByText('Select')).toBeInTheDocument()
     expect(inSection.getByText("President's")).toBeInTheDocument()
     expect(inSection.getByText('Smedley')).toBeInTheDocument()
+  })
+})
+
+// ── #1843 — club page on the mobile primitives ─────────────────────────────
+describe('club page primitives (#1843)', () => {
+  const located = {
+    ...baseMockClub,
+    coordinates: { lat: 45.42197, lng: -75.69486 },
+    address: { street: '90 Elgin Street', city: 'Ottawa', region: 'ON' },
+  }
+  const neighbour = {
+    ...baseMockClub,
+    clubId: '00001001',
+    clubName: 'Kanata Toastmasters',
+    coordinates: { lat: 45.3088, lng: -75.8987 },
+  }
+  const mockAnalytics = (clubs: unknown[]) =>
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: { districtId: '61', allClubs: clubs },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+  afterEach(() => cleanup())
+
+  it('renders "Multi-year history" as a row link below the panels', () => {
+    mockAnalytics([located, neighbour])
+    renderWithRoute()
+    const rows = screen.getByRole('list', { name: 'More about this club' })
+    expect(
+      within(rows).getByRole('link', { name: /Multi-year history/ })
+    ).toHaveAttribute('href', '/district/61/club/00000606/history')
+  })
+
+  it("moves the club's website into the rows (the phone hero keeps Contact only)", () => {
+    mockAnalytics([
+      { ...located, website: 'https://stlawrence.example.org/' },
+      neighbour,
+    ])
+    renderWithRoute()
+    const rows = screen.getByRole('list', { name: 'More about this club' })
+    expect(
+      within(rows).getByRole('link', { name: /Club website/ })
+    ).toHaveAttribute('href', 'https://stlawrence.example.org/')
+  })
+
+  it('renders the static mini-map linking to the club map with this club selected', () => {
+    mockAnalytics([located, neighbour])
+    const { container } = renderWithRoute()
+    const link = screen.getByRole('link', {
+      name: /St Lawrence Toastmasters on the District 61 club map/,
+    })
+    expect(link).toHaveAttribute('href', '/district/61/map?club=00000606')
+    expect(container.querySelectorAll('.club-minimap__dot')).toHaveLength(1)
+  })
+
+  it('omits the mini-map when the club has no coordinates', () => {
+    mockAnalytics([baseMockClub, neighbour])
+    const { container } = renderWithRoute()
+    expect(container.querySelector('.club-minimap')).toBeNull()
   })
 })

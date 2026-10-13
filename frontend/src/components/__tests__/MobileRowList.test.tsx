@@ -54,6 +54,34 @@ describe('MobileRowList — flat rows', () => {
     expect(first.querySelectorAll('a, button')).toHaveLength(0)
   })
 
+  // #1843 — an off-site row (a club's own website) opens in a new tab and
+  // says so; it is still one whole-row link with the chevron.
+  it('renders an external row as a new-tab anchor with an accessible hint', () => {
+    render(
+      <MobileRowList
+        label="More"
+        rows={[
+          {
+            id: 'site',
+            to: 'https://7238597.toastmastersclubs.org/',
+            title: 'Club website',
+            external: true,
+          },
+        ]}
+      />
+    )
+    const link = screen.getByRole('link', {
+      name: 'Club website (opens in a new tab)',
+    })
+    expect(link).toHaveAttribute(
+      'href',
+      'https://7238597.toastmastersclubs.org/'
+    )
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(link).toHaveAttribute('data-testid', 'mobile-row')
+  })
+
   it('shows the first 50 rows, then "Show 25 more" reveals 25 at a time', () => {
     render(<MobileRowList label="Clubs" rows={makeRows(80)} noun="clubs" />)
     const list = screen.getByRole('list', { name: 'Clubs' })
