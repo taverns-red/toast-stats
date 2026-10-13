@@ -83,9 +83,12 @@
     </script>
 
     <!-- Google Analytics 4 (#314) — production only, no PII collected.
-         The gtag() queue is set up now, so config and the SPA's page_view
-         events are buffered in dataLayer from the first moment (Google
-         processes queued pushes in order once the library loads).
+         The gtag() queue is set up now, so config is buffered in dataLayer
+         from the first moment (Google processes queued pushes in order once
+         the library loads). #1946: gtag owns page_view — config sends the
+         one per load, and the property's Enhanced Measurement "page changes
+         based on browser history events" sends one per SPA navigation. The
+         app must not send its own (that stacked 2–4 per load).
          #1830 moved the ~176 KB library to `load` + idle. #1906: in this SPA
          `load` fires before any CDN data, so gtag still raced the first
          screen's LCP — and Lighthouse charges every request that finishes
