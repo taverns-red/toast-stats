@@ -376,6 +376,8 @@
   margin: 0;
   font-size: 16px;
   font-weight: 700;
+  /* Focused from a map pin (#1967): land clear of the sticky header. */
+  scroll-margin-top: 80px;
 }
 
 .map-club__place {
