@@ -40,6 +40,14 @@ describe('ClubWhereItMeets', () => {
     expect(contact).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
+  // #1843 — the phone hero hides the website link (CSS hook); the page
+  // offers it as a row instead.
+  it('marks the website item so the phone hero can drop it', () => {
+    render(<ClubWhereItMeets info={INFO} />)
+    const site = screen.getByRole('link', { name: /club website/i })
+    expect(site.closest('li')).toHaveClass('club-meets__item--website')
+  })
+
   it('skips parts that are absent', () => {
     render(
       <ClubWhereItMeets

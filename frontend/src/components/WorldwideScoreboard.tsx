@@ -441,6 +441,14 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
               </table>
             </div>
           )}
+
+          {!countryLoading && !countryError && clubsByCountry && (
+            <p className="wws__note">
+              <Link to="/history/countries" className="wws__link wws__map-link">
+                See the map of all {clubsByCountry.countries.length} countries →
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     </Shell>

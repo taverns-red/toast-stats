@@ -1,0 +1,51 @@
+/* Club membership-trend sparkline (#1792) — the Clubs table "Trend" column
+   and the phone row's trailing trend. 60×16 per the feature design §2.5.
+
+   The line is the product accent (--rt-stats). On the light surface the raw
+   amber (#D4873F) is ~2.6:1 — under WCAG 1.4.11's 3:1 for a graphic — so the
+   light theme darkens it toward ink (~5:1); dark keeps the raw accent, which
+   clears 3:1 on the dark surface comfortably. Values are text in ink tokens,
+   never the series colour (dataviz: text wears text tokens). */
+
+@layer components {
+  .club-trend-sparkline {
+    display: block;
+    flex-shrink: 0;
+    width: 60px;
+    height: 16px;
+    overflow: visible;
+    color: color-mix(in oklab, var(--rt-stats, #d4873f) 70%, var(--ink));
+  }
+
+  [data-theme='dark'] .club-trend-sparkline {
+    color: var(--rt-stats, #d4873f);
+  }
+
+  /* Desktop/tablet cell: sparkline, then the signed net as text. */
+  .clubs-trend-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .clubs-trend-cell__net {
+    min-width: 3ch;
+    font-size: 14px;
+    color: var(--ink-2);
+    text-align: end;
+  }
+
+  /* Phone row trailing slot: sparkline over the net, right-aligned. */
+  .clubs-row-trend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .clubs-row-trend__net {
+    font-size: 14px;
+    line-height: 18px;
+    color: var(--ink-2);
+  }
+}

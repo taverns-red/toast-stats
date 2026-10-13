@@ -59,6 +59,7 @@ const EXPECTED_HEADERS = [
   'Area',
   'Status',
   'Members',
+  'Trend',
   'Needed',
   'New',
   'Oct Renew',
@@ -66,6 +67,7 @@ const EXPECTED_HEADERS = [
   'DCP',
   'Tier',
   'Club Status',
+  'Coach',
   'Years',
 ]
 

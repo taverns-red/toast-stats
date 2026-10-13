@@ -27,6 +27,7 @@ import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
+import { fetchCdnGlobalClubRace } from '../../services/cdn'
 
 Object.defineProperty(window, 'matchMedia', {
   value: vi.fn().mockImplementation((query: string) => ({
@@ -211,6 +212,31 @@ describe('ClubDetailPage — hero first, analytics after (#1901)', () => {
     await new Promise(resolve => setTimeout(resolve, 400))
 
     expect(analyticsEnabledCalls()).toHaveLength(0)
+  })
+
+  // #1843 — the worldwide-standing card sits at the bottom of the page; its
+  // race file must not compete with the hero's snapshot read (it was
+  // fetched twice before the LCP paint: once for "latest", once pinned).
+  it('does not fetch the worldwide race before the hero has painted', async () => {
+    mockedStats.mockReturnValue({ data: undefined, isLoading: true } as never)
+
+    renderAt()
+    await new Promise(resolve => setTimeout(resolve, 400))
+
+    expect(vi.mocked(fetchCdnGlobalClubRace)).not.toHaveBeenCalled()
+  })
+
+  it('fetches the worldwide race once, pinned to the page date, after the hero paints', async () => {
+    mockedStats.mockReturnValue({ data: snapshot, isLoading: false } as never)
+
+    renderAt()
+
+    await waitFor(() =>
+      expect(vi.mocked(fetchCdnGlobalClubRace)).toHaveBeenCalled()
+    )
+    expect(vi.mocked(fetchCdnGlobalClubRace).mock.calls).toEqual([
+      ['2026-10-11'],
+    ])
   })
 
   it('starts the analytics read once the snapshot hero has painted', async () => {

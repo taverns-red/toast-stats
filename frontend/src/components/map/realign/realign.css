@@ -1,0 +1,249 @@
+/* Realignment sandbox (#1819). Loaded with its on-demand chunk, so none of
+   this is on the default map's first load. Uses the map's --map-* theme
+   variables (themselves --rt-* tokens remapped under [data-theme='dark']).
+
+   While the sandbox is open it owns the side of the map: the page's
+   toolbar, legend panel and phone peek step aside here, in CSS, so the
+   page chunk (at its byte budget) carries no sandbox branches. */
+.district-map:has(.realign-panel, .realign-bar) .district-map__toolbar,
+.district-map:has(.realign-panel, .realign-bar) .district-map__peek,
+.district-map__body:has(.realign-panel) > .map-panel:not(.realign-panel) {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .district-map__body:has(.realign-panel) {
+    grid-template-columns: minmax(0, 1fr) 420px;
+  }
+}
+
+.realign {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rt-space-3);
+  color: var(--map-text);
+  font-size: 14px;
+}
+
+.realign__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.realign__note,
+.realign__help {
+  margin: 0;
+  color: var(--map-text-2);
+}
+
+.realign__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rt-space-2);
+}
+
+.realign .map-pill[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.realign__summary {
+  margin: 0;
+  font-weight: 600;
+}
+
+.realign__notice {
+  margin: 0;
+  padding: var(--rt-space-2) var(--rt-space-3);
+  border-left: 3px solid var(--rt-stats);
+  background: color-mix(in srgb, var(--rt-stats) 12%, transparent);
+}
+
+.realign__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rt-space-1);
+  font-weight: 600;
+}
+
+/* ≥ 44 px and 16 px text: iOS zooms into smaller selects (spec §5). */
+.realign__select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 var(--rt-space-3);
+  border: 1px solid var(--map-border);
+  border-radius: var(--rt-radius-md);
+  background: var(--map-surface);
+  color: var(--map-text);
+  font-size: 16px;
+  appearance: auto;
+}
+
+.realign__select:focus-visible,
+.realign__toggle:focus-visible {
+  outline: 3px solid var(--map-focus);
+  outline-offset: 2px;
+}
+
+.realign__heading {
+  margin: 0 0 var(--rt-space-1);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.realign__group {
+  border-top: 1px solid var(--map-border);
+  padding-top: var(--rt-space-3);
+}
+
+.realign__clubs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.realign__clubs li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rt-space-2);
+  padding: var(--rt-space-1) 0;
+}
+
+.realign__club {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.realign__from {
+  font-weight: 400;
+  color: var(--map-text-2);
+  font-family: var(--rt-font-mono, monospace);
+}
+
+.realign__table-wrap {
+  overflow-x: auto;
+}
+
+.realign__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.realign__table caption {
+  margin-bottom: var(--rt-space-1);
+  text-align: left;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.realign__table th,
+.realign__table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--map-border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.realign__table th:first-child {
+  text-align: left;
+  font-family: var(--rt-font-mono, monospace);
+}
+
+.realign__table thead th {
+  font-family: inherit;
+  color: var(--map-text-2);
+  font-weight: 600;
+}
+
+.realign__table tr.is-changed th[scope='row'] {
+  box-shadow: inset 3px 0 0 var(--rt-stats);
+  padding-left: 8px;
+}
+
+.realign__delta {
+  margin-left: 2px;
+  color: var(--map-text-2);
+  font-size: 13px;
+}
+
+.realign__share {
+  color: var(--map-text-2);
+  font-size: 13px;
+}
+
+/* Norm flags are words, never colour alone. */
+.realign__norm,
+.realign__tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.realign__health {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.realign__bar {
+  display: inline-flex;
+  width: 36px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--map-border);
+}
+
+.realign__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--rt-space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Phone: one bar under the map; the plan itself opens in a sheet. */
+.realign-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rt-space-2);
+  padding: var(--rt-space-3);
+  border: 1px solid var(--map-border);
+  border-radius: var(--rt-radius-md);
+  background: var(--map-surface);
+  color: var(--map-text);
+  font-size: 14px;
+}
+
+.district-map__body:has(.realign-bar) .district-map__canvas {
+  height: max(320px, calc(100dvh - 400px));
+}
+
+.realign-bar__summary {
+  margin: 0;
+  font-weight: 700;
+}
+
+.realign-bar > .map-pill {
+  justify-content: center;
+}

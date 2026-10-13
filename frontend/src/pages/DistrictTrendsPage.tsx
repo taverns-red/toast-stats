@@ -271,6 +271,13 @@ const DistrictTrendsPage: React.FC = () => {
                   <MembershipTrendChart
                     membershipTrend={membershipTrendPoints}
                     isLoading={isLoadingAggregated}
+                    // #1705: the PY the plotted points belong to — the
+                    // series' own year when the time series is in, else the
+                    // selector's (R3: passed down, never inferred).
+                    programYear={
+                      timeSeries?.currentProgramYear ??
+                      effectiveProgramYear?.label
+                    }
                     priorYearTrends={
                       // #238: overlay prior years for YoY comparison
                       timeSeries

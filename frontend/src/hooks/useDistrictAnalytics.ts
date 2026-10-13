@@ -16,6 +16,11 @@ import {
   type ClubStatusOverlay,
 } from '../utils/clubStatusOverlay'
 import type { SnapshotDate } from '../types/snapshotDate'
+import {
+  applyCoachOverlay,
+  buildCoachLookup,
+  type ClubCoach,
+} from '../utils/clubCoach'
 
 // Re-export for backward compatibility with existing imports
 export type { ClubHealthStatus, ProspectiveClub }
@@ -44,6 +49,12 @@ export interface ClubTrend {
    * Values: "Active", "Suspended", "Ineligible", "Low", or undefined
    */
   clubStatus?: string
+  /**
+   * Read-time coach status from the daily Coaches report (#1954), joined at
+   * the same single site as `statusOverlay`. Absent when the club has no coach
+   * row. Status and begin date only — never a coach identity.
+   */
+  coach?: ClubCoach
   /**
    * Read-time augmented status from the daily Dues Renewal report (epic #1062
    * Sprint 4 #1069). Present only when the renewal report promotes a non-Active
@@ -265,6 +276,8 @@ export const useDistrictAnalytics = (
       // each consumer inherits `statusOverlay`.
       if (reports) {
         const lookup = buildDuesRenewalLookup(reports, snapshotDate)
+        // Coach status (#1954) joins at the same single site.
+        const coaches = buildCoachLookup(reports)
         for (const clubs of [
           analytics.allClubs,
           analytics.vulnerableClubs,
@@ -272,6 +285,7 @@ export const useDistrictAnalytics = (
           analytics.interventionRequiredClubs,
         ]) {
           applyDuesRenewalOverlay(clubs ?? [], lookup)
+          applyCoachOverlay(clubs ?? [], coaches)
         }
       }
       // Hand the same dataset to the education-award leaderboards (#1592) so

@@ -90,11 +90,15 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
       <div className="club-hero__pills">
         {/* #445: anniversary badge (years chartered, milestones, a countdown
             within ±30 days). Omitted when charterDate is missing. */}
+        {/* #1843: the phone hero keeps two pills (health, tier); the
+            badge is hidden below 768 by CSS. */}
         {club.charterDate && (
-          <ClubAnniversaryBadge
-            anniversary={getClubAnniversary(club.charterDate)}
-            {...(charterLabel ? { charterDateLabel: charterLabel } : {})}
-          />
+          <span className="club-hero__anniversary">
+            <ClubAnniversaryBadge
+              anniversary={getClubAnniversary(club.charterDate)}
+              {...(charterLabel ? { charterDateLabel: charterLabel } : {})}
+            />
+          </span>
         )}
         {statusPills ?? (
           <span
