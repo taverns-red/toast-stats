@@ -171,12 +171,12 @@ If "Green" state cannot be reached in 3 iterations: revert all changes, document
 
 ## Specialized Agent Personas
 
-Activate the relevant persona when work matches its trigger. Read the SKILL.md file at the listed path, then apply its framework throughout the task.
+Activate the relevant persona when work matches its trigger. Invoke the listed skill with the Skill tool, then apply its framework throughout the task.
 
-| Persona                | Skill File                                     | Trigger                                                                                                                    |
-| ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **Product Manager**    | `~/.gemini/skills/product-manager/SKILL.md`    | Sprint planning, feature design, scope decisions, product questions. Consult `docs/product-spec.md`.                       |
-| **Software Architect** | `~/.gemini/skills/software-architect/SKILL.md` | Structural changes (≥3 modules), adding dependencies, designing subsystems, refactoring. Run blast radius analysis first.  |
-| **Quality Engineer**   | `~/.gemini/skills/quality-engineer/SKILL.md`   | Flaky tests, test strategy decisions, coverage analysis, release quality gates. Establish baseline by running tests first. |
-| **Incident Responder** | `~/.gemini/skills/incident-responder/SKILL.md` | Deploy failures, production bugs, pipeline failures, rollback decisions. Restore service before investigating root cause.  |
-| **UX Designer**        | `~/.gemini/skills/ux-designer/SKILL.md`        | UI changes, CSS/styling, new screens, accessibility, responsive design. Verify at 375px, 768px, 1280px + dark mode.        |
+| Persona                | Skill (invoke via Skill tool) | Trigger                                                                                                                    |
+| ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Product Manager**    | `ron-pm`                      | Sprint planning, feature design, scope decisions, product questions. Consult `docs/product-spec.md`.                       |
+| **Software Architect** | `ron-sa`                      | Structural changes (≥3 modules), adding dependencies, designing subsystems, refactoring. Run blast radius analysis first.  |
+| **Quality Engineer**   | `ron-qe`                      | Flaky tests, test strategy decisions, coverage analysis, release quality gates. Establish baseline by running tests first. |
+| **Incident Responder** | `ron-ir`                      | Deploy failures, production bugs, pipeline failures, rollback decisions. Restore service before investigating root cause.  |
+| **UX Designer**        | `ron-ux`                      | UI changes, CSS/styling, new screens, accessibility, responsive design. Verify at 375px, 768px, 1280px + dark mode.        |
