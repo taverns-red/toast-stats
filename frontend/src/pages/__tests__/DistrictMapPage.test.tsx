@@ -365,7 +365,7 @@ describe('DistrictMapPage — list view', () => {
       /Intervention/
     )
     expect(beta.querySelector('.mobile-row__meta')).toHaveTextContent(
-      'Division B · Area 12'
+      'Div B · Area 12'
     )
   })
 })
