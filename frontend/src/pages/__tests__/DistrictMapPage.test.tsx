@@ -352,6 +352,22 @@ describe('DistrictMapPage — list view', () => {
     ])
     expect(screen.queryByTestId('map-stub')).not.toBeInTheDocument()
   })
+
+  it('?view=list uses the shared MobileRowList rows (#1945)', async () => {
+    renderAt('/district/61/map?view=list')
+    const list = await screen.findByRole('list', { name: 'Clubs' })
+    const rows = within(list).getAllByTestId('mobile-row')
+    expect(rows).toHaveLength(3)
+    const beta = rows.find(r => r.textContent?.includes('Beta Orators'))!
+    expect(beta).toHaveAttribute('href', '/district/61/club/102')
+    // The chip names the pin category in words, not colour alone.
+    expect(beta.querySelector('.mobile-row__chip')?.textContent).toMatch(
+      /Intervention/
+    )
+    expect(beta.querySelector('.mobile-row__meta')).toHaveTextContent(
+      'Div B · Area 12'
+    )
+  })
 })
 
 describe('DistrictMapPage — phone', () => {
