@@ -6,6 +6,8 @@ on:
     paths:
       - 'frontend/**'
       - 'lighthouserc.js'
+      - '.github/workflows/lighthouse-ci.yml'
+      - 'scripts/lighthouse-cdn-server.mjs' # lighthouserc.js starts it (#2000)
 
 permissions:
   contents: read
