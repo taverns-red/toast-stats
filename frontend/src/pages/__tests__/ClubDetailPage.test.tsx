@@ -960,6 +960,18 @@ describe('club page primitives (#1843)', () => {
     ).toHaveAttribute('href', '/district/61/club/00000606/history')
   })
 
+  it("moves the club's website into the rows (the phone hero keeps Contact only)", () => {
+    mockAnalytics([
+      { ...located, website: 'https://stlawrence.example.org/' },
+      neighbour,
+    ])
+    renderWithRoute()
+    const rows = screen.getByRole('list', { name: 'More about this club' })
+    expect(
+      within(rows).getByRole('link', { name: /Club website/ })
+    ).toHaveAttribute('href', 'https://stlawrence.example.org/')
+  })
+
   it('renders the static mini-map linking to the club map with this club selected', () => {
     mockAnalytics([located, neighbour])
     const { container } = renderWithRoute()

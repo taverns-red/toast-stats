@@ -43,6 +43,8 @@ export interface MobileRow {
   domId?: string
   /** Marks the row as the current item (`aria-current` + highlight). */
   current?: boolean
+  /** `to` is an off-site URL: a new-tab anchor, not a router link. */
+  external?: boolean
 }
 
 export interface MobileRowGroup {
