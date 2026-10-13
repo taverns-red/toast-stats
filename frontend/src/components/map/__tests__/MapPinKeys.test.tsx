@@ -193,7 +193,6 @@ describe('MapPinKeys', () => {
         selectedIds={['2']}
         onSelect={onSelect}
         layers={layers}
-        layers={layers}
       />
     )
     fireEvent.keyDown(bravo, { key: 'Escape' })
