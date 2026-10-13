@@ -204,3 +204,89 @@ for (const theme of ['light', 'dark'] as const) {
     })
   }
 }
+
+/* Map filters (#1788): visit round, online-capable, division and area as
+ * URL state, in the shared Filter & sort sheet at 375 and a side-panel
+ * section at 1280; the list view applies the same set. */
+const shownOf = async (page: Page) => {
+  const status = page.getByRole('status').filter({ hasText: /Showing/ })
+  // "of 0" is the line before the analytics land; wait for the real total.
+  await expect(status).toHaveText(/Showing \d+ of [1-9]\d* clubs/, {
+    timeout: 30_000,
+  })
+  const [, n, m] = /Showing (\d+) of (\d+)/.exec(
+    (await status.textContent()) ?? ''
+  )!
+  return { n: Number(n), m: Number(m) }
+}
+
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [375, 1280]) {
+    test(`district map filters at ${width} (${theme})`, async ({ page }) => {
+      test.setTimeout(90_000)
+      await open(page, theme, width)
+      await page.goto(`${MAP}?online=yes`, { waitUntil: 'domcontentloaded' })
+      const online = await shownOf(page)
+      expect(online.n).toBeGreaterThan(0)
+      expect(online.n).toBeLessThan(online.m)
+
+      await page.getByRole('button', { name: 'Filters, 1 active' }).click()
+      const surface =
+        width < 768
+          ? page.getByRole('dialog', { name: 'Filter & sort' })
+          : page.getByRole('region', { name: 'Filters' })
+      await expect(surface).toBeVisible()
+      await expect(
+        surface.getByRole('button', { name: 'Online attendance possible' })
+      ).toHaveAttribute('aria-pressed', 'true')
+
+      const m = await page.evaluate(() => {
+        const chips = Array.from(
+          document.querySelectorAll<HTMLElement>('.filter-sheet__chip')
+        ).filter(el => el.getBoundingClientRect().width > 0)
+        return {
+          overflow:
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+          count: chips.length,
+          minHeight: Math.min(
+            ...chips.map(c => c.getBoundingClientRect().height)
+          ),
+          minFont: Math.min(
+            ...chips.map(c => parseFloat(getComputedStyle(c).fontSize))
+          ),
+        }
+      })
+      expect(m.overflow).toBeLessThanOrEqual(0)
+      expect(m.count).toBeGreaterThan(4)
+      expect(m.minHeight).toBeGreaterThanOrEqual(44)
+      expect(m.minFont).toBeGreaterThanOrEqual(14)
+
+      // Round 1 composes with online (one write each) and reads the
+      // snapshot's visit awards for the viewed date.
+      await surface.getByRole('button', { name: 'Round 1' }).click()
+      await expect(page).toHaveURL(/visit=r1/)
+      await expect(page).toHaveURL(/online=yes/)
+      // D61 has round-1 visits reported, so the set narrows.
+      await expect
+        .poll(async () => (await shownOf(page)).n, { timeout: 15_000 })
+        .toBeLessThan(online.n)
+
+      await surface.getByRole('button', { name: 'Clear all' }).click()
+      await expect(page).not.toHaveURL(/visit=|online=/)
+      if (width < 768) await page.keyboard.press('Escape')
+      await expect
+        .poll(async () => (await shownOf(page)).n, { timeout: 15_000 })
+        .toBe(online.m)
+
+      // The list view applies the same filters.
+      await page.goto(`${MAP}?view=list&online=yes`, {
+        waitUntil: 'domcontentloaded',
+      })
+      const list = page.getByRole('list', { name: 'Clubs' })
+      await expect(list.getByRole('link')).toHaveCount(online.n, {
+        timeout: 30_000,
+      })
+    })
+  }
+}
