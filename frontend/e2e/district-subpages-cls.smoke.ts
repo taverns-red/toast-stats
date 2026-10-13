@@ -52,6 +52,8 @@ const SUBPAGES = [
   'clubs',
   'divisions',
   'grid',
+  // The club map (#1784): the map box is reserved before MapLibre arrives.
+  'map',
   'trends',
   'analytics',
   'rankings',
