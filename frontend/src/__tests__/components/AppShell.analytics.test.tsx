@@ -19,7 +19,15 @@
  * The prod-network proof is e2e/ga-page-view.smoke.ts.
  */
 import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type Mock,
+} from 'vitest'
 import { render, act } from '@testing-library/react'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
@@ -65,14 +73,14 @@ const renderShell = () => {
   return router
 }
 
-const pageViewCalls = (gtag: ReturnType<typeof vi.fn>) =>
+const pageViewCalls = (gtag: Mock<(...args: unknown[]) => void>) =>
   gtag.mock.calls.filter(c => c[0] === 'event' && c[1] === 'page_view')
 
 describe('GA page_view ownership (#1946)', () => {
-  let gtag: ReturnType<typeof vi.fn>
+  let gtag: Mock<(...args: unknown[]) => void>
 
   beforeEach(() => {
-    gtag = vi.fn()
+    gtag = vi.fn<(...args: unknown[]) => void>()
     window.gtag = gtag
   })
   afterEach(() => {
