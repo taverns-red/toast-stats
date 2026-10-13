@@ -33,6 +33,12 @@ export interface MobileRow {
   title: string
   /** Line 1, right: status chip (glyph/text + colour, never colour alone). */
   chip?: React.ReactNode
+  /**
+   * Line 1, right after the name: a short word-flag (e.g. "Coach", #1968).
+   * Like the chip it never shrinks — the name ellipsizes instead. It must be
+   * words, not colour alone, and also be said in `ariaLabel` when one is set.
+   */
+  badge?: React.ReactNode
   /** Line 2: two or three key numbers. */
   meta?: React.ReactNode
   /** Optional trailing visual before the chevron (e.g. a sparkline). */
@@ -120,6 +126,9 @@ const RowItem: React.FC<{ row: MobileRow; chipPlacement: ChipPlacement }> = ({
       <span className="mobile-row__body">
         <span className="mobile-row__line1">
           <span className="mobile-row__title">{row.title}</span>
+          {row.badge != null && (
+            <span className="mobile-row__badge">{row.badge}</span>
+          )}
           {chipPlacement === 'title' && chip}
         </span>
         {(row.meta != null || chipPlacement === 'meta') && (
