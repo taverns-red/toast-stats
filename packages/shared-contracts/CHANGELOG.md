@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.15.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.14.1...shared-contracts-v1.15.0) (2026-10-13)
+
+
+### Features
+
+* **pipeline:** education rollup from the ledger — district, region, world per PY ([#1801](https://github.com/taverns-red/toast-stats/issues/1801)) ([#1973](https://github.com/taverns-red/toast-stats/issues/1973)) ([aa7bb5b](https://github.com/taverns-red/toast-stats/commit/aa7bb5bd4e0c61199ea15351418828b32fad66b9))
+* **pipeline:** snapshots/{date}/suspended-clubs.json — per-club suspended-this-PY list ([#1953](https://github.com/taverns-red/toast-stats/issues/1953)) ([#1969](https://github.com/taverns-red/toast-stats/issues/1969)) ([94c9745](https://github.com/taverns-red/toast-stats/commit/94c97454201d78e12ce891d12a77ca5db7a21d88))
+
+
+### Bug Fixes
+
+* **education:** count the CES vintage path in the leaderboards — one Pathways vocabulary ([#1976](https://github.com/taverns-red/toast-stats/issues/1976)) ([#1980](https://github.com/taverns-red/toast-stats/issues/1980)) ([1aefc96](https://github.com/taverns-red/toast-stats/commit/1aefc9677ba75755959682a380f59bdbe09f580a))
+
 ## [1.14.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.14.0...shared-contracts-v1.14.1) (2026-10-13)
 
 

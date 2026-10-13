@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.12.1...collector-cli-v1.13.0) (2026-10-13)
+
+
+### Features
+
+* **pipeline:** snapshots/{date}/suspended-clubs.json — per-club suspended-this-PY list ([#1953](https://github.com/taverns-red/toast-stats/issues/1953)) ([#1969](https://github.com/taverns-red/toast-stats/issues/1969)) ([94c9745](https://github.com/taverns-red/toast-stats/commit/94c97454201d78e12ce891d12a77ca5db7a21d88))
+
 ## [1.12.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.12.0...collector-cli-v1.12.1) (2026-10-13)
 
 
