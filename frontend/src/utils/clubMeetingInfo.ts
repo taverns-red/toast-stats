@@ -78,6 +78,11 @@ export function containsMeetingAccess(value: string): boolean {
   return MEETING_HOST.test(value) || MEETING_CREDENTIAL.test(value)
 }
 
+/** #1958 — placeholder; behaviour lands in the green commit. */
+export function formatMeetingTime(time: string): string {
+  return time
+}
+
 /** `clean`, then null if the text would give entry to a meeting. */
 function publicText(value: string | undefined): string | null {
   const text = clean(value)
