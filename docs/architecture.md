@@ -39,18 +39,21 @@ No circular dependencies. `shared-contracts` is the foundation.
 
 ## Data Pipeline Architecture
 
-The pipeline runs as a GitHub Actions workflow (`data-pipeline.yml`) with 5 modes:
+The pipeline runs as a GitHub Actions workflow (`data-pipeline.yml`) with 7 modes:
 
-| Mode                  | Trigger                                                  | What It Does                                                         |
-| --------------------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
-| `daily`               | Cron (08:00 UTC, backup 11:00 UTC)                       | Scrape today → transform → compute → upload to staging               |
-| `rebuild`             | Manual                                                   | Re-process historical dates from GCS raw-csv (no re-scrape)          |
-| `rescrape`            | Manual                                                   | Re-collect CSVs from dashboard for specific dates/program year       |
-| `rescrape-historical` | Manual                                                   | Re-download ALL historical CSVs (4-segment URL format), then rebuild |
-| `prune`               | Manual + cron (06:00 UTC on the 25th of Feb/May/Aug/Nov) | Remove non-month-end snapshots to reduce storage                     |
+| Mode                        | Trigger                                                   | What It Does                                                         |
+| --------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------- |
+| `daily`                     | Dispatch, fired by launchd at 05:00 America/Toronto       | Scrape today → transform → compute → upload to staging               |
+| `rebuild`                   | Manual                                                    | Re-process historical dates from GCS raw-csv (no re-scrape)          |
+| `rescrape`                  | Manual                                                    | Re-collect CSVs from dashboard for specific dates/program year       |
+| `rescrape-historical`       | Manual                                                    | Re-download ALL historical CSVs (4-segment URL format), then rebuild |
+| `prune`                     | Manual (quarterly cron `0 6 25 2,5,8,11 *` not yet wired) | Remove non-month-end snapshots to reduce storage                     |
+| `backfill-global-totals`    | Manual                                                    | Build `global-totals.json` for already-published dates               |
+| `backfill-education-ledger` | Manual                                                    | Fetch education ledger history into staging only (no promotion)      |
 
-The two daily crons are deliberate: the 11:00 UTC run is a backup that absorbs GitHub's
-occasionally-dropped scheduled events (#753). Every write lands in **staging** first; a gated
+The workflow has no `schedule:` trigger: GitHub's cron fired late or dropped events, so the
+daily run is dispatched on time by a launchd job on the operator Mac (#1242, see
+`docs/runbooks/local-daily-pipeline-trigger.md`). Every write lands in **staging** first; a gated
 promotion copies it to production (see [Staging → Production Promotion](#staging--production-promotion)).
 
 ### Data Flow (daily)
