@@ -60,6 +60,24 @@ vi.mock('../../components/map/LazyBasemapMap', () => ({
   ),
 }))
 
+// #1943: the preview is decorative, so its failure (a chunk that does not
+// load, a render error) must never take the live map down with it.
+let mockPreviewFails = false
+let previewFailures = 0
+vi.mock('../../components/LocatorDots', async importOriginal => {
+  const real =
+    await importOriginal<typeof import('../../components/LocatorDots')>()
+  return {
+    LocatorDots: (props: Parameters<typeof real.LocatorDots>[0]) => {
+      if (mockPreviewFails) {
+        previewFailures++
+        throw new Error('preview failed')
+      }
+      return real.LocatorDots(props)
+    },
+  }
+})
+
 let mockIsMobile = false
 vi.mock('../../hooks/useIsMobile', () => ({
   useIsMobile: () => mockIsMobile,
@@ -260,6 +278,19 @@ describe('DistrictMapPage — map and legend', () => {
     expect(
       list.container.querySelector('[data-testid="map-preview"]')
     ).toBeNull()
+  })
+
+  it('keeps the live map when the static preview fails', async () => {
+    mockPreviewFails = true
+    previewFailures = 0
+    try {
+      renderAt('/district/61/map')
+      expect(await screen.findByTestId('map-stub')).toBeInTheDocument()
+      await vi.waitFor(() => expect(previewFailures).toBeGreaterThan(0))
+      expect(screen.getByTestId('map-stub')).toBeInTheDocument()
+    } finally {
+      mockPreviewFails = false
+    }
   })
 
   it('colours by Distinguished level with ?color=tier, and clamps unknown values', async () => {
