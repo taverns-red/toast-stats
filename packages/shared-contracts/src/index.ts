@@ -186,6 +186,18 @@ export {
   type GlobalTotalsClubsByCountry,
 } from './schemas/global-totals.schema.js'
 
+// Clubs suspended this program year — snapshots/{date}/suspended-clubs.json (#1953)
+export {
+  SuspendedClubsSchema,
+  SuspendedClubsFormatSchema,
+  SuspendedClubSchema,
+  SUSPENDED_CLUBS_FORMAT,
+  SUSPENDED_CLUBS_FILE_NAME,
+  type SuspendedClubs,
+  type SuspendedClubsFormat,
+  type SuspendedClub,
+} from './schemas/suspended-clubs.schema.js'
+
 // Club-race crossing store — club-race/{PY}/first-reached.json (#1556)
 export {
   ClubRaceStoreSchema,
