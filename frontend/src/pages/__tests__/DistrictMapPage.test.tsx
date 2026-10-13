@@ -163,6 +163,7 @@ beforeAll(async () => {
     import('../../components/map/MapClubLists'),
     import('../../components/map/mapFilters'),
     import('../../components/map/MapFilterPanel'),
+    import('../../components/map/MapPhoneSheets'),
   ])
 }, 60_000)
 

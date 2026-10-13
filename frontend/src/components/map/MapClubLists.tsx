@@ -4,7 +4,7 @@ import type {
   ClubTrend,
   ProspectiveClub,
 } from '../../hooks/useDistrictAnalytics'
-import type { ModeModel } from './pinModes'
+import type { LegendChip, ModeModel } from './pinModes'
 import { PinSwatch } from './PinSwatch'
 
 /* The map page's club lists (#1784): clubs not on the map, prospective
@@ -90,3 +90,53 @@ export const MapLists: React.FC<{
     </Section>
   </>
 )
+
+/** Legend chips (#1784): aria-pressed toggles writing the mode facet. */
+export const LegendChips: React.FC<{
+  model: ModeModel
+  chips: LegendChip[]
+  pressed: string[]
+  onToggle: (chip: LegendChip) => void
+  limit?: number | undefined
+  onMore?: (() => void) | undefined
+}> = ({ model, chips, pressed, onToggle, limit, onMore }) => {
+  // The phone peek shows the top few; "N more" opens the full legend.
+  const cut = limit !== undefined && chips.length > limit + 1
+  const shown = cut ? chips.slice(0, limit) : chips
+  return (
+    <div
+      className="map-legend__chips"
+      role="group"
+      aria-label={`${model.title} legend`}
+    >
+      {shown.map(chip => {
+        const value = model.facet?.valueOf(chip) ?? chip.key
+        return (
+          <button
+            key={chip.key}
+            type="button"
+            className="map-legend__chip"
+            aria-pressed={pressed.includes(value)}
+            onClick={() => onToggle(chip)}
+          >
+            <PinSwatch category={chip} />
+            {chip.code && (
+              <span className="map-legend__code">{chip.code}</span>
+            )}{' '}
+            <span>{chip.label}</span>{' '}
+            <span className="map-legend__count">{chip.count}</span>
+          </button>
+        )
+      })}
+      {cut && (
+        <button
+          type="button"
+          className="map-legend__chip map-legend__more"
+          onClick={onMore}
+        >
+          {chips.length - shown.length} more
+        </button>
+      )}
+    </div>
+  )
+}

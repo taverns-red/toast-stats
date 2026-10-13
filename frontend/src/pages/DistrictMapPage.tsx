@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import type { Map as MapLibreMap } from 'maplibre-gl'
+import type { MapFilter } from '../components/map/MapFilterPanel'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
@@ -18,13 +18,10 @@ import {
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
-import { BottomSheet } from '../components/BottomSheet'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
-import { PinSwatch } from '../components/map/PinSwatch'
 import { useClubPins } from '../components/map/useClubPins'
 import { buildPinFeatures } from '../components/map/pinLayer'
 import {
-  CATEGORICAL8,
   MAP_COLOR_MODES,
   activeMapFilterCount,
   applyFacets,
@@ -36,7 +33,6 @@ import {
   toggleFacetValue,
   type LegendChip,
   type MapColorMode,
-  type ModeModel,
 } from '../components/map/pinModes'
 import '../components/map/districtMap.css'
 
@@ -58,7 +54,7 @@ import '../components/map/districtMap.css'
 
 const CHIP_PEEK = 5
 
-// The club lists are data-dependent: their chunk is fetched on mount, in
+// The legend chips and club lists are data-dependent: their chunk is fetched on mount, in
 // parallel with the data, not on the route's first load.
 const loadLists = () => import('../components/map/MapClubLists')
 const MapLists = React.lazy(() =>
@@ -67,12 +63,19 @@ const MapLists = React.lazy(() =>
 const ClubLinks = React.lazy(() =>
   loadLists().then(m => ({ default: m.ClubLinks }))
 )
+// The legend chips carry data counts, so they ride the same chunk.
+const Chips = React.lazy(() =>
+  loadLists().then(m => ({ default: m.LegendChips }))
+)
 
-const loadFilters = () => import('../components/map/mapFilters')
 const MapFilterPanel = React.lazy(
   () => import('../components/map/MapFilterPanel')
 )
-const FILTERS_ID = 'map-filters'
+
+// Phones only: the mode picker, legend and club sheets (fetched on mount).
+const MapPhoneSheets = React.lazy(
+  () => import('../components/map/MapPhoneSheets')
+)
 
 // Only a tap needs the club summary, so it loads on the first selection.
 const MapClubSummary = React.lazy(() =>
@@ -94,60 +97,14 @@ class MapErrorBoundary extends React.Component<
   }
 }
 
-const Chips: React.FC<{
-  model: ModeModel
-  chips: LegendChip[]
-  pressed: string[]
-  onToggle: (chip: LegendChip) => void
-  limit?: number | undefined
-  onMore?: (() => void) | undefined
-}> = ({ model, chips, pressed, onToggle, limit, onMore }) => {
-  // The phone peek shows the top few; "N more" opens the full legend.
-  const cut = limit !== undefined && chips.length > limit + 1
-  const shown = cut ? chips.slice(0, limit) : chips
-  return (
-    <div
-      className="map-legend__chips"
-      role="group"
-      aria-label={`${model.title} legend`}
-    >
-      {shown.map(chip => {
-        const value = model.facet?.valueOf(chip) ?? chip.key
-        return (
-          <button
-            key={chip.key}
-            type="button"
-            className="map-legend__chip"
-            aria-pressed={pressed.includes(value)}
-            onClick={() => onToggle(chip)}
-          >
-            <PinSwatch category={chip} />
-            {chip.code && (
-              <span className="map-legend__code">{chip.code}</span>
-            )}{' '}
-            <span>{chip.label}</span>{' '}
-            <span className="map-legend__count">{chip.count}</span>
-          </button>
-        )
-      })}
-      {cut && (
-        <button
-          type="button"
-          className="map-legend__chip map-legend__more"
-          onClick={onMore}
-        >
-          {chips.length - shown.length} more
-        </button>
-      )}
-    </div>
-  )
-}
-
-const ModeButtons: React.FC<{
+/** The colour-mode toggles (#1784): aria-pressed buttons, not tabs. The
+ *  phone picker adds a swatch preview per mode (`preview`, from its own
+ *  on-demand chunk). */
+export const ModeButtons: React.FC<{
   mode: MapColorMode
   onChange: (m: MapColorMode) => void
-  previews?: boolean
-}> = ({ mode, onChange, previews }) => (
+  preview?: (m: MapColorMode) => React.ReactNode
+}> = ({ mode, onChange, preview }) => (
   <div className="map-modes" role="group" aria-label="Colour pins by">
     {MAP_COLOR_MODES.map(m => (
       <button
@@ -157,21 +114,7 @@ const ModeButtons: React.FC<{
         aria-pressed={mode === m.id}
         onClick={() => onChange(m.id)}
       >
-        {previews && (
-          <span className="map-modes__preview" aria-hidden="true">
-            {(m.id === 'health' || m.id === 'tier'
-              ? buildModeModel(m.id).categories.slice(0, 5)
-              : CATEGORICAL8.slice(0, 5).map(fill => ({
-                  key: fill,
-                  label: '',
-                  fill,
-                  shape: 'circle' as const,
-                }))
-            ).map(c => (
-              <PinSwatch key={c.key} category={c} />
-            ))}
-          </span>
-        )}
+        {preview?.(m.id)}
         {m.label}
       </button>
     ))}
@@ -250,32 +193,19 @@ const DistrictMapPage: React.FC = () => {
         : buildModeModel(isTerritoryMode(mode) ? 'health' : mode),
     [mode, allClubs, territory]
   )
-  // Visit / online filtering loads on demand; until it (and, for a visit
-  // round, the snapshot) lands, a filtered deep link draws nothing rather
-  // than the unfiltered set.
+  // Visit / online filtering lives in the on-demand filter chunk, which
+  // hands its filter up once ready (with the visit snapshot when a round is
+  // asked for); until then a filtered deep link draws nothing rather than
+  // the unfiltered set.
   const wantsFilters = searchParams.has('visit') || searchParams.has('online')
-  const [filters, setFilters] = useState<Awaited<
-    ReturnType<typeof loadFilters>
-  > | null>(null)
-  React.useEffect(() => {
-    if ((wantsFilters || filtersSeen) && !filters)
-      void loadFilters().then(setFilters)
-  }, [wantsFilters, filtersSeen, filters])
-  const wantsVisits = !!filters?.needsVisitData(searchParams)
-  const { data: visits } = useQuery({
-    queryKey: ['mapVisits', districtId, effectiveEndDate],
-    queryFn: () => filters!.loadVisitIndex(effectiveEndDate!, districtId),
-    enabled: wantsVisits && !!effectiveEndDate,
-    staleTime: 15 * 60 * 1000,
-  })
-  const filtering =
-    wantsFilters && (!filters || (wantsVisits && visits === undefined))
+  const [mapFilter, setMapFilter] = useState<MapFilter | null>(null)
+  const filtering = wantsFilters && !mapFilter
   const applyAll = React.useCallback(
     (clubs: typeof allClubs, params: URLSearchParams) => {
       const out = applyFacets(clubs, params)
-      return filters ? filters.applyMapFilters(out, params, visits) : out
+      return mapFilter ? mapFilter(out, params) : out
     },
-    [filters, visits]
+    [mapFilter]
   )
   const filtered = useMemo(
     () => (filtering ? [] : applyAll(allClubs, searchParams)),
@@ -351,14 +281,16 @@ const DistrictMapPage: React.FC = () => {
         {effectiveEndDate && <span> · as of {effectiveEndDate}</span>}
       </p>
       {pending ? null : (
-        <Chips
-          model={model}
-          chips={chips}
-          pressed={pressed}
-          onToggle={toggleChip}
-          limit={limit}
-          onMore={onMore}
-        />
+        <React.Suspense fallback={<div className="map-legend__chips" />}>
+          <Chips
+            model={model}
+            chips={chips}
+            pressed={pressed}
+            onToggle={toggleChip}
+            limit={limit}
+            onMore={onMore}
+          />
+        </React.Suspense>
       )}
       {!pending && model.kind !== 'categorical' && limit === undefined && (
         <p className="map-legend__note">
@@ -382,7 +314,7 @@ const DistrictMapPage: React.FC = () => {
     </React.Suspense>
   )
 
-  const filterPanel = filtersSeen && (
+  const filterPanel = (wantsFilters || filtersSeen) && (
     <React.Suspense fallback={null}>
       <MapFilterPanel
         clubs={allClubs}
@@ -390,8 +322,9 @@ const DistrictMapPage: React.FC = () => {
         isOpen={filtersOpen}
         onClose={() => setSheet(null)}
         resultCount={filtered.length}
-        visitsUnavailable={visits === null}
-        id={FILTERS_ID}
+        districtId={districtId}
+        date={effectiveEndDate}
+        onFilter={setMapFilter}
       />
     </React.Suspense>
   )
@@ -556,31 +489,33 @@ const DistrictMapPage: React.FC = () => {
         {isPhone && (
           <>
             {filterPanel}
-            <BottomSheet
-              isOpen={sheet === 'modes'}
-              onClose={() => setSheet(null)}
-              title="Colour pins by"
-            >
-              <ModeButtons mode={mode} onChange={setMode} previews />
-            </BottomSheet>
-            <BottomSheet
-              isOpen={sheet === 'legend'}
-              onClose={() => setSheet(null)}
-              title={model.title}
-            >
-              {legend()}
-              {lists}
-            </BottomSheet>
-            <BottomSheet
-              isOpen={selected.length > 0 && sheet === null}
-              onClose={() => setSelectedIds([])}
-              title={selected.length > 1 ? 'Clubs here' : 'Club details'}
-              closeLabel="Close club details"
-            >
-              <React.Suspense fallback={null}>
-                <MapClubSummary clubs={selected} districtId={districtId} />
-              </React.Suspense>
-            </BottomSheet>
+            <React.Suspense fallback={null}>
+              <MapPhoneSheets
+                sheet={sheet}
+                onClose={() => setSheet(null)}
+                modes={preview => (
+                  <ModeButtons
+                    mode={mode}
+                    onChange={setMode}
+                    preview={preview}
+                  />
+                )}
+                legendTitle={model.title}
+                legend={
+                  <>
+                    {legend()}
+                    {lists}
+                  </>
+                }
+                selectedCount={selected.length}
+                summary={
+                  <React.Suspense fallback={null}>
+                    <MapClubSummary clubs={selected} districtId={districtId} />
+                  </React.Suspense>
+                }
+                onDeselect={() => setSelectedIds([])}
+              />
+            </React.Suspense>
           </>
         )}
       </div>
