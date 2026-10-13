@@ -394,3 +394,26 @@ describe('daily builds the rollup with the same script', () => {
     expect(run.slice(call)).toMatch(/\|\|\s*echo "::warning::/)
   })
 })
+
+describe('sample output for consumers (#1793, #1807, #1810, #1811)', () => {
+  // fixtures/education-rollup-output/ is what this script builds from the
+  // recorded inputs: consumers build against it until #1763 promotes the
+  // real artifact. Regenerate with UPDATE_EDUCATION_ROLLUP_SAMPLE=1.
+  const SAMPLE = path.join(
+    REPO,
+    'scripts/lib/__tests__/fixtures/education-rollup-output'
+  )
+  it('the built objects equal the committed sample', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    for (const obj of rollupObjects()) {
+      const built = readObject(obj)
+      const file = path.join(SAMPLE, path.basename(obj))
+      if (process.env['UPDATE_EDUCATION_ROLLUP_SAMPLE'] === '1') {
+        fs.mkdirSync(SAMPLE, { recursive: true })
+        fs.writeFileSync(file, `${JSON.stringify(built, null, 2)}\n`)
+      }
+      expect(built, obj).toEqual(JSON.parse(fs.readFileSync(file, 'utf-8')))
+    }
+  })
+})

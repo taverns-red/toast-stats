@@ -1,0 +1,66 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "education-rollup"
+  },
+  "programYear": "2003-2004",
+  "source": "ledger-history",
+  "sourceDate": null,
+  "districts": {
+    "17": {
+      "status": "not-available",
+      "region": null,
+      "reason": "no-data"
+    },
+    "85": {
+      "status": "available",
+      "region": null,
+      "awards": {
+        "totals": {
+          "awards": 29,
+          "pathways": 0,
+          "legacy": 28,
+          "dtm": 1,
+          "other": 0
+        },
+        "pathwaysMatrix": {},
+        "legacyByCode": {
+          "AL": 1,
+          "ATMS": 3,
+          "CL": 4,
+          "CTM": 19,
+          "LDREXC": 1
+        },
+        "otherByCode": {},
+        "clubsWithAward": 7,
+        "membersWithAward": null,
+        "tripleCrownAchievers": null
+      }
+    }
+  },
+  "regions": null,
+  "regionsUnassigned": [],
+  "world": {
+    "totals": {
+      "awards": 29,
+      "pathways": 0,
+      "legacy": 28,
+      "dtm": 1,
+      "other": 0
+    },
+    "pathwaysMatrix": {},
+    "legacyByCode": {
+      "AL": 1,
+      "ATMS": 3,
+      "CL": 4,
+      "CTM": 19,
+      "LDREXC": 1
+    },
+    "otherByCode": {},
+    "clubsWithAward": 7,
+    "membersWithAward": null,
+    "tripleCrownAchievers": null,
+    "districtsAvailable": ["85"],
+    "districtsNotAvailable": ["17"]
+  }
+}

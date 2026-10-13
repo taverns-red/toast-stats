@@ -1,0 +1,157 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "education-rollup"
+  },
+  "programYear": "2019-2020",
+  "source": "reports",
+  "sourceDate": "2020-06-30",
+  "districts": {
+    "61": {
+      "status": "not-available",
+      "region": "09",
+      "reason": "no-file"
+    },
+    "111": {
+      "status": "available",
+      "region": "08",
+      "awards": {
+        "totals": {
+          "awards": 377,
+          "pathways": 294,
+          "legacy": 81,
+          "dtm": 2,
+          "other": 0
+        },
+        "pathwaysMatrix": {
+          "DL": [25, 4, 3, 2, 2],
+          "EC": [11, 9, 6, 3, 0],
+          "EH": [1, 1, 1, 1, 0],
+          "IP": [40, 26, 15, 4, 0],
+          "LD": [6, 3, 1, 1, 1],
+          "MS": [10, 8, 3, 1, 0],
+          "PI": [15, 3, 3, 2, 0],
+          "PM": [27, 9, 4, 2, 2],
+          "SR": [8, 4, 2, 1, 1],
+          "TC": [3, 2, 0, 0, 0],
+          "VC": [10, 7, 1, 0, 0]
+        },
+        "legacyByCode": {
+          "ACB": 8,
+          "ACG": 4,
+          "ACS": 2,
+          "ALB": 7,
+          "ALS": 2,
+          "CC": 30,
+          "CL": 26,
+          "LDREXC": 2
+        },
+        "otherByCode": {},
+        "clubsWithAward": 23,
+        "membersWithAward": null,
+        "tripleCrownAchievers": null
+      }
+    },
+    "F": {
+      "status": "not-available",
+      "region": null,
+      "reason": "no-file"
+    }
+  },
+  "regions": {
+    "08": {
+      "totals": {
+        "awards": 377,
+        "pathways": 294,
+        "legacy": 81,
+        "dtm": 2,
+        "other": 0
+      },
+      "pathwaysMatrix": {
+        "DL": [25, 4, 3, 2, 2],
+        "EC": [11, 9, 6, 3, 0],
+        "EH": [1, 1, 1, 1, 0],
+        "IP": [40, 26, 15, 4, 0],
+        "LD": [6, 3, 1, 1, 1],
+        "MS": [10, 8, 3, 1, 0],
+        "PI": [15, 3, 3, 2, 0],
+        "PM": [27, 9, 4, 2, 2],
+        "SR": [8, 4, 2, 1, 1],
+        "TC": [3, 2, 0, 0, 0],
+        "VC": [10, 7, 1, 0, 0]
+      },
+      "legacyByCode": {
+        "ACB": 8,
+        "ACG": 4,
+        "ACS": 2,
+        "ALB": 7,
+        "ALS": 2,
+        "CC": 30,
+        "CL": 26,
+        "LDREXC": 2
+      },
+      "otherByCode": {},
+      "clubsWithAward": 23,
+      "membersWithAward": null,
+      "tripleCrownAchievers": null,
+      "districtsAvailable": ["111"],
+      "districtsNotAvailable": []
+    },
+    "09": {
+      "totals": {
+        "awards": 0,
+        "pathways": 0,
+        "legacy": 0,
+        "dtm": 0,
+        "other": 0
+      },
+      "pathwaysMatrix": {},
+      "legacyByCode": {},
+      "otherByCode": {},
+      "clubsWithAward": 0,
+      "membersWithAward": null,
+      "tripleCrownAchievers": null,
+      "districtsAvailable": [],
+      "districtsNotAvailable": ["61"]
+    }
+  },
+  "regionsUnassigned": ["F"],
+  "world": {
+    "totals": {
+      "awards": 377,
+      "pathways": 294,
+      "legacy": 81,
+      "dtm": 2,
+      "other": 0
+    },
+    "pathwaysMatrix": {
+      "DL": [25, 4, 3, 2, 2],
+      "EC": [11, 9, 6, 3, 0],
+      "EH": [1, 1, 1, 1, 0],
+      "IP": [40, 26, 15, 4, 0],
+      "LD": [6, 3, 1, 1, 1],
+      "MS": [10, 8, 3, 1, 0],
+      "PI": [15, 3, 3, 2, 0],
+      "PM": [27, 9, 4, 2, 2],
+      "SR": [8, 4, 2, 1, 1],
+      "TC": [3, 2, 0, 0, 0],
+      "VC": [10, 7, 1, 0, 0]
+    },
+    "legacyByCode": {
+      "ACB": 8,
+      "ACG": 4,
+      "ACS": 2,
+      "ALB": 7,
+      "ALS": 2,
+      "CC": 30,
+      "CL": 26,
+      "LDREXC": 2
+    },
+    "otherByCode": {},
+    "clubsWithAward": 23,
+    "membersWithAward": null,
+    "tripleCrownAchievers": null,
+    "districtsAvailable": ["111"],
+    "districtsNotAvailable": ["61", "F"]
+  }
+}
