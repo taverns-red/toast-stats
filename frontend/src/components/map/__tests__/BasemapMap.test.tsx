@@ -53,6 +53,7 @@ vi.mock('../../../contexts/DarkModeContext', () => ({
   }),
 }))
 
+import { Protocol, type PMTiles } from 'pmtiles'
 import BasemapMap from '../BasemapMap'
 import { BASEMAP_ATTRIBUTION, BASEMAP_COLOURS } from '../basemapStyle'
 
@@ -70,6 +71,11 @@ describe('BasemapMap', () => {
   beforeEach(() => {
     hoisted.maps.length = 0
     theme.isDark = false
+    // The head prefetch (#1943) must never reach the network from jsdom.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 404 }))
+    )
   })
 
   it('renders a labelled map region and hands MapLibre the basemap style', () => {
@@ -141,5 +147,19 @@ describe('BasemapMap', () => {
     const { unmount } = render(<BasemapMap ariaLabel="Map" pmtilesUrl={URL} />)
     unmount()
     expect(hoisted.maps[0]!.remove).toHaveBeenCalledTimes(1)
+  })
+
+  it('registers the archive behind the prefetched-head source (#1943)', async () => {
+    vi.resetModules()
+    const add = vi.spyOn(Protocol.prototype, 'add')
+    const { default: Fresh } = await import('../BasemapMap')
+    const { PrefetchedHeadSource } = await import('../prefetchedHeadSource')
+    render(<Fresh ariaLabel="A" pmtilesUrl={URL} />)
+    render(<Fresh ariaLabel="B" pmtilesUrl={URL} />)
+    expect(add).toHaveBeenCalledTimes(1)
+    const archive = add.mock.calls[0]![0] as PMTiles
+    expect(archive.source).toBeInstanceOf(PrefetchedHeadSource)
+    expect(archive.source.getKey()).toBe(URL)
+    add.mockRestore()
   })
 })
