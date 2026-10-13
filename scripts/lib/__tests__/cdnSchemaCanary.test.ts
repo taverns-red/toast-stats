@@ -25,6 +25,10 @@ import {
   checkTimeSeriesMetadata,
   checkTimeSeriesProgramYear,
   checkDistrictSnapshotIndex,
+  checkClubDistrictHistoryIndex,
+  checkClubDistrictHistoryShard,
+  pickClubHistoryShards,
+  ANCHOR_CLUB_SHARD,
   pickTimeSeriesDistricts,
   type CdnObjectFetch,
   type DistrictFetchResult,
@@ -365,6 +369,109 @@ describe('checkDistrictSnapshotIndex', () => {
         obj('c.json', enc(JSON.stringify({ districts: { '61': ['oops'] } })))
       )
     ).toMatch(/61/)
+  })
+})
+
+describe('club-district history (#1782)', () => {
+  const index = (asOf: string, over: Record<string, unknown> = {}) => ({
+    _format: { version: '1.0.0', type: 'club-district-history-index' },
+    asOf,
+    sourcesUpdatedAt: `${asOf}T12:00:00.000Z`,
+    granularity: 'program-year',
+    programYears: ['2025-2026', '2026-2027'],
+    totalClubs: 2,
+    shards: ['77', '99'],
+    duplicates: [],
+    ...over,
+  })
+  const shard = (key: string, over: Record<string, unknown> = {}) => ({
+    _format: { version: '1.0.0', type: 'club-district-history-shard' },
+    shard: key,
+    asOf: '2026-10-08',
+    clubs: {
+      [`9${key}`]: {
+        name: 'Club',
+        formerNames: [],
+        firstSeen: '2025-07-01',
+        lastSeen: '2026-10-08',
+        spans: [
+          { from: '2025-07-01', to: '2026-06-30', districtId: '01' },
+          { from: '2026-07-26', to: null, districtId: '201' },
+        ],
+        byProgramYear: { '2025-2026': '01', '2026-2027': '201' },
+      },
+    },
+    ...over,
+  })
+  const json = (v: unknown) => obj('c.json', enc(JSON.stringify(v)))
+
+  it('passes a fresh index and returns its shards', () => {
+    expect(
+      checkClubDistrictHistoryIndex(json(index('2026-10-08')), AGE)
+    ).toEqual({ failure: null, shards: ['77', '99'] })
+  })
+
+  it('fails a stale index (the identity build stopped)', () => {
+    expect(
+      checkClubDistrictHistoryIndex(json(index('2026-10-01')), AGE).failure
+    ).toMatch(/2026-10-01.*days old/)
+  })
+
+  it('fails an index that breaks the schema or folded nothing', () => {
+    expect(
+      checkClubDistrictHistoryIndex(
+        json(index('2026-10-08', { granularity: 'day' })),
+        AGE
+      ).failure
+    ).toMatch(/schema/)
+    expect(
+      checkClubDistrictHistoryIndex(
+        json(index('2026-10-08', { totalClubs: 0 })),
+        AGE
+      ).failure
+    ).toMatch(/no clubs/)
+  })
+
+  it('fails a nested-gzip index (#1702)', () => {
+    const body = gzipSync(JSON.stringify(index('2026-10-08')))
+    expect(
+      checkClubDistrictHistoryIndex(obj('c.json', body), AGE).failure
+    ).toMatch(/gzip/)
+  })
+
+  it('passes a shard served under its own key', () => {
+    expect(checkClubDistrictHistoryShard(json(shard('77')), '77')).toBeNull()
+  })
+
+  it('fails a shard with the wrong key, a club in another shard, or no clubs', () => {
+    expect(checkClubDistrictHistoryShard(json(shard('76')), '77')).toMatch(
+      /shard 76/
+    )
+    const misplaced = shard('77')
+    ;(misplaced.clubs as Record<string, unknown>)['1234'] = (
+      misplaced.clubs as Record<string, unknown>
+    )['977']
+    expect(checkClubDistrictHistoryShard(json(misplaced), '77')).toMatch(
+      /club 1234/
+    )
+    expect(
+      checkClubDistrictHistoryShard(json(shard('77', { clubs: {} })), '77')
+    ).toMatch(/no clubs/)
+  })
+
+  it('checks the anchor shard (club 977, D01 → D201) plus one other listed shard', () => {
+    expect(ANCHOR_CLUB_SHARD).toBe('77')
+    expect(pickClubHistoryShards(['00', '77', '99'], () => 0)).toEqual([
+      '77',
+      '00',
+    ])
+    expect(pickClubHistoryShards(['00', '77', '99'], () => 0.99)).toEqual([
+      '77',
+      '99',
+    ])
+    // The anchor is checked even when the index does not list it: then the
+    // shard fetch fails loudly instead of the canary skipping it.
+    expect(pickClubHistoryShards(['00'], () => 0)).toEqual(['77', '00'])
   })
 })
 

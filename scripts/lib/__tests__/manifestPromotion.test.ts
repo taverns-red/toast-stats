@@ -192,6 +192,53 @@ describe('planManifestPromotion', () => {
     ).not.toContain('v1/latest.json')
   })
 
+  it('copies the club-district history index after all 100 of its shards (#1782)', () => {
+    const dir = 'config/club-district-history/'
+    const shards = Array.from(
+      { length: 100 },
+      (_, i) => `${dir}${String(i).padStart(2, '0')}.json`
+    )
+    const plan = planManifestPromotion(
+      inputs({
+        entries: [...recorded, ...shards.map(entry), entry(`${dir}index.json`)],
+      })
+    )
+    const at = (p: string) => plan.batches.findIndex(b => b.paths.includes(p))
+    const indexBatch = plan.batches[at(`${dir}index.json`)]!
+    expect(indexBatch.phase).toBe('entry')
+    expect(indexBatch.paths).toEqual([`${dir}index.json`])
+    for (const s of shards) {
+      expect(plan.batches[at(s)]!.phase, s).toBe('globals')
+      expect(at(s), s).toBeLessThan(at(`${dir}index.json`))
+    }
+    // The shards share one cp (100 sources, under the per-call cap); the
+    // v1/ entry points still go last.
+    expect(new Set(shards.map(at)).size).toBe(1)
+    expect(plan.batches.at(-1)!.paths.sort()).toEqual(
+      [...ENTRY_POINT_PATHS].sort()
+    )
+    expect(plan.objectCount).toBe(14 + 101)
+  })
+
+  it('holds the club-district history with the other globals when a date is held', () => {
+    const dir = 'config/club-district-history/'
+    const plan = planManifestPromotion(
+      inputs({
+        entries: [
+          ...recorded,
+          entry(`${dir}77.json`),
+          entry(`${dir}index.json`),
+        ],
+        held: resolveHeldDates({ promote: false, heldDates: ['2026-10-11'] }),
+      })
+    )
+    expect(copied(plan)).not.toContain(`${dir}77.json`)
+    expect(copied(plan)).not.toContain(`${dir}index.json`)
+    expect(plan.held.map(h => h.path)).toEqual(
+      expect.arrayContaining([`${dir}77.json`, `${dir}index.json`])
+    )
+  })
+
   it('batches by destination directory so every object keeps its path', () => {
     const plan = planManifestPromotion(inputs())
     for (const b of plan.batches) {

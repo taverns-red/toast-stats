@@ -23,9 +23,10 @@
  * a shard's key order is not lexicographic (Lesson 158); the writer promises
  * identical bytes for any input order instead.
  *
- * Path: `derived/club-district-history/{index,NN}.json` in STAGING only until
- * scoped promotion lands (#1763, ADR-015 step 5); it then moves under
- * `config/` and is promoted from the run manifest.
+ * Path: `config/club-district-history/{index,NN}.json`, served from the CDN
+ * (plain JSON, `max-age=300`, edge-compressed) and promoted with the run.
+ * Shards are written and promoted before the index that names them, and a
+ * shard key never disappears.
  *
  * @module club-district-history.schema
  */

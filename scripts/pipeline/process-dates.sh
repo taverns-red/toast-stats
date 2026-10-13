@@ -69,9 +69,9 @@
 # After the loop, once per run:
 #  12. identity  scripts/pipeline/build-identity-history.sh <bucket> (#1782):
 #                the club-district history from the club-race store, to
-#                staging derived/ (never promoted until #1763), and the
-#                district → region history (#1820) to config/, promoted with
-#                the run. Daily runs the same script, so no mode builds it
+#                config/club-district-history/, and the district → region
+#                history (#1820) to config/district-region-history.json;
+#                both are promoted with the run. Daily runs the same script, so no mode builds it
 #                differently (ADR-015 P1). A failure is a warning and a
 #                summary line, never a failed run: the previous copies stand.
 #  13. education scripts/pipeline/build-education-rollup.sh <bucket> (#1801):
