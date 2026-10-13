@@ -1,0 +1,396 @@
+/**
+ * The education rollup in the pipeline (#1801, epic #1781; ADR-015 parity).
+ *
+ * scripts/pipeline/build-education-rollup.sh reads the persisted ledger
+ * inputs from STAGING — raw-education-ledger/ (#1802), each reports PY's
+ * newest snapshots/<date>/district_*_reports.json, each PY's last
+ * all-districts-rankings.json and derived/district-region-history.json —
+ * folds them (scripts/lib/educationRollup.ts) and uploads
+ * derived/education-rollup/{<PY>,index}.json to staging, recorded in the run
+ * manifest. derived/ is not a promoted prefix: nothing reaches prod until
+ * scoped promotion (#1763) lists it. The contracts here:
+ *   1. run for real against the gcloud shim (D10) on recorded fixtures, it
+ *      writes schema-valid per-PY objects and the index, plain JSON, under
+ *      derived/education-rollup/ only, index last, every object recorded;
+ *   2. a PY with no reports at any of its recent dates is omitted and named,
+ *      never written as zeros; a missing input degrades, a listing error
+ *      fails closed with nothing uploaded;
+ *   3. no prod write (the #1755 guard);
+ *   4. process-dates.sh runs it once after its loop, non-fatally, and daily
+ *      runs the same script after its upload.
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import * as zlib from 'node:zlib'
+import { parse } from 'yaml'
+import {
+  EducationRollupIndexSchema,
+  EducationRollupProgramYearSchema,
+} from '@taverns-red/shared-contracts'
+import { prodWriteReasons, type Workflow } from '../prodWriteGuard.js'
+import { PROMOTED_PREFIXES } from '../promotionContentGate.js'
+
+const REPO = process.cwd()
+const SCRIPT = path.join(REPO, 'scripts/pipeline/build-education-rollup.sh')
+const PROCESS_DATES = path.join(REPO, 'scripts/pipeline/process-dates.sh')
+const SHIM = path.join(
+  REPO,
+  'scripts/lib/__tests__/fixtures/gcloud-shim/gcloud'
+)
+const STUBS = path.join(REPO, 'scripts/lib/__tests__/fixtures/process-dates')
+const FIX = path.join(REPO, 'scripts/lib/__tests__/fixtures/education-rollup')
+const BUCKET = 'test-bucket'
+const PREFIX = 'derived/education-rollup/'
+
+let tmp: string
+let root: string
+let shimLog: string
+let stubLog: string
+let summary: string
+let manifest: string
+
+beforeEach(() => {
+  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'education-rollup-'))
+  root = path.join(tmp, 'gcs')
+  shimLog = path.join(tmp, 'gcloud.log')
+  stubLog = path.join(tmp, 'stubs.log')
+  summary = path.join(tmp, 'summary.md')
+  manifest = path.join(tmp, 'written.jsonl')
+  fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
+})
+
+afterEach(() => {
+  fs.rmSync(tmp, { recursive: true, force: true })
+})
+
+function shimEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    GCLOUD: SHIM,
+    SHIM_ROOT: root,
+    SHIM_LOG: shimLog,
+    SHIM_DOWNLOAD_DECOMPRESS: '1',
+    CACHE_DIR: path.join(tmp, 'cache'),
+    GITHUB_STEP_SUMMARY: summary,
+    RUN_MANIFEST_FILE: manifest,
+    ...extra,
+  }
+}
+
+function runScript(extra: Record<string, string> = {}) {
+  return spawnSync('bash', [SCRIPT, BUCKET], {
+    cwd: REPO,
+    encoding: 'utf-8',
+    env: shimEnv(extra),
+  })
+}
+
+/** Stage one fixture object; `gzip` = as the pipeline stages it (-Z). */
+function put(objectPath: string, from: string, gzip: boolean): void {
+  const dest = path.join(root, BUCKET, objectPath)
+  fs.mkdirSync(path.dirname(dest), { recursive: true })
+  const bytes = fs.readFileSync(path.join(FIX, from))
+  fs.writeFileSync(dest, gzip ? zlib.gzipSync(bytes) : bytes)
+  const meta = path.join(root, '.meta', BUCKET, objectPath)
+  fs.mkdirSync(path.dirname(meta), { recursive: true })
+  fs.writeFileSync(
+    meta,
+    `${gzip ? 'content-encoding=gzip\n' : ''}content-type=application/json\n`
+  )
+}
+
+/** Every recorded fixture at its staging path, encoded as staging has it. */
+function seedAll(): void {
+  for (const rel of fs
+    .readdirSync(FIX, { recursive: true, withFileTypes: true })
+    .filter(e => e.isFile())
+    .map(e => path.relative(FIX, path.join(e.parentPath, e.name)))) {
+    // Snapshots are uploaded -Z; the ledger and derived/ are plain JSON.
+    put(rel, rel, rel.startsWith('snapshots/'))
+  }
+  // 2020-21: a PY with a snapshot (rankings) but no reports at any date.
+  put(
+    'snapshots/2021-06-30/all-districts-rankings.json',
+    'snapshots/2020-06-30/all-districts-rankings.json',
+    true
+  )
+}
+
+function allObjects(): string[] {
+  const dir = path.join(root, BUCKET)
+  return fs
+    .readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter(e => e.isFile())
+    .map(e => path.relative(dir, path.join(e.parentPath, e.name)))
+    .sort()
+}
+const rollupObjects = () => allObjects().filter(o => o.startsWith(PREFIX))
+
+function readObject(objectPath: string): unknown {
+  return JSON.parse(
+    fs.readFileSync(path.join(root, BUCKET, objectPath), 'utf-8')
+  )
+}
+
+function lines(file: string): string[] {
+  return fs.existsSync(file)
+    ? fs.readFileSync(file, 'utf-8').split('\n').filter(Boolean)
+    : []
+}
+
+describe('build-education-rollup.sh: staging derived/education-rollup/', () => {
+  it('uploads one schema-valid object per PY and the index', () => {
+    seedAll()
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(rollupObjects()).toEqual(
+      ['2003-2004', '2018-2019', '2019-2020', '2026-2027', 'index']
+        .map(k => `${PREFIX}${k}.json`)
+        .sort()
+    )
+    const y2018 = EducationRollupProgramYearSchema.parse(
+      readObject(`${PREFIX}2018-2019.json`)
+    )
+    expect(y2018.source).toBe('ledger-history')
+    expect(y2018.world.totals.awards).toBe(201)
+    // 85 is in the 2019-06-30 rankings but has no 2018-19 ledger file.
+    expect(y2018.districts['85']).toMatchObject({ reason: 'no-file' })
+    expect(y2018.regions?.['08']?.districtsAvailable).toEqual(['111'])
+
+    const y2026 = EducationRollupProgramYearSchema.parse(
+      readObject(`${PREFIX}2026-2027.json`)
+    )
+    expect(y2026).toMatchObject({ source: 'reports', sourceDate: '2026-10-12' })
+    const d49 = y2026.districts['49']
+    expect(d49?.status === 'available' && d49.awards.membersWithAward).toBe(65)
+    expect(y2026.districts['61']).toMatchObject({ reason: 'no-file' })
+  })
+
+  it('names a PY with no reports at any date as omitted, never zeros', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const index = EducationRollupIndexSchema.parse(
+      readObject(`${PREFIX}index.json`)
+    )
+    expect(index.programYears.map(p => p.programYear)).toEqual([
+      '2003-2004',
+      '2018-2019',
+      '2019-2020',
+      '2026-2027',
+    ])
+    expect(index.omittedProgramYears.map(o => o.programYear)).toEqual([
+      '2020-2021',
+    ])
+    expect(index.asOf).toBe('2026-10-12')
+    expect(rollupObjects()).not.toContain(`${PREFIX}2020-2021.json`)
+  })
+
+  it('uploads plain JSON (internal, no -Z), the index after every PY object', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    for (const obj of rollupObjects()) {
+      const meta = fs.readFileSync(
+        path.join(root, '.meta', BUCKET, obj),
+        'utf-8'
+      )
+      expect(meta, obj).not.toContain('content-encoding=gzip')
+      expect(meta, obj).toContain('content-type=application/json')
+    }
+    const uploads = lines(shimLog).filter(l =>
+      /^storage cp .*gs:\/\/\S+\/derived\/education-rollup\/$/.test(l)
+    )
+    expect(uploads.at(-1)).toMatch(/index\.json gs:/)
+    expect(uploads.slice(0, -1).join('\n')).not.toContain('index.json')
+  })
+
+  it('records every object in the run manifest with the sha256 of its bytes', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const recorded = lines(manifest).map(
+      l => JSON.parse(l) as { path: string; sha256: string; stage: string }
+    )
+    expect(recorded.map(e => e.path).sort()).toEqual(rollupObjects())
+    for (const e of recorded) {
+      expect(e.stage).toBe('education-rollup')
+      const bytes = fs.readFileSync(path.join(root, BUCKET, e.path))
+      expect(e.sha256, e.path).toBe(
+        createHash('sha256').update(bytes).digest('hex')
+      )
+    }
+  })
+
+  it('writes nothing outside derived/education-rollup/', () => {
+    seedAll()
+    const before = allObjects().filter(o => !o.startsWith(PREFIX))
+    expect(runScript().status).toBe(0)
+    expect(allObjects().filter(o => !o.startsWith(PREFIX))).toEqual(before)
+  })
+
+  it('reads each reports PY at its newest date only, and only one rankings file per PY', () => {
+    seedAll()
+    // An older 2026-27 date with reports: listed, never downloaded.
+    put(
+      'snapshots/2026-10-11/district_49_reports.json',
+      'snapshots/2026-10-12/district_49_reports.json',
+      true
+    )
+    put(
+      'snapshots/2026-10-11/all-districts-rankings.json',
+      'snapshots/2026-10-12/all-districts-rankings.json',
+      true
+    )
+    expect(runScript().status).toBe(0)
+    const reads = lines(shimLog)
+      .filter(l => /^storage cp gs:\/\/\S+\/snapshots\//.test(l))
+      .map(l => /snapshots\/([\d-]+)\/(\S+)/.exec(l)?.slice(1, 3).join('/'))
+    expect(reads).not.toContain('2026-10-11/district_*_reports.json')
+    expect(reads).not.toContain('2026-10-11/all-districts-rankings.json')
+    expect(reads).toContain('2026-10-12/district_*_reports.json')
+  })
+
+  it('prints one JSON summary line on stdout (R4)', () => {
+    seedAll()
+    const r = runScript()
+    const out = r.stdout.trim().split('\n')
+    expect(out).toHaveLength(1)
+    expect(JSON.parse(out[0]!)).toMatchObject({
+      programYears: 4,
+      omitted: 1,
+    })
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(/education rollup/i)
+  })
+
+  it('reads gzip-stored reports under gcloud 568 too (bytes as stored)', () => {
+    seedAll()
+    const r = runScript({ SHIM_DOWNLOAD_DECOMPRESS: '0' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(rollupObjects()).toContain(`${PREFIX}2026-2027.json`)
+  })
+
+  it('without a ledger history, the ledger years are omitted and the rest still build', () => {
+    seedAll()
+    fs.rmSync(path.join(root, BUCKET, 'raw-education-ledger'), {
+      recursive: true,
+    })
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::warning::.*raw-education-ledger/)
+    expect(rollupObjects()).toContain(`${PREFIX}2026-2027.json`)
+    expect(rollupObjects()).not.toContain(`${PREFIX}2003-2004.json`)
+  })
+
+  it('without a region history, every region block is null; districts and world still build', () => {
+    seedAll()
+    fs.rmSync(path.join(root, BUCKET, 'derived/district-region-history.json'))
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::warning::.*district-region-history/)
+    const y = EducationRollupProgramYearSchema.parse(
+      readObject(`${PREFIX}2026-2027.json`)
+    )
+    expect(y.regions).toBeNull()
+    expect(y.world.totals.awards).toBe(86)
+  })
+
+  it('a listing error fails closed (exit 1) with nothing uploaded', () => {
+    seedAll()
+    const r = runScript({ SHIM_FAIL_MATCH: '^ls .*snapshots' })
+    expect(r.status).toBe(1)
+    expect(rollupObjects()).toEqual([])
+  })
+
+  it('usage: exactly one bucket argument (exit 2)', () => {
+    const r = spawnSync('bash', [SCRIPT], { cwd: REPO, encoding: 'utf-8' })
+    expect(r.status).toBe(2)
+  })
+})
+
+describe('derived/education-rollup/ is staging-only until #1763', () => {
+  it('is not under any promoted prefix', () => {
+    expect(PROMOTED_PREFIXES.some(p => PREFIX.startsWith(p))).toBe(false)
+  })
+
+  it('the script makes no prod write (the #1755 prod-write guard)', () => {
+    const text = fs.readFileSync(SCRIPT, 'utf-8')
+    expect(prodWriteReasons(text)).toEqual([])
+    expect(text).not.toMatch(/GCS_BUCKET_PRODUCTION|toast-stats-data-ca/)
+  })
+})
+
+describe('process-dates.sh builds the rollup in every mode (ADR-015 P1)', () => {
+  function runProcessDates(mode: string, env: Record<string, string> = {}) {
+    return spawnSync('bash', [PROCESS_DATES, BUCKET, mode], {
+      cwd: REPO,
+      encoding: 'utf-8',
+      env: shimEnv({
+        COLLECTOR_CLI: path.join(STUBS, 'collector-cli'),
+        GUARD_SNAPSHOT_UPLOAD: path.join(STUBS, 'guard-snapshot-upload'),
+        RESOLVE_REBUILD_SOURCE: path.join(STUBS, 'resolve-rebuild-source'),
+        VALIDATE_SNAPSHOTS: path.join(STUBS, 'validate-snapshots'),
+        BUILD_IDENTITY_HISTORY: path.join(STUBS, 'build-identity-history'),
+        BUILD_EDUCATION_ROLLUP: path.join(STUBS, 'build-education-rollup'),
+        STUB_LOG: stubLog,
+        DISTRICTS: '61',
+        ...env,
+      }),
+    })
+  }
+
+  for (const mode of ['rebuild', 'rescrape', 'rescrape-historical']) {
+    it(`${mode}: invokes it exactly once, with the bucket, after identity`, () => {
+      const r = runProcessDates(mode)
+      expect(r.status, r.stderr).toBe(0)
+      const stubs = lines(stubLog)
+      expect(stubs.filter(l => l.startsWith('education-rollup '))).toEqual([
+        `education-rollup ${BUCKET}`,
+      ])
+      expect(stubs.indexOf(`education-rollup ${BUCKET}`)).toBeGreaterThan(
+        stubs.indexOf(`identity ${BUCKET}`)
+      )
+    })
+  }
+
+  it('a failed build is reported but does not fail the run or its counts', () => {
+    const r = runProcessDates('rebuild', { STUB_EDUCATION_ROLLUP_FAIL: '1' })
+    expect(r.status).toBe(0)
+    expect(JSON.parse(r.stdout)).toEqual({
+      succeeded: 0,
+      refused: 0,
+      failed: 0,
+    })
+    expect(r.stderr).toMatch(/::warning::.*education rollup/i)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /education rollup.*FAILED/i
+    )
+  })
+})
+
+describe('daily builds the rollup with the same script', () => {
+  it('after the identity histories, in the upload step, non-fatally', () => {
+    const wf = parse(
+      fs.readFileSync(
+        path.join(REPO, '.github/workflows/data-pipeline.yml'),
+        'utf-8'
+      )
+    ) as Workflow
+    const upload = wf.jobs.pipeline?.steps?.find(
+      s => s.name === '[daily] Upload to GCS'
+    )
+    const run = upload?.run ?? ''
+    const call = run.indexOf(
+      'bash scripts/pipeline/build-education-rollup.sh "${GCS_BUCKET}"'
+    )
+    expect(call, 'daily upload step does not call the script').toBeGreaterThan(
+      0
+    )
+    expect(call).toBeGreaterThan(
+      run.indexOf('scripts/pipeline/build-identity-history.sh')
+    )
+    expect(run.slice(call)).toMatch(/\|\|\s*echo "::warning::/)
+  })
+})

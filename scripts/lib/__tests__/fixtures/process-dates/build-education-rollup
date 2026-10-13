@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Stand-in for `bash scripts/pipeline/build-education-rollup.sh <bucket>`
+# (#1801): process-dates.sh runs it once after its date loop, after the
+# identity histories. Same argv and exit codes as the real script: 0 built
+# and uploaded · 1 a listing, build or transfer error.
+# Env: STUB_LOG (appends `education-rollup <bucket>`),
+#      STUB_EDUCATION_ROLLUP_FAIL ("1" → exit 1)
+set -euo pipefail
+BUCKET="${1:?}"
+if [ -n "${STUB_LOG:-}" ]; then printf 'education-rollup %s\n' "${BUCKET}" >>"${STUB_LOG}"; fi
+if [ "${STUB_EDUCATION_ROLLUP_FAIL:-0}" = "1" ]; then
+  echo "::error::build-education-rollup: could not list staged snapshots" >&2
+  exit 1
+fi
