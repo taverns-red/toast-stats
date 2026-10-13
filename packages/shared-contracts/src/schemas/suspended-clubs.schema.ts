@@ -12,7 +12,7 @@
  *
  * Presence carries meaning (#1757, the #1514 rule):
  * - no file for a date: unknown for every district (the date's source has no
- *   `Susp` value at all, as in TM's 2023-24 exports);
+ *   `Susp` value at all, as in some older TM exports, #1757);
  * - a district key absent: unknown for that district (its source was not
  *   read), matching an absent `suspendedClubs`;
  * - `[]`: a measured zero.
