@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.52.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.51.0...toast-stats-v2.52.0) (2026-10-13)
+
+
+### Features
+
+* **clubs:** membership-trend sparkline column, sortable by net change ([#1792](https://github.com/taverns-red/toast-stats/issues/1792)) ([#1930](https://github.com/taverns-red/toast-stats/issues/1930)) ([c455a31](https://github.com/taverns-red/toast-stats/commit/c455a31c92d7f2b6cfa6f9d16b5deeb1a3e4fdc0))
+* **map:** visit-round, online-capable, division/area filters + richer club summary ([#1788](https://github.com/taverns-red/toast-stats/issues/1788)) ([#1941](https://github.com/taverns-red/toast-stats/issues/1941)) ([b1e9061](https://github.com/taverns-red/toast-stats/commit/b1e90614c3a43272ccf184c10835028df4c38a2e))
+* **trends:** membership trend spans the whole program year against prior years ([#1705](https://github.com/taverns-red/toast-stats/issues/1705)) ([#1937](https://github.com/taverns-red/toast-stats/issues/1937)) ([a3dd754](https://github.com/taverns-red/toast-stats/commit/a3dd754323907100b6a22004f80dc8b8a7946e0c))
+* **world:** worldwide country choropleth on /history/countries ([#1797](https://github.com/taverns-red/toast-stats/issues/1797)) ([#1935](https://github.com/taverns-red/toast-stats/issues/1935)) ([be9b2ea](https://github.com/taverns-red/toast-stats/commit/be9b2eabc7585f2f2fd41e47fdb624ab7708dda6))
+
+
+### Bug Fixes
+
+* **analytics:** one GA page_view per load and per SPA navigation ([#1946](https://github.com/taverns-red/toast-stats/issues/1946)) ([#1949](https://github.com/taverns-red/toast-stats/issues/1949)) ([c420644](https://github.com/taverns-red/toast-stats/commit/c42064443fd49a2d37cfa53bbf3a65f54b8d1196))
+
+
+### Tests
+
+* **e2e:** wait for snapshot dates before asserting the date selector ([#1947](https://github.com/taverns-red/toast-stats/issues/1947)) ([#1952](https://github.com/taverns-red/toast-stats/issues/1952)) ([972c332](https://github.com/taverns-red/toast-stats/commit/972c3324a460b7ae2fde3f0300a8cae8b165bd9f))
+
 ## [2.51.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.50.0...toast-stats-v2.51.0) (2026-10-13)
 
 
