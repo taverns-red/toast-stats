@@ -18,6 +18,7 @@ import {
 } from '../clubCoach'
 import { applyFilter, processClubs } from '../columnFilterUtils'
 import { exportClubPerformance } from '../csvExport'
+import { paramsToFilterState } from '../clubFilterUrl'
 
 const live = recorded.cdn_2026_10_11 as unknown as DistrictReportsDataset
 
@@ -87,6 +88,19 @@ describe('coach filter', () => {
     expect(only(['Active'])).toEqual(['5046'])
     expect(only(['Completed', 'None'])).toEqual(['4673', '3045'])
     expect(only([])).toEqual(['5046', '4673', '3045'])
+  })
+})
+
+describe('coach filter in the URL (the phone path)', () => {
+  it('reads ?coach=Active into a categorical Coach filter', () => {
+    expect(
+      paramsToFilterState(new URLSearchParams('coach=Active'))['coach']
+    ).toEqual({
+      field: 'coach',
+      type: 'categorical',
+      value: ['Active'],
+      operator: 'in',
+    })
   })
 })
 
