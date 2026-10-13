@@ -48,6 +48,9 @@ export interface MapPinKeysProps {
   model: ModeModel
   selectedIds: readonly string[]
   onSelect: (ids: string[]) => void
+  /** Enter opened a club from this pin: the page may move focus into its
+   *  panel and hand it back here on Escape (#1967). */
+  onOpen?: (pin: HTMLButtonElement) => void
   /** The pin source and layers (`pinLayer.ts`), handed down so this chunk
    *  never pulls the page's pin module into a shared chunk (budget). */
   layers: { source: string; cluster: string; pin: string }
@@ -59,6 +62,7 @@ export const MapPinKeys: React.FC<MapPinKeysProps> = ({
   model,
   selectedIds,
   onSelect,
+  onOpen,
   layers: { source: sourceId, cluster, pin },
 }) => {
   const project = useCallback<Project>(at => map.project(at), [map])
@@ -131,6 +135,8 @@ export const MapPinKeys: React.FC<MapPinKeysProps> = ({
     if (!t.cluster) {
       onSelect(t.ids)
       setSaid(`Opened ${t.label}. Escape closes.`)
+      const el = buttons.current.get(t.key)
+      if (el) onOpen?.(el)
       return
     }
     const source = map.getSource(sourceId) as GeoJSONSource | undefined

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { clubIdsMatch } from '@taverns-red/shared-contracts'
 import type { Map as MapLibreMap } from 'maplibre-gl'
@@ -298,6 +298,29 @@ const DistrictMapPage: React.FC = () => {
   )
   const selectedClubIds = useMemo(() => selected.map(c => c.clubId), [selected])
 
+  // #1967 — Enter on a pin opens the club in the side panel and focus
+  // follows it there; Escape in the panel closes it and returns to the pin.
+  // The phone sheet manages its own focus.
+  const returnPin = useRef<HTMLElement | null>(null)
+  const [focusSummary, setFocusSummary] = useState(false)
+  const onPinOpen = useCallback(
+    (pin: HTMLElement) => {
+      if (isPhone) return
+      returnPin.current = pin
+      setFocusSummary(true)
+    },
+    [isPhone]
+  )
+  const summaryFocused = useCallback(() => setFocusSummary(false), [])
+  const onSummaryKeyDown = (e: React.KeyboardEvent) => {
+    const pin = returnPin.current
+    if (e.key !== 'Escape' || !pin?.isConnected) return
+    e.preventDefault()
+    returnPin.current = null
+    setSelectedIds([])
+    pin.focus()
+  }
+
   // The sandbox draws its own pins on this map.
   useClubPins(listView || sandbox ? null : map, {
     data,
@@ -528,6 +551,7 @@ const DistrictMapPage: React.FC = () => {
                       model={model}
                       selectedIds={selectedClubIds}
                       onSelect={setSelectedIds}
+                      onOpen={onPinOpen}
                       layers={{
                         source: PIN_SOURCE_ID,
                         cluster: CLUSTER_LAYER_ID,
@@ -557,11 +581,14 @@ const DistrictMapPage: React.FC = () => {
                     <section
                       className="map-panel__section"
                       aria-label="Selected club"
+                      onKeyDown={onSummaryKeyDown}
                     >
                       <React.Suspense fallback={null}>
                         <MapClubSummary
                           clubs={selected}
                           districtId={districtId}
+                          autoFocus={focusSummary}
+                          onAutoFocused={summaryFocused}
                         />
                       </React.Suspense>
                     </section>
