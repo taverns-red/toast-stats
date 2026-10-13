@@ -525,6 +525,19 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/type-floor.smoke.ts
 
+      # 375 mobile gate (#1841, mobile review §7). At 375x812 with touch,
+      # light and dark, on the 25 review routes, each gated on a content
+      # sentinel: no document overflow with the body overflow-x mask off, no
+      # sub-44px target outside the issue-owned allowlist, text under 14px
+      # within the route's ratchet, first content within the route's budget
+      # (110px on context-bar routes). Budgets: e2e/mobile-375-budgets.json,
+      # ratchet down only. Both engines.
+      - name: Cross-engine 375 mobile gate against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/mobile-375-gate.smoke.ts
+
       # Landing scroll budget (#864, #1834). At 375/414, both engines, `/` must
       # stay ≤ 8,000px tall with the phone rankings in their default 25-row
       # reveal. It was a local-only smoke; running it here flags growth (more

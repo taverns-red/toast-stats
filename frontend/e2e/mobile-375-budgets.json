@@ -1,0 +1,195 @@
+{
+  "$comment": "Ratchet budgets for e2e/mobile-375-gate.smoke.ts (#1841, epic #1827). Each route: `sentinel` is page-specific content the route must render before anything is measured; `first` (default: the sentinel) is the element whose top is the first-content offset; `firstContentMaxPx` and `maxShareUnder14` start at the value measured when the gate landed (worst of Chromium/WebKit, light/dark, plus a little headroom) and may only go DOWN. A budget looser than the site-wide target (15% text, 110px on context-bar routes) or any tapAllowlist entry must name the issue that owns fixing it in `issue`. src/__tests__/lint/mobile-375-budgets.test.ts enforces the caps.",
+  "targets": {
+    "overflowPx": 0,
+    "maxShareUnder14": 0.15,
+    "contextBarFirstContentMaxPx": 110
+  },
+  "routes": [
+    {
+      "path": "/",
+      "sentinel": ".districts-kpi-strip",
+      "firstContentMaxPx": 240,
+      "maxShareUnder14": 0.05
+    },
+    {
+      "path": "/district/61",
+      "sentinel": "[data-testid=\"district-hub-tiles\"]",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.04
+    },
+    {
+      "path": "/district/61/clubs",
+      "sentinel": ".mobile-row-group__heading",
+      "first": "[data-testid=\"district-section-bar\"] + *",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.03
+    },
+    {
+      "path": "/district/61/divisions",
+      "sentinel": "[data-testid=\"mobile-row\"]",
+      "first": "[data-testid=\"district-section-bar\"] + *",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.01
+    },
+    {
+      "path": "/district/61/rankings",
+      "sentinel": ".chart-spark__headline",
+      "first": "[data-testid=\"district-section-bar\"] + *",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.01
+    },
+    {
+      "path": "/district/61/trends",
+      "sentinel": ".chart-spark__headline",
+      "first": "[data-testid=\"district-section-bar\"] + *",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.05
+    },
+    {
+      "path": "/district/61/analytics",
+      "sentinel": "[data-testid=\"education-awards-leaderboard\"]",
+      "first": "[data-testid=\"district-section-bar\"] + *",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.03
+    },
+    {
+      "path": "/district/61/changes",
+      "sentinel": "[data-testid=\"changes-to-chip-select\"]",
+      "first": "[data-testid=\"district-section-bar\"] + *",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.01
+    },
+    {
+      "path": "/district/61/grid",
+      "sentinel": ".club-grid-tile",
+      "first": "[data-testid=\"district-section-bar\"] + *",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.05
+    },
+    {
+      "path": "/district/61/action-list",
+      "sentinel": "[data-testid=\"mobile-row\"]",
+      "first": "[data-testid=\"district-section-bar\"] + *",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.01
+    },
+    {
+      "path": "/district/61/division/A",
+      "sentinel": "[data-testid=\"division-progress-text\"]",
+      "first": ".tm-card",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.03
+    },
+    {
+      "path": "/district/61/division/A/area/01",
+      "sentinel": "[data-testid=\"area-progress-text\"]",
+      "first": ".districts-page-header",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.01
+    },
+    {
+      "path": "/district/61/club/7238597",
+      "sentinel": ".club-stat",
+      "first": ".club-hero",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.1
+    },
+    {
+      "path": "/district/61/club/7238597/history",
+      "sentinel": ".priority-columns__table tbody tr",
+      "first": ".priority-columns",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.01
+    },
+    {
+      "path": "/district/80",
+      "sentinel": "[data-testid=\"district-hub-tiles\"]",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.04
+    },
+    {
+      "path": "/district/80/clubs",
+      "sentinel": ".mobile-row-group__heading",
+      "first": "[data-testid=\"district-section-bar\"] + *",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.03
+    },
+    {
+      "path": "/regions",
+      "sentinel": ".priority-columns__table tbody tr",
+      "first": ".priority-columns__table",
+      "firstContentMaxPx": 690,
+      "maxShareUnder14": 0.07
+    },
+    {
+      "path": "/region/05",
+      "sentinel": ".priority-columns__table tbody tr",
+      "first": ".districts-kpi-strip",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.12
+    },
+    {
+      "path": "/history",
+      "sentinel": "[data-testid=\"history-year-card\"]",
+      "first": "[data-testid=\"history-year-strip\"]",
+      "firstContentMaxPx": 300,
+      "maxShareUnder14": 0.11
+    },
+    {
+      "path": "/methodology",
+      "sentinel": ".methodology-toc",
+      "firstContentMaxPx": 390,
+      "maxShareUnder14": 0.13
+    },
+    {
+      "path": "/awards",
+      "sentinel": ".awards-page-card",
+      "firstContentMaxPx": 440,
+      "maxShareUnder14": 0.05
+    },
+    {
+      "path": "/clubs",
+      "sentinel": "[data-testid=\"clubs-kpi\"]",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.05
+    },
+    {
+      "path": "/clubs/race/distinguished",
+      "sentinel": ".mobile-row-list__rows",
+      "contextBar": true,
+      "firstContentMaxPx": 110,
+      "maxShareUnder14": 0.01
+    },
+    {
+      "path": "/mcp",
+      "sentinel": ".methodology-section",
+      "firstContentMaxPx": 310,
+      "maxShareUnder14": 0.1
+    },
+    {
+      "path": "/no-such-page",
+      "sentinel": "[data-testid=\"error-page\"] .error-page__panel",
+      "firstContentMaxPx": 230,
+      "maxShareUnder14": 0.01
+    }
+  ],
+  "tapAllowlist": []
+}
