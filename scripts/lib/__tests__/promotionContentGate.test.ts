@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import {
   buildContentGateSummary,
@@ -159,6 +160,7 @@ describe('classifyObject', () => {
     ],
     ['snapshots/2026-10-08/analytics/manifest.json', 'json'],
     ['config/district-snapshot-index.json', 'snapshot-index'],
+    ['config/district-region-history.json', 'district-region-history'],
     ['v1/latest.json', 'latest'],
     ['snapshots/2026-10-08/district_61.json', 'json'],
     ['club-trends/district_61/2026-2027.json', 'json'],
@@ -333,6 +335,37 @@ describe('checkObject — other shapes', () => {
   })
 })
 
+describe('checkObject — district-region history (#1820)', () => {
+  const REGION_PATH = 'config/district-region-history.json'
+  // The history the identity-history builder wrote from the staged
+  // rankings (shared with the education-rollup fixtures).
+  const history = JSON.parse(
+    readFileSync(
+      'scripts/lib/__tests__/fixtures/education-rollup/config/district-region-history.json',
+      'utf-8'
+    )
+  ) as {
+    districts: Record<string, { spans: unknown[] }>
+  }
+
+  it('passes the recorded history', () => {
+    expect(check(REGION_PATH, plain(history))).toBeNull()
+  })
+
+  it('fails a history that breaks the shared-contracts schema', () => {
+    const broken = structuredClone(history)
+    const first = Object.values(broken.districts)[0]!
+    first.spans = []
+    expect(check(REGION_PATH, plain(broken))).toMatch(/schema/)
+  })
+
+  it('fails a history with no districts (a fold over nothing)', () => {
+    expect(check(REGION_PATH, plain({ ...history, districts: {} }))).toMatch(
+      /no districts/
+    )
+  })
+})
+
 describe('checkLatestAgreesWithIndex', () => {
   it('passes when some district lists the latest date', () => {
     expect(
@@ -383,6 +416,21 @@ describe('planContentChecks — bounded, change-driven sampling', () => {
       random: () => 0,
     })
     expect(plan.crossCheckLatest).toBe(true)
+  })
+
+  it('always checks the district-region history, never sampling it out', () => {
+    const plan = planContentChecks(
+      [
+        ...Array.from({ length: 20 }, (_, i) =>
+          meta(`snapshots/2026-10-08/district_${i + 100}.json`)
+        ),
+        meta('config/district-region-history.json'),
+      ],
+      { random: () => 0, caps: { generic: 0 } }
+    )
+    expect(plan.checks.map(c => c.path)).toEqual([
+      'config/district-region-history.json',
+    ])
   })
 
   it('caps the generic sample, keeps D61, and skips non-JSON', () => {

@@ -22,8 +22,8 @@
  *   region at the year's LAST sampled date;
  * - a retired district stays, with `to` set.
  *
- * Path: `derived/district-region-history.json` in STAGING only until scoped
- * promotion lands (#1763); it then moves under `config/`.
+ * Path: `config/district-region-history.json`, promoted with the run and
+ * schema-checked by the promotion content gate (#1820).
  *
  * @module district-region-history.schema
  */

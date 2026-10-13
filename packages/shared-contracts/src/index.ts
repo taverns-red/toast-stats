@@ -234,7 +234,7 @@ export {
   type ClubDistrictHistoryShard,
 } from './schemas/club-district-history.schema.js'
 
-// District → region history — derived/district-region-history.json (#1820)
+// District → region history — config/district-region-history.json (#1820)
 export {
   DistrictRegionSpanSchema,
   DistrictRegionHistoryDistrictSchema,
