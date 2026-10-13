@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/test'
 
 /* District map static preview (#1943) on the deployed preview (BASE_URL),
  * at 375 and 1280, light and dark, both engines. Real D61 data.

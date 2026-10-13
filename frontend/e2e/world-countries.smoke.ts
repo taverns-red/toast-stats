@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Worldwide country choropleth (#1797) on /history/countries, against the
  * deployed preview and its real staging data. At 375 and 1280, light and

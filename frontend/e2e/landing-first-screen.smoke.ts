@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Landing first screen on phones (#1846, mobile epic #1827 Phase 2, review
  * §7 item 19).

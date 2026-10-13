@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Form controls at ≥16px below 768 — no iOS focus zoom (#1838, epic #1827).
  *

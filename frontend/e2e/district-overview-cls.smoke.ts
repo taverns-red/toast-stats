@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/test'
 
 /* CLS budget for the district overview `/district/:id`, measured live (#1647).
  *

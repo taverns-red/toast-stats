@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* WCAG AA text contrast on the routes #1839 fixed (epic #1827).
  *

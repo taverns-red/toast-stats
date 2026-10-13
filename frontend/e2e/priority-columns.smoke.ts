@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Priority-column comparison tables (#1834, mobile epic #1827 Phase 1,
  * review §5.2).

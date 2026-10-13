@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 import { MIN_TOUCH_TARGET_PX } from '../src/utils/touchTargetUtils'
 
 /* Breadcrumb baseline-alignment tripwire (#1387).

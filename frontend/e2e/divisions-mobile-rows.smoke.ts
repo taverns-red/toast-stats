@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Phone divisions page as collapsed division rows (#1844, mobile epic #1827
  * Phase 2, review §3 "divisions" row, §7 target "divisions page height").

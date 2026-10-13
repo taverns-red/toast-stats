@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* Club page on the mobile primitives (#1843, mobile epic #1827 Phase 2,
  * review §6.3).

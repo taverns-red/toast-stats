@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* District Overview hub on a phone (#1842, mobile epic #1827 Phase 2,
  * review §5.5).

@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Locator } from '@playwright/test'
+import { test, expect, type Page, type Locator } from './fixtures/test'
 
 /* Touch-only chart probe (#1835, mobile epic #1827 Phase 1 item 13).
  *

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures/test'
 
 /* District Club Growth funnel (#1794, epic #1781) — measured on the deployed
  * preview (BASE_URL) at 375 (light + dark) and 1280:
