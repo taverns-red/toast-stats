@@ -302,6 +302,19 @@ export function facetValues(params: URLSearchParams, param: string): string[] {
   return (params.get(param) ?? '').split(',').filter(Boolean)
 }
 
+/** The Filters control's keys (#1788); the rest of the filter logic loads
+ *  on demand from `mapFilters`. */
+export const MAP_FILTER_PARAMS = [
+  'visit',
+  'online',
+  'divisions',
+  'areas',
+] as const
+export type MapFilterParam = (typeof MAP_FILTER_PARAMS)[number]
+
+export const activeMapFilterCount = (params: URLSearchParams) =>
+  MAP_FILTER_PARAMS.filter(k => facetValues(params, k).length).length
+
 /** Apply every facet present in the URL (AND across facets, OR within). */
 export function applyFacets(
   clubs: readonly ClubTrend[],

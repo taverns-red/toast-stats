@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
@@ -25,6 +26,7 @@ import { buildPinFeatures } from '../components/map/pinLayer'
 import {
   CATEGORICAL8,
   MAP_COLOR_MODES,
+  activeMapFilterCount,
   applyFacets,
   buildModeModel,
   isTerritoryMode,
@@ -47,7 +49,12 @@ import '../components/map/districtMap.css'
    the Clubs-table filter keys `?status=` / `?distinguished=` /
    `?divisions=` / `?areas=` written by the legend chips, and `?view=list`
    — the full non-map equivalent. The PY/date scaffolding is the club
-   grid's (R3: passed down, never re-derived from the response). */
+   grid's (R3: passed down, never re-derived from the response).
+
+   Filters (#1788): `?visit=` / `?online=` with `?divisions=` / `?areas=`,
+   composing with the mode and the legend keys. Their logic (and the raw
+   snapshot the visit awards come from) loads only when the URL asks for
+   them or Filters is first opened; their UI only on that first open. */
 
 const CHIP_PEEK = 5
 
@@ -60,6 +67,12 @@ const MapLists = React.lazy(() =>
 const ClubLinks = React.lazy(() =>
   loadLists().then(m => ({ default: m.ClubLinks }))
 )
+
+const loadFilters = () => import('../components/map/mapFilters')
+const MapFilterPanel = React.lazy(
+  () => import('../components/map/MapFilterPanel')
+)
+const FILTERS_ID = 'map-filters'
 
 // Only a tap needs the club summary, so it loads on the first selection.
 const MapClubSummary = React.lazy(() =>
@@ -174,7 +187,12 @@ const DistrictMapPage: React.FC = () => {
   const { isDark } = useDarkMode()
   const [map, setMap] = useState<MapLibreMap | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [sheet, setSheet] = useState<'legend' | 'modes' | null>(null)
+  const [sheet, setSheet] = useState<'legend' | 'modes' | 'filters' | null>(
+    null
+  )
+  const filtersOpen = sheet === 'filters'
+  const [filtersSeen, setFiltersSeen] = useState(false)
+  const filterCount = activeMapFilterCount(searchParams)
 
   const {
     selectedProgramYear,
@@ -232,9 +250,36 @@ const DistrictMapPage: React.FC = () => {
         : buildModeModel(isTerritoryMode(mode) ? 'health' : mode),
     [mode, allClubs, territory]
   )
+  // Visit / online filtering loads on demand; until it (and, for a visit
+  // round, the snapshot) lands, a filtered deep link draws nothing rather
+  // than the unfiltered set.
+  const wantsFilters = searchParams.has('visit') || searchParams.has('online')
+  const [filters, setFilters] = useState<Awaited<
+    ReturnType<typeof loadFilters>
+  > | null>(null)
+  React.useEffect(() => {
+    if ((wantsFilters || filtersSeen) && !filters)
+      void loadFilters().then(setFilters)
+  }, [wantsFilters, filtersSeen, filters])
+  const wantsVisits = !!filters?.needsVisitData(searchParams)
+  const { data: visits } = useQuery({
+    queryKey: ['mapVisits', districtId, effectiveEndDate],
+    queryFn: () => filters!.loadVisitIndex(effectiveEndDate!, districtId),
+    enabled: wantsVisits && !!effectiveEndDate,
+    staleTime: 15 * 60 * 1000,
+  })
+  const filtering =
+    wantsFilters && (!filters || (wantsVisits && visits === undefined))
+  const applyAll = React.useCallback(
+    (clubs: typeof allClubs, params: URLSearchParams) => {
+      const out = applyFacets(clubs, params)
+      return filters ? filters.applyMapFilters(out, params, visits) : out
+    },
+    [filters, visits]
+  )
   const filtered = useMemo(
-    () => applyFacets(allClubs, searchParams),
-    [allClubs, searchParams]
+    () => (filtering ? [] : applyAll(allClubs, searchParams)),
+    [allClubs, searchParams, applyAll, filtering]
   )
   const facetParam = model.facet?.param
   const chips = useMemo(() => {
@@ -242,8 +287,8 @@ const DistrictMapPage: React.FC = () => {
     // zeroes the others; they include clubs not on the map (spec §4.3).
     const others = new URLSearchParams(searchParams)
     if (facetParam) others.delete(facetParam)
-    return legendChips(model, applyFacets(allClubs, others))
-  }, [model, allClubs, searchParams, facetParam])
+    return legendChips(model, applyAll(allClubs, others))
+  }, [model, allClubs, searchParams, facetParam, applyAll])
   const pressed = facetParam ? facetValues(searchParams, facetParam) : []
   const data = useMemo(
     () => buildPinFeatures(pending ? [] : filtered, model),
@@ -279,6 +324,10 @@ const DistrictMapPage: React.FC = () => {
     setSearchParams(prev => toggleFacetValue(prev, param, valueOf(chip)), {
       replace: true,
     })
+  }
+  const toggleFilters = () => {
+    setFiltersSeen(true)
+    setSheet(filtersOpen ? null : 'filters')
   }
   const viewHref = (view: 'list' | null) => {
     const next = new URLSearchParams(searchParams)
@@ -333,6 +382,20 @@ const DistrictMapPage: React.FC = () => {
     </React.Suspense>
   )
 
+  const filterPanel = filtersSeen && (
+    <React.Suspense fallback={null}>
+      <MapFilterPanel
+        clubs={allClubs}
+        isPhone={isPhone}
+        isOpen={filtersOpen}
+        onClose={() => setSheet(null)}
+        resultCount={filtered.length}
+        visitsUnavailable={visits === null}
+        id={FILTERS_ID}
+      />
+    </React.Suspense>
+  )
+
   const listFallback = (
     <div className="district-map__empty">
       <p>The map can’t be shown on this device.</p>
@@ -377,16 +440,34 @@ const DistrictMapPage: React.FC = () => {
             ) : (
               <ModeButtons mode={mode} onChange={setMode} />
             )}
+            <button
+              type="button"
+              className="map-pill"
+              aria-haspopup={isPhone ? 'dialog' : undefined}
+              aria-expanded={filtersOpen}
+              aria-label={
+                filterCount ? `Filters, ${filterCount} active` : 'Filters'
+              }
+              onClick={toggleFilters}
+            >
+              Filters
+              {filterCount > 0 && (
+                <span className="map-pill__badge">{filterCount}</span>
+              )}
+            </button>
             <Link className="map-pill" to={viewHref(listView ? null : 'list')}>
               {listView ? 'Map view' : 'List view'}
             </Link>
           </div>
           <p role="status" className="sr-only">
-            Showing {filtered.length} of {allClubs.length} clubs
+            {filtering
+              ? 'Filtering clubs…'
+              : `Showing ${filtered.length} of ${allClubs.length} clubs`}
           </p>
 
           {listView ? (
             <div className="district-map__listview">
+              {!isPhone && filterPanel}
               {legend()}
               <React.Suspense fallback={null}>
                 <ClubLinks
@@ -450,6 +531,7 @@ const DistrictMapPage: React.FC = () => {
               </div>
               {!isPhone && (
                 <aside className="map-panel" aria-label="Map legend and lists">
+                  {filterPanel}
                   {legend()}
                   {selected.length > 0 && (
                     <section
@@ -473,6 +555,7 @@ const DistrictMapPage: React.FC = () => {
 
         {isPhone && (
           <>
+            {filterPanel}
             <BottomSheet
               isOpen={sheet === 'modes'}
               onClose={() => setSheet(null)}
