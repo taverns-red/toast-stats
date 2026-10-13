@@ -184,3 +184,15 @@
     white-space: nowrap;
   }
 }
+
+/* Card rows (<640): the shared action-table prints each cell's label INLINE
+   before its value. Inline, "PAYMENT" + "Incomplete" has no break
+   opportunity and is wider than its auto-fit column, so the row overflowed
+   the 375 page (measured on the PR preview). Here the label stacks above the
+   value instead, scoped to this page's tables. */
+@media (max-width: 639px) {
+  .growth-stage .action-table td::before {
+    display: block;
+    margin-right: 0;
+  }
+}
