@@ -12,13 +12,27 @@
  */
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 
-export type MapColorMode = 'health' | 'tier' | 'division' | 'area'
+export type MapColorMode =
+  'health' | 'tier' | 'division' | 'area' | ExtendedMode
 
-export const MAP_COLOR_MODES: readonly { id: MapColorMode; label: string }[] = [
-  { id: 'health', label: 'Club health' },
-  { id: 'tier', label: 'Distinguished level' },
-  { id: 'division', label: 'Division' },
-  { id: 'area', label: 'Area' },
+/** #1787: built in `pinExtended`, loaded after the first render. */
+export type ExtendedMode = 'status' | 'size' | 'growth' | 'dcp' | 'age'
+
+/** Picker order, in the spec's groups (§5). */
+export const MAP_COLOR_MODES: readonly {
+  id: MapColorMode
+  label: string
+  group: string
+}[] = [
+  { id: 'health', label: 'Club health', group: 'Health & status' },
+  { id: 'tier', label: 'Distinguished level', group: 'Health & status' },
+  { id: 'status', label: 'TI club status', group: 'Health & status' },
+  { id: 'size', label: 'Members', group: 'Membership & DCP' },
+  { id: 'growth', label: 'Net growth', group: 'Membership & DCP' },
+  { id: 'dcp', label: 'DCP goals', group: 'Membership & DCP' },
+  { id: 'age', label: 'Club age', group: 'Membership & DCP' },
+  { id: 'division', label: 'Division', group: 'Territory' },
+  { id: 'area', label: 'Area', group: 'Territory' },
 ]
 
 /** `?color=` is URL-seedable: whitelist at the parse (Lessons 124/144). */
@@ -38,6 +52,11 @@ export type PinShape =
   | 'fill50'
   | 'fill75'
   | 'fill100'
+  | 'up'
+  | 'upHalf'
+  | 'down'
+  | 'downHalf'
+  | 'na'
 
 export const PIN_SHAPES: readonly PinShape[] = [
   'circle',
@@ -49,6 +68,11 @@ export const PIN_SHAPES: readonly PinShape[] = [
   'fill50',
   'fill75',
   'fill100',
+  'up',
+  'upHalf',
+  'down',
+  'downHalf',
+  'na',
 ]
 
 export const HEALTH_FILLS = {
@@ -211,11 +235,20 @@ export type TerritoryMode = 'division' | 'area'
 export const isTerritoryMode = (m: MapColorMode): m is TerritoryMode =>
   m === 'division' || m === 'area'
 
-/** Health and tier. Territory modes live in `pinTerritory` (loaded on
- *  demand: two of the four modes, kept off the route's first load). */
-export function buildModeModel(
-  mode: Exclude<MapColorMode, TerritoryMode>
-): ModeModel {
+/** Health and tier are built here; every other mode in an on-demand chunk
+ *  (`pinTerritory`, `pinExtended`), kept off the route's first load. */
+export const isLazyMode = (m: MapColorMode) => m !== 'health' && m !== 'tier'
+
+/** The legend-chip keys of the `pinExtended` modes (#1787). */
+export const EXTENDED_FACET_PARAMS = [
+  'clubStatus',
+  'size',
+  'growth',
+  'dcp',
+  'age',
+] as const
+
+export function buildModeModel(mode: 'health' | 'tier'): ModeModel {
   if (mode === 'tier') {
     return {
       mode,
@@ -266,8 +299,11 @@ export function legendChips(
     ...cat,
     count: counts.get(cat.key) ?? 0,
   }))
+  // Shared states (suspended, not available) are no rung: hidden at 0.
   const shown = chips.filter(
-    c => c.count > 0 || (model.kind === 'ordinal' && c.key !== SUSPENDED.key)
+    c =>
+      c.count > 0 ||
+      (model.kind === 'ordinal' && c.shape !== 'suspended' && c.shape !== 'na')
   )
   if (model.kind === 'categorical')
     shown.sort((a, b) => b.count - a.count || compareLabel(a.label, b.label))

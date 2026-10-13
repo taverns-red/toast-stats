@@ -13,6 +13,16 @@ const LEVEL: Record<string, number> = {
   fill100: 1,
 }
 
+const UP = 'M7 1.5L12.6 11.5H1.4Z'
+const DOWN = 'M7 12.5L12.6 2.5H1.4Z'
+const ARROWS: Record<string, string> = {
+  triangle: UP,
+  up: UP,
+  upHalf: UP,
+  down: DOWN,
+  downHalf: DOWN,
+}
+
 function wedge(level: number): string {
   if (level >= 1) return ''
   const a = -Math.PI / 2 + level * Math.PI * 2
@@ -26,8 +36,34 @@ export const PinSwatch: React.FC<{ category: PinCategory }> = ({
 }) => {
   const level = LEVEL[shape]
   let body: React.ReactNode
-  if (shape === 'triangle') {
-    body = <path d="M7 1.5L12.6 11.5H1.4Z" fill={fill} />
+  const arrow = ARROWS[shape]
+  if (arrow) {
+    // Direction (net growth): solid for the big step, open for the small.
+    body = shape.endsWith('Half') ? (
+      <>
+        <path d={arrow} className="pin-swatch__bg" />
+        <path
+          d={arrow}
+          fill="none"
+          stroke={fill}
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+      </>
+    ) : (
+      <path d={arrow} fill={fill} />
+    )
+  } else if (shape === 'na') {
+    body = (
+      <circle
+        cx="7"
+        cy="7"
+        r="3.75"
+        fill="none"
+        stroke={fill}
+        strokeWidth="1.5"
+      />
+    )
   } else if (shape === 'square') {
     body = <rect x="2" y="2" width="10" height="10" fill={fill} />
   } else if (shape === 'suspended') {

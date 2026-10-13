@@ -13,6 +13,7 @@ import {
 } from '../pinExtended'
 import { legendChips } from '../pinModes'
 import { buildPinFeatures, clubPinLayers } from '../pinLayer'
+import { pinTargets } from '../pinTargets'
 
 const club = (o: Partial<ClubTrend>): ClubTrend =>
   ({
@@ -240,5 +241,24 @@ describe('legend-chip facets (one key per mode)', () => {
     expect(ids('size=20-29&clubStatus=Low')).toEqual([])
     expect(ids('clubStatus=Active')).toEqual(['b', 'c'])
     expect(ids('')).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('pin names (#1966 keyboard path)', () => {
+  it("a pin is named by club and the active mode's category, in words", () => {
+    const model = extendedModel('size', DATE)
+    const c = club({
+      clubId: '7',
+      clubName: 'Alpha',
+      membershipTrend: members(9),
+    })
+    const [f] = buildPinFeatures([c], model).features
+    const [t] = pinTargets(
+      [{ geometry: f!.geometry, properties: { ...f!.properties } }],
+      ([x, y]) => ({ x, y }),
+      [c],
+      model
+    )
+    expect(t!.label).toBe('Alpha, 8–11 members')
   })
 })

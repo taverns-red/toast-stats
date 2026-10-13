@@ -28,15 +28,18 @@ import {
   buildPinFeatures,
 } from '../components/map/pinLayer'
 import {
+  EXTENDED_FACET_PARAMS,
   MAP_COLOR_MODES,
   activeMapFilterCount,
   applyFacets,
   buildModeModel,
+  isLazyMode,
   isTerritoryMode,
   facetValues,
   legendChips,
   parseMapColorMode,
   toggleFacetValue,
+  type ExtendedMode,
   type LegendChip,
   type MapColorMode,
 } from '../components/map/pinModes'
@@ -88,6 +91,13 @@ const MapFilterPanel = React.lazy(
   () => import('../components/map/MapFilterPanel')
 )
 
+// The grouped mode picker (#1787): the phone sheet's and the desktop
+// popover's, fetched on mount.
+const loadPicker = () => import('../components/map/MapModePicker')
+const ModePopover = React.lazy(() =>
+  loadPicker().then(m => ({ default: m.ModePopover }))
+)
+
 // Phones only: the mode picker, legend and club sheets (fetched on mount).
 const MapPhoneSheets = React.lazy(
   () => import('../components/map/MapPhoneSheets')
@@ -121,16 +131,23 @@ class MapErrorBoundary extends React.Component<
   }
 }
 
-/** The colour-mode toggles (#1784): aria-pressed buttons, not tabs. The
- *  phone picker adds a swatch preview per mode (`preview`, from its own
- *  on-demand chunk). */
-export const ModeButtons: React.FC<{
+/** "Colour pins by" in words for the map's label: "club health", "TI club
+ *  status", "DCP goals". */
+const lowerFirst = (l: string) =>
+  /^[A-Z][a-z]/.test(l) ? l[0]!.toLowerCase() + l.slice(1) : l
+
+/** The quick toggle beside the picker at ≥ 1024 (spec §5): the default
+ *  and the runner-up, one tap away. aria-pressed buttons, not tabs. */
+const QuickModes: React.FC<{
   mode: MapColorMode
   onChange: (m: MapColorMode) => void
-  preview?: (m: MapColorMode) => React.ReactNode
-}> = ({ mode, onChange, preview }) => (
-  <div className="map-modes" role="group" aria-label="Colour pins by">
-    {MAP_COLOR_MODES.map(m => (
+}> = ({ mode, onChange }) => (
+  <div
+    className="map-modes map-modes--quick"
+    role="group"
+    aria-label="Quick colour"
+  >
+    {MAP_COLOR_MODES.slice(0, 2).map(m => (
       <button
         key={m.id}
         type="button"
@@ -138,7 +155,6 @@ export const ModeButtons: React.FC<{
         aria-pressed={mode === m.id}
         onClick={() => onChange(m.id)}
       >
-        {preview?.(m.id)}
         {m.label}
       </button>
     ))}
@@ -165,6 +181,8 @@ const DistrictMapPage: React.FC = () => {
     null
   )
   const filtersOpen = sheet === 'filters'
+  const modesOpen = sheet === 'modes'
+  const modePill = React.useRef<HTMLButtonElement>(null)
   const [filtersSeen, setFiltersSeen] = useState(false)
   const filterCount = activeMapFilterCount(searchParams)
 
@@ -213,32 +231,45 @@ const DistrictMapPage: React.FC = () => {
   const [territory, setTerritory] = useState<
     typeof import('../components/map/pinTerritory') | null
   >(null)
+  // So do the extended modes (#1787): status, members, growth, DCP, age.
+  const [extended, setExtended] = useState<
+    typeof import('../components/map/pinExtended') | null
+  >(null)
   React.useEffect(() => {
     void import('../components/map/pinTerritory').then(setTerritory)
+    void import('../components/map/pinExtended').then(setExtended)
     void loadLists()
     void loadPreview()
+    void loadPicker()
   }, [])
-  const pending = isTerritoryMode(mode) && !territory
-  const model = useMemo(
-    () =>
-      isTerritoryMode(mode) && territory
-        ? territory.territoryModel(mode, allClubs)
-        : buildModeModel(isTerritoryMode(mode) ? 'health' : mode),
-    [mode, allClubs, territory]
-  )
+  const pending =
+    isLazyMode(mode) && !(isTerritoryMode(mode) ? territory : extended)
+  // Club age is measured at the viewed date, passed down (R3).
+  const viewedDate = effectiveEndDate ?? ''
+  const model = useMemo(() => {
+    if (pending || !isLazyMode(mode))
+      return buildModeModel(mode === 'tier' ? 'tier' : 'health')
+    return isTerritoryMode(mode)
+      ? territory!.territoryModel(mode, allClubs)
+      : extended!.extendedModel(mode as ExtendedMode, viewedDate)
+  }, [mode, allClubs, territory, extended, pending, viewedDate])
   // Visit / online filtering lives in the on-demand filter chunk, which
   // hands its filter up once ready (with the visit snapshot when a round is
   // asked for); until then a filtered deep link draws nothing rather than
   // the unfiltered set.
   const wantsFilters = searchParams.has('visit') || searchParams.has('online')
   const [mapFilter, setMapFilter] = useState<MapFilter | null>(null)
-  const filtering = wantsFilters && !mapFilter
+  // An extended mode's legend key (`?size=`, `?clubStatus=` …) waits for
+  // its chunk too.
+  const wantsExtended = EXTENDED_FACET_PARAMS.some(p => searchParams.has(p))
+  const filtering = (wantsFilters && !mapFilter) || (wantsExtended && !extended)
   const applyAll = React.useCallback(
     (clubs: typeof allClubs, params: URLSearchParams) => {
-      const out = applyFacets(clubs, params)
+      let out = applyFacets(clubs, params)
+      if (extended) out = extended.applyExtendedFacets(out, params, viewedDate)
       return mapFilter ? mapFilter(out, params) : out
     },
-    [mapFilter]
+    [mapFilter, extended, viewedDate]
   )
   const filtered = useMemo(
     () => (filtering ? [] : applyAll(allClubs, searchParams)),
@@ -313,6 +344,7 @@ const DistrictMapPage: React.FC = () => {
     : rawName || ''
   useDocumentTitle(districtName ? `${districtName} Club Map` : null)
   const modeLabel = MAP_COLOR_MODES.find(m => m.id === mode)!.label
+  const closeModes = React.useCallback(() => setSheet(null), [setSheet])
 
   const legend = (limit?: number, onMore?: () => void) => (
     <div className="map-legend">
@@ -390,19 +422,32 @@ const DistrictMapPage: React.FC = () => {
 
         <section className="district-map" aria-label="Club map">
           <div className="district-map__toolbar">
-            {isPhone ? (
+            <div className="map-modes-anchor">
               <button
+                ref={modePill}
                 type="button"
                 className="map-pill"
-                aria-haspopup="dialog"
-                onClick={() => setSheet('modes')}
+                aria-haspopup={isPhone ? 'dialog' : undefined}
+                aria-expanded={isPhone ? undefined : modesOpen}
+                aria-controls={isPhone ? undefined : 'map-modes-pop'}
+                onClick={() => setSheet(modesOpen ? null : 'modes')}
               >
                 Colour: {modeLabel}
                 <span aria-hidden="true"> ▾</span>
               </button>
-            ) : (
-              <ModeButtons mode={mode} onChange={setMode} />
-            )}
+              {!isPhone && modesOpen && (
+                <React.Suspense fallback={null}>
+                  <ModePopover
+                    id="map-modes-pop"
+                    mode={mode}
+                    onChange={setMode}
+                    onClose={closeModes}
+                    trigger={modePill}
+                  />
+                </React.Suspense>
+              )}
+            </div>
+            {!isPhone && <QuickModes mode={mode} onChange={setMode} />}
             <button
               type="button"
               className="map-pill"
@@ -462,7 +507,7 @@ const DistrictMapPage: React.FC = () => {
                 ) : (
                   <MapErrorBoundary fallback={listFallback}>
                     <LazyBasemapMap
-                      ariaLabel={`Club map, coloured by ${sandbox ? 'proposed area' : modeLabel.toLowerCase()}`}
+                      ariaLabel={`Club map, coloured by ${sandbox ? 'proposed area' : lowerFirst(modeLabel)}`}
                       onReady={setMap}
                       cooperativeGestures={false}
                     />
@@ -549,13 +594,8 @@ const DistrictMapPage: React.FC = () => {
               <MapPhoneSheets
                 sheet={sheet}
                 onClose={() => setSheet(null)}
-                modes={preview => (
-                  <ModeButtons
-                    mode={mode}
-                    onChange={setMode}
-                    preview={preview}
-                  />
-                )}
+                mode={mode}
+                onModeChange={setMode}
                 legendTitle={model.title}
                 legend={
                   <>

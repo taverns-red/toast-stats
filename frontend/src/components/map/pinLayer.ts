@@ -109,10 +109,11 @@ function clusterFill(model: ModeModel): ExpressionSpecification | string {
   const cats = model.categories
   if (model.kind === 'categorical') return NEUTRAL_CLUSTER_FILL
   if (model.kind === 'ordinal') {
-    // Rungs from the bottom of the ladder; the suspended override is no rung.
+    // Rungs from the bottom of the ladder; the shared states (suspended,
+    // not available) are no rung.
     const rungs = cats
       .map((c, i) => ({ c, i }))
-      .filter(r => r.c.shape !== 'suspended')
+      .filter(r => r.c.shape !== 'suspended' && r.c.shape !== 'na')
       .reverse()
     const total: ExpressionSpecification = [
       '+',
