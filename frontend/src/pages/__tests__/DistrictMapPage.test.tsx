@@ -245,7 +245,7 @@ describe('DistrictMapPage — map and legend', () => {
   // static preview (no tiles, no MapLibre); the list view has no map box.
   it('shows a static preview of the located clubs in the map box', async () => {
     const { container } = renderAt('/district/61/map')
-    await screen.findByRole('region', { name: /Club map/ })
+    await screen.findByTestId('map-stub')
     const canvas = container.querySelector('.district-map__canvas')!
     await vi.waitFor(() =>
       expect(

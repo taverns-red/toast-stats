@@ -45,23 +45,16 @@ const located = (
   Number.isFinite(c.coordinates.lat) &&
   Number.isFinite(c.coordinates.lng)
 
-// #1943: red-phase stub; implemented in the next commit.
+/**
+ * #1943 — every located club, projected into the box with no focus. The
+ * district map's static preview draws these while MapLibre loads.
+ */
 export function projectClubPoints(
-  _clubs: readonly LocatorSource[],
-  _box: LocatorBox
-): LocatorPoint[] {
-  return []
-}
-
-/** Null when the focus club has no usable coordinates. */
-export function projectClubLocator(
   clubs: readonly LocatorSource[],
-  focusId: string,
   box: LocatorBox
-): ClubLocator | null {
+): LocatorPoint[] {
   const pts = clubs.filter(located)
-  const focusSrc = pts.find(c => clubIdsMatch(c.clubId, focusId))
-  if (!focusSrc) return null
+  if (pts.length === 0) return []
 
   const lats = pts.map(c => c.coordinates.lat)
   const meanLat = lats.reduce((s, v) => s + v, 0) / lats.length
@@ -90,12 +83,25 @@ export function projectClubLocator(
   const offX = box.pad + (innerW - spanX * scale) / 2
   const offY = box.pad + (innerH - spanY * scale) / 2
 
-  const points = pts.map((c, i) => ({
+  return pts.map((c, i) => ({
     id: c.clubId,
     x: offX + (xs[i]! - minX) * scale,
     // North up: larger latitude → smaller y.
     y: offY + (maxY - ys[i]!) * scale,
   }))
+}
+
+/** Null when the focus club has no usable coordinates. */
+export function projectClubLocator(
+  clubs: readonly LocatorSource[],
+  focusId: string,
+  box: LocatorBox
+): ClubLocator | null {
+  const focusSrc = clubs
+    .filter(located)
+    .find(c => clubIdsMatch(c.clubId, focusId))
+  if (!focusSrc) return null
+  const points = projectClubPoints(clubs, box)
   const focus = points.find(p => p.id === focusSrc.clubId) ?? null
   return { points, focus }
 }

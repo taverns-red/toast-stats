@@ -74,6 +74,11 @@ const MapEmpty = React.lazy(() =>
   loadLists().then(m => ({ default: m.MapEmpty }))
 )
 
+// #1943: the static club preview shown while MapLibre loads. Its own small
+// chunk, fetched on mount with the data, never on the map's critical path.
+const loadPreview = () => import('../components/map/MapPreview')
+const MapPreview = React.lazy(loadPreview)
+
 const MapFilterPanel = React.lazy(
   () => import('../components/map/MapFilterPanel')
 )
@@ -203,6 +208,7 @@ const DistrictMapPage: React.FC = () => {
   React.useEffect(() => {
     void import('../components/map/pinTerritory').then(setTerritory)
     void loadLists()
+    void loadPreview()
   }, [])
   const pending = isTerritoryMode(mode) && !territory
   const model = useMemo(
@@ -452,6 +458,9 @@ const DistrictMapPage: React.FC = () => {
                       onReady={setMap}
                       cooperativeGestures={false}
                     />
+                    <React.Suspense fallback={null}>
+                      <MapPreview clubs={allClubs} map={map} />
+                    </React.Suspense>
                   </MapErrorBoundary>
                 )}
                 {isPhone && (

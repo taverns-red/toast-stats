@@ -141,6 +141,43 @@
   font-size: 16px;
 }
 
+/* #1943: the static club preview over the map box while MapLibre loads.
+   Absolutely positioned in the reserved box (no layout shift), decorative,
+   never takes a tap. It cross-fades out when the live map first goes idle;
+   `visibility` follows the fade so nothing lingers once it is transparent.
+   The map's controls (z-index 2) and the phone peek stay above it. */
+.map-preview {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 1;
+  transition:
+    opacity 400ms ease-out,
+    visibility 0s linear 400ms;
+}
+
+.map-preview[data-state='painted'] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.map-preview__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The mini-map's dots (#1843), a little stronger over the bare land colour. */
+.map-preview .club-minimap__dot {
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-preview {
+    transition: none;
+  }
+}
+
 /* Phone peek: one row of legend chips over the map's bottom edge, then
    the button to the full legend. Scrolls sideways with a fade cue; the
    title lives in the "Colour: …" pill above the map. */
