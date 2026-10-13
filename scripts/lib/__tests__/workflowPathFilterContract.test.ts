@@ -117,7 +117,37 @@ function filesIn(text: string, cwd: string): string[] {
     })
 }
 
-/** Every repo file a workflow's steps reference. */
+const SCRIPT_EXT = /\.(?:[cm]?[jt]s)$/
+const IMPORT_SPEC =
+  /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|^\s*import\s+)['"](\.{1,2}\/[^'"]+)['"]/gm
+
+/**
+ * `file` plus every repo module it reaches through relative imports, so a
+ * gate's logic in `scripts/lib/` counts as part of the script that runs it.
+ */
+function withImports(file: string, seen = new Set<string>()): Set<string> {
+  if (seen.has(file)) return seen
+  seen.add(file)
+  if (!SCRIPT_EXT.test(file)) return seen
+  const src = fs.readFileSync(path.join(ROOT, file), 'utf-8')
+  for (const [, spec] of src.matchAll(IMPORT_SPEC)) {
+    const base = path.posix.join(path.posix.dirname(file), spec!)
+    // ESM `./x.js` specifiers name the `./x.ts` source under tsx.
+    const hit = [
+      base,
+      `${base}.ts`,
+      base.replace(/\.js$/, '.ts'),
+      `${base}/index.ts`,
+    ].find(c => {
+      const abs = path.join(ROOT, c)
+      return fs.existsSync(abs) && fs.statSync(abs).isFile()
+    })
+    if (hit) withImports(hit, seen)
+  }
+  return seen
+}
+
+/** Every repo file a workflow's steps reference, plus their imports. */
 function filesRunBy(wf: Workflow): string[] {
   const out = new Set<string>()
   for (const job of Object.values(wf.jobs ?? {})) {
@@ -134,7 +164,9 @@ function filesRunBy(wf: Workflow): string[] {
       }
     }
   }
-  return [...out].sort()
+  const all = new Set<string>()
+  for (const f of out) withImports(f).forEach(g => all.add(g))
+  return [...all].sort()
 }
 
 const filtered = workflows.filter(w => filteredEvents(w.wf).length > 0)
@@ -158,6 +190,16 @@ describe('workflow path filters cover the files their steps run (#2005)', () => 
         'lighthouserc.js',
         'scripts/check-critical-path.ts',
         'scripts/check-map-route-budget.ts',
+      ])
+    )
+  })
+
+  it('follows relative imports into scripts/lib', () => {
+    const lh = workflows.find(w => w.file === 'lighthouse-ci.yml')!
+    expect(filesRunBy(lh.wf)).toEqual(
+      expect.arrayContaining([
+        'scripts/lib/criticalPath.ts',
+        'scripts/lib/mapRouteBudget.ts',
       ])
     )
   })
