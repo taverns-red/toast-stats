@@ -23,6 +23,7 @@ import {
   labelColourOn,
 } from '../pinModes'
 import { BASEMAP_COLOURS } from '../basemapStyle'
+import { DIVERGING5, SEQUENTIAL5, STATUS_FILLS } from '../pinExtended'
 
 type Vision = 'normal' | 'protan' | 'deutan' | 'tritan'
 const VISIONS: Vision[] = ['normal', 'protan', 'deutan', 'tritan']
@@ -181,6 +182,7 @@ describe('status and categorical palettes', () => {
   const sets: Record<string, string[]> = {
     health: Object.values(HEALTH_FILLS),
     categorical8: [...CATEGORICAL8],
+    status: Object.values(STATUS_FILLS),
   }
   for (const [name, colours] of Object.entries(sets)) {
     for (const v of VISIONS) {
@@ -211,6 +213,27 @@ describe('tier (ordinal) palette', () => {
   }
 })
 
+// #1787: members, DCP goals and club age share one sequential ramp; net
+// growth a diverging one, darkest at both ends and peaking at "no change".
+describe('sequential and diverging palettes (#1787)', () => {
+  for (const v of VISIONS) {
+    it(`sequential5: adjacent steps ≥ 8 and L* monotone under ${v}`, () => {
+      expect(minPairDelta([...SEQUENTIAL5], v, true)).toBeGreaterThanOrEqual(8)
+      const ls = SEQUENTIAL5.map(c => lab(simulate(c, v))[0])
+      for (let i = 1; i < ls.length; i++)
+        expect(ls[i]!).toBeLessThan(ls[i - 1]!)
+    })
+    it(`diverging5: adjacent steps ≥ 8 and L* peaks at the centre under ${v}`, () => {
+      expect(minPairDelta([...DIVERGING5], v, true)).toBeGreaterThanOrEqual(8)
+      const ls = DIVERGING5.map(c => lab(simulate(c, v))[0])
+      expect(ls[0]!).toBeLessThan(ls[1]!)
+      expect(ls[1]!).toBeLessThan(ls[2]!)
+      expect(ls[3]!).toBeLessThan(ls[2]!)
+      expect(ls[4]!).toBeLessThan(ls[3]!)
+    })
+  }
+})
+
 describe('contrast', () => {
   for (const theme of ['light', 'dark'] as const) {
     it(`outline clears 3:1 on land and water (${theme})`, () => {
@@ -225,6 +248,9 @@ describe('contrast', () => {
       ...Object.values(HEALTH_FILLS),
       ...Object.values(TIER_FILLS),
       ...CATEGORICAL8,
+      ...Object.values(STATUS_FILLS),
+      ...SEQUENTIAL5,
+      ...DIVERGING5,
     ]
     for (const fill of fills) {
       const best = contrast(fill, WHITE) >= contrast(fill, INK) ? WHITE : INK

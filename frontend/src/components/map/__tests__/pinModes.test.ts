@@ -17,13 +17,16 @@ import {
   legendChips,
   parseMapColorMode,
   toggleFacetValue,
+  type ExtendedMode,
   type MapColorMode,
 } from '../pinModes'
 import { assignTerritoryColours, territoryModel } from '../pinTerritory'
 
 // Health/tier come from pinModes; division/area from the on-demand module.
-const buildModeModel = (mode: MapColorMode, clubs: readonly ClubTrend[]) =>
-  isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode)
+const buildModeModel = (
+  mode: Exclude<MapColorMode, ExtendedMode>,
+  clubs: readonly ClubTrend[]
+) => (isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode))
 
 const club = (o: Partial<ClubTrend>): ClubTrend =>
   ({
@@ -43,13 +46,16 @@ const club = (o: Partial<ClubTrend>): ClubTrend =>
   }) as ClubTrend
 
 describe('parseMapColorMode', () => {
-  it('defaults to club health and whitelists the four core modes', () => {
+  it('defaults to club health and whitelists every offered mode', () => {
     expect(parseMapColorMode(null)).toBe('health')
     expect(parseMapColorMode('tier')).toBe('tier')
     expect(parseMapColorMode('division')).toBe('division')
     expect(parseMapColorMode('area')).toBe('area')
-    // Unknown, and modes this level does not offer yet (#1787), fall back.
-    expect(parseMapColorMode('size')).toBe('health')
+    // #1787: the extended modes are offered now.
+    for (const m of ['status', 'size', 'growth', 'dcp', 'age'])
+      expect(parseMapColorMode(m)).toBe(m)
+    // Unknown, and modes this level does not offer yet, fall back.
+    expect(parseMapColorMode('csp')).toBe('health')
     expect(parseMapColorMode('<script>')).toBe('health')
   })
 
@@ -57,6 +63,11 @@ describe('parseMapColorMode', () => {
     expect(MAP_COLOR_MODES.map(m => m.id)).toEqual([
       'health',
       'tier',
+      'status',
+      'size',
+      'growth',
+      'dcp',
+      'age',
       'division',
       'area',
     ])

@@ -215,6 +215,66 @@ for (const theme of ['light', 'dark'] as const) {
   }
 }
 
+/* Extended colour modes (#1787): picked from the grouped picker (the sheet
+ * at 375, the popover at 1280), the mode lands in `?color=`, the map says
+ * what it is coloured by, and the legend names every club's category in
+ * words — its chips sum to every club in scope, so no club silently drops
+ * out as a false zero. */
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [375, 1280]) {
+    test(`district map extended modes at ${width} (${theme})`, async ({
+      page,
+    }) => {
+      test.setTimeout(90_000)
+      await open(page, theme, width)
+      const total = (await shownOf(page)).m
+
+      await page.getByRole('button', { name: /^Colour: Club health/ }).click()
+      const picker =
+        width < 768
+          ? page.getByRole('dialog', { name: 'Colour pins by' })
+          : page.locator('#map-modes-pop')
+      const group = picker.getByRole('group', { name: 'Membership & DCP' })
+      await expect(group).toBeVisible({ timeout: 15_000 })
+      await group.getByRole('button', { name: 'Members' }).click()
+      await expect(page).toHaveURL(/color=size/)
+      await expect(
+        page.getByRole('region', { name: 'Club map, coloured by members' })
+      ).toBeVisible({ timeout: 30_000 })
+
+      // The full legend: the side panel at 1280, the sheet at 375.
+      if (width < 768)
+        await page.getByRole('button', { name: 'Legend and lists' }).click()
+      const legend = page
+        .getByRole('group', { name: 'Members legend' })
+        .filter({ visible: true })
+        .last()
+      await expect(legend).toBeVisible()
+      const chips = await legend.getByRole('button').allTextContents()
+      const counts = chips.map(t => {
+        const m = /^(.*\S)\s+(\d+)$/.exec(t.replace(/\s+/g, ' ').trim())
+        expect(m, t).not.toBeNull()
+        return { label: m![1]!, n: Number(m![2]) }
+      })
+      expect(counts.slice(0, 5).map(c => c.label)).toEqual([
+        '0–7 members',
+        '8–11 members',
+        '12–19 members',
+        '20–29 members',
+        '30 or more members',
+      ])
+      expect(counts.reduce((a, c) => a + c.n, 0)).toBe(total)
+
+      const m = await page.evaluate(() => ({
+        overflow:
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      }))
+      expect(m.overflow).toBeLessThanOrEqual(0)
+    })
+  }
+}
+
 /* Map filters (#1788): visit round, online-capable, division and area as
  * URL state, in the shared Filter & sort sheet at 375 and a side-panel
  * section at 1280; the list view applies the same set. */

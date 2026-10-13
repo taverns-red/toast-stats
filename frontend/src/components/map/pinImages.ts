@@ -44,10 +44,16 @@ function shapePath(
   r: number
 ) {
   ctx.beginPath()
-  if (shape === 'triangle') {
+  if (shape === 'triangle' || shape === 'up' || shape === 'upHalf') {
     ctx.moveTo(cx, cy - r)
     ctx.lineTo(cx + r * 0.95, cy + r * 0.75)
     ctx.lineTo(cx - r * 0.95, cy + r * 0.75)
+    ctx.closePath()
+  } else if (shape === 'down' || shape === 'downHalf') {
+    // Net growth's decline arrows (spec §3.2, direction family).
+    ctx.moveTo(cx, cy + r)
+    ctx.lineTo(cx + r * 0.95, cy - r * 0.75)
+    ctx.lineTo(cx - r * 0.95, cy - r * 0.75)
     ctx.closePath()
   } else if (shape === 'square') {
     const s = r * 0.85
@@ -93,7 +99,24 @@ function drawPin(
     ctx.fill()
   }
   const level = FILL_LEVEL[spec.shape]
-  if (spec.shape === 'suspended') {
+  if (spec.shape === 'na') {
+    // ◌ Not available: a 70 % hollow ring, no outline (spec §3.2).
+    shapePath(ctx, 'circle', cx, cy, r * 0.7)
+    ctx.lineWidth = 2
+    ctx.strokeStyle = spec.fill
+    ctx.stroke()
+    return
+  }
+  if (spec.shape === 'upHalf' || spec.shape === 'downHalf') {
+    // The smaller step: the arrow drawn open, in its fill colour.
+    shapePath(ctx, spec.shape, cx, cy, r)
+    ctx.fillStyle = HALO[spec.theme]
+    ctx.fill()
+    shapePath(ctx, spec.shape, cx, cy, r - 2.5)
+    ctx.lineWidth = 2
+    ctx.strokeStyle = spec.fill
+    ctx.stroke()
+  } else if (spec.shape === 'suspended') {
     shapePath(ctx, 'circle', cx, cy, r)
     ctx.fillStyle = HALO[spec.theme]
     ctx.fill()

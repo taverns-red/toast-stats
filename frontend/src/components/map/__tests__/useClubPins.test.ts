@@ -45,13 +45,14 @@ const opts: ClubPinsOptions = {
 }
 
 describe('useClubPins', () => {
-  it('removes its layers and source when handed null, and rebuilds on return', () => {
+  it('removes its layers and source when handed null, and rebuilds on return', async () => {
     const map = fakeMap()
     const { rerender } = renderHook(
       ({ m }: { m: MapLibreMap | null }) => useClubPins(m, opts),
       { initialProps: { m: map as unknown as MapLibreMap | null } }
     )
-    expect(map.sources.has(PIN_SOURCE_ID)).toBe(true)
+    // The pins go on once the icon painter's chunk has landed (#1787).
+    await vi.waitFor(() => expect(map.sources.has(PIN_SOURCE_ID)).toBe(true))
     expect([...map.layers]).toEqual(expect.arrayContaining([...PIN_LAYER_IDS]))
 
     rerender({ m: null })

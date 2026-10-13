@@ -18,6 +18,7 @@ import type { ClubTrend } from '../../../hooks/useDistrictAnalytics'
 import {
   buildModeModel as baseModel,
   isTerritoryMode,
+  type ExtendedMode,
   type MapColorMode,
 } from '../pinModes'
 import { territoryModel } from '../pinTerritory'
@@ -31,8 +32,10 @@ import {
 } from '../pinLayer'
 
 // Health/tier come from pinModes; division/area from the on-demand module.
-const buildModeModel = (mode: MapColorMode, clubs: readonly ClubTrend[]) =>
-  isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode)
+const buildModeModel = (
+  mode: Exclude<MapColorMode, ExtendedMode>,
+  clubs: readonly ClubTrend[]
+) => (isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode))
 
 const club = (o: Partial<ClubTrend>): ClubTrend =>
   ({
@@ -79,7 +82,7 @@ describe('buildPinFeatures', () => {
   })
 })
 
-function styleWith(mode: MapColorMode) {
+function styleWith(mode: Exclude<MapColorMode, ExtendedMode>) {
   const model = buildModeModel(mode, CLUBS)
   return {
     model,
@@ -115,7 +118,7 @@ describe('clubPinLayers', () => {
 
 /** Evaluate a layer's icon-image for a feature, as MapLibre would. */
 function iconFor(
-  mode: MapColorMode,
+  mode: Exclude<MapColorMode, ExtendedMode>,
   layerId: string,
   properties: Record<string, unknown>,
   zoom = 8

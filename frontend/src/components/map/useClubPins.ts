@@ -10,7 +10,7 @@
  *
  * Only MapLibre *types* are imported: the runtime arrives with the map.
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type {
   GeoJSONSource,
   LngLatBoundsLike,
@@ -32,7 +32,16 @@ import {
   type MapTheme,
   type PinFeatureCollection,
 } from './pinLayer'
-import { drawIcon } from './pinImages'
+
+// The icon painter is its own chunk (#1787: the map route's first-load
+// budget). It is fetched as soon as the hook mounts — long before MapLibre
+// is up — and the pins are added once it has landed.
+type Draw = typeof import('./pinImages').drawIcon
+let draw: Draw | null = null
+const loadDraw = () =>
+  import('./pinImages').then(m => {
+    draw = m.drawIcon
+  })
 
 export interface ClubPinsOptions {
   data: PinFeatureCollection
@@ -77,15 +86,19 @@ export function useClubPins(map: MapLibreMap | null, opts: ClubPinsOptions) {
   })
   const built = useRef<{ mode: ModeModel; theme: MapTheme } | null>(null)
   const fitted = useRef<string | null>(null)
+  const [painter, setPainter] = useState(() => draw)
+  useEffect(() => {
+    if (!painter) void loadDraw().then(() => setPainter(() => draw))
+  }, [painter])
 
   // Draw icons on demand, add/refresh the source and layers, refit.
   useEffect(() => {
-    if (!map) return
+    if (!map || !painter) return
     const onMissing = (id: string) => {
       const spec = parseIconId(id)
       if (!spec || map.hasImage(id)) return
       const dpr = Math.min(3, Math.ceil(window.devicePixelRatio || 1))
-      const icon = drawIcon(spec, dpr)
+      const icon = painter(spec, dpr)
       if (icon) map.addImage(id, icon, { pixelRatio: dpr })
     }
     const sync = () => {
@@ -137,7 +150,15 @@ export function useClubPins(map: MapLibreMap | null, opts: ClubPinsOptions) {
       map.off('styledata', onStyle)
     }
     // `sync` reads the latest options; these are the triggers.
-  }, [map, opts.data, opts.model, opts.theme, opts.selectedIds, opts.fitKey])
+  }, [
+    map,
+    painter,
+    opts.data,
+    opts.model,
+    opts.theme,
+    opts.selectedIds,
+    opts.fitKey,
+  ])
 
   // Letting go of a map takes the pins along, so another user of the same
   // map (the realignment sandbox, #1819) starts clean, and so does this

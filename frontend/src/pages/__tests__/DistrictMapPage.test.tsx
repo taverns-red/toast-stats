@@ -185,6 +185,8 @@ beforeAll(async () => {
   await Promise.all([
     import('../DistrictMapPage'),
     import('../../components/map/pinTerritory'),
+    import('../../components/map/pinExtended'),
+    import('../../components/map/MapModePicker'),
     import('../../components/map/MapClubLists'),
     import('../../components/map/MapPreview'),
     import('../../components/map/mapFilters'),
@@ -305,15 +307,38 @@ describe('DistrictMapPage — map and legend', () => {
     ).toBeInTheDocument()
   })
 
-  it('switches mode with aria-pressed buttons and keeps every filter', async () => {
+  it('switches mode from the Colour popover and keeps every filter', async () => {
     renderAt('/district/61/map?status=intervention')
+    const pill = await screen.findByRole('button', {
+      name: /Colour: Club health/,
+    })
+    expect(pill).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(pill)
+    expect(pill).toHaveAttribute('aria-expanded', 'true')
     const modes = await screen.findByRole('group', { name: 'Colour pins by' })
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+    // Grouped as the spec's picker (§5).
+    expect(
+      within(modes).getByRole('group', { name: 'Membership & DCP' })
+    ).toBeInTheDocument()
     fireEvent.click(within(modes).getByRole('button', { name: 'Area' }))
     expect(search()).toContain('color=area')
     expect(search()).toContain('status=intervention')
-    fireEvent.click(within(modes).getByRole('button', { name: 'Club health' }))
+    expect(pill).toHaveAttribute('aria-expanded', 'false')
+    // The quick toggle keeps Health | Distinguished one tap away.
+    const quick = screen.getByRole('group', { name: 'Quick colour' })
+    fireEvent.click(within(quick).getByRole('button', { name: 'Club health' }))
     expect(search()).not.toContain('color=')
+  })
+
+  it('Escape closes the Colour popover and returns focus to the pill', async () => {
+    renderAt('/district/61/map')
+    const pill = await screen.findByRole('button', { name: /Colour:/ })
+    fireEvent.click(pill)
+    await screen.findByRole('group', { name: 'Colour pins by' })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(pill).toHaveAttribute('aria-expanded', 'false')
+    expect(pill).toHaveFocus()
   })
 
   it('a legend chip filters through ?status= and announces the count', async () => {
@@ -331,6 +356,89 @@ describe('DistrictMapPage — map and legend', () => {
     renderAt('/district/61/map?color=division')
     fireEvent.click(await screen.findByRole('button', { name: /Division B 1/ }))
     expect(search()).toContain('divisions=Division B')
+  })
+})
+
+// #1787: the extended modes, from fields already on each club.
+describe('DistrictMapPage — extended colour modes', () => {
+  const sized = (): ClubTrend[] => [
+    { ...CLUBS[0]!, membershipTrend: [{ date: '2026-10-11', count: 9 }] },
+    { ...CLUBS[1]!, membershipTrend: [{ date: '2026-10-11', count: 25 }] },
+    // No count for the date: "not available", never 0–7.
+    { ...CLUBS[2]!, membershipTrend: [] },
+  ]
+
+  it('?color=size colours by members, with an ordinal legend in words', async () => {
+    mockClubs = sized()
+    renderAt('/district/61/map?color=size')
+    expect(
+      await screen.findByRole('region', {
+        name: 'Club map, coloured by members',
+      })
+    ).toBeInTheDocument()
+    const legend = await screen.findByRole('group', { name: 'Members legend' })
+    const chips = within(legend)
+      .getAllByRole('button')
+      .map(b => b.textContent?.replace(/\s+/g, ' ').trim())
+    expect(chips).toEqual([
+      '0–7 members 0',
+      '8–11 members 1',
+      '12–19 members 0',
+      '20–29 members 1',
+      '30 or more members 0',
+      'Not available for this date 1',
+    ])
+  })
+
+  it('a members chip writes ?size= and filters the map and the list', async () => {
+    mockClubs = sized()
+    renderAt('/district/61/map?color=size')
+    fireEvent.click(
+      await screen.findByRole('button', { name: /20–29 members 1/ })
+    )
+    expect(search()).toContain('size=20-29')
+    expect(screen.getByRole('status')).toHaveTextContent('Showing 1 of 3 clubs')
+  })
+
+  it('a ?size= deep link filters once its chunk loads, never the unfiltered set', async () => {
+    mockClubs = sized()
+    renderAt('/district/61/map?view=list&color=size&size=8-11')
+    const list = await screen.findByRole('list', { name: 'Clubs' })
+    await vi.waitFor(() =>
+      expect(
+        within(list)
+          .getAllByRole('link')
+          .map(a => a.textContent)
+      ).toEqual([expect.stringContaining('Alpha Speakers')])
+    )
+    // The list chip names the category in words.
+    expect(within(list).getByText('8–11 members')).toBeInTheDocument()
+  })
+
+  it('?color=status reads the renewal overlay and writes the Clubs-table ?clubStatus=', async () => {
+    mockClubs = [
+      { ...CLUBS[0]!, clubStatus: 'Low' },
+      {
+        ...CLUBS[1]!,
+        clubStatus: 'Suspended',
+        statusOverlay: {
+          status: 'Active',
+          source: 'dues-renewal',
+          activeSince: '2026-10-01',
+          asOf: '',
+        },
+      },
+      { ...CLUBS[2]!, clubStatus: 'Active' },
+    ]
+    renderAt('/district/61/map?color=status')
+    expect(
+      await screen.findByRole('region', {
+        name: 'Club map, coloured by TI club status',
+      })
+    ).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: /^Active 2/ }))
+    expect(search()).toContain('clubStatus=Active')
+    expect(screen.getByRole('status')).toHaveTextContent('Showing 2 of 3 clubs')
   })
 })
 
