@@ -157,6 +157,40 @@ describe('ChartReadout on a device without hover (#1835)', () => {
   })
 })
 
+describe('ChartReadout with a chart-owned description (#1705 axis)', () => {
+  it('describe() replaces the payload rows when the x axis is not a date', async () => {
+    // The membership chart plots program-year days and reads each series
+    // at its nearest real point; the chart, not the payload, knows the date.
+    stubHover(false)
+    function DayHarness() {
+      const readout = useChartReadout()
+      return (
+        <div>
+          <LineChart width={400} height={200} data={DATA}>
+            <XAxis dataKey="date" />
+            <Tooltip {...readout.tooltipProps} />
+            <Line dataKey="members" name="Members" isAnimationActive={false} />
+          </LineChart>
+          <ChartReadout
+            readout={readout}
+            describe={label => ({
+              label: `Described ${label}`,
+              rows: [{ key: 'x', name: '2026-27', value: 4242 }],
+            })}
+          />
+        </div>
+      )
+    }
+    const { container } = render(<DayHarness />)
+    await tap(container.querySelector('.recharts-wrapper')!, 395, 100)
+    await settle()
+    const line = screen.getByTestId('chart-readout')
+    expect(line).toHaveTextContent('Described 2026-10-01')
+    expect(line).toHaveTextContent('2026-27 4,242')
+    expect(line).not.toHaveTextContent('Members')
+  })
+})
+
 describe('ChartReadout on a hover-capable device', () => {
   it('renders no readout line and leaves the tooltip on hover', () => {
     stubHover(true)
