@@ -422,10 +422,12 @@ for (const theme of ['light', 'dark'] as const) {
         timeout: 30_000,
       })
 
-      // From the map canvas, one Tab lands on the pins.
+      // From the map canvas, Tab reaches the pins: past the attribution
+      // links in Chromium (WebKit's Tab skips links), one stop for all pins.
       await page.locator('canvas.maplibregl-canvas').focus()
-      await page.keyboard.press('Tab')
       const focused = pins.locator('button:focus')
+      for (let i = 0; i < 6 && (await focused.count()) === 0; i++)
+        await page.keyboard.press('Tab')
       await expect(focused).toHaveCount(1)
       const ring = await focused.evaluate(el => {
         const s = getComputedStyle(el)
