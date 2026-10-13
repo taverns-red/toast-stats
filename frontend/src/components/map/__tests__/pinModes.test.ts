@@ -17,13 +17,16 @@ import {
   legendChips,
   parseMapColorMode,
   toggleFacetValue,
+  type ExtendedMode,
   type MapColorMode,
 } from '../pinModes'
 import { assignTerritoryColours, territoryModel } from '../pinTerritory'
 
 // Health/tier come from pinModes; division/area from the on-demand module.
-const buildModeModel = (mode: MapColorMode, clubs: readonly ClubTrend[]) =>
-  isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode)
+const buildModeModel = (
+  mode: Exclude<MapColorMode, ExtendedMode>,
+  clubs: readonly ClubTrend[]
+) => (isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode))
 
 const club = (o: Partial<ClubTrend>): ClubTrend =>
   ({
