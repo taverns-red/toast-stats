@@ -21,7 +21,12 @@ import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 import { useClubPins } from '../components/map/useClubPins'
-import { buildPinFeatures } from '../components/map/pinLayer'
+import {
+  CLUSTER_LAYER_ID,
+  PIN_LAYER_ID,
+  PIN_SOURCE_ID,
+  buildPinFeatures,
+} from '../components/map/pinLayer'
 import {
   MAP_COLOR_MODES,
   activeMapFilterCount,
@@ -465,6 +470,11 @@ const DistrictMapPage: React.FC = () => {
                       model={model}
                       selectedIds={selectedClubIds}
                       onSelect={setSelectedIds}
+                      layers={{
+                        source: PIN_SOURCE_ID,
+                        cluster: CLUSTER_LAYER_ID,
+                        pin: PIN_LAYER_ID,
+                      }}
                     />
                   </React.Suspense>
                 )}

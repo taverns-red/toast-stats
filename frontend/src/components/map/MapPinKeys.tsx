@@ -17,7 +17,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import type { ModeModel } from './pinModes'
-import { CLUSTER_LAYER_ID, PIN_LAYER_ID, PIN_SOURCE_ID } from './pinLayer'
 import {
   HALF,
   pinTargets,
@@ -49,6 +48,9 @@ export interface MapPinKeysProps {
   model: ModeModel
   selectedIds: readonly string[]
   onSelect: (ids: string[]) => void
+  /** The pin source and layers (`pinLayer.ts`), handed down so this chunk
+   *  never pulls the page's pin module into a shared chunk (budget). */
+  layers: { source: string; cluster: string; pin: string }
 }
 
 export const MapPinKeys: React.FC<MapPinKeysProps> = ({
@@ -57,20 +59,21 @@ export const MapPinKeys: React.FC<MapPinKeysProps> = ({
   model,
   selectedIds,
   onSelect,
+  layers: { source: sourceId, cluster, pin },
 }) => {
   const project = useCallback<Project>(at => map.project(at), [map])
   const read = useCallback((): PinTarget[] => {
     try {
-      if (!map.getLayer(PIN_LAYER_ID)) return []
+      if (!map.getLayer(pin)) return []
       const found = map.queryRenderedFeatures({
-        layers: [CLUSTER_LAYER_ID, PIN_LAYER_ID],
+        layers: [cluster, pin],
       }) as unknown as RenderedPin[]
       return pinTargets(found, project, clubs, model)
     } catch {
       // The map is gone or its style is still loading.
       return []
     }
-  }, [map, project, clubs, model])
+  }, [map, project, clubs, model, cluster, pin])
 
   const [targets, setTargets] = useState<PinTarget[]>(read)
   const [active, setActive] = useState<string | null>(null)
@@ -130,7 +133,7 @@ export const MapPinKeys: React.FC<MapPinKeysProps> = ({
       setSaid(`Opened ${t.label}. Escape closes.`)
       return
     }
-    const source = map.getSource(PIN_SOURCE_ID) as GeoJSONSource | undefined
+    const source = map.getSource(sourceId) as GeoJSONSource | undefined
     void source?.getClusterExpansionZoom(t.cluster.id).then(zoom => {
       refocus.current = t.at
       const view = { center: t.at, zoom }

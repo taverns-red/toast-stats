@@ -15,6 +15,7 @@ import { MapPinKeys } from '../MapPinKeys'
 import { pinTargets, type RenderedPin } from '../pinTargets'
 
 const model = buildModeModel('health')
+const layers = { source: 's', cluster: 'c', pin: 'p' }
 const cat = (key: string) => model.categories.findIndex(c => c.key === key)
 
 const club = (clubId: string, clubName: string): ClubTrend =>
@@ -82,6 +83,7 @@ const setup = (
       model={model}
       selectedIds={selectedIds}
       onSelect={onSelect}
+      layers={layers}
     />
   )
   return { map, onSelect, ...utils }
@@ -190,6 +192,8 @@ describe('MapPinKeys', () => {
         model={model}
         selectedIds={['2']}
         onSelect={onSelect}
+        layers={layers}
+        layers={layers}
       />
     )
     fireEvent.keyDown(bravo, { key: 'Escape' })
