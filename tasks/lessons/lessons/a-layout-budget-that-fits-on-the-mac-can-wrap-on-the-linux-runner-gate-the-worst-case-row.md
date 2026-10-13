@@ -34,4 +34,10 @@ When a height budget depends on a row like that:
   Fonts, hinting and fallback metrics differ between macOS and Linux.
 
 The fix moved the club website out of the hero into a "More about this
-club" row, which left the link row with Contact only.
+club" row, which left the link row with Contact only. The first attempt
+still measured 212 px on the runner. The phone `display: none` rule had
+the same specificity as the base `.club-meets__item` rule, which sits later
+in the same layer, so the base rule won and the link never hid. That
+attempt passed locally only because the Mac never wrapped the row. Check
+that a hide rule really applies (computed `display` or a zero-height box),
+not just that the budget passes on one machine.
