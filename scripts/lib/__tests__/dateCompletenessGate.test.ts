@@ -410,3 +410,92 @@ describe('evaluate + summary', () => {
     expect(md).toContain(`${dir}global-totals.json`)
   })
 })
+
+describe('retired analytics files are not a regression (#1798)', () => {
+  // Compute stopped writing these 8 per-district files (#1798); prod keeps
+  // its old copies until a separately approved cleanup. A re-touch of an
+  // already-promoted date must not hold because staging no longer has them.
+  const RETIRED = [
+    'membership',
+    'clubhealth',
+    'membership-analytics',
+    'vulnerable-clubs',
+    'leadership-insights',
+    'distinguished-analytics',
+    'year-over-year',
+    'club-trends-index',
+  ]
+  const retiredFiles = (id: string) =>
+    RETIRED.map(t => `analytics/district_${id}_${t}.json`)
+  const kept = (id: string) => [
+    `analytics/district_${id}_analytics.json`,
+    `analytics/district_${id}_performance-targets.json`,
+  ]
+  const profile = (objectNames: string[]): DateProfile => ({
+    objectNames: [...objectNames].sort(),
+    manifestDistricts: 94,
+    metadataDistricts: 94,
+    globalClubs: 14513,
+    globalCountries: 158,
+    districts: {},
+  })
+  const base = ['manifest.json', 'metadata.json', 'district_61.json']
+
+  it('a rebuild missing only retired files passes', () => {
+    const prod = profile([...base, ...kept('61'), ...retiredFiles('61')])
+    const staging = profile([...base, ...kept('61')])
+    expect(compareDateProfiles(DATE, prod, staging)).toEqual([])
+  })
+
+  it('a rebuild missing a non-retired analytics file still holds, naming only it', () => {
+    const prod = profile([...base, ...kept('61'), ...retiredFiles('61')])
+    const staging = profile([...base, 'analytics/district_61_analytics.json'])
+    const r = compareDateProfiles(DATE, prod, staging)
+    expect(r).toHaveLength(1)
+    expect(r[0]!.reason).toContain('district_61_performance-targets.json')
+    for (const t of RETIRED) {
+      expect(r[0]!.reason).not.toContain(`district_61_${t}.json`)
+    }
+  })
+
+  it('stale retired copies in staging cannot mask a missing live file', () => {
+    const prod = profile([...base, ...kept('61'), ...retiredFiles('61')])
+    // Staging still holds old retired copies (more objects in total) but
+    // lost the district snapshot.
+    const staging = profile([
+      'manifest.json',
+      'metadata.json',
+      ...kept('61'),
+      ...retiredFiles('61'),
+      ...retiredFiles('62'),
+    ])
+    const r = compareDateProfiles(DATE, prod, staging)
+    expect(r).toHaveLength(1)
+    expect(r[0]!.reason).toContain('district_61.json')
+  })
+
+  it('only the exact retired names are exempt', () => {
+    const prod = profile([
+      ...base,
+      'analytics/district_61_membership-extra.json',
+      'district_61_clubhealth.json',
+    ])
+    const r = compareDateProfiles(DATE, prod, profile(base))
+    expect(r).toHaveLength(1)
+    expect(r[0]!.reason).toContain('district_61_membership-extra.json')
+    expect(r[0]!.reason).toContain('district_61_clubhealth.json')
+  })
+
+  it('end to end: prod with retired copies vs a staging rebuild passes', async () => {
+    const retiredObjects = Object.fromEntries(
+      retiredFiles('02').map(f => [`${dir}${f}`, { metadata: {}, data: {} }])
+    )
+    const prod = fakeBucket(dateTree({ extra: retiredObjects }))
+    const staging = fakeBucket(dateTree({}))
+    const r = await runCompletenessGate(staging, prod, [DATE], {
+      allowValueChanges: false,
+    })
+    expect(r.failures).toEqual([])
+    expect(r.promote).toBe(true)
+  })
+})
