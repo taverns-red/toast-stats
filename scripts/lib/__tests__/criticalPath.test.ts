@@ -106,12 +106,11 @@ describe('chartless routes (#1830)', () => {
   const names = Object.keys(ROUTE_CHUNKS)
   const readRoute = (n: string) => ROUTE_CHUNKS[n] ?? null
 
-  it('names the five Lighthouse mobile routes, none of which renders Recharts at first paint', () => {
+  it('names the four lazy Lighthouse mobile routes (the landing page is in the entry), none of which renders Recharts at first paint', () => {
     expect([...CHARTLESS_ROUTE_CHUNK_PREFIXES].sort()).toEqual([
       'ClubDetailPage-',
       'DistrictClubsPage-',
       'DistrictDetailPage-',
-      'DistrictsPage-',
       'RegionsPage-',
     ])
   })
