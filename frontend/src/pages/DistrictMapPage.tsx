@@ -458,9 +458,13 @@ const DistrictMapPage: React.FC = () => {
                       onReady={setMap}
                       cooperativeGestures={false}
                     />
-                    <React.Suspense fallback={null}>
-                      <MapPreview clubs={allClubs} map={map} />
-                    </React.Suspense>
+                    {/* Decorative: if its chunk fails, show nothing rather
+                        than let the outer boundary drop the live map. */}
+                    <MapErrorBoundary fallback={null}>
+                      <React.Suspense fallback={null}>
+                        <MapPreview clubs={allClubs} map={map} />
+                      </React.Suspense>
+                    </MapErrorBoundary>
                   </MapErrorBoundary>
                 )}
                 {isPhone && (
