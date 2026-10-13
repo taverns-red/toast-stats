@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { toastmastersClubPageUrl } from '../../utils/toastmastersClubPageUrl'
@@ -56,47 +56,65 @@ const Fact: React.FC<{ term: string; cat: PinCategory }> = ({ term, cat }) => (
 export const MapClubSummary: React.FC<{
   clubs: ClubTrend[]
   districtId: string
-}> = ({ clubs, districtId }) => (
-  <div className="map-club">
-    {clubs.map(club => {
-      const health = HEALTH.categoryOf(club)
-      const ti = toastmastersClubPageUrl(club.clubId)
-      const counts = countsLine(club)
-      const meeting = meetingLine(club)
-      return (
-        <article key={club.clubId} className="map-club__item">
-          <h3 className="map-club__name">{club.clubName}</h3>
-          <p className="map-club__place">
-            {[club.divisionName, club.areaName].filter(Boolean).join(' · ')}
-          </p>
-          {counts && <p className="map-club__line">{counts}</p>}
-          {meeting && <p className="map-club__line">{meeting}</p>}
-          <dl className="map-club__facts">
-            <Fact term="Health" cat={health} />
-            {health.shape !== 'suspended' && (
-              <Fact term="Distinguished" cat={TIER.categoryOf(club)} />
-            )}
-          </dl>
-          <div className="map-club__links">
-            <Link
-              to={`/district/${districtId}/club/${club.clubId}`}
-              className="map-club__link"
+  /** Opened from the keyboard (#1967): focus the first club's heading, then
+   *  report it so a later pointer tap leaves focus where it is. */
+  autoFocus?: boolean
+  onAutoFocused?: () => void
+}> = ({ clubs, districtId, autoFocus = false, onAutoFocused }) => {
+  const first = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (!autoFocus || !first.current) return
+    first.current.focus()
+    onAutoFocused?.()
+  }, [autoFocus, onAutoFocused])
+  return (
+    <div className="map-club">
+      {clubs.map((club, i) => {
+        const health = HEALTH.categoryOf(club)
+        const ti = toastmastersClubPageUrl(club.clubId)
+        const counts = countsLine(club)
+        const meeting = meetingLine(club)
+        return (
+          <article key={club.clubId} className="map-club__item">
+            <h3
+              ref={i === 0 ? first : undefined}
+              tabIndex={-1}
+              className="map-club__name"
             >
-              Open club page →
-            </Link>
-            {ti && (
-              <a
-                href={ti}
-                target="_blank"
-                rel="noopener noreferrer"
+              {club.clubName}
+            </h3>
+            <p className="map-club__place">
+              {[club.divisionName, club.areaName].filter(Boolean).join(' · ')}
+            </p>
+            {counts && <p className="map-club__line">{counts}</p>}
+            {meeting && <p className="map-club__line">{meeting}</p>}
+            <dl className="map-club__facts">
+              <Fact term="Health" cat={health} />
+              {health.shape !== 'suspended' && (
+                <Fact term="Distinguished" cat={TIER.categoryOf(club)} />
+              )}
+            </dl>
+            <div className="map-club__links">
+              <Link
+                to={`/district/${districtId}/club/${club.clubId}`}
                 className="map-club__link"
               >
-                Contact on toastmasters.org ↗
-              </a>
-            )}
-          </div>
-        </article>
-      )
-    })}
-  </div>
-)
+                Open club page →
+              </Link>
+              {ti && (
+                <a
+                  href={ti}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="map-club__link"
+                >
+                  Contact on toastmasters.org ↗
+                </a>
+              )}
+            </div>
+          </article>
+        )
+      })}
+    </div>
+  )
+}

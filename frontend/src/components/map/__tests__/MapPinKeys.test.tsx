@@ -73,7 +73,8 @@ function fakeMap(features: RenderedPin[]) {
 const setup = (
   features: RenderedPin[],
   selectedIds: string[] = [],
-  onSelect = vi.fn()
+  onSelect = vi.fn(),
+  onOpen = vi.fn()
 ) => {
   const map = fakeMap(features)
   const utils = render(
@@ -83,10 +84,11 @@ const setup = (
       model={model}
       selectedIds={selectedIds}
       onSelect={onSelect}
+      onOpen={onOpen}
       layers={layers}
     />
   )
-  return { map, onSelect, ...utils }
+  return { map, onSelect, onOpen, ...utils }
 }
 
 describe('pinTargets', () => {
@@ -200,6 +202,16 @@ describe('MapPinKeys', () => {
     expect(bravo).toHaveFocus()
   })
 
+  it('Enter on a club hands its pin to onOpen, so focus can come back (#1967)', () => {
+    const { onOpen } = setup(three)
+    const bravo = screen.getByRole('button', {
+      name: 'Bravo Talkers, Vulnerable',
+    })
+    fireEvent.click(bravo)
+    expect(onOpen).toHaveBeenCalledTimes(1)
+    expect(onOpen).toHaveBeenCalledWith(bravo)
+  })
+
   it('Escape with nothing open does nothing', () => {
     const { onSelect } = setup(three)
     const first = screen.getAllByRole('button')[0]!
@@ -208,12 +220,13 @@ describe('MapPinKeys', () => {
   })
 
   it('Enter on a cluster zooms into it instead of selecting', async () => {
-    const { onSelect, map } = setup([cluster(7, [3, 3], 5)])
+    const { onSelect, onOpen, map } = setup([cluster(7, [3, 3], 5)])
     fireEvent.click(
       screen.getByRole('button', { name: 'Group of 5 clubs. Enter zooms in' })
     )
     await act(async () => {})
     expect(onSelect).not.toHaveBeenCalled()
+    expect(onOpen).not.toHaveBeenCalled()
     expect(map.easeTo.mock.calls.length + map.jumpTo.mock.calls.length).toBe(1)
   })
 

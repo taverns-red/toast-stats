@@ -485,7 +485,8 @@ for (const theme of ['light', 'dark'] as const) {
 /* Keyboard path between pins (#1940): the map canvas then one Tab stop for
  * the pins; arrows move between them, each named by club and category (not
  * colour) with a visible focus ring; Enter opens the club (a sheet at 375,
- * the side panel at 1280); Escape closes it and focus returns to the pin;
+ * the side panel at 1280, where focus moves to the club's heading, #1967);
+ * Escape closes it and focus returns to the pin;
  * Tab moves on (no trap). */
 const CATEGORY =
   /, (Thriving|Vulnerable|Intervention required|Suspended)(;|$)|^Group of \d+ clubs/
@@ -533,6 +534,15 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(
         summary.getByRole('link', { name: /Open club page/ }).first()
       ).toBeVisible()
+      // In the side panel, focus follows the club there (#1967).
+      if (width >= 768) {
+        const heading = summary.getByRole('heading').first()
+        await expect(heading).toBeFocused()
+        // ...and its focus ring is not tucked under the sticky header.
+        const header = await page.getByRole('banner').first().boundingBox()
+        const box = await heading.boundingBox()
+        expect(box!.y).toBeGreaterThanOrEqual(header!.y + header!.height)
+      }
 
       await page.keyboard.press('Escape')
       await expect(summary).toHaveCount(0)
