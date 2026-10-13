@@ -101,9 +101,9 @@ const renderTable = () =>
 describe('ClubsTable column groups (#819)', () => {
   it('renders all columns by default, header/body in lockstep', () => {
     renderTable()
-    // 14 since the Trend sparkline column (#1792).
-    expect(headerCount()).toBe(14)
-    expect(firstRowCellCount()).toBe(14)
+    // 14 since the Trend sparkline column (#1792); 15 with Coach (#1954).
+    expect(headerCount()).toBe(15)
+    expect(firstRowCellCount()).toBe(15)
   })
 
   it('exposes a Columns control listing non-empty groups (no Changes yet)', async () => {
@@ -137,10 +137,10 @@ describe('ClubsTable column groups (#819)', () => {
 
     expect(headerLabels()).not.toContain('Oct Renew')
     expect(headerLabels()).not.toContain('Apr Renew')
-    expect(headerCount()).toBe(12)
+    expect(headerCount()).toBe(13)
     // TanStack's row.getVisibleCells keeps the body in lockstep with the
     // header automatically — assert it, not the implementation.
-    expect(firstRowCellCount()).toBe(12)
+    expect(firstRowCellCount()).toBe(13)
   })
 
   it('keeps the sticky Club column when the Identity group is hidden', async () => {
@@ -199,8 +199,8 @@ describe('ClubsTable column groups (#819)', () => {
     // Recognition = Status + DCP + Tier (3 columns) stay hidden after reload.
     expect(headerLabels()).not.toContain('DCP')
     expect(headerLabels()).not.toContain('Tier')
-    expect(headerCount()).toBe(11)
-    expect(firstRowCellCount()).toBe(11)
+    expect(headerCount()).toBe(12)
+    expect(firstRowCellCount()).toBe(12)
   })
 
   it('drops stale (unknown) group ids from localStorage on rehydrate', async () => {
@@ -211,8 +211,8 @@ describe('ClubsTable column groups (#819)', () => {
       JSON.stringify(['renewals', 'bogus-group'])
     )
     renderTable()
-    // Renewals (2 cols) hidden → 12; the bogus id is silently dropped.
-    expect(headerCount()).toBe(12)
-    expect(firstRowCellCount()).toBe(12)
+    // Renewals (2 cols) hidden → 13; the bogus id is silently dropped.
+    expect(headerCount()).toBe(13)
+    expect(firstRowCellCount()).toBe(13)
   })
 })

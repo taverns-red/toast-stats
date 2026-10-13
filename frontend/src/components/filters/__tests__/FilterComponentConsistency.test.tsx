@@ -181,6 +181,7 @@ describe('Filter Component Consistency', () => {
         'status',
         'distinguished',
         'clubStatus',
+        'coach',
       ])
 
       // Each categorical column should be filterable and have options
