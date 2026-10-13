@@ -591,7 +591,7 @@ export const exportClubPerformance = (
     octoberRenewals?: number | undefined
     aprilRenewals?: number | undefined
     newMembers?: number | undefined
-    clubStatus?: string
+    clubStatus?: string | undefined
     coach?: ClubCoach | undefined
   }>,
   districtId: string
