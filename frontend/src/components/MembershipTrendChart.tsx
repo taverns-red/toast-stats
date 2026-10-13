@@ -19,6 +19,12 @@ import {
   pointNearDay,
   type TrendSeries,
 } from './membershipTrendChartData'
+import {
+  useChartReadout,
+  ChartReadout,
+  formatReadoutDate,
+  type ChartReading,
+} from './charts/ChartReadout'
 
 /** A named set of data points for one program year */
 export interface YearTrendData {
@@ -87,6 +93,44 @@ const PRIOR_YEAR_STYLES = [
   { stroke: 'var(--tm-cool-gray)', dash: '6 4' },
   { stroke: 'var(--tm-true-maroon-80)', dash: '2 3' },
 ] as const
+
+/**
+ * The tap-to-pin readout (#1835) for a program-year day: the same per-year
+ * nearest points the tooltip reads (#1705), headed by the current year's
+ * date. A prior year's row names its own date, since its nearest point
+ * rarely falls on the same day.
+ */
+const describeTrendDay = (
+  series: TrendSeries[],
+  day: number
+): ChartReading | null => {
+  const lines = series.flatMap(s => {
+    const p = pointNearDay(s, day)
+    return p ? [{ s, p }] : []
+  })
+  if (lines.length === 0) return null
+  const priors = series.filter(s => !s.isCurrent)
+  const head = (lines.find(l => l.s.isCurrent) ?? lines[0])!
+  const ordered = [...lines].sort(
+    (a, b) => Number(b.s.isCurrent) - Number(a.s.isCurrent)
+  )
+  return {
+    label: formatReadoutDate(head.p.date),
+    rows: ordered.map(({ s, p }) => ({
+      key: s.key,
+      name: s.isCurrent
+        ? shortPyLabel(s.label)
+        : `${shortPyLabel(s.label)} (${formatShortDate(p.date)})`,
+      value: p.count,
+      color: s.isCurrent
+        ? 'var(--tm-loyal-blue)'
+        : (
+            PRIOR_YEAR_STYLES[priors.indexOf(s) % PRIOR_YEAR_STYLES.length] ??
+            PRIOR_YEAR_STYLES[0]
+          ).stroke,
+    })),
+  }
+}
 
 /**
  * Tooltip (#1705): one line per program year, each with that year's real
@@ -160,6 +204,9 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   priorYearTrends,
   programYear,
 }) => {
+  // Tap-to-pin readout on devices without hover (#1835) — before early returns.
+  const readout = useChartReadout()
+
   if (isLoading) {
     return <LoadingSkeleton variant="chart" />
   }
@@ -442,6 +489,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                     currentDates={currentDates}
                   />
                 }
+                {...readout.tooltipProps}
               />
               <Legend
                 wrapperStyle={{ fontSize: '12px' }}
@@ -518,6 +566,10 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
           </ResponsiveContainer>
         </div>
       </div>
+      <ChartReadout
+        readout={readout}
+        describe={day => describeTrendDay(chart.series, Number(day))}
+      />
 
       {/* Legend for highlights */}
       {periods.length > 0 && (

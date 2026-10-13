@@ -448,6 +448,17 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/divisions-mobile-rows.smoke.ts
 
+      # Touch-only chart probe (#1835, mobile review §4.1). Emulated as a phone
+      # (hasTouch + isMobile → hover: none), light and dark: the readout line
+      # is reserved before a tap, a tap pins a dated value with no floating
+      # tooltip, the arrow keys move it, text ≥14px inside the viewport. 1280
+      # keeps the hover tooltip and no readout. Both engines.
+      - name: Cross-engine touch chart readout guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/chart-readout-touch.smoke.ts
+
       # Club grid on phones (#1845). At 375, light and dark: tiles are
       # buttons ≥44px that open the club sheet (name, status, link), the grid
       # has 0 title-only tooltips, legend chips are ≥14px and the document
