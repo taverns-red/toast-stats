@@ -52,6 +52,12 @@ interface RowGeometry {
     metaPx: number
     chipInside: boolean
     chipClipped: boolean
+    /** The #1792 trend sparkline: 60×16 and wholly inside the row. */
+    trendW: number
+    trendH: number
+    trendInside: boolean
+    /** Line 2 (chip + DCP) must not ellipsize beside the trend. */
+    metaClipped: boolean
   }[]
 }
 
@@ -73,6 +79,9 @@ async function measure(page: Page): Promise<RowGeometry> {
         const r = row.getBoundingClientRect()
         const chip = row.querySelector('.mobile-row__chip')
         const c = chip?.getBoundingClientRect()
+        const spark = row.querySelector('.mobile-row__trailing svg')
+        const meta = row.querySelector('.mobile-row__meta')
+        const t = spark?.getBoundingClientRect()
         return {
           text: (row.textContent ?? '') + ' ' + row.getAttribute('aria-label'),
           left: Math.round(r.left),
@@ -91,6 +100,15 @@ async function measure(page: Page): Promise<RowGeometry> {
                 .concat(chip)
                 .some(el => el.scrollWidth > el.clientWidth + 0.5)
             : true,
+          metaClipped: meta ? meta.scrollWidth > meta.clientWidth + 0.5 : false,
+          trendW: Math.round(t?.width ?? 0),
+          trendH: Math.round(t?.height ?? 0),
+          trendInside: t
+            ? t.left >= r.left - 0.5 &&
+              t.right <= r.right + 0.5 &&
+              t.top >= r.top - 0.5 &&
+              t.bottom <= r.bottom + 0.5
+            : false,
         }
       })
     return {
@@ -116,6 +134,10 @@ function expectRows(g: RowGeometry, min = 1): void {
     expect(r.right, rc).toBeLessThanOrEqual(g.width)
     expect(r.chipInside, rc).toBe(true)
     expect(r.chipClipped, rc).toBe(false)
+    // Trend sparkline (#1792): on at 375, 60×16, unclipped by the row.
+    expect([r.trendW, r.trendH], rc).toEqual([60, 16])
+    expect(r.trendInside, rc).toBe(true)
+    expect(r.metaClipped, rc).toBe(false)
     expect(r.titlePx, rc).toBeGreaterThanOrEqual(14)
     expect(r.metaPx, rc).toBeGreaterThanOrEqual(14)
     // Privacy: no email, URL/meeting link or phone number in a row.
@@ -297,5 +319,15 @@ for (const width of [768, 1280]) {
     ).toBeVisible()
     await expect(page.locator(ROW)).toHaveCount(0)
     await expect(page.locator(GROUPED)).toHaveCount(0)
+    // Trend column (#1792) at every width: a header, and a named sparkline.
+    await expect(
+      page.getByRole('button', { name: /^Sort by Trend/ })
+    ).toBeVisible()
+    await expect(
+      page
+        .locator('#clubs-table tbody tr')
+        .first()
+        .getByRole('img', { name: /^Membership / })
+    ).toBeVisible()
   })
 }

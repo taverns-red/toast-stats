@@ -46,9 +46,12 @@ export interface UseGlobalClubRaceResult {
 const EMPTY: ReadonlyMap<string, GlobalClubRaceReached> = new Map()
 
 export function useGlobalClubRace(
-  date?: SnapshotDate
+  date?: SnapshotDate,
+  /** `enabled: false` holds the read (e.g. until a first screen paints). */
+  options: { enabled?: boolean } = {}
 ): UseGlobalClubRaceResult {
   const query = useQuery<{ race: GlobalClubRace | null; date: string }>({
+    enabled: options.enabled ?? true,
     queryKey: globalClubRaceQueryKey(date),
     queryFn: async () => {
       const resolved = date ?? (await fetchLatestSnapshotDate())

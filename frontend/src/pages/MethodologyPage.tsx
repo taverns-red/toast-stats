@@ -498,14 +498,18 @@ const MethodologyPage: React.FC = () => {
             Daily snapshots before pruning are not retained.
           </li>
           <li>
-            <strong>Program-year scope.</strong> The default chart shows the
-            currently selected program year. Use the program-year selector to
-            inspect prior years.
+            <strong>Program-year scope.</strong> The x-axis is the whole program
+            year, July to June. The selected program year is the solid line;
+            while it is in progress it stops at the latest snapshot. Its line
+            starts on July 1 from the prior year&apos;s June 30 close, because
+            Toastmasters publishes the new year&apos;s first figures late in
+            July. Use the program-year selector to inspect prior years.
           </li>
           <li>
-            <strong>Comparison series.</strong> Prior-year data is overlaid as a
-            faint reference line so you can visually compare YoY growth at the
-            same calendar week.
+            <strong>Comparison series.</strong> Each prior program year is drawn
+            in full as a faint dashed line, aligned by position in the program
+            year, so the same date sits at the same point on the axis for every
+            year.
           </li>
           <li>
             <strong>Y-axis.</strong> &quot;Paid Members&quot; — count of members

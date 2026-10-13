@@ -60,16 +60,20 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
       '/district/61/analytics'
     )
     // ADR-005 §3 order: lateral views read Overview · What Changed · Clubs ·
-    // Divisions · Grid · Trends · Analytics · Rankings. Grid (#1230) sits after
-    // Divisions as the dense whole-district companion to the division breakdown.
+    // Divisions · Grid · Map · Trends · Analytics · Rankings. Grid (#1230) sits
+    // after Divisions as the dense whole-district companion to the division
+    // breakdown; Map (#1784) follows it, the same view laid out geographically.
     // Action List (#1231) closes the epic as the area-director "what to do
     // next" destination — last, since it's a task view, not a lateral data view.
+    // Growth (#1794), the Club Growth funnel, follows Map.
     expect(DISTRICT_SECTIONS.map(s => s.label)).toEqual([
       'Overview',
       'What Changed',
       'Clubs',
       'Divisions',
       'Grid',
+      'Map',
+      'Growth',
       'Trends',
       'Analytics',
       'Rankings',
@@ -168,7 +172,7 @@ describe('DistrictSubnav on a phone (#1832)', () => {
     expect(screen.getByRole('button', { name: /^More/ })).toBeInTheDocument()
   })
 
-  it('More holds every other section, in config order, so all 9 are within 2 taps', () => {
+  it('More holds every other section, in config order, so all 11 are within 2 taps', () => {
     stubViewport(true)
     renderAt('/district/61')
     fireEvent.click(screen.getByRole('button', { name: /^More/ }))
@@ -181,6 +185,8 @@ describe('DistrictSubnav on a phone (#1832)', () => {
     ).toEqual([
       ['What Changed', '/district/61/changes'],
       ['Grid', '/district/61/grid'],
+      ['Map', '/district/61/map'],
+      ['Growth', '/district/61/growth'],
       ['Analytics', '/district/61/analytics'],
       ['Rankings', '/district/61/rankings'],
       ['Action List', '/district/61/action-list'],

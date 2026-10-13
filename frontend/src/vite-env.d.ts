@@ -8,3 +8,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/** gtag.js queue, defined by the inline GA snippet in index.html (prod only). */
+interface Window {
+  gtag?: (...args: unknown[]) => void
+}
