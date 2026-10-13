@@ -28,7 +28,9 @@ import { clubsColumnHelper as colHelper } from './clubsTableFeatures'
 import type { ClubsTableMeta } from './clubsTableFeatures'
 import type { ClubTrend, ClubHealthStatus } from '../hooks/useDistrictAnalytics'
 import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
+import { coachFilterValue, coachSortRank } from '../utils/clubCoach'
 import { ClubStatusCell } from './ClubStatusCell'
+import { ClubTrendSparkline, formatSignedNet } from './ClubTrendSparkline'
 import {
   getClubHealthStatusLabel,
   getClubHealthStatusPillModifier,
@@ -83,6 +85,7 @@ const DESKTOP_ONLY_FIELDS: ReadonlySet<string> = new Set([
   'octoberRenewals',
   'aprilRenewals',
   'clubStatus',
+  'coach',
   'yearsChartered',
 ])
 
@@ -114,6 +117,7 @@ const TD_BASE_CLASS: Record<string, string> = {
   status: 'px-2 py-3 whitespace-nowrap text-center',
   membership:
     'px-2 py-3 whitespace-nowrap text-sm text-center clubs-members-cell',
+  netChange: 'px-2 py-3 whitespace-nowrap text-sm',
   membersNeeded:
     'px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center font-medium',
   newMembers: 'px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center',
@@ -123,6 +127,7 @@ const TD_BASE_CLASS: Record<string, string> = {
   dcpGoals: 'px-2 py-3 whitespace-nowrap text-center',
   distinguished: 'px-2 py-3 whitespace-nowrap text-center',
   clubStatus: 'px-2 py-3 whitespace-nowrap text-sm text-center',
+  coach: 'px-2 py-3 whitespace-nowrap text-sm text-center',
   yearsChartered:
     'px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center',
   // Opt-in "Changes" group delta cells (#795). Same vertical rhythm as the
@@ -226,6 +231,31 @@ export const clubsColumns = colHelper.columns([
       )
     },
   }),
+  // Membership-trend sparkline (#1792). Sorts by the signed net change; clubs
+  // with no recorded base have no delta and sort last in both directions.
+  colHelper.accessor(c => c.netChange ?? undefined, {
+    id: 'netChange',
+    header: 'Trend',
+    sortFn: 'basic',
+    sortUndefined: 'last',
+    cell: info => {
+      const club = info.row.original
+      return (
+        <span className="clubs-trend-cell">
+          <ClubTrendSparkline club={club} />
+          {/* The sparkline's accessible name already carries the net. */}
+          <span
+            className="clubs-trend-cell__net tabular-nums"
+            aria-hidden="true"
+          >
+            {club.netChange == null
+              ? '\u2014'
+              : formatSignedNet(club.netChange)}
+          </span>
+        </span>
+      )
+    },
+  }),
   colHelper.accessor(c => c.membersNeeded, {
     id: 'membersNeeded',
     header: 'Needed',
@@ -323,6 +353,17 @@ export const clubsColumns = colHelper.columns([
         statusOverlay={info.row.original.statusOverlay}
       />
     ),
+  }),
+  // Coach (#1954): Active / Completed / — from the daily Coaches report.
+  // Sorted active → completed → none via a rank; status only, no identity.
+  colHelper.accessor(c => coachSortRank(c), {
+    id: 'coach',
+    header: 'Coach',
+    sortFn: 'basic',
+    cell: info => {
+      const value = coachFilterValue(info.row.original)
+      return value === 'None' ? <Dash /> : <span>{value}</span>
+    },
   }),
   colHelper.accessor(c => c.yearsChartered ?? undefined, {
     id: 'yearsChartered',

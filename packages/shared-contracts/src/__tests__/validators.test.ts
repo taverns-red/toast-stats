@@ -468,6 +468,30 @@ describe('validators error message quality', () => {
   })
 
   describe('validateSnapshotManifest', () => {
+    it('still accepts published manifests that carry the retired fileSize (#1888)', () => {
+      // Real shape of a prod manifest written before #1888 dropped fileSize.
+      const published = {
+        snapshotId: '2026-10-10',
+        createdAt: '2026-10-11T09:02:18.667Z',
+        districts: [
+          {
+            districtId: '02',
+            fileName: 'district_02.json',
+            status: 'success',
+            fileSize: 697933,
+            lastModified: '2026-10-11T09:02:17.219Z',
+          },
+        ],
+        totalDistricts: 1,
+        successfulDistricts: 1,
+        failedDistricts: 0,
+      }
+
+      const result = validateSnapshotManifest(published)
+
+      expect(result.success).toBe(true)
+    })
+
     describe('missing required field produces descriptive error', () => {
       it('should mention missing snapshotId field', () => {
         const data = {
@@ -567,7 +591,6 @@ describe('validators error message quality', () => {
               districtId: 42, // should be string
               fileName: 'district_42.json',
               status: 'success',
-              fileSize: 1024,
               lastModified: '2024-01-15T10:00:00Z',
             },
           ],
@@ -614,7 +637,6 @@ describe('validators error message quality', () => {
               districtId: '42',
               fileName: 'district_42.json',
               status: 'invalid', // should be 'success' or 'failed'
-              fileSize: 1024,
               lastModified: '2024-01-15T10:00:00Z',
             },
           ],

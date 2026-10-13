@@ -116,12 +116,41 @@ describe('ClubsTable < 768 px — compact rows (#1833)', () => {
     expect(alpha.querySelector('.mobile-row__line1')).toHaveTextContent(
       /^Alpha Speakers$/
     )
-    // Line 2: glyph + one-word status, then members and DCP.
+    // Line 2: glyph + one-word status, then DCP.
     const line2 = alpha.querySelector('.mobile-row__line2')!
     expect(line2).toHaveTextContent('✗ Intervention')
-    expect(line2).toHaveTextContent('8 members · 5/10 DCP')
+    expect(line2).toHaveTextContent(/^✗ Intervention\s*5\/10 DCP$/)
+    // Members ride under the trend sparkline (#1792); the name keeps them.
+    expect(alpha.querySelector('.clubs-row-trend__net')).toHaveTextContent(
+      '8 (−10)'
+    )
+    expect(alpha).toHaveAccessibleName(/8 members/)
     // Net change stays in the accessible name.
     expect(alpha).toHaveAccessibleName(/net −10/)
+  })
+
+  it('leaves the phone row unchanged for a coached club (#1954)', () => {
+    // Measured on the preview at 375: line 2 (chip + DCP) has no room left —
+    // "· Coach" ellipsized to "· C…" beside a "⚠ Vulnerable" chip. A clipped
+    // flag is worse than none, so on phones coach status is reached through
+    // the Coach filter (?coach=Active) and sort instead.
+    render(
+      <ClubsTable
+        clubs={[
+          club('1', 'Alpha Speakers', 'A', {
+            coach: { status: 'active', since: '2026-07-25' },
+          }),
+        ]}
+        districtId="61"
+        openGroups={['A']}
+        onOpenGroupsChange={vi.fn()}
+      />
+    )
+    const [alpha] = screen.getAllByTestId('mobile-row')
+    expect(alpha!.querySelector('.mobile-row__line2')).toHaveTextContent(
+      /5\/10 DCP$/
+    )
+    expect(alpha).not.toHaveAccessibleName(/coach/i)
   })
 
   it('asks the page to toggle a group (URL-owned open set)', () => {

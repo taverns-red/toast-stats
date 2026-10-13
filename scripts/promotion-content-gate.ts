@@ -39,8 +39,8 @@ import {
 import {
   runContentGate,
   selfCheckListing,
-  type GateBucket,
 } from './lib/promotionContentGateIo.js'
+import { gateBucket } from './lib/gcsMedia.js'
 import { parseRunManifest, type RunManifestEntry } from './lib/runManifest.js'
 
 const DEFAULT_RESULT_FILE = '/tmp/content-gate.json'
@@ -76,8 +76,8 @@ async function run(): Promise<ContentGateResult> {
   log(`[content-gate] run manifest: ${manifest.length} line(s)`)
   const storage = new Storage()
   return runContentGate(
-    storage.bucket(stagingName) as unknown as GateBucket,
-    storage.bucket(prodName) as unknown as GateBucket,
+    gateBucket(storage, stagingName),
+    gateBucket(storage, prodName),
     log,
     { manifest }
   )
@@ -124,7 +124,7 @@ async function main(): Promise<void> {
 async function selfCheck(): Promise<void> {
   const name = process.env.GCS_BUCKET
   if (!name) throw new Error('GCS_BUCKET must be set')
-  const bucket = new Storage().bucket(name) as unknown as GateBucket
+  const bucket = gateBucket(new Storage(), name)
   const report = await selfCheckListing(bucket, SELF_CHECK_PREFIX)
   log(
     `[content-gate] self-check OK — ${report.count} object(s) under ` +

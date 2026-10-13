@@ -722,8 +722,11 @@ describe('TransformService', () => {
         expect(district.districtId).toBeDefined()
         expect(district.fileName).toBeDefined()
         expect(district.status).toBe('success')
-        expect(district.fileSize).toBeGreaterThan(0)
         expect(district.lastModified).toBeDefined()
+        // #1888: the transform writes the manifest before the Find-A-Club
+        // merge rewrites district_N.json, so a size measured here never
+        // matched the stored object. Nothing read it; it is not recorded.
+        expect(district).not.toHaveProperty('fileSize')
       }
 
       // Verify district files are present

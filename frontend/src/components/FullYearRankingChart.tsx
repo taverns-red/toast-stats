@@ -14,6 +14,11 @@ import type {
 } from '../types/districts'
 import type { ProgramYear } from '../utils/programYear'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
+import {
+  useChartReadout,
+  ChartReadout,
+  formatReadoutDate,
+} from './charts/ChartReadout'
 
 /**
  * Rank metric types for the chart
@@ -260,6 +265,8 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
   isLoading,
   programYear,
 }) => {
+  // Tap-to-pin readout on devices without hover (#1835) — before early returns.
+  const readout = useChartReadout()
   // Show loading skeleton while data is being fetched
   if (isLoading) {
     return <ChartLoadingSkeleton />
@@ -392,6 +399,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
               />
               <Tooltip
                 content={<CustomTooltip selectedMetric={selectedMetric} />}
+                {...readout.tooltipProps}
               />
               <Line
                 type="monotone"
@@ -415,6 +423,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
           </ResponsiveContainer>
         </div>
       </div>
+      <ChartReadout readout={readout} labelFormatter={formatReadoutDate} />
 
       {/* Screen reader accessible description */}
       <p id="full-year-rank-chart-desc" className="sr-only">

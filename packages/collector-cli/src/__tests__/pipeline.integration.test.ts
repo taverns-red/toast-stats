@@ -337,7 +337,6 @@ describe('Pipeline Integration Tests', () => {
           districtId: string
           fileName: string
           status: string
-          fileSize: number
           lastModified: string
         }>
         totalDistricts: number
@@ -355,8 +354,9 @@ describe('Pipeline Integration Tests', () => {
         expect(district.districtId).toBeDefined()
         expect(district.fileName).toBeDefined()
         expect(district.status).toBe('success')
-        expect(district.fileSize).toBeGreaterThan(0)
         expect(district.lastModified).toBeDefined()
+        // #1888: no pre-Find-A-Club-merge fileSize in the manifest
+        expect(district).not.toHaveProperty('fileSize')
       }
     })
 
