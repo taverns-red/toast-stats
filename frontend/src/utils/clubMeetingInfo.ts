@@ -78,9 +78,35 @@ export function containsMeetingAccess(value: string): boolean {
   return MEETING_HOST.test(value) || MEETING_CREDENTIAL.test(value)
 }
 
-/** #1958 — placeholder; behaviour lands in the green commit. */
+/**
+ * #1958 — a 24-hour clock (13–23h) followed by an am/pm suffix. TI's
+ * `MeetingTime` is free text copied verbatim, and some clubs type both
+ * (D61 8590 "19:30 pm", 7670344 "12:00 - 13:00 PM", 5097 "18h30 pm").
+ */
+const TWENTY_FOUR_HOUR_WITH_SUFFIX =
+  /\b(1[3-9]|2[0-3])\s*([:h])\s*([0-5]\d)(\s*)([ap])(\.?\s?m\.?)(?![a-z])/gi
+
+/**
+ * Render a meeting time as 12-hour with its suffix or 24-hour without one,
+ * never both: "19:30 pm" → "7:30 pm"; a contradictory "19:30 am" → "19:30".
+ * Everything else — 12-hour times, bare 24-hour times, prose — is untouched.
+ */
 export function formatMeetingTime(time: string): string {
-  return time
+  return time.replace(
+    TWENTY_FOUR_HOUR_WITH_SUFFIX,
+    (
+      _match,
+      hour: string,
+      sep: string,
+      minute: string,
+      gap: string,
+      ap: string,
+      rest: string
+    ) =>
+      ap.toLowerCase() === 'p'
+        ? `${Number(hour) - 12}:${minute}${gap}${ap}${rest}`
+        : `${hour}${sep}${minute}`
+  )
 }
 
 /** `clean`, then null if the text would give entry to a meeting. */
@@ -113,7 +139,8 @@ export function buildClubMeetingInfo(
   club: ClubMeetingSource
 ): ClubMeetingInfo | null {
   const day = publicText(club.meetingDay)
-  const time = publicText(club.meetingTime)
+  const rawTime = publicText(club.meetingTime)
+  const time = rawTime === null ? null : formatMeetingTime(rawTime)
   const schedule = [day, time].filter(Boolean).join(' · ') || null
 
   // A street that is a meeting link means the club's meeting place is online.
