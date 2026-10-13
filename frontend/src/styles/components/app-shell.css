@@ -2209,7 +2209,9 @@
     /* The website is a row below the panels on phones, so "Contact on
        toastmasters.org" never wraps the link row to a second 44px line
        (it did on the Linux runner: 213px). */
-    .club-meets__item--website {
+    /* Two classes: the base `.club-meets__item { display: inline-flex }`
+       sits later in this layer and would win at equal specificity. */
+    .club-meets__links .club-meets__item--website {
       display: none;
     }
 
