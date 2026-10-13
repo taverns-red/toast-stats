@@ -168,6 +168,7 @@ beforeAll(async () => {
     import('../DistrictMapPage'),
     import('../../components/map/pinTerritory'),
     import('../../components/map/MapClubLists'),
+    import('../../components/map/MapPreview'),
     import('../../components/map/mapFilters'),
     import('../../components/map/MapFilterPanel'),
     import('../../components/map/MapPhoneSheets'),
@@ -238,6 +239,27 @@ describe('DistrictMapPage — map and legend', () => {
     expect(
       within(legend).queryByRole('button', { name: /Vulnerable/ })
     ).not.toBeInTheDocument()
+  })
+
+  // #1943: while MapLibre loads, the map box shows the located clubs as a
+  // static preview (no tiles, no MapLibre); the list view has no map box.
+  it('shows a static preview of the located clubs in the map box', async () => {
+    const { container } = renderAt('/district/61/map')
+    await screen.findByRole('region', { name: /Club map/ })
+    const canvas = container.querySelector('.district-map__canvas')!
+    await vi.waitFor(() =>
+      expect(
+        canvas.querySelectorAll(
+          '[data-testid="map-preview"] circle.club-minimap__dot'
+        )
+      ).toHaveLength(2)
+    )
+    cleanup()
+    const list = renderAt('/district/61/map?view=list')
+    await screen.findByRole('link', { name: 'Map view' })
+    expect(
+      list.container.querySelector('[data-testid="map-preview"]')
+    ).toBeNull()
   })
 
   it('colours by Distinguished level with ?color=tier, and clamps unknown values', async () => {

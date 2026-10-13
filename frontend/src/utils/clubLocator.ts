@@ -45,6 +45,14 @@ const located = (
   Number.isFinite(c.coordinates.lat) &&
   Number.isFinite(c.coordinates.lng)
 
+// #1943: red-phase stub; implemented in the next commit.
+export function projectClubPoints(
+  _clubs: readonly LocatorSource[],
+  _box: LocatorBox
+): LocatorPoint[] {
+  return []
+}
+
 /** Null when the focus club has no usable coordinates. */
 export function projectClubLocator(
   clubs: readonly LocatorSource[],
