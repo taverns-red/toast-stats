@@ -112,11 +112,18 @@ for (const theme of ['light', 'dark'] as const) {
       await expectReadoutGeometry(page, readout)
 
       // The FIRST tap lands where it was made: a click trigger pinned
-      // index 0 on the first tap of this stacked AreaChart. A tap at the
-      // left edge must read differently from the first tap at 60 %.
-      const first = await readout.textContent()
-      await tapPlot(page, figure, 0.02)
-      await expect(readout).not.toHaveText(first ?? '')
+      // index 0 (the first snapshot) on the first tap of this stacked
+      // AreaChart. The 60 % tap must read a later date than a tap early in
+      // the plot (15 %, clear of the y axis).
+      const dateOf = (t: string | null) =>
+        Date.parse(DATED.exec(t ?? '')?.[0] ?? '')
+      const firstText = await readout.textContent()
+      const first = dateOf(firstText)
+      await tapPlot(page, figure, 0.15)
+      await expect(readout).not.toHaveText(firstText ?? '')
+      const early = dateOf(await readout.textContent())
+      expect(Number.isFinite(first) && Number.isFinite(early)).toBe(true)
+      expect(first).toBeGreaterThan(early)
     })
   })
 }
