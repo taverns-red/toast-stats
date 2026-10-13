@@ -100,7 +100,8 @@ describe('ClubGrowthFunnelView', () => {
       'https://www.toastmasters.org/Find-a-Club/28678700'
     )
     expect(section).toHaveTextContent('544 days')
-    expect(section).toHaveTextContent(/payment incomplete/i)
+    // Live: two prospective clubs have not paid (28679937, 28680099).
+    expect(within(section).getAllByText('Incomplete')).toHaveLength(2)
   })
 
   it('links coached clubs to their club pages with status and since', () => {

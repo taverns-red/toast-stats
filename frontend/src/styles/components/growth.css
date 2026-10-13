@@ -174,5 +174,13 @@
 
 .growth-table__num {
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+}
+
+/* Below 640 the action-table rows are cards whose cells share auto-fit
+   columns; a nowrap cell there overflows its column (and the page), so the
+   no-wrap applies only to the real table. */
+@media (min-width: 640px) {
+  .growth-table__num {
+    white-space: nowrap;
+  }
 }

@@ -123,16 +123,16 @@ function StageSection({
 }
 
 const paymentText: Record<ProspectiveRow['payment'], string> = {
-  complete: 'Payment complete',
-  incomplete: 'Payment incomplete',
-  unknown: 'Payment not stated',
+  complete: 'Complete',
+  incomplete: 'Incomplete',
+  unknown: 'Not stated',
 }
 
 const prospectiveColumns: ActionTableColumn<ProspectiveRow>[] = [
   {
     key: 'club',
     header: 'Club',
-    className: 'growth-table__club',
+    className: 'action-table__subject growth-table__club',
     cell: r =>
       r.href ? (
         <a
@@ -177,7 +177,7 @@ const charteredColumns: ActionTableColumn<CharteredRow>[] = [
   {
     key: 'club',
     header: 'Club',
-    className: 'growth-table__club',
+    className: 'action-table__subject growth-table__club',
     cell: r => (
       <Link to={r.href} className="growth-table__link">
         {r.clubName}
@@ -210,7 +210,7 @@ const coachedColumns: ActionTableColumn<CoachedRow>[] = [
   {
     key: 'club',
     header: 'Club',
-    className: 'growth-table__club',
+    className: 'action-table__subject growth-table__club',
     cell: r => (
       <Link to={r.href} className="growth-table__link">
         {r.clubName}
