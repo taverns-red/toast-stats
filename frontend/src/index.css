@@ -48,6 +48,7 @@
 @import './styles/components/app-shell.css';
 @import './styles/clubs-table.css';
 @import './styles/components/chart-sparkline-expand.css';
+@import './styles/components/chart-readout.css';
 @import './styles/components/chart-legend.css';
 @import './styles/components/district-narrative.css';
 @import './styles/components/district-subnav.css';
@@ -59,7 +60,9 @@
 @import './styles/components/club-history.css';
 @import './styles/components/club-grid.css';
 @import './styles/components/action-list.css';
+@import './styles/components/growth.css';
 @import './styles/components/mobile-row-list.css';
+@import './styles/components/club-trend-sparkline.css';
 @import './styles/components/district-hub.css';
 @import './styles/components/priority-columns.css';
 /* Safe-area insets + short-landscape chrome (#1847) — after the chrome

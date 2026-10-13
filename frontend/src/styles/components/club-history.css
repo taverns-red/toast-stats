@@ -104,6 +104,15 @@
   opacity: 1;
 }
 
+/* #1843 — on phones the link leaves the hero and becomes a row below the
+   panels (`.club-more`). Here, not in app-shell.css, because this sheet is
+   unlayered and its display above would win over the brand layer. */
+@media (max-width: 767.98px) {
+  .club-hero__history-link {
+    display: none;
+  }
+}
+
 .club-history-scroll {
   position: relative;
   overflow-x: auto;

@@ -70,6 +70,7 @@ const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/district/61/club/01479548' },
   { path: '/club/01479548' },
   { path: '/history' },
+  { path: '/history/countries', mustRender: '.wm-table__select' }, // #1797
   { path: '/methodology' },
   { path: '/mcp' },
   { path: '/awards' },
@@ -81,6 +82,9 @@ const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/district/61/grid', mustRender: '.club-grid-toggle__btn' },
   { path: '/district/61/action-list' },
   { path: '/district/61/club/7238597/history' },
+  // #1944: the map's ODbL credit links were 14px tall. The credit is the
+  // sentinel, so the measure waits for MapLibre to mount it.
+  { path: '/district/61/map', mustRender: '.maplibregl-ctrl-attrib a' },
 ]
 
 /* #1839: inline links that are NOT prose. The WCAG inline exemption is for a
@@ -104,6 +108,7 @@ const NOT_PROSE_LINKS = [
   '[data-testid="district-csp-line"] a', // Overview "See which clubs →" (17px)
   '[data-testid="division-area-heading"] a', // division page area links (22px)
   '[data-testid="education-awards-leaderboard"] td a', // analytics club link (61×37)
+  '.maplibregl-ctrl-attrib a', // #1944 map ODbL credit links (14px tall)
 ]
 
 interface Finding {

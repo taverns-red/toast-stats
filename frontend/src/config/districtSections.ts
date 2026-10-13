@@ -27,6 +27,14 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   // colour-coded tile per club. Sits after Divisions as the dense
   // whole-district companion to the division/area breakdown.
   { label: 'Grid', segment: 'grid' },
+  // 'Map' (#1784, epic #1781) — where the clubs are, pins coloured by health
+  // (default), Distinguished level, division or area. Beside Grid: the same
+  // whole-district view, laid out geographically.
+  { label: 'Map', segment: 'map' },
+  // 'Growth' (#1794, epic #1781) — the Club Growth funnel: prospective →
+  // chartered → coached → suspended. After Map: another whole-district view,
+  // before the time-series sections.
+  { label: 'Growth', segment: 'growth' },
   { label: 'Trends', segment: 'trends' },
   { label: 'Analytics', segment: 'analytics' },
   { label: 'Rankings', segment: 'rankings' },

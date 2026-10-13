@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom'
 import AppShellTopBar from './AppShellTopBar'
 import AppShellFooter from './AppShellFooter'
 import CommandPalette from './CommandPalette'
-import { useGoogleAnalytics } from '../../hooks/useGoogleAnalytics'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { useScrollRestoration } from '../../hooks/useScrollRestoration'
 
@@ -16,8 +15,6 @@ import { useScrollRestoration } from '../../hooks/useScrollRestoration'
    DistrictsPage, so it usually opens with data already in memory. */
 
 const AppShell: React.FC = () => {
-  useGoogleAnalytics()
-
   // #1103: restore scroll on Back/Forward, reset to top on push navigations.
   // A custom hook (not RR's <ScrollRestoration/>) because the landing
   // leaderboard renders short on first commit and a single synchronous restore

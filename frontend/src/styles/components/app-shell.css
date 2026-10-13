@@ -305,6 +305,24 @@
     .app-shell-nav__link {
       padding: 8px 12px;
       font-size: 13.5px;
+      /* #1917: a link label never wraps; at 768 "How it works" broke onto
+         two lines (57px against its siblings' 44px). */
+      white-space: nowrap;
+    }
+  }
+
+  /* #1917 — tablet (768–1023): the six nav links need ~448px at the desktop
+     12px padding but get ~406px beside the search field, so they wrapped.
+     8px link padding and a 16px bar gap free ~64px and leave a 30px margin
+     before the search field at 768. ≥1024 keeps the desktop spacing. */
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    .app-shell-top-bar {
+      gap: 16px;
+    }
+
+    .app-shell-nav__link {
+      padding-left: 8px;
+      padding-right: 8px;
     }
   }
 
@@ -596,6 +614,23 @@
       flex-direction: row;
       align-items: flex-start;
       justify-content: space-between;
+    }
+  }
+
+  /* #1917 — the landing's action cluster (freshness pill · PY · date ·
+     Export · Share) is ~616px of unwrapped chips. Inline beside the intro on
+     a tablet it left the intro 88px wide at 768 (140px at 820): a two-line
+     title, the lede at one word per line, a 671px-tall header. Below 1024 the
+     landing header stacks instead, the same as on a phone, so the intro gets
+     the full measure and the cluster sits on one row under it. Stacking is
+     width-driven, not data-driven, so the loading shell's actions skeleton
+     stacks too and the KPI strip lands at the same y in both states. Scoped
+     to .districts-page-root (the landing only): the Regions, Awards, Clubs
+     and Division headers carry shorter clusters and keep a 290px+ intro. */
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    .districts-page-root .districts-page-header {
+      flex-direction: column;
+      align-items: stretch;
     }
   }
 
@@ -2093,9 +2128,7 @@
      type and spacing; the --rt-stats accent is the link underline only
      (decorative, never the sole signal — links keep the ↗ glyph). */
   .club-meets {
-    list-style: none;
     margin: var(--rt-space-3) 0 0;
-    padding: 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -2104,6 +2137,178 @@
     font-size: 0.875rem; /* 14px floor for phone text (mobile review §5.6) */
     line-height: 1.4;
     color: rgba(255, 255, 255, 0.88);
+  }
+
+  /* #1843 — the facts and the links are two lists; from 768 they flow as
+     one wrapping row, as before. */
+  .club-meets__facts,
+  .club-meets__links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--rt-space-4);
+    min-width: 0;
+  }
+
+  /* #1843 — phone hero ≤ 200px (review §6.3): name at 22px, the area line,
+     ONE where-it-meets line (ellipsized; the full place is printed under
+     the mini-map), the links on their own 44px row, and the two status
+     pills. The eyebrow and the anniversary badge stay on ≥768 only, and
+     "View multi-year history" becomes a row below the panels
+     (`.club-more`). The PY/date chips already moved to the context bar
+     (#1831, context-bar.css). */
+  @media (max-width: 767.98px) {
+    .club-hero {
+      gap: var(--rt-space-2);
+      padding: var(--rt-space-3) var(--rt-space-4);
+      margin-bottom: var(--rt-space-4);
+    }
+
+    .club-hero__eyebrow,
+    .club-hero__history-link,
+    .club-hero__anniversary {
+      display: none;
+    }
+
+    .club-hero__title {
+      margin: 0 0 2px;
+      font-size: 22px;
+      line-height: 1.15;
+    }
+
+    .club-meets {
+      display: block;
+      margin-top: 2px;
+    }
+
+    .club-meets__facts {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .club-meets__facts .club-meets__item {
+      display: inline;
+      overflow-wrap: normal;
+    }
+
+    .club-meets__facts .club-meets__item + .club-meets__item::before {
+      content: '·';
+      margin: 0 6px;
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .club-meets__facts .club-meets__ico {
+      display: none;
+    }
+
+    /* The website is a row below the panels on phones, so "Contact on
+       toastmasters.org" never wraps the link row to a second 44px line
+       (it did on the Linux runner: 213px). */
+    /* Two classes: the base `.club-meets__item { display: inline-flex }`
+       sits later in this layer and would win at equal specificity. */
+    .club-meets__links .club-meets__item--website {
+      display: none;
+    }
+
+    .club-meets__links {
+      gap: 0 var(--rt-space-5);
+      margin-top: -6px;
+      margin-bottom: -6px;
+    }
+
+    .club-hero__pill {
+      padding: 4px 12px;
+    }
+  }
+
+  /* #1843 — the phone's "More about this club" rows; ≥768 keeps the hero's
+     history link instead. */
+  .club-more {
+    display: none;
+  }
+
+  @media (max-width: 767.98px) {
+    .club-more {
+      display: block;
+      margin-bottom: 20px;
+    }
+  }
+
+  /* #1843 — static mini-map: an inline SVG of the district's clubs with
+     this club as a pin. Theme tokens only (R10): dots --ink-4, pin --rt-red
+     (≥ 3:1 on --surface in both themes), halo a translucent ring. */
+  .club-minimap {
+    margin-bottom: 20px;
+  }
+
+  .club-minimap__link {
+    display: block;
+    color: var(--link);
+    text-decoration: none;
+    border-radius: var(--rds-radius-sm);
+  }
+
+  .club-minimap__link:focus-visible {
+    outline: 2px solid var(--loyal-600);
+    outline-offset: 2px;
+  }
+
+  .club-minimap__svg {
+    display: block;
+    width: 100%;
+    max-width: 480px;
+    height: auto;
+    aspect-ratio: 2 / 1;
+    background-color: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-sm);
+  }
+
+  .club-minimap__dot {
+    fill: var(--ink-4);
+    opacity: 0.55;
+  }
+
+  .club-minimap__halo {
+    fill: var(--rt-red);
+    opacity: 0.18;
+  }
+
+  .club-minimap__pin {
+    fill: var(--rt-red);
+    stroke: var(--surface);
+    stroke-width: 2;
+  }
+
+  .club-minimap__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .club-minimap__legend {
+    margin: 0 0 4px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-3);
+  }
+
+  .club-minimap__place {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-2);
   }
 
   .club-meets__item {
@@ -2734,15 +2939,17 @@
     opacity: 0.6;
   }
 
+  /* #1791 — 12px ticks (review §5.3); the viewBox now tracks the plot's
+     width, so these are real CSS pixels at every size. */
   .mem-chart .axis-text {
     fill: var(--ink-4);
-    font-size: 10.5px;
+    font-size: 12px;
     font-family: var(--sans);
   }
 
   .mem-chart .key-text {
     fill: var(--ink-3);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     font-family: var(--sans);
   }
@@ -2775,6 +2982,97 @@
 
   [data-theme='dark'] .mem-chart .dot {
     fill: #8ec5e8;
+  }
+
+  /* #1791 — earlier program years, faint and dashed behind the current
+     line (the dash, not only the tone, tells them apart). Newest prior year
+     is the least faint. Theme tokens, so dark mode follows (R10). */
+  .mem-chart .line--prior {
+    fill: none;
+    stroke: var(--ink-4);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
+    stroke-linecap: round;
+    opacity: 0.55;
+  }
+
+  .mem-chart .line--prior-1 {
+    opacity: 0.4;
+  }
+
+  .mem-chart .line--prior-2 {
+    opacity: 0.28;
+  }
+
+  /* Tap-to-pin marker. */
+  .mem-chart .pin-line {
+    stroke: var(--ink-3);
+    stroke-width: 1;
+  }
+
+  .mem-chart .dot--pinned {
+    stroke: var(--surface);
+    stroke-width: 2;
+  }
+
+  .club-trend__plot {
+    border-radius: var(--rds-radius-sm);
+    cursor: crosshair;
+    touch-action: pan-y;
+  }
+
+  .club-trend__plot:focus-visible {
+    outline: 2px solid var(--loyal-600);
+    outline-offset: 2px;
+  }
+
+  .club-trend__legend {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 16px;
+    min-height: 20px;
+    overflow: hidden;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  .club-trend__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .club-trend__swatch {
+    flex-shrink: 0;
+    width: 18px;
+    height: 0;
+    border-top: 3px solid var(--loyal-500);
+  }
+
+  [data-theme='dark'] .club-trend__swatch {
+    border-top-color: #8ec5e8;
+  }
+
+  .club-trend__legend-item--prior .club-trend__swatch {
+    border-top: 2px dashed var(--ink-4);
+  }
+
+  /* The readout is #1835's .chart-readout line (two lines reserved); only
+     the current-year swatch is this chart's own colour. */
+  .club-trend__swatch-current {
+    background-color: var(--loyal-500);
+  }
+
+  [data-theme='dark'] .club-trend__swatch-current {
+    background-color: #8ec5e8;
   }
 
   /* DCP Status — tier row (Current Level + Outlook) + per-tier gap rows. */

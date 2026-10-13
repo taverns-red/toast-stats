@@ -12,8 +12,19 @@ import {
 } from 'recharts'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
-import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
-import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
+import { formatLongDate, formatShortDate } from '../utils/dateFormatting'
+import {
+  buildMembershipTrendChartData,
+  lastOf,
+  pointNearDay,
+  type TrendSeries,
+} from './membershipTrendChartData'
+import {
+  useChartReadout,
+  ChartReadout,
+  formatReadoutDate,
+  type ChartReading,
+} from './charts/ChartReadout'
 
 /** A named set of data points for one program year */
 export interface YearTrendData {
@@ -26,6 +37,13 @@ interface MembershipTrendChartProps {
   isLoading?: boolean
   /** Prior-year trend data for YoY comparison overlay (#238) */
   priorYearTrends?: YearTrendData[] | undefined
+  /**
+   * The program year `membershipTrend` belongs to, e.g. "2026-2027" (#1705).
+   * Passed by the page that owns the PY selector (R3), never inferred from
+   * the points. Names the current line and finds the predecessor PY whose
+   * 06-30 close anchors it (D15).
+   */
+  programYear?: string | undefined
 }
 
 interface Period {
@@ -34,64 +52,160 @@ interface Period {
   type: 'growth' | 'decline'
 }
 
-// Custom tooltip moved outside render
-const CustomTooltip = ({
-  active,
-  payload,
-  sortedData,
-  periods,
-}: {
-  active?: boolean
-  payload?: Array<{ payload: { date: string; count: number } }>
-  sortedData: Array<{ date: string; count: number }>
-  periods: Period[]
-}) => {
-  if (active && payload && payload.length) {
-    const data = payload[0]?.payload
-    if (!data) return null
-
-    const formattedDate = formatLongDate(data.date)
-
-    // Find if this point is in a growth/decline period
-    const pointIndex = sortedData.findIndex(d => d.date === data.date)
-    const period = periods.find(
-      p => pointIndex >= p.start && pointIndex <= p.end
-    )
-
-    return (
-      <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
-        <p className="text-sm font-medium text-gray-900 mb-1">
-          {formattedDate}
-        </p>
-        <p className="text-sm text-tm-loyal-blue font-semibold">
-          Members: {data.count.toLocaleString()}
-        </p>
-        {period && (
-          <p
-            className={`text-xs mt-1 ${
-              period.type === 'growth' ? 'text-green-600' : 'text-red-600'
-            }`}
-          >
-            {period.type === 'growth'
-              ? '📈 Growth Period'
-              : '📉 Decline Period'}
-          </p>
-        )}
-      </div>
-    )
-  }
-  return null
+/** "2026-2027" → "PY 2026–27" */
+const shortPyLabel = (label: string): string => {
+  const m = /^(\d{4})-\d{2}(\d{2})$/.exec(label)
+  return m ? `PY ${m[1]}–${m[2]}` : label
 }
 
-const PRIOR_YEAR_COLORS = ['var(--tm-cool-gray)', 'var(--tm-true-maroon-80)']
+/** Legend name: an in-progress current year says how far it runs (#1705). */
+const seriesName = (s: TrendSeries): string => {
+  const base = shortPyLabel(s.label)
+  const last = lastOf(s.points)
+  return s.isCurrent && s.inProgress && last
+    ? `${base} · to ${formatShortDate(last.date)}`
+    : base
+}
+
+// Month starts as program-year days (0 = Jul 1) for a non-leap PY. In a leap
+// PY the Mar–Jun ticks sit one day early, under a pixel at chart widths.
+const MONTH_TICKS: ReadonlyArray<{ day: number; label: string }> = [
+  { day: 0, label: 'Jul' },
+  { day: 31, label: 'Aug' },
+  { day: 62, label: 'Sep' },
+  { day: 92, label: 'Oct' },
+  { day: 123, label: 'Nov' },
+  { day: 153, label: 'Dec' },
+  { day: 184, label: 'Jan' },
+  { day: 215, label: 'Feb' },
+  { day: 243, label: 'Mar' },
+  { day: 274, label: 'Apr' },
+  { day: 304, label: 'May' },
+  { day: 335, label: 'Jun' },
+]
+const monthLabel = (day: number): string =>
+  MONTH_TICKS.find(t => t.day === day)?.label ?? ''
+
+// Prior years are context, not the subject: thin, faint and each with its
+// own dash pattern, so they are told apart by pattern and legend label as
+// well as by colour (WCAG 1.4.1). The current year is the one solid line.
+const PRIOR_YEAR_STYLES = [
+  { stroke: 'var(--tm-cool-gray)', dash: '6 4' },
+  { stroke: 'var(--tm-true-maroon-80)', dash: '2 3' },
+] as const
+
+/**
+ * The tap-to-pin readout (#1835) for a program-year day: the same per-year
+ * nearest points the tooltip reads (#1705), headed by the current year's
+ * date. A prior year's row names its own date, since its nearest point
+ * rarely falls on the same day.
+ */
+const describeTrendDay = (
+  series: TrendSeries[],
+  day: number
+): ChartReading | null => {
+  const lines = series.flatMap(s => {
+    const p = pointNearDay(s, day)
+    return p ? [{ s, p }] : []
+  })
+  if (lines.length === 0) return null
+  const priors = series.filter(s => !s.isCurrent)
+  const head = (lines.find(l => l.s.isCurrent) ?? lines[0])!
+  const ordered = [...lines].sort(
+    (a, b) => Number(b.s.isCurrent) - Number(a.s.isCurrent)
+  )
+  return {
+    label: formatReadoutDate(head.p.date),
+    rows: ordered.map(({ s, p }) => ({
+      key: s.key,
+      name: s.isCurrent
+        ? shortPyLabel(s.label)
+        : `${shortPyLabel(s.label)} (${formatShortDate(p.date)})`,
+      value: p.count,
+      color: s.isCurrent
+        ? 'var(--tm-loyal-blue)'
+        : (
+            PRIOR_YEAR_STYLES[priors.indexOf(s) % PRIOR_YEAR_STYLES.length] ??
+            PRIOR_YEAR_STYLES[0]
+          ).stroke,
+    })),
+  }
+}
+
+/**
+ * Tooltip (#1705): one line per program year, each with that year's real
+ * date and value nearest the hovered position. Built from the series rather
+ * than Recharts' payload, because daily current-year points and month-end
+ * prior-year points rarely share an exact x.
+ */
+const TrendTooltip = ({
+  active,
+  label,
+  series,
+  periods,
+  currentDates,
+}: {
+  active?: boolean
+  label?: number | string
+  series: TrendSeries[]
+  periods: Period[]
+  currentDates: string[]
+}) => {
+  if (!active || label === undefined || label === '') return null
+  const day = Number(label)
+  const lines = series.flatMap(s => {
+    const p = pointNearDay(s, day)
+    return p ? [{ s, p }] : []
+  })
+  if (lines.length === 0) return null
+
+  const currentPoint = lines.find(l => l.s.isCurrent)?.p
+  const pointIndex =
+    currentPoint && !currentPoint.anchor
+      ? currentDates.indexOf(currentPoint.date)
+      : -1
+  const period =
+    pointIndex >= 0
+      ? periods.find(p => pointIndex >= p.start && pointIndex <= p.end)
+      : undefined
+
+  return (
+    <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-[12.5rem] sm:max-w-[16rem]">
+      <ul className="space-y-1">
+        {lines.map(({ s, p }) => (
+          <li
+            key={s.key}
+            className={`text-sm ${
+              s.isCurrent ? 'text-tm-loyal-blue font-semibold' : 'text-gray-700'
+            }`}
+          >
+            {shortPyLabel(s.label)} · {formatLongDate(p.date)}
+            {p.anchor ? ' (prior year close)' : ''}: {p.count.toLocaleString()}{' '}
+            members
+          </li>
+        ))}
+      </ul>
+      {period && (
+        <p
+          className={`text-xs mt-1 ${
+            period.type === 'growth' ? 'text-green-600' : 'text-red-600'
+          }`}
+        >
+          {period.type === 'growth' ? '📈 Growth Period' : '📉 Decline Period'}
+        </p>
+      )}
+    </div>
+  )
+}
 
 export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   membershipTrend,
   isLoading,
   priorYearTrends,
+  programYear,
 }) => {
-  // Responsive tick interval for mobile (#237) — must be called before early returns
-  const tickInterval = useResponsiveTickInterval(membershipTrend?.length ?? 0)
+  // Tap-to-pin readout on devices without hover (#1835) — before early returns.
+  const readout = useChartReadout()
 
   if (isLoading) {
     return <LoadingSkeleton variant="chart" />
@@ -107,50 +221,21 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
     )
   }
 
-  // Sort current year data by date
-  const rawSorted = [...membershipTrend].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  // Whole-PY chart data (#1705): every series placed by program-year day,
+  // prior years in full, the current year up to its latest point and
+  // anchored on the predecessor's 06-30 close (D15).
+  const chart = buildMembershipTrendChartData(
+    membershipTrend,
+    priorYearTrends ?? [],
+    programYear
   )
+  const currentSeries = chart.series[0]!
+  const priorSeries = chart.series.slice(1)
 
-  // --- Merge prior-year data into unified dataset (#243) ---
-  // Use program-year month index (Jul=0, Aug=1, ..., Jun=11) for alignment
-  const toMonthIndex = (dateStr: string): number => {
-    const d = parseLocalDate(dateStr)
-    const m = d.getMonth() // 0=Jan ... 6=Jul ... 11=Dec
-    return m >= 6 ? m - 6 : m + 6 // Jul=0, Aug=1, ..., Jun=11
-  }
-
-  // Build a map from monthIndex → prior year membership for each prior year
-  const priorYearKeys: string[] = []
-  const priorMonthMaps: Map<number, number>[] = []
-  if (priorYearTrends && priorYearTrends.length > 0) {
-    for (const yt of priorYearTrends) {
-      priorYearKeys.push(yt.label)
-      const monthMap = new Map<number, number>()
-      for (const dp of yt.data) {
-        const mi = toMonthIndex(dp.date)
-        // If multiple points in same month, use the latest
-        monthMap.set(mi, dp.count)
-      }
-      priorMonthMaps.push(monthMap)
-    }
-  }
-
-  // Merge: add prior year values to each current-year data point
-  type MergedDataPoint = {
-    date: string
-    count: number
-    [key: string]: string | number | undefined
-  }
-  const sortedData: MergedDataPoint[] = rawSorted.map(point => {
-    const merged: MergedDataPoint = { date: point.date, count: point.count }
-    const mi = toMonthIndex(point.date)
-    for (let i = 0; i < priorYearKeys.length; i++) {
-      const key = `prior_${i}`
-      merged[key] = priorMonthMaps[i]?.get(mi)
-    }
-    return merged
-  })
+  // Statistics and insights read the current year's OWN points only — never
+  // the D15 anchor, which is the prior year's close.
+  const sortedData = currentSeries.points.filter(p => !p.anchor)
+  const currentDates = sortedData.map(d => d.date)
 
   // Calculate statistics
   const counts = sortedData.map(d => d.count)
@@ -165,11 +250,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
       : '0.0'
 
   // Detect growth/decline periods (3+ consecutive increases/decreases)
-  const periods: Array<{
-    start: number
-    end: number
-    type: 'growth' | 'decline'
-  }> = []
+  const periods: Period[] = []
   let currentPeriod: { start: number; type: 'growth' | 'decline' } | null = null
 
   for (let i = 1; i < sortedData.length; i++) {
@@ -226,8 +307,6 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
     }
   })
 
-  // Program year milestones (Toastmasters year: July 1 - June 30)
-  const milestones: Array<{ date: string; label: string }> = []
   const firstDataPoint = sortedData[0]
   const lastDataPoint = sortedData[sortedData.length - 1]
 
@@ -235,34 +314,21 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
     return <div>No data available</div>
   }
 
-  const startDate = new Date(firstDataPoint.date)
-  const endDate = new Date(lastDataPoint.date)
+  const monthTicks = MONTH_TICKS.map(t => t.day).filter(
+    d => d <= chart.domain[1]
+  )
 
-  // Add program year start dates (July 1)
-  for (
-    let year = startDate.getFullYear();
-    year <= endDate.getFullYear() + 1;
-    year++
-  ) {
-    const julyFirst = new Date(year, 6, 1) // Month is 0-indexed
-    if (julyFirst >= startDate && julyFirst <= endDate) {
-      const dateString = julyFirst.toISOString().split('T')[0]
-      if (dateString) {
-        milestones.push({
-          date: dateString,
-          label: `PY ${year}-${year + 1}`,
-        })
-      }
-    }
-  }
-
-  // Format date for X-axis (using utility to avoid UTC timezone shift)
-  const formatXAxis = (dateStr: string) => {
-    const date = parseLocalDate(dateStr)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
-
-  const chartDescription = `Line chart showing district membership trend from ${firstDataPoint.date} to ${lastDataPoint.date}. Membership ${netChange >= 0 ? 'increased' : 'decreased'} by ${Math.abs(netChange)} members (${percentChange}%).`
+  // Screen-reader summary (#1705): the current year AND each prior year,
+  // so the comparison is not carried by the drawing alone.
+  const priorSummary = priorSeries
+    .map(s => {
+      const last = lastOf(s.points)
+      return last
+        ? ` ${shortPyLabel(s.label)} ended at ${last.count.toLocaleString()} members on ${formatLongDate(last.date)}.`
+        : ''
+    })
+    .join('')
+  const chartDescription = `Line chart of district membership across the program year, July to June. ${shortPyLabel(currentSeries.label)}: ${startMembership.toLocaleString()} members on ${formatLongDate(firstDataPoint.date)}, ${endMembership.toLocaleString()} on ${formatLongDate(lastDataPoint.date)}, ${netChange >= 0 ? 'up' : 'down'} ${Math.abs(netChange)} (${percentChange}%).${priorSummary}`
 
   return (
     <div
@@ -294,7 +360,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
         </h2>
         <p className="text-sm text-gray-600 mt-1 font-tm-body">
           Paid members per snapshot · Source: Toastmasters District Performance
-          · Program-year milestones overlaid
+          · Program year July–June, prior years for comparison
         </p>
       </div>
 
@@ -388,22 +454,22 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
         <div className="min-w-[320px]">
           <ResponsiveContainer width="100%" height={400}>
             <LineChart
-              data={sortedData}
-              margin={{ top: 5, right: 20, left: 10, bottom: 60 }}
+              data={chart.rows}
+              margin={{ top: 5, right: 20, left: 10, bottom: 20 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--tm-cool-gray-20)"
               />
               <XAxis
-                dataKey="date"
+                dataKey="day"
+                type="number"
+                domain={chart.domain}
+                ticks={monthTicks}
+                tickFormatter={monthLabel}
+                interval="preserveStartEnd"
                 stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '12px' }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                interval={tickInterval}
-                tickFormatter={formatXAxis}
               />
               <YAxis
                 stroke="var(--tm-cool-gray)"
@@ -417,8 +483,13 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
               />
               <Tooltip
                 content={
-                  <CustomTooltip sortedData={sortedData} periods={periods} />
+                  <TrendTooltip
+                    series={chart.series}
+                    periods={periods}
+                    currentDates={currentDates}
+                  />
                 }
+                {...readout.tooltipProps}
               />
               <Legend
                 wrapperStyle={{ fontSize: '12px' }}
@@ -426,127 +497,83 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 height={36}
               />
 
-              {/* Program year milestone lines */}
-              {milestones.map((milestone, index) => (
-                <ReferenceLine
-                  key={index}
-                  x={milestone.date}
-                  stroke="var(--tm-true-maroon)" // TM True Maroon
-                  strokeDasharray="5 5"
-                  label={{
-                    value: milestone.label,
-                    position: 'top',
-                    fill: 'var(--tm-true-maroon)',
-                    fontSize: 12,
-                  }}
-                />
-              ))}
-
-              {/* Main membership line */}
-              <Line
-                type="monotone"
-                dataKey="count"
-                stroke="var(--tm-loyal-blue)" // TM Loyal Blue
-                strokeWidth={3}
-                dot={{ fill: 'var(--tm-loyal-blue)', r: 0.3 }}
-                activeDot={{ r: 0.3 }}
-                name="Total Membership"
-              />
-
-              {/* Prior year overlay lines (#238, #243) */}
-              {priorYearKeys.map((label, i) => {
-                const color =
-                  PRIOR_YEAR_COLORS[i % PRIOR_YEAR_COLORS.length] ??
-                  'var(--tm-cool-gray)'
+              {/* Prior program years first, so the current line paints on
+                  top (#238, #243, #1705). */}
+              {priorSeries.map((s, i) => {
+                const style =
+                  PRIOR_YEAR_STYLES[i % PRIOR_YEAR_STYLES.length] ??
+                  PRIOR_YEAR_STYLES[0]
                 return (
                   <Line
-                    key={label}
+                    key={s.key}
                     type="monotone"
-                    dataKey={`prior_${i}`}
-                    stroke={color}
+                    dataKey={s.key}
+                    stroke={style.stroke}
                     strokeWidth={1.5}
-                    strokeDasharray="6 3"
-                    strokeOpacity={0.5}
+                    strokeDasharray={style.dash}
+                    strokeOpacity={0.6}
                     dot={false}
-                    activeDot={{ r: 2 }}
-                    name={label}
+                    activeDot={{ r: 3 }}
+                    name={seriesName(s)}
+                    legendType="plainline"
                     connectNulls
+                    isAnimationActive={false}
                   />
                 )
               })}
 
-              {/* Highlight growth periods */}
+              {/* The current program year: the one solid, heavy line. */}
+              <Line
+                type="monotone"
+                dataKey={currentSeries.key}
+                stroke="var(--tm-loyal-blue)"
+                strokeWidth={3}
+                dot={false}
+                activeDot={{ r: 4 }}
+                name={seriesName(currentSeries)}
+                legendType="plainline"
+                connectNulls
+                isAnimationActive={false}
+              />
+
+              {/* Growth / decline period bounds on the current year. */}
               {periods.map((period, index) => {
-                if (period.type === 'growth') {
-                  const startPoint = sortedData[period.start]
-                  const endPoint = sortedData[period.end]
-                  if (!startPoint || !endPoint) return null
-
-                  const startDate = startPoint.date
-                  const endDate = endPoint.date
-                  return (
-                    <React.Fragment key={`growth-${index}`}>
-                      <ReferenceLine
-                        x={startDate}
-                        stroke="var(--tm-loyal-blue)"
-                        strokeWidth={2}
-                        strokeOpacity={0.3}
-                      />
-                      <ReferenceLine
-                        x={endDate}
-                        stroke="var(--tm-loyal-blue)"
-                        strokeWidth={2}
-                        strokeOpacity={0.3}
-                      />
-                    </React.Fragment>
-                  )
-                }
-                return null
-              })}
-
-              {/* Highlight decline periods */}
-              {periods.map((period, index) => {
-                if (period.type === 'decline') {
-                  const startPoint = sortedData[period.start]
-                  const endPoint = sortedData[period.end]
-                  if (!startPoint || !endPoint) return null
-
-                  const startDate = startPoint.date
-                  const endDate = endPoint.date
-                  return (
-                    <React.Fragment key={`decline-${index}`}>
-                      <ReferenceLine
-                        x={startDate}
-                        stroke="var(--tm-true-maroon)"
-                        strokeWidth={2}
-                        strokeOpacity={0.3}
-                      />
-                      <ReferenceLine
-                        x={endDate}
-                        stroke="var(--tm-true-maroon)"
-                        strokeWidth={2}
-                        strokeOpacity={0.3}
-                      />
-                    </React.Fragment>
-                  )
-                }
-                return null
+                const startPoint = sortedData[period.start]
+                const endPoint = sortedData[period.end]
+                if (!startPoint || !endPoint) return null
+                const stroke =
+                  period.type === 'growth'
+                    ? 'var(--tm-loyal-blue)'
+                    : 'var(--tm-true-maroon)'
+                return (
+                  <React.Fragment key={`${period.type}-${index}`}>
+                    <ReferenceLine
+                      x={startPoint.day}
+                      stroke={stroke}
+                      strokeWidth={2}
+                      strokeOpacity={0.3}
+                    />
+                    <ReferenceLine
+                      x={endPoint.day}
+                      stroke={stroke}
+                      strokeWidth={2}
+                      strokeOpacity={0.3}
+                    />
+                  </React.Fragment>
+                )
               })}
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
+      <ChartReadout
+        readout={readout}
+        describe={day => describeTrendDay(chart.series, Number(day))}
+      />
 
       {/* Legend for highlights */}
       {periods.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-4 h-0.5 bg-tm-true-maroon"
-              style={{ borderTop: '2px dashed' }}
-            ></div>
-            <span className="font-tm-body">Program Year Start</span>
-          </div>
           {periods.some(p => p.type === 'growth') && (
             <div className="flex items-center gap-2">
               <div className="w-4 h-0.5 bg-green-500"></div>

@@ -122,8 +122,10 @@ describe('Filter Component Consistency', () => {
       // numeric but display-only — it carries filterable: false because
       // a years-since-charter range filter wasn't part of the epic.
       // Order follows the #669 column reconcile (COLUMN_CONFIGS order).
+      // netChange (#1792, the Trend sparkline) is sort-only, like Years.
       expect(numericColumns.map(c => c.field)).toEqual([
         'membership',
+        'netChange',
         'membersNeeded',
         'newMembers',
         'octoberRenewals',
@@ -135,7 +137,7 @@ describe('Filter Component Consistency', () => {
       // Each numeric column should be filterable, except the display-only
       // yearsChartered column (#448).
       numericColumns.forEach(column => {
-        if (column.field === 'yearsChartered') {
+        if (column.field === 'yearsChartered' || column.field === 'netChange') {
           expect(column.filterable).toBe(false)
         } else {
           expect(column.filterable).toBe(true)
@@ -179,6 +181,7 @@ describe('Filter Component Consistency', () => {
         'status',
         'distinguished',
         'clubStatus',
+        'coach',
       ])
 
       // Each categorical column should be filterable and have options

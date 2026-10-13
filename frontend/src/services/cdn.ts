@@ -177,6 +177,12 @@ export interface CdnRankingsData {
      * `aprilPayments`, `octoberPayments`, `latePayments`, `charterPayments`.
      */
     newCharteredClubs?: number
+    /**
+     * Clubs suspended this program year (#1497), from the same
+     * `Charter Date/Suspend Date` column. Absent or a census-wide 0 means
+     * not collected — unknown, never zero (#1757; see `readGrowthCounts`).
+     */
+    suspendedClubs?: number
   }>
   /**
    * The dashboard **as-of** date (`metadata.sourceCsvDate`). This advances past

@@ -121,3 +121,18 @@ describe('first-screen routes do not statically import Recharts (#1901)', () => 
     expect(staticImportersOf(resolve(SRC, page), 'recharts')).toEqual([])
   })
 })
+
+// #1843 — the club page's mini-map is a static SVG; MapLibre (and the
+// PMTiles reader) belong to the map route only (ADR-016 route budget).
+describe('the club route does not reach a map library (#1843)', () => {
+  it.each(['maplibre-gl', 'pmtiles'])('%s', pkg => {
+    expect(
+      staticImportersOf(resolve(SRC, 'pages/ClubDetailPage.tsx'), pkg)
+    ).toEqual([])
+  })
+
+  it('renders the mini-map component', () => {
+    const src = readFileSync(resolve(SRC, 'pages/ClubDetailPage.tsx'), 'utf-8')
+    expect(staticSpecifiers(src)).toContain('../components/clubs/ClubMiniMap')
+  })
+})

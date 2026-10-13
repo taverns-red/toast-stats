@@ -14,73 +14,87 @@ export function ClubWhereItMeets({ info }: { info: ClubMeetingInfo | null }) {
 
   const external = { target: '_blank', rel: 'noopener noreferrer' } as const
 
+  const hasFacts = !!(info.schedule || info.mode || info.place)
+  const hasLinks = !!(info.websiteUrl || info.contactUrl)
+
+  // #1843 — two lists: the facts (one ellipsized line on phones; the full
+  // place is printed again under the mini-map) and the links (their own
+  // 44px row on phones, so neither is truncated away).
   return (
-    <ul className="club-meets" aria-label="Where the club meets">
-      {info.schedule && (
-        <li className="club-meets__item">
-          <svg
-            className="club-meets__ico"
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.6}
-            aria-hidden="true"
-          >
-            <circle cx="8" cy="8" r="6" />
-            <path d="M8 4.5V8l2.5 1.5" />
-          </svg>
-          <span>{info.schedule}</span>
-        </li>
+    <div className="club-meets">
+      {hasFacts && (
+        <ul className="club-meets__facts" aria-label="Where the club meets">
+          {info.schedule && (
+            <li className="club-meets__item">
+              <svg
+                className="club-meets__ico"
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.6}
+                aria-hidden="true"
+              >
+                <circle cx="8" cy="8" r="6" />
+                <path d="M8 4.5V8l2.5 1.5" />
+              </svg>
+              <span>{info.schedule}</span>
+            </li>
+          )}
+          {info.mode && (
+            <li className="club-meets__item">
+              <span>{info.mode}</span>
+            </li>
+          )}
+          {info.place && (
+            <li className="club-meets__item">
+              <svg
+                className="club-meets__ico"
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.6}
+                aria-hidden="true"
+              >
+                <path d="M8 14s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0C3.5 9.8 8 14 8 14z" />
+                <circle cx="8" cy="6.5" r="1.5" />
+              </svg>
+              <span>{info.place}</span>
+            </li>
+          )}
+        </ul>
       )}
-      {info.mode && (
-        <li className="club-meets__item">
-          <span>{info.mode}</span>
-        </li>
+      {hasLinks && (
+        <ul className="club-meets__links" aria-label="Club links">
+          {info.websiteUrl && (
+            <li className="club-meets__item club-meets__item--website">
+              <a
+                className="club-meets__link"
+                href={info.websiteUrl}
+                {...external}
+                aria-label="Club website (opens in a new tab)"
+              >
+                Website <span aria-hidden="true">↗</span>
+              </a>
+            </li>
+          )}
+          {info.contactUrl && (
+            <li className="club-meets__item">
+              <a
+                className="club-meets__link"
+                href={info.contactUrl}
+                {...external}
+                aria-label="Contact on toastmasters.org (opens in a new tab)"
+              >
+                Contact on toastmasters.org <span aria-hidden="true">↗</span>
+              </a>
+            </li>
+          )}
+        </ul>
       )}
-      {info.place && (
-        <li className="club-meets__item">
-          <svg
-            className="club-meets__ico"
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.6}
-            aria-hidden="true"
-          >
-            <path d="M8 14s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0C3.5 9.8 8 14 8 14z" />
-            <circle cx="8" cy="6.5" r="1.5" />
-          </svg>
-          <span>{info.place}</span>
-        </li>
-      )}
-      {info.websiteUrl && (
-        <li className="club-meets__item">
-          <a
-            className="club-meets__link"
-            href={info.websiteUrl}
-            {...external}
-            aria-label="Club website (opens in a new tab)"
-          >
-            Website <span aria-hidden="true">↗</span>
-          </a>
-        </li>
-      )}
-      {info.contactUrl && (
-        <li className="club-meets__item">
-          <a
-            className="club-meets__link"
-            href={info.contactUrl}
-            {...external}
-            aria-label="Contact on toastmasters.org (opens in a new tab)"
-          >
-            Contact on toastmasters.org <span aria-hidden="true">↗</span>
-          </a>
-        </li>
-      )}
-    </ul>
+    </div>
   )
 }

@@ -1,0 +1,282 @@
+{
+  "_provenance": "Recorded, not hand-written (#1794). cdn_2026_10_11: sections newClubs/prospectiveClubs/coaches copied verbatim from https://cdn.taverns.red/snapshots/2026-10-11/district_61_reports.json. collector_2026_06_01_newClubs: the real DistrictReportsBuilder run over packages/collector-cli/src/__tests__/fixtures/daily-reports/new-clubs.html (live D61 capture 2026-06-01).",
+  "cdn_2026_10_11": {
+    "districtId": "61",
+    "programYear": "2026-2027",
+    "generatedAt": "2026-10-12T09:04:56.539Z",
+    "sections": {
+      "newClubs": {
+        "sources": [
+          {
+            "reportType": "new-clubs",
+            "tableId": "ac6df5db-13de-425a-b8b9-f9c6093b538a",
+            "asOf": ""
+          }
+        ],
+        "records": []
+      },
+      "prospectiveClubs": {
+        "sources": [
+          {
+            "reportType": "prospective-clubs",
+            "tableId": "50630d17-1492-40c9-8244-930b1d94167b",
+            "asOf": "October 12, 2026"
+          }
+        ],
+        "records": [
+          {
+            "division": "F",
+            "area": "53",
+            "club": "28678700",
+            "status": "Prospective",
+            "name": "Parole Chrétienne et Passionné de Dieu",
+            "location": "Hawkesbury",
+            "prospect": "#1 Application to Organize Complete - 04/15/2025Payment Complete - 04/19/2025"
+          },
+          {
+            "division": "A",
+            "area": "3",
+            "club": "28679454",
+            "status": "Prospective",
+            "name": "Perth, CAN Prospective Club",
+            "location": "Perth",
+            "prospect": "#1 Application to Organize Complete - 12/03/2025Payment Complete - 12/03/2025"
+          },
+          {
+            "division": "C",
+            "area": "21",
+            "club": "28679513",
+            "status": "Prospective",
+            "name": "Wendover, CAN Prospective Club",
+            "location": "Wendover",
+            "prospect": "#1 Application to Organize Complete - 11/26/2025Payment Complete - 11/26/2025"
+          },
+          {
+            "division": "",
+            "area": "",
+            "club": "28679714",
+            "status": "Prospective",
+            "name": "Vaudreuil-Dorion CAN Prospective Club",
+            "location": "Vaudreuil-Dorion",
+            "prospect": "#1 Application to Organize Complete - 04/29/2026Payment Complete - 04/29/2026"
+          },
+          {
+            "division": "",
+            "area": "",
+            "club": "28679937",
+            "status": "Prospective",
+            "name": "Montreal, CAN Prospective Club",
+            "location": "Montreal",
+            "prospect": "#1 Application to Organize Complete - 03/21/2026Payment Incomplete"
+          },
+          {
+            "division": "",
+            "area": "",
+            "club": "28680007",
+            "status": "Prospective",
+            "name": "Laval, CAN Prospective Club",
+            "location": "Laval",
+            "prospect": "#1 Application to Organize Complete - 04/09/2026Payment Complete - 04/09/2026"
+          },
+          {
+            "division": "",
+            "area": "",
+            "club": "28680099",
+            "status": "Prospective",
+            "name": "MTL, CAN Prospective Club",
+            "location": "MTL",
+            "prospect": "#1 Application to Organize Complete - 04/20/2026Payment Incomplete"
+          },
+          {
+            "division": "G",
+            "area": "64",
+            "club": "28680436",
+            "status": "Prospective",
+            "name": "Montreal, CAN Prospective Club",
+            "location": "Montreal",
+            "prospect": "#1 Application to Organize Complete - 06/14/2026Payment Complete - 06/14/2026"
+          }
+        ]
+      },
+      "coaches": {
+        "sources": [
+          {
+            "reportType": "coaches",
+            "tableId": "41955922-25ab-4a5a-8025-ebb7634f68bf",
+            "asOf": "October 12, 2026"
+          }
+        ],
+        "records": [
+          {
+            "club": "1269833",
+            "clubName": "FSA-Universite Laval",
+            "code": "COACH",
+            "beginDate": "09/30/2026",
+            "status": "PENDING",
+            "activeCoach": true
+          },
+          {
+            "club": "1269833",
+            "clubName": "FSA-Universite Laval",
+            "code": "COACH",
+            "beginDate": "09/30/2026",
+            "status": "PENDING",
+            "activeCoach": true
+          },
+          {
+            "club": "1296822",
+            "clubName": "Les Explosifs De Laval",
+            "code": "COACH",
+            "beginDate": "08/03/2026",
+            "status": "PENDING",
+            "activeCoach": true
+          },
+          {
+            "club": "4673",
+            "clubName": "Bombardier Canadair Toastmasters Club",
+            "code": "COACH",
+            "beginDate": "12/09/2025",
+            "status": "AWARDED",
+            "activeCoach": false
+          },
+          {
+            "club": "4675249",
+            "clubName": "Carleton Place Toastmasters",
+            "code": "COACH",
+            "beginDate": "12/21/2024",
+            "status": "AWARDED",
+            "activeCoach": false
+          },
+          {
+            "club": "5046",
+            "clubName": "Avance Synergie",
+            "code": "COACH",
+            "beginDate": "07/25/2026",
+            "status": "PENDING",
+            "activeCoach": true
+          },
+          {
+            "club": "5046",
+            "clubName": "Avance Synergie",
+            "code": "COACH",
+            "beginDate": "01/20/2026",
+            "status": "PENDING",
+            "activeCoach": true
+          },
+          {
+            "club": "6502",
+            "clubName": "TM Francophone de Chicoutimi Club",
+            "code": "COACH",
+            "beginDate": "12/16/2025",
+            "status": "AWARDED",
+            "activeCoach": false
+          },
+          {
+            "club": "6552",
+            "clubName": "Expression Club",
+            "code": "COACHU",
+            "beginDate": "05/17/2025",
+            "status": "AWARDED",
+            "activeCoach": false
+          },
+          {
+            "club": "675689",
+            "clubName": "Les Communicateurs eloquents de Lanaudiere",
+            "code": "COACH",
+            "beginDate": "09/06/2026",
+            "status": "PENDING",
+            "activeCoach": true
+          },
+          {
+            "club": "684093",
+            "clubName": "Club avancé international",
+            "code": "COACH",
+            "beginDate": "09/23/2025",
+            "status": "PENDING",
+            "activeCoach": true
+          },
+          {
+            "club": "7027",
+            "clubName": "Les Orateurs Pratt & Whitney - Canada",
+            "code": "COACH",
+            "beginDate": "12/22/2024",
+            "status": "PENDING",
+            "activeCoach": true
+          },
+          {
+            "club": "901116",
+            "clubName": "La Seigneurie De Boucherville",
+            "code": "COACHU",
+            "beginDate": "12/31/2025",
+            "status": "AWARDED",
+            "activeCoach": false
+          },
+          {
+            "club": "9361",
+            "clubName": "Club Toastmasters Montréal",
+            "code": "COACH",
+            "beginDate": "05/17/2025",
+            "status": "AWARDED",
+            "activeCoach": false
+          }
+        ]
+      }
+    }
+  },
+  "collector_2026_06_01_newClubs": {
+    "sources": [
+      {
+        "reportType": "new-clubs",
+        "tableId": "ac6df5db-13de-425a-b8b9-f9c6093b538a",
+        "asOf": "June 01, 2026"
+      }
+    ],
+    "records": [
+      {
+        "division": "I",
+        "area": "93",
+        "club": "28678571",
+        "charterDate": "04/17/2026",
+        "status": "Complete",
+        "name": "Club Toastmasters de Drummondville",
+        "location": "Drummondville"
+      },
+      {
+        "division": "G",
+        "area": "62",
+        "club": "28679190",
+        "charterDate": "04/15/2026",
+        "status": "Complete",
+        "name": "Club Toastmasters Les Entrepreneurs de Montreal",
+        "location": "Montreal"
+      },
+      {
+        "division": "I",
+        "area": "92",
+        "club": "28679222",
+        "charterDate": "01/22/2026",
+        "status": "Complete",
+        "name": "Club Toastmasters IA",
+        "location": "Quebec"
+      },
+      {
+        "division": "G",
+        "area": "63",
+        "club": "28679503",
+        "charterDate": "12/01/2025",
+        "status": "Complete",
+        "name": "TENE Toastmasters",
+        "location": "Montreal"
+      },
+      {
+        "division": "G",
+        "area": "61",
+        "club": "28680300",
+        "charterDate": "05/22/2026",
+        "status": "Complete",
+        "name": "iA Montreal Toastmasters",
+        "location": "Montreal"
+      }
+    ]
+  }
+}

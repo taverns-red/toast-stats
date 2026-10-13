@@ -53,6 +53,52 @@ export interface FilterSheetProps {
   id?: string
 }
 
+/** The facet chip groups, without the sheet: also rendered inline where a
+ *  wider screen has room for them (the map's side panel, #1788). */
+export const FilterFacetGroups: React.FC<{ facets: FilterSheetFacet[] }> = ({
+  facets,
+}) => {
+  const groupId = useId()
+  const toggle = (facet: FilterSheetFacet, value: string) => {
+    const on = facet.selected.includes(value)
+    facet.onChange(
+      on ? facet.selected.filter(v => v !== value) : [...facet.selected, value]
+    )
+  }
+  return (
+    <>
+      {facets
+        .filter(f => f.options.length > 0)
+        .map(facet => (
+          <section key={facet.id} className="filter-sheet__section">
+            <div
+              role="group"
+              aria-labelledby={`${groupId}-${facet.id}`}
+              className="filter-sheet__facet"
+            >
+              <h3 id={`${groupId}-${facet.id}`} className="filter-sheet__label">
+                {facet.label}
+              </h3>
+              <div className="filter-sheet__chips">
+                {facet.options.map(o => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    className="filter-sheet__chip"
+                    aria-pressed={facet.selected.includes(o.value)}
+                    onClick={() => toggle(facet, o.value)}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        ))}
+    </>
+  )
+}
+
 const DIRECTIONS: { value: 'asc' | 'desc'; label: string }[] = [
   { value: 'asc', label: 'Ascending' },
   { value: 'desc', label: 'Descending' },
@@ -70,13 +116,6 @@ export const FilterSheet: React.FC<FilterSheetProps> = ({
   id,
 }) => {
   const sortId = useId()
-
-  const toggle = (facet: FilterSheetFacet, value: string) => {
-    const on = facet.selected.includes(value)
-    facet.onChange(
-      on ? facet.selected.filter(v => v !== value) : [...facet.selected, value]
-    )
-  }
 
   const noun = resultCount === 1 ? resultNoun.one : resultNoun.other
 
@@ -128,37 +167,7 @@ export const FilterSheet: React.FC<FilterSheetProps> = ({
           </section>
         )}
 
-        {facets
-          .filter(f => f.options.length > 0)
-          .map(facet => (
-            <section key={facet.id} className="filter-sheet__section">
-              <div
-                role="group"
-                aria-labelledby={`${sortId}-${facet.id}`}
-                className="filter-sheet__facet"
-              >
-                <h3
-                  id={`${sortId}-${facet.id}`}
-                  className="filter-sheet__label"
-                >
-                  {facet.label}
-                </h3>
-                <div className="filter-sheet__chips">
-                  {facet.options.map(o => (
-                    <button
-                      key={o.value}
-                      type="button"
-                      className="filter-sheet__chip"
-                      aria-pressed={facet.selected.includes(o.value)}
-                      onClick={() => toggle(facet, o.value)}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </section>
-          ))}
+        <FilterFacetGroups facets={facets} />
 
         <div className="filter-sheet__footer">
           <button

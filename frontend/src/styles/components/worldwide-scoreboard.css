@@ -51,6 +51,15 @@
   text-underline-offset: 2px;
 }
 
+/* The country map link (#1797) stands alone under the table, so it gets a
+   full 44 px touch target rather than inline-link height. */
+.wws__map-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+}
+
 /* Height-reserving slots. A section fed by a separately resolving query must
    never render null-until-data, or everything below it jumps (Lesson 79/107).
    These heights are matched to the loaded table's first screen. */

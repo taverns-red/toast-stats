@@ -322,6 +322,36 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/landing-first-screen.smoke.ts
 
+      # Landing header at tablet widths (#1917). At 768/820/1024, light and
+      # dark: the intro keeps ≥320px, the title stays on one line, intro and
+      # actions never overlap, nav links never wrap or run into the search,
+      # and the loading shell lands the KPI strip at its loaded y. Both engines.
+      - name: Cross-engine landing tablet header guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/landing-header-tablet.smoke.ts
+
+      # One GA page_view per load and per SPA navigation (#1946). The preview
+      # is served as ts.taverns.red so the real gtag runs; every collect
+      # request is answered locally with a 204, so no hit reaches GA.
+      - name: Cross-engine GA page_view count guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/ga-page-view.smoke.ts
+
+      # Worldwide country choropleth (#1797). At 375 and 1280, light and dark,
+      # on real staging data: the map draws (US in the top bin) with no
+      # sideways scroll, Unknown clubs stated, theme-aware sea, a tap writes
+      # ?country=, 375 opens the all-countries sheet, 1280 sets the table
+      # beside the map, and no console (CSP) error. Both engines.
+      - name: Cross-engine country map guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/world-countries.smoke.ts
+
       # Phone bottom section bar (#1832, mobile review §5.1). At 375/390 in
       # portrait, light and dark, on all 9 district routes: a 56px fixed bar
       # (4 routes + More), labels inside their 44px+ items, content under the
@@ -334,7 +364,7 @@ jobs:
         run: npx playwright test --config playwright.config.ts e2e/section-bar.smoke.ts
 
       # Self-hosted basemap (#1786, ADR-016). At 375, light and dark, on the
-      # unlisted /dev/basemap page: MapLibre draws the Protomaps archive read
+      # district club map (/district/61/map, #1784): MapLibre draws the Protomaps archive read
       # with HTTP range requests (served from the committed z0 fixture until
       # the real object is uploaded), inside the viewport with no sideways
       # scroll, ODbL credit visible and expanded, no CSP/worker error on the
@@ -344,6 +374,17 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/basemap-375.smoke.ts
+
+      # District club map (#1784). At 375 and 1280, light and dark, on real
+      # D61 data and the real basemap: the pin layer reports rendered pins,
+      # legend chips are >= 44px / 14px and write ?status=, tapping a pin
+      # opens the club summary (sheet at 375, side panel at 1280) with no
+      # contact details, and no CSP/worker/WebGL error. Both engines.
+      - name: Cross-engine district map guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/district-map.smoke.ts
 
       # District Overview hub (#1842, mobile review §5.5). At 375, light and
       # dark: 2x2 KPI tiles (block <= 300px, was 860px) starting at the hub's
@@ -393,6 +434,43 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/clubs-mobile-rows.smoke.ts
+
+      # Phone divisions page as collapsed division rows (#1844, mobile review
+      # §3, §7 "divisions page height"). At 375 and 390, light and dark: one
+      # 56–64px row per division linking to its routed page (chip whole by
+      # bounding box, text ≥14px), no inline area table, no "N/A N/A N/A",
+      # page ≤ 6,000px (was 28,083), zero overflow with the body mask off;
+      # the progress summary starts collapsed and ?summary= round-trips. 768
+      # and 1280 keep the desktop division cards. Both engines.
+      - name: Cross-engine phone divisions rows guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/divisions-mobile-rows.smoke.ts
+
+      # Touch-only chart probe (#1835, mobile review §4.1). Emulated as a phone
+      # (hasTouch + isMobile → hover: none), light and dark: the readout line
+      # is reserved before a tap, a tap pins a dated value with no floating
+      # tooltip, the arrow keys move it, text ≥14px inside the viewport. 1280
+      # keeps the hover tooltip and no readout. Both engines.
+      - name: Cross-engine touch chart readout guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/chart-readout-touch.smoke.ts
+
+      # Club page on the mobile primitives (#1843, review §6.3). At 375 and
+      # 390, light and dark: hero ≤ 200px (was 401) with a 22px name, the
+      # PY/date chips and history link out of the hero, "Multi-year history"
+      # as a ≥56px row, stat cells ≥56px, zero overflow with the body mask
+      # off. At 375 and 1280 the static mini-map links to
+      # /district/61/map?club=, and the route requests no MapLibre, tiles or
+      # club-index.json. Both engines.
+      - name: Cross-engine club page primitives guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/club-page-mobile.smoke.ts
 
       # Club grid on phones (#1845). At 375, light and dark: tiles are
       # buttons ≥44px that open the club sheet (name, status, link), the grid
