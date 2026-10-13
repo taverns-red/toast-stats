@@ -134,13 +134,10 @@ export function ClubMembershipTrendChart({
 
   const pyDisplay = shortYearLabel(programYearLabel)
   // The three most recent closes keep the readout to two lines at 375.
-  const closes = priorSeries
-    .slice(0, 3)
-    .map(s => {
-      const close = lastOf(s.points)
-      return close ? `${shortYearLabel(s.label)} ${close.count}` : null
-    })
-    .filter(Boolean)
+  const closes = priorSeries.slice(0, 3).flatMap(s => {
+    const close = lastOf(s.points)
+    return close ? [{ label: shortYearLabel(s.label), count: close.count }] : []
+  })
 
   return (
     <div className="club-trend">
@@ -271,19 +268,32 @@ export function ClubMembershipTrendChart({
       </div>
 
       {pin && (
+        // #1835's readout line (same classes, so every chart's pinned value
+        // reads alike); this chart pins on every device, as it has no hover
+        // tooltip to fall back on.
         <p
-          className="club-trend__readout"
+          className="chart-readout club-trend__readout"
           data-testid="club-trend-readout"
+          role="status"
           aria-live="polite"
         >
-          <strong>{formatDisplayDate(pin.date)}</strong> · {pyDisplay}:{' '}
-          {pin.count} members
-          {closes.length > 0 && (
-            <span className="club-trend__closes">
-              {' '}
-              · Year-end: {closes.join(' · ')}
+          <span className="chart-readout__label">
+            {formatDisplayDate(pin.date)}
+          </span>
+          <span className="chart-readout__item">
+            <span
+              className="chart-readout__swatch club-trend__swatch-current"
+              aria-hidden="true"
+            />
+            {pyDisplay}:{' '}
+            <span className="chart-readout__value">{pin.count}</span> members
+          </span>
+          {closes.map(c => (
+            <span key={c.label} className="chart-readout__item">
+              {c.label} year-end{' '}
+              <span className="chart-readout__value">{c.count}</span>
             </span>
-          )}
+          ))}
         </p>
       )}
     </div>

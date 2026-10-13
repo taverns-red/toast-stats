@@ -3065,20 +3065,14 @@
     border-top: 2px dashed var(--ink-4);
   }
 
-  /* Two lines reserved, so the year-end closes arriving later do not move
-     what follows. */
-  .club-trend__readout {
-    margin: 8px 0 0;
-    min-height: 2.8em;
-    font-family: var(--sans);
-    font-size: 14px;
-    line-height: 1.4;
-    color: var(--ink-2);
+  /* The readout is #1835's .chart-readout line (two lines reserved); only
+     the current-year swatch is this chart's own colour. */
+  .club-trend__swatch-current {
+    background-color: var(--loyal-500);
   }
 
-  .club-trend__readout strong {
-    color: var(--ink);
-    font-weight: 600;
+  [data-theme='dark'] .club-trend__swatch-current {
+    background-color: #8ec5e8;
   }
 
   /* DCP Status — tier row (Current Level + Outlook) + per-tier gap rows. */
