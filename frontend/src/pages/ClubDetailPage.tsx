@@ -302,8 +302,12 @@ const ClubDetailPage: React.FC = () => {
 
   // Worldwide standing (#1556): the race artifact for the SAME pinned date
   // this page reads (Lesson 59). Absent artifact → no card, never an error.
+  // #1843 — the card is at the bottom of the page, so its read waits for the
+  // same after-paint gate as analytics: before, it started with the hero's
+  // snapshot read (twice — "latest" and then the pinned date).
   const { race: globalRace, reachedById: raceReachedById } = useGlobalClubRace(
-    effectiveEndDate ?? undefined
+    effectiveEndDate ?? undefined,
+    { enabled: analyticsReady && !!effectiveEndDate }
   )
 
   // ── Moved-club lookup (#1441) ─────────────────────────────────────────────
