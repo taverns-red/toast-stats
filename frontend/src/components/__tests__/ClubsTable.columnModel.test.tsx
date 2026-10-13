@@ -59,6 +59,7 @@ const EXPECTED_HEADERS = [
   'Area',
   'Status',
   'Members',
+  'Trend',
   'Needed',
   'New',
   'Oct Renew',

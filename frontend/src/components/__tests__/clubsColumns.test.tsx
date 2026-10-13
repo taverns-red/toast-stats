@@ -33,6 +33,7 @@ const EXPECTED_ID_ORDER = [
   'area',
   'status',
   'membership',
+  'netChange',
   'membersNeeded',
   'newMembers',
   'octoberRenewals',
@@ -79,7 +80,7 @@ function sortedIds(clubs: ClubTrend[], sorting: SortingState): string[] {
 }
 
 describe('clubsColumns — TanStack column model (#835)', () => {
-  it('exposes the 13 columns in the HANDOFF SortField order', () => {
+  it('exposes the 14 columns in the HANDOFF SortField order', () => {
     expect(clubsColumns.map(c => c.id)).toEqual(EXPECTED_ID_ORDER)
   })
 

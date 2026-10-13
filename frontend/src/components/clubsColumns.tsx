@@ -29,6 +29,7 @@ import type { ClubsTableMeta } from './clubsTableFeatures'
 import type { ClubTrend, ClubHealthStatus } from '../hooks/useDistrictAnalytics'
 import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
 import { ClubStatusCell } from './ClubStatusCell'
+import { ClubTrendSparkline, formatSignedNet } from './ClubTrendSparkline'
 import {
   getClubHealthStatusLabel,
   getClubHealthStatusPillModifier,
@@ -114,6 +115,7 @@ const TD_BASE_CLASS: Record<string, string> = {
   status: 'px-2 py-3 whitespace-nowrap text-center',
   membership:
     'px-2 py-3 whitespace-nowrap text-sm text-center clubs-members-cell',
+  netChange: 'px-2 py-3 whitespace-nowrap text-sm',
   membersNeeded:
     'px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center font-medium',
   newMembers: 'px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center',
@@ -223,6 +225,31 @@ export const clubsColumns = colHelper.columns([
             </span>
           )}
         </>
+      )
+    },
+  }),
+  // Membership-trend sparkline (#1792). Sorts by the signed net change; clubs
+  // with no recorded base have no delta and sort last in both directions.
+  colHelper.accessor(c => c.netChange ?? undefined, {
+    id: 'netChange',
+    header: 'Trend',
+    sortFn: 'basic',
+    sortUndefined: 'last',
+    cell: info => {
+      const club = info.row.original
+      return (
+        <span className="clubs-trend-cell">
+          <ClubTrendSparkline club={club} />
+          {/* The sparkline's accessible name already carries the net. */}
+          <span
+            className="clubs-trend-cell__net tabular-nums"
+            aria-hidden="true"
+          >
+            {club.netChange == null
+              ? '\u2014'
+              : formatSignedNet(club.netChange)}
+          </span>
+        </span>
       )
     },
   }),

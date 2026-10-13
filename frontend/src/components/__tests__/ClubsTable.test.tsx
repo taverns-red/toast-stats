@@ -519,9 +519,9 @@ describe('ClubsTable', () => {
       const dataRow = screen.getAllByRole('row')[1]
       const cells = dataRow.querySelectorAll('td')
       // New column order (#669): New=6, Oct Renew=7, Apr Renew=8 (0-indexed).
-      expect(cells[6]).toHaveTextContent('0')
       expect(cells[7]).toHaveTextContent('0')
       expect(cells[8]).toHaveTextContent('0')
+      expect(cells[9]).toHaveTextContent('0')
     })
 
     it('should display "—" for undefined payment counts', () => {
@@ -546,9 +546,9 @@ describe('ClubsTable', () => {
       const dataRow = screen.getAllByRole('row')[1]
       const cells = dataRow.querySelectorAll('td')
       // New column order (#669): New=6, Oct Renew=7, Apr Renew=8 (0-indexed).
-      expect(cells[6]).toHaveTextContent('—')
       expect(cells[7]).toHaveTextContent('—')
       expect(cells[8]).toHaveTextContent('—')
+      expect(cells[9]).toHaveTextContent('—')
     })
 
     it('should handle mixed defined and undefined payment values', () => {
@@ -574,16 +574,16 @@ describe('ClubsTable', () => {
       const cells = dataRow.querySelectorAll('td')
       // New column order (#669): New=6, Oct Renew=7, Apr Renew=8 (0-indexed).
       // octoberRenewals=10, aprilRenewals=undefined, newMembers=0.
-      expect(cells[6]).toHaveTextContent('0')
-      expect(cells[7]).toHaveTextContent('10')
-      expect(cells[8]).toHaveTextContent('—')
+      expect(cells[7]).toHaveTextContent('0')
+      expect(cells[8]).toHaveTextContent('10')
+      expect(cells[9]).toHaveTextContent('—')
     })
   })
 
   describe('Table Column Structure', () => {
     // Years Chartered column was added in #448 (epic #443).
-    // 12 → 13 reflects that new column.
-    it('should render 13 columns in the table', () => {
+    // 12 → 13 reflects that new column; the Trend sparkline (#1792) → 14.
+    it('should render 14 columns in the table', () => {
       const clubs = [createMockClub()]
 
       render(
@@ -596,10 +596,10 @@ describe('ClubsTable', () => {
 
       const headerRow = screen.getAllByRole('row')[0]
       const headerCells = headerRow.querySelectorAll('th')
-      expect(headerCells.length).toBe(13)
+      expect(headerCells.length).toBe(14)
     })
 
-    it('should render 13 cells per data row', () => {
+    it('should render 14 cells per data row', () => {
       const clubs = [createMockClub()]
 
       render(
@@ -612,7 +612,7 @@ describe('ClubsTable', () => {
 
       const dataRow = screen.getAllByRole('row')[1]
       const cells = dataRow.querySelectorAll('td')
-      expect(cells.length).toBe(13)
+      expect(cells.length).toBe(14)
     })
   })
 
