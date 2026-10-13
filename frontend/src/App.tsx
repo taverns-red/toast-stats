@@ -45,6 +45,11 @@ const DistrictActionListPage = React.lazy(
   () => import('./pages/DistrictActionListPage')
 )
 
+// Code-split: DistrictGrowthPage — Club Growth funnel (#1794, epic #1781)
+const DistrictGrowthPage = React.lazy(
+  () => import('./pages/DistrictGrowthPage')
+)
+
 // Code-split: DistrictTrendsPage — trends subroute (#680, epic #674 Sprint 6)
 const DistrictTrendsPage = React.lazy(
   () => import('./pages/DistrictTrendsPage')
@@ -211,6 +216,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictActionListPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/growth',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <DistrictGrowthPage />
             </Suspense>
           ),
         },
