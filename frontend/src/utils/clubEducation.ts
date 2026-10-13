@@ -1,5 +1,7 @@
 import {
+  awardCodeFromAward,
   clubIdsMatch,
+  pathwaysLevel,
   type DistrictReportsDataset,
 } from '@taverns-red/shared-contracts'
 
@@ -44,7 +46,8 @@ export type ClubEducationSummary =
       membersWithAward: number | null
     }
 
-const PATHWAYS_LEVEL = /^([A-Z]{2})([1-5])(.*?)\s+Level\s+[1-5]\s*$/
+// The path title between the level code and its trailing "Level N".
+const PATH_TITLE = /^(.*?)\s+Level\s+[1-5]\s*$/
 // Longest codes first so ACB is not read as a two-letter code.
 const LEGACY_CODES = [
   'LDREXC',
@@ -74,13 +77,17 @@ export function classifyEducationAward(
   const text = award.trim()
   if (!text) return null
 
-  const level = PATHWAYS_LEVEL.exec(text)
-  if (level) {
+  // The shared Pathways level vocabulary (#1976): a two- or three-capital
+  // path code + level, so the vintage CES path is read like any other.
+  const levelCode = awardCodeFromAward(text)
+  const level = pathwaysLevel(levelCode)
+  const title = level && PATH_TITLE.exec(text.slice(levelCode.length))
+  if (level && title) {
     return {
       program: 'Pathways',
-      code: level[1]!,
-      pathName: level[3]!.trim() || null,
-      level: Number(level[2]),
+      code: level.path,
+      pathName: title[1]!.trim() || null,
+      level: level.level,
     }
   }
   if (startsWithCode(text, 'DTM')) {

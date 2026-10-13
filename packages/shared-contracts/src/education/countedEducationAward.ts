@@ -1,17 +1,23 @@
 /**
- * The counted-education-award rule (#1592, #1599).
+ * The counted-education-award rule (#1592, #1599, #1976).
  *
- * A Pathways level award (`PM1…`–`VC5…`, i.e. two capitals + level 1–5) or
- * DTM counts; anything else — e.g. `PWMENTORPGMPathways Mentor Program` —
- * does not. TI renders the award as its code immediately followed by its
- * title, so the rule is a prefix match.
+ * A Pathways level award (a two- or three-capital path + level 1–5: `PM1`,
+ * `BT1`, `CES1`) or DTM counts; anything else — e.g. `PWMENTORPGMPathways
+ * Mentor Program` or `EOMOnline Meeting Mastery` — does not. TI renders the
+ * award as its code immediately followed by its title.
  *
- * Shared because two sides must agree on it: collector-cli counts distinct
- * members per club over counted awards only (`DailyReportParser`), and the
- * frontend counts awards per club by it (`educationAwardRankings`).
+ * Shared because three sides must agree on it: collector-cli counts distinct
+ * members per club over counted awards only (`DailyReportParser`), the
+ * frontend counts awards per club by it (`educationAwardRankings`), and the
+ * #1801 rollup tags programs by `educationAwardProgram`. So the rule is
+ * defined by that one vocabulary: a new path needs no change here.
  */
-const COUNTED_AWARD = /^(?:[A-Z]{2}[1-5]|DTM)/
+import {
+  awardCodeFromAward,
+  educationAwardProgram,
+} from './educationAwardProgram.js'
 
 export function isCountedEducationAward(award: string): boolean {
-  return COUNTED_AWARD.test(award)
+  const program = educationAwardProgram(awardCodeFromAward(award))
+  return program === 'Pathways' || program === 'DTM'
 }
