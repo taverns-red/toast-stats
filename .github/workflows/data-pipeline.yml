@@ -98,9 +98,10 @@ on:
         type: string
       force:
         description: >-
-          Re-fetch and re-derive even if cached (#1771, ADR-015 P7). Daily: re-scrape instead of reusing the
-          raw CSVs already in staging. rebuild/rescrape/rescrape-historical/backfill-global-totals always
-          re-derive, so it changes nothing there. backfill-education-ledger: re-fetch PY/district pairs already resumed from staging.
+          Re-fetch and re-derive even if cached (#1771, ADR-015 P7). Daily: re-scrape instead of
+          reusing the raw CSVs already in staging. rebuild/rescrape/rescrape-historical and
+          backfill-global-totals always re-derive, so it changes nothing there.
+          backfill-education-ledger: re-fetch PY/district pairs already resumed from staging.
           Prune: not used.
         required: false
         type: boolean
@@ -126,7 +127,9 @@ on:
         type: boolean
         default: false
       allow_partial:
-        description: 'rebuild/rescrape/rescrape-historical/backfill-global-totals: let a run with failed dates go on to promotion (#1708, #1771). Default fails it.'
+        description: >-
+          rebuild/rescrape/rescrape-historical/backfill-global-totals: let a run with failed
+          dates go on to promotion (#1708, #1771). Default fails it.
         required: false
         type: boolean
         default: false
