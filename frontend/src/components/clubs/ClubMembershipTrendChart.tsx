@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   buildMembershipTrendChartData,
   lastOf,
@@ -28,10 +28,14 @@ import { formatDisplayDate } from '../../utils/dateFormatting'
  * Tap-to-pin instead of a hover tooltip: a tap or click pins the nearest
  * current-year point, arrow keys move it, and a readout under the chart says
  * the value in words.
+ *
+ * The viewBox width follows the plot's measured width, so one SVG unit is
+ * one CSS pixel: the 12px ticks stay 12px in a 343px phone sheet instead of
+ * being squeezed by a stretched 800-unit box (review §5.3).
  */
 const CHART = { W: 800, H: 260, PT: 14, PR: 14, PB: 26, PL: 36 }
-const INNER_W = CHART.W - CHART.PL - CHART.PR
 const INNER_H = CHART.H - CHART.PT - CHART.PB
+const MIN_W = 280
 const PY_DAYS = 365
 
 const KEY_DATES = [
@@ -65,6 +69,21 @@ export function ClubMembershipTrendChart({
     () => buildMembershipTrendChartData(current, priors, programYearLabel),
     [current, priors, programYearLabel]
   )
+  // Measured plot width (800 until measured, e.g. in jsdom).
+  const plotRef = useRef<HTMLDivElement>(null)
+  const [W, setW] = useState(CHART.W)
+  useLayoutEffect(() => {
+    const el = plotRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(entries => {
+      const w = Math.round(entries[0]?.contentRect.width ?? 0)
+      if (w > 0) setW(Math.max(MIN_W, w))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const innerW = W - CHART.PL - CHART.PR
+
   const currentSeries = series[0] as TrendSeries
   const priorSeries = series.slice(1).filter(s => s.points.length > 0)
   const dataPoints = currentSeries.points.filter(p => !p.anchor)
@@ -75,7 +94,7 @@ export function ClubMembershipTrendChart({
   const yMin = values.length ? Math.max(0, Math.min(...values) - 4) : 0
   const yMax = values.length ? Math.max(...values) + 4 : 8
   const yRange = yMax - yMin
-  const x = (day: number) => CHART.PL + (day / PY_DAYS) * INNER_W
+  const x = (day: number) => CHART.PL + (day / PY_DAYS) * innerW
   const y = (count: number) =>
     CHART.PT + (1 - (count - yMin) / yRange) * INNER_H
   const line = (s: TrendSeries) =>
@@ -93,8 +112,8 @@ export function ClubMembershipTrendChart({
   const pinNearest = (e: React.PointerEvent<SVGSVGElement>) => {
     const box = e.currentTarget.getBoundingClientRect()
     if (box.width === 0 || dataPoints.length === 0) return
-    const svgX = ((e.clientX - box.left) / box.width) * CHART.W
-    const day = ((svgX - CHART.PL) / INNER_W) * PY_DAYS
+    const svgX = ((e.clientX - box.left) / box.width) * W
+    const day = ((svgX - CHART.PL) / innerW) * PY_DAYS
     let best = 0
     dataPoints.forEach((p, i) => {
       if (Math.abs(p.day - day) < Math.abs(dataPoints[best]!.day - day))
@@ -145,6 +164,7 @@ export function ClubMembershipTrendChart({
 
       <div
         className="club-trend__plot"
+        ref={plotRef}
         tabIndex={0}
         role="group"
         aria-label="Membership trend points: use the arrow keys to move between dates"
@@ -152,8 +172,7 @@ export function ClubMembershipTrendChart({
       >
         <svg
           className="mem-chart"
-          viewBox={`0 0 ${CHART.W} ${CHART.H}`}
-          preserveAspectRatio="none"
+          viewBox={`0 0 ${W} ${CHART.H}`}
           role="img"
           aria-label={`Membership trend for program year ${pyDisplay}${
             priorSeries.length
@@ -170,7 +189,7 @@ export function ClubMembershipTrendChart({
                   className="grid"
                   x1={CHART.PL}
                   y1={y(v)}
-                  x2={CHART.W - CHART.PR}
+                  x2={W - CHART.PR}
                   y2={y(v)}
                 />
                 <text
@@ -200,7 +219,9 @@ export function ClubMembershipTrendChart({
                 className="key-text"
                 x={x(kd.day)}
                 y={CHART.H - 10}
-                textAnchor="middle"
+                textAnchor={
+                  kd.day === 0 ? 'start' : kd.day === PY_DAYS ? 'end' : 'middle'
+                }
               >
                 {kd.label}
               </text>

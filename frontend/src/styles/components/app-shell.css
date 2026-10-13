@@ -2939,15 +2939,17 @@
     opacity: 0.6;
   }
 
+  /* #1791 — 12px ticks (review §5.3); the viewBox now tracks the plot's
+     width, so these are real CSS pixels at every size. */
   .mem-chart .axis-text {
     fill: var(--ink-4);
-    font-size: 10.5px;
+    font-size: 12px;
     font-family: var(--sans);
   }
 
   .mem-chart .key-text {
     fill: var(--ink-3);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     font-family: var(--sans);
   }
