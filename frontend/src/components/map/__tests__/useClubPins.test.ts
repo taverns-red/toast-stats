@@ -49,7 +49,7 @@ describe('useClubPins', () => {
     const map = fakeMap()
     const { rerender } = renderHook(
       ({ m }: { m: MapLibreMap | null }) => useClubPins(m, opts),
-      { initialProps: { m: map as unknown as MapLibreMap } }
+      { initialProps: { m: map as unknown as MapLibreMap | null } }
     )
     expect(map.sources.has(PIN_SOURCE_ID)).toBe(true)
     expect([...map.layers]).toEqual(expect.arrayContaining([...PIN_LAYER_IDS]))
