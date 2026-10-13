@@ -4,7 +4,7 @@
  * scripts/pipeline/build-education-rollup.sh reads the persisted ledger
  * inputs from STAGING — raw-education-ledger/ (#1802), each reports PY's
  * newest snapshots/<date>/district_*_reports.json, each PY's last
- * all-districts-rankings.json and derived/district-region-history.json —
+ * all-districts-rankings.json and config/district-region-history.json —
  * folds them (scripts/lib/educationRollup.ts) and uploads
  * derived/education-rollup/{<PY>,index}.json to staging, recorded in the run
  * manifest. derived/ is not a promoted prefix: nothing reaches prod until
@@ -110,7 +110,7 @@ function seedAll(): void {
     .readdirSync(FIX, { recursive: true, withFileTypes: true })
     .filter(e => e.isFile())
     .map(e => path.relative(FIX, path.join(e.parentPath, e.name)))) {
-    // Snapshots are uploaded -Z; the ledger and derived/ are plain JSON.
+    // Snapshots are uploaded -Z; the ledger and config/ are plain JSON.
     put(rel, rel, rel.startsWith('snapshots/'))
   }
   // 2020-21: a PY with a snapshot (rankings) but no reports at any date.
@@ -286,7 +286,7 @@ describe('build-education-rollup.sh: staging derived/education-rollup/', () => {
 
   it('without a region history, every region block is null; districts and world still build', () => {
     seedAll()
-    fs.rmSync(path.join(root, BUCKET, 'derived/district-region-history.json'))
+    fs.rmSync(path.join(root, BUCKET, 'config/district-region-history.json'))
     const r = runScript()
     expect(r.status, r.stderr).toBe(0)
     expect(r.stderr).toMatch(/::warning::.*district-region-history/)
