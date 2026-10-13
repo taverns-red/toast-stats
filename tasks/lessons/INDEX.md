@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-ga-beacon-reports-requestfailed-so-guard-real-hits-on-response.md` — A real GA collect beacon fires `response` then `requestfailed`, never `requestfinished` — key a Playwright leak guard on `response`  (2026-10-13)
 - `a-layered-css-override-never-beats-an-unlayered-rule-whatever-its-specificity.md` — A layered CSS override never beats an unlayered rule, whatever its specificity — check which side of `@layer` both rules sit on, and pin the computed value in a test  (2026-10-13)
 - `a-layout-budget-that-fits-on-the-mac-can-wrap-on-the-linux-runner-gate-the-worst-case-row.md` — A height budget measured on macOS can fail on the Linux CI runner because the same web font sets wider there; a row with only a few px of slack wraps and adds a whole 44px line. Gate the worst-case content (the longest name, every link) and leave real headroom  (2026-10-13)
 - `a-disabled-dependent-query-reports-not-loading-so-isloading-skeletons-paint-nothing.md` — A dependent TanStack query that is disabled while its key is unresolved reports isLoading false, so an `isLoading && <Skeleton/>` arm paints nothing for that whole window; gate the skeleton on the full dependency chain  (2026-10-12)
