@@ -84,6 +84,13 @@ a future requirement demands narrowing staging CORS, the only correct lever is
 a credentialed/signed-URL scheme, not an origin allowlist, because preview
 hostnames cannot be enumerated.
 
+## Note (2026-10-13, #1995 / #2003)
+
+Previews now read this bucket through the staging CDN
+(`cdn-staging.taverns.red`, ADR-007 addendum). The CDN passes the bucket's
+CORS response through, so the `*` origin above still applies and is still
+what makes previews work; Cloud CDN varies its cache on `Origin`.
+
 ## Consequences
 
 - Preview channels now render full data; visual review on previews is
