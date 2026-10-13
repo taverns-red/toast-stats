@@ -731,11 +731,9 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         // Line 2 keeps the chip and DCP; the member count rides under the
         // trend sparkline with its net (#1792) — measured at 375, the count
         // beside a 60 px trend ellipsized every row by up to 60 px.
-        // An ACTIVE coach (#1954) is a current flag worth line 2; a completed
-        // engagement is history and stays on the desktop column.
-        meta: `${club.latestDcpGoals}/10 DCP${
-          club.coach?.status === 'active' ? ' · Coach' : ''
-        }`,
+        // No coach flag here (#1954): at 375 line 2 has no room ("· Coach"
+        // clipped to "· C…"); phones reach coach status via ?coach=.
+        meta: `${club.latestDcpGoals}/10 DCP`,
         // The row's trend (#1792): the same 60×16 sparkline as the desktop
         // Trend column, then "members (net)". The link's accessible name
         // already says all of it, so the visual pair is hidden from AT.
@@ -751,9 +749,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           club.currentStatus
         )}, ${memberText}${net ? `, net ${net}` : ''}, ${
           club.latestDcpGoals
-        } of 10 DCP goals${
-          club.coach?.status === 'active' ? ', active coach' : ''
-        }`,
+        } of 10 DCP goals`,
       }
     },
     [clubLinkTo, clubLinkState]
