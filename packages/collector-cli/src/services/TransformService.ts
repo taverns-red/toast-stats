@@ -113,7 +113,9 @@ interface RankingMetrics {
   newCharteredClubs: number
   // Clubs suspended in the current program year (#1497) — the Susp branch of
   // the same `Charter Date/Suspend Date` column, for the worldwide rollup.
-  suspendedClubs: number
+  // undefined = unknown: no district-performance.csv for the district, or
+  // no Susp value anywhere in the date's source (#1757). Never a 0.
+  suspendedClubs: number | undefined
   // Payment breakdown (#327)
   newPayments: number
   aprilPayments: number
@@ -778,8 +780,9 @@ export class TransformService {
           clubsWith20PlusMembers: 0,
           // Default 0; populated later from per-district club-performance.csv (#336)
           newCharteredClubs: 0,
-          // Default 0; populated later from per-district district-performance.csv (#1497)
-          suspendedClubs: 0,
+          // Unknown until measured from per-district district-performance.csv
+          // (#1497); stays unknown without one (#1757)
+          suspendedClubs: undefined,
           // Payment breakdown (#327)
           newPayments: this.parseNumber(record['New Payments']),
           aprilPayments: this.parseNumber(record['April Payments']),
@@ -964,6 +967,9 @@ export class TransformService {
       !!programYearEnd &&
       d >= programYearStart &&
       d <= programYearEnd
+    // Clubs, across every district of the date, whose status column carries
+    // a parseable Susp date at all (#1757, the #1514 presence rule).
+    let clubsWithSuspensionDate = 0
     for (const metric of metrics) {
       try {
         const districtDir = path.join(
@@ -1015,6 +1021,9 @@ export class TransformService {
               const chartered = parseCharterDateFromStatusField(status)
               if (inProgramYear(chartered)) newCharters++
               const suspendedOn = parseSuspendDateFromStatusField(status)
+              // Any parseable Susp date, in the window or not, proves the
+              // branch was collected for this date (#1514, #1757).
+              if (suspendedOn) clubsWithSuspensionDate++
               if (inProgramYear(suspendedOn)) suspended++
             }
             metric.newCharteredClubs = newCharters
@@ -1050,6 +1059,13 @@ export class TransformService {
       } catch {
         // Skip districts with missing club data
       }
+    }
+    // Absence is never zero (#1757, #1514): when not one club of the date
+    // carries a Susp date (TM's 2023-24 exports have none), the per-district
+    // count is unknown and is left absent, as the contract's optional field
+    // allows. A populated branch that sums to zero in the PY keeps its 0.
+    if (clubsWithSuspensionDate === 0) {
+      for (const metric of metrics) metric.suspendedClubs = undefined
     }
 
     this.logger.debug('Extracted ranking metrics', {
