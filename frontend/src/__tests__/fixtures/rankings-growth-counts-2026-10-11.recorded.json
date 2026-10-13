@@ -1,0 +1,476 @@
+{
+  "_provenance": "Recorded (#1794): districtId/newCharteredClubs/suspendedClubs of every row in https://cdn.taverns.red/snapshots/2026-10-11/all-districts-rankings.json; other fields dropped.",
+  "snapshotDate": "2026-10-11",
+  "rankings": [
+    {
+      "districtId": "93",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "76",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "86",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "80",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "89",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "17",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "59",
+      "newCharteredClubs": 4,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "73",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "88",
+      "newCharteredClubs": 5,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "82",
+      "newCharteredClubs": 3,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "25",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "230",
+      "newCharteredClubs": 8,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "95",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 2
+    },
+    {
+      "districtId": "130",
+      "newCharteredClubs": 8,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "83",
+      "newCharteredClubs": 8,
+      "suspendedClubs": 3
+    },
+    {
+      "districtId": "217",
+      "newCharteredClubs": 3,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "128",
+      "newCharteredClubs": 4,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "49",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "70",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "61",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "34",
+      "newCharteredClubs": 3,
+      "suspendedClubs": 2
+    },
+    {
+      "districtId": "67",
+      "newCharteredClubs": 4,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "114",
+      "newCharteredClubs": 11,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "202",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "118",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 2
+    },
+    {
+      "districtId": "72",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "201",
+      "newCharteredClubs": 3,
+      "suspendedClubs": 2
+    },
+    {
+      "districtId": "71",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "60",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "206",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "31",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "205",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "26",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "69",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "123",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "41",
+      "newCharteredClubs": 4,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "47",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "102",
+      "newCharteredClubs": 4,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "215",
+      "newCharteredClubs": 4,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "220",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "109",
+      "newCharteredClubs": 3,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "21",
+      "newCharteredClubs": 4,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "210",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 2
+    },
+    {
+      "districtId": "94",
+      "newCharteredClubs": 10,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "06",
+      "newCharteredClubs": 3,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "03",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "101",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "20",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "91",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "218",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "219",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "107",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "85",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "87",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "214",
+      "newCharteredClubs": 4,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "46",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "53",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 2
+    },
+    {
+      "districtId": "51",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "222",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "84",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "55",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "208",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "50",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "113",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "221",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "56",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "F",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "127",
+      "newCharteredClubs": 5,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "212",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 3
+    },
+    {
+      "districtId": "231",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "229",
+      "newCharteredClubs": 4,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "223",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "207",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 2
+    },
+    {
+      "districtId": "227",
+      "newCharteredClubs": 7,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "77",
+      "newCharteredClubs": 3,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "213",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "203",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 3
+    },
+    {
+      "districtId": "225",
+      "newCharteredClubs": 5,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "02",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "211",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 2
+    },
+    {
+      "districtId": "226",
+      "newCharteredClubs": 9,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "75",
+      "newCharteredClubs": 3,
+      "suspendedClubs": 1
+    },
+    {
+      "districtId": "209",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "228",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "216",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 2
+    },
+    {
+      "districtId": "74",
+      "newCharteredClubs": 6,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "105",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "U",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "30",
+      "newCharteredClubs": 1,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "224",
+      "newCharteredClubs": 7,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "79",
+      "newCharteredClubs": 3,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "129",
+      "newCharteredClubs": 5,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "116",
+      "newCharteredClubs": 0,
+      "suspendedClubs": 0
+    },
+    {
+      "districtId": "104",
+      "newCharteredClubs": 2,
+      "suspendedClubs": 0
+    }
+  ]
+}
