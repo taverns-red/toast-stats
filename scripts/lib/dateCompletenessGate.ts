@@ -10,7 +10,9 @@
  *
  * For each touched date this compares staging's `snapshots/<date>/` with
  * production's:
- *   - the object count (names of the missing objects are listed);
+ *   - the object count (names of the missing objects are listed), not
+ *     counting the per-district analytics files compute retired (#1798):
+ *     prod keeps old copies of those, staging no longer writes them;
  *   - the district count in `manifest.json` and `metadata.json`;
  *   - `global-totals.json`'s club count and `clubsByCountry` country count;
  *   - per sampled district file: the `data` keys, and the key set of the
@@ -41,6 +43,7 @@ import {
   decodeStoredObject,
   type GcsObjectMeta,
 } from './promotionContentGate.js'
+import { isRetiredAnalyticsFile } from '../../packages/collector-cli/src/utils/retiredAnalyticsFiles.js'
 
 /** District files read per run across all dates (each read twice). */
 export const DISTRICT_SAMPLE_BUDGET = 200
@@ -204,14 +207,20 @@ export function compareDateProfiles(
   const push = (file: string, reason: string) =>
     out.push({ date, path: `${dir}${file}`, reason: `${date}: ${reason}` })
 
-  if (staging.objectNames.length < prod.objectNames.length) {
-    const have = new Set(staging.objectNames)
-    const missing = prod.objectNames.filter(n => !have.has(n))
+  // Retired names are dropped from both sides: prod's old copies are not
+  // owed, and staging's stale copies must not pad its count (#1798).
+  const prodNames = prod.objectNames.filter(n => !isRetiredAnalyticsFile(n))
+  const stagingNames = staging.objectNames.filter(
+    n => !isRetiredAnalyticsFile(n)
+  )
+  if (stagingNames.length < prodNames.length) {
+    const have = new Set(stagingNames)
+    const missing = prodNames.filter(n => !have.has(n))
     out.push({
       date,
       path: dir,
       reason:
-        `${date}: ${staging.objectNames.length} object(s) in staging vs ${prod.objectNames.length} in production` +
+        `${date}: ${stagingNames.length} object(s) in staging vs ${prodNames.length} in production` +
         (missing.length ? `; missing ${listed(missing)}` : ''),
     })
   }
@@ -360,7 +369,7 @@ export function buildCompletenessGateSummary(
     `- Touched dates: ${result.dates.length ? result.dates.join(', ') : '—'}`,
     `- New in this run (no production baseline): ${result.newDates.length ? result.newDates.join(', ') : '—'}`,
     `- District files sampled per bucket: ${result.districtsSampled}`,
-    '- Asserted: object count, `manifest`/`metadata` district counts, `global-totals` clubs and countries, district `data` keys and the most complete club record’s keys — staging ≥ production.',
+    '- Asserted: object count (retired analytics files excluded, #1798), `manifest`/`metadata` district counts, `global-totals` clubs and countries, district `data` keys and the most complete club record’s keys — staging ≥ production.',
     '',
   ]
   if (result.failures.length) {
