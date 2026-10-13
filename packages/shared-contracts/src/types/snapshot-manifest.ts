@@ -17,8 +17,6 @@ export interface DistrictManifestEntry {
   fileName: string
   /** Whether the district was processed successfully or failed */
   status: 'success' | 'failed'
-  /** Size of the district file in bytes */
-  fileSize: number
   /** ISO timestamp when the file was last modified */
   lastModified: string
   /** Error message if status is 'failed' */
