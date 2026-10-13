@@ -162,7 +162,9 @@ describe('data-pipeline.yml: force has one meaning (#1771, ADR-015 P7)', () => {
     const doc = fs.readFileSync(FLOW_DOC, 'utf-8')
     expect(doc).toMatch(/re-fetch and re-derive even if cached/i)
     for (const mode of Object.keys(CASES)) {
-      expect(doc).toMatch(new RegExp(`\\| \`${mode}\` \\|[^\\n]*force`, 'i'))
+      expect(doc).toMatch(
+        new RegExp(`\\|\\s*\`${mode}\`\\s*\\|[^\\n]*force`, 'i')
+      )
     }
   })
 })
