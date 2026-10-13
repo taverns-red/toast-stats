@@ -18,6 +18,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import { AnalyticsComputeService } from '../services/AnalyticsComputeService.js'
+import { RETIRED_ANALYTICS_TYPES } from '../utils/retiredAnalyticsFiles.js'
 import {
   ANALYTICS_SCHEMA_VERSION,
   ClubHealthAnalyticsModule,
@@ -1913,14 +1914,13 @@ describe('AnalyticsComputeService', () => {
    * compute-analytics run, including the new extended analytics types.
    */
   describe('complete analytics generation (Requirement 12.3)', () => {
-    it('should generate all required analytics files in a single compute run', async () => {
+    it('writes only the consumed analytics files in a single compute run (#1798)', async () => {
       const date = '2024-01-15'
       const districtId = '1'
       const stats = createSampleDistrictStatistics(districtId, date)
 
       await writeDistrictSnapshot(testCache.path, date, districtId, stats)
 
-      // Run compute-analytics
       const result = await analyticsComputeService.compute({ date })
 
       expect(result.success).toBe(true)
@@ -1932,32 +1932,23 @@ describe('AnalyticsComputeService', () => {
         date,
         'analytics'
       )
-      const files = await fs.readdir(analyticsDir)
+      const files = (await fs.readdir(analyticsDir)).sort()
 
-      // Verify all required files are generated
-      // Base analytics files (existing)
-      expect(files).toContain(`district_${districtId}_analytics.json`)
-      expect(files).toContain(`district_${districtId}_membership.json`)
-      expect(files).toContain(`district_${districtId}_clubhealth.json`)
-
-      // Extended analytics files (NEW - Requirements 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1)
-      expect(files).toContain(
-        `district_${districtId}_membership-analytics.json`
+      // Only `analytics` and `performance-targets` have readers; the other
+      // 8 per-district files are retired (#1798).
+      expect(files).toEqual(
+        [
+          `district_${districtId}_analytics.json`,
+          `district_${districtId}_performance-targets.json`,
+          'manifest.json',
+        ].sort()
       )
-      expect(files).toContain(`district_${districtId}_vulnerable-clubs.json`)
-      expect(files).toContain(`district_${districtId}_leadership-insights.json`)
-      expect(files).toContain(
-        `district_${districtId}_distinguished-analytics.json`
-      )
-      expect(files).toContain(`district_${districtId}_year-over-year.json`)
-      expect(files).toContain(`district_${districtId}_performance-targets.json`)
-      expect(files).toContain(`district_${districtId}_club-trends-index.json`)
-
-      // Manifest file
-      expect(files).toContain('manifest.json')
+      for (const type of RETIRED_ANALYTICS_TYPES) {
+        expect(files).not.toContain(`district_${districtId}_${type}.json`)
+      }
     })
 
-    it('should include all new file types in the manifest', async () => {
+    it('lists only the written file types in the manifest (#1798)', async () => {
       const date = '2024-01-15'
       const districtId = '1'
       const stats = createSampleDistrictStatistics(districtId, date)
@@ -1976,25 +1967,9 @@ describe('AnalyticsComputeService', () => {
       const manifestContent = await fs.readFile(manifestPath, 'utf-8')
       const manifest = JSON.parse(manifestContent) as AnalyticsManifest
 
-      // Verify manifest contains entries for all file types
-      const fileTypes = manifest.files.map(f => f.type)
-
-      // Base types
-      expect(fileTypes).toContain('analytics')
-      expect(fileTypes).toContain('membership')
-      expect(fileTypes).toContain('clubhealth')
-
-      // Extended types (NEW)
-      expect(fileTypes).toContain('membership-analytics')
-      expect(fileTypes).toContain('vulnerable-clubs')
-      expect(fileTypes).toContain('leadership-insights')
-      expect(fileTypes).toContain('distinguished-analytics')
-      expect(fileTypes).toContain('year-over-year')
-      expect(fileTypes).toContain('performance-targets')
-      expect(fileTypes).toContain('club-trends-index')
-
-      // Total should be 10 files (3 base + 7 extended)
-      expect(manifest.totalFiles).toBe(10)
+      const fileTypes = manifest.files.map(f => f.type).sort()
+      expect(fileTypes).toEqual(['analytics', 'performance-targets'])
+      expect(manifest.totalFiles).toBe(2)
     })
 
     it('should generate valid membership-analytics.json with correct structure', async () => {
