@@ -78,6 +78,12 @@ for (const scheme of ['light', 'dark'] as const) {
             h => !hub?.contains(h) && h.getBoundingClientRect().height > 0
           )
           .map(h => h.textContent?.trim() ?? ''),
+        // Section rows (#1794): compact single-line nav links, still ≥44px.
+        sectionRowHeights: [
+          ...document.querySelectorAll(
+            '[data-testid="district-hub-sections"] .mobile-row'
+          ),
+        ].map(r => Math.round(r.getBoundingClientRect().height)),
         pageH: document.documentElement.scrollHeight,
         overflowX: document.documentElement.scrollWidth - window.innerWidth,
       }
@@ -111,6 +117,8 @@ for (const scheme of ['light', 'dark'] as const) {
     // section rows; the panel after it is titled for what it is.
     expect(m.h2s, msg).not.toContain('Overview')
     expect(m.h2s[0], msg).toBe('Details')
+    expect(m.sectionRowHeights.length, msg).toBeGreaterThan(0)
+    expect(Math.min(...m.sectionRowHeights), msg).toBeGreaterThanOrEqual(44)
     expect(m.pageH, msg).toBeLessThanOrEqual(PAGE_MAX_H)
     expect(m.overflowX, msg).toBeLessThanOrEqual(0)
   })
