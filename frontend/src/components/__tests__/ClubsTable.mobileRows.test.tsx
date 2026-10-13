@@ -129,28 +129,38 @@ describe('ClubsTable < 768 px — compact rows (#1833)', () => {
     expect(alpha).toHaveAccessibleName(/net −10/)
   })
 
-  it('leaves the phone row unchanged for a coached club (#1954)', () => {
-    // Measured on the preview at 375: line 2 (chip + DCP) has no room left —
-    // "· Coach" ellipsized to "· C…" beside a "⚠ Vulnerable" chip. A clipped
-    // flag is worse than none, so on phones coach status is reached through
-    // the Coach filter (?coach=Active) and sort instead.
+  it('flags an actively coached club on line 1, in words (#1968)', () => {
+    // #1954 measured line 2 (chip + DCP) full at 375 — "· Coach" clipped to
+    // "· C…". The flag rides line 1 after the name instead: the name
+    // ellipsizes, the flag never does, and line 2 is untouched.
     render(
       <ClubsTable
         clubs={[
           club('1', 'Alpha Speakers', 'A', {
             coach: { status: 'active', since: '2026-07-25' },
           }),
+          club('2', 'Bravo Talkers', 'A', {
+            coach: { status: 'completed', since: '2025-11-02' },
+          }),
+          club('3', 'Charlie Orators', 'A'),
         ]}
         districtId="61"
         openGroups={['A']}
         onOpenGroupsChange={vi.fn()}
       />
     )
-    const [alpha] = screen.getAllByTestId('mobile-row')
+    const [alpha, bravo, charlie] = screen.getAllByTestId('mobile-row')
+    const flag = alpha!.querySelector('.mobile-row__line1 .mobile-row__badge')
+    expect(flag).toHaveTextContent(/^Coach$/)
     expect(alpha!.querySelector('.mobile-row__line2')).toHaveTextContent(
-      /5\/10 DCP$/
+      /^✓ Thriving\s*5\/10 DCP$/
     )
-    expect(alpha).not.toHaveAccessibleName(/coach/i)
+    expect(alpha).toHaveAccessibleName(/, active coach,/)
+    // Completed or no coach: no flag, nothing in the name.
+    for (const row of [bravo!, charlie!]) {
+      expect(row.querySelector('.mobile-row__badge')).toBeNull()
+      expect(row).not.toHaveAccessibleName(/coach/i)
+    }
   })
 
   it('asks the page to toggle a group (URL-owned open set)', () => {

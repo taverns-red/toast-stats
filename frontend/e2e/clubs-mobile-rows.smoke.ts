@@ -58,6 +58,9 @@ interface RowGeometry {
     trendInside: boolean
     /** Line 2 (chip + DCP) must not ellipsize beside the trend. */
     metaClipped: boolean
+    /** Line-1 coach flag (#1968), when present: whole and inside the row. */
+    badgeInside: boolean
+    badgeClipped: boolean
   }[]
 }
 
@@ -82,6 +85,8 @@ async function measure(page: Page): Promise<RowGeometry> {
         const spark = row.querySelector('.mobile-row__trailing svg')
         const meta = row.querySelector('.mobile-row__meta')
         const t = spark?.getBoundingClientRect()
+        const badge = row.querySelector('.mobile-row__badge')
+        const b = badge?.getBoundingClientRect()
         return {
           text: (row.textContent ?? '') + ' ' + row.getAttribute('aria-label'),
           left: Math.round(r.left),
@@ -101,6 +106,17 @@ async function measure(page: Page): Promise<RowGeometry> {
                 .some(el => el.scrollWidth > el.clientWidth + 0.5)
             : true,
           metaClipped: meta ? meta.scrollWidth > meta.clientWidth + 0.5 : false,
+          badgeInside: b
+            ? b.left >= r.left - 0.5 &&
+              b.right <= r.right + 0.5 &&
+              b.top >= r.top - 0.5 &&
+              b.bottom <= r.bottom + 0.5
+            : true,
+          badgeClipped: badge
+            ? Array.from(badge.querySelectorAll('*'))
+                .concat(badge)
+                .some(el => el.scrollWidth > el.clientWidth + 0.5)
+            : false,
           trendW: Math.round(t?.width ?? 0),
           trendH: Math.round(t?.height ?? 0),
           trendInside: t
@@ -138,6 +154,8 @@ function expectRows(g: RowGeometry, min = 1): void {
     expect([r.trendW, r.trendH], rc).toEqual([60, 16])
     expect(r.trendInside, rc).toBe(true)
     expect(r.metaClipped, rc).toBe(false)
+    expect(r.badgeInside, rc).toBe(true)
+    expect(r.badgeClipped, rc).toBe(false)
     expect(r.titlePx, rc).toBeGreaterThanOrEqual(14)
     expect(r.metaPx, rc).toBeGreaterThanOrEqual(14)
     // Privacy: no email, URL/meeting link or phone number in a row.
