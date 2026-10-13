@@ -122,7 +122,7 @@ on:
         type: boolean
         default: false
       allow_partial:
-        description: 'rebuild/rescrape/rescrape-historical: let a run with failed dates go on to promotion (#1708). Default fails it.'
+        description: 'rebuild/rescrape/rescrape-historical/backfill-global-totals: let a run with failed dates go on to promotion (#1708, #1771). Default fails it.'
         required: false
         type: boolean
         default: false
@@ -923,6 +923,8 @@ jobs:
       # never writes, so an additive file cannot trip it.
       - name: '[backfill] Build global-totals.json one date at a time'
         if: steps.mode.outputs.mode == 'backfill-global-totals'
+        env:
+          ALLOW_PARTIAL: ${{ inputs.allow_partial }}
         run: |
           set -uo pipefail
 
@@ -998,10 +1000,18 @@ jobs:
           echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Uploaded to \`${GCS_BUCKET}\`; the promotion step below carries it to production." >> "$GITHUB_STEP_SUMMARY"
 
+          # Nothing built is a failed run whatever allow_partial says: there
+          # is nothing to promote.
           if [ "${SUCCEEDED}" -eq 0 ]; then
             echo "::error::No dates were backfilled"
             exit 1
           fi
+
+          # Fail the run (no promotion) on any failed date — a skipped date
+          # with no rankings file included — unless allow_partial (#1771,
+          # audit D-26; the #1708 rule every per-date mode follows). Last, so
+          # the per-date uploads above stand in staging.
+          bash scripts/partial-failure-gate.sh "backfill-global-totals" "${FAILED}"
 
       # ════════════════════════════════════════════════════════
       # RESCRAPE MODE
