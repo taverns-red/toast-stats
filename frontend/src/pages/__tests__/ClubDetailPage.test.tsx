@@ -16,6 +16,7 @@ import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import { useClubHistory } from '../../hooks/useClubHistory'
 
 // Mock localStorage
 const localStorageMock = {
@@ -94,6 +95,18 @@ const baseMockClub = {
 vi.mock('../../services/cdn', async importOriginal => ({
   ...(await importOriginal<typeof import('../../services/cdn')>()),
   fetchCdnClubIndex: vi.fn().mockResolvedValue({ clubs: {} }),
+}))
+
+// #1791 — the trend's prior years come from the club's year-end history.
+vi.mock('../../hooks/useClubHistory', () => ({
+  useClubHistory: vi.fn(() => ({
+    rows: [],
+    gaps: [],
+    clubName: null,
+    isLoading: false,
+    isError: false,
+    error: null,
+  })),
 }))
 
 vi.mock('../../hooks/useDistrictAnalytics', () => ({
@@ -990,5 +1003,65 @@ describe('club page primitives (#1843)', () => {
     mockAnalytics([baseMockClub, neighbour])
     const { container } = renderWithRoute()
     expect(container.querySelector('.club-minimap')).toBeNull()
+  })
+})
+
+// ── #1791 — multi-year membership context ──────────────────────────────────
+describe('membership trend with prior program years (#1791)', () => {
+  const historyRow = (startYear: number, base: number, end: number) => ({
+    startYear,
+    label: `${startYear}-${startYear + 1}`,
+    yearEndDate: `${startYear + 1}-06-30`,
+    hasData: true,
+    dcpGoals: 5,
+    tierCode: null,
+    tierLabel: '—',
+    membershipBase: base,
+    membershipEnd: end,
+    membershipNet: end - base,
+    octoberRenewals: null,
+    aprilRenewals: null,
+    clubStatus: 'Active',
+  })
+
+  beforeEach(() => {
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: { districtId: '61', allClubs: [baseMockClub] },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    vi.mocked(useClubHistory).mockClear()
+    vi.mocked(useClubHistory).mockReturnValue({
+      // Newest first. The page's PY is 2025-2026 (baseMockClub's dates),
+      // so 2025 is not a prior year and must not be drawn.
+      rows: [
+        historyRow(2025, 46, 41),
+        historyRow(2024, 40, 46),
+        historyRow(2023, 35, 40),
+      ],
+      gaps: [],
+      clubName: 'St Lawrence Toastmasters',
+      isLoading: false,
+      isError: false,
+      error: null,
+    })
+  })
+
+  afterEach(() => cleanup())
+
+  it('draws earlier program years faint behind the current line at desktop', () => {
+    const { container } = renderWithRoute()
+    const priors = container.querySelectorAll('polyline.line--prior')
+    expect([...priors].map(p => p.getAttribute('data-year'))).toEqual([
+      '2024-2025',
+      '2023-2024',
+    ])
+    expect(vi.mocked(useClubHistory)).toHaveBeenCalledWith('61', '00000606')
+  })
+
+  it('keeps the stats on the current year only', () => {
+    renderWithRoute()
+    // base 46 → current 41, unchanged by the prior years.
+    expect(screen.getByText('-5 (-10.9%)')).toBeInTheDocument()
   })
 })

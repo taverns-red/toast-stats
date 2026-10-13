@@ -2939,15 +2939,17 @@
     opacity: 0.6;
   }
 
+  /* #1791 — 12px ticks (review §5.3); the viewBox now tracks the plot's
+     width, so these are real CSS pixels at every size. */
   .mem-chart .axis-text {
     fill: var(--ink-4);
-    font-size: 10.5px;
+    font-size: 12px;
     font-family: var(--sans);
   }
 
   .mem-chart .key-text {
     fill: var(--ink-3);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     font-family: var(--sans);
   }
@@ -2980,6 +2982,97 @@
 
   [data-theme='dark'] .mem-chart .dot {
     fill: #8ec5e8;
+  }
+
+  /* #1791 — earlier program years, faint and dashed behind the current
+     line (the dash, not only the tone, tells them apart). Newest prior year
+     is the least faint. Theme tokens, so dark mode follows (R10). */
+  .mem-chart .line--prior {
+    fill: none;
+    stroke: var(--ink-4);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
+    stroke-linecap: round;
+    opacity: 0.55;
+  }
+
+  .mem-chart .line--prior-1 {
+    opacity: 0.4;
+  }
+
+  .mem-chart .line--prior-2 {
+    opacity: 0.28;
+  }
+
+  /* Tap-to-pin marker. */
+  .mem-chart .pin-line {
+    stroke: var(--ink-3);
+    stroke-width: 1;
+  }
+
+  .mem-chart .dot--pinned {
+    stroke: var(--surface);
+    stroke-width: 2;
+  }
+
+  .club-trend__plot {
+    border-radius: var(--rds-radius-sm);
+    cursor: crosshair;
+    touch-action: pan-y;
+  }
+
+  .club-trend__plot:focus-visible {
+    outline: 2px solid var(--loyal-600);
+    outline-offset: 2px;
+  }
+
+  .club-trend__legend {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 16px;
+    min-height: 20px;
+    overflow: hidden;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  .club-trend__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .club-trend__swatch {
+    flex-shrink: 0;
+    width: 18px;
+    height: 0;
+    border-top: 3px solid var(--loyal-500);
+  }
+
+  [data-theme='dark'] .club-trend__swatch {
+    border-top-color: #8ec5e8;
+  }
+
+  .club-trend__legend-item--prior .club-trend__swatch {
+    border-top: 2px dashed var(--ink-4);
+  }
+
+  /* The readout is #1835's .chart-readout line (two lines reserved); only
+     the current-year swatch is this chart's own colour. */
+  .club-trend__swatch-current {
+    background-color: var(--loyal-500);
+  }
+
+  [data-theme='dark'] .club-trend__swatch-current {
+    background-color: #8ec5e8;
   }
 
   /* DCP Status — tier row (Current Level + Outlook) + per-tier gap rows. */
