@@ -37,7 +37,7 @@ import { recordCdnResponse } from './cdnCacheTracker'
 
 // CDN base URL — set via VITE_CDN_BASE_URL at build time (#316)
 // Production build: https://cdn.taverns.red (default)
-// Staging build: https://storage.googleapis.com/toast-stats-data-staging
+// PR preview build: https://cdn-staging.taverns.red (staging bucket via CDN, #1995)
 const CDN_BASE_URL: string =
   import.meta.env['VITE_CDN_BASE_URL'] || 'https://cdn.taverns.red'
 
