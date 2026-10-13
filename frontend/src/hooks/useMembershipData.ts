@@ -2,12 +2,8 @@ import { queryOptions, useQuery } from '@tanstack/react-query'
 import {
   fetchLatestSnapshotDate,
   fetchCdnDistrictSnapshot,
-  fetchCdnDistrictAnalytics,
 } from '../services/cdn'
-import type {
-  DistrictStatistics,
-  MembershipHistoryResponse,
-} from '../types/districts'
+import type { DistrictStatistics } from '../types/districts'
 import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
@@ -51,32 +47,6 @@ export function districtStatisticsQueryOptions(
       const date = selectedDate || (await fetchLatestSnapshotDate())
       return fetchCdnDistrictSnapshot<DistrictStatistics>(date, districtId)
     },
-    staleTime: 15 * 60 * 1000, // 15 minutes
-    retry: 2,
-  })
-}
-
-/**
- * React Query hook to fetch membership history data from CDN (#173).
- * Reads the pre-computed membership analytics file.
- */
-export const useMembershipHistory = (
-  districtId: string | null,
-  months: number = 12
-) => {
-  return useQuery<MembershipHistoryResponse, Error>({
-    queryKey: ['membershipHistory', districtId, months],
-    queryFn: async () => {
-      if (!districtId) {
-        throw new Error('District ID is required')
-      }
-      return fetchCdnDistrictAnalytics<MembershipHistoryResponse>(
-        await fetchLatestSnapshotDate(),
-        districtId,
-        'membership'
-      )
-    },
-    enabled: !!districtId,
     staleTime: 15 * 60 * 1000, // 15 minutes
     retry: 2,
   })

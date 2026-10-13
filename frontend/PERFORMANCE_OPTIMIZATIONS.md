@@ -45,7 +45,6 @@ The following optimizations have been implemented to improve application perform
 - `DistinguishedProgressChart`
 - `MembershipTrendChart`
 - `YearOverYearComparison`
-- `DCPGoalAnalysis`
 
 ## 4. Enhanced Analytics Caching
 

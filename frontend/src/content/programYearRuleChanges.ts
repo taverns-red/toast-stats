@@ -98,7 +98,6 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'packages/analytics-core/src/transformation/DataTransformer.ts',
       'frontend/src/utils/extractEducationLevels.ts',
       'frontend/src/components/EducationLevelsCard.tsx',
-      'frontend/src/components/DCPGoalAnalysis.tsx',
     ],
   },
   {

@@ -11,15 +11,6 @@ export interface DistrictsResponse {
   districts: District[]
 }
 
-export interface MembershipHistoryPoint {
-  date: string
-  count: number
-}
-
-export interface MembershipHistoryResponse {
-  data: MembershipHistoryPoint[]
-}
-
 export interface MembershipStats {
   total: number
   change: number

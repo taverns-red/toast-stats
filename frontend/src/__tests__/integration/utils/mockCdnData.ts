@@ -237,15 +237,6 @@ export const cdnMocks = {
       },
     ],
   },
-  clubHealth: {
-    districtId: '61',
-    eligibleClubs: 2,
-    atRiskClubs: 1,
-    healthyClubs: 1,
-    metrics: {
-      avgMembersPerClub: 16,
-    },
-  },
   rankHistory: {
     districtId: '61',
     districtName: 'District 61',
@@ -325,8 +316,6 @@ export function setupCdnFetchMock() {
             }
           } else if (path.includes('/district_61.json')) {
             data = cdnMocks.districtSnapshot
-          } else if (path.includes('/district_61_clubhealth.json')) {
-            data = cdnMocks.clubHealth
           } else if (path.includes('v1/rank-history/61.json')) {
             data = cdnMocks.rankHistory
           } else if (path.includes('/district_61/index-metadata.json')) {
