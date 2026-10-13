@@ -83,6 +83,12 @@ export interface CompletenessGateResult {
   newDates: string[]
   districtsSampled: number
   failures: Array<{ path: string; reason: string }>
+  /**
+   * The dates this verdict holds (#1763: scoped promotion holds only them).
+   * Empty on a pass or an allow_value_changes override — and on an error,
+   * where `promote: false` with no named date means hold everything.
+   */
+  heldDates: string[]
   reason: string
 }
 
@@ -288,6 +294,7 @@ export function evaluateCompletenessGate(input: {
     dates: input.dates,
     newDates: input.newDates ?? [],
     districtsSampled: input.districtsSampled ?? 0,
+    heldDates: [] as string[],
   }
   if (input.error) {
     return {
@@ -322,7 +329,13 @@ export function evaluateCompletenessGate(input: {
         failures,
         reason: `${what} — promoting anyway: allow_value_changes is set`,
       }
-    : { ...base, promote: false, failures, reason: `HOLD — ${what}` }
+    : {
+        ...base,
+        promote: false,
+        failures,
+        heldDates: held,
+        reason: `HOLD — ${what}`,
+      }
 }
 
 const MAX_LISTED = 300

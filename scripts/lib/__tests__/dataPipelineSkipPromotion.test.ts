@@ -177,8 +177,9 @@ describe('data-pipeline skip_promotion contract (#1754)', () => {
   })
 
   it('reports promoted only when the promote step actually ran', () => {
+    // …or the scoped promote (#1763) copied everything it planned.
     expect(workflow.jobs.pipeline.outputs?.promoted).toBe(
-      "${{ steps.promote.outcome == 'success' }}"
+      "${{ steps.promote.outcome == 'success' || steps.promotemanifest.outputs.complete == 'true' }}"
     )
     expect(byName('Promote staging to production')?.id).toBe('promote')
   })

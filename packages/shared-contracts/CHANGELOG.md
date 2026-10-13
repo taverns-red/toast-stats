@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.14.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.14.0...shared-contracts-v1.14.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **collector-cli:** per-district suspendedClubs is unknown (absent), not 0, without Susp data ([#1757](https://github.com/taverns-red/toast-stats/issues/1757)) ([#1934](https://github.com/taverns-red/toast-stats/issues/1934)) ([98d1c85](https://github.com/taverns-red/toast-stats/commit/98d1c8596cf05de7cbb3bb9e9406b44b1ccf6a03))
+* **collector:** drop pre-merge fileSize from the snapshot manifest ([#1888](https://github.com/taverns-red/toast-stats/issues/1888)) ([#1932](https://github.com/taverns-red/toast-stats/issues/1932)) ([fc0b547](https://github.com/taverns-red/toast-stats/commit/fc0b5472ea1c53e0d7caed3afc4bb5f66ab7073e))
+
 ## [1.14.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.13.0...shared-contracts-v1.14.0) (2026-10-12)
 
 
