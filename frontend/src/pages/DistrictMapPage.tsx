@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { clubIdsMatch } from '@taverns-red/shared-contracts'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { MapFilter } from '../components/map/MapFilterPanel'
 import { useDistricts } from '../hooks/useDistricts'
@@ -140,7 +141,13 @@ const DistrictMapPage: React.FC = () => {
   const isPhone = useIsMobile()
   const theme = useDarkMode().isDark ? 'dark' : 'light'
   const [map, setMap] = useState<MapLibreMap | null>(null)
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  // #1843 — `?club=<id>` (the club page's mini-map link) opens that club
+  // as the initial selection. Ids are matched in any form (zero-padded or
+  // not) through `selected` below, and closing the summary clears it.
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
+    const linked = searchParams.get('club')
+    return linked ? [linked] : []
+  })
   const [sheet, setSheet] = useState<'legend' | 'modes' | 'filters' | null>(
     null
   )
@@ -186,6 +193,7 @@ const DistrictMapPage: React.FC = () => {
   )
 
   const allClubs = useMemo(() => analytics?.allClubs ?? [], [analytics])
+
   const prospective = analytics?.prospectiveClubs ?? []
   // Division and area load after the first render (a split chunk); until
   // then a territory deep link draws no pins rather than the wrong colours.
@@ -238,12 +246,19 @@ const DistrictMapPage: React.FC = () => {
   const unmapped = filtered.filter(c => !c.coordinates)
   const noLocation = allClubs.length > 0 && allClubs.every(c => !c.coordinates)
 
+  const selected = useMemo(
+    () =>
+      allClubs.filter(c => selectedIds.some(id => clubIdsMatch(c.clubId, id))),
+    [allClubs, selectedIds]
+  )
+  const selectedClubIds = useMemo(() => selected.map(c => c.clubId), [selected])
+
   // The sandbox draws its own pins on this map.
   useClubPins(listView || sandbox ? null : map, {
     data,
     model,
     theme,
-    selectedIds,
+    selectedIds: selectedClubIds,
     onSelect: setSelectedIds,
     fitKey: `${districtId}|${effectiveEndDate}`,
   })
@@ -278,7 +293,6 @@ const DistrictMapPage: React.FC = () => {
     return { search: `?${next}` }
   }
 
-  const selected = allClubs.filter(c => selectedIds.includes(c.clubId))
   const rawName = districtsData?.districts?.find(d => d.id === districtId)?.name
   const districtName = /^\d+$/.test(rawName || districtId)
     ? `District ${rawName || districtId}`

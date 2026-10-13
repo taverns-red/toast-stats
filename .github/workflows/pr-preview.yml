@@ -459,6 +459,19 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/chart-readout-touch.smoke.ts
 
+      # Club page on the mobile primitives (#1843, review §6.3). At 375 and
+      # 390, light and dark: hero ≤ 200px (was 401) with a 22px name, the
+      # PY/date chips and history link out of the hero, "Multi-year history"
+      # as a ≥56px row, stat cells ≥56px, zero overflow with the body mask
+      # off. At 375 and 1280 the static mini-map links to
+      # /district/61/map?club=, and the route requests no MapLibre, tiles or
+      # club-index.json. Both engines.
+      - name: Cross-engine club page primitives guard against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/club-page-mobile.smoke.ts
+
       # Club grid on phones (#1845). At 375, light and dark: tiles are
       # buttons ≥44px that open the club sheet (name, status, link), the grid
       # has 0 title-only tooltips, legend chips are ≥14px and the document

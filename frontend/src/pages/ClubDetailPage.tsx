@@ -50,6 +50,9 @@ import {
   summarizeClubCoach,
 } from '../utils/clubCompliance'
 import { ClubCompliancePanel } from '../components/clubs/ClubCompliancePanel'
+import { ClubMiniMap } from '../components/clubs/ClubMiniMap'
+import { MobileRowList } from '../components/MobileRowList'
+import { buildClubMeetingInfo } from '../utils/clubMeetingInfo'
 
 // ── DCP Status Card ────────────────────────────────────────────────────────
 // Re-skinned to club-reference.html (#619): a `.club-panel` with a bordered
@@ -1204,8 +1207,8 @@ const ClubDetailPage: React.FC = () => {
           {/* Worldwide standing (#1556) — cohort percentile for any club; a
               rank only when the club has reached a tier. #1783 moved it below
               the DCP goals grid per the §3.2 layout: the club's own numbers
-              first, the worldwide comparison last. The mini-map (#1784, not
-              built yet) slots in after it. */}
+              first, the worldwide comparison last. The mini-map (#1843)
+              follows it. */}
           <WorldwideStandingCard
             race={globalRace}
             clubId={normalizeClubId(club.clubId)}
@@ -1215,6 +1218,34 @@ const ClubDetailPage: React.FC = () => {
             }
             members={latestMembership}
             reached={raceReachedById.get(normalizeClubId(club.clubId)) ?? null}
+          />
+
+          {/* #1843 — "View multi-year history" leaves the phone hero and
+              becomes a row here (review §6.3); ≥768 keeps the hero link and
+              hides this list (CSS). */}
+          <div className="club-more">
+            <MobileRowList
+              label="More about this club"
+              rows={[
+                {
+                  id: 'history',
+                  to: `/district/${districtId}/club/${clubId}/history`,
+                  title: 'Multi-year history',
+                  meta: 'Every program year for this club',
+                },
+              ]}
+            />
+          </div>
+
+          {/* #1843 — static mini-map: an inline SVG from the coordinates
+              analytics already carries (no MapLibre, no tiles), linking to
+              the district club map with this club selected. */}
+          <ClubMiniMap
+            districtId={districtId ?? ''}
+            clubId={clubId ?? club.clubId}
+            clubName={club.clubName}
+            clubs={analytics?.allClubs ?? []}
+            place={buildClubMeetingInfo(club)?.place}
           />
 
           {/* Bottom back-link (#618) — the redesign reintroduces a footer

@@ -148,9 +148,12 @@ for (const width of [375, 1280]) {
 test('the mini-map link opens the district map with the club selected', async ({
   page,
 }) => {
+  test.setTimeout(90_000)
   await page.setViewportSize({ width: 1280, height: 900 })
+  // The basemap streams range requests, so the network never idles here
+  // (same load pattern as district-map.smoke.ts).
   await page.goto('/district/61/map?club=7238597', {
-    waitUntil: 'networkidle',
+    waitUntil: 'domcontentloaded',
     timeout: 60_000,
   })
   await expect(
