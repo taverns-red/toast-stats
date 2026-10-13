@@ -538,6 +538,30 @@ for (const theme of ['light', 'dark'] as const) {
       if (width >= 768) {
         const heading = summary.getByRole('heading').first()
         await expect(heading).toBeFocused()
+        // html has scroll-behavior: smooth, so the scroll from focusing the
+        // pin can still be in flight, and focusing the heading starts another
+        // one. Between and during them the heading passes y≈54, then settles
+        // at its scroll-margin (y≈80). Measure at rest: scrollY and the
+        // heading hold still for 5 frames and 150 ms (#1993).
+        await heading.evaluate(
+          el =>
+            new Promise<void>(resolve => {
+              let last = ''
+              let frames = 0
+              let since = performance.now()
+              const t0 = since
+              const tick = () => {
+                const t = performance.now()
+                const now = `${window.scrollY}:${el.getBoundingClientRect().top}`
+                if (now === last) frames++
+                else [last, frames, since] = [now, 0, t]
+                if ((frames >= 5 && t - since >= 150) || t - t0 > 5000)
+                  resolve()
+                else requestAnimationFrame(tick)
+              }
+              requestAnimationFrame(tick)
+            })
+        )
         // ...and its focus ring is not tucked under the sticky header.
         const header = await page.getByRole('banner').first().boundingBox()
         const box = await heading.boundingBox()
