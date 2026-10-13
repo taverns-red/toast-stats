@@ -528,14 +528,6 @@ describe('process-dates.sh rescrape: scrape + transform stage', () => {
     expect(raw).toBeGreaterThan(snap)
   })
 
-  it('does not pull a prior-year snapshot (rescrape never did)', () => {
-    putObject('snapshots/2025-09-10/district_61.json', '{"d":61}', true)
-    run('rescrape', ['2026-09-10'], env)
-    expect(lines(shimLog).some(l => l.includes('snapshots/2025-09-10/'))).toBe(
-      false
-    )
-  })
-
   it('counts a failed scrape, drops what it left, uploads nothing, and goes on (#1669)', () => {
     const r = run('rescrape', ['2026-09-09', '2026-09-10'], {
       ...env,
@@ -557,6 +549,79 @@ describe('process-dates.sh rescrape: scrape + transform stage', () => {
     expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
     expect(objectExists('snapshots/2026-06-30/district_61.json')).toBe(true)
     expect(objectsUnder('raw-csv/2026-07-02')).toHaveLength(1)
+  })
+})
+
+describe('process-dates.sh: prior-year snapshot for YoY in every mode (#1769, D-8)', () => {
+  // compute-analytics reads snapshots/<year - 1 of the date it computes>/
+  // for YoY (findPreviousProgramYearDate). The runner used to pull it in
+  // rebuild and rescrape-historical only, so a rescraped month-end was
+  // computed from a single snapshot: different YoY from a rebuild of the
+  // same date (I-1).
+  let diskLog: string
+
+  beforeEach(() => {
+    diskLog = path.join(tmp, 'disk.log')
+  })
+
+  function seenByCompute(): string[] {
+    return lines(diskLog)
+      .filter(l => l.startsWith('compute-analytics: '))
+      .map(l => l.slice('compute-analytics: '.length))
+  }
+
+  it('rescrape: a month-end pulls its prior-year month-end before compute', () => {
+    putObject('snapshots/2025-09-30/district_61.json', '{"d":61}', true)
+    const r = run('rescrape', ['2026-09-30'], {
+      DISTRICTS: '61',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(seenByCompute()).toContain('snapshots/2025-09-30/district_61.json')
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('rescrape and rebuild of the same date give compute the same prior year (I-1)', () => {
+    putObject('snapshots/2025-09-30/district_61.json', '{"d":61}', true)
+    putRaw('2026-09-30')
+    run('rebuild', ['2026-09-30'], { STUB_DISK_LOG: diskLog })
+    const rebuilt = seenByCompute().filter(f => f.startsWith('snapshots/2025'))
+    fs.rmSync(diskLog, { force: true })
+    run('rescrape', ['2026-09-30'], {
+      DISTRICTS: '61',
+      STUB_DISK_LOG: diskLog,
+    })
+    const rescraped = seenByCompute().filter(f =>
+      f.startsWith('snapshots/2025')
+    )
+    expect(rebuilt).toEqual(['snapshots/2025-09-30/district_61.json'])
+    expect(rescraped).toEqual(rebuilt)
+  })
+
+  it('keys the prior year on the date the transform wrote, not the one asked for', () => {
+    // A close collected 2026-07-02 lands on 2026-06-30 (#193); compute
+    // reads 2025-06-30, so that is the one to pull.
+    putObject('snapshots/2025-06-30/district_61.json', '{"d":61}', true)
+    const r = run('rescrape', ['2026-07-02'], {
+      DISTRICTS: '61',
+      STUB_REMAP: '2026-07-02=2026-06-30',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(seenByCompute()).toContain('snapshots/2025-06-30/district_61.json')
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('a date with no prior-year snapshot still publishes and is counted in the summary', () => {
+    putObject('snapshots/2025-09-30/district_61.json', '{"d":61}', true)
+    const r = run('rescrape', ['2026-08-31', '2026-09-30'], {
+      DISTRICTS: '61',
+    })
+    expect(r.counts).toEqual({ succeeded: 2, refused: 0, failed: 0 })
+    const md = summaryText()
+    expect(md).toContain('- **Dates with a prior-year snapshot (YoY)**: 1')
+    expect(md).toContain('- **Dates without one (no YoY)**: 1')
   })
 })
 

@@ -45,6 +45,11 @@ const DistrictActionListPage = React.lazy(
   () => import('./pages/DistrictActionListPage')
 )
 
+// Code-split: DistrictGrowthPage — Club Growth funnel (#1794, epic #1781)
+const DistrictGrowthPage = React.lazy(
+  () => import('./pages/DistrictGrowthPage')
+)
+
 // Code-split: DistrictTrendsPage — trends subroute (#680, epic #674 Sprint 6)
 const DistrictTrendsPage = React.lazy(
   () => import('./pages/DistrictTrendsPage')
@@ -60,6 +65,10 @@ const ClubRedirectPage = React.lazy(() => import('./pages/ClubRedirectPage'))
 
 // Code-split: HistoryPage placeholder (#355) — real content in #367
 const HistoryPage = React.lazy(() => import('./pages/HistoryPage'))
+// Code-split: worldwide country choropleth, a /history subpage (#1797)
+const WorldCountriesPage = React.lazy(
+  () => import('./pages/WorldCountriesPage')
+)
 
 // Code-split: MethodologyPage placeholder (#355) — real content in #368
 const MethodologyPage = React.lazy(() => import('./pages/MethodologyPage'))
@@ -75,11 +84,9 @@ const ClubsRacePage = React.lazy(() => import('./pages/ClubsRacePage'))
 // Code-split: McpPage — public MCP-server install page (#1165, epic #1162)
 const McpPage = React.lazy(() => import('./pages/McpPage'))
 
-// Code-split: unlisted basemap preview (#1786) — removed when #1784's
-// /district/:id/map lands and takes over the basemap smoke.
-const BasemapPreviewPage = React.lazy(
-  () => import('./pages/BasemapPreviewPage')
-)
+// Code-split: DistrictMapPage — the club map (#1784, epic #1781). Its chunk
+// lazy-imports MapLibre (ADR-016); the map route budget is CI-enforced.
+const DistrictMapPage = React.lazy(() => import('./pages/DistrictMapPage'))
 
 // Code-split: RegionPage — /region/:n landing (#423)
 const RegionPage = React.lazy(() => import('./pages/RegionPage'))
@@ -197,10 +204,26 @@ const router = createBrowserRouter(
           ),
         },
         {
+          path: 'district/:districtId/map',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <DistrictMapPage />
+            </Suspense>
+          ),
+        },
+        {
           path: 'district/:districtId/action-list',
           element: (
             <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictActionListPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/growth',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <DistrictGrowthPage />
             </Suspense>
           ),
         },
@@ -253,6 +276,14 @@ const router = createBrowserRouter(
           ),
         },
         {
+          path: 'history/countries',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <WorldCountriesPage />
+            </Suspense>
+          ),
+        },
+        {
           path: 'methodology',
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
@@ -291,14 +322,6 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <McpPage />
-            </Suspense>
-          ),
-        },
-        {
-          path: 'dev/basemap',
-          element: (
-            <Suspense fallback={<PageLoadingFallback />}>
-              <BasemapPreviewPage />
             </Suspense>
           ),
         },

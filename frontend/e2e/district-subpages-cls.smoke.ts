@@ -52,6 +52,10 @@ const SUBPAGES = [
   'clubs',
   'divisions',
   'grid',
+  // The club map (#1784): the map box is reserved before MapLibre arrives.
+  'map',
+  // The Club Growth funnel (#1794).
+  'growth',
   'trends',
   'analytics',
   'rankings',

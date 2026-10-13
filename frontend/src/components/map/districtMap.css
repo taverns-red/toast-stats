@@ -1,0 +1,377 @@
+/* District club map (#1784). Brand tokens (--rt-*) with local theme
+   remaps under [data-theme='dark'] (R10). The legend and club summary also
+   render inside the portalled BottomSheet, so the variables live on :root. */
+:root {
+  --map-surface: #ffffff;
+  --map-text: var(--rt-ink);
+  --map-text-2: var(--rt-ink-2);
+  --map-border: rgb(15 14 13 / 0.22);
+  --map-pressed-bg: var(--rt-ink);
+  --map-pressed-text: #ffffff;
+  --map-focus: var(--rt-stats);
+}
+
+[data-theme='dark'] {
+  --map-surface: var(--rt-bg-2);
+  --map-text: var(--rt-ink-on-dk);
+  --map-text-2: #cfc9bf;
+  --map-border: rgb(244 241 235 / 0.28);
+  --map-pressed-bg: var(--rt-ink-on-dk);
+  --map-pressed-text: var(--rt-ink);
+}
+
+.district-map {
+  margin-top: var(--rt-space-4);
+  color: var(--map-text);
+}
+
+.district-map__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rt-space-2);
+  align-items: center;
+  margin-bottom: var(--rt-space-3);
+}
+
+/* Pills and chips: ≥ 44 px targets, ≥ 8 px apart, 14 px text (spec §5). */
+.map-pill,
+.map-modes__btn,
+.map-legend__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--map-border);
+  border-radius: 999px;
+  background: var(--map-surface);
+  color: var(--map-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.map-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.map-modes__btn[aria-pressed='true'],
+.map-legend__chip[aria-pressed='true'] {
+  background: var(--map-pressed-bg);
+  color: var(--map-pressed-text);
+  border-color: var(--map-pressed-bg);
+}
+
+.map-pill:focus-visible,
+.map-modes__btn:focus-visible,
+.map-legend__chip:focus-visible,
+.map-list a:focus-visible,
+.map-club__link:focus-visible {
+  outline: 3px solid var(--map-focus);
+  outline-offset: 2px;
+}
+
+.map-modes__preview {
+  display: inline-flex;
+  gap: 2px;
+}
+
+/* Inside the phone's mode sheet: one full-width row per mode. */
+.bottom-sheet .map-modes {
+  flex-direction: column;
+}
+
+.bottom-sheet .map-modes__btn {
+  justify-content: flex-start;
+  border-radius: var(--rt-radius-md);
+}
+
+.pin-swatch {
+  flex: none;
+  overflow: visible;
+}
+
+.pin-swatch__bg {
+  fill: var(--map-surface);
+}
+
+.district-map__body {
+  display: grid;
+  gap: var(--rt-space-4);
+}
+
+@media (min-width: 768px) {
+  .district-map__body {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+  }
+}
+
+/* The parent owns the map's box, reserved before MapLibre arrives (L107). */
+.district-map__canvas {
+  position: relative;
+  height: max(360px, calc(100dvh - 230px));
+  overflow: hidden;
+  border: 1px solid var(--map-border);
+  border-radius: var(--rt-radius-md);
+  touch-action: none;
+}
+
+@media (min-width: 768px) {
+  .district-map__canvas {
+    height: min(72dvh, 760px);
+    min-height: 420px;
+  }
+}
+
+.district-map__empty {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rt-space-3);
+  padding: var(--rt-space-4);
+  text-align: center;
+  font-size: 16px;
+}
+
+/* Phone peek: one row of legend chips over the map's bottom edge, then
+   the button to the full legend. Scrolls sideways with a fade cue; the
+   title lives in the "Colour: …" pill above the map. */
+.district-map__peek {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--map-surface);
+  border-top: 1px solid var(--map-border);
+  border-radius: 14px 14px 0 0;
+  touch-action: pan-x;
+  mask-image: linear-gradient(to right, #000 88%, transparent);
+}
+
+.district-map__peek .map-legend__title {
+  display: none;
+}
+
+.district-map__peek .map-legend__chips {
+  flex-wrap: nowrap;
+}
+
+.district-map__peek .map-legend,
+.district-map__peek .map-legend__chip,
+.district-map__peek > .map-pill {
+  flex: none;
+}
+
+/* Keep the ODbL credit above the peek strip. */
+.district-map__canvas:has(.district-map__peek) .maplibregl-ctrl-bottom-right {
+  bottom: 66px;
+}
+
+.map-legend__title {
+  margin: 0;
+}
+
+.district-map__peek .map-legend__chips {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+}
+
+.district-map__peek > .map-pill {
+  align-self: flex-start;
+}
+
+.map-legend__title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--map-text-2);
+}
+
+.map-legend__title strong {
+  color: var(--map-text);
+}
+
+.map-legend__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.map-legend__code {
+  font-family: var(--rt-font-mono, monospace);
+}
+
+.map-legend__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.map-legend__note,
+.map-panel__note {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--map-text-2);
+}
+
+.map-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rt-space-4);
+  padding: var(--rt-space-4);
+  border: 1px solid var(--map-border);
+  border-radius: var(--rt-radius-md);
+  background: var(--map-surface);
+}
+
+.map-panel__section {
+  border-top: 1px solid var(--map-border);
+  padding-top: var(--rt-space-3);
+}
+
+.map-panel__heading {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.map-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-list li,
+.map-list a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.map-list a {
+  flex: 1;
+  color: var(--map-text);
+  text-decoration: none;
+}
+
+.map-list__name {
+  font-weight: 600;
+}
+
+.map-list__meta {
+  margin-left: auto;
+  color: var(--map-text-2);
+}
+
+.district-map__listview .map-list {
+  border-top: 1px solid var(--map-border);
+}
+
+.district-map__listview .map-list li {
+  border-bottom: 1px solid var(--map-border);
+}
+
+.map-club__item + .map-club__item {
+  margin-top: var(--rt-space-4);
+  padding-top: var(--rt-space-4);
+  border-top: 1px solid var(--map-border);
+}
+
+.map-club__name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.map-club__place {
+  margin: 2px 0 8px;
+  font-size: 14px;
+  color: var(--map-text-2);
+}
+
+/* Filters (#1788): the active-count badge on the trigger, and the panel
+   section's Clear all (the chips themselves are the shared filter sheet's). */
+.map-pill__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--map-pressed-bg);
+  color: var(--map-pressed-text);
+  font-size: 14px;
+}
+
+.map-filters .filter-sheet__clear {
+  margin-top: 12px;
+}
+
+.map-club__line {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.map-club__facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.map-club__fact {
+  display: flex;
+  gap: 8px;
+}
+
+.map-club__fact dt {
+  min-width: 7.5em;
+  color: var(--map-text-2);
+}
+
+.map-club__fact dd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.map-club__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+
+.map-club__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--map-text);
+}
+
+/* #1945: the list view's row chip is the club's pin and its category. */
+.map-row-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--map-text);
+}

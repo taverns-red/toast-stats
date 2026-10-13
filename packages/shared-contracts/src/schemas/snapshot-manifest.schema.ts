@@ -29,9 +29,6 @@ export const DistrictManifestEntrySchema = z.object({
   /** Whether the district was processed successfully or failed */
   status: z.enum(['success', 'failed']),
 
-  /** Size of the district file in bytes */
-  fileSize: z.number(),
-
   /** ISO timestamp when the file was last modified */
   lastModified: z.string(),
 

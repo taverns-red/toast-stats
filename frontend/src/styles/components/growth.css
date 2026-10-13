@@ -1,0 +1,198 @@
+/* District Club Growth funnel (#1794, epic #1781). Built on the theme-aware
+   tokens (--ink*, --surface, --line) so dark mode remaps with the theme, plus
+   the product accent --rt-stats for the decorative bars. The value is always
+   printed as text; the bar is aria-hidden and never the only signal. */
+
+.growth-page {
+  margin-top: 1rem;
+}
+
+.growth-page__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.growth-page__subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  max-width: 65ch;
+}
+
+/* ── Funnel strip ──────────────────────────────────────────────────────── */
+
+.growth-funnel {
+  list-style: none;
+  margin: 1rem 0 1.5rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .growth-funnel {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+.growth-funnel__link {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'step text'
+    'track track';
+  gap: 0.5rem 0.75rem;
+  align-items: start;
+  min-height: 44px;
+  height: 100%;
+  padding: 0.75rem 0.875rem;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+}
+
+.growth-funnel__link:hover {
+  border-color: var(--rt-stats, #d4873f);
+}
+
+.growth-funnel__link:focus-visible {
+  outline: 2px solid var(--rt-stats, #d4873f);
+  outline-offset: 2px;
+}
+
+.growth-funnel__step {
+  grid-area: step;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.growth-funnel__text {
+  grid-area: text;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 0.5rem;
+  min-width: 0;
+}
+
+.growth-funnel__label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.growth-funnel__value {
+  grid-row: span 2;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  text-align: right;
+}
+
+.growth-funnel__value--unknown {
+  font-size: 1rem;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+.growth-funnel__hint {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+.growth-funnel__track {
+  grid-area: track;
+  display: block;
+  height: 6px;
+  background: var(--surface-3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.growth-funnel__bar {
+  display: block;
+  height: 100%;
+  background: var(--rt-stats, #d4873f);
+  border-radius: 999px;
+}
+
+/* ── Stage sections ────────────────────────────────────────────────────── */
+
+.growth-stage {
+  margin-top: 1.5rem;
+  /* Clear the sticky chrome when a funnel link scrolls here. */
+  scroll-margin-top: 6rem;
+}
+
+.growth-stage__title {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.growth-stage__subtitle {
+  margin-top: 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.growth-stage__note {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  max-width: 70ch;
+}
+
+.growth-table__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.growth-table__link:focus-visible {
+  outline: 2px solid var(--rt-stats, #d4873f);
+  outline-offset: 2px;
+}
+
+.growth-table__num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Below 640 the action-table rows are cards whose cells share auto-fit
+   columns; a nowrap cell there overflows its column (and the page), so the
+   no-wrap applies only to the real table. */
+@media (min-width: 640px) {
+  .growth-table__num {
+    white-space: nowrap;
+  }
+}
+
+/* Card rows (<640): the shared action-table prints each cell's label INLINE
+   before its value. Inline, "PAYMENT" + "Incomplete" has no break
+   opportunity and is wider than its auto-fit column, so the row overflowed
+   the 375 page (measured on the PR preview). Here the label stacks above the
+   value instead, scoped to this page's tables. */
+@media (max-width: 639px) {
+  .growth-stage .action-table td::before {
+    display: block;
+    margin-right: 0;
+  }
+}

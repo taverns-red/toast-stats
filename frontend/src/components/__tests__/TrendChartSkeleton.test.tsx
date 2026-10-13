@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { TrendChartSkeleton } from '../TrendChartSkeleton'
+import { TOUCH_QUERY } from '../charts/ChartReadout'
 
 function stubMobile(matches: boolean) {
   vi.stubGlobal(
@@ -65,5 +66,35 @@ describe('TrendChartSkeleton (#1837)', () => {
     expect(
       screen.getByRole('status', { name: 'Loading payments trend' })
     ).toHaveClass('redesign-panel')
+  })
+
+  it('reserves the tap-to-pin readout line on a device without hover (#1835)', () => {
+    // A tablet: wide enough for the panel, but it cannot hover, so the loaded
+    // chart carries the readout line under the plot — the skeleton must too.
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query === TOUCH_QUERY,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    )
+    const { container } = render(
+      <TrendChartSkeleton label="membership trend" />
+    )
+    expect(container.querySelector('.chart-readout')).toBeInTheDocument()
+  })
+
+  it('reserves no readout line on a hover device', () => {
+    stubMobile(false)
+    const { container } = render(
+      <TrendChartSkeleton label="membership trend" />
+    )
+    expect(container.querySelector('.chart-readout')).toBeNull()
   })
 })

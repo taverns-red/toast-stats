@@ -1,0 +1,235 @@
+/**
+ * Map pin palette validator (#1784), ported from the #1785 spec's
+ * `palette_check.py` (PR #1895) so a palette edit fails CI instead of drifting
+ * (docs/design/map-pin-colour-modes.md §6).
+ *
+ * - CVD: Machado, Oliveira & Fernandes (2009), severity 1.0, linear sRGB.
+ * - Distinctness: CIEDE2000. Status/categorical palettes: every pair ≥ 15
+ *   (normal) and ≥ 8 (each CVD). Ordinal: adjacent steps ≥ 8 under every
+ *   vision, with monotone L* (Smedley exempt: a distinct award, not a step).
+ * - Contrast: pin outline vs land and water ≥ 3:1 in both themes (1.4.11);
+ *   the better of white or ink text on every fill ≥ 4.5:1 (1.4.3), and the
+ *   renderer must pick that same colour.
+ *
+ * The palettes and outline are read from the modules the map renders with,
+ * so this test guards the shipped values, not a copy.
+ */
+import { describe, expect, it } from 'vitest'
+import {
+  CATEGORICAL8,
+  HEALTH_FILLS,
+  OUTLINE,
+  TIER_FILLS,
+  labelColourOn,
+} from '../pinModes'
+import { BASEMAP_COLOURS } from '../basemapStyle'
+
+type Vision = 'normal' | 'protan' | 'deutan' | 'tritan'
+const VISIONS: Vision[] = ['normal', 'protan', 'deutan', 'tritan']
+const INK = '#0F0E0D'
+const WHITE = '#FFFFFF'
+
+const MACHADO: Record<Exclude<Vision, 'normal'>, number[][]> = {
+  protan: [
+    [0.152286, 1.052583, -0.204868],
+    [0.114503, 0.786281, 0.099216],
+    [-0.003882, -0.048116, 1.051998],
+  ],
+  deutan: [
+    [0.367322, 0.860646, -0.227968],
+    [0.280085, 0.672501, 0.047413],
+    [-0.01182, 0.04294, 0.968881],
+  ],
+  tritan: [
+    [1.255528, -0.076749, -0.178779],
+    [-0.078411, 0.930809, 0.147602],
+    [0.004733, 0.691367, 0.3039],
+  ],
+}
+
+const hex2rgb = (h: string): number[] => {
+  const s = h.replace('#', '')
+  return [0, 2, 4].map(i => parseInt(s.slice(i, i + 2), 16) / 255)
+}
+const toLin = (v: number) =>
+  v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+const toSrgb = (v: number) => {
+  const c = Math.max(0, Math.min(1, v))
+  return c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055
+}
+const rgb2hex = (c: number[]) =>
+  '#' +
+  c
+    .map(v =>
+      Math.round(Math.max(0, Math.min(1, v)) * 255)
+        .toString(16)
+        .padStart(2, '0')
+    )
+    .join('')
+    .toUpperCase()
+
+function simulate(hex: string, v: Vision): string {
+  if (v === 'normal') return hex
+  const lin = hex2rgb(hex).map(toLin)
+  const m = MACHADO[v]
+  return rgb2hex(
+    m.map(row => toSrgb(row.reduce((s, k, i) => s + k * lin[i]!, 0)))
+  )
+}
+
+const luminance = (hex: string) => {
+  const [r, g, b] = hex2rgb(hex).map(toLin) as [number, number, number]
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+const contrast = (a: string, b: string) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [
+    number,
+    number,
+  ]
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+function lab(hex: string): [number, number, number] {
+  const [r, g, b] = hex2rgb(hex).map(toLin) as [number, number, number]
+  const x = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.95047
+  const y = 0.2126729 * r + 0.7151522 * g + 0.072175 * b
+  const z = (0.0193339 * r + 0.119192 * g + 0.9503041 * b) / 1.08883
+  const f = (t: number) =>
+    t > 216 / 24389 ? Math.cbrt(t) : ((24389 / 27) * t + 16) / 116
+  const [fx, fy, fz] = [f(x), f(y), f(z)]
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)]
+}
+
+const rad = (d: number) => (d * Math.PI) / 180
+const deg = (r: number) => (r * 180) / Math.PI
+
+function ciede2000(c1: string, c2: string): number {
+  const [L1, a1, b1] = lab(c1)
+  const [L2, a2, b2] = lab(c2)
+  const C1 = Math.hypot(a1, b1)
+  const C2 = Math.hypot(a2, b2)
+  const Cb = (C1 + C2) / 2
+  const G = 0.5 * (1 - Math.sqrt(Cb ** 7 / (Cb ** 7 + 25 ** 7)))
+  const a1p = (1 + G) * a1
+  const a2p = (1 + G) * a2
+  const C1p = Math.hypot(a1p, b1)
+  const C2p = Math.hypot(a2p, b2)
+  const h1p = (deg(Math.atan2(b1, a1p)) + 360) % 360
+  const h2p = (deg(Math.atan2(b2, a2p)) + 360) % 360
+  const dLp = L2 - L1
+  const dCp = C2p - C1p
+  let dhp = 0
+  if (C1p * C2p !== 0) {
+    if (Math.abs(h2p - h1p) <= 180) dhp = h2p - h1p
+    else if (h2p - h1p > 180) dhp = h2p - h1p - 360
+    else dhp = h2p - h1p + 360
+  }
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin(rad(dhp / 2))
+  const Lbp = (L1 + L2) / 2
+  const Cbp = (C1p + C2p) / 2
+  let hbp: number
+  if (C1p * C2p === 0) hbp = h1p + h2p
+  else if (Math.abs(h1p - h2p) <= 180) hbp = (h1p + h2p) / 2
+  else if (h1p + h2p < 360) hbp = (h1p + h2p + 360) / 2
+  else hbp = (h1p + h2p - 360) / 2
+  const T =
+    1 -
+    0.17 * Math.cos(rad(hbp - 30)) +
+    0.24 * Math.cos(rad(2 * hbp)) +
+    0.32 * Math.cos(rad(3 * hbp + 6)) -
+    0.2 * Math.cos(rad(4 * hbp - 63))
+  const dth = 30 * Math.exp(-(((hbp - 275) / 25) ** 2))
+  const Rc = 2 * Math.sqrt(Cbp ** 7 / (Cbp ** 7 + 25 ** 7))
+  const Sl = 1 + (0.015 * (Lbp - 50) ** 2) / Math.sqrt(20 + (Lbp - 50) ** 2)
+  const Sc = 1 + 0.045 * Cbp
+  const Sh = 1 + 0.015 * Cbp * T
+  const Rt = -Math.sin(rad(2 * dth)) * Rc
+  return Math.sqrt(
+    (dLp / Sl) ** 2 +
+      (dCp / Sc) ** 2 +
+      (dHp / Sh) ** 2 +
+      Rt * (dCp / Sc) * (dHp / Sh)
+  )
+}
+
+function minPairDelta(
+  colours: string[],
+  v: Vision,
+  adjacentOnly: boolean
+): number {
+  let min = Infinity
+  for (let i = 0; i < colours.length; i++)
+    for (let j = i + 1; j < colours.length; j++) {
+      if (adjacentOnly && j !== i + 1) continue
+      min = Math.min(
+        min,
+        ciede2000(simulate(colours[i]!, v), simulate(colours[j]!, v))
+      )
+    }
+  return min
+}
+
+describe('validator self-check (matches the spec §6.2 numbers)', () => {
+  it('reproduces the health palette ΔE and the outline contrast', () => {
+    const health = Object.values(HEALTH_FILLS)
+    expect(minPairDelta(health, 'normal', false)).toBeCloseTo(38.0, 0)
+    expect(contrast('#3D3B38', '#F4F1EB')).toBeCloseTo(9.9, 1)
+  })
+})
+
+describe('status and categorical palettes', () => {
+  const sets: Record<string, string[]> = {
+    health: Object.values(HEALTH_FILLS),
+    categorical8: [...CATEGORICAL8],
+  }
+  for (const [name, colours] of Object.entries(sets)) {
+    for (const v of VISIONS) {
+      it(`${name}: every pair is distinct under ${v}`, () => {
+        const limit = v === 'normal' ? 15 : 8
+        expect(minPairDelta(colours, v, false)).toBeGreaterThanOrEqual(limit)
+      })
+    }
+  }
+})
+
+describe('tier (ordinal) palette', () => {
+  // Not yet → Distinguished → Select → President's → Smedley.
+  const ramp = [
+    TIER_FILLS.NotDistinguished,
+    TIER_FILLS.Distinguished,
+    TIER_FILLS.Select,
+    TIER_FILLS.President,
+    TIER_FILLS.Smedley,
+  ]
+  for (const v of VISIONS) {
+    it(`adjacent steps ≥ 8 and L* monotone under ${v}`, () => {
+      expect(minPairDelta(ramp, v, true)).toBeGreaterThanOrEqual(8)
+      const ls = ramp.slice(0, 4).map(c => lab(simulate(c, v))[0])
+      for (let i = 1; i < ls.length; i++)
+        expect(ls[i]!).toBeLessThan(ls[i - 1]!)
+    })
+  }
+})
+
+describe('contrast', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    it(`outline clears 3:1 on land and water (${theme})`, () => {
+      const { land, water } = BASEMAP_COLOURS[theme]
+      expect(contrast(OUTLINE[theme], land)).toBeGreaterThanOrEqual(3)
+      expect(contrast(OUTLINE[theme], water)).toBeGreaterThanOrEqual(3)
+    })
+  }
+
+  it('the renderer picks the better of white and ink, and it clears 4.5:1', () => {
+    const fills = [
+      ...Object.values(HEALTH_FILLS),
+      ...Object.values(TIER_FILLS),
+      ...CATEGORICAL8,
+    ]
+    for (const fill of fills) {
+      const best = contrast(fill, WHITE) >= contrast(fill, INK) ? WHITE : INK
+      expect(labelColourOn(fill)).toBe(best)
+      expect(contrast(fill, best)).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+})
