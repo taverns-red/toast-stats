@@ -1,5 +1,41 @@
 # Changelog
 
+## [2.53.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.52.0...toast-stats-v2.53.0) (2026-10-13)
+
+
+### Features
+
+* **charts:** tap-to-pin chart readout on touch devices ([#1835](https://github.com/taverns-red/toast-stats/issues/1835)) ([#1939](https://github.com/taverns-red/toast-stats/issues/1939)) ([a54f297](https://github.com/taverns-red/toast-stats/commit/a54f297d8a3165353eb3bf79fa44051d044b9bf2))
+* **club:** club page on the mobile primitives — hero ≤ 200 px, history row, static mini-map ([#1843](https://github.com/taverns-red/toast-stats/issues/1843)) ([#1950](https://github.com/taverns-red/toast-stats/issues/1950)) ([6a9150f](https://github.com/taverns-red/toast-stats/commit/6a9150fe609ad66c44740ce49083cf53dedea615))
+* **club:** multi-year membership context on the club page ([#1791](https://github.com/taverns-red/toast-stats/issues/1791)) ([#1955](https://github.com/taverns-red/toast-stats/issues/1955)) ([a562eba](https://github.com/taverns-red/toast-stats/commit/a562ebac438ffd15826e0437c301ee21c77393c0))
+* **clubs:** Coach column, filter, phone flag and CSV export ([#1954](https://github.com/taverns-red/toast-stats/issues/1954)) ([#1963](https://github.com/taverns-red/toast-stats/issues/1963)) ([0e84331](https://github.com/taverns-red/toast-stats/commit/0e843317fe6b9f030450f209d0526359f712825e))
+* **growth:** district Club Growth funnel — /district/:id/growth ([#1794](https://github.com/taverns-red/toast-stats/issues/1794)) ([#1948](https://github.com/taverns-red/toast-stats/issues/1948)) ([587f56a](https://github.com/taverns-red/toast-stats/commit/587f56adc88df7cafeda3dbc882bfbac46a36106))
+* **map:** ?view=list uses the shared MobileRowList rows ([#1945](https://github.com/taverns-red/toast-stats/issues/1945)) ([#1964](https://github.com/taverns-red/toast-stats/issues/1964)) ([36bddd3](https://github.com/taverns-red/toast-stats/commit/36bddd33790353962f7ea0e3276b30dc4da72ae9))
+* **map:** keyboard navigation between map pins ([#1940](https://github.com/taverns-red/toast-stats/issues/1940)) ([#1966](https://github.com/taverns-red/toast-stats/issues/1966)) ([90e11f2](https://github.com/taverns-red/toast-stats/commit/90e11f22bdacf4dfacd357d571a19df6510a9447))
+* **map:** realignment sandbox on the district map ([#1819](https://github.com/taverns-red/toast-stats/issues/1819)) ([#1951](https://github.com/taverns-red/toast-stats/issues/1951)) ([a68e450](https://github.com/taverns-red/toast-stats/commit/a68e450c8aa4ccfb783f50fe4dcc5e9e2ed74222))
+* **pipeline:** scoped promotion from the run manifest — mechanism, opt-in ([#1763](https://github.com/taverns-red/toast-stats/issues/1763)) ([#1938](https://github.com/taverns-red/toast-stats/issues/1938)) ([63369e2](https://github.com/taverns-red/toast-stats/commit/63369e2855a6b64cd99c7df62edccc2a09810f91))
+
+
+### Bug Fixes
+
+* **collector-cli:** per-district suspendedClubs is unknown (absent), not 0, without Susp data ([#1757](https://github.com/taverns-red/toast-stats/issues/1757)) ([#1934](https://github.com/taverns-red/toast-stats/issues/1934)) ([98d1c85](https://github.com/taverns-red/toast-stats/commit/98d1c8596cf05de7cbb3bb9e9406b44b1ccf6a03))
+* **collector:** drop pre-merge fileSize from the snapshot manifest ([#1888](https://github.com/taverns-red/toast-stats/issues/1888)) ([#1932](https://github.com/taverns-red/toast-stats/issues/1932)) ([fc0b547](https://github.com/taverns-red/toast-stats/commit/fc0b5472ea1c53e0d7caed3afc4bb5f66ab7073e))
+* **map:** 44px tap targets for the basemap credit links ([#1944](https://github.com/taverns-red/toast-stats/issues/1944)) ([#1961](https://github.com/taverns-red/toast-stats/issues/1961)) ([f44ceed](https://github.com/taverns-red/toast-stats/commit/f44ceede7329fa866acaf99aa05104023ff240a5))
+* **map:** render 24-hour meeting times without an am/pm suffix ([#1958](https://github.com/taverns-red/toast-stats/issues/1958)) ([#1959](https://github.com/taverns-red/toast-stats/issues/1959)) ([881eaf9](https://github.com/taverns-red/toast-stats/commit/881eaf9e7a2cd0d92450095d38598100d9da5e2b))
+* **pipeline:** daily FAC merge falls back to persisted raw-fac and fails closed ([#1770](https://github.com/taverns-red/toast-stats/issues/1770)) ([#1933](https://github.com/taverns-red/toast-stats/issues/1933)) ([82c52fd](https://github.com/taverns-red/toast-stats/commit/82c52fdf09118a3c53861c46db4fa39882e65d9f))
+* **pipeline:** every mode pulls the prior-year snapshot compute reads for YoY ([#1769](https://github.com/taverns-red/toast-stats/issues/1769)) ([#1928](https://github.com/taverns-red/toast-stats/issues/1928)) ([ea24309](https://github.com/taverns-red/toast-stats/commit/ea24309dfa68097ed5ad83ed3b04a394e29dea76))
+* **scripts:** GCS media reads without the SDK's double-piped stream — no MaxListeners warnings ([#1729](https://github.com/taverns-red/toast-stats/issues/1729)) ([#1936](https://github.com/taverns-red/toast-stats/issues/1936)) ([5a945b1](https://github.com/taverns-red/toast-stats/commit/5a945b1785a9cb0f4d4a424fd4ad43b1da118967))
+
+
+### Performance
+
+* **map:** static club preview while MapLibre loads; re-baseline first tile to ~4 s ([#1943](https://github.com/taverns-red/toast-stats/issues/1943)) ([#1965](https://github.com/taverns-red/toast-stats/issues/1965)) ([44e1bd7](https://github.com/taverns-red/toast-stats/commit/44e1bd725add4581dbcb87a2bf0519f370cae7f2))
+
+
+### Documentation
+
+* **lessons:** a layered CSS override never beats an unlayered rule ([#1794](https://github.com/taverns-red/toast-stats/issues/1794)) ([#1960](https://github.com/taverns-red/toast-stats/issues/1960)) ([0086684](https://github.com/taverns-red/toast-stats/commit/0086684002bc95d7535e0a864515bbe323aa80ec))
+
 ## [2.52.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.51.0...toast-stats-v2.52.0) (2026-10-13)
 
 

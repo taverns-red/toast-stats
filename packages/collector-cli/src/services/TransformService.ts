@@ -50,6 +50,12 @@ import {
   validateSnapshotMetadata,
   validateSnapshotManifest,
   validateSnapshotPointer,
+  normalizeClubId,
+  SuspendedClubsSchema,
+  SUSPENDED_CLUBS_FILE_NAME,
+  SUSPENDED_CLUBS_FORMAT,
+  type SuspendedClub,
+  type SuspendedClubs,
   type PerDistrictData,
   type AllDistrictsRankingsData,
   type DistrictRanking,
@@ -925,7 +931,11 @@ export class TransformService {
   private async calculateAllDistrictsRankings(
     date: string,
     logicalDate: string = date
-  ): Promise<AllDistrictsRankingsData | null> {
+  ): Promise<{
+    rankings: AllDistrictsRankingsData
+    // The per-club rows behind each `suspendedClubs` (#1953); null = unknown.
+    suspendedClubs: SuspendedClubs | null
+  } | null> {
     this.logger.info('Calculating all-districts rankings', { date })
 
     // Read all-districts CSV
@@ -970,6 +980,9 @@ export class TransformService {
     // Clubs, across every district of the date, whose status column carries
     // a parseable Susp date at all (#1757, the #1514 presence rule).
     let clubsWithSuspensionDate = 0
+    // The clubs behind each district's suspendedClubs (#1953): same rows,
+    // same window, so a district's list length IS its count.
+    const suspendedByDistrict: Record<string, SuspendedClub[]> = {}
     for (const metric of metrics) {
       try {
         const districtDir = path.join(
@@ -1015,7 +1028,7 @@ export class TransformService {
           if (districtContent) {
             const rows = this.parseCSVToRecords(districtContent)
             let newCharters = 0
-            let suspended = 0
+            const suspendedRows: SuspendedClub[] = []
             for (const row of rows) {
               const status = row['Charter Date/Suspend Date']
               const chartered = parseCharterDateFromStatusField(status)
@@ -1024,10 +1037,19 @@ export class TransformService {
               // Any parseable Susp date, in the window or not, proves the
               // branch was collected for this date (#1514, #1757).
               if (suspendedOn) clubsWithSuspensionDate++
-              if (inProgramYear(suspendedOn)) suspended++
+              if (suspendedOn && inProgramYear(suspendedOn)) {
+                suspendedRows.push({
+                  clubNumber: normalizeClubId(row['Club']),
+                  clubName: (row['Club Name'] ?? '').trim(),
+                  division: (row['Division'] ?? '').trim(),
+                  area: (row['Area'] ?? '').trim(),
+                  suspendDate: suspendedOn.toISOString().slice(0, 10),
+                })
+              }
             }
             metric.newCharteredClubs = newCharters
-            metric.suspendedClubs = suspended
+            metric.suspendedClubs = suspendedRows.length
+            suspendedByDistrict[metric.districtId] = suspendedRows
           }
         }
 
@@ -1169,7 +1191,23 @@ export class TransformService {
 
     const calculatedAt = new Date().toISOString()
 
-    return {
+    // Same presence rule as the counts above (#1757): no Susp value anywhere
+    // in the date's source means the list is unknown, so no file — never a
+    // file of empty lists. A district whose source was not read has no key.
+    const suspendedClubs: SuspendedClubs | null =
+      clubsWithSuspensionDate > 0 && programYearStart && programYearEnd
+        ? {
+            _format: SUSPENDED_CLUBS_FORMAT,
+            snapshotDate: logicalDate,
+            programYear: {
+              start: programYearStart.toISOString().slice(0, 10),
+              end: programYearEnd.toISOString().slice(0, 10),
+            },
+            districts: suspendedByDistrict,
+          }
+        : null
+
+    const allDistrictsRankings: AllDistrictsRankingsData = {
       metadata: {
         snapshotId: date,
         calculatedAt,
@@ -1183,6 +1221,7 @@ export class TransformService {
       },
       rankings,
     }
+    return { rankings: allDistrictsRankings, suspendedClubs }
   }
 
   /**
@@ -1977,6 +2016,31 @@ export class TransformService {
   }
 
   /**
+   * Write snapshots/{date}/suspended-clubs.json (#1953), validated against
+   * its contract before the atomic rename.
+   */
+  private async writeSuspendedClubsToDate(
+    snapshotDate: string,
+    data: SuspendedClubs
+  ): Promise<string> {
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    const filePath = path.join(snapshotDir, SUSPENDED_CLUBS_FILE_NAME)
+    await fs.mkdir(snapshotDir, { recursive: true })
+
+    const validated = SuspendedClubsSchema.parse(data)
+    const tempPath = `${filePath}.tmp.${Date.now()}`
+    await fs.writeFile(tempPath, JSON.stringify(validated, null, 2), 'utf-8')
+    await fs.rename(tempPath, filePath)
+
+    this.logger.info('Suspended clubs written', {
+      snapshotDate,
+      path: filePath,
+      districts: Object.keys(validated.districts).length,
+    })
+    return filePath
+  }
+
+  /**
    * Write competitive awards + Distinguished District standings file (#330, #332)
    *
    * Computes:
@@ -2465,16 +2529,28 @@ export class TransformService {
         // Read rankings from source date, write to snapshot date
         // Refused above when a district's raw is missing (#1756).
         try {
-          const rankings =
+          const calculated =
             shortfall.rankings.length === 0
               ? await this.calculateAllDistrictsRankings(date, snapshotDate)
               : null
-          if (rankings) {
+          const rankings = calculated?.rankings ?? null
+          if (calculated && rankings) {
             const rankingsPath = await this.writeAllDistrictsRankingsToDate(
               snapshotDate,
               rankings
             )
             snapshotLocations.push(rankingsPath)
+
+            // The clubs behind each suspendedClubs count (#1953). A date-level
+            // artifact, so it is written (or refused) with the rankings.
+            if (calculated.suspendedClubs) {
+              snapshotLocations.push(
+                await this.writeSuspendedClubsToDate(
+                  snapshotDate,
+                  calculated.suspendedClubs
+                )
+              )
+            }
 
             // Calculate and write competitive awards standings (#330)
             try {

@@ -57,6 +57,7 @@ toast-stats-data-{staging|ca}/
 │   ├── metadata.json                      # Snapshot metadata
 │   ├── manifest.json                      # District registry + checksums
 │   ├── all-districts-rankings.json        # Cross-district rankings
+│   ├── suspended-clubs.json               # Clubs suspended this PY, per district (#1953); absent = unknown
 │   ├── global-club-race.json              # Worldwide race projection of club-race/ (#1556)
 │   └── analytics/                         # Pre-computed analytics
 │       ├── district_{id}_analytics.json
