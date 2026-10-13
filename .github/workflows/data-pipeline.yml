@@ -653,11 +653,13 @@ jobs:
           echo "- **Snapshot date**: ${SNAPSHOT_DATE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Snapshot/analytics files**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-          # Identity histories (#1782): the same script process-dates.sh runs
-          # after its loop (ADR-015 P1, no daily-only stage). Staging derived/
-          # only until #1763; a failure leaves the previous copy, not a red run.
+          # Identity histories (#1782, #1820): the same script process-dates.sh
+          # runs after its loop (ADR-015 P1, no daily-only stage). The club
+          # history goes to staging derived/ (internal until #1763); the region
+          # history to config/district-region-history.json, promoted with the
+          # run. A failure leaves the previous copies, not a red run.
           bash scripts/pipeline/build-identity-history.sh "${GCS_BUCKET}" \
-            || echo "::warning::Identity histories were not rebuilt (#1782); the previous derived/ copy stands"
+            || echo "::warning::Identity histories were not rebuilt (#1782, #1820); the previous copies stand"
 
           # Education rollup (#1801): the same script process-dates.sh runs
           # after the identity histories, whose region history it reads.

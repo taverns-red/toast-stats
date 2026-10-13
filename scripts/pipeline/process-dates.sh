@@ -69,10 +69,11 @@
 # After the loop, once per run:
 #  12. identity  scripts/pipeline/build-identity-history.sh <bucket> (#1782):
 #                the club-district history from the club-race store, to
-#                staging derived/ (never promoted until #1763). Daily runs
-#                the same script, so no mode builds it differently (ADR-015
-#                P1). A failure is a warning and a summary line, never a
-#                failed run: the previous derived/ copy stands.
+#                staging derived/ (never promoted until #1763), and the
+#                district → region history (#1820) to config/, promoted with
+#                the run. Daily runs the same script, so no mode builds it
+#                differently (ADR-015 P1). A failure is a warning and a
+#                summary line, never a failed run: the previous copies stand.
 #  13. education scripts/pipeline/build-education-rollup.sh <bucket> (#1801):
 #                the education rollup from the ledger history, the staged
 #                reports and the region history step 12 just wrote, to
@@ -507,7 +508,7 @@ done
 # 12. identity — once, after every date is uploaded (#1782).
 IDENTITY_STATUS=built
 if ! "${IDENTITY[@]}" "${BUCKET}"; then
-  echo "::warning::Identity histories were not rebuilt (#1782); the previous derived/ copy stands"
+  echo "::warning::Identity histories were not rebuilt (#1782, #1820); the previous copies stand"
   IDENTITY_STATUS="FAILED (see the step log)"
 fi
 

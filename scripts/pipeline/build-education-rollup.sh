@@ -17,7 +17,7 @@
 #     current PY). A PY's dates come from its logical (directory) date;
 #   - snapshots/<date>/all-districts-rankings.json — each PY's last date,
 #     which names the PY's districts so a missing file reads "not available";
-#   - derived/district-region-history.json (#1820) — each PY's own regions.
+#   - config/district-region-history.json (#1820) — each PY's own regions.
 # Missing inputs degrade per row (a PY without reports is omitted and named
 # in the index; no ledger or no region history is a warning); a listing or
 # transfer ERROR fails closed with nothing uploaded.
@@ -128,14 +128,14 @@ while IFS=$'\t' read -r PY SOURCE RANKINGS CANDIDATES; do
 done <"${WORK}/plan.tsv"
 
 # 4. Each PY's own regions; without them, no region rollups.
-if ! "${GCLOUD}" storage cp "gs://${BUCKET}/derived/district-region-history.json" \
+if ! "${GCLOUD}" storage cp "gs://${BUCKET}/config/district-region-history.json" \
   "${WORK}/" 2>"${WORK}/cp.err"; then
   if ! grep -Eq "${NO_MATCH}" "${WORK}/cp.err"; then
     cat "${WORK}/cp.err" >&2
-    echo "::error::build-education-rollup: could not read derived/district-region-history.json" >&2
+    echo "::error::build-education-rollup: could not read config/district-region-history.json" >&2
     exit 1
   fi
-  echo "::warning::build-education-rollup: no derived/district-region-history.json; region rollups are null this run" >&2
+  echo "::warning::build-education-rollup: no config/district-region-history.json; region rollups are null this run" >&2
 fi
 
 "${TSX}" "${BUILDER}" build \
