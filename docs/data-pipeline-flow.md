@@ -133,6 +133,28 @@ Production is never written directly. Each run processes into **staging**; a two
 step then decides whether to `rsync` staging → prod (`v1/`, `snapshots/`, `time-series/`,
 `config/` — additive, no `-d`).
 
+**Scoped promotion (#1763, ADR-015 P6; `promotion_scope=manifest`, opt-in until the rsync
+step is retired).** Instead of the four rsyncs, `scripts/promote-run-manifest.ts --execute`
+copies exactly the objects in this run's manifest (`runs/<run_id>/written.jsonl`) that sit under
+`PROMOTED_PREFIXES` — the set the content gate read. It uses server-side `gcloud storage cp`, so
+bytes and headers arrive as staged. Rules (`scripts/lib/manifestPromotion.ts`):
+
+- `snapshots/<date>/…` objects promote per date. A date held by the completeness gate stays
+  out; the run's other dates still promote.
+- `v1/`, `config/` and `time-series/` are global: they aggregate over every staged date. They
+  hold when any date is held, and when staging's `v1/dates.json`/`latest.json` names a date that
+  prod lacks and the run does not promote (re-derive that date to clear it).
+- Order: dates → globals → `v1/dates.json` + `v1/latest.json` last. A failed copy stops the run
+  before the next phase. Nothing in prod is deleted; a rename leaves the old object until a
+  reconcile removes it.
+- Never promoted: the stores, `raw-*/`, `derived/` and `runs/`. Staging path == prod path, so an
+  identity artifact becomes promotable by being written under `config/` once it is gated.
+
+Every non-prune run prints the plan (`Plan scoped promotion (#1763)`, a dry run) whatever the
+scope, skip_promotion included. To preview a published manifest locally:
+`gcloud storage cat gs://toast-stats-data-staging/runs/<id>/written.jsonl > /tmp/w.jsonl`, then
+`RUN_MANIFEST_FILE=/tmp/w.jsonl GCS_BUCKET=toast-stats-data-staging GCS_BUCKET_PRODUCTION=toast-stats-data-ca npx tsx scripts/promote-run-manifest.ts --dry-run --assume-pass`.
+
 **Pipeline-internal stores (#1738, decision D3).** `club-trends/` and `club-race/` are working
 state for `compute-analytics`, not CDN products: no frontend or MCP code reads them (the frontend
 reads the per-snapshot `club-trends-index` and `global-club-race.json` projections instead). They
