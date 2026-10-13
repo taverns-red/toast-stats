@@ -16,6 +16,7 @@ import {
   computeMembersToDistinguished,
 } from './membersToDistinguished'
 import { calculateClubProjection } from './dcpProjections'
+import { coachFilterValue } from './clubCoach'
 
 // ========== Data Processing Functions ==========
 
@@ -70,18 +71,25 @@ export function processClubs(
   referenceDate: Date = new Date(),
   programYear?: string
 ): ProcessedClubTrend[] {
-  return clubs.map(club => ({
-    ...club,
-    latestMembership: getLatestMembership(club),
-    latestDcpGoals: getLatestDcpGoals(club),
-    distinguishedOrder: getDistinguishedOrder(club),
-    membersNeeded: getMembersNeeded(club, programYear),
-    // #448 — Years Chartered column. null when charterDate is absent
-    // or invalid, which the table renders as em-dash and sorts to end.
-    yearsChartered: club.charterDate
-      ? (getClubAnniversary(club.charterDate, referenceDate)?.years ?? null)
-      : null,
-  }))
+  return clubs.map(club => {
+    const latestMembership = getLatestMembership(club)
+    return {
+      ...club,
+      latestMembership,
+      netChange:
+        club.membershipBase == null
+          ? null
+          : latestMembership - club.membershipBase,
+      latestDcpGoals: getLatestDcpGoals(club),
+      distinguishedOrder: getDistinguishedOrder(club),
+      membersNeeded: getMembersNeeded(club, programYear),
+      // #448 — Years Chartered column. null when charterDate is absent
+      // or invalid, which the table renders as em-dash and sorts to end.
+      yearsChartered: club.charterDate
+        ? (getClubAnniversary(club.charterDate, referenceDate)?.years ?? null)
+        : null,
+    }
+  })
 }
 
 // ========== Filter Application ==========
@@ -215,6 +223,16 @@ export function applyFilter(
         return clubs.filter(club => {
           return club.clubStatus && selectedValues.includes(club.clubStatus)
         })
+      }
+      break
+
+    case 'coach':
+      if (filter.type === 'categorical' && Array.isArray(filter.value)) {
+        const selectedValues = filter.value as string[]
+        if (selectedValues.length === 0) return clubs
+        return clubs.filter(club =>
+          selectedValues.includes(coachFilterValue(club))
+        )
       }
       break
 

@@ -33,6 +33,7 @@ const EXPECTED_ID_ORDER = [
   'area',
   'status',
   'membership',
+  'netChange',
   'membersNeeded',
   'newMembers',
   'octoberRenewals',
@@ -40,6 +41,8 @@ const EXPECTED_ID_ORDER = [
   'dcpGoals',
   'distinguished',
   'clubStatus',
+  // Coach (#1954): coach status joined from the daily Coaches report.
+  'coach',
   'yearsChartered',
 ]
 
@@ -79,7 +82,7 @@ function sortedIds(clubs: ClubTrend[], sorting: SortingState): string[] {
 }
 
 describe('clubsColumns — TanStack column model (#835)', () => {
-  it('exposes the 13 columns in the HANDOFF SortField order', () => {
+  it('exposes the 15 columns in the HANDOFF SortField order', () => {
     expect(clubsColumns.map(c => c.id)).toEqual(EXPECTED_ID_ORDER)
   })
 
@@ -95,6 +98,7 @@ describe('clubsColumns — TanStack column model (#835)', () => {
       'octoberRenewals',
       'aprilRenewals',
       'clubStatus',
+      'coach',
       'yearsChartered',
     ]) {
       expect(priority[id]).toBe('desktop')
@@ -141,6 +145,27 @@ describe('clubsColumns — TanStack column model (#835)', () => {
     // < President(3) < Smedley(4). This is the SHIPPED order — distinct from
     // the unused `COLUMN_CONFIGS.sortCustom` map.
     expect(ids).toEqual(['none', 'dist', 'select', 'pres', 'smedley'])
+  })
+
+  it('sorts Coach active, then completed, then none (#1954)', () => {
+    const clubs = [
+      createMockClub({ clubId: 'none', clubName: 'A' }),
+      createMockClub({
+        clubId: 'done',
+        clubName: 'B',
+        coach: { status: 'completed', since: '2025-12-09' },
+      }),
+      createMockClub({
+        clubId: 'live',
+        clubName: 'C',
+        coach: { status: 'active', since: '2026-07-25' },
+      }),
+    ]
+    expect(sortedIds(clubs, [{ id: 'coach', desc: false }])).toEqual([
+      'live',
+      'done',
+      'none',
+    ])
   })
 
   it('sorts undefined renewals to the end regardless of direction', () => {

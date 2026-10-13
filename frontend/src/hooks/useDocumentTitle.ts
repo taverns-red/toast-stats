@@ -5,7 +5,7 @@ import { useEffect } from 'react'
  *
  * A deliberately small head manager — no `react-helmet-async` dependency or
  * provider. The app already manages `document.title` imperatively, and
- * `useGoogleAnalytics` reads it as the single source for the `page_view`
+ * gtag (Enhanced Measurement, #1946) reads it as the `page_view`
  * title; a hook keeps that contract intact while letting each route self-title
  * for share/deep-link value.
  */

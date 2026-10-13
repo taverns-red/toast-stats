@@ -1793,7 +1793,6 @@ export class TransformService {
         districtId,
         fileName: `district_${districtId}.json`,
         status: 'success',
-        fileSize: stat.size,
         lastModified: stat.mtime.toISOString(),
       }
     } catch {

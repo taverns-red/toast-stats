@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildClubMeetingInfo,
+  formatMeetingTime,
   toastmastersClubPageUrl,
 } from '../clubMeetingInfo'
 
@@ -255,5 +256,59 @@ describe('buildClubMeetingInfo — never a meeting link (#1879)', () => {
         })?.place
       ).toBe(`${street}, Ottawa, ON`)
     }
+  })
+})
+
+/**
+ * #1958 — TI's Find-A-Club `MeetingTime` is free text, copied verbatim. Some
+ * clubs type a 24-hour clock with an am/pm suffix: the D61 snapshot of
+ * 2026-10-11 has club 8590 "19:30 pm", 1261 "18:45 pm", 2501 "19:00 pm",
+ * 7670344 "12:00 - 13:00 PM" and 5097 "18h30 pm et 7:00 am". Render either
+ * 12-hour with the suffix or 24-hour without it — never both.
+ */
+describe('formatMeetingTime (#1958)', () => {
+  it.each([
+    ['19:30 pm', '7:30 pm'],
+    ['18:45 pm', '6:45 pm'],
+    ['19:00 PM', '7:00 PM'],
+    ['19:30 p.m.', '7:30 p.m.'],
+    ['12:00 - 13:00 PM', '12:00 - 1:00 PM'],
+    ['18h30 pm et 7:00 am', '6:30 pm et 7:00 am'],
+    ['23:15pm', '11:15pm'],
+  ])('converts a 24-hour time with a pm suffix: %j → %j', (input, expected) => {
+    expect(formatMeetingTime(input)).toBe(expected)
+  })
+
+  it('drops a contradictory am suffix from a 24-hour time', () => {
+    expect(formatMeetingTime('19:30 am')).toBe('19:30')
+  })
+
+  it.each([
+    '7:30 pm',
+    '12:00 pm',
+    '7:00 p.m.',
+    '6:30pm-8:15pm',
+    '11:45 am - 1pm',
+    '6:30 h pm à 8:30 h pm',
+  ])('leaves an already-suffixed 12-hour time alone: %j', input => {
+    expect(formatMeetingTime(input)).toBe(input)
+  })
+
+  it.each(['19:30', '18:30 - 20:00', '19h00', '19 h 00', '17:30 - 19:30 (ET)'])(
+    'leaves a 24-hour time without a suffix alone: %j',
+    input => {
+      expect(formatMeetingTime(input)).toBe(input)
+    }
+  )
+
+  it('applies in the shared builder the map summary and club hero use', () => {
+    expect(
+      buildClubMeetingInfo({
+        clubId: '8590',
+        meetingDay: 'mercredi',
+        meetingTime: '19:30 pm',
+        allowsVirtualAttendance: false,
+      })?.schedule
+    ).toBe('mercredi · 7:30 pm')
   })
 })

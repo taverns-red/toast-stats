@@ -15,9 +15,8 @@
 #   2. raw       rebuild: rsync raw-csv/<source>/ down. A transfer error fails
 #                the date (it used to end in `|| true` and transform whatever
 #                had landed).
-#   3. prev-year rebuild, rescrape-historical: best effort,
-#                snapshots/<date - 1y>/district_*.json for YoY. (rescrape
-#                never pulled it.)
+#   3. prev-year moved into stage 8 (#1769): it is keyed on the date the
+#                transform wrote, and every mode pulls it.
 #   3b. hydrate  rescrape: rsync raw-csv/<date>/ and snapshots/<date>/ (with
 #                analytics/) down from staging, so the date-level artifacts
 #                are computed over the date's whole district set, not just
@@ -44,7 +43,13 @@
 #                started 2026-05-15): processed unenriched and counted. An
 #                unreadable raw-fac or a failed merge FAILS the date: an
 #                unenriched upload over an enriched date is the D-1 strip.
-#   8. compute   collector-cli compute-analytics. A failure is counted, but
+#   8. compute   first the prior year, in every mode (#1769, D-8): best
+#                effort, snapshots/<actual - 1y>/district_*.json, the date
+#                compute-analytics reads for YoY (findPreviousProgramYearDate,
+#                the year minus one), so it is keyed on the date the
+#                transform WROTE. None: YoY is omitted (dataAvailable:
+#                false) and the date is counted. Then collector-cli
+#                compute-analytics. A failure is counted, but
 #                the snapshots still upload (#1708); its JSON feeds the store
 #                counters either way.
 #   9. validate  scripts/validate-snapshots.ts on the date's directory
@@ -162,7 +167,10 @@ FAILED=0
 REFUSED=0
 ENRICHED=0
 UNENRICHED=0
+YOY_PRESENT=0
+YOY_ABSENT=0
 HYDRATED=""
+PREV=""
 
 # The snapshot date directories present in the cache, one per line, sorted.
 snapshot_dates() {
@@ -171,11 +179,33 @@ snapshot_dates() {
     -exec basename {} \; | LC_ALL=C sort
 }
 
-# YYYY-MM-DD one year earlier (GNU date on the runner, BSD date locally).
+# The date compute-analytics reads for YoY: the year minus one, month and
+# day kept (analytics-core findPreviousProgramYearDate). Calendar arithmetic
+# (`date -d '- 1 year'`) would disagree with it on 02-29.
 prior_year() {
-  date -d "$1 - 1 year" +%Y-%m-%d 2>/dev/null ||
-    date -j -v-1y -f %Y-%m-%d "$1" +%Y-%m-%d 2>/dev/null ||
-    true
+  printf '%04d%s\n' "$((10#${1:0:4} - 1))" "${1:4}"
+}
+
+# Pull snapshots/<prior year of $1>/district_*.json for compute's YoY, best
+# effort, and count the date in YOY_PRESENT or YOY_ABSENT. Sets PREV to the
+# directory's date when this call created it, so cleanup removes it.
+pull_prior_year() {
+  local prior
+  prior="$(prior_year "$1")"
+  if [ ! -d "${SNAPSHOTS}/${prior}" ]; then
+    mkdir -p "${SNAPSHOTS}/${prior}"
+    PREV="${prior}"
+    "${GCLOUD}" storage cp \
+      "gs://${BUCKET}/snapshots/${prior}/district_*.json" \
+      "${SNAPSHOTS}/${prior}/" 2>/dev/null || true
+  fi
+  if [ -n "$(find "${SNAPSHOTS}/${prior}" -name 'district_*.json' | head -1)" ]; then
+    YOY_PRESENT=$((YOY_PRESENT + 1))
+  else
+    echo "No prior-year snapshot for ${prior}; YoY omitted for $1"
+    YOY_ABSENT=$((YOY_ABSENT + 1))
+  fi
+  return 0
 }
 
 # The *.json files under $1 as `cksum` lines with ./-relative paths, sorted.
@@ -285,6 +315,7 @@ process_one() {
   local source prev before actual guard_status
   OUTCOME=failed
   HYDRATED=""
+  PREV=""
   source="${date}"
   prev=""
 
@@ -308,18 +339,6 @@ process_one() {
       rm -rf "${RAW:?}/${source}"
       return 0
     fi
-  fi
-
-  # 3. prev-year
-  if [ "${MODE}" != "rescrape" ]; then
-    prev="$(prior_year "${date}")"
-  fi
-  if [ -n "${prev}" ] && [ ! -d "${SNAPSHOTS}/${prev}" ]; then
-    mkdir -p "${SNAPSHOTS}/${prev}"
-    "${GCLOUD}" storage cp \
-      "gs://${BUCKET}/snapshots/${prev}/district_*.json" \
-      "${SNAPSHOTS}/${prev}/" 2>/dev/null ||
-      echo "No prior-year snapshot for ${prev}; YoY omitted"
   fi
 
   # 3b. hydrate (rescrape) — before `before`, so a hydrated date directory
@@ -381,7 +400,9 @@ process_one() {
       ;;
   esac
 
-  # 8. compute
+  # 8. compute, with the prior year it reads for YoY (#1769)
+  pull_prior_year "${actual}"
+  prev="${PREV}"
   echo "Computing analytics for ${actual}..."
   local compute_ok=1
   if ! "${COLLECTOR[@]}" compute-analytics --date "${actual}" \
@@ -463,6 +484,8 @@ fi
   echo "- **Dates failed**: ${FAILED}"
   echo "- **Dates enriched from raw-fac**: ${ENRICHED}"
   echo "- **Dates unenriched (no raw-fac)**: ${UNENRICHED}"
+  echo "- **Dates with a prior-year snapshot (YoY)**: ${YOY_PRESENT}"
+  echo "- **Dates without one (no YoY)**: ${YOY_ABSENT}"
   echo "- **Identity histories**: ${IDENTITY_STATUS}"
   jq -rs -f "${REPO}/scripts/compute-counters.jq" "${COUNTERS_JSONL}"
 } >>"${SUMMARY}"

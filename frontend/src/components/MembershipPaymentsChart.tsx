@@ -26,6 +26,7 @@ import type {
   MultiYearPaymentData,
   PaymentStatistics,
 } from '../hooks/usePaymentsTrend'
+import { useChartReadout, ChartReadout } from './charts/ChartReadout'
 
 /**
  * Props for the MembershipPaymentsChart component
@@ -275,6 +276,8 @@ export const MembershipPaymentsChart: React.FC<
 > = ({ paymentsTrend, multiYearData, statistics, isLoading = false }) => {
   // Responsive tick interval for mobile (#237) — must be called before early returns
   const tickInterval = useResponsiveTickInterval(paymentsTrend?.length ?? 0)
+  // Tap-to-pin readout on devices without hover (#1835) — before early returns.
+  const readout = useChartReadout()
 
   // Loading state - Requirement 4.1
   if (isLoading) {
@@ -457,7 +460,7 @@ export const MembershipPaymentsChart: React.FC<
                   style: { fontSize: '12px' },
                 }}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} {...readout.tooltipProps} />
               <Legend
                 wrapperStyle={{ fontSize: '12px' }}
                 verticalAlign="top"
@@ -486,6 +489,10 @@ export const MembershipPaymentsChart: React.FC<
           </ResponsiveContainer>
         </div>
       </div>
+      <ChartReadout
+        readout={readout}
+        labelFormatter={day => `Day ${Number(day) + 1} of the program year`}
+      />
 
       {/* Legend explanation */}
       <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600">

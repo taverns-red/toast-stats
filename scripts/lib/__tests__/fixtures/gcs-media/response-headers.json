@@ -1,0 +1,27 @@
+{
+  "_recorded": "2026-10-12, read-only GET ?alt=media with Accept-Encoding: gzip against toast-stats-data-staging (#1729). Volatile headers (date, etag, generation, guploader) dropped.",
+  "gzipStored": {
+    "object": "snapshots/2026-10-11/manifest.json",
+    "headers": {
+      "content-type": "application/json",
+      "x-goog-hash": "crc32c=R0Vzqw==,md5=rJ0QFCdQ9AG11bszKXwt0A==",
+      "content-encoding": "gzip",
+      "x-goog-stored-content-encoding": "gzip",
+      "x-goog-stored-content-length": "1587",
+      "cache-control": "public, max-age=3600, must-revalidate, no-transform",
+      "content-disposition": "attachment",
+      "content-length": "1587"
+    }
+  },
+  "identityStored": {
+    "object": "raw-csv/2026-10-11/metadata.json",
+    "headers": {
+      "content-type": "application/json",
+      "x-goog-hash": "crc32c=uIiC3g==,md5=37sAOW3miJF8iv6Fl0q2jg==",
+      "x-goog-stored-content-encoding": "identity",
+      "x-goog-stored-content-length": "12444",
+      "content-disposition": "attachment",
+      "content-length": "12444"
+    }
+  }
+}

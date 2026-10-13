@@ -21,6 +21,11 @@ import {
   totalRecognised,
   type ClubRaceTierCounts,
 } from '../../utils/clubRaceCounts'
+import {
+  useChartReadout,
+  ChartReadout,
+  formatReadoutDate,
+} from '../charts/ChartReadout'
 
 /* #1556 / #1570 — the cumulative race chart ("the pack"). The total still
    rises to the recognised count; the bands show the tier MIX inside it, each
@@ -73,6 +78,8 @@ export const RaceChart: React.FC<RaceChartProps> = ({
   smedleyAvailable,
   currentCounts,
 }) => {
+  // Tap-to-pin readout on devices without hover (#1835) — before early returns.
+  const readout = useChartReadout()
   const series = RACE_TIER_ROUTES.filter(
     r => smedleyAvailable || r.tier !== 'Smedley'
   )
@@ -130,7 +137,10 @@ export const RaceChart: React.FC<RaceChartProps> = ({
           />
           <XAxis dataKey="date" tickFormatter={shortDate} minTickGap={24} />
           <YAxis domain={domain} allowDecimals={false} width={40} />
-          <Tooltip labelFormatter={label => `Snapshot ${String(label)}`} />
+          <Tooltip
+            labelFormatter={label => `Snapshot ${String(label)}`}
+            {...readout.tooltipProps}
+          />
           <Legend content={renderLegend} />
           {series.map(({ tier, slug }) => (
             <Area
@@ -153,6 +163,10 @@ export const RaceChart: React.FC<RaceChartProps> = ({
           ))}
         </AreaChart>
       </ResponsiveContainer>
+      <ChartReadout
+        readout={readout}
+        labelFormatter={iso => `Snapshot ${formatReadoutDate(iso)}`}
+      />
       <figcaption className="race-chart__caption">
         Clubs recognised per observed snapshot date, banded by the tier each
         holds — every club counted once. The stack reaches{' '}

@@ -10,6 +10,7 @@
 
 import { Storage } from '@google-cloud/storage'
 import type { RawCSVEntry } from './monthEndDates.js'
+import { readObjectMedia } from './gcsMedia.js'
 
 const METADATA_FILENAME = 'metadata.json'
 
@@ -91,8 +92,11 @@ export async function readMetadataForDate(
 ): Promise<RawCSVEntry> {
   try {
     const objectPath = `raw-csv/${date}/${METADATA_FILENAME}`
-    const file = storage.bucket(bucketName).file(objectPath)
-    const [buffer] = await file.download()
+    // Non-streaming read: file.download() logs 2 MaxListeners warnings per
+    // object (#1729, see gcsMedia.ts).
+    const buffer = await readObjectMedia(storage, bucketName, objectPath, {
+      decompress: true,
+    })
     const meta = JSON.parse(buffer.toString('utf-8')) as RawMetadata
 
     return {

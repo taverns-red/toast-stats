@@ -236,7 +236,6 @@ const districtManifestEntryArb = fc.record({
   status: fc.constantFrom('success', 'failed') as fc.Arbitrary<
     'success' | 'failed'
   >,
-  fileSize: fc.nat(),
   lastModified: fc.string({ minLength: 1 }),
   errorMessage: fc.option(fc.string({ minLength: 1 }), { nil: undefined }),
 })
@@ -1122,9 +1121,6 @@ describe('Property 2: Validation Round-Trip', () => {
               )
               expect(result.data.districts[i]?.status).toBe(
                 original.districts[i]?.status
-              )
-              expect(result.data.districts[i]?.fileSize).toBe(
-                original.districts[i]?.fileSize
               )
             }
           }

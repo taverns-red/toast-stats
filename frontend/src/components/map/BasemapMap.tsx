@@ -44,6 +44,9 @@ export interface BasemapMapProps {
   /** Called once with the live map (add sources/layers here). */
   onReady?: (map: MapLibreMap) => void
   className?: string
+  /** Two-finger pan on touch so the page scrolls past an embedded map.
+   *  A full-height map page (#1784) turns it off: one finger pans. */
+  cooperativeGestures?: boolean
 }
 
 export default function BasemapMap({
@@ -52,6 +55,7 @@ export default function BasemapMap({
   initialView = { center: [0, 20], zoom: 1 },
   onReady,
   className,
+  cooperativeGestures = true,
 }: BasemapMapProps) {
   const { isDark } = useDarkMode()
   const theme: BasemapTheme = isDark ? 'dark' : 'light'
@@ -61,7 +65,13 @@ export default function BasemapMap({
   const styledRef = useRef<{ theme: string; url: string } | null>(null)
   // The first render's view and callback seed the map; later changes to
   // them are the page's job through the map instance.
-  const seedRef = useRef({ initialView, onReady, theme, url })
+  const seedRef = useRef({
+    initialView,
+    onReady,
+    theme,
+    url,
+    cooperativeGestures,
+  })
 
   useEffect(() => {
     const container = containerRef.current
@@ -75,8 +85,8 @@ export default function BasemapMap({
       zoom: seed.initialView.zoom,
       // ODbL: the credit stays visible, never collapsed behind an icon.
       attributionControl: { compact: false },
-      // Page scroll keeps working on phones; two fingers pan the map.
-      cooperativeGestures: true,
+      // Embedded maps: page scroll keeps working; two fingers pan the map.
+      cooperativeGestures: seed.cooperativeGestures,
     })
     mapRef.current = map
     styledRef.current = { theme: seed.theme, url: seed.url }
