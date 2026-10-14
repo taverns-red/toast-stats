@@ -445,9 +445,11 @@ jobs:
           # PY for any July date. No verdict (manual districts) -> `all`.
           CLUB_TRENDS_PROGRAM_YEARS="$(npx tsx scripts/club-trends-sync-scope.ts --program-year "${{ steps.daily-config.outputs.program_year }}" --date "${DATE}" --date "${{ steps.daily-scrape.outputs.snapshot_date }}")"
           echo "Club-trends program years to pull: ${CLUB_TRENDS_PROGRAM_YEARS}"
+          # district-region-history (#1799) is a read-only input: each PY's
+          # regions for compute's snapshots/<date>/region-rollups.json.
           CLUB_TRENDS_PROGRAM_YEARS="${CLUB_TRENDS_PROGRAM_YEARS}" \
             bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
-            time-series club-trends club-race
+            time-series club-trends club-race district-region-history
 
           # Previous year snapshots for YoY comparison
           PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
@@ -873,7 +875,8 @@ jobs:
           # either gcloud rsync behaviour (#1702, #1722).
           echo "## ⏬ Store Sync (rebuild)" >> "$GITHUB_STEP_SUMMARY"
           bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
-            time-series club-trends club-race district-awards-history
+            time-series club-trends club-race district-awards-history \
+            district-region-history
 
       # ── Rebuild Step 2: Discover dates, then stream one-at-a-time ──
       - name: '[rebuild] Stream rebuild — one date at a time'
@@ -1047,7 +1050,8 @@ jobs:
           # either gcloud rsync behaviour (#1702, #1722).
           echo "## ⏬ Store Sync (rescrape)" >> "$GITHUB_STEP_SUMMARY"
           bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
-            time-series club-trends club-race district-awards-history
+            time-series club-trends club-race district-awards-history \
+            district-region-history
 
       # ── Rescrape Step 2: Scrape → transform → compute → upload ──
       - name: '[rescrape] Re-collect and process dates'
@@ -1198,7 +1202,8 @@ jobs:
           # Fail-closed pull + count floor + gzip normalise: see the script
           # (#1722, #1738). Whole club-trends store, like rebuild/rescrape.
           bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
-            time-series club-trends club-race district-awards-history
+            time-series club-trends club-race district-awards-history \
+            district-region-history
 
           RAW_DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
           echo "## 🔨 Historical rebuild (#1670)" >> "$GITHUB_STEP_SUMMARY"

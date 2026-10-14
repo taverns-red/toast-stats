@@ -228,6 +228,41 @@ describe('sync-stores.sh (#1722)', () => {
     expect(r.status).not.toBe(0)
   })
 
+  // #1799: compute-analytics reads each PY's regions from the history
+  // build-identity-history.sh publishes under config/. A read-only input:
+  // pulled here, never pushed back by publish-stores.sh.
+  it('pulls config/district-region-history.json into the cache, plain JSON', () => {
+    putObject('config/district-region-history.json', doc(5))
+    const r = run(SYNC, ['district-region-history'])
+    expect(r.status, r.stderr).toBe(0)
+    const body = fs.readFileSync(
+      path.join(cache, 'config/district-region-history.json')
+    )
+    expect(body.equals(doc(5))).toBe(true)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /district-region-history\*\*: pulled/
+    )
+  })
+
+  it('treats a missing region history as "not yet built": no file, exit 0', () => {
+    const r = run(SYNC, ['district-region-history'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(
+      fs.existsSync(path.join(cache, 'config/district-region-history.json'))
+    ).toBe(false)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /district-region-history\*\*: none yet/
+    )
+  })
+
+  it('fails when the region history cannot be fetched', () => {
+    putObject('config/district-region-history.json', doc(5))
+    const r = run(SYNC, ['district-region-history'], {
+      SHIM_FAIL_MATCH: '^cp ',
+    })
+    expect(r.status).not.toBe(0)
+  })
+
   it('rejects an unknown store name', () => {
     const r = run(SYNC, ['snapshots'])
     expect(r.status).not.toBe(0)

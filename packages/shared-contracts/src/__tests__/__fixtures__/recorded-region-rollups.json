@@ -1,0 +1,312 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "region-rollups"
+  },
+  "snapshotDate": "2026-06-30",
+  "programYear": "2025-2026",
+  "generatedAt": "2026-10-13T00:00:00.000Z",
+  "regionMembership": {
+    "source": "config/district-region-history.json",
+    "asOf": "2026-10-12",
+    "programYear": "2025-2026"
+  },
+  "regionMembershipNote": null,
+  "scope": {
+    "excludedDistricts": ["201"],
+    "unassignedDistricts": ["U"],
+    "duplicateClubs": []
+  },
+  "world": {
+    "districts": 4,
+    "clubs": 222,
+    "membership": 3148,
+    "payments": 6973,
+    "health": {
+      "thriving": 63,
+      "vulnerable": 60,
+      "interventionRequired": 99
+    },
+    "clubStatus": {
+      "active": 198,
+      "low": 8,
+      "ineligible": 6,
+      "suspended": 10,
+      "other": 0
+    },
+    "distinguished": {
+      "smedley": 11,
+      "president": 12,
+      "select": 9,
+      "distinguished": 31,
+      "notDistinguished": 159
+    },
+    "compliance": {
+      "cspSubmitted": 167,
+      "octoberDuesOnTime": 160,
+      "aprilDuesOnTime": 159,
+      "officerListOnTime": 184
+    },
+    "growth": {
+      "prospective": null,
+      "chartered": 6,
+      "suspended": 10
+    }
+  },
+  "regions": {
+    "02": {
+      "districtIds": ["01"],
+      "clubs": 116,
+      "membership": 1707,
+      "payments": 3748,
+      "health": {
+        "thriving": 45,
+        "vulnerable": 21,
+        "interventionRequired": 50
+      },
+      "clubStatus": {
+        "active": 108,
+        "low": 2,
+        "ineligible": 3,
+        "suspended": 3,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 7,
+        "president": 11,
+        "select": 4,
+        "distinguished": 23,
+        "notDistinguished": 71
+      },
+      "compliance": {
+        "cspSubmitted": 102,
+        "octoberDuesOnTime": 94,
+        "aprilDuesOnTime": 92,
+        "officerListOnTime": 108
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": 1,
+        "suspended": 3
+      }
+    },
+    "04": {
+      "districtIds": ["68"],
+      "clubs": 35,
+      "membership": 447,
+      "payments": 1033,
+      "health": {
+        "thriving": 3,
+        "vulnerable": 12,
+        "interventionRequired": 20
+      },
+      "clubStatus": {
+        "active": 30,
+        "low": 3,
+        "ineligible": 0,
+        "suspended": 2,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 2,
+        "president": 0,
+        "select": 0,
+        "distinguished": 1,
+        "notDistinguished": 32
+      },
+      "compliance": {
+        "cspSubmitted": 22,
+        "octoberDuesOnTime": 23,
+        "aprilDuesOnTime": 22,
+        "officerListOnTime": 22
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": 1,
+        "suspended": 2
+      }
+    },
+    "07": {
+      "districtIds": ["111"],
+      "clubs": 24,
+      "membership": 359,
+      "payments": 814,
+      "health": {
+        "thriving": 6,
+        "vulnerable": 8,
+        "interventionRequired": 10
+      },
+      "clubStatus": {
+        "active": 22,
+        "low": 2,
+        "ineligible": 0,
+        "suspended": 0,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 0,
+        "president": 0,
+        "select": 2,
+        "distinguished": 4,
+        "notDistinguished": 18
+      },
+      "compliance": {
+        "cspSubmitted": 22,
+        "octoberDuesOnTime": 19,
+        "aprilDuesOnTime": 20,
+        "officerListOnTime": 18
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": 1,
+        "suspended": 0
+      }
+    }
+  },
+  "districts": {
+    "68": {
+      "region": "04",
+      "clubs": 35,
+      "membership": 447,
+      "payments": 1033,
+      "health": {
+        "thriving": 3,
+        "vulnerable": 12,
+        "interventionRequired": 20
+      },
+      "clubStatus": {
+        "active": 30,
+        "low": 3,
+        "ineligible": 0,
+        "suspended": 2,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 2,
+        "president": 0,
+        "select": 0,
+        "distinguished": 1,
+        "notDistinguished": 32
+      },
+      "compliance": {
+        "cspSubmitted": 22,
+        "octoberDuesOnTime": 23,
+        "aprilDuesOnTime": 22,
+        "officerListOnTime": 22
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": 1,
+        "suspended": 2
+      }
+    },
+    "111": {
+      "region": "07",
+      "clubs": 24,
+      "membership": 359,
+      "payments": 814,
+      "health": {
+        "thriving": 6,
+        "vulnerable": 8,
+        "interventionRequired": 10
+      },
+      "clubStatus": {
+        "active": 22,
+        "low": 2,
+        "ineligible": 0,
+        "suspended": 0,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 0,
+        "president": 0,
+        "select": 2,
+        "distinguished": 4,
+        "notDistinguished": 18
+      },
+      "compliance": {
+        "cspSubmitted": 22,
+        "octoberDuesOnTime": 19,
+        "aprilDuesOnTime": 20,
+        "officerListOnTime": 18
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": 1,
+        "suspended": 0
+      }
+    },
+    "01": {
+      "region": "02",
+      "clubs": 116,
+      "membership": 1707,
+      "payments": 3748,
+      "health": {
+        "thriving": 45,
+        "vulnerable": 21,
+        "interventionRequired": 50
+      },
+      "clubStatus": {
+        "active": 108,
+        "low": 2,
+        "ineligible": 3,
+        "suspended": 3,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 7,
+        "president": 11,
+        "select": 4,
+        "distinguished": 23,
+        "notDistinguished": 71
+      },
+      "compliance": {
+        "cspSubmitted": 102,
+        "octoberDuesOnTime": 94,
+        "aprilDuesOnTime": 92,
+        "officerListOnTime": 108
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": 1,
+        "suspended": 3
+      }
+    },
+    "U": {
+      "region": null,
+      "clubs": 47,
+      "membership": 635,
+      "payments": 1378,
+      "health": {
+        "thriving": 9,
+        "vulnerable": 19,
+        "interventionRequired": 19
+      },
+      "clubStatus": {
+        "active": 38,
+        "low": 1,
+        "ineligible": 3,
+        "suspended": 5,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 2,
+        "president": 1,
+        "select": 3,
+        "distinguished": 3,
+        "notDistinguished": 38
+      },
+      "compliance": {
+        "cspSubmitted": 21,
+        "octoberDuesOnTime": 24,
+        "aprilDuesOnTime": 25,
+        "officerListOnTime": 36
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": 3,
+        "suspended": 5
+      }
+    }
+  }
+}

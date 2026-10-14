@@ -28,7 +28,11 @@ import {
   DistrictRegionHistorySchema,
   findClubContactField,
   ProgramYearIndexFileSchema,
+  REGION_ROLLUPS_FILE_NAME,
+  RegionRollupsSchema,
+  type RegionRollupFigures,
 } from '@taverns-red/shared-contracts'
+import { programYearForSnapshotDate } from './ceoReportSnapshotDates.js'
 import {
   ANCHOR_DISTRICT,
   checkDistrictSnapshotIndex,
@@ -71,6 +75,7 @@ export type ObjectKind =
   | 'district-region-history'
   | 'club-district-history-index'
   | 'club-district-history-shard'
+  | 'region-rollups'
   | 'latest'
   | 'json'
 
@@ -107,6 +112,9 @@ const TS_METADATA =
 const TS_PROGRAM_YEAR =
   /^time-series\/district_([A-Za-z0-9]+)\/(\d{4}-\d{4})\.json$/
 const AWARDS = /^snapshots\/(\d{4}-\d{2}-\d{2})\/competitive-awards\.json$/
+const REGION_ROLLUPS = new RegExp(
+  `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${REGION_ROLLUPS_FILE_NAME.replace('.', '\\.')}$`
+)
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
 
@@ -149,6 +157,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (TS_PROGRAM_YEAR.test(path)) return 'time-series-program-year'
   if (AWARDS.test(path)) return 'competitive-awards'
   if (DISTRICT_ANALYTICS.test(path)) return 'district-analytics'
+  if (REGION_ROLLUPS.test(path)) return 'region-rollups'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
@@ -274,7 +283,8 @@ export function planContentChecks(
       c.kind === 'snapshot-index' ||
       c.kind === 'district-region-history' ||
       c.kind === 'club-district-history-index' ||
-      c.kind === 'club-district-history-shard'
+      c.kind === 'club-district-history-shard' ||
+      c.kind === 'region-rollups'
     ) {
       checks.push(c)
     } else {
@@ -603,6 +613,95 @@ function checkClubHistoryShard(path: string, value: unknown): string | null {
     : `club ${stray} belongs in shard ${clubDistrictHistoryShardKey(stray)}, not ${key}`
 }
 
+/** Every count of a block, flattened, for the world = Σ districts check. */
+function figureCounts(f: RegionRollupFigures): Array<[string, number | null]> {
+  const out: Array<[string, number | null]> = [
+    ['clubs', f.clubs],
+    ['membership', f.membership],
+    ['payments', f.payments],
+  ]
+  for (const group of [
+    'health',
+    'clubStatus',
+    'distinguished',
+    'compliance',
+    'growth',
+  ] as const) {
+    for (const [k, v] of Object.entries(f[group])) {
+      out.push([`${group}.${k}`, v as number | null])
+    }
+  }
+  return out
+}
+
+/** Σ rows figure by figure; a null in any row makes that figure null. */
+function sumFigures(
+  rows: readonly RegionRollupFigures[]
+): Map<string, number | null> {
+  const sums = new Map<string, number | null>()
+  for (const row of rows) {
+    for (const [k, v] of figureCounts(row)) {
+      const prev = sums.has(k) ? sums.get(k)! : 0
+      sums.set(k, prev === null || v === null ? null : prev + v)
+    }
+  }
+  return sums
+}
+
+function firstMismatch(
+  block: RegionRollupFigures,
+  sums: Map<string, number | null>
+): string | null {
+  for (const [k, v] of figureCounts(block)) {
+    const want = sums.has(k) ? sums.get(k)! : 0
+    if (v !== want) return `${k} is ${v}, its districts sum to ${want}`
+  }
+  return null
+}
+
+/**
+ * snapshots/<date>/region-rollups.json (#1799): the shared-contracts schema;
+ * served under its own date, with that LOGICAL date's program year (a June
+ * close is collected in July — the #1284 slip); world = Σ districts; and
+ * each region lists only districts placed in it, summing to them.
+ */
+function checkRegionRollups(path: string, value: unknown): string | null {
+  const parsed = RegionRollupsSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const r = parsed.data
+  const date = REGION_ROLLUPS.exec(path)?.[1]
+  if (r.snapshotDate !== date) {
+    return `holds snapshotDate ${r.snapshotDate} but is served under ${date}`
+  }
+  const programYear = programYearForSnapshotDate(r.snapshotDate)
+  if (r.programYear !== programYear) {
+    return `programYear ${r.programYear}, but ${r.snapshotDate} is in ${programYear}`
+  }
+  const rows = Object.values(r.districts)
+  if (r.world.districts !== rows.length) {
+    return `world.districts is ${r.world.districts}, but ${rows.length} districts are listed`
+  }
+  const world = firstMismatch(r.world, sumFigures(rows))
+  if (world !== null) return `world: ${world}`
+  for (const [region, block] of Object.entries(r.regions ?? {})) {
+    const members = block.districtIds.map(id => r.districts[id])
+    const stray = block.districtIds.find(
+      (id, i) => members[i]?.region !== region
+    )
+    if (stray !== undefined) {
+      return `region ${region} lists district ${stray}, which is not placed in it`
+    }
+    const mismatch = firstMismatch(
+      block,
+      sumFigures(members as RegionRollupFigures[])
+    )
+    if (mismatch !== null) return `region ${region}: ${mismatch}`
+  }
+  return null
+}
+
 function checkLatest(value: unknown): string | null {
   const date = (value as { latestSnapshotDate?: unknown } | null)
     ?.latestSnapshotDate
@@ -654,6 +753,8 @@ export function checkObject(
       return checkClubHistoryIndex(value, ctx)
     case 'club-district-history-shard':
       return checkClubHistoryShard(check.path, value)
+    case 'region-rollups':
+      return checkRegionRollups(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -755,6 +856,8 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, clubStrengthAward.allDistricts non-empty; current PY: priorYearAvgClubSize not null for every district (#1704)',
   'district-analytics': 'decoded, has `metadata` and `data` objects',
   'snapshot-index': 'decoded, `districts` maps ids to YYYY-MM-DD arrays',
+  'region-rollups':
+    'decoded, RegionRollupsSchema, served under its snapshotDate with that date’s program year, world = Σ districts, each region = Σ its districts (#1799)',
   latest: 'decoded, latestSnapshotDate is a real date',
   json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',

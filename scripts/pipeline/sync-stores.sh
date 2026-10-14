@@ -3,6 +3,7 @@
 #
 # Usage: scripts/pipeline/sync-stores.sh <bucket> <store>...
 #   <store>: time-series | club-trends | club-race | district-awards-history
+#            | district-region-history
 # Env:   GCLOUD     the gcloud binary (default `gcloud`; tests point it at a
 #                   shim over a temp dir, decision D10)
 #        CACHE_DIR  the runner cache (default ./cache)
@@ -31,6 +32,13 @@
 # district-awards-history delegates to scripts/pull-awards-history.sh (#1704)
 # and is normalised the same way.
 #
+# district-region-history is a read-only INPUT, not a store (#1799):
+# config/district-region-history.json, which build-identity-history.sh owns
+# (#1820), lands at ${CACHE_DIR}/config/district-region-history.json for
+# compute-analytics' region rollups. publish-stores.sh never pushes it. Not
+# built yet ("matched no objects") is a warning and no file: compute then
+# writes the rollups with regions null. Any other error fails.
+#
 # Exit codes: 0 ok · 1 a store could not be pulled or is corrupt · 2 usage
 set -euo pipefail
 
@@ -51,7 +59,7 @@ TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 
 for store in "$@"; do
   case "${store}" in
-    time-series | club-trends | club-race | district-awards-history) ;;
+    time-series | club-trends | club-race | district-awards-history | district-region-history) ;;
     *)
       echo "::error::sync-stores: unknown store '${store}'" >&2
       exit 2
@@ -90,6 +98,30 @@ sync_awards() {
   else
     echo "- **district-awards-history**: none yet (first run)" >>"${SUMMARY}"
   fi
+}
+
+sync_region_history() {
+  local src="gs://${BUCKET}/config/district-region-history.json"
+  local dest="${CACHE_DIR}/config/district-region-history.json"
+  local err
+  err="$(mktemp)"
+  mkdir -p "$(dirname "${dest}")"
+  if "${GCLOUD}" storage cp "${src}" "${dest}" 2>"${err}"; then
+    rm -f "${err}"
+    normalize "${dest}"
+    echo "- **district-region-history**: pulled" >>"${SUMMARY}"
+    return 0
+  fi
+  if grep -q 'matched no objects' "${err}"; then
+    rm -f "${err}" "${dest}"
+    echo "::warning::No ${src} yet; region rollups are written with regions null (#1799)" >&2
+    echo "- **district-region-history**: none yet (regions null this run)" >>"${SUMMARY}"
+    return 0
+  fi
+  cat "${err}" >&2
+  rm -f "${err}" "${dest}"
+  echo "::error::Failed to pull ${src} (#1799)" >&2
+  exit 1
 }
 
 # Size of a directory in MB, one decimal (what the step summary reports).
@@ -144,6 +176,8 @@ sync_dir() {
 for store in "$@"; do
   if [ "${store}" = "district-awards-history" ]; then
     sync_awards
+  elif [ "${store}" = "district-region-history" ]; then
+    sync_region_history
   elif [ "${store}" = "club-trends" ] && [ "${#CLUB_TRENDS_PYS[@]}" -gt 0 ]; then
     for py in "${CLUB_TRENDS_PYS[@]}"; do
       sync_dir "club-trends/${py}"

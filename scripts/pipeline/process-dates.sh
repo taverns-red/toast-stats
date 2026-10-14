@@ -82,7 +82,12 @@
 # The GCS-backed stores (time-series, club-trends, club-race, awards history)
 # are NOT handled here: the caller pulls them with sync-stores.sh before and
 # pushes them with publish-stores.sh after, then runs
-# scripts/partial-failure-gate.sh with the failed count (#1708, D7).
+# scripts/partial-failure-gate.sh with the failed count (#1708, D7). The
+# caller also pulls config/district-region-history.json
+# (`sync-stores.sh district-region-history`, #1799): step 8's compute reads
+# it from ${CACHE_DIR}/config/ for each date's region-rollups.json, using the
+# history as it stood when the run started (step 12 rewrites it after the
+# loop).
 #
 # Env:
 #   GCLOUD                 gcloud binary (default `gcloud`; tests use a shim)
