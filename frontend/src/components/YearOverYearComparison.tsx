@@ -443,8 +443,15 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
         })}
       </div>
 
-      {/* Bar Chart Visualization - Separate charts for each metric */}
-      <div role="img" aria-label={chartDescription} className="w-full">
+      {/* Bar Chart Visualization - Separate charts for each metric.
+          Every bar's value is printed in the cards above, so nothing here
+          depends on hover; the touch probe (#1835) reads this marker. */}
+      <div
+        role="img"
+        aria-label={chartDescription}
+        className="w-full"
+        data-chart-values="printed"
+      >
         {/* Legend */}
         <div className="flex justify-center gap-6 mb-4">
           <div className="flex items-center gap-2">
