@@ -45,6 +45,10 @@ import {
   readSnapshotRankings,
   readSnapshotRollupInput,
 } from '../packages/analytics-core/src/rollup/index.js'
+import {
+  missingDistricts as unrecordedDistricts,
+  recordedFailedDistricts,
+} from '../packages/collector-cli/src/utils/dateLevelCoverage.js'
 
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)
@@ -55,7 +59,7 @@ function readFlag(name: string): string | undefined {
   return index === -1 ? undefined : process.argv[index + 1]
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const snapshotDir = readFlag('snapshot-dir')
   const date = readFlag('date')
 
@@ -94,7 +98,22 @@ function main(): void {
       rankings,
     })
 
-    const missing = totals.districts.missingDistricts
+    // A district the date's metadata.json records as failed — a #1671
+    // source gap included — is accounted for, as in transform (#2035).
+    const recorded = await recordedFailedDistricts(snapshotDir)
+    const missing = unrecordedDistricts(
+      totals.districts.missingDistricts,
+      recorded
+    )
+    const accounted = totals.districts.missingDistricts.filter(
+      id => !missing.includes(id)
+    )
+    if (accounted.length > 0) {
+      log(
+        `${date}: ${accounted.length} district(s) recorded as failed or a ` +
+          `source gap in metadata.json, left out of the sums: ${accounted.join(', ')}`
+      )
+    }
     if (missing.length > 0 && !allowMissing) {
       log(
         `::error::${date}: ${missing.length} of ${totals.districts.total} listed ` +
@@ -169,4 +188,4 @@ function main(): void {
   }
 }
 
-main()
+void main()

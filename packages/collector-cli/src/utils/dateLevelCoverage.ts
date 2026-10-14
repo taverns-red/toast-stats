@@ -14,6 +14,8 @@
  * counted error under {@link DATE_LEVEL_ERROR_ID}.
  */
 
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 import { canonicalDistrictKey } from './districtSetForDate.js'
 
 /** The `districtId` a date-level refusal is recorded under in `errors[]`. */
@@ -44,4 +46,32 @@ export function dateLevelRefusal(
     `(missing: ${missing.join(', ')}). Hydrate them from staging or run ` +
     `without a districts subset (#1756).`
   )
+}
+
+/**
+ * The districts a snapshot date's `metadata.json` records as failed — a
+ * #1671 source gap included (#2035). Transform writes that file only once
+ * every district of the date is accounted for, and lists a district there
+ * only when this run recorded its failure or gap with a reason in
+ * `errors[]`. A downstream roster check accepts these exactly as transform's
+ * does; any other district without input is still a shortfall. An absent or
+ * unreadable metadata file records nothing, so the check stays closed.
+ */
+export async function recordedFailedDistricts(
+  snapshotDir: string
+): Promise<string[]> {
+  try {
+    const parsed: unknown = JSON.parse(
+      await fs.readFile(path.join(snapshotDir, 'metadata.json'), 'utf-8')
+    )
+    const failed =
+      typeof parsed === 'object' && parsed !== null
+        ? (parsed as { failedDistricts?: unknown }).failedDistricts
+        : undefined
+    return Array.isArray(failed)
+      ? failed.filter((id): id is string => typeof id === 'string')
+      : []
+  } catch {
+    return []
+  }
 }

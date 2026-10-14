@@ -977,6 +977,10 @@ jobs:
             gcloud storage cp \
               "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${DATE}/district_*.json" \
               "${SNAPSHOT_DIR}/" 2>/dev/null || true
+            # The districts it records as failed or a #1671 gap (#2035).
+            gcloud storage cp \
+              "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${DATE}/metadata.json" \
+              "${SNAPSHOT_DIR}/" 2>/dev/null || true
 
             if [ ! -f "${SNAPSHOT_DIR}/all-districts-rankings.json" ]; then
               echo "::warning::${DATE} has no all-districts-rankings.json — skipping (no district set to scope to)"

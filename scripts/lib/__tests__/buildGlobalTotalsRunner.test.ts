@@ -136,6 +136,52 @@ describe('build-global-totals runner (#1498)', () => {
     expect(existsSync(artifact())).toBe(false)
   })
 
+  it('publishes when the district without a file is one metadata.json records as failed (a #1671 gap, #2035)', () => {
+    // Transform recorded 62 as a gap: TI's HTML error page for its club
+    // report, no district_62.json, metadata failedDistricts + its reason.
+    writeFileSync(
+      join(snapshotDir, 'all-districts-rankings.json'),
+      JSON.stringify({ rankings: [ranking('61'), ranking('62')] })
+    )
+    writeFileSync(
+      join(snapshotDir, 'metadata.json'),
+      JSON.stringify({
+        successfulDistricts: ['61'],
+        failedDistricts: ['62'],
+        errors: [
+          `62: Skipped: club-performance.csv for district 62 on ${DATE} is not a CSV (body is HTML) — a gap, not zero clubs (#1671)`,
+        ],
+      })
+    )
+    writeDistrict('61')
+
+    const result = run()
+
+    expect(result.status).toBe(0)
+    expect(result.stderr).toMatch(/62/)
+    expect(existsSync(artifact())).toBe(true)
+  })
+
+  it('still refuses a district without a file that metadata.json does not record', () => {
+    writeFileSync(
+      join(snapshotDir, 'all-districts-rankings.json'),
+      JSON.stringify({
+        rankings: [ranking('61'), ranking('62'), ranking('63')],
+      })
+    )
+    writeFileSync(
+      join(snapshotDir, 'metadata.json'),
+      JSON.stringify({ failedDistricts: ['62'] })
+    )
+    writeDistrict('61')
+
+    const result = run()
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toMatch(/Missing: 63\./)
+    expect(existsSync(artifact())).toBe(false)
+  })
+
   it('publishes under an explicit operator override, saying so loudly', () => {
     writeFileSync(
       join(snapshotDir, 'all-districts-rankings.json'),
