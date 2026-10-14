@@ -12,7 +12,7 @@ import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import type { GlobalClubRace } from '@taverns-red/shared-contracts'
 import ClubDetailPage from '../ClubDetailPage'
-import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import { useClubAnalytics } from '../../hooks/useClubAnalytics'
 import { useGlobalClubRace } from '../../hooks/useGlobalClubRace'
 
 Object.defineProperty(window, 'matchMedia', {
@@ -39,8 +39,8 @@ vi.mock('../../hooks/useDistrictData', () => ({
   useDistrictCachedDates: vi.fn(() => ({ data: { dates: ['2026-09-11'] } })),
 }))
 
-vi.mock('../../hooks/useDistrictAnalytics', () => ({
-  useDistrictAnalytics: vi.fn(),
+vi.mock('../../hooks/useClubAnalytics', () => ({
+  useClubAnalytics: vi.fn(),
 }))
 
 vi.mock('../../hooks/useDistrictStatistics', () => ({
@@ -175,13 +175,13 @@ const renderPage = () =>
 
 describe('ClubDetailPage — Worldwide standing (#1556)', () => {
   beforeEach(() => {
-    vi.mocked(useDistrictAnalytics).mockReturnValue({
-      data: { allClubs: [club], districtId: '61' },
+    vi.mocked(useClubAnalytics).mockReturnValue({
+      data: { clubs: [club], districtId: '61' },
       isLoading: false,
       isError: false,
       error: null,
       refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
     vi.mocked(useGlobalClubRace).mockReset()
   })
 

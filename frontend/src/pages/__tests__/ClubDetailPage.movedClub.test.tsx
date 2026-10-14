@@ -77,9 +77,9 @@ vi.mock('../../hooks/useMembershipData', () => ({
 }))
 
 // District 90's PY-2026 snapshot no longer contains club 00002274 — it moved.
-vi.mock('../../hooks/useDistrictAnalytics', () => ({
-  useDistrictAnalytics: vi.fn(() => ({
-    data: { districtId: '90', allClubs: [] },
+vi.mock('../../hooks/useClubAnalytics', () => ({
+  useClubAnalytics: vi.fn(() => ({
+    data: { districtId: '90', clubs: [] },
     isLoading: false,
     isError: false,
     error: null,

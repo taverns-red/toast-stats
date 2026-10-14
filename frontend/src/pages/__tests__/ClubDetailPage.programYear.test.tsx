@@ -21,7 +21,7 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
-import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import { useClubAnalytics } from '../../hooks/useClubAnalytics'
 
 Object.defineProperty(window, 'matchMedia', {
   value: vi.fn().mockImplementation((query: string) => ({
@@ -95,9 +95,9 @@ const baseMockClub = {
   distinguishedLevel: 'NotDistinguished' as const,
 }
 
-vi.mock('../../hooks/useDistrictAnalytics', () => ({
-  useDistrictAnalytics: vi.fn(() => ({
-    data: { districtId: '61', allClubs: [baseMockClub] },
+vi.mock('../../hooks/useClubAnalytics', () => ({
+  useClubAnalytics: vi.fn(() => ({
+    data: { districtId: '61', clubs: [baseMockClub] },
     isLoading: false,
     error: null,
     refetch: vi.fn(),
@@ -105,7 +105,7 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
   ClubTrend: {},
 }))
 
-const mockedAnalytics = vi.mocked(useDistrictAnalytics)
+const mockedAnalytics = vi.mocked(useClubAnalytics)
 
 const LocationProbe = () => {
   const { search } = useLocation()
@@ -141,7 +141,7 @@ function renderAt(url: string) {
 
 const lastAnalyticsEndDate = () => {
   const calls = mockedAnalytics.mock.calls
-  return calls[calls.length - 1]?.[2]
+  return calls[calls.length - 1]?.[3]
 }
 
 describe('ClubDetailPage — program year selector (#1302)', () => {

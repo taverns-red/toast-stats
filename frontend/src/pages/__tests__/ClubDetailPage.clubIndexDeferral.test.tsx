@@ -107,11 +107,11 @@ const presentClub = {
   aprilRenewals: 0,
   newMembers: 0,
 }
-vi.mock('../../hooks/useDistrictAnalytics', () => ({
-  useDistrictAnalytics: vi.fn((districtId: string | null) =>
+vi.mock('../../hooks/useClubAnalytics', () => ({
+  useClubAnalytics: vi.fn((districtId: string | null) =>
     districtId
       ? {
-          data: { districtId: '90', allClubs: [presentClub] },
+          data: { districtId: '90', clubs: [presentClub] },
           isLoading: false,
           isError: false,
           error: null,

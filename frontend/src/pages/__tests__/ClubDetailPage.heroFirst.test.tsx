@@ -25,7 +25,7 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
-import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import { useClubAnalytics } from '../../hooks/useClubAnalytics'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
 import { fetchCdnGlobalClubRace } from '../../services/cdn'
 
@@ -82,8 +82,8 @@ vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(),
 }))
 
-vi.mock('../../hooks/useDistrictAnalytics', () => ({
-  useDistrictAnalytics: vi.fn(),
+vi.mock('../../hooks/useClubAnalytics', () => ({
+  useClubAnalytics: vi.fn(),
   ClubTrend: {},
 }))
 
@@ -126,7 +126,7 @@ const snapshot = {
   },
 }
 
-const mockedAnalytics = vi.mocked(useDistrictAnalytics)
+const mockedAnalytics = vi.mocked(useClubAnalytics)
 const mockedStats = vi.mocked(useDistrictStatistics)
 
 /** A real-shaped hook: disabled ⇒ idle (no data, not loading); enabled ⇒
@@ -135,6 +135,7 @@ const mockedStats = vi.mocked(useDistrictStatistics)
 function analyticsInFlight() {
   mockedAnalytics.mockImplementation(((
     districtId: string | null,
+    _clubId: string | null,
     _start?: string,
     _end?: string,
     options?: { enabled?: boolean }
@@ -153,7 +154,7 @@ function analyticsInFlight() {
 const analyticsEnabledCalls = () =>
   mockedAnalytics.mock.calls.filter(
     c =>
-      !!c[0] && (c[3] as { enabled?: boolean } | undefined)?.enabled !== false
+      !!c[0] && (c[4] as { enabled?: boolean } | undefined)?.enabled !== false
   )
 
 afterEach(() => cleanup())
@@ -246,7 +247,7 @@ describe('ClubDetailPage — hero first, analytics after (#1901)', () => {
 
     // First render: the hero has not painted yet, so analytics is held.
     const first = mockedAnalytics.mock.calls.find(c => !!c[0])
-    expect((first?.[3] as { enabled?: boolean } | undefined)?.enabled).toBe(
+    expect((first?.[4] as { enabled?: boolean } | undefined)?.enabled).toBe(
       false
     )
     await waitFor(() =>
@@ -280,5 +281,58 @@ describe('ClubDetailPage — hero first, analytics after (#1901)', () => {
     await waitFor(() =>
       expect(analyticsEnabledCalls().length).toBeGreaterThan(0)
     )
+  })
+
+  // #1901 — the club's analytics now come from its shard (~10 % of the
+  // district), so the mini-map's "the district's clubs" must come from the
+  // snapshot's full clubs[] (same coordinates), never from the shard.
+  it("feeds the mini-map from the snapshot's clubs, not the analytics shard", async () => {
+    const here = { lat: 45.42197, lng: -75.69486 }
+    const neighbour = {
+      ...snapshotClub,
+      clubId: '3045',
+      clubName: 'Limestone City Club',
+      coordinates: { lat: 44.25068, lng: -76.551 },
+    }
+    mockedStats.mockReturnValue({
+      data: {
+        ...snapshot,
+        data: {
+          ...snapshot.data,
+          clubs: [{ ...snapshotClub, coordinates: here }, neighbour],
+        },
+      },
+      isLoading: false,
+    } as never)
+    mockedAnalytics.mockReturnValue({
+      data: {
+        clubs: [
+          {
+            ...snapshotClub,
+            coordinates: here,
+            membershipTrend: [{ date: '2026-10-11', count: 10 }],
+            dcpGoalsTrend: [{ date: '2026-10-11', goalsAchieved: 4 }],
+            membershipBase: 16,
+            currentStatus: 'intervention-required',
+            riskFactors: [],
+            distinguishedLevel: 'NotDistinguished',
+          },
+        ],
+        districtReports: null,
+        source: 'shard',
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    } as never)
+
+    renderAt()
+
+    expect(
+      await screen.findByRole('img', {
+        name: /90 Elgin Toastmasters among 2 District 61 clubs with a location/,
+      })
+    ).toBeInTheDocument()
   })
 })

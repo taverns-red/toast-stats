@@ -15,7 +15,7 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
-import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import { useClubAnalytics } from '../../hooks/useClubAnalytics'
 import { useClubHistory } from '../../hooks/useClubHistory'
 
 // Mock localStorage
@@ -109,11 +109,11 @@ vi.mock('../../hooks/useClubHistory', () => ({
   })),
 }))
 
-vi.mock('../../hooks/useDistrictAnalytics', () => ({
-  useDistrictAnalytics: vi.fn(() => ({
+vi.mock('../../hooks/useClubAnalytics', () => ({
+  useClubAnalytics: vi.fn(() => ({
     data: {
       districtId: '61',
-      allClubs: [baseMockClub],
+      clubs: [baseMockClub],
     },
     isLoading: false,
     error: null,
@@ -313,13 +313,13 @@ describe('ClubDetailPage (#208)', () => {
   // club was removed). Error is checked before the loaded-but-absent branch.
   it('renders a retryable error state — not "Club Not Found" — when the analytics fetch rejects', () => {
     const refetch = vi.fn()
-    vi.mocked(useDistrictAnalytics).mockReturnValueOnce({
+    vi.mocked(useClubAnalytics).mockReturnValueOnce({
       data: undefined,
       isLoading: false,
       isError: true,
       error: new Error('Failed to fetch'),
       refetch,
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
 
     renderWithRoute()
 
@@ -347,17 +347,17 @@ describe('ClubDetailPage (#208)', () => {
   // honours Lesson 51 / 53 — every page mount adds parallel-coverage
   // contention pressure.
   it('renders the chartered date segment in the eyebrow when charterDate is present', () => {
-    const mockedHook = vi.mocked(useDistrictAnalytics)
+    const mockedHook = vi.mocked(useClubAnalytics)
     mockedHook.mockReturnValueOnce({
       data: {
         districtId: '61',
-        allClubs: [{ ...baseMockClub, charterDate: '1987-02-15' }],
+        clubs: [{ ...baseMockClub, charterDate: '1987-02-15' }],
       },
       isLoading: false,
       error: null,
       // `as unknown as` — UseQueryResult is a 23-field discriminated union
       // no hand-built mock satisfies; matches the existing cast at l.298 (#1368).
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
 
     renderWithRoute()
 
@@ -372,11 +372,11 @@ describe('ClubDetailPage (#208)', () => {
   // never-email/phone rule end to end; the absent case is covered by every
   // other test in this file (none set FAC fields) plus the explicit check.
   it('renders the where-it-meets line and never renders email or phone (#1783)', () => {
-    const mockedHook = vi.mocked(useDistrictAnalytics)
+    const mockedHook = vi.mocked(useClubAnalytics)
     mockedHook.mockReturnValueOnce({
       data: {
         districtId: '61',
-        allClubs: [
+        clubs: [
           {
             ...baseMockClub,
             address: {
@@ -397,7 +397,7 @@ describe('ClubDetailPage (#208)', () => {
       },
       isLoading: false,
       error: null,
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
 
     const { container } = renderWithRoute()
 
@@ -424,11 +424,11 @@ describe('ClubDetailPage (#208)', () => {
   // link (sometimes with MtgID + Passcode) in address.street, not website
   // (D61 clubs 1009147 and 7396993, snapshot 2026-10-10).
   it('never renders a meeting link, meeting ID or passcode (#1879)', () => {
-    const mockedHook = vi.mocked(useDistrictAnalytics)
+    const mockedHook = vi.mocked(useClubAnalytics)
     mockedHook.mockReturnValueOnce({
       data: {
         districtId: '61',
-        allClubs: [
+        clubs: [
           {
             ...baseMockClub,
             address: {
@@ -449,7 +449,7 @@ describe('ClubDetailPage (#208)', () => {
       },
       isLoading: false,
       error: null,
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
 
     const { container } = renderWithRoute()
 
@@ -487,11 +487,11 @@ describe('ClubDetailPage (#208)', () => {
   // #1790 — Education panel in the §3.2 panel slot, fed by the reports
   // sidecar the analytics hook already fetched for the page's date (R3).
   it('renders the Education panel from the reports ledger, after the trend row (#1790)', () => {
-    const mockedHook = vi.mocked(useDistrictAnalytics)
+    const mockedHook = vi.mocked(useClubAnalytics)
     mockedHook.mockReturnValueOnce({
       data: {
         districtId: '61',
-        allClubs: [baseMockClub],
+        clubs: [baseMockClub],
         districtReports: {
           districtId: '61',
           programYear: '2025-2026',
@@ -522,7 +522,7 @@ describe('ClubDetailPage (#208)', () => {
       },
       isLoading: false,
       error: null,
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
 
     const { container } = renderWithRoute()
     const panel = screen.getByRole('region', { name: 'Education' })
@@ -545,11 +545,11 @@ describe('ClubDetailPage (#208)', () => {
   // #1790 — Compliance panel beside Education; stat strip gains Awards and
   // Coach. With no reports file every row and both cells say so.
   it('renders the Compliance panel and Awards/Coach stat cells (#1790)', () => {
-    const mockedHook = vi.mocked(useDistrictAnalytics)
+    const mockedHook = vi.mocked(useClubAnalytics)
     mockedHook.mockReturnValueOnce({
       data: {
         districtId: '61',
-        allClubs: [baseMockClub],
+        clubs: [baseMockClub],
         districtReports: {
           districtId: '61',
           programYear: '2025-2026',
@@ -610,7 +610,7 @@ describe('ClubDetailPage (#208)', () => {
       },
       isLoading: false,
       error: null,
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
 
     const { container } = renderWithRoute()
     const panel = screen.getByRole('region', { name: 'Compliance' })
@@ -662,16 +662,16 @@ describe('Provisional Distinguished Badge — ClubDetailPage', () => {
   })
 
   function setClubOverrides(overrides: Record<string, unknown>) {
-    vi.mocked(useDistrictAnalytics).mockReturnValue({
+    vi.mocked(useClubAnalytics).mockReturnValue({
       data: {
         districtId: '61',
-        allClubs: [{ ...baseMockClub, ...overrides }],
+        clubs: [{ ...baseMockClub, ...overrides }],
       },
       isLoading: false,
       error: null,
       // `as unknown as` — UseQueryResult is a 23-field discriminated union
       // no hand-built mock satisfies; matches the existing cast at l.298 (#1368).
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
   }
 
   it('shows "Provisional" when Distinguished and pre-April with low renewals', () => {
@@ -748,16 +748,16 @@ describe('Close-to-Distinguished call-out — ClubDetailPage', () => {
   })
 
   function setClubOverrides(overrides: Record<string, unknown>) {
-    vi.mocked(useDistrictAnalytics).mockReturnValue({
+    vi.mocked(useClubAnalytics).mockReturnValue({
       data: {
         districtId: '61',
-        allClubs: [{ ...baseMockClub, ...overrides }],
+        clubs: [{ ...baseMockClub, ...overrides }],
       },
       isLoading: false,
       error: null,
       // `as unknown as` — UseQueryResult is a 23-field discriminated union
       // no hand-built mock satisfies; matches the existing cast at l.298 (#1368).
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
   }
 
   it('renders the call-out with redesign chrome class when goals met but members short', () => {
@@ -884,13 +884,13 @@ describe('Membership Trend + DCP Status re-skin (#619)', () => {
   // Earlier describes use persistent mockReturnValue; reset to the base club
   // so these assertions see the 4-point PY 2025–2026 trend.
   beforeEach(() => {
-    vi.mocked(useDistrictAnalytics).mockReturnValue({
-      data: { districtId: '61', allClubs: [baseMockClub] },
+    vi.mocked(useClubAnalytics).mockReturnValue({
+      data: { districtId: '61', clubs: [baseMockClub] },
       isLoading: false,
       error: null,
       // `as unknown as` — UseQueryResult is a 23-field discriminated union
       // no hand-built mock satisfies; matches the existing cast at l.298 (#1368).
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
   })
 
   afterEach(() => {
@@ -960,11 +960,11 @@ describe('club page primitives (#1843)', () => {
     coordinates: { lat: 45.3088, lng: -75.8987 },
   }
   const mockAnalytics = (clubs: unknown[]) =>
-    vi.mocked(useDistrictAnalytics).mockReturnValue({
-      data: { districtId: '61', allClubs: clubs },
+    vi.mocked(useClubAnalytics).mockReturnValue({
+      data: { districtId: '61', clubs: clubs },
       isLoading: false,
       error: null,
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
 
   afterEach(() => cleanup())
 
@@ -1025,11 +1025,11 @@ describe('membership trend with prior program years (#1791)', () => {
   })
 
   beforeEach(() => {
-    vi.mocked(useDistrictAnalytics).mockReturnValue({
-      data: { districtId: '61', allClubs: [baseMockClub] },
+    vi.mocked(useClubAnalytics).mockReturnValue({
+      data: { districtId: '61', clubs: [baseMockClub] },
       isLoading: false,
       error: null,
-    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    } as unknown as ReturnType<typeof useClubAnalytics>)
     vi.mocked(useClubHistory).mockClear()
     vi.mocked(useClubHistory).mockReturnValue({
       // Newest first. The page's PY is 2025-2026 (baseMockClub's dates),

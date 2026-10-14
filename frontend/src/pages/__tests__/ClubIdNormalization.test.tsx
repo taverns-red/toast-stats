@@ -21,7 +21,7 @@ import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
 import ClubRedirectPage from '../ClubRedirectPage'
-import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import { useClubAnalytics } from '../../hooks/useClubAnalytics'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
 import { fetchCdnClubIndex } from '../../services/cdn'
 
@@ -62,8 +62,8 @@ vi.mock('../../hooks/useDistrictData', () => ({
   useDistrictCachedDates: vi.fn(() => ({ data: { dates: ['2025-10-15'] } })),
 }))
 
-vi.mock('../../hooks/useDistrictAnalytics', () => ({
-  useDistrictAnalytics: vi.fn(),
+vi.mock('../../hooks/useClubAnalytics', () => ({
+  useClubAnalytics: vi.fn(),
 }))
 
 vi.mock('../../hooks/useMembershipData', () => ({
@@ -142,11 +142,11 @@ describe('ClubDetailPage club-id normalization (#1440)', () => {
   it.each(DIRECTIONS)(
     'finds the club in analytics — %s / %s (%s)',
     async (stored, url) => {
-      vi.mocked(useDistrictAnalytics).mockReturnValue({
-        data: { districtId: '61', allClubs: [clubTrend(stored)] },
+      vi.mocked(useClubAnalytics).mockReturnValue({
+        data: { districtId: '61', clubs: [clubTrend(stored)] },
         isLoading: false,
         error: null,
-      } as unknown as ReturnType<typeof useDistrictAnalytics>)
+      } as unknown as ReturnType<typeof useClubAnalytics>)
       vi.mocked(useDistrictStatistics).mockReturnValue({
         data: null,
         isLoading: false,
@@ -163,11 +163,11 @@ describe('ClubDetailPage club-id normalization (#1440)', () => {
   it.each(DIRECTIONS)(
     'finds the raw clubPerformance record — %s / %s (%s)',
     async (stored, url) => {
-      vi.mocked(useDistrictAnalytics).mockReturnValue({
-        data: { districtId: '61', allClubs: [clubTrend(stored)] },
+      vi.mocked(useClubAnalytics).mockReturnValue({
+        data: { districtId: '61', clubs: [clubTrend(stored)] },
         isLoading: false,
         error: null,
-      } as unknown as ReturnType<typeof useDistrictAnalytics>)
+      } as unknown as ReturnType<typeof useClubAnalytics>)
       vi.mocked(useDistrictStatistics).mockReturnValue({
         data: {
           data: {
