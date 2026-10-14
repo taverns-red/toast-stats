@@ -26,6 +26,10 @@ import {
   type AnalyticsManifestEntry,
   type AnalyticsManifest,
 } from '@taverns-red/analytics-core'
+import {
+  expandDistrictAnalyticsClubLists,
+  slimDistrictAnalyticsClubLists,
+} from '@taverns-red/shared-contracts'
 
 /**
  * Create an isolated test cache directory
@@ -261,9 +265,48 @@ describe('AnalyticsWriter', () => {
         content
       ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
-      // Calculate expected checksum
-      const expectedChecksum = calculateChecksum(JSON.stringify(analytics))
+      // The checksum describes the data as written: the slim shape (#1901)
+      const expectedChecksum = calculateChecksum(
+        JSON.stringify(slimDistrictAnalyticsClubLists(analytics))
+      )
       expect(parsed.metadata.checksum).toBe(expectedChecksum)
+    })
+
+    it('writes the club category lists as clubId lists (#1901)', async () => {
+      const date = '2024-01-15'
+      const districtId = '1'
+      const analytics = createSampleDistrictAnalytics(districtId)
+
+      const filePath = await analyticsWriter.writeDistrictAnalytics(
+        date,
+        districtId,
+        analytics
+      )
+
+      const parsed = JSON.parse(await fs.readFile(filePath, 'utf-8')) as {
+        data: Record<string, unknown>
+      }
+      expect(parsed.data['thrivingClubIds']).toEqual(['1234'])
+      expect(parsed.data['vulnerableClubIds']).toEqual([])
+      expect(parsed.data['interventionRequiredClubIds']).toEqual([])
+      expect(parsed.data).not.toHaveProperty('thrivingClubs')
+      expect(parsed.data).not.toHaveProperty('vulnerableClubs')
+      expect(parsed.data).not.toHaveProperty('interventionRequiredClubs')
+    })
+
+    it('writes compact JSON (#1901)', async () => {
+      const date = '2024-01-15'
+      const districtId = '1'
+      const analytics = createSampleDistrictAnalytics(districtId)
+
+      const filePath = await analyticsWriter.writeDistrictAnalytics(
+        date,
+        districtId,
+        analytics
+      )
+
+      const content = await fs.readFile(filePath, 'utf-8')
+      expect(content).toBe(JSON.stringify(JSON.parse(content)))
     })
 
     it('should preserve data structure exactly', async () => {
@@ -282,8 +325,8 @@ describe('AnalyticsWriter', () => {
         content
       ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
-      // Verify data matches original
-      expect(parsed.data).toEqual(analytics)
+      // Verify data matches original once the reader expands it (#1901)
+      expect(expandDistrictAnalyticsClubLists(parsed.data)).toEqual(analytics)
     })
 
     it('should create analytics directory if it does not exist', async () => {
