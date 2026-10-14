@@ -381,12 +381,22 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
         aria-describedby="full-year-rank-chart-desc"
         className="w-full overflow-x-auto"
       >
-        <div className="min-w-[320px]">
-          <ResponsiveContainer width="100%" height={PLOT_HEIGHT} minWidth={320}>
+        {/* The desktop min-width; a phone sheet is narrower (#1835). */}
+        <div className={compact ? undefined : 'min-w-[320px]'}>
+          <ResponsiveContainer
+            width="100%"
+            height={PLOT_HEIGHT}
+            minWidth={compact ? 0 : 320}
+          >
             <LineChart
               {...readout.chartProps}
               data={chartData}
-              margin={{ top: 5, right: 10, left: 0, bottom: compact ? 5 : 60 }}
+              margin={{
+                top: 5,
+                right: compact ? 16 : 10,
+                left: 0,
+                bottom: compact ? 5 : 60,
+              }}
               aria-hidden="true"
               // The wrapper is the accessible role="img"; Recharts' default
               // layer would put tabindex=0 inside aria-hidden (#1660).

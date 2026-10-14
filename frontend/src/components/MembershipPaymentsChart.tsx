@@ -442,7 +442,8 @@ export const MembershipPaymentsChart: React.FC<
         aria-label={chartDescription}
         className="w-full overflow-x-auto"
       >
-        <div className="min-w-[320px]">
+        {/* The desktop min-width; a phone sheet is narrower (#1835). */}
+        <div className={compact ? undefined : 'min-w-[320px]'}>
           <ResponsiveContainer width="100%" height={350}>
             <LineChart
               {...readout.chartProps}
