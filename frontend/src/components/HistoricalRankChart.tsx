@@ -11,6 +11,8 @@ import {
 import type { RankHistoryResponse } from '../types/districts'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { dateAxisLayout } from './charts/compactAxis'
 import {
   useChartReadout,
   ChartReadout,
@@ -106,6 +108,8 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   const readout = useChartReadout()
   // Legend chips toggle each district's line (#1835).
   const legend = useSeriesVisibility()
+  // Phone x axis: four horizontal ticks, no −45° labels (#1835).
+  const compact = useIsMobile(768)
   // Responsive tick interval for mobile (#237) — must be called before early returns
   const tickInterval = useResponsiveTickInterval(
     data?.reduce((count, d) => count + d.history.length, 0) ?? 0
@@ -319,7 +323,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
             <LineChart
               {...readout.chartProps}
               data={chartData}
-              margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
+              margin={{ top: 5, right: 10, left: 0, bottom: compact ? 5 : 60 }}
               aria-hidden="true"
             >
               <CartesianGrid
@@ -330,10 +334,11 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 dataKey="date"
                 stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '12px' }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                interval={tickInterval || 'preserveStartEnd'}
+                {...dateAxisLayout(
+                  compact,
+                  sortedDates,
+                  tickInterval || 'preserveStartEnd'
+                )}
                 tickFormatter={value => {
                   const date = parseLocalDate(value)
                   return date.toLocaleDateString('en-US', {

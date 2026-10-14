@@ -20,6 +20,8 @@ import {
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { dateAxisLayout } from './charts/compactAxis'
 import type { PaymentTrendDataPoint } from '../utils/paymentTrend'
 import type {
   MultiYearPaymentData,
@@ -283,6 +285,8 @@ export const MembershipPaymentsChart: React.FC<
   const readout = useChartReadout()
   // Legend chips toggle each program year's line (#1835).
   const legend = useSeriesVisibility()
+  // Phone x axis: four horizontal ticks, no −45° labels (#1835).
+  const compact = useIsMobile(768)
 
   // Loading state - Requirement 4.1
   if (isLoading) {
@@ -443,7 +447,12 @@ export const MembershipPaymentsChart: React.FC<
             <LineChart
               {...readout.chartProps}
               data={chartData}
-              margin={{ top: 5, right: 20, left: 10, bottom: 60 }}
+              margin={{
+                top: 5,
+                right: 20,
+                left: 10,
+                bottom: compact ? 10 : 60,
+              }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -453,11 +462,14 @@ export const MembershipPaymentsChart: React.FC<
                 dataKey="programYearDay"
                 stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '12px' }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
+                {...dateAxisLayout(
+                  compact,
+                  chartData.map(d => d.programYearDay),
+                  tickInterval
+                )}
+                // The axis title sits under the ticks: room for both.
+                {...(compact ? { height: 50 } : {})}
                 tickFormatter={formatXAxis}
-                interval={tickInterval}
                 label={{
                   value: 'Program Year Month',
                   position: 'insideBottom',

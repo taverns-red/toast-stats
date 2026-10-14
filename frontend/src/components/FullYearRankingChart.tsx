@@ -14,6 +14,8 @@ import type {
 } from '../types/districts'
 import type { ProgramYear } from '../utils/programYear'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { dateAxisLayout } from './charts/compactAxis'
 import {
   useChartReadout,
   ChartReadout,
@@ -267,6 +269,8 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
 }) => {
   // Tap-to-pin readout on devices without hover (#1835) — before early returns.
   const readout = useChartReadout()
+  // Phone x axis: four horizontal ticks, no −45° labels (#1835).
+  const compact = useIsMobile(768)
   // Show loading skeleton while data is being fetched
   if (isLoading) {
     return <ChartLoadingSkeleton />
@@ -360,7 +364,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
             <LineChart
               {...readout.chartProps}
               data={chartData}
-              margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
+              margin={{ top: 5, right: 10, left: 0, bottom: compact ? 5 : 60 }}
               aria-hidden="true"
               // The wrapper is the accessible role="img"; Recharts' default
               // layer would put tabindex=0 inside aria-hidden (#1660).
@@ -374,10 +378,10 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
                 dataKey="date"
                 stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '12px' }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                interval="preserveStartEnd"
+                {...dateAxisLayout(
+                  compact,
+                  chartData.map(d => d.date)
+                )}
                 tickFormatter={value => {
                   const date = parseLocalDate(value)
                   return date.toLocaleDateString('en-US', {

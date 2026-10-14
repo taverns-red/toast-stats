@@ -28,6 +28,8 @@ import {
   ChartLegendChips,
   useSeriesVisibility,
 } from './charts/ChartLegendChips'
+import { compactTicks } from './charts/compactAxis'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 /** A named set of data points for one program year */
 export interface YearTrendData {
@@ -211,6 +213,8 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   const readout = useChartReadout()
   // Legend chips toggle each program year's line (#1835).
   const legend = useSeriesVisibility()
+  // Phone x axis: four month ticks (#1835).
+  const compact = useIsMobile(768)
 
   if (isLoading) {
     return <LoadingSkeleton variant="chart" />
@@ -493,7 +497,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 dataKey="day"
                 type="number"
                 domain={chart.domain}
-                ticks={monthTicks}
+                ticks={compact ? compactTicks(monthTicks) : monthTicks}
                 tickFormatter={monthLabel}
                 interval="preserveStartEnd"
                 stroke="var(--tm-cool-gray)"
