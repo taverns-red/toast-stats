@@ -64,8 +64,12 @@ const TARGET = {
  * with margin; otherwise to that worst per-run best + ~10-15%. Comments show
  * "median of 24 samples / worst per-run best". Still above target: every
  * LCP (#1901 analytics payload gates /district/* and club; landing/regions
- * floor is fonts + shell), and total bytes on /district/*. Clubs script is
- * 323-334 KB (the charts chunk) against the 300 KB target.
+ * floor is fonts + shell), and total bytes on /district/*.
+ *
+ * Ratchet 2 (2026-10-13, #2014): #2009 stopped /district/61/clubs loading the
+ * Recharts chunk. Over 3 post-#2009 preview runs x 3 samples, clubs script is
+ * 229-232 KB and total 1180-1183 KB, so clubs script drops to its 300 KB
+ * TARGET and clubs total to 1300 KB (the worst per-run best + ~10%).
  */
 const RATCHET_ISSUE = '#1856'
 const KB = 1024
@@ -86,12 +90,13 @@ const BUDGETS = {
     totalBytes: 1200 * KB,
   },
   // LCP 4069 / 4169 ms (bimodal 3.5 / 8.0 s within a run); CLS 0 (max 0.04,
-  // #1837 landed); script 324 / 334 KB; total 1275 / 1286 KB
+  // #1837 landed). After #2009 (Recharts off clubs): script 230 / 230 KB;
+  // total 1180 / 1180 KB (was 324 / 334 and 1275 / 1286 KB)
   clubs: {
     lcpMs: 4800,
     cls: 0.1,
-    scriptBytes: 350 * KB,
-    totalBytes: 1400 * KB,
+    scriptBytes: 300 * KB,
+    totalBytes: 1300 * KB,
   },
   // LCP 6360 / 6613 ms; CLS 0.006; script 211 / 218 KB; total 1188 / 1197 KB
   // (prod before #1830, Lighthouse mobile: 15.1 s, 2.36 MB)
