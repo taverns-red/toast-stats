@@ -122,7 +122,56 @@ describe('normaliseTiClub', () => {
       meetingTime: '7:00 am',
       allowsVirtualAttendance: false,
       isProspective: false,
+      location: 'TOAST Fine Food and Coffee',
+      meetingSchedule: [
+        {
+          day: 'Thursday',
+          cadence: 'weekly',
+          startTime: '07:00',
+          mode: 'in-person',
+        },
+      ],
     })
+  })
+
+  // #1789 — Location is kept, scrubbed of contact details and meeting
+  // access, and meetingSchedule[] is parsed from the day/time/location.
+  it('keeps a scrubbed Location and parses per-week modes (#1789)', () => {
+    const result = normaliseTiClub({
+      ...realClub,
+      MeetingDay: 'Wed.1st and 3rd in person  (2nd online) ',
+      MeetingTime: '7:30 pm',
+      Location:
+        'Trillium Centre<br>Zoom: https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER (TEL: 555-0100)',
+    })
+    expect(result?.location).toBe('Trillium Centre\nZoom')
+    expect(result?.meetingSchedule).toEqual([
+      {
+        day: 'Wednesday',
+        cadence: 'monthly',
+        weeksOfMonth: [1, 3],
+        startTime: '19:30',
+        mode: 'in-person',
+      },
+      {
+        day: 'Wednesday',
+        cadence: 'monthly',
+        weeksOfMonth: [2],
+        startTime: '19:30',
+        mode: 'online',
+      },
+    ])
+  })
+
+  it('omits location and meetingSchedule when nothing public or parseable is left (#1789)', () => {
+    const result = normaliseTiClub({
+      ...realClub,
+      MeetingDay: 'https://example.toastmastersclubs.org/',
+      Location:
+        'https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER<br>club-contact@example.org',
+    })
+    expect(result).not.toHaveProperty('location')
+    expect(result).not.toHaveProperty('meetingSchedule')
   })
 
   it('returns null when the club is missing its primary key', () => {
