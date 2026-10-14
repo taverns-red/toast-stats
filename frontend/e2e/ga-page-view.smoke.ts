@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Request } from './fixtures/test'
+import { resolveBaseUrl } from './helpers/baseUrl'
 
 /* One GA page_view per page load and per SPA navigation (#1946).
  *
@@ -18,7 +19,7 @@ import { test, expect, type Page, type Request } from './fixtures/test'
  */
 
 const PROD_ORIGIN = 'https://ts.taverns.red'
-const BASE = (process.env['BASE_URL'] || PROD_ORIGIN).replace(/\/$/, '')
+const BASE = resolveBaseUrl(process.env).replace(/\/$/, '')
 // GA4 sends the first hit at once and batches later events (~5 s): wait past
 // a batch window before asserting "exactly", so a late duplicate is caught.
 const SETTLE_MS = 8_000

@@ -257,6 +257,31 @@ npm run test:mcp-server
 npm run test:coverage
 ```
 
+### Playwright smokes
+
+The smokes in `frontend/e2e/` run against a deployed or served build, never a
+default. `BASE_URL` is required; without it Playwright refuses to load its
+config and prints the options (#2010). There is no default because the only
+candidate, the `staging-toast-stats.web.app` live channel, is no longer
+deployed and serves a stale build.
+
+```bash
+cd frontend
+
+# Against prod
+BASE_URL=https://ts.taverns.red npx playwright test e2e/staging.smoke.ts
+
+# Against a local production build
+npm run build && npx vite preview        # serves http://localhost:4173
+BASE_URL=http://localhost:4173 npx playwright test e2e/staging.smoke.ts
+
+# Against a PR preview channel (the URL in the pr-preview sticky comment)
+BASE_URL=https://staging-toast-stats--pr-<N>-<hash>.web.app npx playwright test
+```
+
+CI (`pr-preview.yml`) sets `BASE_URL` to the PR's preview channel URL on every
+smoke step.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

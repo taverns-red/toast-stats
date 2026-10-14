@@ -1,10 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
+import { resolveBaseUrl } from './e2e/helpers/baseUrl'
 
 /**
  * Smoke test configuration for staging environment (#316)
  *
- * Runs against a deployed URL (staging or production).
- * Set BASE_URL env var to override the default staging URL.
+ * Runs against the URL in BASE_URL, which is required (#2010): a PR preview
+ * channel (what CI sets), prod (https://ts.taverns.red), or a local
+ * `vite preview` (http://localhost:4173). There is no default; the old one was
+ * the staging site's live channel, a stale May 2026 build.
  *
  * Two engines (#710): `smoke` runs in Chromium (default), `webkit` runs in
  * WebKit/Safari. #685 verified contrast in Chromium-at-rest only and missed
@@ -16,7 +19,7 @@ export default defineConfig({
   timeout: 30_000,
   retries: 1,
   use: {
-    baseURL: process.env['BASE_URL'] || 'https://staging-toast-stats.web.app',
+    baseURL: resolveBaseUrl(process.env),
     headless: true,
     screenshot: 'only-on-failure',
   },
