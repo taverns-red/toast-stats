@@ -92,14 +92,34 @@ const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/district/61/map', mustRender: '.maplibregl-ctrl-attrib a' },
 ]
 
-for (const { path, mustRender } of ROUTES) {
-  test(`every interactive element clears ${FLOOR}px at 375px — ${path}`, async ({
+/* #2017: phone landscape. At 844×390 the footer links measured 17px and the
+ * header search button 21px while 375/390 portrait passed: the width-only
+ * mobile rules stop at 768, so a landscape phone got desktop-sized chrome.
+ * The same routes run again on a touch landscape viewport. */
+const LANDSCAPE = { width: 844, height: 390 } // iPhone 14-class landscape
+
+const VIEWPORTS = [
+  { label: '375px', viewport: VIEWPORT, hasTouch: false },
+  { label: '844×390 touch landscape', viewport: LANDSCAPE, hasTouch: true },
+] as const
+
+for (const { label, viewport, hasTouch } of VIEWPORTS) {
+  test.describe(label, () => {
+    test.use({ viewport, hasTouch })
+    for (const route of ROUTES) defineRouteTest(label, route)
+  })
+}
+
+function defineRouteTest(
+  label: string,
+  { path, mustRender }: { path: string; mustRender?: string }
+): void {
+  test(`every interactive element clears ${FLOOR}px at ${label} — ${path}`, async ({
     page,
   }) => {
     // The global config timeout (30s) governs the whole test; raise it so the
     // 60s goto budget is actually reachable on a cold preview hitting the CDN.
     test.setTimeout(90_000)
-    await page.setViewportSize(VIEWPORT)
     await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
 
     // Wait for the page's REQUIRED content control to mount before measuring —

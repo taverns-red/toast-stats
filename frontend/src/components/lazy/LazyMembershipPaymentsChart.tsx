@@ -26,6 +26,7 @@ export function LazyMembershipPaymentsChart(
           statTiles={3}
           plotHeight={350}
           shape="panel"
+          legend
         />
       }
     >

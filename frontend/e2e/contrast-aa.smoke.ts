@@ -125,7 +125,8 @@ const CASES: { path: string; width: number; ready: string }[] = [
     {
       path: '/district/61/trends',
       width,
-      ready: '.recharts-legend-item-text',
+      // The series legend is chips since #1835 (was Recharts' strip).
+      ready: '.chart-legend-chip',
     },
   ]),
 ]

@@ -40,7 +40,7 @@
      index, so a miss means a pipeline gap. */
 
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
+import { districtRankingsQueryOptions } from './districtRankingsQuery'
 import type { DistrictRanking } from '../types/districts'
 import type { SnapshotDate } from '../types/snapshotDate'
 
@@ -53,11 +53,7 @@ export function useDistrictRanking(
   ranking: DistrictRanking | null
   isLoading: boolean
 } {
-  const { data, isLoading } = useQuery({
-    queryKey: ['district-rankings', date ?? 'latest'],
-    queryFn: date ? () => fetchCdnRankingsForDate(date) : fetchCdnRankings,
-    staleTime: 15 * 60 * 1000,
-  })
+  const { data, isLoading } = useQuery(districtRankingsQueryOptions(date))
 
   // `fetchCdnRankingsForDate` silently falls back to the CURRENT
   // `v1/rankings.json` when a per-date file 404s, and signals that by leaving

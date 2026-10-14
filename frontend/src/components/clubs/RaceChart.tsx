@@ -122,11 +122,13 @@ export const RaceChart: React.FC<RaceChartProps> = ({
 
   return (
     <figure
+      {...readout.surfaceProps}
       className="race-chart"
       aria-label="Clubs recognised per snapshot date, banded by tier"
     >
       <ResponsiveContainer width="100%" height={260}>
         <AreaChart
+          {...readout.chartProps}
           data={data}
           margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
         >

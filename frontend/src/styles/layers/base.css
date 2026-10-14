@@ -49,7 +49,7 @@
     min-width: 44px;
   }
 
-  /* Form controls at ≥16px below 768 (#1838).
+  /* Form controls at ≥16px below 768 or on a touch screen (#1838, #2018).
    * iOS Safari zooms the page when a focused text field or <select> has a
    * computed font-size under 16px. This is a floor, not a default, so it is
    * `!important`: an important declaration in the LOWEST layer outranks every
@@ -58,8 +58,11 @@
    * it. It includes the transparent chip-select overlays (PY/date pills): they
    * take focus, so they zoom too, and their text is never painted.
    * Checkbox/radio/range/file carry no text and are left alone.
+   * A phone in landscape (844×390) is wider than 768, so the floor also
+   * follows the input: a coarse pointer gets it at any width (as #2017 did
+   * for tap targets), and a mouse keeps the compact desktop sizes.
    * Guarded by e2e/form-controls-16px.smoke.ts in both engines. */
-  @media (max-width: 767.98px) {
+  @media (max-width: 767.98px), (pointer: coarse) {
     select,
     textarea,
     input:not(
