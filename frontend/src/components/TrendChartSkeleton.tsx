@@ -28,6 +28,8 @@ export interface TrendChartSkeletonProps {
   /** `panel` forces the desktop shape — for a fallback that always renders
    *  the full chart (inline at desktop, or inside the phone expand sheet). */
   shape?: 'auto' | 'panel'
+  /** The loaded chart has a legend-chip row above its plot (#1835). */
+  legend?: boolean
 }
 
 export const TrendChartSkeleton: React.FC<TrendChartSkeletonProps> = ({
