@@ -25,6 +25,10 @@ import {
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
   clubDistrictHistoryShardKey,
+  DistrictClubShardSchema,
+  districtClubShardKey,
+  normalizeClubId,
+  parseDistrictClubShardPath,
   DistrictRegionHistorySchema,
   ProgramYearIndexFileSchema,
 } from '@taverns-red/shared-contracts'
@@ -70,6 +74,7 @@ export type ObjectKind =
   | 'district-region-history'
   | 'club-district-history-index'
   | 'club-district-history-shard'
+  | 'district-club-shard'
   | 'latest'
   | 'json'
 
@@ -152,6 +157,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
   if (CLUB_HISTORY_SHARD.test(path)) return 'club-district-history-shard'
+  if (parseDistrictClubShardPath(path)) return 'district-club-shard'
   if (path === LATEST_PATH) return 'latest'
   return 'json'
 }
@@ -602,6 +608,42 @@ function checkClubHistoryShard(path: string, value: unknown): string | null {
     : `club ${stray} belongs in shard ${clubDistrictHistoryShardKey(stray)}, not ${key}`
 }
 
+/**
+ * snapshots/<date>/analytics/district_<id>_clubs_<D>.json (#1901): the
+ * schema, the date, district and shard its path names, every club in the
+ * shard its id maps to (the readers' `districtClubShardKey`), and no club
+ * twice. An empty shard is valid: all ten are written for every district.
+ */
+function checkDistrictClubShard(path: string, value: unknown): string | null {
+  const parsed = DistrictClubShardSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const where = parseDistrictClubShardPath(path)!
+  const s = parsed.data
+  const served = `district_${where.districtId}_clubs_${where.shard}.json`
+  if (s.shard !== where.shard) {
+    return `holds shard ${s.shard} but is served as ${served}`
+  }
+  if (s.districtId !== where.districtId) {
+    return `holds district ${s.districtId} but is served as ${served}`
+  }
+  if (s.snapshotDate !== where.snapshotDate) {
+    return `holds snapshotDate ${s.snapshotDate} but is served under ${where.snapshotDate}`
+  }
+  const seen = new Set<string>()
+  for (const club of s.clubs) {
+    const key = districtClubShardKey(club.clubId)
+    if (key !== where.shard) {
+      return `club ${club.clubId} belongs in shard ${key}, not ${where.shard}`
+    }
+    const id = normalizeClubId(club.clubId)
+    if (seen.has(id)) return `club ${club.clubId} is listed twice`
+    seen.add(id)
+  }
+  return null
+}
+
 function checkLatest(value: unknown): string | null {
   const date = (value as { latestSnapshotDate?: unknown } | null)
     ?.latestSnapshotDate
@@ -646,6 +688,8 @@ export function checkObject(
       return checkClubHistoryIndex(value, ctx)
     case 'club-district-history-shard':
       return checkClubHistoryShard(check.path, value)
+    case 'district-club-shard':
+      return checkDistrictClubShard(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -746,6 +790,8 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
   'competitive-awards':
     'decoded, clubStrengthAward.allDistricts non-empty; current PY: priorYearAvgClubSize not null for every district (#1704)',
   'district-analytics': 'decoded, has `metadata` and `data` objects',
+  'district-club-shard':
+    'decoded, DistrictClubShardSchema, date/district/shard match the path, every club in its last-digit shard, none twice (#1901)',
   'snapshot-index': 'decoded, `districts` maps ids to YYYY-MM-DD arrays',
   latest: 'decoded, latestSnapshotDate is a real date',
   json: 'decoded (no nested gzip) and parses as JSON',
