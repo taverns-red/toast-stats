@@ -142,11 +142,16 @@ export async function addGapDistrictRaw(
   cacheDir: string,
   clubPerformanceBody: string
 ): Promise<void> {
+  const footer = footerFor(SUBSET_DATE)
   const rawDir = path.join(cacheDir, 'raw-csv', SUBSET_DATE)
-  const lines = ALL_DISTRICTS_CSV.split('\n')
-  lines.splice(lines.length - 1, 0, GAP_ALL_DISTRICTS_ROW)
+  const csv = [
+    ALL_DISTRICTS_HEADER,
+    ...SUBSET_DISTRICTS.map(id => ALL_DISTRICTS_ROWS[id]),
+    GAP_ALL_DISTRICTS_ROW,
+    footer,
+  ].join('\n')
   await fs.mkdir(rawDir, { recursive: true })
-  await fs.writeFile(path.join(rawDir, 'all-districts.csv'), lines.join('\n'))
+  await fs.writeFile(path.join(rawDir, 'all-districts.csv'), csv)
   const dir = path.join(rawDir, `district-${GAP_DISTRICT}`)
   await fs.mkdir(dir, { recursive: true })
   await fs.writeFile(
@@ -159,7 +164,7 @@ export async function addGapDistrictRaw(
       DISTRICT_PERFORMANCE_HEADER,
       '"U","0D","0A","05159852","Toastmasters Costa Rica","10","19","14","14","47","0","57","",""',
       '"U","0D","0A","05331530","O.C. Debaters","0","0","0","0","0","0","0","",""',
-      FOOTER,
+      footer,
     ].join('\n')
   )
 }
