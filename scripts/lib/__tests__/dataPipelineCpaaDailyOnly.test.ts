@@ -72,3 +72,49 @@ describe('data-pipeline value gate — CPAA is daily-only (#1673)', () => {
     expect(cli).toContain("'--no-closing-auto-allow'")
   })
 })
+
+/**
+ * #2040 (#1759 B4, run 38586593289): a failed rebuild left its re-derive on
+ * staging unpromoted; the next daily's CPAA would auto-allow those dates
+ * (closing-pinned, counter-only) and the prefix rsync would copy them to
+ * prod. The daily's CPAA must cover only the snapshot dates the daily itself
+ * wrote, taken from its own run manifest.
+ */
+describe('data-pipeline value gate — daily CPAA only for dates the run wrote (#2040)', () => {
+  const run = valueDiffStep().run!
+  const dailyBranch = run.slice(
+    run.indexOf('if [ "${PIPELINE_MODE:-}" != "daily" ]; then'),
+    run.indexOf('npx collector-cli value-diff \\')
+  )
+
+  it('derives the written dates from the run manifest in the daily branch', () => {
+    expect(dailyBranch).toMatch(/\belse\b/)
+    expect(dailyBranch).toContain(
+      'npx tsx scripts/run-manifest-snapshot-dates.ts'
+    )
+  })
+
+  it('fails closed to an empty list when the manifest cannot be read', () => {
+    expect(dailyBranch).toMatch(/: > \/tmp\/vd-cpaa-dates\.txt/)
+  })
+
+  it('passes the list to value-diff via --closing-auto-allow-dates', () => {
+    expect(dailyBranch).toContain(
+      'CPAA_FLAG="--closing-auto-allow-dates /tmp/vd-cpaa-dates.txt"'
+    )
+  })
+
+  it('the collector-cli value-diff command declares the flag', () => {
+    const cli = fs.readFileSync(CLI_PATH, 'utf-8')
+    expect(cli).toContain("'--closing-auto-allow-dates <file>'")
+  })
+
+  it('the dates script reuses the completeness gate manifest reader', () => {
+    const script = fs.readFileSync(
+      path.resolve(process.cwd(), 'scripts/run-manifest-snapshot-dates.ts'),
+      'utf-8'
+    )
+    expect(script).toContain('manifestSnapshotDates')
+    expect(script).toContain('parseRunManifest')
+  })
+})

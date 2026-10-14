@@ -597,6 +597,34 @@ describe('evaluatePromote CPAA wiring (#1086)', () => {
     expect(decision.reasons.join(' ')).toMatch(/auto-allow disabled/i)
   })
 
+  it('does NOT auto-allow a changed date this run did not write (#2040)', () => {
+    // A failed rebuild's unpromoted re-derive left on staging (#1759 B4):
+    // the daily's CPAA must not vouch for a date only another run wrote.
+    const { report, digests } = promoteCase({ totalPayments: 4999 })
+    const decision = evaluatePromote(
+      report,
+      { closingAutoAllowDates: ['2026-06-02'] },
+      digests
+    )
+    expect(decision.promote).toBe(false)
+    expect(decision.requiresReview).toBe(true)
+    expect(decision.autoAllowed).toBeUndefined()
+    expect(decision.reasons.join(' ')).toMatch(
+      /2026-05-31: not written by this run/
+    )
+  })
+
+  it('auto-allows a changed date this run wrote (#2040, daily unchanged)', () => {
+    const { report, digests } = promoteCase({ totalPayments: 4999 })
+    const decision = evaluatePromote(
+      report,
+      { closingAutoAllowDates: ['2026-05-31'] },
+      digests
+    )
+    expect(decision.promote).toBe(true)
+    expect(decision.autoAllowed).toBe('closing-reconciliation')
+  })
+
   it('allowValueChanges still promotes when CPAA is disabled (#1673)', () => {
     const { report, digests } = promoteCase({ totalPayments: 5050 })
     const decision = evaluatePromote(

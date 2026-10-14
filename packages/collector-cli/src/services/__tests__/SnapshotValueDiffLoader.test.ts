@@ -237,6 +237,91 @@ describe('runValueDiff — Closing-Pinned Auto-Allow end-to-end (#1086)', () => 
   })
 })
 
+describe('runValueDiff — CPAA only for dates this run wrote (#2040)', () => {
+  /**
+   * The #1759 B4 shape (run 38586593289): a failed rebuild left 2019-03-31
+   * re-derived on staging (closing raw 2019-04-11, counter-only change:
+   * clubsWith20PlusMembers down) and promoted nothing. The next daily wrote
+   * only its own date, yet its CPAA would auto-allow the rebuild's date and
+   * the prefix rsync would copy it to prod unreviewed.
+   */
+  function b4Rankings(
+    date: string,
+    sourceCsvDate: string,
+    clubsWith20PlusMembers: number
+  ): AllDistrictsRankingsData {
+    const data = rankings(date, 5000)
+    return {
+      ...data,
+      metadata: { ...data.metadata, sourceCsvDate },
+      rankings: data.rankings.map(r => ({ ...r, clubsWith20PlusMembers })),
+    }
+  }
+
+  function b4Buckets() {
+    const staging = join(tmp, 'staging')
+    const prod = join(tmp, 'prod')
+    writeSnapshot(
+      prod,
+      '2019-03-31',
+      b4Rankings('2019-03-31', '2019-04-11', 21)
+    )
+    writeSnapshot(
+      staging,
+      '2019-03-31',
+      b4Rankings('2019-03-31', '2019-04-11', 17)
+    )
+    // The daily's own (new, additive) date.
+    writeSnapshot(staging, '2026-10-14', rankings('2026-10-14', 5000))
+    return { staging, prod }
+  }
+
+  it('holds (exit 1) a closing-pinned counter change on a date the daily did not write', () => {
+    const { staging, prod } = b4Buckets()
+    const { decision, exitCode } = runValueDiff({
+      stagingDir: staging,
+      prodDir: prod,
+      closingAutoAllowDates: ['2026-10-14'],
+    })
+    expect(decision.promote).toBe(false)
+    expect(decision.requiresReview).toBe(true)
+    expect(decision.autoAllowed).toBeUndefined()
+    expect(decision.reasons.join(' ')).toMatch(
+      /2019-03-31: not written by this run/
+    )
+    expect(exitCode).toBe(1)
+  })
+
+  it('still auto-allows (exit 0) when the daily wrote the closing date itself', () => {
+    const { staging, prod } = b4Buckets()
+    const { decision, exitCode } = runValueDiff({
+      stagingDir: staging,
+      prodDir: prod,
+      closingAutoAllowDates: ['2019-03-31', '2026-10-14'],
+    })
+    expect(decision.promote).toBe(true)
+    expect(decision.autoAllowed).toBe('closing-reconciliation')
+    expect(decision.closingDeltas).toEqual([
+      expect.objectContaining({
+        date: '2019-03-31',
+        field: 'clubsWith20PlusMembers',
+        delta: -4,
+      }),
+    ])
+    expect(exitCode).toBe(0)
+  })
+
+  it('an empty written-dates list allows nothing (fail closed)', () => {
+    const { staging, prod } = b4Buckets()
+    const { decision } = runValueDiff({
+      stagingDir: staging,
+      prodDir: prod,
+      closingAutoAllowDates: [],
+    })
+    expect(decision.promote).toBe(false)
+  })
+})
+
 describe('runValueDiff — hash-equal dates skipped by the fetch plan (#1730)', () => {
   /**
    * Today every overlap date is downloaded from both buckets. With the plan,
