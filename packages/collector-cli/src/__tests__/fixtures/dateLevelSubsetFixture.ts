@@ -85,3 +85,46 @@ export async function writeSubsetRawCsv(
   }
   return rawDir
 }
+
+/**
+ * District U, TI's undistricted bucket, as #1759's B4 rebuild found it
+ * (#2035): the date's all-districts CSV names it (the real 2019-04-11 row,
+ * mapped onto this fixture's header), its district report is a real CSV
+ * (rows copied from `raw-csv/2019-04-11/district-U/district-performance.csv`),
+ * and its club report is TI's 8082-byte XHTML error page, a #1671 gap.
+ */
+export const GAP_DISTRICT = 'U'
+
+const GAP_ALL_DISTRICTS_ROW =
+  '"DNAR","U","N","N","N","N","1230","1619","2033","85","601","5568","6135","-9.24%","120","139","15.83%","147","0","0","0","0","0","0%"'
+
+/**
+ * Add the gap district to the date written by `writeSubsetRawCsv`: its row in
+ * all-districts.csv (before the footer) and a raw directory whose
+ * club-performance.csv is `clubPerformanceBody`.
+ */
+export async function addGapDistrictRaw(
+  cacheDir: string,
+  clubPerformanceBody: string
+): Promise<void> {
+  const rawDir = path.join(cacheDir, 'raw-csv', SUBSET_DATE)
+  const lines = ALL_DISTRICTS_CSV.split('\n')
+  lines.splice(lines.length - 1, 0, GAP_ALL_DISTRICTS_ROW)
+  await fs.mkdir(rawDir, { recursive: true })
+  await fs.writeFile(path.join(rawDir, 'all-districts.csv'), lines.join('\n'))
+  const dir = path.join(rawDir, `district-${GAP_DISTRICT}`)
+  await fs.mkdir(dir, { recursive: true })
+  await fs.writeFile(
+    path.join(dir, 'club-performance.csv'),
+    clubPerformanceBody
+  )
+  await fs.writeFile(
+    path.join(dir, 'district-performance.csv'),
+    [
+      DISTRICT_PERFORMANCE_HEADER,
+      '"U","0D","0A","05159852","Toastmasters Costa Rica","10","19","14","14","47","0","57","",""',
+      '"U","0D","0A","05331530","O.C. Debaters","0","0","0","0","0","0","0","",""',
+      FOOTER,
+    ].join('\n')
+  )
+}

@@ -18,18 +18,21 @@ import React from 'react'
 import { renderHook, waitFor, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useDistrictRanking } from '../useDistrictRanking'
-import { fetchCdnRankings, fetchCdnRankingsForDate } from '../../services/cdn'
+import {
+  fetchCdnRankings,
+  fetchCdnRankingsForDateExact,
+} from '../../services/cdn'
 import type { CdnRankingsData } from '../../services/cdn'
 import { snap } from '../../test-utils/snapshotDate'
 import type { SnapshotDate } from '../../types/snapshotDate'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
-  fetchCdnRankingsForDate: vi.fn(),
+  fetchCdnRankingsForDateExact: vi.fn(),
 }))
 
 const mockedLatest = vi.mocked(fetchCdnRankings)
-const mockedForDate = vi.mocked(fetchCdnRankingsForDate)
+const mockedForDate = vi.mocked(fetchCdnRankingsForDateExact)
 
 /** A rankings row carrying the payment breakdown the card consumes. */
 type Row = CdnRankingsData['rankings'][number] & {
@@ -135,7 +138,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockedLatest.mockResolvedValue(CURRENT)
   mockedForDate.mockImplementation((date: SnapshotDate) =>
-    Promise.resolve(BY_DATE[date] ?? CURRENT)
+    Promise.resolve(BY_DATE[date] ?? null)
   )
 })
 afterEach(() => cleanup())
@@ -207,7 +210,7 @@ describe('useDistrictRanking — snapshot scoping (#1396)', () => {
     // file 404s, and marks that by leaving `snapshotDate` unset. Rendering the
     // current year's numbers under a past date is the exact #1396 symptom, so
     // the hook must report "no row" rather than the wrong row.
-    mockedForDate.mockResolvedValue(CURRENT)
+    mockedForDate.mockResolvedValue(null)
 
     const { result } = renderRanking(snap('2025-06-30'), makeClient())
     await waitFor(() => expect(result.current.isLoading).toBe(false))

@@ -19,7 +19,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import DistrictDetailPage from '../DistrictDetailPage'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
-import { fetchCdnRankings, fetchCdnRankingsForDate } from '../../services/cdn'
+import {
+  fetchCdnRankings,
+  fetchCdnRankingsForDateExact,
+} from '../../services/cdn'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import type { CdnRankingsData } from '../../services/cdn'
 import { snap } from '../../test-utils/snapshotDate'
@@ -138,7 +141,7 @@ vi.mock('../../services/cdn', async importOriginal => {
   return {
     ...actual,
     fetchCdnRankings: vi.fn(),
-    fetchCdnRankingsForDate: vi.fn(),
+    fetchCdnRankingsForDateExact: vi.fn(),
   }
 })
 
@@ -209,7 +212,7 @@ vi.mock('../../hooks/useCompetitiveAwards', () => ({
 }))
 
 const mockedLatest = vi.mocked(fetchCdnRankings)
-const mockedForDate = vi.mocked(fetchCdnRankingsForDate)
+const mockedForDate = vi.mocked(fetchCdnRankingsForDateExact)
 
 beforeEach(() => {
   vi.clearAllMocks()

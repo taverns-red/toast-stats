@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchLatestSnapshotDate,
-  cdnAnalyticsUrl,
-  fetchFromCdn,
   fetchCdnDistrictReports,
 } from '../services/cdn'
+import { districtAnalyticsFileQueryOptions } from './districtAnalyticsFileQuery'
 import type {
   ClubHealthStatus,
   DistrictReportsDataset,
@@ -252,25 +251,41 @@ export const useDistrictAnalytics = (
 
   return useQuery<DistrictAnalyticsWithReports, Error>({
     queryKey: ['districtAnalytics', districtId, startDate, endDate],
-    queryFn: async () => {
+    queryFn: async ({ client }) => {
       if (!districtId) {
         throw new Error('District ID is required')
       }
 
       // Use the selected date for CDN URL; fall back to manifest latest
       const snapshotDate = endDate || (await fetchLatestSnapshotDate())
-      const url = cdnAnalyticsUrl(snapshotDate, districtId, 'analytics')
       // Read-time club-status overlay (epic #1062 Sprint 4 #1069): fetch the
       // base analytics and the daily Dues Renewal report in parallel (they are
       // independent once the snapshot date is known). The reports fetch is
       // tolerant (404/malformed ⇒ null ⇒ no overlay), so the daily-fresh
       // renewal data can promote a frozen-base club to Active during closing
       // WITHOUT mutating the base snapshot.
+      //
+      // The analytics file is read through the shared file entry (#2027): the
+      // hub's useAggregatedAnalytics reads the same file.
       const [file, reports] = await Promise.all([
-        fetchFromCdn<{ data: DistrictAnalytics }>(url),
+        client.fetchQuery(
+          districtAnalyticsFileQueryOptions(districtId, snapshotDate)
+        ),
         fetchCdnDistrictReports(snapshotDate, districtId),
       ])
-      const analytics = file.data
+      // The overlays below write onto club objects, and `file` is the shared
+      // cached payload — copy the clubs so the cache is never mutated.
+      const analytics: DistrictAnalytics = reports
+        ? {
+            ...file,
+            allClubs: file.allClubs?.map(c => ({ ...c })),
+            vulnerableClubs: file.vulnerableClubs?.map(c => ({ ...c })),
+            thrivingClubs: file.thrivingClubs?.map(c => ({ ...c })),
+            interventionRequiredClubs: file.interventionRequiredClubs?.map(
+              c => ({ ...c })
+            ),
+          }
+        : file
 
       // Single join site — build the lookup once, attach to every club array so
       // each consumer inherits `statusOverlay`.

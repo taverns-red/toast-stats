@@ -17,7 +17,12 @@ import type { SnapshotDate } from '../types/snapshotDate'
  * (Pre-fix the hook returned null for undefined date — the AwardsPage
  * surfaced this as an empty state.)
  */
-export function useCompetitiveAwards(date: SnapshotDate | undefined) {
+export function useCompetitiveAwards(
+  date: SnapshotDate | undefined,
+  /** `enabled: false` holds the read until the caller knows its date, so it
+      does not fetch `latest` first and the dated file after (#2027). */
+  options: { enabled?: boolean } = {}
+) {
   return useQuery<CompetitiveAwardStandings | null>({
     queryKey: ['competitive-awards', date ?? 'latest'],
     queryFn: async () => {
@@ -27,5 +32,6 @@ export function useCompetitiveAwards(date: SnapshotDate | undefined) {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled: options.enabled ?? true,
   })
 }

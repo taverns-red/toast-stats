@@ -1,36 +1,13 @@
 /**
- * Helper functions for aggregated analytics — fetch and data conversion.
+ * Helper functions for aggregated analytics — data conversion.
  * No React dependencies — fully testable in isolation.
  *
- * CDN-only strategy: fetches pre-computed JSON from Cloud CDN (#168, #173).
- * The Express `/analytics-summary` endpoint has been deleted.
+ * The analytics file itself is read through `districtAnalyticsFileQueryOptions`
+ * (#2027), shared with useDistrictAnalytics.
  */
 
-import {
-  fetchLatestSnapshotDate,
-  cdnAnalyticsUrl,
-  fetchFromCdn,
-} from '../../services/cdn'
 import type { DistrictAnalytics } from '../useDistrictAnalytics'
 import type { AggregatedAnalyticsResponse, TrendData } from './types'
-import type { SnapshotDate } from '../../types/snapshotDate'
-
-/**
- * Fetch district analytics from Cloud CDN.
- *
- * CDN path: cdn.taverns.red/snapshots/{date}/analytics/district_{id}_analytics.json
- *
- * This is the sole data source — no Express fallback (#173).
- */
-export async function fetchIndividualAnalytics(
-  districtId: string,
-  snapshotDate?: SnapshotDate
-): Promise<DistrictAnalytics> {
-  const date = snapshotDate || (await fetchLatestSnapshotDate())
-  const url = cdnAnalyticsUrl(date, districtId, 'analytics')
-  const file = await fetchFromCdn<{ data: DistrictAnalytics }>(url)
-  return file.data
-}
 
 /**
  * Convert individual analytics response to aggregated format.
