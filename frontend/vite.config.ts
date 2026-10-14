@@ -32,8 +32,12 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             {
+              // `use-sync-external-store` is shared by Recharts and by
+              // @tanstack/react-table v9 (via react-store). Left to `charts`,
+              // the clubs table imported its one binding from the Recharts
+              // chunk and the clubs route paid 112 KB gzip for it (#1830).
               name: 'vendor',
-              test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/,
+              test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler|use-sync-external-store)[\\/]/,
               priority: 30,
             },
             {

@@ -87,3 +87,64 @@ export function forbiddenOnCriticalPath(
 ): string[] {
   return chunks.filter(c => forbiddenPrefixes.some(p => c.startsWith(p)))
 }
+
+/**
+ * Page chunks of the lazy Lighthouse mobile routes (`lighthouserc.mobile.js`;
+ * the landing page is bundled into the entry, so the critical-path check
+ * above already covers it). None renders a Recharts chart at first paint (charts on `/district/:id` and
+ * the club page load through a lazy `import()`), so none may reach a
+ * route-only chunk through a static import. On 2026-10-13 the clubs page did:
+ * it took one shared binding (`use-sync-external-store/with-selector`) from
+ * `charts-*.js` and paid 112 KB gzip for it (#1830).
+ */
+export const CHARTLESS_ROUTE_CHUNK_PREFIXES: readonly string[] = [
+  'DistrictDetailPage-',
+  'DistrictClubsPage-',
+  'ClubDetailPage-',
+  'RegionsPage-',
+]
+
+export interface ChartlessRouteReport {
+  /** `<route chunk> statically imports <route-only chunk>` lines. */
+  violations: string[]
+  /** Listed prefixes with no chunk in the build (a vacuous check). */
+  missing: string[]
+}
+
+/**
+ * For each chartless route prefix, the route-only chunks its page chunk
+ * reaches over static imports.
+ */
+export function routeOnlyChunksOnChartlessRoutes(
+  assetNames: readonly string[],
+  readChunk: (name: string) => string | null,
+  routePrefixes: readonly string[] = CHARTLESS_ROUTE_CHUNK_PREFIXES,
+  forbiddenPrefixes: readonly string[] = ROUTE_ONLY_CHUNK_PREFIXES
+): ChartlessRouteReport {
+  const violations: string[] = []
+  const missing: string[] = []
+  for (const prefix of routePrefixes) {
+    const entries = assetNames.filter(
+      n => n.startsWith(prefix) && n.endsWith('.js')
+    )
+    if (entries.length === 0) {
+      missing.push(prefix)
+      continue
+    }
+    for (const entry of entries) {
+      const seen = new Set<string>()
+      const queue = [entry]
+      while (queue.length > 0) {
+        const name = queue.shift() as string
+        if (seen.has(name)) continue
+        seen.add(name)
+        const src = readChunk(name)
+        if (src === null) continue
+        for (const dep of staticImports(src)) queue.push(dep)
+      }
+      for (const hit of forbiddenOnCriticalPath([...seen], forbiddenPrefixes))
+        violations.push(`${entry} statically imports ${hit}`)
+    }
+  }
+  return { violations, missing }
+}
