@@ -25,7 +25,9 @@ import { z } from 'zod'
 import type {
   ScrapedRecordCoordinates,
   ScrapedRecordAddress,
+  MeetingScheduleEntry,
 } from '@taverns-red/shared-contracts'
+import { parseMeetingSchedule, scrubFacLocation } from './FacMeetingSchedule.js'
 
 const TI_HQ_LATITUDE = 39.6478
 const TI_HQ_LONGITUDE = -104.9878
@@ -137,6 +139,10 @@ export interface ClubEnrichment {
   meetingTime?: string
   allowsVirtualAttendance?: boolean
   isProspective?: boolean
+  /** FAC Location, scrubbed of contact details and meeting access (#1789). */
+  location?: string
+  /** Parsed from MeetingDay / MeetingTime / Location (#1789). */
+  meetingSchedule?: MeetingScheduleEntry[]
 }
 
 export interface FindAClubServiceConfig {
@@ -297,6 +303,16 @@ export function normaliseTiClub(club: TiClub): ClubEnrichment | null {
   if (typeof club.IsProspective === 'boolean') {
     result.isProspective = club.IsProspective
   }
+
+  // #1789 — the scrubbed Location is both a field and the mode fallback.
+  const location = scrubFacLocation(club.Location)
+  if (location) result.location = location
+  const meetingSchedule = parseMeetingSchedule({
+    meetingDay: club.MeetingDay,
+    meetingTime: club.MeetingTime,
+    location,
+  })
+  if (meetingSchedule) result.meetingSchedule = meetingSchedule
 
   return result
 }
