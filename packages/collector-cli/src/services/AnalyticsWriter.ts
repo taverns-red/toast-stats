@@ -27,6 +27,7 @@ import {
   type AnalyticsManifest,
   type AnalyticsManifestEntry,
 } from '@taverns-red/analytics-core'
+import { slimDistrictAnalyticsClubLists } from '@taverns-red/shared-contracts'
 
 /**
  * Configuration for AnalyticsWriter
@@ -243,8 +244,9 @@ export class AnalyticsWriter implements IAnalyticsWriter {
       data,
     }
 
-    // Serialize to JSON with pretty printing
-    const content = JSON.stringify(fileContent, null, 2)
+    // Compact JSON (#1901): indentation was over half the decoded bytes of
+    // the largest file, and no reader depends on the layout.
+    const content = JSON.stringify(fileContent)
     const size = Buffer.byteLength(content, 'utf-8')
 
     // Write atomically using temp file and rename
@@ -290,11 +292,13 @@ export class AnalyticsWriter implements IAnalyticsWriter {
       filePath,
     })
 
+    // The category arrays are written as clubId lists (#1901); readers
+    // expand them against allClubs (expandDistrictAnalyticsClubLists).
     const result = await this.writeAnalyticsFile(
       filePath,
       snapshotDate,
       districtId,
-      analytics,
+      slimDistrictAnalyticsClubLists(analytics),
       options?.sourceSnapshotChecksum
     )
 
