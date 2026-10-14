@@ -113,11 +113,13 @@ interface RankingMetrics {
   marketAnalysisSubmitted: boolean | undefined
   communicationPlanSubmitted: boolean | undefined
   regionAdvisorVisitMet: boolean | undefined
-  // Clubs with 20+ paid members for President's 20-Plus Award (#330)
-  clubsWith20PlusMembers: number
+  // Clubs with 20+ paid members for President's 20-Plus Award (#330).
+  // undefined = unknown: no usable club-performance.csv (#1671, #2037).
+  clubsWith20PlusMembers: number | undefined
   // Paid clubs chartered in the current program year (#336) — used to compute
   // the District Club Retention Award on base-club survival alone.
-  newCharteredClubs: number
+  // undefined = unknown: no usable district-performance.csv (#2037).
+  newCharteredClubs: number | undefined
   // Clubs suspended in the current program year (#1497) — the Susp branch of
   // the same `Charter Date/Suspend Date` column, for the worldwide rollup.
   // undefined = unknown: no district-performance.csv for the district, or
@@ -789,10 +791,13 @@ export class TransformService {
           regionAdvisorVisitMet: this.parseYesNo(
             record['Region Advisor Visit']
           ),
-          // Default 0; populated later from per-district club-performance.csv (#330)
-          clubsWith20PlusMembers: 0,
-          // Default 0; populated later from per-district club-performance.csv (#336)
-          newCharteredClubs: 0,
+          // Unknown until measured from a usable per-district
+          // club-performance.csv (#330); a #1671 gap leaves it unknown, never
+          // 0 (#2037)
+          clubsWith20PlusMembers: undefined,
+          // Unknown until measured from a usable per-district
+          // district-performance.csv (#336, #2037)
+          newCharteredClubs: undefined,
           // Unknown until measured from per-district district-performance.csv
           // (#1497); stays unknown without one (#1757)
           suspendedClubs: undefined,
@@ -1001,22 +1006,40 @@ export class TransformService {
         const csvPath = path.join(districtDir, 'club-performance.csv')
         const content = await fs.readFile(csvPath, 'utf-8').catch(() => null)
         if (!content) continue
-        const clubs = this.parseCSVToRecords(content)
+        // A 200 is not proof of a CSV (#1671): when the club report is TI's
+        // HTML error page (or a header-only file), no club-derived count is
+        // read from it. clubsWith20PlusMembers stays absent — the contract's
+        // UNKNOWN, never zero — and the district stays ranked on its
+        // all-districts row, which is a real CSV (#2037).
+        const clubReportUsable =
+          validateCsvBody(content, 'clubperformance').ok &&
+          this.validateCSVContent(content, csvPath).valid
+        if (!clubReportUsable) {
+          this.logger.warn(
+            'club-performance.csv is not a usable CSV — no 20-plus count for district',
+            { date, districtId: metric.districtId, path: csvPath }
+          )
+        }
+        const clubs = clubReportUsable ? this.parseCSVToRecords(content) : null
 
         // Always count clubs with 20+ paid members for President's 20-Plus Award (#330).
         // Item 1490 scopes it to ACTIVE clubs (the denominator is Active
         // Clubs), so suspended and ineligible rows are excluded (#1611). A
         // legacy export without the Club Status column counts every row.
-        let twentyPlus = 0
-        for (const club of clubs) {
-          const status = club['Club Status']?.trim().toLowerCase()
-          if (status === 'suspended' || status === 'ineligible') continue
-          const members = this.parseNumber(
-            club['Active Members'] ?? club['Membership'] ?? club['Paid Members']
-          )
-          if (members >= 20) twentyPlus++
+        if (clubs) {
+          let twentyPlus = 0
+          for (const club of clubs) {
+            const status = club['Club Status']?.trim().toLowerCase()
+            if (status === 'suspended' || status === 'ineligible') continue
+            const members = this.parseNumber(
+              club['Active Members'] ??
+                club['Membership'] ??
+                club['Paid Members']
+            )
+            if (members >= 20) twentyPlus++
+          }
+          metric.clubsWith20PlusMembers = twentyPlus
         }
-        metric.clubsWith20PlusMembers = twentyPlus
 
         // Count newly chartered and newly suspended clubs from
         // district-performance.csv (#336, #1497). The
@@ -1032,7 +1055,12 @@ export class TransformService {
           const districtContent = await fs
             .readFile(districtPerfPath, 'utf-8')
             .catch(() => null)
-          if (districtContent) {
+          // Same #1671 guard for the district report: an HTML body yields
+          // no charter or suspension count, not zero (#2037).
+          if (
+            districtContent &&
+            validateCsvBody(districtContent, 'districtperformance').ok
+          ) {
             const rows = this.parseCSVToRecords(districtContent)
             let newCharters = 0
             const suspendedRows: SuspendedClub[] = []
@@ -1061,7 +1089,7 @@ export class TransformService {
         }
 
         // Compute confirmed Distinguished only when all districts report 0 (#304)
-        if (allZeroDistinguished) {
+        if (clubs && allZeroDistinguished) {
           let confirmed = 0
           for (const club of clubs) {
             const goals = this.parseNumber(club['Goals Met'])

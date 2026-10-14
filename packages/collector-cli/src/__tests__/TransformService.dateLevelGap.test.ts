@@ -168,6 +168,31 @@ describe('TransformService — a source gap is accounted for in the date-level r
     expect(awards.extensionAward.map(r => r.districtId)).toContain(GAP_DISTRICT)
   })
 
+  it('reads no charter or suspension count from a district report that is the TI error page (#2037)', async () => {
+    await writeSubsetRawCsv(cacheDir, SUBSET_DISTRICTS)
+    await addGapDistrictRaw(cacheDir, TI_ERROR_PAGE)
+    await fs.writeFile(
+      path.join(
+        cacheDir,
+        'raw-csv',
+        SUBSET_DATE,
+        `district-${GAP_DISTRICT}`,
+        'district-performance.csv'
+      ),
+      TI_ERROR_PAGE
+    )
+
+    await service.transform({ date: SUBSET_DATE, force: true })
+
+    const rankings = await readJson<{
+      rankings: Array<{ districtId: string; newCharteredClubs?: number }>
+    }>('all-districts-rankings.json')
+    const gap = rankings.rankings.find(r => r.districtId === GAP_DISTRICT)
+    expect(gap).toBeDefined()
+    expect(gap).not.toHaveProperty('newCharteredClubs')
+    expect(gap).not.toHaveProperty('suspendedClubs')
+  })
+
   it('still refuses when another district of the set has no input and no recorded gap or failure (#1756 intact)', async () => {
     await writeSubsetRawCsv(cacheDir, ['21', '49'])
     await addGapDistrictRaw(cacheDir, TI_ERROR_PAGE)
