@@ -250,6 +250,21 @@ describe('stripStoredObject', () => {
     }
   })
 
+  it('re-gzips at maximum compression when the original was (gcloud -Z: XFL=2)', () => {
+    // Probe 2026-10-14: staging analytics objects carry XFL=2 (level 9). A
+    // default-level re-gzip of district_61_analytics.json was 15% larger.
+    const text = JSON.stringify(analyticsFile(), null, 2)
+    const original = gzipSync(Buffer.from(text), { level: 9 })
+    expect(original[8]).toBe(2)
+    const result = stripStoredObject(original)
+    if (!result.changed) throw new Error('expected a change')
+    expect(result.bytes[8]).toBe(2)
+    // A default-level original keeps the default level.
+    const plain = stripStoredObject(gzipSync(Buffer.from(text)))
+    if (!plain.changed) throw new Error('expected a change')
+    expect(plain.bytes[8]).toBe(0)
+  })
+
   it('keeps a non-default format (4-space indent)', () => {
     const original = stored(districtFile(), 1, 4)
     const result = stripStoredObject(original)
