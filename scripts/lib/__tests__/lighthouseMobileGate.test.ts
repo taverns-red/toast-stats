@@ -131,7 +131,7 @@ describe('lighthouserc.mobile.js (#1830)', () => {
       }
     })
 
-    it('is ratcheted to the 2026-10-13 runner measurements (#1856)', () => {
+    it('is ratcheted to the 2026-10-13 runner measurements (#1856, #2014)', () => {
       // Ceilings from 8 PR-preview runs x 3 samples (2026-10-13). LHCI asserts
       // the best of 3 (`optimistic`), so each ceiling is the worst per-run
       // best + headroom, or the #1830 target where that already passes. A
@@ -150,11 +150,13 @@ describe('lighthouserc.mobile.js (#1830)', () => {
           scriptBytes: 300 * KB,
           totalBytes: 1200 * KB,
         },
+        // Ratchet 2 (#2014): #2009 dropped the Recharts chunk from clubs.
+        // 3 post-#2009 runs: script 229-230 KB, total 1180 KB per-run best.
         clubs: {
           lcpMs: 4800,
           cls: 0.1,
-          scriptBytes: 350 * KB,
-          totalBytes: 1400 * KB,
+          scriptBytes: 300 * KB,
+          totalBytes: 1300 * KB,
         },
         club: {
           lcpMs: 7500,
