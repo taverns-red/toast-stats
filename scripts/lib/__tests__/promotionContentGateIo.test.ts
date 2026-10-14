@@ -186,7 +186,10 @@ const latest = (date: string) => ({
 const PY = 'time-series/district_61/2026-2027.json'
 
 /** Prod as of yesterday; staging is today's run on top of it. */
-function buckets(overrides: Record<string, Stored> = {}) {
+function buckets(
+  overrides: Record<string, Stored> = {},
+  prodOverrides: Record<string, Stored> = {}
+) {
   const shared = {
     'config/club-index.json': plain({ clubs: {} }),
     'time-series/district_61/index-metadata.json': gz(metadata),
@@ -201,6 +204,7 @@ function buckets(overrides: Record<string, Stored> = {}) {
     }),
     [PY]: gz(programYearFile('2026-09-30')),
     'snapshots/2026-09-30/district_61.json': plain({ districtId: '61' }),
+    ...prodOverrides,
   })
   const staging = fakeBucket({
     ...shared,
@@ -330,6 +334,79 @@ describe('runContentGate end to end over the real SDK shape', () => {
     })
     expect(result.promote).toBe(false)
     expect(result.failures.map(f => f.path)).toContain(PY)
+  })
+})
+
+describe('runContentGate checks the club-district history shard set (#1782)', () => {
+  const DIR = 'config/club-district-history/'
+  const clubIndex = (shards: string[]) => ({
+    _format: { version: '1.0.0', type: 'club-district-history-index' },
+    asOf: '2026-10-08',
+    sourcesUpdatedAt: '2026-10-09T12:00:00.000Z',
+    granularity: 'program-year',
+    programYears: ['2026-2027'],
+    totalClubs: shards.length,
+    shards,
+    duplicates: [],
+  })
+  const clubShard = (key: string) => ({
+    _format: { version: '1.0.0', type: 'club-district-history-shard' },
+    shard: key,
+    asOf: '2026-10-08',
+    clubs: {
+      [`9${key}`]: {
+        name: `Club 9${key}`,
+        formerNames: [],
+        firstSeen: '2026-07-26',
+        lastSeen: '2026-10-08',
+        spans: [{ from: '2026-07-26', to: null, districtId: '61' }],
+        byProgramYear: { '2026-2027': '61' },
+      },
+    },
+  })
+  const run = async (
+    staged: Record<string, Stored>,
+    prodExtra: Record<string, Stored> = {}
+  ) => {
+    const { staging, prod } = buckets(staged, prodExtra)
+    return runContentGate(staging, prod, () => {}, { random: () => 0 })
+  }
+
+  it('passes an index whose every shard is staged', async () => {
+    const result = await run({
+      [`${DIR}index.json`]: plain(clubIndex(['77', '99'])),
+      [`${DIR}77.json`]: plain(clubShard('77')),
+      [`${DIR}99.json`]: plain(clubShard('99')),
+    })
+    expect(result.failures).toEqual([])
+    expect(result.checked.map(c => c.path)).toEqual(
+      expect.arrayContaining([
+        `${DIR}index.json`,
+        `${DIR}77.json`,
+        `${DIR}99.json`,
+      ])
+    )
+  })
+
+  it('holds an index that names a shard staging does not have', async () => {
+    const result = await run({
+      [`${DIR}index.json`]: plain(clubIndex(['77', '99'])),
+      [`${DIR}77.json`]: plain(clubShard('77')),
+    })
+    expect(result.promote).toBe(false)
+    expect(result.failures.map(f => f.path)).toEqual([`${DIR}index.json`])
+  })
+
+  it('holds an index that drops a shard prod already serves', async () => {
+    const result = await run(
+      {
+        [`${DIR}index.json`]: plain(clubIndex(['77'])),
+        [`${DIR}77.json`]: plain(clubShard('77')),
+      },
+      { [`${DIR}99.json`]: plain(clubShard('99')) }
+    )
+    expect(result.promote).toBe(false)
+    expect(result.failures.map(f => f.path)).toEqual([`${DIR}index.json`])
   })
 })
 

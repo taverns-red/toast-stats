@@ -6,6 +6,14 @@ on:
     paths:
       - 'frontend/**'
       - 'lighthouserc.js'
+      - '.github/workflows/lighthouse-ci.yml'
+      - 'scripts/lighthouse-cdn-server.mjs' # lighthouserc.js starts it (#2000)
+      # The bundle gates below run these; their logic lives in scripts/lib (#2005)
+      - 'scripts/check-critical-path.ts'
+      - 'scripts/check-map-route-budget.ts'
+      - 'scripts/lib/criticalPath.ts'
+      - 'scripts/lib/mapRouteBudget.ts'
+      - '.nvmrc' # setup-node reads it (#2005)
 
 permissions:
   contents: read

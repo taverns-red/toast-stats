@@ -684,6 +684,8 @@ export function createCLI(): Command {
         clubRaceStoreFailed: computeResult.clubRaceStoreFailed,
         globalClubRacePath: computeResult.globalClubRacePath,
         globalClubRaceFailed: computeResult.globalClubRaceFailed,
+        regionRollupsPath: computeResult.regionRollupsPath,
+        regionRollupsFailed: computeResult.regionRollupsFailed,
         timeSeriesFailed: computeResult.timeSeriesFailed,
         timeSeriesWritten: computeResult.timeSeriesWritten,
         clubTrendsUpdated: computeResult.clubTrendsUpdated,

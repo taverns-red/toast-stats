@@ -1,4 +1,9 @@
-import { test, expect, type Page } from './fixtures/test'
+import { test, expect } from './fixtures/test'
+import {
+  NOT_PROSE_LINKS,
+  describeTarget,
+  measureInteractiveTargets,
+} from './helpers/mobile-measure'
 import {
   INTERACTIVE_SELECTORS,
   MIN_TOUCH_TARGET_PX,
@@ -87,98 +92,34 @@ const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/district/61/map', mustRender: '.maplibregl-ctrl-attrib a' },
 ]
 
-/* #1839: inline links that are NOT prose. The WCAG inline exemption is for a
- * link inside a running sentence. These are row/heading/list links, a
- * sentence's closing call to action, or a standalone "Methodology"-style
- * link that the prod sweep (2.48.0) measured at 17–23px tall. They must clear
- * the floor even when they render `display: inline`. Presence is not required
- * (a route may not render every family); size is, when they do render. */
-const NOT_PROSE_LINKS = [
-  '.awards-page-card__district', // /awards district links (13×18)
-  '.changes-group__item a', // /district/61/changes club rows (22px)
-  '.clubs-section__title a', // /clubs tier headings "Distinguished →" (22px)
-  '.race-podium__district', // /clubs podium district pills (40×23)
-  '.districts-methodology-callout__link', // landing / awards / history "Methodology"
-  '.methodology-link', // divisions "How it works" (65×17)
-  '.wws__link', // history worldwide scoreboard methodology link
-  '.race-basis a[href^="/methodology"]', // /clubs + race pages "Methodology" (79×21)
-  '.worldwide-standing__note a', // club page "Clubs worldwide" (120×18)
-  '.club-history-page__back a', // club history "← Back to …" (17px)
-  '.club-history-year-link', // club history year links (64×21)
-  '[data-testid="district-csp-line"] a', // Overview "See which clubs →" (17px)
-  '[data-testid="division-area-heading"] a', // division page area links (22px)
-  '[data-testid="education-awards-leaderboard"] td a', // analytics club link (61×37)
-  '.maplibregl-ctrl-attrib a', // #1944 map ODbL credit links (14px tall)
-]
+/* #2017: phone landscape. At 844×390 the footer links measured 17px and the
+ * header search button 21px while 375/390 portrait passed: the width-only
+ * mobile rules stop at 768, so a landscape phone got desktop-sized chrome.
+ * The same routes run again on a touch landscape viewport. */
+const LANDSCAPE = { width: 844, height: 390 } // iPhone 14-class landscape
 
-interface Finding {
-  tag: string
-  testid: string | null
-  aria: string | null
-  cls: string
-  w: number
-  h: number
+const VIEWPORTS = [
+  { label: '375px', viewport: VIEWPORT, hasTouch: false },
+  { label: '844×390 touch landscape', viewport: LANDSCAPE, hasTouch: true },
+] as const
+
+for (const { label, viewport, hasTouch } of VIEWPORTS) {
+  test.describe(label, () => {
+    test.use({ viewport, hasTouch })
+    for (const route of ROUTES) defineRouteTest(label, route)
+  })
 }
 
-async function measureInteractiveTargets(
-  page: Page,
-  selectors: readonly string[],
-  notProse: readonly string[]
-): Promise<Finding[]> {
-  return page.evaluate(
-    ([sels, notProseSels]) => {
-      const els = Array.from(document.querySelectorAll(sels.join(', ')))
-      const out: Finding[] = []
-      for (const el of els as HTMLElement[]) {
-        const cs = getComputedStyle(el)
-        // Mirror the product's own visibility filter (getAllInteractiveElements).
-        if (cs.display === 'none' || cs.visibility === 'hidden') continue
-        const rect = el.getBoundingClientRect()
-        // sr-only collapsed / zero-box: not a real tap target (see header).
-        if (rect.width <= 1 || rect.height <= 1) continue
-        const tag = el.tagName.toLowerCase()
-        // WCAG 2.5.5 inline-prose-link exemption — but not for the #1839
-        // families above, which are inline in markup but not in a sentence.
-        const inlineProseLink =
-          tag === 'a' &&
-          cs.display === 'inline' &&
-          el.getAttribute('role') !== 'button' &&
-          !notProseSels.some(s => el.matches(s))
-        if (inlineProseLink) continue
-        out.push({
-          tag,
-          testid: el.getAttribute('data-testid'),
-          aria: el.getAttribute('aria-label'),
-          cls: (el.getAttribute('class') || '').slice(0, 90),
-          w: Math.round(rect.width),
-          h: Math.round(rect.height),
-        })
-      }
-      return out
-    },
-    [selectors, notProse] as const
-  )
-}
-
-function describe(f: Finding): string {
-  const id = f.testid
-    ? `[data-testid="${f.testid}"]`
-    : f.aria
-      ? `[aria-label="${f.aria}"]`
-      : f.cls
-        ? `.${f.cls.split(/\s+/).slice(0, 2).join('.')}`
-        : ''
-  return `${f.tag}${id} ${f.w}×${f.h}`
-}
-
-for (const { path, mustRender } of ROUTES) {
-  test(`every interactive element clears ${FLOOR}px at 375px — ${path}`, async ({
+function defineRouteTest(
+  label: string,
+  { path, mustRender }: { path: string; mustRender?: string }
+): void {
+  test(`every interactive element clears ${FLOOR}px at ${label} — ${path}`, async ({
     page,
   }) => {
     // The global config timeout (30s) governs the whole test; raise it so the
     // 60s goto budget is actually reachable on a cold preview hitting the CDN.
     test.setTimeout(90_000)
-    await page.setViewportSize(VIEWPORT)
     await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
 
     // Wait for the page's REQUIRED content control to mount before measuring —
@@ -210,7 +151,7 @@ for (const { path, mustRender } of ROUTES) {
     expect(
       failing,
       `${path}: ${failing.length} sub-${FLOOR}px target(s): ` +
-        failing.map(describe).join('; ')
+        failing.map(describeTarget).join('; ')
     ).toEqual([])
   })
 }

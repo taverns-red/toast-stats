@@ -150,7 +150,12 @@ describe('red-first: FAC loss on a touched date HOLDS (#1758 shape)', () => {
     const text = r.failures.map(f => `${f.path}: ${f.reason}`).join('\n')
     expect(text).toContain(DATE)
     expect(text).toMatch(/district_02\.json/)
-    for (const key of ['address', 'coordinates', 'meetingDay', 'email']) {
+    for (const key of [
+      'address',
+      'allowsVirtualAttendance',
+      'coordinates',
+      'meetingDay',
+    ]) {
       expect(text).toContain(key)
     }
     expect(text).toContain('prospectiveClubs')
@@ -180,6 +185,34 @@ describe('red-first: FAC loss on a touched date HOLDS (#1758 shape)', () => {
     )
     expect(r.promote).toBe(true)
     expect(r.failures).toEqual([])
+  })
+})
+
+describe('retired club contact keys (#2026)', () => {
+  /** prod's district file with every email/phone key removed. */
+  const withoutContact = (value: unknown): unknown =>
+    JSON.parse(JSON.stringify(value), (k, v) =>
+      k === 'email' || k === 'phone' ? undefined : v
+    )
+
+  it('does not hold a re-derived date for dropping email/phone', async () => {
+    const prod = fakeBucket(dateTree({}))
+    const staging = fakeBucket(
+      dateTree({ district: withoutContact(prodDistrict) })
+    )
+    const r = await runCompletenessGate(staging, prod, [DATE], {
+      allowValueChanges: false,
+    })
+    expect(r.failures).toEqual([])
+    expect(r.promote).toBe(true)
+  })
+
+  it('leaves the contact keys out of the compared club key sets', () => {
+    const shape = districtShape(prodDistrict)!
+    expect(shape.clubKeys).not.toContain('email')
+    expect(shape.clubKeys).not.toContain('phone')
+    expect(shape.clubPerformanceKeys).not.toContain('email')
+    expect(shape.clubKeys).toContain('website')
   })
 })
 

@@ -12,7 +12,10 @@
  *      and the current-PY file; decode each exactly as a browser does (one
  *      Content-Encoding layer), parse, validate, and require a fresh last
  *      point (#1710 — the #1702 nested-gzip outage class),
- *   5. emit a healthy/unhealthy decision + alert body for the workflow.
+ *   5. fetch `config/club-district-history/index.json` (#1782), require a
+ *      fresh `asOf`, and check the anchor shard 77 (club 977) plus one
+ *      random listed shard,
+ *   6. emit a healthy/unhealthy decision + alert body for the workflow.
  *
  * No decision logic lives here — that is unit-tested in
  * scripts/lib/__tests__/cdnSchemaCanary.test.ts. All logging goes to
@@ -39,7 +42,10 @@ import {
   buildCanaryIssueTitle,
   buildCanaryIssueBody,
   decodeCdnJson,
+  checkClubDistrictHistoryIndex,
+  checkClubDistrictHistoryShard,
   checkDistrictSnapshotIndex,
+  pickClubHistoryShards,
   checkTimeSeriesMetadata,
   checkTimeSeriesProgramYear,
   pickTimeSeriesDistricts,
@@ -64,6 +70,8 @@ const RANDOM_TIME_SERIES_DISTRICTS = 2
 const DEFAULT_MAX_TIME_SERIES_AGE_DAYS = 3
 
 const SNAPSHOT_INDEX_PATH = 'config/district-snapshot-index.json'
+const CLUB_HISTORY_DIR = 'config/club-district-history/'
+const CLUB_HISTORY_INDEX_PATH = `${CLUB_HISTORY_DIR}index.json`
 
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)
@@ -165,7 +173,35 @@ async function checkObjects(
     })
   )
   checks.push(...perDistrict.flat())
+  checks.push(...(await checkClubHistory(baseUrl, { now, maxAgeDays })))
   return checks
+}
+
+/** The club-district history (#1782): its index, then two of its shards. */
+async function checkClubHistory(
+  baseUrl: string,
+  opts: { now: Date; maxAgeDays: number }
+): Promise<ObjectCheck[]> {
+  const index = checkClubDistrictHistoryIndex(
+    await fetchCdnObject(baseUrl, CLUB_HISTORY_INDEX_PATH),
+    opts
+  )
+  const out: ObjectCheck[] = [
+    { path: CLUB_HISTORY_INDEX_PATH, failure: index.failure },
+  ]
+  const keys = pickClubHistoryShards(index.shards)
+  log(`Checking club-district history shard(s) ${keys.join(', ')}...`)
+  for (const key of keys) {
+    const p = `${CLUB_HISTORY_DIR}${key}.json`
+    out.push({
+      path: p,
+      failure: checkClubDistrictHistoryShard(
+        await fetchCdnObject(baseUrl, p),
+        key
+      ),
+    })
+  }
+  return out
 }
 
 async function main(): Promise<void> {

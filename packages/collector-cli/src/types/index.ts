@@ -376,6 +376,10 @@ export interface ComputeAnalyticsResult {
   globalClubRacePath?: string
   /** True when the race projection could not be written (#1556). Never publish-blocking. */
   globalClubRaceFailed?: boolean
+  /** Path of `snapshots/{date}/region-rollups.json` written (#1799). */
+  regionRollupsPath?: string
+  /** True when the region rollups were refused or threw (#1799). Never publish-blocking. */
+  regionRollupsFailed?: boolean
   /**
    * Districts whose time-series data point could not be written (#1702),
    * e.g. because the synced program-year index exists but cannot be parsed.

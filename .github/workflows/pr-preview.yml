@@ -25,6 +25,8 @@ on:
       - '.firebaserc'
       - '.github/workflows/pr-preview.yml'
       - 'scripts/check-hosting-site.sh'
+      - 'lighthouserc.mobile.js' # the mobile gate below runs it (#1994)
+      - '.nvmrc' # setup-node reads it (#2005)
 
 # Cancel an in-flight preview build when a new push to the same PR
 # arrives — only the latest commit gets a deploy.
@@ -72,10 +74,11 @@ jobs:
       - name: Build frontend
         run: npm run build:frontend
         env:
-          # Preview channels point at the same data as staging; both
-          # use the staging CDN bucket so the preview matches what the
-          # post-merge staging deploy will look like.
-          VITE_CDN_BASE_URL: https://storage.googleapis.com/toast-stats-data-staging
+          # Preview channels read the staging bucket through the staging
+          # CDN (#1995), compressing like prod (#1900). Rollback: point
+          # back at https://storage.googleapis.com/toast-stats-data-staging
+          # (still allowed in the CSP connect-src).
+          VITE_CDN_BASE_URL: https://cdn-staging.taverns.red
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -229,6 +232,18 @@ jobs:
         run: >-
           npx playwright test --config playwright.config.ts
           e2e/tooltip-viewport-clip.smoke.ts
+
+      # Header search field surface (#2022). The blanket dark-mode input remap
+      # painted --surface-card inside the field's --surface-2, a box-in-a-box
+      # that no contrast or geometry gate sees. Computed colours at 844 touch
+      # and 1280 mouse, light and dark.
+      - name: Header search field surface tripwire against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: >-
+          npx playwright test --config playwright.config.ts
+          e2e/header-search-field-bg.smoke.ts
 
       # Mobile loading/error→loaded CLS guard (#922). The Lighthouse CLS gate
       # runs the desktop preset, where the landing header actions lay out
@@ -522,6 +537,19 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/type-floor.smoke.ts
+
+      # 375 mobile gate (#1841, mobile review §7). At 375x812 with touch,
+      # light and dark, on the 25 review routes, each gated on a content
+      # sentinel: no document overflow with the body overflow-x mask off, no
+      # sub-44px target outside the issue-owned allowlist, text under 14px
+      # within the route's ratchet, first content within the route's budget
+      # (110px on context-bar routes). Budgets: e2e/mobile-375-budgets.json,
+      # ratchet down only. Both engines.
+      - name: Cross-engine 375 mobile gate against preview
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/mobile-375-gate.smoke.ts
 
       # Landing scroll budget (#864, #1834). At 375/414, both engines, `/` must
       # stay ≤ 8,000px tall with the phone rankings in their default 25-row

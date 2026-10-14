@@ -9,7 +9,11 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import { readFileSync, readdirSync } from 'node:fs'
+import * as path from 'node:path'
 import { gzipSync } from 'node:zlib'
+import type { ClubRaceStoreData } from '@taverns-red/shared-contracts'
+import { foldClubDistrictHistory } from '../clubDistrictHistory.js'
 import {
   buildContentGateSummary,
   checkLatestAgreesWithIndex,
@@ -127,9 +131,13 @@ const latest = (date: string) => ({
   generatedAt: '2026-10-09T12:20:00.000Z',
 })
 
+// The shards the fold of the recorded club-race stores writes (below).
+const CLUB_SHARDS = ['02', '07', '45', '68', '77', '99']
+
 const CTX: CheckContext = {
   latestSnapshotDate: '2026-10-08',
   availableDates: ['2025-06-30', '2025-10-08', '2026-09-30', '2026-10-08'],
+  clubHistoryShards: { staging: CLUB_SHARDS, prod: [] },
 }
 
 const PY_PATH = 'time-series/district_61/2026-2027.json'
@@ -159,6 +167,12 @@ describe('classifyObject', () => {
     ],
     ['snapshots/2026-10-08/analytics/manifest.json', 'json'],
     ['config/district-snapshot-index.json', 'snapshot-index'],
+    ['config/district-region-history.json', 'district-region-history'],
+    ['config/club-district-history/index.json', 'club-district-history-index'],
+    ['config/club-district-history/77.json', 'club-district-history-shard'],
+    ['config/club-district-history/00.json', 'club-district-history-shard'],
+    ['config/club-district-history/777.json', 'json'],
+    ['derived/club-district-history/77.json', 'json'],
     ['v1/latest.json', 'latest'],
     ['snapshots/2026-10-08/district_61.json', 'json'],
     ['club-trends/district_61/2026-2027.json', 'json'],
@@ -333,6 +347,170 @@ describe('checkObject — other shapes', () => {
   })
 })
 
+describe('checkObject — no club contact fields (#2026)', () => {
+  // Synthetic placeholders only. The failure names the path, never the value.
+  const SNAPSHOT_PATH = 'snapshots/2026-10-08/district_61.json'
+  const snapshot = (club: Record<string, unknown>) => ({
+    districtId: '61',
+    data: {
+      clubPerformance: [{ 'Club Number': '00000180' }],
+      clubs: [{ clubId: '180', meetingDay: 'Tuesday' }, club],
+      prospectiveClubs: [],
+    },
+  })
+
+  it('holds a district snapshot whose clubs[] carry an email', () => {
+    const failure = check(
+      SNAPSHOT_PATH,
+      plain(snapshot({ clubId: '2', email: 'club-1@example.com' }))
+    )
+    expect(failure).toMatch(/data\.clubs\[1\]\.email/)
+    expect(failure).toMatch(/#2026/)
+    expect(failure).not.toContain('example.com')
+  })
+
+  it('holds a snapshot whose prospectiveClubs[] carry a phone', () => {
+    const value = snapshot({ clubId: '2' })
+    value.data.prospectiveClubs = [
+      { clubId: '88888', phone: '+15550100001' },
+    ] as never[]
+    expect(check(SNAPSHOT_PATH, plain(value))).toMatch(
+      /prospectiveClubs\[0\]\.phone/
+    )
+  })
+
+  it('holds a district analytics file whose ClubTrend carries a phone', () => {
+    const value = {
+      ...analytics,
+      data: { allClubs: [{ clubId: '1', phone: '+15550100001' }] },
+    }
+    const failure = check(ANALYTICS_PATH, plain(value))
+    expect(failure).toMatch(/data\.allClubs\[0\]\.phone/)
+    expect(failure).not.toContain('15550100001')
+  })
+
+  it('passes records with no contact key, or an empty one', () => {
+    expect(check(SNAPSHOT_PATH, plain(snapshot({ clubId: '2' })))).toBeNull()
+    expect(
+      check(SNAPSHOT_PATH, plain(snapshot({ clubId: '2', email: '' })))
+    ).toBeNull()
+    expect(check(ANALYTICS_PATH, plain(analytics))).toBeNull()
+  })
+})
+
+describe('checkObject — district-region history (#1820)', () => {
+  const REGION_PATH = 'config/district-region-history.json'
+  // The history the identity-history builder wrote from the staged
+  // rankings (shared with the education-rollup fixtures).
+  const history = JSON.parse(
+    readFileSync(
+      'scripts/lib/__tests__/fixtures/education-rollup/config/district-region-history.json',
+      'utf-8'
+    )
+  ) as {
+    districts: Record<string, { spans: unknown[] }>
+  }
+
+  it('passes the recorded history', () => {
+    expect(check(REGION_PATH, plain(history))).toBeNull()
+  })
+
+  it('fails a history that breaks the shared-contracts schema', () => {
+    const broken = structuredClone(history)
+    const first = Object.values(broken.districts)[0]!
+    first.spans = []
+    expect(check(REGION_PATH, plain(broken))).toMatch(/schema/)
+  })
+
+  it('fails a history with no districts (a fold over nothing)', () => {
+    expect(check(REGION_PATH, plain({ ...history, districts: {} }))).toMatch(
+      /no districts/
+    )
+  })
+})
+
+describe('checkObject — club-district history (#1782)', () => {
+  const INDEX_PATH = 'config/club-district-history/index.json'
+  const SHARD_PATH = 'config/club-district-history/77.json'
+  // The fold of the recorded club-race stores (the identity-history
+  // fixtures), exactly what build-identity-history.sh uploads.
+  const STORES = path.resolve(__dirname, 'fixtures/identity-history/club-race')
+  const artifact = foldClubDistrictHistory(
+    readdirSync(STORES).map(
+      py =>
+        JSON.parse(
+          readFileSync(path.join(STORES, py, 'first-reached.json'), 'utf-8')
+        ) as ClubRaceStoreData
+    )
+  )
+  const index = artifact.index
+  const shard = artifact.shards['77']!
+
+  it('the fixture is the six recorded shards', () => {
+    expect(index.shards).toEqual(CLUB_SHARDS)
+    expect(Object.keys(shard.clubs)).toContain('977')
+  })
+
+  it('passes the recorded index and shard', () => {
+    expect(check(INDEX_PATH, plain(index))).toBeNull()
+    expect(check(SHARD_PATH, plain(shard))).toBeNull()
+  })
+
+  it('fails an index or shard that breaks the shared-contracts schema', () => {
+    expect(check(INDEX_PATH, plain({ ...index, granularity: 'day' }))).toMatch(
+      /schema/
+    )
+    const broken = structuredClone(shard)
+    broken.clubs['977']!.spans = []
+    expect(check(SHARD_PATH, plain(broken))).toMatch(/schema/)
+  })
+
+  it('fails an index that folded nothing (no clubs or no shards)', () => {
+    expect(check(INDEX_PATH, plain({ ...index, totalClubs: 0 }))).toMatch(
+      /no clubs/
+    )
+    expect(check(INDEX_PATH, plain({ ...index, shards: [] }))).toMatch(
+      /no clubs/
+    )
+  })
+
+  it('fails an index naming a shard staging does not hold (it would dangle)', () => {
+    const ctx = {
+      ...CTX,
+      clubHistoryShards: { staging: CLUB_SHARDS.slice(1), prod: [] },
+    }
+    expect(check(INDEX_PATH, plain(index), ctx)).toMatch(
+      /names shard 02.*not in staging/
+    )
+  })
+
+  it('fails an index that drops a shard prod already serves (a key never disappears)', () => {
+    const ctx = {
+      ...CTX,
+      clubHistoryShards: { staging: CLUB_SHARDS, prod: [...CLUB_SHARDS, '50'] },
+    }
+    expect(check(INDEX_PATH, plain(index), ctx)).toMatch(/drops shard 50.*prod/)
+  })
+
+  it('fails a shard whose key does not match its path', () => {
+    expect(check(SHARD_PATH, plain({ ...shard, shard: '76' }))).toMatch(
+      /shard 76.*77\.json/
+    )
+  })
+
+  it('fails a shard holding a club from another shard', () => {
+    const moved = structuredClone(shard)
+    moved.clubs['1234'] = moved.clubs['977']!
+    expect(check(SHARD_PATH, plain(moved))).toMatch(/club 1234.*shard 34/)
+  })
+
+  it('fails an empty shard (the writer only writes shards with clubs)', () => {
+    expect(check(SHARD_PATH, plain({ ...shard, clubs: {} }))).toMatch(
+      /no clubs/
+    )
+  })
+})
+
 describe('checkLatestAgreesWithIndex', () => {
   it('passes when some district lists the latest date', () => {
     expect(
@@ -383,6 +561,40 @@ describe('planContentChecks — bounded, change-driven sampling', () => {
       random: () => 0,
     })
     expect(plan.crossCheckLatest).toBe(true)
+  })
+
+  it('always checks the district-region history, never sampling it out', () => {
+    const plan = planContentChecks(
+      [
+        ...Array.from({ length: 20 }, (_, i) =>
+          meta(`snapshots/2026-10-08/district_${i + 100}.json`)
+        ),
+        meta('config/district-region-history.json'),
+      ],
+      { random: () => 0, caps: { generic: 0 } }
+    )
+    expect(plan.checks.map(c => c.path)).toEqual([
+      'config/district-region-history.json',
+    ])
+  })
+
+  it('always checks the club-district history index and every changed shard', () => {
+    const shards = Array.from(
+      { length: 100 },
+      (_, i) =>
+        `config/club-district-history/${String(i).padStart(2, '0')}.json`
+    )
+    const plan = planContentChecks(
+      [
+        meta('snapshots/2026-10-08/district_100.json'),
+        ...shards.map(meta),
+        meta('config/club-district-history/index.json'),
+      ],
+      { random: () => 0, caps: { generic: 0 } }
+    )
+    expect(plan.checks.map(c => c.path).sort()).toEqual(
+      [...shards, 'config/club-district-history/index.json'].sort()
+    )
   })
 
   it('caps the generic sample, keeps D61, and skips non-JSON', () => {

@@ -15,3 +15,67 @@
     color: var(--ink-2) !important;
   }
 }
+
+/* Legend chips (#1835). The series legend of a multi-series chart is a row
+   of aria-pressed toggles outside the plot: 44 px tall with an 8 px gap (the
+   mobile tap-target gate), 14 px ink labels, the series colour on the swatch
+   only. An unpressed chip (series hidden) strikes its label through and dims
+   its swatch, so the state is not carried by colour alone. */
+@layer components {
+  .chart-legend-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 8px;
+  }
+
+  .chart-legend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 9999px;
+    background-color: var(--surface);
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 20px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+
+  .chart-legend-chip[aria-pressed='true'] {
+    border-color: var(--ink-3);
+    background-color: var(--surface-2);
+    color: var(--ink);
+  }
+
+  .chart-legend-chip[aria-pressed='false'] {
+    text-decoration: line-through;
+  }
+
+  .chart-legend-chip[aria-pressed='false'] .chart-legend-chip__swatch {
+    opacity: 0.35;
+  }
+
+  .chart-legend-chip[aria-disabled='true'] {
+    cursor: default;
+  }
+
+  .chart-legend-chip:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--rt-stats-focus, #b5651d);
+  }
+
+  .chart-legend-chip--static {
+    cursor: default;
+    border-color: transparent;
+    background-color: transparent;
+    padding-left: 0;
+  }
+
+  .chart-legend-chip__swatch {
+    flex-shrink: 0;
+  }
+}

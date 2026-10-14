@@ -21,6 +21,7 @@ export function LazyMembershipTrendChart(props: LazyMembershipTrendChartProps) {
           label="membership trend"
           statTiles={4}
           shape="panel"
+          legend
         />
       }
     >

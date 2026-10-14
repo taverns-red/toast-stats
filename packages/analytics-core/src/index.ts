@@ -294,3 +294,13 @@ export {
   type GlobalClubRaceInput,
   type GlobalClubRaceDistrictInput,
 } from './rollup/globalClubRace.js'
+
+// Region and world rollups — snapshots/{date}/region-rollups.json (#1799)
+export {
+  buildRegionRollups,
+  readRegionRollupInput,
+  type RegionRollupClub,
+  type RegionRollupDistrictInput,
+  type RegionRollupsInput,
+  type RegionRollupsResult,
+} from './rollup/regionRollups.js'

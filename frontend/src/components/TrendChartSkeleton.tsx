@@ -28,6 +28,8 @@ export interface TrendChartSkeletonProps {
   /** `panel` forces the desktop shape — for a fallback that always renders
    *  the full chart (inline at desktop, or inside the phone expand sheet). */
   shape?: 'auto' | 'panel'
+  /** The loaded chart has a legend-chip row above its plot (#1835). */
+  legend?: boolean
 }
 
 export const TrendChartSkeleton: React.FC<TrendChartSkeletonProps> = ({
@@ -36,6 +38,7 @@ export const TrendChartSkeleton: React.FC<TrendChartSkeletonProps> = ({
   plotHeight = 400,
   breakpoint = 768,
   shape = 'auto',
+  legend = false,
 }) => {
   const isMobile = useIsMobile(breakpoint)
   // Without hover the loaded chart carries the tap-to-pin readout line
@@ -85,6 +88,15 @@ export const TrendChartSkeleton: React.FC<TrendChartSkeletonProps> = ({
                 </p>
               </div>
             ))}
+          </div>
+        )}
+        {legend && (
+          // The loaded chart's legend-chip row above the plot (#1835): one
+          // 44 px chip on the real classes; the row's height is the chip's.
+          <div className="chart-legend-chips">
+            <span className="chart-legend-chip chart-legend-chip--static">
+              &nbsp;
+            </span>
           </div>
         )}
         <ChartSkeleton height={plotHeight} />

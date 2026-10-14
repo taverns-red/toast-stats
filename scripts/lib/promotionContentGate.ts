@@ -21,7 +21,18 @@
 
 import { createHash } from 'node:crypto'
 import { gunzipSync } from 'node:zlib'
-import { ProgramYearIndexFileSchema } from '@taverns-red/shared-contracts'
+import {
+  ClubDistrictHistoryIndexSchema,
+  ClubDistrictHistoryShardSchema,
+  clubDistrictHistoryShardKey,
+  DistrictRegionHistorySchema,
+  findClubContactField,
+  ProgramYearIndexFileSchema,
+  REGION_ROLLUPS_FILE_NAME,
+  RegionRollupsSchema,
+  type RegionRollupFigures,
+} from '@taverns-red/shared-contracts'
+import { programYearForSnapshotDate } from './ceoReportSnapshotDates.js'
 import {
   ANCHOR_DISTRICT,
   checkDistrictSnapshotIndex,
@@ -61,6 +72,10 @@ export type ObjectKind =
   | 'competitive-awards'
   | 'district-analytics'
   | 'snapshot-index'
+  | 'district-region-history'
+  | 'club-district-history-index'
+  | 'club-district-history-shard'
+  | 'region-rollups'
   | 'latest'
   | 'json'
 
@@ -78,6 +93,11 @@ export interface CheckContext {
   latestSnapshotDate: string | null
   /** Staging `v1/dates.json` dates, empty when unreadable. */
   availableDates: string[]
+  /**
+   * Club-district history shard keys present under
+   * `config/club-district-history/` (#1782), from the two listings.
+   */
+  clubHistoryShards: { staging: readonly string[]; prod: readonly string[] }
 }
 
 export interface CheckResult {
@@ -92,6 +112,9 @@ const TS_METADATA =
 const TS_PROGRAM_YEAR =
   /^time-series\/district_([A-Za-z0-9]+)\/(\d{4}-\d{4})\.json$/
 const AWARDS = /^snapshots\/(\d{4}-\d{2}-\d{2})\/competitive-awards\.json$/
+const REGION_ROLLUPS = new RegExp(
+  `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${REGION_ROLLUPS_FILE_NAME.replace('.', '\\.')}$`
+)
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
 
@@ -110,6 +133,22 @@ export const PROMOTED_PREFIXES = [
 export const LATEST_PATH = 'v1/latest.json'
 export const DATES_PATH = 'v1/dates.json'
 export const SNAPSHOT_INDEX_PATH = 'config/district-snapshot-index.json'
+/** District → region per program year (#1820), built by build-identity-history.sh. */
+export const REGION_HISTORY_PATH = 'config/district-region-history.json'
+/** The club-district history (#1782): `index.json` plus one `NN.json` per shard. */
+export const CLUB_HISTORY_DIR = 'config/club-district-history/'
+export const CLUB_HISTORY_INDEX_PATH = `${CLUB_HISTORY_DIR}index.json`
+const CLUB_HISTORY_SHARD = /^config\/club-district-history\/(\d{2})\.json$/
+
+/** The shard keys in a listing (`config/club-district-history/NN.json`), sorted. */
+export function clubHistoryShardKeys(names: Iterable<string>): string[] {
+  const keys: string[] = []
+  for (const n of names) {
+    const m = CLUB_HISTORY_SHARD.exec(n)
+    if (m) keys.push(m[1]!)
+  }
+  return keys.sort()
+}
 
 /** The kind of content check an object gets; null = not JSON, not checked. */
 export function classifyObject(path: string): ObjectKind | null {
@@ -118,7 +157,11 @@ export function classifyObject(path: string): ObjectKind | null {
   if (TS_PROGRAM_YEAR.test(path)) return 'time-series-program-year'
   if (AWARDS.test(path)) return 'competitive-awards'
   if (DISTRICT_ANALYTICS.test(path)) return 'district-analytics'
+  if (REGION_ROLLUPS.test(path)) return 'region-rollups'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
+  if (path === REGION_HISTORY_PATH) return 'district-region-history'
+  if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
+  if (CLUB_HISTORY_SHARD.test(path)) return 'club-district-history-shard'
   if (path === LATEST_PATH) return 'latest'
   return 'json'
 }
@@ -198,6 +241,11 @@ function sample<T extends { path: string }>(
  *   and its newest changed program-year file, compared with prod;
  * - the newest changed competitive-awards dates;
  * - latest + snapshot index whenever either changed;
+ * - the district-region history whenever it changed (one small object that
+ *   every region page and rollup reads, #1820);
+ * - the club-district history index and every changed shard (#1782): at
+ *   most 101 small objects (~9 MB raw in all), and a broken shard is a
+ *   broken club page for 1% of clubs, so none is sampled out;
  * - a random sample of everything else (older program years, district
  *   snapshots, analytics, club stores), D61 always included.
  */
@@ -230,7 +278,14 @@ export function planContentChecks(
       byDistrict.set(ts[1]!, list)
     } else if (c.kind === 'competitive-awards') {
       awards.push(c)
-    } else if (c.kind === 'latest' || c.kind === 'snapshot-index') {
+    } else if (
+      c.kind === 'latest' ||
+      c.kind === 'snapshot-index' ||
+      c.kind === 'district-region-history' ||
+      c.kind === 'club-district-history-index' ||
+      c.kind === 'club-district-history-shard' ||
+      c.kind === 'region-rollups'
+    ) {
       checks.push(c)
     } else {
       rest.push(c)
@@ -488,6 +543,165 @@ function checkDistrictAnalytics(value: unknown): string | null {
   return null
 }
 
+/**
+ * config/district-region-history.json (#1820): the shared-contracts schema,
+ * and at least one district — the fold refuses empty input, so an empty
+ * history is a broken writer, not a quiet year. A conflict (a district in
+ * two regions in one PY) is reported data, not a failure.
+ */
+function checkRegionHistory(value: unknown): string | null {
+  const parsed = DistrictRegionHistorySchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  return Object.keys(parsed.data.districts).length === 0
+    ? 'no districts — the region history folded nothing'
+    : null
+}
+
+/**
+ * config/club-district-history/index.json (#1782): the schema, at least one
+ * club and shard, every listed shard staged (promotion would publish an
+ * index naming a missing object), and no shard prod serves dropped (clubs
+ * are never removed from the history, so a shard key never disappears).
+ */
+function checkClubHistoryIndex(
+  value: unknown,
+  ctx: CheckContext
+): string | null {
+  const parsed = ClubDistrictHistoryIndexSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const { totalClubs, shards } = parsed.data
+  if (totalClubs === 0 || shards.length === 0) {
+    return 'no clubs or no shards — the club history folded nothing'
+  }
+  const staged = new Set(ctx.clubHistoryShards.staging)
+  const missing = shards.filter(k => !staged.has(k))
+  if (missing.length > 0) {
+    return `names shard ${missing.join(', ')}, not in staging (the index would dangle)`
+  }
+  const listed = new Set(shards)
+  const dropped = ctx.clubHistoryShards.prod.filter(k => !listed.has(k))
+  if (dropped.length > 0) {
+    return `drops shard ${dropped.join(', ')}, which prod serves (a shard key never disappears)`
+  }
+  return null
+}
+
+/**
+ * config/club-district-history/NN.json (#1782): the schema, `shard` equal to
+ * the file's key, at least one club, and every club in the shard its id maps
+ * to (the readers' `clubDistrictHistoryShardKey`).
+ */
+function checkClubHistoryShard(path: string, value: unknown): string | null {
+  const parsed = ClubDistrictHistoryShardSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const key = CLUB_HISTORY_SHARD.exec(path)?.[1]
+  if (parsed.data.shard !== key) {
+    return `holds shard ${parsed.data.shard} but is served as ${key}.json`
+  }
+  const ids = Object.keys(parsed.data.clubs)
+  if (ids.length === 0)
+    return 'no clubs — the writer only writes shards with clubs'
+  const stray = ids.find(id => clubDistrictHistoryShardKey(id) !== key)
+  return stray === undefined
+    ? null
+    : `club ${stray} belongs in shard ${clubDistrictHistoryShardKey(stray)}, not ${key}`
+}
+
+/** Every count of a block, flattened, for the world = Σ districts check. */
+function figureCounts(f: RegionRollupFigures): Array<[string, number | null]> {
+  const out: Array<[string, number | null]> = [
+    ['clubs', f.clubs],
+    ['membership', f.membership],
+    ['payments', f.payments],
+  ]
+  for (const group of [
+    'health',
+    'clubStatus',
+    'distinguished',
+    'compliance',
+    'growth',
+  ] as const) {
+    for (const [k, v] of Object.entries(f[group])) {
+      out.push([`${group}.${k}`, v as number | null])
+    }
+  }
+  return out
+}
+
+/** Σ rows figure by figure; a null in any row makes that figure null. */
+function sumFigures(
+  rows: readonly RegionRollupFigures[]
+): Map<string, number | null> {
+  const sums = new Map<string, number | null>()
+  for (const row of rows) {
+    for (const [k, v] of figureCounts(row)) {
+      const prev = sums.has(k) ? sums.get(k)! : 0
+      sums.set(k, prev === null || v === null ? null : prev + v)
+    }
+  }
+  return sums
+}
+
+function firstMismatch(
+  block: RegionRollupFigures,
+  sums: Map<string, number | null>
+): string | null {
+  for (const [k, v] of figureCounts(block)) {
+    const want = sums.has(k) ? sums.get(k)! : 0
+    if (v !== want) return `${k} is ${v}, its districts sum to ${want}`
+  }
+  return null
+}
+
+/**
+ * snapshots/<date>/region-rollups.json (#1799): the shared-contracts schema;
+ * served under its own date, with that LOGICAL date's program year (a June
+ * close is collected in July — the #1284 slip); world = Σ districts; and
+ * each region lists only districts placed in it, summing to them.
+ */
+function checkRegionRollups(path: string, value: unknown): string | null {
+  const parsed = RegionRollupsSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const r = parsed.data
+  const date = REGION_ROLLUPS.exec(path)?.[1]
+  if (r.snapshotDate !== date) {
+    return `holds snapshotDate ${r.snapshotDate} but is served under ${date}`
+  }
+  const programYear = programYearForSnapshotDate(r.snapshotDate)
+  if (r.programYear !== programYear) {
+    return `programYear ${r.programYear}, but ${r.snapshotDate} is in ${programYear}`
+  }
+  const rows = Object.values(r.districts)
+  if (r.world.districts !== rows.length) {
+    return `world.districts is ${r.world.districts}, but ${rows.length} districts are listed`
+  }
+  const world = firstMismatch(r.world, sumFigures(rows))
+  if (world !== null) return `world: ${world}`
+  for (const [region, block] of Object.entries(r.regions ?? {})) {
+    const members = block.districtIds.map(id => r.districts[id])
+    const stray = block.districtIds.find(
+      (id, i) => members[i]?.region !== region
+    )
+    if (stray !== undefined) {
+      return `region ${region} lists district ${stray}, which is not placed in it`
+    }
+    const mismatch = firstMismatch(
+      block,
+      sumFigures(members as RegionRollupFigures[])
+    )
+    if (mismatch !== null) return `region ${region}: ${mismatch}`
+  }
+  return null
+}
+
 function checkLatest(value: unknown): string | null {
   const date = (value as { latestSnapshotDate?: unknown } | null)
     ?.latestSnapshotDate
@@ -511,6 +725,13 @@ export function checkObject(
   if (!decoded.ok) return decoded.reason
   const value = decoded.value
 
+  // #2026: club contact email/phone are never promoted. Names the path,
+  // never the value, so the step summary stays safe to read.
+  const contact = findClubContactField(value)
+  if (contact !== null) {
+    return `${contact} is a non-empty club contact field; email/phone are never promoted (#2026)`
+  }
+
   switch (check.kind) {
     case 'time-series-metadata':
       return checkTimeSeriesMetadata({ ok: true, body: JSON.stringify(value) })
@@ -526,6 +747,14 @@ export function checkObject(
         ok: true,
         body: JSON.stringify(value),
       })
+    case 'district-region-history':
+      return checkRegionHistory(value)
+    case 'club-district-history-index':
+      return checkClubHistoryIndex(value, ctx)
+    case 'club-district-history-shard':
+      return checkClubHistoryShard(check.path, value)
+    case 'region-rollups':
+      return checkRegionRollups(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -627,8 +856,10 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, clubStrengthAward.allDistricts non-empty; current PY: priorYearAvgClubSize not null for every district (#1704)',
   'district-analytics': 'decoded, has `metadata` and `data` objects',
   'snapshot-index': 'decoded, `districts` maps ids to YYYY-MM-DD arrays',
+  'region-rollups':
+    'decoded, RegionRollupsSchema, served under its snapshotDate with that date’s program year, world = Σ districts, each region = Σ its districts (#1799)',
   latest: 'decoded, latestSnapshotDate is a real date',
-  json: 'decoded (no nested gzip) and parses as JSON',
+  json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',
 }
 

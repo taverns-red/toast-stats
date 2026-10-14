@@ -73,10 +73,11 @@
 # After the loop, once per run:
 #  12. identity  scripts/pipeline/build-identity-history.sh <bucket> (#1782):
 #                the club-district history from the club-race store, to
-#                staging derived/ (never promoted until #1763). Daily runs
-#                the same script, so no mode builds it differently (ADR-015
-#                P1). A failure is a warning and a summary line, never a
-#                failed run: the previous derived/ copy stands.
+#                config/club-district-history/, and the district → region
+#                history (#1820) to config/district-region-history.json;
+#                both are promoted with the run. Daily runs the same script, so no mode builds it
+#                differently (ADR-015 P1). A failure is a warning and a
+#                summary line, never a failed run: the previous copies stand.
 #  13. education scripts/pipeline/build-education-rollup.sh <bucket> (#1801):
 #                the education rollup from the ledger history, the staged
 #                reports and the region history step 12 just wrote, to
@@ -85,7 +86,12 @@
 # The GCS-backed stores (time-series, club-trends, club-race, awards history)
 # are NOT handled here: the caller pulls them with sync-stores.sh before and
 # pushes them with publish-stores.sh after, then runs
-# scripts/partial-failure-gate.sh with the failed count (#1708, D7).
+# scripts/partial-failure-gate.sh with the failed count (#1708, D7). The
+# caller also pulls config/district-region-history.json
+# (`sync-stores.sh district-region-history`, #1799): step 8's compute reads
+# it from ${CACHE_DIR}/config/ for each date's region-rollups.json, using the
+# history as it stood when the run started (step 12 rewrites it after the
+# loop).
 #
 # Env:
 #   GCLOUD                 gcloud binary (default `gcloud`; tests use a shim)
@@ -521,7 +527,7 @@ done
 # 12. identity — once, after every date is uploaded (#1782).
 IDENTITY_STATUS=built
 if ! "${IDENTITY[@]}" "${BUCKET}"; then
-  echo "::warning::Identity histories were not rebuilt (#1782); the previous derived/ copy stands"
+  echo "::warning::Identity histories were not rebuilt (#1782, #1820); the previous copies stand"
   IDENTITY_STATUS="FAILED (see the step log)"
 fi
 

@@ -627,7 +627,7 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(result.allClubs[0]?.charterDate).toBe('1987-02-15')
     })
 
-    it('forwards coordinates / address / contact / meeting fields', () => {
+    it('forwards coordinates / address / meeting fields, never contact fields (#2026)', () => {
       const module = new ClubHealthAnalyticsModule()
       const enriched = {
         ...createMockClub({ clubId: '1' }),
@@ -640,8 +640,8 @@ describe('ClubHealthAnalyticsModule', () => {
           postalCode: 'K1A 0A0',
           country: 'Canada',
         },
-        email: 'officers-180@toastmastersclubs.org',
-        phone: '+13039128450',
+        email: 'club-1@example.com',
+        phone: '+15550100001',
         website: 'http://180.toastmastersclubs.org/',
         facebookLink: 'https://www.facebook.com/test',
         meetingDay: 'Tuesday',
@@ -657,8 +657,9 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(out?.charterDate).toBe('1987-02-15')
       expect(out?.coordinates).toEqual({ lat: 45.42, lng: -75.69 })
       expect(out?.address?.city).toBe('Ottawa')
-      expect(out?.email).toBe('officers-180@toastmastersclubs.org')
-      expect(out?.phone).toBe('+13039128450')
+      // #2026: contact fields stay out of the promoted analytics JSON.
+      expect(out).not.toHaveProperty('email')
+      expect(out).not.toHaveProperty('phone')
       expect(out?.website).toBe('http://180.toastmastersclubs.org/')
       expect(out?.facebookLink).toBe('https://www.facebook.com/test')
       expect(out?.meetingDay).toBe('Tuesday')
@@ -677,7 +678,7 @@ describe('ClubHealthAnalyticsModule', () => {
 
       expect(out?.charterDate).toBeUndefined()
       expect(out?.coordinates).toBeUndefined()
-      expect(out?.email).toBeUndefined()
+      expect(out).not.toHaveProperty('email')
     })
   })
 

@@ -546,6 +546,29 @@ describe('AnalyticsComputer', () => {
       )
     })
 
+    it('strips club contact fields from prospectiveClubs (#2026)', async () => {
+      const computer = new AnalyticsComputer()
+      const snapshot = createMockSnapshot('D101', '2024-01-15', [
+        createMockClub({ clubId: '1' }),
+      ])
+      // A legacy snapshot written before #2026 still carries them.
+      const legacy = {
+        clubId: '88888',
+        clubName: 'New ATO Toastmasters',
+        website: 'https://example.org/88888',
+        email: 'club-1@example.com',
+        phone: '+15550100001',
+      }
+      snapshot.prospectiveClubs = [legacy]
+
+      const result = await computer.computeDistrictAnalytics('D101', [snapshot])
+
+      const club = result.districtAnalytics.prospectiveClubs[0]
+      expect(club?.website).toBe('https://example.org/88888')
+      expect(club).not.toHaveProperty('email')
+      expect(club).not.toHaveProperty('phone')
+    })
+
     it('should default prospectiveClubs to an empty array when the snapshot omits it', async () => {
       const computer = new AnalyticsComputer()
       const snapshot = createMockSnapshot('D101', '2024-01-15', [

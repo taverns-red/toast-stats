@@ -16,6 +16,9 @@
  */
 
 import {
+  ClubDistrictHistoryIndexSchema,
+  ClubDistrictHistoryShardSchema,
+  clubDistrictHistoryShardKey,
   PerDistrictDataSchema,
   ProgramYearIndexFileSchema,
   TimeSeriesIndexMetadataSchema,
@@ -220,20 +223,97 @@ export function checkTimeSeriesProgramYear(
   const last = points[points.length - 1]
   if (last === undefined) return 'no data points — the file has no last point'
 
-  const lastMs = parseCalendarDate(last.date)
-  if (lastMs === null) {
-    return `last data point has an invalid date: ${JSON.stringify(last.date)}`
-  }
+  return checkFresh(`last data point`, last.date, opts)
+}
+
+/** `<what> <date>` must be a real date, not in the future, at most N days old. */
+function checkFresh(
+  what: string,
+  date: string,
+  opts: { now: Date; maxAgeDays: number }
+): string | null {
+  const ms = parseCalendarDate(date)
+  if (ms === null) return `${what} has an invalid date: ${JSON.stringify(date)}`
 
   const todayMs = Date.parse(`${opts.now.toISOString().slice(0, 10)}T00:00:00Z`)
-  const ageDays = Math.round((todayMs - lastMs) / DAY_MS)
-  if (ageDays < 0) {
-    return `last data point ${last.date} is in the future`
-  }
+  const ageDays = Math.round((todayMs - ms) / DAY_MS)
+  if (ageDays < 0) return `${what} ${date} is in the future`
   if (ageDays > opts.maxAgeDays) {
-    return `last data point ${last.date} is ${ageDays} days old (max ${opts.maxAgeDays} days)`
+    return `${what} ${date} is ${ageDays} days old (max ${opts.maxAgeDays} days)`
   }
   return null
+}
+
+/**
+ * `config/club-district-history/index.json` (#1782): decode, validate, at
+ * least one club, and an `asOf` no older than `maxAgeDays` — the identity
+ * build is a warning, not a failed run, so a stopped build shows here. The
+ * shard keys are returned for the shard checks.
+ */
+export function checkClubDistrictHistoryIndex(
+  fetch: CdnFetchOutcome,
+  opts: { now: Date; maxAgeDays: number }
+): { failure: string | null; shards: string[] } {
+  const decoded = decodeCdnJson(fetch)
+  if (!decoded.ok) return { failure: decoded.reason, shards: [] }
+
+  const parsed = ClubDistrictHistoryIndexSchema.safeParse(decoded.value)
+  if (!parsed.success) {
+    return {
+      failure: `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`,
+      shards: [],
+    }
+  }
+  const { asOf, totalClubs, shards } = parsed.data
+  if (totalClubs === 0 || shards.length === 0) {
+    return { failure: 'no clubs or no shards in the index', shards }
+  }
+  return { failure: checkFresh('asOf', asOf, opts), shards }
+}
+
+/**
+ * `config/club-district-history/<key>.json` (#1782): decode, validate, the
+ * served key, at least one club, every club in the shard a reader would
+ * look it up in.
+ */
+export function checkClubDistrictHistoryShard(
+  fetch: CdnFetchOutcome,
+  key: string
+): string | null {
+  const decoded = decodeCdnJson(fetch)
+  if (!decoded.ok) return decoded.reason
+
+  const parsed = ClubDistrictHistoryShardSchema.safeParse(decoded.value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  if (parsed.data.shard !== key) {
+    return `holds shard ${parsed.data.shard}, served as ${key}.json`
+  }
+  const ids = Object.keys(parsed.data.clubs)
+  if (ids.length === 0) return 'no clubs in the shard'
+  const stray = ids.find(id => clubDistrictHistoryShardKey(id) !== key)
+  return stray === undefined
+    ? null
+    : `club ${stray} belongs in shard ${clubDistrictHistoryShardKey(stray)}, not ${key}`
+}
+
+/** The shard of club 977 (D01 → D201 in the 2026 reformation), always checked. */
+export const ANCHOR_CLUB_SHARD = '77'
+
+/**
+ * The anchor shard plus one other listed shard, chosen at random so coverage
+ * rotates. The anchor is checked even when the index omits it: a missing
+ * shard then fails the fetch rather than going unchecked.
+ */
+export function pickClubHistoryShards(
+  listed: readonly string[],
+  random: () => number = Math.random
+): string[] {
+  const pool = [...new Set(listed)].filter(k => k !== ANCHOR_CLUB_SHARD)
+  if (pool.length === 0) return [ANCHOR_CLUB_SHARD]
+  const index = Math.min(Math.floor(random() * pool.length), pool.length - 1)
+  return [ANCHOR_CLUB_SHARD, pool[index]!]
 }
 
 /** `config/district-snapshot-index.json`: decode and shape-check. */

@@ -1,5 +1,9 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
+import {
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query'
+import { districtRankingsQueryOptions } from './districtRankingsQuery'
 import type { DistrictsResponse } from '../types/districts'
 import type { SnapshotDate } from '../types/snapshotDate'
 
@@ -54,12 +58,18 @@ import type { SnapshotDate } from '../types/snapshotDate'
 export const useDistricts = (
   date?: SnapshotDate | undefined
 ): UseQueryResult<DistrictsResponse, Error> => {
+  const queryClient = useQueryClient()
   return useQuery<DistrictsResponse, Error>({
     queryKey: ['districts', date ?? 'latest'],
     queryFn: async () => {
-      const { rankings } = date
-        ? await fetchCdnRankingsForDate(date)
-        : await fetchCdnRankings()
+      // Read through the shared `['district-rankings', …]` entry rather than
+      // fetching the file again: pages that mount this beside
+      // useDistrictRanking / useLatestAsOfDate (the club page) downloaded the
+      // same rankings file twice in parallel (#1901). `fetchQuery` joins an
+      // in-flight request and honours its staleTime.
+      const { rankings } = await queryClient.fetchQuery(
+        districtRankingsQueryOptions(date)
+      )
       return {
         districts: rankings.map(r => ({
           id: r.districtId,

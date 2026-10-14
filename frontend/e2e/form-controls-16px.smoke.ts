@@ -23,6 +23,21 @@ import { test, expect, type Page } from './fixtures/test'
 const MIN_PX = 16
 const PHONE = { width: 375, height: 812 }
 const BELOW_TABLET = { width: 767, height: 1024 }
+/* #2018: a phone in landscape (844×390) is wider than 768, so the width-only
+ * floor missed it and the desktop header search rendered at 14px. The floor
+ * also follows the input (`pointer: coarse`), as #2017 did for tap targets. */
+const TOUCH_LANDSCAPE = { width: 844, height: 390 }
+const DESKTOP = { width: 1280, height: 800 }
+
+const VIEWPORTS = [
+  { label: '375', viewport: PHONE, hasTouch: false },
+  { label: '767', viewport: BELOW_TABLET, hasTouch: false },
+  {
+    label: '844×390 touch landscape',
+    viewport: TOUCH_LANDSCAPE,
+    hasTouch: true,
+  },
+] as const
 
 interface Control {
   desc: string
@@ -85,33 +100,65 @@ const ROUTES: { path: string; ready: string }[] = [
   { path: '/district/61/clubs', ready: 'input[type="search"]' },
 ]
 
-for (const viewport of [PHONE, BELOW_TABLET]) {
-  for (const { path, ready } of ROUTES) {
-    test(`every input/select is ≥${MIN_PX}px at ${viewport.width} — ${path}`, async ({
-      page,
-    }) => {
-      await page.setViewportSize(viewport)
-      await open(page, path, ready)
-      const controls = await measureControls(page)
-      expect(
-        controls.length,
-        `${path}: no form controls measured`
-      ).toBeGreaterThan(0)
-      const small = controls.filter(c => c.px < MIN_PX)
-      expect(small, `${path}: sub-${MIN_PX}px controls: ${fmt(small)}`).toEqual(
-        []
-      )
-      // Lesson 111: the 44px box must survive the font change (WebKit ignores
-      // min-height on a native select unless it opts out of appearance).
-      const short = controls.filter(
-        c => c.desc.startsWith('select') && c.h < 44
-      )
-      expect(short, `${path}: selects under 44px tall: ${fmt(short)}`).toEqual(
-        []
-      )
-    })
-  }
+for (const { label, viewport, hasTouch } of VIEWPORTS) {
+  test.describe(label, () => {
+    test.use({ viewport, hasTouch })
+    for (const { path, ready } of ROUTES) {
+      test(`every input/select is ≥${MIN_PX}px at ${label} — ${path}`, async ({
+        page,
+      }) => {
+        await open(page, path, ready)
+        const controls = await measureControls(page)
+        expect(
+          controls.length,
+          `${path}: no form controls measured`
+        ).toBeGreaterThan(0)
+        const small = controls.filter(c => c.px < MIN_PX)
+        expect(
+          small,
+          `${path}: sub-${MIN_PX}px controls: ${fmt(small)}`
+        ).toEqual([])
+        // Lesson 111: the 44px box must survive the font change (WebKit
+        // ignores min-height on a native select unless it opts out of
+        // appearance).
+        const short = controls.filter(
+          c => c.desc.startsWith('select') && c.h < 44
+        )
+        expect(
+          short,
+          `${path}: selects under 44px tall: ${fmt(short)}`
+        ).toEqual([])
+      })
+    }
+  })
 }
+
+/* The touch landscape run must cover the desktop header search (the control
+ * #2018 found at 14px), and a mouse at 1280 keeps its compact desktop size:
+ * the floor is for coarse pointers, not wide screens. */
+test.describe('header search', () => {
+  test.describe('844×390 touch landscape', () => {
+    test.use({ viewport: TOUCH_LANDSCAPE, hasTouch: true })
+    test(`header search input is ≥${MIN_PX}px`, async ({ page }) => {
+      await open(page, '/', '.header-search__input')
+      const controls = await measureControls(page, '.header-search')
+      expect(controls.length, 'header search not measured').toBeGreaterThan(0)
+      expect(controls.filter(c => c.px < MIN_PX)).toEqual([])
+    })
+  })
+  test.describe('1280 mouse', () => {
+    test.use({ viewport: DESKTOP, hasTouch: false })
+    test('header search input keeps its desktop size', async ({ page }) => {
+      await open(page, '/', '.header-search__input')
+      const controls = await measureControls(page, '.header-search')
+      expect(controls.length, 'header search not measured').toBeGreaterThan(0)
+      expect(
+        controls.every(c => c.px < MIN_PX),
+        fmt(controls)
+      ).toBe(true)
+    })
+  })
+})
 
 test(`context-bar sheet selects are ≥${MIN_PX}px at 375 — /district/61`, async ({
   page,

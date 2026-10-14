@@ -218,7 +218,7 @@ export {
   type ClubRaceOfficialCode,
 } from './schemas/club-race-store.schema.js'
 
-// Club-district history — derived/club-district-history/ (#1782)
+// Club-district history — config/club-district-history/ (#1782)
 export {
   ClubDistrictSpanSchema,
   ClubDistrictHistoryClubSchema,
@@ -234,7 +234,7 @@ export {
   type ClubDistrictHistoryShard,
 } from './schemas/club-district-history.schema.js'
 
-// District → region history — derived/district-region-history.json (#1820)
+// District → region history — config/district-region-history.json (#1820)
 export {
   DistrictRegionSpanSchema,
   DistrictRegionHistoryDistrictSchema,
@@ -246,6 +246,26 @@ export {
   type DistrictRegionConflict,
   type DistrictRegionHistory,
 } from './schemas/district-region-history.schema.js'
+
+// Region and world rollups — snapshots/{date}/region-rollups.json (#1799)
+export {
+  RegionRollupsSchema,
+  RegionRollupsFormatSchema,
+  RegionRollupFiguresSchema,
+  RegionRollupDistrictSchema,
+  RegionRollupRegionSchema,
+  RegionRollupWorldSchema,
+  REGION_ROLLUPS_VERSION,
+  REGION_ROLLUPS_FORMAT,
+  REGION_ROLLUPS_FILE_NAME,
+  REGION_ROLLUPS_REGION_SOURCE,
+  type RegionRollups,
+  type RegionRollupsFormat,
+  type RegionRollupFigures,
+  type RegionRollupDistrict,
+  type RegionRollupRegion,
+  type RegionRollupWorld,
+} from './schemas/region-rollups.schema.js'
 
 // Worldwide club race artifact — snapshots/{date}/global-club-race.json (#1556)
 export {
@@ -415,3 +435,11 @@ export {
   type EducationRollupProgramYear,
   type EducationRollupIndex,
 } from './schemas/education-rollup.schema.js'
+
+// Club contact fields never reach a promoted artifact (#2026)
+export {
+  CLUB_CONTACT_KEYS,
+  isClubContactKey,
+  omitClubContactFields,
+  findClubContactField,
+} from './privacy/club-contact.js'

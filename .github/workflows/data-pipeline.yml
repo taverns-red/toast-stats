@@ -446,9 +446,11 @@ jobs:
           # PY for any July date. No verdict (manual districts) -> `all`.
           CLUB_TRENDS_PROGRAM_YEARS="$(npx tsx scripts/club-trends-sync-scope.ts --program-year "${{ steps.daily-config.outputs.program_year }}" --date "${DATE}" --date "${{ steps.daily-scrape.outputs.snapshot_date }}")"
           echo "Club-trends program years to pull: ${CLUB_TRENDS_PROGRAM_YEARS}"
+          # district-region-history (#1799) is a read-only input: each PY's
+          # regions for compute's snapshots/<date>/region-rollups.json.
           CLUB_TRENDS_PROGRAM_YEARS="${CLUB_TRENDS_PROGRAM_YEARS}" \
             bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
-            time-series club-trends club-race
+            time-series club-trends club-race district-region-history
 
           # Previous year snapshots for YoY comparison
           PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
@@ -654,11 +656,14 @@ jobs:
           echo "- **Snapshot date**: ${SNAPSHOT_DATE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Snapshot/analytics files**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-          # Identity histories (#1782): the same script process-dates.sh runs
-          # after its loop (ADR-015 P1, no daily-only stage). Staging derived/
-          # only until #1763; a failure leaves the previous copy, not a red run.
+          # Identity histories (#1782, #1820): the same script process-dates.sh
+          # runs after its loop (ADR-015 P1, no daily-only stage). Both go to
+          # config/ and are promoted with the run: the club history as
+          # config/club-district-history/{NN,index}.json, the region history
+          # as config/district-region-history.json. A failure leaves the
+          # previous copies, not a red run.
           bash scripts/pipeline/build-identity-history.sh "${GCS_BUCKET}" \
-            || echo "::warning::Identity histories were not rebuilt (#1782); the previous derived/ copy stands"
+            || echo "::warning::Identity histories were not rebuilt (#1782, #1820); the previous copies stand"
 
           # Education rollup (#1801): the same script process-dates.sh runs
           # after the identity histories, whose region history it reads.
@@ -871,7 +876,8 @@ jobs:
           # either gcloud rsync behaviour (#1702, #1722).
           echo "## ⏬ Store Sync (rebuild)" >> "$GITHUB_STEP_SUMMARY"
           bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
-            time-series club-trends club-race district-awards-history
+            time-series club-trends club-race district-awards-history \
+            district-region-history
 
       # ── Rebuild Step 2: Discover dates, then stream one-at-a-time ──
       - name: '[rebuild] Stream rebuild — one date at a time'
@@ -972,6 +978,10 @@ jobs:
             gcloud storage cp \
               "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${DATE}/district_*.json" \
               "${SNAPSHOT_DIR}/" 2>/dev/null || true
+            # The districts it records as failed or a #1671 gap (#2035).
+            gcloud storage cp \
+              "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${DATE}/metadata.json" \
+              "${SNAPSHOT_DIR}/" 2>/dev/null || true
 
             if [ ! -f "${SNAPSHOT_DIR}/all-districts-rankings.json" ]; then
               echo "::warning::${DATE} has no all-districts-rankings.json — skipping (no district set to scope to)"
@@ -1045,7 +1055,8 @@ jobs:
           # either gcloud rsync behaviour (#1702, #1722).
           echo "## ⏬ Store Sync (rescrape)" >> "$GITHUB_STEP_SUMMARY"
           bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
-            time-series club-trends club-race district-awards-history
+            time-series club-trends club-race district-awards-history \
+            district-region-history
 
       # ── Rescrape Step 2: Scrape → transform → compute → upload ──
       - name: '[rescrape] Re-collect and process dates'
@@ -1168,7 +1179,8 @@ jobs:
           # Fail-closed pull + count floor + gzip normalise: see the script
           # (#1722, #1738). Whole club-trends store, like rebuild/rescrape.
           bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
-            time-series club-trends club-race district-awards-history
+            time-series club-trends club-race district-awards-history \
+            district-region-history
 
           RAW_DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
           echo "## 🔨 Historical rebuild (#1670)" >> "$GITHUB_STEP_SUMMARY"

@@ -10,7 +10,7 @@
  *   snapshots/2020-06-30/district_111_reports.json         (archive backfill)
  *   snapshots/2026-10-12/district_49_reports.json          (daily feed)
  *   snapshots/{2019-06-30,2020-06-30,2026-10-12}/all-districts-rankings.json
- *   derived/district-region-history.json
+ *   config/district-region-history.json
  * Expected counts were computed independently (Python over the same files).
  */
 
@@ -54,7 +54,7 @@ const rankingIds = (date: string): string[] =>
     }
   ).rankings.map(r => r.districtId)
 const regionHistory = DistrictRegionHistorySchema.parse(
-  json('derived/district-region-history.json')
+  json('config/district-region-history.json')
 )
 
 const rollup2018 = () =>

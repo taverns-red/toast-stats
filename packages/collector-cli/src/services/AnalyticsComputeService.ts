@@ -20,12 +20,14 @@ import {
   AnalyticsComputer,
   buildGlobalClubRace,
   buildGlobalTotals,
+  buildRegionRollups,
   canonicalDistrictId,
   findPreviousProgramYearDate,
   getCSPStatus,
   programYearForSnapshotDate,
   readSnapshotRankings,
   readSnapshotRollupInput,
+  readRegionRollupInput,
   type Logger,
   type ClubStatistics,
   type DistrictStatistics,
@@ -46,6 +48,10 @@ import {
   isDistrictSnapshotFile,
   GLOBAL_CLUB_RACE_FILE_NAME,
   GLOBAL_TOTALS_FILE_NAME,
+  DistrictRegionHistorySchema,
+  REGION_ROLLUPS_FILE_NAME,
+  REGION_ROLLUPS_REGION_SOURCE,
+  type DistrictRegionHistory,
 } from '@taverns-red/shared-contracts'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import {
@@ -55,7 +61,11 @@ import {
 } from './ClubRaceStore.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
 import { validateDistrictId } from '../utils/validateDistrictId.js'
-import { dateLevelRefusal } from '../utils/dateLevelCoverage.js'
+import {
+  dateLevelRefusal,
+  missingDistricts as unrecordedDistricts,
+  recordedFailedDistricts,
+} from '../utils/dateLevelCoverage.js'
 import type { CacheMetadata } from '../types/collector.js'
 import {
   ClosingPeriodDetector,
@@ -198,6 +208,17 @@ export interface ComputeOperationResult {
    * snapshot never recomputes.
    */
   globalClubRaceFailed: boolean
+  /**
+   * Path of `snapshots/{date}/region-rollups.json` (#1799), or undefined when
+   * the date was skipped (no rankings file) or the artifact was refused.
+   */
+  regionRollupsPath?: string
+  /**
+   * True when the region rollups were refused (a listed district had no
+   * file, ADR-015 P3) or threw. Reported, never publish-blocking: a missing
+   * artifact reads "not available for this date".
+   */
+  regionRollupsFailed: boolean
   /**
    * Districts whose time-series data point was not written (#1702). The
    * loop still continues to the next district, but the run fails: Trends
@@ -1247,6 +1268,7 @@ export class AnalyticsComputeService {
         globalTotalsFailed: false,
         clubRaceStoreFailed: false,
         globalClubRaceFailed: false,
+        regionRollupsFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
         clubTrendsUpdated: [],
@@ -1294,6 +1316,7 @@ export class AnalyticsComputeService {
         globalTotalsFailed: false,
         clubRaceStoreFailed: false,
         globalClubRaceFailed: false,
+        regionRollupsFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
         clubTrendsUpdated: [],
@@ -1494,6 +1517,10 @@ export class AnalyticsComputeService {
       errors
     )
 
+    // Region and world rollups (#1799): the same input surface as the
+    // worldwide rollup, regions from the synced config/ history.
+    const regionRollups = await this.writeRegionRollups(snapshotDate, errors)
+
     // A time-series write failure is recorded per district but must fail the
     // run (#1702): it is the only writer behind Trends.
     const timeSeriesFailed: string[] = []
@@ -1567,6 +1594,8 @@ export class AnalyticsComputeService {
       clubRaceStoreFailed: clubRace.failed,
       globalClubRacePath: globalClubRace.path,
       globalClubRaceFailed: globalClubRace.failed,
+      regionRollupsPath: regionRollups.path,
+      regionRollupsFailed: regionRollups.failed,
       timeSeriesFailed,
       timeSeriesWritten,
       clubTrendsUpdated,
@@ -1634,7 +1663,12 @@ export class AnalyticsComputeService {
       // A listed district with no file would be summed as nothing: one
       // district's clubs published as the world's (#1756). Refuse, like the
       // sibling runner scripts/build-global-totals.ts.
-      const missing = totals.districts.missingDistricts
+      // A district metadata records as failed or a gap is accounted for
+      // (#2035); it is left out of the sums and named in missingDistricts.
+      const missing = unrecordedDistricts(
+        totals.districts.missingDistricts,
+        await recordedFailedDistricts(snapshotDir)
+      )
       if (missing.length > 0) {
         const message = dateLevelRefusal(
           GLOBAL_TOTALS_FILE_NAME,
@@ -1748,9 +1782,13 @@ export class AnalyticsComputeService {
       const seen = new Set(
         districts.map(d => canonicalDistrictId(d.districtId))
       )
-      const missing = rankings
-        .map(row => row.districtId)
-        .filter(id => !seen.has(canonicalDistrictId(id)))
+      // ...unless metadata records the district as failed or a gap (#2035).
+      const missing = unrecordedDistricts(
+        rankings
+          .map(row => row.districtId)
+          .filter(id => !seen.has(canonicalDistrictId(id))),
+        await recordedFailedDistricts(snapshotDir)
+      )
       if (missing.length > 0) {
         const message = dateLevelRefusal(
           'club-race/first-reached.json',
@@ -1872,6 +1910,149 @@ export class AnalyticsComputeService {
       })
       return { failed: true }
     }
+  }
+
+  /**
+   * Write `snapshots/{date}/region-rollups.json` — region and world rollups
+   * of the district figures for this date (#1799, epic #1781).
+   *
+   * Placed with `global-totals.json` for the same reason: this step holds
+   * every district file and the date's own rankings on disk, and the
+   * per-date upload copies `snapshots/${DATE}/*.json` wholesale, so the
+   * artifact is in the run manifest and promoted with its date.
+   *
+   * Region membership is `<cache>/config/district-region-history.json`
+   * (#1820), pulled from staging before compute by
+   * `sync-stores.sh district-region-history`. Absent or invalid, the
+   * artifact is still written — world and district rows, `regions: null`
+   * and the reason — because a missing region list is visible, not a
+   * plausible wrong number.
+   *
+   * - No rankings file → skipped quietly, like the worldwide rollup.
+   * - A listed district with no file → refused and recorded (ADR-015 P3):
+   *   summing a subset would publish part of a region as all of it.
+   * - Never publish-blocking (`regionRollupsFailed` does not move the exit
+   *   code): a missing artifact reads "not available for this date".
+   */
+  private async writeRegionRollups(
+    snapshotDate: string,
+    errors: Array<{ districtId: string; error: string; timestamp: string }>
+  ): Promise<{ path?: string; failed: boolean }> {
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    try {
+      await fs.access(path.join(snapshotDir, 'all-districts-rankings.json'))
+    } catch {
+      this.logger.warn(
+        'No all-districts-rankings.json for this date — skipping the region rollups',
+        { snapshotDate }
+      )
+      return { failed: false }
+    }
+
+    try {
+      const { regionHistory, note } = await this.readRegionHistory()
+      const { rankings, districts } = readRegionRollupInput(snapshotDir)
+      const { rollups, missingDistricts: withoutFile } = buildRegionRollups({
+        snapshotDate,
+        rankings,
+        districts,
+        regionHistory,
+        ...(note !== undefined && { regionHistoryNote: note }),
+      })
+      // A district metadata records as failed or a gap is accounted for
+      // (#2035); any other ranked district without a file is a shortfall.
+      const missingDistricts = unrecordedDistricts(
+        withoutFile,
+        await recordedFailedDistricts(snapshotDir)
+      )
+
+      if (missingDistricts.length > 0) {
+        const message = dateLevelRefusal(
+          REGION_ROLLUPS_FILE_NAME,
+          snapshotDate,
+          rankings.length,
+          missingDistricts
+        )
+        this.logger.error(message, { snapshotDate, missingDistricts })
+        errors.push({
+          districtId: 'N/A',
+          error: message,
+          timestamp: new Date().toISOString(),
+        })
+        return { failed: true }
+      }
+
+      if (rollups.regions === null) {
+        this.logger.warn('Region rollups written without regions', {
+          snapshotDate,
+          reason: rollups.regionMembershipNote,
+        })
+      }
+      const outputPath = path.join(snapshotDir, REGION_ROLLUPS_FILE_NAME)
+      await fs.writeFile(
+        outputPath,
+        JSON.stringify(rollups, null, 2) + '\n',
+        'utf-8'
+      )
+      this.logger.info('Wrote region rollups', {
+        snapshotDate,
+        path: outputPath,
+        programYear: rollups.programYear,
+        districts: rollups.world.districts,
+        regions: rollups.regions ? Object.keys(rollups.regions).length : null,
+        unassigned: rollups.scope.unassignedDistricts.length,
+        excludedDistricts: rollups.scope.excludedDistricts.length,
+      })
+      return { path: outputPath, failed: false }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      this.logger.error('Failed to write region rollups', {
+        snapshotDate,
+        error: message,
+      })
+      errors.push({
+        districtId: 'N/A',
+        error: `Failed to write ${REGION_ROLLUPS_FILE_NAME}: ${message}`,
+        timestamp: new Date().toISOString(),
+      })
+      return { failed: true }
+    }
+  }
+
+  /**
+   * The synced district → region history (#1820), or null with the reason.
+   * An unreadable file is reported, never trusted: regions are then null.
+   */
+  private async readRegionHistory(): Promise<{
+    regionHistory: DistrictRegionHistory | null
+    note?: string
+  }> {
+    const historyPath = path.join(this.cacheDir, REGION_ROLLUPS_REGION_SOURCE)
+    let raw: string
+    try {
+      raw = await fs.readFile(historyPath, 'utf-8')
+    } catch {
+      return { regionHistory: null }
+    }
+    let value: unknown
+    try {
+      value = JSON.parse(raw)
+    } catch {
+      return {
+        regionHistory: null,
+        note: `${REGION_ROLLUPS_REGION_SOURCE} is not a valid history (not JSON); region membership is unknown`,
+      }
+    }
+    const parsed = DistrictRegionHistorySchema.safeParse(value)
+    if (!parsed.success) {
+      const first = parsed.error.issues[0]
+      const where = first?.path.join('.') || '(root)'
+      return {
+        regionHistory: null,
+        note: `${REGION_ROLLUPS_REGION_SOURCE} is not a valid history (${where}: ${first?.message ?? 'schema'}); region membership is unknown`,
+      }
+    }
+    return { regionHistory: parsed.data }
   }
 
   // ========== Dense Club Trends Enrichment (#79b) ==========

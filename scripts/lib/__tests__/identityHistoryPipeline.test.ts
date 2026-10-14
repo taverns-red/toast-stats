@@ -3,16 +3,20 @@
  *
  * One script, scripts/pipeline/build-identity-history.sh, builds the
  * club-district history from the runner's club-race store (#1782) and the
- * district → region history from the staged all-districts rankings (#1820),
- * and uploads both to STAGING `derived/` — a prefix promotion never copies, until scoped
- * promotion (#1763, ADR-015 step 5) lists it in the run manifest and moves
- * it under `config/`. It is not a daily-only stage: daily calls it after its
- * upload, and process-dates.sh (rebuild, rescrape, rescrape-historical) calls
- * it once after its date loop. The contracts here:
+ * district → region history from the staged all-districts rankings (#1820).
+ * Both go under `config/`, a promoted prefix: the club history as
+ * `config/club-district-history/{NN,index}.json` (#1782), the region
+ * history as `config/district-region-history.json` (#1820). The content gate
+ * schema-checks them and promotion copies them with the run (whole-prefix
+ * rsync, or the run manifest under promotion_scope=manifest, #1763, which
+ * copies the club index after its shards). It is not a daily-only stage: daily
+ * calls it after its upload, and process-dates.sh (rebuild, rescrape,
+ * rescrape-historical) calls it once after its date loop. The contracts here:
  *   1. the script, run for real against the gcloud shim (D10), writes the
- *      schema-valid shards and index, plain JSON, under derived/ only;
- *   2. derived/ is not promoted, and nothing the script runs is a prod write
- *      (the #1755 guard);
+ *      schema-valid shards and index and the region history under config/,
+ *      plain JSON (identity: config/ is edge-compressed), nothing in derived/;
+ *   2. both are global promotion objects with their own content-gate kinds,
+ *      and nothing the script runs is a prod write (the #1755 guard);
  *   3. process-dates.sh invokes it in every mode, once, after the loop, and a
  *      failure is reported but never fails the run;
  *   4. every workflow mode that publishes the club-race store also builds
@@ -33,7 +37,8 @@ import {
   DistrictRegionHistorySchema,
 } from '@taverns-red/shared-contracts'
 import { prodWriteReasons, type Workflow } from '../prodWriteGuard.js'
-import { PROMOTED_PREFIXES } from '../promotionContentGate.js'
+import { classifyPromotionPath } from '../manifestPromotion.js'
+import { classifyObject, PROMOTED_PREFIXES } from '../promotionContentGate.js'
 
 const REPO = process.cwd()
 const SCRIPT = path.join(REPO, 'scripts/pipeline/build-identity-history.sh')
@@ -52,8 +57,8 @@ const RANKINGS = path.join(
   'scripts/lib/__tests__/fixtures/identity-history/snapshots'
 )
 const BUCKET = 'test-bucket'
-const PREFIX = 'derived/club-district-history/'
-const REGION = 'derived/district-region-history.json'
+const PREFIX = 'config/club-district-history/'
+const REGION = 'config/district-region-history.json'
 
 let tmp: string
 let root: string
@@ -141,6 +146,11 @@ function derivedObjects(): string[] {
   return allObjects().filter(o => o.startsWith('derived/'))
 }
 
+/** Everything the script may write: the club history and the region history. */
+function writtenObjects(): string[] {
+  return allObjects().filter(o => o.startsWith(PREFIX) || o === REGION)
+}
+
 function allObjects(): string[] {
   const dir = path.join(root, BUCKET)
   return fs
@@ -166,12 +176,13 @@ function lines(file: string): string[] {
     : []
 }
 
-describe('build-identity-history.sh: club-district history to staging derived/', () => {
+describe('build-identity-history.sh: club-district history to config/ (#1782)', () => {
   it('uploads the schema-valid index and one shard per club-id suffix', () => {
     seedAll()
     const r = runScript()
     expect(r.status, r.stderr).toBe(0)
-    expect(derivedObjects().filter(o => o.startsWith(PREFIX))).toEqual(
+    expect(derivedObjects()).toEqual([])
+    expect(allObjects().filter(o => o.startsWith(PREFIX))).toEqual(
       ['02', '07', '45', '68', '77', '99', 'index']
         .map(k => `${PREFIX}${k}.json`)
         .sort()
@@ -189,7 +200,7 @@ describe('build-identity-history.sh: club-district history to staging derived/',
     ])
   })
 
-  it('uploads plain JSON with a JSON content type (internal, no -Z)', () => {
+  it('uploads plain JSON with a JSON content type (no -Z under config/, #1852)', () => {
     seedAll()
     expect(runScript().status).toBe(0)
     for (const obj of [`${PREFIX}index.json`, `${PREFIX}77.json`, REGION]) {
@@ -197,6 +208,28 @@ describe('build-identity-history.sh: club-district history to staging derived/',
       expect(meta, obj).not.toContain('content-encoding=gzip')
       expect(meta, obj).toContain('content-type=application/json')
     }
+  })
+
+  it('serves both histories like their config/ siblings: identity, max-age=300', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    for (const obj of writtenObjects()) {
+      expect(readMeta(obj), obj).toContain('cache-control=public, max-age=300')
+      expect(readMeta(obj), obj).not.toContain('no-transform')
+    }
+    expect(writtenObjects()).toHaveLength(6 + 1 + 1)
+  })
+
+  it('uploads the shards before the index that names them', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const uploads = lines(shimLog).filter(l =>
+      new RegExp(`^storage cp .*gs://${BUCKET}/${PREFIX}$`).test(l)
+    )
+    expect(uploads).toHaveLength(2)
+    expect(uploads[0]).toMatch(/\/77\.json /)
+    expect(uploads[0]).not.toMatch(/index\.json/)
+    expect(uploads[1]).toMatch(/\/index\.json /)
   })
 
   it('prints one JSON summary line on stdout (R4) and reports gzip sizes', () => {
@@ -220,33 +253,40 @@ describe('build-identity-history.sh: club-district history to staging derived/',
     seedRankings()
     const r = runScript()
     expect(r.status).toBe(1)
-    expect(derivedObjects()).toEqual([])
+    expect(writtenObjects()).toEqual([])
   })
 
-  it('writes nothing outside derived/', () => {
+  it('writes nothing outside the two histories', () => {
     seedAll()
-    const before = allObjects().filter(o => !o.startsWith('derived/'))
+    const before = allObjects().filter(o => !writtenObjects().includes(o))
     expect(runScript().status).toBe(0)
-    expect(allObjects().filter(o => !o.startsWith('derived/'))).toEqual(before)
+    expect(allObjects().filter(o => !writtenObjects().includes(o))).toEqual(
+      before
+    )
     const writes = lines(shimLog).filter(
       l => /^storage (cp|rsync)/.test(l) && /\sgs:\/\/\S+$/.test(l)
     )
     expect(writes.length).toBeGreaterThan(0)
     for (const w of writes) {
       const dest = w.split(' ').at(-1) ?? ''
-      expect(dest.startsWith(`gs://${BUCKET}/derived/`), w).toBe(true)
+      expect(
+        dest === `gs://${BUCKET}/${PREFIX}` ||
+          dest === `gs://${BUCKET}/${REGION}`,
+        w
+      ).toBe(true)
     }
+    expect(derivedObjects()).toEqual([])
   })
 
-  it('records every derived/ object in the run manifest, with the sha256 of its bytes (#1762, ADR-015 P5)', () => {
+  it('records every object it writes in the run manifest, with the sha256 of its bytes (#1762, ADR-015 P5)', () => {
     seedAll()
     const r = runScript()
     expect(r.status, r.stderr).toBe(0)
     const recorded = lines(manifest).map(
       l => JSON.parse(l) as { path: string; sha256: string; stage: string }
     )
-    expect(recorded.map(e => e.path).sort()).toEqual(derivedObjects())
-    expect(derivedObjects()).toContain('derived/district-region-history.json')
+    expect(recorded.map(e => e.path).sort()).toEqual(writtenObjects())
+    expect(recorded.map(e => e.path)).toContain(REGION)
     for (const e of recorded) {
       expect(e.stage).toBe('identity')
       const bytes = fs.readFileSync(path.join(root, BUCKET, e.path))
@@ -309,16 +349,38 @@ describe('build-identity-history.sh: district → region history (#1820)', () =>
     seedClubRace()
     const r = runScript()
     expect(r.status).toBe(1)
-    expect(derivedObjects()).not.toContain(REGION)
+    expect(allObjects()).not.toContain(REGION)
   })
 })
 
-describe('derived/ is staging-only until #1763', () => {
-  it('is not under any promoted prefix', () => {
-    expect(PROMOTED_PREFIXES.some(p => 'derived/'.startsWith(p))).toBe(false)
-    expect(PROMOTED_PREFIXES.some(p => PREFIX.startsWith(p))).toBe(false)
+describe('both histories are promoted with the run (#1820, #1782)', () => {
+  it('is under a promoted prefix, a global object for scoped promotion', () => {
+    expect(PROMOTED_PREFIXES.some(p => REGION.startsWith(p))).toBe(true)
+    expect(classifyPromotionPath(REGION)).toEqual({ kind: 'global' })
   })
 
+  it('the content gate schema-checks it (its own kind, not the generic sample)', () => {
+    expect(classifyObject(REGION)).toBe('district-region-history')
+  })
+
+  it('the club history shards and index are global objects with their own gate kinds', () => {
+    for (const p of [`${PREFIX}77.json`, `${PREFIX}index.json`]) {
+      expect(
+        PROMOTED_PREFIXES.some(x => p.startsWith(x)),
+        p
+      ).toBe(true)
+      expect(classifyPromotionPath(p), p).toEqual({ kind: 'global' })
+    }
+    expect(classifyObject(`${PREFIX}77.json`)).toBe(
+      'club-district-history-shard'
+    )
+    expect(classifyObject(`${PREFIX}index.json`)).toBe(
+      'club-district-history-index'
+    )
+  })
+})
+
+describe('the script writes only to the bucket it is given', () => {
   it('the script makes no prod write (the #1755 prod-write guard)', () => {
     const text = fs.readFileSync(SCRIPT, 'utf-8')
     expect(prodWriteReasons(text)).toEqual([])

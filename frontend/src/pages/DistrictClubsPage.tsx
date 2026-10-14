@@ -26,6 +26,7 @@ import { ProspectiveClubsPanel } from '../components/ProspectiveClubsPanel'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay } from '../components/ErrorDisplay'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import type { SortDirection, SortField } from '../components/filters/types'
 import type { FilterState } from '../components/filters/types'
 import {
@@ -170,7 +171,8 @@ const DistrictClubsPage: React.FC = () => {
     d => d.id === districtId
   )
 
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId || '')
+  const { data: cachedDatesData, isPending: isDatesPending = false } =
+    useDistrictCachedDates(districtId || '')
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
@@ -240,6 +242,15 @@ const DistrictClubsPage: React.FC = () => {
   )
 
   const allClubs = analytics?.allClubs || []
+
+  // #1999: hold the skeleton until the analytics settle — including the
+  // date-index window, where the query is disabled and reports
+  // `isLoading: false` with no data. Without this the table painted its
+  // "No club data is available" empty state (and Lighthouse took it as LCP).
+  const isClubsPending = isDistrictSlotPending(
+    { hasData: !!analytics, isError: !!isError },
+    { hasValidDates, datesSettled: !isDatesPending }
+  )
 
   // Default snapshot-diff pair = (previous recorded date → latest recorded
   // date) for this district (#795, epic #821 Sprint 3). The diff feeds the
@@ -326,7 +337,7 @@ const DistrictClubsPage: React.FC = () => {
                 }}
                 showDetails={true}
               />
-            ) : isLoading && allClubs.length === 0 ? (
+            ) : isClubsPending ? (
               <LoadingSkeleton variant="table" count={6} />
             ) : (
               <>

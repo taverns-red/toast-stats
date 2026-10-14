@@ -25,9 +25,11 @@
  *   and this run does not promote — e.g. a date an earlier run left held.
  *   Promoting the index would point the frontend at a missing directory.
  *   Remedy: re-derive that date (it then promotes through its own gates).
- * - **Order.** Dates first, then globals, then the v1/ entry points
- *   (dates.json, latest.json) last, so prod never references an object the
- *   promotion has not yet written (R15: the strongest signal last).
+ * - **Order.** Dates first, then globals, then the entry phase: the index
+ *   of a sharded object (the club-district history index, #1782) after its
+ *   shards, and the v1/ entry points (dates.json, latest.json) last, so prod
+ *   never references an object the promotion has not yet written (R15: the
+ *   strongest signal last).
  * - **Additive.** Nothing is deleted or renamed in prod. An object the run
  *   no longer writes stays in prod until a reconcile removes it (prune,
  *   #1767 routes that through a manifest too).
@@ -41,6 +43,16 @@ import { latestByPath, type RunManifestEntry } from './runManifest.js'
 
 /** The frontend's entry points: copied last, in their own `cp`. */
 export const ENTRY_POINT_PATHS = ['v1/dates.json', 'v1/latest.json'] as const
+
+/**
+ * Indexes that name sibling shards (#1782): copied in the entry phase, after
+ * every globals batch has written the shards, and before the v1/ entry
+ * points (their directories sort first; the entry phase runs one `cp` at a
+ * time).
+ */
+export const SHARD_INDEX_PATHS = [
+  'config/club-district-history/index.json',
+] as const
 
 /** Sources per `gcloud storage cp` call (well under ARG_MAX). */
 export const MAX_SOURCES_PER_COPY = 500
@@ -234,7 +246,7 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
       held.push({ path: p, reason: `date ${d} held by the completeness gate` })
     }
   }
-  const entry = new Set<string>(ENTRY_POINT_PATHS)
+  const entry = new Set<string>([...SHARD_INDEX_PATHS, ...ENTRY_POINT_PATHS])
   const batches: CopyBatch[] = [
     ...promotedDates.flatMap(d => batch('dates', dated.get(d)!)),
   ]

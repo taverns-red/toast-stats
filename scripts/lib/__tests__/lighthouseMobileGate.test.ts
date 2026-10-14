@@ -131,6 +131,56 @@ describe('lighthouserc.mobile.js (#1830)', () => {
       }
     })
 
+    it('is ratcheted to the 2026-10-13 runner measurements (#1856, #2014)', () => {
+      // Ceilings from 8 PR-preview runs x 3 samples (2026-10-13). LHCI asserts
+      // the best of 3 (`optimistic`), so each ceiling is the worst per-run
+      // best + headroom, or the #1830 target where that already passes. A
+      // budget may only go DOWN from here; never raise one to make a run pass.
+      const KB = 1024
+      const CEILING: Record<string, Record<string, number>> = {
+        landing: {
+          lcpMs: 4200,
+          cls: 0.1,
+          scriptBytes: 300 * KB,
+          totalBytes: 500 * KB,
+        },
+        district: {
+          lcpMs: 6600,
+          cls: 0.1,
+          scriptBytes: 300 * KB,
+          totalBytes: 1200 * KB,
+        },
+        // Ratchet 2 (#2014): #2009 dropped the Recharts chunk from clubs.
+        // 3 post-#2009 runs: script 229-230 KB, total 1180 KB per-run best.
+        clubs: {
+          lcpMs: 4800,
+          cls: 0.1,
+          scriptBytes: 300 * KB,
+          totalBytes: 1300 * KB,
+        },
+        club: {
+          lcpMs: 7500,
+          cls: 0.1,
+          scriptBytes: 300 * KB,
+          totalBytes: 1300 * KB,
+        },
+        regions: {
+          lcpMs: 3600,
+          cls: 0.1,
+          scriptBytes: 300 * KB,
+          totalBytes: 500 * KB,
+        },
+      }
+      for (const [route, ceiling] of Object.entries(CEILING)) {
+        for (const [metric, max] of Object.entries(ceiling)) {
+          expect(
+            rc.BUDGETS[route][metric],
+            `${route}.${metric}`
+          ).toBeLessThanOrEqual(max)
+        }
+      }
+    })
+
     it('any budget looser than its target names a ratchet issue', () => {
       const { TARGET, BUDGETS, RATCHET_ISSUE } = rc
       const loose = Object.entries(

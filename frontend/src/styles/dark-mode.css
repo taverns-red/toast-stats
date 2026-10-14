@@ -456,8 +456,12 @@
    White selects/inputs → dark bg + light text
    ═══════════════════════════════════════════ */
 
+/* #2022: the header search input sits inside .header-search__field, which
+   owns the surface (--surface-2, already theme-aware) and the border. Painting
+   the input --surface-card here drew a mismatched box inside the field, so it
+   is exempt and keeps its own transparent background and --ink colour. */
 [data-theme='dark'] select,
-[data-theme='dark'] input[type='text'],
+[data-theme='dark'] input[type='text']:not(.header-search__input),
 [data-theme='dark'] input[type='search'],
 [data-theme='dark'] input[type='date'],
 [data-theme='dark'] input[type='number'] {

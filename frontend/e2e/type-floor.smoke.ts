@@ -1,4 +1,5 @@
-import { test, expect, type Page } from './fixtures/test'
+import { test, expect } from './fixtures/test'
+import { measureText } from './helpers/mobile-measure'
 
 /* Phone type floor at 375 (#1840, epic #1827).
  *
@@ -47,64 +48,6 @@ const ROUTES = [
   '/clubs/race/distinguished',
   '/mcp',
 ]
-
-interface TextStats {
-  total: number
-  under14: number
-  offenders: string[] // grouped "<px>px <el> ×n "sample"" for < 14px
-  belowFloor: string[] // same, for < HARD_FLOOR_PX
-}
-
-async function measureText(page: Page, floor: number): Promise<TextStats> {
-  return page.evaluate(floorPx => {
-    const groups = new Map<string, { n: number; chars: number; ex: string }>()
-    const below = new Map<string, number>()
-    let total = 0
-    let under14 = 0
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT
-    )
-    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-      const text = (n.textContent || '').trim()
-      if (!text) continue
-      const el = n.parentElement
-      if (!el) continue
-      const cs = getComputedStyle(el)
-      if (
-        cs.display === 'none' ||
-        cs.visibility === 'hidden' ||
-        cs.opacity === '0'
-      )
-        continue
-      const r = el.getBoundingClientRect()
-      if (r.width <= 1 || r.height <= 1) continue // sr-only / collapsed
-      const px = parseFloat(cs.fontSize)
-      total += text.length
-      if (px >= 14) continue
-      under14 += text.length
-      const cls = (el.getAttribute('class') || '')
-        .split(/\s+/)
-        .slice(0, 2)
-        .join('.')
-      const key = `${Math.round(px * 10) / 10}px ${el.tagName.toLowerCase()}${cls ? '.' + cls : ''}`
-      const g = groups.get(key) || { n: 0, chars: 0, ex: text.slice(0, 24) }
-      g.n++
-      g.chars += text.length
-      groups.set(key, g)
-      if (px < floorPx) below.set(key, (below.get(key) || 0) + 1)
-    }
-    const fmt = ([k, g]: [string, { n: number; chars: number; ex: string }]) =>
-      `${k} ×${g.n} (${g.chars}c) "${g.ex}"`
-    const sorted = [...groups.entries()].sort((a, b) => b[1].chars - a[1].chars)
-    return {
-      total,
-      under14,
-      offenders: sorted.slice(0, 12).map(fmt),
-      belowFloor: sorted.filter(([k]) => below.has(k)).map(fmt),
-    }
-  }, floor)
-}
 
 for (const path of ROUTES) {
   test(`≤15% of text under 14px, none under 12px, at 375 — ${path}`, async ({
