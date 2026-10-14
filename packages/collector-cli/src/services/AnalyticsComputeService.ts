@@ -61,7 +61,11 @@ import {
 } from './ClubRaceStore.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
 import { validateDistrictId } from '../utils/validateDistrictId.js'
-import { dateLevelRefusal } from '../utils/dateLevelCoverage.js'
+import {
+  dateLevelRefusal,
+  missingDistricts as unrecordedDistricts,
+  recordedFailedDistricts,
+} from '../utils/dateLevelCoverage.js'
 import type { CacheMetadata } from '../types/collector.js'
 import {
   ClosingPeriodDetector,
@@ -1659,7 +1663,12 @@ export class AnalyticsComputeService {
       // A listed district with no file would be summed as nothing: one
       // district's clubs published as the world's (#1756). Refuse, like the
       // sibling runner scripts/build-global-totals.ts.
-      const missing = totals.districts.missingDistricts
+      // A district metadata records as failed or a gap is accounted for
+      // (#2035); it is left out of the sums and named in missingDistricts.
+      const missing = unrecordedDistricts(
+        totals.districts.missingDistricts,
+        await recordedFailedDistricts(snapshotDir)
+      )
       if (missing.length > 0) {
         const message = dateLevelRefusal(
           GLOBAL_TOTALS_FILE_NAME,
@@ -1773,9 +1782,13 @@ export class AnalyticsComputeService {
       const seen = new Set(
         districts.map(d => canonicalDistrictId(d.districtId))
       )
-      const missing = rankings
-        .map(row => row.districtId)
-        .filter(id => !seen.has(canonicalDistrictId(id)))
+      // ...unless metadata records the district as failed or a gap (#2035).
+      const missing = unrecordedDistricts(
+        rankings
+          .map(row => row.districtId)
+          .filter(id => !seen.has(canonicalDistrictId(id))),
+        await recordedFailedDistricts(snapshotDir)
+      )
       if (missing.length > 0) {
         const message = dateLevelRefusal(
           'club-race/first-reached.json',
@@ -1939,13 +1952,19 @@ export class AnalyticsComputeService {
     try {
       const { regionHistory, note } = await this.readRegionHistory()
       const { rankings, districts } = readRegionRollupInput(snapshotDir)
-      const { rollups, missingDistricts } = buildRegionRollups({
+      const { rollups, missingDistricts: withoutFile } = buildRegionRollups({
         snapshotDate,
         rankings,
         districts,
         regionHistory,
         ...(note !== undefined && { regionHistoryNote: note }),
       })
+      // A district metadata records as failed or a gap is accounted for
+      // (#2035); any other ranked district without a file is a shortfall.
+      const missingDistricts = unrecordedDistricts(
+        withoutFile,
+        await recordedFailedDistricts(snapshotDir)
+      )
 
       if (missingDistricts.length > 0) {
         const message = dateLevelRefusal(
