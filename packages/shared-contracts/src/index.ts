@@ -234,6 +234,20 @@ export {
   type ClubDistrictHistoryShard,
 } from './schemas/club-district-history.schema.js'
 
+// District club shards — snapshots/<date>/analytics/district_<id>_clubs_<D>.json (#1901)
+export {
+  DISTRICT_CLUB_SHARD_KEYS,
+  DISTRICT_CLUB_SHARD_VERSION,
+  DistrictClubShardClubSchema,
+  DistrictClubShardSchema,
+  districtClubShardKey,
+  districtClubShardPath,
+  parseDistrictClubShardPath,
+  type DistrictClubShard,
+  type DistrictClubShardClub,
+  type DistrictClubShardKey,
+} from './schemas/district-club-shard.schema.js'
+
 // District → region history — config/district-region-history.json (#1820)
 export {
   DistrictRegionSpanSchema,
