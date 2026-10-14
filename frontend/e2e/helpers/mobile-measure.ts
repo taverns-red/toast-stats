@@ -19,7 +19,11 @@ export const NOT_PROSE_LINKS = [
   '.clubs-section__title a', // /clubs tier headings "Distinguished →" (22px)
   '.race-podium__district', // /clubs podium district pills (40×23)
   '.districts-methodology-callout__link', // landing / awards / history "Methodology"
-  '.methodology-link', // divisions "How it works" (65×17)
+  // Divisions "How it works" (65×17). Scoped to the criteria source line, as
+  // in tap-targets.css: a bare `.methodology-link` also matched the prose
+  // links in /methodology and /mcp body copy, which the 844×390 run (#2017)
+  // measured because the sections that hide them at 375 are open there.
+  '.ddp-criteria__source .methodology-link',
   '.wws__link', // history worldwide scoreboard methodology link
   '.race-basis a[href^="/methodology"]', // /clubs + race pages "Methodology" (79×21)
   '.worldwide-standing__note a', // club page "Clubs worldwide" (120×18)
@@ -29,6 +33,7 @@ export const NOT_PROSE_LINKS = [
   '[data-testid="division-area-heading"] a', // division page area links (22px)
   '[data-testid="education-awards-leaderboard"] td a', // analytics club link (61×37)
   '.maplibregl-ctrl-attrib a', // #1944 map ODbL credit links (14px tall)
+  '.app-shell-footer__link', // #2017 footer meta links (17px at 844×390)
 ]
 
 export interface Finding {
