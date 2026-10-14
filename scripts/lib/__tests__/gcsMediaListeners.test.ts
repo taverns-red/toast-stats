@@ -35,9 +35,11 @@ import { createHash } from 'node:crypto'
 import { gunzipSync, gzipSync } from 'node:zlib'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import * as os from 'node:os'
 import { CRC32C, Storage } from '@google-cloud/storage'
 import { OAuth2Client } from 'google-auth-library'
-import { gateBucket } from '../gcsMedia.js'
+import { gateBucket, rankHistoryBucket } from '../gcsMedia.js'
+import { pullRankHistory, type RankHistoryBucket } from '../rankHistoryPull.js'
 import { readMetadataForDates } from '../gcsHelpers.js'
 import { CONCURRENCY, mapLimit } from '../promotionContentGateIo.js'
 
@@ -61,6 +63,15 @@ interface Stored {
 
 const objects = new Map<string, Stored>()
 
+/**
+ * A second bucket for the rank-history pull (#2029): gzip-stored
+ * `snapshots/{date}/all-districts-rankings.json`, served to `getFiles` as a
+ * JSON-API listing and to `?alt=media` like the gate's objects.
+ */
+const RANK_BUCKET = 'rank-test-bucket'
+const RANK_DATES = 12
+const rankObjects = new Map<string, Stored & { plain: Buffer }>()
+
 function hashHeader(bytes: Buffer): string {
   const crc = new CRC32C()
   crc.update(bytes)
@@ -77,7 +88,20 @@ function serveMedia(req: http.IncomingMessage, res: http.ServerResponse) {
   const url = new URL(req.url ?? '/', 'http://localhost')
   const match = /\/b\/([^/]+)\/o\/(.+)$/.exec(url.pathname)
   const name = match ? decodeURIComponent(match[2]!) : ''
-  const stored = objects.get(name)
+  const listing = /\/b\/([^/]+)\/o$/.exec(url.pathname)
+  if (listing && listing[1] === RANK_BUCKET) {
+    const items = [...rankObjects.keys()].map(n => ({
+      name: n,
+      bucket: RANK_BUCKET,
+    }))
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify({ kind: 'storage#objects', items }))
+    return
+  }
+  const stored =
+    match && match[1] === RANK_BUCKET
+      ? rankObjects.get(name)
+      : objects.get(name)
   if (!match || url.searchParams.get('alt') !== 'media' || !stored) {
     res.writeHead(404, { 'content-type': 'application/json' })
     res.end(JSON.stringify({ error: { code: 404, message: 'Not Found' } }))
@@ -118,6 +142,17 @@ beforeAll(async () => {
         JSON.stringify({ isClosingPeriod: i % 2 === 0, dataMonth: '2026-09' })
       ),
       gzip: false,
+    })
+  }
+  for (let i = 0; i < RANK_DATES; i++) {
+    const plain = Buffer.from(
+      JSON.stringify({ rankings: [{ districtId: String(i), rank: i + 1 }] })
+    )
+    const date = `2026-09-${String(i + 1).padStart(2, '0')}`
+    rankObjects.set(`snapshots/${date}/all-districts-rankings.json`, {
+      bytes: gzipSync(plain),
+      gzip: true,
+      plain,
     })
   }
   server = http.createServer(serveMedia)
@@ -211,5 +246,77 @@ describe('GCS media reads (#1729)', () => {
     ).rejects.toThrow()
     const [entry] = await readMetadataForDates(storage, BUCKET, ['1999-01-01'])
     expect(entry).toMatchObject({ metadataFound: false })
+  })
+})
+
+/** Pull every rankings file into a fresh temp dir; return dir + warnings. */
+async function pullInto(bucket: RankHistoryBucket) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rank-pull-'))
+  const warnings = await countListenerWarnings(() =>
+    pullRankHistory(bucket, dir, { concurrency: 1 })
+  )
+  return { dir, warnings }
+}
+
+describe('rank-history pull reads (#2029)', () => {
+  it('harness: the SDK bucket trips the warning on the rank-history pull (2 per object)', async () => {
+    const { dir, warnings } = await pullInto(
+      storage.bucket(RANK_BUCKET) as unknown as RankHistoryBucket
+    )
+    fs.rmSync(dir, { recursive: true, force: true })
+    expect(warnings).toBe(RANK_DATES * 2)
+  })
+
+  it('rankHistoryBucket pulls every date with no MaxListenersExceededWarning, writing the decompressed JSON', async () => {
+    const { dir, warnings } = await pullInto(
+      rankHistoryBucket(storage, RANK_BUCKET)
+    )
+    try {
+      expect(warnings).toBe(0)
+      const files = fs.readdirSync(dir).sort()
+      expect(files).toHaveLength(RANK_DATES)
+      for (const [name, o] of rankObjects) {
+        const date = name.split('/')[1]!
+        // Same bytes the SDK's default download({ destination }) writes:
+        // the gzip layer inflated.
+        expect(
+          fs.readFileSync(path.join(dir, `${date}.json`)).equals(o.plain)
+        ).toBe(true)
+      }
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('rankHistoryBucket rejects a missing object (the pull stays fail-closed)', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rank-pull-'))
+    try {
+      await expect(
+        rankHistoryBucket(storage, RANK_BUCKET)
+          .file('snapshots/1999-01-01/all-districts-rankings.json')
+          .download({ destination: path.join(dir, 'x.json') })
+      ).rejects.toThrow()
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+/**
+ * The runners build their buckets; an SDK `storage.bucket()` handed straight
+ * to the gate or the pull brings back the SDK stream download and its
+ * warnings (#2029: 426 lines in run 38539146918). Each runner must take its
+ * bucket from gcsMedia.
+ */
+describe('pipeline runners read through gcsMedia (#2029)', () => {
+  const RUNNERS = [
+    'scripts/promotion-content-gate.ts',
+    'scripts/date-completeness-gate.ts',
+    'scripts/pull-rank-history.ts',
+  ]
+  it.each(RUNNERS)('%s builds no SDK bucket of its own', runner => {
+    const src = fs.readFileSync(path.resolve(process.cwd(), runner), 'utf-8')
+    expect(src).toMatch(/from '\.\/lib\/gcsMedia\.js'/)
+    expect(src).not.toMatch(/\.bucket\(/)
   })
 })

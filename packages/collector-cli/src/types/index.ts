@@ -48,6 +48,11 @@ export interface ScrapeOptions {
   districts?: string[]
   /** Force re-scrape even if cache exists */
   force?: boolean
+  /**
+   * Take the district set from the scraped date's own districtsummary
+   * (#1766). Mutually exclusive with `districts`.
+   */
+  discoverDistricts?: boolean
 }
 
 /**
@@ -151,6 +156,8 @@ export interface CLIOptions {
   date?: string
   /** Parsed list of district IDs */
   districts?: string[]
+  /** scrape --discover-districts: the date's own districtsummary set (#1766) */
+  discoverDistricts?: boolean
   /** Force re-scrape even if cache exists */
   force: boolean
   /** Enable verbose logging */

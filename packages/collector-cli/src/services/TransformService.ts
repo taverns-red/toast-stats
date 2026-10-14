@@ -77,6 +77,7 @@ import {
   getPriorProgramYear,
 } from '../utils/CachePaths.js'
 import { parseDistrictIdsFromSummaryCsv } from '../utils/programYearResolver.js'
+import { canonicalDistrictKey } from '../utils/districtSetForDate.js'
 import {
   DATE_LEVEL_ERROR_ID,
   dateLevelRefusal,
@@ -1441,6 +1442,35 @@ export class TransformService {
   }
 
   /**
+   * The districts a transform with no explicit list covers for `date`
+   * (#1766, ADR-015 P3): the raw directories on disk that the date's own
+   * all-districts CSV names. Raw-csv uploads never delete, so a directory
+   * for a district that did not exist on the date can survive in staging and
+   * would otherwise be transformed into it again (D-25). A date with no
+   * readable CSV is undecided, not emptied: every raw directory is taken, as
+   * before.
+   */
+  private async discoverDistrictsForDate(date: string): Promise<string[]> {
+    const onDisk = await this.discoverAvailableDistricts(date)
+    const csv = await this.readCSVFile(
+      path.join(this.getRawCsvDir(date), 'all-districts.csv')
+    )
+    const listed = parseDistrictIdsFromSummaryCsv(csv)
+    if (listed.length === 0) return onDisk
+    const listedKeys = new Set(listed.map(canonicalDistrictKey))
+    const ignored = onDisk.filter(
+      id => !listedKeys.has(canonicalDistrictKey(id))
+    )
+    if (ignored.length > 0) {
+      this.logger.warn(
+        'Ignoring raw district directories the date’s all-districts CSV does not name (#1766)',
+        { date, ignored }
+      )
+    }
+    return onDisk.filter(id => listedKeys.has(canonicalDistrictKey(id)))
+  }
+
+  /**
    * The date's district set: the DISTRICT column of its own all-districts
    * CSV (#1756). A date with no readable CSV falls back to the raw
    * directories present — the date's data, still never the requested list.
@@ -2384,12 +2414,13 @@ export class TransformService {
       }
     }
 
-    // Discover available districts if not specified
+    // Discover the date's districts if not specified (#1766): its own
+    // all-districts CSV names them, so a stale raw directory is ignored.
     let districtsToTransform: string[]
     if (requestedDistricts && requestedDistricts.length > 0) {
       districtsToTransform = requestedDistricts
     } else {
-      districtsToTransform = await this.discoverAvailableDistricts(date)
+      districtsToTransform = await this.discoverDistrictsForDate(date)
     }
 
     if (districtsToTransform.length === 0) {

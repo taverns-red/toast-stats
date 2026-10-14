@@ -9,10 +9,8 @@
  */
 
 import { Storage } from '@google-cloud/storage'
-import {
-  pullRankHistory,
-  type RankHistoryBucket,
-} from './lib/rankHistoryPull.js'
+import { rankHistoryBucket } from './lib/gcsMedia.js'
+import { pullRankHistory } from './lib/rankHistoryPull.js'
 
 async function main(): Promise<void> {
   const [bucketName, destDir] = process.argv.slice(2)
@@ -22,9 +20,9 @@ async function main(): Promise<void> {
     return
   }
   const started = Date.now()
-  const bucket = new Storage().bucket(
-    bucketName
-  ) as unknown as RankHistoryBucket
+  // Non-streaming reads: SDK file.download() logs 2 MaxListeners warnings
+  // per object (#2029, see gcsMedia.ts).
+  const bucket = rankHistoryBucket(new Storage(), bucketName)
   const { downloaded } = await pullRankHistory(bucket, destDir)
   console.error(
     `[rank-history] pulled ${downloaded} rankings files from ` +

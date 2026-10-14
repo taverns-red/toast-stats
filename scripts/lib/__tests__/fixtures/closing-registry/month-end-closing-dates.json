@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-10-12T09:15:01.722Z",
+  "description": "Month-end closing dates derived from raw-csv metadata. Each entry maps a Toastmasters data month (YYYY-MM) to the last closing-period collection date in raw-csv/.",
+  "note": "Trimmed copy of docs/month-end-closing-dates.json (#1766 test fixture): the real entries for 2023-06..2024-07 and 2026-06..2026-09.",
+  "months": [
+    {
+      "dataMonth": "2023-06",
+      "closingDate": "2023-07-19"
+    },
+    {
+      "dataMonth": "2023-07",
+      "closingDate": "2023-08-10"
+    },
+    {
+      "dataMonth": "2023-08",
+      "closingDate": "2023-09-06"
+    },
+    {
+      "dataMonth": "2023-09",
+      "closingDate": "2023-10-12"
+    },
+    {
+      "dataMonth": "2023-10",
+      "closingDate": "2023-11-08"
+    },
+    {
+      "dataMonth": "2023-11",
+      "closingDate": "2023-12-06"
+    },
+    {
+      "dataMonth": "2023-12",
+      "closingDate": "2024-01-09"
+    },
+    {
+      "dataMonth": "2024-01",
+      "closingDate": "2024-02-07"
+    },
+    {
+      "dataMonth": "2024-02",
+      "closingDate": "2024-03-08"
+    },
+    {
+      "dataMonth": "2024-03",
+      "closingDate": "2024-04-10"
+    },
+    {
+      "dataMonth": "2024-04",
+      "closingDate": "2024-05-08"
+    },
+    {
+      "dataMonth": "2024-05",
+      "closingDate": "2024-06-11"
+    },
+    {
+      "dataMonth": "2024-06",
+      "closingDate": "2024-07-19"
+    },
+    {
+      "dataMonth": "2024-07",
+      "closingDate": "2024-08-08"
+    },
+    {
+      "dataMonth": "2026-06",
+      "closingDate": "2026-07-25"
+    },
+    {
+      "dataMonth": "2026-07",
+      "closingDate": "2026-08-10"
+    },
+    {
+      "dataMonth": "2026-08",
+      "closingDate": "2026-09-03"
+    },
+    {
+      "dataMonth": "2026-09",
+      "closingDate": "2026-10-07"
+    }
+  ]
+}

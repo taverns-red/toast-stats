@@ -571,7 +571,9 @@ export class CollectorOrchestrator {
     logger.info('Starting scrape operation', {
       date,
       force,
-      requestedDistricts: options.districts ?? 'all configured',
+      requestedDistricts: options.discoverDistricts
+        ? 'discover (the date’s districtsummary)'
+        : (options.districts ?? 'all configured'),
     })
 
     // Check circuit breaker state
@@ -605,8 +607,34 @@ export class CollectorOrchestrator {
     //   auto-discovering from the ALL_DISTRICTS CSV), trust it directly.
     // - If no districts are specified, fall back to the local config file (legacy
     //   path used in local dev or manual targeted runs without an explicit list).
+    // - With discoverDistricts (#1766), the set is read from the scraped
+    //   date's own districtsummary once it is resolved below; see there.
+    const discover = options.discoverDistricts === true
+    if (discover && options.districts && options.districts.length > 0) {
+      const message =
+        'discoverDistricts and an explicit district list are mutually exclusive (#1766)'
+      logger.error(message)
+      return {
+        success: false,
+        date,
+        districtsProcessed: [],
+        districtsSucceeded: [],
+        districtsFailed: [],
+        cacheLocations: [],
+        errors: [
+          {
+            districtId: 'N/A',
+            error: message,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        duration_ms: Date.now() - startTime,
+      }
+    }
     let districtsToScrape: string[]
-    if (options.districts && options.districts.length > 0) {
+    if (discover) {
+      districtsToScrape = []
+    } else if (options.districts && options.districts.length > 0) {
       districtsToScrape = options.districts
       logger.info('Using explicitly provided district list', {
         districtCount: districtsToScrape.length,
@@ -641,7 +669,7 @@ export class CollectorOrchestrator {
       }
     }
 
-    if (districtsToScrape.length === 0) {
+    if (!discover && districtsToScrape.length === 0) {
       logger.warn('No districts to scrape')
 
       return {
@@ -766,6 +794,39 @@ export class CollectorOrchestrator {
     // in snapshots/2026-06-30/. The districtsummary the resolver just validated
     // is that date's own district list, so reconcile against it here — no extra
     // fetch, and no second program-year computation.
+    //
+    // discoverDistricts (#1766, D-7): the same body IS the set. Rescrape used
+    // to hand every date the first date's discovery; per date, each scrapes
+    // the districts its own as-of lists. `discover-districts` cannot do this
+    // for a past date — it reads the live as-of.
+    if (discover) {
+      districtsToScrape = parseDistrictIdsFromSummaryCsv(districtSummaryCsv)
+      logger.info('Districts discovered from the scraped date’s summary', {
+        date,
+        districtCount: districtsToScrape.length,
+      })
+      if (districtsToScrape.length === 0) {
+        const message = `No districts could be read from the districtsummary for ${date} (#1766)`
+        logger.error(message, { date, activeProgramYear })
+        await this.close()
+        return {
+          success: false,
+          date,
+          districtsProcessed: [],
+          districtsSucceeded: [],
+          districtsFailed: [],
+          cacheLocations: [],
+          errors: [
+            {
+              districtId: 'N/A',
+              error: message,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+          duration_ms: Date.now() - startTime,
+        }
+      }
+    }
     const districtSet = reconcileDistrictsForDate(
       districtsToScrape,
       districtSummaryCsv

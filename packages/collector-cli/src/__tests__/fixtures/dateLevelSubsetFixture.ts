@@ -17,15 +17,20 @@ import * as path from 'node:path'
 export const SUBSET_DATE = '2026-10-09'
 export const SUBSET_DISTRICTS = ['02', '21', '49'] as const
 
-const FOOTER = 'Month of Oct, As of 10/09/2026'
+/** The footer TI writes on every export for `date` (an October date). */
+function footerFor(date: string): string {
+  const [year, month, day] = date.split('-')
+  return `Month of Oct, As of ${month}/${day}/${year}`
+}
 
-const ALL_DISTRICTS_CSV = [
-  '"REGION","DISTRICT","DSP","Training","Market Analysis","Communication Plan","New Payments","April Payments","October Payments","Late Payments","Charter Payments","Total YTD Payments","Payment Base","% Payment Growth","Paid Club Base","Paid Clubs","% Club Growth","Active Clubs","Distinguished Clubs","Select Distinguished Clubs","Presidents Distinguished Clubs","Smedley Distinguished Clubs","Total Distinguished Clubs","% Distinguished Clubs"',
-  '"01","02","Y","N","Y","Y","254","702","2065","11","23","3055","6294","-51.46%","195","151","-22.56%","203","0","0","0","0","0","0%"',
-  '"01","21","Y","N","Y","Y","295","782","2132","12","97","3318","6406","-48.2%","171","149","-12.87%","184","0","0","0","0","0","0%"',
-  '"01","49","Y","N","Y","Y","85","262","833","8","34","1222","2164","-43.53%","65","57","-12.31%","66","0","0","0","0","0","0%"',
-  FOOTER,
-].join('\n')
+const ALL_DISTRICTS_HEADER =
+  '"REGION","DISTRICT","DSP","Training","Market Analysis","Communication Plan","New Payments","April Payments","October Payments","Late Payments","Charter Payments","Total YTD Payments","Payment Base","% Payment Growth","Paid Club Base","Paid Clubs","% Club Growth","Active Clubs","Distinguished Clubs","Select Distinguished Clubs","Presidents Distinguished Clubs","Smedley Distinguished Clubs","Total Distinguished Clubs","% Distinguished Clubs"'
+
+const ALL_DISTRICTS_ROWS: Record<string, string> = {
+  '02': '"01","02","Y","N","Y","Y","254","702","2065","11","23","3055","6294","-51.46%","195","151","-22.56%","203","0","0","0","0","0","0%"',
+  '21': '"01","21","Y","N","Y","Y","295","782","2132","12","97","3318","6406","-48.2%","171","149","-12.87%","184","0","0","0","0","0","0%"',
+  '49': '"01","49","Y","N","Y","Y","85","262","833","8","34","1222","2164","-43.53%","65","57","-12.31%","66","0","0","0","0","0","0%"',
+}
 
 const CLUB_PERFORMANCE_HEADER =
   '"District","Division","Area","Club Number","Club Name","Club Status","CSP","Mem. Base","Active Members","Net Growth","Goals Met","Level 1s","Level 2s or EOM","Add. Level 2s or EOM","Level 3s","Level 4s, Path Completions, or DTM Awards","Add. Level 4s, Path Completions, or DTM award","New Members","Add. New Members","Off. Trained Round 1","Off. Trained Round 2","Mem. dues on time Oct","Mem. dues on time Apr","Off. List On Time","Club Distinguished Status"'
@@ -41,26 +46,29 @@ function clubIds(districtId: string): [string, string] {
   return [String(base + 1).padStart(8, '0'), String(base + 2).padStart(8, '0')]
 }
 
-function districtFiles(districtId: string): Record<string, string> {
+function districtFiles(
+  districtId: string,
+  footer: string
+): Record<string, string> {
   const [big, small] = clubIds(districtId)
   return {
     'club-performance.csv': [
       CLUB_PERFORMANCE_HEADER,
       `"${districtId}","A","01","${big}","Big Club ${districtId}","Active","Y","24","25","1","2","2","1","0","1","1","0","0","0","6","0","1","0","1",""`,
       `"${districtId}","A","01","${small}","Small Club ${districtId}","Active","Y","15","11","-4","1","1","0","0","1","0","0","1","0","4","0","1","0","1",""`,
-      FOOTER,
+      footer,
     ].join('\n'),
     'district-performance.csv': [
       DISTRICT_PERFORMANCE_HEADER,
       `"${districtId}","A","01","${big}","Big Club ${districtId}","1","0","20","0","20","5","25","","Charter 08/15/26"`,
       `"${districtId}","A","01","${small}","Small Club ${districtId}","0","0","11","0","11","0","11",""," Susp 09/30/26"`,
-      FOOTER,
+      footer,
     ].join('\n'),
     'division-performance.csv': [
       DIVISION_PERFORMANCE_HEADER,
       `"${districtId}","A","01","${big}","Big Club ${districtId}","1","0","1","0","25","2","","4","4","4","5","4","2","3","3","0","","16","16","17","18","16","8","8","9","0","",""`,
       `"${districtId}","A","01","${small}","Small Club ${districtId}","1","0","1","0","11","1","","4","4","4","5","4","2","3","3","0","","16","16","17","18","16","8","8","9","0","",""`,
-      FOOTER,
+      footer,
     ].join('\n'),
   }
 }
@@ -73,13 +81,40 @@ export async function writeSubsetRawCsv(
   cacheDir: string,
   withRaw: readonly string[]
 ): Promise<string> {
-  const rawDir = path.join(cacheDir, 'raw-csv', SUBSET_DATE)
+  return writeRawCsvForDate(cacheDir, SUBSET_DATE, SUBSET_DISTRICTS, withRaw)
+}
+
+/**
+ * Write `raw-csv/<date>/all-districts.csv` naming `listed` (a subset of
+ * SUBSET_DISTRICTS), plus a per-district raw directory for each of `withRaw`
+ * — which may name districts the CSV does not, as a stale or hydrated
+ * directory would (#1766, D-25). `date` must be an October date.
+ */
+export async function writeRawCsvForDate(
+  cacheDir: string,
+  date: string,
+  listed: readonly string[],
+  withRaw: readonly string[]
+): Promise<string> {
+  const footer = footerFor(date)
+  const rawDir = path.join(cacheDir, 'raw-csv', date)
   await fs.mkdir(rawDir, { recursive: true })
-  await fs.writeFile(path.join(rawDir, 'all-districts.csv'), ALL_DISTRICTS_CSV)
+  const csv = [
+    ALL_DISTRICTS_HEADER,
+    ...listed.map(id => {
+      const row = ALL_DISTRICTS_ROWS[id]
+      if (!row) throw new Error(`no real all-districts row for ${id}`)
+      return row
+    }),
+    footer,
+  ].join('\n')
+  await fs.writeFile(path.join(rawDir, 'all-districts.csv'), csv)
   for (const districtId of withRaw) {
     const dir = path.join(rawDir, `district-${districtId}`)
     await fs.mkdir(dir, { recursive: true })
-    for (const [name, body] of Object.entries(districtFiles(districtId))) {
+    for (const [name, body] of Object.entries(
+      districtFiles(districtId, footer)
+    )) {
       await fs.writeFile(path.join(dir, name), body)
     }
   }
@@ -107,11 +142,16 @@ export async function addGapDistrictRaw(
   cacheDir: string,
   clubPerformanceBody: string
 ): Promise<void> {
+  const footer = footerFor(SUBSET_DATE)
   const rawDir = path.join(cacheDir, 'raw-csv', SUBSET_DATE)
-  const lines = ALL_DISTRICTS_CSV.split('\n')
-  lines.splice(lines.length - 1, 0, GAP_ALL_DISTRICTS_ROW)
+  const csv = [
+    ALL_DISTRICTS_HEADER,
+    ...SUBSET_DISTRICTS.map(id => ALL_DISTRICTS_ROWS[id]),
+    GAP_ALL_DISTRICTS_ROW,
+    footer,
+  ].join('\n')
   await fs.mkdir(rawDir, { recursive: true })
-  await fs.writeFile(path.join(rawDir, 'all-districts.csv'), lines.join('\n'))
+  await fs.writeFile(path.join(rawDir, 'all-districts.csv'), csv)
   const dir = path.join(rawDir, `district-${GAP_DISTRICT}`)
   await fs.mkdir(dir, { recursive: true })
   await fs.writeFile(
@@ -124,7 +164,7 @@ export async function addGapDistrictRaw(
       DISTRICT_PERFORMANCE_HEADER,
       '"U","0D","0A","05159852","Toastmasters Costa Rica","10","19","14","14","47","0","57","",""',
       '"U","0D","0A","05331530","O.C. Debaters","0","0","0","0","0","0","0","",""',
-      FOOTER,
+      footer,
     ].join('\n')
   )
 }
