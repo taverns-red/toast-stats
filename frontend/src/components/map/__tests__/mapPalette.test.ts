@@ -24,6 +24,7 @@ import {
 } from '../pinModes'
 import { BASEMAP_COLOURS } from '../basemapStyle'
 import { DIVERGING5, SEQUENTIAL5, STATUS_FILLS } from '../pinExtended'
+import { ATTENDANCE_FILLS, COACH_FILLS, COMPLIANCE_FILLS } from '../pinReports'
 
 type Vision = 'normal' | 'protan' | 'deutan' | 'tritan'
 const VISIONS: Vision[] = ['normal', 'protan', 'deutan', 'tritan']
@@ -183,6 +184,10 @@ describe('status and categorical palettes', () => {
     health: Object.values(HEALTH_FILLS),
     categorical8: [...CATEGORICAL8],
     status: Object.values(STATUS_FILLS),
+    // #1787: renewals, CSP and officer list; coach; how members attend.
+    compliance: Object.values(COMPLIANCE_FILLS),
+    coach: Object.values(COACH_FILLS),
+    attendance: Object.values(ATTENDANCE_FILLS),
   }
   for (const [name, colours] of Object.entries(sets)) {
     for (const v of VISIONS) {
@@ -251,6 +256,9 @@ describe('contrast', () => {
       ...Object.values(STATUS_FILLS),
       ...SEQUENTIAL5,
       ...DIVERGING5,
+      ...Object.values(COMPLIANCE_FILLS),
+      ...Object.values(COACH_FILLS),
+      ...Object.values(ATTENDANCE_FILLS),
     ]
     for (const fill of fills) {
       const best = contrast(fill, WHITE) >= contrast(fill, INK) ? WHITE : INK
