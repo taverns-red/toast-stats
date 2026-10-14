@@ -304,13 +304,14 @@ export function normaliseTiClub(club: TiClub): ClubEnrichment | null {
     result.isProspective = club.IsProspective
   }
 
-  // #1789 — the scrubbed Location is both a field and the mode fallback.
+  // #1789 — only the scrubbed Location is written; the raw one is read for
+  // the meeting mode (an enum, so nothing personal leaves through it).
   const location = scrubFacLocation(club.Location)
   if (location) result.location = location
   const meetingSchedule = parseMeetingSchedule({
     meetingDay: club.MeetingDay,
     meetingTime: club.MeetingTime,
-    location,
+    location: club.Location,
   })
   if (meetingSchedule) result.meetingSchedule = meetingSchedule
 

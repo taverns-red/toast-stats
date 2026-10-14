@@ -44,18 +44,64 @@ const MEETING_HOST_TOKEN =
   /\S*(?:zoom\.us|zoomgov\.com|zoom\.com|teams\.microsoft\.com|teams\.live\.com|meet\.google\.com|webex\.com|gotomeeting\.com|gotomeet\.me|meet\.goto\.com|meet\.jit\.si|8x8\.vc|whereby\.com|bluejeans\.com)\S*/gi
 const CREDENTIAL =
   /\b(?:meeting\s*id|mtg\s*id|passcode|password|pwd|mot de passe)\b\s*[:#=]?\s*[\w-]*/gi
-/** A digit run that, with 7+ digits, is a phone number or meeting id. */
-const DIGIT_RUN = /\+?\(?\d[\d\s().-]*\d/g
+/** A digit run that, with 7+ digits, is a phone number or meeting id. A
+ *  run touching a letter ("23300 58th Ave") is a street number, not one. */
+const DIGIT_RUN = /(?<!\w)\+?\(?\d[\d\s().-]*\d(?!\w)/g
+/**
+ * A contact instruction ("Contact Alex for link", "c/o …", "Wechat ID: …",
+ * "(@handle)"). It is not a meeting place, and it is where clubs name a
+ * person or a messaging handle, so the parenthetical, or else the whole
+ * line, is dropped. Matched on folded text.
+ */
+const CONTACT_CUE =
+  /\bcontact\w*|\bcall(?:ing)?\b|\be-?mail\w*|\bcourriel\b|\btext\b|\bwhats\s?app\b|\bwechat\b|\btelegram\b|\bskype\b|\bline id\b|\bc\/o\b|\battn\b|@\w|\btel\b|\bphone\b|\btelephone\b/
 /** A contact label left dangling once its value is gone ("(TEL: )"). */
 const DANGLING_LABEL =
   /\b(?:tel|tél|phone|ph|telephone|téléphone|e-?mail|courriel)\b\.?\s*:\s*(?=[)\]]|$)/gi
 
-function scrubLine(line: string): string {
-  return line
-    .replace(/<[^>]*>/g, ' ')
+/** A handle, c/o, or messaging id: the line names someone, so it all goes. */
+const PERSONAL_CUE =
+  /@\w|\bc\/o\b|\battn\b|\b(?:wechat|whats\s?app|telegram|skype|line id)\b/
+/** "Contact Alex", "call Sam": a contact verb followed by a capitalised
+ *  word that is not "Us" / "Club" / "the" and so on. */
+const CONTACT_VERB_THEN_WORD =
+  /\b(?:contact|call|text|email|ask for)\s+([A-Z][a-z]+)/gi
+const NOT_A_NAME = new Set([
+  'us',
+  'the',
+  'club',
+  'our',
+  'for',
+  'to',
+  'via',
+  'me',
+  'officers',
+  'club officers',
+])
+
+function namesSomeone(line: string): boolean {
+  if (PERSONAL_CUE.test(fold(line))) return true
+  for (const match of line.matchAll(CONTACT_VERB_THEN_WORD)) {
+    const word = match[1] ?? ''
+    if (/^[A-Z]/.test(word) && !NOT_A_NAME.has(word.toLowerCase())) {
+      return true
+    }
+  }
+  return false
+}
+
+function scrubLine(raw: string): string {
+  const tagless = raw.replace(/<[^>]*>/g, ' ')
+  const linkless = tagless
     .replace(EMAIL, ' ')
     .replace(URL_WITH_SCHEME, ' ')
     .replace(MEETING_HOST_TOKEN, ' ')
+  if (namesSomeone(linkless)) return ''
+  const line = linkless.replace(/\([^()]*\)/g, group =>
+    CONTACT_CUE.test(fold(group)) ? ' ' : group
+  )
+  if (CONTACT_CUE.test(fold(line))) return ''
+  return line
     .replace(CREDENTIAL, ' ')
     .replace(DIGIT_RUN, run => (run.replace(/\D/g, '').length >= 7 ? ' ' : run))
     .replace(DANGLING_LABEL, ' ')
@@ -65,9 +111,9 @@ function scrubLine(line: string): string {
 }
 
 /**
- * The public meeting place from FAC `Location`: `<br>` becomes "\n", and
- * emails, URLs, meeting hosts, credentials and phone numbers are removed.
- * Undefined when nothing public is left.
+ * The public meeting place from FAC `Location`: `<br>` becomes "\n";
+ * contact instructions, emails, URLs, meeting hosts, credentials and phone
+ * numbers are removed. Undefined when nothing public is left.
  */
 export function scrubFacLocation(
   raw: string | null | undefined
@@ -368,7 +414,11 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
 export interface MeetingScheduleSource {
   meetingDay?: string | null
   meetingTime?: string | null
-  /** The scrubbed Location ({@link scrubFacLocation}). */
+  /**
+   * FAC Location, raw. Read only for the mode: its words count even on a
+   * line the scrubber drops ("ZOOM - contact … for link" is online), but a
+   * place only counts when a public line is left.
+   */
   location?: string | null
 }
 
@@ -400,7 +450,8 @@ export function parseMeetingSchedule(
     typeof source.meetingTime === 'string' ? fold(source.meetingTime) : ''
   const defaultMode =
     combineModes([...loose, ...modesIn(timeText)]) ??
-    meetingModeFromText(source.location, { place: true })
+    meetingModeFromText(source.location) ??
+    meetingModeFromText(scrubFacLocation(source.location), { place: true })
 
   const slots = timeSlotsIn(source.meetingTime)
   const slotFor = (index: number): Slot =>
