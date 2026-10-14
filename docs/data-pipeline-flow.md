@@ -90,6 +90,7 @@ toast-stats-data-{staging|ca}/
 │   ├── global-club-race.json              # Worldwide race projection of club-race/ (#1556)
 │   └── analytics/                         # Pre-computed analytics
 │       ├── district_{id}_analytics.json
+│       ├── district_{id}_clubs_{0-9}.json  # allClubs split by last club-id digit, all 10 always written; club page reads one (#1901). Not in analytics/manifest.json
 │       ├── district_{id}_membership.json
 │       ├── district_{id}_clubhealth.json
 │       ├── district_{id}_membership-analytics.json
@@ -239,6 +240,7 @@ When a user opens a district page:
 ```
 1. GET /v1/latest.json                                    → latestSnapshotDate
 2. GET /snapshots/{date}/analytics/district_{id}_analytics.json  → clubs, health, DCP
+   (club page: GET …/analytics/district_{id}_clubs_{last digit}.json instead; the district file only on a 404, #1901)
 3. GET /time-series/district_{id}/index-metadata.json     → available program years
 4. GET /time-series/district_{id}/{YYYY}-{YYYY}.json      → membership/payment trends
 5. GET /v1/rankings.json                                   → global district rankings
