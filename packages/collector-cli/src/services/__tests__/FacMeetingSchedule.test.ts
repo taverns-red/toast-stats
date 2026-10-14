@@ -57,10 +57,6 @@ describe('scrubFacLocation (#1789)', () => {
     ['Barley Mow, Westboro<br> ', 'Barley Mow, Westboro'],
     ["Restaurant L'Ambroisie (TEL: 555-0100)", "Restaurant L'Ambroisie"],
     [
-      'ZOOM -contact club-contact@example.org<br>ZOOM - contact club-contact@example.org for link',
-      'ZOOM -contact\nZOOM - contact for link',
-    ],
-    [
       'Rencontres virtuelles / Virtual meeting<br>https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER',
       'Rencontres virtuelles / Virtual meeting',
     ],
@@ -74,11 +70,29 @@ describe('scrubFacLocation (#1789)', () => {
     ],
     [
       'Richcraft Recreation Complex<br>Zoom (Please contact club-contact@example.org to RSVP)',
-      'Richcraft Recreation Complex\nZoom (Please contact to RSVP)',
+      'Richcraft Recreation Complex\nZoom',
     ],
     // Synthetic shapes the recorded day does not contain.
     ['Room 4, MtgID: 000 0000 000 Passcode: 000000', 'Room 4'],
-    ['Call +1 (555) 010-0199 for the room', 'Call for the room'],
+    ['Room 12 +1 (555) 010-0199', 'Room 12'],
+    // A contact instruction is not a meeting place, and it is where clubs
+    // name a person or a messaging handle (seen in D02/D91/D101/D85 on
+    // raw-fac/2026-10-12): the parenthetical, or else the whole line, goes.
+    ['Hybrid (Contact Us)', 'Hybrid'],
+    ['Online and In-Person (Call for details)', 'Online and In-Person'],
+    ['Library<br>Virtual- Contact Alex for link', 'Library'],
+    ['Office Tower<br>Sam Example (@samexample)', 'Office Tower'],
+    ['Hall B<br>c/o Pat Example', 'Hall B'],
+    ['Wechat ID: EXAMPLE<br>Community Room', 'Community Room'],
+    [
+      "In-Person Weekly, Monday's @ Parkview Estates: 3rd Floor Theatre Room",
+      "In-Person Weekly, Monday's @ Parkview Estates: 3rd Floor Theatre Room",
+    ],
+    // Street numbers next to an ordinal street are not a phone number.
+    [
+      '12345 67th Ave W, Lynnwood, WA 98000',
+      '12345 67th Ave W, Lynnwood, WA 98000',
+    ],
     ['Library<br>zoom.us/j/00000000000', 'Library'],
     ['Hall<br>Password = abc123', 'Hall'],
   ])('%j → %j', (raw, expected) => {
@@ -89,6 +103,10 @@ describe('scrubFacLocation (#1789)', () => {
     [
       'https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER<br>https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER',
     ],
+    [
+      'ZOOM -contact club-contact@example.org<br>ZOOM - contact club-contact@example.org for link',
+    ],
+    ['Call +1 (555) 010-0199 for the room'],
     ['  '],
     ['<br>'],
   ])('returns undefined when nothing public is left: %j', raw => {
@@ -571,6 +589,27 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
         mode: 'in-person',
       },
     ])
+  })
+
+  it('reads the mode from the raw Location, even when no public line is left', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Tuesday',
+        meetingTime: '7:00 pm',
+        location:
+          'ZOOM -contact club-contact@example.org<br>ZOOM - contact club-contact@example.org for link',
+      })
+    ).toEqual([
+      { day: 'Tuesday', cadence: 'weekly', startTime: '19:00', mode: 'online' },
+    ])
+    // ...but an email alone is not a place.
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Tuesday',
+        meetingTime: '7:00 pm',
+        location: 'club-contact@example.org',
+      })
+    ).toEqual([{ day: 'Tuesday', cadence: 'weekly', startTime: '19:00' }])
   })
 
   it('leaves an ambiguous bare 12-hour time out rather than guess am/pm', () => {
