@@ -225,6 +225,18 @@ for (const theme of ['light', 'dark'] as const) {
             px: parseFloat(getComputedStyle(el).fontSize),
           }))
         )
+        // The plot fits the sheet: no side-scroller clipping the last
+        // tick and the right end of the lines (the desktop min-width).
+        const scroller = await sheet
+          .locator('.recharts-wrapper')
+          .first()
+          .evaluate(el => {
+            let n: HTMLElement | null = el.parentElement
+            while (n && getComputedStyle(n).overflowX !== 'auto')
+              n = n.parentElement
+            return n ? { sw: n.scrollWidth, cw: n.clientWidth } : null
+          })
+        if (scroller) expect(scroller.sw).toBeLessThanOrEqual(scroller.cw)
         expect(read.length).toBeGreaterThanOrEqual(2)
         expect(read.length).toBeLessThanOrEqual(4)
         for (const t of read) {
