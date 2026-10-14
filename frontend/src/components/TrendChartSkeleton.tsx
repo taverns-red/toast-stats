@@ -38,6 +38,7 @@ export const TrendChartSkeleton: React.FC<TrendChartSkeletonProps> = ({
   plotHeight = 400,
   breakpoint = 768,
   shape = 'auto',
+  legend = false,
 }) => {
   const isMobile = useIsMobile(breakpoint)
   // Without hover the loaded chart carries the tap-to-pin readout line
@@ -87,6 +88,15 @@ export const TrendChartSkeleton: React.FC<TrendChartSkeletonProps> = ({
                 </p>
               </div>
             ))}
+          </div>
+        )}
+        {legend && (
+          // The loaded chart's legend-chip row above the plot (#1835): one
+          // 44 px chip on the real classes; the row's height is the chip's.
+          <div className="chart-legend-chips">
+            <span className="chart-legend-chip chart-legend-chip--static">
+              &nbsp;
+            </span>
           </div>
         )}
         <ChartSkeleton height={plotHeight} />

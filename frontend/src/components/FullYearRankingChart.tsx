@@ -16,6 +16,10 @@ import type { ProgramYear } from '../utils/programYear'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { dateAxisLayout } from './charts/compactAxis'
+import { ChartSkeleton } from './ChartSkeleton'
+
+/** The plot's height — the loading state reserves the same (#1835). */
+const PLOT_HEIGHT = 400
 import {
   useChartReadout,
   ChartReadout,
@@ -184,32 +188,81 @@ const MetricToggleButton: React.FC<MetricToggleButtonProps> = ({
 }
 
 /**
- * Loading skeleton for the chart
+ * Heading, program year and metric toggles — shared by the loaded chart and
+ * its loading state, so the skeleton has the loaded chrome (#1835).
  */
-const ChartLoadingSkeleton: React.FC = () => (
+const ChartHeader: React.FC<{
+  programYear: ProgramYear
+  selectedMetric: RankMetric
+  onMetricChange: (metric: RankMetric) => void
+}> = ({ programYear, selectedMetric, onMetricChange }) => (
+  <div className="flex flex-col gap-4 mb-4">
+    <div className="flex-1">
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-tm-headline">
+        Ranking Progression
+      </h2>
+      <p className="text-sm text-gray-600 font-tm-body mt-1">
+        Program Year: {programYear.label} ({programYear.startDate} to{' '}
+        {programYear.endDate})
+      </p>
+    </div>
+
+    {/* Metric Toggle */}
+    <div
+      className="flex flex-wrap gap-2"
+      role="group"
+      aria-label="Select ranking metric"
+    >
+      <span className="text-sm font-medium text-gray-600 font-tm-body self-center mr-2">
+        View:
+      </span>
+      <MetricToggleButton
+        metric="aggregate"
+        selectedMetric={selectedMetric}
+        onSelect={onMetricChange}
+      />
+      <MetricToggleButton
+        metric="clubs"
+        selectedMetric={selectedMetric}
+        onSelect={onMetricChange}
+      />
+      <MetricToggleButton
+        metric="payments"
+        selectedMetric={selectedMetric}
+        onSelect={onMetricChange}
+      />
+      <MetricToggleButton
+        metric="distinguished"
+        selectedMetric={selectedMetric}
+        onSelect={onMetricChange}
+      />
+    </div>
+  </div>
+)
+
+/**
+ * Loading state: the loaded panel with only the plot replaced (#1835,
+ * Lesson 158) — same chrome, a 400 px plot placeholder and, without hover,
+ * the readout line — so the chart lands without a shift.
+ */
+const ChartLoadingSkeleton: React.FC<{
+  programYear: ProgramYear
+  selectedMetric: RankMetric
+  onMetricChange: (metric: RankMetric) => void
+  touch: boolean
+}> = ({ touch, ...header }) => (
   <section
     className="redesign-panel sm:p-6"
     aria-busy="true"
     aria-label="Loading ranking progression chart"
   >
-    <div className="flex flex-col gap-4 mb-4">
-      <div className="h-6 w-48 bg-gray-300 rounded-sm animate-pulse" />
-      <div className="h-4 w-32 bg-gray-300 rounded-sm animate-pulse" />
-    </div>
-    <div className="flex flex-wrap gap-2 mb-4">
-      {[1, 2, 3, 4].map(i => (
-        <div
-          key={i}
-          className="h-10 w-24 bg-gray-300 rounded-lg animate-pulse"
-        />
-      ))}
-    </div>
-    <div className="flex items-center justify-center h-80">
-      <div className="animate-pulse flex flex-col items-center">
-        <div className="h-4 w-32 bg-gray-300 rounded-sm mb-2" />
-        <div className="h-4 w-24 bg-gray-300 rounded-sm" />
-      </div>
-    </div>
+    <ChartHeader {...header} />
+    <ChartSkeleton height={PLOT_HEIGHT} />
+    {touch && (
+      <p className="chart-readout" data-testid="chart-readout-reserve">
+        &nbsp;
+      </p>
+    )}
   </section>
 )
 
@@ -273,7 +326,14 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
   const compact = useIsMobile(768)
   // Show loading skeleton while data is being fetched
   if (isLoading) {
-    return <ChartLoadingSkeleton />
+    return (
+      <ChartLoadingSkeleton
+        programYear={programYear}
+        selectedMetric={selectedMetric}
+        onMetricChange={onMetricChange}
+        touch={readout.touch}
+      />
+    )
   }
 
   // Show empty state if no data
@@ -307,49 +367,11 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
       className="redesign-panel sm:p-6"
       aria-label="Full year ranking progression chart"
     >
-      {/* Header */}
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex-1">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-tm-headline">
-            Ranking Progression
-          </h2>
-          <p className="text-sm text-gray-600 font-tm-body mt-1">
-            Program Year: {programYear.label} ({programYear.startDate} to{' '}
-            {programYear.endDate})
-          </p>
-        </div>
-
-        {/* Metric Toggle */}
-        <div
-          className="flex flex-wrap gap-2"
-          role="group"
-          aria-label="Select ranking metric"
-        >
-          <span className="text-sm font-medium text-gray-600 font-tm-body self-center mr-2">
-            View:
-          </span>
-          <MetricToggleButton
-            metric="aggregate"
-            selectedMetric={selectedMetric}
-            onSelect={onMetricChange}
-          />
-          <MetricToggleButton
-            metric="clubs"
-            selectedMetric={selectedMetric}
-            onSelect={onMetricChange}
-          />
-          <MetricToggleButton
-            metric="payments"
-            selectedMetric={selectedMetric}
-            onSelect={onMetricChange}
-          />
-          <MetricToggleButton
-            metric="distinguished"
-            selectedMetric={selectedMetric}
-            onSelect={onMetricChange}
-          />
-        </div>
-      </div>
+      <ChartHeader
+        programYear={programYear}
+        selectedMetric={selectedMetric}
+        onMetricChange={onMetricChange}
+      />
 
       {/* Chart container with horizontal scroll for mobile */}
       <div
@@ -360,7 +382,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
         className="w-full overflow-x-auto"
       >
         <div className="min-w-[320px]">
-          <ResponsiveContainer width="100%" height={400} minWidth={320}>
+          <ResponsiveContainer width="100%" height={PLOT_HEIGHT} minWidth={320}>
             <LineChart
               {...readout.chartProps}
               data={chartData}
