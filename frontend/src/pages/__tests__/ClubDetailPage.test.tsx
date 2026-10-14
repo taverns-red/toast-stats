@@ -959,9 +959,11 @@ describe('club page primitives (#1843)', () => {
     clubName: 'Kanata Toastmasters',
     coordinates: { lat: 45.3088, lng: -75.8987 },
   }
+  // A district-file read (a date with no shards): its clubs are the whole
+  // district, so the mini-map may use them when no snapshot is loaded.
   const mockAnalytics = (clubs: unknown[]) =>
     vi.mocked(useClubAnalytics).mockReturnValue({
-      data: { districtId: '61', clubs: clubs },
+      data: { districtId: '61', clubs: clubs, source: 'district' },
       isLoading: false,
       error: null,
     } as unknown as ReturnType<typeof useClubAnalytics>)

@@ -9,7 +9,8 @@ import {
   normalizeClubId,
 } from '@taverns-red/shared-contracts'
 import { fetchCdnClubIndex } from '../services/cdn'
-import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
+import type { ClubTrend } from '../hooks/useDistrictAnalytics'
+import { useClubAnalytics } from '../hooks/useClubAnalytics'
 import { useGlobalClubRace } from '../hooks/useGlobalClubRace'
 import { WorldwideStandingCard } from '../components/clubs/WorldwideStandingCard'
 import { useDistricts } from '../hooks/useDistricts'
@@ -41,6 +42,7 @@ import { ClubDCPGoalsPanel } from '../components/ClubDCPGoalsPanel'
 import { useClubGoalTimeline } from '../hooks/useClubGoalTimeline'
 import { ClubHero, type ClubHeroSource } from '../components/clubs/ClubHero'
 import { useAfterPaint } from '../hooks/useAfterPaint'
+import type { LocatorSource } from '../utils/clubLocator'
 import { summarizeClubEducation } from '../utils/clubEducation'
 import { ClubEducationPanel } from '../components/clubs/ClubEducationPanel'
 import {
@@ -252,23 +254,24 @@ const ClubDetailPage: React.FC = () => {
       effectiveEndDate ?? undefined
     )
 
-  // #1901 — hero first, analytics after. The analytics file is the whole
-  // district's trends (~150 KB on the wire, 3.65 MB decoded); under applied
-  // mobile throttling the h1 waited on it until ~6.7 s. The snapshot read
-  // above is smaller, already needed, and carries the hero's fields, so the
-  // analytics read starts only once that read has settled and its hero (or
-  // the skeleton, when the club is not in the snapshot) has painted.
+  // #1901 — hero first, analytics after. The snapshot read above is
+  // already needed and carries the hero's fields, so the analytics read
+  // starts only once that read has settled and its hero (or the skeleton,
+  // when the club is not in the snapshot) has painted.
   const analyticsReady = useAfterPaint(hasValidDates && !isLoadingStats)
 
-  // Fetch district analytics to get this club's data
+  // #1901 — this club's analytics: its shard (~10 clubs, ≤ 120 KB decoded
+  // for D61), not the whole district file (3.65 MB decoded). The district
+  // file is read only for a date that has no shards yet.
   const {
     data: analytics,
     isLoading: isLoadingAnalytics,
     isError,
     error,
     refetch,
-  } = useDistrictAnalytics(
+  } = useClubAnalytics(
     hasValidDates ? districtId || null : null,
+    clubId ?? null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined,
     { enabled: analyticsReady }
@@ -282,7 +285,7 @@ const ClubDetailPage: React.FC = () => {
   // Find the club
   const club: ClubTrend | null = useMemo(() => {
     if (!analytics || !clubId) return null
-    return analytics.allClubs.find(c => clubIdsMatch(c.clubId, clubId)) ?? null
+    return analytics.clubs.find(c => clubIdsMatch(c.clubId, clubId)) ?? null
   }, [analytics, clubId])
 
   // #1901 — the same club in the district snapshot's transformed `clubs[]`.
@@ -358,6 +361,22 @@ const ClubDetailPage: React.FC = () => {
     const raw = match?.name || movedTo.districtId
     return /^\d+$/.test(raw) ? `District ${raw}` : raw
   }, [movedTo, districtsData])
+
+  // #1901 — the mini-map's "the district's clubs" (coordinates). The shard
+  // holds only ~10 % of the district, so this comes from the snapshot's full
+  // `clubs[]` (the same Find-A-Club coordinates analytics copies); the
+  // analytics list is used only when it is the whole district file.
+  const locatorClubs: readonly LocatorSource[] = useMemo(() => {
+    if (districtStats) {
+      const raw = districtStats as unknown as Record<string, unknown>
+      const statsData = (raw['data'] ?? raw) as Record<string, unknown>
+      const clubs = statsData['clubs']
+      if (Array.isArray(clubs) && clubs.length > 0) {
+        return clubs as LocatorSource[]
+      }
+    }
+    return analytics?.source === 'district' ? analytics.clubs : []
+  }, [districtStats, analytics])
 
   // Find matching raw CSV record for per-goal progress (#242)
   const clubRawRecord = useMemo(() => {
@@ -1137,7 +1156,7 @@ const ClubDetailPage: React.FC = () => {
             districtId={districtId ?? ''}
             clubId={clubId ?? club.clubId}
             clubName={club.clubName}
-            clubs={analytics?.allClubs ?? []}
+            clubs={locatorClubs}
             place={heroMeetingInfo?.place}
           />
 
