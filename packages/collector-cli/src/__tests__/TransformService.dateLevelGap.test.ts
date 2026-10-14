@@ -129,6 +129,45 @@ describe('TransformService — a source gap is accounted for in the date-level r
     expect(manifest.totalDistricts).toBe(4)
   })
 
+  it('carries no 20-plus count for the gap district in the rankings, and leaves it out of the 20-Plus award (#2037)', async () => {
+    await writeSubsetRawCsv(cacheDir, SUBSET_DISTRICTS)
+    await addGapDistrictRaw(cacheDir, TI_ERROR_PAGE)
+
+    await service.transform({ date: SUBSET_DATE, force: true })
+
+    const rankings = await readJson<{
+      rankings: Array<{
+        districtId: string
+        paidClubs: number
+        clubsWith20PlusMembers?: number
+        newCharteredClubs?: number
+      }>
+    }>('all-districts-rankings.json')
+    const byId = new Map(rankings.rankings.map(r => [r.districtId, r]))
+    // The all-districts row is a real CSV: U stays ranked on it.
+    expect(byId.get(GAP_DISTRICT)?.paidClubs).toBe(139)
+    // Its club report is HTML: no number is read from it. Absent = unknown.
+    expect(byId.get(GAP_DISTRICT)).not.toHaveProperty('clubsWith20PlusMembers')
+    // Its district report is a real CSV, so its charter count still stands.
+    expect(byId.get(GAP_DISTRICT)?.newCharteredClubs).toBe(0)
+    for (const id of SUBSET_DISTRICTS) {
+      expect(byId.get(id)?.clubsWith20PlusMembers, id).toBe(1)
+    }
+
+    const awards = await readJson<{
+      twentyPlusAward: Array<{ districtId: string }>
+      extensionAward: Array<{ districtId: string }>
+      byDistrict: Record<string, { twentyPlusIsWinner: boolean }>
+    }>('competitive-awards.json')
+    expect(awards.twentyPlusAward.map(r => r.districtId).sort()).toEqual([
+      '02',
+      '21',
+      '49',
+    ])
+    expect(awards.byDistrict[GAP_DISTRICT]?.twentyPlusIsWinner).toBe(false)
+    expect(awards.extensionAward.map(r => r.districtId)).toContain(GAP_DISTRICT)
+  })
+
   it('still refuses when another district of the set has no input and no recorded gap or failure (#1756 intact)', async () => {
     await writeSubsetRawCsv(cacheDir, ['21', '49'])
     await addGapDistrictRaw(cacheDir, TI_ERROR_PAGE)
