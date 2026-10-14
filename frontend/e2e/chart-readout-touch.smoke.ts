@@ -23,6 +23,7 @@ test.use({
 
 const READOUT = '[data-testid="chart-readout"]'
 const DATED = /[A-Z][a-z]{2} \d{1,2}, \d{4}/
+const HINT = /Tap the chart to read a value/
 
 async function load(page: Page, path: string): Promise<void> {
   await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
@@ -127,6 +128,162 @@ for (const theme of ['light', 'dark'] as const) {
     })
   })
 }
+
+/* Pin, unpin, legend chips and the phone axis inside the expand sheet
+   (#1835). Same phone emulation as above. */
+for (const theme of ['light', 'dark'] as const) {
+  test.describe(`chart sheet on touch (${theme})`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme })
+    })
+
+    test('a second tap unpins; Escape unpins before it closes the sheet; Enter pins', async ({
+      page,
+    }) => {
+      await load(page, '/district/61/trends?chartExpanded=membership')
+      const sheet = page.getByRole('dialog')
+      const readout = sheet.locator(READOUT)
+      await expect(readout).toHaveText(HINT)
+
+      await tapPlot(page, sheet)
+      await expect(readout).toHaveText(DATED)
+      // The same spot again takes the pin back.
+      await tapPlot(page, sheet)
+      await expect(readout).toHaveText(HINT)
+      // And a third tap pins it again.
+      await tapPlot(page, sheet)
+      await expect(readout).toHaveText(DATED)
+
+      // The tap focused the plot: Escape unpins and the sheet stays open.
+      await page.keyboard.press('Escape')
+      await expect(readout).toHaveText(HINT)
+      await expect(sheet).toBeVisible()
+      // Nothing pinned: the next Escape is the sheet's.
+      await page.keyboard.press('Escape')
+      await expect(sheet).toBeHidden()
+
+      // Keyboard only: arrow reads a point, Enter unpins, Enter pins.
+      await load(page, '/district/61/trends?chartExpanded=membership')
+      const sheet2 = page.getByRole('dialog')
+      const readout2 = sheet2.locator(READOUT)
+      await plotSurface(sheet2).focus()
+      await page.keyboard.press('ArrowRight')
+      await expect(readout2).toHaveText(DATED)
+      await page.keyboard.press('Enter')
+      await expect(readout2).toHaveText(HINT)
+      await page.keyboard.press('Enter')
+      await expect(readout2).toHaveText(DATED)
+    })
+
+    test('the legend is aria-pressed chips that hide and show a line', async ({
+      page,
+    }) => {
+      await load(page, '/district/61/trends?chartExpanded=payments')
+      const sheet = page.getByRole('dialog')
+      const chips = sheet
+        .getByRole('group', { name: 'Chart series' })
+        .getByRole('button')
+      const count = await chips.count()
+      expect(count).toBeGreaterThan(1)
+      // Recharts' own pointer-only legend strip is gone.
+      await expect(sheet.locator('.recharts-legend-wrapper')).toHaveCount(0)
+      for (let i = 0; i < count; i++) {
+        const chip = chips.nth(i)
+        await expect(chip).toHaveAttribute('aria-pressed', 'true')
+        const box = await chip.boundingBox()
+        expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
+        const px = await chip.evaluate(el =>
+          parseFloat(getComputedStyle(el).fontSize)
+        )
+        expect(px).toBeGreaterThanOrEqual(14)
+      }
+      const lines = sheet.locator('.recharts-line')
+      const before = await lines.count()
+      const last = chips.nth(count - 1)
+      await last.scrollIntoViewIfNeeded()
+      const box = await last.boundingBox()
+      if (!box) throw new Error('chip has no box')
+      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
+      await expect(last).toHaveAttribute('aria-pressed', 'false')
+      await expect(lines).toHaveCount(before - 1)
+      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
+      await expect(last).toHaveAttribute('aria-pressed', 'true')
+      await expect(lines).toHaveCount(before)
+    })
+
+    for (const chart of ['membership', 'payments'] as const) {
+      test(`${chart} sheet: 3–4 horizontal x ticks, at least 12 px`, async ({
+        page,
+      }) => {
+        await load(page, `/district/61/trends?chartExpanded=${chart}`)
+        const sheet = page.getByRole('dialog')
+        const ticks = sheet.locator('.recharts-xAxis-tick-labels text')
+        await expect(ticks.first()).toBeVisible()
+        const read = await ticks.evaluateAll(els =>
+          els.map(el => ({
+            transform: el.getAttribute('transform') ?? '',
+            px: parseFloat(getComputedStyle(el).fontSize),
+          }))
+        )
+        expect(read.length).toBeGreaterThanOrEqual(2)
+        expect(read.length).toBeLessThanOrEqual(4)
+        for (const t of read) {
+          expect(t.transform).not.toMatch(/rotate/)
+          expect(t.px).toBeGreaterThanOrEqual(12)
+        }
+      })
+    }
+  })
+}
+
+/* No chart on a phone depends on hover (#1835 AC). Every Recharts chart
+   visible on these phone views either carries the readout line or prints
+   its values beside it (data-chart-values="printed"). */
+test.describe('touch-only probe: no hover-only chart', () => {
+  const VIEWS: Array<{ path: string; open?: string }> = [
+    { path: '/district/61/trends' },
+    { path: '/district/61/trends?chartExpanded=membership' },
+    { path: '/district/61/trends?chartExpanded=payments' },
+    { path: '/district/61/rankings', open: 'Expand Ranking Progression chart' },
+    { path: '/clubs' },
+  ]
+
+  for (const view of VIEWS) {
+    test(`${view.path}${view.open ? ' (sheet)' : ''}`, async ({ page }) => {
+      await load(page, view.path)
+      if (view.open) {
+        await page.getByRole('button', { name: view.open }).click()
+        await expect(page.getByRole('dialog')).toBeVisible()
+      }
+      // Lazy charts mount as they scroll in; walk the page first.
+      await page.evaluate(async () => {
+        for (let y = 0; y < document.body.scrollHeight; y += 600) {
+          window.scrollTo(0, y)
+          await new Promise(r => setTimeout(r, 120))
+        }
+        window.scrollTo(0, 0)
+      })
+      const charts = await page.locator('.recharts-wrapper').evaluateAll(els =>
+        els
+          .filter(el => {
+            const r = el.getBoundingClientRect()
+            return r.width > 0 && r.height > 0
+          })
+          .map(el => {
+            const host =
+              el.closest('[data-chart-values="printed"]') ??
+              el.closest('[role="dialog"], figure, section, .redesign-panel')
+            const ok =
+              !!el.closest('[data-chart-values="printed"]') ||
+              !!host?.querySelector('[data-testid="chart-readout"]')
+            return { ok, where: host?.getAttribute('aria-label') ?? '' }
+          })
+      )
+      expect(charts.length).toBeGreaterThan(0)
+      expect(charts.filter(c => !c.ok)).toEqual([])
+    })
+  }
+})
 
 test.describe('hover device', () => {
   test.use({
