@@ -1,5 +1,5 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { fetchCdnSnapshotIndex } from '../services/cdn'
+import { snapshotIndexQueryOptions } from './snapshotIndexQuery'
 import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
 
 /**
@@ -23,7 +23,7 @@ export interface CachedDatesResponse {
 export function districtCachedDatesQueryOptions(districtId: string | null) {
   return queryOptions<CachedDatesResponse, Error>({
     queryKey: ['district-cached-dates', districtId],
-    queryFn: async () => {
+    queryFn: async ({ client }) => {
       if (!districtId) {
         throw new Error('District ID is required')
       }
@@ -31,7 +31,9 @@ export function districtCachedDatesQueryOptions(districtId: string | null) {
       // The per-district snapshot index is the pipeline's own enumeration of the
       // snapshots it wrote for this district — the district-side mint for the
       // brand (#1323), the sibling of useProgramYearControls' dates-index mint.
-      const index = await fetchCdnSnapshotIndex()
+      // Read through the shared index entry (#2027) — the hub's club-growth
+      // card reads the same file, and fetchQuery joins an in-flight request.
+      const index = await client.fetchQuery(snapshotIndexQueryOptions())
       const dates = snapshotDatesFrom({
         dates: index[districtId] ?? [],
       }).sort()

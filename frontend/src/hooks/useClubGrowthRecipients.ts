@@ -20,14 +20,10 @@
  */
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
-import {
-  fetchCdnDates,
-  fetchCdnRankingsForDateExact,
-  type CdnRankingsData,
-} from '../services/cdn'
+import { fetchCdnDates, type CdnRankingsData } from '../services/cdn'
+import { exactRankingsQueryOptions } from './districtRankingsQuery'
 import { snapshotDatesFrom } from '../types/snapshotDate'
 import {
-  checkpointRankingsQueryKey,
   clubGrowthCheckpointDates,
   isUncollectedCharterCount,
   resolveCheckpointPlan,
@@ -253,9 +249,7 @@ export function useClubGrowthRecipients(
       }
       return {
         // Shared with useClubGrowthMilestones: one file, one cache entry.
-        queryKey: checkpointRankingsQueryKey(date),
-        queryFn: () => fetchCdnRankingsForDateExact(date),
-        staleTime: 60 * 60 * 1000,
+        ...exactRankingsQueryOptions(date),
       }
     }),
   })

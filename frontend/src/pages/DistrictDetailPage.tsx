@@ -89,8 +89,11 @@ const DistrictDetailPageInner: React.FC = () => {
   } = useUrlProgramYear()
 
   // Fetch cached dates for date selector
-  const { data: cachedDatesData, isLoading: isLoadingCachedDates } =
-    useDistrictCachedDates(districtId || '')
+  const {
+    data: cachedDatesData,
+    isLoading: isLoadingCachedDates,
+    isPending: isPendingCachedDates,
+  } = useDistrictCachedDates(districtId || '')
 
   // Get all cached dates
   const allCachedDates = React.useMemo(
@@ -294,8 +297,20 @@ const DistrictDetailPageInner: React.FC = () => {
   // query resolves separately from (and later than) the page-analytics query;
   // its loading flag reserves the trophy-case slot to avoid the late-insert
   // CLS shift (#1105 / Lesson 107).
-  const { data: competitiveAwards, isLoading: isLoadingCompetitiveAwards } =
-    useCompetitiveAwards(effectiveEndDate ?? undefined)
+  //
+  // It waits for the date index to settle, so it reads the file once under
+  // the date the page displays rather than `latest` first and the dated file
+  // after (#2027). Settled includes "resolved empty" and "failed": both leave
+  // `effectiveEndDate` null, and the read falls back to `latest`.
+  const snapshotDateSettled = !isPendingCachedDates || !districtId
+  const competitiveAwardsQuery = useCompetitiveAwards(
+    effectiveEndDate ?? undefined,
+    { enabled: snapshotDateSettled }
+  )
+  const competitiveAwards = competitiveAwardsQuery.data
+  // Held (disabled) counts as loading, so the trophy-case slot stays reserved.
+  const isLoadingCompetitiveAwards =
+    competitiveAwardsQuery.isLoading || !snapshotDateSettled
   const distinguishedDistrictStatus = React.useMemo(() => {
     if (!districtId || !competitiveAwards?.distinguishedDistrict) return null
     return competitiveAwards.distinguishedDistrict[districtId] ?? null

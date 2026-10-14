@@ -19,14 +19,17 @@ import '@testing-library/jest-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { DistrictOverview } from '../DistrictOverview'
-import { fetchCdnRankings, fetchCdnRankingsForDate } from '../../services/cdn'
+import {
+  fetchCdnRankings,
+  fetchCdnRankingsForDateExact,
+} from '../../services/cdn'
 import type { CdnRankingsData } from '../../services/cdn'
 import { snap } from '../../test-utils/snapshotDate'
 import type { SnapshotDate } from '../../types/snapshotDate'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
-  fetchCdnRankingsForDate: vi.fn(),
+  fetchCdnRankingsForDateExact: vi.fn(),
 }))
 
 vi.mock('../../hooks/useDistrictAnalytics', () => ({
@@ -47,7 +50,7 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
 }))
 
 const mockedLatest = vi.mocked(fetchCdnRankings)
-const mockedForDate = vi.mocked(fetchCdnRankingsForDate)
+const mockedForDate = vi.mocked(fetchCdnRankingsForDateExact)
 
 type Row = CdnRankingsData['rankings'][number] & {
   newPayments: number
