@@ -88,7 +88,8 @@ on:
         type: string
       program_year:
         description: >-
-          Rescrape only: program year (e.g. 2025-2026). Generates monthly dates automatically.
+          Rescrape: program year (e.g. 2025-2026); expands to the month-end of every month of it
+          that has closed in docs/month-end-closing-dates.json (#1766). rescrape-historical: the year filter.
           backfill-education-ledger: comma-separated program years (default 2003-2004 … 2018-2019).
         required: false
         type: string
@@ -1070,23 +1071,12 @@ jobs:
           if [ -n "${{ inputs.dates }}" ]; then
             DATES=$(echo "${{ inputs.dates }}" | tr ',' ' ')
           elif [ -n "${{ inputs.program_year }}" ]; then
-            # Generate monthly dates for the program year
+            # The program year's closed month-ends, from the closing-date
+            # registry (#1766, ADR-011, D-6) — the dates a close is filed
+            # under and prune keeps. Fails on a malformed or unclosed PY.
             PY="${{ inputs.program_year }}"
-            START_YEAR=$(echo "$PY" | cut -d'-' -f1)
-            DATES=$(node -e "
-              const sy = parseInt('${START_YEAR}', 10);
-              const dates = [];
-              // Jul through Dec of start year, Jan through Jun of end year
-              for (let m = 6; m < 18; m++) {
-                const year = sy + Math.floor(m / 12);
-                const month = m % 12;
-                // Use the 15th of each month as a representative date
-                const d = new Date(year, month, 15);
-                dates.push(d.toISOString().split('T')[0]);
-              }
-              process.stdout.write(dates.join(' '));
-            ")
-            echo "Generated dates from program year ${PY}: ${DATES}"
+            DATES=$(npx tsx scripts/program-year-month-ends.ts "${PY}")
+            echo "Month-ends of program year ${PY}: ${DATES}"
           else
             echo "::error::rescrape mode requires either 'dates' or 'program_year' input"
             exit 1
@@ -1094,36 +1084,19 @@ jobs:
 
           echo "## 🔄 Rescrape" >> "$GITHUB_STEP_SUMMARY"
 
-          # Discover districts (same approach as daily mode)
+          # Districts: an explicit list is scraped for every date and the
+          # rest hydrated from staging (#1756). Otherwise each date scrapes
+          # the districts its own districtsummary lists (#1766, D-7): one
+          # discovery from the first date handed every date the same set,
+          # wrong on one side of a consolidation (128 → 94).
           if [ -n "${{ inputs.districts }}" ]; then
             DISTRICTS="${{ inputs.districts }}"
             echo "Using manual district override: ${DISTRICTS}"
+            echo "- **Districts**: $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ') (explicit, hydrated)" >> "$GITHUB_STEP_SUMMARY"
           else
-            # Use the first date to discover districts, resolving the active
-            # program year by data (#1284) — falls back to the prior PY at the
-            # July rollover when the new year's dashboard isn't published yet.
-            FIRST_DATE=$(echo "$DATES" | awk '{print $1}')
-            echo "Discovering districts for ${FIRST_DATE}..."
-            set +e
-            DISCOVERY_JSON=$(npx collector-cli discover-districts --date "${FIRST_DATE}" --verbose)
-            DISCOVERY_STATUS=$?
-            set -e
-            if [ ${DISCOVERY_STATUS} -ne 0 ]; then
-              echo "::error::Failed to discover districts from Toastmasters CSV (exit ${DISCOVERY_STATUS})."
-              echo "${DISCOVERY_JSON}"
-              exit 1
-            fi
-            DISTRICTS=$(echo "${DISCOVERY_JSON}" | jq -r '.districts')
-            DISCOVERED_PY=$(echo "${DISCOVERY_JSON}" | jq -r '.programYear')
-
-            if [ -z "${DISTRICTS}" ] || [ "${DISTRICTS}" = "null" ]; then
-              echo "::error::Failed to discover districts from Toastmasters CSV."
-              exit 1
-            fi
-            DISTRICT_COUNT=$(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')
-            echo "Discovered ${DISTRICT_COUNT} districts for PY ${DISCOVERED_PY}"
+            DISTRICTS="discover"
+            echo "- **Districts**: discovered per date from each date's districtsummary" >> "$GITHUB_STEP_SUMMARY"
           fi
-          echo "- **Districts**: $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')" >> "$GITHUB_STEP_SUMMARY"
 
           # One date at a time: scrape + transform (#1669: a date the dashboard
           # answers with another day's data fails), guard against overwriting

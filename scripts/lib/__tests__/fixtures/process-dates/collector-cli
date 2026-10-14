@@ -9,7 +9,7 @@
 #       where <A> is D, or the date STUB_REMAP maps it to (`D=A,...`): the
 #       transform remaps a closing collection onto its month-end (#193).
 #       Like the real CLI it also logs on stdout.
-#   scrape --date D --transform --force --verbose --districts X
+#   scrape --date D --transform --force --verbose (--districts X | --discover-districts)
 #       writes raw-csv/D, then the snapshot as transform does. With
 #       STUB_SCRAPE_FAIL it still leaves both behind and exits 1.
 #   compute-analytics --date A --force-analytics --verbose

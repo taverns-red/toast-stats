@@ -552,6 +552,31 @@ describe('process-dates.sh rescrape: scrape + transform stage', () => {
   })
 })
 
+describe('process-dates.sh rescrape: DISTRICTS=discover reads each date’s own set (#1766, D-7)', () => {
+  // The step used to discover once, from the first date, and pass that list
+  // to every date. With `discover` each scrape takes its district set from
+  // the districtsummary it resolved for that date (#1669 as-of), so two dates
+  // across a consolidation each scrape their own set.
+  it('scrapes every date with --discover-districts and no shared list', () => {
+    const r = run('rescrape', ['2026-06-30', '2026-07-31'], {
+      DISTRICTS: 'discover',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 2, refused: 0, failed: 0 })
+    const scrapes = lines(stubLog).filter(l =>
+      l.startsWith('collector-cli scrape ')
+    )
+    expect(scrapes).toEqual([
+      'collector-cli scrape --date 2026-06-30 --transform --force --verbose --discover-districts',
+      'collector-cli scrape --date 2026-07-31 --transform --force --verbose --discover-districts',
+    ])
+  })
+
+  it('still rejects an empty DISTRICTS: discovery is asked for, never implied (R17)', () => {
+    expect(run('rescrape', ['2026-09-10'], { DISTRICTS: '' }).status).toBe(2)
+  })
+})
+
 describe('process-dates.sh: prior-year snapshot for YoY in every mode (#1769, D-8)', () => {
   // compute-analytics reads snapshots/<year - 1 of the date it computes>/
   // for YoY (findPreviousProgramYearDate). The runner used to pull it in

@@ -254,13 +254,6 @@ export interface AllowedInlineNodeScript {
 
 export const ALLOWED_INLINE_NODE_SCRIPTS: readonly AllowedInlineNodeScript[] = [
   {
-    file: 'data-pipeline.yml',
-    fingerprint: 'Use the 15th of each month as a representative date',
-    reason:
-      'rescrape program-year date list; lives in the per-date-loop region ' +
-      'that P3-1 is extracting — drop this entry when that lands',
-  },
-  {
     file: 'ci-gate.yml',
     fingerprint: "require('./package.json').devDependencies.tsx",
     reason: 'one-expression version read, no logic',
