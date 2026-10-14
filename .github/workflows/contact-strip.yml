@@ -1,0 +1,112 @@
+# Club contact strip (#2026): one-off, manual dispatch only.
+#
+# Six snapshot dates were written by a daily with the Find-A-Club merge
+# before #2030 stopped promoting club email/phone: 2026-10-09..10-13 (every
+# district) and 2026-06-30 (districts 201-231). This rewrites those objects
+# in place, removing only the email and phone keys. The JSON text is
+# otherwise byte-identical, and the gzip layer, headers and custom
+# metadata are kept. Every write is conditional on the generation that was
+# read. See scripts/lib/stripClubContact.ts.
+#
+# Route (c) of the 2026-10-14 cleanup plan: run it on staging, then let a
+# scheduled daily promote the stripped objects through its gates. bucket=prod
+# is the fallback if that daily holds.
+#
+# Dry run is the default. Every dispatch, dry or not, needs Ron's approval.
+# It shares the data-pipeline concurrency group, so it never overlaps a
+# pipeline run. The audit manifest (paths, generations, md5s, counts; never a
+# value) is always uploaded as an artifact, and a real run also keeps it in
+# staging at runs/<run_id>/contact-strip.jsonl.
+
+name: Club Contact Strip
+
+on:
+  workflow_dispatch:
+    inputs:
+      bucket:
+        description: 'Bucket to rewrite'
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+        default: staging
+      dates:
+        description: 'Snapshot dates (comma separated YYYY-MM-DD)'
+        required: true
+        type: string
+        default: '2026-06-30,2026-10-09,2026-10-10,2026-10-11,2026-10-12,2026-10-13'
+      dry_run:
+        description: 'Dry run: report what would change, write nothing'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: data-pipeline
+  cancel-in-progress: false
+
+jobs:
+  strip:
+    name: Strip club email/phone
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The script imports the contact helpers from the workspace package,
+      # which resolves to its built dist/ (R2: the runner starts empty).
+      - name: Build shared contracts
+        run: npm run build:shared-contracts
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Strip contact keys
+        id: strip
+        env:
+          BUCKET: ${{ inputs.bucket }}
+          DATES: ${{ inputs.dates }}
+          # A boolean input reaches the shell as the string true/false (#1133).
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          ARGS=(--bucket "${BUCKET}" --dates "${DATES}" --manifest contact-strip.jsonl)
+          if [ "${DRY_RUN}" = "false" ]; then
+            ARGS+=(--execute --audit-object "runs/${GITHUB_RUN_ID}/contact-strip.jsonl")
+          fi
+          set -o pipefail
+          npx tsx scripts/strip-club-contact.ts "${ARGS[@]}" | tee summary.json
+          {
+            echo "## Club contact strip (#2026)"
+            echo "- bucket: ${BUCKET}"
+            echo "- dry run: ${DRY_RUN}"
+            for KEY in objects planned stripped unchanged errors keysRemoved; do
+              echo "- ${KEY}: $(jq -r ".${KEY}" summary.json)"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload audit manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contact-strip-${{ inputs.bucket }}-${{ github.run_id }}
+          path: contact-strip.jsonl
+          if-no-files-found: warn
+          retention-days: 90

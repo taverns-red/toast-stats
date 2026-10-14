@@ -20,6 +20,11 @@ import { writeFile } from 'node:fs/promises'
 import type { Storage } from '@google-cloud/storage'
 import type { GateBucket } from './promotionContentGateIo.js'
 import type { RankHistoryBucket } from './rankHistoryPull.js'
+import type {
+  StoredObjectMeta,
+  StripIo,
+  WriteMetadata,
+} from './stripClubContact.js'
 
 type RequestOptions = Parameters<Storage['authClient']['request']>[0]
 
@@ -34,19 +39,24 @@ type RequestOptions = Parameters<Storage['authClient']['request']>[0]
  * gaxios 7 moves to the platform fetch, which always decodes. The
  * gcsMediaListeners test asserts that the stored bytes come back, so that
  * upgrade fails loudly.
+ *
+ * `generation` pins the read to that generation (404 once it is replaced).
  */
 export async function readObjectMedia(
   storage: Storage,
   bucketName: string,
   name: string,
-  opts: { decompress: boolean }
+  opts: { decompress: boolean; generation?: string }
 ): Promise<Buffer> {
   const url =
     `${storage.apiEndpoint}/storage/v1/b/${encodeURIComponent(bucketName)}` +
     `/o/${encodeURIComponent(name)}`
   const request = {
     url,
-    params: { alt: 'media' },
+    params: {
+      alt: 'media',
+      ...(opts.generation !== undefined ? { generation: opts.generation } : {}),
+    },
     headers: { 'Accept-Encoding': 'gzip' },
     responseType: 'arraybuffer',
     retry: true,
@@ -93,5 +103,74 @@ export function rankHistoryBucket(
         await writeFile(destination, bytes)
       },
     }),
+  }
+}
+
+/** The listed fields the contact strip keeps, as strings. */
+function toStoredMeta(m: Record<string, unknown>): StoredObjectMeta {
+  const str = (v: unknown): string | undefined =>
+    v === undefined || v === null ? undefined : String(v)
+  const out: StoredObjectMeta = {
+    name: String(m.name),
+    generation: String(m.generation),
+  }
+  for (const key of [
+    'md5Hash',
+    'size',
+    'contentType',
+    'contentEncoding',
+    'cacheControl',
+    'contentDisposition',
+    'contentLanguage',
+  ] as const) {
+    const v = str(m[key])
+    if (v !== undefined) out[key] = v
+  }
+  if (m.metadata && typeof m.metadata === 'object') {
+    out.metadata = Object.fromEntries(
+      Object.entries(m.metadata as Record<string, unknown>).map(([k, v]) => [
+        k,
+        String(v),
+      ])
+    )
+  }
+  return out
+}
+
+/**
+ * The bucket the one-off contact strip (#2026) works through: SDK listing,
+ * generation-pinned non-streaming stored-byte reads, and a single-request
+ * upload of the bytes as given (`gzip: false`, so no second layer) carrying
+ * the original headers and `ifGenerationMatch`.
+ */
+export function stripBucket(storage: Storage, bucketName: string): StripIo {
+  const bucket = storage.bucket(bucketName)
+  return {
+    list: async prefix => {
+      const [files] = await bucket.getFiles({ prefix })
+      return files.map(f =>
+        toStoredMeta(f.metadata as unknown as Record<string, unknown>)
+      )
+    },
+    read: (name, generation) =>
+      readObjectMedia(storage, bucketName, name, {
+        decompress: false,
+        generation,
+      }),
+    write: async (
+      name: string,
+      bytes: Buffer,
+      metadata: WriteMetadata,
+      ifGenerationMatch: string
+    ) => {
+      const file = bucket.file(name)
+      await file.save(bytes, {
+        resumable: false,
+        gzip: false,
+        metadata: { ...metadata },
+        preconditionOpts: { ifGenerationMatch },
+      })
+      return toStoredMeta(file.metadata as unknown as Record<string, unknown>)
+    },
   }
 }
