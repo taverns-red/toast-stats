@@ -347,6 +347,57 @@ describe('checkObject — other shapes', () => {
   })
 })
 
+describe('checkObject — no club contact fields (#2026)', () => {
+  // Synthetic placeholders only. The failure names the path, never the value.
+  const SNAPSHOT_PATH = 'snapshots/2026-10-08/district_61.json'
+  const snapshot = (club: Record<string, unknown>) => ({
+    districtId: '61',
+    data: {
+      clubPerformance: [{ 'Club Number': '00000180' }],
+      clubs: [{ clubId: '180', meetingDay: 'Tuesday' }, club],
+      prospectiveClubs: [],
+    },
+  })
+
+  it('holds a district snapshot whose clubs[] carry an email', () => {
+    const failure = check(
+      SNAPSHOT_PATH,
+      plain(snapshot({ clubId: '2', email: 'club-1@example.com' }))
+    )
+    expect(failure).toMatch(/data\.clubs\[1\]\.email/)
+    expect(failure).toMatch(/#2026/)
+    expect(failure).not.toContain('example.com')
+  })
+
+  it('holds a snapshot whose prospectiveClubs[] carry a phone', () => {
+    const value = snapshot({ clubId: '2' })
+    value.data.prospectiveClubs = [
+      { clubId: '88888', phone: '+15550100001' },
+    ] as never[]
+    expect(check(SNAPSHOT_PATH, plain(value))).toMatch(
+      /prospectiveClubs\[0\]\.phone/
+    )
+  })
+
+  it('holds a district analytics file whose ClubTrend carries a phone', () => {
+    const value = {
+      ...analytics,
+      data: { allClubs: [{ clubId: '1', phone: '+15550100001' }] },
+    }
+    const failure = check(ANALYTICS_PATH, plain(value))
+    expect(failure).toMatch(/data\.allClubs\[0\]\.phone/)
+    expect(failure).not.toContain('15550100001')
+  })
+
+  it('passes records with no contact key, or an empty one', () => {
+    expect(check(SNAPSHOT_PATH, plain(snapshot({ clubId: '2' })))).toBeNull()
+    expect(
+      check(SNAPSHOT_PATH, plain(snapshot({ clubId: '2', email: '' })))
+    ).toBeNull()
+    expect(check(ANALYTICS_PATH, plain(analytics))).toBeNull()
+  })
+})
+
 describe('checkObject — district-region history (#1820)', () => {
   const REGION_PATH = 'config/district-region-history.json'
   // The history the identity-history builder wrote from the staged

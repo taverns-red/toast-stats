@@ -26,6 +26,7 @@ import {
   ClubDistrictHistoryShardSchema,
   clubDistrictHistoryShardKey,
   DistrictRegionHistorySchema,
+  findClubContactField,
   ProgramYearIndexFileSchema,
 } from '@taverns-red/shared-contracts'
 import {
@@ -625,6 +626,13 @@ export function checkObject(
   if (!decoded.ok) return decoded.reason
   const value = decoded.value
 
+  // #2026: club contact email/phone are never promoted. Names the path,
+  // never the value, so the step summary stays safe to read.
+  const contact = findClubContactField(value)
+  if (contact !== null) {
+    return `${contact} is a non-empty club contact field; email/phone are never promoted (#2026)`
+  }
+
   switch (check.kind) {
     case 'time-series-metadata':
       return checkTimeSeriesMetadata({ ok: true, body: JSON.stringify(value) })
@@ -748,7 +756,7 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
   'district-analytics': 'decoded, has `metadata` and `data` objects',
   'snapshot-index': 'decoded, `districts` maps ids to YYYY-MM-DD arrays',
   latest: 'decoded, latestSnapshotDate is a real date',
-  json: 'decoded (no nested gzip) and parses as JSON',
+  json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',
 }
 

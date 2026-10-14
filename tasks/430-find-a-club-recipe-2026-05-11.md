@@ -67,8 +67,8 @@ Key constraints:
   },
   "CountryName": "United States",
   "CharterDate": "/Date(197190000000)/", // .NET ms-since-epoch — parse to ISO
-  "Email": "officers-1399@toastmastersclubs.org",
-  "Phone": "+13039128450",
+  "Email": "club-100@example.com",
+  "Phone": "+15550190000",
   "Website": "http://1399.toastmastersclubs.org/",
   "FacebookLink": "https://www.facebook.com/SouthSuburbanTM1399",
   "TwitterLink": null,

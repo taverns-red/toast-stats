@@ -415,3 +415,11 @@ export {
   type EducationRollupProgramYear,
   type EducationRollupIndex,
 } from './schemas/education-rollup.schema.js'
+
+// Club contact fields never reach a promoted artifact (#2026)
+export {
+  CLUB_CONTACT_KEYS,
+  isClubContactKey,
+  omitClubContactFields,
+  findClubContactField,
+} from './privacy/club-contact.js'

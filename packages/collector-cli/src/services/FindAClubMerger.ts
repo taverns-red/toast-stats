@@ -8,7 +8,9 @@
  *   - Snapshot is the spine. For every club in \`clubPerformance\`,
  *     look up the FAC record by \`Club Number\`, canonicalized through
  *     the shared \`normalizeClubId\` (#1440) on both sides of the join.
- *   - Matched: copy charterDate / coordinates / address / email / etc.
+ *   - Matched: copy charterDate / coordinates / address / website / etc.
+ *     Never the contact email/phone (#2026): the snapshot is promoted and
+ *     served publicly, so they are stripped from every row, legacy ones too.
  *   - Snapshot-only: leave as-is. The FAC fields are all optional, so
  *     a missing match is a no-op. The ~410-1000 'missing from FAC'
  *     clubs land here — and leaving them untouched is CORRECT, not a
@@ -32,7 +34,10 @@ import type { ProspectiveClub } from '@taverns-red/shared-contracts'
 // convention — 8-char zero-padded — applied to the raw clubPerformance rows
 // but not to the parsed clubs[] ids, so a form mismatch silently demoted a
 // matched club to "snapshot-only".
-import { normalizeClubId } from '@taverns-red/shared-contracts'
+import {
+  normalizeClubId,
+  omitClubContactFields,
+} from '@taverns-red/shared-contracts'
 import {
   TI_CLUB_NUMBER_KEY,
   type FacRawResponse,
@@ -99,8 +104,6 @@ export function mergeFacIntoSnapshot(
     if (facHit.charterDate) enrichment['charterDate'] = facHit.charterDate
     if (facHit.coordinates) enrichment['coordinates'] = facHit.coordinates
     if (facHit.address) enrichment['address'] = facHit.address
-    if (facHit.email) enrichment['email'] = facHit.email
-    if (facHit.phone) enrichment['phone'] = facHit.phone
     if (facHit.website) enrichment['website'] = facHit.website
     if (facHit.facebookLink) enrichment['facebookLink'] = facHit.facebookLink
     if (facHit.twitterLink) enrichment['twitterLink'] = facHit.twitterLink
@@ -190,12 +193,13 @@ export function mergeFacIntoSnapshot(
       ...snapshot,
       data: {
         ...snapshot.data,
-        clubPerformance: enrichedClubs,
+        // #2026: no row keeps a contact email/phone, a legacy one included.
+        clubPerformance: enrichedClubs.map(omitClubContactFields),
         // Only spread .clubs[] back when we actually had one to enrich.
         // Undefined when the snapshot lacked the parsed array (older
         // shape) so we don't fabricate it.
         ...(enrichedParsedClubs !== undefined && {
-          clubs: enrichedParsedClubs,
+          clubs: enrichedParsedClubs.map(omitClubContactFields),
         }),
         prospectiveClubs,
       },
@@ -229,7 +233,6 @@ function projectProspectiveClub(enriched: ClubEnrichment): ProspectiveClub {
   if (enriched.meetingDay) club.meetingDay = enriched.meetingDay
   if (enriched.meetingTime) club.meetingTime = enriched.meetingTime
   if (enriched.website) club.website = enriched.website
-  if (enriched.email) club.email = enriched.email
   if (typeof enriched.isProspective === 'boolean') {
     club.isProspective = enriched.isProspective
   }

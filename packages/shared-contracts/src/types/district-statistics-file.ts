@@ -114,9 +114,6 @@ export interface ProspectiveClub {
   /** Public club website URL. */
   website?: string
 
-  /** Public club contact email. */
-  email?: string
-
   /** FAC's IsProspective flag — true for clubs in ATO state. */
   isProspective?: boolean
 }
@@ -213,10 +210,6 @@ export interface ClubStatisticsFile {
     postalCode?: string
     country?: string
   }
-  /** Club contact email. */
-  email?: string
-  /** Club contact phone number. */
-  phone?: string
   /** Public club website URL. */
   website?: string
   /** Public Facebook page URL. */
