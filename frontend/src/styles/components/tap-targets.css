@@ -38,4 +38,31 @@
     align-items: center;
     min-height: 44px;
   }
+
+  /* Touch devices above the 768 phone breakpoint (#2017). A phone in
+     landscape (844×390) is wider than 768, so it gets the desktop chrome:
+     the inline header search field (input 21px tall) and the footer meta
+     strip (links 17px). Both are sized for a mouse. The floor follows the
+     input, not the width, so a coarse pointer gets 44px at any width and a
+     mouse keeps the compact desktop sizes. Below 768 neither renders (the
+     search is an icon button, the footer moves into "About"). */
+  @media (pointer: coarse) {
+    .header-search__field {
+      height: auto;
+    }
+
+    .header-search__input {
+      min-height: 44px;
+    }
+
+    /* inline-flex lets the base layer's 44px min-height apply; its baseline
+       is the text's, so the links stay on the line with the text around
+       them. The strip is one row at this width, so the taller boxes do not
+       overlap. */
+    .app-shell-footer__link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
+  }
 }
