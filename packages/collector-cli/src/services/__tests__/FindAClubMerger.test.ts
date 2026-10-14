@@ -16,7 +16,7 @@ const ottawaFacClub = {
   },
   CountryName: 'Canada',
   CharterDate: '/Date(197190000000)/',
-  Email: 'officers-180@toastmastersclubs.org',
+  Email: 'club-180@example.com',
   Website: 'http://180.toastmastersclubs.org/',
   MeetingDay: 'Tuesday',
   MeetingTime: '7:00 pm',
@@ -207,7 +207,8 @@ describe('mergeFacIntoSnapshot — clubs[] propagation (#503)', () => {
       lat: 45.42,
       lng: -75.69,
     })
-    expect(parsedClubs[0]?.['email']).toBe('officers-180@toastmastersclubs.org')
+    // #2026: contact fields are never written into the snapshot.
+    expect(parsedClubs[0]).not.toHaveProperty('email')
     expect(parsedClubs[0]?.['meetingDay']).toBe('Tuesday')
   })
 
@@ -312,7 +313,8 @@ describe('mergeFacIntoSnapshot', () => {
       postalCode: 'K1A 0A0',
       country: 'Canada',
     })
-    expect(merged['email']).toBe('officers-180@toastmastersclubs.org')
+    // #2026: contact fields are never written into the snapshot.
+    expect(merged).not.toHaveProperty('email')
     expect(merged['meetingDay']).toBe('Tuesday')
   })
 
