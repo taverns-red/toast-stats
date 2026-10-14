@@ -241,6 +241,9 @@ export class ClubHealthAnalyticsModule {
         ...(typeof club.isProspective === 'boolean' && {
           isProspective: club.isProspective,
         }),
+        // #1789 — read by the meeting-time heatmap and map pin modes.
+        ...(club.location && { location: club.location }),
+        ...(club.meetingSchedule && { meetingSchedule: club.meetingSchedule }),
       })
     }
 

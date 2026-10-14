@@ -5,7 +5,10 @@
  * vulnerable clubs, and club trends indexes.
  */
 
-import type { ClubHealthStatus } from '@taverns-red/shared-contracts'
+import type {
+  ClubHealthStatus,
+  MeetingScheduleEntry,
+} from '@taverns-red/shared-contracts'
 import type { MembershipTrendPoint } from './membership.js'
 
 /**
@@ -114,6 +117,10 @@ export interface ClubTrend {
   meetingTime?: string
   allowsVirtualAttendance?: boolean
   isProspective?: boolean
+  /** FAC Location, scrubbed by the collector (#1789). */
+  location?: string
+  /** Parsed meeting schedule (#1789); absent when the day text is unparsed. */
+  meetingSchedule?: MeetingScheduleEntry[]
 }
 
 /**
