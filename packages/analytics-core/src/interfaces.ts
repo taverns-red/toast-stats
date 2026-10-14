@@ -108,8 +108,6 @@ export interface ClubStatistics {
     postalCode?: string
     country?: string
   }
-  email?: string
-  phone?: string
   website?: string
   facebookLink?: string
   twitterLink?: string
