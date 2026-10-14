@@ -350,6 +350,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
       {/* Chart container with horizontal scroll for mobile */}
       <div
         role="img"
+        {...readout.surfaceProps}
         aria-label={chartDescription}
         aria-describedby="full-year-rank-chart-desc"
         className="w-full overflow-x-auto"
@@ -357,6 +358,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
         <div className="min-w-[320px]">
           <ResponsiveContainer width="100%" height={400} minWidth={320}>
             <LineChart
+              {...readout.chartProps}
               data={chartData}
               margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
               aria-hidden="true"

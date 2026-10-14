@@ -421,12 +421,14 @@ export const MembershipPaymentsChart: React.FC<
       {/* Chart - Requirements 1.2, 1.3, 1.4, 2.3, 5.2, 5.3 */}
       <div
         role="img"
+        {...readout.surfaceProps}
         aria-label={chartDescription}
         className="w-full overflow-x-auto"
       >
         <div className="min-w-[320px]">
           <ResponsiveContainer width="100%" height={350}>
             <LineChart
+              {...readout.chartProps}
               data={chartData}
               margin={{ top: 5, right: 20, left: 10, bottom: 60 }}
             >

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { TooltipContentProps, MouseHandlerDataParam } from 'recharts'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { parseLocalDate } from '../../utils/dateFormatting'
@@ -52,7 +52,8 @@ const NO_OVERRIDE: TooltipOverride = {}
 export interface ChartReadoutHandle {
   /** True on a device without hover — the readout line is in use. */
   touch: boolean
-  /** The pinned point, or null before the first tap / key press. */
+  /** The pinned point, or null before the first tap / key press and
+   *  after an unpin (a second tap on it, Escape, Enter). */
   reading: ChartReading | null
   /** Spread onto the chart's <Tooltip> after its own props. */
   tooltipProps: TooltipOverride
@@ -73,9 +74,9 @@ const readingKey = (r: ChartReading) =>
 /** Tooltip content that paints nothing and reports the active point. */
 const ReadoutReporter: React.FC<
   Partial<TooltipContentProps<TooltipValue, string>> & {
-    onReading: (r: ChartReading) => void
+    onReading: (r: ChartReading, index: string | null) => void
   }
-> = ({ active, payload, label, onReading }) => {
+> = ({ active, payload, label, activeIndex, onReading }) => {
   const last = useRef('')
   const reading = useMemo<ChartReading | null>(() => {
     if (!active || !payload || payload.length === 0) return null
@@ -98,20 +99,114 @@ const ReadoutReporter: React.FC<
     const key = readingKey(reading)
     if (key === last.current) return
     last.current = key
-    onReading(reading)
-  }, [reading, onReading])
+    onReading(reading, activeIndex == null ? null : String(activeIndex))
+  }, [reading, activeIndex, onReading])
 
   return null
 }
 
+/** Hover devices: nothing is added to the chart or its wrapper. */
+const NO_CHART_PROPS: ChartPinProps = {}
+const NO_SURFACE_PROPS: SurfacePinProps = {}
+
 export function useChartReadout(): ChartReadoutHandle {
   const touch = useMediaQuery(TOUCH_QUERY)
-  const [reading, setReading] = useState<ChartReading | null>(null)
+  // `latest` is the point the chart last made active; the line shows it
+  // only while `pinned`. Refs mirror both so the event handlers below read
+  // the current values whichever order Recharts delivers a tap's events in.
+  const [latest, setLatest] = useState<ChartReading | null>(null)
+  const [pinned, setPinnedState] = useState(false)
+  const latestRef = useRef<ChartReading | null>(null)
+  const pinnedRef = useRef(false)
+  const lastLabelRef = useRef<string | null>(null)
+  // The index the previous tap landed on, while that tap's pin stands.
+  const tappedIndexRef = useRef<string | null>(null)
+  // A click that arrived before its mousemove placed the active point: the
+  // next reading names the index it landed on.
+  const tapPendingRef = useRef(false)
+
+  const setPinned = useCallback((next: boolean) => {
+    pinnedRef.current = next
+    setPinnedState(next)
+  }, [])
+
+  const onReading = useCallback(
+    (r: ChartReading, index: string | null) => {
+      latestRef.current = r
+      if (tapPendingRef.current) {
+        tapPendingRef.current = false
+        tappedIndexRef.current = index
+      }
+      setLatest(r)
+      // A new x position pins it (a tap elsewhere, an arrow key). The same
+      // x with other rows (a series toggled off) only refreshes the values.
+      if (r.label !== lastLabelRef.current) {
+        lastLabelRef.current = r.label
+        setPinned(true)
+      }
+    },
+    [setPinned]
+  )
+
   const tooltipProps = useMemo<TooltipOverride>(() => {
     if (!touch) return NO_OVERRIDE
-    return { content: <ReadoutReporter onReading={setReading} /> }
-  }, [touch])
-  return { touch, reading, tooltipProps, chartProps: {}, surfaceProps: {} }
+    return { content: <ReadoutReporter onReading={onReading} /> }
+  }, [touch, onReading])
+
+  const chartProps = useMemo<ChartPinProps>(() => {
+    if (!touch) return NO_CHART_PROPS
+    return {
+      // Recharts runs onClick after the tap's mousemove has placed the
+      // active point, so the state names the index the tap landed on.
+      onClick: (state: MouseHandlerDataParam) => {
+        const index = state?.activeTooltipIndex ?? state?.activeIndex
+        if (index == null) {
+          tapPendingRef.current = true
+          return
+        }
+        tapPendingRef.current = false
+        const tapped = String(index)
+        if (pinnedRef.current && tappedIndexRef.current === tapped) {
+          // A second tap on the pinned point takes the pin back.
+          tappedIndexRef.current = null
+          setPinned(false)
+          return
+        }
+        tappedIndexRef.current = tapped
+        if (latestRef.current) setPinned(true)
+      },
+    }
+  }, [touch, setPinned])
+
+  const surfaceProps = useMemo<SurfacePinProps>(() => {
+    if (!touch) return NO_SURFACE_PROPS
+    return {
+      onKeyDown: (e: React.KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          if (!pinnedRef.current) return // the sheet's Escape: close it
+          // Unpin only; the expand sheet listens on the document.
+          e.stopPropagation()
+          tappedIndexRef.current = null
+          setPinned(false)
+        } else if (e.key === 'Enter') {
+          tappedIndexRef.current = null
+          if (pinnedRef.current) setPinned(false)
+          else if (latestRef.current) setPinned(true)
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          tappedIndexRef.current = null
+          if (latestRef.current) setPinned(true)
+        }
+      },
+    }
+  }, [touch, setPinned])
+
+  return {
+    touch,
+    reading: pinned ? latest : null,
+    tooltipProps,
+    chartProps,
+    surfaceProps,
+  }
 }
 
 export interface ChartReadoutProps {

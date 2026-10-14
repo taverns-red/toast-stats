@@ -294,6 +294,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
 
       <div
         role="img"
+        {...readout.surfaceProps}
         aria-label={chartDescription}
         aria-describedby="rank-chart-desc"
         className="w-full overflow-x-auto"
@@ -301,6 +302,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
         <div className="min-w-[320px]">
           <ResponsiveContainer width="100%" height={400} minWidth={320}>
             <LineChart
+              {...readout.chartProps}
               data={chartData}
               margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
               aria-hidden="true"
