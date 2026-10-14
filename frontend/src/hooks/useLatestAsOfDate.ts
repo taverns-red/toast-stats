@@ -28,7 +28,8 @@
  *   `v1/latest.json` manifest instead. See the follow-up issue.
  */
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnRankings, fetchCdnManifest } from '../services/cdn'
+import { fetchCdnManifest } from '../services/cdn'
+import { districtRankingsQueryOptions } from './districtRankingsQuery'
 import {
   snapshotDateFromManifest,
   type SnapshotDate,
@@ -42,13 +43,9 @@ export interface LatestAsOfDate {
 }
 
 export function useLatestAsOfDate(): LatestAsOfDate {
-  const { data: rankings } = useQuery({
-    // Shares `useDistrictRanking`'s key/queryFn/staleTime so the two don't fetch
-    // the same 126KB rankings.json under competing keys (#1321).
-    queryKey: ['district-rankings', 'latest'],
-    queryFn: fetchCdnRankings,
-    staleTime: 15 * 60 * 1000,
-  })
+  // Shares `useDistrictRanking`'s key/queryFn/staleTime so the two don't fetch
+  // the same 126KB rankings.json under competing keys (#1321).
+  const { data: rankings } = useQuery(districtRankingsQueryOptions())
   const { data: manifest } = useQuery({
     queryKey: ['cdn-manifest'],
     queryFn: fetchCdnManifest,
