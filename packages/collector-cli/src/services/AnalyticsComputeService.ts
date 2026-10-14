@@ -13,6 +13,7 @@
  *        division/area comparisons, and year-over-year metrics
  */
 
+import { writeDistrictClubShards } from './DistrictClubShardWriter.js'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as crypto from 'node:crypto'
@@ -956,6 +957,15 @@ export class AnalyticsComputeService {
         districtId,
         computationResult.districtAnalytics,
         writeOptions
+      )
+
+      // #1901 — the same allClubs, split into ten per-digit shards for the
+      // club page (it reads one shard, not the whole district file).
+      await writeDistrictClubShards(
+        this.getAnalyticsDir(date),
+        date,
+        districtId,
+        computationResult.districtAnalytics.allClubs
       )
 
       const membershipPath = await this.analyticsWriter.writeMembershipTrends(
