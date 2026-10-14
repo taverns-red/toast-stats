@@ -1,0 +1,1004 @@
+[
+  {
+    "MeetingDay": "Fri",
+    "MeetingTime": "12:00 - 1:00 p.m. (EST)",
+    "Location": "Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:00 pm - 9:00 pm",
+    "Location": "Restaurant L'Ambroisie (TEL: 555-0100)",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "1st, 3rd & 5th Tuesday of each month",
+    "MeetingTime": "7:00 pm - 9:00 pm (ET)",
+    "Location": "South Fallingbrook Community Center<br>Online - Hybrid",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Every Friday - online",
+    "MeetingTime": "12:15 pm",
+    "Location": "ZOOM -contact club-contact@example.org<br>ZOOM - contact club-contact@example.org for link",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday - Virtual",
+    "MeetingTime": "12:00 pm - 1:00 pm",
+    "Location": "Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "18:45 pm",
+    "Location": "Complexe Renaud-V.-Patenaude<br>Salle des Benevoles",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "7:00 p.m.",
+    "Location": "Chartwell Residence<br>face à la réception",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "7:00 pm",
+    "Location": "College Saint-Charles-Garnier",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:30 pm",
+    "Location": "Centre Sportif Terrasse Arthur-Buies<br>Face au Centre de Formation Professionnelle",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "6:00 pm",
+    "Location": "Sandy Hill Community Center",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "12:00 pm",
+    "Location": "Tower C, Room varies, Place de Ville, please email for room #",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Maison de la Famille Le Cavalier",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "1st & 3rd Tuesday",
+    "MeetingTime": "12:00 pm",
+    "Location": "Children Nom / Avant tout, les enfants",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Jeudi",
+    "MeetingTime": "19:00 pm",
+    "Location": "Centre recreatif saint-Rodrigue<br>130, 50e rue Est",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "12:00 pm",
+    "Location": "Rencontres virtuelle via TEAMS<br>5th Fl Salon d'accueil",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "6:30 p.m.",
+    "Location": "The Bronson Centre",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "https://example.toastmastersclubs.org/",
+    "MeetingTime": "6:30 pm",
+    "Location": "OPG Saunders Hydro Dam Visitor Centre<br>2500 Second St W, Cornwall, ON K6H 5R6",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Wed.1st and 3rd in person  (2nd online) ",
+    "MeetingTime": "7:30 pm",
+    "Location": "Trillium Centre<br>In Person for 1st and 3rd Wednesdays - Online 2nd Wednesdays ",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "6:30pm",
+    "Location": "Scotia Bank Building <br>8th Floor (use elevator)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "12:00 pm",
+    "Location": "50 Victoria Street, Room 509-B<br>Phase 1, Place du Portage",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "4:00 pm EST",
+    "Location": "Statistics Canada<br>Note: Online meetings",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Mondays ",
+    "MeetingTime": "6:30pm-8:15pm",
+    "Location": "Britannia United Church or online<br>We meet weekly, alternating between online and hybrid (in-person + online) meetings.",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "12:00 pm",
+    "Location": "Conference Room",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "6:45 pm",
+    "Location": "Centre St-Louis",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "12:00 pm (Virtual - Ask for details)",
+    "Location": "Online Meeting Until Further Notice<br>Use \"Contact/Visit Club\" above right, to arrange to visit us online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Monday (except holidays)",
+    "MeetingTime": "17:30 - 19:30 (ET)",
+    "Location": "Overbrook Community Centre<br>Zoom & in-person hybrid meetings",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:00 pm",
+    "Location": "975 Rue des Lys, Sherbrooke,  QC J1E 3N5<br>Lien zoom sur demande",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "1st & 3rd Wednesday",
+    "MeetingTime": "7:00PM",
+    "Location": "Bridlewood Manor",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "5:45 pm",
+    "Location": "McGill University",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "07:15 - 08:30 EDT",
+    "Location": "Reunion en ligne/ Online Meeting ",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "7:30PM to 9:30PM",
+    "Location": "Briarwood Presbyterian Church<br>70  Beaconsfield Boulevard, Beaconsfield, QC  H9W 3Z3",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "12:00 pm",
+    "Location": "MS Teams Meetings On-Line Only.<br>Bombardier Administration",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "2nd & 4th Wednesday",
+    "MeetingTime": "6:30 pm",
+    "Location": "Online via Zoom",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Mercredi et Jeudi",
+    "MeetingTime": "18h30 pm et 7:00 am",
+    "Location": "825 Lebourgneuf, bureau 500",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursdays",
+    "MeetingTime": "7:00 p.m.",
+    "Location": "The Royal Canadian Legion, Bells Corners",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "6:45 pm",
+    "Location": "Virtual / Hybrid Online<br>Contact us for Zoom / Hybrid Details Ottawa, ON  Canada",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Jeudi/Thursday",
+    "MeetingTime": "12 noon/midi",
+    "Location": "Rencontres virtuelles / Virtual meeting<br>https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "7:15 am",
+    "Location": "Virtual meetings<br>3rd Floor, Room 0-083",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Mondays",
+    "MeetingTime": "12:05  pm - 1 p.m.",
+    "Location": "Online over Zoom<br>Occasional In person meeting  ",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "7:30 pm",
+    "Location": "Sarto Desnoyers Community Ctr",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Friday",
+    "MeetingTime": "7:00 am to 8:30 am ",
+    "Location": "Online Via Zoom - English Speaking Club<br>Last Friday of month: at Cora Dejeuners, 1020 Rte de l'Eglise, St-Foy, Quebec",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday virtually",
+    "MeetingTime": "7:00 pm",
+    "Location": " Virtual<br> ",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Mardi",
+    "MeetingTime": "18h45",
+    "Location": "130, 25e Avenue Saint-Eustache J7P 2V2<br>Club Optimiste de Saint-Eustache ",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Jeudi soir (de septembre à mai)",
+    "MeetingTime": "19 h 00",
+    "Location": " Point de service Emile-Loranger<br>Présentiel : Point de service Émile-Loranger (presbytère)",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "6:30 pm",
+    "Location": "Room MB4.206<br>John Molson Building, Concordia University",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Friday (GAC workers only)",
+    "MeetingTime": "12:00 pm",
+    "Location": "Global Affairs Canada",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "4:45 pm (EST)",
+    "Location": "https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER<br>https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "12:00 pm EST",
+    "Location": "Online. Click \"Contact Club\" above to <br>register and receive a Zoom link. ",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Friday",
+    "MeetingTime": "11:05 a.m to 11:55 a.m. ET",
+    "Location": "EDC Ottawa Toastmasters meets virtually",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "6:00 pm",
+    "Location": "CN Building Lobby",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Mercredi soir (de septembre à mai)",
+    "MeetingTime": "19 h 00",
+    "Location": "Zoom : Contactez-nous pour avoir le lien<br>En salle : ",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "12:05 p.m.",
+    "Location": "Chalk River Laboratories<br>Building 350",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:20 pm",
+    "Location": "Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:30 pm",
+    "Location": "Centre Communautaire Marcel Morin<br>(temporarily closed: 2026 flooding)",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Mercredi",
+    "MeetingTime": "19h00",
+    "Location": "Café du Mille-Lieux<br>Hybride (lien sur demande)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Every Thursday",
+    "MeetingTime": "1:00 pm",
+    "Location": "GoC <br>(Online since April 2020)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday ",
+    "MeetingTime": "6:50 pm",
+    "Location": "Centre Montmartre<br>Porte et stationnement à l'arrière - salle Saint-Vallier",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Friday",
+    "MeetingTime": "12h30 - 13h30",
+    "Location": "Pratt & Whitney Canada Plant 1, WW2<br>https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Victoria Hall, 2nd floor",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": " 1st & 3rd Sat - refer to website ",
+    "MeetingTime": "9:30 a.m.",
+    "Location": "Sandy Hill Community Centre<br>Boardroom, Lower Level",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "6:30 pm",
+    "Location": "Hybrid  and online.<br>(We meet in person the last two Tuesdays of the month. All other meetings are virtual.) ",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "12:00 pm Eastern Time (UTC -4 or UTC-5) ",
+    "Location": "Teams- contact the club for link<br>Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Saturday 1st and 3rd of each month",
+    "MeetingTime": "9:00 am  EST",
+    "Location": "3700 Griffith, St. Laurent and Via Zoom<br>Meeting place in-person to be determined",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "6:45 pm",
+    "Location": "Kanata Seniors Centre",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:30 pm",
+    "Location": "St-Mary's Church - Parish Hall (lower)<br>See Directions at: https://example.toastmastersclubs.org/",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "1st & 3rd Thursday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Raina Mall, Sanders Street Entrance <br>Next to Sigma Computers",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "5:00 pm",
+    "Location": "Hybrid meetings - Email us for details!<br>email club-contact@example.org to get venue location and MS Teams invite",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "5:15 pm",
+    "Location": "Ottawa Public Library - Main Branch<br>IDRC",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Parc Coubertin (Home)",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "12:05 pm",
+    "Location": "Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "mercredi",
+    "MeetingTime": "19:30 pm",
+    "Location": "Ecole du milieu de Levis<br>Stationnement a l'arriere",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Saturday",
+    "MeetingTime": "8:00 am",
+    "Location": "Centre Communautaire Scout de Saint-Hubert",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "2nd & 4th Monday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Minto Recreation Complex<br>Echo Room",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:30 p.m.",
+    "Location": "UQO - Pavillon Alexandre-Taché<br> (ET en alternance avec des runions en ligne viia ZOOM)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "7:30 pm - 9:00 pm",
+    "Location": "IN PERSON: 1st and 3rd Thursday<br>ONLINE: 2nd and 4th Thursday",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tues.",
+    "MeetingTime": "12:00 p.m.",
+    "Location": "Public service building<br>local 3.385",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "12:00 pm",
+    "Location": "Meets online only (Virtually via Zoom)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:00 am",
+    "Location": "Montreal",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "2nd & 4th Tuesdays, Monthly",
+    "MeetingTime": "6:30 pm",
+    "Location": "Barley Mow, Westboro<br> ",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Wednesdays",
+    "MeetingTime": "08:00 am",
+    "Location": "Junior Ranks Mess<br>CFB Kingston",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Briarwood Presbyterian Church, <br>70 Beasoncsfield Blvd, Beaconsfield H9W 3Z3",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Wednesday (mercredi)",
+    "MeetingTime": "6:30 h pm à 8:30 h pm",
+    "Location": "IGA extra",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Every other Wed-Contact club for details",
+    "MeetingTime": "12:00 pm",
+    "Location": "Canada Mortgage Housing Corporation",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesdays",
+    "MeetingTime": "7PM-weekly alternating virtual/in-person",
+    "Location": "Salle du Monastere<br>5th floor",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "6:00 pm - 7:30 pm",
+    "Location": "SUSPENDED<br>Basement",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "1st and 3rd Wednesday",
+    "MeetingTime": "4:30 pm - 5:45 pm",
+    "Location": "Meets online only",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Second Wednesday",
+    "MeetingTime": "12:00 pm",
+    "Location": "Agriculture and Agri-Food Canada, and <br>Canadian Food Inspection Agency",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursdays",
+    "MeetingTime": "7 pm -  9 pm",
+    "Location": "In person meeting<br>Online meeting once a month",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "7:00 pm to 8:45pm",
+    "Location": "Southpointe Community Centre",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "1st & 3rd Tuesday",
+    "MeetingTime": "5:45 pm",
+    "Location": "Currently meeting online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wed. / Mercredi",
+    "MeetingTime": "7:00 pm to 9:00 PM",
+    "Location": "Centre Laurent-Venne<br>\"Les Communicateurs éloquents de Lanaudière\"",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "noon EST/EDT UTC- 4 (opens at 11:45am)",
+    "Location": "VIRTUAL:   ONLINE <br>Contact us for Zoom Details Ottawa, ON Canada",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Un samedi sur deux",
+    "MeetingTime": "14h @ UTC-5",
+    "Location": "Exlusivement via Zoom<br>Online meetings: https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday evenings",
+    "MeetingTime": "6:30 pm",
+    "Location": "Meetings on Zoom with in-person events<br>Will not meet Dec. 24 or 31, 2024",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thurs.",
+    "MeetingTime": "6:30 pm (1hr meetings) ",
+    "Location": "Currently ZOOM meetings  ",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "most Mondays (check webpage)",
+    "MeetingTime": "1 p.m. EST",
+    "Location": "Online only<br>See website for Zoom contact",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "6:15 pm",
+    "Location": "680, rue Sherbrooke Ouest<br>Montreal",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "7:30 pm, link opens 7:15PM",
+    "Location": "National Printing Bureau / Imprimerie na<br>MS Team, hybrid about once a month",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "12:00 pm",
+    "Location": "Future Electronics",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "7:00 pm to 9:00 pm",
+    "Location": "Paroisse Saint-Sebastien<br>Ou en ligne (valider)/Or on line (please check with the club)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "12:00 pm",
+    "Location": "Statistics Canada",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesdays (meeting virtually)",
+    "MeetingTime": "12:00 to 1:00 pm",
+    "Location": "Place Vincent Massey<br>currently meeting virtually",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "1st & 3rd Tuesdays of the month",
+    "MeetingTime": "6:00 PM (EST)",
+    "Location": "https://example.toastmastersclubs.org/<br>4th floor, Blue Section, Esdras-Minville Meeting Room",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Mondays",
+    "MeetingTime": "18:30 - 20:00  Ottawa EST",
+    "Location": "Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Mardi",
+    "MeetingTime": "19 h",
+    "Location": "Maison des associations<br> Local 102,rez-de-chaussee",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Pavillon Jordi-Bonet<br>salle Louis-Philippe-Martin",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Friday",
+    "MeetingTime": "12:05 pm - 1:00 pm",
+    "Location": "IBM Canada",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "2nd Friday of each month",
+    "MeetingTime": "6:30 pm",
+    "Location": "A different restaurant each month",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Wed.",
+    "MeetingTime": "7:00 p.m",
+    "Location": "Pavillion Palasis-Prince - Rm. 1609<br>Pavillon Alphonse-Desjardins",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "7:00 PM",
+    "Location": "Centre communautaire le Sorbier <br>In person and online meetings. Please contact us.",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "6:30 pm",
+    "Location": "YWCA ",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Cégep Trois-Rivières, local SA-3110",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "2nd (Virtual) and 4th (Hybrid) Thursday",
+    "MeetingTime": "7:00 pm - 9:00 pm",
+    "Location": "Richcraft Recreation Complex<br>Zoom (Please contact club-contact@example.org to RSVP)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Monday",
+    "MeetingTime": "7:30 pm",
+    "Location": "1960 Chemin Ste Ang, Saint-Lazare /City <br>1960 Chemin Ste Ang, Saint-Lazare /City Hall",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursdays (Bi-weekly)",
+    "MeetingTime": "7:00 pm - 8:40 pm  EST",
+    "Location": "Q West Condos Meeting Room (Hybrid)<br>Guests, please contact the club to come meet us!",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "6:55 am - 8:00 am",
+    "Location": "Cafe Church Kingston<br>Suite 200 (entry by Queen Street)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday ",
+    "MeetingTime": "7:00 pm - 8:30 pm",
+    "Location": "Adult Learning and Training Center<br>Upstairs Boardroom with elevator access",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesdays",
+    "MeetingTime": "11:45 am - 1pm",
+    "Location": "St. Lawrence College - Room 13040<br>Contact club for Zoom meeting information",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday (1st and 3rd)",
+    "MeetingTime": "18:30 - 20:00",
+    "Location": "Aspira Bearbrook Retirement Living",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:00 PM",
+    "Location": "Centre communautaire Jean-Paul Campeau<br>Room 101",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "2nd and 4th Friday",
+    "MeetingTime": "9:30 am",
+    "Location": "Hybrid meeting Zoom and<br>1274 Cafe - Best Western Plus (across from Westgate Mall)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesdays",
+    "MeetingTime": "7:00 PM",
+    "Location": "Stittsville United Church<br>Use green door entrance, church basement",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "2nd and 4th Thursday ",
+    "MeetingTime": "7:00 - 8:45 p.m.",
+    "Location": "Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "12:00 p.m.",
+    "Location": "OAG",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "First and Third Saturdays",
+    "MeetingTime": "9:30-11:30 AM Eastern - UTC-5 | -4DT",
+    "Location": "https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER<br>https://example.toastmastersclubs.org/",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesdays",
+    "MeetingTime": "12:00pm",
+    "Location": "CAE Sim Cafe, 1G22<br>Online, contact us for the MS Teams private link",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "12:00 noon",
+    "Location": "https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER<br>Collab Space (in-person quarterly)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Twice a month - Thursday - No guests",
+    "MeetingTime": "6:45 - 8:15 p.m.",
+    "Location": "Multiple locations including HEC MTL<br>Corporate Club, membership is strictly  restricted to Executive MBA McGill-HEC Montréal graduates and participants. .  ",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "12:00pm",
+    "Location": "Kinaxis HQ",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "Noon",
+    "Location": "BNP Paribas Canada",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "12:00",
+    "Location": "90 Elgin Street",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursdays",
+    "MeetingTime": "5:30 PM",
+    "Location": "QCPU Boardroom - Biosciences Building <br>Queen's University",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "2nd and 4th Thursday",
+    "MeetingTime": "7:00PM-8:00PM Zoom opens at 6:45pm",
+    "Location": " Meeting Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Every Second Monday",
+    "MeetingTime": "12:00 - 12:40 PM",
+    "Location": "BMS Canada Head Office<br>Hybrid",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "6:30 - 8:00 PM",
+    "Location": "Réunion en ligne depuis le Covid-19",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "12:00",
+    "Location": "Bells Corner Complex",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Mercredi",
+    "MeetingTime": "12:00 - 1:00 PM",
+    "Location": "Banque Nationale du Canada",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "12:00",
+    "Location": "JSI",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "12:00 - 13:00 PM",
+    "Location": "Bank of Canada",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Mercredi au 2 semaine",
+    "MeetingTime": "12:00 - 13:00",
+    "Location": "Reunion en personne et hybride sur Teams<br>(seulement pour les employes de Desjardins)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "12:00",
+    "Location": "Contact us",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Thursdays",
+    "MeetingTime": "12:00 - 1:00 PM",
+    "Location": "Ericsson Canada",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "18:45",
+    "Location": "Online (every week)<br>Richcraft Recreation Complex (3rd week of the month, September to June)",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "2nd & 4th Mondays monthly",
+    "MeetingTime": "6:00 PM",
+    "Location": "KEYS Employment & Newcomer Services <br>KEYS JOB CENTRE",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "1st & 3rd Saturdays, skip holidays",
+    "MeetingTime": "11:00 am",
+    "Location": "Online only: greenTMvert.ca<br>NOT in person at City Hall!",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "3rd Monday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "1st & 3rd Tuesdays",
+    "MeetingTime": "12:00 PM",
+    "Location": "PBI Conseillers",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "1st & 3rd Tuesday",
+    "MeetingTime": "12:00 pm",
+    "Location": "Morgan Stanley Offices, Montreal",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Tuesday",
+    "MeetingTime": "7:00 pm",
+    "Location": "Kanata Muslim Association (Pool Room)<br>Jami Omar Masjid (Library)",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "1st & 3rd Wednesday",
+    "MeetingTime": "9:30 am - 10:30 am",
+    "Location": "Montreal General Hospital<br>L7-140",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Tuesdays",
+    "MeetingTime": "3:00 pm",
+    "Location": "Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesdays",
+    "MeetingTime": "7:00 PM",
+    "Location": "Drummond Économique",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Tuesday & Wednesday",
+    "MeetingTime": "9:00 am",
+    "Location": "Fonds de Solidarite FTQ",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": null,
+    "MeetingTime": null,
+    "Location": "Online",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesday",
+    "MeetingTime": "6:00 PM",
+    "Location": "NDG Community Council / PROMODEV<br>Zoom",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Wednesdays",
+    "MeetingTime": "7:30 AM",
+    "Location": "Espace Ax.c<br>3rd floor / 3e etage",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Thursdays",
+    "MeetingTime": "12:00 PM",
+    "Location": "iA Groupe Financier",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": null,
+    "MeetingTime": null,
+    "Location": "Yak Youth Services hub.<br>Boardroom",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "2nd & 4th Saturdays",
+    "MeetingTime": "12:00 pm",
+    "Location": "University of Montreal",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": null,
+    "MeetingTime": null,
+    "Location": null,
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": null,
+    "MeetingTime": null,
+    "Location": "To be determined",
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": null,
+    "MeetingTime": null,
+    "Location": null,
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": "Alternating Tuesdays/Thursdays",
+    "MeetingTime": "12:00 pm",
+    "Location": "1500",
+    "AllowsVirtualAttendance": true
+  },
+  {
+    "MeetingDay": null,
+    "MeetingTime": null,
+    "Location": null,
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": null,
+    "MeetingTime": null,
+    "Location": null,
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": "Thursday",
+    "MeetingTime": "12:00 pm",
+    "Location": null,
+    "AllowsVirtualAttendance": false
+  },
+  {
+    "MeetingDay": null,
+    "MeetingTime": null,
+    "Location": null,
+    "AllowsVirtualAttendance": true
+  }
+]

@@ -1,0 +1,623 @@
+/**
+ * #1789 — FAC Location is kept (scrubbed) and meetingSchedule[] is parsed
+ * from the free-text MeetingDay / MeetingTime / Location.
+ *
+ * The table cases are the RECORDED D61 vocabulary (raw-fac/2026-10-12,
+ * fixtures/fac-d61-2026-10-12); the fixture-wide cases run every recorded
+ * row through the parser and the scrubber.
+ */
+import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { MeetingScheduleEntrySchema } from '@taverns-red/shared-contracts'
+import {
+  parseMeetingSchedule,
+  scrubFacLocation,
+  meetingModeFromText,
+} from '../FacMeetingSchedule.js'
+
+interface VocabRow {
+  MeetingDay: string | null
+  MeetingTime: string | null
+  Location: string | null
+  AllowsVirtualAttendance: boolean | null
+}
+
+const vocabulary: VocabRow[] = JSON.parse(
+  readFileSync(
+    join(__dirname, 'fixtures/fac-d61-2026-10-12/meeting-vocabulary.json'),
+    'utf-8'
+  )
+)
+
+/** No email, URL, meeting host, credential or 7+ digit phone-like run. */
+function assertNoContactOrAccess(text: string): void {
+  expect(text).not.toMatch(/@/)
+  expect(text).not.toMatch(/https?:|www\./i)
+  expect(text).not.toMatch(/zoom\.us|teams\.microsoft|meet\.google/i)
+  expect(text).not.toMatch(/pwd|passcode|password|mtg\s*id|meeting\s*id/i)
+  const digitRuns = text.match(/\+?\(?\d[\d ().-]*\d/g) ?? []
+  for (const run of digitRuns) {
+    expect(run.replace(/\D/g, '').length).toBeLessThan(7)
+  }
+}
+
+describe('scrubFacLocation (#1789)', () => {
+  it.each([
+    ['Online', 'Online'],
+    ['Sandy Hill Community Center', 'Sandy Hill Community Center'],
+    [
+      'OPG Saunders Hydro Dam Visitor Centre<br>2500 Second St W, Cornwall, ON K6H 5R6',
+      'OPG Saunders Hydro Dam Visitor Centre\n2500 Second St W, Cornwall, ON K6H 5R6',
+    ],
+    [
+      'Scotia Bank Building <br>8th Floor (use elevator)',
+      'Scotia Bank Building\n8th Floor (use elevator)',
+    ],
+    ['Barley Mow, Westboro<br> ', 'Barley Mow, Westboro'],
+    ["Restaurant L'Ambroisie (TEL: 555-0100)", "Restaurant L'Ambroisie"],
+    [
+      'ZOOM -contact club-contact@example.org<br>ZOOM - contact club-contact@example.org for link',
+      'ZOOM -contact\nZOOM - contact for link',
+    ],
+    [
+      'Rencontres virtuelles / Virtual meeting<br>https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER',
+      'Rencontres virtuelles / Virtual meeting',
+    ],
+    [
+      'Exlusivement via Zoom<br>Online meetings: https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER',
+      'Exlusivement via Zoom\nOnline meetings',
+    ],
+    [
+      "St-Mary's Church - Parish Hall (lower)<br>See Directions at: https://example.toastmastersclubs.org/",
+      "St-Mary's Church - Parish Hall (lower)\nSee Directions at",
+    ],
+    [
+      'Richcraft Recreation Complex<br>Zoom (Please contact club-contact@example.org to RSVP)',
+      'Richcraft Recreation Complex\nZoom (Please contact to RSVP)',
+    ],
+    // Synthetic shapes the recorded day does not contain.
+    ['Room 4, MtgID: 000 0000 000 Passcode: 000000', 'Room 4'],
+    ['Call +1 (555) 010-0199 for the room', 'Call for the room'],
+    ['Library<br>zoom.us/j/00000000000', 'Library'],
+    ['Hall<br>Password = abc123', 'Hall'],
+  ])('%j → %j', (raw, expected) => {
+    expect(scrubFacLocation(raw)).toBe(expected)
+  })
+
+  it.each([
+    [
+      'https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER<br>https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER',
+    ],
+    ['  '],
+    ['<br>'],
+  ])('returns undefined when nothing public is left: %j', raw => {
+    expect(scrubFacLocation(raw)).toBeUndefined()
+  })
+
+  it('returns undefined for a missing Location', () => {
+    expect(scrubFacLocation(null)).toBeUndefined()
+    expect(scrubFacLocation(undefined)).toBeUndefined()
+  })
+
+  it('leaves no contact detail or meeting access in any recorded D61 Location', () => {
+    for (const row of vocabulary) {
+      const scrubbed = scrubFacLocation(row.Location)
+      if (scrubbed !== undefined) assertNoContactOrAccess(scrubbed)
+    }
+  })
+})
+
+describe('meetingModeFromText (#1789)', () => {
+  it.each([
+    ['Online', 'online'],
+    ['Online via Zoom', 'online'],
+    ['MS Teams Meetings On-Line Only.\nBombardier Administration', 'online'],
+    ['Statistics Canada\nNote: Online meetings', 'online'],
+    ['Réunion en ligne depuis le Covid-19', 'online'],
+    ['EDC Ottawa Toastmasters meets virtually', 'online'],
+    ['South Fallingbrook Community Center\nOnline - Hybrid', 'hybrid'],
+    ['Overbrook Community Centre\nZoom & in-person hybrid meetings', 'hybrid'],
+    ['Café du Mille-Lieux\nHybride (lien sur demande)', 'hybrid'],
+    ['Online over Zoom\nOccasional In person meeting', 'hybrid'],
+    ['Reunion en personne et hybride sur Teams', 'hybrid'],
+    ['Sandy Hill Community Center', 'in-person'],
+    [
+      ' Point de service Emile-Loranger\nPrésentiel : Point de service Émile-Loranger (presbytère)',
+      'in-person',
+    ],
+  ])('location %j → %s', (text, mode) => {
+    expect(meetingModeFromText(text, { place: true })).toBe(mode)
+  })
+
+  it.each([['Contact us'], ['To be determined'], ['1500'], ['']])(
+    'location %j carries no mode signal',
+    text => {
+      expect(meetingModeFromText(text, { place: true })).toBeUndefined()
+    }
+  )
+
+  it('a plain day/time text with no mode word carries no signal', () => {
+    expect(meetingModeFromText('Tuesday 7:00 pm')).toBeUndefined()
+    expect(meetingModeFromText('Thursday - Virtual')).toBe('online')
+    expect(
+      meetingModeFromText('7PM-weekly alternating virtual/in-person')
+    ).toBe('hybrid')
+  })
+})
+
+describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
+  it.each([
+    [
+      'Tuesday',
+      '7:30 pm',
+      [{ day: 'Tuesday', cadence: 'weekly', startTime: '19:30' }],
+    ],
+    [
+      'Tuesdays',
+      '6:30 p.m.',
+      [{ day: 'Tuesday', cadence: 'weekly', startTime: '18:30' }],
+    ],
+    [
+      'Tues.',
+      '12:00 p.m.',
+      [{ day: 'Tuesday', cadence: 'weekly', startTime: '12:00' }],
+    ],
+    [
+      'Fri',
+      '12:00 - 1:00 p.m. (EST)',
+      [
+        {
+          day: 'Friday',
+          cadence: 'weekly',
+          startTime: '12:00',
+          endTime: '13:00',
+        },
+      ],
+    ],
+    [
+      'Monday',
+      '18:45 pm',
+      [{ day: 'Monday', cadence: 'weekly', startTime: '18:45' }],
+    ],
+    [
+      'Jeudi',
+      '19:00 pm',
+      [{ day: 'Thursday', cadence: 'weekly', startTime: '19:00' }],
+    ],
+    [
+      'Mardi',
+      '18h45',
+      [{ day: 'Tuesday', cadence: 'weekly', startTime: '18:45' }],
+    ],
+    [
+      'Jeudi soir (de septembre à mai)',
+      '19 h 00',
+      [{ day: 'Thursday', cadence: 'weekly', startTime: '19:00' }],
+    ],
+    [
+      'Mardi',
+      '19 h',
+      [{ day: 'Tuesday', cadence: 'weekly', startTime: '19:00' }],
+    ],
+    [
+      'Friday',
+      '12h30 - 13h30',
+      [
+        {
+          day: 'Friday',
+          cadence: 'weekly',
+          startTime: '12:30',
+          endTime: '13:30',
+        },
+      ],
+    ],
+    [
+      'Wednesday (mercredi)',
+      '6:30 h pm à 8:30 h pm',
+      [
+        {
+          day: 'Wednesday',
+          cadence: 'weekly',
+          startTime: '18:30',
+          endTime: '20:30',
+        },
+      ],
+    ],
+    [
+      'Wednesday',
+      '07:15 - 08:30 EDT',
+      [
+        {
+          day: 'Wednesday',
+          cadence: 'weekly',
+          startTime: '07:15',
+          endTime: '08:30',
+        },
+      ],
+    ],
+    [
+      'Tuesdays',
+      '12:00 - 13:00 PM',
+      [
+        {
+          day: 'Tuesday',
+          cadence: 'weekly',
+          startTime: '12:00',
+          endTime: '13:00',
+        },
+      ],
+    ],
+    [
+      'Friday',
+      '11:05 a.m to 11:55 a.m. ET',
+      [
+        {
+          day: 'Friday',
+          cadence: 'weekly',
+          startTime: '11:05',
+          endTime: '11:55',
+        },
+      ],
+    ],
+    [
+      'Tuesday',
+      'noon EST/EDT UTC- 4 (opens at 11:45am)',
+      [{ day: 'Tuesday', cadence: 'weekly', startTime: '12:00' }],
+    ],
+    [
+      'Jeudi/Thursday',
+      '12 noon/midi',
+      [{ day: 'Thursday', cadence: 'weekly', startTime: '12:00' }],
+    ],
+    [
+      'Thursday',
+      '7:30 pm, link opens 7:15PM',
+      [{ day: 'Thursday', cadence: 'weekly', startTime: '19:30' }],
+    ],
+    [
+      'Thurs.',
+      '6:30 pm (1hr meetings) ',
+      [{ day: 'Thursday', cadence: 'weekly', startTime: '18:30' }],
+    ],
+    [
+      'Mondays',
+      '12:05  pm - 1 p.m.',
+      [
+        {
+          day: 'Monday',
+          cadence: 'weekly',
+          startTime: '12:05',
+          endTime: '13:00',
+        },
+      ],
+    ],
+    [
+      'Thursdays',
+      '7 pm -  9 pm',
+      [
+        {
+          day: 'Thursday',
+          cadence: 'weekly',
+          startTime: '19:00',
+          endTime: '21:00',
+        },
+      ],
+    ],
+    [
+      'Tuesdays',
+      '12:00',
+      [{ day: 'Tuesday', cadence: 'weekly', startTime: '12:00' }],
+    ],
+    [
+      'First and Third Saturdays',
+      '9:30-11:30 AM Eastern - UTC-5 | -4DT',
+      [
+        {
+          day: 'Saturday',
+          cadence: 'monthly',
+          weeksOfMonth: [1, 3],
+          startTime: '09:30',
+          endTime: '11:30',
+        },
+      ],
+    ],
+    [
+      '1st, 3rd & 5th Tuesday of each month',
+      '7:00 pm - 9:00 pm (ET)',
+      [
+        {
+          day: 'Tuesday',
+          cadence: 'monthly',
+          weeksOfMonth: [1, 3, 5],
+          startTime: '19:00',
+          endTime: '21:00',
+        },
+      ],
+    ],
+    [
+      'Saturday 1st and 3rd of each month',
+      '9:00 am  EST',
+      [
+        {
+          day: 'Saturday',
+          cadence: 'monthly',
+          weeksOfMonth: [1, 3],
+          startTime: '09:00',
+        },
+      ],
+    ],
+    [
+      'Thursday (1st and 3rd)',
+      '18:30 - 20:00',
+      [
+        {
+          day: 'Thursday',
+          cadence: 'monthly',
+          weeksOfMonth: [1, 3],
+          startTime: '18:30',
+          endTime: '20:00',
+        },
+      ],
+    ],
+    [
+      'Second Wednesday',
+      '12:00 pm',
+      [
+        {
+          day: 'Wednesday',
+          cadence: 'monthly',
+          weeksOfMonth: [2],
+          startTime: '12:00',
+        },
+      ],
+    ],
+    [
+      '2nd & 4th Tuesdays, Monthly',
+      '6:30 pm',
+      [
+        {
+          day: 'Tuesday',
+          cadence: 'monthly',
+          weeksOfMonth: [2, 4],
+          startTime: '18:30',
+        },
+      ],
+    ],
+    [
+      'Every Second Monday',
+      '12:00 - 12:40 PM',
+      [
+        {
+          day: 'Monday',
+          cadence: 'biweekly',
+          startTime: '12:00',
+          endTime: '12:40',
+        },
+      ],
+    ],
+    [
+      'Thursdays (Bi-weekly)',
+      '7:00 pm - 8:40 pm  EST',
+      [
+        {
+          day: 'Thursday',
+          cadence: 'biweekly',
+          startTime: '19:00',
+          endTime: '20:40',
+        },
+      ],
+    ],
+    [
+      'Un samedi sur deux',
+      '14h @ UTC-5',
+      [{ day: 'Saturday', cadence: 'biweekly', startTime: '14:00' }],
+    ],
+    [
+      'Mercredi au 2 semaine',
+      '12:00 - 13:00',
+      [
+        {
+          day: 'Wednesday',
+          cadence: 'biweekly',
+          startTime: '12:00',
+          endTime: '13:00',
+        },
+      ],
+    ],
+    [
+      'Alternating Tuesdays/Thursdays',
+      '12:00 pm',
+      [
+        { day: 'Tuesday', cadence: 'biweekly', startTime: '12:00' },
+        { day: 'Thursday', cadence: 'biweekly', startTime: '12:00' },
+      ],
+    ],
+    [
+      'Tuesday & Wednesday',
+      '9:00 am',
+      [
+        { day: 'Tuesday', cadence: 'weekly', startTime: '09:00' },
+        { day: 'Wednesday', cadence: 'weekly', startTime: '09:00' },
+      ],
+    ],
+    [
+      'Mercredi et Jeudi',
+      '18h30 pm et 7:00 am',
+      [
+        { day: 'Wednesday', cadence: 'weekly', startTime: '18:30' },
+        { day: 'Thursday', cadence: 'weekly', startTime: '07:00' },
+      ],
+    ],
+    // The day is known but not how often: cadence is left out, not guessed.
+    [
+      'Twice a month - Thursday - No guests',
+      '6:45 - 8:15 p.m.',
+      [{ day: 'Thursday', startTime: '18:45', endTime: '20:15' }],
+    ],
+    [
+      'most Mondays (check webpage)',
+      '1 p.m. EST',
+      [{ day: 'Monday', startTime: '13:00' }],
+    ],
+  ])('%j / %j', (meetingDay, meetingTime, expected) => {
+    expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual(expected)
+  })
+
+  it('splits per-week modes: "Wed.1st and 3rd in person  (2nd online) "', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Wed.1st and 3rd in person  (2nd online) ',
+        meetingTime: '7:30 pm',
+        location:
+          'Trillium Centre\nIn Person for 1st and 3rd Wednesdays - Online 2nd Wednesdays',
+      })
+    ).toEqual([
+      {
+        day: 'Wednesday',
+        cadence: 'monthly',
+        weeksOfMonth: [1, 3],
+        startTime: '19:30',
+        mode: 'in-person',
+      },
+      {
+        day: 'Wednesday',
+        cadence: 'monthly',
+        weeksOfMonth: [2],
+        startTime: '19:30',
+        mode: 'online',
+      },
+    ])
+  })
+
+  it('splits per-week modes: "2nd (Virtual) and 4th (Hybrid) Thursday"', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: '2nd (Virtual) and 4th (Hybrid) Thursday',
+        meetingTime: '7:00 pm - 9:00 pm',
+      })
+    ).toEqual([
+      {
+        day: 'Thursday',
+        cadence: 'monthly',
+        weeksOfMonth: [2],
+        startTime: '19:00',
+        endTime: '21:00',
+        mode: 'online',
+      },
+      {
+        day: 'Thursday',
+        cadence: 'monthly',
+        weeksOfMonth: [4],
+        startTime: '19:00',
+        endTime: '21:00',
+        mode: 'hybrid',
+      },
+    ])
+  })
+
+  it('a mode word in the day or time text beats the location', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every Friday - online',
+        meetingTime: '12:15 pm',
+        location: 'Sandy Hill Community Center',
+      })
+    ).toEqual([
+      { day: 'Friday', cadence: 'weekly', startTime: '12:15', mode: 'online' },
+    ])
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Wednesdays',
+        meetingTime: '7PM-weekly alternating virtual/in-person',
+        location: 'Salle du Monastere\n5th floor',
+      })
+    ).toEqual([
+      {
+        day: 'Wednesday',
+        cadence: 'weekly',
+        startTime: '19:00',
+        mode: 'hybrid',
+      },
+    ])
+  })
+
+  it('falls back to the location for the mode', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Thursday',
+        meetingTime: '12:00 pm',
+        location: 'Online',
+      })
+    ).toEqual([
+      {
+        day: 'Thursday',
+        cadence: 'weekly',
+        startTime: '12:00',
+        mode: 'online',
+      },
+    ])
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Monday',
+        meetingTime: '7:00 pm',
+        location: 'College Saint-Charles-Garnier',
+      })
+    ).toEqual([
+      {
+        day: 'Monday',
+        cadence: 'weekly',
+        startTime: '19:00',
+        mode: 'in-person',
+      },
+    ])
+  })
+
+  it('leaves an ambiguous bare 12-hour time out rather than guess am/pm', () => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Monday', meetingTime: '6:30' })
+    ).toEqual([{ day: 'Monday', cadence: 'weekly' }])
+  })
+
+  it.each([
+    ['https://example.toastmastersclubs.org/', '6:30 pm'],
+    [null, null],
+    [undefined, '7:00 pm'],
+    ['', ''],
+  ])('no weekday in %j → no schedule (counted unknown downstream)', (d, t) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: d, meetingTime: t })
+    ).toBeUndefined()
+  })
+})
+
+describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
+  const WEEKDAY_WORD =
+    /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
+
+  it('every entry validates against the strict shared-contracts schema', () => {
+    for (const row of vocabulary) {
+      const schedule = parseMeetingSchedule({
+        meetingDay: row.MeetingDay,
+        meetingTime: row.MeetingTime,
+        location: scrubFacLocation(row.Location),
+      })
+      for (const entry of schedule ?? []) {
+        expect(MeetingScheduleEntrySchema.safeParse(entry).success).toBe(true)
+      }
+    }
+  })
+
+  it('every row whose day text names a weekday yields a schedule', () => {
+    const misses = vocabulary.filter(
+      row =>
+        row.MeetingDay !== null &&
+        WEEKDAY_WORD.test(row.MeetingDay) &&
+        parseMeetingSchedule({
+          meetingDay: row.MeetingDay,
+          meetingTime: row.MeetingTime,
+        }) === undefined
+    )
+    expect(misses.map(r => r.MeetingDay)).toEqual([])
+  })
+})
