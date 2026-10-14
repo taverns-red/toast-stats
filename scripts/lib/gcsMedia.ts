@@ -16,8 +16,10 @@
  * GET), matching the SDK's retry-request default count.
  */
 
+import { writeFile } from 'node:fs/promises'
 import type { Storage } from '@google-cloud/storage'
 import type { GateBucket } from './promotionContentGateIo.js'
+import type { RankHistoryBucket } from './rankHistoryPull.js'
 
 type RequestOptions = Parameters<Storage['authClient']['request']>[0]
 
@@ -55,8 +57,8 @@ export async function readObjectMedia(
 }
 
 /**
- * The bucket the pre-promotion content gate reads through: SDK listing,
- * non-streaming stored-byte reads.
+ * The bucket the pre-promotion content gate and the per-date completeness
+ * gate read through: SDK listing, non-streaming stored-byte reads.
  */
 export function gateBucket(storage: Storage, bucketName: string): GateBucket {
   const bucket = storage.bucket(bucketName)
@@ -66,6 +68,30 @@ export function gateBucket(storage: Storage, bucketName: string): GateBucket {
       download: async () => [
         await readObjectMedia(storage, bucketName, name, { decompress: false }),
       ],
+    }),
+  }
+}
+
+/**
+ * The bucket the rank-history pull reads through (#2029): SDK listing,
+ * non-streaming reads written to `destination`. `decompress: true` inflates
+ * a gzip-stored object, the same bytes the SDK's default
+ * `download({ destination })` wrote (#1733 verified those with `cmp`).
+ */
+export function rankHistoryBucket(
+  storage: Storage,
+  bucketName: string
+): RankHistoryBucket {
+  const bucket = storage.bucket(bucketName)
+  return {
+    getFiles: query => bucket.getFiles(query) as Promise<unknown[]>,
+    file: name => ({
+      download: async ({ destination }) => {
+        const bytes = await readObjectMedia(storage, bucketName, name, {
+          decompress: true,
+        })
+        await writeFile(destination, bytes)
+      },
     }),
   }
 }

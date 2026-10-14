@@ -28,7 +28,7 @@ import {
   runCompletenessGate,
   type CompletenessGateResult,
 } from './lib/dateCompletenessGate.js'
-import type { GateBucket } from './lib/promotionContentGateIo.js'
+import { gateBucket } from './lib/gcsMedia.js'
 import { manifestSnapshotDates, parseRunManifest } from './lib/runManifest.js'
 
 const DEFAULT_RESULT_FILE = '/tmp/completeness-gate.json'
@@ -59,9 +59,11 @@ async function run(
   const dates = touchedDates()
   log(`[completeness-gate] touched dates: ${dates.join(' ') || '(none)'}`)
   const storage = new Storage()
+  // Non-streaming reads: SDK file.download() logs 2 MaxListeners warnings
+  // per object (#2029, see gcsMedia.ts).
   return runCompletenessGate(
-    storage.bucket(stagingName) as unknown as GateBucket,
-    storage.bucket(prodName) as unknown as GateBucket,
+    gateBucket(storage, stagingName),
+    gateBucket(storage, prodName),
     dates,
     { allowValueChanges, log }
   )
