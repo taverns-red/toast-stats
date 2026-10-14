@@ -13,7 +13,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import React from 'react'
 import { renderHook, waitFor, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
+import type {
+  DistrictClubShard,
+  DistrictReportsDataset,
+} from '@taverns-red/shared-contracts'
 import { useClubAnalytics } from '../useClubAnalytics'
 import type { ClubTrend, DistrictAnalytics } from '../useDistrictAnalytics'
 import {
@@ -51,14 +54,15 @@ const trend = (clubId: string, clubStatus = 'Active'): ClubTrend =>
     clubStatus,
   }) as ClubTrend
 
-const shard = (clubs: ClubTrend[]) => ({
-  _format: { version: '1.0.0', type: 'district-club-shard' as const },
-  snapshotDate: '2026-10-12',
-  districtId: '61',
-  shard: '7' as const,
-  shardCount: 10 as const,
-  clubs,
-})
+const shard = (clubs: ClubTrend[]) =>
+  ({
+    _format: { version: '1.0.0', type: 'district-club-shard' as const },
+    snapshotDate: '2026-10-12',
+    districtId: '61',
+    shard: '7' as const,
+    shardCount: 10 as const,
+    clubs,
+  }) as unknown as DistrictClubShard
 
 const fullFile = (clubs: ClubTrend[]) => ({
   data: {
