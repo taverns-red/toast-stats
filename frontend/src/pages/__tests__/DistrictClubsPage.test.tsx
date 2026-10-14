@@ -34,6 +34,7 @@ import {
   useDistrictAnalytics,
   type ClubTrend,
 } from '../../hooks/useDistrictAnalytics'
+import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import DistrictDetailPage from '../DistrictDetailPage'
@@ -559,5 +560,87 @@ describe('DistrictClubsPage phone rows — open divisions in the URL (#1833)', (
       'aria-expanded',
       'true'
     )
+  })
+})
+
+// #1999: while the snapshot-dates index is still pending, the analytics query
+// is disabled — it reports `isLoading: false` with no data, so `allClubs`
+// collapsed to `[]` and ClubsTable painted its "No club data is available"
+// empty state. Lighthouse then measured LCP on that false empty state. The
+// loading skeleton must hold the slot until the data settles; the empty state
+// only shows once loading has finished with zero clubs.
+describe('DistrictClubsPage loading vs empty state (#1999)', () => {
+  const disabledAnalytics = {
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useDistrictAnalytics>
+
+  beforeEach(() => {
+    vi.mocked(useDistrictAnalytics).mockReset()
+    vi.mocked(useDistrictCachedDates).mockReset()
+  })
+  afterEach(() => {
+    cleanup()
+    vi.mocked(useDistrictAnalytics).mockReset()
+    vi.mocked(useDistrictCachedDates).mockReset()
+  })
+
+  it('shows the loading skeleton, not the empty state, while dates are pending', async () => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: undefined,
+      isPending: true,
+      isLoading: true,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    vi.mocked(useDistrictAnalytics).mockReturnValue(disabledAnalytics)
+
+    renderAt('/district/61/clubs')
+
+    expect(
+      await screen.findByRole('status', { name: /loading table/i })
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/no club data is available/i)).toBeNull()
+  })
+
+  it('shows the loading skeleton while dates are known but analytics has no data yet', async () => {
+    vi.mocked(useDistrictAnalytics).mockReturnValue(disabledAnalytics)
+
+    renderAt('/district/61/clubs')
+
+    expect(
+      await screen.findByRole('status', { name: /loading table/i })
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/no club data is available/i)).toBeNull()
+  })
+
+  it('shows the empty state once loading has finished with zero clubs', async () => {
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      ...disabledAnalytics,
+      data: { allClubs: [], prospectiveClubs: [] },
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    renderAt('/district/61/clubs')
+
+    expect(
+      await screen.findByText(/no club data is available/i)
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: /loading table/i })).toBeNull()
+  })
+
+  it('shows the empty state when the district has no snapshot dates at all', async () => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: { dates: [] },
+      isPending: false,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    vi.mocked(useDistrictAnalytics).mockReturnValue(disabledAnalytics)
+
+    renderAt('/district/61/clubs')
+
+    expect(
+      await screen.findByText(/no club data is available/i)
+    ).toBeInTheDocument()
   })
 })
