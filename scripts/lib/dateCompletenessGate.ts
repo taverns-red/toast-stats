@@ -36,6 +36,7 @@ import {
   readStored,
   type GateBucket,
 } from './promotionContentGateIo.js'
+import { isClubContactKey } from '@taverns-red/shared-contracts'
 import {
   decodeStoredObject,
   type GcsObjectMeta,
@@ -115,14 +116,18 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const num = (v: unknown): number | null =>
   typeof v === 'number' && Number.isFinite(v) ? v : null
 
-/** Keys of the record with the most keys (the best-enriched one). */
+/**
+ * Keys of the record with the most keys (the best-enriched one). The retired
+ * club contact keys (#2026) are left out: writers no longer emit them, so
+ * their absence against a prod object written earlier is not a regression.
+ */
 function richestKeys(records: unknown): string[] {
   if (!Array.isArray(records)) return []
   let best: string[] = []
   for (const r of records) {
-    if (isRecord(r) && Object.keys(r).length > best.length) {
-      best = Object.keys(r)
-    }
+    if (!isRecord(r)) continue
+    const keys = Object.keys(r).filter(k => !isClubContactKey(k))
+    if (keys.length > best.length) best = keys
   }
   return [...best].sort()
 }

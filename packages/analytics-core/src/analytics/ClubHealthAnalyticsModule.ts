@@ -225,12 +225,11 @@ export class ClubHealthAnalyticsModule {
         cspSubmitted: getCSPStatus(club),
         // Find-A-Club enrichment (#503). Propagate any FAC fields the
         // merger wrote onto ClubStatistics. All optional — present
-        // only when FAC matched the club.
+        // only when FAC matched the club. Never the contact email/phone
+        // (#2026): this JSON is promoted and served publicly.
         ...(club.charterDate && { charterDate: club.charterDate }),
         ...(club.coordinates && { coordinates: club.coordinates }),
         ...(club.address && { address: club.address }),
-        ...(club.email && { email: club.email }),
-        ...(club.phone && { phone: club.phone }),
         ...(club.website && { website: club.website }),
         ...(club.facebookLink && { facebookLink: club.facebookLink }),
         ...(club.twitterLink && { twitterLink: club.twitterLink }),

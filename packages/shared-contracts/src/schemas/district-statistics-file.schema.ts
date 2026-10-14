@@ -146,8 +146,6 @@ export const ClubStatisticsFileSchema = z.object({
    */
   coordinates: FacCoordinatesSchema.optional(),
   address: FacAddressSchema.optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
   website: z.string().optional(),
   facebookLink: z.string().optional(),
   twitterLink: z.string().optional(),
@@ -282,9 +280,6 @@ export const ProspectiveClubSchema = z.object({
 
   /** Public club website URL. */
   website: z.string().optional(),
-
-  /** Public club contact email. */
-  email: z.string().optional(),
 
   /** FAC's IsProspective flag — true for clubs in ATO state. */
   isProspective: z.boolean().optional(),

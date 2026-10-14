@@ -37,7 +37,10 @@ import type {
   MetricRankings,
 } from '../types.js'
 import type { AllDistrictsRankingsData } from '@taverns-red/shared-contracts'
-import { detectReformationDiscontinuity } from '@taverns-red/shared-contracts'
+import {
+  detectReformationDiscontinuity,
+  omitClubContactFields,
+} from '@taverns-red/shared-contracts'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
 import { MetricRankingsCalculator } from '../rankings/MetricRankingsCalculator.js'
 import { MembershipAnalyticsModule } from './MembershipAnalyticsModule.js'
@@ -215,7 +218,11 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     // #489 — Prospective clubs are surfaced verbatim from the latest
     // snapshot; they're a directory-style overlay, not an analytics
     // input. Default to [] so the frontend can always assume an array.
-    const prospectiveClubs = latestSnapshot?.prospectiveClubs ?? []
+    // A snapshot written before #2026 may still carry contact fields on
+    // them; they never reach the promoted analytics file.
+    const prospectiveClubs = (latestSnapshot?.prospectiveClubs ?? []).map(
+      omitClubContactFields
+    )
 
     // Build district analytics (base result)
     const districtAnalytics: DistrictAnalytics = {

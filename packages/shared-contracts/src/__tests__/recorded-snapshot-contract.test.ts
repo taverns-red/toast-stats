@@ -85,7 +85,7 @@ describe('recorded live-CDN snapshot — write contract (#1123)', () => {
     )
   })
 
-  it('ClubStatisticsFileSchema preserves the FAC contact/meeting fields on parsed clubs', () => {
+  it('ClubStatisticsFileSchema preserves the FAC meeting fields and drops contact fields (#2026)', () => {
     // Audit §9a gap: phone/website/meetingDay/meetingTime/isProspective are
     // written onto .clubs[] rows by FindAClubMerger but were absent from the
     // schema, so zod silently STRIPPED them from every validating read.
@@ -96,7 +96,9 @@ describe('recorded live-CDN snapshot — write contract (#1123)', () => {
       // Keyed access (not dotted) so this test type-checks at the Red step,
       // before the schema's inferred type carries the new fields.
       const parsed = res.data as Record<string, unknown>
-      expect(parsed['phone']).toBe(club['phone'])
+      // #2026: a legacy file's contact fields are stripped on read.
+      expect(parsed).not.toHaveProperty('phone')
+      expect(parsed).not.toHaveProperty('email')
       expect(parsed['website']).toBe(club['website'])
       expect(parsed['meetingDay']).toBe(club['meetingDay'])
       expect(parsed['meetingTime']).toBe(club['meetingTime'])
