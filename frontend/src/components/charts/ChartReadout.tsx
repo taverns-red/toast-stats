@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import type { TooltipContentProps } from 'recharts'
+import type { TooltipContentProps, MouseHandlerDataParam } from 'recharts'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { parseLocalDate } from '../../utils/dateFormatting'
 
@@ -56,7 +56,16 @@ export interface ChartReadoutHandle {
   reading: ChartReading | null
   /** Spread onto the chart's <Tooltip> after its own props. */
   tooltipProps: TooltipOverride
+  /** Spread onto the Recharts chart element (LineChart, AreaChart). */
+  chartProps: ChartPinProps
+  /** Spread onto the element wrapping the chart (keyboard pin/unpin). */
+  surfaceProps: SurfacePinProps
 }
+
+type ChartPinProps =
+  Record<string, never> | { onClick: (state: MouseHandlerDataParam) => void }
+type SurfacePinProps =
+  Record<string, never> | { onKeyDown: (e: React.KeyboardEvent) => void }
 
 const readingKey = (r: ChartReading) =>
   `${r.label}\u0000${r.rows.map(x => `${x.key}=${x.value}`).join('\u0000')}`
@@ -102,7 +111,7 @@ export function useChartReadout(): ChartReadoutHandle {
     if (!touch) return NO_OVERRIDE
     return { content: <ReadoutReporter onReading={setReading} /> }
   }, [touch])
-  return { touch, reading, tooltipProps }
+  return { touch, reading, tooltipProps, chartProps: {}, surfaceProps: {} }
 }
 
 export interface ChartReadoutProps {
