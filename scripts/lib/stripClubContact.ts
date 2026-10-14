@@ -14,7 +14,8 @@
  * - the JSON text is re-serialized only when one canonical format
  *   reproduces the original exactly (the pipeline writes 2-space JSON, no
  *   trailing newline), so every other byte stays as it was;
- * - the gzip layer count is kept (one, `Content-Encoding: gzip`);
+ * - the gzip layer count is kept (one, `Content-Encoding: gzip`), at the
+ *   original's compression level (level 9 from `gcloud storage cp -Z`);
  * - the object's headers and custom metadata are carried over;
  * - each write is conditional on the generation that was read, so a
  *   concurrent writer wins and this object is reported, not clobbered.
@@ -191,6 +192,18 @@ function decode(stored: Buffer): { text: string; layers: number } {
   return { text: data.toString('utf-8'), layers }
 }
 
+/**
+ * The deflate level matching a gzip member's XFL byte (RFC 1952): 2 is
+ * maximum compression, which `gcloud storage cp -Z` writes; 4 is fastest.
+ * Matching it keeps a rewritten object the size of the original.
+ */
+function gzipLevel(stored: Buffer): number {
+  const xfl = stored.length > 9 ? stored[8] : undefined
+  if (xfl === 2) return 9
+  if (xfl === 4) return 1
+  return 6
+}
+
 function parse(text: string): unknown {
   try {
     return JSON.parse(text)
@@ -218,8 +231,9 @@ export function stripStoredObject(stored: Buffer): StripResult {
     )
   }
   const { value: stripped, removed } = stripContactKeys(value)
+  const level = gzipLevel(stored)
   let bytes = Buffer.from(serialize(stripped, format), 'utf-8')
-  for (let i = 0; i < layers; i++) bytes = gzipSync(bytes)
+  for (let i = 0; i < layers; i++) bytes = gzipSync(bytes, { level })
 
   const check = decode(bytes)
   const reparsed = parse(check.text)
