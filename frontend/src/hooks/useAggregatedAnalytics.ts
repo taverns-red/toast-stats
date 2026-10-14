@@ -28,10 +28,9 @@ export type {
 } from './aggregatedAnalytics/types'
 
 import type { AggregatedAnalyticsResponse } from './aggregatedAnalytics/types'
-import {
-  fetchIndividualAnalytics,
-  convertToAggregatedFormat,
-} from './aggregatedAnalytics/helpers'
+import { convertToAggregatedFormat } from './aggregatedAnalytics/helpers'
+import { districtAnalyticsFileQueryOptions } from './districtAnalyticsFileQuery'
+import { fetchLatestSnapshotDate } from '../services/cdn'
 import type { SnapshotDate } from '../types/snapshotDate'
 
 // ============================================================================
@@ -65,13 +64,17 @@ export function useAggregatedAnalytics(
 } {
   const query = useQuery({
     queryKey: ['aggregatedAnalytics', districtId, snapshotDate],
-    queryFn: async (): Promise<AggregatedAnalyticsResponse> => {
+    queryFn: async ({ client }): Promise<AggregatedAnalyticsResponse> => {
       if (!districtId) {
         throw new Error('District ID is required')
       }
 
-      // Direct CDN fetch — no Express fallback (#173)
-      const analytics = await fetchIndividualAnalytics(districtId, snapshotDate)
+      // Direct CDN fetch — no Express fallback (#173). Read through the shared
+      // file entry (#2027): the hub's useDistrictAnalytics reads the same file.
+      const date = snapshotDate || (await fetchLatestSnapshotDate())
+      const analytics = await client.fetchQuery(
+        districtAnalyticsFileQueryOptions(districtId, date)
+      )
       return convertToAggregatedFormat(analytics)
     },
     enabled: !!districtId,

@@ -40,7 +40,7 @@ import DistrictDetailPage from '../DistrictDetailPage'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import {
   fetchCdnRankings,
-  fetchCdnRankingsForDate,
+  fetchCdnRankingsForDateExact,
   fetchCdnRankHistory,
   fetchCdnDates,
 } from '../../services/cdn'
@@ -180,7 +180,7 @@ vi.mock('../../services/cdn', async importOriginal => {
   return {
     ...actual,
     fetchCdnRankings: vi.fn(),
-    fetchCdnRankingsForDate: vi.fn(),
+    fetchCdnRankingsForDateExact: vi.fn(),
     fetchCdnRankHistory: vi.fn(),
     fetchCdnDates: vi.fn(),
   }
@@ -239,7 +239,7 @@ vi.mock('../../hooks/useCompetitiveAwards', () => ({
 }))
 
 const mockedLatest = vi.mocked(fetchCdnRankings)
-const mockedForDate = vi.mocked(fetchCdnRankingsForDate)
+const mockedForDate = vi.mocked(fetchCdnRankingsForDateExact)
 const mockedRankHistory = vi.mocked(fetchCdnRankHistory)
 const mockedDates = vi.mocked(fetchCdnDates)
 

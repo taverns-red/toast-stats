@@ -48,12 +48,10 @@
  */
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
-import {
-  fetchCdnRankingsForDateExact,
-  fetchCdnSnapshotIndex,
-  type CdnRankingsData,
-} from '../services/cdn'
+import type { CdnRankingsData } from '../services/cdn'
+import { exactRankingsQueryOptions } from './districtRankingsQuery'
 import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
+import { snapshotIndexQueryOptions } from './snapshotIndexQuery'
 import type { ProgramYear } from '../utils/programYear'
 
 /** The two checkpoints TI judges the achievement on. */
@@ -100,14 +98,9 @@ export interface UseClubGrowthMilestonesResult {
 }
 
 /** Query key for one checkpoint's rankings file — the PINNED date, per #1315. */
-export const checkpointRankingsQueryKey = (
-  date: SnapshotDate
-): readonly unknown[] => ['rankings-checkpoint', date]
+export { checkpointRankingsQueryKey } from './districtRankingsQuery'
 
-/** Query key for the shared district snapshot index (the availability set). */
-export const snapshotIndexQueryKey: readonly unknown[] = [
-  'district-snapshot-index',
-]
+export { snapshotIndexQueryKey } from './snapshotIndexQuery'
 
 /**
  * The checkpoint deadlines for a program year (Jul 1 – Jun 30), in order.
@@ -265,11 +258,7 @@ export function useClubGrowthMilestones(
     [programYear]
   )
 
-  const indexQuery = useQuery({
-    queryKey: snapshotIndexQueryKey,
-    queryFn: fetchCdnSnapshotIndex,
-    staleTime: 60 * 60 * 1000,
-  })
+  const indexQuery = useQuery(snapshotIndexQueryOptions())
 
   const availableDates = useMemo(
     () => (indexQuery.data ? availableSnapshotDates(indexQuery.data) : null),
@@ -305,10 +294,9 @@ export function useClubGrowthMilestones(
         }
       }
       return {
-        queryKey: checkpointRankingsQueryKey(date),
-        queryFn: () => fetchCdnRankingsForDateExact(date),
+        // Shared with the page's own dated rankings read (#2027).
+        ...exactRankingsQueryOptions(date),
         enabled: Boolean(districtId),
-        staleTime: 60 * 60 * 1000,
       }
     }),
   })
