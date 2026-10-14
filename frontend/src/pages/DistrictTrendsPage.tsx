@@ -299,7 +299,11 @@ const DistrictTrendsPage: React.FC = () => {
               </ChartSparklineExpand>
             ) : (
               isAggregatedPending && (
-                <TrendChartSkeleton label="membership trend" statTiles={4} />
+                <TrendChartSkeleton
+                  label="membership trend"
+                  statTiles={4}
+                  legend
+                />
               )
             )}
 
@@ -395,6 +399,7 @@ const DistrictTrendsPage: React.FC = () => {
                   label="payments trend"
                   statTiles={3}
                   plotHeight={350}
+                  legend
                 />
               )
             )}

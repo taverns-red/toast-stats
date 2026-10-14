@@ -7,16 +7,22 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts'
 import type { RankHistoryResponse } from '../types/districts'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { dateAxisLayout } from './charts/compactAxis'
+import { ChartSkeleton } from './ChartSkeleton'
 import {
   useChartReadout,
   ChartReadout,
   formatReadoutDate,
 } from './charts/ChartReadout'
+import {
+  ChartLegendChips,
+  useSeriesVisibility,
+} from './charts/ChartLegendChips'
 
 interface HistoricalRankChartProps {
   data: RankHistoryResponse[]
@@ -91,6 +97,95 @@ const DISTRICT_COLORS = [
   'var(--tm-happy-yellow-80)', // Additional series with opacity
 ]
 
+/** The plot's height — the loading state reserves the same (#1835). */
+const PLOT_HEIGHT = 400
+
+type ProgramYearLabel = {
+  year: string | number
+  startDate: string
+  endDate: string
+}
+
+/**
+ * Heading, program year and metric toggles — shared by the loaded chart and
+ * its loading state, so the skeleton has the loaded chrome (#1835).
+ */
+const RankChartHeader: React.FC<{
+  programYear: ProgramYearLabel | undefined
+  selectedMetric: RankMetric
+  onSelect: (metric: RankMetric) => void
+  disabled?: boolean
+}> = ({ programYear, selectedMetric, onSelect, disabled = false }) => (
+  <div className="flex flex-col gap-4 mb-4">
+    <div className="flex-1">
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+        Historical Rank Progression
+      </h2>
+      {programYear && (
+        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+          Program Year: {programYear.year} ({programYear.startDate} to{' '}
+          {programYear.endDate})
+        </p>
+      )}
+    </div>
+
+    {/* Metric Toggle */}
+    <div className="flex flex-wrap gap-2">
+      <span className="text-sm font-medium text-gray-700 self-center mr-2">
+        View:
+      </span>
+      <button
+        onClick={() => onSelect('aggregate')}
+        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+          selectedMetric === 'aggregate'
+            ? 'bg-tm-loyal-blue text-white'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        }`}
+        disabled={disabled}
+        aria-pressed={selectedMetric === 'aggregate'}
+      >
+        Overall Score
+      </button>
+      <button
+        onClick={() => onSelect('clubs')}
+        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+          selectedMetric === 'clubs'
+            ? 'bg-tm-loyal-blue text-white'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        }`}
+        disabled={disabled}
+        aria-pressed={selectedMetric === 'clubs'}
+      >
+        Paid Clubs
+      </button>
+      <button
+        onClick={() => onSelect('payments')}
+        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+          selectedMetric === 'payments'
+            ? 'bg-tm-loyal-blue text-white'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        }`}
+        disabled={disabled}
+        aria-pressed={selectedMetric === 'payments'}
+      >
+        Total Payments
+      </button>
+      <button
+        onClick={() => onSelect('distinguished')}
+        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+          selectedMetric === 'distinguished'
+            ? 'bg-tm-loyal-blue text-white'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        }`}
+        disabled={disabled}
+        aria-pressed={selectedMetric === 'distinguished'}
+      >
+        Distinguished
+      </button>
+    </div>
+  </div>
+)
+
 const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   data,
   isLoading,
@@ -101,27 +196,42 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate')
   // Tap-to-pin readout on devices without hover (#1835) — before early returns.
   const readout = useChartReadout()
+  // Legend chips toggle each district's line (#1835).
+  const legend = useSeriesVisibility()
+  // Phone x axis: four horizontal ticks, no −45° labels (#1835).
+  const compact = useIsMobile(768)
   // Responsive tick interval for mobile (#237) — must be called before early returns
   const tickInterval = useResponsiveTickInterval(
     data?.reduce((count, d) => count + d.history.length, 0) ?? 0
   )
 
   if (isLoading) {
+    // The loaded panel with only the plot replaced (#1835, Lesson 158):
+    // same chrome, one legend-chip row, the 400 px plot and, without
+    // hover, the readout line.
     return (
       <section
-        className="redesign-panel"
+        className="redesign-panel sm:p-6"
         aria-busy="true"
         aria-label="Loading historical rank data"
       >
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Historical Rank Progression
-        </h2>
-        <div className="flex items-center justify-center h-80">
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="h-4 w-32 bg-gray-300 rounded-sm mb-2"></div>
-            <div className="h-4 w-24 bg-gray-300 rounded-sm"></div>
-          </div>
+        <RankChartHeader
+          programYear={selectedProgramYear}
+          selectedMetric={selectedMetric}
+          onSelect={setSelectedMetric}
+          disabled
+        />
+        <div className="chart-legend-chips" aria-hidden="true">
+          <span className="chart-legend-chip chart-legend-chip--static">
+            &nbsp;
+          </span>
         </div>
+        <ChartSkeleton height={PLOT_HEIGHT} />
+        {readout.touch && (
+          <p className="chart-readout" data-testid="chart-readout-reserve">
+            &nbsp;
+          </p>
+        )}
       </section>
     )
   }
@@ -227,82 +337,45 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
       className="redesign-panel sm:p-6"
       aria-label="Historical rank progression chart"
     >
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex-1">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-            Historical Rank Progression
-          </h2>
-          {programYear && (
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              Program Year: {programYear.year} ({programYear.startDate} to{' '}
-              {programYear.endDate})
-            </p>
-          )}
-        </div>
+      <RankChartHeader
+        programYear={programYear}
+        selectedMetric={selectedMetric}
+        onSelect={setSelectedMetric}
+      />
 
-        {/* Metric Toggle */}
-        <div className="flex flex-wrap gap-2">
-          <span className="text-sm font-medium text-gray-700 self-center mr-2">
-            View:
-          </span>
-          <button
-            onClick={() => setSelectedMetric('aggregate')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-              selectedMetric === 'aggregate'
-                ? 'bg-tm-loyal-blue text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-            aria-pressed={selectedMetric === 'aggregate'}
-          >
-            Overall Score
-          </button>
-          <button
-            onClick={() => setSelectedMetric('clubs')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-              selectedMetric === 'clubs'
-                ? 'bg-tm-loyal-blue text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-            aria-pressed={selectedMetric === 'clubs'}
-          >
-            Paid Clubs
-          </button>
-          <button
-            onClick={() => setSelectedMetric('payments')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-              selectedMetric === 'payments'
-                ? 'bg-tm-loyal-blue text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-            aria-pressed={selectedMetric === 'payments'}
-          >
-            Total Payments
-          </button>
-          <button
-            onClick={() => setSelectedMetric('distinguished')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-              selectedMetric === 'distinguished'
-                ? 'bg-tm-loyal-blue text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-            aria-pressed={selectedMetric === 'distinguished'}
-          >
-            Distinguished
-          </button>
-        </div>
-      </div>
-
+      <ChartLegendChips
+        series={data.map((district, index) => ({
+          key: district.districtId,
+          name: district.districtName || district.districtId,
+          color:
+            DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
+            'var(--tm-loyal-blue)',
+        }))}
+        visibility={legend}
+      />
       <div
         role="img"
+        {...readout.surfaceProps}
         aria-label={chartDescription}
         aria-describedby="rank-chart-desc"
         className="w-full overflow-x-auto"
       >
-        <div className="min-w-[320px]">
-          <ResponsiveContainer width="100%" height={400} minWidth={320}>
+        {/* The desktop min-width; a phone sheet is narrower (#1835). */}
+        <div className={compact ? undefined : 'min-w-[320px]'}>
+          <ResponsiveContainer
+            width="100%"
+            height={PLOT_HEIGHT}
+            minWidth={compact ? 0 : 320}
+          >
             <LineChart
+              {...readout.chartProps}
               data={chartData}
-              margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
+              margin={{
+                top: 5,
+                right: compact ? 16 : 10,
+                left: 0,
+                bottom: compact ? 5 : 60,
+              }}
               aria-hidden="true"
             >
               <CartesianGrid
@@ -313,10 +386,11 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 dataKey="date"
                 stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '12px' }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                interval={tickInterval || 'preserveStartEnd'}
+                {...dateAxisLayout(
+                  compact,
+                  sortedDates,
+                  tickInterval || 'preserveStartEnd'
+                )}
                 tickFormatter={value => {
                   const date = parseLocalDate(value)
                   return date.toLocaleDateString('en-US', {
@@ -352,15 +426,6 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 }
                 {...readout.tooltipProps}
               />
-              <Legend
-                wrapperStyle={{ fontSize: '12px' }}
-                verticalAlign="top"
-                height={36}
-                formatter={value => {
-                  const district = data.find(d => d.districtId === value)
-                  return district?.districtName || value
-                }}
-              />
               {data.map((district, index) => {
                 const color =
                   DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
@@ -378,6 +443,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                     }}
                     activeDot={{ r: 0.5 }}
                     name={district.districtId}
+                    hide={!legend.isVisible(district.districtId)}
                     connectNulls
                   />
                 )

@@ -8,7 +8,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  Legend,
 } from 'recharts'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
@@ -25,6 +24,12 @@ import {
   formatReadoutDate,
   type ChartReading,
 } from './charts/ChartReadout'
+import {
+  ChartLegendChips,
+  useSeriesVisibility,
+} from './charts/ChartLegendChips'
+import { compactTicks } from './charts/compactAxis'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 /** A named set of data points for one program year */
 export interface YearTrendData {
@@ -206,6 +211,10 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
 }) => {
   // Tap-to-pin readout on devices without hover (#1835) — before early returns.
   const readout = useChartReadout()
+  // Legend chips toggle each program year's line (#1835).
+  const legend = useSeriesVisibility()
+  // Phone x axis: four month ticks (#1835).
+  const compact = useIsMobile(768)
 
   if (isLoading) {
     return <LoadingSkeleton variant="chart" />
@@ -446,14 +455,38 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
       )}
 
       {/* Chart */}
+      <ChartLegendChips
+        series={chart.series.map(s => {
+          if (s.isCurrent)
+            return {
+              key: s.key,
+              name: seriesName(s),
+              color: 'var(--tm-loyal-blue)',
+            }
+          const style =
+            PRIOR_YEAR_STYLES[
+              priorSeries.indexOf(s) % PRIOR_YEAR_STYLES.length
+            ] ?? PRIOR_YEAR_STYLES[0]
+          return {
+            key: s.key,
+            name: seriesName(s),
+            color: style.stroke,
+            dash: style.dash,
+          }
+        })}
+        visibility={legend}
+      />
       <div
         role="img"
+        {...readout.surfaceProps}
         aria-label={chartDescription}
         className="w-full overflow-x-auto"
       >
-        <div className="min-w-[320px]">
+        {/* The desktop min-width; a phone sheet is narrower (#1835). */}
+        <div className={compact ? undefined : 'min-w-[320px]'}>
           <ResponsiveContainer width="100%" height={400}>
             <LineChart
+              {...readout.chartProps}
               data={chart.rows}
               margin={{ top: 5, right: 20, left: 10, bottom: 20 }}
             >
@@ -465,7 +498,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 dataKey="day"
                 type="number"
                 domain={chart.domain}
-                ticks={monthTicks}
+                ticks={compact ? compactTicks(monthTicks) : monthTicks}
                 tickFormatter={monthLabel}
                 interval="preserveStartEnd"
                 stroke="var(--tm-cool-gray)"
@@ -491,12 +524,6 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 }
                 {...readout.tooltipProps}
               />
-              <Legend
-                wrapperStyle={{ fontSize: '12px' }}
-                verticalAlign="top"
-                height={36}
-              />
-
               {/* Prior program years first, so the current line paints on
                   top (#238, #243, #1705). */}
               {priorSeries.map((s, i) => {
@@ -515,6 +542,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                     dot={false}
                     activeDot={{ r: 3 }}
                     name={seriesName(s)}
+                    hide={!legend.isVisible(s.key)}
                     legendType="plainline"
                     connectNulls
                     isAnimationActive={false}
@@ -531,6 +559,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 dot={false}
                 activeDot={{ r: 4 }}
                 name={seriesName(currentSeries)}
+                hide={!legend.isVisible(currentSeries.key)}
                 legendType="plainline"
                 connectNulls
                 isAnimationActive={false}
@@ -568,7 +597,12 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
       </div>
       <ChartReadout
         readout={readout}
-        describe={day => describeTrendDay(chart.series, Number(day))}
+        describe={day =>
+          describeTrendDay(
+            chart.series.filter(s => legend.isVisible(s.key)),
+            Number(day)
+          )
+        }
       />
 
       {/* Legend for highlights */}
