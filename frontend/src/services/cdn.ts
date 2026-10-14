@@ -562,13 +562,25 @@ export function cdnDistrictClubShardUrl(
  * analytics file, so a missing shard never reads as "club not found".
  */
 export async function fetchCdnDistrictClubShard(
-  _date: SnapshotDate,
-  _districtId: string,
-  _shard: DistrictClubShardKey
+  date: SnapshotDate,
+  districtId: string,
+  shard: DistrictClubShardKey
 ): Promise<DistrictClubShard | null> {
-  // #1901 — stub for the red commit; the next commit implements it.
-  void DistrictClubShardSchema
-  return null
+  try {
+    const res = await fetch(cdnDistrictClubShardUrl(date, districtId, shard))
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = DistrictClubShardSchema.safeParse(await res.json())
+    if (!parsed.success) return null
+    const s = parsed.data
+    return s.districtId === districtId &&
+      s.snapshotDate === date &&
+      s.shard === shard
+      ? s
+      : null
+  } catch {
+    return null
+  }
 }
 
 /**
