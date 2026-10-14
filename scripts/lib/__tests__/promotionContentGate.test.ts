@@ -172,6 +172,15 @@ describe('classifyObject', () => {
     ['config/club-district-history/77.json', 'club-district-history-shard'],
     ['config/club-district-history/00.json', 'club-district-history-shard'],
     ['config/club-district-history/777.json', 'json'],
+    [
+      'snapshots/2026-10-12/analytics/district_61_clubs_7.json',
+      'district-club-shard',
+    ],
+    [
+      'snapshots/2026-10-12/analytics/district_U_clubs_0.json',
+      'district-club-shard',
+    ],
+    ['snapshots/2026-10-12/analytics/district_61_clubs_10.json', 'json'],
     ['derived/club-district-history/77.json', 'json'],
     ['v1/latest.json', 'latest'],
     ['snapshots/2026-10-08/district_61.json', 'json'],
@@ -457,6 +466,65 @@ describe('checkObject — club-district history (#1782)', () => {
     expect(check(SHARD_PATH, plain({ ...shard, clubs: {} }))).toMatch(
       /no clubs/
     )
+  })
+})
+
+describe('checkObject — district club shards (#1901)', () => {
+  const SHARD_PATH = 'snapshots/2026-10-12/analytics/district_61_clubs_4.json'
+  // Recorded from collector-cli's writer over the real D61 2026-10-12
+  // allClubs (contact fields dropped).
+  const shard = JSON.parse(
+    readFileSync(
+      path.resolve(
+        __dirname,
+        '../../../packages/shared-contracts/src/__tests__/__fixtures__/recorded-district-club-shard.json'
+      ),
+      'utf-8'
+    )
+  ) as {
+    shard: string
+    districtId: string
+    snapshotDate: string
+    clubs: Array<Record<string, unknown> & { clubId: string }>
+  }
+
+  it('passes the recorded shard, gzip-stored as the pipeline uploads it', () => {
+    expect(shard.clubs.length).toBeGreaterThan(0)
+    expect(check(SHARD_PATH, stored(shard))).toBeNull()
+  })
+
+  it('passes an empty shard (a small district may have no club ending in a digit)', () => {
+    expect(check(SHARD_PATH, stored({ ...shard, clubs: [] }))).toBeNull()
+  })
+
+  it('fails a shard that breaks the shared-contracts schema', () => {
+    const broken = structuredClone(shard)
+    delete broken.clubs[0]!['membershipTrend']
+    expect(check(SHARD_PATH, stored(broken))).toMatch(/schema/)
+  })
+
+  it('fails a shard whose key, district or date does not match its path', () => {
+    expect(check(SHARD_PATH, stored({ ...shard, shard: '5' }))).toMatch(
+      /shard 5.*district_61_clubs_4/
+    )
+    expect(check(SHARD_PATH, stored({ ...shard, districtId: '62' }))).toMatch(
+      /district 62/
+    )
+    expect(
+      check(SHARD_PATH, stored({ ...shard, snapshotDate: '2026-10-11' }))
+    ).toMatch(/2026-10-11/)
+  })
+
+  it('fails a shard holding a club from another shard', () => {
+    const moved = structuredClone(shard)
+    moved.clubs.push({ ...moved.clubs[0]!, clubId: '7238597' })
+    expect(check(SHARD_PATH, stored(moved))).toMatch(/club 7238597.*shard 7/)
+  })
+
+  it('fails a shard listing one club twice', () => {
+    const dup = structuredClone(shard)
+    dup.clubs.push(dup.clubs[0]!)
+    expect(check(SHARD_PATH, stored(dup))).toMatch(/twice/)
   })
 })
 
