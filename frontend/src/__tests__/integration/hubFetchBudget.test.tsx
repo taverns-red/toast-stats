@@ -36,10 +36,9 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 300))
 function requestCounts(mockFetch: ReturnType<typeof vi.fn>) {
   const counts = new Map<string, number>()
   for (const [input] of mockFetch.mock.calls) {
-    const url = String(input)
-    if (!url.startsWith(CDN)) continue
-    const path = url.slice(CDN.length)
-    counts.set(path, (counts.get(path) ?? 0) + 1)
+    const url = new URL(String(input), 'http://localhost')
+    if (url.origin !== CDN) continue
+    counts.set(url.pathname, (counts.get(url.pathname) ?? 0) + 1)
   }
   return counts
 }
