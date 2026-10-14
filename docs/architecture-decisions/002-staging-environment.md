@@ -28,6 +28,13 @@ Implement a two-environment deployment flow with **separate GCS buckets** for st
 | **GA4**          | `G-CDWQYHC2Z3`               | Disabled                        |
 | **Deploys from** | Promotion after staging gate | `main` (automatic)              |
 
+> **Note (2026-10, #1995 / #2003):** the "no CDN" cell is superseded for PR
+> preview channels. Previews now read the staging bucket through
+> `cdn-staging.taverns.red`, a Cloud CDN load balancer that mirrors prod's
+> (edge compression, see ADR-007 addendum 2026-10-13). The bucket itself and
+> its public-read/CORS setup are unchanged; the direct GCS URL remains the
+> rollback path.
+
 ### How each change type flows
 
 #### a) Frontend change only

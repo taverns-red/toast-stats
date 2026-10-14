@@ -172,6 +172,16 @@ describe('firebase.json security headers (#783)', () => {
           expect(csp()).toMatch(/connect-src[^;]*https:\/\/cdn\.taverns\.red/)
         })
 
+        it('allows the staging CDN origin in connect-src (#1995, #2003)', () => {
+          // PR previews read data through cdn-staging.taverns.red (the
+          // compressing LB in front of the staging bucket). Previews inherit
+          // the staging target's headers, and the CSP-identity test above
+          // keeps prod in lockstep, so both targets carry it.
+          expect(csp()).toMatch(
+            /connect-src[^;]*https:\/\/cdn-staging\.taverns\.red/
+          )
+        })
+
         it('allows Google Analytics origins', () => {
           // GA4 loads only on the prod hostname, but the policy must permit
           // it there: tag-manager script + analytics beacons.

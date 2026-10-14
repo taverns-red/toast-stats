@@ -85,8 +85,44 @@ gcloud compute backend-buckets update toast-stats-cdn-backend --compression-mode
 **Verify:** `npx tsx scripts/cdn-compression-check.ts` (read-only; exit 0 when
 every frontend-fetched `v1/`/`config/` object comes back br/gzip and decodes
 to one layer of JSON). Cached identity entries age out within their
-`max-age` (300–900 s). Staging has no CDN (ADR-002), so preview channels stay
-uncompressed for these prefixes.
+`max-age` (300–900 s). Preview channels were left uncompressed by this
+addendum; that is superseded by the 2026-10-13 addendum below.
+
+## Addendum (2026-10-13, #1995 / #2003): staging CDN for PR previews
+
+PR preview channels read `toast-stats-data-staging` straight from
+`storage.googleapis.com`, which serves JSON identity-encoded (the snapshot
+index was ~488 KB on the wire vs ~3 KB br from `cdn.taverns.red`). That was
+the suspected cause of the bimodal Lighthouse LCP in #1995. The statement
+above that "staging has no CDN" (and in the #1900 PR text) is superseded.
+
+A dedicated load balancer mirrors prod one to one (no prod resource was
+modified), all in `toast-stats-prod-6d64a`:
+
+| Resource           | Name                                                                                                                                                      |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Static IP (global) | `toast-stats-cdn-staging-ip` (34.111.149.108)                                                                                                             |
+| Backend bucket     | `toast-stats-cdn-staging-backend` → `toast-stats-data-staging`; `compressionMode AUTOMATIC`, `CACHE_ALL_STATIC`, default/client TTL 300 s, max TTL 3600 s |
+| URL map            | `toast-stats-cdn-staging-url-map`                                                                                                                         |
+| Managed cert       | `toast-stats-cdn-staging-cert` (`cdn-staging.taverns.red`)                                                                                                |
+| HTTPS proxy        | `toast-stats-cdn-staging-proxy`                                                                                                                           |
+| Forwarding rule    | `toast-stats-cdn-staging-fwd` (443 only, classic EXTERNAL, PREMIUM)                                                                                       |
+| DNS                | `cdn-staging.taverns.red A 34.111.149.108`                                                                                                                |
+
+The frontend uses it via `VITE_CDN_BASE_URL` in `pr-preview.yml`; the CSP
+`connect-src` lists the host for both targets (they must stay identical).
+Edge TTLs follow the objects' own `Cache-Control` (300–3600 s), the same
+staleness previews had from public GCS. No automatic invalidation; if needed:
+`gcloud compute url-maps invalidate-cdn-cache toast-stats-cdn-staging-url-map --path '/*' --async`.
+A staging purge cannot touch prod's URL map.
+
+**Verify:** `npx tsx scripts/cdn-compression-check.ts --base https://cdn-staging.taverns.red` exits 0.
+
+**Roll back:** repo first (point `VITE_CDN_BASE_URL` back at
+`https://storage.googleapis.com/toast-stats-data-staging`), then delete in
+reverse order: forwarding rule, proxy, cert, URL map, backend bucket, IP, DNS
+record. Soft rollback that keeps the infra:
+`gcloud compute backend-buckets update toast-stats-cdn-staging-backend --compression-mode=DISABLED`.
 
 ## Related
 
