@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { queryOptions, useQuery } from '@tanstack/react-query'
 import {
   fetchLatestSnapshotDate,
   fetchCdnDistrictSnapshot,
@@ -25,7 +25,24 @@ export const useDistrictStatistics = (
   selectedDate?: SnapshotDate,
   fields?: 'divisions' | 'clubs' | 'all'
 ) => {
-  return useQuery<DistrictStatistics, Error>({
+  return useQuery({
+    ...districtStatisticsQueryOptions(districtId, selectedDate, fields),
+    enabled: !!districtId,
+  })
+}
+
+/**
+ * The `['districtStatistics', …]` query, shared by the hook above and the
+ * entry prefetch (`services/routePrefetch.ts`, #1901). The key keeps its
+ * 4-element shape — `fields` included even when undefined — because a
+ * 3-element key hashes differently and would miss the prefetched entry.
+ */
+export function districtStatisticsQueryOptions(
+  districtId: string | null,
+  selectedDate?: SnapshotDate,
+  fields?: 'divisions' | 'clubs' | 'all'
+) {
+  return queryOptions<DistrictStatistics, Error>({
     queryKey: ['districtStatistics', districtId, selectedDate, fields],
     queryFn: async () => {
       if (!districtId) {
@@ -34,7 +51,6 @@ export const useDistrictStatistics = (
       const date = selectedDate || (await fetchLatestSnapshotDate())
       return fetchCdnDistrictSnapshot<DistrictStatistics>(date, districtId)
     },
-    enabled: !!districtId,
     staleTime: 15 * 60 * 1000, // 15 minutes
     retry: 2,
   })

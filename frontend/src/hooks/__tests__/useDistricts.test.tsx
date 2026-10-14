@@ -22,6 +22,8 @@ import React from 'react'
 import { renderHook, waitFor, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useDistricts } from '../useDistricts'
+import { useDistrictRanking } from '../useDistrictRanking'
+import { useLatestAsOfDate } from '../useLatestAsOfDate'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../../services/cdn'
 import type { CdnRankingsData } from '../../services/cdn'
 import { snap } from '../../test-utils/snapshotDate'
@@ -30,6 +32,7 @@ import type { SnapshotDate } from '../../types/snapshotDate'
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
   fetchCdnRankingsForDate: vi.fn(),
+  fetchCdnManifest: vi.fn(() => new Promise(() => {})),
 }))
 
 const mockedLatest = vi.mocked(fetchCdnRankings)
@@ -201,5 +204,45 @@ describe('useDistricts — undated latest path is unchanged (#1398)', () => {
     expect(idsOf(dated.result.current.data)).toContain('27')
     // The undated entry must not have been overwritten by the dated fetch.
     expect(idsOf(undated.result.current.data)).not.toContain('27')
+  })
+})
+
+/**
+ * #1901 side finding — the club page fetched `v1/rankings.json` twice in
+ * parallel: once under `['districts', 'latest']` (this hook) and once under
+ * `['district-rankings', 'latest']` (useLatestAsOfDate / useDistrictRanking).
+ * Same file, two keys. The list must read through the rankings entry.
+ */
+describe('useDistricts — shares the rankings read with its siblings (#1901)', () => {
+  function renderTogether(date: SnapshotDate | undefined) {
+    const client = makeClient()
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    return renderHook(
+      () => ({
+        districts: useDistricts(date),
+        ranking: useDistrictRanking('61', date),
+        asOf: useLatestAsOfDate(),
+      }),
+      { wrapper }
+    )
+  }
+
+  it('fetches v1/rankings.json once when mounted beside the latest readers', async () => {
+    const { result } = renderTogether(undefined)
+    await waitFor(() => expect(result.current.districts.data).toBeDefined())
+    await waitFor(() => expect(result.current.ranking.ranking).not.toBeNull())
+    expect(idsOf(result.current.districts.data)).toEqual(['61', '46', 'F'])
+    expect(result.current.asOf.asOfDate).toBe('2026-08-02')
+    expect(mockedLatest).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches a dated rankings file once when mounted beside useDistrictRanking', async () => {
+    const { result } = renderTogether(snap('2025-06-30'))
+    await waitFor(() => expect(result.current.districts.data).toBeDefined())
+    await waitFor(() => expect(result.current.ranking.ranking).not.toBeNull())
+    expect(idsOf(result.current.districts.data)).toContain('27')
+    expect(mockedForDate).toHaveBeenCalledTimes(1)
   })
 })
