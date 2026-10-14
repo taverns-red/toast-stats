@@ -15,13 +15,17 @@
  */
 
 import {
+  DistrictClubShardSchema,
   DistrictReportsDatasetSchema,
+  districtClubShardPath,
   GlobalClubRaceSchema,
   GlobalHistorySchema,
   GlobalTotalsSchema,
   GLOBAL_CLUB_RACE_FILE_NAME,
   GLOBAL_HISTORY_OBJECT_PATH,
   GLOBAL_TOTALS_FILE_NAME,
+  type DistrictClubShard,
+  type DistrictClubShardKey,
   type DistrictReportsDataset,
   type GlobalClubRace,
   type GlobalHistory,
@@ -537,6 +541,34 @@ export async function fetchCdnDistrictReports(
   } catch {
     return null
   }
+}
+
+/**
+ * Construct a CDN URL for one district club shard (#1901): the clubs whose id
+ * ends in `shard`, as the analytics file's own `ClubTrend`s.
+ */
+export function cdnDistrictClubShardUrl(
+  date: SnapshotDate,
+  districtId: string,
+  shard: DistrictClubShardKey
+): string {
+  return `${cdnBaseUrl()}/${districtClubShardPath(date, districtId, shard)}`
+}
+
+/**
+ * Fetch one district club shard, **tolerantly** (#1901). Null when it is
+ * absent (dates written before the shards existed), malformed, for another
+ * district/date/shard, or unreachable. The caller then reads the district
+ * analytics file, so a missing shard never reads as "club not found".
+ */
+export async function fetchCdnDistrictClubShard(
+  _date: SnapshotDate,
+  _districtId: string,
+  _shard: DistrictClubShardKey
+): Promise<DistrictClubShard | null> {
+  // #1901 — stub for the red commit; the next commit implements it.
+  void DistrictClubShardSchema
+  return null
 }
 
 /**
