@@ -24,17 +24,19 @@ import type {
 import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
- * One club's analytics, read for the club page (#1901).
+ * A club's analytics neighbourhood, read for the club page (#1901).
  *
- * - `club`: the analytics `ClubTrend`, with the read-time overlays applied;
- *   null when the club is not in the district on that date.
+ * - `clubs`: the analytics `ClubTrend`s of the club's shard (the clubs whose
+ *   id ends in the same digit), or the whole district's `allClubs` when it
+ *   came from the district file, with the read-time overlays applied. The
+ *   page finds its club in it; absent means not in the district that date.
  * - `districtReports`: the reports sidecar, for the page's education,
  *   compliance and coach sections (#1790).
  * - `source`: which file it came from — the club's shard, or the whole
  *   district file (a date with no shards yet, or a warm cache).
  */
 export interface ClubAnalytics {
-  club: ClubTrend | null
+  clubs: ClubTrend[]
   districtReports: DistrictReportsDataset | null
   source: 'shard' | 'district'
 }
@@ -65,9 +67,6 @@ export const useClubAnalytics = (
       if (!districtId || !clubId) {
         throw new Error('District and club IDs are required')
       }
-      const find = (clubs: readonly ClubTrend[] | undefined) =>
-        clubs?.find(c => normalizeClubId(c.clubId) === canonicalId) ?? null
-
       // Warm cache: the district pages share this key with useDistrictAnalytics.
       const warm = queryClient.getQueryData<DistrictAnalyticsWithReports>([
         'districtAnalytics',
@@ -77,7 +76,7 @@ export const useClubAnalytics = (
       ])
       if (warm) {
         return {
-          club: find(warm.allClubs),
+          clubs: warm.allClubs ?? [],
           districtReports: warm.districtReports ?? null,
           source: 'district',
         }
@@ -92,28 +91,28 @@ export const useClubAnalytics = (
         fetchCdnDistrictReports(snapshotDate, districtId),
       ])
 
-      let club: ClubTrend | null
+      let clubs: ClubTrend[]
       let source: ClubAnalytics['source']
       if (shard) {
-        club = find(shard.clubs as unknown as ClubTrend[])
+        clubs = shard.clubs as unknown as ClubTrend[]
         source = 'shard'
       } else {
         const file = await fetchFromCdn<{ data: DistrictAnalytics }>(
           cdnAnalyticsUrl(snapshotDate, districtId, 'analytics')
         )
-        club = find(file.data.allClubs)
+        clubs = file.data.allClubs ?? []
         source = 'district'
       }
 
       // The same overlays, from the same sidecar, as useDistrictAnalytics.
-      if (club && reports) {
+      if (reports) {
         applyDuesRenewalOverlay(
-          [club],
+          clubs,
           buildDuesRenewalLookup(reports, snapshotDate)
         )
-        applyCoachOverlay([club], buildCoachLookup(reports))
+        applyCoachOverlay(clubs, buildCoachLookup(reports))
       }
-      return { club, districtReports: reports, source }
+      return { clubs, districtReports: reports, source }
     },
     enabled: enabled && !!districtId && !!clubId && hasValidDateRange,
     staleTime: 10 * 60 * 1000,

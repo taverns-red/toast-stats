@@ -119,7 +119,9 @@ describe('useClubAnalytics (#1901)', () => {
     expect(mockedShard).toHaveBeenCalledWith('2026-10-12', '61', '7')
     expect(mockedReports).toHaveBeenCalledWith('2026-10-12', '61')
     expect(mockedFull).not.toHaveBeenCalled()
-    expect(result.current.data?.club?.clubName).toBe('Club 7238597')
+    expect(
+      result.current.data?.clubs.find(c => c.clubId === '7238597')?.clubName
+    ).toBe('Club 7238597')
     expect(result.current.data?.source).toBe('shard')
   })
 
@@ -132,17 +134,19 @@ describe('useClubAnalytics (#1901)', () => {
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockedShard).toHaveBeenCalledWith('2026-10-12', '61', '7')
-    expect(result.current.data?.club?.clubId).toBe('3047')
+    expect(result.current.data?.clubs.map(c => c.clubId)).toEqual(['3047'])
   })
 
-  it('reports a club absent from a built shard as absent (null), without the district file', async () => {
+  it('reports a club absent from a built shard as absent, without the district file', async () => {
     mockedShard.mockResolvedValue(shard([trend('3047')]))
     const { result } = renderHook(
       () => useClubAnalytics('61', '7238597', '2026-07-01', snap('2026-10-12')),
       { wrapper }
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data?.club).toBeNull()
+    expect(result.current.data?.clubs.some(c => c.clubId === '7238597')).toBe(
+      false
+    )
     expect(mockedFull).not.toHaveBeenCalled()
   })
 
@@ -155,7 +159,9 @@ describe('useClubAnalytics (#1901)', () => {
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockedFull).toHaveBeenCalledTimes(1)
-    expect(result.current.data?.club?.clubName).toBe('Club 7238597')
+    expect(
+      result.current.data?.clubs.find(c => c.clubId === '7238597')?.clubName
+    ).toBe('Club 7238597')
     expect(result.current.data?.source).toBe('district')
   })
 
@@ -184,7 +190,7 @@ describe('useClubAnalytics (#1901)', () => {
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data?.districtReports).toBe(reports)
-    expect(result.current.data?.club?.coach).toBeDefined()
+    expect(result.current.data?.clubs[0]?.coach).toBeDefined()
   })
 
   it('does not fetch while disabled', () => {
