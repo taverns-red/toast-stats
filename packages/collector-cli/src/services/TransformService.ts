@@ -178,6 +178,12 @@ export interface DistrictTransformResult {
   snapshotPath?: string
   error?: string
   skipped?: boolean
+  /**
+   * The district's club report is a gap in the source (#1671): skipped, no
+   * snapshot written, `error` names why. The date-level roster counts it as
+   * a recorded failure (#2035).
+   */
+  gap?: boolean
 }
 
 /**
@@ -1457,7 +1463,8 @@ export class TransformService {
    *
    * - `roster` (metadata.json, manifest.json): a district with neither a
    *   snapshot file on disk (written now or hydrated) nor a failure recorded
-   *   by this run. A recorded failure is reported as such, not as absent.
+   *   by this run. A recorded failure — including a #1671 source gap
+   *   (#2035) — is reported as such, not as absent.
    * - `rankings` (all-districts-rankings.json, competitive-awards.json): a
    *   district with no raw `club-performance.csv`. Its 20-plus, charter and
    *   suspension counts would otherwise publish as a measured 0.
@@ -1545,6 +1552,7 @@ export class TransformService {
         districtId,
         success: true,
         skipped: true,
+        gap: true,
         error: rawData.gap,
       }
     }
@@ -1892,6 +1900,7 @@ export class TransformService {
         districtId,
         success: true,
         skipped: true,
+        gap: true,
         error: rawData.gap,
       }
     }
@@ -2444,9 +2453,16 @@ export class TransformService {
     // date's whole district set, not this run's districts (#1756, ADR-015
     // P3). A subset run writes them only when the other districts' inputs
     // were hydrated onto disk; otherwise they are refused, never defaulted.
-    const failedDistrictIds = results
-      .filter(r => !r.success)
-      .map(r => r.districtId)
+    // A source gap this run recorded (#1671) counts as a failure here: the
+    // district is accounted for, reported in metadata/manifest as failed with
+    // its reason, and never as a 0-club success (#2035). A district with no
+    // input and nothing recorded is still a shortfall.
+    const gapResults = results.filter(r => r.success && r.gap)
+    const gapDistrictIds = gapResults.map(r => r.districtId)
+    const failedDistrictIds = [
+      ...results.filter(r => !r.success).map(r => r.districtId),
+      ...gapDistrictIds,
+    ]
     const dateSet = await this.dateLevelDistrictSet(date)
     const shortfall = await this.dateLevelShortfall(
       date,
@@ -2488,6 +2504,7 @@ export class TransformService {
     for (const districtId of [
       ...new Set([...dateSet, ...districtsToTransform]),
     ]) {
+      if (gapDistrictIds.includes(districtId)) continue
       const entry = await this.getDistrictManifestEntry(
         snapshotDate,
         districtId
@@ -2502,7 +2519,10 @@ export class TransformService {
     if (shortfall.roster.length === 0 && allSuccessfulDistricts.length > 0) {
       try {
         // Collect error messages for metadata
-        const errorMessages = errors.map(e => `${e.districtId}: ${e.error}`)
+        const errorMessages = [
+          ...errors.map(e => `${e.districtId}: ${e.error}`),
+          ...gapResults.map(r => `${r.districtId}: ${r.error}`),
+        ]
         const processingDuration = Date.now() - startTime
 
         // Pass closing period info to writeMetadata for Task 7.2
