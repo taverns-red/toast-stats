@@ -16,7 +16,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
@@ -27,6 +26,10 @@ import type {
   PaymentStatistics,
 } from '../hooks/usePaymentsTrend'
 import { useChartReadout, ChartReadout } from './charts/ChartReadout'
+import {
+  ChartLegendChips,
+  useSeriesVisibility,
+} from './charts/ChartLegendChips'
 
 /**
  * Props for the MembershipPaymentsChart component
@@ -278,6 +281,8 @@ export const MembershipPaymentsChart: React.FC<
   const tickInterval = useResponsiveTickInterval(paymentsTrend?.length ?? 0)
   // Tap-to-pin readout on devices without hover (#1835) — before early returns.
   const readout = useChartReadout()
+  // Legend chips toggle each program year's line (#1835).
+  const legend = useSeriesVisibility()
 
   // Loading state - Requirement 4.1
   if (isLoading) {
@@ -419,6 +424,14 @@ export const MembershipPaymentsChart: React.FC<
       </div>
 
       {/* Chart - Requirements 1.2, 1.3, 1.4, 2.3, 5.2, 5.3 */}
+      <ChartLegendChips
+        series={yearLabels.map((label, index) => ({
+          key: label,
+          name: label,
+          color: YEAR_COLORS[index] ?? YEAR_COLORS[2] ?? 'var(--tm-cool-gray)',
+        }))}
+        visibility={legend}
+      />
       <div
         role="img"
         {...readout.surfaceProps}
@@ -463,12 +476,6 @@ export const MembershipPaymentsChart: React.FC<
                 }}
               />
               <Tooltip content={<CustomTooltip />} {...readout.tooltipProps} />
-              <Legend
-                wrapperStyle={{ fontSize: '12px' }}
-                verticalAlign="top"
-                height={36}
-              />
-
               {/* Render a line for each year */}
               {yearLabels.map((label, index) => {
                 const color =
@@ -483,6 +490,7 @@ export const MembershipPaymentsChart: React.FC<
                     dot={false}
                     activeDot={{ r: 5 }}
                     name={label}
+                    hide={!legend.isVisible(label)}
                     connectNulls
                   />
                 )

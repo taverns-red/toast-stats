@@ -7,7 +7,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts'
 import type { RankHistoryResponse } from '../types/districts'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
@@ -17,6 +16,10 @@ import {
   ChartReadout,
   formatReadoutDate,
 } from './charts/ChartReadout'
+import {
+  ChartLegendChips,
+  useSeriesVisibility,
+} from './charts/ChartLegendChips'
 
 interface HistoricalRankChartProps {
   data: RankHistoryResponse[]
@@ -101,6 +104,8 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate')
   // Tap-to-pin readout on devices without hover (#1835) — before early returns.
   const readout = useChartReadout()
+  // Legend chips toggle each district's line (#1835).
+  const legend = useSeriesVisibility()
   // Responsive tick interval for mobile (#237) — must be called before early returns
   const tickInterval = useResponsiveTickInterval(
     data?.reduce((count, d) => count + d.history.length, 0) ?? 0
@@ -292,6 +297,16 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
         </div>
       </div>
 
+      <ChartLegendChips
+        series={data.map((district, index) => ({
+          key: district.districtId,
+          name: district.districtName || district.districtId,
+          color:
+            DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
+            'var(--tm-loyal-blue)',
+        }))}
+        visibility={legend}
+      />
       <div
         role="img"
         {...readout.surfaceProps}
@@ -354,15 +369,6 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 }
                 {...readout.tooltipProps}
               />
-              <Legend
-                wrapperStyle={{ fontSize: '12px' }}
-                verticalAlign="top"
-                height={36}
-                formatter={value => {
-                  const district = data.find(d => d.districtId === value)
-                  return district?.districtName || value
-                }}
-              />
               {data.map((district, index) => {
                 const color =
                   DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
@@ -380,6 +386,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                     }}
                     activeDot={{ r: 0.5 }}
                     name={district.districtId}
+                    hide={!legend.isVisible(district.districtId)}
                     connectNulls
                   />
                 )
