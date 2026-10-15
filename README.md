@@ -4,7 +4,7 @@ A data visualization platform for Toastmasters district leaders to track perform
 
 **Live site:** [ts.taverns.red](https://ts.taverns.red)
 
-**Brand:** Red Taverns Brand v1.0 — token source of truth is [`taverns-red/ops:docs/brand/`](https://github.com/taverns-red/ops/blob/main/docs/brand/). The product is part of the [Red Taverns](https://taverns.red) branded house, accent color `--rt-stats` (#D4873F). UI chrome migration to brand v1.0 is tracked at [#339](https://github.com/taverns-red/toast-stats/issues/339) and gated on the Toast Stats / Tally rename decision ([`ops#37`](https://github.com/taverns-red/ops/issues/37)).
+**Brand:** Red Taverns Brand v1.0 — token source of truth is [`taverns-red/ops:docs/brand/`](https://github.com/taverns-red/ops/blob/main/docs/brand/). The product is part of the [Red Taverns](https://taverns.red) branded house, brand accent `--rt-stats` (#D4873F), which the UI does not use until the re-skin: new pages match the existing app palette (#2080). UI chrome migration to brand v1.0 is tracked at [#339](https://github.com/taverns-red/toast-stats/issues/339) and gated on the Toast Stats / Tally rename decision ([`ops#37`](https://github.com/taverns-red/ops/issues/37)).
 
 ## Project Structure
 
