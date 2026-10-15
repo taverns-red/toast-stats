@@ -8,7 +8,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { LoadingSkeleton } from './LoadingSkeleton'
+import {
+  YearOverYearComparisonSkeleton,
+  YOY_PLOT_HEIGHT,
+} from './YearOverYearComparisonSkeleton'
 import { EmptyState } from './ErrorDisplay'
 
 interface YearOverYearData {
@@ -106,7 +109,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
   unavailableReason = null,
 }) => {
   if (isLoading) {
-    return <LoadingSkeleton variant="chart" />
+    return <YearOverYearComparisonSkeleton />
   }
 
   // #1442: an explicit reason outranks both the "no data" and the "all zeroes"
@@ -487,7 +490,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                 <h4 className="text-sm font-semibold text-gray-700 text-center mb-2">
                   {item.metric}
                 </h4>
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={YOY_PLOT_HEIGHT}>
                   <BarChart
                     data={singleChartData}
                     margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
