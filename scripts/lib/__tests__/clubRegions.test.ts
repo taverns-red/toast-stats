@@ -18,6 +18,7 @@ import {
   extractClubPoints,
   bufferBox,
   clusterBoxes,
+  shouldMerge,
   buildClubRegions,
   regionsToGeoJson,
   MAX_MERCATOR_LAT,
@@ -112,18 +113,28 @@ describe('clusterBoxes', () => {
     expect(merged).toContainEqual({ box: [10, 10, 11, 11], count: 1 })
   })
 
-  it('re-merges when a union grows into a box it did not touch before', () => {
-    // A and B overlap; their union [0,0,4,1] reaches C, which overlapped
-    // neither on its own (C sits above B's top edge but within the union).
+  it('keeps boxes that only touch at a corner apart: their union would mostly be empty', () => {
+    // A corridor of clubs (Boston–Washington) chained into one bbox covered
+    // 218k km² of mostly empty land and sea. Overlapping polygons are fine for
+    // go-pmtiles: its relevance bitmap is the union of every polygon's tiles.
     const merged = clusterBoxes([
-      [0, 0, 2, 1],
-      [1.5, 0, 4, 0.5],
-      [3, 0.8, 5, 2],
+      [0, 0, 2, 2],
+      [1.9, 1.9, 3.9, 3.9],
     ])
-    expect(merged).toEqual([{ box: [0, 0, 5, 2], count: 3 }])
+    expect(merged).toHaveLength(2)
   })
 
-  it('returns pairwise disjoint boxes', () => {
+  it('re-merges when a union grows into a box it did not touch before', () => {
+    // A and B merge; their union reaches C, which overlapped neither alone.
+    const merged = clusterBoxes([
+      [0, 0, 2, 1],
+      [1.5, 0.2, 4, 1.2],
+      [3, 0, 5, 0.15],
+    ])
+    expect(merged).toEqual([{ box: [0, 0, 5, 1.2], count: 3 }])
+  })
+
+  it('is stable: no two output regions still qualify for a merge', () => {
     const boxes: Box[] = []
     for (let i = 0; i < 60; i++) {
       const x = (i * 37) % 23
@@ -133,11 +144,7 @@ describe('clusterBoxes', () => {
     const merged = clusterBoxes(boxes)
     for (let i = 0; i < merged.length; i++) {
       for (let j = i + 1; j < merged.length; j++) {
-        const a = merged[i]!.box
-        const b = merged[j]!.box
-        const overlap =
-          a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3]
-        expect(overlap).toBe(false)
+        expect(shouldMerge(merged[i]!.box, merged[j]!.box)).toBe(false)
       }
     }
     expect(merged.reduce((s, m) => s + m.count, 0)).toBe(60)
