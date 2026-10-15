@@ -1028,11 +1028,8 @@ export class AnalyticsComputeService {
               const json = JSON.parse(raw)
               if (json.data) {
                 json.data.paymentsTrend = accumulatedTrend
-                await fs.writeFile(
-                  filePath,
-                  JSON.stringify(json, null, 2),
-                  'utf-8'
-                )
+                // Compact, as AnalyticsWriter writes it (#1901).
+                await fs.writeFile(filePath, JSON.stringify(json), 'utf-8')
               }
             }
             this.logger.info('Patched paymentsTrend from time-series', {
