@@ -89,7 +89,7 @@ describe('CharterSurvivalView', () => {
   it('highlights a cohort through ?cohort= links that keep the other params', () => {
     renderAt('/district/61/survival?py=2026-2027&cohort=2019-2020')
     const nav = screen.getByRole('navigation', { name: /highlight a cohort/i })
-    const current = within(nav).getByRole('link', { current: 'page' })
+    const current = within(nav).getByRole('link', { current: true })
     expect(current).toHaveTextContent('2019-20')
     const all = within(nav).getByRole('link', { name: /all cohorts/i })
     expect(all.getAttribute('href')).toBe('/district/61/survival?py=2026-2027')

@@ -10,10 +10,11 @@ import {
   YAxis,
 } from 'recharts'
 import type { TooltipContentProps } from 'recharts'
-import type {
-  CharterCohort,
-  CharterCohortSurvival,
-  PooledYearCell,
+import {
+  shortProgramYear,
+  type CharterCohort,
+  type CharterCohortSurvival,
+  type PooledYearCell,
 } from '../utils/charterCohortSurvival'
 import {
   ChartReadout,
@@ -34,10 +35,6 @@ import {
 
 const COHORT_PARAM = 'cohort'
 const HEADLINE_YEARS = [1, 3, 5] as const
-
-/** "2019-2020" → "2019-20". */
-export const shortProgramYear = (py: string): string =>
-  `${py.slice(0, 4)}-${py.slice(7, 9)}`
 
 const pct = (share: number): string => `${Math.round(share * 100)}%`
 const seriesKey = (py: string) => `c${py.replace('-', '_')}`

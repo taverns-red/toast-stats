@@ -76,6 +76,10 @@ export interface BuildCharterCohortSurvivalInput {
   throughProgramYear: string
 }
 
+/** "2019-2020" → "2019-20". */
+export const shortProgramYear = (py: string): string =>
+  `${py.slice(0, 4)}-${py.slice(7, 9)}`
+
 /** "2026-2027" → "2027-06-30", the program year's close. */
 function programYearClose(programYear: string): string {
   return `${programYear.slice(5, 9)}-06-30`
