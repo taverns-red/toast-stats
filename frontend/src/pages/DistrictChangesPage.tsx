@@ -6,6 +6,7 @@ import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useSnapshotDiff } from '../hooks/useSnapshotDiff'
 import { useUrlDatePair } from '../hooks/useUrlDatePair'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
+import { useTransferCounterparts } from '../hooks/useTransferCounterparts'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ContextBar } from '../components/ContextBar'
@@ -144,6 +145,14 @@ const DistrictChangesPage: React.FC = () => {
     }
     return map
   }, [diff?.events])
+
+  // Realignment transfers name the district on the other side when the
+  // club-district history knows it (#1806). Lazy: no fetch unless the diff
+  // carries a transfer.
+  const counterparts = useTransferCounterparts(
+    invalidPair ? undefined : diff,
+    districtId ?? ''
+  )
 
   if (!districtId) return null
 
@@ -336,6 +345,7 @@ const DistrictChangesPage: React.FC = () => {
                         districtId={districtId}
                         collapsed={collapsedGroups.includes(category)}
                         onToggle={handleGroupToggle}
+                        counterparts={counterparts}
                       />
                     ))}
                   </div>

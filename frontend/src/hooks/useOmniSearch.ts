@@ -9,13 +9,22 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { clubDistrictHistoryShardKey } from '@taverns-red/shared-contracts'
 import {
+  clubIdIndexMiss,
+  closedClubEntity,
   loadSearchIndex,
   searchEntities,
+  withClosedClub,
   type SearchEntity,
   type SearchIndex,
   type SearchResultGroup,
 } from '../services/searchIndex'
+import { clubDistrictHistoryShardQuery } from './useTransferCounterparts'
+import {
+  closedClubSummary,
+  findClubInShard,
+} from '../utils/clubDistrictHistory'
 
 export interface UseOmniSearchOptions {
   /** Navigate to (and otherwise act on) the chosen entity. */
@@ -54,10 +63,32 @@ export function useOmniSearch(options: UseOmniSearchOptions): UseOmniSearch {
     enabled,
   })
 
-  const groups = useMemo(
+  const currentGroups = useMemo(
     () => (index ? searchEntities(query, index) : []),
     [index, query]
   )
+
+  // Closed clubs (#1806): a club number that club-index misses falls back to
+  // the club-district history. Only that one shard is fetched, only on a
+  // miss, so club-index stays the primary source and a name query or a hit
+  // costs nothing. A failed shard leaves the current results untouched.
+  const missedClubId = index ? clubIdIndexMiss(query, index) : null
+  const shardKey = missedClubId ? clubDistrictHistoryShardKey(missedClubId) : ''
+  const { data: historyShard } = useQuery({
+    ...clubDistrictHistoryShardQuery(shardKey),
+    enabled: !!missedClubId,
+  })
+
+  const groups = useMemo(() => {
+    if (!missedClubId || !historyShard) return currentGroups
+    const club = findClubInShard(historyShard, missedClubId)
+    const closed = club && closedClubSummary(club)
+    if (!club || !closed) return currentGroups
+    return withClosedClub(
+      currentGroups,
+      closedClubEntity(missedClubId, { name: club.name, ...closed })
+    )
+  }, [currentGroups, missedClubId, historyShard])
 
   // Flatten grouped results into one ordered list for keyboard nav /
   // aria-activedescendant — groups are display-only.

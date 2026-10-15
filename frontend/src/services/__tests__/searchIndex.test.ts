@@ -497,10 +497,16 @@ describe('closed clubs from the club-district history (#1806)', () => {
   })
 
   it('adds the closed club to the Clubs group, keeping group order', () => {
-    const groups = withClosedClub(searchEntities('61', index), closed)
-    expect(groups.map(g => g.type)).toEqual(['district', 'club'])
+    const before = searchEntities('61', index)
+    expect(before.map(g => g.type)).toContain('club')
+    const groups = withClosedClub(before, closed)
+    expect(groups.map(g => g.type)).toEqual(before.map(g => g.type))
     const clubs = groups.find(g => g.type === 'club')!.entities
     expect(clubs[0]).toBe(closed)
+    // The current club that matched stays, after the exact closed match.
+    expect(clubs.slice(1)).toEqual(
+      before.find(g => g.type === 'club')!.entities
+    )
   })
 
   it('creates the Clubs group when the query matched no current club', () => {

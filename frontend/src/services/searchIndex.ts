@@ -16,6 +16,7 @@ import {
   fetchCdnSnapshotIndex,
 } from './cdn'
 import { getProgramYearForDate } from '../utils/programYear'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 
 export type SearchEntityType =
   'district' | 'region' | 'club' | 'division' | 'area'
@@ -314,30 +315,69 @@ export function searchEntities(
   })).filter(g => g.entities.length > 0)
 }
 
+/* Closed clubs (#1806). `club-index.json` is the current roster only, so a
+   closed club is unsearchable through it. The club-district history (#1782)
+   keeps closed clubs, but it is sharded by club id — reachable by NUMBER,
+   not by name, without loading all 100 shards. So the fallback is a
+   club-number query that club-index misses: the caller fetches that one
+   shard and, if the club closed, adds it via `withClosedClub`. club-index
+   stays the primary source; nothing here touches `buildSearchIndex`. */
+
+/** A search entity for a closed club: "closed 2024 · last in District 39". */
 export function closedClubEntity(
-  _clubId: string,
-  _club: {
+  clubId: string,
+  club: {
     name: string
     lastDistrictId: string
     lastSeen: string
     closedYear: number
   }
 ): SearchEntity {
-  throw new Error('not implemented (#1806 red)')
+  // Land on the club's last program year in its last district, where its
+  // page still has data.
+  const py = getProgramYearForDate(club.lastSeen)
+  return {
+    type: 'club',
+    id: clubId,
+    label: club.name,
+    context: `closed ${club.closedYear} · last in District ${club.lastDistrictId}`,
+    route: `/district/${club.lastDistrictId}/club/${clubId}?py=${py.year}`,
+    terms: dedupeTerms([clubId, club.name]),
+  }
 }
 
+/**
+ * The canonical club id a query names when it is a club number that no
+ * indexed club carries; null for a name query, an empty query, or a hit.
+ */
 export function clubIdIndexMiss(
-  _query: string,
-  _index: SearchIndex
+  query: string,
+  index: SearchIndex
 ): string | null {
-  return null
+  const q = query.trim()
+  if (!/^\d+$/.test(q)) return null
+  const clubId = normalizeClubId(q)
+  if (!clubId) return null
+  const hit = index.entities.some(
+    e => e.type === 'club' && normalizeClubId(e.id) === clubId
+  )
+  return hit ? null : clubId
 }
 
+/** Put a closed club at the head of the Clubs group (creating it if needed),
+    keeping the canonical group order. An exact club-number match outranks
+    a club that merely contains the digits. */
 export function withClosedClub(
   groups: SearchResultGroup[],
-  _entity: SearchEntity
+  entity: SearchEntity
 ): SearchResultGroup[] {
-  return groups
+  const others = groups.filter(g => g.type !== 'club')
+  const clubs = groups.find(g => g.type === 'club')?.entities ?? []
+  const merged = [
+    ...others,
+    { type: 'club' as const, entities: [entity, ...clubs] },
+  ]
+  return GROUP_ORDER.flatMap(type => merged.filter(g => g.type === type))
 }
 
 /**
