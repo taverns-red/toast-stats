@@ -57,6 +57,13 @@ vi.mock('../../hooks/useDistrictData', () => ({
   })),
 }))
 
+// #1804 — no club-district history here (never the live CDN): a club absent
+// from the district falls back to the club index. The history-backed paths
+// are covered by ClubDetailPage.preMove and ClubRedirectPage.programYear.
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
+  fetchClubDistrictHistoryShard: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('../../services/cdn', () => ({
   fetchCdnClubIndex: vi.fn(),
   fetchCdnDates: vi.fn().mockResolvedValue({

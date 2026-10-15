@@ -72,6 +72,13 @@ vi.mock('../../hooks/useMembershipData', () => ({
 
 // Only the club-index fetch is stubbed — the rest of the CDN service stays
 // real (ProgramYearProvider reaches for fetchCdnDates through it).
+// #1804 — no club-district history here (never the live CDN): a club absent
+// from the district falls back to the club index. The history-backed paths
+// are covered by ClubDetailPage.preMove and ClubRedirectPage.programYear.
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
+  fetchClubDistrictHistoryShard: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('../../services/cdn', async importOriginal => {
   const actual = await importOriginal<typeof import('../../services/cdn')>()
   return { ...actual, fetchCdnClubIndex: vi.fn() }

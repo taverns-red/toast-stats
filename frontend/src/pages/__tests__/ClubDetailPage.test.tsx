@@ -92,6 +92,13 @@ const baseMockClub = {
 // #1441 — the not-found branch now consults the club index before concluding
 // a club is gone. Only that one export is stubbed (partial mock): the page's
 // other CDN reads keep their existing behaviour in this file.
+// #1804 — no club-district history here (never the live CDN): a club absent
+// from the district falls back to the club index. The history-backed paths
+// are covered by ClubDetailPage.preMove and ClubRedirectPage.programYear.
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
+  fetchClubDistrictHistoryShard: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('../../services/cdn', async importOriginal => ({
   ...(await importOriginal<typeof import('../../services/cdn')>()),
   fetchCdnClubIndex: vi.fn().mockResolvedValue({ clubs: {} }),

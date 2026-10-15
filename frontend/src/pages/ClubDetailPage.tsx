@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 // One shared definition of "the same club" (#1440) — this file used to hold
@@ -53,6 +53,14 @@ import { useClubDistrictHistoryEntry } from '../hooks/useClubDistrictHistoryEntr
 import { useSuspendedClubs } from '../hooks/useSuspendedClubs'
 import { buildClubLifecycle } from '../utils/clubLifecycle'
 import { buildClubLineage, type ClubLineage } from '../utils/clubLineage'
+import {
+  clubDistrictNotice,
+  districtForProgramYear,
+  movedAfterDate,
+  sameDistrictId,
+} from '../utils/clubDistrictSpan'
+import { ClubDistrictBanner } from '../components/clubs/ClubDistrictBanner'
+import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import { ClubMiniMap } from '../components/clubs/ClubMiniMap'
 import { ClubStatStrip } from '../components/clubs/ClubStatStrip'
 import { ClubMembershipTrend } from '../components/clubs/ClubMembershipTrend'
@@ -197,12 +205,37 @@ function DCPProjectionCard({
 // ── Main Page ──────────────────────────────────────────────────────────────
 
 const ClubDetailPage: React.FC = () => {
-  const { districtId, clubId } = useParams<{
+  const { districtId: urlDistrictId, clubId } = useParams<{
     districtId: string
     clubId: string
   }>()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // ── The district for the selected PY (#1804) ───────────────────────────
+  // A club that moved district keeps one number, so a link can name a
+  // district the club was not in for the year it asks about
+  // (`/district/201/club/977?py=2024`: 977 was in District 01 then). The
+  // page does not redirect — that loops with the PY selector. It shows the
+  // right district's data under a banner; the breadcrumb follows the URL.
+  // `districtId` below is the district whose data the page shows.
+  //
+  // The switch is latched per (URL district, club, selected PY) and made only
+  // when the URL district cannot answer (see `needsDistrictResolution`), so
+  // a normal visit never consults the history before its hero paints. A new
+  // PY from the selector (or the back button) is a new key: the URL district
+  // is tried again, and the banner goes when it is right.
+  const { selectedProgramYear: urlProgramYear } = useUrlProgramYear()
+  const resolutionKey = `${urlDistrictId}|${clubId}|${urlProgramYear.year}`
+  const [resolvedDistrict, setResolvedDistrict] = useState<{
+    key: string
+    districtId: string
+  } | null>(null)
+  const districtId =
+    resolvedDistrict?.key === resolutionKey
+      ? resolvedDistrict.districtId
+      : urlDistrictId
+  const isShowingOtherDistrict = districtId !== urlDistrictId
 
   // #577 — Filter round-trip: when the user arrived from a filtered clubs
   // list, ClubsTable passed the prior search via navigation state. The
@@ -244,17 +277,39 @@ const ClubDetailPage: React.FC = () => {
 
   // Fetch district info
   const { data: districtsData } = useDistricts()
+  // The URL's district: the breadcrumb and back links follow the URL (#1804).
   const selectedDistrict = districtsData?.districts?.find(
-    d => d.id === districtId
+    d => d.id === urlDistrictId
   )
-  const rawName = selectedDistrict?.name || districtId || ''
+  const rawName = selectedDistrict?.name || urlDistrictId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
 
   // Fetch raw district statistics for per-goal DCP data (#242). Since #1901
   // it also feeds the hero's first paint (see `snapshotHeroClub`).
+  // #1804 — an explicit `?py=` the URL district has no data for is the one
+  // case decided before the hero: the club's history shard (~12 KB) says
+  // which district holds that year, and the snapshot read waits for it
+  // rather than reading the healed year of the wrong district.
+  const hasExplicitPy = new URLSearchParams(location.search).has('py')
+  const isPyMissingHere =
+    !isShowingOtherDistrict &&
+    hasExplicitPy &&
+    !isDatesPending &&
+    !availableProgramYears.some(py => py.year === selectedProgramYear.year)
+  const { history: pyHistory, isLoading: isLoadingPyHistory } =
+    useClubDistrictHistoryEntry(clubId, isPyMissingHere)
+  const pyHistoryDistrict = districtForProgramYear(
+    pyHistory,
+    selectedProgramYear.label
+  )
+  const isHoldingForPy =
+    isPyMissingHere &&
+    (isLoadingPyHistory ||
+      (!!pyHistoryDistrict &&
+        !sameDistrictId(pyHistoryDistrict, urlDistrictId ?? '')))
   const { data: districtStats, isLoading: isLoadingStats } =
     useDistrictStatistics(
-      hasValidDates ? districtId || null : null,
+      hasValidDates && !isHoldingForPy ? districtId || null : null,
       effectiveEndDate ?? undefined
     )
 
@@ -264,7 +319,9 @@ const ClubDetailPage: React.FC = () => {
   // above is smaller, already needed, and carries the hero's fields, so the
   // analytics read starts only once that read has settled and its hero (or
   // the skeleton, when the club is not in the snapshot) has painted.
-  const analyticsReady = useAfterPaint(hasValidDates && !isLoadingStats)
+  const analyticsReady = useAfterPaint(
+    hasValidDates && !isLoadingStats && !isHoldingForPy
+  )
 
   // Fetch district analytics to get this club's data
   const {
@@ -274,7 +331,7 @@ const ClubDetailPage: React.FC = () => {
     error,
     refetch,
   } = useDistrictAnalytics(
-    hasValidDates ? districtId || null : null,
+    hasValidDates && !isHoldingForPy ? districtId || null : null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined,
     { enabled: analyticsReady }
@@ -332,11 +389,49 @@ const ClubDetailPage: React.FC = () => {
   // snapshot dates at all (analytics will never load).
   const isClubAbsentSettled =
     !club && (!!analytics || (!isDatesPending && !hasValidDates))
+
+  // #1804 — when the URL district cannot answer for the selected PY (its
+  // dates lack an explicit `?py=`, or its data lacks the club), the club's
+  // history shard says which district held the club that year, and the page
+  // latches onto it (see `resolvedDistrict`). #1843/#1805 — the same read
+  // feeds the Lifecycle timeline and the hero's lineage chip; on a normal
+  // visit it starts with the analytics read, after first paint (#1901), so it
+  // never competes with the hero's reads, and the full render waits for it
+  // (see `isHoldingForHistory`).
+  const isClubAbsentHere =
+    !isShowingOtherDistrict && isClubAbsentSettled && !isLoading && !isError
+  const needsDistrictResolution = isPyMissingHere || isClubAbsentHere
+  const { history: clubDistrictHistory, isLoading: isLoadingHistory } =
+    useClubDistrictHistoryEntry(
+      clubId,
+      analyticsReady || needsDistrictResolution
+    )
+  const resolutionTarget = needsDistrictResolution
+    ? districtForProgramYear(clubDistrictHistory, selectedProgramYear.label)
+    : null
+  const isTargetElsewhere =
+    !!resolutionTarget && !sameDistrictId(resolutionTarget, urlDistrictId ?? '')
+  // Latched while rendering (React's "adjust state on a change" pattern),
+  // not in an effect: the next render already reads the right district.
+  if (
+    isTargetElsewhere &&
+    resolutionTarget &&
+    resolvedDistrict?.key !== resolutionKey
+  ) {
+    setResolvedDistrict({ key: resolutionKey, districtId: resolutionTarget })
+  }
+  const isResolvingDistrict =
+    needsDistrictResolution && (isLoadingHistory || isTargetElsewhere)
+
+  // The current-district index, only when the history could not place the
+  // club elsewhere for this year (#1804): it then says where the club is now.
+  const isClubIndexEnabled =
+    !!clubId && isClubAbsentHere && !isLoadingHistory && !isTargetElsewhere
   const { data: clubIndex, isError: isClubIndexError } = useQuery({
     queryKey: ['club-index'],
     queryFn: fetchCdnClubIndex,
     staleTime: 15 * 60 * 1000,
-    enabled: !!clubId && isClubAbsentSettled && !isLoading && !isError,
+    enabled: isClubIndexEnabled,
   })
 
   // Where the index says this club lives now — null unless the index both
@@ -352,9 +447,17 @@ const ClubDetailPage: React.FC = () => {
     // stored, so an exact-key lookup would report "may have been removed" for
     // a club that did move and IS in the index, just under the other form.
     const entry = findClubEntry(clubIndex.clubs, clubId)
-    if (!entry?.districtId || entry.districtId === districtId) return null
+    if (!entry?.districtId || entry.districtId === urlDistrictId) return null
     return entry
-  }, [club, clubId, clubIndex, districtId])
+  }, [club, clubId, clubIndex, urlDistrictId])
+  // #1804 — the move's date, when the history can vouch for one.
+  const movedToAfter = movedTo
+    ? movedAfterDate(
+        clubDistrictHistory,
+        urlDistrictId ?? '',
+        movedTo.districtId
+      )
+    : null
 
   const movedToName = useMemo(() => {
     if (!movedTo) return ''
@@ -420,16 +523,10 @@ const ClubDetailPage: React.FC = () => {
     [analytics, clubId]
   )
 
-  // #1843 — Lifecycle timeline: charter (snapshot), district spans (one
-  // club-district-history shard, #1782) and, only for a club the dashboard
-  // lists as Suspended, its `Susp` date from the page date's
-  // suspended-clubs.json (#1953, R3). Neither read competes with the
-  // hero's reads: the shard (~12 KB) starts with the analytics read, after
-  // first paint (#1901) — since #1805 the hero's lineage chip needs it in
-  // the full render's commit (see `isHoldingForHistory`) — and the
-  // suspended list waits for the club's analytics.
-  const { history: clubDistrictHistory, isLoading: isLoadingHistory } =
-    useClubDistrictHistoryEntry(clubId, analyticsReady)
+  // #1843 — Lifecycle timeline: charter (snapshot), district spans (the
+  // club-district-history shard read above) and, only for a club the
+  // dashboard lists as Suspended, its `Susp` date from the page date's
+  // suspended-clubs.json (#1953, R3), read once the club's analytics lands.
   // #1805 — "District 201 (District 1 until June 2026)".
   const lineage = useMemo(
     () => buildClubLineage(clubDistrictHistory, districtId),
@@ -555,6 +652,26 @@ const ClubDetailPage: React.FC = () => {
   // default while the club is still loading or absent.
   useDocumentTitle(club ? `${club.clubName} — ${districtName}` : null)
 
+  // #1804 — the banner when the page shows another district's data than
+  // its URL names (the breadcrumb keeps following the URL).
+  const districtNotice = useMemo(
+    () =>
+      isShowingOtherDistrict
+        ? clubDistrictNotice(clubDistrictHistory, {
+            urlDistrictId: urlDistrictId ?? '',
+            shownDistrictId: districtId ?? '',
+            programYearLabel: programYear.label,
+          })
+        : null,
+    [
+      isShowingOtherDistrict,
+      clubDistrictHistory,
+      urlDistrictId,
+      districtId,
+      programYear.label,
+    ]
+  )
+
   // The page top: context bar, breadcrumb and hero. Shared by the full
   // render and the hero-first render (#1901), so the h1 and everything
   // above it keep one geometry while analytics loads in behind them.
@@ -572,7 +689,7 @@ const ClubDetailPage: React.FC = () => {
         title={heroClub.clubName}
         back={{
           label: 'Clubs',
-          to: `/district/${districtId}/clubs${fromClubsSearch}`,
+          to: `/district/${urlDistrictId}/clubs${fromClubsSearch}`,
         }}
         programYear={effectiveProgramYear ?? selectedProgramYear}
         date={effectiveEndDate ?? latestSnapshotDate}
@@ -594,10 +711,10 @@ const ClubDetailPage: React.FC = () => {
         about="This club's membership, DCP goals, recognition and education for the selected program year."
         trail={[
           { label: 'Districts', to: '/' },
-          { label: districtName, to: `/district/${districtId}` },
+          { label: districtName, to: `/district/${urlDistrictId}` },
           {
             label: 'Clubs',
-            to: `/district/${districtId}/clubs${fromClubsSearch}`,
+            to: `/district/${urlDistrictId}/clubs${fromClubsSearch}`,
           },
           { label: heroClub.clubName },
         ]}
@@ -608,14 +725,21 @@ const ClubDetailPage: React.FC = () => {
           restores the user's prior filtered list (filter round-trip). */}
       <SubpageBreadcrumb
         crumbs={[
-          { label: districtName, to: `/district/${districtId}` },
+          { label: districtName, to: `/district/${urlDistrictId}` },
           {
             label: 'Clubs',
-            to: `/district/${districtId}/clubs${fromClubsSearch}`,
+            to: `/district/${urlDistrictId}/clubs${fromClubsSearch}`,
           },
           { label: heroClub.clubName },
         ]}
       />
+
+      {districtNotice && (
+        <ClubDistrictBanner
+          notice={districtNotice}
+          openTo={`/district/${districtId}/club/${clubId}${location.search}`}
+        />
+      )}
 
       <ClubHero
         clubId={clubId ?? ''}
@@ -650,6 +774,21 @@ const ClubDetailPage: React.FC = () => {
   // included), so React keeps the hero's DOM when analytics lands and nothing
   // above the fold moves. The tree differs from the plain skeleton below, so
   // that skeleton's nodes are replaced rather than pushed down (no CLS).
+  // #1804 — while the history decides which district holds the selected PY,
+  // the plain skeleton: neither district's figures are claimed yet.
+  if (isResolvingDistrict) {
+    return (
+      <div className="min-h-screen" aria-busy="true">
+        <div className="container mx-auto px-4 py-8">
+          <LoadingSkeleton variant="card" />
+          <div className="mt-6">
+            <LoadingSkeleton variant="chart" height="400px" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // #1805 — the full render also waits for the club's history shard, so the
   // hero's lineage chip lands in the same commit as the analytics panels
   // instead of pushing painted content down on its own. The shard is ~12 KB
@@ -723,7 +862,13 @@ const ClubDetailPage: React.FC = () => {
   // Deliberately NOT `isFetching`: on the render where `enabled` flips true the
   // query is still 'idle', which would leak one frame of "may have been
   // removed" before the lookup even starts.
-  const isClubIndexUnresolved = !!clubId && !clubIndex && !isClubIndexError
+  // #1804 — on another district's data the index is not read (the history
+  // already placed the club); a district whose dates are still loading has
+  // not answered yet either.
+  const isClubIndexUnresolved =
+    !!clubId &&
+    (isDatesPending ||
+      (!isShowingOtherDistrict && !clubIndex && !isClubIndexError))
 
   if (!club && isClubIndexUnresolved) {
     return (
@@ -745,7 +890,11 @@ const ClubDetailPage: React.FC = () => {
         <div className="container mx-auto px-4 py-8">
           <EmptyState
             title="Club Moved Districts"
-            message={`${movedTo.clubName || `Club ${clubId}`} is no longer in ${districtName} — it is now in ${movedToName}.`}
+            message={
+              movedToAfter
+                ? `${movedTo.clubName || `Club ${clubId}`} is no longer in ${districtName} — it moved to ${movedToName} after ${movedToAfter}.`
+                : `${movedTo.clubName || `Club ${clubId}`} is no longer in ${districtName} — it is now in ${movedToName}.`
+            }
             icon="search"
             action={{
               label: `View this club in ${movedToName}`,
@@ -768,7 +917,7 @@ const ClubDetailPage: React.FC = () => {
             icon="data"
             action={{
               label: 'Back to District',
-              onClick: () => navigate(`/district/${districtId}`),
+              onClick: () => navigate(`/district/${urlDistrictId}`),
             }}
           />
         </div>
@@ -1155,7 +1304,7 @@ const ClubDetailPage: React.FC = () => {
               user who has scrolled the full page can return without scrolling
               back up to the breadcrumb. #577 removed the old *button*; this is
               a single styled link, not a duplicate button. */}
-          <Link to={`/district/${districtId}`} className="club-back-link">
+          <Link to={`/district/${urlDistrictId}`} className="club-back-link">
             <svg
               className="club-back-link__icon"
               width="14"

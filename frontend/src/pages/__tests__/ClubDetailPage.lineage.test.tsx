@@ -246,6 +246,44 @@ describe('ClubDetailPage — hero lineage chip (#1805)', () => {
     ).toBeInTheDocument()
   })
 
+  // Cached analytics (back-navigation) is there before first paint, while the
+  // shard read is still gated on paint. The full render must not show (and
+  // then flip back to the hero-first render once the shard starts): that
+  // unmounted the panels mid-load — the CI flake in the Lifecycle test.
+  it('does not show the full render before the shard read has started, even with cached analytics', async () => {
+    mockedAnalytics.mockImplementation(((districtId: string | null) =>
+      districtId
+        ? {
+            data: { districtId, allClubs: [analyticsClub] },
+            isLoading: false,
+            isError: false,
+            error: null,
+            refetch: vi.fn(),
+          }
+        : {
+            data: undefined,
+            isLoading: false,
+            isError: false,
+            error: null,
+            refetch: vi.fn(),
+          }) as never)
+    let resolveShard: (v: ClubDistrictHistoryShard) => void = () => {}
+    mockedShard.mockReturnValue(
+      new Promise(resolve => {
+        resolveShard = resolve
+      })
+    )
+    renderAt('/district/219/club/497')
+    // The first commit: analytics is cached, the shard read not started.
+    expect(mockedShard).not.toHaveBeenCalled()
+    expect(screen.queryByText('Thriving')).not.toBeInTheDocument()
+
+    await waitFor(() => expect(mockedShard).toHaveBeenCalled())
+    expect(screen.queryByText('Thriving')).not.toBeInTheDocument()
+    resolveShard(historyShard as ClubDistrictHistoryShard)
+    expect(await screen.findByText('Thriving')).toBeInTheDocument()
+  })
+
   it('renders the page without a chip when the shard is unavailable', async () => {
     mockedShard.mockResolvedValue(null)
     const { container } = renderAt('/district/219/club/497')
