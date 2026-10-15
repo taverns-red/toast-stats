@@ -297,77 +297,11 @@ const Matrix: React.FC<{ e: Available }> = ({ e }) => {
     sel && selPath
       ? `${selPath.title} · Level ${sel.level}: ${fmt(selPath.levels[sel.level - 1]!)} awards`
       : 'Tap a cell to read it.'
+  // The readout sits OUTSIDE the scroll region, above it, so a tapped cell's
+  // value stays in view however far the matrix is scrolled (in the phone
+  // sheet the region is the scroller).
   return (
     <>
-      <table className="education-matrix" aria-label={MATRIX_LABEL}>
-        <thead>
-          <tr>
-            <th scope="col" className="education-matrix__corner">
-              Path
-            </th>
-            {[1, 2, 3, 4, 5].map(l => (
-              <th
-                key={l}
-                scope="col"
-                className={sel?.level === l ? 'is-highlighted' : undefined}
-              >
-                L{l}
-              </th>
-            ))}
-            <th scope="col">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {e.paths.map(p => (
-            <tr
-              key={p.path}
-              className={sel?.path === p.path ? 'is-highlighted' : undefined}
-            >
-              <th scope="row" className="education-matrix__path">
-                <span className="education-matrix__code">{p.path}</span>
-                <span className="education-matrix__title">{p.title}</span>
-              </th>
-              {p.levels.map((n, i) => {
-                const active = sel?.path === p.path && sel.level === i + 1
-                return (
-                  <td
-                    key={i}
-                    className={
-                      sel?.level === i + 1 ? 'is-highlighted' : undefined
-                    }
-                  >
-                    <button
-                      type="button"
-                      className="education-matrix__cell"
-                      aria-pressed={active}
-                      aria-label={`${p.title} level ${i + 1}: ${n}`}
-                      onClick={() =>
-                        setSel(active ? null : { path: p.path, level: i + 1 })
-                      }
-                    >
-                      {fmt(n)}
-                    </button>
-                  </td>
-                )
-              })}
-              <td className="education-matrix__total">{fmt(p.total)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <th scope="row" className="education-matrix__path">
-              Total
-            </th>
-            {e.levelTotals.map((n, i) => (
-              <td key={i} className="education-matrix__total">
-                {fmt(n)}
-              </td>
-            ))}
-            <td className="education-matrix__total">{fmt(pathways)}</td>
-          </tr>
-        </tfoot>
-      </table>
       <p
         className="education-matrix__readout"
         data-testid="education-matrix-readout"
@@ -375,6 +309,82 @@ const Matrix: React.FC<{ e: Available }> = ({ e }) => {
       >
         {readout}
       </p>
+      <div
+        className="education-matrix__region"
+        role="region"
+        aria-label={MATRIX_LABEL}
+        tabIndex={0}
+      >
+        <table className="education-matrix" aria-label={MATRIX_LABEL}>
+          <thead>
+            <tr>
+              <th scope="col" className="education-matrix__corner">
+                Path
+              </th>
+              {[1, 2, 3, 4, 5].map(l => (
+                <th
+                  key={l}
+                  scope="col"
+                  className={sel?.level === l ? 'is-highlighted' : undefined}
+                >
+                  L{l}
+                </th>
+              ))}
+              <th scope="col">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {e.paths.map(p => (
+              <tr
+                key={p.path}
+                className={sel?.path === p.path ? 'is-highlighted' : undefined}
+              >
+                <th scope="row" className="education-matrix__path">
+                  <span className="education-matrix__code">{p.path}</span>
+                  <span className="education-matrix__title">{p.title}</span>
+                </th>
+                {p.levels.map((n, i) => {
+                  const active = sel?.path === p.path && sel.level === i + 1
+                  return (
+                    <td
+                      key={i}
+                      className={
+                        sel?.level === i + 1 ? 'is-highlighted' : undefined
+                      }
+                    >
+                      <button
+                        type="button"
+                        className="education-matrix__cell"
+                        aria-pressed={active}
+                        aria-label={`${p.title} level ${i + 1}: ${n}`}
+                        onClick={() =>
+                          setSel(active ? null : { path: p.path, level: i + 1 })
+                        }
+                      >
+                        {fmt(n)}
+                      </button>
+                    </td>
+                  )
+                })}
+                <td className="education-matrix__total">{fmt(p.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" className="education-matrix__path">
+                Total
+              </th>
+              {e.levelTotals.map((n, i) => (
+                <td key={i} className="education-matrix__total">
+                  {fmt(n)}
+                </td>
+              ))}
+              <td className="education-matrix__total">{fmt(pathways)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </>
   )
 }
@@ -384,16 +394,7 @@ const MatrixSection: React.FC<{ e: Available }> = ({ e }) => {
   const [open, setOpen] = useState(false)
   const openerRef = useRef<HTMLButtonElement>(null)
   const sheetId = useId()
-  const region = (
-    <div
-      className="education-matrix__region"
-      role="region"
-      aria-label={MATRIX_LABEL}
-      tabIndex={0}
-    >
-      <Matrix e={e} />
-    </div>
-  )
+  const region = <Matrix e={e} />
   return (
     <section className="education-section" aria-labelledby={`${sheetId}-h`}>
       <h2 id={`${sheetId}-h`} className="education-section__title">
