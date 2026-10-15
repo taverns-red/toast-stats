@@ -72,10 +72,13 @@ const LINK_TOKEN = new RegExp(
 /** Marks where a link was, so a label in front of it can be found. */
 const MARK = '\u0001'
 
-/** "Zoom Link:", "Meeting link -", "Join us at", "Zoom:" before a link. */
+/**
+ * "Zoom Link:", "Meeting link -", "Join us at" before a link. A bare
+ * platform name ("Zoom: <link>") is kept: it says how the club meets.
+ */
 const LABEL_BEFORE_LINK = new RegExp(
   '(?:\\b(?:(?:zoom|teams|webex|google\\s+meet|meet(?:ing)?|online|virtual|web)\\s+)?(?:link|url)s?\\b' +
-    '|\\b(?:zoom|teams|webex|google\\s+meet|join(?:\\s+us)?(?:\\s+(?:at|on|via))?)\\b)' +
+    '|\\bjoin(?:\\s+us)?(?:\\s+(?:at|on|via))?\\b)' +
     `\\s*[:=–—-]?\\s*(?=${MARK})`,
   'gi'
 )

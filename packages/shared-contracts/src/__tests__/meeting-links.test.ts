@@ -94,6 +94,10 @@ describe('stripLinks (#2069)', () => {
     expect(containsLink(place)).toBe(false)
   })
 
+  it('keeps a bare platform name, which says how the club meets', () => {
+    expect(stripLinks('Hall, Zoom: bit.ly/abc123')).toBe('Hall, Zoom')
+  })
+
   it('drops an email too', () => {
     expect(stripLinks('9 Main St, club-1@example.com')).toBe('9 Main St')
   })
