@@ -19,6 +19,7 @@ import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ClubGrowthFunnelView } from '../components/ClubGrowthFunnelView'
+import { GrowthSurvivalLink } from '../components/GrowthSurvivalLink'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
 
@@ -176,6 +177,8 @@ const DistrictGrowthPage: React.FC = () => {
           />
 
           <DistrictSubnav districtId={districtId} />
+
+          <GrowthSurvivalLink districtId={districtId} />
 
           {loading || !funnel || !effectiveEndDate ? (
             <LoadingSkeleton variant="card" />
