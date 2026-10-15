@@ -174,9 +174,28 @@ export function stripContactKeys(value: unknown): {
   return { value: walk(value), removed }
 }
 
+/** Place-text values holding a link, at any depth (#2069). Stub. */
+export function countPlaceLinks(_value: unknown): number {
+  return 0
+}
+
+/** A copy with the links scrubbed from place text (#2069). Stub. */
+export function scrubPlaceLinks(value: unknown): {
+  value: unknown
+  scrubbed: number
+} {
+  return { value, scrubbed: 0 }
+}
+
 export type StripResult =
   | { changed: false; gzipLayers: number }
-  | { changed: true; gzipLayers: number; keysRemoved: number; bytes: Buffer }
+  | {
+      changed: true
+      gzipLayers: number
+      keysRemoved: number
+      placeValuesScrubbed: number
+      bytes: Buffer
+    }
 
 function decode(stored: Buffer): { text: string; layers: number } {
   let data: Buffer
@@ -244,7 +263,13 @@ export function stripStoredObject(stored: Buffer): StripResult {
   ) {
     throw new StripError('stripped output failed its own post-check')
   }
-  return { changed: true, gzipLayers: layers, keysRemoved: removed, bytes }
+  return {
+    changed: true,
+    gzipLayers: layers,
+    keysRemoved: removed,
+    placeValuesScrubbed: 0,
+    bytes,
+  }
 }
 
 /** The original's headers and custom metadata, for the rewrite. */
@@ -279,6 +304,8 @@ export interface AuditRow {
   /** planned: dry run would rewrite; stripped: rewritten and verified. */
   action: 'planned' | 'stripped' | 'unchanged' | 'error'
   keysRemoved: number
+  /** Place-text values that held a link and were scrubbed (#2069). */
+  placeValuesScrubbed: number
   gzipLayers: number | null
   oldGeneration: string
   newGeneration: string | null
@@ -299,6 +326,7 @@ export interface StripSummary {
   unchanged: number
   errors: number
   keysRemoved: number
+  placeValuesScrubbed: number
 }
 
 export interface StripOptions {
@@ -330,6 +358,7 @@ async function stripOne(
     path: meta.name,
     action: 'error',
     keysRemoved: 0,
+    placeValuesScrubbed: 0,
     gzipLayers: null,
     oldGeneration: meta.generation,
     newGeneration: null,
@@ -438,6 +467,7 @@ export async function runStrip(
       unchanged: count('unchanged'),
       errors: count('error'),
       keysRemoved: rows.reduce((n, r) => n + r.keysRemoved, 0),
+      placeValuesScrubbed: rows.reduce((n, r) => n + r.placeValuesScrubbed, 0),
     },
   }
 }

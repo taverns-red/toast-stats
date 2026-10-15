@@ -71,7 +71,8 @@ describe('contact-strip.yml', () => {
     })
     expect(inputs.dates?.type).toBe('string')
     expect(inputs.dates?.default).toBe(
-      '2026-06-30,2026-10-09,2026-10-10,2026-10-11,2026-10-12,2026-10-13'
+      // #2069: 10-14 carries place links (no contact keys).
+      '2026-06-30,2026-10-09,2026-10-10,2026-10-11,2026-10-12,2026-10-13,2026-10-14'
     )
     expect(inputs.dry_run).toMatchObject({ type: 'boolean', default: true })
   })
@@ -108,6 +109,10 @@ describe('contact-strip.yml', () => {
     expect(upload).toBeDefined()
     expect(upload!.if).toBe('always()')
     expect(String(upload!.with?.path)).toContain('contact-strip.jsonl')
+  })
+
+  it('reports the place-link count in the step summary (#2069)', () => {
+    expect(runs).toContain('placeValuesScrubbed')
   })
 
   it('keeps the audit copy in staging only on a real run', () => {
