@@ -147,9 +147,10 @@
   fill: var(--map-surface);
 }
 
-/* "No coach" is a pale dot: outlined like its pin, so it reads on any
+/* The pale "No coach" dot and the dark Ineligible / coaching-complete
+   diamond: outlined like their pins, so they read on either theme's
    surface (1.4.11). */
-.pin-swatch__dot {
+.pin-swatch__edge {
   stroke: var(--map-pin-outline);
   stroke-width: 1.25;
 }
