@@ -793,7 +793,12 @@ const ClubDetailPage: React.FC = () => {
   // hero's lineage chip lands in the same commit as the analytics panels
   // instead of pushing painted content down on its own. The shard is ~12 KB
   // and starts with the ~150 KB analytics read, so this rarely waits.
-  const isHoldingForHistory = !!club && isLoadingHistory
+  // "Not started yet" holds too: cached analytics can be there before the
+  // paint gate opens the shard read, and a full render then would flip back
+  // to this one when the read starts (unmounting the panels mid-load).
+  const isHistoryReadStarted = analyticsReady || needsDistrictResolution
+  const isHoldingForHistory =
+    !!club && (isLoadingHistory || !isHistoryReadStarted)
   if ((isLoading || isHoldingForHistory) && snapshotHeroClub) {
     return (
       <ErrorBoundary>
