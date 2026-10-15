@@ -14,6 +14,7 @@ import type {
 } from '@taverns-red/shared-contracts'
 import recorded from '../../__tests__/fixtures/d61-growth-reports.recorded.json'
 import suspendedJson from '../../__tests__/fixtures/suspended-clubs-2026-10-13.recorded.json'
+import sponsorsRecorded from '../../__tests__/fixtures/sponsors-mentors-2026-06-01.recorded.json'
 import { buildClubGrowthFunnel } from '../../utils/clubGrowthFunnel'
 import { ClubGrowthFunnelView } from '../ClubGrowthFunnelView'
 
@@ -200,4 +201,89 @@ describe('ClubGrowthFunnelView', () => {
     const { container } = renderView(2)
     expect(container.textContent).not.toMatch(/@|\+1\d{10}|COACHU|PENDING/)
   })
+
+  // #1794 + #1795 — sponsor/mentor COUNTS for new clubs, never who.
+  it('says sponsor and mentor counts are not available yet without the section', () => {
+    renderView(2)
+    const section = screen.getByRole('region', { name: /chartered/i })
+    expect(section).toHaveTextContent(/sponsors and mentors/i)
+    expect(section).toHaveTextContent(/not available yet/i)
+    expect(within(section).queryByTestId('growth-sponsors-table')).toBeNull()
+  })
+
+  it('lists sponsor and mentor counts per new club from the recorded section', () => {
+    renderSponsors(false)
+    const section = screen.getByRole('region', { name: /chartered/i })
+    expect(section).not.toHaveTextContent(/not available yet/i)
+    // Totals as text: 11 sponsors + 10 mentors (MENTOR + MENTORU) across 6
+    // clubs; no 'other role' — every recorded code is a known role.
+    expect(section).toHaveTextContent(/11 sponsors and 10 mentors across/)
+    expect(section).toHaveTextContent(/6 new clubs/)
+    expect(section).not.toHaveTextContent(/other role/i)
+    expect(
+      within(section).queryByRole('columnheader', { name: /other/i })
+    ).toBeNull()
+    const table = within(section).getByTestId('growth-sponsors-table')
+    const link = within(table).getByRole('link', {
+      name: 'iA Montreal Toastmasters',
+    })
+    expect(link).toHaveAttribute('href', '/district/61/club/28680300')
+    const row = link.closest('tr')!
+    expect(row).toHaveTextContent('May 22, 2026')
+  })
+
+  it('shows sponsor and mentor counts as tappable rows on phones', () => {
+    renderSponsors(true)
+    const section = screen.getByRole('region', { name: /chartered/i })
+    expect(
+      within(section).getByRole('link', { name: /iA Montreal Toastmasters/ })
+    ).toHaveAttribute('href', '/district/61/club/28680300')
+    expect(section).toHaveTextContent(/2 sponsors · 2 mentors/)
+  })
+
+  it('gives every phone row its full counts as its accessible name', () => {
+    renderSponsors(true)
+    const section = screen.getByRole('region', { name: /chartered/i })
+    // The visible meta line may ellipsize at 375; the name never does.
+    expect(
+      within(section).getByRole('link', {
+        name: 'Family Club, chartered Jun 25, 2025: 2 sponsors, 2 mentors, 4 awarded (opens toastmasters.org)',
+      })
+    ).toBeInTheDocument()
+    expect(
+      within(section).getByRole('link', {
+        name: 'iA Montreal Toastmasters, chartered May 22, 2026: 2 sponsors, 2 mentors, 0 awarded',
+      })
+    ).toBeInTheDocument()
+  })
+
+  it('never renders a raw TI code or status, nor a person', () => {
+    const { container } = renderSponsors(false)
+    expect(container.textContent).not.toMatch(
+      /MENTORU|SPONSOR\b|MENTOR\b|AWARDED|PENDING|@/
+    )
+  })
 })
+
+function renderSponsors(mobile: boolean) {
+  stubMobile(mobile)
+  const funnel = buildClubGrowthFunnel({
+    districtId: '61',
+    reports: {
+      ...live,
+      sections: {
+        ...live.sections,
+        sponsorsMentors: sponsorsRecorded.sponsorsMentors_2026_06_01,
+      },
+    },
+    counts: { chartered: 0, suspended: 0 },
+    programYear: { startDate: '2026-07-01', endDate: '2027-06-30' },
+    asOfDate: '2026-10-11',
+    clubPageIds: new Set(['28678571', '28680300']),
+  })
+  return render(
+    <MemoryRouter>
+      <ClubGrowthFunnelView funnel={funnel} asOfDate="2026-10-11" />
+    </MemoryRouter>
+  )
+}

@@ -5,6 +5,7 @@ import type {
   ClubGrowthFunnel,
   CoachedRow,
   ProspectiveRow,
+  SponsorMentorClubRow,
   StageValue,
   SuspendedRow,
 } from '../utils/clubGrowthFunnel'
@@ -282,11 +283,129 @@ const suspendedMobileRow = (r: SuspendedRow): MobileRow => ({
     : {}),
 })
 
+const plural = (n: number, one: string, many: string) =>
+  `${n} ${n === 1 ? one : many}`
+
+const sponsorColumns = (
+  showOther: boolean
+): ActionTableColumn<SponsorMentorClubRow>[] => [
+  {
+    key: 'club',
+    header: 'Club',
+    className: 'action-table__subject growth-table__club',
+    cell: r => (
+      <ClubLink name={r.clubName} href={r.href} external={r.external} />
+    ),
+  },
+  {
+    key: 'chartered',
+    header: 'Chartered',
+    cell: r => (r.charterDate ? formatDisplayDate(r.charterDate) : '—'),
+  },
+  {
+    key: 'sponsors',
+    header: 'Sponsors',
+    className: 'growth-table__num',
+    cell: r => r.sponsors,
+  },
+  {
+    key: 'mentors',
+    header: 'Mentors',
+    className: 'growth-table__num',
+    cell: r => r.mentors,
+  },
+  ...(showOther
+    ? [
+        {
+          key: 'other',
+          header: 'Other roles',
+          className: 'growth-table__num',
+          cell: (r: SponsorMentorClubRow) => r.other,
+        },
+      ]
+    : []),
+  {
+    key: 'awarded',
+    header: 'Awarded',
+    className: 'growth-table__num',
+    cell: r => r.awarded,
+  },
+]
+
+const sponsorRoleParts = (r: SponsorMentorClubRow) => [
+  plural(r.sponsors, 'sponsor', 'sponsors'),
+  plural(r.mentors, 'mentor', 'mentors'),
+  ...(r.other > 0 ? [plural(r.other, 'other role', 'other roles')] : []),
+]
+
+/* The row primitive's meta line is one ellipsizing line (56–64 px row
+   contract, #1833), so the row's accessible name always carries the full
+   counts — a clipped meta never hides a number from a screen reader. */
+const sponsorMobileRow = (r: SponsorMentorClubRow): MobileRow => ({
+  id: r.clubId,
+  to: r.href,
+  external: r.external,
+  title: r.clubName,
+  meta: [
+    ...sponsorRoleParts(r),
+    ...(r.awarded > 0 ? [`${r.awarded} awarded`] : []),
+  ].join(' · '),
+  ariaLabel: `${r.clubName}, chartered ${
+    r.charterDate ? formatDisplayDate(r.charterDate) : 'date not stated'
+  }: ${[...sponsorRoleParts(r), `${r.awarded} awarded`].join(', ')}${
+    r.external ? ' (opens toastmasters.org)' : ''
+  }`,
+})
+
+/** Sponsor/mentor COUNTS for new clubs (#1795) — who sponsors or mentors a
+ *  club is never shown. Absent section = the report is not available yet. */
+function SponsorsMentors({
+  data,
+}: {
+  data: ClubGrowthFunnel['sponsorsMentors']
+}) {
+  return (
+    <div data-testid="growth-sponsors">
+      <h4 className="growth-stage__subtitle">Sponsors and mentors</h4>
+      {data === null ? (
+        <p className="growth-stage__note">
+          Sponsor and mentor counts are not available yet for this date.
+        </p>
+      ) : data.clubs.length === 0 ? (
+        <p className="growth-stage__note">
+          No sponsor or mentor assignments reported for new clubs.
+        </p>
+      ) : (
+        <>
+          <p className="growth-stage__note">
+            {plural(data.totals.sponsors, 'sponsor', 'sponsors')} and{' '}
+            {plural(data.totals.mentors, 'mentor', 'mentors')}
+            {data.totals.other > 0
+              ? ` (plus ${plural(data.totals.other, 'other role', 'other roles')})`
+              : ''}{' '}
+            across {plural(data.totals.clubs, 'new club', 'new clubs')};{' '}
+            {data.totals.awarded} awarded. Counts only — the people are never
+            shown.
+          </p>
+          <ActionTable
+            caption="Sponsor and mentor counts by new club"
+            columns={sponsorColumns(data.totals.other > 0)}
+            rows={data.clubs}
+            rowKey={r => r.clubId}
+            mobileRow={sponsorMobileRow}
+            testId="growth-sponsors-table"
+          />
+        </>
+      )}
+    </div>
+  )
+}
+
 export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
   funnel,
   asOfDate,
 }) => {
-  const { prospective, chartered, coached, suspended } = funnel
+  const { prospective, chartered, coached, suspended, sponsorsMentors } = funnel
   const stages: StageSpec[] = [
     {
       id: 'prospective',
@@ -386,6 +505,7 @@ export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
             but this date’s new-club report does not list them.
           </p>
         )}
+        <SponsorsMentors data={sponsorsMentors} />
       </StageSection>
 
       <StageSection
