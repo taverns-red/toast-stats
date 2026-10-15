@@ -49,6 +49,7 @@ import {
 } from '../utils/clubCompliance'
 import { ClubCompliancePanel } from '../components/clubs/ClubCompliancePanel'
 import { ClubMiniMap } from '../components/clubs/ClubMiniMap'
+import { ClubStatStrip } from '../components/clubs/ClubStatStrip'
 import { ClubMembershipTrend } from '../components/clubs/ClubMembershipTrend'
 import { MobileRowList } from '../components/MobileRowList'
 import { buildClubMeetingInfo } from '../utils/clubMeetingInfo'
@@ -790,15 +791,12 @@ const ClubDetailPage: React.FC = () => {
             </>
           )}
 
-          {/* 8-stat strip (#618) — pixel-perfect to club-reference.html.
-              Dedicated `.club-stats-grid` lays out 8 columns on desktop,
-              collapsing to 4 (≤640px) then 2 (≤420px) in CSS. Stat value
-              colour is carried by a `--pos/--neg/--muted/--tick/--cross`
-              modifier so the cross-cutting dark-mode override lives in CSS
-              (R10), not inline Tailwind classes. Net Δ and CSP keep their
-              sign / ✓✗ glyph so colour is never the only signal. */}
-          <div className="club-stats-grid">
-            {[
+          {/* Stat strip (#618; #1843 review §6.3) — 2×2 at 375, 4×2 from
+              768; the cells past the first four fold behind `?stats=1` on
+              phones. Awards and Coach (#1790) are read from the Education
+              and Compliance panels directly below, not repeated here. */}
+          <ClubStatStrip
+            stats={[
               { label: 'Base', value: baseMembership },
               { label: 'Current', value: latestMembership },
               {
@@ -848,52 +846,8 @@ const ClubDetailPage: React.FC = () => {
                       ? 'Club Success Plan submitted'
                       : 'Club Success Plan not submitted — required for Distinguished',
               },
-              // #1790 — ledger award count ("—" when the date has no
-              // ledger, never 0) and coach status in words.
-              {
-                label: 'Awards',
-                value: educationSummary.available
-                  ? educationSummary.total
-                  : '—',
-                valClass: educationSummary.available ? '' : 'muted',
-                title: educationSummary.available
-                  ? 'Education awards this program year (ledger)'
-                  : 'Education awards not available for this date',
-              },
-              {
-                label: 'Coach',
-                value:
-                  coachSummary === null
-                    ? '—'
-                    : coachSummary.status === 'active'
-                      ? 'Active'
-                      : coachSummary.status === 'awarded'
-                        ? 'Awarded'
-                        : 'None',
-                valClass: coachSummary === null ? 'muted' : '',
-                title:
-                  coachSummary?.label ??
-                  'Coach data not available for this date',
-              },
-            ].map(stat => (
-              <div
-                key={stat.label}
-                className="club-stat"
-                title={'title' in stat ? (stat.title as string) : undefined}
-              >
-                <div className="club-stat__label">{stat.label}</div>
-                <div
-                  className={`club-stat__val tabular-nums${
-                    'valClass' in stat && stat.valClass
-                      ? ` club-stat__val--${stat.valClass}`
-                      : ''
-                  }`}
-                >
-                  {stat.value}
-                </div>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
 
           {/* 2/3 + 1/3 row — Membership Trend + DCP Status (#619), pixel-mapped
               to club-reference.html. The chart is hand-rolled SVG (not Recharts):

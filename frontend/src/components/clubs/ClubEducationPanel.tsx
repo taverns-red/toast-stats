@@ -1,3 +1,4 @@
+import { ClubPanel } from './ClubPanel'
 import type {
   ClubEducationSummary,
   EducationProgram,
@@ -38,125 +39,119 @@ export function ClubEducationPanel({
         : null
 
   return (
-    <section className="club-panel club-edu" aria-labelledby="club-edu-title">
-      <div className="club-panel__head">
-        <h2 id="club-edu-title">
-          <svg
-            className="club-panel__ico"
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.6}
-            aria-hidden="true"
-          >
-            <path d="M1.5 6L8 3l6.5 3L8 9 1.5 6z" />
-            <path d="M4 7.5V11c1.2 1 2.6 1.5 4 1.5s2.8-.5 4-1.5V7.5" />
-          </svg>
-          Education
-        </h2>
-        {meta && <span className="club-panel__meta">{meta}</span>}
-      </div>
-      <div className="club-panel__body">
-        {!summary.available ? (
-          <p className="club-edu__note">
-            Education awards are not available for this date.
-          </p>
-        ) : (
-          <>
-            <dl className="club-edu__kpis">
-              <div className="club-edu__kpi">
-                <dt>Awards</dt>
-                <dd className="tabular-nums">{summary.total}</dd>
-              </div>
-              <div className="club-edu__kpi">
-                <dt>Members with an award</dt>
-                <dd className="tabular-nums">
-                  {summary.membersWithAward ?? '—'}
-                </dd>
-              </div>
-              <div className="club-edu__kpi">
-                <dt>DTMs</dt>
-                <dd className="tabular-nums">{summary.byProgram.DTM}</dd>
-              </div>
-            </dl>
+    <ClubPanel
+      titleId="club-edu-title"
+      title="Education"
+      className="club-edu"
+      meta={meta}
+      icon={
+        <svg
+          className="club-panel__ico"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.6}
+          aria-hidden="true"
+        >
+          <path d="M1.5 6L8 3l6.5 3L8 9 1.5 6z" />
+          <path d="M4 7.5V11c1.2 1 2.6 1.5 4 1.5s2.8-.5 4-1.5V7.5" />
+        </svg>
+      }
+    >
+      {!summary.available ? (
+        <p className="club-edu__note">
+          Education awards are not available for this date.
+        </p>
+      ) : (
+        <>
+          <dl className="club-edu__kpis">
+            <div className="club-edu__kpi">
+              <dt>Awards</dt>
+              <dd className="tabular-nums">{summary.total}</dd>
+            </div>
+            <div className="club-edu__kpi">
+              <dt>Members with an award</dt>
+              <dd className="tabular-nums">
+                {summary.membersWithAward ?? '—'}
+              </dd>
+            </div>
+            <div className="club-edu__kpi">
+              <dt>DTMs</dt>
+              <dd className="tabular-nums">{summary.byProgram.DTM}</dd>
+            </div>
+          </dl>
 
-            {summary.total === 0 ? (
-              <p className="club-edu__note">
-                No education awards recorded in {pyDisplay}
-                {summary.isArchive ? '.' : ' yet.'}
-              </p>
-            ) : (
-              <>
-                <div className="club-edu__stack" aria-hidden="true">
-                  {PROGRAMS.filter(p => summary.byProgram[p] > 0).map(p => (
+          {summary.total === 0 ? (
+            <p className="club-edu__note">
+              No education awards recorded in {pyDisplay}
+              {summary.isArchive ? '.' : ' yet.'}
+            </p>
+          ) : (
+            <>
+              <div className="club-edu__stack" aria-hidden="true">
+                {PROGRAMS.filter(p => summary.byProgram[p] > 0).map(p => (
+                  <span
+                    key={p}
+                    className={`club-edu__seg ${PROGRAM_CLASS[p]}`}
+                    style={{ flexGrow: summary.byProgram[p] }}
+                  />
+                ))}
+              </div>
+              <ul className="club-edu__legend" aria-label="Awards by program">
+                {PROGRAMS.filter(p => summary.byProgram[p] > 0).map(p => (
+                  <li key={p}>
                     <span
-                      key={p}
-                      className={`club-edu__seg ${PROGRAM_CLASS[p]}`}
-                      style={{ flexGrow: summary.byProgram[p] }}
+                      className={`club-edu__swatch ${PROGRAM_CLASS[p]}`}
+                      aria-hidden="true"
                     />
-                  ))}
-                </div>
-                <ul className="club-edu__legend" aria-label="Awards by program">
-                  {PROGRAMS.filter(p => summary.byProgram[p] > 0).map(p => (
-                    <li key={p}>
-                      <span
-                        className={`club-edu__swatch ${PROGRAM_CLASS[p]}`}
-                        aria-hidden="true"
-                      />
-                      {p}{' '}
-                      <span className="tabular-nums">
-                        {summary.byProgram[p]}
+                    {p}{' '}
+                    <span className="tabular-nums">{summary.byProgram[p]}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <h3 className="club-edu__subhead">Pathways levels</h3>
+              <ul
+                className="club-edu__levels"
+                aria-label="Pathways awards by level"
+              >
+                {summary.pathwaysLevels.map((count, i) => {
+                  const max = Math.max(...summary.pathwaysLevels, 1)
+                  return (
+                    <li key={i} className="club-edu__level">
+                      <span className="club-edu__level-lab">Level {i + 1}</span>{' '}
+                      <span className="club-edu__bar" aria-hidden="true">
+                        <span
+                          className="club-edu__bar-fill"
+                          style={{ width: `${(count / max) * 100}%` }}
+                        />
+                      </span>
+                      <span className="club-edu__level-val tabular-nums">
+                        {count}
                       </span>
                     </li>
-                  ))}
-                </ul>
+                  )
+                })}
+              </ul>
 
-                <h3 className="club-edu__subhead">Pathways levels</h3>
-                <ul
-                  className="club-edu__levels"
-                  aria-label="Pathways awards by level"
-                >
-                  {summary.pathwaysLevels.map((count, i) => {
-                    const max = Math.max(...summary.pathwaysLevels, 1)
-                    return (
-                      <li key={i} className="club-edu__level">
-                        <span className="club-edu__level-lab">
-                          Level {i + 1}
-                        </span>{' '}
-                        <span className="club-edu__bar" aria-hidden="true">
-                          <span
-                            className="club-edu__bar-fill"
-                            style={{ width: `${(count / max) * 100}%` }}
-                          />
-                        </span>
-                        <span className="club-edu__level-val tabular-nums">
-                          {count}
-                        </span>
+              {summary.paths.length > 0 && (
+                <>
+                  <h3 className="club-edu__subhead">Paths</h3>
+                  <ul className="club-edu__paths" aria-label="Paths">
+                    {summary.paths.map(p => (
+                      <li key={p.code}>
+                        {p.name} <span className="tabular-nums">{p.count}</span>
                       </li>
-                    )
-                  })}
-                </ul>
-
-                {summary.paths.length > 0 && (
-                  <>
-                    <h3 className="club-edu__subhead">Paths</h3>
-                    <ul className="club-edu__paths" aria-label="Paths">
-                      {summary.paths.map(p => (
-                        <li key={p.code}>
-                          {p.name}{' '}
-                          <span className="tabular-nums">{p.count}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </div>
-    </section>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </ClubPanel>
   )
 }
