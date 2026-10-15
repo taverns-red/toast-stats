@@ -363,6 +363,13 @@ export interface PromoteOptions {
    * reconciliation and must hold for operator review (#1673).
    */
   closingAutoAllow?: boolean
+  /**
+   * The snapshot dates THIS run wrote (from its run manifest, #1762). When
+   * set, CPAA may vouch only for these: a changed date the run did not write
+   * is another run's unpromoted state (a failed rebuild's re-derive, #2040 /
+   * #1759 B4) and holds for review. Unset ⇒ no restriction.
+   */
+  closingAutoAllowDates?: readonly string[]
 }
 
 /** Digest sets for CPAA evaluation of changed overlap dates (#1086). */
@@ -502,7 +509,8 @@ export function diffSnapshots(
  */
 function evaluateClosingAutoAllowAcross(
   changed: ChangedDate[],
-  digests: PromoteDigests
+  digests: PromoteDigests,
+  writtenDates?: readonly string[]
 ): {
   allowed: boolean
   reasons: string[]
@@ -514,8 +522,16 @@ function evaluateClosingAutoAllowAcross(
   const reasons: string[] = []
   const deltas: NonNullable<PromoteDecision['closingDeltas']> = []
   let derivedOnlyDistricts = 0
+  const written = writtenDates ? new Set(writtenDates) : undefined
 
   for (const { date } of changed) {
+    if (written && !written.has(date)) {
+      reasons.push(
+        `${date}: not written by this run — another run's unpromoted ` +
+          `staging state needs operator review (#2040)`
+      )
+      continue
+    }
     const staging = stagingMap.get(date)
     const prod = prodMap.get(date)
     if (!staging || !prod) {
@@ -584,7 +600,11 @@ export function evaluatePromote(
       const cpaaEnabled = opts.closingAutoAllow !== false
       const cpaa =
         cpaaEnabled && digests && report.removed.length === 0
-          ? evaluateClosingAutoAllowAcross(report.changed, digests)
+          ? evaluateClosingAutoAllowAcross(
+              report.changed,
+              digests,
+              opts.closingAutoAllowDates
+            )
           : undefined
       if (cpaa?.allowed) {
         requiresReview = false

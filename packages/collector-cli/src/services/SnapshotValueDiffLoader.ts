@@ -30,6 +30,8 @@ export interface RunValueDiffOptions {
   allowValueChanges?: boolean
   /** CPAA eligibility; false for non-daily pipeline runs (#1673). Default true. */
   closingAutoAllow?: boolean
+  /** Dates this run wrote; CPAA vouches only for these when set (#2040). */
+  closingAutoAllowDates?: string[]
   /**
    * Overlap dates not downloaded because their live object hashes match on
    * both sides (#1730). Byte-identical ⇒ equal digests, so each counts as an
@@ -144,6 +146,7 @@ export function runValueDiff(opts: RunValueDiffOptions): RunValueDiffResult {
     {
       allowValueChanges: opts.allowValueChanges,
       closingAutoAllow: opts.closingAutoAllow,
+      closingAutoAllowDates: opts.closingAutoAllowDates,
     },
     // CPAA (#1086): digests carry the already-parsed rows + sourceCsvDate.
     { staging, prod }

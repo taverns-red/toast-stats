@@ -1945,10 +1945,22 @@ jobs:
           # reconciliation only (#1083). A rebuild/rescrape of a past close
           # carries the same closing-pinned signature and auto-promoted in
           # run 37535062136 — every non-daily mode holds for review (#1673).
+          # And in the daily it vouches only for the snapshot dates the daily
+          # itself wrote (its run manifest, #1762): a changed date it did not
+          # write is another run's unpromoted state, e.g. a failed rebuild's
+          # re-derive (#1759 B4), and holds for review (#2040). An unreadable
+          # manifest gives an empty list, which allows nothing (fail closed).
           CPAA_FLAG=""
           if [ "${PIPELINE_MODE:-}" != "daily" ]; then
             CPAA_FLAG="--no-closing-auto-allow"
             echo "Closing-pinned auto-allow disabled (mode=${PIPELINE_MODE:-unset})"
+          else
+            if ! npx tsx scripts/run-manifest-snapshot-dates.ts > /tmp/vd-cpaa-dates.txt 2>>/tmp/vd-plan.log; then
+              : > /tmp/vd-cpaa-dates.txt
+              echo "::warning::run manifest unreadable — closing-pinned auto-allow covers no date (#2040)"
+            fi
+            echo "Closing-pinned auto-allow limited to this run's dates: $(tr '\n' ' ' < /tmp/vd-cpaa-dates.txt)"
+            CPAA_FLAG="--closing-auto-allow-dates /tmp/vd-cpaa-dates.txt"
           fi
 
           # R4: structured JSON on stdout, logs on stderr. Parse .promote from JSON

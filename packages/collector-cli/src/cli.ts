@@ -1718,6 +1718,10 @@ export function createCLI(): Command {
       '--hash-equal-dates <file>',
       'Newline-separated overlap dates skipped by value-diff-plan (equal stored hashes); counted as unchanged (#1730)'
     )
+    .option(
+      '--closing-auto-allow-dates <file>',
+      "Newline-separated snapshot dates this run wrote (run manifest); CPAA auto-allows only these, so another run's unpromoted dates hold for review (#2040)"
+    )
     .option('-v, --verbose', 'Enable detailed logging output', false)
     .action(
       async (options: {
@@ -1726,6 +1730,7 @@ export function createCLI(): Command {
         allowValueChanges: boolean
         closingAutoAllow: boolean
         hashEqualDates?: string
+        closingAutoAllowDates?: string
         verbose: boolean
       }) => {
         const { runValueDiff, readDateList } =
@@ -1738,6 +1743,9 @@ export function createCLI(): Command {
             prodDir: options.prodDir,
             allowValueChanges: options.allowValueChanges,
             closingAutoAllow: options.closingAutoAllow,
+            closingAutoAllowDates: options.closingAutoAllowDates
+              ? readDateList(options.closingAutoAllowDates)
+              : undefined,
             // An unreadable list throws → fail closed below.
             hashEqualDates: options.hashEqualDates
               ? readDateList(options.hashEqualDates)
