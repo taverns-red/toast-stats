@@ -53,7 +53,9 @@ describe('basemap label layers', () => {
     // Every layer after the first label is a label: nothing paints over them
     // except the pin layers, which useClubPins appends with addLayer.
     expect(layers.slice(firstLabel).every(l => l.type === 'symbol')).toBe(true)
-    expect(layers.some(l => PIN_LAYER_IDS.includes(l.id))).toBe(false)
+    expect(
+      layers.some(l => (PIN_LAYER_IDS as readonly string[]).includes(l.id))
+    ).toBe(false)
   })
 
   it('serves glyphs from our own origin, never a third party', () => {
