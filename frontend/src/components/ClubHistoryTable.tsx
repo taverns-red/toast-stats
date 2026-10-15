@@ -145,6 +145,12 @@ export interface ClubHistoryTableProps {
   showDistrict?: boolean
 }
 
+/* #1803 (Ron, 2026-10-15) — the current program year is read from its
+   latest snapshot so far, not a year-end: say so in words. */
+function InProgressTag() {
+  return <span className="club-history-in-progress">in progress</span>
+}
+
 /** Where a row's year label links: that year's district when known. */
 function yearHref(clubId: string, row: ClubHistoryRow): string {
   return row.districtId
@@ -272,6 +278,7 @@ export function ClubHistoryTable({
               ) : (
                 row.label
               )}
+              {row.inProgress && <InProgressTag />}
             </th>
             {showDistrict && (
               <td className="club-history-td">
@@ -335,6 +342,7 @@ export function ClubHistoryTable({
       renderIdentity={r => (
         <>
           {clubId ? <Link to={yearHref(clubId, r)}>{r.label}</Link> : r.label}
+          {r.inProgress && <InProgressTag />}
           {/* #1803 — phones name the year's district under the year. */}
           {showDistrict && r.districtId && (
             <span className="club-history-district">

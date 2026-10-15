@@ -248,6 +248,23 @@
   color: var(--ink-3);
 }
 
+/* #1803 (Ron, 2026-10-15) — the current program year's row is a partial
+   year: a small worded tag beside the year (never colour alone). Theme-aware
+   ink and rule (redesign tokens); --rt-stats as the border accent only. */
+.club-history-in-progress {
+  display: inline-block;
+  margin-left: var(--rt-space-2);
+  padding: 0 6px;
+  border: 1px solid var(--rt-stats);
+  border-radius: var(--rt-radius-sm);
+  font-size: var(--rt-text-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink-2);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 /* #1803 — on phones, the year's district sits under the year in the
    identity cell (the District column is ≥768 and in the sheet). Theme-aware
    ink (redesign token, remapped under [data-theme='dark']); --rt-* type. */

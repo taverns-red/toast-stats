@@ -88,7 +88,7 @@ export default function ClubHistoryPage() {
             </button>
           ) : undefined
         }
-        about="Multi-year performance by program year. Each row is the club's settled value at the close of that program year."
+        about="Multi-year performance by program year. Each row is the club's settled value at the close of that program year; the year in progress shows its latest snapshot so far."
         trail={[
           { label: 'Districts', to: '/' },
           { label: districtName, to: `/district/${districtId}` },
@@ -111,7 +111,8 @@ export default function ClubHistoryPage() {
           <h1 className="club-history-page__title">{heading} — History</h1>
           <p className="club-history-page__sub">
             Multi-year performance by program year. Each row is the club&rsquo;s
-            settled value at the close of that program year.
+            settled value at the close of that program year; the year in
+            progress shows its latest snapshot so far.
           </p>
         </div>
         {rows.length > 0 && (

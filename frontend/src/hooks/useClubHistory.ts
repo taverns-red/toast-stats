@@ -168,7 +168,9 @@ function spansInProgramYear(
 }
 
 type YearOutcome =
-  { row: ClubHistoryRow; clubName: string } | { gap: ClubHistoryGap }
+  | { skip: true }
+  | { row: ClubHistoryRow; clubName: string }
+  | { gap: ClubHistoryGap }
 
 export function useClubHistory(
   districtId: string | null | undefined,
@@ -219,9 +221,21 @@ export function useClubHistory(
       // a club that moved districts has completed years this district never
       // saw, and those must be reported rather than silently skipped (#1437).
       const now = new Date()
-      const completedYears = [...programYearsInIndex(index)]
+      const indexYears = [...programYearsInIndex(index)]
+      const completedYears = indexYears
         .filter(y => isCompletedProgramYear(y, now))
         .sort((a, b) => b - a)
+
+      // #1803 (Ron, 2026-10-15) — the program year in progress, by data: the
+      // newest year the archive holds that has not closed. It is read from
+      // its latest snapshot so far, so a club that moved this July shows its
+      // new district. Not closed, so never a gap: a miss just adds no row.
+      const openYears = indexYears.filter(y => !isCompletedProgramYear(y, now))
+      const inProgressYear = openYears.length ? Math.max(...openYears) : null
+      const candidateYears =
+        inProgressYear === null
+          ? completedYears
+          : [inProgressYear, ...completedYears]
 
       const gapFor = (
         startYear: number,
@@ -241,14 +255,17 @@ export function useClubHistory(
       // At most one fetch per completed year — the year-end of the district
       // the club was in that year. No cross-district fan-out.
       const outcomes = await Promise.all(
-        completedYears.map(async (startYear): Promise<YearOutcome> => {
+        candidateYears.map(async (startYear): Promise<YearOutcome> => {
+          const inProgress = startYear === inProgressYear
           const label = getProgramYear(startYear).label
           const district = indexKeyFor(
             history?.byProgramYear[label] ?? pageDistrict
           )
           const yearEndDate = yearEndsOf(district).get(startYear)
           if (!yearEndDate)
-            return gapFor(startYear, district, null, 'district-absent')
+            return inProgress
+              ? { skip: true }
+              : gapFor(startYear, district, null, 'district-absent')
 
           let found
           try {
@@ -260,7 +277,9 @@ export function useClubHistory(
               district
             )
             if (snap.status === 'failed') {
-              return gapFor(startYear, district, yearEndDate, 'snapshot-failed')
+              return inProgress
+                ? { skip: true }
+                : gapFor(startYear, district, yearEndDate, 'snapshot-failed')
             }
             // Toastmasters emits both `00002274` and `2274` and the transformer
             // stores whichever arrived, so identity is the normalized form —
@@ -269,6 +288,7 @@ export function useClubHistory(
           } catch {
             // A missing year-end snapshot for this district — report the year
             // rather than fail the whole history (the index can outrun storage).
+            if (inProgress) return { skip: true }
             return gapFor(
               startYear,
               district,
@@ -277,6 +297,7 @@ export function useClubHistory(
             )
           }
           if (!found) {
+            if (inProgress) return { skip: true }
             const split = history && spansInProgramYear(history, startYear) > 1
             return gapFor(
               startYear,
@@ -285,8 +306,14 @@ export function useClubHistory(
               split ? 'moved-mid-year' : 'club-absent'
             )
           }
+          const row = buildClubHistoryRow(
+            startYear,
+            yearEndDate,
+            found,
+            district
+          )
           return {
-            row: buildClubHistoryRow(startYear, yearEndDate, found, district),
+            row: inProgress ? { ...row, inProgress: true } : row,
             clubName: found.clubName,
           }
         })
@@ -298,6 +325,7 @@ export function useClubHistory(
       const gaps: ClubHistoryGap[] = []
       let clubName: string | null = null
       for (const outcome of outcomes) {
+        if ('skip' in outcome) continue
         if ('gap' in outcome) {
           gaps.push(outcome.gap)
           continue

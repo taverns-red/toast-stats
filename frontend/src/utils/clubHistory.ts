@@ -281,7 +281,7 @@ export function toClubHistoryCsvRows(
   return [
     [...CLUB_HISTORY_CSV_HEADERS],
     ...rows.map(r => [
-      r.label,
+      r.inProgress ? `${r.label} (in progress)` : r.label,
       csvCell(r.dcpGoals),
       r.tierCode ? r.tierLabel : '',
       csvCell(r.membershipBase),

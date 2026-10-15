@@ -272,7 +272,10 @@ describe("useClubHistory — each year's district from the history (#1803)", () 
     })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(result.current.rows).toEqual([])
+    // Only the year in progress, which D201 (the page) does hold.
+    expect(
+      result.current.rows.map(r => [r.startYear, r.districtId, r.inProgress])
+    ).toEqual([[2026, '201', true]])
     expect(result.current.gaps).toEqual([
       expect.objectContaining({
         startYear: 2024,
