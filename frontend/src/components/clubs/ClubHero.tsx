@@ -8,6 +8,7 @@ import {
   type ClubMeetingSource,
 } from '../../utils/clubMeetingInfo'
 import { ClubWhereItMeets } from './ClubWhereItMeets'
+import type { ClubLineage } from '../../utils/clubLineage'
 
 /**
  * The fields the club hero shows. `ClubTrend` satisfies it, and so does the
@@ -33,6 +34,8 @@ export interface ClubHeroProps {
    * does not shift when they arrive (#1901).
    */
   statusPills?: React.ReactNode
+  /** #1805 — former districts and names; null/undefined renders no chip. */
+  lineage?: ClubLineage | null | undefined
 }
 
 /**
