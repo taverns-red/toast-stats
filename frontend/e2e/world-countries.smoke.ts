@@ -13,7 +13,7 @@ import { test, expect, type Page } from './fixtures/test'
  *   - no console error (a CSP block surfaces there). */
 
 const THEMES = ['light', 'dark'] as const
-const SEA = { light: 'rgb(217, 214, 208)', dark: 'rgb(30, 42, 51)' }
+const SEA = { light: 'rgb(169, 178, 177)', dark: 'rgb(10, 15, 21)' }
 
 async function open(page: Page, theme: (typeof THEMES)[number], url: string) {
   await page.addInitScript(t => {
