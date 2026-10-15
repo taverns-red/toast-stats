@@ -49,15 +49,13 @@ describe('basemap-build.yml (#1786)', () => {
     expect(Object.keys(wf.on)).toEqual(['workflow_dispatch'])
   })
 
-  it('takes build date, maxzoom, extent, club buffer, dry run and a target', () => {
+  it('takes build date, maxzoom, dry run and a staging|prod-copy target', () => {
     const inputs = (
       wf.on['workflow_dispatch'] as { inputs: Record<string, any> }
     ).inputs
     expect(Object.keys(inputs).sort()).toEqual([
       'build_date',
-      'club_buffer_km',
       'dry_run',
-      'extent',
       'maxzoom',
       'target',
     ])
@@ -66,23 +64,26 @@ describe('basemap-build.yml (#1786)', () => {
     expect(inputs['target'].default).toBe('staging')
   })
 
-  it('builds with the repo scripts, never an inline extract or merge', () => {
+  it('builds with the repo script, never an inline extract', () => {
     expect(raw).toContain('scripts/basemap/build-basemap.sh')
-    expect(raw).toContain('scripts/basemap/build-club-basemap.sh')
-    expect(steps.some(s => /pmtiles"? (extract|merge)/.test(s.run ?? ''))).toBe(
-      false
-    )
+    expect(steps.some(s => /pmtiles"? extract/.test(s.run ?? ''))).toBe(false)
   })
 
-  describe('club detail extent (#2084)', () => {
+  describe('world z0-14 (#2084)', () => {
     const inputs = (
       wf.on['workflow_dispatch'] as { inputs: Record<string, any> }
     ).inputs
+    const validate = steps.find(s => s.name === 'Validate inputs')
 
-    it('offers world (default) and world-clubs', () => {
-      expect(inputs['extent'].type).toBe('choice')
-      expect(inputs['extent'].options).toEqual(['world', 'world-clubs'])
-      expect(inputs['extent'].default).toBe('world')
+    it('accepts maxzoom up to 14, and no higher', () => {
+      expect(validate?.run ?? '').toMatch(/\(\(MAXZOOM > 14\)\)/)
+      expect(validate?.run ?? '').toContain('maxzoom must be 0..14')
+    })
+
+    it('keeps the immutable world-z0-<maxzoom>-<date> object name', () => {
+      expect(validate?.run ?? '').toContain(
+        'OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles'
+      )
     })
 
     it('defaults to a dry run, and every copy is skipped on a dry run', () => {
@@ -93,19 +94,9 @@ describe('basemap-build.yml (#1786)', () => {
       }
     })
 
-    it('names the merged object world-z0-<maxzoom>-clubs-z14-<date>', () => {
-      expect(raw).toMatch(
-        /OBJ=basemap\/protomaps-v4\/world-z0-\$\{MAXZOOM\}-clubs-z14-\$\{BUILD_DATE\}\.pmtiles/
-      )
-    })
-
-    it('builds the club regions with the tested runner, only for world-clubs', () => {
-      const step = steps.find(s =>
-        /scripts\/build-club-regions\.ts/.test(s.run ?? '')
-      )
-      expect(step).toBeDefined()
-      expect(step!.if ?? '').toContain("inputs.extent == 'world-clubs'")
-      expect(step!.run).toContain('--buffer-km')
+    it('gives a 69 GB build time to finish (extract + sha256 + upload)', () => {
+      const job = Object.values(wf.jobs)[0] as { 'timeout-minutes'?: number }
+      expect(job['timeout-minutes'] ?? 0).toBeGreaterThanOrEqual(180)
     })
   })
 
