@@ -39,9 +39,11 @@ The frontend reads the object named in `BASEMAP_OBJECT_PATH` in `frontend/src/co
 
 ## 1. Build and upload to staging
 
+The workflow defaults to `dry_run=true` (#2084): it sizes the archive and checks the disk, then stops without downloading or writing anything. Run it once as a dry run, then again with `-f dry_run=false` to build and upload.
+
 ```bash
 gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
-  -f build_date=20261011 -f maxzoom=10 -f target=staging
+  -f build_date=20261011 -f maxzoom=10 -f target=staging -f dry_run=false
 gh run watch --repo taverns-red/toast-stats "$(gh run list --repo taverns-red/toast-stats \
   --workflow basemap-build.yml --limit 1 --json databaseId -q '.[0].databaseId')"
 ```
@@ -77,8 +79,10 @@ cd frontend && BASE_URL=<preview url> BASEMAP_LIVE=1 \
 
 ```bash
 gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
-  -f build_date=20261011 -f maxzoom=10 -f target=prod-copy
+  -f build_date=20261011 -f maxzoom=10 -f target=prod-copy -f dry_run=false
 ```
+
+With `dry_run=true` this target only checks the staging object's metadata.
 
 The job runs these steps:
 
@@ -115,6 +119,47 @@ Pick a new `build_date`. Change `BASEMAP_OBJECT_PATH` in a PR, then run steps 1�
 ```bash
 gcloud storage rm "gs://toast-stats-data-ca/<old>" "gs://toast-stats-data-staging/<old>"
 ```
+
+## 5. Street-level detail near clubs (`extent=world-clubs`, #2084)
+
+The world file stops at z10. Street names and POIs exist in the Protomaps v4 schema only at z12–14. `extent=world-clubs` builds one archive: world z0–10, merged (`pmtiles merge`) with z11–14 over buffered club coordinates. The object is `basemap/protomaps-v4/world-z0-10-clubs-z14-<YYYYMMDD>.pmtiles`, and the upload rules are the same as above.
+
+How the runner builds it:
+
+1. `scripts/build-club-regions.ts` reads the latest `snapshots/<date>/analytics/district_<id>_analytics.json` for every district on `cdn.taverns.red`. These are single-object reads, held in memory. It fails if any district is unreadable.
+2. It buffers each geocoded club (`allClubs[].coordinates`) by `club_buffer_km`. It merges overlapping boxes while the union stays compact (`scripts/lib/clubRegions.ts`). It writes the result as a GeoJSON FeatureCollection, the input `pmtiles extract --region` takes.
+3. `scripts/basemap/build-club-basemap.sh` extracts the world z0–10 file and the club z11–14 file, merges them with the world file first, and runs `pmtiles verify`.
+
+**Buffer: 8 km (default).** At z13, a 1280 px desktop map centred on a club is about 17 km wide at 45° latitude, so it is about 8.6 km either side; at z14 it is half that. A 375 px phone at z12 is about 5 km wide. With 8 km, the street-level zooms around a club stay inside the detailed area. It also absorbs Find-A-Club geocodes that are off by a few km.
+
+**Sizing (measured 2026-10-15, build `20261015`, data `2026-10-14`, `pmtiles extract … --dry-run`, go-pmtiles 1.31.2):**
+
+| Buffer | Boxes | Clubs inside a buffer     | z11–14 extract | Merged with world z0–10 (3.8 GB) |
+| ------ | ----- | ------------------------- | -------------- | -------------------------------- |
+| 5 km   | 2,363 | 14,145 of 14,145 geocoded | 5.3 GB         | about 9.1 GB                     |
+| 8 km   | 1,984 | 14,145 of 14,145 geocoded | 7.0 GB         | about 10.8 GB                    |
+
+The data lists 14,522 clubs in 94 districts. 14,145 (97.4%) have usable coordinates. The other 377 stay at over-zoomed z10: 345 have no coordinates and 32 have unusable ones, such as 0,0. For comparison, world z0–11 is 8.0 GB and world z0–12 is 18 GB (ADR-016 D1). Dense metro cores dominate the size.
+
+**Disk.** The runner holds the world file, the club file and the merged file at the same time, about 2 × 10.8 GB plus 15% and 1 GB. The sizing step checks this before downloading anything and stops with "use a larger runner" if there is not enough space.
+
+**Dispatch** (needs Ron's approval; dry run first, which writes nothing):
+
+```bash
+gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
+  -f build_date=20261015 -f maxzoom=10 -f extent=world-clubs -f club_buffer_km=8 \
+  -f target=staging
+# then, after reading the dry-run summary:
+gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
+  -f build_date=20261015 -f maxzoom=10 -f extent=world-clubs -f club_buffer_km=8 \
+  -f target=staging -f dry_run=false
+```
+
+Protomaps keeps daily builds for one week. Pick a current `build_date` (step 0).
+
+**Follow-up:** after the prod copy, a PR changes `BASEMAP_OBJECT_PATH` in `frontend/src/config/basemap.ts` to `basemap/protomaps-v4/world-z0-10-clubs-z14-<YYYYMMDD>.pmtiles`.
+
+**Before that PR ships, check the frontend.** The merged header says `max zoom: 14`. Outside the buffers there are no z11–14 tiles, and the `pmtiles` protocol answers a missing vector tile with an empty one (`{data: new Uint8Array}` in pmtiles 4.x, unless `errorOnMissingTile` is set). MapLibre draws that empty tile instead of over-zooming z10. The map would go blank above z10 away from clubs. The `BASEMAP_OBJECT_PATH` PR has to handle this, and has to be verified on the preview at 4 zooms, light and dark (#2084).
 
 ## Local build (diagnostics only)
 
