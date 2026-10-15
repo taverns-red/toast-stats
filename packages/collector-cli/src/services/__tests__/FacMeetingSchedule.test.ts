@@ -35,6 +35,7 @@ function assertNoContactOrAccess(text: string): void {
   expect(text).not.toMatch(/@/)
   expect(text).not.toMatch(/https?:|www\./i)
   expect(text).not.toMatch(/zoom\.us|teams\.microsoft|meet\.google/i)
+  expect(text).not.toMatch(/\b[a-z0-9-]+\.[a-z]{2,}\/|bit\.ly/i)
   expect(text).not.toMatch(/pwd|passcode|password|mtg\s*id|meeting\s*id/i)
   const digitRuns = text.match(/\+?\(?\d[\d ().-]*\d/g) ?? []
   for (const run of digitRuns) {
@@ -95,6 +96,11 @@ describe('scrubFacLocation (#1789)', () => {
     ],
     ['Library<br>zoom.us/j/00000000000', 'Library'],
     ['Hall<br>Password = abc123', 'Hall'],
+    // #2069 — a scheme-less shortened Zoom link and its label (club 977,
+    // D201, prod 2026-10-14; link redacted, house number 9s).
+    ['Zoom Link: bit.ly/REDACTED977, 9999 Overland Ave', '9999 Overland Ave'],
+    ['Hall<br>tinyurl.com/abc123', 'Hall'],
+    ['Hall<br>Meeting link: example.org/meet', 'Hall'],
   ])('%j → %j', (raw, expected) => {
     expect(scrubFacLocation(raw)).toBe(expected)
   })

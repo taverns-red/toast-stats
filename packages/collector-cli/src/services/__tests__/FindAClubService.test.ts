@@ -174,6 +174,45 @@ describe('normaliseTiClub', () => {
     expect(result).not.toHaveProperty('meetingSchedule')
   })
 
+  // #2069 — TI's Address.Street is free text too: club 977 (D201, prod
+  // 2026-10-14) typed a shortened Zoom link before its street. Link
+  // redacted, house numbers 9s.
+  it('drops a scheme-less meeting link and its label from the street (#2069)', () => {
+    const result = normaliseTiClub({
+      ...realClub,
+      Address: {
+        ...realClub.Address,
+        Street: 'Zoom Link: bit.ly/REDACTED977, 9999 Overland Ave',
+      },
+    })
+    expect(result?.address?.street).toBe('9999 Overland Ave')
+    expect(result?.address?.city).toBe('Littleton')
+  })
+
+  it('omits a street that is only a meeting link and its credentials (#2069)', () => {
+    for (const Street of [
+      'bit.ly/REDACTED00',
+      'https://us99web.zoom.us/j/99999999999, MtgID: 999 9999 999 Passcode:999999',
+    ]) {
+      const result = normaliseTiClub({
+        ...realClub,
+        Address: { ...realClub.Address, Street },
+      })
+      expect(result?.address).not.toHaveProperty('street')
+      expect(result?.address?.city).toBe('Littleton')
+    }
+  })
+
+  it('drops a link from the meeting day and time text (#2069)', () => {
+    const result = normaliseTiClub({
+      ...realClub,
+      MeetingDay: 'Tuesday, see example.toastmastersclubs.org/agenda',
+      MeetingTime: '7:00 pm bit.ly/REDACTED00',
+    })
+    expect(result?.meetingDay).toBe('Tuesday, see')
+    expect(result?.meetingTime).toBe('7:00 pm')
+  })
+
   it('returns null when the club is missing its primary key', () => {
     expect(
       normaliseTiClub({
