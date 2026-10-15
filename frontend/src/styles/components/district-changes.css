@@ -238,6 +238,30 @@
   padding-block: 0.75rem;
 }
 
+/* #1806: every link in a change row (the club name, a transfer's "District
+   N") shows its affordance at rest. The shared .clubs-name-link style hides
+   the underline until hover because it was built for links inside a
+   clickable row; a feed row is not clickable, so here the links read as plain
+   text (WCAG 1.4.1). Same treatment as the realignment-notice link above:
+   inherited ink (contrast holds in both themes), an underline, a thicker one
+   on hover, and the accent focus ring. This file is unlayered, so it wins
+   over the @layer brand rule. */
+.changes-group__item a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.changes-group__item a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.changes-group__item a:focus-visible {
+  outline: 2px solid var(--rt-stats, currentColor);
+  outline-offset: 2px;
+  border-radius: 0.125rem;
+}
+
 /* inline-flex lets the base layer's 44px min-height apply (it is ignored on
    an inline box) and centres the name in it (was 22px tall). */
 .changes-group__item .clubs-name-link {
