@@ -7,7 +7,8 @@
  *     [--manifest contact-strip.jsonl] [--audit-object runs/<id>/contact-strip.jsonl]
  *
  * Dry run unless `--execute`. Reads every `.json` under `snapshots/<date>/`,
- * rewrites only objects that carry a contact key (see
+ * rewrites only objects that carry a contact key or a meeting link in place
+ * text (#2069; see
  * scripts/lib/stripClubContact.ts for the byte-level contract), and writes
  * one audit row per object to `--manifest`. With `--execute` and
  * `--audit-object`, the manifest is also kept in the staging bucket at that
@@ -89,7 +90,8 @@ async function main(): Promise<void> {
   console.error(
     `[contact-strip] ${summary.objects} objects: ${summary.planned} planned, ` +
       `${summary.stripped} stripped, ${summary.unchanged} unchanged, ` +
-      `${summary.errors} errors, ${summary.keysRemoved} keys removed ` +
+      `${summary.errors} errors, ${summary.keysRemoved} keys removed, ` +
+      `${summary.placeValuesScrubbed} place links scrubbed ` +
       `in ${Date.now() - started} ms`
   )
   process.stdout.write(JSON.stringify(summary) + '\n')

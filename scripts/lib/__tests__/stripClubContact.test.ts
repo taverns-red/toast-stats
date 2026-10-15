@@ -522,6 +522,8 @@ describe('runStrip', () => {
       path: `${P}/district_61.json`,
       action: 'stripped',
       keysRemoved: 10,
+      // No link in this fixture's place text (#2069).
+      placeValuesScrubbed: 0,
       gzipLayers: 1,
       oldGeneration: gen,
       newGeneration: after.meta.generation,
