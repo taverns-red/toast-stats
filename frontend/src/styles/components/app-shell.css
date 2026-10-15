@@ -2725,8 +2725,8 @@
      rail through the dots joins the rows; dot, rail and accent are
      decoration (the current district says "Current" in words). Rows have a
      fixed minimum height so the loading skeleton reserves the real space.
-     Text ≥ 14px; remapping --ink-*/
-  --line tokens carry dark mode. */ .club-lifecycle__list {
+     Text ≥ 14px; the remapping ink and line tokens carry dark mode. */
+  .club-lifecycle__list {
     list-style: none;
     margin: 0;
     padding: 0;
