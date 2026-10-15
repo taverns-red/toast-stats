@@ -248,6 +248,43 @@
   color: var(--ink-3);
 }
 
+/* #1803 (Ron, 2026-10-15) — the current program year's row is a partial
+   year: a small worded tag beside the year (never colour alone). Theme-aware
+   ink and rule (redesign tokens); --rt-stats as the border accent only. */
+.club-history-in-progress {
+  display: inline-block;
+  margin-left: var(--rt-space-2);
+  padding: 0 6px;
+  border: 1px solid var(--rt-stats);
+  border-radius: var(--rt-radius-sm);
+  font-size: var(--rt-text-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink-2);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Phones keep the 14px type floor in tables (#1834 priority-columns gate):
+   the tag and the district line are body-size there. */
+@media (max-width: 767.98px) {
+  .club-history-in-progress {
+    font-size: 14px;
+  }
+}
+
+/* #1803 — on phones, the year's district sits under the year in the
+   identity cell (the District column is ≥768 and in the sheet). Theme-aware
+   ink (redesign token, remapped under [data-theme='dark']); --rt-* type. */
+.club-history-district {
+  display: block;
+  margin-top: 2px;
+  /* Phone-only (the identity cell); the 14px table type floor applies. */
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--ink-3);
+}
+
 .club-history-net--pos {
   color: var(--green-600);
 }

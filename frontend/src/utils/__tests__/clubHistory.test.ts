@@ -151,6 +151,7 @@ describe('toClubHistoryCsvRows', () => {
       'October Renewals',
       'April Renewals',
       'Status',
+      'District',
     ])
     expect(csv[1]).toEqual([
       '2023-2024',
@@ -162,13 +163,34 @@ describe('toClubHistoryCsvRows', () => {
       18,
       16,
       'Active',
+      '',
     ])
+  })
+
+  // #1803 — each row's district comes from the club-district history, so a
+  // moved club's export says which district every year was recorded under.
+  it("carries each row's district", () => {
+    const csv = toClubHistoryCsvRows([
+      buildClubHistoryRow(2025, '2026-06-30', makeClub(), '01'),
+      buildClubHistoryRow(2026, '2027-06-30', makeClub(), '201'),
+    ])
+    expect(csv.slice(1).map(r => r[r.length - 1])).toEqual(['01', '201'])
+  })
+
+  // #1803 (Ron, 2026-10-15) — the current year is a partial row; the export
+  // must not pass it off as a settled year.
+  it('labels the in-progress year in the Program Year column', () => {
+    const row = {
+      ...buildClubHistoryRow(2026, '2026-10-14', makeClub(), '201'),
+      inProgress: true,
+    }
+    expect(toClubHistoryCsvRows([row])[1]?.[0]).toBe('2026-2027 (in progress)')
   })
 
   it('uses empty cells (not em-dashes) for missing values so the CSV stays numeric', () => {
     const csv = toClubHistoryCsvRows([
       buildClubHistoryRow(2021, '2022-06-30', undefined),
     ])
-    expect(csv[1]).toEqual(['2021-2022', '', '', '', '', '', '', '', ''])
+    expect(csv[1]).toEqual(['2021-2022', '', '', '', '', '', '', '', '', ''])
   })
 })

@@ -14,6 +14,7 @@
 
 import type { ClubStatisticsFile } from '@taverns-red/shared-contracts'
 import { getProgramYear } from './programYear'
+import { lifecycleDistrictLabel } from './clubLifecycle'
 import {
   distinguishedTierName,
   normalizeTierCode,
@@ -52,6 +53,18 @@ export interface ClubHistoryRow {
   aprilRenewals: number | null
   /** Operational club status (Active / Suspended / Low / Ineligible), or null. */
   clubStatus: string | null
+  /**
+   * #1803 — the district whose year-end snapshot this row was read from: the
+   * district the club was in that program year (club-district history,
+   * #1782). Optional so a hand-built row stays valid; `useClubHistory`
+   * always sets it.
+   */
+  districtId?: string
+  /**
+   * #1803 (Ron, 2026-10-15) — the current program year, read from its latest
+   * snapshot so far rather than a year-end: not a settled value.
+   */
+  inProgress?: boolean
 }
 
 /**
@@ -62,12 +75,15 @@ export interface ClubHistoryRow {
 export function buildClubHistoryRow(
   startYear: number,
   yearEndDate: string,
-  club: ClubStatisticsFile | undefined
+  club: ClubStatisticsFile | undefined,
+  districtId?: string
 ): ClubHistoryRow {
   const label = getProgramYear(startYear).label
+  const district = districtId === undefined ? {} : { districtId }
 
   if (!club) {
     return {
+      ...district,
       startYear,
       label,
       yearEndDate,
@@ -93,6 +109,7 @@ export function buildClubHistoryRow(
       : null
 
   return {
+    ...district,
     startYear,
     label,
     yearEndDate,
@@ -127,6 +144,11 @@ export type ClubHistorySkipReason =
   | 'snapshot-failed'
   /** The snapshot loaded cleanly; this club is not in it. */
   | 'club-absent'
+  /**
+   * #1803 — the club-district history has two spans in that program year (it
+   * moved during the year) and the year-end district's snapshot lacks it.
+   */
+  | 'moved-mid-year'
 
 /** One completed program year that yielded no row, and why. */
 export interface ClubHistoryGap {
@@ -162,35 +184,70 @@ function listYears(labels: readonly string[]): string {
  */
 export function summarizeClubHistoryGaps(
   gaps: readonly ClubHistoryGap[],
-  opts: { districtLabel: string }
+  opts: { districtLabel: string; pageDistrictId?: string }
 ): string | null {
   if (gaps.length === 0) return null
 
-  const labelsFor = (...reasons: ClubHistorySkipReason[]): string[] =>
-    gaps.filter(g => reasons.includes(g.reason)).map(g => g.label)
+  // #1803 — a gap is in the district the club was in that year, which need
+  // not be the page's: name ITS district (the page's keeps its label).
+  const labelOf = (districtId: string): string =>
+    !opts.pageDistrictId || sameDistrict(districtId, opts.pageDistrictId)
+      ? opts.districtLabel
+      : lifecycleDistrictLabel(districtId)
+
+  /** Year lists for these reasons, one per district, in first-seen order. */
+  const byDistrict = (
+    ...reasons: ClubHistorySkipReason[]
+  ): Array<[label: string, years: string[]]> => {
+    const groups = new Map<string, string[]>()
+    for (const g of gaps) {
+      if (!reasons.includes(g.reason)) continue
+      const label = labelOf(g.districtId)
+      groups.set(label, [...(groups.get(label) ?? []), g.label])
+    }
+    return [...groups]
+  }
 
   const clauses: string[] = []
 
-  const districtAbsent = labelsFor('district-absent')
-  if (districtAbsent.length > 0) {
+  for (const [label, years] of byDistrict('district-absent')) {
     clauses.push(
-      `${opts.districtLabel} has no snapshot for ${listYears(districtAbsent)} — a club that changed districts is recorded under another district for those years.`
+      `${label} has no snapshot for ${listYears(years)} — a club that changed districts is recorded under another district for those years.`
     )
   }
 
-  const clubAbsent = labelsFor('club-absent')
-  if (clubAbsent.length > 0) {
+  for (const [label, years] of byDistrict('club-absent')) {
     clauses.push(
-      `This club is not in ${opts.districtLabel}'s year-end snapshot for ${listYears(clubAbsent)}; it may have been in another district that year.`
+      `This club is not in ${label}'s year-end snapshot for ${listYears(years)}; it may have been in another district that year.`
     )
   }
 
-  const unloadable = labelsFor('snapshot-unavailable', 'snapshot-failed')
+  const movedMidYear = gaps
+    .filter(g => g.reason === 'moved-mid-year')
+    .map(g => g.label)
+  if (movedMidYear.length > 0) {
+    clauses.push(
+      `This club moved district during ${listYears(movedMidYear)}, so no single district's year-end snapshot holds that year.`
+    )
+  }
+
+  const unloadable = gaps
+    .filter(
+      g => g.reason === 'snapshot-unavailable' || g.reason === 'snapshot-failed'
+    )
+    .map(g => g.label)
   if (unloadable.length > 0) {
     clauses.push(`${listYears(unloadable)} could not be loaded.`)
   }
 
   return clauses.join(' ')
+}
+
+/** "01" and "1" are one district; a lettered id compares case-blind. */
+export function sameDistrict(a: string, b: string): boolean {
+  const norm = (id: string) =>
+    /^\d+$/.test(id) ? String(Number(id)) : id.toUpperCase()
+  return norm(a) === norm(b)
 }
 
 /** Column headers for the club-history CSV export, in render order. */
@@ -204,6 +261,8 @@ export const CLUB_HISTORY_CSV_HEADERS = [
   'October Renewals',
   'April Renewals',
   'Status',
+  // #1803 — the district the year was recorded under (club-district history).
+  'District',
 ] as const
 
 /** A missing value in the CSV is an empty cell, never an em-dash (keep it numeric). */
@@ -222,7 +281,7 @@ export function toClubHistoryCsvRows(
   return [
     [...CLUB_HISTORY_CSV_HEADERS],
     ...rows.map(r => [
-      r.label,
+      r.inProgress ? `${r.label} (in progress)` : r.label,
       csvCell(r.dcpGoals),
       r.tierCode ? r.tierLabel : '',
       csvCell(r.membershipBase),
@@ -231,6 +290,7 @@ export function toClubHistoryCsvRows(
       csvCell(r.octoberRenewals),
       csvCell(r.aprilRenewals),
       csvCell(r.clubStatus),
+      csvCell(r.districtId ?? null),
     ]),
   ]
 }

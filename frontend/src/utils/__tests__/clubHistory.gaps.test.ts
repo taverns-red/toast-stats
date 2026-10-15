@@ -93,3 +93,32 @@ describe('summarizeClubHistoryGaps (#1437)', () => {
     expect(text).toMatch(/\+\d+ more|and \d+ more/i)
   })
 })
+
+// #1803 — with the club-district history, each year is looked up in the
+// district the club was in that year, so a gap names ITS district, and a year
+// split between two districts says so.
+describe('summarizeClubHistoryGaps with per-year districts (#1803)', () => {
+  it("names the gap's own district when it is not the page's", () => {
+    const text = summarizeClubHistoryGaps(
+      [
+        gap({
+          districtId: '01',
+          reason: 'club-absent',
+          yearEndDate: '2023-06-30',
+        }),
+      ],
+      { districtLabel: 'District 201', pageDistrictId: '201' }
+    )
+    expect(text).toMatch(/not in District 1's year-end snapshot for 2022-2023/)
+    expect(text).not.toMatch(/District 201/)
+  })
+
+  it('says a year was split between districts', () => {
+    const text = summarizeClubHistoryGaps(
+      [gap({ reason: 'moved-mid-year', yearEndDate: '2023-06-30' })],
+      opts
+    )
+    expect(text).toMatch(/2022-2023/)
+    expect(text).toMatch(/moved district during/i)
+  })
+})

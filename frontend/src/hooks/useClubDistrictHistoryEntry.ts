@@ -23,6 +23,17 @@ import { fetchClubDistrictHistoryShard } from '../services/cdnClubDistrictHistor
    found nothing: reporting it as done let the panel say the history was
    missing, and then be torn down when the read actually started. */
 
+/** The shard query, shared with readers outside React render (#1803's
+    `useClubHistory` reads it via `ensureQueryData`) so every reader hits
+    one cache entry per shard — the key `useClubDistrictHistory` uses. */
+export function clubDistrictHistoryShardQuery(shardKey: string) {
+  return {
+    queryKey: ['club-district-history', 'shard', shardKey] as const,
+    queryFn: () => fetchClubDistrictHistoryShard(shardKey),
+    staleTime: 15 * 60 * 1000,
+  }
+}
+
 export function useClubDistrictHistoryEntry(
   clubId: string | undefined,
   enabled: boolean
@@ -33,10 +44,8 @@ export function useClubDistrictHistoryEntry(
 } {
   const shardKey = clubId ? clubDistrictHistoryShardKey(clubId) : null
   const { data, isPending } = useQuery({
-    queryKey: ['club-district-history', 'shard', shardKey ?? 'none'],
-    queryFn: () => fetchClubDistrictHistoryShard(shardKey ?? ''),
+    ...clubDistrictHistoryShardQuery(shardKey ?? 'none'),
     enabled: enabled && shardKey !== null,
-    staleTime: 15 * 60 * 1000,
   })
   // TanStack's `isPending` is "no data and no error yet" — true for a
   // disabled query too, unlike `isLoading` (pending AND fetching).

@@ -24,13 +24,16 @@
  *    completed program years the archive covers — and each year is resolved
  *    against this district's own dates. A year this district cannot cover is
  *    REPORTED as a gap instead of vanishing.
- *  - **Rows for those years still cannot be fetched here.** Recovering them
- *    needs a club → district-per-year index the pipeline does not emit
- *    (`config/club-index.json` is rebuilt from the LATEST date only, so it
- *    knows one district per club and no history). The alternative — probing
- *    every district's year-end snapshot — is ~100 multi-hundred-KB fetches per
- *    missing year, which is not a read-path we can put behind a page load. So
- *    the hook reports the gap honestly rather than half-fixing it. See #1436.
+ *  - **Rows for those years** need a club → district-per-year index. #1803:
+ *    the club-district history (#1782) is that index. The hook reads the
+ *    club's one shard (~12 KB, through the #1843 query, so the club page's
+ *    read is reused) alongside the snapshot index, takes each year's district
+ *    from `byProgramYear`, and fetches THAT district's year-end — still one
+ *    fetch per year, never a fan-out across districts. A year the history
+ *    does not list (before 2016-17, or the shard unavailable) falls back to
+ *    this district, the pre-#1803 behaviour, so its gap is still reported.
+ *    A year with two spans whose year-end district lacks the club is
+ *    `moved-mid-year`.
  *
  * ## Every skip used to look the same (#1437)
  *
@@ -42,16 +45,25 @@
  * carrying its reason, and the page says which case it is.
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchCdnSnapshotIndex,
   fetchCdnDistrictSnapshot,
 } from '../services/cdn'
-import type { PerDistrictData } from '@taverns-red/shared-contracts'
-import { clubIdsMatch } from '@taverns-red/shared-contracts'
+import type {
+  ClubDistrictHistoryClub,
+  PerDistrictData,
+} from '@taverns-red/shared-contracts'
+import {
+  clubDistrictHistoryShardKey,
+  clubIdsMatch,
+  findClubEntry,
+} from '@taverns-red/shared-contracts'
+import { clubDistrictHistoryShardQuery } from './useClubDistrictHistoryEntry'
 import { getProgramYear, getProgramYearForDate } from '../utils/programYear'
 import {
   buildClubHistoryRow,
+  sameDistrict,
   type ClubHistoryGap,
   type ClubHistoryRow,
 } from '../utils/clubHistory'
@@ -143,38 +155,91 @@ function isCompletedProgramYear(startYear: number, now: Date): boolean {
   return new Date(`${startYear + 1}-06-30T23:59:59`) < now
 }
 
+/** How many of the club's spans touch a program year (by start year). */
+function spansInProgramYear(
+  history: ClubDistrictHistoryClub,
+  startYear: number
+): number {
+  return history.spans.filter(span => {
+    const from = getProgramYearForDate(span.from).year
+    const to = getProgramYearForDate(span.to ?? history.lastSeen).year
+    return from <= startYear && startYear <= to
+  }).length
+}
+
 type YearOutcome =
-  { row: ClubHistoryRow; clubName: string } | { gap: ClubHistoryGap }
+  | { skip: true }
+  | { row: ClubHistoryRow; clubName: string }
+  | { gap: ClubHistoryGap }
 
 export function useClubHistory(
   districtId: string | null | undefined,
   clubId: string | null | undefined
 ): UseClubHistoryResult {
   const enabled = Boolean(districtId && clubId)
+  const queryClient = useQueryClient()
 
   const query = useQuery({
     queryKey: clubHistoryQueryKey(districtId ?? '', clubId ?? ''),
     enabled,
     queryFn: async (): Promise<ClubHistoryData> => {
-      const district = districtId!
-      const index = await fetchCdnSnapshotIndex()
+      const pageDistrict = districtId!
+      const club = clubId!
+      // The club's history shard is read beside the index, not after it.
+      // A shard that fails resolves null: the history is then unavailable.
+      const [index, shard] = await Promise.all([
+        fetchCdnSnapshotIndex(),
+        queryClient
+          .ensureQueryData(
+            clubDistrictHistoryShardQuery(clubDistrictHistoryShardKey(club))
+          )
+          .catch(() => null),
+      ])
+      const history = shard ? (findClubEntry(shard.clubs, club) ?? null) : null
 
-      // This district's own dates are the only ones we can fetch with — they
+      // Index keys are the districts' own ids ("01"); match padding-blind.
+      const indexKeyFor = (id: string): string =>
+        id in index
+          ? id
+          : (Object.keys(index).find(k => sameDistrict(k, id)) ?? id)
+
+      // A district's own dates are the only ones we can fetch with — they
       // carry the SnapshotDate provenance the per-snapshot fetch requires.
-      const ownYearEnd = latestDateByProgramYear(
-        snapshotDatesFrom({ dates: index[district] ?? [] })
-      )
+      const yearEndsByDistrict = new Map<string, Map<number, SnapshotDate>>()
+      const yearEndsOf = (id: string): Map<number, SnapshotDate> => {
+        let byYear = yearEndsByDistrict.get(id)
+        if (!byYear) {
+          byYear = latestDateByProgramYear(
+            snapshotDatesFrom({ dates: index[id] ?? [] })
+          )
+          yearEndsByDistrict.set(id, byYear)
+        }
+        return byYear
+      }
 
       // Candidate years come from the WHOLE index, not this district's entry:
       // a club that moved districts has completed years this district never
       // saw, and those must be reported rather than silently skipped (#1437).
       const now = new Date()
-      const completedYears = [...programYearsInIndex(index)]
+      const indexYears = [...programYearsInIndex(index)]
+      const completedYears = indexYears
         .filter(y => isCompletedProgramYear(y, now))
         .sort((a, b) => b - a)
 
+      // #1803 (Ron, 2026-10-15) — the program year in progress, by data: the
+      // newest year the archive holds that has not closed. It is read from
+      // its latest snapshot so far, so a club that moved this July shows its
+      // new district. Not closed, so never a gap: a miss just adds no row.
+      const openYears = indexYears.filter(y => !isCompletedProgramYear(y, now))
+      const inProgressYear = openYears.length ? Math.max(...openYears) : null
+      const candidateYears =
+        inProgressYear === null
+          ? completedYears
+          : [inProgressYear, ...completedYears]
+
       const gapFor = (
         startYear: number,
+        district: string,
         yearEndDate: SnapshotDate | null,
         reason: ClubHistoryGap['reason']
       ): YearOutcome => ({
@@ -187,14 +252,22 @@ export function useClubHistory(
         },
       })
 
-      // At most one fetch per completed year — this district's own year-end.
-      // No cross-district fan-out: see the module header.
+      // At most one fetch per completed year — the year-end of the district
+      // the club was in that year. No cross-district fan-out.
       const outcomes = await Promise.all(
-        completedYears.map(async (startYear): Promise<YearOutcome> => {
-          const yearEndDate = ownYearEnd.get(startYear)
-          if (!yearEndDate) return gapFor(startYear, null, 'district-absent')
+        candidateYears.map(async (startYear): Promise<YearOutcome> => {
+          const inProgress = startYear === inProgressYear
+          const label = getProgramYear(startYear).label
+          const district = indexKeyFor(
+            history?.byProgramYear[label] ?? pageDistrict
+          )
+          const yearEndDate = yearEndsOf(district).get(startYear)
+          if (!yearEndDate)
+            return inProgress
+              ? { skip: true }
+              : gapFor(startYear, district, null, 'district-absent')
 
-          let club
+          let found
           try {
             // The dated file is a PerDistrictData ENVELOPE — the parsed clubs
             // live at `.data.clubs` (the diff engine unwraps the same way, see
@@ -204,21 +277,44 @@ export function useClubHistory(
               district
             )
             if (snap.status === 'failed') {
-              return gapFor(startYear, yearEndDate, 'snapshot-failed')
+              return inProgress
+                ? { skip: true }
+                : gapFor(startYear, district, yearEndDate, 'snapshot-failed')
             }
             // Toastmasters emits both `00002274` and `2274` and the transformer
             // stores whichever arrived, so identity is the normalized form —
             // a strict `===` here dropped the row silently (#1437, #1440).
-            club = snap.data?.clubs?.find(c => clubIdsMatch(c.clubId, clubId))
+            found = snap.data?.clubs?.find(c => clubIdsMatch(c.clubId, club))
           } catch {
             // A missing year-end snapshot for this district — report the year
             // rather than fail the whole history (the index can outrun storage).
-            return gapFor(startYear, yearEndDate, 'snapshot-unavailable')
+            if (inProgress) return { skip: true }
+            return gapFor(
+              startYear,
+              district,
+              yearEndDate,
+              'snapshot-unavailable'
+            )
           }
-          if (!club) return gapFor(startYear, yearEndDate, 'club-absent')
+          if (!found) {
+            if (inProgress) return { skip: true }
+            const split = history && spansInProgramYear(history, startYear) > 1
+            return gapFor(
+              startYear,
+              district,
+              yearEndDate,
+              split ? 'moved-mid-year' : 'club-absent'
+            )
+          }
+          const row = buildClubHistoryRow(
+            startYear,
+            yearEndDate,
+            found,
+            district
+          )
           return {
-            row: buildClubHistoryRow(startYear, yearEndDate, club),
-            clubName: club.clubName,
+            row: inProgress ? { ...row, inProgress: true } : row,
+            clubName: found.clubName,
           }
         })
       )
@@ -229,6 +325,7 @@ export function useClubHistory(
       const gaps: ClubHistoryGap[] = []
       let clubName: string | null = null
       for (const outcome of outcomes) {
+        if ('skip' in outcome) continue
         if ('gap' in outcome) {
           gaps.push(outcome.gap)
           continue

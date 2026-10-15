@@ -19,7 +19,7 @@ import { ClubHistoryTable } from '../components/ClubHistoryTable'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState, ErrorDisplay } from '../components/ErrorDisplay'
 import { exportClubHistory } from '../utils/csvExport'
-import { summarizeClubHistoryGaps } from '../utils/clubHistory'
+import { sameDistrict, summarizeClubHistoryGaps } from '../utils/clubHistory'
 
 export default function ClubHistoryPage() {
   const { districtId, clubId } = useParams<{
@@ -43,8 +43,21 @@ export default function ClubHistoryPage() {
   // "this club moved districts", "that snapshot is missing" and "this club has
   // no history" are the same empty table.
   const gapNote = useMemo(
-    () => summarizeClubHistoryGaps(gaps, { districtLabel: districtName }),
-    [gaps, districtName]
+    () =>
+      summarizeClubHistoryGaps(gaps, {
+        districtLabel: districtName,
+        ...(districtId ? { pageDistrictId: districtId } : {}),
+      }),
+    [gaps, districtName, districtId]
+  )
+
+  // #1803 — the District column only when it tells the reader something: a
+  // year recorded under a district other than this page's (a moved club).
+  const showDistrict = useMemo(
+    () =>
+      !!districtId &&
+      rows.some(r => r.districtId && !sameDistrict(r.districtId, districtId)),
+    [rows, districtId]
   )
 
   const heading = clubName || `Club ${clubId}`
@@ -75,7 +88,7 @@ export default function ClubHistoryPage() {
             </button>
           ) : undefined
         }
-        about="Multi-year performance by program year. Each row is the club's settled value at the close of that program year."
+        about="Multi-year performance by program year. Each row is the club's settled value at the close of that program year; the year in progress shows its latest snapshot so far."
         trail={[
           { label: 'Districts', to: '/' },
           { label: districtName, to: `/district/${districtId}` },
@@ -98,7 +111,8 @@ export default function ClubHistoryPage() {
           <h1 className="club-history-page__title">{heading} — History</h1>
           <p className="club-history-page__sub">
             Multi-year performance by program year. Each row is the club&rsquo;s
-            settled value at the close of that program year.
+            settled value at the close of that program year; the year in
+            progress shows its latest snapshot so far.
           </p>
         </div>
         {rows.length > 0 && (
@@ -126,11 +140,15 @@ export default function ClubHistoryPage() {
         />
       ) : (
         <>
-          {/* No `districtId` prop, by design (#1441): a row's year label deep-
-              links to the district-agnostic `/club/:clubId` route, because the
-              page's current district is not a fact about the club's 2022 row.
-              That is the same invariant #1437 is about, one level up. */}
-          <ClubHistoryTable rows={rows} clubName={heading} clubId={clubId} />
+          {/* No page `districtId` prop, by design (#1441): the page's current
+              district is not a fact about the club's 2022 row. Each row
+              carries its own (#1803), and its year links there. */}
+          <ClubHistoryTable
+            rows={rows}
+            clubName={heading}
+            clubId={clubId}
+            showDistrict={showDistrict}
+          />
           {gapNote && (
             <p className="club-history-page__gaps" role="note">
               {gapNote}
