@@ -127,3 +127,14 @@ export const YearOverYearComparisonSkeleton: React.FC = () => (
     </div>
   </div>
 )
+
+/** Stub (#1835 red): the chunk fallback for every pre-data state. */
+export const YearOverYearComparisonFallback: React.FC<{
+  yearOverYear?: {
+    membershipChange: number
+    distinguishedChange: number
+    clubHealthChange: number
+  }
+  isLoading?: boolean
+  unavailableReason?: string | null
+}> = () => null

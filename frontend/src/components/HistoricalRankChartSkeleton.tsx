@@ -113,3 +113,12 @@ export const HistoricalRankChartSkeleton: React.FC<{
     </section>
   )
 }
+
+/** Stub (#1835 red): the chunk fallback for every pre-data state. */
+export const HistoricalRankChartFallback: React.FC<{
+  data: unknown[]
+  isLoading: boolean
+  isError: boolean
+  error?: Error | null
+  selectedProgramYear?: ProgramYearLabel
+}> = () => null
