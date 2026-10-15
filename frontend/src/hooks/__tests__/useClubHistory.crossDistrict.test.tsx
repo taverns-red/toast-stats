@@ -15,6 +15,12 @@
  *     for that year", "that collection failed" and "the club is not in this
  *     district's snapshot" all rendered as the same empty table (Lesson 47 —
  *     a lookup that degrades to nothing is indistinguishable from no data).
+ *
+ * #1803 changed the spec: with the club-district history (#1782) each year is
+ * read from the district the club was in that year
+ * (useClubHistory.clubDistrictHistory). These tests now pin the fallback when
+ * the history is unavailable: every year resolves against the page district
+ * and what it cannot cover is still reported, never dropped.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -31,6 +37,13 @@ import {
   fetchCdnSnapshotIndex,
   fetchCdnDistrictSnapshot,
 } from '../../services/cdn'
+
+// #1803 — no club-district history here (never the live CDN): every year
+// resolves against the page district, the pre-#1803 behaviour these tests
+// pin. The history-backed paths: useClubHistory.clubDistrictHistory.
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
+  fetchClubDistrictHistoryShard: vi.fn().mockResolvedValue(null),
+}))
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnSnapshotIndex: vi.fn(),

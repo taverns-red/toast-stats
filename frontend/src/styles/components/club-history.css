@@ -248,6 +248,17 @@
   color: var(--ink-3);
 }
 
+/* #1803 — on phones, the year's district sits under the year in the
+   identity cell (the District column is ≥768 and in the sheet). Theme-aware
+   ink (redesign token, remapped under [data-theme='dark']); --rt-* type. */
+.club-history-district {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--rt-text-xs);
+  line-height: 1.3;
+  color: var(--ink-3);
+}
+
 .club-history-net--pos {
   color: var(--green-600);
 }

@@ -24,6 +24,7 @@ import {
   PriorityColumnsTable,
   type PriorityMetric,
 } from './PriorityColumnsTable'
+import { lifecycleDistrictLabel } from '../utils/clubLifecycle'
 
 type SortField = 'year' | 'dcpGoals' | 'tier' | 'membershipNet' | 'status'
 
@@ -134,20 +135,28 @@ export interface ClubHistoryTableProps {
    *  reading the multi-year table can jump into a single year. Omitted → plain
    *  text (keeps the component usable outside a Router).
    *
-   *  #1441 — the link is the district-agnostic `/club/:clubId` route, which
-   *  resolves the club's district from the club index. A row knows its program
-   *  year but not its district: districts were reformed on 2026-07-01 and
-   *  clubs moved between them, so the page's current district is not a fact
-   *  about the club's 2022 row. No `districtId` prop, by design. */
+   *  #1803 — a row now knows its district (the club-district history), so
+   *  the link goes straight to the club page in THAT year's district. A row
+   *  without one keeps the district-agnostic `/club/:clubId` route (#1441),
+   *  which resolves the district itself. Never the page's district: after the
+   *  2026-07-01 reformation it is not a fact about the club's 2022 row. */
   clubId?: string | undefined
   /** #1803 — show each row's district (the page sets it when they vary). */
   showDistrict?: boolean
+}
+
+/** Where a row's year label links: that year's district when known. */
+function yearHref(clubId: string, row: ClubHistoryRow): string {
+  return row.districtId
+    ? `/district/${row.districtId}/club/${clubId}?py=${row.startYear}`
+    : `/club/${clubId}?py=${row.startYear}`
 }
 
 export function ClubHistoryTable({
   rows,
   clubName,
   clubId,
+  showDistrict = false,
 }: ClubHistoryTableProps) {
   const [sortField, setSortField] = useState<SortField>('year')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -205,6 +214,11 @@ export function ClubHistoryTable({
             thClassName="club-history-th"
             buttonClassName="club-history-sort"
           />
+          {showDistrict && (
+            <th scope="col" className="club-history-th">
+              District
+            </th>
+          )}
           <SortableHeader<SortField>
             field="dcpGoals"
             label="DCP Goals"
@@ -250,7 +264,7 @@ export function ClubHistoryTable({
             <th scope="row" className="club-history-td club-history-td--year">
               {clubId ? (
                 <Link
-                  to={`/club/${clubId}?py=${row.startYear}`}
+                  to={yearHref(clubId, row)}
                   className="club-history-year-link"
                 >
                   {row.label}
@@ -259,6 +273,13 @@ export function ClubHistoryTable({
                 row.label
               )}
             </th>
+            {showDistrict && (
+              <td className="club-history-td">
+                {row.districtId
+                  ? lifecycleDistrictLabel(row.districtId)
+                  : EM_DASH}
+              </td>
+            )}
             <td className="club-history-td club-history-td--num">
               {row.dcpGoals == null ? EM_DASH : `${row.dcpGoals} / 10`}
             </td>
@@ -311,13 +332,17 @@ export function ClubHistoryTable({
       rowKey={r => String(r.startYear)}
       identityHeader="Year"
       identitySortField="year"
-      renderIdentity={r =>
-        clubId ? (
-          <Link to={`/club/${clubId}?py=${r.startYear}`}>{r.label}</Link>
-        ) : (
-          r.label
-        )
-      }
+      renderIdentity={r => (
+        <>
+          {clubId ? <Link to={yearHref(clubId, r)}>{r.label}</Link> : r.label}
+          {/* #1803 — phones name the year's district under the year. */}
+          {showDistrict && r.districtId && (
+            <span className="club-history-district">
+              {lifecycleDistrictLabel(r.districtId)}
+            </span>
+          )}
+        </>
+      )}
       metrics={PHONE_METRICS}
       defaultMetricIds={['dcpGoals', 'tier']}
       sort={currentSort}

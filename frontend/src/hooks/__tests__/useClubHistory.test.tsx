@@ -25,6 +25,13 @@ import {
 } from '../../services/cdn'
 import { getCurrentProgramYear } from '../../utils/programYear'
 
+// #1803 — no club-district history here (never the live CDN): every year
+// resolves against the page district, the pre-#1803 behaviour these tests
+// pin. The history-backed paths: useClubHistory.clubDistrictHistory.
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
+  fetchClubDistrictHistoryShard: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('../../services/cdn', () => ({
   fetchCdnSnapshotIndex: vi.fn(),
   fetchCdnDistrictSnapshot: vi.fn(),
