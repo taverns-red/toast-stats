@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url'
 import {
   GLOBAL_CLUB_RACE_FILE_NAME,
   GLOBAL_TOTALS_FILE_NAME,
+  GlobalTotalsSchema,
   REGION_ROLLUPS_FILE_NAME,
 } from '@taverns-red/shared-contracts'
 import { TransformService } from '../services/TransformService.js'
@@ -103,6 +104,43 @@ describe('AnalyticsComputeService — a recorded gap is accounted for in the rol
       )
     ) as { membership: { clubsCounted: number } }
     expect(totals.membership.clubsCounted).toBe(6)
+  })
+
+  it('states the gap district it left out of the club sums, with its reason and size (#2042)', async () => {
+    await new AnalyticsComputeService({ cacheDir }).compute({
+      date: SUBSET_DATE,
+    })
+
+    // Read through the published contract, so a field the schema does not
+    // declare is stripped and this assertion fails.
+    const totals = GlobalTotalsSchema.parse(
+      JSON.parse(
+        await fs.readFile(
+          path.join(snapshotDir(), GLOBAL_TOTALS_FILE_NAME),
+          'utf-8'
+        )
+      )
+    )
+
+    expect(totals.districts.missingDistricts).toEqual([GAP_DISTRICT])
+    const uncounted = totals.districts.uncountedDistricts ?? []
+    expect(uncounted).toHaveLength(1)
+    // The size of the hole comes from the date's real all-districts.csv row
+    // (paid 139, active 147); the reason is the gap transform recorded.
+    expect(uncounted[0]).toMatchObject({
+      districtId: GAP_DISTRICT,
+      paidClubs: 139,
+      activeClubs: 147,
+    })
+    expect(uncounted[0]!.reason).toMatch(/is not a CSV/)
+    expect(uncounted[0]!.reason).toMatch(/#1671/)
+
+    // paidClubs stays the sum over every ranked district, U included, but
+    // avgClubSize divides the counted clubs' members by the COUNTED
+    // districts' paid clubs (151 + 149 + 57), never by U's as well.
+    expect(totals.membership.paidClubs).toBe(151 + 149 + 57 + 139)
+    expect(totals.membership.totalMembership).toBe(3 * (25 + 11))
+    expect(totals.membership.avgClubSize).toBeCloseTo(108 / 357, 10)
   })
 
   it('still refuses a ranked district with no file that metadata does not record (#1756 intact)', async () => {
