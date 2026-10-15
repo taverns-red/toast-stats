@@ -128,6 +128,19 @@ describe('basemap label layers', () => {
     }
   })
 
+  it('lets point labels step beside a pin instead of hiding under it', () => {
+    const byId = new Map(
+      symbolLayers(styleFor('light').layers).map(l => [l.id, l])
+    )
+    for (const id of ['label-cities', 'label-pois']) {
+      const layout = byId.get(id)!.layout!
+      expect(layout['text-variable-anchor']).toEqual(
+        expect.arrayContaining(['center', 'top', 'bottom', 'left', 'right'])
+      )
+      expect(layout['text-radial-offset']).toBeGreaterThan(0)
+    }
+  })
+
   it('uses quiet ink-on-paper colours with a land-coloured halo', () => {
     for (const theme of ['light', 'dark'] as const) {
       const ink = theme === 'light' ? '15, 14, 13' : '244, 241, 235'

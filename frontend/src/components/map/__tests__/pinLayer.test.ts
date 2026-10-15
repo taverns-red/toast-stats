@@ -104,6 +104,18 @@ describe('clubPinLayers', () => {
     })
   }
 
+  it('always draws pins but keeps basemap labels out from under them (#2081)', () => {
+    const { style } = styleWith('health')
+    for (const layer of style.layers) {
+      const layout = (layer as { layout?: Record<string, unknown> }).layout
+      // Pins never hide each other or vanish for a label...
+      expect(layout?.['icon-allow-overlap']).toBe(true)
+      // ...and their boxes enter the collision index, so a label placed
+      // after them (every basemap label sits below) moves or hides.
+      expect(layout?.['icon-ignore-placement']).toBe(false)
+    }
+  })
+
   it('clusters with a 44 px radius and shows single pins from z14', () => {
     const { model } = styleWith('health')
     const src = pinSourceSpec(buildPinFeatures(CLUBS, model), model)
