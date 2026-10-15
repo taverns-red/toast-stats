@@ -13,6 +13,7 @@ import { MeetingScheduleEntrySchema } from '@taverns-red/shared-contracts'
 import {
   parseMeetingSchedule,
   scrubFacLocation,
+  scrubFacStreet,
   meetingModeFromText,
 } from '../FacMeetingSchedule.js'
 
@@ -100,6 +101,11 @@ describe('scrubFacLocation (#1789)', () => {
     // D201, prod 2026-10-14; link redacted, house number 9s).
     ['Zoom Link: bit.ly/REDACTED977, 9999 Overland Ave', '9999 Overland Ave'],
     ['Hall<br>tinyurl.com/abc123', 'Hall'],
+    // A passcode typed as prose (D201 street shape, prod 2026-10-14).
+    [
+      'Hall, Zoom Meeting ID 00000000000, Zoom Passcode is 000000',
+      'Hall, Zoom, Zoom',
+    ],
     ['Hall<br>Meeting link: example.org/meet', 'Hall'],
   ])('%j → %j', (raw, expected) => {
     expect(scrubFacLocation(raw)).toBe(expected)
@@ -129,6 +135,52 @@ describe('scrubFacLocation (#1789)', () => {
       const scrubbed = scrubFacLocation(row.Location)
       if (scrubbed !== undefined) assertNoContactOrAccess(scrubbed)
     }
+  })
+})
+
+/**
+ * #2069 — FAC Address.Street. Shapes recorded from prod
+ * snapshots/2026-10-14 (D201, D61, D101, D85, D91, U; read 2026-10-15),
+ * with links, names and numbers replaced by placeholders.
+ */
+describe('scrubFacStreet (#2069)', () => {
+  it.each([
+    ['Zoom Link: bit.ly/REDACTED977, 9999 Overland Ave', '9999 Overland Ave'],
+    ['999 W 999th St, bit.ly/REDACTED00', '999 W 999th St'],
+    ['9999 Barber Ln, https://us99web.zoom.us/j/99999999999', '9999 Barber Ln'],
+    ['West, https://club.toastmastersclubs.org/ ', 'West'],
+    ['Enquiry via EMAIL ONLY, club-1@example.com', 'Enquiry via EMAIL ONLY'],
+    ['Call with questions:  555-010-0199', 'Call with questions'],
+    ['Zoom Meeting ID 00000000000, Zoom Passcode is 000000', 'Zoom, Zoom'],
+    ['Tencent Meeting: 000 0000 0000', 'Tencent Meeting'],
+  ])('%j → %j', (raw, expected) => {
+    expect(scrubFacStreet(raw)).toBe(expected)
+  })
+
+  it.each([
+    ['bit.ly/REDACTED00'],
+    [
+      'https://us99web.zoom.us/j/999999999, MtgID: 999 9999 999 Passcode:999999',
+    ],
+    ['club-1@example.com'],
+    // A contact instruction naming a person (D101 shape).
+    ['contact Pat Example for Zoom link, pat@example.com  '],
+  ])('returns undefined when nothing public is left: %j', raw => {
+    expect(scrubFacStreet(raw)).toBeUndefined()
+  })
+
+  it.each([
+    // Verbatim, trailing space and odd punctuation included: a street with
+    // no link or access detail is not rewritten.
+    ['790 Edgar Street, Court Building '],
+    ['999 S. Aviation Blvd, , #999'],
+    ['-'],
+    ['Zoom (Please email for zoom link)'],
+    // Quebec unit-civic numbers are not phone numbers.
+    ['100-1234 Chemin de la Cote St. Luc'],
+    ['23300 58th Ave W'],
+  ])('keeps %j unchanged', raw => {
+    expect(scrubFacStreet(raw)).toBe(raw)
   })
 })
 

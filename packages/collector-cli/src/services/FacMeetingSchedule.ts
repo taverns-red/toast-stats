@@ -22,6 +22,7 @@
  * Pure functions; no I/O.
  */
 
+import { stripLinks } from '@taverns-red/shared-contracts'
 import type {
   MeetingScheduleEntry,
   MeetingWeekday,
@@ -37,11 +38,6 @@ function fold(text: string): string {
 
 /* ── Location scrubber ─────────────────────────────────────────────── */
 
-const EMAIL = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi
-const URL_WITH_SCHEME = /(?:https?:\/\/|www\.)\S+/gi
-/** Same host list as the frontend's #1879 guard (clubMeetingInfo.ts). */
-const MEETING_HOST_TOKEN =
-  /\S*(?:zoom\.us|zoomgov\.com|zoom\.com|teams\.microsoft\.com|teams\.live\.com|meet\.google\.com|webex\.com|gotomeeting\.com|gotomeet\.me|meet\.goto\.com|meet\.jit\.si|8x8\.vc|whereby\.com|bluejeans\.com)\S*/gi
 const CREDENTIAL =
   /\b(?:meeting\s*id|mtg\s*id|passcode|password|pwd|mot de passe)\b\s*[:#=]?\s*[\w-]*/gi
 /** A digit run that, with 7+ digits, is a phone number or meeting id. A
@@ -92,22 +88,54 @@ function namesSomeone(line: string): boolean {
 
 function scrubLine(raw: string): string {
   const tagless = raw.replace(/<[^>]*>/g, ' ')
-  const linkless = tagless
-    .replace(EMAIL, ' ')
-    .replace(URL_WITH_SCHEME, ' ')
-    .replace(MEETING_HOST_TOKEN, ' ')
+  // Emails, URLs with or without a scheme, meeting hosts, shorteners and
+  // the "Zoom Link:" label in front of one (#1879, #2069).
+  const linkless = stripLinks(tagless)
   if (namesSomeone(linkless)) return ''
   const line = linkless.replace(/\([^()]*\)/g, group =>
     CONTACT_CUE.test(fold(group)) ? ' ' : group
   )
   if (CONTACT_CUE.test(fold(line))) return ''
+  return withoutAccess(line)
+}
+
+/** Credentials, phone-like digit runs and dangling contact labels out. */
+function withoutAccess(line: string): string {
   return line
     .replace(CREDENTIAL, ' ')
     .replace(DIGIT_RUN, run => (run.replace(/\D/g, '').length >= 7 ? ' ' : run))
     .replace(DANGLING_LABEL, ' ')
     .replace(/\(\s*[,;:.-]*\s*\)/g, ' ')
     .replace(/\s+/g, ' ')
+    .replace(/\s+([,;])/g, '$1')
     .replace(/^[\s,;:|-]+|[\s,;:|-]+$/g, '')
+}
+
+/**
+ * FAC `Address.Street`, which is free text too (#2069: club 977 typed
+ * "Zoom Link: <shortened link>, <street>"). Links, credentials and phone
+ * numbers are removed and the street kept. Undefined when nothing is left.
+ * Unlike Location, a contact cue does not drop the street: it is the
+ * club's postal address, not a place it describes.
+ */
+export function scrubFacStreet(
+  raw: string | null | undefined
+): string | undefined {
+  if (typeof raw !== 'string') return undefined
+  const street = withoutAccess(stripLinks(raw.replace(/<[^>]*>/g, ' ')))
+  return street.length > 0 ? street : undefined
+}
+
+/**
+ * Free text with every link removed (MeetingDay, MeetingTime; #2069).
+ * Undefined when nothing is left.
+ */
+export function stripFacLinks(
+  raw: string | null | undefined
+): string | undefined {
+  if (typeof raw !== 'string') return undefined
+  const text = stripLinks(raw).trim()
+  return text.length > 0 ? text : undefined
 }
 
 /**
