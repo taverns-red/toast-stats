@@ -30,7 +30,7 @@ import {
   LazyMembershipPaymentsChart as MembershipPaymentsChart,
   LazyYearOverYearComparison as YearOverYearComparison,
 } from '../components/LazyCharts'
-import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { YearOverYearComparisonSkeleton } from '../components/YearOverYearComparisonSkeleton'
 import { TrendChartSkeleton } from '../components/TrendChartSkeleton'
 import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -428,9 +428,7 @@ const DistrictTrendsPage: React.FC = () => {
                 />
               </div>
             ) : (
-              isAggregatedPending && (
-                <LoadingSkeleton variant="chart" height="300px" />
-              )
+              isAggregatedPending && <YearOverYearComparisonSkeleton />
             )}
           </section>
         </div>

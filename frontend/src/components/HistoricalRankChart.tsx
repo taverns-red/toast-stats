@@ -13,7 +13,14 @@ import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { dateAxisLayout } from './charts/compactAxis'
-import { ChartSkeleton } from './ChartSkeleton'
+import {
+  HistoricalRankChartEmpty,
+  HistoricalRankChartError,
+  HistoricalRankChartSkeleton,
+  PLOT_HEIGHT,
+  RankChartHeader,
+  type RankMetric,
+} from './HistoricalRankChartSkeleton'
 import {
   useChartReadout,
   ChartReadout,
@@ -36,8 +43,6 @@ interface HistoricalRankChartProps {
     endDate: string
   }
 }
-
-type RankMetric = 'aggregate' | 'clubs' | 'payments' | 'distinguished'
 
 interface TooltipPayload {
   dataKey: string
@@ -97,95 +102,6 @@ const DISTRICT_COLORS = [
   'var(--tm-happy-yellow-80)', // Additional series with opacity
 ]
 
-/** The plot's height — the loading state reserves the same (#1835). */
-const PLOT_HEIGHT = 400
-
-type ProgramYearLabel = {
-  year: string | number
-  startDate: string
-  endDate: string
-}
-
-/**
- * Heading, program year and metric toggles — shared by the loaded chart and
- * its loading state, so the skeleton has the loaded chrome (#1835).
- */
-const RankChartHeader: React.FC<{
-  programYear: ProgramYearLabel | undefined
-  selectedMetric: RankMetric
-  onSelect: (metric: RankMetric) => void
-  disabled?: boolean
-}> = ({ programYear, selectedMetric, onSelect, disabled = false }) => (
-  <div className="flex flex-col gap-4 mb-4">
-    <div className="flex-1">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-        Historical Rank Progression
-      </h2>
-      {programYear && (
-        <p className="text-xs sm:text-sm text-gray-600 mt-1">
-          Program Year: {programYear.year} ({programYear.startDate} to{' '}
-          {programYear.endDate})
-        </p>
-      )}
-    </div>
-
-    {/* Metric Toggle */}
-    <div className="flex flex-wrap gap-2">
-      <span className="text-sm font-medium text-gray-700 self-center mr-2">
-        View:
-      </span>
-      <button
-        onClick={() => onSelect('aggregate')}
-        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-          selectedMetric === 'aggregate'
-            ? 'bg-tm-loyal-blue text-white'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-        }`}
-        disabled={disabled}
-        aria-pressed={selectedMetric === 'aggregate'}
-      >
-        Overall Score
-      </button>
-      <button
-        onClick={() => onSelect('clubs')}
-        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-          selectedMetric === 'clubs'
-            ? 'bg-tm-loyal-blue text-white'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-        }`}
-        disabled={disabled}
-        aria-pressed={selectedMetric === 'clubs'}
-      >
-        Paid Clubs
-      </button>
-      <button
-        onClick={() => onSelect('payments')}
-        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-          selectedMetric === 'payments'
-            ? 'bg-tm-loyal-blue text-white'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-        }`}
-        disabled={disabled}
-        aria-pressed={selectedMetric === 'payments'}
-      >
-        Total Payments
-      </button>
-      <button
-        onClick={() => onSelect('distinguished')}
-        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-          selectedMetric === 'distinguished'
-            ? 'bg-tm-loyal-blue text-white'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-        }`}
-        disabled={disabled}
-        aria-pressed={selectedMetric === 'distinguished'}
-      >
-        Distinguished
-      </button>
-    </div>
-  </div>
-)
-
 const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   data,
   isLoading,
@@ -206,78 +122,21 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   )
 
   if (isLoading) {
-    // The loaded panel with only the plot replaced (#1835, Lesson 158):
-    // same chrome, one legend-chip row, the 400 px plot and, without
-    // hover, the readout line.
+    // The same markup as the lazy chunk fallback (#1835).
     return (
-      <section
-        className="redesign-panel sm:p-6"
-        aria-busy="true"
-        aria-label="Loading historical rank data"
-      >
-        <RankChartHeader
-          programYear={selectedProgramYear}
-          selectedMetric={selectedMetric}
-          onSelect={setSelectedMetric}
-          disabled
-        />
-        <div className="chart-legend-chips" aria-hidden="true">
-          <span className="chart-legend-chip chart-legend-chip--static">
-            &nbsp;
-          </span>
-        </div>
-        <ChartSkeleton height={PLOT_HEIGHT} />
-        {readout.touch && (
-          <p className="chart-readout" data-testid="chart-readout-reserve">
-            &nbsp;
-          </p>
-        )}
-      </section>
+      <HistoricalRankChartSkeleton
+        programYear={selectedProgramYear}
+        selectedMetric={selectedMetric}
+      />
     )
   }
 
   if (isError) {
-    return (
-      <section
-        className="redesign-panel"
-        role="alert"
-        aria-label="Historical rank data error"
-      >
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Historical Rank Progression
-        </h2>
-        <div className="flex items-center justify-center h-80">
-          <div className="text-center">
-            <p className="text-red-600 font-medium mb-2">
-              Failed to load historical rank data
-            </p>
-            <p className="text-gray-600 text-sm">
-              {error?.message || 'An unexpected error occurred'}
-            </p>
-          </div>
-        </div>
-      </section>
-    )
+    return <HistoricalRankChartError error={error} />
   }
 
   if (!data || data.length === 0) {
-    return (
-      <section
-        className="redesign-panel"
-        role="status"
-        aria-label="Historical rank data"
-      >
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Historical Rank Progression
-        </h2>
-        <div className="flex items-center justify-center h-80">
-          <p className="text-gray-600">
-            No historical rank data available. Select regions above to view rank
-            progression.
-          </p>
-        </div>
-      </section>
-    )
+    return <HistoricalRankChartEmpty />
   }
 
   // Use selectedProgramYear prop if provided, fall back to data (#232)

@@ -8,17 +8,19 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { LoadingSkeleton } from './LoadingSkeleton'
-import { EmptyState } from './ErrorDisplay'
-
-interface YearOverYearData {
-  membershipChange: number
-  distinguishedChange: number
-  clubHealthChange: number
-}
+import {
+  YearOverYearComparisonEmpty,
+  YearOverYearComparisonSkeleton,
+  YOY_PLOT_HEIGHT,
+} from './YearOverYearComparisonSkeleton'
+import {
+  NO_HISTORY,
+  yearOverYearEmpty,
+  type YearOverYearChanges,
+} from './yearOverYearEmpty'
 
 interface YearOverYearComparisonProps {
-  yearOverYear?: YearOverYearData
+  yearOverYear?: YearOverYearChanges
   currentYear: {
     totalMembership: number
     distinguishedClubs: number
@@ -106,45 +108,13 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
   unavailableReason = null,
 }) => {
   if (isLoading) {
-    return <LoadingSkeleton variant="chart" />
+    return <YearOverYearComparisonSkeleton />
   }
 
-  // #1442: an explicit reason outranks both the "no data" and the "all zeroes"
-  // empty states — it is the only one of the three that is actually true.
-  if (unavailableReason) {
-    return (
-      <EmptyState
-        title="Comparison Unavailable"
-        message={unavailableReason}
-        icon="data"
-      />
-    )
-  }
-
-  if (!yearOverYear) {
-    return (
-      <EmptyState
-        title="No Historical Data"
-        message="Year-over-year comparison requires data from previous program years. Continue collecting data to enable this feature."
-        icon="data"
-      />
-    )
-  }
-
-  // All-zero changes indicate the backend couldn't find distinct previous year data
-  const allChangesZero =
-    yearOverYear.membershipChange === 0 &&
-    yearOverYear.distinguishedChange === 0 &&
-    yearOverYear.clubHealthChange === 0
-
-  if (allChangesZero) {
-    return (
-      <EmptyState
-        title="No Historical Data"
-        message="Year-over-year comparison requires data from previous program years. Continue collecting data to enable this feature."
-        icon="data"
-      />
-    )
+  // The same rule decides the lazy chunk fallback (#1835).
+  const empty = yearOverYearEmpty(yearOverYear, unavailableReason)
+  if (empty || !yearOverYear) {
+    return <YearOverYearComparisonEmpty {...(empty ?? NO_HISTORY)} />
   }
 
   // Calculate previous year values from percentage changes
@@ -487,7 +457,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                 <h4 className="text-sm font-semibold text-gray-700 text-center mb-2">
                   {item.metric}
                 </h4>
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={YOY_PLOT_HEIGHT}>
                   <BarChart
                     data={singleChartData}
                     margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
