@@ -222,9 +222,11 @@ export function pinSourceSpec(
   }
 }
 
+// Pins always draw, and their boxes enter the collision index so the basemap
+// labels below them step aside or hide instead of sitting under a pin (#2081).
 const overlap = {
   'icon-allow-overlap': true,
-  'icon-ignore-placement': true,
+  'icon-ignore-placement': false,
 } as const
 
 export function clubPinLayers(

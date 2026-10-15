@@ -24,6 +24,13 @@ import { useDarkMode } from '../../contexts/DarkModeContext'
 import { basemapUrl } from '../../config/basemap'
 import { buildBasemapStyle, type BasemapTheme } from './basemapStyle'
 
+// Labels (#2081) come after the basemap's first render, from their own lazy
+// chunk: the first tile is never waiting on them, and the map route's fixed
+// bytes stay inside the ADR-016 budget. They draw on the canvas, so they
+// cannot shift the layout.
+type Labels = typeof import('./basemapLabels')
+const loadLabels = (): Promise<Labels> => import('./basemapLabels')
+
 let registered = false
 
 /** One pmtiles protocol and one worker URL per page, however many maps. */
@@ -62,7 +69,8 @@ export default function BasemapMap({
   const url = pmtilesUrl ?? basemapUrl()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
-  const styledRef = useRef<{ theme: string; url: string } | null>(null)
+  const styledRef = useRef<{ theme: BasemapTheme; url: string } | null>(null)
+  const labelsRef = useRef<Labels | null>(null)
   // The first render's view and callback seed the map; later changes to
   // them are the page's job through the map instance.
   const seedRef = useRef({
@@ -90,6 +98,17 @@ export default function BasemapMap({
     })
     mapRef.current = map
     styledRef.current = { theme: seed.theme, url: seed.url }
+    map.once('idle', () => {
+      void loadLabels().then(labels => {
+        const styled = styledRef.current
+        if (mapRef.current !== map || !styled) return
+        labelsRef.current = labels
+        labels.addBasemapLabels(map, {
+          theme: styled.theme,
+          origin: window.location.origin,
+        })
+      })
+    })
     seed.onReady?.(map)
     return () => {
       map.remove()
@@ -103,7 +122,16 @@ export default function BasemapMap({
     const styled = styledRef.current
     if (!map || !styled) return
     if (styled.theme === theme && styled.url === url) return
-    map.setStyle(buildBasemapStyle({ theme, pmtilesUrl: url }))
+    const style = buildBasemapStyle({ theme, pmtilesUrl: url })
+    const labels = labelsRef.current
+    map.setStyle(
+      labels
+        ? labels.withBasemapLabels(style, {
+            theme,
+            origin: window.location.origin,
+          })
+        : style
+    )
     styledRef.current = { theme, url }
   }, [theme, url])
 

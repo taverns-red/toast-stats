@@ -12,6 +12,9 @@ interface Recorded {
   options: Record<string, unknown>
   setStyle: ReturnType<typeof vi.fn>
   remove: ReturnType<typeof vi.fn>
+  setGlyphs: ReturnType<typeof vi.fn>
+  addLayer: ReturnType<typeof vi.fn>
+  once: Map<string, () => void>
 }
 
 const hoisted = vi.hoisted(() => ({
@@ -25,11 +28,22 @@ vi.mock('maplibre-gl', () => {
     setStyle = vi.fn()
     remove = vi.fn()
     on = vi.fn()
+    setGlyphs = vi.fn()
+    addLayer = vi.fn()
+    getStyle = vi.fn(() => ({ layers: [] }))
+    handlers = new globalThis.Map<string, () => void>()
+    once = vi.fn((event: string, fn: () => void) => {
+      this.handlers.set(event, fn)
+      return this
+    })
     constructor(options: Record<string, unknown>) {
       hoisted.maps.push({
         options,
         setStyle: this.setStyle,
         remove: this.remove,
+        setGlyphs: this.setGlyphs,
+        addLayer: this.addLayer,
+        once: this.handlers,
       })
     }
   }
@@ -135,6 +149,46 @@ describe('BasemapMap', () => {
     expect(backgroundOf(setStyle.mock.calls[0]![0])).toBe(
       BASEMAP_COLOURS.dark.land
     )
+  })
+
+  it('adds the labels only after the first render, from a lazy chunk (#2081)', async () => {
+    render(<BasemapMap ariaLabel="Map" pmtilesUrl={URL} />)
+    const map = hoisted.maps[0]!
+    // The first style is geometry only: no glyphs, no label layers.
+    const style = map.options['style'] as {
+      glyphs?: string
+      layers: Array<{ type: string }>
+    }
+    expect(style.glyphs).toBeUndefined()
+    expect(style.layers.some(l => l.type === 'symbol')).toBe(false)
+    expect(map.setGlyphs).not.toHaveBeenCalled()
+
+    const idle = map.once.get('idle')
+    expect(idle).toBeDefined()
+    act(() => idle!())
+    await vi.waitFor(() => expect(map.setGlyphs).toHaveBeenCalledTimes(1))
+    expect(map.setGlyphs).toHaveBeenCalledWith(
+      `${window.location.origin}/basemap/glyphs/inter-4.1/{fontstack}/{range}.pbf`
+    )
+    expect(map.addLayer).toHaveBeenCalledTimes(6)
+  })
+
+  it('keeps the labels across a theme change once they are loaded', async () => {
+    const { rerender } = render(<BasemapMap ariaLabel="Map" pmtilesUrl={URL} />)
+    const map = hoisted.maps[0]!
+    act(() => map.once.get('idle')!())
+    await vi.waitFor(() => expect(map.setGlyphs).toHaveBeenCalled())
+    theme.isDark = true
+    act(() => {
+      rerender(<BasemapMap ariaLabel="Map" pmtilesUrl={URL} />)
+    })
+    const next = map.setStyle.mock.calls[0]![0] as {
+      glyphs?: string
+      layers: Array<{ id: string; paint?: Record<string, unknown> }>
+    }
+    expect(next.glyphs).toContain('/basemap/glyphs/')
+    const country = next.layers.find(l => l.id === 'label-countries')
+    expect(country?.paint?.['text-halo-color']).toBe(BASEMAP_COLOURS.dark.land)
   })
 
   it('removes the map on unmount', () => {

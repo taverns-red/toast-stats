@@ -136,9 +136,53 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
   - Cache lookups (~US$0.01 per 10k) and cache fill within North America are negligible at our traffic.
   - The fixed load-balancer charge (ADR-007) is unchanged.
 - **Map route cost.** 292 KB gzip of main-thread JS, plus a 144 KB gzip worker. That is the price of vector tiles; a raster stack would need a tile server or a pre-rendered pyramid.
-- **No place labels** until a glyph range is self-hosted (follow-up). Pins and side panels carry names.
+- ~~**No place labels** until a glyph range is self-hosted (follow-up).~~ Superseded by the addendum below (#2081): labels ship on self-hosted glyphs. **Street names and most landmarks are still absent**, because the z0–10 archive carries no road names and only a few POIs per city.
 - **Operator steps.** Two manual workflow dispatches per refresh. The standard runner is used after it frees preinstalled toolchains. The workflow checks the space before downloading anything, and fails with "use a larger runner" if there is not enough.
 - **Detail.** Beyond z10 the geometry is over-zoomed, so minor streets are generalised. The 2026-10-15 amendment (D1) moves to world z0–14 for street-level detail everywhere. That costs about 18 times the storage (US$3–3.6 a month) and a build of about 40 minutes.
+
+## Addendum (2026-10-15, #2081): labels on self-hosted glyphs
+
+**Decision.** The basemap draws labels with our own zoom-banded symbol layers (`frontend/src/components/map/basemapLabels.ts`). The glyphs are served from our own origin, so there is still no third-party request from the viewer's browser.
+
+- **Deferred.** The base style stays geometry only. On the basemap's first `idle`, `BasemapMap` imports the label module (its own lazy chunk), sets the glyphs URL and adds the label layers above the basemap's own layers, below anything a page has added (the pins). The first tile never waits on labels. The map route's fixed bytes grow by about 140 B gzip, inside the 300 KB budget, which stays unchanged (#1856 ratchets budgets down). Labels draw on the canvas, so they cause no layout shift.
+
+- **Font.** Inter Regular 4.1 (SIL OFL 1.1, licence shipped beside the files as `OFL.txt`). It is the app's body font (`--rt-font-body`). The glyph PBFs were built with `build_pbf_glyphs` 1.5.1 from the official release's `extras/ttf/Inter-Regular.ttf`.
+- **Files.** `frontend/public/basemap/glyphs/inter-4.1/Inter-Regular/{range}.pbf`, served by Firebase Hosting. The path carries the font version, so the files are cached as `immutable` (`firebase.json`). A new font or a new range means a new version directory.
+- **Ranges and bytes.** Seven ranges, 719,203 bytes on disk (217,153 gzip -9):
+
+  | Range     | Covers                                 | Bytes   | gzip   |
+  | --------- | -------------------------------------- | ------- | ------ |
+  | 0-255     | Basic Latin, Latin-1                   | 84,331  | 28,795 |
+  | 256-511   | Latin Extended-A/B                     | 139,397 | 38,489 |
+  | 512-767   | Latin Extended-B, IPA, modifiers       | 101,699 | 34,529 |
+  | 768-1023  | Combining marks, Greek                 | 62,810  | 22,254 |
+  | 1024-1279 | Cyrillic                               | 131,092 | 41,333 |
+  | 7680-7935 | Latin Extended Additional (Vietnamese) | 147,232 | 30,556 |
+  | 8192-8447 | General punctuation (– ’ “ ”)          | 52,642  | 21,197 |
+
+  MapLibre fetches a range only when a visible label needs it, after the map chunk has loaded. A typical English-language view needs `0-255`, and often `8192-8447` for names such as "York South–Weston".
+
+- **Unshipped ranges 404.** A rewrite sends `/basemap/glyphs/**` misses to a file that does not exist, so Hosting returns 404 rather than the SPA's `index.html` with a 200. MapLibre then draws that glyph locally (checked on the Hosting emulator and on the preview).
+- **Script coverage.** The English name (`name:en`) wins. Without one:
+  - Latin, Cyrillic and Greek names are drawn from our glyphs.
+  - Chinese, Japanese and Korean names are drawn by the browser's own font (MapLibre's `localIdeographFontFamily`), with no request.
+  - Any other script (Arabic, Hebrew, Indic, Thai…) is shown only when an English name exists. We ship no glyphs for these scripts, and Arabic also needs the RTL shaping plugin. Most countries, states and cities have `name:en`. Neighbourhoods in those regions often do not.
+- **Zoom bands.** Labels are never busy:
+  - countries z1–7;
+  - states and provinces z4–10 (the abbreviation below z6);
+  - cities and towns from z3, each one zoom after the tile's own `min_zoom`;
+  - neighbourhoods from z12;
+  - streets from z13 (major roads) and z15 (minor roads);
+  - landmarks from z14 (airports, stations, parks, universities, stadiums, museums, zoos, attractions; no shops).
+- **Look.** Labels use the app's slate inks: `--ink-2` for cities and `--ink-3` for every other band (light `#344052`/`#5B6675`, dark `#C8D1DD`/`#8A96A6`), with a 1.5 px halo in the land colour. Every label is at least 4.5:1 on the land (#2080's neutral basemap). There is no new hue and no sprite.
+  - Labels sit directly above the basemap's layers and below the pins.
+  - Pins keep `icon-allow-overlap` but now enter the collision index (`icon-ignore-placement: false`). A city or landmark label therefore steps beside a pin, by 2.2–2.4 em, or hides; it never sits under one.
+- **Accessibility.** Labels are canvas-drawn and decorative. The map region keeps its accessible name, and the side panels carry the club names.
+
+**Limits and follow-ups (Ron's call).**
+
+1. **Street names need higher-zoom tiles.** In the z0–10 world archive, road features carry no `name` (only highway `ref`s), and a city tile carries 3–9 POIs. The street and landmark layers are in place and light up as soon as the archive has z11+ tiles for club areas: the D1 regional-merge follow-up (`pmtiles merge` of a club-buffer extract, a GCS upload).
+2. **Arabic-script names without an English name.** These need a self-hosted copy of `@mapbox/mapbox-gl-rtl-text` and an Arabic glyph range (1536-1791).
 
 ## Alternatives considered
 
