@@ -75,3 +75,39 @@ export async function recordedFailedDistricts(
     return []
   }
 }
+
+/**
+ * Why each district {@link recordedFailedDistricts} names has no file, read
+ * from the same `metadata.json`'s `errors[]` — transform writes one
+ * `"<districtId>: <reason>"` entry per recorded failure or #1671 gap. Keyed
+ * by the district id as `failedDistricts` spells it; a district with no
+ * matching entry is left out, and the caller states it without a reason
+ * rather than inventing one (#2042).
+ */
+export async function recordedFailureReasons(
+  snapshotDir: string
+): Promise<Record<string, string>> {
+  const failed = await recordedFailedDistricts(snapshotDir)
+  let errors: unknown
+  try {
+    const parsed: unknown = JSON.parse(
+      await fs.readFile(path.join(snapshotDir, 'metadata.json'), 'utf-8')
+    )
+    errors =
+      typeof parsed === 'object' && parsed !== null
+        ? (parsed as { errors?: unknown }).errors
+        : undefined
+  } catch {
+    return {}
+  }
+  if (!Array.isArray(errors)) return {}
+  const reasons: Record<string, string> = {}
+  for (const districtId of failed) {
+    const prefix = `${districtId}: `
+    const entry = errors.find(
+      (e): e is string => typeof e === 'string' && e.startsWith(prefix)
+    )
+    if (entry) reasons[districtId] = entry.slice(prefix.length)
+  }
+  return reasons
+}

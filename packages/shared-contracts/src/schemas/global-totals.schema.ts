@@ -115,16 +115,25 @@ export const GlobalTotalsMembershipSchema = z.object({
   totalMembership: z.number().int(),
   /** Sum of `districtPerformance` "Total to Date", each club counted once. */
   totalPayments: z.number().int(),
-  /** Sum of the rankings rows' `paidClubs`. */
+  /**
+   * Sum of the rankings rows' `paidClubs` — EVERY listed district, an
+   * `uncountedDistricts` entry included (its all-districts.csv row is real).
+   */
   paidClubs: z.number().int(),
   /** Sum of the rankings rows' `activeClubs`. */
   activeClubs: z.number().int(),
-  /** Distinct canonical club ids the membership/payment sums ran over. */
+  /**
+   * Distinct canonical club ids the membership/payment sums ran over. Never
+   * includes an `uncountedDistricts` entry's clubs: no district report of
+   * its was read, so it has no club ids to count (#2042).
+   */
   clubsCounted: z.number().int(),
   /**
    * `totalMembership ÷ paidClubs` — the basis ruled on #1426 (2026-08-19).
    * On a June-30 date this is the year-end membership over year-end paid
-   * clubs. `null` when `paidClubs` is 0 rather than a divide-by-zero.
+   * clubs. The denominator leaves out `uncountedDistricts`' paid clubs, whose
+   * members are not in the numerator (#2042). `null` when that denominator
+   * is 0 rather than a divide-by-zero.
    */
   avgClubSize: z.number().nullable(),
 })
@@ -222,6 +231,10 @@ export const GlobalTotalsClubMovementSchema = z.object({
    * signal is window-independent, so a `Susp` value dated outside the window
    * still proves the branch was collected. Readers render `null` as "not on
    * file", never as zero.
+   *
+   * Only counted districts' rows are seen, so a date whose `Susp` values all
+   * sat in an `uncountedDistricts` entry's report is `null` too: unknown,
+   * because the rows that would say were never read (#2042).
    */
   suspendedClubs: z.number().int().nullable(),
 })
