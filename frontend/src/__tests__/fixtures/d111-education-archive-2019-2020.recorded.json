@@ -1,0 +1,2124 @@
+{
+  "districtId": "111",
+  "programYear": "2019-2020",
+  "generatedAt": "2026-06-12T15:10:26.876Z",
+  "sections": {
+    "educationAchievements": {
+      "sources": [
+        {
+          "reportType": "education-archive",
+          "tableId": "a30b93f3-081e-42c8-9a36-137acb24be69",
+          "asOf": ""
+        }
+      ],
+      "records": [
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "ALBAdvanced Leader Bronze",
+          "achievementCount": 2
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 4
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "CLCompetent Leader",
+          "achievementCount": 4
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "EC1Effective Coaching Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "EC2Effective Coaching Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "2229225",
+          "division": "B",
+          "area": "1",
+          "name": "Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "ALBAdvanced Leader Bronze",
+          "achievementCount": 1
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 7
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "CLCompetent Leader",
+          "achievementCount": 3
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "LD2Leadership Development Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "LD3Leadership Development Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "LD4Leadership Development Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "LD5Leadership Development Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2453527",
+          "division": "B",
+          "area": "6",
+          "name": "Rio Speak Out",
+          "location": "Rio De Janeiro",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "ACBAdvanced Communicator Bronze",
+          "achievementCount": 2
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 1
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "CLCompetent Leader",
+          "achievementCount": 1
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "DL3Dynamic Leadership Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "DL4Dynamic Leadership Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "DL5Dynamic Leadership Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "EC1Effective Coaching Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "EC2Effective Coaching Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "SR1Strategic Relationships Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "3182108",
+          "division": "B",
+          "area": "2",
+          "name": "Vila Olimpia English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "SR2Strategic Relationships Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4158459",
+          "division": "B",
+          "area": "6",
+          "name": "Shell Rio Toastmasters",
+          "location": "Rio De Janeiro",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4158459",
+          "division": "B",
+          "area": "6",
+          "name": "Shell Rio Toastmasters",
+          "location": "Rio De Janeiro",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4158459",
+          "division": "B",
+          "area": "6",
+          "name": "Shell Rio Toastmasters",
+          "location": "Rio De Janeiro",
+          "award": "SR1Strategic Relationships Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4175277",
+          "division": "B",
+          "area": "1",
+          "name": "Ericsson Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 2
+        },
+        {
+          "club": "4175277",
+          "division": "B",
+          "area": "1",
+          "name": "Ericsson Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4175277",
+          "division": "B",
+          "area": "1",
+          "name": "Ericsson Sao Paulo Toastmasters",
+          "location": "Sao Paulo",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "ALBAdvanced Leader Bronze",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 3
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "EC1Effective Coaching Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "EC2Effective Coaching Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "EC3Effective Coaching Level 3",
+          "achievementCount": 2
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "EC4Effective Coaching Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 6
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 4
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "IP3Innovative Planning Level 3",
+          "achievementCount": 4
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "IP4Innovative Planning Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "LD1Leadership Development Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "LD2Leadership Development Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 3
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "PI3Persuasive Influence Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 4
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 2
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "SR1Strategic Relationships Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4398319",
+          "division": "B",
+          "area": "7",
+          "name": "Rio Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "ACGAdvanced Communicator Gold",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "CLCompetent Leader",
+          "achievementCount": 2
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "EH1Engaging Humor Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "EH2Engaging Humor Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "EH3Engaging Humor Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "EH4Engaging Humor Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 7
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "IP3Innovative Planning Level 3",
+          "achievementCount": 6
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "IP4Innovative Planning Level 4",
+          "achievementCount": 3
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 3
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 3
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "MS3Motivational Strategies Level 3",
+          "achievementCount": 2
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "MS4Motivational Strategies Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PI3Persuasive Influence Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PI4Persuasive Influence Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4830452",
+          "division": "B",
+          "area": "4",
+          "name": "NOS Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "EC1Effective Coaching Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "IP3Innovative Planning Level 3",
+          "achievementCount": 2
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "MS3Motivational Strategies Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "SR2Strategic Relationships Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "SR3Strategic Relationships Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "SR4Strategic Relationships Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "SR5Strategic Relationships Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4856017",
+          "division": "B",
+          "area": "2",
+          "name": "Avenida Paulista Toastmasters",
+          "location": "Sao Paulo",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5092876",
+          "division": "B",
+          "area": "3",
+          "name": "Caterpillar Brazil Bilingual",
+          "location": "Piracicaba",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5092876",
+          "division": "B",
+          "area": "3",
+          "name": "Caterpillar Brazil Bilingual",
+          "location": "Piracicaba",
+          "award": "EC1Effective Coaching Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5092876",
+          "division": "B",
+          "area": "3",
+          "name": "Caterpillar Brazil Bilingual",
+          "location": "Piracicaba",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5092876",
+          "division": "B",
+          "area": "3",
+          "name": "Caterpillar Brazil Bilingual",
+          "location": "Piracicaba",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5313265",
+          "division": "B",
+          "area": "1",
+          "name": "Wild Talkers English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "ACGAdvanced Communicator Gold",
+          "achievementCount": 1
+        },
+        {
+          "club": "5313265",
+          "division": "B",
+          "area": "1",
+          "name": "Wild Talkers English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 1
+        },
+        {
+          "club": "5313265",
+          "division": "B",
+          "area": "1",
+          "name": "Wild Talkers English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "CLCompetent Leader",
+          "achievementCount": 3
+        },
+        {
+          "club": "5313265",
+          "division": "B",
+          "area": "1",
+          "name": "Wild Talkers English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5313265",
+          "division": "B",
+          "area": "1",
+          "name": "Wild Talkers English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "5313265",
+          "division": "B",
+          "area": "1",
+          "name": "Wild Talkers English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "LD2Leadership Development Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5313265",
+          "division": "B",
+          "area": "1",
+          "name": "Wild Talkers English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5313265",
+          "division": "B",
+          "area": "1",
+          "name": "Wild Talkers English Toastmasters Club",
+          "location": "Sao Paulo",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "ACBAdvanced Communicator Bronze",
+          "achievementCount": 2
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "ALBAdvanced Leader Bronze",
+          "achievementCount": 2
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "ALSAdvanced Leader Silver",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "CLCompetent Leader",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 5
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "DL3Dynamic Leadership Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "DL4Dynamic Leadership Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "DL5Dynamic Leadership Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "IP3Innovative Planning Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "LDREXCLeadership Excellence",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 3
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 9
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "TC1Team Collaboration Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "TC2Team Collaboration Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5445456",
+          "division": "B",
+          "area": "8",
+          "name": "Brasilia TM - Alumni UnB",
+          "location": "Brasilia",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5864102",
+          "division": "B",
+          "area": "8",
+          "name": "Belo Horizonte Toastmasters",
+          "location": "Belo Horizonte",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 1
+        },
+        {
+          "club": "5864102",
+          "division": "B",
+          "area": "8",
+          "name": "Belo Horizonte Toastmasters",
+          "location": "Belo Horizonte",
+          "award": "EC2Effective Coaching Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "CLCompetent Leader",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "DTMDistinguished Toastmaster",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "EC2Effective Coaching Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "EC3Effective Coaching Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 3
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "IP3Innovative Planning Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "PI3Persuasive Influence Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5880816",
+          "division": "B",
+          "area": "1",
+          "name": "Citi Brazil English Toastmasters",
+          "location": "Sao Paulo",
+          "award": "PI4Persuasive Influence Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "6556192",
+          "division": "B",
+          "area": "3",
+          "name": "Campinas #1 English Toastmasters",
+          "location": "Campinas",
+          "award": "ALSAdvanced Leader Silver",
+          "achievementCount": 1
+        },
+        {
+          "club": "6556192",
+          "division": "B",
+          "area": "3",
+          "name": "Campinas #1 English Toastmasters",
+          "location": "Campinas",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 2
+        },
+        {
+          "club": "6556192",
+          "division": "B",
+          "area": "3",
+          "name": "Campinas #1 English Toastmasters",
+          "location": "Campinas",
+          "award": "CLCompetent Leader",
+          "achievementCount": 2
+        },
+        {
+          "club": "6556192",
+          "division": "B",
+          "area": "3",
+          "name": "Campinas #1 English Toastmasters",
+          "location": "Campinas",
+          "award": "DTMDistinguished Toastmaster",
+          "achievementCount": 1
+        },
+        {
+          "club": "6556192",
+          "division": "B",
+          "area": "3",
+          "name": "Campinas #1 English Toastmasters",
+          "location": "Campinas",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6556192",
+          "division": "B",
+          "area": "3",
+          "name": "Campinas #1 English Toastmasters",
+          "location": "Campinas",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "6556192",
+          "division": "B",
+          "area": "3",
+          "name": "Campinas #1 English Toastmasters",
+          "location": "Campinas",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "6556192",
+          "division": "B",
+          "area": "3",
+          "name": "Campinas #1 English Toastmasters",
+          "location": "Campinas",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "ACBAdvanced Communicator Bronze",
+          "achievementCount": 2
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 2
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "CLCompetent Leader",
+          "achievementCount": 3
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "DL3Dynamic Leadership Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "EC1Effective Coaching Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "LD1Leadership Development Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "SR1Strategic Relationships Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "SR2Strategic Relationships Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "SR3Strategic Relationships Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "6578697",
+          "division": "B",
+          "area": "7",
+          "name": "The Rio Gringo Toastmasters",
+          "location": "Rio de Janeiro",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "6786802",
+          "division": "B",
+          "area": "3",
+          "name": "Dell Brazil SP Club",
+          "location": "Hortolandia",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 4
+        },
+        {
+          "club": "6786802",
+          "division": "B",
+          "area": "3",
+          "name": "Dell Brazil SP Club",
+          "location": "Hortolandia",
+          "award": "CLCompetent Leader",
+          "achievementCount": 6
+        },
+        {
+          "club": "6786802",
+          "division": "B",
+          "area": "3",
+          "name": "Dell Brazil SP Club",
+          "location": "Hortolandia",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6786802",
+          "division": "B",
+          "area": "3",
+          "name": "Dell Brazil SP Club",
+          "location": "Hortolandia",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "6786802",
+          "division": "B",
+          "area": "3",
+          "name": "Dell Brazil SP Club",
+          "location": "Hortolandia",
+          "award": "LD1Leadership Development Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6786802",
+          "division": "B",
+          "area": "3",
+          "name": "Dell Brazil SP Club",
+          "location": "Hortolandia",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6786802",
+          "division": "B",
+          "area": "3",
+          "name": "Dell Brazil SP Club",
+          "location": "Hortolandia",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6786802",
+          "division": "B",
+          "area": "3",
+          "name": "Dell Brazil SP Club",
+          "location": "Hortolandia",
+          "award": "TC1Team Collaboration Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7006126",
+          "division": "B",
+          "area": "8",
+          "name": "Palmas Toastmasters",
+          "location": "Palmas",
+          "award": "TC1Team Collaboration Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7006126",
+          "division": "B",
+          "area": "8",
+          "name": "Palmas Toastmasters",
+          "location": "Palmas",
+          "award": "TC2Team Collaboration Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7039995",
+          "division": "B",
+          "area": "5",
+          "name": "Open POA Toastmasters",
+          "location": "Porto Alegre",
+          "award": "ALBAdvanced Leader Bronze",
+          "achievementCount": 1
+        },
+        {
+          "club": "7039995",
+          "division": "B",
+          "area": "5",
+          "name": "Open POA Toastmasters",
+          "location": "Porto Alegre",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7039995",
+          "division": "B",
+          "area": "5",
+          "name": "Open POA Toastmasters",
+          "location": "Porto Alegre",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "7039995",
+          "division": "B",
+          "area": "5",
+          "name": "Open POA Toastmasters",
+          "location": "Porto Alegre",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7039995",
+          "division": "B",
+          "area": "5",
+          "name": "Open POA Toastmasters",
+          "location": "Porto Alegre",
+          "award": "IP3Innovative Planning Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "7039995",
+          "division": "B",
+          "area": "5",
+          "name": "Open POA Toastmasters",
+          "location": "Porto Alegre",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7039995",
+          "division": "B",
+          "area": "5",
+          "name": "Open POA Toastmasters",
+          "location": "Porto Alegre",
+          "award": "SR1Strategic Relationships Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7039995",
+          "division": "B",
+          "area": "5",
+          "name": "Open POA Toastmasters",
+          "location": "Porto Alegre",
+          "award": "SR2Strategic Relationships Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "EC2Effective Coaching Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "EC3Effective Coaching Level 3",
+          "achievementCount": 2
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "EC4Effective Coaching Level 4",
+          "achievementCount": 2
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "LD1Leadership Development Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7095420",
+          "division": "B",
+          "area": "5",
+          "name": "Sicredi Toastmasters",
+          "location": "Porto Alegre",
+          "award": "SR1Strategic Relationships Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "ACBAdvanced Communicator Bronze",
+          "achievementCount": 2
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "ACGAdvanced Communicator Gold",
+          "achievementCount": 1
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "ACSAdvanced Communicator Silver",
+          "achievementCount": 1
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "CCCompetent Communicator",
+          "achievementCount": 1
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 3
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "LDREXCLeadership Excellence",
+          "achievementCount": 1
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "7122413",
+          "division": "B",
+          "area": "7",
+          "name": "Carioca Toastmasters Club",
+          "location": "Rio De Janeiro",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7443125",
+          "division": "B",
+          "area": "2",
+          "name": "Toastmasters PRA Club",
+          "location": "sao paulo",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7478011",
+          "division": "B",
+          "area": "4",
+          "name": "ToastMasters Curitiba",
+          "location": "Curitiba",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "7478011",
+          "division": "B",
+          "area": "4",
+          "name": "ToastMasters Curitiba",
+          "location": "Curitiba",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "7478011",
+          "division": "B",
+          "area": "4",
+          "name": "ToastMasters Curitiba",
+          "location": "Curitiba",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "ACGAdvanced Communicator Gold",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "ACSAdvanced Communicator Silver",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "EC1Effective Coaching Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "EC2Effective Coaching Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "EC3Effective Coaching Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "IP2Innovative Planning Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "LD1Leadership Development Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "SR1Strategic Relationships Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "955824",
+          "division": "B",
+          "area": "5",
+          "name": "Dell Toastmasters Brazil",
+          "location": "Eldorado Do Sul",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        }
+      ]
+    }
+  }
+}

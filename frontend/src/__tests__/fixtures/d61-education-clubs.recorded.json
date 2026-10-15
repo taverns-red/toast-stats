@@ -1,0 +1,1132 @@
+{
+  "_recorded": "https://cdn.taverns.red/snapshots/2026-10-13/analytics/district_61_analytics.json, fetched 2026-10-14 (#1793). data.allClubs projected to the fields the education page reads; values unedited.",
+  "clubs": [
+    {
+      "clubId": "3045",
+      "clubName": "Limestone City Club",
+      "divisionId": "A",
+      "areaId": "01",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "9560",
+      "clubName": "CFB Kingston Toastmasters",
+      "divisionId": "A",
+      "areaId": "01",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "1849755",
+      "clubName": "Toastmasters At St. Lawrence College",
+      "divisionId": "A",
+      "areaId": "01",
+      "membershipBase": 1
+    },
+    {
+      "clubId": "7260126",
+      "clubName": "Toastmasters At Queen's",
+      "divisionId": "A",
+      "areaId": "01",
+      "membershipBase": 15
+    },
+    {
+      "clubId": "7833019",
+      "clubName": "KEYS Toastmasters Club",
+      "divisionId": "A",
+      "areaId": "01",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "2959",
+      "clubName": "Seaway Toastmasters Club of Cornwall",
+      "divisionId": "A",
+      "areaId": "02",
+      "membershipBase": 23
+    },
+    {
+      "clubId": "3886",
+      "clubName": "Thousand Islands Club",
+      "divisionId": "A",
+      "areaId": "02",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "1570163",
+      "clubName": "Downtown Kingston Toastmasters",
+      "divisionId": "A",
+      "areaId": "02",
+      "membershipBase": 36
+    },
+    {
+      "clubId": "28675542",
+      "clubName": "Mastermind Leaders",
+      "divisionId": "A",
+      "areaId": "02",
+      "membershipBase": 12
+    },
+    {
+      "clubId": "8032",
+      "clubName": "North Grenville Club",
+      "divisionId": "A",
+      "areaId": "03",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "8684",
+      "clubName": "Manotick Club",
+      "divisionId": "A",
+      "areaId": "03",
+      "membershipBase": 19
+    },
+    {
+      "clubId": "1590426",
+      "clubName": "Smiths Falls Toastmasters",
+      "divisionId": "A",
+      "areaId": "03",
+      "membershipBase": 14
+    },
+    {
+      "clubId": "4544358",
+      "clubName": "Stittsville Toastmasters Club",
+      "divisionId": "A",
+      "areaId": "03",
+      "membershipBase": 44
+    },
+    {
+      "clubId": "4675249",
+      "clubName": "Carleton Place Toastmasters",
+      "divisionId": "A",
+      "areaId": "03",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "9303",
+      "clubName": "Nepean Wingtalkers Toastmasters Club",
+      "divisionId": "A",
+      "areaId": "04",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "640929",
+      "clubName": "Barrhaven Toastmasters",
+      "divisionId": "A",
+      "areaId": "04",
+      "membershipBase": 26
+    },
+    {
+      "clubId": "1100158",
+      "clubName": "IBM Ottawa Toastmasters",
+      "divisionId": "A",
+      "areaId": "04",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "5884192",
+      "clubName": "Ottawa Collab Toastmasters",
+      "divisionId": "A",
+      "areaId": "04",
+      "membershipBase": 15
+    },
+    {
+      "clubId": "3279",
+      "clubName": "Statistics Canada Toastmasters Club",
+      "divisionId": "B",
+      "areaId": "10",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "5833",
+      "clubName": "Pembroke & Area Club",
+      "divisionId": "B",
+      "areaId": "10",
+      "membershipBase": 6
+    },
+    {
+      "clubId": "6536",
+      "clubName": "Chalk River Laboratories Toastmasters",
+      "divisionId": "B",
+      "areaId": "10",
+      "membershipBase": 15
+    },
+    {
+      "clubId": "616346",
+      "clubName": "Health and Fitness Toastmasters",
+      "divisionId": "B",
+      "areaId": "10",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "777940",
+      "clubName": "Silver & Wiser Toastmasters",
+      "divisionId": "B",
+      "areaId": "10",
+      "membershipBase": 25
+    },
+    {
+      "clubId": "946842",
+      "clubName": "Les Orateurs De Statistique Canada",
+      "divisionId": "B",
+      "areaId": "10",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "7751",
+      "clubName": "West End Toastmasters",
+      "divisionId": "B",
+      "areaId": "11",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "9122",
+      "clubName": "Kanata Toastmasters Club",
+      "divisionId": "B",
+      "areaId": "11",
+      "membershipBase": 21
+    },
+    {
+      "clubId": "1430971",
+      "clubName": "Valley Vintage Advanced",
+      "divisionId": "B",
+      "areaId": "11",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "7582363",
+      "clubName": "Canmet Toastmasters",
+      "divisionId": "B",
+      "areaId": "11",
+      "membershipBase": 19
+    },
+    {
+      "clubId": "7718892",
+      "clubName": "NDHQ Carling Toastmasters",
+      "divisionId": "B",
+      "areaId": "11",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "28678043",
+      "clubName": "Ottawa Muslim Speakers Club",
+      "divisionId": "B",
+      "areaId": "11",
+      "membershipBase": 12
+    },
+    {
+      "clubId": "6425",
+      "clubName": "LAN Toastmasters Club",
+      "divisionId": "B",
+      "areaId": "12",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "6871192",
+      "clubName": "Kinaxis Toastmasters Club",
+      "divisionId": "B",
+      "areaId": "12",
+      "membershipBase": 12
+    },
+    {
+      "clubId": "7634790",
+      "clubName": "Quackmasters",
+      "divisionId": "B",
+      "areaId": "12",
+      "membershipBase": 17
+    },
+    {
+      "clubId": "7749720",
+      "clubName": "Ericsson Ottawa Toastmasters Club",
+      "divisionId": "B",
+      "areaId": "12",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "7749943",
+      "clubName": "Kanata Francophone",
+      "divisionId": "B",
+      "areaId": "12",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "6236",
+      "clubName": "Health Canada Club",
+      "divisionId": "B",
+      "areaId": "13",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "9472",
+      "clubName": "Visioneers Advanced Club",
+      "divisionId": "B",
+      "areaId": "13",
+      "membershipBase": 12
+    },
+    {
+      "clubId": "654417",
+      "clubName": "Management Development for Women Club",
+      "divisionId": "B",
+      "areaId": "13",
+      "membershipBase": 22
+    },
+    {
+      "clubId": "3950903",
+      "clubName": "Percolators Breakfast Club",
+      "divisionId": "B",
+      "areaId": "13",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "7396993",
+      "clubName": "Ottawa Coaches Corner",
+      "divisionId": "B",
+      "areaId": "13",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "28678526",
+      "clubName": "Leaders Go First Toastmasters",
+      "divisionId": "B",
+      "areaId": "13",
+      "membershipBase": 23
+    },
+    {
+      "clubId": "928",
+      "clubName": "The Prose Toastmasters Club",
+      "divisionId": "B",
+      "areaId": "14",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "3319",
+      "clubName": "Carlingwood Club",
+      "divisionId": "B",
+      "areaId": "14",
+      "membershipBase": 22
+    },
+    {
+      "clubId": "5108",
+      "clubName": "Bells Corners Toastmasters Club",
+      "divisionId": "B",
+      "areaId": "14",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "676481",
+      "clubName": "Ottawa Community Toastmasters",
+      "divisionId": "B",
+      "areaId": "14",
+      "membershipBase": 10
+    },
+    {
+      "clubId": "737419",
+      "clubName": "Constellation Club",
+      "divisionId": "B",
+      "areaId": "14",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "2722",
+      "clubName": "Capital Club",
+      "divisionId": "C",
+      "areaId": "20",
+      "membershipBase": 31
+    },
+    {
+      "clubId": "5458",
+      "clubName": "Luncheon Troupers Toastmasters Club",
+      "divisionId": "C",
+      "areaId": "20",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "7258",
+      "clubName": "Advanced Speakers Club",
+      "divisionId": "C",
+      "areaId": "20",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "7261",
+      "clubName": "Centretown Ottawa Toastmasters",
+      "divisionId": "C",
+      "areaId": "20",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "985878",
+      "clubName": "Agora Toastmasters Club",
+      "divisionId": "C",
+      "areaId": "20",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "5407",
+      "clubName": "Dawn Breaker Toastmasters Club",
+      "divisionId": "C",
+      "areaId": "21",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "6432",
+      "clubName": "EDC Ottawa Toastmasters Club",
+      "divisionId": "C",
+      "areaId": "21",
+      "membershipBase": 12
+    },
+    {
+      "clubId": "8296",
+      "clubName": "Downtown Ottawa Toastmasters Club",
+      "divisionId": "C",
+      "areaId": "21",
+      "membershipBase": 21
+    },
+    {
+      "clubId": "1106180",
+      "clubName": "A Matter of Taste",
+      "divisionId": "C",
+      "areaId": "21",
+      "membershipBase": 15
+    },
+    {
+      "clubId": "1611",
+      "clubName": "Club Toastmasters Les Mots Arts",
+      "divisionId": "C",
+      "areaId": "22",
+      "membershipBase": 21
+    },
+    {
+      "clubId": "8585",
+      "clubName": "Rockcliffe Aerodites Club",
+      "divisionId": "C",
+      "areaId": "22",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "8861",
+      "clubName": "Le Parolier Toastmasters Club",
+      "divisionId": "C",
+      "areaId": "22",
+      "membershipBase": 21
+    },
+    {
+      "clubId": "829817",
+      "clubName": "Louis St Laurent Icebreakers",
+      "divisionId": "C",
+      "areaId": "22",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "7538599",
+      "clubName": "Club Toastmasters francophone d'Ottawa",
+      "divisionId": "C",
+      "areaId": "22",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "3221",
+      "clubName": "Odyssea",
+      "divisionId": "C",
+      "areaId": "23",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "6232",
+      "clubName": "Pearson Club",
+      "divisionId": "C",
+      "areaId": "23",
+      "membershipBase": 18
+    },
+    {
+      "clubId": "1567785",
+      "clubName": "Creative Communicators",
+      "divisionId": "C",
+      "areaId": "23",
+      "membershipBase": 10
+    },
+    {
+      "clubId": "7238597",
+      "clubName": "90 Elgin Toastmasters",
+      "divisionId": "C",
+      "areaId": "23",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "180",
+      "clubName": "Causeurs Ottawa Speakers Club",
+      "divisionId": "C",
+      "areaId": "24",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "2190",
+      "clubName": "Transport Canada Toastmasters",
+      "divisionId": "C",
+      "areaId": "24",
+      "membershipBase": 25
+    },
+    {
+      "clubId": "5257061",
+      "clubName": "OAG / BVG",
+      "divisionId": "C",
+      "areaId": "24",
+      "membershipBase": 17
+    },
+    {
+      "clubId": "7670344",
+      "clubName": "Bank of Canada Toastmasters Club",
+      "divisionId": "C",
+      "areaId": "24",
+      "membershipBase": 18
+    },
+    {
+      "clubId": "808",
+      "clubName": "Orléans Raconteurs Toastmasters Club 808",
+      "divisionId": "D",
+      "areaId": "30",
+      "membershipBase": 23
+    },
+    {
+      "clubId": "3487",
+      "clubName": "Intrepid Club",
+      "divisionId": "D",
+      "areaId": "30",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "6728",
+      "clubName": "Cultivators Of Self-Ex Club",
+      "divisionId": "D",
+      "areaId": "30",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "3171418",
+      "clubName": "Blackburn Toastmasters Club",
+      "divisionId": "D",
+      "areaId": "30",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "3619",
+      "clubName": "Speakers Corner Club",
+      "divisionId": "D",
+      "areaId": "31",
+      "membershipBase": 18
+    },
+    {
+      "clubId": "3656",
+      "clubName": "East Ottawa Toastmasters Club",
+      "divisionId": "D",
+      "areaId": "31",
+      "membershipBase": 36
+    },
+    {
+      "clubId": "5135",
+      "clubName": "Riverside Club",
+      "divisionId": "D",
+      "areaId": "31",
+      "membershipBase": 10
+    },
+    {
+      "clubId": "8210",
+      "clubName": "Mail Talk Club",
+      "divisionId": "D",
+      "areaId": "31",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "1935",
+      "clubName": "Ottawa Toastmasters Club",
+      "divisionId": "D",
+      "areaId": "33",
+      "membershipBase": 41
+    },
+    {
+      "clubId": "692750",
+      "clubName": "Creativity + Toastmasters",
+      "divisionId": "D",
+      "areaId": "33",
+      "membershipBase": 12
+    },
+    {
+      "clubId": "1009147",
+      "clubName": "Los Amigos Online",
+      "divisionId": "D",
+      "areaId": "33",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "28678196",
+      "clubName": "MDS Aero Toastmasters",
+      "divisionId": "D",
+      "areaId": "33",
+      "membershipBase": 12
+    },
+    {
+      "clubId": "5046",
+      "clubName": "Avance Synergie",
+      "divisionId": "D",
+      "areaId": "34",
+      "membershipBase": 12
+    },
+    {
+      "clubId": "7618",
+      "clubName": "Dows Lake Toastmasters Club",
+      "divisionId": "D",
+      "areaId": "34",
+      "membershipBase": 14
+    },
+    {
+      "clubId": "9824",
+      "clubName": "CMHC/SCHL Club",
+      "divisionId": "D",
+      "areaId": "34",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "616889",
+      "clubName": "AGRI-Toastmasters Club",
+      "divisionId": "D",
+      "areaId": "34",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "7872266",
+      "clubName": "Green/Vert Toastmasters",
+      "divisionId": "D",
+      "areaId": "34",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "4468",
+      "clubName": "Beaconsfield Toastmasters Club",
+      "divisionId": "F",
+      "areaId": "50",
+      "membershipBase": 24
+    },
+    {
+      "clubId": "6596",
+      "clubName": "Pierrefonds Club",
+      "divisionId": "F",
+      "areaId": "50",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "9750",
+      "clubName": "Pointe Claire Toastmasters",
+      "divisionId": "F",
+      "areaId": "50",
+      "membershipBase": 43
+    },
+    {
+      "clubId": "874232",
+      "clubName": "Future First",
+      "divisionId": "F",
+      "areaId": "50",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "1479548",
+      "clubName": "Saint-Lazare Inspirers",
+      "divisionId": "F",
+      "areaId": "50",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "4673",
+      "clubName": "Bombardier Canadair Toastmasters Club",
+      "divisionId": "F",
+      "areaId": "52",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "5600",
+      "clubName": "Dorval City Toastmasters Club",
+      "divisionId": "F",
+      "areaId": "52",
+      "membershipBase": 14
+    },
+    {
+      "clubId": "7701",
+      "clubName": "Club Excellence - Toastmasters",
+      "divisionId": "F",
+      "areaId": "52",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "5488489",
+      "clubName": "CAE Toastmasters",
+      "divisionId": "F",
+      "areaId": "52",
+      "membershipBase": 21
+    },
+    {
+      "clubId": "7515340",
+      "clubName": "BMS Canada Toastmasters",
+      "divisionId": "F",
+      "areaId": "52",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "4319",
+      "clubName": "Les Communicateurs de la Rive-Nord",
+      "divisionId": "F",
+      "areaId": "53",
+      "membershipBase": 14
+    },
+    {
+      "clubId": "5842",
+      "clubName": "St Eustache Club",
+      "divisionId": "F",
+      "areaId": "53",
+      "membershipBase": 14
+    },
+    {
+      "clubId": "1036983",
+      "clubName": "Maîtres parleurs de Blainville",
+      "divisionId": "F",
+      "areaId": "53",
+      "membershipBase": 32
+    },
+    {
+      "clubId": "28678752",
+      "clubName": "Genetec Inc.",
+      "divisionId": "F",
+      "areaId": "53",
+      "membershipBase": 22
+    },
+    {
+      "clubId": "3604",
+      "clubName": "Club Dynamique De Laval",
+      "divisionId": "F",
+      "areaId": "54",
+      "membershipBase": 30
+    },
+    {
+      "clubId": "684093",
+      "clubName": "Club avancé international",
+      "divisionId": "F",
+      "areaId": "54",
+      "membershipBase": 10
+    },
+    {
+      "clubId": "1296822",
+      "clubName": "Les Explosifs De Laval",
+      "divisionId": "F",
+      "areaId": "54",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "3620126",
+      "clubName": "Laval Achievers",
+      "divisionId": "F",
+      "areaId": "54",
+      "membershipBase": 25
+    },
+    {
+      "clubId": "28678588",
+      "clubName": "Club Toastmasters Fonds de Solidarite FTQ",
+      "divisionId": "F",
+      "areaId": "54",
+      "membershipBase": 22
+    },
+    {
+      "clubId": "835",
+      "clubName": "Words On Wings (WOW) Club",
+      "divisionId": "G",
+      "areaId": "61",
+      "membershipBase": 15
+    },
+    {
+      "clubId": "6483",
+      "clubName": "CN Collaborators Club",
+      "divisionId": "G",
+      "areaId": "61",
+      "membershipBase": 28
+    },
+    {
+      "clubId": "9886",
+      "clubName": "Golden Mile Toastmasters Club",
+      "divisionId": "G",
+      "areaId": "61",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "632838",
+      "clubName": "NDG Leader Toastmasters Club",
+      "divisionId": "G",
+      "areaId": "61",
+      "membershipBase": 24
+    },
+    {
+      "clubId": "5468876",
+      "clubName": "Beyond Words Advanced Toastmasters",
+      "divisionId": "G",
+      "areaId": "61",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "28680300",
+      "clubName": "iA Montreal Toastmasters",
+      "divisionId": "G",
+      "areaId": "61",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "606",
+      "clubName": "St Lawrence Toastmasters Club",
+      "divisionId": "G",
+      "areaId": "62",
+      "membershipBase": 41
+    },
+    {
+      "clubId": "3200",
+      "clubName": "Club Modérateur/Moderator Club",
+      "divisionId": "G",
+      "areaId": "62",
+      "membershipBase": 40
+    },
+    {
+      "clubId": "7041",
+      "clubName": "Westmount Club",
+      "divisionId": "G",
+      "areaId": "62",
+      "membershipBase": 30
+    },
+    {
+      "clubId": "28677884",
+      "clubName": "Morgan Stanley Speak Easy",
+      "divisionId": "G",
+      "areaId": "62",
+      "membershipBase": 32
+    },
+    {
+      "clubId": "28679190",
+      "clubName": "Club Toastmasters Les Entrepreneurs de Montreal",
+      "divisionId": "G",
+      "areaId": "62",
+      "membershipBase": 26
+    },
+    {
+      "clubId": "4311",
+      "clubName": "McGill Club",
+      "divisionId": "G",
+      "areaId": "63",
+      "membershipBase": 35
+    },
+    {
+      "clubId": "6207",
+      "clubName": "Concordia Toastmasters Club",
+      "divisionId": "G",
+      "areaId": "63",
+      "membershipBase": 41
+    },
+    {
+      "clubId": "613576",
+      "clubName": "Speak with Style Toastmasters Club",
+      "divisionId": "G",
+      "areaId": "63",
+      "membershipBase": 2
+    },
+    {
+      "clubId": "7222705",
+      "clubName": "BNP Paribas Montreal Toastmasters Club",
+      "divisionId": "G",
+      "areaId": "63",
+      "membershipBase": 22
+    },
+    {
+      "clubId": "28679953",
+      "clubName": "Club EloHQuence",
+      "divisionId": "G",
+      "areaId": "63",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "7782",
+      "clubName": "South Shore Toastmasters Club",
+      "divisionId": "G",
+      "areaId": "64",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "999225",
+      "clubName": "HEC Toastmasters",
+      "divisionId": "G",
+      "areaId": "64",
+      "membershipBase": 30
+    },
+    {
+      "clubId": "6036809",
+      "clubName": "Executive MBA McGill-HEC Montreal",
+      "divisionId": "G",
+      "areaId": "64",
+      "membershipBase": 29
+    },
+    {
+      "clubId": "28679503",
+      "clubName": "TENE Toastmasters",
+      "divisionId": "G",
+      "areaId": "64",
+      "membershipBase": 9
+    },
+    {
+      "clubId": "7027",
+      "clubName": "Les Orateurs Pratt & Whitney - Canada",
+      "divisionId": "H",
+      "areaId": "70",
+      "membershipBase": 16
+    },
+    {
+      "clubId": "813731",
+      "clubName": "Leaders En Action",
+      "divisionId": "H",
+      "areaId": "70",
+      "membershipBase": 36
+    },
+    {
+      "clubId": "7704900",
+      "clubName": "DesjLead",
+      "divisionId": "H",
+      "areaId": "70",
+      "membershipBase": 23
+    },
+    {
+      "clubId": "28678212",
+      "clubName": "BRaIN Program (RI-MUHC) Toastmasters",
+      "divisionId": "H",
+      "areaId": "70",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "2587",
+      "clubName": "Toastmasters Quartier International",
+      "divisionId": "H",
+      "areaId": "71",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "5310",
+      "clubName": "Club Toastmasters Ville Marie",
+      "divisionId": "H",
+      "areaId": "71",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "9361",
+      "clubName": "Club Toastmasters Montréal",
+      "divisionId": "H",
+      "areaId": "71",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "7592011",
+      "clubName": "Toastmasters Banque Nationale",
+      "divisionId": "H",
+      "areaId": "71",
+      "membershipBase": 30
+    },
+    {
+      "clubId": "28677010",
+      "clubName": "Club Progresser, Bâtir et Inspirer (PBI)",
+      "divisionId": "H",
+      "areaId": "71",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "2296",
+      "clubName": "O.P.C.R. Club",
+      "divisionId": "H",
+      "areaId": "72",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "8519",
+      "clubName": "St Leonard Toastmasters Club",
+      "divisionId": "H",
+      "areaId": "72",
+      "membershipBase": 25
+    },
+    {
+      "clubId": "675689",
+      "clubName": "Les Communicateurs eloquents de Lanaudiere",
+      "divisionId": "H",
+      "areaId": "72",
+      "membershipBase": 8
+    },
+    {
+      "clubId": "901116",
+      "clubName": "La Seigneurie De Boucherville",
+      "divisionId": "H",
+      "areaId": "72",
+      "membershipBase": 15
+    },
+    {
+      "clubId": "28678920",
+      "clubName": "Family Club",
+      "divisionId": "H",
+      "areaId": "72",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "1261",
+      "clubName": "Club Toastmasters Lemoyne de Candiac",
+      "divisionId": "H",
+      "areaId": "73",
+      "membershipBase": 29
+    },
+    {
+      "clubId": "2273",
+      "clubName": "Club Toastmasters Rive-Sud",
+      "divisionId": "H",
+      "areaId": "73",
+      "membershipBase": 21
+    },
+    {
+      "clubId": "6552",
+      "clubName": "Expression Club",
+      "divisionId": "H",
+      "areaId": "73",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "8658",
+      "clubName": "Les Orateurs Distingués",
+      "divisionId": "H",
+      "areaId": "73",
+      "membershipBase": 22
+    },
+    {
+      "clubId": "9820",
+      "clubName": "ASC Toastmasters Club",
+      "divisionId": "H",
+      "areaId": "73",
+      "membershipBase": 21
+    },
+    {
+      "clubId": "1838",
+      "clubName": "Club Toastmasters Quebec",
+      "divisionId": "I",
+      "areaId": "90",
+      "membershipBase": 29
+    },
+    {
+      "clubId": "2501",
+      "clubName": "Club Toastmasters de Charlesbourg",
+      "divisionId": "I",
+      "areaId": "90",
+      "membershipBase": 11
+    },
+    {
+      "clubId": "6066",
+      "clubName": "Club Toastmasters de L'Ancienne-Lorette",
+      "divisionId": "I",
+      "areaId": "90",
+      "membershipBase": 15
+    },
+    {
+      "clubId": "6502",
+      "clubName": "TM Francophone de Chicoutimi Club",
+      "divisionId": "I",
+      "areaId": "90",
+      "membershipBase": 14
+    },
+    {
+      "clubId": "1840",
+      "clubName": "Club Toastmasters La Causerie",
+      "divisionId": "I",
+      "areaId": "91",
+      "membershipBase": 28
+    },
+    {
+      "clubId": "5651",
+      "clubName": "Quest Toastmasters Club",
+      "divisionId": "I",
+      "areaId": "91",
+      "membershipBase": 17
+    },
+    {
+      "clubId": "6705",
+      "clubName": "St-Georges de Beauce Toastmasters Club",
+      "divisionId": "I",
+      "areaId": "91",
+      "membershipBase": 13
+    },
+    {
+      "clubId": "8590",
+      "clubName": "Club Toastmasters De Levis",
+      "divisionId": "I",
+      "areaId": "91",
+      "membershipBase": 20
+    },
+    {
+      "clubId": "1269833",
+      "clubName": "FSA-Universite Laval",
+      "divisionId": "I",
+      "areaId": "91",
+      "membershipBase": 4
+    },
+    {
+      "clubId": "5097",
+      "clubName": "Club Toastmasters de Sainte-Foy",
+      "divisionId": "I",
+      "areaId": "92",
+      "membershipBase": 57
+    },
+    {
+      "clubId": "6942",
+      "clubName": "Les Communicateurs De Quebec",
+      "divisionId": "I",
+      "areaId": "92",
+      "membershipBase": 15
+    },
+    {
+      "clubId": "9127",
+      "clubName": "Les optimates de la colline parlementaire de Québec",
+      "divisionId": "I",
+      "areaId": "92",
+      "membershipBase": 14
+    },
+    {
+      "clubId": "1377570",
+      "clubName": "Club Toastmasters YWCA Québec",
+      "divisionId": "I",
+      "areaId": "92",
+      "membershipBase": 24
+    },
+    {
+      "clubId": "28679222",
+      "clubName": "Club Toastmasters IA",
+      "divisionId": "I",
+      "areaId": "92",
+      "membershipBase": 21
+    },
+    {
+      "clubId": "3747",
+      "clubName": "Club Toastmasters de Sherbrooke",
+      "divisionId": "I",
+      "areaId": "93",
+      "membershipBase": 21
+    },
+    {
+      "clubId": "1099641",
+      "clubName": "Toastmasters Vallee Du Richelieu",
+      "divisionId": "I",
+      "areaId": "93",
+      "membershipBase": 22
+    },
+    {
+      "clubId": "1417584",
+      "clubName": "Extra-Expressif",
+      "divisionId": "I",
+      "areaId": "93",
+      "membershipBase": 15
+    },
+    {
+      "clubId": "28678571",
+      "clubName": "Club Toastmasters de Drummondville",
+      "divisionId": "I",
+      "areaId": "93",
+      "membershipBase": 25
+    }
+  ]
+}
