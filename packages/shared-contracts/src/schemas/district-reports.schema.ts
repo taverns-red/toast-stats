@@ -139,6 +139,27 @@ export const CoachRecordSchema = z.object({
 })
 
 /**
+ * New Club Sponsors & Mentors (#1795) — one record per (club, code, status)
+ * with the number of sponsor/mentor assignments in that group. The report's
+ * `Name` column is a person: it is dropped at parse and the rows are collapsed
+ * to counts, so no record can identify who sponsors or mentors a club.
+ * STRICT: an extra key (a name, or any per-person field) fails validation
+ * instead of being silently stripped.
+ */
+export const SponsorMentorRecordSchema = z
+  .object({
+    club: z.string(),
+    clubName: z.string(),
+    charterDate: z.string(),
+    /** Assignment type as TI emits it, e.g. 'SPONSOR', 'MENTOR'. */
+    code: z.string(),
+    /** Assignment status as TI emits it, e.g. 'PENDING', 'AWARDED'. */
+    status: z.string(),
+    count: z.number().int().nonnegative(),
+  })
+  .strict()
+
+/**
  * Triple Crown — has no club column once `Member` is excluded, so it collapses
  * to a single district scalar: the number of Triple-Crown achievers.
  */
@@ -171,6 +192,7 @@ export const DistrictReportsSectionsSchema = z.object({
   newClubs: section(NewClubRecordSchema).optional(),
   prospectiveClubs: section(ProspectiveClubRecordSchema).optional(),
   coaches: section(CoachRecordSchema).optional(),
+  sponsorsMentors: section(SponsorMentorRecordSchema).optional(),
 })
 
 export const DistrictReportsDatasetSchema = z.object({
@@ -193,6 +215,7 @@ export type EducationMembersRecord = z.infer<
 export type NewClubRecord = z.infer<typeof NewClubRecordSchema>
 export type ProspectiveClubRecord = z.infer<typeof ProspectiveClubRecordSchema>
 export type CoachRecord = z.infer<typeof CoachRecordSchema>
+export type SponsorMentorRecord = z.infer<typeof SponsorMentorRecordSchema>
 export type TripleCrownSummary = z.infer<typeof TripleCrownSummarySchema>
 export type DistrictReportsSections = z.infer<
   typeof DistrictReportsSectionsSchema
