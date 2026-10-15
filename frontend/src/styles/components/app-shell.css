@@ -2400,7 +2400,9 @@
     color: #ffffff;
     font-weight: 600;
     text-decoration: underline;
-    text-decoration-color: var(--tm-loyal-blue);
+    /* #2080: the amber underline is retired; loyal blue would vanish on the
+       loyal-blue hero, so the underline follows the white text. */
+    text-decoration-color: currentColor;
     text-decoration-thickness: 2px;
     text-underline-offset: 3px;
   }
