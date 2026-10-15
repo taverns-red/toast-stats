@@ -1,0 +1,38 @@
+{
+  "_recorded": "cdn.taverns.red/snapshots/2026-10-13/suspended-clubs.json, fetched 2026-10-14; districts trimmed to 61 (measured zero) and 83 (3 rows); rows verbatim",
+  "_format": {
+    "version": "1.0.0",
+    "type": "suspended-clubs"
+  },
+  "snapshotDate": "2026-10-13",
+  "programYear": {
+    "start": "2026-07-01",
+    "end": "2027-06-30"
+  },
+  "districts": {
+    "61": [],
+    "83": [
+      {
+        "clubNumber": "1380016",
+        "clubName": "Travelers Toastmasters",
+        "division": "C",
+        "area": "33",
+        "suspendDate": "2026-10-01"
+      },
+      {
+        "clubNumber": "875053",
+        "clubName": "Cartus Magnus Club",
+        "division": "G",
+        "area": "71",
+        "suspendDate": "2026-10-01"
+      },
+      {
+        "clubNumber": "28678052",
+        "clubName": "Subway North Hub",
+        "division": "G",
+        "area": "74",
+        "suspendDate": "2026-10-01"
+      }
+    ]
+  }
+}

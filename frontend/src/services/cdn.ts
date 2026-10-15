@@ -22,10 +22,13 @@ import {
   GLOBAL_CLUB_RACE_FILE_NAME,
   GLOBAL_HISTORY_OBJECT_PATH,
   GLOBAL_TOTALS_FILE_NAME,
+  SUSPENDED_CLUBS_FILE_NAME,
+  SuspendedClubsSchema,
   type DistrictReportsDataset,
   type GlobalClubRace,
   type GlobalHistory,
   type GlobalTotals,
+  type SuspendedClubs,
 } from '@taverns-red/shared-contracts'
 
 import {
@@ -533,6 +536,33 @@ export async function fetchCdnDistrictReports(
     if (!res.ok) return null
     recordCdnResponse(res)
     const parsed = DistrictReportsDatasetSchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/** `snapshots/{date}/suspended-clubs.json` (#1953) — the clubs suspended in
+ *  the snapshot's program year, per district. */
+export function cdnSuspendedClubsUrl(date: SnapshotDate): string {
+  return `${cdnBaseUrl()}/snapshots/${date}/${SUSPENDED_CLUBS_FILE_NAME}`
+}
+
+/**
+ * Fetch a date's suspended-clubs list (#1953) for the Club Growth funnel's
+ * Suspended stage (#1794), **tolerantly**. Only recent dates carry the file;
+ * older ones lack it until they are re-derived. So `null` — on a 404, a
+ * contract failure or a network error — means "not measured for this date",
+ * and the caller must never render it as an empty list (a measured zero).
+ */
+export async function fetchCdnSuspendedClubs(
+  date: SnapshotDate
+): Promise<SuspendedClubs | null> {
+  try {
+    const res = await fetch(cdnSuspendedClubsUrl(date))
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = SuspendedClubsSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null

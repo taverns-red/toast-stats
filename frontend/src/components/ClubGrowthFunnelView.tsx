@@ -6,6 +6,7 @@ import type {
   CoachedRow,
   ProspectiveRow,
   StageValue,
+  SuspendedRow,
 } from '../utils/clubGrowthFunnel'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { ActionTable, type ActionTableColumn } from './ActionTable'
@@ -122,6 +123,37 @@ function StageSection({
   )
 }
 
+/** A club name linking to its page here, or — `external` — to its page on
+ *  toastmasters.org in a new tab (said to screen readers). */
+function ClubLink({
+  name,
+  href,
+  external = false,
+}: {
+  name: string
+  href: string
+  external?: boolean
+}) {
+  if (!external) {
+    return (
+      <Link to={href} className="growth-table__link">
+        {name}
+      </Link>
+    )
+  }
+  return (
+    <a
+      href={href}
+      className="growth-table__link"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {name}
+      <span className="sr-only"> (opens toastmasters.org)</span>
+    </a>
+  )
+}
+
 const paymentText: Record<ProspectiveRow['payment'], string> = {
   complete: 'Complete',
   incomplete: 'Incomplete',
@@ -135,15 +167,7 @@ const prospectiveColumns: ActionTableColumn<ProspectiveRow>[] = [
     className: 'action-table__subject growth-table__club',
     cell: r =>
       r.href ? (
-        <a
-          href={r.href}
-          className="growth-table__link"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {r.clubName}
-          <span className="sr-only"> (opens toastmasters.org)</span>
-        </a>
+        <ClubLink name={r.clubName} href={r.href} external />
       ) : (
         r.clubName
       ),
@@ -178,11 +202,7 @@ const charteredColumns: ActionTableColumn<CharteredRow>[] = [
     key: 'club',
     header: 'Club',
     className: 'action-table__subject growth-table__club',
-    cell: r => (
-      <Link to={r.href} className="growth-table__link">
-        {r.clubName}
-      </Link>
-    ),
+    cell: r => <ClubLink name={r.clubName} href={r.href} />,
   },
   {
     key: 'where',
@@ -211,11 +231,7 @@ const coachedColumns: ActionTableColumn<CoachedRow>[] = [
     key: 'club',
     header: 'Club',
     className: 'action-table__subject growth-table__club',
-    cell: r => (
-      <Link to={r.href} className="growth-table__link">
-        {r.clubName}
-      </Link>
-    ),
+    cell: r => <ClubLink name={r.clubName} href={r.href} />,
   },
   { key: 'status', header: 'Status', cell: coachStatusText },
   {
@@ -230,6 +246,40 @@ const coachedMobileRow = (r: CoachedRow): MobileRow => ({
   to: r.href,
   title: r.clubName,
   meta: `${coachStatusText(r)}${r.since ? ` · since ${formatDisplayDate(r.since)}` : ''}`,
+})
+
+const suspendedColumns: ActionTableColumn<SuspendedRow>[] = [
+  {
+    key: 'club',
+    header: 'Club',
+    className: 'action-table__subject growth-table__club',
+    cell: r => (
+      <ClubLink name={r.clubName} href={r.href} external={r.external} />
+    ),
+  },
+  {
+    key: 'where',
+    header: 'Division / Area',
+    cell: r => divisionArea(r.division, r.area),
+  },
+  {
+    key: 'suspended',
+    header: 'Suspended',
+    cell: r => formatDisplayDate(r.suspendDate),
+  },
+]
+
+const suspendedMobileRow = (r: SuspendedRow): MobileRow => ({
+  id: r.clubId,
+  to: r.href,
+  external: r.external,
+  title: r.clubName,
+  meta: `Suspended ${formatDisplayDate(r.suspendDate)} · ${divisionArea(r.division, r.area)}`,
+  ...(r.external
+    ? {
+        ariaLabel: `${r.clubName}, suspended ${formatDisplayDate(r.suspendDate)} (opens toastmasters.org)`,
+      }
+    : {}),
 })
 
 export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
@@ -383,13 +433,34 @@ export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
         id="suspended"
         title={`Suspended this program year (${valueText(suspended.value)})`}
       >
-        <p className="growth-stage__note">
-          {suspended.value.kind === 'unknown'
-            ? `${suspended.value.reason}. `
-            : ''}
-          This site receives the count only, so the suspended clubs cannot be
-          listed here yet.
-        </p>
+        {suspended.clubs === null ? (
+          <p className="growth-stage__note">
+            {suspended.value.kind === 'unknown'
+              ? `${suspended.value.reason}. `
+              : ''}
+            The list of suspended clubs is not available for this date yet —
+            only the count.
+          </p>
+        ) : suspended.clubs.length === 0 ? (
+          <p className="growth-stage__note">
+            No clubs suspended in this program year.
+          </p>
+        ) : (
+          <>
+            <p className="growth-stage__note">
+              Most recent first. A club without a page here links to its page on
+              toastmasters.org.
+            </p>
+            <ActionTable
+              caption="Clubs suspended this program year"
+              columns={suspendedColumns}
+              rows={suspended.clubs}
+              rowKey={r => r.clubId}
+              mobileRow={suspendedMobileRow}
+              testId="growth-suspended-table"
+            />
+          </>
+        )}
       </StageSection>
     </div>
   )
