@@ -149,7 +149,6 @@ describe('scrubFacStreet (#2069)', () => {
     ['999 W 999th St, bit.ly/REDACTED00', '999 W 999th St'],
     ['9999 Barber Ln, https://us99web.zoom.us/j/99999999999', '9999 Barber Ln'],
     ['West, https://club.toastmastersclubs.org/ ', 'West'],
-    ['Enquiry via EMAIL ONLY, club-1@example.com', 'Enquiry via EMAIL ONLY'],
     ['Call with questions:  555-010-0199', 'Call with questions'],
     ['Zoom Meeting ID 00000000000, Zoom Passcode is 000000', 'Zoom, Zoom'],
     ['Tencent Meeting: 000 0000 0000', 'Tencent Meeting'],
@@ -163,6 +162,9 @@ describe('scrubFacStreet (#2069)', () => {
       'https://us99web.zoom.us/j/999999999, MtgID: 999 9999 999 Passcode:999999',
     ],
     ['club-1@example.com'],
+    // A contact instruction is not a place; the person-name heuristic
+    // shared with Location also drops this D91 shape.
+    ['Enquiry via EMAIL ONLY, club-1@example.com'],
     // A contact instruction naming a person (D101 shape).
     ['contact Pat Example for Zoom link, pat@example.com  '],
   ])('returns undefined when nothing public is left: %j', raw => {
