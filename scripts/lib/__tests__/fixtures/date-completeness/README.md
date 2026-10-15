@@ -19,3 +19,9 @@ Recorded 2026-10-11 from single-object reads of
   every club `unknown`, which is what `buildGlobalTotals` writes without FAC.
 - `prod-manifest.json` — verbatim except `districts[]` trimmed to two rows.
 - `prod-metadata.json` — verbatim.
+- `prod-district_U-gap-junk.json` (#2038) — recorded 2026-10-14 from
+  `gs://toast-stats-data-ca/snapshots/2018-03-31/district_U.json`: the stale
+  file the 2026-06-11 build wrote from TI's HTML error page (0 clubs,
+  `clubPerformance[]` made of HTML lines). Trimmed to three
+  `clubPerformance` rows and one division/district row, club name
+  replaced with a placeholder; keys and types unchanged.

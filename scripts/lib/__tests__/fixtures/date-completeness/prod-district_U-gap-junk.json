@@ -1,0 +1,88 @@
+{
+  "districtId": "U",
+  "districtName": "District U",
+  "collectedAt": "2026-06-11T10:41:50.819Z",
+  "status": "success",
+  "data": {
+    "districtId": "U",
+    "snapshotDate": "2018-03-31",
+    "clubs": [],
+    "divisions": [],
+    "areas": [],
+    "totals": {
+      "totalClubs": 0,
+      "totalMembership": 0,
+      "totalPayments": 0,
+      "distinguishedClubs": 0,
+      "selectDistinguishedClubs": 0,
+      "presidentDistinguishedClubs": 0,
+      "smedleyDistinguishedClubs": 0
+    },
+    "divisionPerformance": [
+      {
+        "District": "U",
+        "Division": "B",
+        "Area": "01",
+        "Club": "03182108",
+        "Club Name": "Placeholder Club",
+        "October Renewals": "1",
+        "April Renewals": "1",
+        "Nov Visit award": "0",
+        "May Visit award": "0",
+        "Membership to date": "40",
+        "Club Goals Met": "4",
+        "Distinguished Club": "",
+        "Area Club Base": "4",
+        "Area Paid Club Goal for Dist.": "4",
+        "Area Paid Club Goal for Select Dist.": "4",
+        "Area Paid Club Goal for Pres. Dist.": "5",
+        "Total Paid Area Clubs": "4",
+        "Area Dist. Club Goal for Dist.": "2",
+        "Area Dist. Club Goal for Select Dist.": "3",
+        "Area Dist. Club Goal for Pres. Dist.": "3",
+        "Total Dist. Area Clubs": "0",
+        "Distinguished Area": "",
+        "Division Club Base": "18",
+        "Division Paid Club Goal for Dist.": "18",
+        "Division Paid Club Goal for Select Dist.": "18",
+        "Division Paid Club Goal for Pres. Dist.": "19",
+        "Total Paid Division Clubs": "22",
+        "Division Dist. Club Goal for Dist.": "8",
+        "Division Dist. Club Goal for Select Dist.": "9",
+        "Division Dist. Club Goal for Pres. Dist.": "9",
+        "Total Dist. Division Clubs": "0",
+        "Distinguished Division": "",
+        "Charter Date/Suspend Date": ""
+      }
+    ],
+    "clubPerformance": [
+      {
+        "": ""
+      },
+      {
+        "": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"
+      },
+      {
+        "": ""
+      }
+    ],
+    "districtPerformance": [
+      {
+        "District": "U",
+        "Division": "B",
+        "Area": "01",
+        "Club": "03182108",
+        "Club Name": "Placeholder Club",
+        "New": "22",
+        "Late Ren.": "3",
+        "Oct. Ren.": "19",
+        "Apr. Ren.": "28",
+        "Total Ren.": "50",
+        "Total Chart": "0",
+        "Total to Date": "72",
+        "Distinguished Status": "",
+        "Charter Date/Suspend Date": ""
+      }
+    ]
+  }
+}
