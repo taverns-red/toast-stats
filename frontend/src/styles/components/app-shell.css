@@ -2489,16 +2489,41 @@
      on desktop, 4 at ≤640px, 2 at ≤420px. Surface cards with hairline
      borders; values in the display face. All colours via tokens so the
      dark-mode cascade (redesign.css) applies without per-element overrides. */
-  /* #1790 — ten cells (Awards + Coach added): 5 × 2 from 421px up so no
-     row is left with orphans; 2 columns on phones (unchanged below). */
+  /* #1843 (review §6.3) — eight cells: 2 × 2 below 768 (the other four
+     fold behind a full-width disclosure, ClubStatStrip), 4 × 2 from 768.
+     Awards and Coach (#1790) live in the panels below, not here. */
   .club-stats-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     margin-bottom: 20px;
   }
 
+  @media (min-width: 768px) {
+    .club-stats-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .club-stats-grid > .mobile-disclosure {
+    grid-column: 1 / -1;
+  }
+
+  .club-stats-grid .mobile-disclosure__summary {
+    font-size: 14px;
+  }
+
+  .club-stats-grid .mobile-disclosure__content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
   .club-stat {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 56px;
     background-color: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--rds-radius-sm);
@@ -2538,18 +2563,6 @@
 
   .club-stat__val--muted {
     color: var(--ink-4);
-  }
-
-  @media (max-width: 640px) {
-    .club-stat__val {
-      font-size: 16px;
-    }
-  }
-
-  @media (max-width: 420px) {
-    .club-stats-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
   }
 
   /* Bottom back-link (#618) — neutral surface chip, anchor (not button). */
@@ -2880,6 +2893,46 @@
 
   .club-panel__body {
     padding: 18px;
+  }
+
+  /* #1843 (review §5.5) — phone disclosure card (ClubPanel below 768): the
+     head is the <summary>, a ≥ 44 px tap target with a chevron that turns
+     when the card is folded. The body keeps the panel's padding. */
+  .club-panel--disclosure .club-panel__head {
+    min-height: 44px;
+    cursor: pointer;
+    list-style: none;
+    flex-wrap: nowrap;
+  }
+
+  .club-panel--disclosure .club-panel__head::-webkit-details-marker {
+    display: none;
+  }
+
+  .club-panel--disclosure .club-panel__meta {
+    margin-left: auto;
+    min-width: 0;
+    text-align: right;
+  }
+
+  .club-panel__chevron {
+    flex-shrink: 0;
+    color: var(--ink-3);
+    transition: transform 0.15s ease;
+  }
+
+  .club-panel--disclosure details:not([open]) .club-panel__chevron {
+    transform: rotate(-90deg);
+  }
+
+  .club-panel--disclosure details:not([open]) > .club-panel__head {
+    border-bottom: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .club-panel__chevron {
+      transition: none;
+    }
   }
 
   /* Inline Base / Current / Change row above the chart. */

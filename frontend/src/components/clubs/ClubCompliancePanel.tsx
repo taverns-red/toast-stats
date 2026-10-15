@@ -1,3 +1,4 @@
+import { ClubPanel } from './ClubPanel'
 import type {
   ClubCoachSummary,
   ComplianceRow,
@@ -43,51 +44,47 @@ export function ClubCompliancePanel({
       }
 
   return (
-    <section
-      className="club-panel club-compliance"
-      aria-labelledby="club-compliance-title"
+    <ClubPanel
+      titleId="club-compliance-title"
+      title="Compliance"
+      className="club-compliance"
+      icon={
+        <svg
+          className="club-panel__ico"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.6}
+          aria-hidden="true"
+        >
+          <path d="M4 2.5h8v11H4z" />
+          <path d="M6 6l1.3 1.3L10 4.7M6 10h4" />
+        </svg>
+      }
     >
-      <div className="club-panel__head">
-        <h2 id="club-compliance-title">
-          <svg
-            className="club-panel__ico"
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.6}
-            aria-hidden="true"
+      <ul className="club-compliance__list">
+        {[...rows, coachRow].map(row => (
+          <li
+            key={row.key}
+            className={`club-compliance__row club-compliance__row--${row.state}`}
           >
-            <path d="M4 2.5h8v11H4z" />
-            <path d="M6 6l1.3 1.3L10 4.7M6 10h4" />
-          </svg>
-          Compliance
-        </h2>
-      </div>
-      <div className="club-panel__body">
-        <ul className="club-compliance__list">
-          {[...rows, coachRow].map(row => (
-            <li
-              key={row.key}
-              className={`club-compliance__row club-compliance__row--${row.state}`}
-            >
-              <span className="club-compliance__glyph" aria-hidden="true">
-                {GLYPH[row.state]}
-              </span>
-              <div className="club-compliance__text">
-                <div className="club-compliance__line">
-                  <span className="club-compliance__label">{row.label}</span>
-                  <span className="club-compliance__value">{row.value}</span>
-                </div>
-                {row.source && (
-                  <div className="club-compliance__source">{row.source}</div>
-                )}
+            <span className="club-compliance__glyph" aria-hidden="true">
+              {GLYPH[row.state]}
+            </span>
+            <div className="club-compliance__text">
+              <div className="club-compliance__line">
+                <span className="club-compliance__label">{row.label}</span>
+                <span className="club-compliance__value">{row.value}</span>
               </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
+              {row.source && (
+                <div className="club-compliance__source">{row.source}</div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </ClubPanel>
   )
 }
