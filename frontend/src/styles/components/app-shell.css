@@ -2634,7 +2634,10 @@
   }
 
   /* #1783/#1790 — §3.2 panel slot (Education, then Compliance). One column
-     on phones; side by side from 768px, a lone panel spanning the row. */
+     on phones; side by side from 768px. #1843 (Ron, PR #2057): the
+     Lifecycle timeline takes its own full-width row below them, so it is
+     never stretched to a taller neighbour's height. Two fixed columns, not
+     auto-fit: at 1280 auto-fit made room for a third. */
   .club-panels-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -2644,7 +2647,11 @@
 
   @media (min-width: 768px) {
     .club-panels-grid {
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .club-panels-grid > .club-lifecycle {
+      grid-column: 1 / -1;
     }
   }
 
@@ -2818,6 +2825,44 @@
 
   .club-lifecycle__note:first-child {
     margin-top: 0;
+  }
+
+  /* #1843 (Ron, PR #2057) — from 768 the timeline runs left to right on its
+     full-width row: dot on top, text under it, the rail joining each dot to
+     the next. Rows grow to at most 15rem, so a two-event club does not
+     spread its dots across 1,200 px, and a 9rem basis keeps four events on
+     one line at 768. Below 768 it stays the vertical list. */
+  @media (min-width: 768px) {
+    .club-lifecycle__list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--rt-space-2) var(--rt-space-4);
+    }
+
+    .club-lifecycle__row {
+      display: flex;
+      flex-direction: column;
+      gap: var(--rt-space-2);
+      flex: 1 1 9rem;
+      max-width: 15rem;
+      min-width: 0;
+      min-height: 0;
+      padding-bottom: 0;
+    }
+
+    .club-lifecycle__row:not(:last-child)::before {
+      left: 0.75rem;
+      right: calc(-1 * var(--rt-space-4));
+      top: calc(0.625rem - 1px);
+      bottom: auto;
+      width: auto;
+      height: 2px;
+    }
+
+    .club-lifecycle__dot {
+      justify-self: auto;
+      flex: none;
+    }
   }
 
   /* #1790 — Education panel internals. Text uses the remapping --ink-*
