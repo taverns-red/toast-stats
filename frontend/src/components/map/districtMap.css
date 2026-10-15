@@ -9,6 +9,8 @@
   --map-pressed-bg: var(--rt-ink);
   --map-pressed-text: #ffffff;
   --map-focus: var(--rt-stats);
+  /* The pins' outline (pinModes OUTLINE), for swatches with a pale fill. */
+  --map-pin-outline: #3d3b38;
 }
 
 [data-theme='dark'] {
@@ -18,6 +20,7 @@
   --map-border: rgb(244 241 235 / 0.28);
   --map-pressed-bg: var(--rt-ink-on-dk);
   --map-pressed-text: var(--rt-ink);
+  --map-pin-outline: #f4f1eb;
 }
 
 .district-map {
@@ -142,6 +145,13 @@
 
 .pin-swatch__bg {
   fill: var(--map-surface);
+}
+
+/* "No coach" is a pale dot: outlined like its pin, so it reads on any
+   surface (1.4.11). */
+.pin-swatch__dot {
+  stroke: var(--map-pin-outline);
+  stroke-width: 1.25;
 }
 
 .district-map__body {

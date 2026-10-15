@@ -16,7 +16,19 @@ export type MapColorMode =
   'health' | 'tier' | 'division' | 'area' | ExtendedMode
 
 /** #1787: built in `pinExtended`, loaded after the first render. */
-export type ExtendedMode = 'status' | 'size' | 'growth' | 'dcp' | 'age'
+export type ExtendedMode =
+  | 'status'
+  | 'size'
+  | 'growth'
+  | 'dcp'
+  | 'age'
+  | 'renew-oct'
+  | 'renew-apr'
+  | 'csp'
+  | 'officers'
+  | 'coach'
+  | 'awards'
+  | 'attendance'
 
 /** Picker order, in the spec's groups (§5). */
 export const MAP_COLOR_MODES: readonly {
@@ -27,10 +39,17 @@ export const MAP_COLOR_MODES: readonly {
   { id: 'health', label: 'Club health', group: 'Health & status' },
   { id: 'tier', label: 'Distinguished level', group: 'Health & status' },
   { id: 'status', label: 'TI club status', group: 'Health & status' },
+  { id: 'coach', label: 'Club coach', group: 'Health & status' },
   { id: 'size', label: 'Members', group: 'Membership & DCP' },
   { id: 'growth', label: 'Net growth', group: 'Membership & DCP' },
   { id: 'dcp', label: 'DCP goals', group: 'Membership & DCP' },
   { id: 'age', label: 'Club age', group: 'Membership & DCP' },
+  { id: 'awards', label: 'Awards per member', group: 'Membership & DCP' },
+  { id: 'renew-oct', label: 'October renewals', group: 'Compliance' },
+  { id: 'renew-apr', label: 'April renewals', group: 'Compliance' },
+  { id: 'csp', label: 'Club Success Plan', group: 'Compliance' },
+  { id: 'officers', label: 'Officer list', group: 'Compliance' },
+  { id: 'attendance', label: 'How members attend', group: 'Meeting' },
   { id: 'division', label: 'Division', group: 'Territory' },
   { id: 'area', label: 'Area', group: 'Territory' },
 ]
@@ -57,6 +76,8 @@ export type PinShape =
   | 'down'
   | 'downHalf'
   | 'na'
+  | 'diamond'
+  | 'dot'
 
 export const PIN_SHAPES: readonly PinShape[] = [
   'circle',
@@ -73,6 +94,8 @@ export const PIN_SHAPES: readonly PinShape[] = [
   'down',
   'downHalf',
   'na',
+  'diamond',
+  'dot',
 ]
 
 export const HEALTH_FILLS = {
@@ -147,6 +170,8 @@ export interface ModeModel {
   facet: { param: string; valueOf(cat: PinCategory): string } | null
   /** The category clusters flag with a pip when it isn't the fill. */
   exceptionKey?: string
+  /** One line under the legend: a source caveat or "not available". */
+  note?: string
 }
 
 export const SUSPENDED: PinCategory = {
@@ -246,6 +271,13 @@ export const EXTENDED_FACET_PARAMS = [
   'growth',
   'dcp',
   'age',
+  'renew-oct',
+  'renew-apr',
+  'csp',
+  'officers',
+  'coach',
+  'awards',
+  'attendance',
 ] as const
 
 export function buildModeModel(mode: 'health' | 'tier'): ModeModel {

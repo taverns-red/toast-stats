@@ -139,13 +139,19 @@ const PROSPECTIVE: ProspectiveClub[] = [
 ]
 
 let mockClubs = CLUBS
+// The reports sidecar the analytics query returns with the clubs (#1787).
+let mockReports: unknown = null
 vi.mock('../../hooks/useDistrictAnalytics', async importOriginal => {
   const actual =
     await importOriginal<typeof import('../../hooks/useDistrictAnalytics')>()
   return {
     ...actual,
     useDistrictAnalytics: vi.fn(() => ({
-      data: { allClubs: mockClubs, prospectiveClubs: PROSPECTIVE },
+      data: {
+        allClubs: mockClubs,
+        prospectiveClubs: PROSPECTIVE,
+        districtReports: mockReports,
+      },
       isLoading: false,
       error: null,
     })),
@@ -234,6 +240,7 @@ const search = () =>
 afterEach(() => {
   cleanup()
   mockClubs = CLUBS
+  mockReports = null
   mockIsMobile = false
   fetchSnapshot.mockClear()
   downloadCSV.mockClear()
@@ -439,6 +446,74 @@ describe('DistrictMapPage — extended colour modes', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^Active 2/ }))
     expect(search()).toContain('clubStatus=Active')
     expect(screen.getByRole('status')).toHaveTextContent('Showing 2 of 3 clubs')
+  })
+})
+
+describe('DistrictMapPage — reports-sidecar colour modes (#1787)', () => {
+  const officerList = (rows: [string, boolean][]) => ({
+    districtId: '61',
+    programYear: '2026-2027',
+    generatedAt: '2026-10-14T09:05:16.444Z',
+    sections: {
+      officerList: {
+        sources: [
+          {
+            reportType: 'officer-list',
+            tableId: 't',
+            asOf: 'October 14, 2026',
+          },
+        ],
+        records: rows.map(([club, submitted]) => ({
+          club,
+          clubName: `Club ${club}`,
+          division: 'A',
+          area: '01',
+          listStatus: submitted ? 'Received - 05/25/2026' : 'List Not Here',
+          electionCadence: 'annual',
+          officerListSubmitted: submitted,
+        })),
+      },
+    },
+  })
+
+  it('?color=officers reads the sidecar; a club without a row is not available', async () => {
+    mockReports = officerList([
+      ['101', true],
+      ['102', false],
+    ])
+    renderAt('/district/61/map?color=officers')
+    const legend = await screen.findByRole('group', {
+      name: 'Officer list legend',
+    })
+    const chips = within(legend)
+      .getAllByRole('button')
+      .map(b => b.textContent?.replace(/\s+/g, ' ').trim())
+    expect(chips).toEqual([
+      'Submitted 1',
+      'Not received 1',
+      'Not available for this date 1',
+    ])
+    fireEvent.click(
+      within(legend).getByRole('button', { name: /^Not received/ })
+    )
+    expect(search()).toContain('officers=no')
+    expect(screen.getByRole('status')).toHaveTextContent('Showing 1 of 3 clubs')
+  })
+
+  it('without a reports file the legend says so, and no club is "Not received"', async () => {
+    renderAt('/district/61/map?color=officers')
+    const legend = await screen.findByRole('group', {
+      name: 'Officer list legend',
+    })
+    expect(within(legend).getAllByRole('button')).toHaveLength(1)
+    expect(
+      within(legend).getByRole('button', {
+        name: /Not available for this date 3/,
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/Officer list is not available for/).length
+    ).toBeGreaterThan(0)
   })
 })
 

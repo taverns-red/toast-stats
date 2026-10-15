@@ -164,6 +164,16 @@ const SandboxEntry: React.FC<{ onOpen?: (() => void) | undefined }> = ({
   )
 }
 
+/** What the cluster pip means, in the mode's own words (#1787). */
+function pipNote(model: ModeModel): string {
+  const k = model.exceptionKey
+  if (!k) return ''
+  if (k === 'intervention-required')
+    return '; a red square marks clusters with clubs needing intervention'
+  const label = model.categories.find(c => c.key === k)?.label
+  return label ? `; a small square marks clusters with “${label}” clubs` : ''
+}
+
 /** Legend chips (#1784): aria-pressed toggles writing the mode facet. */
 export const LegendChips: React.FC<{
   model: ModeModel
@@ -217,11 +227,11 @@ export const LegendChips: React.FC<{
         <p className="map-legend__note">
           Clusters show the{' '}
           {model.kind === 'ordinal' ? 'middle level' : 'most common status'}
-          {model.exceptionKey
-            ? '; a red square marks clusters with clubs needing intervention'
-            : ''}
-          .
+          {pipNote(model)}.
         </p>
+      )}
+      {model.note && limit === undefined && (
+        <p className="map-legend__note">{model.note}</p>
       )}
     </>
   )

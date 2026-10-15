@@ -1,7 +1,8 @@
 /**
  * Extended pin colour modes (#1787, spec §4.2): TI club status, members,
  * net growth, DCP goals and club age — all from fields already on each
- * `ClubTrend`, so no extra fetch. Split from `pinModes` like `pinTerritory`:
+ * `ClubTrend`, so no extra fetch. The reports-sidecar modes (renewals, CSP,
+ * officer list, coach, awards) and attendance live in `pinReports`. Split from `pinModes` like `pinTerritory`:
  * the page loads it after its first render, keeping the map route's first
  * load inside its budget.
  *
@@ -9,6 +10,7 @@
  * direction) and a category in words, and a missing source value is "Not
  * available for this date" (◌), never a false 0 or "No change".
  */
+import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { getClubAnniversary } from '../../utils/clubAnniversary'
 import {
@@ -21,8 +23,15 @@ import {
   type PinCategory,
   type PinShape,
 } from './pinModes'
+import {
+  NOT_AVAILABLE,
+  SEQUENTIAL5,
+  isReportsMode,
+  reportsModel,
+  type ReportsMode,
+} from './pinReports'
 
-export { EXTENDED_FACET_PARAMS }
+export { EXTENDED_FACET_PARAMS, NOT_AVAILABLE, SEQUENTIAL5 }
 
 /** TI operational status (spec §3.3 `status`). */
 export const STATUS_FILLS = {
@@ -32,15 +41,6 @@ export const STATUS_FILLS = {
   Suspended: SUSPENDED.fill,
 } as const
 
-/** Low → high (spec §3.3 `sequential5`). */
-export const SEQUENTIAL5 = [
-  '#DCE9F5',
-  '#9ECAE1',
-  '#5A9FCF',
-  '#2B6FB0',
-  '#0B3F7A',
-] as const
-
 /** Decline → growth, peaking at "no change" (spec §3.3 `diverging5`). */
 export const DIVERGING5 = [
   '#B2182B',
@@ -49,14 +49,6 @@ export const DIVERGING5 = [
   '#67A9CF',
   '#2166AC',
 ] as const
-
-/** ◌ The source does not exist for this club on the viewed date. */
-export const NOT_AVAILABLE: PinCategory = {
-  key: 'na',
-  label: 'Not available for this date',
-  fill: '#8C8A82',
-  shape: 'na',
-}
 
 const LEVELS: PinShape[] = ['fill0', 'fill25', 'fill50', 'fill75', 'fill100']
 const DIRECTIONS: PinShape[] = ['down', 'downHalf', 'circle', 'upHalf', 'up']
@@ -80,7 +72,7 @@ const binOf = (v: number, upper: number[]) => {
   return i < 0 ? upper.length : i
 }
 
-const BINS: Record<Exclude<ExtendedMode, 'status'>, Bins> = {
+const BINS: Record<Exclude<ExtendedMode, 'status' | ReportsMode>, Bins> = {
   size: {
     title: 'Members',
     keys: ['0-7', '8-11', '12-19', '20-29', '30plus'],
@@ -175,8 +167,14 @@ function statusCategory(c: ClubTrend): PinCategory {
   return STATUS_CATS.find(cat => cat.key.toLowerCase() === raw) ?? NOT_AVAILABLE
 }
 
-/** `date` is the viewed snapshot date, passed down by the page (R3). */
-export function extendedModel(mode: ExtendedMode, date: string): ModeModel {
+/** `date` is the viewed snapshot date and `reports` its sidecar, both passed
+ *  down by the page (R3). */
+export function extendedModel(
+  mode: ExtendedMode,
+  date: string,
+  reports?: DistrictReportsDataset | null
+): ModeModel {
+  if (isReportsMode(mode)) return reportsModel(mode, date, reports)
   if (mode === 'status') {
     return {
       mode,
@@ -215,13 +213,18 @@ export function extendedModel(mode: ExtendedMode, date: string): ModeModel {
 export function applyExtendedFacets(
   clubs: readonly ClubTrend[],
   params: URLSearchParams,
-  date: string
+  date: string,
+  reports?: DistrictReportsDataset | null
 ): ClubTrend[] {
   let out = [...clubs]
   for (const param of EXTENDED_FACET_PARAMS) {
     const wanted = new Set(facetValues(params, param))
     if (wanted.size === 0) continue
-    const model = extendedModel(param === 'clubStatus' ? 'status' : param, date)
+    const model = extendedModel(
+      param === 'clubStatus' ? 'status' : param,
+      date,
+      reports
+    )
     out = out.filter(c => wanted.has(model.categoryOf(c).key))
   }
   return out

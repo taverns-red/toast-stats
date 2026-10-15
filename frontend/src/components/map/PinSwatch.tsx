@@ -66,6 +66,12 @@ export const PinSwatch: React.FC<{ category: PinCategory }> = ({
     )
   } else if (shape === 'square') {
     body = <rect x="2" y="2" width="10" height="10" fill={fill} />
+  } else if (shape === 'diamond') {
+    body = <path d="M7 0.75L13.25 7L7 13.25L0.75 7Z" fill={fill} />
+  } else if (shape === 'dot') {
+    body = (
+      <circle cx="7" cy="7" r="3.25" fill={fill} className="pin-swatch__dot" />
+    )
   } else if (shape === 'suspended') {
     body = (
       <>
