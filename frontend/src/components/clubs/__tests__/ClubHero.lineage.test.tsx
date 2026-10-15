@@ -12,6 +12,7 @@ import { ClubHero, type ClubHeroProps } from '../ClubHero'
 afterEach(() => cleanup())
 
 const club = {
+  clubId: '977',
   clubName: 'Professional Women Toastmasters',
   areaName: 'Area 24',
   divisionName: 'Division C',
