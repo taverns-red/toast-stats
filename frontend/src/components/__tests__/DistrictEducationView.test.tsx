@@ -224,7 +224,7 @@ describe('DistrictEducationView', () => {
     renderView()
     const table = screen.getByRole('table', { name: /education by division/i })
     fireEvent.click(
-      within(table).getByRole('button', { name: /Sort by Awards/ })
+      within(table).getByRole('button', { name: /^Sort by Awards\./ })
     )
     expect(screen.getByTestId('loc').textContent).toMatch(/sort=awards/)
     const first = within(table).getAllByRole('row')[1]!
