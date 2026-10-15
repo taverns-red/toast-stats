@@ -31,9 +31,15 @@
 import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import {
+  containsLink,
   findClubContactField,
   isClubContactKey,
 } from '@taverns-red/shared-contracts'
+import {
+  scrubFacLocation,
+  scrubFacStreet,
+  stripFacLinks,
+} from '../../packages/collector-cli/src/services/FacMeetingSchedule.js'
 import {
   GzipLayerError,
   peelGzipLayers,
@@ -174,9 +180,81 @@ export function stripContactKeys(value: unknown): {
   return { value: walk(value), removed }
 }
 
+/**
+ * Place-text fields (#2069). A FAC street, Location, meeting day or time is
+ * free text a club types, and some typed their meeting link there; files
+ * written before #2074 carry it verbatim. Each field is scrubbed with the
+ * collector's own scrubber, so a rewritten file matches what a fresh run
+ * would write. `undefined` from a scrubber removes the key, as the
+ * collector omits it.
+ */
+type Scrubber = (raw: string) => string | undefined
+const PLACE_SCRUBBERS: Record<string, Scrubber> = {
+  meetingDay: stripFacLinks,
+  meetingTime: stripFacLinks,
+  location: scrubFacLocation,
+}
+const ADDRESS_SCRUBBERS: Record<string, Scrubber> = {
+  street: scrubFacStreet,
+  city: stripFacLinks,
+  region: stripFacLinks,
+}
+
+/** The scrubber for `key` under `parentKey`, or null if not place text. */
+function placeScrubber(parentKey: string | null, key: string): Scrubber | null {
+  const table = parentKey === 'address' ? ADDRESS_SCRUBBERS : PLACE_SCRUBBERS
+  return Object.hasOwn(table, key) ? (table[key] ?? null) : null
+}
+
+/**
+ * Walk `value`, rewriting each place-text string that contains a link.
+ * A value with no link is never touched. Key order is kept; the input is
+ * not mutated.
+ */
+function walkPlaceText(value: unknown): { value: unknown; scrubbed: number } {
+  let scrubbed = 0
+  const walk = (node: unknown, parentKey: string | null): unknown => {
+    if (Array.isArray(node)) return node.map(item => walk(item, null))
+    if (typeof node !== 'object' || node === null) return node
+    const entries: Array<[string, unknown]> = []
+    for (const [key, child] of Object.entries(node)) {
+      const scrub = placeScrubber(parentKey, key)
+      if (scrub && typeof child === 'string' && containsLink(child)) {
+        scrubbed++
+        const out = scrub(child)
+        if (out !== undefined) entries.push([key, out])
+        continue
+      }
+      entries.push([key, walk(child, key)])
+    }
+    // fromEntries defines own properties, so a `__proto__` key stays data.
+    return Object.fromEntries(entries)
+  }
+  return { value: walk(value, null), scrubbed }
+}
+
+/** Number of place-text values holding a link, at any depth (#2069). */
+export function countPlaceLinks(value: unknown): number {
+  return walkPlaceText(value).scrubbed
+}
+
+/** A copy with every linked place-text value scrubbed, and how many. */
+export function scrubPlaceLinks(value: unknown): {
+  value: unknown
+  scrubbed: number
+} {
+  return walkPlaceText(value)
+}
+
 export type StripResult =
   | { changed: false; gzipLayers: number }
-  | { changed: true; gzipLayers: number; keysRemoved: number; bytes: Buffer }
+  | {
+      changed: true
+      gzipLayers: number
+      keysRemoved: number
+      placeValuesScrubbed: number
+      bytes: Buffer
+    }
 
 function decode(stored: Buffer): { text: string; layers: number } {
   let data: Buffer
@@ -221,7 +299,7 @@ function parse(text: string): unknown {
 export function stripStoredObject(stored: Buffer): StripResult {
   const { text, layers } = decode(stored)
   const value = parse(text)
-  if (countContactKeys(value) === 0) {
+  if (countContactKeys(value) === 0 && countPlaceLinks(value) === 0) {
     return { changed: false, gzipLayers: layers }
   }
   const format = detectJsonFormat(text)
@@ -231,8 +309,10 @@ export function stripStoredObject(stored: Buffer): StripResult {
     )
   }
   const { value: stripped, removed } = stripContactKeys(value)
+  const { value: scrubbed, scrubbed: placeValuesScrubbed } =
+    scrubPlaceLinks(stripped)
   const level = gzipLevel(stored)
-  let bytes = Buffer.from(serialize(stripped, format), 'utf-8')
+  let bytes = Buffer.from(serialize(scrubbed, format), 'utf-8')
   for (let i = 0; i < layers; i++) bytes = gzipSync(bytes, { level })
 
   const check = decode(bytes)
@@ -240,11 +320,18 @@ export function stripStoredObject(stored: Buffer): StripResult {
   if (
     check.layers !== layers ||
     countContactKeys(reparsed) !== 0 ||
-    findClubContactField(reparsed) !== null
+    findClubContactField(reparsed) !== null ||
+    countPlaceLinks(reparsed) !== 0
   ) {
     throw new StripError('stripped output failed its own post-check')
   }
-  return { changed: true, gzipLayers: layers, keysRemoved: removed, bytes }
+  return {
+    changed: true,
+    gzipLayers: layers,
+    keysRemoved: removed,
+    placeValuesScrubbed,
+    bytes,
+  }
 }
 
 /** The original's headers and custom metadata, for the rewrite. */
@@ -279,6 +366,8 @@ export interface AuditRow {
   /** planned: dry run would rewrite; stripped: rewritten and verified. */
   action: 'planned' | 'stripped' | 'unchanged' | 'error'
   keysRemoved: number
+  /** Place-text values that held a link and were scrubbed (#2069). */
+  placeValuesScrubbed: number
   gzipLayers: number | null
   oldGeneration: string
   newGeneration: string | null
@@ -299,6 +388,7 @@ export interface StripSummary {
   unchanged: number
   errors: number
   keysRemoved: number
+  placeValuesScrubbed: number
 }
 
 export interface StripOptions {
@@ -330,6 +420,7 @@ async function stripOne(
     path: meta.name,
     action: 'error',
     keysRemoved: 0,
+    placeValuesScrubbed: 0,
     gzipLayers: null,
     oldGeneration: meta.generation,
     newGeneration: null,
@@ -350,6 +441,7 @@ async function stripOne(
       return row
     }
     row.keysRemoved = result.keysRemoved
+    row.placeValuesScrubbed = result.placeValuesScrubbed
     if (opts.dryRun) {
       row.action = 'planned'
       return row
@@ -377,6 +469,9 @@ async function stripOne(
     row.postCheck = findClubContactField(after)
     if (row.postCheck !== null || countContactKeys(after) !== 0) {
       throw new StripError('re-read object still has a contact key')
+    }
+    if (countPlaceLinks(after) !== 0) {
+      throw new StripError('re-read object still has a place link')
     }
     row.action = 'stripped'
     return row
@@ -438,6 +533,7 @@ export async function runStrip(
       unchanged: count('unchanged'),
       errors: count('error'),
       keysRemoved: rows.reduce((n, r) => n + r.keysRemoved, 0),
+      placeValuesScrubbed: rows.reduce((n, r) => n + r.placeValuesScrubbed, 0),
     },
   }
 }

@@ -8,6 +8,13 @@
 # metadata are kept. Every write is conditional on the generation that was
 # read. See scripts/lib/stripClubContact.ts.
 #
+# #2069 extends it to meeting links in place text. Files written before
+# #2074 carry FAC address.street (and rarely meetingDay/meetingTime)
+# verbatim, and some clubs typed their meeting link there (D201 club 977:
+# a scheme-less shortened Zoom link). A place-text value that contains a
+# link is rewritten with the collector's own scrubber; nothing else moves.
+# Affected: 2026-06-30 (D201-231) and 2026-10-09..10-14 (every district).
+#
 # Route (c) of the 2026-10-14 cleanup plan: run it on staging, then let a
 # scheduled daily promote the stripped objects through its gates. bucket=prod
 # is the fallback if that daily holds.
@@ -35,7 +42,7 @@ on:
         description: 'Snapshot dates (comma separated YYYY-MM-DD)'
         required: true
         type: string
-        default: '2026-06-30,2026-10-09,2026-10-10,2026-10-11,2026-10-12,2026-10-13'
+        default: '2026-06-30,2026-10-09,2026-10-10,2026-10-11,2026-10-12,2026-10-13,2026-10-14'
       dry_run:
         description: 'Dry run: report what would change, write nothing'
         required: true
@@ -94,10 +101,10 @@ jobs:
           set -o pipefail
           npx tsx scripts/strip-club-contact.ts "${ARGS[@]}" | tee summary.json
           {
-            echo "## Club contact strip (#2026)"
+            echo "## Club contact and place-link strip (#2026, #2069)"
             echo "- bucket: ${BUCKET}"
             echo "- dry run: ${DRY_RUN}"
-            for KEY in objects planned stripped unchanged errors keysRemoved; do
+            for KEY in objects planned stripped unchanged errors keysRemoved placeValuesScrubbed; do
               echo "- ${KEY}: $(jq -r ".${KEY}" summary.json)"
             done
           } >> "$GITHUB_STEP_SUMMARY"
