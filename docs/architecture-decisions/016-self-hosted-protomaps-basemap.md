@@ -138,6 +138,8 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
 
 **Decision.** The basemap draws labels with our own zoom-banded symbol layers (`frontend/src/components/map/basemapLabels.ts`). The glyphs are served from our own origin, so there is still no third-party request from the viewer's browser.
 
+- **Deferred.** The base style stays geometry only. On the basemap's first `idle`, `BasemapMap` imports the label module (its own lazy chunk), sets the glyphs URL and adds the label layers above the basemap's own layers, below anything a page has added (the pins). The first tile never waits on labels. The map route's fixed bytes grow by about 140 B gzip, inside the 300 KB budget, which stays unchanged (#1856 ratchets budgets down). Labels draw on the canvas, so they cause no layout shift.
+
 - **Font.** Inter Regular 4.1 (SIL OFL 1.1, licence shipped beside the files as `OFL.txt`). It is the app's body font (`--rt-font-body`). The glyph PBFs were built with `build_pbf_glyphs` 1.5.1 from the official release's `extras/ttf/Inter-Regular.ttf`.
 - **Files.** `frontend/public/basemap/glyphs/inter-4.1/Inter-Regular/{range}.pbf`, served by Firebase Hosting. The path carries the font version, so the files are cached as `immutable` (`firebase.json`). A new font or a new range means a new version directory.
 - **Ranges and bytes.** Seven ranges, 719,203 bytes on disk (217,153 gzip -9):
@@ -167,7 +169,7 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
   - streets from z13 (major roads) and z15 (minor roads);
   - landmarks from z14 (airports, stations, parks, universities, stadiums, museums, zoos, attractions; no shops).
 - **Look.** Labels use ink (`--rt-ink`) on light and paper (`--rt-ink-on-dk`) on dark, at 45–72 % opacity, with a 1.5 px halo in the land colour. There is no new hue and no sprite.
-  - Labels are the last basemap layers. The pin layers are appended above them.
+  - Labels sit directly above the basemap's layers and below the pins.
   - Pins keep `icon-allow-overlap` but now enter the collision index (`icon-ignore-placement: false`). A city or landmark label therefore steps beside a pin, by 2.2–2.4 em, or hides; it never sits under one.
 - **Accessibility.** Labels are canvas-drawn and decorative. The map region keeps its accessible name, and the side panels carry the club names.
 
