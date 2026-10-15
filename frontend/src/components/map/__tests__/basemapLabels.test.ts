@@ -133,11 +133,16 @@ describe('basemap label layers', () => {
       symbolLayers(styleFor('light').layers).map(l => [l.id, l])
     )
     for (const id of ['label-cities', 'label-pois']) {
-      const layout = byId.get(id)!.layout!
-      expect(layout['text-variable-anchor']).toEqual(
-        expect.arrayContaining(['center', 'top', 'bottom', 'left', 'right'])
-      )
-      expect(layout['text-radial-offset']).toBeGreaterThan(0)
+      const offsets = byId.get(id)!.layout!['text-variable-anchor-offset'] as
+        unknown[] | undefined
+      expect(offsets).toBeDefined()
+      const anchors = offsets!.filter((_, k) => k % 2 === 0)
+      expect(anchors).toEqual(['center', 'top', 'bottom', 'left', 'right'])
+      // Off-centre anchors clear a 44 px cluster (~2 em at 11 px).
+      for (let k = 3; k < offsets!.length; k += 2) {
+        const [x, y] = offsets![k] as [number, number]
+        expect(Math.hypot(x, y)).toBeGreaterThanOrEqual(2)
+      }
     }
   })
 

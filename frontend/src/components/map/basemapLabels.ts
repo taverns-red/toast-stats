@@ -154,6 +154,23 @@ export function labelLayers(
     'text-halo-blur': 0.5,
   })
   const base = { type: 'symbol' as const, source }
+  // A point label tries its own spot first, then steps beside whatever
+  // claimed it (a pin, usually: pins are placed before any label).
+  const besidePin = {
+    'text-variable-anchor-offset': [
+      'center',
+      [0, 0],
+      'top',
+      [0, 2.2],
+      'bottom',
+      [0, -2.2],
+      'left',
+      [2.4, 0],
+      'right',
+      [-2.4, 0],
+    ] as Array<string | [number, number]>,
+    'text-justify': 'auto' as const,
+  }
   const text = {
     'text-font': [LABEL_FONT],
     'text-field': NAME,
@@ -169,6 +186,7 @@ export function labelLayers(
       filter: ['all', kindIs(...POI_KINDS), fromMinZoom(2)],
       layout: {
         ...text,
+        ...besidePin,
         'text-size': 10.5,
         'text-padding': 8,
         'symbol-sort-key': ['get', 'min_zoom'],
@@ -223,6 +241,7 @@ export function labelLayers(
       filter: ['all', kindIs('locality'), fromMinZoom(1)],
       layout: {
         ...text,
+        ...besidePin,
         'text-size': [
           'interpolate',
           ['linear'],
