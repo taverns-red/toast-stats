@@ -414,8 +414,12 @@
   background: var(--surface);
 }
 
+.education-matrix thead .education-matrix__corner {
+  padding-left: 0.75rem;
+}
+
 .education-matrix__path {
-  padding: 0.25rem 0.75rem 0.25rem 0 !important;
+  padding: 0.25rem 0.75rem !important;
   font-weight: 600;
   min-width: 8rem;
 }
