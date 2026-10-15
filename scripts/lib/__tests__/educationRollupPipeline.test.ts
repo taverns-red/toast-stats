@@ -17,7 +17,7 @@
  *      fails closed with nothing uploaded;
  *   3. no prod write (the #1755 guard);
  *   4. process-dates.sh runs it once after its loop, non-fatally, and daily
- *      runs the same script after its upload.
+ *      runs the same script in its own job after place-reports (#2028).
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -370,28 +370,91 @@ describe('process-dates.sh builds the rollup in every mode (ADR-015 P1)', () => 
   })
 })
 
-describe('daily builds the rollup with the same script', () => {
-  it('after the identity histories, in the upload step, non-fatally', () => {
-    const wf = parse(
-      fs.readFileSync(
-        path.join(REPO, '.github/workflows/data-pipeline.yml'),
-        'utf-8'
+describe('daily builds the rollup with the same script, after the reports land (#2028)', () => {
+  // The rollup reads the newest snapshot date that has
+  // district_*_reports.json. Those are written by `place-reports`, which
+  // waits for the ~22-minute `daily-reports` fetch; the `pipeline` job's
+  // upload step finishes long before. Run there, the rollup read the day
+  // before's reports (run 38539146918: the rollup read 2026-10-12 at 09:08Z,
+  // and the 2026-10-13 reports were placed at 09:22Z). So daily builds it in
+  // its own job, ordered after `place-reports`.
+  interface JobStep {
+    name?: string
+    id?: string
+    if?: string
+    run?: string
+    uses?: string
+    with?: Record<string, string>
+  }
+  interface Job {
+    needs?: string | string[]
+    if?: string
+    steps?: JobStep[]
+  }
+  const wf = parse(
+    fs.readFileSync(
+      path.join(REPO, '.github/workflows/data-pipeline.yml'),
+      'utf-8'
+    )
+  ) as { jobs: Record<string, Job> }
+  const CALL = 'bash scripts/pipeline/build-education-rollup.sh "${GCS_BUCKET}"'
+  const MANIFEST = '"gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl"'
+  const LOCAL = '"${RUN_MANIFEST_FILE}"'
+  const job = wf.jobs['education-rollup']
+  const steps = job?.steps ?? []
+  const needs = ([] as string[]).concat(job?.needs ?? [])
+  const flat = (s: JobStep) => (s.run ?? '').replace(/\\\r?\n\s*/g, ' ')
+  const at = (pred: (s: JobStep) => boolean) => steps.findIndex(pred)
+  const rollup = at(s => (s.run ?? '').includes(CALL))
+
+  it('the pipeline job no longer builds it before the reports are placed', () => {
+    const calls = (wf.jobs.pipeline?.steps ?? []).filter(s =>
+      (s.run ?? '').includes('build-education-rollup.sh')
+    )
+    expect(calls.map(s => s.name)).toEqual([])
+  })
+
+  it('its own job runs after place-reports, whatever the reports outcome', () => {
+    expect(job, 'no education-rollup job').toBeDefined()
+    expect(needs).toEqual(expect.arrayContaining(['pipeline', 'place-reports']))
+    // always(): a skipped or failed placement must not skip the rollup; the
+    // newest reports already in staging are still a valid input.
+    expect(job?.if).toMatch(/always\(\)/)
+    expect(job?.if).toContain("needs.pipeline.result == 'success'")
+    expect(job?.if).toContain("needs.pipeline.outputs.snapshot_date != ''")
+  })
+
+  it('calls the same script non-fatally', () => {
+    expect(rollup, 'job does not call the script').toBeGreaterThanOrEqual(0)
+    const run = steps[rollup]?.run ?? ''
+    expect(run.slice(run.indexOf(CALL))).toMatch(/\|\|\s*echo "::warning::/)
+  })
+
+  it('installs deps, builds shared-contracts and pins gcloud 588 first', () => {
+    const before = steps.slice(0, Math.max(rollup, 0))
+    expect(before.some(s => s.uses?.startsWith('actions/checkout@'))).toBe(true)
+    expect(before.some(s => (s.run ?? '').includes('npm ci'))).toBe(true)
+    expect(
+      before.some(s =>
+        (s.run ?? '').includes(
+          'npm run build --workspace=@taverns-red/shared-contracts'
+        )
       )
-    ) as Workflow
-    const upload = wf.jobs.pipeline?.steps?.find(
-      s => s.name === '[daily] Upload to GCS'
-    )
-    const run = upload?.run ?? ''
-    const call = run.indexOf(
-      'bash scripts/pipeline/build-education-rollup.sh "${GCS_BUCKET}"'
-    )
-    expect(call, 'daily upload step does not call the script').toBeGreaterThan(
-      0
-    )
-    expect(call).toBeGreaterThan(
-      run.indexOf('scripts/pipeline/build-identity-history.sh')
-    )
-    expect(run.slice(call)).toMatch(/\|\|\s*echo "::warning::/)
+    ).toBe(true)
+    expect(
+      before.find(s =>
+        s.uses?.startsWith('google-github-actions/setup-gcloud@')
+      )?.with?.version
+    ).toBe('588.0.0')
+  })
+
+  it('appends to the run manifest the pipeline job published, then republishes it', () => {
+    const seed = at(s => flat(s).includes(`${MANIFEST} ${LOCAL}`))
+    const publish = at(s => flat(s).includes(`${LOCAL} ${MANIFEST}`))
+    expect(seed, 'no manifest seed step').toBeGreaterThanOrEqual(0)
+    expect(seed).toBeLessThan(rollup)
+    expect(publish).toBeGreaterThan(rollup)
+    expect(steps[publish]?.if).toContain('!cancelled()')
   })
 })
 
