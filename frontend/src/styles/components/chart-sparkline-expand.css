@@ -32,7 +32,7 @@
 
   .chart-spark__trigger:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--rt-stats-focus, #b5651d);
+    box-shadow: 0 0 0 2px var(--focus-ring);
   }
 
   .chart-spark__headline {
@@ -49,7 +49,7 @@
     width: 100%;
     height: 32px;
     /* The polyline strokes `currentColor`; tint it with the product accent. */
-    color: var(--rt-stats, #d4873f);
+    color: var(--tm-loyal-blue);
   }
 
   .chart-spark__hint {
@@ -134,7 +134,7 @@
 
   .chart-expand-sheet__close:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--rt-stats-focus, #b5651d);
+    box-shadow: 0 0 0 2px var(--focus-ring);
   }
 
   .chart-expand-sheet__body {

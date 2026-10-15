@@ -173,7 +173,7 @@ function describeYear(
           : cell
             ? `${pct(cell.share)} (${cell.survivors} of ${highlighted.chartered})`
             : 'not reached',
-      color: 'var(--rt-stats)',
+      color: 'var(--tm-loyal-blue)',
     })
   }
   return { label: k === 0 ? 'Charter year' : `After ${yearLabel(k)}`, rows }
@@ -325,9 +325,9 @@ const SurvivalChart: React.FC<{
             {highlighted && (
               <Line
                 dataKey={seriesKey(highlighted.programYear)}
-                stroke="var(--rt-stats)"
+                stroke="var(--tm-loyal-blue)"
                 strokeWidth={2.5}
-                dot={{ r: 4, fill: 'var(--rt-stats)' }}
+                dot={{ r: 4, fill: 'var(--tm-loyal-blue)' }}
                 isAnimationActive={false}
               />
             )}

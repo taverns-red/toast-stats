@@ -58,7 +58,7 @@
 
 .club-history-page__export:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--rt-stats-focus);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 /* Which completed program years produced no row, and why (#1437). Sits under
@@ -67,7 +67,7 @@
 .club-history-page__gaps {
   margin: 0.75rem 0 0;
   padding: 0.6rem 0.75rem;
-  border-left: 3px solid var(--rt-stats);
+  border-left: 3px solid var(--tm-loyal-blue);
   border-radius: 0 4px 4px 0;
   background: var(--surface-2);
   color: var(--ink-2);
@@ -123,7 +123,7 @@
 
 .club-history-scroll:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--rt-stats-focus);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 /* Right-edge fade cue — "there's more →" when the table overflows (Lesson 105). */
@@ -183,7 +183,7 @@
 
 .club-history-sort:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--rt-stats-focus);
+  box-shadow: 0 0 0 2px var(--focus-ring);
   border-radius: 3px;
 }
 
@@ -218,7 +218,7 @@
 /* #1302 — the year label deep-links into ClubDetailPage for that program year.
    Reads as a link (link colour, underline on hover/focus) without disturbing
    the sticky identity column's weight/alignment.
-   #1839: --link, not the amber brand accent. --rt-stats (#D4873F) is 2.86:1
+   #1839: --link, not the amber brand accent. The retired amber (#D4873F) was 2.86:1
    on white — a fill/accent colour, never text; --link remaps for dark mode.
    The row is the target: an inline-flex 44px box (the year cell grows to fit). */
 .club-history-year-link {
@@ -250,12 +250,12 @@
 
 /* #1803 (Ron, 2026-10-15) — the current program year's row is a partial
    year: a small worded tag beside the year (never colour alone). Theme-aware
-   ink and rule (redesign tokens); --rt-stats as the border accent only. */
+   ink and rule (redesign tokens); --tm-loyal-blue as the border accent only (#2080). */
 .club-history-in-progress {
   display: inline-block;
   margin-left: var(--rt-space-2);
   padding: 0 6px;
-  border: 1px solid var(--rt-stats);
+  border: 1px solid var(--tm-loyal-blue);
   border-radius: var(--rt-radius-sm);
   font-size: var(--rt-text-xs);
   font-weight: 600;

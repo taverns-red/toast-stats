@@ -1,6 +1,6 @@
 /* District Club Growth funnel (#1794, epic #1781). Built on the theme-aware
    tokens (--ink*, --surface, --line) so dark mode remaps with the theme, plus
-   the product accent --rt-stats for the decorative bars. The value is always
+   the loyal-blue accent (--tm-loyal-blue, #2080) for the decorative bars. The value is always
    printed as text; the bar is aria-hidden and never the only signal. */
 
 .growth-page {
@@ -57,11 +57,11 @@
 }
 
 .growth-funnel__link:hover {
-  border-color: var(--rt-stats, #d4873f);
+  border-color: var(--tm-loyal-blue);
 }
 
 .growth-funnel__link:focus-visible {
-  outline: 2px solid var(--rt-stats, #d4873f);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -125,7 +125,7 @@
 .growth-funnel__bar {
   display: block;
   height: 100%;
-  background: var(--rt-stats, #d4873f);
+  background: var(--tm-loyal-blue);
   border-radius: 999px;
 }
 
@@ -168,7 +168,7 @@
 }
 
 .growth-table__link:focus-visible {
-  outline: 2px solid var(--rt-stats, #d4873f);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 

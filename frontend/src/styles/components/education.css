@@ -1,6 +1,6 @@
 /* District Education page (#1793, epic #1781). Theme-aware tokens (--ink*,
    --surface*, --line) remap under [data-theme='dark']; the product accent
-   --rt-stats marks Pathways. Bars are aria-hidden decoration: every value is
+   --tm-loyal-blue marks Pathways (#2080: legacy palette until Phase 2). Bars are aria-hidden decoration: every value is
    printed as text beside it. Text stays ≥14px and tap targets ≥44px at 375
    (mobile review §6.4); matrix cells are ≥32px. */
 
@@ -42,17 +42,20 @@
 
 /* ── Program colours ───────────────────────────────────────────────── */
 
+/* #2080: legacy TM palette (each remaps under [data-theme='dark'] in
+   dark-mode.css / redesign.css). Pathways and legacy match the club page's
+   .club-edu__seg colours. */
 .education-seg--pathways {
-  background: var(--rt-stats, #d4873f);
+  background: var(--tm-loyal-blue);
 }
 .education-seg--legacy {
-  background: var(--rt-info, #2f6db5);
+  background: var(--ink-3);
 }
 .education-seg--dtm {
-  background: var(--rt-red, #b4232a);
+  background: var(--tm-true-maroon);
 }
 .education-seg--other {
-  background: var(--ink-3);
+  background: var(--tm-cool-gray);
 }
 
 /* ── KPI strip: 2×2 + a full-width sixth row at 375; one row at ≥768 ── */
@@ -202,8 +205,8 @@
 
 .education-switch__link.is-current {
   color: var(--ink);
-  border-color: var(--rt-stats, #d4873f);
-  box-shadow: inset 0 0 0 1px var(--rt-stats, #d4873f);
+  border-color: var(--tm-loyal-blue);
+  box-shadow: inset 0 0 0 1px var(--tm-loyal-blue);
 }
 
 .education-switch__link:focus-visible,
@@ -212,7 +215,7 @@
 .education-open-matrix:focus-visible,
 .education-matrix__region:focus-visible,
 .education-rollup__scroll:focus-visible {
-  outline: 2px solid var(--rt-stats, #d4873f);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -254,7 +257,7 @@
 }
 
 .education-row__button[aria-expanded='true'] {
-  border-color: var(--rt-stats, #d4873f);
+  border-color: var(--tm-loyal-blue);
 }
 
 .education-row__label {
@@ -305,7 +308,7 @@
   display: block;
   height: 100%;
   min-width: 3px;
-  background: var(--rt-stats, #d4873f);
+  background: var(--tm-loyal-blue);
 }
 /* Five steps of one hue: lighter = earlier level. */
 .education-level--1 {
@@ -369,7 +372,7 @@
   font-weight: 600;
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--rt-stats, #d4873f);
+  border: 1px solid var(--tm-loyal-blue);
   border-radius: var(--rt-radius-md, 8px);
 }
 
@@ -452,7 +455,7 @@
 
 .education-matrix__cell[aria-pressed='true'] {
   font-weight: 700;
-  box-shadow: inset 0 0 0 2px var(--rt-stats, #d4873f);
+  box-shadow: inset 0 0 0 2px var(--tm-loyal-blue);
 }
 
 .education-matrix__total {

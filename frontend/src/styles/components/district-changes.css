@@ -131,7 +131,7 @@
   color: var(--ink-2);
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--rt-stats, var(--line));
+  border-left: 3px solid var(--tm-loyal-blue);
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   line-height: 1.5;
@@ -154,7 +154,7 @@
 }
 
 .district-changes__notice-link:focus-visible {
-  outline: 2px solid var(--rt-stats, currentColor);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 0.125rem;
 }
@@ -257,7 +257,7 @@
 }
 
 .changes-group__item a:focus-visible {
-  outline: 2px solid var(--rt-stats, currentColor);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 0.125rem;
 }

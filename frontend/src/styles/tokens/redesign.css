@@ -59,16 +59,13 @@
   --ink-4: #828b9a;
   --link: var(--loyal-500);
 
-  /* #1106: focus-ring amber. The brand product accent --rt-stats (#d4873f) is
-     the sole focus affordance at ~10 sites (box-shadow: 0 0 0 2px), but on
-     light surfaces it measures only 2.86:1 against white — below WCAG 1.4.11's
-     3:1 non-text floor for a focus indicator. This darkened amber clears 3:1 on
-     every light surface a ring lands on (#fff 4.34, --surface-2 4.15,
-     --surface-3 3.90) while reading as the same amber. Dark mode remaps back to
-     the bright brand accent below, where it already passes (5.5–6.2:1) — the
-     token must remap with the surface (lesson 093/094). Local override, NOT a
-     brand-token edit (rt-brand-v1.css stays untouched). */
-  --rt-stats-focus: #b5651d;
+  /* Focus ring (#1106, #2080). The app's focus colour — --link, the same
+     loyal blue the `outline: 2px solid var(--link)` rings use. It was a
+     darkened amber until #2080 retired the --rt-stats accent ahead of the
+     Phase 2 re-skin (ops#37). Clears 3:1 on every surface in both themes
+     (__tests__/accessibility/FocusRingContrast.test.ts). Defined in both
+     theme blocks so it remaps with the surface (lessons 093/094). */
+  --focus-ring: var(--link);
 
   /* Metric-matched swap fallbacks (#1373) — see tokens/font-fallbacks.css.
      Must sit between the web font and system-ui. --mono has no fallback
@@ -107,15 +104,15 @@
      by __tests__/accessibility/RecognitionBadgeContrast.test.ts. Defined in
      BOTH theme blocks — never inherited — so a dark-mode regression shows up
      as a missing token rather than as an unreadable glyph.
-     President's routes through --rt-stats-focus, not --rt-stats: the raw
-     brand amber is 2.79:1 on --surface-2 (the same #1106 finding that gave
-     the focus ring its own darkened value). */
+     President's is legacy loyal blue (#2080: no --rt-stats amber until
+     Phase 2) — --loyal-400, the tier ramp's Select step, because the
+     President's step #004165 is already Club Growth's --tm-loyal-blue. */
   --recognition-extension: var(--rt-good); /* 3.90:1 */
   --recognition-twenty-plus: var(--rt-info); /* 4.45:1 */
   --recognition-retention: var(--rt-red); /* 4.07:1 */
   --recognition-distinguished: var(--rt-red-dk); /* 8.78:1 */
   --recognition-select: var(--rt-ink-2); /* 10.89:1 */
-  --recognition-presidents: var(--rt-stats-focus); /* 4.23:1 */
+  --recognition-presidents: var(--loyal-400); /* 5.37:1 */
   --recognition-smedley: var(--rt-eval); /* 5.31:1 */
   /* Club Growth Achievement (#1537): a LEGACY chrome token, not --rt-*, until
      the Phase 2 chrome migration (ops#37). TM Loyal Blue, 10.9:1. */
@@ -137,9 +134,9 @@
 
 [data-theme='dark'] {
   --bg: #0a0f15;
-  /* #1106: on the dark surfaces the bright brand amber already clears 3:1
-     (5.5–6.2:1), so the focus ring stays on the accent in dark mode. */
-  --rt-stats-focus: var(--rt-stats, #d4873f);
+  /* #1106 / #2080: --link remaps to #60a5d8 here (≥5.9:1 on the dark
+     surfaces). */
+  --focus-ring: var(--link);
   --surface: #111922;
   --surface-2: #161f2a;
   --surface-3: #1a2330;
@@ -191,16 +188,13 @@
          rather than sliding into Retention's brand red.
        - Select: --rt-ink-2 (#3d3b38) is dark-on-dark; --rt-ink-3 is the
          palette's light-neutral and lands at 4.81:1.
-     President's flips the other way from light — the raw brand amber already
-     clears the floor here (5.81:1), which is why --rt-stats-focus remaps to
-     it in dark (#1106 / lessons 093-094: a token must remap WITH its
-     surface). */
+     President's follows the dark tier chart fill (#2080). */
   --recognition-extension: var(--rt-good); /* 4.16:1 */
   --recognition-twenty-plus: var(--rt-info); /* 3.64:1 */
   --recognition-retention: var(--rt-red); /* 3.99:1 */
   --recognition-distinguished: #c96a76; /* 4.60:1 */
   --recognition-select: var(--rt-ink-3); /* 4.81:1 */
-  --recognition-presidents: var(--rt-stats); /* 5.81:1 */
+  --recognition-presidents: var(--tier-chart-presidents); /* 9.0:1 */
   --recognition-smedley: var(--rt-eval); /* 3.06:1 */
   /* dark-mode.css remaps --tm-loyal-blue to #5dade2 on this same scope. */
   --recognition-club-growth: var(--tm-loyal-blue);

@@ -65,7 +65,7 @@
 
   .chart-legend-chip:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--rt-stats-focus, #b5651d);
+    box-shadow: 0 0 0 2px var(--focus-ring);
   }
 
   .chart-legend-chip--static {

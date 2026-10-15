@@ -4,7 +4,7 @@
    .clubs-filters-trigger class (app-shell.css) so its border / radius / padding
    / 44px height / hover / focus-ring / dark-mode tokens match the Filters and
    Columns buttons exactly — one visual language, no drift. The .clubs-preset-chip
-   modifier below adds ONLY the pressed-state affordance (product accent amber),
+   modifier below adds ONLY the pressed-state affordance (loyal-blue fill, #2080),
    layered on top of the shared base. (Imported after app-shell.css in index.css,
    so the equal-specificity pressed rules win source-order over the base hover.)
    #967: the chip now lives inside .clubs-filter-toolbar (after Columns), so the
@@ -14,13 +14,15 @@
   white-space: nowrap;
 }
 
-/* Active toggle — amber fill so the pressed state reads as an active filter,
-   not just another idle toolbar button. Overrides the shared base + its hover. */
+/* Active toggle — loyal-blue fill (#2080: the app palette, was amber) so the
+   pressed state reads as an active filter, not just another idle toolbar
+   button. Overrides the shared base + its hover. Text is --surface so it
+   flips with the fill: white on #004165, dark on the dark-mode #5dade2. */
 .clubs-preset-chip[aria-pressed='true'],
 .clubs-preset-chip[aria-pressed='true']:hover {
-  color: #fff;
-  background-color: var(--rt-stats, #d4873f);
-  border-color: var(--rt-stats, #d4873f);
+  color: var(--surface);
+  background-color: var(--tm-loyal-blue);
+  border-color: var(--tm-loyal-blue);
 }
 
 .clubs-preset-count {

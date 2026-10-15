@@ -56,8 +56,8 @@
 .realign__notice {
   margin: 0;
   padding: var(--rt-space-2) var(--rt-space-3);
-  border-left: 3px solid var(--rt-stats);
-  background: color-mix(in srgb, var(--rt-stats) 12%, transparent);
+  border-left: 3px solid var(--tm-loyal-blue);
+  background: var(--tm-loyal-blue-10);
 }
 
 .realign__field {
@@ -175,7 +175,7 @@
 }
 
 .realign__table tr.is-changed th[scope='row'] {
-  box-shadow: inset 3px 0 0 var(--rt-stats);
+  box-shadow: inset 3px 0 0 var(--tm-loyal-blue);
   padding-left: 8px;
 }
 

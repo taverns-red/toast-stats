@@ -81,15 +81,15 @@ describe('buildBasemapStyle', () => {
 
   it('uses the spec §6.3 land and water colours in each theme', () => {
     // #2080: neutral app-palette shades, not the warm --rt-paper beige.
-    // Land is the app's panel neutral; water is the loyal-blue tint ramp.
+    // Land is the app surface; water the loyal-blue tint (light) / page bg.
     expect(BASEMAP_COLOURS).toEqual({
       light: {
-        land: appToken('--surface-3', 'light'),
+        land: appToken('--surface', 'light'),
         water: appToken('--loyal-100', 'light'),
       },
       dark: {
         land: appToken('--surface-2', 'dark'),
-        water: appToken('--loyal-100', 'dark'),
+        water: appToken('--bg', 'dark'),
       },
     })
     for (const theme of ['light', 'dark'] as const) {
