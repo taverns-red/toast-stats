@@ -218,4 +218,27 @@ describe('ClubDetailPage — Lifecycle timeline (#1843)', () => {
     await settle()
     expect(mockedShard).not.toHaveBeenCalled()
   })
+
+  // #2076 — a shard read that has not started yet is not a read that found
+  // nothing. Before the gate opened, the panel built the timeline from
+  // `history: null`, said the history was missing, and was then torn down by
+  // the hold-for-history render, detaching the node a test had just found.
+  it('does not report the history missing before the shard read starts', async () => {
+    // Hold the after-paint gate shut: no frame is painted, and `settle` ends
+    // well inside the 250 ms hidden-tab fallback.
+    const raf = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation(() => 0)
+    try {
+      currentClub = suspendedClub
+      renderAt('/district/83/club/1380016')
+      await settle()
+      expect(mockedShard).not.toHaveBeenCalled()
+      expect(
+        screen.queryByText(/District history is not available/)
+      ).not.toBeInTheDocument()
+    } finally {
+      raf.mockRestore()
+    }
+  })
 })
