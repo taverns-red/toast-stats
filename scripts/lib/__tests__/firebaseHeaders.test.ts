@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -225,6 +225,8 @@ const ASSET_SOURCES = [
   '**/*.@(js|css)',
   '**/*.@(jpg|jpeg|gif|png|svg|webp|ico)',
   '**/*.@(woff|woff2|ttf|otf|eot)',
+  // #2081: basemap glyph PBFs, under a font-versioned path.
+  '/basemap/glyphs/**',
 ]
 
 describe('firebase.json cache headers (#1365)', () => {
@@ -304,6 +306,31 @@ describe('firebase.json cache headers (#1365)', () => {
           headerValue(securityRule!.headers, 'Cache-Control')
         ).toBeUndefined()
       })
+    })
+  }
+})
+
+describe('firebase.json basemap glyphs (#2081)', () => {
+  // MapLibre asks for any 256-codepoint range a label needs, and we ship only
+  // some. A range we do not ship must 404 (MapLibre then draws that glyph
+  // locally), never fall through to the SPA's index.html with a 200.
+  // Verified against the Hosting emulator: a rewrite to a missing file 404s.
+  for (const targetName of ['production', 'staging']) {
+    it(`${targetName}: rewrites missing glyph ranges to a 404, ahead of the SPA`, () => {
+      const target = loadHosting().find(t => t.target === targetName) as
+        | (HostingTarget & {
+            rewrites?: { source: string; destination: string }[]
+          })
+        | undefined
+      const rewrites = target?.rewrites ?? []
+      const glyphs = rewrites.findIndex(r => r.source === '/basemap/glyphs/**')
+      const spa = rewrites.findIndex(r => r.source === '**')
+      expect(glyphs).toBeGreaterThan(-1)
+      expect(glyphs).toBeLessThan(spa)
+      expect(rewrites[glyphs]!.destination).not.toBe('/index.html')
+      expect(
+        existsSync(join(ROOT, 'frontend/public', rewrites[glyphs]!.destination))
+      ).toBe(false)
     })
   }
 })
