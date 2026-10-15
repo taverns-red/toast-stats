@@ -27,7 +27,7 @@ import {
    - Headline: pooled survival after 1, 3 and 5 years, as text with counts.
    - Chart: one faint line per cohort for context, the pooled line in ink and
      at most one highlighted cohort in the product accent. The highlighted
-     cohort is URL state (`?cohort=2019-2020`) chosen by links — same route,
+     cohort is URL state (`?cohort=<charter PY>`) chosen by links — same route,
      no tabs — so a deep link or the back button restores it.
    - Table: the accessible alternative and the precise values. Unreached
      years read "not reached", never 0%; the in-progress PY reads "so far".
