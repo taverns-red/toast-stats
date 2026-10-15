@@ -44,6 +44,7 @@ import {
   type GcsObjectMeta,
 } from './promotionContentGate.js'
 import { isRetiredAnalyticsFile } from '../../packages/collector-cli/src/utils/retiredAnalyticsFiles.js'
+import { districtObjectId, sourceGapDistricts } from './sourceGap.js'
 
 /** District files read per run across all dates (each read twice). */
 export const DISTRICT_SAMPLE_BUDGET = 200
@@ -71,6 +72,15 @@ export interface DateProfile {
   globalCountries: number | null
   /** Sampled district id → shape (null = file absent or unreadable). */
   districts: Record<string, DistrictShape | null>
+  /** `metadata.json`'s successfulDistricts (absent when unreadable). */
+  metadataDistrictIds?: string[]
+  /** Districts `metadata.json` records as a #1671 source gap (#2038). */
+  gapDistricts?: string[]
+  /**
+   * District id → `data.clubs` length of its file, for the ids read
+   * (null = unreadable or not a district snapshot).
+   */
+  clubCounts?: Record<string, number | null>
 }
 
 export interface DateRegression {
@@ -150,6 +160,23 @@ export function manifestDistricts(value: unknown): number | null {
   return isRecord(value) ? num(value.successfulDistricts) : null
 }
 
+/** `data.clubs` length of a district snapshot, null when it is not one. */
+export function districtClubCount(value: unknown): number | null {
+  return isRecord(value) &&
+    isRecord(value.data) &&
+    Array.isArray(value.data.clubs)
+    ? value.data.clubs.length
+    : null
+}
+
+export function metadataDistrictIds(value: unknown): string[] | undefined {
+  return isRecord(value) && Array.isArray(value.successfulDistricts)
+    ? value.successfulDistricts.filter(
+        (id): id is string => typeof id === 'string'
+      )
+    : undefined
+}
+
 export function metadataDistricts(value: unknown): number | null {
   return isRecord(value) && Array.isArray(value.successfulDistricts)
     ? value.successfulDistricts.length
@@ -209,34 +236,73 @@ export function compareDateProfiles(
 
   // Retired names are dropped from both sides: prod's old copies are not
   // owed, and staging's stale copies must not pad its count (#1798).
-  const prodNames = prod.objectNames.filter(n => !isRetiredAnalyticsFile(n))
-  const stagingNames = staging.objectNames.filter(
+  const prodObjects = prod.objectNames.filter(n => !isRetiredAnalyticsFile(n))
+  const stagingObjects = staging.objectNames.filter(
     n => !isRetiredAnalyticsFile(n)
   )
-  if (stagingNames.length < prodNames.length) {
-    const have = new Set(stagingNames)
-    const missing = prodNames.filter(n => !have.has(n))
+
+  // A district staging records as a #1671 source gap (#2038) is accounted
+  // for, not lost, when production has nothing real for it: no file, or the
+  // 0-club junk an earlier build wrote from TI's HTML error page. Its
+  // objects may be missing from staging, and it stands in for itself in the
+  // district counts, only where production counted it. A gap production has
+  // real clubs for (or cannot read) is a regression.
+  const prodNames = new Set(prodObjects)
+  const excused = new Set<string>()
+  for (const id of staging.gapDistricts ?? []) {
+    const file = `district_${id}.json`
+    if (!prodNames.has(file)) {
+      excused.add(id)
+      continue
+    }
+    const clubs = prod.clubCounts?.[id]
+    if (clubs === 0) excused.add(id)
+    else if (typeof clubs === 'number') {
+      push(
+        file,
+        `staging records ${id} as a #1671 source gap but production has ${clubs} club(s) for it — a lost district, not a known gap`
+      )
+    } else {
+      push(
+        file,
+        `staging records ${id} as a #1671 source gap but production's copy could not be read — not excused`
+      )
+    }
+  }
+  const prodCounted = new Set(prod.metadataDistrictIds ?? [])
+  const gapCredit = [...excused].filter(id => prodCounted.has(id)).length
+  const isExcused = (name: string) => {
+    const id = districtObjectId(name)
+    return id !== null && excused.has(id)
+  }
+
+  const have = new Set(stagingObjects)
+  const missing = prodObjects.filter(n => !have.has(n))
+  const excusedMissing = missing.filter(isExcused).length
+  if (stagingObjects.length + excusedMissing < prodObjects.length) {
+    const unexcused = missing.filter(n => !isExcused(n))
     out.push({
       date,
       path: dir,
       reason:
-        `${date}: ${stagingNames.length} object(s) in staging vs ${prodNames.length} in production` +
-        (missing.length ? `; missing ${listed(missing)}` : ''),
+        `${date}: ${stagingObjects.length} object(s) in staging vs ${prodObjects.length} in production` +
+        (unexcused.length ? `; missing ${listed(unexcused)}` : ''),
     })
   }
 
+  const credited = (n: number | null) => (n === null ? null : n + gapCredit)
   const counts: Array<[string, string, number | null, number | null]> = [
     [
       'manifest.json',
       'successfulDistricts',
       prod.manifestDistricts,
-      staging.manifestDistricts,
+      credited(staging.manifestDistricts),
     ],
     [
       'metadata.json',
       'successfulDistricts',
       prod.metadataDistricts,
-      staging.metadataDistricts,
+      credited(staging.metadataDistricts),
     ],
     [
       'global-totals.json',
@@ -264,6 +330,7 @@ export function compareDateProfiles(
     if (!p) continue
     const file = `district_${id}.json`
     const s = staging.districts[id]
+    if (!s && excused.has(id)) continue
     if (!s) {
       push(file, 'absent or unreadable in staging')
       continue
@@ -369,7 +436,7 @@ export function buildCompletenessGateSummary(
     `- Touched dates: ${result.dates.length ? result.dates.join(', ') : '—'}`,
     `- New in this run (no production baseline): ${result.newDates.length ? result.newDates.join(', ') : '—'}`,
     `- District files sampled per bucket: ${result.districtsSampled}`,
-    '- Asserted: object count (retired analytics files excluded, #1798), `manifest`/`metadata` district counts, `global-totals` clubs and countries, district `data` keys and the most complete club record’s keys — staging ≥ production.',
+    '- Asserted: object count (retired analytics files excluded, #1798), `manifest`/`metadata` district counts, `global-totals` clubs and countries, district `data` keys and the most complete club record’s keys — staging ≥ production. A district staging records as a #1671 source gap counts for itself when production holds no clubs for it (#2038).',
     '',
   ]
   if (result.failures.length) {
@@ -413,17 +480,46 @@ async function profileDate(
       readJson(bucket, byName.get(f))
     )
   )
-  const shapes = await mapLimit(sample, CONCURRENCY, async id =>
-    districtShape(await readJson(bucket, byName.get(`district_${id}.json`)))
+  const files = await mapLimit(sample, CONCURRENCY, id =>
+    readJson(bucket, byName.get(`district_${id}.json`))
   )
   return {
     objectNames: [...byName.keys()].sort(),
     manifestDistricts: manifestDistricts(manifest),
     metadataDistricts: metadataDistricts(metadata),
+    metadataDistrictIds: metadataDistrictIds(metadata),
+    gapDistricts: sourceGapDistricts(metadata),
     globalClubs: globalClubs(totals),
     globalCountries: globalCountries(totals),
-    districts: Object.fromEntries(sample.map((id, i) => [id, shapes[i]!])),
+    districts: Object.fromEntries(
+      sample.map((id, i) => [id, districtShape(files[i])])
+    ),
+    clubCounts: Object.fromEntries(
+      sample.map((id, i) => [id, districtClubCount(files[i])])
+    ),
   }
+}
+
+/**
+ * Club counts of production's file for each staging gap district the sample
+ * did not already read (#2038): one read per gap, only when prod has one.
+ */
+async function addGapClubCounts(
+  bucket: GateBucket,
+  dir: string,
+  listing: GcsObjectMeta[],
+  prod: DateProfile,
+  staging: DateProfile | null
+): Promise<void> {
+  const byName = new Map(listing.map(o => [o.name.slice(dir.length), o]))
+  const counts = (prod.clubCounts ??= {})
+  const unread = (staging?.gapDistricts ?? []).filter(
+    id => !(id in counts) && byName.has(`district_${id}.json`)
+  )
+  const files = await mapLimit(unread, CONCURRENCY, id =>
+    readJson(bucket, byName.get(`district_${id}.json`))
+  )
+  unread.forEach((id, i) => (counts[id] = districtClubCount(files[i])))
 }
 
 /** Compare every touched date, staging vs prod. Throws on listing errors. */
@@ -454,7 +550,10 @@ export async function runCompletenessGate(
       profileDate(staging, dir, stagingList, sample),
     ])
     if (!p) newDates.push(date)
-    else districtsSampled += sample.length
+    else {
+      districtsSampled += sample.length
+      await addGapClubCounts(prod, dir, prodList, p, s)
+    }
     const found = compareDateProfiles(date, p, s)
     regressions.push(...found)
     log(
