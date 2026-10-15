@@ -58,8 +58,9 @@ const SUBPAGES = [
   'growth',
   // Education awards PYTD (#1793).
   'education',
-  // Charter cohort survival (#1817): the chart slot has a fixed height.
-  'survival',
+  // Charter cohort survival (#1817), under Growth: the loading slot is
+  // reserved taller than the viewport.
+  'growth/survival',
   'trends',
   'analytics',
   'rankings',

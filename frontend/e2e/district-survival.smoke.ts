@@ -11,7 +11,7 @@ import { test, expect, type Page } from './fixtures/test'
  *    its own region (its `.sr-only` cells once scrolled the page to 936px
  *    at 375). */
 
-const SURVIVAL = '/district/61/survival'
+const SURVIVAL = '/district/61/growth/survival'
 
 async function load(page: Page, url = SURVIVAL): Promise<void> {
   await page.goto(url, { waitUntil: 'networkidle', timeout: 120_000 })

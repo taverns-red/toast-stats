@@ -1,8 +1,9 @@
 /**
- * District Survival page (#1817, epic #1781) — `/district/:id/survival`.
+ * District Survival page (#1817, epic #1781) — `/district/:id/growth/survival`.
  *
- * A real routed subpage (ADR-005): the section nav marks it current and the
- * program year comes from the URL-synced page controls, handed down (R3).
+ * A real routed subpage (ADR-005) under Club Growth: the section nav keeps
+ * Growth current, the breadcrumb leads back through Growth, and the program
+ * year comes from the URL-synced page controls, handed down (R3).
  * The history is the recorded prod fixture (D61 / D01, 2026-10-15).
  */
 import React, { Suspense } from 'react'
@@ -77,7 +78,7 @@ const renderAt = (initialUrl: string) => {
   })
   const routes: RouteObject[] = [
     {
-      path: '/district/:districtId/survival',
+      path: '/district/:districtId/growth/survival',
       element: (
         <Suspense fallback={<div>Loading…</div>}>
           <DistrictSurvivalPage />
@@ -105,25 +106,30 @@ describe('DistrictSurvivalPage (#1817)', () => {
   })
   afterEach(() => cleanup())
 
-  it('renders the survival view with Survival current in the section nav', async () => {
-    renderAt('/district/61/survival')
+  it('renders the survival view under Growth, with Growth current in the section nav', async () => {
+    renderAt('/district/61/growth/survival?py=2026')
     expect(
       await screen.findByRole('list', { name: /survival after/i })
     ).toHaveTextContent('51 of 51 clubs')
     expect(
-      screen.getByRole('link', { name: 'Survival', current: 'page' })
+      screen.getByRole('link', { name: 'Growth', current: 'page' })
     ).toBeInTheDocument()
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(
+      within(crumbs).getByRole('link', { name: 'Growth' }).getAttribute('href')
+    ).toBe('/district/61/growth?py=2026')
+    expect(crumbs).toHaveTextContent('Club survival')
   })
 
   it('self-titles the document', async () => {
-    renderAt('/district/61/survival')
+    renderAt('/district/61/growth/survival')
     await waitFor(() =>
       expect(document.title).toBe('District 61 Club Survival — Toast Stats')
     )
   })
 
   it('stops at the program year selected in the page controls (R3)', async () => {
-    renderAt('/district/61/survival?py=2019')
+    renderAt('/district/61/growth/survival?py=2019')
     const table = await screen.findByRole('table', {
       name: /survival by charter year/i,
     })
@@ -141,7 +147,7 @@ describe('DistrictSurvivalPage (#1817)', () => {
       index,
       clubs: null,
     })
-    renderAt('/district/61/survival')
+    renderAt('/district/61/growth/survival')
     expect(
       await screen.findByText(/loading club history: 37 of 100 files/i)
     ).toHaveAttribute('role', 'status')
@@ -155,7 +161,7 @@ describe('DistrictSurvivalPage (#1817)', () => {
       index,
       clubs: null,
     })
-    renderAt('/district/61/survival')
+    renderAt('/district/61/growth/survival')
     expect(
       await screen.findByText(/club history is not available right now/i)
     ).toHaveAttribute('role', 'status')
