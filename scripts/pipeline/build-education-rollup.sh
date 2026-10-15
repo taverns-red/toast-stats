@@ -4,8 +4,9 @@
 #
 # Usage: scripts/pipeline/build-education-rollup.sh <bucket>
 #
-# One script for every mode (ADR-015 P1): daily calls it after the identity
-# histories, and scripts/pipeline/process-dates.sh (rebuild, rescrape,
+# One script for every mode (ADR-015 P1): daily calls it in the
+# education-rollup job, after place-reports lands the day's reports (#2028),
+# and scripts/pipeline/process-dates.sh (rebuild, rescrape,
 # rescrape-historical) calls it once after its date loop. It derives only
 # from persisted inputs in <bucket> (ADR-015 P2), all read before anything
 # is uploaded:
