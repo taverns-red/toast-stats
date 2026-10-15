@@ -36,6 +36,7 @@ const FIXTURE_BY_GUID: Record<string, string> = {
   [REPORT_GUIDS.newClubs]: 'new-clubs.html',
   [REPORT_GUIDS.prospective]: 'prospective-clubs.html',
   [REPORT_GUIDS.coaches]: 'coaches.html',
+  [REPORT_GUIDS.sponsors]: 'sponsors-mentors.html',
 }
 
 const PERSONAL_DENYLIST = [
@@ -95,6 +96,7 @@ describe('ingestDistrictReports (fetch → build → write)', () => {
         'octoberDuesRenewal',
         'officerList',
         'prospectiveClubs',
+        'sponsorsMentors',
         'tripleCrown',
       ].sort()
     )

@@ -88,6 +88,25 @@ const VALID: DistrictReportsDataset = {
         },
       ],
     },
+    sponsorsMentors: {
+      sources: [
+        source(
+          'sponsors-mentors',
+          '4da53bd8-f6d9-4fa5-81d8-34ed5966dddd',
+          'June 01, 2026'
+        ),
+      ],
+      records: [
+        {
+          club: '28678571',
+          clubName: 'A Club',
+          charterDate: '04/17/2026',
+          code: 'MENTOR',
+          status: 'PENDING',
+          count: 2,
+        },
+      ],
+    },
   },
 }
 
@@ -195,6 +214,25 @@ describe('DistrictReportsDatasetSchema', () => {
     // @ts-expect-error — deliberately wrong type
     bad.sections.coaches!.records[0]!.activeCoach = 1
     expect(DistrictReportsDatasetSchema.safeParse(bad).success).toBe(false)
+  })
+
+  // #1795 — sponsors/mentors are counted per (club, code, status); the
+  // person's Name is dropped at parse. The record schema is STRICT so a
+  // regression that lets a name (or any per-person field) ride along fails
+  // validation loudly instead of being silently stripped.
+  it('sponsors-mentors count must be a non-negative integer', () => {
+    for (const bad of [-1, 1.5, '2']) {
+      const ds = structuredClone(VALID)
+      // @ts-expect-error — deliberately invalid count
+      ds.sections.sponsorsMentors!.records[0]!.count = bad
+      expect(DistrictReportsDatasetSchema.safeParse(ds).success).toBe(false)
+    }
+  })
+
+  it('sponsors-mentors records reject any extra field (no name can ride along)', () => {
+    const ds = structuredClone(VALID)
+    Object.assign(ds.sections.sponsorsMentors!.records[0]!, { name: 'x' })
+    expect(DistrictReportsDatasetSchema.safeParse(ds).success).toBe(false)
   })
 
   it('allows an empty sections object (a district with no reports yet)', () => {

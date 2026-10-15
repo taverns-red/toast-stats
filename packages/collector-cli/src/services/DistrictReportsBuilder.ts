@@ -14,9 +14,10 @@
  *   - **Triple Crown scalar** — the report has no club column once `Member` is
  *     excluded, so it collapses to one district number: the achiever count.
  *
- * Sponsors/Mentors is DEFERRED (#11): its GUID is intentionally NOT in scope, so
- * even if fetched it is dropped here. No I/O, no pipeline wiring (that is the
- * writer / orchestrator step).
+ *   - **Sponsors/Mentors counts** (#1795) — the person `Name` is dropped at
+ *     parse; rows collapse to one count per (club, code, status).
+ *
+ * No I/O, no pipeline wiring (that is the writer / orchestrator step).
  */
 
 import type {
@@ -25,6 +26,7 @@ import type {
   DistrictReportsSections,
   OfficerListRecord,
   ReportSource,
+  SponsorMentorRecord,
 } from '@taverns-red/shared-contracts'
 
 import {
@@ -32,9 +34,10 @@ import {
   parseDistrictReport,
   type OfficerListRow,
   type ParsedDistrictReport,
+  type SponsorMentorRow,
 } from './DailyReportParser.js'
 
-/** The in-scope report-type GUIDs (per sub-issue #1065; sponsors deferred). */
+/** The in-scope report-type GUIDs (per sub-issue #1065; sponsors #1795). */
 export const REPORT_GUIDS = {
   aprilDues: '0235cdd5-ffee-4101-ab43-a952a2736fc0',
   octoberDues: '0d56c054-0cd2-46ba-b3b1-3bf17221bd6c',
@@ -46,14 +49,14 @@ export const REPORT_GUIDS = {
   newClubs: 'ac6df5db-13de-425a-b8b9-f9c6093b538a',
   prospective: '50630d17-1492-40c9-8244-930b1d94167b',
   coaches: '41955922-25ab-4a5a-8025-ebb7634f68bf',
-  /** Deferred (#11) — present for the skip test, never routed into a section. */
+  /** New Club Sponsors & Mentors — counts only, Name dropped (#1795). */
   sponsors: '4da53bd8-f6d9-4fa5-81d8-34ed5966dddd',
 } as const
 
 /**
  * GUIDs whose data is wired into a section this sprint, in fetch order. The
  * fetcher iterates this; the builder uses it to drop out-of-scope reports.
- * Sponsors/Mentors (#11) and the empty Archive are intentionally absent.
+ * The empty Archive is intentionally absent.
  */
 export const IN_SCOPE_REPORT_GUIDS: readonly string[] = [
   REPORT_GUIDS.aprilDues,
@@ -66,6 +69,7 @@ export const IN_SCOPE_REPORT_GUIDS: readonly string[] = [
   REPORT_GUIDS.newClubs,
   REPORT_GUIDS.prospective,
   REPORT_GUIDS.coaches,
+  REPORT_GUIDS.sponsors,
 ]
 
 /** GUIDs whose data is wired into a section this sprint. */
@@ -148,6 +152,34 @@ function deriveCoaches(
     ...r,
     activeCoach: r.status === ACTIVE_COACH_STATUS,
   }))
+}
+
+/**
+ * Collapse sponsor/mentor assignment rows to one count per (club, code,
+ * status). The parser has already dropped the person `Name`; collapsing also
+ * removes row cardinality, so no record maps to one individual. `clubName` and
+ * `charterDate` are per-club constants, so they ride along without splitting
+ * a group (L153: a per-row field in the key would re-shatter the counts).
+ */
+function countSponsorsMentors(
+  rows: ReadonlyArray<SponsorMentorRow>
+): SponsorMentorRecord[] {
+  const byKey = new Map<string, SponsorMentorRecord>()
+  for (const r of rows) {
+    const key = JSON.stringify([r.club, r.code, r.status])
+    const hit = byKey.get(key)
+    if (hit) hit.count += 1
+    else
+      byKey.set(key, {
+        club: r.club,
+        clubName: r.clubName,
+        charterDate: r.charterDate,
+        code: r.code,
+        status: r.status,
+        count: 1,
+      })
+  }
+  return [...byKey.values()]
 }
 
 /**
@@ -278,6 +310,17 @@ export function buildDistrictReports(
     sections.coaches = {
       sources: [sourceFor('coaches', REPORT_GUIDS.coaches, coaches.html)],
       records: deriveCoaches(coaches.report.rows),
+    }
+  }
+
+  // ── Sponsors & Mentors → per-(club, code, status) counts (#1795) ──
+  const sponsors = parsed(REPORT_GUIDS.sponsors)
+  if (sponsors && sponsors.report.reportType === 'sponsors-mentors') {
+    sections.sponsorsMentors = {
+      sources: [
+        sourceFor('sponsors-mentors', REPORT_GUIDS.sponsors, sponsors.html),
+      ],
+      records: countSponsorsMentors(sponsors.report.rows),
     }
   }
 

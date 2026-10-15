@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { DistrictReportsDatasetSchema } from '@taverns-red/shared-contracts'
 
-import { deriveEducationMemberDenylist } from '../../__tests__/fixtures/educationMemberDenylist'
+import {
+  deriveColumnDenylist,
+  deriveEducationMemberDenylist,
+} from '../../__tests__/fixtures/educationMemberDenylist'
 import { parseDistrictReport } from '../DailyReportParser'
 import {
   buildDistrictReports,
@@ -62,6 +65,10 @@ const ALL_IN_SCOPE: RawReport[] = [
     html: readFixture('prospective-clubs.html'),
   },
   { tableId: REPORT_GUIDS.coaches, html: readFixture('coaches.html') },
+  {
+    tableId: REPORT_GUIDS.sponsors,
+    html: readFixture('sponsors-mentors.html'),
+  },
 ]
 
 const build = (reports = ALL_IN_SCOPE) =>
@@ -132,16 +139,62 @@ describe('buildDistrictReports — privacy backstop (end-to-end)', () => {
     expect(denylist.filter(v => blob.includes(v)).length).toBe(0)
   })
 
-  it('sponsors-mentors is deferred (#11) — skipped even if fetched', () => {
-    const withSponsors: RawReport[] = [
-      ...ALL_IN_SCOPE,
+  // #1795 — the sponsors/mentors `Name` column is a person. Derive every Name
+  // value from the recorded fixture itself (not a hand-picked sample) and
+  // assert none survives. Counts only in assertions: a failure never prints
+  // a name.
+  it('no sponsors/mentors Name value survives in the dataset', () => {
+    const raw = readFixture('sponsors-mentors.html')
+    const names = deriveColumnDenylist(raw, 'Name')
+    // Falsifiability: the denylist is real and really from the fixture.
+    expect(names.length).toBeGreaterThanOrEqual(5)
+    expect(names.filter(v => !raw.includes(v)).length).toBe(0)
+
+    const blob = JSON.stringify(build())
+    expect(names.filter(v => blob.includes(v)).length).toBe(0)
+  })
+})
+
+describe('buildDistrictReports — sponsors/mentors counts (#1795)', () => {
+  const RAW_ROWS = 21 // rows in the recorded D61 fixture
+
+  it('lands a provenanced sponsorsMentors section', () => {
+    const ds = build()
+    expect(ds.sections.sponsorsMentors!.sources).toEqual([
       {
+        reportType: 'sponsors-mentors',
         tableId: REPORT_GUIDS.sponsors,
-        html: readFixture('sponsors-mentors.html'),
+        asOf: expect.any(String),
       },
-    ]
-    const blob = JSON.stringify(build(withSponsors))
-    expect(blob).not.toContain('Louise Audy, PM5')
+    ])
+  })
+
+  it('records carry only club identity, code, status and a count', () => {
+    for (const r of build().sections.sponsorsMentors!.records) {
+      expect(Object.keys(r).sort()).toEqual(
+        ['charterDate', 'club', 'clubName', 'code', 'count', 'status'].sort()
+      )
+    }
+  })
+
+  it('collapses per-person rows into (club, code, status) counts that sum back to the raw total', () => {
+    const recs = build().sections.sponsorsMentors!.records
+    // The collapse happened (L153): fewer records than raw rows ...
+    expect(recs.length).toBeLessThan(RAW_ROWS)
+    // ... no row was lost ...
+    expect(recs.reduce((n, r) => n + r.count, 0)).toBe(RAW_ROWS)
+    // ... and each (club, code, status) group appears exactly once.
+    const keys = recs.map(r => `${r.club}|${r.code}|${r.status}`)
+    expect(new Set(keys).size).toBe(recs.length)
+    // The recorded report covers 6 clubs.
+    expect(new Set(recs.map(r => r.club)).size).toBe(6)
+  })
+
+  it('omits the section when the report was not fetched', () => {
+    const ds = build(
+      ALL_IN_SCOPE.filter(r => r.tableId !== REPORT_GUIDS.sponsors)
+    )
+    expect(ds.sections.sponsorsMentors).toBeUndefined()
   })
 })
 
