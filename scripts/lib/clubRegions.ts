@@ -9,8 +9,9 @@
  *   1. read `data.allClubs[].coordinates` from each district's analytics file
  *      (Find-A-Club enrichment, #429), deduplicated by club id;
  *   2. buffer each club by `bufferKm` into a lat/lng box;
- *   3. merge overlapping boxes into their union until no two overlap, so a
- *      metro area becomes one box and the output stays small;
+ *   3. merge overlapping boxes into their union (with an area guard, see
+ *      shouldMerge), so a metro area becomes one box and the output stays
+ *      small;
  *   4. emit a GeoJSON FeatureCollection of Polygon features — the form
  *      go-pmtiles 1.31.2 `UnmarshalRegion` (pmtiles/region.go) accepts.
  *
@@ -127,10 +128,32 @@ const union = (a: Box, b: Box): Box => [
 ]
 
 /**
- * Merge overlapping boxes into their unions until the result is pairwise
- * disjoint. A union can reach a box neither part touched, so it repeats until
- * a pass merges nothing. Boxes must not cross the antimeridian (split first).
- * Quadratic per pass in the worst case; ~14k clubs run in well under a second.
+ * How much bigger than its two parts a merged box may be. Two club buffers
+ * offset by half a buffer diagonally have a union bbox 9/8 of their summed
+ * area, so they merge; a chain that only touches at corners does not.
+ */
+export const MERGE_SLACK = 1.25
+
+/**
+ * Merge two boxes only when they overlap and their union bbox costs at most
+ * MERGE_SLACK times their summed area. Without the area guard, the
+ * Boston–Washington corridor chained into one 218k km² box of mostly empty
+ * land and sea (2026-10-14 data, 8 km buffer).
+ */
+export function shouldMerge(a: Box, b: Box): boolean {
+  return (
+    overlaps(a, b) &&
+    boxAreaKm2(union(a, b)) <= MERGE_SLACK * (boxAreaKm2(a) + boxAreaKm2(b))
+  )
+}
+
+/**
+ * Cluster boxes by repeated pairwise merging (see shouldMerge) until a pass
+ * merges nothing. A union can reach a box neither part touched, hence the
+ * repeat. Output boxes may still overlap: go-pmtiles builds its relevance
+ * bitmap as the union of every polygon's tiles (pmtiles/bitmap.go), so an
+ * overlap costs no extra tiles. Boxes must not cross the antimeridian (split
+ * first). Quadratic per pass; ~14k clubs run in about a second.
  */
 export function clusterBoxes(boxes: Box[]): Region[] {
   let regions: Region[] = boxes.map(box => ({ box: [...box] as Box, count: 1 }))
@@ -139,10 +162,10 @@ export function clusterBoxes(boxes: Box[]): Region[] {
     let merged = false
     for (const r of regions) {
       let cur = r
-      // Absorb every kept region it overlaps.
+      // Absorb every kept region it qualifies to merge with.
       for (let i = out.length - 1; i >= 0; i--) {
         const o = out[i]!
-        if (overlaps(o.box, cur.box)) {
+        if (shouldMerge(o.box, cur.box)) {
           cur = { box: union(o.box, cur.box), count: o.count + cur.count }
           out.splice(i, 1)
           merged = true
@@ -174,7 +197,8 @@ export interface ClubRegions {
   stats: ClubRegionsStats
 }
 
-const boxAreaKm2 = (b: Box): number => {
+/** Approximate area of a box in km² (equirectangular at its mid-latitude). */
+function boxAreaKm2(b: Box): number {
   const midLat = ((b[1] + b[3]) / 2) * (Math.PI / 180)
   return (
     (b[2] - b[0]) *
