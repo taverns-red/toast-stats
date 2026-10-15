@@ -173,9 +173,12 @@ describe('DistrictEducationPage (#1793)', () => {
       analyticsWith({ ...d61, programYear: '2025-2026' })
     )
     renderAt('/district/61/education')
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      /No education report/
-    )
+    expect(
+      await screen.findByText(/No education report for this date/)
+    ).toHaveAttribute('role', 'status')
+    expect(
+      screen.queryByRole('list', { name: /education at a glance/i })
+    ).toBeNull()
   })
 
   it('carries the two leaderboards, anchored for the Analytics redirect', async () => {

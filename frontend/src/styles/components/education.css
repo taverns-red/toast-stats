@@ -513,3 +513,19 @@
   margin-top: 1.5rem;
   scroll-margin-top: 6rem;
 }
+
+/* Analytics pointer to the moved leaderboards (#1793). */
+.education-moved {
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.education-moved__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

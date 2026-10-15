@@ -50,6 +50,11 @@ const DistrictGrowthPage = React.lazy(
   () => import('./pages/DistrictGrowthPage')
 )
 
+// Code-split: DistrictEducationPage — education awards PYTD (#1793, epic #1781)
+const DistrictEducationPage = React.lazy(
+  () => import('./pages/DistrictEducationPage')
+)
+
 // Code-split: DistrictTrendsPage — trends subroute (#680, epic #674 Sprint 6)
 const DistrictTrendsPage = React.lazy(
   () => import('./pages/DistrictTrendsPage')
@@ -224,6 +229,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictGrowthPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/education',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <DistrictEducationPage />
             </Suspense>
           ),
         },

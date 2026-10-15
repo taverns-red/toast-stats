@@ -268,11 +268,10 @@ describe('DistrictAnalyticsPage (#680 — ADR-005)', () => {
   // redirects there so a saved link still lands on the leaderboards.
   it('no longer renders the leaderboards; points to the Education page', async () => {
     renderAt('/district/61/analytics?py=2024')
-    await screen.findByTestId('top-growth-clubs')
+    const link = await screen.findByTestId('education-moved-link')
     expect(
       screen.queryByTestId('education-awards-leaderboard')
     ).not.toBeInTheDocument()
-    const link = screen.getByTestId('education-moved-link')
     expect(link).toHaveAttribute(
       'href',
       '/district/61/education?py=2024#leaderboards'
