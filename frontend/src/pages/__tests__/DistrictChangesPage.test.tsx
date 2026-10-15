@@ -8,6 +8,7 @@ import { useSnapshotDiff } from '../../hooks/useSnapshotDiff'
 import { useDistricts } from '../../hooks/useDistricts'
 import type { SnapshotDiff } from '@taverns-red/shared-contracts'
 import { exportSnapshotDiff } from '../../utils/csvExport'
+import { useTransferCounterparts } from '../../hooks/useTransferCounterparts'
 
 vi.mock('../../utils/csvExport', () => ({ exportSnapshotDiff: vi.fn() }))
 vi.mock('../../hooks/useDistrictData')
@@ -18,6 +19,13 @@ vi.mock('../../hooks/useSnapshotDiff', async () => {
   >('../../hooks/useSnapshotDiff')
   return { ...actual, useSnapshotDiff: vi.fn() }
 })
+
+// The club-district history join (#1806) is unit-tested in its own hook test;
+// here it is a seam, empty unless a test names a counterpart.
+vi.mock('../../hooks/useTransferCounterparts', () => ({
+  useTransferCounterparts: vi.fn(),
+}))
+const mockedCounterparts = vi.mocked(useTransferCounterparts)
 
 const mockedDates = vi.mocked(useDistrictCachedDates)
 const mockedDiff = vi.mocked(useSnapshotDiff)
@@ -92,6 +100,7 @@ function diffFixture(over: Partial<SnapshotDiff> = {}): SnapshotDiff {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockedCounterparts.mockReturnValue(new Map())
   mockedDistricts.mockReturnValue({
     data: { districts: [{ id: '61', name: '61' }] },
   } as unknown as ReturnType<typeof useDistricts>)
@@ -447,6 +456,27 @@ describe('DistrictChangesPage — district realignment (#1443)', () => {
       'href',
       '/methodology#py-2026-2027-district-boundaries-redrawn'
     )
+  })
+
+  it('names the district on the other side of each transfer the history knows (#1806)', () => {
+    const diff = realignmentDiff()
+    mockedDiff.mockReturnValue({
+      data: diff,
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+    mockedCounterparts.mockReturnValue(new Map([['333', '201']]))
+
+    renderPage()
+    // The page hands the hook the diff it renders and its route district (R3).
+    expect(mockedCounterparts).toHaveBeenCalledWith(diff, '61')
+    expect(screen.getByRole('link', { name: 'District 201' })).toHaveAttribute(
+      'href',
+      '/district/201'
+    )
+    expect(screen.getByText(/transferred to/)).toBeInTheDocument()
+    // The club the history cannot place keeps the engine's wording.
+    expect(screen.getByText(/moved into the district/)).toBeInTheDocument()
   })
 
   it('groups transfers separately so a genuine new club is not buried in them', () => {
