@@ -665,11 +665,9 @@ jobs:
           bash scripts/pipeline/build-identity-history.sh "${GCS_BUCKET}" \
             || echo "::warning::Identity histories were not rebuilt (#1782, #1820); the previous copies stand"
 
-          # Education rollup (#1801): the same script process-dates.sh runs
-          # after the identity histories, whose region history it reads.
-          # Staging derived/ only until #1763; a failure leaves the previous copy.
-          bash scripts/pipeline/build-education-rollup.sh "${GCS_BUCKET}" \
-            || echo "::warning::Education rollup was not rebuilt (#1801); the previous derived/ copy stands"
+          # The daily education rollup (#1801) is NOT built here: it reads
+          # the newest district_*_reports.json, which `place-reports` writes
+          # later. It runs in the `education-rollup` job instead (#2028).
 
       # ════════════════════════════════════════════════════════
       # CLOSING-DATE REGISTRY FRESHNESS (#1128, epic #1098)
@@ -3003,6 +3001,88 @@ jobs:
           fi
           gcloud storage rm -r "gs://${GCS_BUCKET}/incoming/daily-reports/${RAW_DATE}/" 2>/dev/null \
             || echo "Nothing to clean up at incoming/daily-reports/${RAW_DATE}/"
+
+  # ══════════════════════════════════════════════════════════
+  # DAILY EDUCATION ROLLUP (#1801, #2028) — STAGING derived/ ONLY
+  #
+  # The rollup reads each reports PY's newest snapshot date that HAS
+  # district_*_reports.json. `place-reports` writes today's, after the
+  # ~22-minute `daily-reports` fetch. Built inside the pipeline job's upload
+  # step, it ran ~15 minutes before them and always read the day before's
+  # (run 38539146918: read 2026-10-12 at 09:08Z; 2026-10-13 placed 09:22Z).
+  #
+  # always(): a failed or skipped placement still rebuilds from the newest
+  # reports staging has, as before. Same script as process-dates.sh (ADR-015
+  # P1), which builds it after its own loop in the other modes. Non-fatal.
+  # Its uploads are appended to the run manifest the pipeline job published.
+  # ══════════════════════════════════════════════════════════
+  education-rollup:
+    name: 'daily education rollup'
+    runs-on: ubuntu-26.04
+    needs: [pipeline, place-reports]
+    if: >-
+      always()
+      && needs.pipeline.result == 'success'
+      && needs.pipeline.outputs.snapshot_date != ''
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared-contracts
+        run: npm run build --workspace=@taverns-red/shared-contracts
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720): rsync must decompress gzip downloads (#1702).
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
+
+      # Start from what the pipeline job published, so republishing below
+      # keeps its records and adds this job's. If it cannot be read, nothing
+      # is republished: overwriting it with this job's lines alone would drop
+      # the pipeline job's (derived/ is unpromoted, so the gap is a record).
+      - name: '[rollup] Fetch the run manifest'
+        id: seed
+        run: |
+          mkdir -p "$(dirname "${RUN_MANIFEST_FILE}")"
+          if gcloud storage cp \
+            "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl" "${RUN_MANIFEST_FILE}"; then
+            echo "seeded=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Could not read runs/${GITHUB_RUN_ID}/written.jsonl; this job's uploads go unrecorded"
+          fi
+
+      - name: '[rollup] Build the education rollup (#1801)'
+        run: |
+          echo "## 🎓 Education rollup (#1801, #2028)" >> "$GITHUB_STEP_SUMMARY"
+          bash scripts/pipeline/build-education-rollup.sh "${GCS_BUCKET}" \
+            || echo "::warning::Education rollup was not rebuilt (#1801); the previous derived/ copy stands"
+
+      - name: '[rollup] Publish run manifest'
+        if: ${{ !cancelled() && steps.seed.outputs.seeded == 'true' }}
+        run: |
+          gcloud storage cp --content-type="application/x-ndjson" \
+            "${RUN_MANIFEST_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl"
 
   # ══════════════════════════════════════════════════════════
   # EDUCATION LEDGER HISTORY BACKFILL (#1802) — STAGING ONLY
