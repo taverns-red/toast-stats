@@ -88,6 +88,34 @@ describe('ClubHistoryTable — district per year (#1803)', () => {
     expect(screen.queryByRole('columnheader', { name: /District/ })).toBeNull()
   })
 
+  // Ron, 2026-10-15: the current program year is a row too, marked so it
+  // never reads as a settled year.
+  it('marks the in-progress year', () => {
+    render(
+      <MemoryRouter>
+        <ClubHistoryTable
+          rows={[
+            {
+              ...rows[0]!,
+              startYear: 2026,
+              label: '2026-2027',
+              yearEndDate: '2026-10-14',
+              districtId: '201',
+              inProgress: true,
+            },
+            ...rows,
+          ]}
+          clubName="Professional Women Toastmasters"
+          clubId="977"
+          showDistrict
+        />
+      </MemoryRouter>
+    )
+    const row = screen.getByRole('link', { name: '2026-2027' }).closest('tr')!
+    expect(within(row).getByText('in progress')).toBeInTheDocument()
+    expect(screen.getAllByText('in progress')).toHaveLength(1)
+  })
+
   it("names each year's district under the year on phones", () => {
     mobile = true
     renderTable(true)

@@ -154,7 +154,10 @@ describe('useClubHistory (#1229)', () => {
     expect(mockedSnapshot).not.toHaveBeenCalledWith('2023-06-15', '61')
   })
 
-  it('excludes the current, incomplete program year', async () => {
+  // Spec change (#1803, Ron 2026-10-15): the current program year is shown
+  // as an in-progress row read from its latest snapshot so far, so a club
+  // that moved this July shows its new district. It was excluded before.
+  it('adds the current program year as an in-progress row from its latest snapshot', async () => {
     const currentYearEnd = `${getCurrentProgramYear().year + 1}-06-30`
     // A snapshot dated inside the current (incomplete) program year.
     const currentInProgress = `${getCurrentProgramYear().year}-09-30`
@@ -170,10 +173,17 @@ describe('useClubHistory (#1229)', () => {
     })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(result.current.rows).toHaveLength(1)
-    expect(result.current.rows[0]!.yearEndDate).toBe('2023-06-30')
-    expect(mockedSnapshot).not.toHaveBeenCalledWith(currentInProgress, '61')
-    // Belt-and-braces: the would-be current year-end was never fetched either.
+    expect(
+      result.current.rows.map(r => [
+        r.startYear,
+        r.yearEndDate,
+        r.inProgress ?? false,
+      ])
+    ).toEqual([
+      [getCurrentProgramYear().year, currentInProgress, true],
+      [2022, '2023-06-30', false],
+    ])
+    // The latest date so far, never a year-end that does not exist yet.
     expect(mockedSnapshot).not.toHaveBeenCalledWith(currentYearEnd, '61')
   })
 

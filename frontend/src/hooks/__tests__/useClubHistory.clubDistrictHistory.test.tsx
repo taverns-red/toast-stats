@@ -14,7 +14,7 @@
  * Fixture: recorded prod shard 77 (asOf 2026-10-14): club 977 D01 → D201,
  * club 177 D34 until 2018-06-30, then D113.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode } from 'react'
@@ -101,7 +101,11 @@ function snapshot(
 beforeEach(() => {
   vi.clearAllMocks()
   mockedShard.mockResolvedValue(shard77 as ClubDistrictHistoryShard)
+  // The day the recorded shard is from: 2026-27 is in progress.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-15T12:00:00Z'))
 })
+afterEach(() => vi.useRealTimers())
 
 describe("useClubHistory — each year's district from the history (#1803)", () => {
   it("fetches each completed year from that year's district, rows carrying it", async () => {
@@ -155,16 +159,45 @@ describe("useClubHistory — each year's district from the history (#1803)", () 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     // 2025-26 is D01's year in the history, even though D201 has a
-    // 2026-06-30 date of its own.
+    // 2026-06-30 date of its own. 2026-27, in progress, is D201's: the
+    // move shows (Ron, 2026-10-15).
     expect(
       result.current.rows.map(r => [r.startYear, r.districtId, r.yearEndDate])
     ).toEqual([
+      [2026, '201', '2026-10-14'],
       [2025, '01', '2026-06-30'],
       [2024, '01', '2025-06-30'],
       [2023, '01', '2024-06-30'],
     ])
     expect(result.current.gaps).toEqual([])
     expect(mockedSnapshot).not.toHaveBeenCalledWith('2026-06-30', '201')
+  })
+
+  it('marks only the current year in progress, and reports no gap for it', async () => {
+    mockedIndex.mockResolvedValue({
+      '01': ['2026-06-30'],
+      '201': ['2026-10-14'],
+    })
+    mockedSnapshot.mockImplementation(
+      async (date, districtId) =>
+        snapshot(
+          date,
+          districtId,
+          date === '2026-10-14' ? [] : [club('977')]
+        ) as never
+    )
+
+    const { result } = renderHook(() => useClubHistory('201', '977'), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // The club is not in the year so far: no row, and not a gap — the year
+    // has not closed.
+    expect(
+      result.current.rows.map(r => [r.startYear, r.inProgress ?? false])
+    ).toEqual([[2025, false]])
+    expect(result.current.gaps).toEqual([])
   })
 
   it("reports a gap in that year's district, not the page's", async () => {

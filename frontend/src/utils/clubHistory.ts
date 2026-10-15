@@ -60,6 +60,11 @@ export interface ClubHistoryRow {
    * always sets it.
    */
   districtId?: string
+  /**
+   * #1803 (Ron, 2026-10-15) — the current program year, read from its latest
+   * snapshot so far rather than a year-end: not a settled value.
+   */
+  inProgress?: boolean
 }
 
 /**
