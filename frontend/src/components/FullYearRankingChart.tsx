@@ -21,10 +21,9 @@ import {
 import {
   ChartHeader,
   FullYearRankingChartSkeleton,
-  METRIC_CONFIG,
   PLOT_HEIGHT,
-  type RankMetric,
 } from './FullYearRankingChartSkeleton'
+import { METRIC_CONFIG, type RankMetric } from './fullYearRankingMetrics'
 
 export type { RankMetric }
 

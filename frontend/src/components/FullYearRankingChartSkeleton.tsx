@@ -1,5 +1,5 @@
 import React from 'react'
-import type { HistoricalRankPoint } from '../types/districts'
+import { METRIC_CONFIG, type RankMetric } from './fullYearRankingMetrics'
 import type { ProgramYear } from '../utils/programYear'
 import { ChartSkeleton } from './ChartSkeleton'
 import { TOUCH_QUERY } from './charts/ChartReadout'
@@ -13,49 +13,6 @@ import { useMediaQuery } from '../hooks/useMediaQuery'
 
 /** The plot's height — the loading state reserves the same (#1835). */
 export const PLOT_HEIGHT = 400
-
-/**
- * Rank metric types for the chart
- */
-export type RankMetric = 'aggregate' | 'clubs' | 'payments' | 'distinguished'
-
-/**
- * Metric configuration for display labels and chart settings
- */
-export interface MetricConfig {
-  label: string
-  shortLabel: string
-  dataKey: keyof HistoricalRankPoint
-  description: string
-}
-
-export const METRIC_CONFIG: Record<RankMetric, MetricConfig> = {
-  aggregate: {
-    label: 'Overall Rank',
-    shortLabel: 'Overall',
-    dataKey: 'overallRank',
-    description: 'Overall ranking position based on aggregate score (1 = best)',
-  },
-  clubs: {
-    label: 'Paid Clubs Rank',
-    shortLabel: 'Clubs',
-    dataKey: 'clubsRank',
-    description: 'Ranking based on paid club count relative to base',
-  },
-  payments: {
-    label: 'Membership Payments Rank',
-    shortLabel: 'Payments',
-    dataKey: 'paymentsRank',
-    description: 'Ranking based on total membership payments relative to base',
-  },
-  distinguished: {
-    label: 'Distinguished Clubs Rank',
-    shortLabel: 'Distinguished',
-    dataKey: 'distinguishedRank',
-    description:
-      'Ranking based on percentage of clubs achieving distinguished status',
-  },
-}
 
 const METRICS: readonly RankMetric[] = [
   'aggregate',
