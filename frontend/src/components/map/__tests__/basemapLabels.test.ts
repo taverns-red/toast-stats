@@ -196,16 +196,46 @@ describe('basemap label layers', () => {
     }
   })
 
-  it('uses quiet ink-on-paper colours with a land-coloured halo', () => {
+  it('uses the app slate inks on the neutral basemap, halo in the land colour', () => {
+    // redesign.css --ink-2 / --ink-3, light and [data-theme='dark'] values.
+    const INKS = {
+      light: { strong: '#344052', quiet: '#5B6675' },
+      dark: { strong: '#C8D1DD', quiet: '#8A96A6' },
+    }
     for (const theme of ['light', 'dark'] as const) {
-      const ink = theme === 'light' ? '15, 14, 13' : '244, 241, 235'
-      for (const l of symbolLayers(styleFor(theme).layers)) {
-        const paint = l.paint ?? {}
-        expect(String(paint['text-color'])).toMatch(
-          new RegExp(`^rgba\\(${ink}, 0\\.\\d+\\)$`)
-        )
+      const byId = new Map(
+        symbolLayers(styleFor(theme).layers).map(l => [l.id, l.paint ?? {}])
+      )
+      // Cities carry the most weight; every other band is quieter.
+      expect(byId.get('label-cities')!['text-color']).toBe(INKS[theme].strong)
+      for (const [id, paint] of byId) {
+        if (id !== 'label-cities')
+          expect(paint['text-color'], id).toBe(INKS[theme].quiet)
         expect(paint['text-halo-color']).toBe(BASEMAP_COLOURS[theme].land)
         expect(paint['text-halo-width']).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('keeps every label readable on its land colour (>= 4.5:1)', () => {
+    const lum = (hex: string) => {
+      const c = [1, 3, 5].map(k => parseInt(hex.slice(k, k + 2), 16) / 255)
+      const [r, g, b] = c.map(v =>
+        v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+      )
+      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!
+    }
+    const ratio = (a: string, b: string) => {
+      const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m)
+      return (x! + 0.05) / (y! + 0.05)
+    }
+    for (const theme of ['light', 'dark'] as const) {
+      for (const l of symbolLayers(styleFor(theme).layers)) {
+        const colour = String(l.paint?.['text-color'])
+        expect(
+          ratio(colour, BASEMAP_COLOURS[theme].land),
+          l.id
+        ).toBeGreaterThanOrEqual(4.5)
       }
     }
   })
