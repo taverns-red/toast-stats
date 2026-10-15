@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.38.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.37.0...frontend-v3.38.0) (2026-10-15)
+
+
+### Features
+
+* **club:** /club/:cid?py= and the club page resolve the PY's district ([#1804](https://github.com/taverns-red/toast-stats/issues/1804)) ([#2067](https://github.com/taverns-red/toast-stats/issues/2067)) ([dfe193d](https://github.com/taverns-red/toast-stats/commit/dfe193d588d82a058d52ab2f837d388070fdc202))
+* **club:** hero lineage chip from the club-district history ([#1805](https://github.com/taverns-red/toast-stats/issues/1805)) ([#2066](https://github.com/taverns-red/toast-stats/issues/2066)) ([cfe9803](https://github.com/taverns-red/toast-stats/commit/cfe9803f3d19073b671454db47a37d2f827e8c43))
+* **growth:** sponsor/mentor counts on the Club Growth funnel ([#1794](https://github.com/taverns-red/toast-stats/issues/1794)) ([#2065](https://github.com/taverns-red/toast-stats/issues/2065)) ([15686fc](https://github.com/taverns-red/toast-stats/commit/15686fce2c776a88dd48c0c59daa1b642175d962))
+
+
+### Bug Fixes
+
+* **club:** lifecycle panel waits for a shard read that has not started ([#2076](https://github.com/taverns-red/toast-stats/issues/2076)) ([#2077](https://github.com/taverns-red/toast-stats/issues/2077)) ([1af2f08](https://github.com/taverns-red/toast-stats/commit/1af2f08e4c868cf602bbc44fa8074cff3f144f17))
+* **privacy:** no link of any kind in the club place or schedule ([#2069](https://github.com/taverns-red/toast-stats/issues/2069)) ([#2074](https://github.com/taverns-red/toast-stats/issues/2074)) ([aa1a580](https://github.com/taverns-red/toast-stats/commit/aa1a580483ba400f8ccae2e91c315d0c41f09031))
+
 ## [3.37.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.36.0...frontend-v3.37.0) (2026-10-15)
 
 
