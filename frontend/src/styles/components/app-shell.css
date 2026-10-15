@@ -2511,6 +2511,28 @@
 
   .club-stats-grid .mobile-disclosure__summary {
     font-size: 14px;
+    list-style: none;
+  }
+
+  /* A flex <summary> drops the native marker in Chromium, so draw the
+     chevron: down when open, right when folded. Decoration only. */
+  .club-stats-grid .mobile-disclosure__summary::after {
+    content: '';
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    margin-left: auto;
+    border-right: 1.75px solid var(--ink-3);
+    border-bottom: 1.75px solid var(--ink-3);
+    transform: rotate(-45deg);
+  }
+
+  .club-stats-grid .mobile-disclosure[open] .mobile-disclosure__summary::after {
+    transform: rotate(45deg);
+  }
+
+  .club-stats-grid .mobile-disclosure__summary::-webkit-details-marker {
+    display: none;
   }
 
   .club-stats-grid .mobile-disclosure__content {
