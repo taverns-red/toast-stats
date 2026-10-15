@@ -50,7 +50,7 @@ const DistrictGrowthPage = React.lazy(
   () => import('./pages/DistrictGrowthPage')
 )
 
-// Code-split: DistrictSurvivalPage — charter cohort survival (#1817, epic #1781)
+// Code-split: DistrictSurvivalPage — charter cohort survival, under Growth (#1817)
 const DistrictSurvivalPage = React.lazy(
   () => import('./pages/DistrictSurvivalPage')
 )
@@ -245,7 +245,7 @@ const router = createBrowserRouter(
           ),
         },
         {
-          path: 'district/:districtId/survival',
+          path: 'district/:districtId/growth/survival',
           element: (
             <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictSurvivalPage />

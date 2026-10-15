@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
@@ -18,7 +18,8 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 /* District charter cohort survival (#1817, epic #1781) —
-   `/district/:id/survival`. "Of the clubs chartered here in PY X, how many
+   `/district/:id/growth/survival`, under Club Growth (Growth stays current
+   in the section nav; the breadcrumb leads back through it). "Of the clubs chartered here in PY X, how many
    are still active 1, 3, 5 years later?" Folded in the browser from the
    club-district history (#1782, `config/club-district-history/`), which
    follows a club across district moves — no new pipeline artifact. The
@@ -80,6 +81,18 @@ const DistrictSurvivalPage: React.FC = () => {
     })
   }, [districtId, effectiveProgramYear, history])
 
+  // The Growth crumb keeps the page's PY and date (R3: read from the URL).
+  const [params] = useSearchParams()
+  const growthQuery = useMemo(() => {
+    const kept = new URLSearchParams()
+    for (const key of ['py', 'date']) {
+      const value = params.get(key)
+      if (value) kept.set(key, value)
+    }
+    const qs = kept.toString()
+    return qs ? `?${qs}` : ''
+  }, [params])
+
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
   useDocumentTitle(districtName ? `${districtName} Club Survival` : null)
@@ -137,7 +150,14 @@ const DistrictSurvivalPage: React.FC = () => {
           />
 
           <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
+            crumbs={[
+              { label: districtName, to: `/district/${districtId}` },
+              {
+                label: 'Growth',
+                to: `/district/${districtId}/growth${growthQuery}`,
+              },
+              { label: 'Club survival' },
+            ]}
           />
 
           <DistrictSubnav districtId={districtId} />

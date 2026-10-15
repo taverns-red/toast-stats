@@ -296,3 +296,26 @@
 .survival-table tr.is-highlighted th {
   box-shadow: inset 3px 0 0 var(--rt-stats, #d4873f);
 }
+
+/* ── Entry link on the Club Growth page ────────────────────────────── */
+
+.survival-entry {
+  margin-top: 0.5rem;
+}
+
+.survival-entry__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rt-stats, #d4873f);
+  text-underline-offset: 3px;
+}
+
+.survival-entry__link:focus-visible {
+  outline: 2px solid var(--rt-stats, #d4873f);
+  outline-offset: 2px;
+}

@@ -39,11 +39,6 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   // date, from the ledger. After Growth: the last whole-district view before
   // the time-series sections.
   { label: 'Education', segment: 'education' },
-  // 'Survival' (#1817, epic #1781) — charter cohort survival: of the clubs
-  // chartered here each program year, how many are still active years later
-  // (moved clubs count). After Education: the bridge into the multi-year
-  // sections.
-  { label: 'Survival', segment: 'survival' },
   { label: 'Trends', segment: 'trends' },
   { label: 'Analytics', segment: 'analytics' },
   { label: 'Rankings', segment: 'rankings' },
