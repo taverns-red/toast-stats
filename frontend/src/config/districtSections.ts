@@ -35,6 +35,10 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   // chartered → coached → suspended. After Map: another whole-district view,
   // before the time-series sections.
   { label: 'Growth', segment: 'growth' },
+  // 'Education' (#1793, epic #1781) — education awards this program year to
+  // date, from the ledger. After Growth: the last whole-district view before
+  // the time-series sections.
+  { label: 'Education', segment: 'education' },
   { label: 'Trends', segment: 'trends' },
   { label: 'Analytics', segment: 'analytics' },
   { label: 'Rankings', segment: 'rankings' },

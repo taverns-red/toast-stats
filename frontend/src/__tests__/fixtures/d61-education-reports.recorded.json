@@ -1,0 +1,2799 @@
+{
+  "_recorded": "https://cdn.taverns.red/snapshots/2026-10-13/district_61_reports.json, fetched 2026-10-14 (#1793). Education sections only, unedited.",
+  "districtId": "61",
+  "programYear": "2026-2027",
+  "generatedAt": "2026-10-14T09:05:16.444Z",
+  "sections": {
+    "educationAchievements": {
+      "sources": [
+        {
+          "reportType": "education-achievements",
+          "tableId": "c757d313-f815-4b22-93dc-b839d04cec7b",
+          "asOf": "October 14, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "VC5Visionary Communication Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "MS3Motivational Strategies Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "MS4Motivational Strategies Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "MS5Motivational Strategies Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "1036983",
+          "division": "F",
+          "area": "53",
+          "name": "Maîtres parleurs de Blainville",
+          "location": "Blainville",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "1036983",
+          "division": "F",
+          "area": "53",
+          "name": "Maîtres parleurs de Blainville",
+          "location": "Blainville",
+          "award": "MS4Motivational Strategies Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "1036983",
+          "division": "F",
+          "area": "53",
+          "name": "Maîtres parleurs de Blainville",
+          "location": "Blainville",
+          "award": "MS5Motivational Strategies Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "1100158",
+          "division": "A",
+          "area": "4",
+          "name": "IBM Ottawa Toastmasters",
+          "location": "Ottawa",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "1106180",
+          "division": "C",
+          "area": "21",
+          "name": "A Matter of Taste",
+          "location": "Ottawa",
+          "award": "IP5Innovative Planning Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "1106180",
+          "division": "C",
+          "area": "21",
+          "name": "A Matter of Taste",
+          "location": "Ottawa",
+          "award": "LD2Leadership Development Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "1261",
+          "division": "H",
+          "area": "73",
+          "name": "Club Toastmasters Lemoyne de Candiac",
+          "location": "Candiac",
+          "award": "DTMDistinguished Toastmaster",
+          "achievementCount": 1
+        },
+        {
+          "club": "1261",
+          "division": "H",
+          "area": "73",
+          "name": "Club Toastmasters Lemoyne de Candiac",
+          "location": "Candiac",
+          "award": "EH5Engaging Humor Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "1296822",
+          "division": "F",
+          "area": "54",
+          "name": "Les Explosifs De Laval",
+          "location": "Ste-Rose Laval",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "1296822",
+          "division": "F",
+          "area": "54",
+          "name": "Les Explosifs De Laval",
+          "location": "Ste-Rose Laval",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "1296822",
+          "division": "F",
+          "area": "54",
+          "name": "Les Explosifs De Laval",
+          "location": "Ste-Rose Laval",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "1296822",
+          "division": "F",
+          "area": "54",
+          "name": "Les Explosifs De Laval",
+          "location": "Ste-Rose Laval",
+          "award": "IP5Innovative Planning Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "1417584",
+          "division": "I",
+          "area": "93",
+          "name": "Extra-Expressif",
+          "location": "Trois-Rivieres",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "1430971",
+          "division": "B",
+          "area": "11",
+          "name": "Valley Vintage Advanced",
+          "location": "Kanata",
+          "award": "LD4Leadership Development Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "1430971",
+          "division": "B",
+          "area": "11",
+          "name": "Valley Vintage Advanced",
+          "location": "Kanata",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "1479548",
+          "division": "F",
+          "area": "50",
+          "name": "Saint-Lazare Inspirers",
+          "location": "st-lazare",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 2
+        },
+        {
+          "club": "1570163",
+          "division": "A",
+          "area": "2",
+          "name": "Downtown Kingston Toastmasters",
+          "location": "Kingston",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "1570163",
+          "division": "A",
+          "area": "2",
+          "name": "Downtown Kingston Toastmasters",
+          "location": "Kingston",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "1590426",
+          "division": "A",
+          "area": "3",
+          "name": "Smiths Falls Toastmasters",
+          "location": "Smiths Falls",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "1590426",
+          "division": "A",
+          "area": "3",
+          "name": "Smiths Falls Toastmasters",
+          "location": "Smiths Falls",
+          "award": "SR5Strategic Relationships Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "1611",
+          "division": "C",
+          "area": "22",
+          "name": "Club Toastmasters Les Mots Arts",
+          "location": "Gatineau",
+          "award": "IP1Innovative Planning Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "1611",
+          "division": "C",
+          "area": "22",
+          "name": "Club Toastmasters Les Mots Arts",
+          "location": "Gatineau",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "1838",
+          "division": "I",
+          "area": "90",
+          "name": "Club Toastmasters Quebec",
+          "location": "Québec",
+          "award": "TC5Team Collaboration Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "1838",
+          "division": "I",
+          "area": "90",
+          "name": "Club Toastmasters Quebec",
+          "location": "Québec",
+          "award": "EH4Engaging Humor Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "1840",
+          "division": "I",
+          "area": "91",
+          "name": "Club Toastmasters La Causerie",
+          "location": "Rimouski",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "1935",
+          "division": "D",
+          "area": "33",
+          "name": "Ottawa Toastmasters Club",
+          "location": "Ottawa",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "1935",
+          "division": "D",
+          "area": "33",
+          "name": "Ottawa Toastmasters Club",
+          "location": "Ottawa",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "1935",
+          "division": "D",
+          "area": "33",
+          "name": "Ottawa Toastmasters Club",
+          "location": "Ottawa",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "1935",
+          "division": "D",
+          "area": "33",
+          "name": "Ottawa Toastmasters Club",
+          "location": "Ottawa",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "2190",
+          "division": "C",
+          "area": "24",
+          "name": "Transport Canada Toastmasters",
+          "location": "Ottawa",
+          "award": "TC4Team Collaboration Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "2190",
+          "division": "C",
+          "area": "24",
+          "name": "Transport Canada Toastmasters",
+          "location": "Ottawa",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "2273",
+          "division": "H",
+          "area": "73",
+          "name": "Club Toastmasters Rive-Sud",
+          "location": "Longueuil",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "2501",
+          "division": "I",
+          "area": "90",
+          "name": "Club Toastmasters de Charlesbourg",
+          "location": "Quebec",
+          "award": "IP5Innovative Planning Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "2587",
+          "division": "H",
+          "area": "71",
+          "name": "Toastmasters Quartier International",
+          "location": "Montreal",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "2722",
+          "division": "C",
+          "area": "20",
+          "name": "Capital Club",
+          "location": "Ottawa",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "2722",
+          "division": "C",
+          "area": "20",
+          "name": "Capital Club",
+          "location": "Ottawa",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "2722",
+          "division": "C",
+          "area": "20",
+          "name": "Capital Club",
+          "location": "Ottawa",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "28675542",
+          "division": "A",
+          "area": "2",
+          "name": "Mastermind Leaders",
+          "location": "Ottawa",
+          "award": "EH2Engaging Humor Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "28675542",
+          "division": "A",
+          "area": "2",
+          "name": "Mastermind Leaders",
+          "location": "Ottawa",
+          "award": "EH3Engaging Humor Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "28675542",
+          "division": "A",
+          "area": "2",
+          "name": "Mastermind Leaders",
+          "location": "Ottawa",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 3
+        },
+        {
+          "club": "28675542",
+          "division": "A",
+          "area": "2",
+          "name": "Mastermind Leaders",
+          "location": "Ottawa",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "28675542",
+          "division": "A",
+          "area": "2",
+          "name": "Mastermind Leaders",
+          "location": "Ottawa",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "28675542",
+          "division": "A",
+          "area": "2",
+          "name": "Mastermind Leaders",
+          "location": "Ottawa",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "28675542",
+          "division": "A",
+          "area": "2",
+          "name": "Mastermind Leaders",
+          "location": "Ottawa",
+          "award": "VC5Visionary Communication Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "28675542",
+          "division": "A",
+          "area": "2",
+          "name": "Mastermind Leaders",
+          "location": "Ottawa",
+          "award": "MS5Motivational Strategies Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "28677010",
+          "division": "H",
+          "area": "71",
+          "name": "Club Progresser, Bâtir et Inspirer (PBI)",
+          "location": "Montreal",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28677884",
+          "division": "G",
+          "area": "62",
+          "name": "Morgan Stanley Speak Easy",
+          "location": "Montreal",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678043",
+          "division": "B",
+          "area": "11",
+          "name": "Ottawa Muslim Speakers Club",
+          "location": "Ottawa",
+          "award": "PI3Persuasive Influence Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678196",
+          "division": "D",
+          "area": "33",
+          "name": "MDS Aero Toastmasters",
+          "location": "Ottawa",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678526",
+          "division": "B",
+          "area": "13",
+          "name": "Leaders Go First Toastmasters",
+          "location": "Ottawa",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678526",
+          "division": "B",
+          "area": "13",
+          "name": "Leaders Go First Toastmasters",
+          "location": "Ottawa",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "28678526",
+          "division": "B",
+          "area": "13",
+          "name": "Leaders Go First Toastmasters",
+          "location": "Ottawa",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678526",
+          "division": "B",
+          "area": "13",
+          "name": "Leaders Go First Toastmasters",
+          "location": "Ottawa",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678571",
+          "division": "I",
+          "area": "93",
+          "name": "Club Toastmasters de Drummondville",
+          "location": "Drummondville",
+          "award": "MS5Motivational Strategies Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678571",
+          "division": "I",
+          "area": "93",
+          "name": "Club Toastmasters de Drummondville",
+          "location": "Drummondville",
+          "award": "SR4Strategic Relationships Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678571",
+          "division": "I",
+          "area": "93",
+          "name": "Club Toastmasters de Drummondville",
+          "location": "Drummondville",
+          "award": "SR5Strategic Relationships Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678571",
+          "division": "I",
+          "area": "93",
+          "name": "Club Toastmasters de Drummondville",
+          "location": "Drummondville",
+          "award": "PI5Persuasive Influence Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "28678571",
+          "division": "I",
+          "area": "93",
+          "name": "Club Toastmasters de Drummondville",
+          "location": "Drummondville",
+          "award": "IP3Innovative Planning Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "28679190",
+          "division": "G",
+          "area": "62",
+          "name": "Club Toastmasters Les Entrepreneurs de Montreal",
+          "location": "Montreal",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "28679953",
+          "division": "G",
+          "area": "63",
+          "name": "Club EloHQuence",
+          "location": "Montreal",
+          "award": "MS4Motivational Strategies Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "2959",
+          "division": "A",
+          "area": "2",
+          "name": "Seaway Toastmasters Club of Cornwall",
+          "location": "Cornwall",
+          "award": "EH1Engaging Humor Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "3200",
+          "division": "G",
+          "area": "62",
+          "name": "Club Modérateur/Moderator Club",
+          "location": "Montreal",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "3200",
+          "division": "G",
+          "area": "62",
+          "name": "Club Modérateur/Moderator Club",
+          "location": "Montreal",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3200",
+          "division": "G",
+          "area": "62",
+          "name": "Club Modérateur/Moderator Club",
+          "location": "Montreal",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "3221",
+          "division": "C",
+          "area": "23",
+          "name": "Odyssea",
+          "location": "Gatineau",
+          "award": "EC4Effective Coaching Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "3221",
+          "division": "C",
+          "area": "23",
+          "name": "Odyssea",
+          "location": "Gatineau",
+          "award": "EH1Engaging Humor Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "3319",
+          "division": "B",
+          "area": "14",
+          "name": "Carlingwood Club",
+          "location": "Ottawa",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "3319",
+          "division": "B",
+          "area": "14",
+          "name": "Carlingwood Club",
+          "location": "Ottawa",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3604",
+          "division": "F",
+          "area": "54",
+          "name": "Club Dynamique De Laval",
+          "location": "Laval",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "3619",
+          "division": "D",
+          "area": "31",
+          "name": "Speakers Corner Club",
+          "location": "Ottawa",
+          "award": "EH2Engaging Humor Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3619",
+          "division": "D",
+          "area": "31",
+          "name": "Speakers Corner Club",
+          "location": "Ottawa",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "3619",
+          "division": "D",
+          "area": "31",
+          "name": "Speakers Corner Club",
+          "location": "Ottawa",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3619",
+          "division": "D",
+          "area": "31",
+          "name": "Speakers Corner Club",
+          "location": "Ottawa",
+          "award": "PI3Persuasive Influence Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "3619",
+          "division": "D",
+          "area": "31",
+          "name": "Speakers Corner Club",
+          "location": "Ottawa",
+          "award": "IP5Innovative Planning Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "3620126",
+          "division": "F",
+          "area": "54",
+          "name": "Laval Achievers",
+          "location": "Laval",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "3620126",
+          "division": "F",
+          "area": "54",
+          "name": "Laval Achievers",
+          "location": "Laval",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3620126",
+          "division": "F",
+          "area": "54",
+          "name": "Laval Achievers",
+          "location": "Laval",
+          "award": "EC5Effective Coaching Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "3620126",
+          "division": "F",
+          "area": "54",
+          "name": "Laval Achievers",
+          "location": "Laval",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3620126",
+          "division": "F",
+          "area": "54",
+          "name": "Laval Achievers",
+          "location": "Laval",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3656",
+          "division": "D",
+          "area": "31",
+          "name": "East Ottawa Toastmasters Club",
+          "location": "Ottawa",
+          "award": "DTMDistinguished Toastmaster",
+          "achievementCount": 1
+        },
+        {
+          "club": "3656",
+          "division": "D",
+          "area": "31",
+          "name": "East Ottawa Toastmasters Club",
+          "location": "Ottawa",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "3656",
+          "division": "D",
+          "area": "31",
+          "name": "East Ottawa Toastmasters Club",
+          "location": "Ottawa",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3747",
+          "division": "I",
+          "area": "93",
+          "name": "Club Toastmasters de Sherbrooke",
+          "location": "SHERBROOKE",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3747",
+          "division": "I",
+          "area": "93",
+          "name": "Club Toastmasters de Sherbrooke",
+          "location": "SHERBROOKE",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "3886",
+          "division": "A",
+          "area": "2",
+          "name": "Thousand Islands Club",
+          "location": "Brockville",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "3950903",
+          "division": "B",
+          "area": "13",
+          "name": "Percolators Breakfast Club",
+          "location": "Ottawa",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4311",
+          "division": "G",
+          "area": "63",
+          "name": "McGill Club",
+          "location": "Montreal",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "DTMDistinguished Toastmaster",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 2
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "EC2Effective Coaching Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "EC3Effective Coaching Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "DL5Dynamic Leadership Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "PI5Persuasive Influence Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "PI3Persuasive Influence Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4319",
+          "division": "F",
+          "area": "53",
+          "name": "Les Communicateurs de la Rive-Nord",
+          "location": "Laval",
+          "award": "PI4Persuasive Influence Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4468",
+          "division": "F",
+          "area": "50",
+          "name": "Beaconsfield Toastmasters Club",
+          "location": "Kirkland",
+          "award": "EH2Engaging Humor Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4468",
+          "division": "F",
+          "area": "50",
+          "name": "Beaconsfield Toastmasters Club",
+          "location": "Kirkland",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4468",
+          "division": "F",
+          "area": "50",
+          "name": "Beaconsfield Toastmasters Club",
+          "location": "Kirkland",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4468",
+          "division": "F",
+          "area": "50",
+          "name": "Beaconsfield Toastmasters Club",
+          "location": "Kirkland",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4544358",
+          "division": "A",
+          "area": "3",
+          "name": "Stittsville Toastmasters Club",
+          "location": "Stittsville",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "4544358",
+          "division": "A",
+          "area": "3",
+          "name": "Stittsville Toastmasters Club",
+          "location": "Stittsville",
+          "award": "EH4Engaging Humor Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "4544358",
+          "division": "A",
+          "area": "3",
+          "name": "Stittsville Toastmasters Club",
+          "location": "Stittsville",
+          "award": "EH5Engaging Humor Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "4544358",
+          "division": "A",
+          "area": "3",
+          "name": "Stittsville Toastmasters Club",
+          "location": "Stittsville",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "4544358",
+          "division": "A",
+          "area": "3",
+          "name": "Stittsville Toastmasters Club",
+          "location": "Stittsville",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4544358",
+          "division": "A",
+          "area": "3",
+          "name": "Stittsville Toastmasters Club",
+          "location": "Stittsville",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "4544358",
+          "division": "A",
+          "area": "3",
+          "name": "Stittsville Toastmasters Club",
+          "location": "Stittsville",
+          "award": "PI5Persuasive Influence Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "4673",
+          "division": "F",
+          "area": "52",
+          "name": "Bombardier Canadair Toastmasters Club",
+          "location": "Dorval",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "4673",
+          "division": "F",
+          "area": "52",
+          "name": "Bombardier Canadair Toastmasters Club",
+          "location": "Dorval",
+          "award": "VC5Visionary Communication Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "5097",
+          "division": "I",
+          "area": "92",
+          "name": "Club Toastmasters de Sainte-Foy",
+          "location": "Quebec",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 2
+        },
+        {
+          "club": "5097",
+          "division": "I",
+          "area": "92",
+          "name": "Club Toastmasters de Sainte-Foy",
+          "location": "Quebec",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5097",
+          "division": "I",
+          "area": "92",
+          "name": "Club Toastmasters de Sainte-Foy",
+          "location": "Quebec",
+          "award": "EH1Engaging Humor Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5097",
+          "division": "I",
+          "area": "92",
+          "name": "Club Toastmasters de Sainte-Foy",
+          "location": "Quebec",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5097",
+          "division": "I",
+          "area": "92",
+          "name": "Club Toastmasters de Sainte-Foy",
+          "location": "Quebec",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5097",
+          "division": "I",
+          "area": "92",
+          "name": "Club Toastmasters de Sainte-Foy",
+          "location": "Quebec",
+          "award": "IP3Innovative Planning Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5097",
+          "division": "I",
+          "area": "92",
+          "name": "Club Toastmasters de Sainte-Foy",
+          "location": "Quebec",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5097",
+          "division": "I",
+          "area": "92",
+          "name": "Club Toastmasters de Sainte-Foy",
+          "location": "Quebec",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5108",
+          "division": "B",
+          "area": "14",
+          "name": "Bells Corners Toastmasters Club",
+          "location": "Ottawa",
+          "award": "SR2Strategic Relationships Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5108",
+          "division": "B",
+          "area": "14",
+          "name": "Bells Corners Toastmasters Club",
+          "location": "Ottawa",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5108",
+          "division": "B",
+          "area": "14",
+          "name": "Bells Corners Toastmasters Club",
+          "location": "Ottawa",
+          "award": "PI4Persuasive Influence Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5108",
+          "division": "B",
+          "area": "14",
+          "name": "Bells Corners Toastmasters Club",
+          "location": "Ottawa",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5108",
+          "division": "B",
+          "area": "14",
+          "name": "Bells Corners Toastmasters Club",
+          "location": "Ottawa",
+          "award": "EH3Engaging Humor Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5468876",
+          "division": "G",
+          "area": "61",
+          "name": "Beyond Words Advanced Toastmasters",
+          "location": "Montreal",
+          "award": "EH4Engaging Humor Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5488489",
+          "division": "F",
+          "area": "52",
+          "name": "CAE Toastmasters",
+          "location": "Saint-Laurent",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5488489",
+          "division": "F",
+          "area": "52",
+          "name": "CAE Toastmasters",
+          "location": "Saint-Laurent",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5488489",
+          "division": "F",
+          "area": "52",
+          "name": "CAE Toastmasters",
+          "location": "Saint-Laurent",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "5488489",
+          "division": "F",
+          "area": "52",
+          "name": "CAE Toastmasters",
+          "location": "Saint-Laurent",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5488489",
+          "division": "F",
+          "area": "52",
+          "name": "CAE Toastmasters",
+          "location": "Saint-Laurent",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5488489",
+          "division": "F",
+          "area": "52",
+          "name": "CAE Toastmasters",
+          "location": "Saint-Laurent",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5488489",
+          "division": "F",
+          "area": "52",
+          "name": "CAE Toastmasters",
+          "location": "Saint-Laurent",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5488489",
+          "division": "F",
+          "area": "52",
+          "name": "CAE Toastmasters",
+          "location": "Saint-Laurent",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5600",
+          "division": "F",
+          "area": "52",
+          "name": "Dorval City Toastmasters Club",
+          "location": "Dorval",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5651",
+          "division": "I",
+          "area": "91",
+          "name": "Quest Toastmasters Club",
+          "location": "St-Foy",
+          "award": "EH3Engaging Humor Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5833",
+          "division": "B",
+          "area": "10",
+          "name": "Pembroke & Area Club",
+          "location": "Virtual",
+          "award": "EH4Engaging Humor Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5833",
+          "division": "B",
+          "area": "10",
+          "name": "Pembroke & Area Club",
+          "location": "Virtual",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "MS5Motivational Strategies Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 2
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "VC5Visionary Communication Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "EH2Engaging Humor Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "EH3Engaging Humor Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5842",
+          "division": "F",
+          "area": "53",
+          "name": "St Eustache Club",
+          "location": "Saint-Eustache",
+          "award": "PI4Persuasive Influence Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "5884192",
+          "division": "A",
+          "area": "4",
+          "name": "Ottawa Collab Toastmasters",
+          "location": "Ottawa",
+          "award": "EH1Engaging Humor Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "5884192",
+          "division": "A",
+          "area": "4",
+          "name": "Ottawa Collab Toastmasters",
+          "location": "Ottawa",
+          "award": "LD5Leadership Development Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "5884192",
+          "division": "A",
+          "area": "4",
+          "name": "Ottawa Collab Toastmasters",
+          "location": "Ottawa",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "6036809",
+          "division": "G",
+          "area": "64",
+          "name": "Executive MBA McGill-HEC Montreal",
+          "location": "Montreal",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "606",
+          "division": "G",
+          "area": "62",
+          "name": "St Lawrence Toastmasters Club",
+          "location": "Montreal",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "606",
+          "division": "G",
+          "area": "62",
+          "name": "St Lawrence Toastmasters Club",
+          "location": "Montreal",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "606",
+          "division": "G",
+          "area": "62",
+          "name": "St Lawrence Toastmasters Club",
+          "location": "Montreal",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "606",
+          "division": "G",
+          "area": "62",
+          "name": "St Lawrence Toastmasters Club",
+          "location": "Montreal",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "606",
+          "division": "G",
+          "area": "62",
+          "name": "St Lawrence Toastmasters Club",
+          "location": "Montreal",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "606",
+          "division": "G",
+          "area": "62",
+          "name": "St Lawrence Toastmasters Club",
+          "location": "Montreal",
+          "award": "DL2Dynamic Leadership Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "6207",
+          "division": "G",
+          "area": "63",
+          "name": "Concordia Toastmasters Club",
+          "location": "Montreal",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "6236",
+          "division": "B",
+          "area": "13",
+          "name": "Health Canada Club",
+          "location": "Ottawa",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "640929",
+          "division": "A",
+          "area": "4",
+          "name": "Barrhaven Toastmasters",
+          "location": "Ottawa",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "640929",
+          "division": "A",
+          "area": "4",
+          "name": "Barrhaven Toastmasters",
+          "location": "Ottawa",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "640929",
+          "division": "A",
+          "area": "4",
+          "name": "Barrhaven Toastmasters",
+          "location": "Ottawa",
+          "award": "VC5Visionary Communication Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "6432",
+          "division": "C",
+          "area": "21",
+          "name": "EDC Ottawa Toastmasters Club",
+          "location": "Ottawa",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "6483",
+          "division": "G",
+          "area": "61",
+          "name": "CN Collaborators Club",
+          "location": "Montreal",
+          "award": "EH5Engaging Humor Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "6483",
+          "division": "G",
+          "area": "61",
+          "name": "CN Collaborators Club",
+          "location": "Montreal",
+          "award": "PI4Persuasive Influence Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "654417",
+          "division": "B",
+          "area": "13",
+          "name": "Management Development for Women Club",
+          "location": "Gatineau",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "654417",
+          "division": "B",
+          "area": "13",
+          "name": "Management Development for Women Club",
+          "location": "Gatineau",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "654417",
+          "division": "B",
+          "area": "13",
+          "name": "Management Development for Women Club",
+          "location": "Gatineau",
+          "award": "LD1Leadership Development Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "6552",
+          "division": "H",
+          "area": "73",
+          "name": "Expression Club",
+          "location": "Saint-Jean-sur-Richelieu",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "6705",
+          "division": "I",
+          "area": "91",
+          "name": "St-Georges de Beauce Toastmasters Club",
+          "location": "Saint-Georges Est",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "6705",
+          "division": "I",
+          "area": "91",
+          "name": "St-Georges de Beauce Toastmasters Club",
+          "location": "Saint-Georges Est",
+          "award": "EH2Engaging Humor Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "676481",
+          "division": "B",
+          "area": "14",
+          "name": "Ottawa Community Toastmasters",
+          "location": "Nepean",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "684093",
+          "division": "F",
+          "area": "54",
+          "name": "Club avancé international",
+          "location": "Montreal",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "684093",
+          "division": "F",
+          "area": "54",
+          "name": "Club avancé international",
+          "location": "Montreal",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "692750",
+          "division": "D",
+          "area": "33",
+          "name": "Creativity + Toastmasters",
+          "location": "Ottawa",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "692750",
+          "division": "D",
+          "area": "33",
+          "name": "Creativity + Toastmasters",
+          "location": "Ottawa",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "6942",
+          "division": "I",
+          "area": "92",
+          "name": "Les Communicateurs De Quebec",
+          "location": "Quebec",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7238597",
+          "division": "C",
+          "area": "23",
+          "name": "90 Elgin Toastmasters",
+          "location": "Ottawa",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7238597",
+          "division": "C",
+          "area": "23",
+          "name": "90 Elgin Toastmasters",
+          "location": "Ottawa",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7238597",
+          "division": "C",
+          "area": "23",
+          "name": "90 Elgin Toastmasters",
+          "location": "Ottawa",
+          "award": "TC4Team Collaboration Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "7238597",
+          "division": "C",
+          "area": "23",
+          "name": "90 Elgin Toastmasters",
+          "location": "Ottawa",
+          "award": "TC5Team Collaboration Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "7238597",
+          "division": "C",
+          "area": "23",
+          "name": "90 Elgin Toastmasters",
+          "location": "Ottawa",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7258",
+          "division": "C",
+          "area": "20",
+          "name": "Advanced Speakers Club",
+          "location": "Ottawa",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7258",
+          "division": "C",
+          "area": "20",
+          "name": "Advanced Speakers Club",
+          "location": "Ottawa",
+          "award": "BT1Basic Training For Toastmasters Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7258",
+          "division": "C",
+          "area": "20",
+          "name": "Advanced Speakers Club",
+          "location": "Ottawa",
+          "award": "DL3Dynamic Leadership Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "7538599",
+          "division": "C",
+          "area": "22",
+          "name": "Club Toastmasters francophone d'Ottawa",
+          "location": "Ottawa",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "7592011",
+          "division": "H",
+          "area": "71",
+          "name": "Toastmasters Banque Nationale",
+          "location": "Montreal",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7592011",
+          "division": "H",
+          "area": "71",
+          "name": "Toastmasters Banque Nationale",
+          "location": "Montreal",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7634790",
+          "division": "B",
+          "area": "12",
+          "name": "Quackmasters",
+          "location": "Ottawa",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7634790",
+          "division": "B",
+          "area": "12",
+          "name": "Quackmasters",
+          "location": "Ottawa",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "7704900",
+          "division": "H",
+          "area": "70",
+          "name": "DesjLead",
+          "location": "Montreal",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7704900",
+          "division": "H",
+          "area": "70",
+          "name": "DesjLead",
+          "location": "Montreal",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "7704900",
+          "division": "H",
+          "area": "70",
+          "name": "DesjLead",
+          "location": "Montreal",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "7718892",
+          "division": "B",
+          "area": "11",
+          "name": "NDHQ Carling Toastmasters",
+          "location": "Nepean",
+          "award": "TC1Team Collaboration Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "7749720",
+          "division": "B",
+          "area": "12",
+          "name": "Ericsson Ottawa Toastmasters Club",
+          "location": "Kanata",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "777940",
+          "division": "B",
+          "area": "10",
+          "name": "Silver & Wiser Toastmasters",
+          "location": "online only",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "777940",
+          "division": "B",
+          "area": "10",
+          "name": "Silver & Wiser Toastmasters",
+          "location": "online only",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "777940",
+          "division": "B",
+          "area": "10",
+          "name": "Silver & Wiser Toastmasters",
+          "location": "online only",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "777940",
+          "division": "B",
+          "area": "10",
+          "name": "Silver & Wiser Toastmasters",
+          "location": "online only",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "777940",
+          "division": "B",
+          "area": "10",
+          "name": "Silver & Wiser Toastmasters",
+          "location": "online only",
+          "award": "VC5Visionary Communication Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "777940",
+          "division": "B",
+          "area": "10",
+          "name": "Silver & Wiser Toastmasters",
+          "location": "online only",
+          "award": "EH3Engaging Humor Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "777940",
+          "division": "B",
+          "area": "10",
+          "name": "Silver & Wiser Toastmasters",
+          "location": "online only",
+          "award": "TC4Team Collaboration Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "777940",
+          "division": "B",
+          "area": "10",
+          "name": "Silver & Wiser Toastmasters",
+          "location": "online only",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7833019",
+          "division": "A",
+          "area": "1",
+          "name": "KEYS Toastmasters Club",
+          "location": "Kingston",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "7833019",
+          "division": "A",
+          "area": "1",
+          "name": "KEYS Toastmasters Club",
+          "location": "Kingston",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "8032",
+          "division": "A",
+          "area": "3",
+          "name": "North Grenville Club",
+          "location": "Kemptville",
+          "award": "MS2Motivational Strategies Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "8032",
+          "division": "A",
+          "area": "3",
+          "name": "North Grenville Club",
+          "location": "Kemptville",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "813731",
+          "division": "H",
+          "area": "70",
+          "name": "Leaders En Action",
+          "location": "Montreal",
+          "award": "DL1Dynamic Leadership Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "813731",
+          "division": "H",
+          "area": "70",
+          "name": "Leaders En Action",
+          "location": "Montreal",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 1
+        },
+        {
+          "club": "813731",
+          "division": "H",
+          "area": "70",
+          "name": "Leaders En Action",
+          "location": "Montreal",
+          "award": "DL4Dynamic Leadership Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "813731",
+          "division": "H",
+          "area": "70",
+          "name": "Leaders En Action",
+          "location": "Montreal",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "813731",
+          "division": "H",
+          "area": "70",
+          "name": "Leaders En Action",
+          "location": "Montreal",
+          "award": "EH2Engaging Humor Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "813731",
+          "division": "H",
+          "area": "70",
+          "name": "Leaders En Action",
+          "location": "Montreal",
+          "award": "DL5Dynamic Leadership Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "813731",
+          "division": "H",
+          "area": "70",
+          "name": "Leaders En Action",
+          "location": "Montreal",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "813731",
+          "division": "H",
+          "area": "70",
+          "name": "Leaders En Action",
+          "location": "Montreal",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "835",
+          "division": "G",
+          "area": "61",
+          "name": "Words On Wings (WOW) Club",
+          "location": "Montreal",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "835",
+          "division": "G",
+          "area": "61",
+          "name": "Words On Wings (WOW) Club",
+          "location": "Montreal",
+          "award": "LD5Leadership Development Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "8519",
+          "division": "H",
+          "area": "72",
+          "name": "St Leonard Toastmasters Club",
+          "location": "Montreal",
+          "award": "DTMDistinguished Toastmaster",
+          "achievementCount": 1
+        },
+        {
+          "club": "8519",
+          "division": "H",
+          "area": "72",
+          "name": "St Leonard Toastmasters Club",
+          "location": "Montreal",
+          "award": "MS4Motivational Strategies Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "8519",
+          "division": "H",
+          "area": "72",
+          "name": "St Leonard Toastmasters Club",
+          "location": "Montreal",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "8519",
+          "division": "H",
+          "area": "72",
+          "name": "St Leonard Toastmasters Club",
+          "location": "Montreal",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "8658",
+          "division": "H",
+          "area": "73",
+          "name": "Les Orateurs Distingués",
+          "location": "Saint-Hubert (Longueuil)",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "8658",
+          "division": "H",
+          "area": "73",
+          "name": "Les Orateurs Distingués",
+          "location": "Saint-Hubert (Longueuil)",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "8861",
+          "division": "C",
+          "area": "22",
+          "name": "Le Parolier Toastmasters Club",
+          "location": "Gatineau",
+          "award": "MS4Motivational Strategies Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "8861",
+          "division": "C",
+          "area": "22",
+          "name": "Le Parolier Toastmasters Club",
+          "location": "Gatineau",
+          "award": "VC4Visionary Communication Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "901116",
+          "division": "H",
+          "area": "72",
+          "name": "La Seigneurie De Boucherville",
+          "location": "Boucherville",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "901116",
+          "division": "H",
+          "area": "72",
+          "name": "La Seigneurie De Boucherville",
+          "location": "Boucherville",
+          "award": "VC5Visionary Communication Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "901116",
+          "division": "H",
+          "area": "72",
+          "name": "La Seigneurie De Boucherville",
+          "location": "Boucherville",
+          "award": "EH2Engaging Humor Level 2",
+          "achievementCount": 2
+        },
+        {
+          "club": "901116",
+          "division": "H",
+          "area": "72",
+          "name": "La Seigneurie De Boucherville",
+          "location": "Boucherville",
+          "award": "EH1Engaging Humor Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "9122",
+          "division": "B",
+          "area": "11",
+          "name": "Kanata Toastmasters Club",
+          "location": "Kanata",
+          "award": "LD5Leadership Development Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "928",
+          "division": "B",
+          "area": "14",
+          "name": "The Prose Toastmasters Club",
+          "location": "NEPEAN",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "928",
+          "division": "B",
+          "area": "14",
+          "name": "The Prose Toastmasters Club",
+          "location": "NEPEAN",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "9361",
+          "division": "H",
+          "area": "71",
+          "name": "Club Toastmasters Montréal",
+          "location": "Montreal",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "9472",
+          "division": "B",
+          "area": "13",
+          "name": "Visioneers Advanced Club",
+          "location": "Ottawa",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "9472",
+          "division": "B",
+          "area": "13",
+          "name": "Visioneers Advanced Club",
+          "location": "Ottawa",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "9472",
+          "division": "B",
+          "area": "13",
+          "name": "Visioneers Advanced Club",
+          "location": "Ottawa",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "9560",
+          "division": "A",
+          "area": "1",
+          "name": "CFB Kingston Toastmasters",
+          "location": "Kingston",
+          "award": "SR1Strategic Relationships Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "9750",
+          "division": "F",
+          "area": "50",
+          "name": "Pointe Claire Toastmasters",
+          "location": "Beaconsfield",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "9750",
+          "division": "F",
+          "area": "50",
+          "name": "Pointe Claire Toastmasters",
+          "location": "Beaconsfield",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 3
+        },
+        {
+          "club": "9750",
+          "division": "F",
+          "area": "50",
+          "name": "Pointe Claire Toastmasters",
+          "location": "Beaconsfield",
+          "award": "EH4Engaging Humor Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "9750",
+          "division": "F",
+          "area": "50",
+          "name": "Pointe Claire Toastmasters",
+          "location": "Beaconsfield",
+          "award": "EH5Engaging Humor Level 5",
+          "achievementCount": 1
+        },
+        {
+          "club": "9750",
+          "division": "F",
+          "area": "50",
+          "name": "Pointe Claire Toastmasters",
+          "location": "Beaconsfield",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "9750",
+          "division": "F",
+          "area": "50",
+          "name": "Pointe Claire Toastmasters",
+          "location": "Beaconsfield",
+          "award": "VC2Visionary Communication Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "9886",
+          "division": "G",
+          "area": "61",
+          "name": "Golden Mile Toastmasters Club",
+          "location": "Montreal",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "9886",
+          "division": "G",
+          "area": "61",
+          "name": "Golden Mile Toastmasters Club",
+          "location": "Montreal",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "9886",
+          "division": "G",
+          "area": "61",
+          "name": "Golden Mile Toastmasters Club",
+          "location": "Montreal",
+          "award": "PI2Persuasive Influence Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "9886",
+          "division": "G",
+          "area": "61",
+          "name": "Golden Mile Toastmasters Club",
+          "location": "Montreal",
+          "award": "PI3Persuasive Influence Level 3",
+          "achievementCount": 2
+        },
+        {
+          "club": "9886",
+          "division": "G",
+          "area": "61",
+          "name": "Golden Mile Toastmasters Club",
+          "location": "Montreal",
+          "award": "PI4Persuasive Influence Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "9886",
+          "division": "G",
+          "area": "61",
+          "name": "Golden Mile Toastmasters Club",
+          "location": "Montreal",
+          "award": "PI5Persuasive Influence Level 5",
+          "achievementCount": 2
+        },
+        {
+          "club": "9886",
+          "division": "G",
+          "area": "61",
+          "name": "Golden Mile Toastmasters Club",
+          "location": "Montreal",
+          "award": "DL4Dynamic Leadership Level 4",
+          "achievementCount": 1
+        },
+        {
+          "club": "999225",
+          "division": "G",
+          "area": "64",
+          "name": "HEC Toastmasters",
+          "location": "Montreal",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "999225",
+          "division": "G",
+          "area": "64",
+          "name": "HEC Toastmasters",
+          "location": "Montreal",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        }
+      ]
+    },
+    "educationMembers": {
+      "sources": [
+        {
+          "reportType": "education-achievements",
+          "tableId": "c757d313-f815-4b22-93dc-b839d04cec7b",
+          "asOf": "October 14, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1009147",
+          "membersWithAward": 3
+        },
+        {
+          "club": "1036983",
+          "membersWithAward": 3
+        },
+        {
+          "club": "1100158",
+          "membersWithAward": 1
+        },
+        {
+          "club": "1106180",
+          "membersWithAward": 2
+        },
+        {
+          "club": "1261",
+          "membersWithAward": 2
+        },
+        {
+          "club": "1296822",
+          "membersWithAward": 4
+        },
+        {
+          "club": "1417584",
+          "membersWithAward": 1
+        },
+        {
+          "club": "1430971",
+          "membersWithAward": 2
+        },
+        {
+          "club": "1479548",
+          "membersWithAward": 2
+        },
+        {
+          "club": "1570163",
+          "membersWithAward": 5
+        },
+        {
+          "club": "1590426",
+          "membersWithAward": 2
+        },
+        {
+          "club": "1611",
+          "membersWithAward": 2
+        },
+        {
+          "club": "1838",
+          "membersWithAward": 2
+        },
+        {
+          "club": "1840",
+          "membersWithAward": 1
+        },
+        {
+          "club": "1935",
+          "membersWithAward": 5
+        },
+        {
+          "club": "2190",
+          "membersWithAward": 2
+        },
+        {
+          "club": "2273",
+          "membersWithAward": 1
+        },
+        {
+          "club": "2501",
+          "membersWithAward": 1
+        },
+        {
+          "club": "2587",
+          "membersWithAward": 1
+        },
+        {
+          "club": "2722",
+          "membersWithAward": 4
+        },
+        {
+          "club": "28675542",
+          "membersWithAward": 4
+        },
+        {
+          "club": "28677010",
+          "membersWithAward": 1
+        },
+        {
+          "club": "28677884",
+          "membersWithAward": 1
+        },
+        {
+          "club": "28678043",
+          "membersWithAward": 1
+        },
+        {
+          "club": "28678196",
+          "membersWithAward": 1
+        },
+        {
+          "club": "28678526",
+          "membersWithAward": 3
+        },
+        {
+          "club": "28678571",
+          "membersWithAward": 2
+        },
+        {
+          "club": "28679190",
+          "membersWithAward": 1
+        },
+        {
+          "club": "28679953",
+          "membersWithAward": 1
+        },
+        {
+          "club": "2959",
+          "membersWithAward": 1
+        },
+        {
+          "club": "3200",
+          "membersWithAward": 3
+        },
+        {
+          "club": "3221",
+          "membersWithAward": 2
+        },
+        {
+          "club": "3319",
+          "membersWithAward": 2
+        },
+        {
+          "club": "3604",
+          "membersWithAward": 1
+        },
+        {
+          "club": "3619",
+          "membersWithAward": 4
+        },
+        {
+          "club": "3620126",
+          "membersWithAward": 4
+        },
+        {
+          "club": "3656",
+          "membersWithAward": 3
+        },
+        {
+          "club": "3747",
+          "membersWithAward": 2
+        },
+        {
+          "club": "3886",
+          "membersWithAward": 1
+        },
+        {
+          "club": "3950903",
+          "membersWithAward": 1
+        },
+        {
+          "club": "4311",
+          "membersWithAward": 1
+        },
+        {
+          "club": "4319",
+          "membersWithAward": 3
+        },
+        {
+          "club": "4468",
+          "membersWithAward": 4
+        },
+        {
+          "club": "4544358",
+          "membersWithAward": 7
+        },
+        {
+          "club": "4673",
+          "membersWithAward": 2
+        },
+        {
+          "club": "5097",
+          "membersWithAward": 9
+        },
+        {
+          "club": "5108",
+          "membersWithAward": 4
+        },
+        {
+          "club": "5468876",
+          "membersWithAward": 1
+        },
+        {
+          "club": "5488489",
+          "membersWithAward": 6
+        },
+        {
+          "club": "5600",
+          "membersWithAward": 1
+        },
+        {
+          "club": "5651",
+          "membersWithAward": 1
+        },
+        {
+          "club": "5833",
+          "membersWithAward": 2
+        },
+        {
+          "club": "5842",
+          "membersWithAward": 7
+        },
+        {
+          "club": "5884192",
+          "membersWithAward": 3
+        },
+        {
+          "club": "6036809",
+          "membersWithAward": 1
+        },
+        {
+          "club": "606",
+          "membersWithAward": 7
+        },
+        {
+          "club": "6207",
+          "membersWithAward": 2
+        },
+        {
+          "club": "6236",
+          "membersWithAward": 1
+        },
+        {
+          "club": "640929",
+          "membersWithAward": 3
+        },
+        {
+          "club": "6432",
+          "membersWithAward": 1
+        },
+        {
+          "club": "6483",
+          "membersWithAward": 2
+        },
+        {
+          "club": "654417",
+          "membersWithAward": 3
+        },
+        {
+          "club": "6552",
+          "membersWithAward": 1
+        },
+        {
+          "club": "6705",
+          "membersWithAward": 2
+        },
+        {
+          "club": "676481",
+          "membersWithAward": 1
+        },
+        {
+          "club": "684093",
+          "membersWithAward": 1
+        },
+        {
+          "club": "692750",
+          "membersWithAward": 2
+        },
+        {
+          "club": "6942",
+          "membersWithAward": 1
+        },
+        {
+          "club": "7238597",
+          "membersWithAward": 4
+        },
+        {
+          "club": "7258",
+          "membersWithAward": 3
+        },
+        {
+          "club": "7538599",
+          "membersWithAward": 1
+        },
+        {
+          "club": "7592011",
+          "membersWithAward": 1
+        },
+        {
+          "club": "7634790",
+          "membersWithAward": 2
+        },
+        {
+          "club": "7704900",
+          "membersWithAward": 2
+        },
+        {
+          "club": "7718892",
+          "membersWithAward": 1
+        },
+        {
+          "club": "7749720",
+          "membersWithAward": 1
+        },
+        {
+          "club": "777940",
+          "membersWithAward": 5
+        },
+        {
+          "club": "7833019",
+          "membersWithAward": 2
+        },
+        {
+          "club": "8032",
+          "membersWithAward": 2
+        },
+        {
+          "club": "813731",
+          "membersWithAward": 8
+        },
+        {
+          "club": "835",
+          "membersWithAward": 2
+        },
+        {
+          "club": "8519",
+          "membersWithAward": 3
+        },
+        {
+          "club": "8658",
+          "membersWithAward": 2
+        },
+        {
+          "club": "8861",
+          "membersWithAward": 2
+        },
+        {
+          "club": "901116",
+          "membersWithAward": 4
+        },
+        {
+          "club": "9122",
+          "membersWithAward": 1
+        },
+        {
+          "club": "928",
+          "membersWithAward": 2
+        },
+        {
+          "club": "9361",
+          "membersWithAward": 1
+        },
+        {
+          "club": "9472",
+          "membersWithAward": 1
+        },
+        {
+          "club": "9560",
+          "membersWithAward": 1
+        },
+        {
+          "club": "9750",
+          "membersWithAward": 8
+        },
+        {
+          "club": "9886",
+          "membersWithAward": 5
+        },
+        {
+          "club": "999225",
+          "membersWithAward": 1
+        }
+      ]
+    },
+    "tripleCrown": {
+      "sources": [
+        {
+          "reportType": "triple-crown",
+          "tableId": "b546ef04-e602-4ffc-95c5-5a786aba36b7",
+          "asOf": "October 14, 2026"
+        }
+      ],
+      "summary": {
+        "achieverCount": 9
+      }
+    }
+  }
+}

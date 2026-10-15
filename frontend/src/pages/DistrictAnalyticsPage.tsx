@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
@@ -13,13 +13,11 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import { extractEducationLevels } from '../utils/extractEducationLevels'
-import { computeEducationAwardRankings } from '../utils/educationAwardRankings'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { EducationLevelsCard } from '../components/EducationLevelsCard'
-import { EducationAwardsLeaderboard } from '../components/EducationAwardsLeaderboard'
 import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import { ErrorDisplay } from '../components/ErrorDisplay'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -166,33 +164,18 @@ const DistrictAnalyticsPage: React.FC = () => {
       .slice(0, 10)
   }, [analytics])
 
-  // Education-award leaderboards (#1592) — per-club ratios over the July 1
-  // membership base, from the reports dataset the analytics hook already
-  // fetched for this snapshot.
-  const educationAwardRankings = useMemo(() => {
-    if (!analytics) return null
-    return computeEducationAwardRankings(
-      analytics.allClubs.map(club => ({
-        clubId: club.clubId,
-        clubName: club.clubName,
-        divisionId: club.divisionId,
-        areaId: club.areaId,
-        membershipBase: club.membershipBase ?? 0,
-      })),
-      analytics.districtReports ?? null
-    )
-  }, [analytics])
-
-  // Prior vs current PY for the leaderboards' "unavailable" copy (#1592) —
-  // from the page's own PY selection against the district's newest PY with
-  // data (data-driven, like useDefaultProgramYear), never reports.programYear.
-  const isPriorProgramYear =
-    effectiveProgramYear !== null &&
-    availableProgramYears[0] !== undefined &&
-    effectiveProgramYear.year < availableProgramYears[0].year
+  // The education-award leaderboards (#1592) moved to the Education subpage
+  // (#1793). Its URL keeps this page's PY/date params; the old in-page
+  // anchor redirects there so a saved link still lands on the leaderboards.
+  const { search, hash } = useLocation()
 
   if (!districtId) {
     return null
+  }
+
+  const educationLeaderboardsUrl = `/district/${districtId}/education${search}#leaderboards`
+  if (hash === '#education-awards') {
+    return <Navigate to={educationLeaderboardsUrl} replace />
   }
 
   return (
@@ -256,13 +239,17 @@ const DistrictAnalyticsPage: React.FC = () => {
               />
             )}
 
-            {educationAwardRankings && (
-              <EducationAwardsLeaderboard
-                rankings={educationAwardRankings}
-                districtId={districtId}
-                isPriorProgramYear={isPriorProgramYear}
-              />
-            )}
+            <p className="education-moved">
+              The education award leaderboards are now on the{' '}
+              <Link
+                to={educationLeaderboardsUrl}
+                data-testid="education-moved-link"
+                className="education-moved__link"
+              >
+                Education page
+              </Link>
+              .
+            </p>
           </section>
         </div>
       </div>
