@@ -122,6 +122,8 @@ export interface BasemapStyleOptions {
   theme: BasemapTheme
   /** Absolute URL of the `.pmtiles` archive (served with range requests). */
   pmtilesUrl: string
+  /** Origin the glyphs are served from (#2081). Defaults to the page's. */
+  origin?: string
 }
 
 export function buildBasemapStyle({
