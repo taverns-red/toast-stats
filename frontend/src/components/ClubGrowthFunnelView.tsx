@@ -360,7 +360,7 @@ function SponsorsMentors({
   data: ClubGrowthFunnel['sponsorsMentors']
 }) {
   return (
-    <>
+    <div data-testid="growth-sponsors">
       <h4 className="growth-stage__subtitle">Sponsors and mentors</h4>
       {data === null ? (
         <p className="growth-stage__note">
@@ -392,7 +392,7 @@ function SponsorsMentors({
           />
         </>
       )}
-    </>
+    </div>
   )
 }
 

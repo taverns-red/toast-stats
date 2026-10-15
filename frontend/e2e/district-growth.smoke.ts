@@ -1,4 +1,6 @@
 import { test, expect, type Page } from './fixtures/test'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 /* District Club Growth funnel (#1794, epic #1781) — measured on the deployed
  * preview (BASE_URL) at 375 (light + dark) and 1280:
@@ -165,4 +167,90 @@ for (const width of [375, 1280] as const) {
     }
     await assertPrivacy(page)
   })
+}
+
+/* #1794 + #1795 — sponsor/mentor COUNTS under the Chartered stage.
+ *
+ * Live: the CDN gets the `sponsorsMentors` section from the first daily
+ * after PR #2056 (2026-10-16). Until then the page must say the counts are
+ * not available yet; after, it must list them. Either is a pass — the state
+ * is read, not assumed.
+ *
+ * Populated: the reports response is augmented with the RECORDED section
+ * (the real DistrictReportsBuilder over the live D61 2026-06-01 capture), so
+ * the table and phone rows are measured on the preview before the data
+ * lands: 6 clubs, no overflow, no raw TI code, no contact data. */
+const SPONSORS_FIXTURE = JSON.parse(
+  readFileSync(
+    resolve(
+      process.cwd(),
+      'src/__tests__/fixtures/sponsors-mentors-2026-06-01.recorded.json'
+    ),
+    'utf8'
+  )
+) as { sponsorsMentors_2026_06_01: unknown }
+
+const injectSponsors = (page: Page) =>
+  page.route('**/district_61_reports.json', async route => {
+    const res = await route.fetch()
+    const body = await res.json()
+    body.sections = {
+      ...(body.sections ?? {}),
+      sponsorsMentors: SPONSORS_FIXTURE.sponsorsMentors_2026_06_01,
+    }
+    await route.fulfill({
+      status: res.status(),
+      json: body,
+      headers: { 'access-control-allow-origin': '*' },
+    })
+  })
+
+test('sponsors and mentors: live state is either listed or not available yet', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await load(page)
+  const section = page.locator('#growth-chartered')
+  await expect(
+    section.getByRole('heading', { name: 'Sponsors and mentors' })
+  ).toBeVisible()
+  const table = section.getByTestId('growth-sponsors-table')
+  const text = (await section.textContent()) ?? ''
+  if ((await table.count()) === 0) {
+    expect(text).toMatch(/not available yet|No sponsor or mentor assignments/)
+  } else {
+    expect(text).toMatch(/\d+ sponsors? and \d+ mentors?/)
+  }
+})
+
+for (const width of [375, 768, 1280] as const) {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`sponsors and mentors at ${width} (${theme}): recorded counts, no overflow`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: theme })
+      await page.setViewportSize({ width, height: 900 })
+      await injectSponsors(page)
+      await load(page)
+      await page.addStyleTag({
+        content: 'html,body{overflow-x:visible !important}',
+      })
+      const section = page.locator('#growth-chartered')
+      await expect(section).toContainText('11 sponsors and 9 mentors')
+      await expect(section).toContainText('6 new clubs')
+      const rows = section
+        .getByTestId('growth-sponsors')
+        .locator(width < 768 ? '[data-testid="mobile-row"]' : 'tbody tr')
+      await expect(rows).toHaveCount(6)
+      const text = (await section.textContent()) ?? ''
+      expect(text).not.toMatch(/MENTORU|\bSPONSOR\b|\bMENTOR\b|AWARDED|PENDING/)
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth
+      )
+      expect(overflow).toBeLessThanOrEqual(0)
+      await assertPrivacy(page)
+    })
+  }
 }
