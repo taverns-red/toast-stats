@@ -314,6 +314,32 @@ export function searchEntities(
   })).filter(g => g.entities.length > 0)
 }
 
+export function closedClubEntity(
+  _clubId: string,
+  _club: {
+    name: string
+    lastDistrictId: string
+    lastSeen: string
+    closedYear: number
+  }
+): SearchEntity {
+  throw new Error('not implemented (#1806 red)')
+}
+
+export function clubIdIndexMiss(
+  _query: string,
+  _index: SearchIndex
+): string | null {
+  return null
+}
+
+export function withClosedClub(
+  groups: SearchResultGroup[],
+  _entity: SearchEntity
+): SearchResultGroup[] {
+  return groups
+}
+
 /**
  * Load and build the unified index from the CDN. The club index (~1MB) is only
  * fetched here — never at import — so it does not regress cold app-load.

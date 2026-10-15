@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   buildSearchIndex,
+  clubIdIndexMiss,
+  closedClubEntity,
   searchEntities,
+  withClosedClub,
   type SearchIndex,
   type SearchResultGroup,
 } from '../searchIndex'
@@ -456,5 +459,52 @@ describe('searchEntities — past-only districts (#1403)', () => {
   it('keeps an exact id match on top regardless of the demotion', () => {
     const flat = flatten(searchEntities('27', index))
     expect(flat[0]).toMatchObject({ type: 'district', id: '27' })
+  })
+})
+
+describe('closed clubs from the club-district history (#1806)', () => {
+  const index = buildSearchIndex(RANKINGS, CLUBS, DIVISIONS_AREAS)
+  // Club 377 as the live prod shard 77 records it (asOf 2026-10-13).
+  const closed = closedClubEntity('377', {
+    name: 'Traveling Toastmasters Club',
+    lastDistrictId: '39',
+    lastSeen: '2024-03-31',
+    closedYear: 2024,
+  })
+
+  it('builds a club entity with "closed YYYY · last in District N" context', () => {
+    expect(closed).toEqual({
+      type: 'club',
+      id: '377',
+      label: 'Traveling Toastmasters Club',
+      context: 'closed 2024 · last in District 39',
+      // Lands on the club's last program year in its last district.
+      route: '/district/39/club/377?py=2023',
+      terms: ['377', 'traveling toastmasters club'],
+    })
+  })
+
+  it('a numeric query that no indexed club carries is a club-index miss', () => {
+    expect(clubIdIndexMiss('377', index)).toBe('377')
+    expect(clubIdIndexMiss(' 000377 ', index)).toBe('377')
+  })
+
+  it('an indexed club id, or a non-numeric query, is not a miss', () => {
+    // CLUBS holds 00001234 — padding must not turn a hit into a miss.
+    expect(clubIdIndexMiss('1234', index)).toBeNull()
+    expect(clubIdIndexMiss('toast', index)).toBeNull()
+    expect(clubIdIndexMiss('', index)).toBeNull()
+  })
+
+  it('adds the closed club to the Clubs group, keeping group order', () => {
+    const groups = withClosedClub(searchEntities('61', index), closed)
+    expect(groups.map(g => g.type)).toEqual(['district', 'club'])
+    const clubs = groups.find(g => g.type === 'club')!.entities
+    expect(clubs[0]).toBe(closed)
+  })
+
+  it('creates the Clubs group when the query matched no current club', () => {
+    const groups = withClosedClub([], closed)
+    expect(groups).toEqual([{ type: 'club', entities: [closed] }])
   })
 })

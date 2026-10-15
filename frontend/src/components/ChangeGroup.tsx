@@ -126,6 +126,8 @@ export const ChangeGroup: React.FC<{
   /** Groups are open by default; collapsed when listed in ?expandChanges (#980). */
   collapsed: boolean
   onToggle: (category: DiffEventCategory, open: boolean) => void
+  /** Canonical club id → the district on the other side of a transfer. */
+  counterparts?: ReadonlyMap<string, string>
 }> = ({ category, heading, events, districtId, collapsed, onToggle }) => {
   if (events.length === 0) return null
   const net = netFor(category, events)
