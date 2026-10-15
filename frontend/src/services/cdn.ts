@@ -24,7 +24,6 @@ import {
   GLOBAL_TOTALS_FILE_NAME,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsSchema,
-  type ClubDistrictHistoryShard,
   type DistrictReportsDataset,
   type GlobalClubRace,
   type GlobalHistory,
@@ -568,17 +567,6 @@ export async function fetchCdnSuspendedClubs(
   } catch {
     return null
   }
-}
-
-// Red-phase stubs (#1843): the tests define the behaviour.
-export function cdnClubDistrictHistoryShardUrl(_clubId: string): string {
-  return ''
-}
-
-export async function fetchCdnClubDistrictHistoryShard(
-  _clubId: string
-): Promise<ClubDistrictHistoryShard | null> {
-  return null
 }
 
 /**

@@ -85,32 +85,36 @@ describe('buildClubLifecycle', () => {
     })
     expect(rows(r)).toEqual([
       ['Chartered', 'Feb 1987'],
-      ['First record in District 1', 'Jan 2017'],
-      ['Moved to District 201', 'Jul 2026'],
+      ['First record in District 1', '2016–17 program year'],
+      ['Moved to District 201', '2026–27 program year'],
     ])
     expect(r.events.map(e => e.current)).toEqual([false, false, true])
     expect(r.historyAvailable).toBe(true)
   })
 
-  it('keeps the data order when the first record predates the charter date', () => {
+  // The history is program-year granular: a span's `from` is the first
+  // date of the PY's store (2018-07-31), not the club's first appearance, so
+  // a club chartered in April 2019 has a 2018-19 first record. Charter and
+  // first record in the same PY read charter first, and spans are labelled
+  // by program year, never by a month the data cannot vouch for.
+  it('a charter inside the first record’s program year comes first (club 7238597)', () => {
     const r = buildClubLifecycle({
       charterDate: '2019-04-30',
       history: CLUB_7238597,
     })
     expect(rows(r)).toEqual([
-      ['First record in District 61', 'Jul 2018'],
       ['Chartered', 'Apr 2019'],
+      ['First record in District 61', '2018–19 program year'],
     ])
-    // The current district is still the one marked current.
-    expect(r.events.find(e => e.current)?.kind).toBe('first')
+    expect(r.events.map(e => e.current)).toEqual([false, true])
   })
 
   it('one row per move, the last one current (club 6197)', () => {
     const r = buildClubLifecycle({ history: CLUB_6197 })
     expect(rows(r)).toEqual([
-      ['First record in District 72', 'Jan 2017'],
-      ['Moved to District 112', 'Jul 2018'],
-      ['Moved to District 72', 'Jul 2026'],
+      ['First record in District 72', '2016–17 program year'],
+      ['Moved to District 112', '2018–19 program year'],
+      ['Moved to District 72', '2026–27 program year'],
     ])
     expect(r.events.filter(e => e.current)).toHaveLength(1)
   })
@@ -118,7 +122,7 @@ describe('buildClubLifecycle', () => {
   it('a club no longer seen ends with its last record and has no current row', () => {
     const r = buildClubLifecycle({ history: CLUB_1597 })
     expect(rows(r)).toEqual([
-      ['First record in District 7', 'Jan 2017'],
+      ['First record in District 7', '2016–17 program year'],
       ['Last record in District 7', 'Mar 2019'],
     ])
     expect(r.events.some(e => e.current)).toBe(false)

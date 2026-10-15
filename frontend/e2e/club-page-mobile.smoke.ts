@@ -118,7 +118,8 @@ for (const width of [375, 390]) {
 
 // #1843 (review §6.3) — stat strip 2×2 below 768 (the rest folded behind
 // one ≥ 44 px disclosure), 4×2 from 768; Education and Compliance are
-// disclosure cards open by default on phones, plain panels from 768.
+// disclosure cards open by default on phones, plain panels from 768. The
+// Lifecycle timeline (#1843) is the third panel, under the same rules.
 for (const [width, cols, rows] of [
   [375, 2, 2],
   [390, 2, 2],
@@ -147,7 +148,11 @@ for (const [width, cols, rows] of [
         cells.map(el => Math.round(el.getBoundingClientRect().left))
       )
       const fold = grid.querySelector('.mobile-disclosure__summary')
-      const panels = ['club-edu-title', 'club-compliance-title'].map(id => {
+      const panels = [
+        'club-edu-title',
+        'club-compliance-title',
+        'club-lifecycle-title',
+      ].map(id => {
         const section = document
           .getElementById(id)!
           .closest('section') as HTMLElement
@@ -156,6 +161,15 @@ for (const [width, cols, rows] of [
         return {
           details: !!details,
           open: details?.open ?? null,
+          rows: section.querySelectorAll(
+            'li:not(.club-lifecycle__row--skeleton)'
+          ).length,
+          rowTextMin: Math.min(
+            ...[...section.querySelectorAll('li span')].map(el =>
+              parseFloat(getComputedStyle(el).fontSize)
+            ),
+            99
+          ),
           summaryH: summary
             ? Math.round(summary.getBoundingClientRect().height)
             : 0,
@@ -182,6 +196,11 @@ for (const [width, cols, rows] of [
     const phone = width < 768
     if (phone) expect(m.foldH).toBeGreaterThanOrEqual(44)
     else expect(m.foldH).toBe(0)
+    // #1843 — Lifecycle is a vertical timeline with real rows (the D61
+    // smoke club: charter + first record), its text ≥ 14px.
+    const lifecycle = m.panels[2]!
+    expect(lifecycle.rows, 'lifecycle rows').toBeGreaterThanOrEqual(2)
+    expect(lifecycle.rowTextMin).toBeGreaterThanOrEqual(14)
     for (const p of m.panels) {
       expect(p.details).toBe(phone)
       if (phone) {

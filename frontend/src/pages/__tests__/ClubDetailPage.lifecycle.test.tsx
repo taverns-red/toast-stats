@@ -21,10 +21,8 @@ import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
-import {
-  fetchCdnClubDistrictHistoryShard,
-  fetchCdnSuspendedClubs,
-} from '../../services/cdn'
+import { fetchCdnSuspendedClubs } from '../../services/cdn'
+import { fetchClubDistrictHistoryShard } from '../../services/cdnClubDistrictHistory'
 import historyShard from '../../__tests__/fixtures/club-district-history-97-2026-10-13.recorded.json'
 import suspendedFile from '../../__tests__/fixtures/suspended-clubs-2026-10-13.recorded.json'
 
@@ -63,7 +61,6 @@ vi.mock('../../hooks/useDistrictData', () => ({
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnClubIndex: vi.fn(),
-  fetchCdnClubDistrictHistoryShard: vi.fn(),
   fetchCdnSuspendedClubs: vi.fn(),
   fetchCdnDates: vi.fn().mockResolvedValue({
     dates: ['2026-10-13'],
@@ -76,6 +73,10 @@ vi.mock('../../services/cdn', () => ({
   fetchCdnManifest: vi
     .fn()
     .mockResolvedValue({ latestSnapshotDate: '2026-10-13' }),
+}))
+
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
+  fetchClubDistrictHistoryShard: vi.fn(),
 }))
 
 vi.mock('../../hooks/useMembershipData', () => ({
@@ -136,7 +137,7 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
   ClubTrend: {},
 }))
 
-const mockedShard = vi.mocked(fetchCdnClubDistrictHistoryShard)
+const mockedShard = vi.mocked(fetchClubDistrictHistoryShard)
 const mockedSuspended = vi.mocked(fetchCdnSuspendedClubs)
 const mockedCachedDates = vi.mocked(useDistrictCachedDates)
 
@@ -182,10 +183,10 @@ describe('ClubDetailPage — Lifecycle timeline (#1843)', () => {
     ).toBeInTheDocument()
     const items = within(panel).getAllByRole('listitem')
     expect(items.map(li => li.textContent)).toEqual([
-      expect.stringContaining('Jul 2018'),
       expect.stringContaining('Chartered'),
+      expect.stringContaining('2018–19 program year'),
     ])
-    expect(mockedShard).toHaveBeenCalledWith('7238597')
+    expect(mockedShard).toHaveBeenCalledWith('97')
   })
 
   it('never reads the suspended list for an active club', async () => {

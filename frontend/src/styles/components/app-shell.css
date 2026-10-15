@@ -2721,6 +2721,105 @@
     color: var(--ink-3);
   }
 
+  /* #1843 — Lifecycle panel: a vertical timeline (mobile review §6.3). A
+     rail through the dots joins the rows; dot, rail and accent are
+     decoration (the current district says "Current" in words). Rows have a
+     fixed minimum height so the loading skeleton reserves the real space.
+     Text ≥ 14px; remapping --ink-*/
+  --line tokens carry dark mode. */ .club-lifecycle__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-family: var(--rt-font-body);
+    font-size: 0.875rem;
+    color: var(--ink);
+  }
+
+  .club-lifecycle__row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: var(--rt-space-2);
+    align-items: start;
+    min-height: 3rem;
+    padding-bottom: var(--rt-space-2);
+  }
+
+  /* The rail: from this dot to the next row's dot. */
+  .club-lifecycle__row:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: calc(0.75rem - 1px);
+    top: 1rem;
+    bottom: -0.25rem;
+    width: 2px;
+    background-color: var(--line);
+  }
+
+  .club-lifecycle__dot {
+    position: relative;
+    justify-self: center;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-top: 0.25rem;
+    border-radius: 999px;
+    border: 2px solid var(--ink-3);
+    background-color: var(--surface);
+  }
+
+  .club-lifecycle__row--current .club-lifecycle__dot {
+    border-color: var(--rt-stats);
+    background-color: var(--rt-stats);
+  }
+
+  .club-lifecycle__row--suspended .club-lifecycle__dot {
+    border-color: var(--red-600);
+  }
+
+  .club-lifecycle__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .club-lifecycle__title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .club-lifecycle__when {
+    color: var(--ink-2);
+  }
+
+  .club-lifecycle__now {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .club-lifecycle__bar {
+    display: block;
+    width: 60%;
+    height: 0.875rem;
+    margin-top: 0.25rem;
+    border-radius: 4px;
+    background-color: var(--line);
+  }
+
+  .club-lifecycle__row--skeleton .club-lifecycle__dot {
+    border-color: var(--line);
+  }
+
+  .club-lifecycle__note {
+    margin: var(--rt-space-2) 0 0;
+    font-family: var(--rt-font-body);
+    font-size: 0.875rem;
+    color: var(--ink-3);
+  }
+
+  .club-lifecycle__note:first-child {
+    margin-top: 0;
+  }
+
   /* #1790 — Education panel internals. Text uses the remapping --ink-*
      tokens (Lesson 093); bar fills are decoration — every value is printed
      beside its label — so the fixed --rt-* hues are safe in both themes.
