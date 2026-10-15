@@ -260,6 +260,104 @@ describe('buildClubMeetingInfo — never a meeting link (#1879)', () => {
 })
 
 /**
+ * #2069 — a scheme-less, shortened meeting link. Club 977's `address.street`
+ * in snapshots/2026-10-14/district_201.json on prod (read 2026-10-15) is a
+ * "Zoom Link:" label, a bit.ly link, then the street. Link redacted, house
+ * number 9s. Already-published files carry it, so the builder must drop it
+ * even after the collector stops writing it.
+ */
+const CLUB_977 = {
+  clubId: '977',
+  address: {
+    street: 'Zoom Link: bit.ly/REDACTED977, 9999 Overland Ave',
+    city: 'Culver City',
+    region: 'CA',
+    postalCode: '99999',
+    country: 'United States',
+  },
+  meetingDay: '1st Thu (online) | 3rd Thu (in-person)',
+  meetingTime: '7:00 to 8:30 PM',
+  allowsVirtualAttendance: true,
+}
+
+const SCHEMELESS_LINKS = [
+  'bit.ly/abc123',
+  'tinyurl.com/abc123',
+  'goo.gl/abc123',
+  'rebrand.ly/abc123',
+  'forms.gle/abc123',
+  'zoom.us/j/99999999',
+  'meet.google.com/abc-defg-hij',
+  'teams.microsoft.com/l/meetup-join/abc',
+  'example.org/meet',
+  'clubsite.com',
+]
+
+describe('buildClubMeetingInfo — no link of any kind in the place (#2069)', () => {
+  it("drops club 977's label and bit.ly link and keeps its street", () => {
+    const info = buildClubMeetingInfo(CLUB_977)
+    expect(info?.place).toBe('9999 Overland Ave, Culver City, CA')
+    expect(JSON.stringify(info)).not.toMatch(/bit\.ly|zoom link/i)
+  })
+
+  it('keeps the attendance mode when a street is left after the link', () => {
+    expect(buildClubMeetingInfo(CLUB_977)?.mode).toBe('Online or hybrid')
+  })
+
+  it('keeps the street after a Zoom link (D201 28675725 shape)', () => {
+    const info = buildClubMeetingInfo({
+      ...LIVE_SHAPE,
+      address: {
+        street:
+          'https://us99web.zoom.us/j/99999999999 9999 Airport Plaza Drive',
+        city: 'Los Angeles',
+        region: 'CA',
+      },
+    })
+    expect(info?.place).toBe('9999 Airport Plaza Drive, Los Angeles, CA')
+  })
+
+  it.each(SCHEMELESS_LINKS)(
+    'drops %s from the street, day and time, labelled or not',
+    link => {
+      const info = buildClubMeetingInfo({
+        ...LIVE_SHAPE,
+        address: {
+          ...LIVE_SHAPE.address,
+          street: `Zoom Link: ${link}, 790 Edgar Street`,
+        },
+        meetingDay: `Tuesday ${link}`,
+        meetingTime: `7:30 pm (${link})`,
+      })
+      expect(info?.place).toBe('790 Edgar Street, Kingston, ON')
+      expect(info?.schedule).toBe('Tuesday · 7:30 pm')
+      expect(JSON.stringify(info)).not.toContain(link.split('/')[0])
+    }
+  )
+
+  it('says the club meets online when its street is only a shortened link', () => {
+    const info = buildClubMeetingInfo({
+      ...CLUB_977,
+      address: { ...CLUB_977.address, street: 'bit.ly/REDACTED00' },
+    })
+    expect(info?.place).toBe('Culver City, CA')
+    expect(info?.mode).toBe('Meets online')
+  })
+
+  it('drops a shortened website, which may hide a meeting link', () => {
+    for (const website of [
+      'https://bit.ly/abc123',
+      'http://tinyurl.com/abc123',
+      'https://www.tinyurl.com/abc123',
+    ]) {
+      expect(
+        buildClubMeetingInfo({ ...LIVE_SHAPE, website })?.websiteUrl
+      ).toBeNull()
+    }
+  })
+})
+
+/**
  * #1958 — TI's Find-A-Club `MeetingTime` is free text, copied verbatim. Some
  * clubs type a 24-hour clock with an am/pm suffix: the D61 snapshot of
  * 2026-10-11 has club 8590 "19:30 pm", 1261 "18:45 pm", 2501 "19:00 pm",

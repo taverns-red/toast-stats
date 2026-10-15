@@ -27,7 +27,12 @@ import type {
   ScrapedRecordAddress,
   MeetingScheduleEntry,
 } from '@taverns-red/shared-contracts'
-import { parseMeetingSchedule, scrubFacLocation } from './FacMeetingSchedule.js'
+import {
+  parseMeetingSchedule,
+  scrubFacLocation,
+  scrubFacStreet,
+  stripFacLinks,
+} from './FacMeetingSchedule.js'
 
 const TI_HQ_LATITUDE = 39.6478
 const TI_HQ_LONGITUDE = -104.9878
@@ -282,7 +287,9 @@ export function normaliseTiClub(club: TiClub): ClubEnrichment | null {
   }
 
   const address: ClubEnrichment['address'] = {}
-  if (club.Address?.Street) address.street = club.Address.Street
+  // #2069 — Street is free text: a club may type its meeting link there.
+  const street = scrubFacStreet(club.Address?.Street)
+  if (street) address.street = street
   if (club.Address?.City) address.city = club.Address.City
   const region = club.Address?.PrimaryRegion?.Value
   if (region) address.region = region
@@ -295,8 +302,10 @@ export function normaliseTiClub(club: TiClub): ClubEnrichment | null {
   if (club.Website) result.website = club.Website
   if (club.FacebookLink) result.facebookLink = club.FacebookLink
   if (club.TwitterLink) result.twitterLink = club.TwitterLink
-  if (club.MeetingDay) result.meetingDay = club.MeetingDay.trim()
-  if (club.MeetingTime) result.meetingTime = club.MeetingTime.trim()
+  const meetingDay = stripFacLinks(club.MeetingDay)
+  if (meetingDay) result.meetingDay = meetingDay
+  const meetingTime = stripFacLinks(club.MeetingTime)
+  if (meetingTime) result.meetingTime = meetingTime
   if (typeof club.AllowsVirtualAttendance === 'boolean') {
     result.allowsVirtualAttendance = club.AllowsVirtualAttendance
   }

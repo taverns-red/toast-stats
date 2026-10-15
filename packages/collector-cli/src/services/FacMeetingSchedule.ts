@@ -22,6 +22,7 @@
  * Pure functions; no I/O.
  */
 
+import { stripLinks } from '@taverns-red/shared-contracts'
 import type {
   MeetingScheduleEntry,
   MeetingWeekday,
@@ -37,13 +38,10 @@ function fold(text: string): string {
 
 /* ── Location scrubber ─────────────────────────────────────────────── */
 
-const EMAIL = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi
-const URL_WITH_SCHEME = /(?:https?:\/\/|www\.)\S+/gi
-/** Same host list as the frontend's #1879 guard (clubMeetingInfo.ts). */
-const MEETING_HOST_TOKEN =
-  /\S*(?:zoom\.us|zoomgov\.com|zoom\.com|teams\.microsoft\.com|teams\.live\.com|meet\.google\.com|webex\.com|gotomeeting\.com|gotomeet\.me|meet\.goto\.com|meet\.jit\.si|8x8\.vc|whereby\.com|bluejeans\.com)\S*/gi
+/** A credential and its value, "Passcode: x", "Passcode is x" or a
+ *  spaced id "MtgID: 999 9999 999" (#2069). */
 const CREDENTIAL =
-  /\b(?:meeting\s*id|mtg\s*id|passcode|password|pwd|mot de passe)\b\s*[:#=]?\s*[\w-]*/gi
+  /\b(?:meeting\s*id|mtg\s*id|passcode|password|pwd|mot de passe)\b\s*(?:is\b\s*)?[:#=]?\s*(?:\d[\d\s-]*\d|[\w-]*)/gi
 /** A digit run that, with 7+ digits, is a phone number or meeting id. A
  *  run touching a letter ("23300 58th Ave") is a street number, not one. */
 const DIGIT_RUN = /(?<!\w)\+?\(?\d[\d\s().-]*\d(?!\w)/g
@@ -92,22 +90,78 @@ function namesSomeone(line: string): boolean {
 
 function scrubLine(raw: string): string {
   const tagless = raw.replace(/<[^>]*>/g, ' ')
-  const linkless = tagless
-    .replace(EMAIL, ' ')
-    .replace(URL_WITH_SCHEME, ' ')
-    .replace(MEETING_HOST_TOKEN, ' ')
+  // Emails, URLs with or without a scheme, meeting hosts, shorteners and
+  // the "Zoom Link:" label in front of one (#1879, #2069).
+  const linkless = stripLinks(tagless)
   if (namesSomeone(linkless)) return ''
   const line = linkless.replace(/\([^()]*\)/g, group =>
     CONTACT_CUE.test(fold(group)) ? ' ' : group
   )
   if (CONTACT_CUE.test(fold(line))) return ''
+  return withoutAccess(line, 7)
+}
+
+/**
+ * Credentials, phone-like digit runs (`minDigits` or more) and dangling
+ * contact labels out; separators tidied.
+ */
+function withoutAccess(line: string, minDigits: number): string {
   return line
     .replace(CREDENTIAL, ' ')
-    .replace(DIGIT_RUN, run => (run.replace(/\D/g, '').length >= 7 ? ' ' : run))
+    .replace(DIGIT_RUN, run =>
+      run.replace(/\D/g, '').length >= minDigits ? ' ' : run
+    )
     .replace(DANGLING_LABEL, ' ')
     .replace(/\(\s*[,;:.-]*\s*\)/g, ' ')
     .replace(/\s+/g, ' ')
+    .replace(/\s+([,;])/g, '$1')
+    .replace(/([,;])(?:\s*[,;])+/g, '$1')
     .replace(/^[\s,;:|-]+|[\s,;:|-]+$/g, '')
+}
+
+/**
+ * A street number run is not a phone number: Quebec unit-civic numbers
+ * ("100-1234 Chemin …") reach 8 digits, a phone or meeting id 9+.
+ */
+const STREET_MIN_PHONE_DIGITS = 9
+
+/**
+ * FAC `Address.Street`, which is free text too (#2069: club 977 typed
+ * "Zoom Link: <shortened link>, <street>"). Links, credentials and phone
+ * numbers are removed and the street kept; a street that names a person
+ * ("contact <name> for link") is dropped. A street with none of these is
+ * returned verbatim. Undefined when nothing is left.
+ */
+export function scrubFacStreet(
+  raw: string | null | undefined
+): string | undefined {
+  if (typeof raw !== 'string') return undefined
+  const tagless = raw.replace(/<[^>]*>/g, ' ')
+  const linkless = stripLinks(tagless)
+  if (namesSomeone(linkless)) return undefined
+  CREDENTIAL.lastIndex = 0
+  const hasAccess =
+    linkless !== tagless ||
+    CREDENTIAL.test(tagless) ||
+    [...tagless.matchAll(DIGIT_RUN)].some(
+      run => run[0].replace(/\D/g, '').length >= STREET_MIN_PHONE_DIGITS
+    )
+  CREDENTIAL.lastIndex = 0
+  if (!hasAccess) return tagless.trim().length > 0 ? raw : undefined
+  const street = withoutAccess(linkless, STREET_MIN_PHONE_DIGITS)
+  return street.length > 0 ? street : undefined
+}
+
+/**
+ * Free text with every link removed (MeetingDay, MeetingTime; #2069).
+ * Undefined when nothing is left.
+ */
+export function stripFacLinks(
+  raw: string | null | undefined
+): string | undefined {
+  if (typeof raw !== 'string') return undefined
+  const text = stripLinks(raw).trim()
+  return text.length > 0 ? text : undefined
 }
 
 /**
