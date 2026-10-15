@@ -438,8 +438,8 @@ describe('buildClubGrowthFunnel — sponsors and mentors', () => {
     expect(totals).toEqual({
       clubs: 6,
       sponsors: 11,
-      mentors: 9,
-      other: 1,
+      mentors: 10,
+      other: 0,
       awarded: 6,
     })
     expect(totals.sponsors + totals.mentors + totals.other).toBe(21)
@@ -453,9 +453,10 @@ describe('buildClubGrowthFunnel — sponsors and mentors', () => {
       clubName: 'Family Club',
       charterDate: '2025-06-25',
       sponsors: 2,
-      mentors: 1,
-      // TI's 'MENTORU' code is kept apart, not guessed into mentors.
-      other: 1,
+      // 'MENTORU' is a mentor whose credit the member has already used
+      // toward a DTM (Ron, PR #2065): MENTOR 1 + MENTORU 1.
+      mentors: 2,
+      other: 0,
       awarded: 4,
     })
   })

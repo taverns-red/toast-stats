@@ -215,10 +215,14 @@ describe('ClubGrowthFunnelView', () => {
     renderSponsors(false)
     const section = screen.getByRole('region', { name: /chartered/i })
     expect(section).not.toHaveTextContent(/not available yet/i)
-    // Totals as text: 11 sponsors + 9 mentors + 1 other role across 6 clubs.
-    expect(section).toHaveTextContent(/11 sponsors/)
-    expect(section).toHaveTextContent(/9 mentors/)
+    // Totals as text: 11 sponsors + 10 mentors (MENTOR + MENTORU) across 6
+    // clubs; no 'other role' — every recorded code is a known role.
+    expect(section).toHaveTextContent(/11 sponsors and 10 mentors across/)
     expect(section).toHaveTextContent(/6 new clubs/)
+    expect(section).not.toHaveTextContent(/other role/i)
+    expect(
+      within(section).queryByRole('columnheader', { name: /other/i })
+    ).toBeNull()
     const table = within(section).getByTestId('growth-sponsors-table')
     const link = within(table).getByRole('link', {
       name: 'iA Montreal Toastmasters',
@@ -235,6 +239,22 @@ describe('ClubGrowthFunnelView', () => {
       within(section).getByRole('link', { name: /iA Montreal Toastmasters/ })
     ).toHaveAttribute('href', '/district/61/club/28680300')
     expect(section).toHaveTextContent(/2 sponsors · 2 mentors/)
+  })
+
+  it('gives every phone row its full counts as its accessible name', () => {
+    renderSponsors(true)
+    const section = screen.getByRole('region', { name: /chartered/i })
+    // The visible meta line may ellipsize at 375; the name never does.
+    expect(
+      within(section).getByRole('link', {
+        name: 'Family Club, chartered Jun 25, 2025: 2 sponsors, 2 mentors, 4 awarded (opens toastmasters.org)',
+      })
+    ).toBeInTheDocument()
+    expect(
+      within(section).getByRole('link', {
+        name: 'iA Montreal Toastmasters, chartered May 22, 2026: 2 sponsors, 2 mentors, 0 awarded',
+      })
+    ).toBeInTheDocument()
   })
 
   it('never renders a raw TI code or status, nor a person', () => {
