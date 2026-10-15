@@ -3,7 +3,7 @@
 - **Issue:** #1786. **Decision:** [ADR-016](../architecture-decisions/016-self-hosted-protomaps-basemap.md).
 - **Who:** Ron. Only the manual workflow `.github/workflows/basemap-build.yml` writes `basemap/`. It never runs on a schedule or a push, and the data pipeline never touches `basemap/`.
 - **When:** first upload, then only for a deliberate refresh (ADR-016 D5).
-- **Where it runs:** on a GitHub runner, not a laptop. World z0–10 needs about 4.4 GB of free disk. Ron decided this on 2026-10-12.
+- **Where it runs:** on a GitHub runner, not a laptop. World z0–10 needs about 4.4 GB of free disk, and world z0–14 about 80 GB (§5). Ron decided this on 2026-10-12.
 
 ## What it produces
 
@@ -120,46 +120,47 @@ Pick a new `build_date`. Change `BASEMAP_OBJECT_PATH` in a PR, then run steps 1�
 gcloud storage rm "gs://toast-stats-data-ca/<old>" "gs://toast-stats-data-staging/<old>"
 ```
 
-## 5. Street-level detail near clubs (`extent=world-clubs`, #2084)
+## 5. World z0–14: street-level detail everywhere (#2084)
 
-The world file stops at z10. Street names and POIs exist in the Protomaps v4 schema only at z12–14. `extent=world-clubs` builds one archive: world z0–10, merged (`pmtiles merge`) with z11–14 over buffered club coordinates. The object is `basemap/protomaps-v4/world-z0-10-clubs-z14-<YYYYMMDD>.pmtiles`, and the upload rules are the same as above.
+Ron chose this on 2026-10-15. It replaces z0–10, and he preferred it to a near-clubs merge: a z0–14 world file has no blank tiles away from clubs and no club-location list to keep current. Street names and POIs exist in the Protomaps v4 schema only at z12–14. The object is `basemap/protomaps-v4/world-z0-14-<YYYYMMDD>.pmtiles`, and the upload rules above apply unchanged.
 
-How the runner builds it:
+**Size.** On 2026-10-15, `pmtiles extract https://build.protomaps.com/20261015.pmtiles /dev/null --maxzoom=14 --dry-run` (go-pmtiles 1.31.2) reported 58,786,221 tile entries and an archive size of 69 GB. That is about 64 GiB.
 
-1. `scripts/build-club-regions.ts` reads the latest `snapshots/<date>/analytics/district_<id>_analytics.json` for every district on `cdn.taverns.red`. These are single-object reads, held in memory. It fails if any district is unreadable.
-2. It buffers each geocoded club (`allClubs[].coordinates`) by `club_buffer_km`. It merges overlapping boxes while the union stays compact (`scripts/lib/clubRegions.ts`). It writes the result as a GeoJSON FeatureCollection, the input `pmtiles extract --region` takes.
-3. `scripts/basemap/build-club-basemap.sh` extracts the world z0–10 file and the club z11–14 file, merges them with the world file first, and runs `pmtiles verify`.
+**Where it builds: the standard runner.**
 
-**Buffer: 8 km (default).** At z13, a 1280 px desktop map centred on a club is about 17 km wide at 45° latitude, so it is about 8.6 km either side; at z14 it is half that. A 375 px phone at z12 is about 5 km wide. With 8 km, the street-level zooms around a club stay inside the detailed area. It also absorbs Find-A-Club geocodes that are off by a few km.
+- `pmtiles extract` writes its output with offset writes and then seeks back to write the header (`pmtiles/extract.go`). It therefore cannot stream to stdout or to GCS. A gcsfuse mount would stage the whole file on local disk anyway.
+- The archive needs about 1.0× its size on local disk. The space check asks for 69 GB × 1.15 + 1 GB ≈ 80 GB.
+- On run `38305058683` (2026-10-12), the `ubuntu-26.04` runner's 145 GB root volume had **109 GB free** after the "Free runner disk" step: `/mnt` and `$RUNNER_TEMP` each reported 115,983,052,800 bytes available. That covers the 80 GB.
+- If a runner image ever ships with less free space, the sizing step stops before downloading, with "use a larger runner".
+- The fallbacks, in order: (1) join `/mnt` and the root volume with LVM (`easimon/maximize-build-space`); (2) a GitHub larger runner, which needs an org admin to create it and costs about $0.032/min for 8 cores; (3) Cloud Build or a VM in our project, which needs new IAM and a disk. None of them is needed on today's evidence.
+- **Cost:** $0. Standard runner minutes are free on this public repo, and Protomaps' host does not charge for the download.
+- **Runtime:** estimated at **35–45 min**. Run `38305058683` built z0–10 in 54 s (about 70 MB/s) and uploaded 3.8 GB in 31 s (about 120 MB/s). At those rates z0–14 takes about 17 min to extract, about 5 min for sha256 and verify, and about 10 min to upload. The job timeout is 180 min.
+- **Storage:** 69 GB in each of two buckets, at Standard storage of about US$0.02–0.026 per GB-month, is about **US$3–3.6 a month**. Delete the old z0–10 object a week after the switch (step 4).
 
-**Sizing (measured 2026-10-15, build `20261015`, data `2026-10-14`, `pmtiles extract … --dry-run`, go-pmtiles 1.31.2):**
+**CDN.** These were read-only checks on 2026-10-15, against the Cloud CDN caching docs:
 
-| Buffer | Boxes | Clubs inside a buffer     | z11–14 extract | Merged with world z0–10 (3.8 GB) |
-| ------ | ----- | ------------------------- | -------------- | -------------------------------- |
-| 5 km   | 2,363 | 14,145 of 14,145 geocoded | 5.3 GB         | about 9.1 GB                     |
-| 8 km   | 1,984 | 14,145 of 14,145 geocoded | 7.0 GB         | about 10.8 GB                    |
+- The backend bucket `toast-stats-cdn-backend` has `CACHE_ALL_STATIC`, `defaultTtl` 3600, `maxTtl` 86400, `clientTtl` 3600, `requestCoalescing` true, `serveWhileStale` 86400 and `compressionMode` AUTOMATIC.
+- Cloud CDN caches objects up to **100 GiB** when the origin supports byte ranges. 64 GiB fits.
+- It fills the cache in chunks of about 2 MiB (2,097,136 bytes), so only the chunks viewers touch are filled.
+- The origin must answer with `Accept-Ranges: bytes`, a full `Content-Range` length and a strong `ETag`. GCS gives a non-composite object these, which is why parallel composite upload stays disabled.
+- The upload's `max-age=86400` equals `maxTtl`, so a chunk lives up to a day and is then refilled on demand. Dynamic compression never applies: the object is `application/octet-stream`, carries `no-transform`, and is over 10 MiB.
+- No CDN change is needed.
 
-The data lists 14,522 clubs in 94 districts. 14,145 (97.4%) have usable coordinates. The other 377 stay at over-zoomed z10: 345 have no coordinates and 32 have unusable ones, such as 0,0. For comparison, world z0–11 is 8.0 GB and world z0–12 is 18 GB (ADR-016 D1). Dense metro cores dominate the size.
-
-**Disk.** The runner holds the world file, the club file and the merged file at the same time, about 2 × 10.8 GB plus 15% and 1 GB. The sizing step checks this before downloading anything and stops with "use a larger runner" if there is not enough space.
-
-**Dispatch** (needs Ron's approval; dry run first, which writes nothing):
+**Dispatch** (needs Ron's approval). Run the dry run first; it downloads and writes nothing:
 
 ```bash
 gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
-  -f build_date=20261015 -f maxzoom=10 -f extent=world-clubs -f club_buffer_km=8 \
-  -f target=staging
+  -f build_date=20261015 -f maxzoom=14 -f target=staging
 # then, after reading the dry-run summary:
 gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
-  -f build_date=20261015 -f maxzoom=10 -f extent=world-clubs -f club_buffer_km=8 \
-  -f target=staging -f dry_run=false
+  -f build_date=20261015 -f maxzoom=14 -f target=staging -f dry_run=false
+gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
+  -f build_date=20261015 -f maxzoom=14 -f target=prod-copy -f dry_run=false
 ```
 
-Protomaps keeps daily builds for one week. Pick a current `build_date` (step 0).
+Protomaps keeps daily builds for one week, so pick a current `build_date` (step 0).
 
-**Follow-up:** after the prod copy, a PR changes `BASEMAP_OBJECT_PATH` in `frontend/src/config/basemap.ts` to `basemap/protomaps-v4/world-z0-10-clubs-z14-<YYYYMMDD>.pmtiles`.
-
-**Before that PR ships, check the frontend.** The merged header says `max zoom: 14`. Outside the buffers there are no z11–14 tiles, and the `pmtiles` protocol answers a missing vector tile with an empty one (`{data: new Uint8Array}` in pmtiles 4.x, unless `errorOnMissingTile` is set). MapLibre draws that empty tile instead of over-zooming z10. The map would go blank above z10 away from clubs. The `BASEMAP_OBJECT_PATH` PR has to handle this, and has to be verified on the preview at 4 zooms, light and dark (#2084).
+**Follow-up:** after the prod copy, a one-line PR sets `BASEMAP_OBJECT_PATH` in `frontend/src/config/basemap.ts` to `basemap/protomaps-v4/world-z0-14-<YYYYMMDD>.pmtiles`. Verify it on the preview at 4 zooms, in light and dark.
 
 ## Local build (diagnostics only)
 

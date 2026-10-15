@@ -43,7 +43,13 @@ Constraints this decision has to satisfy:
   | World z0–14                                                                                                 | 69 GB      | Planet z0–15 is 139 GB                                                                                                                                                                                                            |
   | Regional z0–12 or z0–14 (measured: D61 bbox 70 MB / 244 MB; India z0–12 681 MB; contiguous US z0–12 2.0 GB) | varies     | Clubs are in **158 countries + 342 unknown** (`global-totals.json`, 2026-10-11). Per-country extracts add up to most of the populated world. They also need a second source in the style, or `pmtiles merge` of disjoint archives |
 
-- **Why not regional now.** A follow-up can merge a world z0–10 file with a higher-zoom extract over **buffered club coordinates** into one archive with `pmtiles merge`. That works only once a date-level club-coordinate artifact exists (`club-geo` / #1800, blocked on #1763). Until then, z0–10 gives every district the same basemap.
+- **Amended 2026-10-15 (#2084, Ron): world z0–14, about 69 GB.** Street names and POIs exist only at z12–14, so directors need z14 for street-level detail. Ron chose a z0–14 world file. He weighed it against a near-clubs merge: world z0–10 plus z11–14 over 8 km club buffers, measured at 1,984 boxes, 7.0 GB of extract and about 10.8 GB merged. He chose z0–14 for two reasons. First, the merged file would draw blank maps above z10 away from clubs, because the `pmtiles` protocol answers a missing tile with an empty one, not an over-zoom. Second, it needs no club-location list to keep current.
+  - Measured on build `20261015` with `--dry-run`: 58,786,221 tile entries, an archive of 69 GB (about 64 GiB).
+  - It builds on the standard `ubuntu-26.04` runner. `pmtiles extract` writes with offsets and seeks back for the header, so it cannot stream to GCS. The 145 GB root volume had 109 GB free after cleanup on run `38305058683`, against about 80 GB needed with margin.
+  - Cost: $0 in runner minutes (public repo). Storage is about US$3–3.6 a month across both buckets. The build is estimated at 35–45 min.
+  - Cloud CDN caches range-capable objects up to 100 GiB, in chunks of about 2 MiB, so this one fits with no CDN change.
+  - The object is `basemap/protomaps-v4/world-z0-14-<YYYYMMDD>.pmtiles`, and the D1 and D4 rules are unchanged. The details are in runbook §5.
+- **Why not regional now (superseded by the amendment above).** A follow-up can merge a world z0–10 file with a higher-zoom extract over **buffered club coordinates** into one archive with `pmtiles merge`. That works only once a date-level club-coordinate artifact exists (`club-geo` / #1800, blocked on #1763). Until then, z0–10 gives every district the same basemap.
 - **Object.** The object is `basemap/protomaps-v4/world-z0-<maxzoom>-<YYYYMMDD>.pmtiles`. It is immutable and dated: a refresh is a new object, then a one-line change to `BASEMAP_OBJECT_PATH`. It is never overwritten in place, so cached chunks can never mix two builds. Upload metadata:
   - `Content-Type: application/octet-stream`, which Protomaps' own build host also uses;
   - `Cache-Control: public, max-age=86400, no-transform`;
@@ -132,7 +138,7 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
 - **Map route cost.** 292 KB gzip of main-thread JS, plus a 144 KB gzip worker. That is the price of vector tiles; a raster stack would need a tile server or a pre-rendered pyramid.
 - **No place labels** until a glyph range is self-hosted (follow-up). Pins and side panels carry names.
 - **Operator steps.** Two manual workflow dispatches per refresh. The standard runner is used after it frees preinstalled toolchains. The workflow checks the space before downloading anything, and fails with "use a larger runner" if there is not enough.
-- **Detail.** Beyond z10 the geometry is over-zoomed, so minor streets are generalised. If directors need street-level detail, the regional-merge follow-up (D1) is the path.
+- **Detail.** Beyond z10 the geometry is over-zoomed, so minor streets are generalised. The 2026-10-15 amendment (D1) moves to world z0–14 for street-level detail everywhere. That costs about 18 times the storage (US$3–3.6 a month) and a build of about 40 minutes.
 
 ## Alternatives considered
 
