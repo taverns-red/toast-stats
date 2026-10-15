@@ -290,6 +290,51 @@ describe('checkObject — time-series shape', () => {
     expect(failure).toBeNull()
   })
 
+  // #2070: a #1671 gap date's 0 point is removed and the date recorded in
+  // sourceGapDates. The record accounts for the date, so a file whose gap
+  // dates reach prod's last point has lost nothing.
+  it('passes a file whose last point became a recorded source gap (#2070)', () => {
+    const file = {
+      ...programYearFile('2026-09-30'),
+      sourceGapDates: ['2026-10-08'],
+    }
+    const failure = check(
+      PY_PATH,
+      stored(file),
+      CTX,
+      stored(programYearFile('2026-09-30', '2026-10-08'))
+    )
+    expect(failure).toBeNull()
+  })
+
+  it('passes a file every date of which is a recorded source gap (#2070)', () => {
+    const file = {
+      ...programYearFile(),
+      sourceGapDates: ['2026-09-30', '2026-10-08'],
+    }
+    const failure = check(
+      PY_PATH,
+      stored(file),
+      CTX,
+      stored(programYearFile('2026-09-30', '2026-10-08'))
+    )
+    expect(failure).toBeNull()
+  })
+
+  it('still fails a lost last point that no source gap accounts for (#2070)', () => {
+    const file = {
+      ...programYearFile('2026-09-30'),
+      sourceGapDates: ['2026-09-15'],
+    }
+    const failure = check(
+      PY_PATH,
+      stored(file),
+      CTX,
+      stored(programYearFile('2026-09-30', '2026-10-08'))
+    )
+    expect(failure).toMatch(/2026-09-30.*2026-10-08/)
+  })
+
   it('fails an index-metadata file that does not match the schema', () => {
     expect(check(META_PATH, plain({ districtId: '61' }))).toMatch(/schema/)
   })
