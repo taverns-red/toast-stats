@@ -8,6 +8,7 @@ import {
   type ClubMeetingSource,
 } from '../../utils/clubMeetingInfo'
 import { ClubWhereItMeets } from './ClubWhereItMeets'
+import type { ClubLineage } from '../../utils/clubLineage'
 
 /**
  * The fields the club hero shows. `ClubTrend` satisfies it, and so does the
@@ -33,6 +34,8 @@ export interface ClubHeroProps {
    * does not shift when they arrive (#1901).
    */
   statusPills?: React.ReactNode
+  /** #1805 — former districts and names; null/undefined renders no chip. */
+  lineage?: ClubLineage | null | undefined
 }
 
 /**
@@ -49,6 +52,7 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
   club,
   controls,
   statusPills,
+  lineage,
 }) => {
   const charterLabel = formatCharterDate(club.charterDate)
   return (
@@ -73,6 +77,21 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
               <span>District {districtId}</span>
             </>
           )}
+          {/* #1805 — lineage chips (club-district history, #1782). Each is
+              one flex item, so a narrow line wraps a whole chip, never
+              mid-phrase. */}
+          {lineage?.formerDistricts.length ? (
+            <span className="club-hero__lineage">
+              {/* The leading space keeps the line's text readable as one
+                  phrase (copy, screen readers); flex drops it visually. */}
+              {` (${lineage.formerDistricts.join('; ')})`}
+            </span>
+          ) : null}
+          {lineage?.formerNames.length ? (
+            <span className="club-hero__lineage">
+              {` Formerly ${lineage.formerNames.join(', ')}`}
+            </span>
+          ) : null}
         </p>
         {/* #1783: where the club meets (FAC enrichment for the viewed date;
             omitted when the snapshot has none). Never shows email or phone. */}

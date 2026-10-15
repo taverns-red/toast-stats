@@ -52,6 +52,7 @@ import { ClubLifecyclePanel } from '../components/clubs/ClubLifecyclePanel'
 import { useClubDistrictHistoryEntry } from '../hooks/useClubDistrictHistoryEntry'
 import { useSuspendedClubs } from '../hooks/useSuspendedClubs'
 import { buildClubLifecycle } from '../utils/clubLifecycle'
+import { buildClubLineage, type ClubLineage } from '../utils/clubLineage'
 import { ClubMiniMap } from '../components/clubs/ClubMiniMap'
 import { ClubStatStrip } from '../components/clubs/ClubStatStrip'
 import { ClubMembershipTrend } from '../components/clubs/ClubMembershipTrend'
@@ -422,11 +423,18 @@ const ClubDetailPage: React.FC = () => {
   // #1843 — Lifecycle timeline: charter (snapshot), district spans (one
   // club-district-history shard, #1782) and, only for a club the dashboard
   // lists as Suspended, its `Susp` date from the page date's
-  // suspended-clubs.json (#1953, R3). Both reads wait for the club's
-  // analytics, which itself waits for first paint (#1901), so neither
-  // competes with the hero's reads.
+  // suspended-clubs.json (#1953, R3). Neither read competes with the
+  // hero's reads: the shard (~12 KB) starts with the analytics read, after
+  // first paint (#1901) — since #1805 the hero's lineage chip needs it in
+  // the full render's commit (see `isHoldingForHistory`) — and the
+  // suspended list waits for the club's analytics.
   const { history: clubDistrictHistory, isLoading: isLoadingHistory } =
-    useClubDistrictHistoryEntry(clubId, !!club)
+    useClubDistrictHistoryEntry(clubId, analyticsReady)
+  // #1805 — "District 201 (District 1 until June 2026)".
+  const lineage = useMemo(
+    () => buildClubLineage(clubDistrictHistory, districtId),
+    [clubDistrictHistory, districtId]
+  )
   const isSuspended = club?.clubStatus === 'Suspended'
   const { clubs: suspendedClubs, isLoading: isLoadingSuspended } =
     useSuspendedClubs(
@@ -552,7 +560,8 @@ const ClubDetailPage: React.FC = () => {
   // above it keep one geometry while analytics loads in behind them.
   const renderTop = (
     heroClub: ClubHeroSource,
-    statusPills?: React.ReactNode
+    statusPills?: React.ReactNode,
+    heroLineage?: ClubLineage | null
   ) => (
     <>
       {/* Phone context bar (#1831, review §6.3): below 768 it replaces the
@@ -613,6 +622,7 @@ const ClubDetailPage: React.FC = () => {
         districtId={districtId}
         club={heroClub}
         statusPills={statusPills}
+        lineage={heroLineage}
         controls={
           <DataControlsBar
             latestSnapshotDate={effectiveEndDate ?? latestSnapshotDate}
@@ -640,7 +650,12 @@ const ClubDetailPage: React.FC = () => {
   // included), so React keeps the hero's DOM when analytics lands and nothing
   // above the fold moves. The tree differs from the plain skeleton below, so
   // that skeleton's nodes are replaced rather than pushed down (no CLS).
-  if (isLoading && snapshotHeroClub) {
+  // #1805 — the full render also waits for the club's history shard, so the
+  // hero's lineage chip lands in the same commit as the analytics panels
+  // instead of pushing painted content down on its own. The shard is ~12 KB
+  // and starts with the ~150 KB analytics read, so this rarely waits.
+  const isHoldingForHistory = !!club && isLoadingHistory
+  if ((isLoading || isHoldingForHistory) && snapshotHeroClub) {
     return (
       <ErrorBoundary>
         <div className="min-h-screen" aria-busy="true">
@@ -826,7 +841,8 @@ const ClubDetailPage: React.FC = () => {
                       })()}
                   </span>
                 )}
-            </>
+            </>,
+            lineage
           )}
 
           {/* Stat strip (#618; #1843 review §6.3) — 2×2 at 375, 4×2 from
