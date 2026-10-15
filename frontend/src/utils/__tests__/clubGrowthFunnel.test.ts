@@ -5,6 +5,7 @@ import type {
 } from '@taverns-red/shared-contracts'
 import recorded from '../../__tests__/fixtures/d61-growth-reports.recorded.json'
 import suspendedJson from '../../__tests__/fixtures/suspended-clubs-2026-10-13.recorded.json'
+import sponsorsRecorded from '../../__tests__/fixtures/sponsors-mentors-2026-06-01.recorded.json'
 import {
   buildClubGrowthFunnel,
   daysBetween,
@@ -393,5 +394,122 @@ describe('readGrowthCounts', () => {
       chartered: null,
       suspended: null,
     })
+  })
+})
+
+/* #1794 + #1795 — sponsor/mentor COUNTS per new club. The section shape is
+   RECORDED: the real DistrictReportsBuilder (PR #2056) over the live D61
+   2026-06-01 sponsors-mentors capture. No person is in the input. */
+describe('buildClubGrowthFunnel — sponsors and mentors', () => {
+  type SponsorsSection = NonNullable<
+    DistrictReportsDataset['sections']['sponsorsMentors']
+  >
+  const withSponsors: DistrictReportsDataset = {
+    ...live,
+    sections: {
+      ...live.sections,
+      sponsorsMentors:
+        sponsorsRecorded.sponsorsMentors_2026_06_01 as SponsorsSection,
+    },
+  }
+  const build = (reports: DistrictReportsDataset | null) =>
+    buildClubGrowthFunnel({
+      districtId: '61',
+      reports,
+      counts: KNOWN_ZERO,
+      programYear: PY_2026,
+      asOfDate: '2026-10-11',
+      clubPageIds: new Set(['28678571', '28680300']),
+    })
+
+  it('is null — not available yet — when the date has no section', () => {
+    expect(build(live).sponsorsMentors).toBeNull()
+    expect(build(null).sponsorsMentors).toBeNull()
+  })
+
+  it('collapses the recorded records to one row per club', () => {
+    const sm = build(withSponsors).sponsorsMentors!
+    expect(sm.clubs).toHaveLength(6)
+    expect(new Set(sm.clubs.map(c => c.clubId)).size).toBe(6)
+  })
+
+  it('sums every assignment exactly once (21 recorded rows)', () => {
+    const { totals } = build(withSponsors).sponsorsMentors!
+    expect(totals).toEqual({
+      clubs: 6,
+      sponsors: 11,
+      mentors: 9,
+      other: 1,
+      awarded: 6,
+    })
+    expect(totals.sponsors + totals.mentors + totals.other).toBe(21)
+  })
+
+  it('splits each club by role and counts awarded assignments', () => {
+    const family = build(withSponsors).sponsorsMentors!.clubs.find(
+      c => c.clubId === '28678920'
+    )
+    expect(family).toMatchObject({
+      clubName: 'Family Club',
+      charterDate: '2025-06-25',
+      sponsors: 2,
+      mentors: 1,
+      // TI's 'MENTORU' code is kept apart, not guessed into mentors.
+      other: 1,
+      awarded: 4,
+    })
+  })
+
+  it('orders newest charter first', () => {
+    const dates = build(withSponsors).sponsorsMentors!.clubs.map(
+      c => c.charterDate ?? ''
+    )
+    expect([...dates].sort((a, b) => b.localeCompare(a))).toEqual(dates)
+    expect(dates[0]).toBe('2026-05-22')
+  })
+
+  it('links a club with a page here internally, any other to TI', () => {
+    const clubs = build(withSponsors).sponsorsMentors!.clubs
+    const byId = new Map(clubs.map(c => [c.clubId, c]))
+    expect(byId.get('28680300')).toMatchObject({
+      href: '/district/61/club/28680300',
+      external: false,
+    })
+    expect(byId.get('28678920')).toMatchObject({
+      href: 'https://www.toastmasters.org/Find-a-Club/28678920',
+      external: true,
+    })
+  })
+
+  it('an empty section is an empty list, not unavailable', () => {
+    const empty: DistrictReportsDataset = {
+      ...live,
+      sections: {
+        ...live.sections,
+        sponsorsMentors: { sources: [], records: [] },
+      },
+    }
+    expect(build(empty).sponsorsMentors).toEqual({
+      clubs: [],
+      totals: { clubs: 0, sponsors: 0, mentors: 0, other: 0, awarded: 0 },
+    })
+  })
+
+  it('row keys carry no person field', () => {
+    for (const c of build(withSponsors).sponsorsMentors!.clubs) {
+      expect(Object.keys(c).sort()).toEqual(
+        [
+          'awarded',
+          'charterDate',
+          'clubId',
+          'clubName',
+          'external',
+          'href',
+          'mentors',
+          'other',
+          'sponsors',
+        ].sort()
+      )
+    }
   })
 })

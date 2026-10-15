@@ -1,0 +1,118 @@
+{
+  "_provenance": "Recorded, not hand-written (#1794). sponsorsMentors_2026_06_01: the real DistrictReportsBuilder (#1795, PR #2056) run over packages/collector-cli/src/__tests__/fixtures/daily-reports/sponsors-mentors.html (live D61 capture 2026-06-01). Counts only: the report's Name column is dropped at parse.",
+  "sponsorsMentors_2026_06_01": {
+    "sources": [
+      {
+        "reportType": "sponsors-mentors",
+        "tableId": "4da53bd8-f6d9-4fa5-81d8-34ed5966dddd",
+        "asOf": "June 01, 2026"
+      }
+    ],
+    "records": [
+      {
+        "club": "28678571",
+        "clubName": "Club Toastmasters de Drummondville",
+        "charterDate": "04/17/2026",
+        "code": "MENTOR",
+        "status": "PENDING",
+        "count": 2
+      },
+      {
+        "club": "28678571",
+        "clubName": "Club Toastmasters de Drummondville",
+        "charterDate": "04/17/2026",
+        "code": "SPONSOR",
+        "status": "AWARDED",
+        "count": 2
+      },
+      {
+        "club": "28678920",
+        "clubName": "Family Club",
+        "charterDate": "06/25/2025",
+        "code": "MENTOR",
+        "status": "AWARDED",
+        "count": 1
+      },
+      {
+        "club": "28678920",
+        "clubName": "Family Club",
+        "charterDate": "06/25/2025",
+        "code": "SPONSOR",
+        "status": "AWARDED",
+        "count": 2
+      },
+      {
+        "club": "28678920",
+        "clubName": "Family Club",
+        "charterDate": "06/25/2025",
+        "code": "MENTORU",
+        "status": "AWARDED",
+        "count": 1
+      },
+      {
+        "club": "28679190",
+        "clubName": "Club Toastmasters Les Entrepreneurs de Montreal",
+        "charterDate": "04/15/2026",
+        "code": "SPONSOR",
+        "status": "PENDING",
+        "count": 1
+      },
+      {
+        "club": "28679190",
+        "clubName": "Club Toastmasters Les Entrepreneurs de Montreal",
+        "charterDate": "04/15/2026",
+        "code": "MENTOR",
+        "status": "PENDING",
+        "count": 1
+      },
+      {
+        "club": "28679222",
+        "clubName": "Club Toastmasters IA",
+        "charterDate": "01/22/2026",
+        "code": "SPONSOR",
+        "status": "PENDING",
+        "count": 2
+      },
+      {
+        "club": "28679222",
+        "clubName": "Club Toastmasters IA",
+        "charterDate": "01/22/2026",
+        "code": "MENTOR",
+        "status": "PENDING",
+        "count": 2
+      },
+      {
+        "club": "28679503",
+        "clubName": "TENE Toastmasters",
+        "charterDate": "12/01/2025",
+        "code": "SPONSOR",
+        "status": "PENDING",
+        "count": 2
+      },
+      {
+        "club": "28679503",
+        "clubName": "TENE Toastmasters",
+        "charterDate": "12/01/2025",
+        "code": "MENTOR",
+        "status": "PENDING",
+        "count": 1
+      },
+      {
+        "club": "28680300",
+        "clubName": "iA Montreal Toastmasters",
+        "charterDate": "05/22/2026",
+        "code": "MENTOR",
+        "status": "PENDING",
+        "count": 2
+      },
+      {
+        "club": "28680300",
+        "clubName": "iA Montreal Toastmasters",
+        "charterDate": "05/22/2026",
+        "code": "SPONSOR",
+        "status": "PENDING",
+        "count": 2
+      }
+    ]
+  }
+}
