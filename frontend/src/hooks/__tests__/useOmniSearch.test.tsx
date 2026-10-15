@@ -15,6 +15,8 @@ import {
   fetchCdnDivisionsAreasIndex,
   fetchCdnSnapshotIndex,
 } from '../../services/cdn'
+import { fetchClubDistrictHistoryShard } from '../../services/clubDistrictHistory'
+import shardFixture from '../../__tests__/fixtures/club-district-history-shard-77.recorded.json'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
@@ -24,6 +26,12 @@ vi.mock('../../services/cdn', () => ({
   // does not stub this leaves loadSearchIndex calling undefined.
   fetchCdnSnapshotIndex: vi.fn(),
 }))
+
+// The club-district history (#1806) — a club-index miss reads one shard.
+vi.mock('../../services/clubDistrictHistory', () => ({
+  fetchClubDistrictHistoryShard: vi.fn(),
+}))
+const mockedShard = vi.mocked(fetchClubDistrictHistoryShard)
 
 const mockedRankings = vi.mocked(fetchCdnRankings)
 const mockedClubIndex = vi.mocked(fetchCdnClubIndex)
@@ -46,6 +54,9 @@ const keyEvent = (key: string) =>
   }) as unknown as React.KeyboardEvent<HTMLInputElement>
 
 const setupCdn = () => {
+  mockedShard.mockResolvedValue(
+    shardFixture as Awaited<ReturnType<typeof fetchClubDistrictHistoryShard>>
+  )
   mockedRankings.mockResolvedValue({
     rankings: [
       { districtId: '57', districtName: 'District 57', region: '7' },
@@ -166,5 +177,73 @@ describe('useOmniSearch (#1058)', () => {
     expect(result.current.activeIndex).toBe(1)
     act(() => result.current.setQuery('61')) // new query
     expect(result.current.activeIndex).toBe(0)
+  })
+})
+
+describe('useOmniSearch closed-club fallback (#1806)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setupCdn()
+  })
+
+  it('a club number missing from club-index resolves from the history shard', async () => {
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('377'))
+    await waitFor(() =>
+      expect(result.current.flat).toContainEqual(
+        expect.objectContaining({
+          type: 'club',
+          label: 'Traveling Toastmasters Club',
+          context: 'closed 2024 · last in District 39',
+          route: '/district/39/club/377?py=2023',
+        })
+      )
+    )
+    // One shard, keyed by the club's last two digits — never the whole history.
+    expect(mockedShard).toHaveBeenCalledTimes(1)
+    expect(mockedShard).toHaveBeenCalledWith('77')
+  })
+
+  it('does not fetch the history when club-index has the club', async () => {
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('12345'))
+    expect(result.current.flat[0]).toMatchObject({ id: '12345' })
+    expect(mockedShard).not.toHaveBeenCalled()
+  })
+
+  it('does not fetch the history for a name query', async () => {
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('traveling'))
+    expect(mockedShard).not.toHaveBeenCalled()
+  })
+
+  it('adds nothing for a club the history holds as still open', async () => {
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('977'))
+    await waitFor(() => expect(mockedShard).toHaveBeenCalledWith('77'))
+    expect(result.current.flat.some(e => e.id === '977')).toBe(false)
+  })
+
+  it('a failed shard fetch leaves search unchanged', async () => {
+    mockedShard.mockRejectedValue(new Error('CDN 404'))
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('377'))
+    await waitFor(() => expect(mockedShard).toHaveBeenCalled())
+    expect(result.current.flat).toEqual([])
   })
 })

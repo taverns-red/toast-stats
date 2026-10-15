@@ -1,8 +1,9 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import type {
-  DiffEvent,
-  DiffEventCategory,
+import {
+  normalizeClubId,
+  type DiffEvent,
+  type DiffEventCategory,
 } from '@taverns-red/shared-contracts'
 
 /* District "What Changed" feed group (#1013/#1014, epic #1007 — entity links).
@@ -51,10 +52,11 @@ function resolveEntity(
     plain text. Falls back to plain text for an entity-less event, or when a
     label unexpectedly doesn't begin with the entity name — so a link is only
     ever rendered when it points somewhere real. */
-const ChangeLabel: React.FC<{ event: DiffEvent; districtId: string }> = ({
-  event,
-  districtId,
-}) => {
+const ChangeLabel: React.FC<{
+  event: DiffEvent
+  districtId: string
+  counterpart: string | undefined
+}> = ({ event, districtId, counterpart }) => {
   const { label } = event
   const entity = resolveEntity(event, districtId)
 
@@ -66,7 +68,51 @@ const ChangeLabel: React.FC<{ event: DiffEvent; districtId: string }> = ({
       <Link to={entity.href} className="clubs-name-link">
         {entity.name}
       </Link>
-      {rest}
+      <TransferRest
+        rest={rest}
+        category={event.category}
+        counterpart={counterpart}
+      />
+    </>
+  )
+}
+
+/* #1806 — the engine's transfer labels (diffSnapshots `transferLabel`) say
+   "moved to another district" / "moved into the district" because a diff
+   holds one district. When the club-district history (#1782) names the other
+   side, that phrase becomes "transferred to/from District N" with a link.
+   Anything else — no counterpart, a non-transfer event, or a label whose
+   wording has drifted from the phrase — renders exactly as the engine wrote
+   it, so the feed never shows a half-rewritten sentence. */
+const TRANSFER_PHRASE: Partial<
+  Record<DiffEventCategory, { phrase: string; preposition: string }>
+> = {
+  'club-transferred-out': {
+    phrase: 'moved to another district',
+    preposition: 'transferred to',
+  },
+  'club-transferred-in': {
+    phrase: 'moved into the district',
+    preposition: 'transferred from',
+  },
+}
+
+const TransferRest: React.FC<{
+  rest: string
+  category: DiffEventCategory
+  counterpart: string | undefined
+}> = ({ rest, category, counterpart }) => {
+  const rewrite = TRANSFER_PHRASE[category]
+  const at = rewrite ? rest.indexOf(rewrite.phrase) : -1
+  if (!rewrite || !counterpart || at < 0) return <>{rest}</>
+  return (
+    <>
+      {rest.slice(0, at)}
+      {rewrite.preposition}{' '}
+      <Link to={`/district/${counterpart}`} className="clubs-name-link">
+        District {counterpart}
+      </Link>
+      {rest.slice(at + rewrite.phrase.length)}
     </>
   )
 }
@@ -126,7 +172,17 @@ export const ChangeGroup: React.FC<{
   /** Groups are open by default; collapsed when listed in ?expandChanges (#980). */
   collapsed: boolean
   onToggle: (category: DiffEventCategory, open: boolean) => void
-}> = ({ category, heading, events, districtId, collapsed, onToggle }) => {
+  /** Canonical club id → the district on the other side of a transfer. */
+  counterparts?: ReadonlyMap<string, string>
+}> = ({
+  category,
+  heading,
+  events,
+  districtId,
+  collapsed,
+  onToggle,
+  counterparts,
+}) => {
   if (events.length === 0) return null
   const net = netFor(category, events)
   return (
@@ -165,7 +221,11 @@ export const ChangeGroup: React.FC<{
             key={`${e.category}-${e.clubId || e.divisionId || ''}-${e.areaId ?? ''}`}
             className="changes-group__item"
           >
-            <ChangeLabel event={e} districtId={districtId} />
+            <ChangeLabel
+              event={e}
+              districtId={districtId}
+              counterpart={counterparts?.get(normalizeClubId(e.clubId))}
+            />
           </li>
         ))}
       </ul>

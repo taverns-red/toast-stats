@@ -350,3 +350,103 @@ describe('ChangeGroup net delta (#1463)', () => {
     }
   )
 })
+
+describe('ChangeGroup transfer counterpart (#1806)', () => {
+  const renderTransfer = (
+    category: 'club-transferred-in' | 'club-transferred-out',
+    label: string,
+    districtId: string,
+    counterparts?: ReadonlyMap<string, string>
+  ) =>
+    render(
+      <MemoryRouter>
+        <ChangeGroup
+          category={category}
+          heading="Clubs moved"
+          events={[
+            event({
+              category,
+              clubId: '00000977',
+              clubName: 'Professional Women Toastmasters',
+              label,
+              magnitude: category === 'club-transferred-in' ? 1 : -1,
+            }),
+          ]}
+          districtId={districtId}
+          collapsed={false}
+          onToggle={() => {}}
+          {...(counterparts ? { counterparts } : {})}
+        />
+      </MemoryRouter>
+    )
+
+  // The labels are the exact strings diffSnapshots' transferLabel emits.
+  const OUT =
+    'Professional Women Toastmasters (Active) moved to another district in the 2026 district realignment'
+  const IN =
+    'Professional Women Toastmasters (Active) moved into the district in the 2026 district realignment'
+
+  it('names and links the district a club transferred to', () => {
+    const { container } = renderTransfer(
+      'club-transferred-out',
+      OUT,
+      '01',
+      new Map([['977', '201']])
+    )
+    const link = screen.getByRole('link', { name: 'District 201' })
+    expect(link).toHaveAttribute('href', '/district/201')
+    expect(container.querySelector('li')?.textContent).toBe(
+      'Professional Women Toastmasters (Active) transferred to District 201 in the 2026 district realignment'
+    )
+  })
+
+  it('names and links the district a club transferred from', () => {
+    const { container } = renderTransfer(
+      'club-transferred-in',
+      IN,
+      '201',
+      new Map([['977', '01']])
+    )
+    expect(screen.getByRole('link', { name: 'District 01' })).toHaveAttribute(
+      'href',
+      '/district/01'
+    )
+    expect(container.querySelector('li')?.textContent).toBe(
+      'Professional Women Toastmasters (Active) transferred from District 01 in the 2026 district realignment'
+    )
+  })
+
+  it('leaves the label unchanged when the history has no counterpart', () => {
+    const { container } = renderTransfer('club-transferred-out', OUT, '01')
+    expect(container.querySelector('li')?.textContent).toBe(OUT)
+    expect(
+      screen.queryByRole('link', { name: /^District / })
+    ).not.toBeInTheDocument()
+  })
+
+  it('ignores a counterpart for a non-transfer event', () => {
+    render(
+      <MemoryRouter>
+        <ChangeGroup
+          category="club-removed"
+          heading="Clubs that left"
+          events={[
+            event({
+              category: 'club-removed',
+              clubId: '977',
+              label: 'Acme Club (Active) left the district',
+              magnitude: -1,
+            }),
+          ]}
+          districtId="01"
+          collapsed={false}
+          onToggle={() => {}}
+          counterparts={new Map([['977', '201']])}
+        />
+      </MemoryRouter>
+    )
+    expect(
+      screen.queryByRole('link', { name: /^District / })
+    ).not.toBeInTheDocument()
+  })
+})
