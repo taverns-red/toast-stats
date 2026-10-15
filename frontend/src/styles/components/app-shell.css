@@ -2122,6 +2122,21 @@
     color: rgba(255, 255, 255, 0.4);
   }
 
+  /* #1805 — lineage chips on the area/division/district line ("(District 1
+     until June 2026)", "Formerly …"). On the fixed loyal-blue hero, same in
+     both themes, so the white-alpha treatment needs no dark remap (as
+     .club-hero__sub). New component → --rt-* tokens; the --rt-stats accent
+     is the left rule only (decorative, the words carry the meaning). The
+     face is the line's own, so one line never mixes two families. */
+  .club-hero__lineage {
+    padding: 0 var(--rt-space-2);
+    border-left: 2px solid var(--rt-stats);
+    font-size: 13px;
+    line-height: 20px;
+    color: rgba(255, 255, 255, 0.85);
+    overflow-wrap: anywhere;
+  }
+
   /* #1783 — where-it-meets line. Sits on the fixed loyal-blue hero, which is
      the same in both themes, so the white-alpha text needs no dark remap
      (same treatment as .club-hero__sub). New component → --rt-* tokens for

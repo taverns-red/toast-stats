@@ -52,6 +52,7 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
   club,
   controls,
   statusPills,
+  lineage,
 }) => {
   const charterLabel = formatCharterDate(club.charterDate)
   return (
@@ -76,6 +77,21 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
               <span>District {districtId}</span>
             </>
           )}
+          {/* #1805 — lineage chips (club-district history, #1782). Each is
+              one flex item, so a narrow line wraps a whole chip, never
+              mid-phrase. */}
+          {lineage?.formerDistricts.length ? (
+            <span className="club-hero__lineage">
+              {/* The leading space keeps the line's text readable as one
+                  phrase (copy, screen readers); flex drops it visually. */}
+              {` (${lineage.formerDistricts.join('; ')})`}
+            </span>
+          ) : null}
+          {lineage?.formerNames.length ? (
+            <span className="club-hero__lineage">
+              {` Formerly ${lineage.formerNames.join(', ')}`}
+            </span>
+          ) : null}
         </p>
         {/* #1783: where the club meets (FAC enrichment for the viewed date;
             omitted when the snapshot has none). Never shows email or phone. */}

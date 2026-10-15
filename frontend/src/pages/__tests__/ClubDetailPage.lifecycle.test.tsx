@@ -5,10 +5,10 @@
  * shard of `config/club-district-history/` (#1782) and, only for a club the
  * dashboard lists as Suspended, the date's `suspended-clubs.json` (#1953).
  *
- * Perf contract (club LCP ≤ 3.0 s, #1843): the shard is read only once the
- * club's analytics has landed (itself after first paint, #1901), so it never
- * competes with the hero's reads; an active club never reads the suspended
- * list at all.
+ * Perf contract (club LCP ≤ 3.0 s, #1843): the shard read starts with the
+ * analytics read, after first paint (#1901; since #1805 the hero's lineage
+ * chip needs it), so it never competes with the hero's reads; an active club
+ * never reads the suspended list at all.
  *
  * R22: this is a full-page mount, so it lives in `src/pages/__tests__/`.
  */

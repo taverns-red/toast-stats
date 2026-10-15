@@ -303,6 +303,43 @@ test(`club hero chrome ≤ ${HERO_MAX_H}px for the longest D61 club name at 375`
   })
 })
 
+// #1805 — a club that moved carries the lineage chip on the hero's
+// area/division/district line. Club 977 (District 1 until June 2026, then
+// District 201) is the worst case the reformation produced: the chip wraps
+// the line at 375, and the hero must still fit its budget, with no
+// sideways scroll.
+test(`moved club's lineage chip fits the hero budget at 375`, async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/district/201/club/977', {
+    waitUntil: 'networkidle',
+    timeout: 60_000,
+  })
+  await page
+    .locator('.club-hero__pill:not([data-testid="club-hero-pill-placeholder"])')
+    .first()
+    .waitFor({ state: 'visible', timeout: 30_000 })
+  await page.evaluate(() => document.fonts.ready.then(() => undefined))
+  await expect(page.locator('.club-hero .club-hero__lineage')).toHaveText(
+    '(District 1 until June 2026)'
+  )
+  const m = await page.evaluate(() => ({
+    heroH: Math.round(
+      document.querySelector('.club-hero')!.getBoundingClientRect().height
+    ),
+    docOverflow:
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  }))
+  expect(m.heroH, `hero height ${m.heroH}px`).toBeLessThanOrEqual(HERO_MAX_H)
+  expect(m.docOverflow).toBe(0)
+  test.info().annotations.push({
+    type: 'hero-height-moved-club',
+    description: `${m.heroH}px`,
+  })
+})
+
 for (const width of [375, 1280]) {
   test(`static mini-map links to the club map without MapLibre at ${width}`, async ({
     page,
