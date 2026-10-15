@@ -400,13 +400,15 @@ export function buildCoached(
 }
 
 /**
- * TI's New Club Sponsors & Mentors codes → role. `MENTORU` is a mentor too:
- * the U marks a mentor credit the member has already used toward a DTM
- * (confirmed by Ron on PR #2065), so it counts as a mentor. Any code not
- * listed here is counted as 'other', never guessed into a role.
+ * TI's New Club Sponsors & Mentors codes → role. A trailing U (`SPONSORU`,
+ * `MENTORU`) marks a sponsor or mentor credit the member has already used
+ * toward a DTM (confirmed by Ron on PR #2065); the role is the same, so it
+ * counts the same. Any code not listed here is counted as 'other', never
+ * guessed into a role.
  */
 const SPONSOR_MENTOR_ROLES: Readonly<Record<string, 'sponsors' | 'mentors'>> = {
   SPONSOR: 'sponsors',
+  SPONSORU: 'sponsors',
   MENTOR: 'mentors',
   MENTORU: 'mentors',
 }
