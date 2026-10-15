@@ -21,21 +21,7 @@ import {
   findClubInShard,
   transferCounterpartDistrict,
 } from '../utils/clubDistrictHistory'
-
-/** The history is rebuilt by the daily pipeline; a shard is stable for hours. */
-export const CLUB_DISTRICT_HISTORY_STALE_MS = 30 * 60 * 1000
-
-export function clubDistrictHistoryShardQuery(shardKey: string) {
-  return {
-    queryKey: ['club-district-history-shard', shardKey] as const,
-    queryFn: () =>
-      import('../services/clubDistrictHistory').then(m =>
-        m.fetchClubDistrictHistoryShard(shardKey)
-      ),
-    staleTime: CLUB_DISTRICT_HISTORY_STALE_MS,
-    retry: false,
-  }
-}
+import { clubDistrictHistoryShardQuery } from './clubDistrictHistoryQuery'
 
 function transferDirection(event: DiffEvent): 'in' | 'out' | null {
   if (event.category === 'club-transferred-in') return 'in'

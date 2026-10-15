@@ -20,7 +20,7 @@ import {
   type SearchIndex,
   type SearchResultGroup,
 } from '../services/searchIndex'
-import { clubDistrictHistoryShardQuery } from './useTransferCounterparts'
+import { clubDistrictHistoryShardQuery } from './clubDistrictHistoryQuery'
 import {
   closedClubSummary,
   findClubInShard,
