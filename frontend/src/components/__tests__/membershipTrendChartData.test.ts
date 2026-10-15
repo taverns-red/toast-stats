@@ -117,3 +117,35 @@ describe('buildMembershipTrendChartData (#1705)', () => {
     expect(current.label).toBe('2026-2027')
   })
 })
+
+// #2070: a #1671 source-gap date has no time-series point (the file lists it
+// in sourceGapDates instead). The chart must show a gap there, never a 0.
+describe('buildMembershipTrendChartData — source-gap dates (#2070)', () => {
+  it('leaves the series undefined on a gap date, so no row plots a 0', () => {
+    // District U, PY 2020-21 neighbours with 2020-09-30 unmeasured.
+    const current = [
+      { date: '2020-08-31', count: 5210 },
+      { date: '2020-10-31', count: 5288 },
+    ]
+    const { rows } = buildMembershipTrendChartData(current, [], '2020-2021')
+
+    expect(rows.map(r => r['current'])).toEqual([5210, 5288])
+    expect(rows.some(r => r['current'] === 0)).toBe(false)
+    expect(
+      rows.find(r => r.day === calculateProgramYearDay('2020-09-30'))
+    ).toBeUndefined()
+  })
+
+  it('anchors nothing on a predecessor close that was a gap', () => {
+    // 2019-20 is all gap dates for U: its file has no points, so no 06-30
+    // close exists to anchor the 2020-21 line on (it used to anchor on 0).
+    const { series } = buildMembershipTrendChartData(
+      [{ date: '2020-07-31', count: 5150 }],
+      [{ label: '2019-2020', data: [] }],
+      '2020-2021'
+    )
+
+    expect(series[0]!.points.some(p => p.anchor)).toBe(false)
+    expect(series[0]!.points.map(p => p.count)).toEqual([5150])
+  })
+})
