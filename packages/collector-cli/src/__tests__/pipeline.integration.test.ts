@@ -22,6 +22,10 @@ import * as os from 'node:os'
 import { TransformService } from '../services/TransformService.js'
 import { AnalyticsComputeService } from '../services/AnalyticsComputeService.js'
 import {
+  DISTRICT_ANALYTICS_CLUB_LISTS,
+  expandDistrictAnalyticsClubLists,
+} from '@taverns-red/shared-contracts'
+import {
   ANALYTICS_SCHEMA_VERSION,
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
@@ -519,14 +523,17 @@ describe('Pipeline Integration Tests', () => {
       // Verify data structure (Property 13: Club Health Completeness)
       expect(clubHealth.data.allClubs).toBeDefined()
       expect(Array.isArray(clubHealth.data.allClubs)).toBe(true)
-      expect(clubHealth.data.thrivingClubs).toBeDefined()
-      expect(Array.isArray(clubHealth.data.thrivingClubs)).toBe(true)
-      expect(clubHealth.data.vulnerableClubs).toBeDefined()
-      expect(Array.isArray(clubHealth.data.vulnerableClubs)).toBe(true)
-      expect(clubHealth.data.interventionRequiredClubs).toBeDefined()
-      expect(Array.isArray(clubHealth.data.interventionRequiredClubs)).toBe(
-        true
-      )
+      // The health lists are written as clubId lists (#1901) and resolve
+      // against allClubs through the reader's expand.
+      const allIds = new Set(clubHealth.data.allClubs.map(c => c.clubId))
+      const slim = clubHealth.data as unknown as Record<string, unknown>
+      for (const [fullKey, idKey] of DISTRICT_ANALYTICS_CLUB_LISTS) {
+        const ids = slim[idKey]
+        expect(Array.isArray(ids)).toBe(true)
+        for (const id of ids as string[]) expect(allIds.has(id)).toBe(true)
+        const expanded = expandDistrictAnalyticsClubLists(clubHealth.data)
+        expect(expanded[fullKey].map(c => c.clubId)).toEqual(ids)
+      }
 
       // Verify club entries have required fields
       if (clubHealth.data.allClubs.length > 0) {
