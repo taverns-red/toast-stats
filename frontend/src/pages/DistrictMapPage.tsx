@@ -226,12 +226,16 @@ const DistrictMapPage: React.FC = () => {
   const allClubs = useMemo(() => analytics?.allClubs ?? [], [analytics])
 
   const prospective = analytics?.prospectiveClubs ?? []
+  // The renewals / CSP / officer / coach / awards modes read the reports
+  // sidecar the analytics query already fetched for this date (#1787).
+  const reports = analytics?.districtReports ?? null
   // Division and area load after the first render (a split chunk); until
   // then a territory deep link draws no pins rather than the wrong colours.
   const [territory, setTerritory] = useState<
     typeof import('../components/map/pinTerritory') | null
   >(null)
-  // So do the extended modes (#1787): status, members, growth, DCP, age.
+  // So do the extended modes (#1787): status, members, growth, DCP, age,
+  // and the reports-sidecar modes.
   const [extended, setExtended] = useState<
     typeof import('../components/map/pinExtended') | null
   >(null)
@@ -251,8 +255,8 @@ const DistrictMapPage: React.FC = () => {
       return buildModeModel(mode === 'tier' ? 'tier' : 'health')
     return isTerritoryMode(mode)
       ? territory!.territoryModel(mode, allClubs)
-      : extended!.extendedModel(mode as ExtendedMode, viewedDate)
-  }, [mode, allClubs, territory, extended, pending, viewedDate])
+      : extended!.extendedModel(mode as ExtendedMode, viewedDate, reports)
+  }, [mode, allClubs, territory, extended, pending, viewedDate, reports])
   // Visit / online filtering lives in the on-demand filter chunk, which
   // hands its filter up once ready (with the visit snapshot when a round is
   // asked for); until then a filtered deep link draws nothing rather than
@@ -266,10 +270,11 @@ const DistrictMapPage: React.FC = () => {
   const applyAll = React.useCallback(
     (clubs: typeof allClubs, params: URLSearchParams) => {
       let out = applyFacets(clubs, params)
-      if (extended) out = extended.applyExtendedFacets(out, params, viewedDate)
+      if (extended)
+        out = extended.applyExtendedFacets(out, params, viewedDate, reports)
       return mapFilter ? mapFilter(out, params) : out
     },
-    [mapFilter, extended, viewedDate]
+    [mapFilter, extended, viewedDate, reports]
   )
   const filtered = useMemo(
     () => (filtering ? [] : applyAll(allClubs, searchParams)),

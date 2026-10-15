@@ -272,6 +272,54 @@ for (const theme of ['light', 'dark'] as const) {
       }))
       expect(m.overflow).toBeLessThanOrEqual(0)
     })
+
+    /* The reports-sidecar modes (#1787): October renewals from the
+     * Compliance group. The chips still sum to every club — a club the
+     * report doesn't list is "Not available", never dropped. */
+    test(`district map compliance mode at ${width} (${theme})`, async ({
+      page,
+    }) => {
+      test.setTimeout(90_000)
+      await open(page, theme, width)
+      const total = (await shownOf(page)).m
+
+      await page.getByRole('button', { name: /^Colour: Club health/ }).click()
+      const picker =
+        width < 768
+          ? page.getByRole('dialog', { name: 'Colour pins by' })
+          : page.locator('#map-modes-pop')
+      const group = picker.getByRole('group', { name: 'Compliance' })
+      await expect(group).toBeVisible({ timeout: 15_000 })
+      await group.getByRole('button', { name: 'October renewals' }).click()
+      await expect(page).toHaveURL(/color=renew-oct/)
+      await expect(
+        page.getByRole('region', {
+          name: 'Club map, coloured by October renewals',
+        })
+      ).toBeVisible({ timeout: 30_000 })
+
+      if (width < 768)
+        await page.getByRole('button', { name: 'Legend and lists' }).click()
+      const legend = page
+        .getByRole('group', { name: 'October renewals legend' })
+        .filter({ visible: true })
+        .last()
+      await expect(legend).toBeVisible()
+      const chips = await legend.getByRole('button').allTextContents()
+      const n = chips.map(t => {
+        const m = /^(.*\S)\s+(\d+)$/.exec(t.replace(/\s+/g, ' ').trim())
+        expect(m, t).not.toBeNull()
+        return Number(m![2])
+      })
+      expect(n.reduce((a, c) => a + c, 0)).toBe(total)
+
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth
+      )
+      expect(overflow).toBeLessThanOrEqual(0)
+    })
   }
 }
 

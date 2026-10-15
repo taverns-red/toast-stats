@@ -58,6 +58,13 @@ function shapePath(
   } else if (shape === 'square') {
     const s = r * 0.85
     ctx.rect(cx - s, cy - s, 2 * s, 2 * s)
+  } else if (shape === 'diamond') {
+    // ◆ Ineligible / coaching complete (spec §3.2, status shapes).
+    ctx.moveTo(cx, cy - r)
+    ctx.lineTo(cx + r, cy)
+    ctx.lineTo(cx, cy + r)
+    ctx.lineTo(cx - r, cy)
+    ctx.closePath()
   } else {
     ctx.arc(cx, cy, r, 0, Math.PI * 2)
   }
@@ -104,6 +111,16 @@ function drawPin(
     shapePath(ctx, 'circle', cx, cy, r * 0.7)
     ctx.lineWidth = 2
     ctx.strokeStyle = spec.fill
+    ctx.stroke()
+    return
+  }
+  if (spec.shape === 'dot') {
+    // A small dot: the quiet "nothing to flag" state (no coach).
+    shapePath(ctx, 'circle', cx, cy, r * 0.55)
+    ctx.fillStyle = spec.fill
+    ctx.fill()
+    ctx.lineWidth = 1.5
+    ctx.strokeStyle = outline
     ctx.stroke()
     return
   }
