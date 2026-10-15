@@ -158,7 +158,23 @@ for (const [width, cols, rows] of [
           .closest('section') as HTMLElement
         const details = section.querySelector('details')
         const summary = section.querySelector('summary')
+        const box = section.getBoundingClientRect()
+        const list = section.querySelector('ol')
+        const items = [
+          ...section.querySelectorAll('li:not(.club-lifecycle__row--skeleton)'),
+        ].map(li => li.getBoundingClientRect())
         return {
+          top: Math.round(box.top),
+          left: Math.round(box.left),
+          width: Math.round(box.width),
+          bottom: Math.round(box.bottom),
+          // Space between the list's last row and the panel's bottom edge:
+          // a panel stretched to a taller neighbour's row height shows it.
+          slackBelowList: list
+            ? Math.round(box.bottom - list.getBoundingClientRect().bottom)
+            : 0,
+          itemTops: items.map(r => Math.round(r.top)),
+          itemLefts: items.map(r => Math.round(r.left)),
           details: !!details,
           open: details?.open ?? null,
           rows: section.querySelectorAll(
@@ -175,7 +191,11 @@ for (const [width, cols, rows] of [
             : 0,
         }
       })
+      const panelsGrid = document
+        .querySelector('.club-panels-grid')!
+        .getBoundingClientRect()
       return {
+        panelsGridWidth: Math.round(panelsGrid.width),
         cells: cells.length,
         cols: lefts.size,
         rows: tops.size,
@@ -201,6 +221,39 @@ for (const [width, cols, rows] of [
     const lifecycle = m.panels[2]!
     expect(lifecycle.rows, 'lifecycle rows').toBeGreaterThanOrEqual(2)
     expect(lifecycle.rowTextMin).toBeGreaterThanOrEqual(14)
+    // Ron's layout decision on PR #2057: Education and Compliance side by
+    // side from 768, the timeline on its own full-width row below them,
+    // laid out horizontally and hugging its content (no stretched empty
+    // space). Below 768 it stays a vertical timeline.
+    const [edu, compliance] = m.panels
+    expect(
+      lifecycle.slackBelowList,
+      'space under the timeline'
+    ).toBeLessThanOrEqual(40)
+    if (phone) {
+      expect(new Set(lifecycle.itemLefts).size, 'vertical: one column').toBe(1)
+      expect(lifecycle.itemTops).toEqual(
+        [...lifecycle.itemTops].sort((a, b) => a - b)
+      )
+      expect(new Set(lifecycle.itemTops).size).toBe(lifecycle.rows)
+    } else {
+      expect(compliance!.top, 'Education and Compliance share a row').toBe(
+        edu!.top
+      )
+      expect(compliance!.left).toBeGreaterThan(edu!.left)
+      expect(
+        lifecycle.top,
+        'timeline below both panels'
+      ).toBeGreaterThanOrEqual(Math.max(edu!.bottom, compliance!.bottom))
+      expect(lifecycle.width, 'timeline is full width').toBeGreaterThanOrEqual(
+        m.panelsGridWidth - 2
+      )
+      expect(new Set(lifecycle.itemTops).size, 'horizontal: one row').toBe(1)
+      expect(lifecycle.itemLefts).toEqual(
+        [...lifecycle.itemLefts].sort((a, b) => a - b)
+      )
+      expect(new Set(lifecycle.itemLefts).size).toBe(lifecycle.rows)
+    }
     for (const p of m.panels) {
       expect(p.details).toBe(phone)
       if (phone) {
