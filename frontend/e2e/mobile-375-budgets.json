@@ -53,7 +53,7 @@
     },
     {
       "path": "/district/61/analytics",
-      "sentinel": "[data-testid=\"education-awards-leaderboard\"]",
+      "sentinel": "[data-testid=\"education-moved-link\"]",
       "first": "[data-testid=\"district-section-bar\"] + *",
       "contextBar": true,
       "firstContentMaxPx": 110,

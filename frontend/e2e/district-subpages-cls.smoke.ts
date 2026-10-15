@@ -56,6 +56,8 @@ const SUBPAGES = [
   'map',
   // The Club Growth funnel (#1794).
   'growth',
+  // Education awards PYTD (#1793).
+  'education',
   'trends',
   'analytics',
   'rankings',
