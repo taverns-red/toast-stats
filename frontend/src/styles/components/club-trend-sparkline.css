@@ -1,11 +1,10 @@
 /* Club membership-trend sparkline (#1792) — the Clubs table "Trend" column
    and the phone row's trailing trend. 60×16 per the feature design §2.5.
 
-   The line is the product accent (--rt-stats). On the light surface the raw
-   amber (#D4873F) is ~2.6:1 — under WCAG 1.4.11's 3:1 for a graphic — so the
-   light theme darkens it toward ink (~5:1); dark keeps the raw accent, which
-   clears 3:1 on the dark surface comfortably. Values are text in ink tokens,
-   never the series colour (dataviz: text wears text tokens). */
+   The line is the loyal-blue accent (#2080, was amber): #004165 is ~10:1 on
+   the light surface and dark-mode.css remaps it to #5dade2 (≥3:1 on the dark
+   surfaces), so no per-theme darkening is needed. Values are text in ink
+   tokens, never the series colour (dataviz: text wears text tokens). */
 
 @layer components {
   .club-trend-sparkline {
@@ -14,11 +13,7 @@
     width: 60px;
     height: 16px;
     overflow: visible;
-    color: color-mix(in oklab, var(--rt-stats, #d4873f) 70%, var(--ink));
-  }
-
-  [data-theme='dark'] .club-trend-sparkline {
-    color: var(--rt-stats, #d4873f);
+    color: var(--tm-loyal-blue);
   }
 
   /* Desktop/tablet cell: sparkline, then the signed net as text. */

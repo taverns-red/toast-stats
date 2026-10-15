@@ -3,7 +3,7 @@ import { test, expect, type Page } from './fixtures/test'
 /* WCAG AA text contrast on the routes #1839 fixed (epic #1827).
  *
  * The 2026-10-11 mobile review and the 2.48.0 prod sweep found three misses:
- *  - the amber brand accent (--rt-stats #D4873F) used as TEXT on white: the
+ *  - the retired amber brand accent (#D4873F, gone since #2080) as TEXT on white: the
  *    club-history year links (2.86:1, 768+ where the full table renders) and
  *    the 404 code (2.86:1, under even the 3:1 large-text bar);
  *  - dark mode's primary button / skip link: white on the remapped light

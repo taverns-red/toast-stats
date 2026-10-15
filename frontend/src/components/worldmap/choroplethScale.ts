@@ -13,8 +13,11 @@
  *   countries never sink into the dark background.
  * - "No clubs located" is the basemap land colour plus a hatch, so it never
  *   relies on colour alone. Dark uses the basemap water (ADR-016); light uses
- *   a warm grey sea, because the basemap's blue water is too close to the
- *   ramp for coastlines to read.
+ *   a cool-grey sea (--tm-cool-gray), because the basemap's blue water is too
+ *   close to the ramp for coastlines to read.
+ * - #2080 (app palette, no warm beige): light land is white, so the lowest
+ *   bin is one step deeper than `sequential5` (#D6E6F3, not #DCE9F5) to stay
+ *   ≥ ΔE 8 from "no clubs" under every CVD simulation.
  */
 
 export interface ChoroplethBin {
@@ -49,22 +52,22 @@ export const CHOROPLETH_BINS: readonly ChoroplethBin[] = [
 
 export const CHOROPLETH_THEME: Record<'light' | 'dark', ChoroplethTheme> = {
   light: {
-    fills: ['#DCE9F5', '#9ECAE1', '#5A9FCF', '#2B6FB0', '#0B3F7A'],
-    noClubs: '#F4F1EB',
-    hatch: '#C9C3B8',
-    water: '#D9D6D0',
+    fills: ['#D6E6F3', '#9ECAE1', '#5A9FCF', '#2B6FB0', '#0B3F7A'],
+    noClubs: '#FFFFFF',
+    hatch: '#D1D5DB',
+    water: '#A9B2B1',
     border: '#FFFFFF',
     markerOutline: '#3D3B38',
-    selection: { inner: '#0F0E0D', outer: '#FFFFFF' },
+    selection: { inner: '#0F1720', outer: '#FFFFFF' },
   },
   dark: {
     fills: ['#25405C', '#2A6497', '#3D8BCC', '#86BEE8', '#D6EAF8'],
-    noClubs: '#1A1816',
-    hatch: '#3A3631',
-    water: '#1E2A33',
-    border: '#0F0E0D',
+    noClubs: '#161F2A',
+    hatch: '#2F3B4A',
+    water: '#0A0F15',
+    border: '#0A0F15',
     markerOutline: '#F4F1EB',
-    selection: { inner: '#F4F1EB', outer: '#0F0E0D' },
+    selection: { inner: '#EEF2F7', outer: '#0A0F15' },
   },
 }
 

@@ -1,6 +1,6 @@
 /* District charter cohort survival (#1817, epic #1781). Theme-aware tokens
    (--ink*, --surface*, --line) remap under [data-theme='dark']; the product
-   accent --rt-stats marks the highlighted cohort. Values are text in ink;
+   accent --tm-loyal-blue marks the highlighted cohort (#2080). Values are text in ink;
    line colour only marks identity (legend + table). Text stays ≥14px and tap
    targets ≥44px at 375 (mobile review §6.4). The table scrolls inside its own
    region, never the page. */
@@ -115,14 +115,14 @@
 
 .survival-switch__link.is-current {
   color: var(--ink);
-  border-color: var(--rt-stats, #d4873f);
-  box-shadow: inset 0 0 0 1px var(--rt-stats, #d4873f);
+  border-color: var(--tm-loyal-blue);
+  box-shadow: inset 0 0 0 1px var(--tm-loyal-blue);
 }
 
 .survival-switch__link:focus-visible,
 .survival-chart:focus-visible,
 .survival-table__scroll:focus-visible {
-  outline: 2px solid var(--rt-stats, #d4873f);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -162,7 +162,7 @@
 }
 
 .survival-legend__line--cohort {
-  border-top-color: var(--rt-stats, #d4873f);
+  border-top-color: var(--tm-loyal-blue);
 }
 
 .survival-legend__line--other {
@@ -294,7 +294,7 @@
 }
 
 .survival-table tr.is-highlighted th {
-  box-shadow: inset 3px 0 0 var(--rt-stats, #d4873f);
+  box-shadow: inset 3px 0 0 var(--tm-loyal-blue);
 }
 
 /* ── Entry link on the Club Growth page ────────────────────────────── */
@@ -311,11 +311,11 @@
   font-weight: 600;
   color: var(--ink);
   text-decoration: underline;
-  text-decoration-color: var(--rt-stats, #d4873f);
+  text-decoration-color: var(--tm-loyal-blue);
   text-underline-offset: 3px;
 }
 
 .survival-entry__link:focus-visible {
-  outline: 2px solid var(--rt-stats, #d4873f);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }

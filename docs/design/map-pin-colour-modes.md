@@ -178,8 +178,8 @@ The validator is in the PR at `.pr-assets/<pr>/palette_check.py`. It is pure Pyt
 
 | Check                                                               | Result                                                                |
 | ------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Outline vs land / water, light (`#3D3B38` on `#F4F1EB` / `#C9D7E0`) | 9.90:1 / 7.59:1                                                       |
-| Outline vs land / water, dark (`#F4F1EB` on `#1A1816` / `#1E2A33`)  | 15.70:1 / 12.99:1                                                     |
+| Outline vs land / water, light (`#3D3B38` on `#FFFFFF` / `#CBDDE7`) | 11.16:1 / 7.99:1 (#2080; was 9.90 / 7.59 on the beige)                |
+| Outline vs land / water, dark (`#F4F1EB` on `#161F2A` / `#0A0F15`)  | 14.74:1 / 17.06:1 (#2080; was 15.70 / 12.99)                          |
 | `health`, min ΔE (normal / protan / deutan / tritan)                | 38.0 / 16.4 / 15.6 / 22.9                                             |
 | `compliance`                                                        | 38.0 / 16.4 / 15.6 / 22.9                                             |
 | `status`                                                            | 26.4 / 20.6 / 17.9 / 22.9                                             |
@@ -196,8 +196,9 @@ The validator also caught a bad first draft. The draft drew "Done" in a pale gre
 
 The fills are validated against these land and water values. #1786's brand-token styles must adopt them, or re-run the validator with its own values:
 
-- **Light:** land `#F4F1EB` (`--rt-paper`), water `#C9D7E0`.
-- **Dark:** land `#1A1816` (`--rt-bg-2`), water `#1E2A33`.
+- **Light:** land `#FFFFFF` (`--surface`), water `#CBDDE7` (`--loyal-100`).
+- **Dark:** land `#161F2A` (`--surface-2`), water `#0A0F15` (`--bg`).
+- **#2080 (2026-10-15):** re-tuned from the warm `--rt-paper` beige (light `#F4F1EB` / `#C9D7E0`, dark `#1A1816` / `#1E2A33`) to the app's cool neutrals, because new pages match the existing palette until the Phase 2 re-skin. The validator (`mapPalette.test.ts`, `choroplethScale.test.ts`) was re-run: pins pass unchanged. No cool neutral land other than white stays ≥ ΔE 8 from the choropleth's lowest bin under every CVD simulation, so light land is white and the choropleth's lowest bin is `#D6E6F3` (one step deeper than `sequential5`'s `#DCE9F5`); its light sea is `--tm-cool-gray`. In dark, the `--loyal-100` tint sat within ΔE 8 of the ramp, so water is the page `--bg`.
 - **Roads and labels:** desaturated, and at least ΔE 10 quieter than any pin fill. Basemap labels stay below the pin layers.
 
 ## 7. Many-category modes (division, area, district, region, meeting day)

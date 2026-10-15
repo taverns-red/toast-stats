@@ -10,7 +10,7 @@ import { dirname, resolve } from 'node:path'
    row. A feed row is not clickable, so there the link showed as plain text
    (WCAG 1.4.1). The feed adopts the affordance its own realignment-notice
    link already uses: inherited ink, an underline, a thicker underline on
-   hover, and an --rt-stats focus ring. Underline, not colour, marks the link,
+   hover, and a --focus-ring focus ring (#2080). Underline, not colour, marks the link,
    so it works in both themes without new tokens. jsdom cannot compute
    cascade-layer styles, so this pins the rule; the preview screenshots show
    the result. */
@@ -44,9 +44,9 @@ describe('changes feed link affordance (#1806)', () => {
     )
   })
 
-  it('gives keyboard users a focus ring in the product accent token', () => {
+  it('gives keyboard users a focus ring in the app focus token (#2080)', () => {
     expect(ruleBody(/\.changes-group__item a:focus-visible/)).toMatch(
-      /outline:\s*2px solid var\(--rt-stats/
+      /outline:\s*2px solid var\(--focus-ring\)/
     )
   })
 })

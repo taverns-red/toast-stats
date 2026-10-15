@@ -1,25 +1,26 @@
-/* District club map (#1784). Brand tokens (--rt-*) with local theme
-   remaps under [data-theme='dark'] (R10). The legend and club summary also
+/* District club map (#1784). App-palette tokens (#2080: legacy palette
+   until the Phase 2 re-skin) with local remaps under [data-theme='dark']
+   (R10). The legend and club summary also
    render inside the portalled BottomSheet, so the variables live on :root. */
 :root {
   --map-surface: #ffffff;
-  --map-text: var(--rt-ink);
-  --map-text-2: var(--rt-ink-2);
-  --map-border: rgb(15 14 13 / 0.22);
-  --map-pressed-bg: var(--rt-ink);
+  --map-text: var(--ink);
+  --map-text-2: var(--ink-2);
+  --map-border: rgb(15 23 32 / 0.22);
+  --map-pressed-bg: var(--ink);
   --map-pressed-text: #ffffff;
-  --map-focus: var(--rt-stats);
+  --map-focus: var(--tm-loyal-blue);
   /* The pins' outline (pinModes OUTLINE), for swatches with a pale fill. */
   --map-pin-outline: #3d3b38;
 }
 
 [data-theme='dark'] {
-  --map-surface: var(--rt-bg-2);
-  --map-text: var(--rt-ink-on-dk);
-  --map-text-2: #cfc9bf;
-  --map-border: rgb(244 241 235 / 0.28);
-  --map-pressed-bg: var(--rt-ink-on-dk);
-  --map-pressed-text: var(--rt-ink);
+  --map-surface: var(--surface);
+  --map-text: var(--ink);
+  --map-text-2: var(--ink-2);
+  --map-border: rgb(238 242 247 / 0.28);
+  --map-pressed-bg: var(--ink);
+  --map-pressed-text: var(--bg);
   --map-pin-outline: #f4f1eb;
 }
 
@@ -127,7 +128,7 @@
   border: 1px solid var(--map-border);
   border-radius: var(--rt-radius-md);
   background: var(--map-surface);
-  box-shadow: 0 8px 24px rgb(15 14 13 / 0.18);
+  box-shadow: 0 8px 24px rgb(15 23 32 / 0.18);
 }
 
 /* The Health | Distinguished quick toggle sits beside the pill at ≥ 1024

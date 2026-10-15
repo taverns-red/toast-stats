@@ -112,7 +112,7 @@
 
 .wws__scroll:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--rt-stats-focus);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 /* Right-edge fade cue — "there's more →" when the table overflows, matching

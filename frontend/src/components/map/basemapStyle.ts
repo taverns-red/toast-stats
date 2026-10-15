@@ -29,31 +29,35 @@ export const BASEMAP_SOURCE_ID = 'protomaps'
 export const BASEMAP_ATTRIBUTION =
   '<a href="https://github.com/protomaps/basemaps" target="_blank" rel="noopener">Protomaps</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
 
-/** Spec §6.3 — the land/water pair the pin fills were validated against. */
+/** Spec §6.3 — the land/water pair the pin fills were validated against.
+ * #2080: the app palette, not the warm --rt-paper beige. Land is the app's
+ * surface (--surface light, --surface-2 dark); water is the loyal-blue tint
+ * --loyal-100 in light and the page --bg in dark. */
 export const BASEMAP_COLOURS = {
-  light: { land: '#F4F1EB', water: '#C9D7E0' },
-  dark: { land: '#1A1816', water: '#1E2A33' },
+  light: { land: '#FFFFFF', water: '#CBDDE7' },
+  dark: { land: '#161F2A', water: '#0A0F15' },
 } as const
 
-/** Quiet, warm-neutral shades for everything that is neither land nor water. */
+/** Quiet, cool-neutral shades (the app's slate greys) for everything that is
+ * neither land nor water. */
 const QUIET = {
   light: {
-    landuse: '#ECE8E0',
-    building: '#E6E1D8',
-    road: '#FFFFFF',
-    roadMinor: '#FBF9F5',
-    casing: '#DDD7CC',
-    rail: '#D3CDC2',
-    boundary: '#A8A196',
+    landuse: '#F6F7F8',
+    building: '#ECEEF0',
+    road: '#E5E7EB',
+    roadMinor: '#ECEEF0',
+    casing: '#D1D5DB',
+    rail: '#D1D5DB',
+    boundary: '#9CA3AF',
   },
   dark: {
-    landuse: '#201E1B',
-    building: '#24211E',
-    road: '#36322D',
-    roadMinor: '#2C2925',
-    casing: '#141210',
-    rail: '#3A3631',
-    boundary: '#5E5850',
+    landuse: '#1A2330',
+    building: '#1F2A38',
+    road: '#2A3645',
+    roadMinor: '#222D3B',
+    casing: '#111922',
+    rail: '#2A3645',
+    boundary: '#5B6675',
   },
 } as const
 

@@ -1,31 +1,31 @@
 /* #1786: the map box before MapLibre arrives, and behind its canvas.
    Land colour per theme (docs/design/map-pin-colour-modes.md §6.3). */
 .basemap-surface {
-  background: var(--rt-paper);
+  background: var(--surface-3);
 }
 
 [data-theme='dark'] .basemap-surface {
-  background: var(--rt-bg-2);
+  background: var(--surface-2);
 }
 
 /* The ODbL credit must stay legible in both themes. MapLibre's default is a
    half-white strip that turns grey-on-grey over the dark land colour. */
 .basemap-surface .maplibregl-ctrl-attrib {
-  background: rgb(244 241 235 / 0.9);
-  color: #3d3b38;
+  background: rgb(255 255 255 / 0.9);
+  color: var(--ink-2);
 }
 
 .basemap-surface .maplibregl-ctrl-attrib a {
-  color: #3d3b38;
+  color: var(--ink-2);
 }
 
 [data-theme='dark'] .basemap-surface .maplibregl-ctrl-attrib {
-  background: rgb(26 24 22 / 0.9);
-  color: #f4f1eb;
+  background: rgb(22 31 42 / 0.9);
+  color: var(--ink);
 }
 
 [data-theme='dark'] .basemap-surface .maplibregl-ctrl-attrib a {
-  color: #f4f1eb;
+  color: var(--ink);
 }
 
 /* #1944: on touch screens each credit link is a 44px-tall tap target. The

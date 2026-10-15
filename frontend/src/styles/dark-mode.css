@@ -45,14 +45,6 @@
   /* Shadows */
   --shadow-color: rgba(0, 0, 0, 0.4);
 
-  /* Taverns-red accents */
-  --accent-red: #c13b3b;
-  --accent-red-dark: #8b1a1a;
-  --accent-maple: #d4873f;
-  --accent-maple-light: #e8a55c;
-  --accent-amber: #f5c36a;
-  --accent-cream: #fff8ed;
-
   /* ─── Toastmasters Brand Token Overrides ─── */
   --tm-black: #f0ecf5;
   --tm-loyal-blue: #5dade2;
