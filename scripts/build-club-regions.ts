@@ -35,7 +35,9 @@ async function getJson(base: string, path: string): Promise<unknown> {
   if (!r.ok || !r.body) {
     throw new Error(`${path}: ${r.status ?? r.error ?? 'no body'}`)
   }
-  return JSON.parse(new TextDecoder().decode(r.body)) as unknown
+  const text =
+    typeof r.body === 'string' ? r.body : new TextDecoder().decode(r.body)
+  return JSON.parse(text) as unknown
 }
 
 async function main(): Promise<void> {
