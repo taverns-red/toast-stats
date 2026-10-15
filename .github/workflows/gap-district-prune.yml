@@ -1,0 +1,115 @@
+# Gap-district prune (#2038): one-off, manual dispatch only.
+#
+# The 2026-06-11 build wrote district_<id>.json and its analytics from TI's
+# HTML error page for district U (2017-02..2020-07 closing raws) and 102
+# (2017-01..05): 0 clubs, clubPerformance made of HTML lines. Since #2036 a
+# rebuild records those districts as #1671 gaps and writes nothing for
+# them, but uploads and promotion only add files, so the junk stays.
+#
+# For each date this reads the bucket's OWN metadata.json and deletes the
+# per-district objects of a district it records as a source gap, only while
+# that district's file has 0 clubs. Every delete is conditional on the
+# listed generation. See scripts/lib/pruneGapDistricts.ts.
+#
+# Order: staging after the rebuild re-derives the dates; prod only after
+# promotion has carried the rebuilt metadata.json there (prod's own
+# metadata must record the gap, or nothing is deleted).
+#
+# Dry run is the default. Every dispatch, dry or not, needs Ron's approval.
+# It shares the data-pipeline concurrency group, so it never overlaps a
+# pipeline run. The audit manifest (paths, generations, md5s, reasons;
+# never content) is always uploaded as an artifact, and a real run also
+# keeps it in staging at runs/<run_id>/gap-prune.jsonl.
+
+name: Gap District Prune
+
+on:
+  workflow_dispatch:
+    inputs:
+      bucket:
+        description: 'Bucket to prune'
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+        default: staging
+      dates:
+        description: 'Snapshot dates (comma separated YYYY-MM-DD)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run: report what would be deleted, delete nothing'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: data-pipeline
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    name: Prune gap-district objects
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The script reuses the contact strip's helpers, which import the
+      # workspace package's built dist/ (R2: the runner starts empty).
+      - name: Build shared contracts
+        run: npm run build:shared-contracts
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Prune gap-district objects
+        id: prune
+        env:
+          BUCKET: ${{ inputs.bucket }}
+          DATES: ${{ inputs.dates }}
+          # A boolean input reaches the shell as the string true/false (#1133).
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          ARGS=(--bucket "${BUCKET}" --dates "${DATES}" --manifest gap-prune.jsonl)
+          if [ "${DRY_RUN}" = "false" ]; then
+            ARGS+=(--execute --audit-object "runs/${GITHUB_RUN_ID}/gap-prune.jsonl")
+          fi
+          set -o pipefail
+          npx tsx scripts/prune-gap-districts.ts "${ARGS[@]}" | tee summary.json
+          {
+            echo "## Gap-district prune (#2038)"
+            echo "- bucket: ${BUCKET}"
+            echo "- dry run: ${DRY_RUN}"
+            echo "- gap districts: $(jq -r '.gapDistricts | length' summary.json)"
+            for KEY in planned deleted kept errors; do
+              echo "- ${KEY}: $(jq -r ".${KEY}" summary.json)"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload audit manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gap-prune-${{ inputs.bucket }}-${{ github.run_id }}
+          path: gap-prune.jsonl
+          if-no-files-found: warn
+          retention-days: 90

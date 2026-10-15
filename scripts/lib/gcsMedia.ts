@@ -25,6 +25,7 @@ import type {
   StripIo,
   WriteMetadata,
 } from './stripClubContact.js'
+import type { PruneIo } from './pruneGapDistricts.js'
 
 type RequestOptions = Parameters<Storage['authClient']['request']>[0]
 
@@ -171,6 +172,23 @@ export function stripBucket(storage: Storage, bucketName: string): StripIo {
         preconditionOpts: { ifGenerationMatch },
       })
       return toStoredMeta(file.metadata as unknown as Record<string, unknown>)
+    },
+  }
+}
+
+/**
+ * The bucket the one-off gap-district prune (#2038) works through: the
+ * contact strip's listing and generation-pinned reads, and an object delete
+ * conditional on `ifGenerationMatch` (412 when the object was rewritten).
+ */
+export function pruneBucket(storage: Storage, bucketName: string): PruneIo {
+  const { list, read } = stripBucket(storage, bucketName)
+  const bucket = storage.bucket(bucketName)
+  return {
+    list,
+    read,
+    delete: async (name, ifGenerationMatch) => {
+      await bucket.file(name).delete({ ifGenerationMatch })
     },
   }
 }
