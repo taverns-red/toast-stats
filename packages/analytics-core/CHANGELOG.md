@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.13.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.12.5...analytics-core-v1.13.0) (2026-10-15)
+
+
+### Features
+
+* **analytics:** retire the 8 unread per-district analytics files; completeness gate ignores them ([#1798](https://github.com/taverns-red/toast-stats/issues/1798)) ([#1989](https://github.com/taverns-red/toast-stats/issues/1989)) ([88b9632](https://github.com/taverns-red/toast-stats/commit/88b9632c56f16da88d1e60cda02cd98aef161a79))
+* **collector:** keep FAC Location and populate meetingSchedule[] ([#1789](https://github.com/taverns-red/toast-stats/issues/1789)) ([#2024](https://github.com/taverns-red/toast-stats/issues/2024)) ([ffc5bf8](https://github.com/taverns-red/toast-stats/commit/ffc5bf849e3492ede5581aca6d413d68e96a8617))
+* **pipeline:** snapshots/&lt;date&gt;/region-rollups.json — region and world rollups, content-gated, promoted with the date ([#1799](https://github.com/taverns-red/toast-stats/issues/1799)) ([#2013](https://github.com/taverns-red/toast-stats/issues/2013)) ([cc8c1a5](https://github.com/taverns-red/toast-stats/commit/cc8c1a5c6b3807299ea4f6a20850b91ee49f97d5))
+
+
+### Bug Fixes
+
+* **global-totals:** state a gap district left out of the world sums ([#2042](https://github.com/taverns-red/toast-stats/issues/2042)) ([#2050](https://github.com/taverns-red/toast-stats/issues/2050)) ([5620f1f](https://github.com/taverns-red/toast-stats/commit/5620f1fb5b897ddfc65b4bb99d1574a11cefd3f9))
+* **privacy:** stop writing club email/phone into promoted artifacts ([#2026](https://github.com/taverns-red/toast-stats/issues/2026)) ([#2030](https://github.com/taverns-red/toast-stats/issues/2030)) ([3480589](https://github.com/taverns-red/toast-stats/commit/3480589d48afcea3d79c90713ad1dded86927627))
+* **rankings:** read no club or charter count from a [#1671](https://github.com/taverns-red/toast-stats/issues/1671) gap report ([#2037](https://github.com/taverns-red/toast-stats/issues/2037)) ([#2045](https://github.com/taverns-red/toast-stats/issues/2045)) ([7cae6f3](https://github.com/taverns-red/toast-stats/commit/7cae6f3c35020800b728e4822fe636d413a369f6))
+
 ## [1.12.5](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.12.4...analytics-core-v1.12.5) (2026-10-12)
 
 

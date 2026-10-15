@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.14.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.13.0...collector-cli-v1.14.0) (2026-10-15)
+
+
+### Features
+
+* **analytics:** retire the 8 unread per-district analytics files; completeness gate ignores them ([#1798](https://github.com/taverns-red/toast-stats/issues/1798)) ([#1989](https://github.com/taverns-red/toast-stats/issues/1989)) ([88b9632](https://github.com/taverns-red/toast-stats/commit/88b9632c56f16da88d1e60cda02cd98aef161a79))
+* **collector:** ingest Sponsors/Mentors daily report as counts, names dropped ([#1795](https://github.com/taverns-red/toast-stats/issues/1795)) ([#2056](https://github.com/taverns-red/toast-stats/issues/2056)) ([217d97d](https://github.com/taverns-red/toast-stats/commit/217d97d4af7aa5c4a516eb047e15683992e7dae9))
+* **collector:** keep FAC Location and populate meetingSchedule[] ([#1789](https://github.com/taverns-red/toast-stats/issues/1789)) ([#2024](https://github.com/taverns-red/toast-stats/issues/2024)) ([ffc5bf8](https://github.com/taverns-red/toast-stats/commit/ffc5bf849e3492ede5581aca6d413d68e96a8617))
+* **pipeline:** snapshots/&lt;date&gt;/region-rollups.json — region and world rollups, content-gated, promoted with the date ([#1799](https://github.com/taverns-red/toast-stats/issues/1799)) ([#2013](https://github.com/taverns-red/toast-stats/issues/2013)) ([cc8c1a5](https://github.com/taverns-red/toast-stats/commit/cc8c1a5c6b3807299ea4f6a20850b91ee49f97d5))
+
+
+### Bug Fixes
+
+* **compute:** count a recorded gap as accounted for in every rollup roster ([#2035](https://github.com/taverns-red/toast-stats/issues/2035)) ([#2039](https://github.com/taverns-red/toast-stats/issues/2039)) ([6d1d0e4](https://github.com/taverns-red/toast-stats/commit/6d1d0e422c567350faec3b5712ae67b3d4c339ef))
+* **global-totals:** state a gap district left out of the world sums ([#2042](https://github.com/taverns-red/toast-stats/issues/2042)) ([#2050](https://github.com/taverns-red/toast-stats/issues/2050)) ([5620f1f](https://github.com/taverns-red/toast-stats/commit/5620f1fb5b897ddfc65b4bb99d1574a11cefd3f9))
+* **pipeline:** per-date district discovery in every source; program_year expands to registry month-ends ([#1766](https://github.com/taverns-red/toast-stats/issues/1766)) ([#1992](https://github.com/taverns-red/toast-stats/issues/1992)) ([dbae713](https://github.com/taverns-red/toast-stats/commit/dbae713bfdbebc01e3e34717fa52b6683bc5d30f))
+* **privacy:** stop writing club email/phone into promoted artifacts ([#2026](https://github.com/taverns-red/toast-stats/issues/2026)) ([#2030](https://github.com/taverns-red/toast-stats/issues/2030)) ([3480589](https://github.com/taverns-red/toast-stats/commit/3480589d48afcea3d79c90713ad1dded86927627))
+* **promotion:** daily CPAA vouches only for dates the daily wrote ([#2040](https://github.com/taverns-red/toast-stats/issues/2040)) ([#2048](https://github.com/taverns-red/toast-stats/issues/2048)) ([7038aab](https://github.com/taverns-red/toast-stats/commit/7038aab09df0ba749dbdd564b5c68499d67f814c))
+* **rankings:** read no club or charter count from a [#1671](https://github.com/taverns-red/toast-stats/issues/1671) gap report ([#2037](https://github.com/taverns-red/toast-stats/issues/2037)) ([#2045](https://github.com/taverns-red/toast-stats/issues/2045)) ([7cae6f3](https://github.com/taverns-red/toast-stats/commit/7cae6f3c35020800b728e4822fe636d413a369f6))
+* **transform:** count a [#1671](https://github.com/taverns-red/toast-stats/issues/1671) source gap as accounted for in the [#1756](https://github.com/taverns-red/toast-stats/issues/1756) roster ([#2035](https://github.com/taverns-red/toast-stats/issues/2035)) ([#2036](https://github.com/taverns-red/toast-stats/issues/2036)) ([a1f7ee6](https://github.com/taverns-red/toast-stats/commit/a1f7ee6a04fc20b2beea43ccf30af2c56ed2cd7f))
+
 ## [1.13.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.12.1...collector-cli-v1.13.0) (2026-10-13)
 
 

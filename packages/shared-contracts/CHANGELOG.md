@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.16.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.15.0...shared-contracts-v1.16.0) (2026-10-15)
+
+
+### Features
+
+* **collector:** ingest Sponsors/Mentors daily report as counts, names dropped ([#1795](https://github.com/taverns-red/toast-stats/issues/1795)) ([#2056](https://github.com/taverns-red/toast-stats/issues/2056)) ([217d97d](https://github.com/taverns-red/toast-stats/commit/217d97d4af7aa5c4a516eb047e15683992e7dae9))
+* **collector:** keep FAC Location and populate meetingSchedule[] ([#1789](https://github.com/taverns-red/toast-stats/issues/1789)) ([#2024](https://github.com/taverns-red/toast-stats/issues/2024)) ([ffc5bf8](https://github.com/taverns-red/toast-stats/commit/ffc5bf849e3492ede5581aca6d413d68e96a8617))
+* dual-shape reader for slim district analytics club lists ([#1901](https://github.com/taverns-red/toast-stats/issues/1901)) ([#2046](https://github.com/taverns-red/toast-stats/issues/2046)) ([7f7b7b2](https://github.com/taverns-red/toast-stats/commit/7f7b7b26160c42348d0e61088b62f726992f3b59))
+* **pipeline:** config/club-district-history/, content-gated and promoted with the run ([#1782](https://github.com/taverns-red/toast-stats/issues/1782)) ([#2008](https://github.com/taverns-red/toast-stats/issues/2008)) ([6474119](https://github.com/taverns-red/toast-stats/commit/6474119fcce6e0c7dbbf5865c5b1493abffb5893))
+* **pipeline:** config/district-region-history.json, content-gated and promoted with the run ([#1820](https://github.com/taverns-red/toast-stats/issues/1820)) ([#2002](https://github.com/taverns-red/toast-stats/issues/2002)) ([1973771](https://github.com/taverns-red/toast-stats/commit/1973771d3271f358bd496cc9d13899b65a0be4da))
+* **pipeline:** snapshots/&lt;date&gt;/region-rollups.json — region and world rollups, content-gated, promoted with the date ([#1799](https://github.com/taverns-red/toast-stats/issues/1799)) ([#2013](https://github.com/taverns-red/toast-stats/issues/2013)) ([cc8c1a5](https://github.com/taverns-red/toast-stats/commit/cc8c1a5c6b3807299ea4f6a20850b91ee49f97d5))
+
+
+### Bug Fixes
+
+* **global-totals:** state a gap district left out of the world sums ([#2042](https://github.com/taverns-red/toast-stats/issues/2042)) ([#2050](https://github.com/taverns-red/toast-stats/issues/2050)) ([5620f1f](https://github.com/taverns-red/toast-stats/commit/5620f1fb5b897ddfc65b4bb99d1574a11cefd3f9))
+* **privacy:** stop writing club email/phone into promoted artifacts ([#2026](https://github.com/taverns-red/toast-stats/issues/2026)) ([#2030](https://github.com/taverns-red/toast-stats/issues/2030)) ([3480589](https://github.com/taverns-red/toast-stats/commit/3480589d48afcea3d79c90713ad1dded86927627))
+
 ## [1.15.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.14.1...shared-contracts-v1.15.0) (2026-10-13)
 
 
