@@ -214,7 +214,7 @@ export interface SponsorMentorClubRow {
   charterDate: string | null
   sponsors: number
   mentors: number
-  /** Assignments under any other TI code (e.g. 'MENTORU'), not guessed. */
+  /** Assignments under a TI code not in `SPONSOR_MENTOR_ROLES` — not guessed. */
   other: number
   /** Assignments TI has marked AWARDED. */
   awarded: number
@@ -399,6 +399,18 @@ export function buildCoached(
   return { value: { kind: 'count', value: active.length }, active, completed }
 }
 
+/**
+ * TI's New Club Sponsors & Mentors codes → role. `MENTORU` is a mentor too:
+ * the U marks a mentor credit the member has already used toward a DTM
+ * (confirmed by Ron on PR #2065), so it counts as a mentor. Any code not
+ * listed here is counted as 'other', never guessed into a role.
+ */
+const SPONSOR_MENTOR_ROLES: Readonly<Record<string, 'sponsors' | 'mentors'>> = {
+  SPONSOR: 'sponsors',
+  MENTOR: 'mentors',
+  MENTORU: 'mentors',
+}
+
 /** A club with a page here links to it; any other to toastmasters.org. */
 function clubLinkFor(
   districtId: string,
@@ -433,10 +445,8 @@ function buildSponsorsMentors(
       }
       byClub.set(clubId, row)
     }
-    const code = r.code.trim().toUpperCase()
-    if (code === 'SPONSOR') row.sponsors += r.count
-    else if (code === 'MENTOR') row.mentors += r.count
-    else row.other += r.count
+    const role = SPONSOR_MENTOR_ROLES[r.code.trim().toUpperCase()] ?? 'other'
+    row[role] += r.count
     if (r.status.trim().toUpperCase() === 'AWARDED') row.awarded += r.count
   }
   // Newest charter first; the sort is stable, so source order breaks ties.
