@@ -38,6 +38,7 @@
  */
 import type {
   ExpressionSpecification,
+  StyleSpecification,
   SymbolLayerSpecification,
 } from 'maplibre-gl'
 
@@ -299,3 +300,29 @@ export function labelLayers(
     },
   ]
 }
+
+/** The part of a MapLibre map the deferred label add touches. */
+export interface LabelTarget {
+  setGlyphs(url: string | null): unknown
+  addLayer(layer: SymbolLayerSpecification, beforeId?: string): unknown
+  getLayer(id: string): unknown
+}
+
+export interface LabelOptions {
+  theme: Theme
+  origin: string
+}
+
+/** Red stub (#2081). */
+export function withBasemapLabels(
+  style: StyleSpecification,
+  _opts: LabelOptions
+): StyleSpecification {
+  return style
+}
+
+/** Red stub (#2081). */
+export function addBasemapLabels(
+  _map: LabelTarget,
+  _opts: LabelOptions
+): void {}

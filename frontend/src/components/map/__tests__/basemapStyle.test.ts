@@ -63,25 +63,19 @@ describe('buildBasemapStyle', () => {
     expect(BASEMAP_ATTRIBUTION).toContain('Protomaps')
   })
 
-  it('makes no third-party request: the archive and our own glyphs only', () => {
-    const origin = 'https://ts.example.test'
+  it('makes no third-party request: no glyphs, no sprite, no symbol layers', () => {
     for (const theme of ['light', 'dark'] as const) {
-      const style = buildBasemapStyle({
-        theme,
-        pmtilesUrl: ARCHIVE_URL,
-        origin,
-      })
-      // #2081: labels need glyphs, served from our own origin (ADR-016
-      // addendum). No sprite: the labels are text only.
-      expect(new URL(style.glyphs!.split('{')[0]!).origin).toBe(origin)
+      const style = buildBasemapStyle({ theme, pmtilesUrl: ARCHIVE_URL })
+      expect(style.glyphs).toBeUndefined()
       expect(style.sprite).toBeUndefined()
-      // Every network URL in the style is one we were given.
+      expect(style.layers.some(l => l.type === 'symbol')).toBe(false)
+      // Every network URL in the style is the one we were given.
       const urls = JSON.stringify(style).match(/https?:\/\/[^"\\]+/g) ?? []
       // The attribution's two links are hrefs the viewer may click, not
       // requests the map makes; match their hosts exactly.
       const creditHosts = new Set(['www.openstreetmap.org', 'github.com'])
       const network = urls.filter(u => !creditHosts.has(new URL(u).hostname))
-      expect(new Set(network)).toEqual(new Set([ARCHIVE_URL, style.glyphs]))
+      expect(new Set(network)).toEqual(new Set([ARCHIVE_URL]))
     }
   })
 

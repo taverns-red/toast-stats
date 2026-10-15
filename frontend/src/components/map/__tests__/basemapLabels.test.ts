@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { LayerSpecification, SymbolLayerSpecification } from 'maplibre-gl'
@@ -9,7 +9,9 @@ import {
   GLYPH_RANGES,
   LABEL_FONT,
   LABEL_LAYER_IDS,
+  addBasemapLabels,
   basemapGlyphsUrl,
+  withBasemapLabels,
 } from '../basemapLabels'
 import { PIN_LAYER_IDS } from '../pinLayer'
 
@@ -22,8 +24,13 @@ const ARCHIVE_URL = 'https://cdn.example.test/basemap/world.pmtiles'
 const ORIGIN = 'https://ts.example.test'
 const PUBLIC_DIR = resolve(__dirname, '../../../../public')
 
+// The labels are added after the basemap's first render (#2081): the base
+// style is geometry only, and the label config ships in its own lazy chunk.
 const styleFor = (theme: 'light' | 'dark') =>
-  buildBasemapStyle({ theme, pmtilesUrl: ARCHIVE_URL, origin: ORIGIN })
+  withBasemapLabels(buildBasemapStyle({ theme, pmtilesUrl: ARCHIVE_URL }), {
+    theme,
+    origin: ORIGIN,
+  })
 
 const symbolLayers = (layers: LayerSpecification[]) =>
   layers.filter((l): l is SymbolLayerSpecification => l.type === 'symbol')
@@ -72,9 +79,42 @@ describe('basemap label layers', () => {
     }
   })
 
-  it('defaults the glyph origin to the page origin', () => {
-    const style = buildBasemapStyle({ theme: 'light', pmtilesUrl: ARCHIVE_URL })
-    expect(style.glyphs).toBe(`${window.location.origin}/${GLYPH_PATH}`)
+  it('leaves the base style untouched (geometry first, labels later)', () => {
+    const base = buildBasemapStyle({ theme: 'light', pmtilesUrl: ARCHIVE_URL })
+    const before = JSON.stringify(base)
+    withBasemapLabels(base, { theme: 'light', origin: ORIGIN })
+    expect(JSON.stringify(base)).toBe(before)
+    expect(base.glyphs).toBeUndefined()
+    expect(base.layers.some(l => l.type === 'symbol')).toBe(false)
+  })
+
+  it('adds the labels to a live map below any pins already on it', () => {
+    const added: Array<[string, string | undefined]> = []
+    const map = {
+      setGlyphs: vi.fn(),
+      addLayer: vi.fn((l: { id: string }, before?: string) =>
+        added.push([l.id, before])
+      ),
+      getLayer: vi.fn((id: string) =>
+        id === PIN_LAYER_IDS[0] ? {} : undefined
+      ),
+    }
+    addBasemapLabels(map, { theme: 'dark', origin: ORIGIN })
+    expect(map.setGlyphs).toHaveBeenCalledWith(`${ORIGIN}/${GLYPH_PATH}`)
+    expect(added.map(a => a[0])).toEqual([...LABEL_LAYER_IDS])
+    expect(added.every(a => a[1] === PIN_LAYER_IDS[0])).toBe(true)
+  })
+
+  it('appends the labels when no pins are on the map yet', () => {
+    const before: Array<string | undefined> = []
+    const map = {
+      setGlyphs: vi.fn(),
+      addLayer: vi.fn((_l: unknown, b?: string) => before.push(b)),
+      getLayer: vi.fn(() => undefined),
+    }
+    addBasemapLabels(map, { theme: 'light', origin: ORIGIN })
+    expect(before).toHaveLength(LABEL_LAYER_IDS.length)
+    expect(before.every(b => b === undefined)).toBe(true)
   })
 
   it('ships every glyph range it names, plus the font licence', () => {

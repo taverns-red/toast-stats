@@ -12,14 +12,14 @@
  *   near-neutral shade of the land colour, so the basemap stays quieter than
  *   any pin fill (spec §6.3: roads and labels desaturated, labels below pins).
  *
- * Labels (#2081) are our own zoom-banded layers in `basemapLabels.ts`, drawn
- * from Inter glyph PBFs on our own origin (ADR-016 addendum). There is no
- * `sprite`, so the network URLs in the style are the basemap archive and the
- * same-origin glyphs.
+ * There are no label layers yet: labels need glyph PBFs, and the hosted
+ * Protomaps glyphs would be a third-party request from every viewer's
+ * browser. Self-hosting a glyph range is a follow-up (ADR-016 §Consequences).
+ * With no `glyphs` and no `sprite`, the only network URL in the style is the
+ * basemap archive itself.
  */
 import type { StyleSpecification } from 'maplibre-gl'
 import { layers, namedFlavor, type Flavor } from '@protomaps/basemaps'
-import { basemapGlyphsUrl, labelLayers } from './basemapLabels'
 
 export type BasemapTheme = 'light' | 'dark'
 
@@ -122,18 +122,14 @@ export interface BasemapStyleOptions {
   theme: BasemapTheme
   /** Absolute URL of the `.pmtiles` archive (served with range requests). */
   pmtilesUrl: string
-  /** Origin the glyphs are served from (#2081). Defaults to the page's. */
-  origin?: string
 }
 
 export function buildBasemapStyle({
   theme,
   pmtilesUrl,
-  origin = window.location.origin,
 }: BasemapStyleOptions): StyleSpecification {
   return {
     version: 8,
-    glyphs: basemapGlyphsUrl(origin),
     sources: {
       [BASEMAP_SOURCE_ID]: {
         type: 'vector',
@@ -141,10 +137,7 @@ export function buildBasemapStyle({
         attribution: BASEMAP_ATTRIBUTION,
       },
     },
-    // No `lang` → Protomaps' geometry only; the labels are ours (#2081).
-    layers: [
-      ...layers(BASEMAP_SOURCE_ID, flavorFor(theme)),
-      ...labelLayers(BASEMAP_SOURCE_ID, theme, BASEMAP_COLOURS[theme].land),
-    ],
+    // No `lang` → geometry only, no symbol layers, no glyphs or sprite.
+    layers: layers(BASEMAP_SOURCE_ID, flavorFor(theme)),
   }
 }
