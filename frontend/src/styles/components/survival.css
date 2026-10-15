@@ -1,0 +1,286 @@
+/* District charter cohort survival (#1817, epic #1781). Theme-aware tokens
+   (--ink*, --surface*, --line) remap under [data-theme='dark']; the product
+   accent --rt-stats marks the highlighted cohort. Values are text in ink;
+   line colour only marks identity (legend + table). Text stays ≥14px and tap
+   targets ≥44px at 375 (mobile review §6.4). The table scrolls inside its own
+   region, never the page. */
+
+.survival-page {
+  margin-top: 1rem;
+}
+
+.survival-page__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.survival-page__subtitle,
+.survival-note {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  max-width: 70ch;
+}
+
+.survival-note {
+  margin-top: 0.75rem;
+}
+
+.survival-empty {
+  margin-top: 1rem;
+  padding: 1rem;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+}
+
+/* ── Headline: three tiles, one row at every width ─────────────────── */
+
+.survival-kpis {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.survival-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+}
+
+.survival-kpi__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.survival-kpi__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.survival-kpi__value--na {
+  color: var(--ink-3);
+}
+
+.survival-kpi__hint {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+/* ── Cohort links ──────────────────────────────────────────────────── */
+
+.survival-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0.75rem;
+}
+
+.survival-switch__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.survival-switch__link.is-current {
+  color: var(--ink);
+  border-color: var(--rt-stats, #d4873f);
+  box-shadow: inset 0 0 0 1px var(--rt-stats, #d4873f);
+}
+
+.survival-switch__link:focus-visible,
+.survival-chart:focus-visible,
+.survival-table__scroll:focus-visible {
+  outline: 2px solid var(--rt-stats, #d4873f);
+  outline-offset: 2px;
+}
+
+/* ── Chart ─────────────────────────────────────────────────────────── */
+
+.survival-figure {
+  margin: 0;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+}
+
+.survival-legend {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+.survival-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.survival-legend__line {
+  display: inline-block;
+  width: 1.25rem;
+  height: 0;
+  border-top: 3px solid var(--ink);
+  border-radius: 2px;
+}
+
+.survival-legend__line--cohort {
+  border-top-color: var(--rt-stats, #d4873f);
+}
+
+.survival-legend__line--other {
+  border-top-width: 2px;
+  border-top-color: var(--ink-3);
+  opacity: 0.6;
+}
+
+/* Fixed height: the slot is reserved before Recharts measures (no CLS). */
+.survival-chart {
+  height: 280px;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .survival-chart {
+    height: 340px;
+  }
+}
+
+.survival-tooltip {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+}
+
+.survival-tooltip__label {
+  font-weight: 700;
+}
+
+.survival-tooltip__row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.survival-swatch {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+}
+
+/* ── Table ─────────────────────────────────────────────────────────── */
+
+.survival-table__scroll {
+  margin-top: 1rem;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.survival-table {
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.survival-table__caption {
+  caption-side: top;
+  text-align: left;
+  padding-bottom: 0.5rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--ink);
+}
+
+.survival-table th,
+.survival-table td {
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.survival-table thead th {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.survival-table tbody th,
+.survival-table tfoot th {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.survival-table tfoot th,
+.survival-table tfoot td {
+  font-weight: 700;
+  border-bottom: 0;
+  border-top: 2px solid var(--line);
+}
+
+.survival-table .survival-table__num {
+  text-align: right;
+}
+
+.survival-table__pct,
+.survival-table__count {
+  display: block;
+}
+
+.survival-table__count {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.survival-table__na,
+.survival-table__none {
+  color: var(--ink-3);
+}
+
+.survival-table__none {
+  font-style: italic;
+}
+
+.survival-table tr.is-highlighted th {
+  box-shadow: inset 3px 0 0 var(--rt-stats, #d4873f);
+}
