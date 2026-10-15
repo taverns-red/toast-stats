@@ -2188,6 +2188,14 @@
       display: none;
     }
 
+    /* #1805 — the lineage chips stay ≥768 too: at 375 they wrap the
+       area/division line and cost a whole line (224 px on the Linux runner,
+       for a moved club and for a renamed one). The phone reads the same
+       facts in the Lifecycle panel ("Moved to District 201", "Formerly …"). */
+    .club-hero__lineage {
+      display: none;
+    }
+
     .club-hero__title {
       margin: 0 0 2px;
       font-size: 22px;
