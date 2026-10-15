@@ -39,3 +39,34 @@ export function deriveEducationMemberDenylist(html: string): string[] {
   }
   return [...values]
 }
+
+/**
+ * #1795 — every value of one personal column (by exact header text) across
+ * every `<table>` in a recorded report, read independently of the parser.
+ * Used for the Sponsors/Mentors `Name` column. Never print the returned values.
+ */
+export function deriveColumnDenylist(html: string, header: string): string[] {
+  const text = (cell: string): string =>
+    cell
+      .split(/<[^>]*>/)
+      .join('')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  const cellsOf = (tr: string): string[] =>
+    [...tr.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(m =>
+      text(m[1] ?? '')
+    )
+
+  const values = new Set<string>()
+  for (const table of html.matchAll(/<table[^>]*>([\s\S]*?)<\/table>/gi)) {
+    const trs = (table[1] ?? '').match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) ?? []
+    const idx = cellsOf(trs[0] ?? '').indexOf(header)
+    if (idx === -1) continue
+    for (const tr of trs.slice(1)) {
+      const v = cellsOf(tr)[idx]
+      if (v) values.add(v)
+    }
+  }
+  return [...values]
+}
