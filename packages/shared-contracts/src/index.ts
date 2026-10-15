@@ -25,6 +25,8 @@ export type {
   AreaStatisticsFile,
   DistrictTotalsFile,
   ProspectiveClub,
+  MeetingScheduleEntry,
+  MeetingWeekday,
 } from './types/district-statistics-file.js'
 
 export type {
@@ -72,6 +74,8 @@ export {
   DistrictTotalsFileSchema,
   ScrapedRecordSchema,
   ProspectiveClubSchema,
+  MeetingScheduleEntrySchema,
+  MEETING_WEEKDAYS,
 } from './schemas/district-statistics-file.schema.js'
 
 export {

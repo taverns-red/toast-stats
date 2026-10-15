@@ -36,6 +36,46 @@ export const FacAddressSchema = z.strictObject({
   country: z.string().optional(),
 })
 
+/** English weekday names used by {@link MeetingScheduleEntrySchema}. */
+export const MEETING_WEEKDAYS = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+] as const
+
+/** 24-hour local clock time, "HH:MM". */
+const ClockTimeSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
+
+/**
+ * One recurring meeting of a club, parsed from the FAC free text (#1789).
+ *
+ * - `cadence`: weekly, every other week (`biweekly`), or `monthly` on the
+ *   listed `weeksOfMonth` (1-5: "1st & 3rd Tuesday" → [1, 3]). Absent when
+ *   the text names the day but not how often ("Twice a month").
+ * - `startTime` / `endTime`: local 24-hour time; absent when the text is
+ *   ambiguous (a bare "6:30") or unparsed.
+ * - `mode`: what the club's own text says. Absent when it says nothing.
+ * - `timeZone`: reserved; FAC's Address.TimeZone is null on every recorded
+ *   club, so the collector does not populate it.
+ *
+ * Strict: every key is optional but `day`, so an unknown key must fail
+ * rather than be stripped. The original {day, startTime, endTime,
+ * timeZone} shape (never populated before #1789) still validates.
+ */
+export const MeetingScheduleEntrySchema = z.strictObject({
+  day: z.enum(MEETING_WEEKDAYS),
+  cadence: z.enum(['weekly', 'biweekly', 'monthly']).optional(),
+  weeksOfMonth: z.array(z.number().int().min(1).max(5)).optional(),
+  startTime: ClockTimeSchema.optional(),
+  endTime: ClockTimeSchema.optional(),
+  timeZone: z.string().optional(),
+  mode: z.enum(['in-person', 'online', 'hybrid']).optional(),
+})
+
 /**
  * Zod schema for a single scraped record from CSV data.
  *
@@ -153,16 +193,19 @@ export const ClubStatisticsFileSchema = z.object({
   meetingTime: z.string().optional(),
   allowsVirtualAttendance: z.boolean().optional(),
   isProspective: z.boolean().optional(),
-  meetingSchedule: z
-    .array(
-      z.object({
-        day: z.string(),
-        startTime: z.string(),
-        endTime: z.string(),
-        timeZone: z.string().optional(),
-      })
-    )
-    .optional(),
+  /**
+   * FAC `Location` — the published meeting place, with emails, phone
+   * numbers, URLs and meeting credentials removed by the collector (#1789).
+   * Lines are separated by "\n". The only signal that a club meets online
+   * or hybrid beyond the coarse allowsVirtualAttendance flag.
+   */
+  location: z.string().optional(),
+  /**
+   * Parsed from FAC MeetingDay / MeetingTime / Location (#1789). The raw
+   * text stays on meetingDay / meetingTime; absent when the day text names
+   * no weekday (consumers count the club as "unknown", never drop it).
+   */
+  meetingSchedule: z.array(MeetingScheduleEntrySchema).optional(),
 })
 
 /**

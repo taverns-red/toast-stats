@@ -224,13 +224,48 @@ export interface ClubStatisticsFile {
   allowsVirtualAttendance?: boolean
   /** FAC's IsProspective flag — true for clubs still in ATO state. */
   isProspective?: boolean
-  /** Recurring meeting schedule. */
-  meetingSchedule?: Array<{
-    day: string
-    startTime: string
-    endTime: string
-    timeZone?: string
-  }>
+  /**
+   * FAC `Location` — the published meeting place, with emails, phone
+   * numbers, URLs and meeting credentials removed (#1789). Lines are
+   * separated by "\n".
+   */
+  location?: string
+  /**
+   * Recurring meeting schedule parsed from the FAC free text (#1789). The
+   * raw text stays on meetingDay / meetingTime. Absent when the day text
+   * names no weekday.
+   */
+  meetingSchedule?: MeetingScheduleEntry[]
+}
+
+/** English weekday name of a {@link MeetingScheduleEntry}. */
+export type MeetingWeekday =
+  | 'Monday'
+  | 'Tuesday'
+  | 'Wednesday'
+  | 'Thursday'
+  | 'Friday'
+  | 'Saturday'
+  | 'Sunday'
+
+/**
+ * One recurring meeting of a club (#1789). See MeetingScheduleEntrySchema
+ * for the field semantics.
+ */
+export interface MeetingScheduleEntry {
+  day: MeetingWeekday
+  /** weekly, every other week, or monthly on `weeksOfMonth`. */
+  cadence?: 'weekly' | 'biweekly' | 'monthly'
+  /** 1-5; "1st & 3rd Tuesday" → [1, 3]. Present when cadence is monthly. */
+  weeksOfMonth?: number[]
+  /** Local 24-hour "HH:MM". */
+  startTime?: string
+  /** Local 24-hour "HH:MM". */
+  endTime?: string
+  /** Reserved; not populated (FAC's Address.TimeZone is null). */
+  timeZone?: string
+  /** What the club's own text says about how it meets. */
+  mode?: 'in-person' | 'online' | 'hybrid'
 }
 
 /**

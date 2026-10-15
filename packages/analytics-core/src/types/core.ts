@@ -8,6 +8,7 @@
 import type {
   AllDistrictsRankingsData,
   ClubHealthStatus,
+  MeetingScheduleEntry,
 } from '@taverns-red/shared-contracts'
 
 /**
@@ -164,6 +165,10 @@ export interface ClubTrend {
   meetingTime?: string
   allowsVirtualAttendance?: boolean
   isProspective?: boolean
+  /** FAC Location, scrubbed by the collector (#1789). */
+  location?: string
+  /** Parsed meeting schedule (#1789); absent when the day text is unparsed. */
+  meetingSchedule?: MeetingScheduleEntry[]
 }
 
 /**

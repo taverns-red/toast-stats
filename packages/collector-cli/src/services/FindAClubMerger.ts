@@ -98,6 +98,7 @@ export function mergeFacIntoSnapshot(
   // keyed by clubId). analytics-core reads from .clubs, so the latter
   // is what reaches the frontend (#503).
   const enrichmentByClubId = new Map<string, Record<string, unknown>>()
+  const parsedEnrichmentByClubId = new Map<string, Record<string, unknown>>()
   for (const [clubId, facHit] of facByClubId) {
     if (!facHit) continue
     const enrichment: Record<string, unknown> = {}
@@ -116,6 +117,14 @@ export function mergeFacIntoSnapshot(
       enrichment['isProspective'] = facHit.isProspective
     }
     enrichmentByClubId.set(clubId, enrichment)
+    // #1789 — clubs[] only. clubPerformance rows are ScrapedRecords, whose
+    // schema admits no arrays; clubs[] is what analytics-core reads.
+    const parsedOnly: Record<string, unknown> = { ...enrichment }
+    if (facHit.location) parsedOnly['location'] = facHit.location
+    if (facHit.meetingSchedule) {
+      parsedOnly['meetingSchedule'] = facHit.meetingSchedule
+    }
+    parsedEnrichmentByClubId.set(clubId, parsedOnly)
   }
 
   // Mutating the snapshot in-place would couple us to JSON.parse'd
@@ -163,7 +172,7 @@ export function mergeFacIntoSnapshot(
       // form as the FAC id. A raw key here missed silently.
       const clubId = normalizeClubId(parsed['clubId'])
       if (!clubId) return raw
-      const enrichment = enrichmentByClubId.get(clubId)
+      const enrichment = parsedEnrichmentByClubId.get(clubId)
       return enrichment ? { ...parsed, ...enrichment } : raw
     })
   }

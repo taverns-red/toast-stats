@@ -606,6 +606,95 @@ describe('DistrictStatisticsFileSchema validation', () => {
     })
   })
 
+  // ============================================================================
+  // ClubStatisticsFile FAC location + meetingSchedule (#1789)
+  // ============================================================================
+
+  describe('ClubStatisticsFileSchema — location + meetingSchedule (#1789)', () => {
+    // ADR-010 silent-strip class: a field the merger writes onto .clubs[]
+    // but the schema omits is dropped by every validating parse.
+    it('preserves location on a parsed club (no silent strip)', () => {
+      const club = {
+        ...createValidClub(),
+        location: 'Sandy Hill Community Center',
+      }
+      const res = ClubStatisticsFileSchema.safeParse(club)
+      expect(res.success).toBe(true)
+      if (res.success) {
+        const parsed = res.data as Record<string, unknown>
+        expect(parsed['location']).toBe('Sandy Hill Community Center')
+      }
+    })
+
+    it('preserves a parsed meetingSchedule: weekday, cadence, weeks, time, mode', () => {
+      const meetingSchedule = [
+        {
+          day: 'Wednesday',
+          cadence: 'monthly',
+          weeksOfMonth: [1, 3],
+          startTime: '19:30',
+          mode: 'in-person',
+        },
+        {
+          day: 'Wednesday',
+          cadence: 'monthly',
+          weeksOfMonth: [2],
+          startTime: '19:30',
+          mode: 'online',
+        },
+        {
+          day: 'Tuesday',
+          cadence: 'weekly',
+          startTime: '19:00',
+          endTime: '21:00',
+        },
+        { day: 'Friday' },
+      ]
+      const res = ClubStatisticsFileSchema.safeParse({
+        ...createValidClub(),
+        meetingSchedule,
+      })
+      expect(res.success).toBe(true)
+      if (res.success) {
+        const parsed = res.data as Record<string, unknown>
+        expect(parsed['meetingSchedule']).toEqual(meetingSchedule)
+      }
+    })
+
+    it('still accepts the original day/startTime/endTime/timeZone entry shape (backward compatible)', () => {
+      const res = ClubStatisticsFileSchema.safeParse({
+        ...createValidClub(),
+        meetingSchedule: [
+          {
+            day: 'Monday',
+            startTime: '18:00',
+            endTime: '19:00',
+            timeZone: 'America/Toronto',
+          },
+        ],
+      })
+      expect(res.success).toBe(true)
+    })
+
+    it.each([
+      ['an unknown weekday', { day: 'Someday' }],
+      ['a non-24h start time', { day: 'Monday', startTime: '7:00 pm' }],
+      ['an unknown mode', { day: 'Monday', mode: 'carrier-pigeon' }],
+      ['an unknown cadence', { day: 'Monday', cadence: 'fortnightly-ish' }],
+      [
+        'a week of month out of range',
+        { day: 'Monday', cadence: 'monthly', weeksOfMonth: [6] },
+      ],
+      ['an unknown key', { day: 'Monday', raw: 'Mondays' }],
+    ])('rejects %s (keeps the contract falsifiable)', (_label, entry) => {
+      const res = ClubStatisticsFileSchema.safeParse({
+        ...createValidClub(),
+        meetingSchedule: [entry],
+      })
+      expect(res.success).toBe(false)
+    })
+  })
+
   describe('ProspectiveClubSchema validation', () => {
     it('should accept a club with only the required fields', () => {
       const result = ProspectiveClubSchema.safeParse({

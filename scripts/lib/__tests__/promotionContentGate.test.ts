@@ -396,6 +396,44 @@ describe('checkObject — no club contact fields (#2026)', () => {
     ).toBeNull()
     expect(check(ANALYTICS_PATH, plain(analytics))).toBeNull()
   })
+
+  // #1789 publishes the scrubbed FAC location and the parsed schedule on
+  // clubs[] and ClubTrend. They are not contact fields: the gate must pass
+  // them, and must still hold an email/phone that rides alongside them.
+  const facFields = {
+    location: 'Community Centre, Room 2',
+    meetingSchedule: [
+      {
+        day: 'Tuesday',
+        cadence: 'weekly',
+        startTime: '19:00',
+        endTime: '20:30',
+        mode: 'hybrid',
+      },
+    ],
+  }
+
+  it('passes clubs[] and ClubTrend carrying location + meetingSchedule (#1789)', () => {
+    expect(
+      check(SNAPSHOT_PATH, plain(snapshot({ clubId: '2', ...facFields })))
+    ).toBeNull()
+    const value = {
+      ...analytics,
+      data: { allClubs: [{ clubId: '1', ...facFields }] },
+    }
+    expect(check(ANALYTICS_PATH, plain(value))).toBeNull()
+  })
+
+  it('still holds an email next to location + meetingSchedule (#1789)', () => {
+    expect(
+      check(
+        SNAPSHOT_PATH,
+        plain(
+          snapshot({ clubId: '2', ...facFields, email: 'club-1@example.com' })
+        )
+      )
+    ).toMatch(/data\.clubs\[1\]\.email/)
+  })
 })
 
 describe('checkObject — district-region history (#1820)', () => {

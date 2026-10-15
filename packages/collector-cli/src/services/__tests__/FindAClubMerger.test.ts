@@ -1,4 +1,8 @@
 import { describe, it, expect } from 'vitest'
+import {
+  ClubStatisticsFileSchema,
+  ScrapedRecordSchema,
+} from '@taverns-red/shared-contracts'
 import { mergeFacIntoSnapshot } from '../FindAClubMerger.js'
 
 /* Fixtures based on the real shapes — TI Find-A-Club response and a
@@ -210,6 +214,68 @@ describe('mergeFacIntoSnapshot — clubs[] propagation (#503)', () => {
     // #2026: contact fields are never written into the snapshot.
     expect(parsedClubs[0]).not.toHaveProperty('email')
     expect(parsedClubs[0]?.['meetingDay']).toBe('Tuesday')
+  })
+
+  // #1789 — location + meetingSchedule go onto .clubs[] (the analytics read
+  // path) only: clubPerformance rows are ScrapedRecords, whose schema admits
+  // no arrays, so a schedule there would fail the publish gate.
+  it('writes location and meetingSchedule onto .clubs[] only (#1789)', () => {
+    const parsedClub = {
+      clubId: '00000180',
+      clubName: 'Causeurs Ottawa Speakers Club',
+      divisionId: 'A',
+      divisionName: 'Division A',
+      areaId: 'A1',
+      areaName: 'Area A1',
+      membershipCount: 23,
+      membershipBase: 20,
+      paymentsCount: 5,
+      dcpGoals: 5,
+      status: 'Distinguished',
+      octoberRenewals: 3,
+      aprilRenewals: 2,
+      newMembers: 1,
+    }
+    const result = mergeFacIntoSnapshot(
+      {
+        districtId: '61',
+        data: { clubPerformance: [ottawaSnapshotRow], clubs: [parsedClub] },
+      },
+      {
+        Clubs: [
+          {
+            ...ottawaFacClub,
+            MeetingDay: '1st & 3rd Tuesday',
+            Location: 'Sandy Hill Community Center<br>Online - Hybrid',
+          },
+        ],
+      }
+    )
+
+    const club = (result.snapshot.data?.['clubs'] as unknown[])[0]
+    const parsed = ClubStatisticsFileSchema.safeParse(club)
+    expect(parsed.success).toBe(true)
+    const kept = parsed.data as Record<string, unknown>
+    expect(kept['location']).toBe(
+      'Sandy Hill Community Center\nOnline - Hybrid'
+    )
+    expect(kept['meetingSchedule']).toEqual([
+      {
+        day: 'Tuesday',
+        cadence: 'monthly',
+        weeksOfMonth: [1, 3],
+        startTime: '19:00',
+        mode: 'hybrid',
+      },
+    ])
+
+    const row = result.snapshot.data?.clubPerformance?.[0] as Record<
+      string,
+      unknown
+    >
+    expect(row).not.toHaveProperty('meetingSchedule')
+    expect(row).not.toHaveProperty('location')
+    expect(ScrapedRecordSchema.safeParse(row).success).toBe(true)
   })
 
   it('leaves .data.clubs[] alone for snapshot-only clubs (no FAC match)', () => {

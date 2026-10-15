@@ -668,6 +668,51 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(out?.isProspective).toBe(false)
     })
 
+    // #1789 — the meeting-time heatmap (#1796) and the map's meeting-day /
+    // online pin modes (#1787) read these from the analytics JSON.
+    it('forwards location and meetingSchedule (#1789)', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const meetingSchedule = [
+        {
+          day: 'Wednesday' as const,
+          cadence: 'monthly' as const,
+          weeksOfMonth: [1, 3],
+          startTime: '19:30',
+          mode: 'in-person' as const,
+        },
+        {
+          day: 'Wednesday' as const,
+          cadence: 'monthly' as const,
+          weeksOfMonth: [2],
+          startTime: '19:30',
+          mode: 'online' as const,
+        },
+      ]
+      const enriched = {
+        ...createMockClub({ clubId: '1' }),
+        location: 'Trillium Centre',
+        meetingSchedule,
+      }
+      const snapshot = createMockSnapshot('2026-01-15', [enriched])
+
+      const out = module.generateClubHealthData([snapshot]).allClubs[0]
+
+      expect(out?.location).toBe('Trillium Centre')
+      expect(out?.meetingSchedule).toEqual(meetingSchedule)
+    })
+
+    it('omits location and meetingSchedule when the snapshot has none (#1789)', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const snapshot = createMockSnapshot('2026-01-15', [
+        createMockClub({ clubId: '1' }),
+      ])
+
+      const out = module.generateClubHealthData([snapshot]).allClubs[0]
+
+      expect(out).not.toHaveProperty('location')
+      expect(out).not.toHaveProperty('meetingSchedule')
+    })
+
     it('leaves FAC fields undefined when ClubStatistics has none (graceful absence)', () => {
       const module = new ClubHealthAnalyticsModule()
       const bare = createMockClub({ clubId: '1' })

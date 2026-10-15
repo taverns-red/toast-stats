@@ -10,6 +10,7 @@ import type {
   ExtendedAnalyticsComputationResult,
 } from './types.js'
 import type {
+  MeetingScheduleEntry,
   ProspectiveClub,
   ScrapedRecord,
 } from '@taverns-red/shared-contracts'
@@ -115,6 +116,10 @@ export interface ClubStatistics {
   meetingTime?: string
   allowsVirtualAttendance?: boolean
   isProspective?: boolean
+  /** FAC Location, scrubbed by the collector (#1789). */
+  location?: string
+  /** Parsed meeting schedule (#1789); absent when the day text is unparsed. */
+  meetingSchedule?: MeetingScheduleEntry[]
 }
 
 /**
