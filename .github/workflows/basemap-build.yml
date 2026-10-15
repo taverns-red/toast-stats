@@ -7,6 +7,13 @@
 # - target=prod-copy: copies that exact object to the prod bucket, server
 #   side (no re-upload).
 #
+# - extent=world-clubs (#2084): the same world file merged with a
+#   z(maxzoom+1)-14 extract over buffered club coordinates
+#   (scripts/build-club-regions.ts reads them from the prod CDN), as one
+#   immutable object world-z0-<maxzoom>-clubs-z14-<date>.pmtiles.
+# - dry_run (default true): sizes with the CLI's --dry-run and checks the
+#   disk, then stops. Nothing is downloaded and nothing is written.
+#
 # Only Ron dispatches it. It never runs on a schedule or a push, and the data
 # pipeline never touches basemap/.
 #
@@ -51,6 +58,24 @@ on:
         options:
           - staging
           - prod-copy
+      extent:
+        description: 'world = z0-maxzoom only; world-clubs = plus z(maxzoom+1)-14 around clubs, merged (#2084)'
+        required: true
+        default: world
+        type: choice
+        options:
+          - world
+          - world-clubs
+      club_buffer_km:
+        description: 'world-clubs only: buffer around each club, km (#2084 measured 8 km = 7.0 GB of z11-14)'
+        required: true
+        default: '8'
+        type: string
+      dry_run:
+        description: 'Size and check only: download nothing, write nothing. Untick to build and upload.'
+        required: true
+        default: true
+        type: boolean
 
 concurrency:
   group: basemap-build
@@ -80,6 +105,8 @@ jobs:
         env:
           BUILD_DATE: ${{ inputs.build_date }}
           MAXZOOM: ${{ inputs.maxzoom }}
+          EXTENT: ${{ inputs.extent }}
+          BUFFER_KM: ${{ inputs.club_buffer_km }}
         run: |
           if ! [[ "$BUILD_DATE" =~ ^[0-9]{8}$ ]]; then
             echo "::error::build_date must be YYYYMMDD"; exit 1
@@ -87,8 +114,22 @@ jobs:
           if ! [[ "$MAXZOOM" =~ ^[0-9]+$ ]] || ((MAXZOOM > 12)); then
             echo "::error::maxzoom must be 0..12"; exit 1
           fi
-          echo "OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
-          echo "NAME=world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
+          case "$EXTENT" in
+            world)
+              echo "OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
+              echo "NAME=world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
+              ;;
+            world-clubs)
+              if ! [[ "$BUFFER_KM" =~ ^[0-9]+$ ]] || ((BUFFER_KM < 1 || BUFFER_KM > 50)); then
+                echo "::error::club_buffer_km must be 1..50"; exit 1
+              fi
+              echo "OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-clubs-z14-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
+              echo "NAME=world-z0-${MAXZOOM}-clubs-z14-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "::error::extent must be world or world-clubs"; exit 1
+              ;;
+          esac
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -134,21 +175,73 @@ jobs:
             exit 1
           fi
 
+      # ── extent=world-clubs: buffered club boxes from the prod CDN (#2084) ─
+      - name: Set up Node
+        if: inputs.target == 'staging' && inputs.extent == 'world-clubs'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: inputs.target == 'staging' && inputs.extent == 'world-clubs'
+        run: npm ci
+
+      - name: Build the club regions
+        if: inputs.target == 'staging' && inputs.extent == 'world-clubs'
+        env:
+          BUFFER_KM: ${{ inputs.club_buffer_km }}
+        run: |
+          # ~100 single-object reads of the latest district analytics on
+          # cdn.taverns.red, in memory; fails if any district is unreadable.
+          npx tsx scripts/build-club-regions.ts --buffer-km "$BUFFER_KM" \
+            --out "$RUNNER_TEMP/club-regions.geojson" > "$RUNNER_TEMP/club-regions.json"
+          cat "$RUNNER_TEMP/club-regions.json"
+          echo "REGION=$RUNNER_TEMP/club-regions.geojson" >> "$GITHUB_ENV"
+          {
+            echo "### Club regions"
+            jq -r '"- snapshot \(.date), \(.districts) districts, buffer \(.bufferKm) km",
+              "- clubs: \(.clubsTotal) listed, \(.clubsWithCoordinates) geocoded",
+              "- inside a buffer: \(.clubsInsideBuffer)",
+              "- regions: \(.regions) boxes"' "$RUNNER_TEMP/club-regions.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Pick a build volume with enough space
         if: inputs.target == 'staging'
         env:
           BUILD_DATE: ${{ inputs.build_date }}
           MAXZOOM: ${{ inputs.maxzoom }}
+          EXTENT: ${{ inputs.extent }}
         run: |
-          # Archive size from the CLI's own dry-run, e.g. "archive size of 3.8 GB".
-          SIZE_LINE=$(DRY_RUN=1 scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" 2>&1 | grep 'archive size of')
-          echo "$SIZE_LINE"
-          NEED=$(echo "$SIZE_LINE" | sed -E 's/.*archive size of ([0-9.]+) ([kMGT]?B).*/\1 \2/' |
-            awk '{m=1; if($2=="kB")m=1e3; if($2=="MB")m=1e6; if($2=="GB")m=1e9; if($2=="TB")m=1e12;
-                  printf "%.0f\n", $1*m*1.15+1e9}')
-          if ! [[ "$NEED" =~ ^[0-9]+$ ]]; then
-            echo "::error::could not read the dry-run size"; exit 1
+          # Archive sizes from the CLI's own dry-run, e.g. "archive size of 3.8 GB".
+          # world: one archive. world-clubs: the world and club extracts, and
+          # the merged archive (their sum) on disk at the same time.
+          if [[ "$EXTENT" == "world-clubs" ]]; then
+            SIZE_LINES=$(DRY_RUN=1 scripts/basemap/build-club-basemap.sh "$BUILD_DATE" "$REGION" "$MAXZOOM" 2>&1 |
+              grep 'archive size of' || true)
+            COPIES=2
+          else
+            SIZE_LINES=$(DRY_RUN=1 scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" 2>&1 |
+              grep 'archive size of' || true)
+            COPIES=1
           fi
+          echo "$SIZE_LINES"
+          ARCHIVE=$(echo "$SIZE_LINES" | sed -E 's/.*archive size of ([0-9.]+) ([kMGT]?B).*/\1 \2/' |
+            awk '{m=1; if($2=="kB")m=1e3; if($2=="MB")m=1e6; if($2=="GB")m=1e9; if($2=="TB")m=1e12;
+                  s+=$1*m} END {printf "%.0f\n", s}')
+          NEED=$(awk -v a="$ARCHIVE" -v c="$COPIES" 'BEGIN {printf "%.0f\n", a*c*1.15+1e9}')
+          # One size line per extract: 1 for world, 2 for world-clubs.
+          LINES=$(echo "$SIZE_LINES" | grep -c 'archive size of' || true)
+          if [[ "$LINES" != "$COPIES" ]] || ! [[ "$ARCHIVE" =~ ^[0-9]+$ ]] || ((ARCHIVE == 0)); then
+            echo "::error::could not read the dry-run size (${LINES} size lines)"; exit 1
+          fi
+          {
+            echo "### Sizing (${EXTENT}, pmtiles --dry-run)"
+            echo '```'
+            echo "$SIZE_LINES"
+            echo '```'
+            echo "- estimated archive: ${ARCHIVE} bytes"
+          } >> "$GITHUB_STEP_SUMMARY"
           BEST=""
           BEST_FREE=0
           for d in /mnt "$RUNNER_TEMP"; do
@@ -167,18 +260,33 @@ jobs:
           sudo chown "$(id -u):$(id -g)" "$BEST/basemap"
           echo "BUILD_DIR=$BEST/basemap" >> "$GITHUB_ENV"
 
+      - name: Dry run — stop before downloading anything
+        if: inputs.target == 'staging' && inputs.dry_run
+        run: |
+          {
+            echo "### Dry run: nothing downloaded or written"
+            echo "Would build and upload gs://${GCS_BUCKET}/${OBJ}."
+            echo "Re-dispatch with dry_run=false to build and upload it."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Build the archive
-        if: inputs.target == 'staging'
+        if: inputs.target == 'staging' && !inputs.dry_run
         env:
           BUILD_DATE: ${{ inputs.build_date }}
           MAXZOOM: ${{ inputs.maxzoom }}
+          EXTENT: ${{ inputs.extent }}
         run: |
-          scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" "$BUILD_DIR" > "$BUILD_DIR/build.json"
+          if [[ "$EXTENT" == "world-clubs" ]]; then
+            scripts/basemap/build-club-basemap.sh "$BUILD_DATE" "$REGION" "$MAXZOOM" "$BUILD_DIR" \
+              > "$BUILD_DIR/build.json"
+          else
+            scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" "$BUILD_DIR" > "$BUILD_DIR/build.json"
+          fi
           cat "$BUILD_DIR/build.json"
           jq -e --arg obj "$OBJ" '.object == $obj' "$BUILD_DIR/build.json"
 
       - name: Upload to staging
-        if: inputs.target == 'staging'
+        if: inputs.target == 'staging' && !inputs.dry_run
         run: |
           gcloud storage cp "$BUILD_DIR/$NAME" "gs://${GCS_BUCKET}/${OBJ}" \
             --no-clobber \
@@ -186,7 +294,7 @@ jobs:
             --cache-control="public, max-age=86400, no-transform"
 
       - name: Verify the staging object and its range response
-        if: inputs.target == 'staging'
+        if: inputs.target == 'staging' && !inputs.dry_run
         env:
           BUILD_DATE: ${{ inputs.build_date }}
         run: |
@@ -219,20 +327,30 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       # ── target=prod-copy: server-side copy of the verified staging object ─
-      - name: Copy the staging object to prod (server side)
+      - name: Check the staging object (read-only)
         if: inputs.target == 'prod-copy'
+        env:
+          DRY_RUN_INPUT: ${{ inputs.dry_run }}
         run: |
           gcloud storage objects describe "gs://${GCS_BUCKET}/${OBJ}" --format=json > /tmp/src.json
+          jq '{size, content_type, cache_control, content_encoding, md5_hash, component_count}' /tmp/src.json
           jq -e '.content_type == "application/octet-stream"
             and (.content_encoding // "") == ""
             and (.component_count // null) == null' /tmp/src.json
+          if [[ "$DRY_RUN_INPUT" == "true" ]]; then
+            echo "### Dry run: would copy gs://${GCS_BUCKET}/${OBJ} to prod" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Copy the staging object to prod (server side)
+        if: inputs.target == 'prod-copy' && !inputs.dry_run
+        run: |
           gcloud storage cp "gs://${GCS_BUCKET}/${OBJ}" "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" \
             --no-clobber \
             --content-type=application/octet-stream \
             --cache-control="public, max-age=86400, no-transform"
 
       - name: Verify the prod object and the CDN range response
-        if: inputs.target == 'prod-copy'
+        if: inputs.target == 'prod-copy' && !inputs.dry_run
         run: |
           gcloud storage objects describe "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" --format=json > /tmp/dst.json
           jq '{size, content_type, cache_control, content_encoding, md5_hash, component_count}' /tmp/dst.json
