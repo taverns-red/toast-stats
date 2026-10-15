@@ -1,8 +1,8 @@
 /**
  * Unit Tests for AnalyticsComputeService - Dense Club Trends Enrichment
  *
- * Tests that club-trends-index files are enriched with data from all
- * program-year snapshots, not just the 2 (previous-year + current) used
+ * Tests that the club trends in `analytics.allClubs` are enriched with data
+ * from all program-year snapshots, not just the 2 (previous-year + current) used
  * for the standard YoY computation.
  *
  * Issue #79b: Club membership graph only shows 1-2 points instead of
@@ -20,7 +20,8 @@ import { ClubTrendsStore } from '../services/ClubTrendsStore.js'
 import type {
   DistrictStatistics,
   PreComputedAnalyticsFile,
-  ClubTrendsIndex,
+  DistrictAnalytics,
+  ClubTrend,
 } from '@taverns-red/analytics-core'
 
 /**
@@ -192,22 +193,31 @@ async function writeDistrictSnapshot(
 }
 
 /**
- * Read the club-trends-index output file for a district.
+ * Read a district's club trends, keyed by club id, from the `analytics`
+ * file's `allClubs` — the copy the club page reads. (The keyed
+ * `club-trends-index` duplicate was retired in #1798.)
  */
 async function readClubTrendsIndex(
   cacheDir: string,
   date: string,
   districtId: string
-): Promise<PreComputedAnalyticsFile<ClubTrendsIndex>> {
+): Promise<{ data: { clubs: Record<string, ClubTrend> } }> {
   const filePath = path.join(
     cacheDir,
     'snapshots',
     date,
     'analytics',
-    `district_${districtId}_club-trends-index.json`
+    `district_${districtId}_analytics.json`
   )
   const content = await fs.readFile(filePath, 'utf-8')
-  return JSON.parse(content) as PreComputedAnalyticsFile<ClubTrendsIndex>
+  const file = JSON.parse(
+    content
+  ) as PreComputedAnalyticsFile<DistrictAnalytics>
+  return {
+    data: {
+      clubs: Object.fromEntries(file.data.allClubs.map(c => [c.clubId, c])),
+    },
+  }
 }
 
 describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
@@ -305,7 +315,7 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
       expect(result.success).toBe(true)
     }
 
-    // After 3 runs, the club-trends-index for the final date should have 3 points
+    // After 3 runs, the analytics club trends for the final date should have 3 points
     const indexFile = await readClubTrendsIndex(
       testCache.path,
       dates[2]!,

@@ -465,17 +465,24 @@ export async function fetchCdnCompetitiveAwards(
 }
 
 /**
+ * The per-district analytics files the pipeline still writes. The other 8
+ * (membership, clubhealth, …, club-trends-index) were retired in #1798.
+ */
+export type CdnAnalyticsType = 'analytics' | 'performance-targets'
+
+/**
  * Construct a CDN URL for a pre-computed analytics file.
  *
  * @param date - Snapshot date (YYYY-MM-DD)
  * @param districtId - District ID
- * @param type - Analytics file type (e.g. 'analytics', 'membership', 'clubhealth')
+ * @param type - Analytics file type: 'analytics' or 'performance-targets'
+ *   (the only two per-district files still written, #1798)
  * @returns Full CDN URL
  */
 export function cdnAnalyticsUrl(
   date: SnapshotDate,
   districtId: string,
-  type: string
+  type: CdnAnalyticsType
 ): string {
   return `${cdnBaseUrl()}/snapshots/${date}/analytics/district_${districtId}_${type}.json`
 }
@@ -665,14 +672,13 @@ export async function fetchCdnDistrictSnapshot<T>(
 
 /**
  * Fetch a pre-computed analytics file for a district.
- * @param type - Analytics type: 'analytics', 'membership', 'clubhealth',
- *   'distinguished-analytics', 'membership-analytics', 'vulnerable-clubs',
- *   'leadership-insights', 'year-over-year', 'performance-targets', 'club-trends-index'
+ * @param type - Analytics type: 'analytics' or 'performance-targets'. The
+ *   other 8 per-district types are no longer written (#1798).
  */
 export async function fetchCdnDistrictAnalytics<T>(
   date: SnapshotDate,
   districtId: string,
-  type: string
+  type: CdnAnalyticsType
 ): Promise<T> {
   return fetchFromCdn<T>(cdnAnalyticsUrl(date, districtId, type))
 }

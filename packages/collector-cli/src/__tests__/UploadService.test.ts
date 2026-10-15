@@ -101,18 +101,13 @@ async function createSampleSnapshotStructure(
     )
 
     await fs.writeFile(
-      path.join(analyticsDir, `district_${districtId}_membership.json`),
+      path.join(
+        analyticsDir,
+        `district_${districtId}_performance-targets.json`
+      ),
       JSON.stringify({
         metadata: { schemaVersion: '1.0.0', districtId },
-        data: { membershipTrend: [] },
-      })
-    )
-
-    await fs.writeFile(
-      path.join(analyticsDir, `district_${districtId}_clubhealth.json`),
-      JSON.stringify({
-        metadata: { schemaVersion: '1.0.0', districtId },
-        data: { allClubs: [] },
+        data: { districtId },
       })
     )
   }
@@ -670,12 +665,7 @@ describe('UploadService', () => {
       ).toBe(true)
       expect(
         result.filesUploaded.some(f =>
-          f.includes('analytics/district_1_membership.json')
-        )
-      ).toBe(true)
-      expect(
-        result.filesUploaded.some(f =>
-          f.includes('analytics/district_1_clubhealth.json')
+          f.includes('analytics/district_1_performance-targets.json')
         )
       ).toBe(true)
     })

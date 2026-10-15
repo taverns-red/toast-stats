@@ -87,8 +87,7 @@ gs://toast-stats-data-{staging|ca}/
 │   ├── all-districts-rankings.json
 │   ├── global-club-race.json      (worldwide race projection, #1556)
 │   └── analytics/
-│       ├── district_{id}_analytics.json
-│       ├── district_{id}_club-trends-index.json
+│       ├── district_{id}_analytics.json   (club trends in allClubs[])
 │       └── district_{id}_performance-targets.json
 ├── time-series/district_{id}/{year}.json
 ├── club-trends/district_{id}.json

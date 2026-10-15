@@ -19,7 +19,7 @@ import { AnalyticsComputeService } from '../services/AnalyticsComputeService.js'
 import type {
   DistrictStatistics,
   PreComputedAnalyticsFile,
-  YearOverYearData,
+  DistrictAnalytics,
 } from '@taverns-red/analytics-core'
 
 /**
@@ -221,22 +221,25 @@ function createMockLogger(): {
 }
 
 /**
- * Read the year-over-year output file for a district.
+ * Read the `analytics` output file for a district. Its `dateRange` and
+ * `memberCountChange` span every snapshot passed to AnalyticsComputer, so
+ * they show whether the previous-year snapshot was used. (The
+ * `year-over-year` file that used to show it was retired in #1798.)
  */
-async function readYearOverYearFile(
+async function readAnalyticsFile(
   cacheDir: string,
   date: string,
   districtId: string
-): Promise<PreComputedAnalyticsFile<YearOverYearData>> {
+): Promise<PreComputedAnalyticsFile<DistrictAnalytics>> {
   const filePath = path.join(
     cacheDir,
     'snapshots',
     date,
     'analytics',
-    `district_${districtId}_year-over-year.json`
+    `district_${districtId}_analytics.json`
   )
   const content = await fs.readFile(filePath, 'utf-8')
-  return JSON.parse(content) as PreComputedAnalyticsFile<YearOverYearData>
+  return JSON.parse(content) as PreComputedAnalyticsFile<DistrictAnalytics>
 }
 
 describe('AnalyticsComputeService - Previous Year Snapshot Loading', () => {
@@ -303,26 +306,21 @@ describe('AnalyticsComputeService - Previous Year Snapshot Loading', () => {
     )
 
     expect(result.success).toBe(true)
-    expect(result.yearOverYearPath).toBeDefined()
 
-    // Read the year-over-year output file
-    const yoyFile = await readYearOverYearFile(
+    const analytics = await readAnalyticsFile(
       testCache.path,
       currentDate,
       districtId
     )
 
-    // With two distinct snapshots, YoY should have data available
-    expect(yoyFile.data.dataAvailable).toBe(true)
-    expect(yoyFile.data.metrics).toBeDefined()
-
-    // The membership metrics should reflect the distinct snapshots
-    // current=60, previous=40, change=20
-    const membership = yoyFile.data.metrics!.membership
-    expect(membership.current).toBe(60)
-    expect(membership.previous).toBe(40)
-    expect(membership.change).toBe(20)
-    expect(membership.percentageChange).toBe(50) // (20/40)*100
+    // Both snapshots reached AnalyticsComputer as distinct data sources:
+    // the range spans them and current=60 vs previous=40 gives change=20.
+    expect(analytics.data.dateRange).toEqual({
+      start: previousDate,
+      end: currentDate,
+    })
+    expect(analytics.data.totalMembership).toBe(60)
+    expect(analytics.data.memberCountChange).toBe(20)
   })
 
   /**
@@ -354,23 +352,20 @@ describe('AnalyticsComputeService - Previous Year Snapshot Loading', () => {
     )
 
     expect(result.success).toBe(true)
-    expect(result.yearOverYearPath).toBeDefined()
 
-    // Read the year-over-year output file
-    const yoyFile = await readYearOverYearFile(
+    // Only the current snapshot was used: the range is that one date and
+    // there is no change to report.
+    const analytics = await readAnalyticsFile(
       testCache.path,
       currentDate,
       districtId
     )
-
-    // With only one snapshot, YoY should report data not available
-    // (AnalyticsComputer with a single snapshot compares the same data,
-    // but the key behavior is that the service gracefully handles the missing snapshot)
-    // The actual dataAvailable value depends on AnalyticsComputer's behavior with 1 snapshot.
-    // With 1 snapshot, findSnapshotForDate returns the same snapshot for both dates,
-    // producing zero-change results — but the service itself should not fail.
-    expect(result.success).toBe(true)
-    expect(yoyFile.data.districtId).toBe(districtId)
+    expect(analytics.data.districtId).toBe(districtId)
+    expect(analytics.data.dateRange).toEqual({
+      start: currentDate,
+      end: currentDate,
+    })
+    expect(analytics.data.memberCountChange).toBe(0)
   })
 
   /**
@@ -419,7 +414,6 @@ describe('AnalyticsComputeService - Previous Year Snapshot Loading', () => {
 
     // The computation should succeed despite the corrupted previous snapshot
     expect(result.success).toBe(true)
-    expect(result.yearOverYearPath).toBeDefined()
 
     // A warning should have been logged about the failed previous snapshot load
     const prevYearWarning = mockLogger.warnings.find(w =>
@@ -427,12 +421,13 @@ describe('AnalyticsComputeService - Previous Year Snapshot Loading', () => {
     )
     expect(prevYearWarning).toBeDefined()
 
-    // Read the year-over-year output — should still be written
-    const yoyFile = await readYearOverYearFile(
+    // Analytics are still written, from the current snapshot alone
+    const analytics = await readAnalyticsFile(
       testCache.path,
       currentDate,
       districtId
     )
-    expect(yoyFile.data.districtId).toBe(districtId)
+    expect(analytics.data.districtId).toBe(districtId)
+    expect(analytics.data.dateRange.start).toBe(currentDate)
   })
 })
