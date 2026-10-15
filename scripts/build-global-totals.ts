@@ -48,6 +48,7 @@ import {
 import {
   missingDistricts as unrecordedDistricts,
   recordedFailedDistricts,
+  recordedFailureReasons,
 } from '../packages/collector-cli/src/utils/dateLevelCoverage.js'
 
 function log(msg: string): void {
@@ -96,6 +97,8 @@ async function main(): Promise<void> {
       snapshotDate: date,
       districts: input.districts,
       rankings,
+      // Stated in uncountedDistricts with the reason transform recorded (#2042).
+      uncountedReasons: await recordedFailureReasons(snapshotDir),
     })
 
     // A district the date's metadata.json records as failed — a #1671

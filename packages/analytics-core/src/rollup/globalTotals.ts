@@ -31,13 +31,18 @@ import {
   type DistrictRanking,
   type GlobalTotals,
   type GlobalTotalsDistrictTiers,
+  type GlobalTotalsUncountedDistrict,
 } from '@taverns-red/shared-contracts'
 import {
   DistinguishedDistrictCalculator,
   type DistinguishedDistrictTier,
 } from '../rankings/DistinguishedDistrictCalculator.js'
 import { isClubSmedleyAvailable } from '../analytics/ClubEligibilityUtils.js'
-import { rollUpGlobal, type DistrictClubPayments } from './globalRollup.js'
+import {
+  canonicalDistrictId,
+  rollUpGlobal,
+  type DistrictClubPayments,
+} from './globalRollup.js'
 
 export interface GlobalTotalsInput {
   /** The snapshot's own date (YYYY-MM-DD) — the key for every window. */
@@ -46,6 +51,13 @@ export interface GlobalTotalsInput {
   readonly districts: readonly DistrictClubPayments[]
   /** The date's own `all-districts-rankings.json` rows — the district set. */
   readonly rankings: readonly DistrictRanking[]
+  /**
+   * Why a listed district has no file, keyed by district id — what the
+   * date's metadata.json records for a failure or a #1671 source gap
+   * (#2042). A missing district with no entry is still stated, as
+   * "no district file".
+   */
+  readonly uncountedReasons?: Readonly<Record<string, string>>
   /** ISO timestamp to stamp; defaults to now. Injected so tests can freeze it. */
   readonly generatedAt?: string
 }
@@ -117,6 +129,38 @@ function derivedBaseTier(
   return base
 }
 
+/** The reason stated when nothing recorded why a district has no file. */
+const NO_DISTRICT_FILE_REASON = 'no district file for this date'
+
+/**
+ * Every listed district the club-level pass found no file for, stated with
+ * its reason and its rankings-row size (#2042). A #1671 gap district's
+ * all-districts.csv row is real, so its paid and active clubs are known even
+ * though none of its clubs could be counted.
+ */
+function uncountedDistricts(
+  missing: readonly string[],
+  rankings: readonly DistrictRanking[],
+  reasons: Readonly<Record<string, string>> = {}
+): GlobalTotalsUncountedDistrict[] {
+  const reasonFor = new Map(
+    Object.entries(reasons).map(([id, reason]) => [
+      canonicalDistrictId(id),
+      reason,
+    ])
+  )
+  return missing.map(districtId => {
+    const key = canonicalDistrictId(districtId)
+    const row = rankings.find(r => canonicalDistrictId(r.districtId) === key)
+    return {
+      districtId,
+      reason: reasonFor.get(key) ?? NO_DISTRICT_FILE_REASON,
+      paidClubs: row?.paidClubs ?? 0,
+      activeClubs: row?.activeClubs ?? 0,
+    }
+  })
+}
+
 export function buildGlobalTotals(input: GlobalTotalsInput): GlobalTotals {
   const { snapshotDate, rankings } = input
   const programYear = programYearForSnapshotDate(snapshotDate)
@@ -131,6 +175,16 @@ export function buildGlobalTotals(input: GlobalTotalsInput): GlobalTotals {
   })
 
   const paidClubs = sumField(rankings, 'paidClubs')
+  const uncounted = uncountedDistricts(
+    rollup.missingDistricts,
+    rankings,
+    input.uncountedReasons
+  )
+  // avgClubSize's denominator is the paid clubs of the districts whose
+  // members were summed. Dividing the counted members by every ranked
+  // district's paid clubs would understate it by the uncounted ones (#2042).
+  const countedPaidClubs =
+    paidClubs - uncounted.reduce((sum, d) => sum + d.paidClubs, 0)
 
   // Rankings tier fields: `distinguishedClubs` is distinguished-OR-BETTER and
   // the other three are subsets of it (#1124, epic F4). Summing the disjoint
@@ -196,6 +250,7 @@ export function buildGlobalTotals(input: GlobalTotalsInput): GlobalTotals {
       includesUndistricted,
       excludedDistricts: [...rollup.excludedDistricts],
       missingDistricts: [...rollup.missingDistricts],
+      uncountedDistricts: uncounted,
       duplicateClubs: rollup.duplicateClubs.map(duplicate => ({
         clubId: duplicate.clubId,
         districtIds: [...duplicate.districtIds],
@@ -207,7 +262,7 @@ export function buildGlobalTotals(input: GlobalTotalsInput): GlobalTotals {
       paidClubs,
       activeClubs: sumField(rankings, 'activeClubs'),
       clubsCounted: rollup.clubCount,
-      avgClubSize: ratio(rollup.totalMembership, paidClubs),
+      avgClubSize: ratio(rollup.totalMembership, countedPaidClubs),
     },
     distinguishedClubs: {
       distinguishedOrBetter,

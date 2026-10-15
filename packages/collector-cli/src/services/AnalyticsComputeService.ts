@@ -65,6 +65,7 @@ import {
   dateLevelRefusal,
   missingDistricts as unrecordedDistricts,
   recordedFailedDistricts,
+  recordedFailureReasons,
 } from '../utils/dateLevelCoverage.js'
 import type { CacheMetadata } from '../types/collector.js'
 import {
@@ -1493,13 +1494,15 @@ export class AnalyticsComputeService {
         snapshotDate,
         districts: input.districts,
         rankings,
+        uncountedReasons: await recordedFailureReasons(snapshotDir),
       })
 
       // A listed district with no file would be summed as nothing: one
       // district's clubs published as the world's (#1756). Refuse, like the
       // sibling runner scripts/build-global-totals.ts.
       // A district metadata records as failed or a gap is accounted for
-      // (#2035); it is left out of the sums and named in missingDistricts.
+      // (#2035); it is left out of the club sums and stated in
+      // uncountedDistricts with its recorded reason and size (#2042).
       const missing = unrecordedDistricts(
         totals.districts.missingDistricts,
         await recordedFailedDistricts(snapshotDir)

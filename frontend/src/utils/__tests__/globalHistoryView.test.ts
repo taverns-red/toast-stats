@@ -112,6 +112,26 @@ describe('buildScoreboardModel — absent is never zero', () => {
     expect(cell.text).not.toBe('0')
   })
 
+  it('marks a null suspendedClubs as not-on-file, not 0 (a #2042 gap year)', () => {
+    // A year whose Susp rows all sat in an uncounted gap district's report
+    // publishes suspendedClubs: null — unknown, never a measured zero.
+    const [first, ...rest] = globalHistoryFixture.years
+    const history: GlobalHistory = {
+      ...globalHistoryFixture,
+      years: [
+        {
+          ...first!,
+          clubMovement: { ...first!.clubMovement, suspendedClubs: null },
+        },
+        ...rest,
+      ],
+    }
+    const cell = findCell(history, 'suspended-clubs', first!.programYear)
+    expect(cell.absence).toBe('not-on-file')
+    expect(cell.text).not.toBe('0')
+    expect(cell.text).toMatch(/not on file/i)
+  })
+
   it('marks report-basis new clubs as forward-only — a third, distinct kind', () => {
     const cell = findCell(
       globalHistoryFixture,

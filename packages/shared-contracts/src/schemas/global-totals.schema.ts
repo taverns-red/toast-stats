@@ -48,6 +48,28 @@ export const GlobalTotalsDuplicateClubSchema = z.object({
 })
 
 /**
+ * A district in the date's set whose clubs are NOT in the club-level sums
+ * (#2042). Its club report could not be read — a #1671 source gap such as
+ * TI's HTML error page, or a recorded transform failure — so it has no
+ * district file, and `clubsCounted`, `totalMembership`, `totalPayments`,
+ * `clubMovement` and `clubsByCountry` run over the other districts only.
+ *
+ * Stated, never silent: `paidClubs` and `activeClubs` are the district's own
+ * all-districts.csv figures (its rankings row), so a reader can see how large
+ * the hole is. They are NOT added to `clubsCounted` — that count is distinct
+ * club ids from the district reports, a different basis.
+ */
+export const GlobalTotalsUncountedDistrictSchema = z.object({
+  districtId: z.string(),
+  /** Why its clubs could not be counted, as transform recorded it. */
+  reason: z.string(),
+  /** The district's `paidClubs` from the date's rankings row. */
+  paidClubs: z.number().int(),
+  /** The district's `activeClubs` from the date's rankings row. */
+  activeClubs: z.number().int(),
+})
+
+/**
  * The district scope this rollup was computed over — always the ids the
  * date's own `all-districts-rankings.json` lists, never a directory listing.
  */
@@ -66,6 +88,13 @@ export const GlobalTotalsDistrictsSchema = z.object({
   excludedDistricts: z.array(z.string()),
   /** Districts the date's set lists but no file supplied. */
   missingDistricts: z.array(z.string()),
+  /**
+   * Every `missingDistricts` entry, with the reason its clubs are not counted
+   * and its size from the rankings row (#2042). Optional only because files
+   * written before #2042 lack it; every writer since emits it, `[]` when
+   * every listed district was counted.
+   */
+  uncountedDistricts: z.array(GlobalTotalsUncountedDistrictSchema).optional(),
   /** Clubs seen under two in-scope districts. Counted once; reported here. */
   duplicateClubs: z.array(GlobalTotalsDuplicateClubSchema),
 })
@@ -86,16 +115,25 @@ export const GlobalTotalsMembershipSchema = z.object({
   totalMembership: z.number().int(),
   /** Sum of `districtPerformance` "Total to Date", each club counted once. */
   totalPayments: z.number().int(),
-  /** Sum of the rankings rows' `paidClubs`. */
+  /**
+   * Sum of the rankings rows' `paidClubs` — EVERY listed district, an
+   * `uncountedDistricts` entry included (its all-districts.csv row is real).
+   */
   paidClubs: z.number().int(),
   /** Sum of the rankings rows' `activeClubs`. */
   activeClubs: z.number().int(),
-  /** Distinct canonical club ids the membership/payment sums ran over. */
+  /**
+   * Distinct canonical club ids the membership/payment sums ran over. Never
+   * includes an `uncountedDistricts` entry's clubs: no district report of
+   * its was read, so it has no club ids to count (#2042).
+   */
   clubsCounted: z.number().int(),
   /**
    * `totalMembership ÷ paidClubs` — the basis ruled on #1426 (2026-08-19).
    * On a June-30 date this is the year-end membership over year-end paid
-   * clubs. `null` when `paidClubs` is 0 rather than a divide-by-zero.
+   * clubs. The denominator leaves out `uncountedDistricts`' paid clubs, whose
+   * members are not in the numerator (#2042). `null` when that denominator
+   * is 0 rather than a divide-by-zero.
    */
   avgClubSize: z.number().nullable(),
 })
@@ -193,6 +231,10 @@ export const GlobalTotalsClubMovementSchema = z.object({
    * signal is window-independent, so a `Susp` value dated outside the window
    * still proves the branch was collected. Readers render `null` as "not on
    * file", never as zero.
+   *
+   * Only counted districts' rows are seen, so a date whose `Susp` values all
+   * sat in an `uncountedDistricts` entry's report is `null` too: unknown,
+   * because the rows that would say were never read (#2042).
    */
   suspendedClubs: z.number().int().nullable(),
 })
@@ -234,6 +276,9 @@ export const GlobalTotalsSchema = z.object({
 export type GlobalTotalsFormat = z.infer<typeof GlobalTotalsFormatSchema>
 export type GlobalTotalsDuplicateClub = z.infer<
   typeof GlobalTotalsDuplicateClubSchema
+>
+export type GlobalTotalsUncountedDistrict = z.infer<
+  typeof GlobalTotalsUncountedDistrictSchema
 >
 export type GlobalTotalsDistricts = z.infer<typeof GlobalTotalsDistrictsSchema>
 export type GlobalTotalsMembership = z.infer<

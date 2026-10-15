@@ -166,3 +166,52 @@ describe('buildGlobalTotals — 2026-06-30 (#1498)', () => {
     }
   })
 })
+
+describe('buildGlobalTotals — a listed district whose clubs were not read (#2042)', () => {
+  // The 2026-06-30 capture minus one real district's file: the rankings row
+  // stays (all-districts.csv is real), its club report does not.
+  const dropped = fixture.rankings.find(row => row.districtId !== 'U')!
+  const withoutDropped = districts.filter(
+    d => d.districtId !== dropped.districtId
+  )
+  const build = (reasons?: Readonly<Record<string, string>>) =>
+    buildGlobalTotals({
+      snapshotDate: fixture.snapshotDate,
+      districts: withoutDropped,
+      rankings: fixture.rankings,
+      uncountedReasons: reasons,
+    })
+
+  it('names it with the recorded reason and its rankings-row size', () => {
+    const reason = 'club-performance.csv is not a CSV (#1671)'
+    const built = build({ [dropped.districtId]: reason })
+    expect(built.districts.missingDistricts).toEqual([dropped.districtId])
+    expect(built.districts.uncountedDistricts).toEqual([
+      {
+        districtId: dropped.districtId,
+        reason,
+        paidClubs: dropped.paidClubs,
+        activeClubs: dropped.activeClubs,
+      },
+    ])
+  })
+
+  it('says "no district file" when no reason was recorded, never omits it', () => {
+    const [entry] = build().districts.uncountedDistricts ?? []
+    expect(entry?.districtId).toBe(dropped.districtId)
+    expect(entry?.reason).toMatch(/no district file/)
+  })
+
+  it('divides membership by the COUNTED districts’ paid clubs only', () => {
+    const built = build()
+    expect(built.membership.paidClubs).toBe(13708)
+    expect(built.membership.avgClubSize).toBeCloseTo(
+      built.membership.totalMembership / (13708 - dropped.paidClubs),
+      10
+    )
+  })
+
+  it('emits an empty list when every listed district was counted', () => {
+    expect(totals().districts.uncountedDistricts).toEqual([])
+  })
+})
