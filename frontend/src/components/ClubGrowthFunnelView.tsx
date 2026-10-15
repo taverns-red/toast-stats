@@ -332,24 +332,29 @@ const sponsorColumns = (
   },
 ]
 
-const sponsorRoleText = (r: SponsorMentorClubRow) =>
-  [
-    plural(r.sponsors, 'sponsor', 'sponsors'),
-    plural(r.mentors, 'mentor', 'mentors'),
-    ...(r.other > 0 ? [plural(r.other, 'other role', 'other roles')] : []),
-  ].join(' · ')
+const sponsorRoleParts = (r: SponsorMentorClubRow) => [
+  plural(r.sponsors, 'sponsor', 'sponsors'),
+  plural(r.mentors, 'mentor', 'mentors'),
+  ...(r.other > 0 ? [plural(r.other, 'other role', 'other roles')] : []),
+]
 
+/* The row primitive's meta line is one ellipsizing line (56–64 px row
+   contract, #1833), so the row's accessible name always carries the full
+   counts — a clipped meta never hides a number from a screen reader. */
 const sponsorMobileRow = (r: SponsorMentorClubRow): MobileRow => ({
   id: r.clubId,
   to: r.href,
   external: r.external,
   title: r.clubName,
-  meta: `${sponsorRoleText(r)}${r.awarded > 0 ? ` · ${r.awarded} awarded` : ''}`,
-  ...(r.external
-    ? {
-        ariaLabel: `${r.clubName}, ${sponsorRoleText(r)} (opens toastmasters.org)`,
-      }
-    : {}),
+  meta: [
+    ...sponsorRoleParts(r),
+    ...(r.awarded > 0 ? [`${r.awarded} awarded`] : []),
+  ].join(' · '),
+  ariaLabel: `${r.clubName}, chartered ${
+    r.charterDate ? formatDisplayDate(r.charterDate) : 'date not stated'
+  }: ${[...sponsorRoleParts(r), `${r.awarded} awarded`].join(', ')}${
+    r.external ? ' (opens toastmasters.org)' : ''
+  }`,
 })
 
 /** Sponsor/mentor COUNTS for new clubs (#1795) — who sponsors or mentors a
