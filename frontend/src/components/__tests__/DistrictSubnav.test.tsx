@@ -66,7 +66,8 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
     // Action List (#1231) closes the epic as the area-director "what to do
     // next" destination — last, since it's a task view, not a lateral data view.
     // Growth (#1794), the Club Growth funnel, follows Map; Education (#1793)
-    // follows Growth, the last whole-district view before the time series.
+    // follows Growth, the last whole-district view before the time series;
+    // Survival (#1817), charter cohort survival, follows Education.
     expect(DISTRICT_SECTIONS.map(s => s.label)).toEqual([
       'Overview',
       'What Changed',
@@ -76,6 +77,7 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
       'Map',
       'Growth',
       'Education',
+      'Survival',
       'Trends',
       'Analytics',
       'Rankings',
@@ -190,6 +192,7 @@ describe('DistrictSubnav on a phone (#1832)', () => {
       ['Map', '/district/61/map'],
       ['Growth', '/district/61/growth'],
       ['Education', '/district/61/education'],
+      ['Survival', '/district/61/survival'],
       ['Analytics', '/district/61/analytics'],
       ['Rankings', '/district/61/rankings'],
       ['Action List', '/district/61/action-list'],
