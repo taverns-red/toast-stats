@@ -1,11 +1,13 @@
-# Basemap build (manual, one-off). See #1786, ADR-016 and docs/runbooks/basemap.md.
+# Basemap build (manual, one-off). See #1786, #2084, ADR-016 and docs/runbooks/basemap.md.
 #
 # What it does:
 # - target=staging: builds the self-hosted world basemap (a Protomaps v4
-#   PMTiles extract) on a GitHub runner and uploads it to the STAGING data
-#   bucket.
+#   PMTiles extract, z0..maxzoom) on a GitHub runner and uploads it to the
+#   STAGING data bucket.
 # - target=prod-copy: copies that exact object to the prod bucket, server
 #   side (no re-upload).
+# - dry_run (default true): sizes the archive with the CLI's --dry-run and
+#   checks the disk, then stops. Nothing is downloaded and nothing is written.
 #
 # Only Ron dispatches it. It never runs on a schedule or a push, and the data
 # pipeline never touches basemap/.
@@ -25,10 +27,15 @@
 # completeness gates. Provenance (bytes, sha256, source build, run) goes to
 # the job summary instead.
 #
-# Disk: a standard ubuntu-26.04 runner. The "Free runner disk" step removes
-# preinstalled toolchains this job never uses. The space check sizes the
-# archive with the CLI's own dry-run before downloading anything, and fails
-# with "use a larger runner" if no volume has the archive size + 15% + 1 GB.
+# Disk: a standard ubuntu-26.04 runner. pmtiles extract writes its output
+# with random-access writes and seeks back for the header, so it cannot
+# stream to GCS; the archive must fit on local disk (about 1.0x its size).
+# On run 38305058683 (2026-10-12) the root volume had 109 GB free after the
+# "Free runner disk" step, which removes preinstalled toolchains this job
+# never uses. World z0-14 is 69 GB (#2084), so it needs ~80 GB with the
+# margin below. The space check sizes the archive with the CLI's own dry-run
+# before downloading anything, and fails with "use a larger runner" if no
+# volume has the archive size + 15% + 1 GB.
 name: Basemap build (manual)
 
 on:
@@ -39,7 +46,7 @@ on:
         required: true
         type: string
       maxzoom:
-        description: 'Max zoom of the world extract (ADR-016 recommends 10, about 3.8 GB)'
+        description: 'Max zoom of the world extract, 0..14 (z10 is 3.8 GB, z14 is 69 GB)'
         required: true
         default: '10'
         type: string
@@ -51,6 +58,11 @@ on:
         options:
           - staging
           - prod-copy
+      dry_run:
+        description: 'Size and check only: download nothing, write nothing. Untick to build and upload.'
+        required: true
+        default: true
+        type: boolean
 
 concurrency:
   group: basemap-build
@@ -72,7 +84,10 @@ env:
 jobs:
   basemap:
     runs-on: ubuntu-26.04
-    timeout-minutes: 120
+    # z0-10 took 3 minutes in all. z0-14 at the measured rates (extract
+    # ~70 MB/s, upload ~120 MB/s) is about 35-45 minutes; 180 leaves headroom
+    # for a slow download from build.protomaps.com.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
 
@@ -84,8 +99,8 @@ jobs:
           if ! [[ "$BUILD_DATE" =~ ^[0-9]{8}$ ]]; then
             echo "::error::build_date must be YYYYMMDD"; exit 1
           fi
-          if ! [[ "$MAXZOOM" =~ ^[0-9]+$ ]] || ((MAXZOOM > 12)); then
-            echo "::error::maxzoom must be 0..12"; exit 1
+          if ! [[ "$MAXZOOM" =~ ^[0-9]+$ ]] || ((MAXZOOM > 14)); then
+            echo "::error::maxzoom must be 0..14"; exit 1
           fi
           echo "OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
           echo "NAME=world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
@@ -149,6 +164,11 @@ jobs:
           if ! [[ "$NEED" =~ ^[0-9]+$ ]]; then
             echo "::error::could not read the dry-run size"; exit 1
           fi
+          {
+            echo "### Sizing (pmtiles --dry-run)"
+            echo "- ${SIZE_LINE##*extract.go:612: }"
+            echo "- disk needed with margin: ${NEED} bytes"
+          } >> "$GITHUB_STEP_SUMMARY"
           BEST=""
           BEST_FREE=0
           for d in /mnt "$RUNNER_TEMP"; do
@@ -158,7 +178,7 @@ jobs:
               if ((FREE > BEST_FREE)); then BEST="$d"; BEST_FREE=$FREE; fi
             fi
           done
-          echo "need ${NEED} bytes; using ${BEST} (${BEST_FREE} free)"
+          echo "need ${NEED} bytes; using ${BEST} (${BEST_FREE} free)" | tee -a "$GITHUB_STEP_SUMMARY"
           if ((BEST_FREE < NEED)); then
             echo "::error::not enough disk on the runner (${BEST_FREE} < ${NEED}); use a larger runner"
             exit 1
@@ -167,8 +187,17 @@ jobs:
           sudo chown "$(id -u):$(id -g)" "$BEST/basemap"
           echo "BUILD_DIR=$BEST/basemap" >> "$GITHUB_ENV"
 
+      - name: Dry run — stop before downloading anything
+        if: inputs.target == 'staging' && inputs.dry_run
+        run: |
+          {
+            echo "### Dry run: nothing downloaded or written"
+            echo "Would build and upload gs://${GCS_BUCKET}/${OBJ}."
+            echo "Re-dispatch with dry_run=false to build and upload it."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Build the archive
-        if: inputs.target == 'staging'
+        if: inputs.target == 'staging' && !inputs.dry_run
         env:
           BUILD_DATE: ${{ inputs.build_date }}
           MAXZOOM: ${{ inputs.maxzoom }}
@@ -178,7 +207,7 @@ jobs:
           jq -e --arg obj "$OBJ" '.object == $obj' "$BUILD_DIR/build.json"
 
       - name: Upload to staging
-        if: inputs.target == 'staging'
+        if: inputs.target == 'staging' && !inputs.dry_run
         run: |
           gcloud storage cp "$BUILD_DIR/$NAME" "gs://${GCS_BUCKET}/${OBJ}" \
             --no-clobber \
@@ -186,7 +215,7 @@ jobs:
             --cache-control="public, max-age=86400, no-transform"
 
       - name: Verify the staging object and its range response
-        if: inputs.target == 'staging'
+        if: inputs.target == 'staging' && !inputs.dry_run
         env:
           BUILD_DATE: ${{ inputs.build_date }}
         run: |
@@ -219,20 +248,30 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       # ── target=prod-copy: server-side copy of the verified staging object ─
-      - name: Copy the staging object to prod (server side)
+      - name: Check the staging object (read-only)
         if: inputs.target == 'prod-copy'
+        env:
+          DRY_RUN_INPUT: ${{ inputs.dry_run }}
         run: |
           gcloud storage objects describe "gs://${GCS_BUCKET}/${OBJ}" --format=json > /tmp/src.json
+          jq '{size, content_type, cache_control, content_encoding, md5_hash, component_count}' /tmp/src.json
           jq -e '.content_type == "application/octet-stream"
             and (.content_encoding // "") == ""
             and (.component_count // null) == null' /tmp/src.json
+          if [[ "$DRY_RUN_INPUT" == "true" ]]; then
+            echo "### Dry run: would copy gs://${GCS_BUCKET}/${OBJ} to prod" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Copy the staging object to prod (server side)
+        if: inputs.target == 'prod-copy' && !inputs.dry_run
+        run: |
           gcloud storage cp "gs://${GCS_BUCKET}/${OBJ}" "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" \
             --no-clobber \
             --content-type=application/octet-stream \
             --cache-control="public, max-age=86400, no-transform"
 
       - name: Verify the prod object and the CDN range response
-        if: inputs.target == 'prod-copy'
+        if: inputs.target == 'prod-copy' && !inputs.dry_run
         run: |
           gcloud storage objects describe "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" --format=json > /tmp/dst.json
           jq '{size, content_type, cache_control, content_encoding, md5_hash, component_count}' /tmp/dst.json

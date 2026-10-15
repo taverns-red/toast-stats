@@ -3,7 +3,7 @@
 - **Issue:** #1786. **Decision:** [ADR-016](../architecture-decisions/016-self-hosted-protomaps-basemap.md).
 - **Who:** Ron. Only the manual workflow `.github/workflows/basemap-build.yml` writes `basemap/`. It never runs on a schedule or a push, and the data pipeline never touches `basemap/`.
 - **When:** first upload, then only for a deliberate refresh (ADR-016 D5).
-- **Where it runs:** on a GitHub runner, not a laptop. World z0–10 needs about 4.4 GB of free disk. Ron decided this on 2026-10-12.
+- **Where it runs:** on a GitHub runner, not a laptop. World z0–10 needs about 4.4 GB of free disk, and world z0–14 about 80 GB (§5). Ron decided this on 2026-10-12.
 
 ## What it produces
 
@@ -39,9 +39,11 @@ The frontend reads the object named in `BASEMAP_OBJECT_PATH` in `frontend/src/co
 
 ## 1. Build and upload to staging
 
+The workflow defaults to `dry_run=true` (#2084): it sizes the archive and checks the disk, then stops without downloading or writing anything. Run it once as a dry run, then again with `-f dry_run=false` to build and upload.
+
 ```bash
 gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
-  -f build_date=20261011 -f maxzoom=10 -f target=staging
+  -f build_date=20261011 -f maxzoom=10 -f target=staging -f dry_run=false
 gh run watch --repo taverns-red/toast-stats "$(gh run list --repo taverns-red/toast-stats \
   --workflow basemap-build.yml --limit 1 --json databaseId -q '.[0].databaseId')"
 ```
@@ -77,8 +79,10 @@ cd frontend && BASE_URL=<preview url> BASEMAP_LIVE=1 \
 
 ```bash
 gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
-  -f build_date=20261011 -f maxzoom=10 -f target=prod-copy
+  -f build_date=20261011 -f maxzoom=10 -f target=prod-copy -f dry_run=false
 ```
+
+With `dry_run=true` this target only checks the staging object's metadata.
 
 The job runs these steps:
 
@@ -115,6 +119,48 @@ Pick a new `build_date`. Change `BASEMAP_OBJECT_PATH` in a PR, then run steps 1�
 ```bash
 gcloud storage rm "gs://toast-stats-data-ca/<old>" "gs://toast-stats-data-staging/<old>"
 ```
+
+## 5. World z0–14: street-level detail everywhere (#2084)
+
+Ron chose this on 2026-10-15. It replaces z0–10, and he preferred it to a near-clubs merge: a z0–14 world file has no blank tiles away from clubs and no club-location list to keep current. Street names and POIs exist in the Protomaps v4 schema only at z12–14. The object is `basemap/protomaps-v4/world-z0-14-<YYYYMMDD>.pmtiles`, and the upload rules above apply unchanged.
+
+**Size.** On 2026-10-15, `pmtiles extract https://build.protomaps.com/20261015.pmtiles /dev/null --maxzoom=14 --dry-run` (go-pmtiles 1.31.2) reported 58,786,221 tile entries and an archive size of 69 GB. That is about 64 GiB.
+
+**Where it builds: the standard runner.**
+
+- `pmtiles extract` writes its output with offset writes and then seeks back to write the header (`pmtiles/extract.go`). It therefore cannot stream to stdout or to GCS. A gcsfuse mount would stage the whole file on local disk anyway.
+- The archive needs about 1.0× its size on local disk. The space check asks for 69 GB × 1.15 + 1 GB ≈ 80 GB.
+- On run `38305058683` (2026-10-12), the `ubuntu-26.04` runner's 145 GB root volume had **109 GB free** after the "Free runner disk" step: `/mnt` and `$RUNNER_TEMP` each reported 115,983,052,800 bytes available. That covers the 80 GB.
+- If a runner image ever ships with less free space, the sizing step stops before downloading, with "use a larger runner".
+- The fallbacks, in order: (1) join `/mnt` and the root volume with LVM (`easimon/maximize-build-space`); (2) a GitHub larger runner, which needs an org admin to create it and costs about $0.032/min for 8 cores; (3) Cloud Build or a VM in our project, which needs new IAM and a disk. None of them is needed on today's evidence.
+- **Cost:** $0. Standard runner minutes are free on this public repo, and Protomaps' host does not charge for the download.
+- **Runtime:** estimated at **35–45 min**. Run `38305058683` built z0–10 in 54 s (about 70 MB/s) and uploaded 3.8 GB in 31 s (about 120 MB/s). At those rates z0–14 takes about 17 min to extract, about 5 min for sha256 and verify, and about 10 min to upload. The job timeout is 180 min.
+- **Storage:** 69 GB in each of two buckets, at Standard storage of about US$0.02–0.026 per GB-month, is about **US$3–3.6 a month**. Delete the old z0–10 object a week after the switch (step 4).
+
+**CDN.** These were read-only checks on 2026-10-15, against the Cloud CDN caching docs:
+
+- The backend bucket `toast-stats-cdn-backend` has `CACHE_ALL_STATIC`, `defaultTtl` 3600, `maxTtl` 86400, `clientTtl` 3600, `requestCoalescing` true, `serveWhileStale` 86400 and `compressionMode` AUTOMATIC.
+- Cloud CDN caches objects up to **100 GiB** when the origin supports byte ranges. 64 GiB fits.
+- It fills the cache in chunks of about 2 MiB (2,097,136 bytes), so only the chunks viewers touch are filled.
+- The origin must answer with `Accept-Ranges: bytes`, a full `Content-Range` length and a strong `ETag`. GCS gives a non-composite object these, which is why parallel composite upload stays disabled.
+- The upload's `max-age=86400` equals `maxTtl`, so a chunk lives up to a day and is then refilled on demand. Dynamic compression never applies: the object is `application/octet-stream`, carries `no-transform`, and is over 10 MiB.
+- No CDN change is needed.
+
+**Dispatch** (needs Ron's approval). Run the dry run first; it downloads and writes nothing:
+
+```bash
+gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
+  -f build_date=20261015 -f maxzoom=14 -f target=staging
+# then, after reading the dry-run summary:
+gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
+  -f build_date=20261015 -f maxzoom=14 -f target=staging -f dry_run=false
+gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
+  -f build_date=20261015 -f maxzoom=14 -f target=prod-copy -f dry_run=false
+```
+
+Protomaps keeps daily builds for one week, so pick a current `build_date` (step 0).
+
+**Follow-up:** after the prod copy, a one-line PR sets `BASEMAP_OBJECT_PATH` in `frontend/src/config/basemap.ts` to `basemap/protomaps-v4/world-z0-14-<YYYYMMDD>.pmtiles`. Verify it on the preview at 4 zooms, in light and dark.
 
 ## Local build (diagnostics only)
 

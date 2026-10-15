@@ -49,12 +49,13 @@ describe('basemap-build.yml (#1786)', () => {
     expect(Object.keys(wf.on)).toEqual(['workflow_dispatch'])
   })
 
-  it('takes build date, maxzoom and a staging|prod-copy target', () => {
+  it('takes build date, maxzoom, dry run and a staging|prod-copy target', () => {
     const inputs = (
       wf.on['workflow_dispatch'] as { inputs: Record<string, any> }
     ).inputs
     expect(Object.keys(inputs).sort()).toEqual([
       'build_date',
+      'dry_run',
       'maxzoom',
       'target',
     ])
@@ -66,6 +67,37 @@ describe('basemap-build.yml (#1786)', () => {
   it('builds with the repo script, never an inline extract', () => {
     expect(raw).toContain('scripts/basemap/build-basemap.sh')
     expect(steps.some(s => /pmtiles"? extract/.test(s.run ?? ''))).toBe(false)
+  })
+
+  describe('world z0-14 (#2084)', () => {
+    const inputs = (
+      wf.on['workflow_dispatch'] as { inputs: Record<string, any> }
+    ).inputs
+    const validate = steps.find(s => s.name === 'Validate inputs')
+
+    it('accepts maxzoom up to 14, and no higher', () => {
+      expect(validate?.run ?? '').toMatch(/\(\(MAXZOOM > 14\)\)/)
+      expect(validate?.run ?? '').toContain('maxzoom must be 0..14')
+    })
+
+    it('keeps the immutable world-z0-<maxzoom>-<date> object name', () => {
+      expect(validate?.run ?? '').toContain(
+        'OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles'
+      )
+    })
+
+    it('defaults to a dry run, and every copy is skipped on a dry run', () => {
+      expect(inputs['dry_run'].type).toBe('boolean')
+      expect(inputs['dry_run'].default).toBe(true)
+      for (const { step } of cpCommands) {
+        expect(step.if ?? '').toContain('!inputs.dry_run')
+      }
+    })
+
+    it('gives a 69 GB build time to finish (extract + sha256 + upload)', () => {
+      const job = Object.values(wf.jobs)[0] as { 'timeout-minutes'?: number }
+      expect(job['timeout-minutes'] ?? 0).toBeGreaterThanOrEqual(180)
+    })
   })
 
   it('has the copy commands under test (guard is not vacuous)', () => {
