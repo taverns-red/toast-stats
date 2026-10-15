@@ -216,6 +216,207 @@ describe('retired club contact keys (#2026)', () => {
   })
 })
 
+describe('a #1671 source gap recorded in staging (#2038)', () => {
+  const junkU = load('prod-district_U-gap-junk.json')
+  const meta = metadata as {
+    successfulDistricts: string[]
+    failedDistricts: string[]
+    errors: string[]
+  }
+  const man = manifest as { successfulDistricts: number }
+  const GAP_U =
+    'U: Skipped: club-performance.csv for district U on 2018-04-18 is not a CSV (body is HTML (starts "<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML…"), not a CSV) — a gap, not zero clubs (#1671)'
+
+  /** Staging metadata/manifest as the #2036 rebuild writes them. */
+  const gapRollups = (
+    opts: { drop?: string[]; reason?: string } = {}
+  ): Record<string, unknown> => {
+    const drop = new Set(['U', ...(opts.drop ?? [])])
+    return {
+      [`${dir}metadata.json`]: {
+        ...meta,
+        status: 'partial',
+        successfulDistricts: meta.successfulDistricts.filter(
+          id => !drop.has(id)
+        ),
+        failedDistricts: ['U'],
+        errors: [opts.reason ?? GAP_U],
+      },
+      [`${dir}manifest.json`]: {
+        ...man,
+        successfulDistricts: man.successfulDistricts - drop.size,
+        failedDistricts: 1,
+      },
+    }
+  }
+  const uObjects = (district: unknown = junkU): Record<string, unknown> => ({
+    [`${dir}district_U.json`]: district,
+    [`${dir}analytics/district_U_analytics.json`]: { metadata: {}, data: {} },
+  })
+  const tree = (objects: Record<string, unknown>) =>
+    Object.fromEntries(Object.entries(objects).map(([k, v]) => [k, gz(v)]))
+  const run = (prod: Record<string, Stored>, staging: Record<string, Stored>) =>
+    runCompletenessGate(fakeBucket(staging), fakeBucket(prod), [DATE], {
+      allowValueChanges: false,
+    })
+
+  it('the fixtures are the real shapes: U counted in prod, junk has 0 clubs', () => {
+    expect(meta.successfulDistricts).toContain('U')
+    const data = (junkU as { data: { clubs: unknown[] } }).data
+    expect(data.clubs).toEqual([])
+  })
+
+  it('does not hold when the stale junk objects are still in staging', async () => {
+    const prod = { ...dateTree({ extra: uObjects() }) }
+    const staging = {
+      ...dateTree({ extra: uObjects() }),
+      ...tree(gapRollups()),
+    }
+    const r = await run(prod, staging)
+    expect(r.failures).toEqual([])
+    expect(r.promote).toBe(true)
+  })
+
+  it('does not hold once the junk objects are removed from staging', async () => {
+    const prod = dateTree({ extra: uObjects() })
+    const staging = { ...dateTree({}), ...tree(gapRollups()) }
+    const r = await run(prod, staging)
+    expect(r.failures).toEqual([])
+    expect(r.promote).toBe(true)
+  })
+
+  it('still holds a district that is genuinely missing beside the gap', async () => {
+    const prod = dateTree({ extra: uObjects() })
+    const staging = {
+      ...dateTree({ extra: uObjects() }),
+      ...tree(gapRollups({ drop: ['03'] })),
+    }
+    const r = await run(prod, staging)
+    expect(r.promote).toBe(false)
+    const paths = r.failures.map(f => f.path)
+    expect(paths).toEqual(
+      expect.arrayContaining([`${dir}metadata.json`, `${dir}manifest.json`])
+    )
+  })
+
+  it('holds a failure whose reason is not a source gap', async () => {
+    const prod = dateTree({ extra: uObjects() })
+    const staging = {
+      ...dateTree({ extra: uObjects() }),
+      ...tree(
+        gapRollups({
+          reason: 'U: Raw CSV data not found for district U on 2018-03-31',
+        })
+      ),
+    }
+    const r = await run(prod, staging)
+    expect(r.promote).toBe(false)
+    expect(r.failures.map(f => f.path)).toContain(`${dir}metadata.json`)
+  })
+
+  it('holds a gap where production has real clubs for that district', async () => {
+    const realU = {
+      ...(prodDistrict as Record<string, unknown>),
+      districtId: 'U',
+    }
+    const prod = dateTree({ extra: uObjects(realU) })
+    const staging = { ...dateTree({}), ...tree(gapRollups()) }
+    const r = await run(prod, staging)
+    expect(r.promote).toBe(false)
+    const text = r.failures.map(f => `${f.path}: ${f.reason}`).join('\n')
+    expect(text).toMatch(/district_U\.json.*source gap.*3 club/)
+    expect(text).toContain(`${dir}metadata.json`)
+  })
+
+  it('reads production only for the gap district, not the date tree', async () => {
+    const prod = fakeBucket(dateTree({ extra: uObjects() }))
+    const staging = fakeBucket({ ...dateTree({}), ...tree(gapRollups()) })
+    await runCompletenessGate(staging, prod, [DATE], {
+      allowValueChanges: false,
+    })
+    expect(prod.downloads.some(d => d.includes('/analytics/'))).toBe(false)
+    expect(prod.downloads.filter(d => d.endsWith('district_U.json'))).toEqual([
+      `${dir}district_U.json`,
+    ])
+  })
+})
+
+describe('gap credit in compareDateProfiles (#2038)', () => {
+  const base = (over: Partial<DateProfile> = {}): DateProfile => ({
+    objectNames: ['district_01.json', 'district_U.json', 'metadata.json'],
+    manifestDistricts: 2,
+    metadataDistricts: 2,
+    metadataDistrictIds: ['01', 'U'],
+    globalClubs: null,
+    globalCountries: null,
+    districts: {},
+    clubCounts: { U: 0 },
+    ...over,
+  })
+
+  it('credits a gap only for a district production counted', () => {
+    // prod already listed U as failed: 1 counted. Staging lost 01 and
+    // records U as a gap; U cannot stand in for 01.
+    const prod = base({
+      manifestDistricts: 1,
+      metadataDistricts: 1,
+      metadataDistrictIds: ['01'],
+    })
+    const staging = base({
+      manifestDistricts: 0,
+      metadataDistricts: 0,
+      metadataDistrictIds: [],
+      gapDistricts: ['U'],
+    })
+    const r = compareDateProfiles(DATE, prod, staging)
+    expect(r.map(x => x.path)).toEqual(
+      expect.arrayContaining([
+        `snapshots/${DATE}/manifest.json`,
+        `snapshots/${DATE}/metadata.json`,
+      ])
+    )
+  })
+
+  it('takes no credit when production has no district list to check', () => {
+    const prod = base({ metadataDistrictIds: undefined })
+    const staging = base({
+      manifestDistricts: 1,
+      metadataDistricts: 1,
+      metadataDistrictIds: ['01'],
+      gapDistricts: ['U'],
+    })
+    expect(compareDateProfiles(DATE, prod, staging).length).toBeGreaterThan(0)
+  })
+
+  it('a gap production cannot read is not excused', () => {
+    const prod = base({ clubCounts: { U: null } })
+    const staging = base({
+      objectNames: ['district_01.json', 'metadata.json'],
+      manifestDistricts: 1,
+      metadataDistricts: 1,
+      metadataDistrictIds: ['01'],
+      gapDistricts: ['U'],
+    })
+    const r = compareDateProfiles(DATE, prod, staging)
+    expect(r.map(x => x.reason).join('\n')).toMatch(/could not be read/)
+  })
+
+  it('a gap production never had a file for is excused', () => {
+    const prod = base({
+      objectNames: ['district_01.json', 'metadata.json'],
+      clubCounts: {},
+    })
+    const staging = base({
+      objectNames: ['district_01.json', 'metadata.json'],
+      manifestDistricts: 1,
+      metadataDistricts: 1,
+      metadataDistrictIds: ['01'],
+      gapDistricts: ['U'],
+    })
+    expect(compareDateProfiles(DATE, prod, staging)).toEqual([])
+  })
+})
+
 describe('runtime stays bounded', () => {
   it('lists only the touched date and reads only the sampled objects', async () => {
     const extra = { [`snapshots/2026-09-30/district_02.json`]: prodDistrict }
