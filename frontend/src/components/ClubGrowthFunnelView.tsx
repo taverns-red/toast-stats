@@ -123,6 +123,37 @@ function StageSection({
   )
 }
 
+/** A club name linking to its page here, or — `external` — to its page on
+ *  toastmasters.org in a new tab (said to screen readers). */
+function ClubLink({
+  name,
+  href,
+  external = false,
+}: {
+  name: string
+  href: string
+  external?: boolean
+}) {
+  if (!external) {
+    return (
+      <Link to={href} className="growth-table__link">
+        {name}
+      </Link>
+    )
+  }
+  return (
+    <a
+      href={href}
+      className="growth-table__link"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {name}
+      <span className="sr-only"> (opens toastmasters.org)</span>
+    </a>
+  )
+}
+
 const paymentText: Record<ProspectiveRow['payment'], string> = {
   complete: 'Complete',
   incomplete: 'Incomplete',
@@ -136,15 +167,7 @@ const prospectiveColumns: ActionTableColumn<ProspectiveRow>[] = [
     className: 'action-table__subject growth-table__club',
     cell: r =>
       r.href ? (
-        <a
-          href={r.href}
-          className="growth-table__link"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {r.clubName}
-          <span className="sr-only"> (opens toastmasters.org)</span>
-        </a>
+        <ClubLink name={r.clubName} href={r.href} external />
       ) : (
         r.clubName
       ),
@@ -179,11 +202,7 @@ const charteredColumns: ActionTableColumn<CharteredRow>[] = [
     key: 'club',
     header: 'Club',
     className: 'action-table__subject growth-table__club',
-    cell: r => (
-      <Link to={r.href} className="growth-table__link">
-        {r.clubName}
-      </Link>
-    ),
+    cell: r => <ClubLink name={r.clubName} href={r.href} />,
   },
   {
     key: 'where',
@@ -212,11 +231,7 @@ const coachedColumns: ActionTableColumn<CoachedRow>[] = [
     key: 'club',
     header: 'Club',
     className: 'action-table__subject growth-table__club',
-    cell: r => (
-      <Link to={r.href} className="growth-table__link">
-        {r.clubName}
-      </Link>
-    ),
+    cell: r => <ClubLink name={r.clubName} href={r.href} />,
   },
   { key: 'status', header: 'Status', cell: coachStatusText },
   {
@@ -238,22 +253,9 @@ const suspendedColumns: ActionTableColumn<SuspendedRow>[] = [
     key: 'club',
     header: 'Club',
     className: 'action-table__subject growth-table__club',
-    cell: r =>
-      r.external ? (
-        <a
-          href={r.href}
-          className="growth-table__link"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {r.clubName}
-          <span className="sr-only"> (opens toastmasters.org)</span>
-        </a>
-      ) : (
-        <Link to={r.href} className="growth-table__link">
-          {r.clubName}
-        </Link>
-      ),
+    cell: r => (
+      <ClubLink name={r.clubName} href={r.href} external={r.external} />
+    ),
   },
   {
     key: 'where',
