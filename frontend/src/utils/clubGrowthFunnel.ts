@@ -3,6 +3,7 @@ import type {
   DistrictReportsDataset,
   NewClubRecord,
   ProspectiveClubRecord,
+  SponsorMentorRecord,
   SuspendedClub,
 } from '@taverns-red/shared-contracts'
 import { normalizeClubId } from '@taverns-red/shared-contracts'
@@ -22,6 +23,10 @@ import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
    - Suspended    — the rankings row's `suspendedClubs`; the clubs come from
      `snapshots/{date}/suspended-clubs.json` (#1953). Older dates have no
      list until re-derived: `null` (not measured) is kept apart from `[]`.
+
+   Sponsors and mentors (#1795) are supporting COUNTS for new clubs, from the
+   sidecar's `sponsorsMentors` section — one record per (club, code, status),
+   the person already dropped at parse. Absent section = not available yet.
 
    A stage whose source is missing is UNKNOWN, never 0 (#1757). Privacy: the
    sidecar is already de-identified at parse; this model keeps only club ids,
@@ -201,6 +206,31 @@ export interface SuspendedRow {
   external: boolean
 }
 
+/** Sponsor/mentor assignment counts for one new club (#1795) — never who. */
+export interface SponsorMentorClubRow {
+  clubId: string
+  clubName: string
+  /** ISO charter date, when TI prints one. */
+  charterDate: string | null
+  sponsors: number
+  mentors: number
+  /** Assignments under any other TI code (e.g. 'MENTORU'), not guessed. */
+  other: number
+  /** Assignments TI has marked AWARDED. */
+  awarded: number
+  href: string
+  /** `href` is off-site (toastmasters.org). */
+  external: boolean
+}
+
+export interface SponsorMentorTotals {
+  clubs: number
+  sponsors: number
+  mentors: number
+  other: number
+  awarded: number
+}
+
 export interface ClubGrowthFunnel {
   prospective: {
     value: StageValue
@@ -214,6 +244,11 @@ export interface ClubGrowthFunnel {
     /** `null` = the list was not measured for this date; `[]` = none. */
     clubs: SuspendedRow[] | null
   }
+  /** `null` = this date's reports carry no sponsors/mentors section yet. */
+  sponsorsMentors: {
+    clubs: SponsorMentorClubRow[]
+    totals: SponsorMentorTotals
+  } | null
 }
 
 export interface BuildClubGrowthFunnelInput {
@@ -364,6 +399,66 @@ export function buildCoached(
   return { value: { kind: 'count', value: active.length }, active, completed }
 }
 
+/** A club with a page here links to it; any other to toastmasters.org. */
+function clubLinkFor(
+  districtId: string,
+  clubId: string,
+  clubPageIds: ReadonlySet<string>
+): { href: string; external: boolean } {
+  const ti = clubPageIds.has(clubId) ? null : toastmastersClubPageUrl(clubId)
+  return ti === null
+    ? { href: clubHref(districtId, clubId), external: false }
+    : { href: ti, external: true }
+}
+
+function buildSponsorsMentors(
+  districtId: string,
+  records: readonly SponsorMentorRecord[],
+  clubPageIds: ReadonlySet<string>
+): NonNullable<ClubGrowthFunnel['sponsorsMentors']> {
+  const byClub = new Map<string, SponsorMentorClubRow>()
+  for (const r of records) {
+    const clubId = normalizeClubId(r.club)
+    let row = byClub.get(clubId)
+    if (!row) {
+      row = {
+        clubId,
+        clubName: r.clubName,
+        charterDate: usDateToIso(r.charterDate),
+        sponsors: 0,
+        mentors: 0,
+        other: 0,
+        awarded: 0,
+        ...clubLinkFor(districtId, clubId, clubPageIds),
+      }
+      byClub.set(clubId, row)
+    }
+    const code = r.code.trim().toUpperCase()
+    if (code === 'SPONSOR') row.sponsors += r.count
+    else if (code === 'MENTOR') row.mentors += r.count
+    else row.other += r.count
+    if (r.status.trim().toUpperCase() === 'AWARDED') row.awarded += r.count
+  }
+  // Newest charter first; the sort is stable, so source order breaks ties.
+  const clubs = [...byClub.values()].sort((a, b) =>
+    (b.charterDate ?? '').localeCompare(a.charterDate ?? '')
+  )
+  const totals: SponsorMentorTotals = {
+    clubs: clubs.length,
+    sponsors: 0,
+    mentors: 0,
+    other: 0,
+    awarded: 0,
+  }
+  for (const c of clubs) {
+    totals.sponsors += c.sponsors
+    totals.mentors += c.mentors
+    totals.other += c.other
+    totals.awarded += c.awarded
+  }
+  return { clubs, totals }
+}
+
 function buildSuspended(
   districtId: string,
   records: readonly SuspendedClub[] | null,
@@ -445,5 +540,13 @@ export function buildClubGrowthFunnel({
     clubPageIds
   )
 
-  return { prospective, chartered, coached, suspended }
+  const sponsorsMentors = sections?.sponsorsMentors
+    ? buildSponsorsMentors(
+        districtId,
+        sections.sponsorsMentors.records,
+        clubPageIds
+      )
+    : null
+
+  return { prospective, chartered, coached, suspended, sponsorsMentors }
 }
