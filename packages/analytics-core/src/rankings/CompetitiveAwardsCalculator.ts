@@ -131,10 +131,14 @@ export class CompetitiveAwardsCalculator {
   private rankByTwentyPlus(
     rankings: DistrictRanking[]
   ): CompetitiveAwardRanking[] {
-    const scored = rankings.map(r => {
-      const twentyPlus = r.clubsWith20PlusMembers ?? 0
+    // A district with no 20-plus count (its club report was a #1671 gap) is
+    // unknown, not 0%: it is left out of this award's standings, and its
+    // byDistrict entry carries rank 0 / not a winner (#2037).
+    const scored = rankings.flatMap(r => {
+      const twentyPlus = r.clubsWith20PlusMembers
+      if (twentyPlus === undefined) return []
       const value = r.activeClubs > 0 ? (twentyPlus / r.activeClubs) * 100 : 0
-      return { district: r, value }
+      return [{ district: r, value }]
     })
     return this.assignRanks(scored)
   }

@@ -150,6 +150,33 @@ describe('CompetitiveAwardsCalculator', () => {
       const d1 = result.twentyPlusAward.find(r => r.districtId === '1')
       expect(d1?.value).toBe(0)
     })
+
+    it('leaves a district with no 20-plus count out of the standings: unknown, not 0% (#2037)', () => {
+      // A #1671 gap district (club report is TI's HTML error page) has no
+      // clubsWith20PlusMembers. Absence is never zero (#1757).
+      const rankings: DistrictRanking[] = [
+        buildRanking({
+          districtId: '1',
+          activeClubs: 10,
+          clubsWith20PlusMembers: 1,
+        }),
+        buildRanking({
+          districtId: '2',
+          activeClubs: 10,
+          clubsWith20PlusMembers: 2,
+        }),
+        buildRanking({ districtId: 'U', activeClubs: 147 }),
+      ]
+
+      const result = calculator.calculate(rankings)
+
+      expect(result.twentyPlusAward.map(r => r.districtId)).toEqual(['2', '1'])
+      expect(result.byDistrict['U']?.twentyPlusRank).toBe(0)
+      expect(result.byDistrict['U']?.twentyPlusIsWinner).toBe(false)
+      // Its other awards are unaffected.
+      expect(result.extensionAward.map(r => r.districtId)).toContain('U')
+      expect(result.retentionAward.map(r => r.districtId)).toContain('U')
+    })
   })
 
   describe('District Club Retention Award', () => {
