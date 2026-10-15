@@ -116,6 +116,83 @@ for (const width of [375, 390]) {
   }
 }
 
+// #1843 (review §6.3) — stat strip 2×2 below 768 (the rest folded behind
+// one ≥ 44 px disclosure), 4×2 from 768; Education and Compliance are
+// disclosure cards open by default on phones, plain panels from 768.
+for (const [width, cols, rows] of [
+  [375, 2, 2],
+  [390, 2, 2],
+  [768, 4, 2],
+  [1280, 4, 2],
+] as const) {
+  test(`stat strip is ${cols}×${rows} and panels fit at ${width}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await load(page, [])
+    await unmask(page)
+    const m = await page.evaluate(() => {
+      const visible = (el: Element) => {
+        const r = el.getBoundingClientRect()
+        return r.width > 0 && r.height > 0
+      }
+      const grid = document.querySelector('.club-stats-grid')!
+      const cells = [...grid.children].filter(
+        el => el.classList.contains('club-stat') && visible(el)
+      )
+      const tops = new Set(
+        cells.map(el => Math.round(el.getBoundingClientRect().top))
+      )
+      const lefts = new Set(
+        cells.map(el => Math.round(el.getBoundingClientRect().left))
+      )
+      const fold = grid.querySelector('.mobile-disclosure__summary')
+      const panels = ['club-edu-title', 'club-compliance-title'].map(id => {
+        const section = document
+          .getElementById(id)!
+          .closest('section') as HTMLElement
+        const details = section.querySelector('details')
+        const summary = section.querySelector('summary')
+        return {
+          details: !!details,
+          open: details?.open ?? null,
+          summaryH: summary
+            ? Math.round(summary.getBoundingClientRect().height)
+            : 0,
+        }
+      })
+      return {
+        cells: cells.length,
+        cols: lefts.size,
+        rows: tops.size,
+        minCellH: Math.min(
+          ...cells.map(el => Math.round(el.getBoundingClientRect().height))
+        ),
+        foldH: fold && visible(fold) ? fold.getBoundingClientRect().height : 0,
+        panels,
+        docOverflow:
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      }
+    })
+    expect(m.cols, 'strip columns').toBe(cols)
+    expect(m.rows, 'strip rows').toBe(rows)
+    expect(m.cells).toBe(cols * rows)
+    expect(m.minCellH).toBeGreaterThanOrEqual(56)
+    const phone = width < 768
+    if (phone) expect(m.foldH).toBeGreaterThanOrEqual(44)
+    else expect(m.foldH).toBe(0)
+    for (const p of m.panels) {
+      expect(p.details).toBe(phone)
+      if (phone) {
+        expect(p.open).toBe(true)
+        expect(p.summaryH).toBeGreaterThanOrEqual(44)
+      }
+    }
+    expect(m.docOverflow).toBe(0)
+  })
+}
+
 // The longest club name in D61 (51 characters) wraps to two lines at 22px
 // on macOS and three on the Linux runner. The hero's chrome must fit the
 // budget with a two-line name; each line past two is the name's own (an h1
