@@ -30,7 +30,7 @@ vi.mock('maplibre-gl', () => {
     on = vi.fn()
     setGlyphs = vi.fn()
     addLayer = vi.fn()
-    getLayer = vi.fn(() => undefined)
+    getStyle = vi.fn(() => ({ layers: [] }))
     handlers = new globalThis.Map<string, () => void>()
     once = vi.fn((event: string, fn: () => void) => {
       this.handlers.set(event, fn)

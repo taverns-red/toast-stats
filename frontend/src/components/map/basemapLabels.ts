@@ -41,6 +41,7 @@ import type {
   StyleSpecification,
   SymbolLayerSpecification,
 } from 'maplibre-gl'
+import { BASEMAP_COLOURS, BASEMAP_SOURCE_ID } from './basemapStyle'
 
 type Theme = 'light' | 'dark'
 
@@ -305,7 +306,7 @@ export function labelLayers(
 export interface LabelTarget {
   setGlyphs(url: string | null): unknown
   addLayer(layer: SymbolLayerSpecification, beforeId?: string): unknown
-  getLayer(id: string): unknown
+  getStyle(): { layers: ReadonlyArray<{ id: string; source?: unknown }> }
 }
 
 export interface LabelOptions {
@@ -313,16 +314,30 @@ export interface LabelOptions {
   origin: string
 }
 
-/** Red stub (#2081). */
+const labelsFor = ({ theme }: LabelOptions) =>
+  labelLayers(BASEMAP_SOURCE_ID, theme, BASEMAP_COLOURS[theme].land)
+
+/** A copy of `style` with our glyphs and label layers (for `setStyle`). */
 export function withBasemapLabels(
   style: StyleSpecification,
-  _opts: LabelOptions
+  opts: LabelOptions
 ): StyleSpecification {
-  return style
+  return {
+    ...style,
+    glyphs: basemapGlyphsUrl(opts.origin),
+    layers: [...style.layers, ...labelsFor(opts)],
+  }
 }
 
-/** Red stub (#2081). */
-export function addBasemapLabels(
-  _map: LabelTarget,
-  _opts: LabelOptions
-): void {}
+/**
+ * Adds the labels to a live map: our glyphs, then the label layers directly
+ * above the basemap's own layers, so anything a page has already added (the
+ * pins) stays on top. Pins added later are appended above them anyway.
+ */
+export function addBasemapLabels(map: LabelTarget, opts: LabelOptions): void {
+  map.setGlyphs(basemapGlyphsUrl(opts.origin))
+  const above = map
+    .getStyle()
+    .layers.find(l => l.source !== undefined && l.source !== BASEMAP_SOURCE_ID)
+  for (const layer of labelsFor(opts)) map.addLayer(layer, above?.id)
+}

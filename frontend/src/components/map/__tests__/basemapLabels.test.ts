@@ -95,9 +95,15 @@ describe('basemap label layers', () => {
       addLayer: vi.fn((l: { id: string }, before?: string) =>
         added.push([l.id, before])
       ),
-      getLayer: vi.fn((id: string) =>
-        id === PIN_LAYER_IDS[0] ? {} : undefined
-      ),
+      // A page's pins, already on the map above the basemap's geometry.
+      getStyle: () => ({
+        layers: [
+          { id: 'background' },
+          { id: 'earth', source: 'protomaps' },
+          { id: PIN_LAYER_IDS[0], source: 'club-pins' },
+          { id: PIN_LAYER_IDS[1], source: 'club-pins' },
+        ],
+      }),
     }
     addBasemapLabels(map, { theme: 'dark', origin: ORIGIN })
     expect(map.setGlyphs).toHaveBeenCalledWith(`${ORIGIN}/${GLYPH_PATH}`)
@@ -110,7 +116,9 @@ describe('basemap label layers', () => {
     const map = {
       setGlyphs: vi.fn(),
       addLayer: vi.fn((_l: unknown, b?: string) => before.push(b)),
-      getLayer: vi.fn(() => undefined),
+      getStyle: () => ({
+        layers: [{ id: 'background' }, { id: 'earth', source: 'protomaps' }],
+      }),
     }
     addBasemapLabels(map, { theme: 'light', origin: ORIGIN })
     expect(before).toHaveLength(LABEL_LAYER_IDS.length)
