@@ -213,7 +213,12 @@
 
 /* ── Table ─────────────────────────────────────────────────────────── */
 
+/* `position: relative` makes the scroller the containing block of the
+   cells' absolutely positioned `.sr-only` text; without it that text sits at
+   the far end of the table, outside the scroller, and scrolls the page
+   sideways (936px at 375). */
 .survival-table__scroll {
+  position: relative;
   margin-top: 1rem;
   max-width: 100%;
   overflow-x: auto;
