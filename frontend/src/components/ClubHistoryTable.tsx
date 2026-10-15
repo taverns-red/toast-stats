@@ -140,6 +140,8 @@ export interface ClubHistoryTableProps {
    *  clubs moved between them, so the page's current district is not a fact
    *  about the club's 2022 row. No `districtId` prop, by design. */
   clubId?: string | undefined
+  /** #1803 — show each row's district (the page sets it when they vary). */
+  showDistrict?: boolean
 }
 
 export function ClubHistoryTable({

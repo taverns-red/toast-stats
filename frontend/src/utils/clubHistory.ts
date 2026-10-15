@@ -52,6 +52,13 @@ export interface ClubHistoryRow {
   aprilRenewals: number | null
   /** Operational club status (Active / Suspended / Low / Ineligible), or null. */
   clubStatus: string | null
+  /**
+   * #1803 — the district whose year-end snapshot this row was read from: the
+   * district the club was in that program year (club-district history,
+   * #1782). Optional so a hand-built row stays valid; `useClubHistory`
+   * always sets it.
+   */
+  districtId?: string
 }
 
 /**
@@ -62,7 +69,8 @@ export interface ClubHistoryRow {
 export function buildClubHistoryRow(
   startYear: number,
   yearEndDate: string,
-  club: ClubStatisticsFile | undefined
+  club: ClubStatisticsFile | undefined,
+  _districtId?: string
 ): ClubHistoryRow {
   const label = getProgramYear(startYear).label
 
@@ -127,6 +135,11 @@ export type ClubHistorySkipReason =
   | 'snapshot-failed'
   /** The snapshot loaded cleanly; this club is not in it. */
   | 'club-absent'
+  /**
+   * #1803 — the club-district history has two spans in that program year (it
+   * moved during the year) and the year-end district's snapshot lacks it.
+   */
+  | 'moved-mid-year'
 
 /** One completed program year that yielded no row, and why. */
 export interface ClubHistoryGap {
@@ -162,7 +175,7 @@ function listYears(labels: readonly string[]): string {
  */
 export function summarizeClubHistoryGaps(
   gaps: readonly ClubHistoryGap[],
-  opts: { districtLabel: string }
+  opts: { districtLabel: string; pageDistrictId?: string }
 ): string | null {
   if (gaps.length === 0) return null
 

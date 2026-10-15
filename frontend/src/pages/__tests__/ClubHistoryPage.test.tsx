@@ -294,3 +294,37 @@ describe('ClubHistoryPage phone context bar (#1831)', () => {
     ])
   })
 })
+
+// #1803 — rows carry the district the club was in that year (club-district
+// history, #1782). The District column appears only when it tells the reader
+// something: a row recorded under a district other than the page's.
+describe('ClubHistoryPage — District column (#1803)', () => {
+  const result = (rows: ClubHistoryRow[]) => ({
+    rows,
+    gaps: [],
+    clubName: 'Sunrise Speakers',
+    isLoading: false,
+    isError: false,
+    error: null,
+  })
+
+  it('shows the District column when a year was recorded under another district', () => {
+    mockedHistory.mockReturnValue(
+      result([
+        { ...row, districtId: '61' },
+        { ...row, startYear: 2022, label: '2022-2023', districtId: '01' },
+      ])
+    )
+    renderPage()
+    expect(
+      screen.getByRole('columnheader', { name: /District/ })
+    ).toBeInTheDocument()
+    expect(screen.getByText('District 1')).toBeInTheDocument()
+  })
+
+  it('has no District column when every year is in the page district', () => {
+    mockedHistory.mockReturnValue(result([{ ...row, districtId: '61' }]))
+    renderPage()
+    expect(screen.queryByRole('columnheader', { name: /District/ })).toBeNull()
+  })
+})
