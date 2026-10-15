@@ -1,3 +1,4 @@
+import { isShortenedLink, stripLinks } from '@taverns-red/shared-contracts'
 import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
 
 export { toastmastersClubPageUrl }
@@ -109,15 +110,30 @@ export function formatMeetingTime(time: string): string {
   )
 }
 
-/** `clean`, then null if the text would give entry to a meeting. */
-function publicText(value: string | undefined): string | null {
+/**
+ * #2069 — `clean` with every link removed: any URL or URL-like token, with
+ * or without a scheme (club 977's street is "Zoom Link: bit.ly/…, <street>";
+ * a shortener hides where it goes), and the "Zoom Link:" label before one.
+ * The same `stripLinks` the collector applies, so files published before
+ * the collector change show no link either.
+ */
+function linklessText(value: string | undefined): string | null {
   const text = clean(value)
+  return text === null ? null : clean(stripLinks(text))
+}
+
+/** `linklessText`, then null if what is left would give entry to a meeting. */
+function publicText(value: string | undefined): string | null {
+  const text = linklessText(value)
   return text !== null && containsMeetingAccess(text) ? null : text
 }
 
+/** An http(s) club site: never a meeting host, never a shortener (#2069). */
 function safeHttpUrl(value: string | undefined): string | null {
-  const text = publicText(value)
-  if (!text) return null
+  const text = clean(value)
+  if (!text || containsMeetingAccess(text) || isShortenedLink(text)) {
+    return null
+  }
   try {
     const url = new URL(text)
     return url.protocol === 'http:' || url.protocol === 'https:'
@@ -143,9 +159,14 @@ export function buildClubMeetingInfo(
   const time = rawTime === null ? null : formatMeetingTime(rawTime)
   const schedule = [day, time].filter(Boolean).join(' · ') || null
 
-  // A street that is a meeting link means the club's meeting place is online.
+  // A street that is only a link (or meeting access) means the club's
+  // meeting place is online. A street left after the link is kept (#2069).
   const rawStreet = clean(club.address?.street)
-  const meetsAtLink = rawStreet !== null && containsMeetingAccess(rawStreet)
+  const street = publicText(club.address?.street)?.replace(/,$/, '') ?? null
+  const meetsAtLink =
+    rawStreet !== null &&
+    street === null &&
+    (linklessText(rawStreet) !== rawStreet || containsMeetingAccess(rawStreet))
 
   const mode = meetsAtLink
     ? 'Meets online'
@@ -155,7 +176,6 @@ export function buildClubMeetingInfo(
         ? 'In person'
         : null
 
-  const street = meetsAtLink ? null : (rawStreet?.replace(/,$/, '') ?? null)
   const place =
     [street, publicText(club.address?.city), publicText(club.address?.region)]
       .filter(Boolean)

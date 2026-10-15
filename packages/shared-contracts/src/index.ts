@@ -453,7 +453,11 @@ export {
 } from './privacy/club-contact.js'
 
 // No link in a club's published meeting place (#2069)
-export { stripLinks, containsLink } from './privacy/meeting-links.js'
+export {
+  stripLinks,
+  containsLink,
+  isShortenedLink,
+} from './privacy/meeting-links.js'
 
 // District analytics category lists as clubId lists (#1901 option B)
 export {

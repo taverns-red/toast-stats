@@ -13,8 +13,8 @@
  * (defence in depth for files already published).
  */
 
-/** Online meeting hosts (the #1879 list) and URL shorteners. */
-const LINK_HOSTS = [
+/** Online meeting hosts (the #1879 list). */
+const MEETING_HOSTS = [
   'zoom\\.us',
   'zoomgov\\.com',
   'zoom\\.com',
@@ -29,6 +29,10 @@ const LINK_HOSTS = [
   '8x8\\.vc',
   'whereby\\.com',
   'bluejeans\\.com',
+]
+
+/** URL shorteners: the destination is hidden, so it may be a meeting. */
+const SHORTENER_HOSTS = [
   'bit\\.ly',
   'bitly\\.com',
   'tinyurl\\.com',
@@ -48,21 +52,39 @@ const LINK_HOSTS = [
   'forms\\.gle',
   'qrco\\.de',
   'linktr\\.ee',
-].join('|')
+]
+
+const LINK_HOSTS = [...MEETING_HOSTS, ...SHORTENER_HOSTS].join('|')
+
+const SHORTENED = new RegExp(
+  `^(?:[a-z][a-z0-9+.-]*:\\/\\/)?(?:[a-z0-9-]+\\.)*(?:${SHORTENER_HOSTS.join('|')})(?:[/?#:]|$)`,
+  'i'
+)
+
+/** True when the URL is on a link shortener (bit.ly, tinyurl.com, …). */
+export function isShortenedLink(url: string): boolean {
+  return SHORTENED.test(url.trim())
+}
 
 /** Bare-domain TLDs common enough to mean a site, rare enough in a street. */
 const BARE_TLDS = 'com|org|net|io|info|app|link|ly|gl|gle|ee|cc|gd|vc|si'
+
+/**
+ * The rest of a URL: anything but whitespace, a bracket or a separator, so
+ * "(bit.ly/x)" and "bit.ly/x, Room 4" keep their punctuation.
+ */
+const URL_REST = '[^\\s()\\[\\]<>,;]'
 
 const LINK_TOKEN = new RegExp(
   [
     // An email (mailto is a link too).
     '[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}',
     // A scheme or www.
-    '(?:[a-z][a-z0-9+.-]*:\\/\\/|www\\.)\\S+',
+    `(?:[a-z][a-z0-9+.-]*:\\/\\/|www\\.)${URL_REST}+`,
     // A meeting host or shortener, with or without a path.
-    `(?<![\\w.-])(?:[a-z0-9-]+\\.)*(?:${LINK_HOSTS})(?![\\w-])(?:[/?#]\\S*)?`,
+    `(?<![\\w.-])(?:[a-z0-9-]+\\.)*(?:${LINK_HOSTS})(?![\\w-])(?:[/?#]${URL_REST}*)?`,
     // Any domain.tld/path.
-    '(?<![\\w.-])(?:[a-z0-9-]+\\.)+[a-z]{2,}\\/\\S*',
+    `(?<![\\w.-])(?:[a-z0-9-]+\\.)+[a-z]{2,}\\/${URL_REST}*`,
     // A bare domain on a common TLD.
     `(?<![\\w.-])(?:[a-z0-9-]+\\.)+(?:${BARE_TLDS})(?![\\w-])`,
   ].join('|'),

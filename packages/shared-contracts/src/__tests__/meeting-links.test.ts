@@ -7,7 +7,7 @@
  * house numbers by 9s: no real link, id or passcode is fixtured.
  */
 import { describe, it, expect } from 'vitest'
-import { containsLink, stripLinks } from '../index.js'
+import { containsLink, isShortenedLink, stripLinks } from '../index.js'
 
 /** Club 977 (D201): a shortened Zoom link, then the street address. */
 const CLUB_977_STREET = 'Zoom Link: bit.ly/REDACTED977, 9999 Overland Ave'
@@ -98,6 +98,13 @@ describe('stripLinks (#2069)', () => {
     expect(stripLinks('Hall, Zoom: bit.ly/abc123')).toBe('Hall, Zoom')
   })
 
+  it('keeps the punctuation around a link', () => {
+    expect(stripLinks('7:30 pm (bit.ly/abc123)')).toBe('7:30 pm')
+    expect(stripLinks('9 W 9th St, bit.ly/abc123, Room 4')).toBe(
+      '9 W 9th St, Room 4'
+    )
+  })
+
   it('drops an email too', () => {
     expect(stripLinks('9 Main St, club-1@example.com')).toBe('9 Main St')
   })
@@ -110,5 +117,26 @@ describe('stripLinks (#2069)', () => {
 describe('containsLink (#2069)', () => {
   it('finds the scheme-less link in club 977', () => {
     expect(containsLink(CLUB_977_STREET)).toBe(true)
+  })
+})
+
+describe('isShortenedLink (#2069)', () => {
+  it.each([
+    'https://bit.ly/abc123',
+    'http://tinyurl.com/abc123',
+    'https://www.tinyurl.com/abc123',
+    'bit.ly/abc123',
+    'https://forms.gle/abc',
+  ])('is true for %s', url => {
+    expect(isShortenedLink(url)).toBe(true)
+  })
+
+  it.each([
+    'https://1009147.toastmastersclubs.org/',
+    'https://www.meetup.com/club',
+    'https://example.org/bit.ly/x',
+    'https://notbit.ly.example.com/',
+  ])('is false for %s', url => {
+    expect(isShortenedLink(url)).toBe(false)
   })
 })
