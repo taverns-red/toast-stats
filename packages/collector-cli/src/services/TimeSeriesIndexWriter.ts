@@ -195,6 +195,13 @@ export class TimeSeriesIndexWriter {
       // Sort data points by date (chronological order)
       indexFile.dataPoints.sort((a, b) => a.date.localeCompare(b.date))
 
+      // A measured point supersedes an earlier "not measured" record (#2070).
+      if (indexFile.sourceGapDates?.includes(dataPoint.date)) {
+        const rest = indexFile.sourceGapDates.filter(d => d !== dataPoint.date)
+        if (rest.length > 0) indexFile.sourceGapDates = rest
+        else delete indexFile.sourceGapDates
+      }
+
       // 5. Recalculate the program year summary
       indexFile.summary = this.calculateProgramYearSummary(indexFile.dataPoints)
       indexFile.lastUpdated = new Date().toISOString()
@@ -222,6 +229,49 @@ export class TimeSeriesIndexWriter {
         cause: error,
       })
     }
+  }
+
+  /**
+   * Record that `districtId` was not measured on `date`: the date's snapshot
+   * metadata lists it as a #1671 source gap (#2070). Removes the date's data
+   * point, if any (a 0 point written before #2036 survives every upsert-only
+   * rebuild), and adds the date to the file's `sourceGapDates`, so the file
+   * itself says why the point is missing. A district with no file for that
+   * program year gets none created.
+   *
+   * @returns true when the file was changed and written
+   */
+  async recordSourceGap(districtId: string, date: string): Promise<boolean> {
+    this.validateDistrictId(districtId)
+    this.validateDate(date, 'date')
+
+    const programYear = this.getProgramYearForDate(date)
+    const indexFile = await this.readProgramYearIndex(districtId, programYear)
+    if (!indexFile) return false
+
+    const dataPoints = indexFile.dataPoints.filter(dp => dp.date !== date)
+    const gapDates = indexFile.sourceGapDates ?? []
+    if (
+      dataPoints.length === indexFile.dataPoints.length &&
+      gapDates.includes(date)
+    ) {
+      return false
+    }
+
+    indexFile.dataPoints = dataPoints
+    indexFile.sourceGapDates = [...new Set([...gapDates, date])].sort()
+    indexFile.summary = this.calculateProgramYearSummary(dataPoints)
+    indexFile.lastUpdated = new Date().toISOString()
+    await this.writeProgramYearIndex(districtId, programYear, indexFile)
+
+    this.logger.info('Recorded a source gap in the time-series index', {
+      operation: 'recordSourceGap',
+      districtId,
+      programYear,
+      date,
+      totalDataPoints: dataPoints.length,
+    })
+    return true
   }
 
   /**
