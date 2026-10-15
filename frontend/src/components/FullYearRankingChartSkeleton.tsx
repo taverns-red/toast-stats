@@ -124,11 +124,42 @@ export const FullYearRankingChartSkeleton: React.FC<{
   )
 }
 
-/** Stub (#1835 red): the chunk fallback for every pre-data state. */
+/**
+ * Empty state when no data is available
+ */
+export const FullYearRankingChartEmpty: React.FC<{
+  programYear: ProgramYear
+}> = ({ programYear }) => (
+  <section
+    className="redesign-panel sm:p-6"
+    role="status"
+    aria-label="No ranking data available"
+  >
+    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-tm-headline mb-4">
+      Ranking Progression
+    </h2>
+    <div className="flex items-center justify-center h-80">
+      <p className="text-base text-gray-600 font-tm-body text-center">
+        No ranking data available for the {programYear.label} program year.
+      </p>
+    </div>
+  </section>
+)
+
+/**
+ * The lazy chunk fallback (#1835): what the chart itself paints before its
+ * plot — loading panel or empty state — so the chunk landing moves nothing.
+ * With data it is the loading panel, the loaded chart's shape.
+ */
 export const FullYearRankingChartFallback: React.FC<{
   data: { history: unknown[] } | null
   isLoading: boolean
   programYear: ProgramYear
   selectedMetric: RankMetric
   onMetricChange: (metric: RankMetric) => void
-}> = () => null
+}> = ({ data, isLoading, ...header }) =>
+  !isLoading && (!data || data.history.length === 0) ? (
+    <FullYearRankingChartEmpty programYear={header.programYear} />
+  ) : (
+    <FullYearRankingChartSkeleton {...header} />
+  )

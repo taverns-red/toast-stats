@@ -114,11 +114,63 @@ export const HistoricalRankChartSkeleton: React.FC<{
   )
 }
 
-/** Stub (#1835 red): the chunk fallback for every pre-data state. */
+export const HistoricalRankChartError: React.FC<{
+  error?: Error | null | undefined
+}> = ({ error }) => (
+  <section
+    className="redesign-panel"
+    role="alert"
+    aria-label="Historical rank data error"
+  >
+    <h2 className="text-xl font-semibold text-gray-900 mb-4">
+      Historical Rank Progression
+    </h2>
+    <div className="flex items-center justify-center h-80">
+      <div className="text-center">
+        <p className="text-red-600 font-medium mb-2">
+          Failed to load historical rank data
+        </p>
+        <p className="text-gray-600 text-sm">
+          {error?.message || 'An unexpected error occurred'}
+        </p>
+      </div>
+    </div>
+  </section>
+)
+
+export const HistoricalRankChartEmpty: React.FC = () => (
+  <section
+    className="redesign-panel"
+    role="status"
+    aria-label="Historical rank data"
+  >
+    <h2 className="text-xl font-semibold text-gray-900 mb-4">
+      Historical Rank Progression
+    </h2>
+    <div className="flex items-center justify-center h-80">
+      <p className="text-gray-600">
+        No historical rank data available. Select regions above to view rank
+        progression.
+      </p>
+    </div>
+  </section>
+)
+
+/**
+ * The lazy chunk fallback (#1835): what the chart itself paints before its
+ * plot — loading panel, error or empty state — so the chunk landing moves
+ * nothing. With data it is the loading panel, the loaded chart's shape.
+ */
 export const HistoricalRankChartFallback: React.FC<{
   data: unknown[]
   isLoading: boolean
   isError: boolean
-  error?: Error | null
+  error?: Error | null | undefined
   selectedProgramYear?: ProgramYearLabel
-}> = () => null
+}> = ({ data, isLoading, isError, error, selectedProgramYear }) => {
+  if (isLoading)
+    return <HistoricalRankChartSkeleton programYear={selectedProgramYear} />
+  if (isError) return <HistoricalRankChartError error={error} />
+  if (!data || data.length === 0) return <HistoricalRankChartEmpty />
+  return <HistoricalRankChartSkeleton programYear={selectedProgramYear} />
+}

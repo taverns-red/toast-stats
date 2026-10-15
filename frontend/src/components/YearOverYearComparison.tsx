@@ -9,19 +9,18 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import {
+  YearOverYearComparisonEmpty,
   YearOverYearComparisonSkeleton,
   YOY_PLOT_HEIGHT,
 } from './YearOverYearComparisonSkeleton'
-import { EmptyState } from './ErrorDisplay'
-
-interface YearOverYearData {
-  membershipChange: number
-  distinguishedChange: number
-  clubHealthChange: number
-}
+import {
+  NO_HISTORY,
+  yearOverYearEmpty,
+  type YearOverYearChanges,
+} from './yearOverYearEmpty'
 
 interface YearOverYearComparisonProps {
-  yearOverYear?: YearOverYearData
+  yearOverYear?: YearOverYearChanges
   currentYear: {
     totalMembership: number
     distinguishedClubs: number
@@ -112,42 +111,10 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
     return <YearOverYearComparisonSkeleton />
   }
 
-  // #1442: an explicit reason outranks both the "no data" and the "all zeroes"
-  // empty states — it is the only one of the three that is actually true.
-  if (unavailableReason) {
-    return (
-      <EmptyState
-        title="Comparison Unavailable"
-        message={unavailableReason}
-        icon="data"
-      />
-    )
-  }
-
-  if (!yearOverYear) {
-    return (
-      <EmptyState
-        title="No Historical Data"
-        message="Year-over-year comparison requires data from previous program years. Continue collecting data to enable this feature."
-        icon="data"
-      />
-    )
-  }
-
-  // All-zero changes indicate the backend couldn't find distinct previous year data
-  const allChangesZero =
-    yearOverYear.membershipChange === 0 &&
-    yearOverYear.distinguishedChange === 0 &&
-    yearOverYear.clubHealthChange === 0
-
-  if (allChangesZero) {
-    return (
-      <EmptyState
-        title="No Historical Data"
-        message="Year-over-year comparison requires data from previous program years. Continue collecting data to enable this feature."
-        icon="data"
-      />
-    )
+  // The same rule decides the lazy chunk fallback (#1835).
+  const empty = yearOverYearEmpty(yearOverYear, unavailableReason)
+  if (empty || !yearOverYear) {
+    return <YearOverYearComparisonEmpty {...(empty ?? NO_HISTORY)} />
   }
 
   // Calculate previous year values from percentage changes

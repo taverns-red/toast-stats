@@ -14,6 +14,8 @@ import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { dateAxisLayout } from './charts/compactAxis'
 import {
+  HistoricalRankChartEmpty,
+  HistoricalRankChartError,
   HistoricalRankChartSkeleton,
   PLOT_HEIGHT,
   RankChartHeader,
@@ -130,47 +132,11 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   }
 
   if (isError) {
-    return (
-      <section
-        className="redesign-panel"
-        role="alert"
-        aria-label="Historical rank data error"
-      >
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Historical Rank Progression
-        </h2>
-        <div className="flex items-center justify-center h-80">
-          <div className="text-center">
-            <p className="text-red-600 font-medium mb-2">
-              Failed to load historical rank data
-            </p>
-            <p className="text-gray-600 text-sm">
-              {error?.message || 'An unexpected error occurred'}
-            </p>
-          </div>
-        </div>
-      </section>
-    )
+    return <HistoricalRankChartError error={error} />
   }
 
   if (!data || data.length === 0) {
-    return (
-      <section
-        className="redesign-panel"
-        role="status"
-        aria-label="Historical rank data"
-      >
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Historical Rank Progression
-        </h2>
-        <div className="flex items-center justify-center h-80">
-          <p className="text-gray-600">
-            No historical rank data available. Select regions above to view rank
-            progression.
-          </p>
-        </div>
-      </section>
-    )
+    return <HistoricalRankChartEmpty />
   }
 
   // Use selectedProgramYear prop if provided, fall back to data (#232)

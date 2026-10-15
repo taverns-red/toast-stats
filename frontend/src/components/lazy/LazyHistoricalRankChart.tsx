@@ -1,5 +1,5 @@
 import React, { Suspense, ComponentProps } from 'react'
-import { HistoricalRankChartSkeleton } from '../HistoricalRankChartSkeleton'
+import { HistoricalRankChartFallback } from '../HistoricalRankChartSkeleton'
 
 const LazyComponent = React.lazy(() => import('../HistoricalRankChart'))
 
@@ -9,9 +9,9 @@ export function LazyHistoricalRankChart(
   return (
     <Suspense
       fallback={
-        // #1835: the chart's own loading state, not a bare 300 px plot, so
-        // the chunk landing moves nothing (Recharts-free module).
-        <HistoricalRankChartSkeleton programYear={props.selectedProgramYear} />
+        // #1835: what the chart paints first (loading panel, error or empty
+        // state), not a bare 300 px plot, so the chunk landing moves nothing.
+        <HistoricalRankChartFallback {...props} />
       }
     >
       <LazyComponent {...props} />

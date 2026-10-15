@@ -1,5 +1,11 @@
 import React from 'react'
 import { ChartSkeleton } from './ChartSkeleton'
+import { EmptyState } from './ErrorDisplay'
+import {
+  yearOverYearEmpty,
+  type YearOverYearChanges,
+  type YearOverYearEmpty,
+} from './yearOverYearEmpty'
 
 /* Loading state of the Year-Over-Year Comparison panel (#1835).
  *
@@ -128,13 +134,26 @@ export const YearOverYearComparisonSkeleton: React.FC = () => (
   </div>
 )
 
-/** Stub (#1835 red): the chunk fallback for every pre-data state. */
+/** The panel's empty state: no prior year, or a deliberate absence. */
+export const YearOverYearComparisonEmpty: React.FC<YearOverYearEmpty> = ({
+  title,
+  message,
+}) => <EmptyState title={title} message={message} icon="data" />
+
+/**
+ * The lazy chunk fallback (#1835): what the panel itself paints before its
+ * charts — skeleton or empty state — so the chunk landing moves nothing.
+ */
 export const YearOverYearComparisonFallback: React.FC<{
-  yearOverYear?: {
-    membershipChange: number
-    distinguishedChange: number
-    clubHealthChange: number
-  }
+  yearOverYear?: YearOverYearChanges
   isLoading?: boolean
   unavailableReason?: string | null
-}> = () => null
+}> = ({ yearOverYear, isLoading = false, unavailableReason = null }) => {
+  if (isLoading) return <YearOverYearComparisonSkeleton />
+  const empty = yearOverYearEmpty(yearOverYear, unavailableReason)
+  return empty ? (
+    <YearOverYearComparisonEmpty {...empty} />
+  ) : (
+    <YearOverYearComparisonSkeleton />
+  )
+}

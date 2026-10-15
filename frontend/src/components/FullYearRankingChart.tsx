@@ -20,6 +20,7 @@ import {
 } from './charts/ChartReadout'
 import {
   ChartHeader,
+  FullYearRankingChartEmpty,
   FullYearRankingChartSkeleton,
   PLOT_HEIGHT,
 } from './FullYearRankingChartSkeleton'
@@ -113,30 +114,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
 }
 
 /**
- * Empty state when no data is available
- */
-interface EmptyStateProps {
-  programYear: ProgramYear
-}
-
-const EmptyState: React.FC<EmptyStateProps> = ({ programYear }) => (
-  <section
-    className="redesign-panel sm:p-6"
-    role="status"
-    aria-label="No ranking data available"
-  >
-    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-tm-headline mb-4">
-      Ranking Progression
-    </h2>
-    <div className="flex items-center justify-center h-80">
-      <p className="text-base text-gray-600 font-tm-body text-center">
-        No ranking data available for the {programYear.label} program year.
-      </p>
-    </div>
-  </section>
-)
-
-/**
  * FullYearRankingChart Component
  *
  * Displays a line chart showing ranking progression throughout a program year.
@@ -183,7 +160,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
 
   // Show empty state if no data
   if (!data || data.history.length === 0) {
-    return <EmptyState programYear={programYear} />
+    return <FullYearRankingChartEmpty programYear={programYear} />
   }
 
   const metricConfig = METRIC_CONFIG[selectedMetric]
