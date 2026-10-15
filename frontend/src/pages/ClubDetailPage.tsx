@@ -48,6 +48,10 @@ import {
   summarizeClubCoach,
 } from '../utils/clubCompliance'
 import { ClubCompliancePanel } from '../components/clubs/ClubCompliancePanel'
+import { ClubLifecyclePanel } from '../components/clubs/ClubLifecyclePanel'
+import { useClubDistrictHistoryEntry } from '../hooks/useClubDistrictHistoryEntry'
+import { useSuspendedClubs } from '../hooks/useSuspendedClubs'
+import { buildClubLifecycle } from '../utils/clubLifecycle'
 import { ClubMiniMap } from '../components/clubs/ClubMiniMap'
 import { ClubStatStrip } from '../components/clubs/ClubStatStrip'
 import { ClubMembershipTrend } from '../components/clubs/ClubMembershipTrend'
@@ -414,6 +418,40 @@ const ClubDetailPage: React.FC = () => {
     () => summarizeClubCoach(analytics?.districtReports, clubId ?? ''),
     [analytics, clubId]
   )
+
+  // #1843 — Lifecycle timeline: charter (snapshot), district spans (one
+  // club-district-history shard, #1782) and, only for a club the dashboard
+  // lists as Suspended, its `Susp` date from the page date's
+  // suspended-clubs.json (#1953, R3). Both reads wait for the club's
+  // analytics, which itself waits for first paint (#1901), so neither
+  // competes with the hero's reads.
+  const { history: clubDistrictHistory, isLoading: isLoadingHistory } =
+    useClubDistrictHistoryEntry(clubId, !!club)
+  const isSuspended = club?.clubStatus === 'Suspended'
+  const { clubs: suspendedClubs, isLoading: isLoadingSuspended } =
+    useSuspendedClubs(
+      districtId,
+      isSuspended ? (effectiveEndDate ?? undefined) : undefined
+    )
+  const lifecycle = useMemo(() => {
+    if (!club || isLoadingHistory) return null
+    if (isSuspended && isLoadingSuspended) return null
+    const suspendDate =
+      suspendedClubs?.find(s => clubIdsMatch(s.clubNumber, club.clubId))
+        ?.suspendDate ?? null
+    return buildClubLifecycle({
+      charterDate: club.charterDate,
+      history: clubDistrictHistory,
+      suspendDate,
+    })
+  }, [
+    club,
+    isLoadingHistory,
+    clubDistrictHistory,
+    isSuspended,
+    isLoadingSuspended,
+    suspendedClubs,
+  ])
 
   // Compute DCP projection
   const projection: ClubDCPProjection | null = useMemo(() => {
@@ -971,6 +1009,7 @@ const ClubDetailPage: React.FC = () => {
               programYearLabel={programYear.label}
             />
             <ClubCompliancePanel rows={complianceRows} coach={coachSummary} />
+            <ClubLifecyclePanel lifecycle={lifecycle} isLoading={!lifecycle} />
           </div>
 
           {/* Risk Factors */}

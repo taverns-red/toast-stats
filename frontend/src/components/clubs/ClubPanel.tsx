@@ -19,6 +19,7 @@ export function ClubPanel({
   icon,
   meta,
   className,
+  busy,
   children,
 }: {
   /** DOM id of the heading; the section is labelled by it. */
@@ -29,6 +30,8 @@ export function ClubPanel({
   meta?: React.ReactNode
   /** Extra classes beside `club-panel` (e.g. `club-edu`). */
   className?: string
+  /** Sets `aria-busy` while the panel's data loads (#1843). */
+  busy?: boolean
   children: React.ReactNode
 }) {
   const isMobile = useIsMobile(768)
@@ -45,7 +48,11 @@ export function ClubPanel({
 
   if (!isMobile) {
     return (
-      <section className={sectionClass} aria-labelledby={titleId}>
+      <section
+        className={sectionClass}
+        aria-labelledby={titleId}
+        aria-busy={busy || undefined}
+      >
         <div className="club-panel__head">
           {heading}
           {metaEl}
@@ -59,6 +66,7 @@ export function ClubPanel({
     <section
       className={`${sectionClass} club-panel--disclosure`}
       aria-labelledby={titleId}
+      aria-busy={busy || undefined}
     >
       <details open={open} onToggle={e => setOpen(e.currentTarget.open)}>
         <summary className="club-panel__head">
