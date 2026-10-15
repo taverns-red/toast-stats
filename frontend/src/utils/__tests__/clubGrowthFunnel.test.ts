@@ -461,6 +461,32 @@ describe('buildClubGrowthFunnel — sponsors and mentors', () => {
     })
   })
 
+  it('counts SPONSORU as a sponsor (credit used toward a DTM)', () => {
+    // The 2026-06-01 capture has no SPONSORU row, so relabel the recorded
+    // Family Club SPONSOR group — same shape, only the code changes.
+    const recorded = withSponsors.sections.sponsorsMentors!
+    const relabelled: DistrictReportsDataset = {
+      ...withSponsors,
+      sections: {
+        ...withSponsors.sections,
+        sponsorsMentors: {
+          ...recorded,
+          records: recorded.records.map(r =>
+            r.club === '28678920' && r.code === 'SPONSOR'
+              ? { ...r, code: 'SPONSORU' }
+              : r
+          ),
+        },
+      },
+    }
+    const sm = build(relabelled).sponsorsMentors!
+    expect(sm.totals).toMatchObject({ sponsors: 11, other: 0 })
+    expect(sm.clubs.find(c => c.clubId === '28678920')).toMatchObject({
+      sponsors: 2,
+      other: 0,
+    })
+  })
+
   it('orders newest charter first', () => {
     const dates = build(withSponsors).sponsorsMentors!.clubs.map(
       c => c.charterDate ?? ''
