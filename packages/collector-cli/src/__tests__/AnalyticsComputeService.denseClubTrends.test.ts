@@ -402,6 +402,47 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
     // First run produces exactly 1 data point (the current date's membership)
     expect(club1!.membershipTrend.length).toBeGreaterThanOrEqual(1)
   })
+
+  it('keeps the analytics file compact when the paymentsTrend patch rewrites it (#1901)', async () => {
+    const districtId = '1'
+    const dates = ['2024-10-01', '2024-11-15']
+    await writeDistrictSnapshot(
+      testCache.path,
+      '2023-10-01',
+      districtId,
+      createSampleDistrictStatistics(districtId, '2023-10-01')
+    )
+    for (const date of dates) {
+      await writeDistrictSnapshot(
+        testCache.path,
+        date,
+        districtId,
+        createSampleDistrictStatistics(districtId, date)
+      )
+      const service = new AnalyticsComputeService({ cacheDir: testCache.path })
+      const result = await service.computeDistrictAnalytics(date, districtId, {
+        force: true,
+      })
+      expect(result.success).toBe(true)
+    }
+
+    const raw = await fs.readFile(
+      path.join(
+        testCache.path,
+        'snapshots',
+        dates[1]!,
+        'analytics',
+        `district_${districtId}_analytics.json`
+      ),
+      'utf-8'
+    )
+    const file = JSON.parse(raw) as PreComputedAnalyticsFile<DistrictAnalytics>
+    // The patch ran: the second date carries the accumulated 2-point trend.
+    expect(file.data.paymentsTrend?.length).toBeGreaterThan(1)
+    // ...and wrote the file back compact, clubId lists intact.
+    expect(raw).toBe(JSON.stringify(file))
+    expect(file.data).toHaveProperty('vulnerableClubIds')
+  })
 })
 
 describe('AnalyticsComputeService - club trends capped at the snapshot date (#1759, ADR-015 P4)', () => {
