@@ -252,6 +252,23 @@ describe('DistrictTrendsPage (#680 — ADR-005)', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('reserves the year-over-year panel shape while analytics load (#1835)', async () => {
+    mockUseAggregated.mockReturnValue({
+      data: null,
+      isLoading: true,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+      usedFallback: false,
+    })
+    renderAt('/district/61/trends')
+    expect(
+      await screen.findByRole('status', {
+        name: 'Loading year-over-year comparison',
+      })
+    ).toBeInTheDocument()
+  })
+
   it('redirects /district/:id?tab=trends to /district/:id/trends', async () => {
     const { router } = renderAt('/district/61?tab=trends')
     await waitFor(() => {
