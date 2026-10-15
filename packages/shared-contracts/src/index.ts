@@ -443,3 +443,13 @@ export {
   omitClubContactFields,
   findClubContactField,
 } from './privacy/club-contact.js'
+
+// District analytics category lists as clubId lists (#1901 option B)
+export {
+  DISTRICT_ANALYTICS_CLUB_LISTS,
+  slimDistrictAnalyticsClubLists,
+  expandDistrictAnalyticsClubLists,
+  type FullDistrictAnalyticsClubLists,
+  type SlimDistrictAnalyticsClubLists,
+  type SlimDistrictAnalytics,
+} from './types/district-analytics-club-lists.js'
