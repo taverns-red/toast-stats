@@ -7,12 +7,18 @@ import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom'
-import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
+import type {
+  DistrictReportsDataset,
+  SuspendedClub,
+  SuspendedClubs,
+} from '@taverns-red/shared-contracts'
 import recorded from '../../__tests__/fixtures/d61-growth-reports.recorded.json'
+import suspendedJson from '../../__tests__/fixtures/suspended-clubs-2026-10-13.recorded.json'
 import { buildClubGrowthFunnel } from '../../utils/clubGrowthFunnel'
 import { ClubGrowthFunnelView } from '../ClubGrowthFunnelView'
 
 const live = recorded.cdn_2026_10_11 as unknown as DistrictReportsDataset
+const suspendedRecorded = suspendedJson as unknown as SuspendedClubs
 
 function stubMobile(matches: boolean) {
   vi.stubGlobal(
@@ -41,6 +47,28 @@ function renderView(suspended: number | null, chartered: number | null = 0) {
   return render(
     <MemoryRouter>
       <ClubGrowthFunnelView funnel={funnel} asOfDate="2026-10-11" />
+    </MemoryRouter>
+  )
+}
+
+function renderSuspended(
+  districtId: string,
+  clubs: SuspendedClub[],
+  count: number
+) {
+  const funnel = buildClubGrowthFunnel({
+    districtId,
+    reports: live,
+    counts: { chartered: 0, suspended: count },
+    programYear: { startDate: '2026-07-01', endDate: '2027-06-30' },
+    asOfDate: '2026-10-13',
+    suspendedClubs: clubs,
+    // 1380016 has a club page here; the others link out to TI.
+    clubPageIds: new Set(['1380016']),
+  })
+  return render(
+    <MemoryRouter>
+      <ClubGrowthFunnelView funnel={funnel} asOfDate="2026-10-13" />
     </MemoryRouter>
   )
 }
@@ -116,10 +144,50 @@ describe('ClubGrowthFunnelView', () => {
     expect(section).toHaveTextContent(/completed/i)
   })
 
-  it('says why the suspended clubs are not listed', () => {
+  it('says the list is not available for a date without one — not "none"', () => {
     renderView(2)
     const section = screen.getByRole('region', { name: /suspended/i })
-    expect(section).toHaveTextContent(/count only/i)
+    expect(section).toHaveTextContent(/not available for this date/i)
+    expect(section).not.toHaveTextContent(/no clubs suspended/i)
+    expect(within(section).queryByRole('table')).toBeNull()
+  })
+
+  it('lists the recorded D83 suspended clubs with date and links', () => {
+    renderSuspended('83', suspendedRecorded.districts['83']!, 3)
+    const section = screen.getByRole('region', { name: /suspended/i })
+    expect(section).toHaveAccessibleName(/suspended this program year \(3\)/i)
+    const own = within(section).getByRole('link', {
+      name: 'Travelers Toastmasters',
+    })
+    expect(own).toHaveAttribute('href', '/district/83/club/1380016')
+    const ti = within(section).getByRole('link', {
+      name: /Cartus Magnus Club/,
+    })
+    expect(ti).toHaveAttribute(
+      'href',
+      'https://www.toastmasters.org/Find-a-Club/00875053'
+    )
+    expect(ti).toHaveAccessibleName(/opens toastmasters\.org/i)
+    expect(within(section).getAllByText('Oct 1, 2026')).toHaveLength(3)
+    expect(section).toHaveTextContent('G / 74')
+  })
+
+  it('lists suspended clubs as tappable rows on phones', () => {
+    stubMobile(true)
+    renderSuspended('83', suspendedRecorded.districts['83']!, 3)
+    const section = screen.getByRole('region', { name: /suspended/i })
+    expect(within(section).queryByRole('table')).toBeNull()
+    expect(section).toHaveTextContent(/Suspended Oct 1, 2026/)
+    expect(
+      within(section).getByRole('link', { name: /Travelers Toastmasters/ })
+    ).toHaveAttribute('href', '/district/83/club/1380016')
+  })
+
+  it('says plainly when no club was suspended this program year', () => {
+    renderSuspended('61', suspendedRecorded.districts['61']!, 0)
+    const section = screen.getByRole('region', { name: /suspended/i })
+    expect(section).toHaveTextContent(/no clubs suspended/i)
+    expect(section).not.toHaveTextContent(/not available/i)
   })
 
   it('says plainly when no club chartered yet this program year', () => {

@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
+import type {
+  DistrictReportsDataset,
+  SuspendedClubs,
+} from '@taverns-red/shared-contracts'
 import recorded from '../../__tests__/fixtures/d61-growth-reports.recorded.json'
+import suspendedJson from '../../__tests__/fixtures/suspended-clubs-2026-10-13.recorded.json'
 import {
   buildClubGrowthFunnel,
   daysBetween,
@@ -15,6 +19,7 @@ import {
    2026-06-01 new-clubs capture. Nothing here is a hand-written shape. */
 
 const live = recorded.cdn_2026_10_11 as unknown as DistrictReportsDataset
+const suspendedRecorded = suspendedJson as unknown as SuspendedClubs
 const PY_2026 = { startDate: '2026-07-01', endDate: '2027-06-30' }
 const PY_2025 = { startDate: '2025-07-01', endDate: '2026-06-30' }
 const KNOWN_ZERO: GrowthCounts = { chartered: 0, suspended: 0 }
@@ -252,6 +257,84 @@ describe('buildClubGrowthFunnel — suspended (#1757)', () => {
       asOfDate: '2026-10-11',
     })
     expect(f.suspended.value.kind).toBe('unknown')
+  })
+})
+
+describe('buildClubGrowthFunnel — suspended club list (#1953)', () => {
+  // Recorded 2026-10-13 file: D83 lists 3 clubs, D61 is a measured [].
+  const d83 = suspendedRecorded.districts['83']!
+  const base = {
+    districtId: '83',
+    reports: live,
+    programYear: PY_2026,
+    asOfDate: '2026-10-13',
+  }
+
+  it('lists each suspended club with its date and division / area', () => {
+    const f = buildClubGrowthFunnel({
+      ...base,
+      counts: { chartered: 8, suspended: 3 },
+      suspendedClubs: d83,
+      clubPageIds: new Set(['1380016', '875053', '28678052']),
+    })
+    expect(f.suspended.value).toEqual({ kind: 'count', value: 3 })
+    expect(f.suspended.clubs).toEqual([
+      {
+        clubId: '1380016',
+        clubName: 'Travelers Toastmasters',
+        division: 'C',
+        area: '33',
+        suspendDate: '2026-10-01',
+        href: '/district/83/club/1380016',
+        external: false,
+      },
+      expect.objectContaining({ clubId: '875053', area: '71' }),
+      expect.objectContaining({ clubId: '28678052', area: '74' }),
+    ])
+  })
+
+  it('links a club with no page here to its toastmasters.org page', () => {
+    const f = buildClubGrowthFunnel({
+      ...base,
+      counts: { chartered: 8, suspended: 3 },
+      suspendedClubs: d83,
+      clubPageIds: new Set(['1380016']),
+    })
+    const cartus = f.suspended.clubs?.find(c => c.clubId === '875053')
+    expect(cartus).toMatchObject({
+      href: 'https://www.toastmasters.org/Find-a-Club/00875053',
+      external: true,
+    })
+  })
+
+  it('keeps a measured zero as an empty list', () => {
+    const f = buildClubGrowthFunnel({
+      ...base,
+      districtId: '61',
+      counts: KNOWN_ZERO,
+      suspendedClubs: suspendedRecorded.districts['61']!,
+    })
+    expect(f.suspended.clubs).toEqual([])
+    expect(f.suspended.value).toEqual({ kind: 'count', value: 0 })
+  })
+
+  it('is not measured (null), not empty, when the date has no list', () => {
+    const f = buildClubGrowthFunnel({
+      ...base,
+      counts: { chartered: 8, suspended: 3 },
+      suspendedClubs: null,
+    })
+    expect(f.suspended.clubs).toBeNull()
+    expect(f.suspended.value).toEqual({ kind: 'count', value: 3 })
+  })
+
+  it('takes the count from a measured list when the rankings count is unknown', () => {
+    const f = buildClubGrowthFunnel({
+      ...base,
+      counts: { chartered: null, suspended: null },
+      suspendedClubs: d83,
+    })
+    expect(f.suspended.value).toEqual({ kind: 'count', value: 3 })
   })
 })
 
