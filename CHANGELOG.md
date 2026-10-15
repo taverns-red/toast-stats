@@ -1,5 +1,70 @@
 # Changelog
 
+## [2.55.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.54.0...toast-stats-v2.55.0) (2026-10-15)
+
+
+### Features
+
+* **analytics:** retire the 8 unread per-district analytics files; completeness gate ignores them ([#1798](https://github.com/taverns-red/toast-stats/issues/1798)) ([#1989](https://github.com/taverns-red/toast-stats/issues/1989)) ([88b9632](https://github.com/taverns-red/toast-stats/commit/88b9632c56f16da88d1e60cda02cd98aef161a79))
+* **changes,search:** transfers name the counterpart district; omni-search finds closed clubs ([#1806](https://github.com/taverns-red/toast-stats/issues/1806)) ([#2060](https://github.com/taverns-red/toast-stats/issues/2060)) ([f80fea1](https://github.com/taverns-red/toast-stats/commit/f80fea17022a570abf2f677986fa1f28304ecbd9))
+* **charts:** lazy chart chunk fallbacks paint the chart's own loading state ([#1835](https://github.com/taverns-red/toast-stats/issues/1835)) ([#2058](https://github.com/taverns-red/toast-stats/issues/2058)) ([370d59e](https://github.com/taverns-red/toast-stats/commit/370d59e979b22b222a1c250c3ef6fc3b3240d27a))
+* **charts:** unpin, legend chips, phone ticks and chart-shaped skeletons ([#1835](https://github.com/taverns-red/toast-stats/issues/1835)) ([#2016](https://github.com/taverns-red/toast-stats/issues/2016)) ([453738b](https://github.com/taverns-red/toast-stats/commit/453738bdebfd34eb8a065b8996938354996520dc))
+* **club:** 2×2 stat strip and open disclosure panels on phones ([#1843](https://github.com/taverns-red/toast-stats/issues/1843)) ([#2052](https://github.com/taverns-red/toast-stats/issues/2052)) ([eee7eab](https://github.com/taverns-red/toast-stats/commit/eee7eab2f6991903102332973840e463bfc99d47))
+* **club:** Lifecycle panel is a vertical timeline ([#1843](https://github.com/taverns-red/toast-stats/issues/1843)) ([#2057](https://github.com/taverns-red/toast-stats/issues/2057)) ([16e956c](https://github.com/taverns-red/toast-stats/commit/16e956c16e42cac90f6a7ac42c57c009be63e02e))
+* **collector:** ingest Sponsors/Mentors daily report as counts, names dropped ([#1795](https://github.com/taverns-red/toast-stats/issues/1795)) ([#2056](https://github.com/taverns-red/toast-stats/issues/2056)) ([217d97d](https://github.com/taverns-red/toast-stats/commit/217d97d4af7aa5c4a516eb047e15683992e7dae9))
+* **collector:** keep FAC Location and populate meetingSchedule[] ([#1789](https://github.com/taverns-red/toast-stats/issues/1789)) ([#2024](https://github.com/taverns-red/toast-stats/issues/2024)) ([ffc5bf8](https://github.com/taverns-red/toast-stats/commit/ffc5bf849e3492ede5581aca6d413d68e96a8617))
+* dual-shape reader for slim district analytics club lists ([#1901](https://github.com/taverns-red/toast-stats/issues/1901)) ([#2046](https://github.com/taverns-red/toast-stats/issues/2046)) ([7f7b7b2](https://github.com/taverns-red/toast-stats/commit/7f7b7b26160c42348d0e61088b62f726992f3b59))
+* **education:** /district/:id/education subpage — PYTD, ledger only ([#1793](https://github.com/taverns-red/toast-stats/issues/1793)) ([#2053](https://github.com/taverns-red/toast-stats/issues/2053)) ([287b882](https://github.com/taverns-red/toast-stats/commit/287b882c3c9fd7d64187f4cdfd08a21cec3c00d9))
+* **growth:** list the clubs suspended this program year in the funnel ([#1794](https://github.com/taverns-red/toast-stats/issues/1794)) ([#2055](https://github.com/taverns-red/toast-stats/issues/2055)) ([1f1b4ad](https://github.com/taverns-red/toast-stats/commit/1f1b4ade65c380c309cfdbc9263c7413e1f738a8))
+* **map:** renewals, CSP, officer list, coach, awards and attendance pin modes ([#1787](https://github.com/taverns-red/toast-stats/issues/1787)) ([#2049](https://github.com/taverns-red/toast-stats/issues/2049)) ([f51b81b](https://github.com/taverns-red/toast-stats/commit/f51b81bd9649e24299ffca47eef103bed2466bda))
+* **pipeline:** config/club-district-history/, content-gated and promoted with the run ([#1782](https://github.com/taverns-red/toast-stats/issues/1782)) ([#2008](https://github.com/taverns-red/toast-stats/issues/2008)) ([6474119](https://github.com/taverns-red/toast-stats/commit/6474119fcce6e0c7dbbf5865c5b1493abffb5893))
+* **pipeline:** config/district-region-history.json, content-gated and promoted with the run ([#1820](https://github.com/taverns-red/toast-stats/issues/1820)) ([#2002](https://github.com/taverns-red/toast-stats/issues/2002)) ([1973771](https://github.com/taverns-red/toast-stats/commit/1973771d3271f358bd496cc9d13899b65a0be4da))
+* **pipeline:** snapshots/&lt;date&gt;/region-rollups.json — region and world rollups, content-gated, promoted with the date ([#1799](https://github.com/taverns-red/toast-stats/issues/1799)) ([#2013](https://github.com/taverns-red/toast-stats/issues/2013)) ([cc8c1a5](https://github.com/taverns-red/toast-stats/commit/cc8c1a5c6b3807299ea4f6a20850b91ee49f97d5))
+* **preview:** read PR preview data through the compressing staging CDN ([#2003](https://github.com/taverns-red/toast-stats/issues/2003)) ([#2004](https://github.com/taverns-red/toast-stats/issues/2004)) ([1880ce8](https://github.com/taverns-red/toast-stats/commit/1880ce8f44bd9f713cfbe60fc0a7e0af6eed836d))
+* **survival:** /district/:id/growth/survival — charter cohort survival curves ([#1817](https://github.com/taverns-red/toast-stats/issues/1817)) ([#2059](https://github.com/taverns-red/toast-stats/issues/2059)) ([80da12f](https://github.com/taverns-red/toast-stats/commit/80da12ffe9e4464a1cebe38fa668a1250b746c36))
+
+
+### Bug Fixes
+
+* **a11y:** 16px form-control floor on touch landscape phones ([#2018](https://github.com/taverns-red/toast-stats/issues/2018)) ([#2021](https://github.com/taverns-red/toast-stats/issues/2021)) ([dd40ac1](https://github.com/taverns-red/toast-stats/commit/dd40ac185af803d55fefeb23a1933ccc7000ca2d))
+* **a11y:** 44px header search and footer links on touch landscape ([#2017](https://github.com/taverns-red/toast-stats/issues/2017)) ([#2019](https://github.com/taverns-red/toast-stats/issues/2019)) ([ab8d4af](https://github.com/taverns-red/toast-stats/commit/ab8d4af5836972d335fd8b768c5c1eeea4e084b9))
+* **clubs:** loading skeleton instead of false empty state while dates load ([#1999](https://github.com/taverns-red/toast-stats/issues/1999)) ([#2031](https://github.com/taverns-red/toast-stats/issues/2031)) ([7442c13](https://github.com/taverns-red/toast-stats/commit/7442c133e906bac9fb1f922b87a00e68aeeaf75b))
+* **compute:** count a recorded gap as accounted for in every rollup roster ([#2035](https://github.com/taverns-red/toast-stats/issues/2035)) ([#2039](https://github.com/taverns-red/toast-stats/issues/2039)) ([6d1d0e4](https://github.com/taverns-red/toast-stats/commit/6d1d0e422c567350faec3b5712ae67b3d4c339ef))
+* **e2e:** measure the map panel heading after the scroll settles ([#1993](https://github.com/taverns-red/toast-stats/issues/1993)) ([#1997](https://github.com/taverns-red/toast-stats/issues/1997)) ([94b0980](https://github.com/taverns-red/toast-stats/commit/94b0980c23732ba2723fb22431831e098d4ea10a))
+* **e2e:** require BASE_URL for Playwright smokes ([#2010](https://github.com/taverns-red/toast-stats/issues/2010)) ([#2011](https://github.com/taverns-red/toast-stats/issues/2011)) ([73c1375](https://github.com/taverns-red/toast-stats/commit/73c137539ced22db8cfcb7dcd3d2f075cc222e61))
+* **global-totals:** state a gap district left out of the world sums ([#2042](https://github.com/taverns-red/toast-stats/issues/2042)) ([#2050](https://github.com/taverns-red/toast-stats/issues/2050)) ([5620f1f](https://github.com/taverns-red/toast-stats/commit/5620f1fb5b897ddfc65b4bb99d1574a11cefd3f9))
+* **pipeline:** a recorded [#1671](https://github.com/taverns-red/toast-stats/issues/1671) gap district no longer holds its date; one-off prune for its stale objects ([#2038](https://github.com/taverns-red/toast-stats/issues/2038)) ([#2051](https://github.com/taverns-red/toast-stats/issues/2051)) ([1939165](https://github.com/taverns-red/toast-stats/commit/1939165517323aae65a130c19eb9d5c36af0cc14))
+* **pipeline:** build the daily education rollup after place-reports ([#2028](https://github.com/taverns-red/toast-stats/issues/2028)) ([#2054](https://github.com/taverns-red/toast-stats/issues/2054)) ([2578354](https://github.com/taverns-red/toast-stats/commit/2578354f4b337d83c71d1e1b4ac706555da016e5))
+* **pipeline:** per-date district discovery in every source; program_year expands to registry month-ends ([#1766](https://github.com/taverns-red/toast-stats/issues/1766)) ([#1992](https://github.com/taverns-red/toast-stats/issues/1992)) ([dbae713](https://github.com/taverns-red/toast-stats/commit/dbae713bfdbebc01e3e34717fa52b6683bc5d30f))
+* **privacy:** stop writing club email/phone into promoted artifacts ([#2026](https://github.com/taverns-red/toast-stats/issues/2026)) ([#2030](https://github.com/taverns-red/toast-stats/issues/2030)) ([3480589](https://github.com/taverns-red/toast-stats/commit/3480589d48afcea3d79c90713ad1dded86927627))
+* **promotion:** daily CPAA vouches only for dates the daily wrote ([#2040](https://github.com/taverns-red/toast-stats/issues/2040)) ([#2048](https://github.com/taverns-red/toast-stats/issues/2048)) ([7038aab](https://github.com/taverns-red/toast-stats/commit/7038aab09df0ba749dbdd564b5c68499d67f814c))
+* **rankings:** read no club or charter count from a [#1671](https://github.com/taverns-red/toast-stats/issues/1671) gap report ([#2037](https://github.com/taverns-red/toast-stats/issues/2037)) ([#2045](https://github.com/taverns-red/toast-stats/issues/2045)) ([7cae6f3](https://github.com/taverns-red/toast-stats/commit/7cae6f3c35020800b728e4822fe636d413a369f6))
+* **scripts:** one-off club email/phone strip script + contact-strip workflow ([#2026](https://github.com/taverns-red/toast-stats/issues/2026)) ([#2044](https://github.com/taverns-red/toast-stats/issues/2044)) ([0161375](https://github.com/taverns-red/toast-stats/commit/01613759a9487ea4a9056b129866538a85531fdf))
+* **scripts:** rank-history pull and completeness gate read GCS media without the SDK stream ([#2029](https://github.com/taverns-red/toast-stats/issues/2029)) ([#2033](https://github.com/taverns-red/toast-stats/issues/2033)) ([3997bf0](https://github.com/taverns-red/toast-stats/commit/3997bf08ac346ab7562aa644aa982a4926c95911))
+* **transform:** count a [#1671](https://github.com/taverns-red/toast-stats/issues/1671) source gap as accounted for in the [#1756](https://github.com/taverns-red/toast-stats/issues/1756) roster ([#2035](https://github.com/taverns-red/toast-stats/issues/2035)) ([#2036](https://github.com/taverns-red/toast-stats/issues/2036)) ([a1f7ee6](https://github.com/taverns-red/toast-stats/commit/a1f7ee6a04fc20b2beea43ccf30af2c56ed2cd7f))
+* **ui:** header search input transparent in dark mode ([#2022](https://github.com/taverns-red/toast-stats/issues/2022)) ([#2023](https://github.com/taverns-red/toast-stats/issues/2023)) ([84068a9](https://github.com/taverns-red/toast-stats/commit/84068a9ca3a198b27d875f8a9fbd9ae10be53943))
+
+
+### Performance
+
+* **club:** prefetch the hero's data chain from the entry; read rankings once ([#1901](https://github.com/taverns-red/toast-stats/issues/1901)) ([#2025](https://github.com/taverns-red/toast-stats/issues/2025)) ([c5d95c3](https://github.com/taverns-red/toast-stats/commit/c5d95c37ce5be4780b21bb201243ddde84a130c8))
+* **hub:** request each CDN resource once per hub load ([#2027](https://github.com/taverns-red/toast-stats/issues/2027)) ([#2032](https://github.com/taverns-red/toast-stats/issues/2032)) ([18a605a](https://github.com/taverns-red/toast-stats/commit/18a605aa06a8aedbf4c3e3785f7ca1cba5e62725))
+* **mobile:** /clubs stops downloading the Recharts chunk ([#1830](https://github.com/taverns-red/toast-stats/issues/1830)) ([#2009](https://github.com/taverns-red/toast-stats/issues/2009)) ([23b1ab8](https://github.com/taverns-red/toast-stats/commit/23b1ab8ca6b4e4857aab929be7250b1aa3cdac80))
+* **mobile:** ratchet clubs byte budgets after [#2009](https://github.com/taverns-red/toast-stats/issues/2009) ([#2014](https://github.com/taverns-red/toast-stats/issues/2014)) ([#2015](https://github.com/taverns-red/toast-stats/issues/2015)) ([b4f2b0b](https://github.com/taverns-red/toast-stats/commit/b4f2b0b679620e67d4e9219dad73b677d35f4b03))
+* **mobile:** ratchet the Lighthouse mobile budgets to measured ceilings ([#1856](https://github.com/taverns-red/toast-stats/issues/1856)) ([#1991](https://github.com/taverns-red/toast-stats/issues/1991)) ([edcaec0](https://github.com/taverns-red/toast-stats/commit/edcaec0e12b8c49c9c726f3d48c153df35ccdeed))
+
+
+### Tests
+
+* **mobile:** 375 Playwright smoke gate — overflow, targets, text, first-content offset ([#1841](https://github.com/taverns-red/toast-stats/issues/1841)) ([#2007](https://github.com/taverns-red/toast-stats/issues/2007)) ([02269f1](https://github.com/taverns-red/toast-stats/commit/02269f167e888d1af3e45794518bc98a1c1f7c0e))
+
+
+### Continuous Integration
+
+* **lighthouse:** trigger desktop gate on lighthouse-cdn-server.mjs changes ([#2000](https://github.com/taverns-red/toast-stats/issues/2000)) ([#2001](https://github.com/taverns-red/toast-stats/issues/2001)) ([909c7e3](https://github.com/taverns-red/toast-stats/commit/909c7e3ec63d47dd20f1f98425de2b73b1cd37f7))
+* path-filtered workflows trigger on every file they run ([#2005](https://github.com/taverns-red/toast-stats/issues/2005)) ([#2006](https://github.com/taverns-red/toast-stats/issues/2006)) ([abd6515](https://github.com/taverns-red/toast-stats/commit/abd65154105f0fc6548f8f726f4165524d188f8f))
+* **pr-preview:** run Lighthouse mobile gate on lighthouserc.mobile.js changes ([#1994](https://github.com/taverns-red/toast-stats/issues/1994)) ([#1998](https://github.com/taverns-red/toast-stats/issues/1998)) ([2de313d](https://github.com/taverns-red/toast-stats/commit/2de313d5faa257fe5802c794e8dc260203b34675))
+
 ## [2.54.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.53.0...toast-stats-v2.54.0) (2026-10-13)
 
 
