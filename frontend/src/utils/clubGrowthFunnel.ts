@@ -471,17 +471,13 @@ function buildSuspended(
       : records
           .map(r => {
             const clubId = normalizeClubId(r.clubNumber)
-            const ti = clubPageIds.has(clubId)
-              ? null
-              : toastmastersClubPageUrl(clubId)
             return {
               clubId,
               clubName: r.clubName,
               division: r.division,
               area: r.area,
               suspendDate: r.suspendDate,
-              href: ti ?? clubHref(districtId, clubId),
-              external: ti !== null,
+              ...clubLinkFor(districtId, clubId, clubPageIds),
             }
           })
           // Most recent first; the sort is stable, so source order breaks ties.
