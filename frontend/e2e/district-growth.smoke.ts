@@ -236,12 +236,31 @@ for (const width of [375, 768, 1280] as const) {
         content: 'html,body{overflow-x:visible !important}',
       })
       const section = page.locator('#growth-chartered')
-      await expect(section).toContainText('11 sponsors and 9 mentors')
+      // MENTORU counts as a mentor (PR #2065): 9 MENTOR + 1 MENTORU.
+      await expect(section).toContainText('11 sponsors and 10 mentors across')
       await expect(section).toContainText('6 new clubs')
       const rows = section
         .getByTestId('growth-sponsors')
         .locator(width < 768 ? '[data-testid="mobile-row"]' : 'tbody tr')
       await expect(rows).toHaveCount(6)
+      if (width < 768) {
+        // The counts line stays readable: no phone-row meta is clipped.
+        const clipped = await section
+          .locator('.mobile-row__meta')
+          .evaluateAll(els =>
+            els
+              .filter(e => e.scrollWidth > e.clientWidth)
+              .map(e => e.textContent)
+          )
+        expect(clipped).toEqual([])
+        // And every row's accessible name carries its full counts.
+        const names = await rows.evaluateAll(as =>
+          as.map(a => a.getAttribute('aria-label') ?? '')
+        )
+        for (const n of names) {
+          expect(n).toMatch(/\d+ sponsors?, \d+ mentors?, .*\d+ awarded/)
+        }
+      }
       const text = (await section.textContent()) ?? ''
       expect(text).not.toMatch(/MENTORU|\bSPONSOR\b|\bMENTOR\b|AWARDED|PENDING/)
       const overflow = await page.evaluate(
