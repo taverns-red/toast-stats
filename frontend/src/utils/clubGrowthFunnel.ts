@@ -3,7 +3,9 @@ import type {
   DistrictReportsDataset,
   NewClubRecord,
   ProspectiveClubRecord,
+  SuspendedClub,
 } from '@taverns-red/shared-contracts'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
 
 /* District Club Growth funnel (#1794, epic #1781).
@@ -17,8 +19,9 @@ import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
      sidecar's `newClubs` report, scoped to the program year.
    - Coached      — the sidecar's `coaches` report: distinct clubs with an
      active (PENDING) coach, plus completed (AWARDED) assignments.
-   - Suspended    — the rankings row's `suspendedClubs`. Count only: no
-     per-club suspension list reaches the CDN today (a pipeline field).
+   - Suspended    — the rankings row's `suspendedClubs`; the clubs come from
+     `snapshots/{date}/suspended-clubs.json` (#1953). Older dates have no
+     list until re-derived: `null` (not measured) is kept apart from `[]`.
 
    A stage whose source is missing is UNKNOWN, never 0 (#1757). Privacy: the
    sidecar is already de-identified at parse; this model keeps only club ids,
@@ -185,6 +188,19 @@ export interface CoachedRow {
   href: string
 }
 
+export interface SuspendedRow {
+  clubId: string
+  clubName: string
+  division: string
+  area: string
+  /** ISO date TI suspended the club. */
+  suspendDate: string
+  /** The club's page here, or its toastmasters.org page when it has none. */
+  href: string
+  /** `href` is off-site (toastmasters.org). */
+  external: boolean
+}
+
 export interface ClubGrowthFunnel {
   prospective: {
     value: StageValue
@@ -193,7 +209,11 @@ export interface ClubGrowthFunnel {
   }
   chartered: { value: StageValue; clubs: CharteredRow[] }
   coached: { value: StageValue; active: CoachedRow[]; completed: CoachedRow[] }
-  suspended: { value: StageValue }
+  suspended: {
+    value: StageValue
+    /** `null` = the list was not measured for this date; `[]` = none. */
+    clubs: SuspendedRow[] | null
+  }
 }
 
 export interface BuildClubGrowthFunnelInput {
@@ -205,6 +225,12 @@ export interface BuildClubGrowthFunnelInput {
   programYear: { startDate: string; endDate: string }
   /** The displayed snapshot date. */
   asOfDate: string
+  /** The district's suspended-this-PY clubs (#1953); `null`/absent = the
+   *  list was not measured for this date. */
+  suspendedClubs?: readonly SuspendedClub[] | null
+  /** Canonical ids of the clubs that have a page here (the analytics club
+   *  list). Any other suspended club links to toastmasters.org instead. */
+  clubPageIds?: ReadonlySet<string>
 }
 
 const NO_REPORT = 'Not in this date’s TI reports'
@@ -338,12 +364,53 @@ export function buildCoached(
   return { value: { kind: 'count', value: active.length }, active, completed }
 }
 
+function buildSuspended(
+  districtId: string,
+  records: readonly SuspendedClub[] | null,
+  count: number | null,
+  clubPageIds: ReadonlySet<string>
+): ClubGrowthFunnel['suspended'] {
+  const clubs: SuspendedRow[] | null =
+    records === null
+      ? null
+      : records
+          .map(r => {
+            const clubId = normalizeClubId(r.clubNumber)
+            const ti = clubPageIds.has(clubId)
+              ? null
+              : toastmastersClubPageUrl(clubId)
+            return {
+              clubId,
+              clubName: r.clubName,
+              division: r.division,
+              area: r.area,
+              suspendDate: r.suspendDate,
+              href: ti ?? clubHref(districtId, clubId),
+              external: ti !== null,
+            }
+          })
+          // Most recent first; the sort is stable, so source order breaks ties.
+          .sort((a, b) => b.suspendDate.localeCompare(a.suspendDate))
+
+  // TI's dashboard count is the stage value. A measured list stands in when
+  // that count was not collected: the file exists only where the source had
+  // suspension data, so its length is a measurement too.
+  let value: StageValue
+  if (count !== null) value = { kind: 'count', value: count }
+  else if (clubs !== null) value = { kind: 'count', value: clubs.length }
+  else value = { kind: 'unknown', reason: NOT_COLLECTED }
+
+  return { value, clubs }
+}
+
 export function buildClubGrowthFunnel({
   districtId,
   reports,
   counts,
   programYear,
   asOfDate,
+  suspendedClubs = null,
+  clubPageIds = new Set<string>(),
 }: BuildClubGrowthFunnelInput): ClubGrowthFunnel {
   const sections = reports?.sections
 
@@ -371,10 +438,12 @@ export function buildClubGrowthFunnel({
         completed: [],
       }
 
-  const suspended: StageValue =
-    counts.suspended === null
-      ? { kind: 'unknown', reason: NOT_COLLECTED }
-      : { kind: 'count', value: counts.suspended }
+  const suspended = buildSuspended(
+    districtId,
+    suspendedClubs,
+    counts.suspended,
+    clubPageIds
+  )
 
-  return { prospective, chartered, coached, suspended: { value: suspended } }
+  return { prospective, chartered, coached, suspended }
 }

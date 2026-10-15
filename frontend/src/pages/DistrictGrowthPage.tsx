@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 import { useParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictGrowthCounts } from '../hooks/useDistrictGrowthCounts'
+import { useSuspendedClubs } from '../hooks/useSuspendedClubs'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import {
   getAvailableProgramYears,
@@ -24,7 +26,8 @@ import ErrorBoundary from '../components/ErrorBoundary'
    The Club Growth Director's view: prospective clubs by stage and days in
    stage → clubs chartered this program year → coached clubs → suspended this
    program year. Reads only data already on the CDN: the reports sidecar
-   (fetched with the analytics file) and the dated rankings file. Program year
+   (fetched with the analytics file), the dated rankings file and the dated
+   suspended-clubs list (#1953). Program year
    and date come from the shared URL-synced page controls (R3). */
 
 const DistrictGrowthPage: React.FC = () => {
@@ -103,6 +106,17 @@ const DistrictGrowthPage: React.FC = () => {
     effectiveEndDate ?? undefined
   )
 
+  const { clubs: suspendedClubs, isLoading: suspendedLoading } =
+    useSuspendedClubs(districtId, effectiveEndDate ?? undefined)
+
+  // A suspended club keeps its page here while the analytics club list still
+  // carries it; otherwise its row links out to toastmasters.org.
+  const clubPageIds = useMemo(
+    () =>
+      new Set((analytics?.allClubs ?? []).map(c => normalizeClubId(c.clubId))),
+    [analytics]
+  )
+
   const funnel = useMemo(() => {
     if (!districtId || !effectiveProgramYear || !effectiveEndDate) return null
     return buildClubGrowthFunnel({
@@ -111,8 +125,18 @@ const DistrictGrowthPage: React.FC = () => {
       counts,
       programYear: effectiveProgramYear,
       asOfDate: effectiveEndDate,
+      suspendedClubs,
+      clubPageIds,
     })
-  }, [districtId, analytics, counts, effectiveProgramYear, effectiveEndDate])
+  }, [
+    districtId,
+    analytics,
+    counts,
+    effectiveProgramYear,
+    effectiveEndDate,
+    suspendedClubs,
+    clubPageIds,
+  ])
 
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
@@ -126,7 +150,8 @@ const DistrictGrowthPage: React.FC = () => {
     return null
   }
 
-  const loading = !hasValidDates || analyticsLoading || countsLoading
+  const loading =
+    !hasValidDates || analyticsLoading || countsLoading || suspendedLoading
 
   return (
     <ErrorBoundary>

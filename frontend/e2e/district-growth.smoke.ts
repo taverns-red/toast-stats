@@ -133,3 +133,36 @@ test('club growth at 1280: four-across funnel and linked club rows', async ({
   // link-through. Both are expected on today's data.
   expect(internal + external).toBeGreaterThan(0)
 })
+
+/* #1953 — the Suspended stage lists its clubs. D83 has suspensions this PY
+ * on the recorded 2026-10-13 data (3 clubs); D61 has a measured zero. The
+ * heading's count must equal the listed rows, and each row links to a club
+ * page here or to toastmasters.org. */
+for (const width of [375, 1280] as const) {
+  test(`suspended stage lists its clubs at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/district/83/growth', {
+      waitUntil: 'networkidle',
+      timeout: 60_000,
+    })
+    const section = page.locator('#growth-suspended')
+    await section.waitFor({ timeout: 30_000 })
+    const heading =
+      (await section.getByRole('heading').first().textContent()) ?? ''
+    const count = Number(/\((\d+)\)/.exec(heading)?.[1] ?? NaN)
+    expect(count).toBeGreaterThan(0)
+    const rows = section.locator(
+      width < 768 ? '[data-testid="mobile-row"]' : 'tbody tr'
+    )
+    await expect(rows).toHaveCount(count)
+    const hrefs = await section
+      .locator('a')
+      .evaluateAll(as => as.map(a => a.getAttribute('href') ?? ''))
+    for (const href of hrefs) {
+      expect(href).toMatch(
+        /^(\/district\/83\/club\/\d+|https:\/\/www\.toastmasters\.org\/Find-a-Club\/\d{8})$/
+      )
+    }
+    await assertPrivacy(page)
+  })
+}
