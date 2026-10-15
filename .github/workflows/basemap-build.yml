@@ -1,18 +1,13 @@
-# Basemap build (manual, one-off). See #1786, ADR-016 and docs/runbooks/basemap.md.
+# Basemap build (manual, one-off). See #1786, #2084, ADR-016 and docs/runbooks/basemap.md.
 #
 # What it does:
 # - target=staging: builds the self-hosted world basemap (a Protomaps v4
-#   PMTiles extract) on a GitHub runner and uploads it to the STAGING data
-#   bucket.
+#   PMTiles extract, z0..maxzoom) on a GitHub runner and uploads it to the
+#   STAGING data bucket.
 # - target=prod-copy: copies that exact object to the prod bucket, server
 #   side (no re-upload).
-#
-# - extent=world-clubs (#2084): the same world file merged with a
-#   z(maxzoom+1)-14 extract over buffered club coordinates
-#   (scripts/build-club-regions.ts reads them from the prod CDN), as one
-#   immutable object world-z0-<maxzoom>-clubs-z14-<date>.pmtiles.
-# - dry_run (default true): sizes with the CLI's --dry-run and checks the
-#   disk, then stops. Nothing is downloaded and nothing is written.
+# - dry_run (default true): sizes the archive with the CLI's --dry-run and
+#   checks the disk, then stops. Nothing is downloaded and nothing is written.
 #
 # Only Ron dispatches it. It never runs on a schedule or a push, and the data
 # pipeline never touches basemap/.
@@ -32,10 +27,15 @@
 # completeness gates. Provenance (bytes, sha256, source build, run) goes to
 # the job summary instead.
 #
-# Disk: a standard ubuntu-26.04 runner. The "Free runner disk" step removes
-# preinstalled toolchains this job never uses. The space check sizes the
-# archive with the CLI's own dry-run before downloading anything, and fails
-# with "use a larger runner" if no volume has the archive size + 15% + 1 GB.
+# Disk: a standard ubuntu-26.04 runner. pmtiles extract writes its output
+# with random-access writes and seeks back for the header, so it cannot
+# stream to GCS; the archive must fit on local disk (about 1.0x its size).
+# On run 38305058683 (2026-10-12) the root volume had 109 GB free after the
+# "Free runner disk" step, which removes preinstalled toolchains this job
+# never uses. World z0-14 is 69 GB (#2084), so it needs ~80 GB with the
+# margin below. The space check sizes the archive with the CLI's own dry-run
+# before downloading anything, and fails with "use a larger runner" if no
+# volume has the archive size + 15% + 1 GB.
 name: Basemap build (manual)
 
 on:
@@ -46,7 +46,7 @@ on:
         required: true
         type: string
       maxzoom:
-        description: 'Max zoom of the world extract (ADR-016 recommends 10, about 3.8 GB)'
+        description: 'Max zoom of the world extract, 0..14 (z10 is 3.8 GB, z14 is 69 GB)'
         required: true
         default: '10'
         type: string
@@ -58,19 +58,6 @@ on:
         options:
           - staging
           - prod-copy
-      extent:
-        description: 'world = z0-maxzoom only; world-clubs = plus z(maxzoom+1)-14 around clubs, merged (#2084)'
-        required: true
-        default: world
-        type: choice
-        options:
-          - world
-          - world-clubs
-      club_buffer_km:
-        description: 'world-clubs only: buffer around each club, km (#2084 measured 8 km = 7.0 GB of z11-14)'
-        required: true
-        default: '8'
-        type: string
       dry_run:
         description: 'Size and check only: download nothing, write nothing. Untick to build and upload.'
         required: true
@@ -97,7 +84,10 @@ env:
 jobs:
   basemap:
     runs-on: ubuntu-26.04
-    timeout-minutes: 120
+    # z0-10 took 3 minutes in all. z0-14 at the measured rates (extract
+    # ~70 MB/s, upload ~120 MB/s) is about 35-45 minutes; 180 leaves headroom
+    # for a slow download from build.protomaps.com.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
 
@@ -105,31 +95,15 @@ jobs:
         env:
           BUILD_DATE: ${{ inputs.build_date }}
           MAXZOOM: ${{ inputs.maxzoom }}
-          EXTENT: ${{ inputs.extent }}
-          BUFFER_KM: ${{ inputs.club_buffer_km }}
         run: |
           if ! [[ "$BUILD_DATE" =~ ^[0-9]{8}$ ]]; then
             echo "::error::build_date must be YYYYMMDD"; exit 1
           fi
-          if ! [[ "$MAXZOOM" =~ ^[0-9]+$ ]] || ((MAXZOOM > 12)); then
-            echo "::error::maxzoom must be 0..12"; exit 1
+          if ! [[ "$MAXZOOM" =~ ^[0-9]+$ ]] || ((MAXZOOM > 14)); then
+            echo "::error::maxzoom must be 0..14"; exit 1
           fi
-          case "$EXTENT" in
-            world)
-              echo "OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
-              echo "NAME=world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
-              ;;
-            world-clubs)
-              if ! [[ "$BUFFER_KM" =~ ^[0-9]+$ ]] || ((BUFFER_KM < 1 || BUFFER_KM > 50)); then
-                echo "::error::club_buffer_km must be 1..50"; exit 1
-              fi
-              echo "OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-clubs-z14-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
-              echo "NAME=world-z0-${MAXZOOM}-clubs-z14-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
-              ;;
-            *)
-              echo "::error::extent must be world or world-clubs"; exit 1
-              ;;
-          esac
+          echo "OBJ=basemap/protomaps-v4/world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
+          echo "NAME=world-z0-${MAXZOOM}-${BUILD_DATE}.pmtiles" >> "$GITHUB_ENV"
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -175,72 +149,25 @@ jobs:
             exit 1
           fi
 
-      # ── extent=world-clubs: buffered club boxes from the prod CDN (#2084) ─
-      - name: Set up Node
-        if: inputs.target == 'staging' && inputs.extent == 'world-clubs'
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        if: inputs.target == 'staging' && inputs.extent == 'world-clubs'
-        run: npm ci
-
-      - name: Build the club regions
-        if: inputs.target == 'staging' && inputs.extent == 'world-clubs'
-        env:
-          BUFFER_KM: ${{ inputs.club_buffer_km }}
-        run: |
-          # ~100 single-object reads of the latest district analytics on
-          # cdn.taverns.red, in memory; fails if any district is unreadable.
-          npx tsx scripts/build-club-regions.ts --buffer-km "$BUFFER_KM" \
-            --out "$RUNNER_TEMP/club-regions.geojson" > "$RUNNER_TEMP/club-regions.json"
-          cat "$RUNNER_TEMP/club-regions.json"
-          echo "REGION=$RUNNER_TEMP/club-regions.geojson" >> "$GITHUB_ENV"
-          {
-            echo "### Club regions"
-            jq -r '"- snapshot \(.date), \(.districts) districts, buffer \(.bufferKm) km",
-              "- clubs: \(.clubsTotal) listed, \(.clubsWithCoordinates) geocoded",
-              "- inside a buffer: \(.clubsInsideBuffer)",
-              "- regions: \(.regions) boxes"' "$RUNNER_TEMP/club-regions.json"
-          } >> "$GITHUB_STEP_SUMMARY"
-
       - name: Pick a build volume with enough space
         if: inputs.target == 'staging'
         env:
           BUILD_DATE: ${{ inputs.build_date }}
           MAXZOOM: ${{ inputs.maxzoom }}
-          EXTENT: ${{ inputs.extent }}
         run: |
-          # Archive sizes from the CLI's own dry-run, e.g. "archive size of 3.8 GB".
-          # world: one archive. world-clubs: the world and club extracts, and
-          # the merged archive (their sum) on disk at the same time.
-          if [[ "$EXTENT" == "world-clubs" ]]; then
-            SIZE_LINES=$(DRY_RUN=1 scripts/basemap/build-club-basemap.sh "$BUILD_DATE" "$REGION" "$MAXZOOM" 2>&1 |
-              grep 'archive size of' || true)
-            COPIES=2
-          else
-            SIZE_LINES=$(DRY_RUN=1 scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" 2>&1 |
-              grep 'archive size of' || true)
-            COPIES=1
-          fi
-          echo "$SIZE_LINES"
-          ARCHIVE=$(echo "$SIZE_LINES" | sed -E 's/.*archive size of ([0-9.]+) ([kMGT]?B).*/\1 \2/' |
+          # Archive size from the CLI's own dry-run, e.g. "archive size of 3.8 GB".
+          SIZE_LINE=$(DRY_RUN=1 scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" 2>&1 | grep 'archive size of')
+          echo "$SIZE_LINE"
+          NEED=$(echo "$SIZE_LINE" | sed -E 's/.*archive size of ([0-9.]+) ([kMGT]?B).*/\1 \2/' |
             awk '{m=1; if($2=="kB")m=1e3; if($2=="MB")m=1e6; if($2=="GB")m=1e9; if($2=="TB")m=1e12;
-                  s+=$1*m} END {printf "%.0f\n", s}')
-          NEED=$(awk -v a="$ARCHIVE" -v c="$COPIES" 'BEGIN {printf "%.0f\n", a*c*1.15+1e9}')
-          # One size line per extract: 1 for world, 2 for world-clubs.
-          LINES=$(echo "$SIZE_LINES" | grep -c 'archive size of' || true)
-          if [[ "$LINES" != "$COPIES" ]] || ! [[ "$ARCHIVE" =~ ^[0-9]+$ ]] || ((ARCHIVE == 0)); then
-            echo "::error::could not read the dry-run size (${LINES} size lines)"; exit 1
+                  printf "%.0f\n", $1*m*1.15+1e9}')
+          if ! [[ "$NEED" =~ ^[0-9]+$ ]]; then
+            echo "::error::could not read the dry-run size"; exit 1
           fi
           {
-            echo "### Sizing (${EXTENT}, pmtiles --dry-run)"
-            echo '```'
-            echo "$SIZE_LINES"
-            echo '```'
-            echo "- estimated archive: ${ARCHIVE} bytes"
+            echo "### Sizing (pmtiles --dry-run)"
+            echo "- ${SIZE_LINE##*extract.go:612: }"
+            echo "- disk needed with margin: ${NEED} bytes"
           } >> "$GITHUB_STEP_SUMMARY"
           BEST=""
           BEST_FREE=0
@@ -251,7 +178,7 @@ jobs:
               if ((FREE > BEST_FREE)); then BEST="$d"; BEST_FREE=$FREE; fi
             fi
           done
-          echo "need ${NEED} bytes; using ${BEST} (${BEST_FREE} free)"
+          echo "need ${NEED} bytes; using ${BEST} (${BEST_FREE} free)" | tee -a "$GITHUB_STEP_SUMMARY"
           if ((BEST_FREE < NEED)); then
             echo "::error::not enough disk on the runner (${BEST_FREE} < ${NEED}); use a larger runner"
             exit 1
@@ -274,14 +201,8 @@ jobs:
         env:
           BUILD_DATE: ${{ inputs.build_date }}
           MAXZOOM: ${{ inputs.maxzoom }}
-          EXTENT: ${{ inputs.extent }}
         run: |
-          if [[ "$EXTENT" == "world-clubs" ]]; then
-            scripts/basemap/build-club-basemap.sh "$BUILD_DATE" "$REGION" "$MAXZOOM" "$BUILD_DIR" \
-              > "$BUILD_DIR/build.json"
-          else
-            scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" "$BUILD_DIR" > "$BUILD_DIR/build.json"
-          fi
+          scripts/basemap/build-basemap.sh "$BUILD_DATE" "$MAXZOOM" "$BUILD_DIR" > "$BUILD_DIR/build.json"
           cat "$BUILD_DIR/build.json"
           jq -e --arg obj "$OBJ" '.object == $obj' "$BUILD_DIR/build.json"
 
