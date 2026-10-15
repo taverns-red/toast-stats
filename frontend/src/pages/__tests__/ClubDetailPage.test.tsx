@@ -178,6 +178,22 @@ describe('ClubDetailPage (#208)', () => {
     }
     afterEach(() => setMobile(false))
 
+    // #1843 (review §6.3): 2×2 stat strip, Education and Compliance as
+    // disclosure cards open by default.
+    it('puts the strip at 2×2 and the panels in open disclosure cards (#1843)', () => {
+      setMobile(true)
+      const { container } = renderWithRoute()
+      const grid = container.querySelector('.club-stats-grid') as HTMLElement
+      expect(
+        [...grid.children].filter(el => el.classList.contains('club-stat'))
+      ).toHaveLength(4)
+      expect(grid.querySelector('details')).not.toBeNull()
+      for (const name of ['Education', 'Compliance']) {
+        const region = screen.getByRole('region', { name })
+        expect(region.querySelector('details')).toHaveAttribute('open')
+      }
+    })
+
     it('collapses the mem-chart behind an expand trigger', () => {
       setMobile(true)
       const { container } = renderWithRoute()
@@ -542,9 +558,10 @@ describe('ClubDetailPage (#208)', () => {
     ).toBeInTheDocument()
   })
 
-  // #1790 — Compliance panel beside Education; stat strip gains Awards and
-  // Coach. With no reports file every row and both cells say so.
-  it('renders the Compliance panel and Awards/Coach stat cells (#1790)', () => {
+  // #1790 — Compliance panel beside Education. #1843 — the stat strip is
+  // back to eight cells (4×2 from 768, review §6.3): Awards and Coach are
+  // read from the Education and Compliance panels directly below it.
+  it('renders the Compliance panel; Awards/Coach live in the panels, not the strip (#1790, #1843)', () => {
     const mockedHook = vi.mocked(useDistrictAnalytics)
     mockedHook.mockReturnValueOnce({
       data: {
@@ -617,22 +634,26 @@ describe('ClubDetailPage (#208)', () => {
     expect(panel).toHaveTextContent('Received Jun 20, 2025')
     expect(panel).toHaveTextContent('No coach')
 
+    const edu = screen.getByRole('region', { name: 'Education' })
+    expect(within(edu).getByText('Awards').nextSibling).toHaveTextContent('4')
+
     const grid = container.querySelector('.club-stats-grid') as HTMLElement
-    const cell = (label: string) =>
-      within(grid).getByText(label).nextElementSibling
-    expect(cell('Awards')).toHaveTextContent('4')
-    expect(cell('Coach')).toHaveTextContent('None')
+    expect(
+      [...grid.querySelectorAll('.club-stat__label')].map(l => l.textContent)
+    ).toEqual([
+      'Base',
+      'Current',
+      'Net Δ',
+      'DCP Goals',
+      'Oct Renewals',
+      'Apr Renewals',
+      'New Members',
+      'CSP',
+    ])
   })
 
-  it('shows "—" for Awards and Coach when the date has no reports file (#1790)', () => {
-    const { container } = renderWithRoute()
-    const grid = container.querySelector('.club-stats-grid') as HTMLElement
-    expect(
-      within(grid).getByText('Awards').nextElementSibling
-    ).toHaveTextContent('—')
-    expect(
-      within(grid).getByText('Coach').nextElementSibling
-    ).toHaveTextContent('—')
+  it('says Compliance is not available when the date has no reports file (#1790)', () => {
+    renderWithRoute()
     expect(
       screen.getByRole('region', { name: 'Compliance' })
     ).toHaveTextContent(/not available for this date/i)
