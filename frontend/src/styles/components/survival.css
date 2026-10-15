@@ -37,6 +37,13 @@
   border-radius: var(--rt-radius-md, 8px);
 }
 
+/* Taller than any viewport the CLS gate uses (812 / 900): the loaded page
+   is taller still, so the footer stays below the fold through the swap. */
+.survival-loading {
+  min-height: 1000px;
+  margin-top: 1rem;
+}
+
 /* ── Headline: three tiles, one row at every width ─────────────────── */
 
 .survival-kpis {
