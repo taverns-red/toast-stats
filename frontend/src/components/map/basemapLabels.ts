@@ -28,10 +28,10 @@
  *   request). Any other script (Arabic, Hebrew, Indic, Thai…) shows only when
  *   an English name exists: we ship no glyphs for it, and Arabic would need
  *   the RTL shaping plugin as well.
- * - **Colour.** Ink (`--rt-ink`) on light and paper (`--rt-ink-on-dk`) on
- *   dark, at reduced opacity, with a halo in the land colour: quieter than any
- *   pin fill, no new hue. Labels are the last basemap layers, and the pin
- *   layers are appended above them (`useClubPins`), so pins always win.
+ * - **Colour.** The app's slate inks: `--ink-2` for cities, `--ink-3` for
+ *   every other band, with a halo in the land colour. Quieter than any pin
+ *   fill, no new hue, at least 4.5:1 on the land. Labels are added above the
+ *   basemap's own layers and below the pins (`addBasemapLabels`).
  * - **Accessibility.** Labels are drawn on the canvas and are decorative: the
  *   map region keeps its own accessible name, and the side panels carry the
  *   club names.
@@ -80,12 +80,11 @@ export const LABEL_LAYER_IDS = [
   'label-countries',
 ] as const
 
-const INK: Record<Theme, string> = {
-  light: '15, 14, 13', // --rt-ink #0F0E0D
-  dark: '244, 241, 235', // --rt-ink-on-dk #F4F1EB
-}
-
-const ink = (theme: Theme, alpha: number) => `rgba(${INK[theme]}, ${alpha})`
+/** The app's slate inks (redesign.css --ink-2 / --ink-3, light and dark). */
+const INK = {
+  light: { strong: '#344052', quiet: '#5B6675' },
+  dark: { strong: '#C8D1DD', quiet: '#8A96A6' },
+} as const
 
 /** Names in these scripts are drawn without an English name (see header). */
 const LOCAL_SCRIPTS = [
@@ -149,8 +148,8 @@ export function labelLayers(
   theme: Theme,
   halo: string
 ): SymbolLayerSpecification[] {
-  const paint = (alpha: number) => ({
-    'text-color': ink(theme, alpha),
+  const paint = (weight: 'strong' | 'quiet') => ({
+    'text-color': INK[theme][weight],
     'text-halo-color': halo,
     'text-halo-width': 1.5,
     'text-halo-blur': 0.5,
@@ -193,7 +192,7 @@ export function labelLayers(
         'text-padding': 8,
         'symbol-sort-key': ['get', 'min_zoom'],
       },
-      paint: paint(0.5),
+      paint: paint('quiet'),
     },
     {
       ...base,
@@ -216,7 +215,7 @@ export function labelLayers(
         'text-letter-spacing': 0.02,
         'symbol-sort-key': ['get', 'min_zoom'],
       },
-      paint: paint(0.55),
+      paint: paint('quiet'),
     },
     {
       ...base,
@@ -233,7 +232,7 @@ export function labelLayers(
         'text-padding': 8,
         'symbol-sort-key': SORT_KEY,
       },
-      paint: paint(0.5),
+      paint: paint('quiet'),
     },
     {
       ...base,
@@ -256,7 +255,7 @@ export function labelLayers(
         'text-padding': 6,
         'symbol-sort-key': SORT_KEY,
       },
-      paint: paint(0.72),
+      paint: paint('strong'),
     },
     {
       ...base,
@@ -280,7 +279,7 @@ export function labelLayers(
         'text-max-width': 7,
         'symbol-sort-key': SORT_KEY,
       },
-      paint: paint(0.45),
+      paint: paint('quiet'),
     },
     {
       ...base,
@@ -297,7 +296,7 @@ export function labelLayers(
         'text-max-width': 6,
         'symbol-sort-key': SORT_KEY,
       },
-      paint: paint(0.5),
+      paint: paint('quiet'),
     },
   ]
 }

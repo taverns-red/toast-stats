@@ -168,7 +168,7 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
   - neighbourhoods from z12;
   - streets from z13 (major roads) and z15 (minor roads);
   - landmarks from z14 (airports, stations, parks, universities, stadiums, museums, zoos, attractions; no shops).
-- **Look.** Labels use ink (`--rt-ink`) on light and paper (`--rt-ink-on-dk`) on dark, at 45–72 % opacity, with a 1.5 px halo in the land colour. There is no new hue and no sprite.
+- **Look.** Labels use the app's slate inks: `--ink-2` for cities and `--ink-3` for every other band (light `#344052`/`#5B6675`, dark `#C8D1DD`/`#8A96A6`), with a 1.5 px halo in the land colour. Every label is at least 4.5:1 on the land (#2080's neutral basemap). There is no new hue and no sprite.
   - Labels sit directly above the basemap's layers and below the pins.
   - Pins keep `icon-allow-overlap` but now enter the collision index (`icon-ignore-placement: false`). A city or landmark label therefore steps beside a pin, by 2.2–2.4 em, or hides; it never sits under one.
 - **Accessibility.** Labels are canvas-drawn and decorative. The map region keeps its accessible name, and the side panels carry the club names.
