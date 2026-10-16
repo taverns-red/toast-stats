@@ -150,7 +150,7 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
 - **Deferred.** The base style stays geometry only. On the basemap's first `idle`, `BasemapMap` imports the label module (its own lazy chunk), sets the glyphs URL and adds the label layers above the basemap's own layers, below anything a page has added (the pins). The first tile never waits on labels. The map route's fixed bytes grow by about 140 B gzip, inside the 300 KB budget, which stays unchanged (#1856 ratchets budgets down). Labels draw on the canvas, so they cause no layout shift.
 
 - **Font.** Inter Regular 4.1 (SIL OFL 1.1, licence shipped beside the files as `OFL.txt`). It is the app's body font (`--rt-font-body`). The glyph PBFs were built with `build_pbf_glyphs` 1.5.1 from the official release's `extras/ttf/Inter-Regular.ttf`.
-- **Files.** `frontend/public/basemap/glyphs/inter-4.1/Inter-Regular/{range}.pbf`, served by Firebase Hosting. The path carries the font version, so the files are cached as `immutable` (`firebase.json`). A new font or a new range means a new version directory.
+- **Files.** `frontend/public/basemap/glyphs/inter-4.1/Inter-Regular/{range}.pbf` (moved to `inter-4.1-noto-ar2.013-he3.001/` by #2085, below), served by Firebase Hosting. The path carries the font version, so the files are cached as `immutable` (`firebase.json`). A new font or a new range means a new version directory.
 - **Ranges and bytes.** Seven ranges, 719,203 bytes on disk (217,153 gzip -9):
 
   | Range     | Covers                                 | Bytes   | gzip   |
@@ -169,7 +169,8 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
 - **Script coverage.** The English name (`name:en`) wins. Without one:
   - Latin, Cyrillic and Greek names are drawn from our glyphs.
   - Chinese, Japanese and Korean names are drawn by the browser's own font (MapLibre's `localIdeographFontFamily`), with no request.
-  - Any other script (Arabic, Hebrew, Indic, Thai…) is shown only when an English name exists. We ship no glyphs for these scripts, and Arabic also needs the RTL shaping plugin. Most countries, states and cities have `name:en`. Neighbourhoods in those regions often do not.
+  - Arabic and Hebrew names are drawn from our glyphs since #2085 (addendum below).
+  - Any other script (Indic, Thai…) is shown only when an English name exists. We ship no glyphs for these scripts. Most countries, states and cities have `name:en`. Neighbourhoods in those regions often do not.
 - **Zoom bands.** Labels are never busy:
   - countries z1–7;
   - states and provinces z4–10 (the abbreviation below z6);
@@ -187,7 +188,27 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
 **Limits and follow-ups (Ron's call).**
 
 1. ~~**Street names need higher-zoom tiles.**~~ Resolved by the world z0–14 archive (D1 amendment, #2084). On z0–10, road features carried no `name` and a city tile carried 3–9 POIs. A z14 tile over downtown Ottawa carries 165 named roads and 111 named POIs.
-2. **Arabic-script names without an English name.** These need a self-hosted copy of `@mapbox/mapbox-gl-rtl-text` and an Arabic glyph range (1536-1791).
+2. ~~**Arabic-script names without an English name.**~~ Resolved by #2085 (addendum below), with glyphs only: MapLibre needs no RTL plugin.
+
+## Addendum (2026-10-16, #2085): Arabic and Hebrew names
+
+**Decision.** Names in Arabic or Hebrew script with no English version are drawn, from self-hosted glyphs. **No RTL text plugin is loaded.**
+
+- **Why no plugin.** MapLibre GL JS 6.9.0 began drawing Arabic and Hebrew labels without one ([changelog](https://github.com/maplibre/maplibre-gl-js/blob/main/CHANGELOG.md): "draws Arabic and Hebrew labels correctly without loading a right-to-left text plugin"). We run 6.14. Its typings mark `setRTLTextPlugin(pluginURL: string, lazy: boolean): Promise<void>` and `getRTLTextPluginStatus()` `@deprecated`. A plugin set there replaces the built-in shaping (`src/symbol/arabic_shaping.ts`) and bidi (`src/symbol/bidi.ts`, on `bidi-js`). Loading `@mapbox/mapbox-gl-rtl-text` (1.0.0, BSD-2-Clause, about 56 KB unpacked) would add a request and swap a maintained path for a deprecated one, with nothing gained. A unit test fails if `BasemapMap` ever calls `setRTLTextPlugin`.
+- **Glyphs.** Inter has no Arabic or Hebrew. Four ranges are built with `build_pbf_glyphs` 1.5.1 as an Inter-first combination (`-c`) with Noto Sans Arabic 2.013 and Noto Sans Hebrew 3.001 (unhinted TTFs from the notofonts GitHub releases; SIL OFL 1.1; licences shipped as `OFL-NotoSansArabic.txt` and `OFL-NotoSansHebrew.txt`). Where Inter has a glyph it wins, so the Cyrillic Supplement in 1280-1535 stays Inter's. The build is reproducible: rebuilding Inter's seven ranges gives byte-identical files.
+- **Which ranges.** MapLibre's shaper rewrites each Arabic letter into the presentation form it takes in its word and asks for that code point, so Arabic needs the presentation-form blocks as well as Arabic proper. The shaper emits Forms-B (U+FE70–FEFF) and, for Persian and Urdu letters, Forms-A U+FB50–FBFF. It never emits the U+FC00–FDFF ligatures, so they are not shipped. A test runs MapLibre's own shaper over real names from the live tiles (Amman, Tel Aviv–Ramat Gan) and checks every code point it draws against the glyph ids in our PBFs.
+
+  | Range       | Covers                                              | Bytes   | gzip   |
+  | ----------- | --------------------------------------------------- | ------- | ------ |
+  | 1280-1535   | Hebrew (+ Inter's Cyrillic Supplement)              | 20,770  | 8,054  |
+  | 1536-1791   | Arabic (letters that do not join, digits, marks)    | 122,071 | 36,587 |
+  | 64256-64511 | Arabic Presentation Forms-A (Persian, Urdu), Hebrew | 104,591 | 27,908 |
+  | 65024-65279 | Arabic Presentation Forms-B                         | 69,784  | 20,780 |
+
+  That is 317,216 bytes on disk (93,329 gzip -9). Nothing is fetched until such a label is on screen. A Hebrew view adds about 8 KB. An Arabic view adds about 57 KB (1536-1791 and Forms-B), plus 28 KB where Persian or Urdu letters appear. Firebase Hosting serves these files as they are, so the raw bytes are what goes over the wire unless Hosting compresses them.
+
+- **New path.** The glyphs moved to `basemap/glyphs/inter-4.1-noto-ar2.013-he3.001/`. A miss under `/basemap/glyphs/**` is a 404 with the same `immutable` header, so a range added in place could stay missing for a viewer who had asked for it. The seven existing files moved unchanged. Returning viewers download them once more.
+- **Budget.** No change to the map route's fixed JS. The label chunk gains two script names and four range strings.
 
 ## Alternatives considered
 
