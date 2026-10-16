@@ -1462,9 +1462,13 @@ describe('AnalyticsComputeService', () => {
       ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       expect(analytics.data.allClubs).toBeDefined()
-      expect(analytics.data.vulnerableClubs).toBeDefined()
-      expect(analytics.data.thrivingClubs).toBeDefined()
-      expect(analytics.data.interventionRequiredClubs).toBeDefined()
+      // Category lists are written as clubId lists (#1901)
+      expect(analytics.data).toHaveProperty('vulnerableClubIds')
+      expect(analytics.data).not.toHaveProperty('vulnerableClubs')
+      expect(analytics.data).toHaveProperty('thrivingClubIds')
+      expect(analytics.data).not.toHaveProperty('thrivingClubs')
+      expect(analytics.data).toHaveProperty('interventionRequiredClubIds')
+      expect(analytics.data).not.toHaveProperty('interventionRequiredClubs')
     })
 
     it('should include distinguished club data in analytics', async () => {
