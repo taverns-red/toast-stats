@@ -9,7 +9,6 @@ import {
   BASEMAP_SOURCE_ID,
   buildBasemapStyle,
 } from '../basemapStyle'
-import { BASEMAP_MAX_ZOOM } from '../../../config/basemap'
 
 /* #1786 — the basemap style. Colours are the ones the pin palette was
  * validated against (docs/design/map-pin-colour-modes.md §6.3); changing them
@@ -52,12 +51,12 @@ describe('buildBasemapStyle', () => {
     })
   })
 
-  it('caps the source at the archive max zoom so MapLibre over-zooms past it', () => {
-    // #2084: world z0–14. An explicit source maxzoom wins over the archive
-    // header's TileJSON, so a mismatched archive cannot ask for z15 tiles.
+  it('takes its max zoom from the archive header, never a hard-coded one', () => {
+    // #2084: the world z0–14 header says 14, so MapLibre over-zooms the z14
+    // tiles beyond 14. A fixed source maxzoom would outrun any smaller
+    // archive (the z0 e2e fixture, a dev extract) and draw blank tiles.
     const style = buildBasemapStyle({ theme: 'light', pmtilesUrl: ARCHIVE_URL })
-    expect(style.sources[BASEMAP_SOURCE_ID]).toMatchObject({ maxzoom: 14 })
-    expect(BASEMAP_MAX_ZOOM).toBe(14)
+    expect(style.sources[BASEMAP_SOURCE_ID]).not.toHaveProperty('maxzoom')
   })
 
   it('carries the ODbL + Protomaps attribution on the source', () => {
