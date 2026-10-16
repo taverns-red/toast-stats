@@ -3015,6 +3015,10 @@ jobs:
   # reports staging has, as before. Same script as process-dates.sh (ADR-015
   # P1), which builds it after its own loop in the other modes. Non-fatal.
   # Its uploads are appended to the run manifest the pipeline job published.
+  #
+  # The same job then builds snapshots/<date>/reports-rollups.json (#2012),
+  # the reports-derived region/world rollups of the date's placed sidecars,
+  # so both writers append to one manifest copy before it is republished.
   # ══════════════════════════════════════════════════════════
   education-rollup:
     name: 'daily education rollup'
@@ -3077,6 +3081,15 @@ jobs:
           echo "## 🎓 Education rollup (#1801, #2028)" >> "$GITHUB_STEP_SUMMARY"
           bash scripts/pipeline/build-education-rollup.sh "${GCS_BUCKET}" \
             || echo "::warning::Education rollup was not rebuilt (#1801); the previous derived/ copy stands"
+
+      # snapshots/<date>/reports-rollups.json (#2012): region/world rollups
+      # of the date's placed sidecars, written beside them in staging and
+      # recorded in the manifest republished below. No prod write: it moves
+      # with its date at the next promotion. No sidecars → nothing written.
+      - name: '[rollup] Build the reports rollups (#2012)'
+        run: |
+          bash scripts/pipeline/build-reports-rollups.sh "${GCS_BUCKET}" "${{ needs.pipeline.outputs.snapshot_date }}" \
+            || echo "::warning::Reports rollups were not built (#2012); the date has no reports-rollups.json this run"
 
       - name: '[rollup] Publish run manifest'
         if: ${{ !cancelled() && steps.seed.outputs.seeded == 'true' }}
