@@ -1,4 +1,6 @@
+import { gzipSync } from 'node:zlib'
 import { test, expect, type Page } from './fixtures/test'
+import survivalD61 from '../src/__tests__/fixtures/charter-cohort-survival-d61.json' with { type: 'json' }
 
 /* District charter cohort survival (#1817, epic #1781) — measured on the
  * deployed preview (BASE_URL) at 375, 768 and 1280, light and dark:
@@ -9,7 +11,12 @@ import { test, expect, type Page } from './fixtures/test'
  *    route, and the legend names it;
  *  - ≥44px cohort links and zero document overflow — the table scrolls in
  *    its own region (its `.sr-only` cells once scrolled the page to 936px
- *    at 375). */
+ *    at 375).
+ *
+ * Until the per-district survival file (#2061) is on the CDN the page reads,
+ * it folds the 100 history shards (the tests above run whichever path the
+ * CDN serves). The last test serves the recorded D61 file and holds the
+ * route to the file path's wire budget. */
 
 const SURVIVAL = '/district/61/growth/survival'
 
@@ -88,4 +95,50 @@ test('a cohort link highlights that cohort through the URL', async ({
   await expect(page).toHaveURL(/[?&]cohort=\d{4}-\d{4}/)
   await expect(nav.locator('[aria-current="true"]')).toHaveText(label)
   await expect(page.getByTestId('survival-legend')).toContainText(label)
+})
+
+test('reads the district survival file: no history shard, fixed wire cost ≤ 500 KB (#2061)', async ({
+  page,
+}) => {
+  test.setTimeout(120_000)
+  // The staging CDN has no file until a pipeline run writes it: serve the
+  // recorded D61 file (the pipeline fold over the recorded prod history).
+  const body = JSON.stringify(survivalD61)
+  await page.route('**/config/charter-cohort-survival/district_61.json', r =>
+    r.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body,
+    })
+  )
+  const shards: string[] = []
+  const sizes: Promise<number>[] = []
+  page.on('request', req => {
+    if (req.url().includes('/config/club-district-history/')) {
+      shards.push(req.url())
+    }
+  })
+  page.on('requestfinished', req => {
+    if (req.url().includes('/config/charter-cohort-survival/')) return
+    sizes.push(
+      req
+        .sizes()
+        .then(s => s.responseBodySize + s.responseHeadersSize)
+        .catch(() => 0)
+    )
+  })
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto(SURVIVAL, { waitUntil: 'networkidle', timeout: 90_000 })
+  await page.locator('.survival-kpis').waitFor({ timeout: 30_000 })
+  await expect(
+    page.getByRole('table', { name: /survival by charter year/i })
+  ).toBeVisible()
+
+  expect(shards).toEqual([])
+  const total = (await Promise.all(sizes)).reduce((a, b) => a + b, 0)
+  // The served file is edge-compressed; count it gzipped, as it travels.
+  const bytes = total + gzipSync(body).length
+  test.info().annotations.push({ type: 'wire-bytes', description: `${bytes}` })
+  expect(bytes).toBeLessThanOrEqual(500 * 1024)
 })

@@ -172,6 +172,15 @@ describe('classifyObject', () => {
     ['config/club-district-history/77.json', 'club-district-history-shard'],
     ['config/club-district-history/00.json', 'club-district-history-shard'],
     ['config/club-district-history/777.json', 'json'],
+    [
+      'config/charter-cohort-survival/district_61.json',
+      'charter-cohort-survival',
+    ],
+    [
+      'config/charter-cohort-survival/district_F.json',
+      'charter-cohort-survival',
+    ],
+    ['config/charter-cohort-survival/61.json', 'json'],
     ['derived/club-district-history/77.json', 'json'],
     ['v1/latest.json', 'latest'],
     ['snapshots/2026-10-08/district_61.json', 'json'],
@@ -512,6 +521,43 @@ describe('checkObject — district-region history (#1820)', () => {
   })
 })
 
+describe('checkObject — charter cohort survival (#2061)', () => {
+  const D61_PATH = 'config/charter-cohort-survival/district_61.json'
+  // The pipeline fold's output over the recorded prod history (#2061).
+  const d61 = JSON.parse(
+    readFileSync(
+      'frontend/src/__tests__/fixtures/charter-cohort-survival-d61.json',
+      'utf-8'
+    )
+  ) as {
+    districtId: string
+    programYears: string[]
+    byThroughProgramYear: Record<string, unknown>
+  }
+
+  it('passes the recorded D61 file', () => {
+    expect(check(D61_PATH, plain(d61))).toBeNull()
+  })
+
+  it('fails a file that breaks the shared-contracts schema', () => {
+    expect(check(D61_PATH, plain({ ...d61, asOf: 'yesterday' }))).toMatch(
+      /schema/
+    )
+  })
+
+  it('fails a file served under another district', () => {
+    expect(
+      check('config/charter-cohort-survival/district_01.json', plain(d61))
+    ).toMatch(/district 61.*district_01/)
+  })
+
+  it('fails a file missing the curves of a program year it lists', () => {
+    const broken = structuredClone(d61)
+    delete broken.byThroughProgramYear[broken.programYears.at(-1)!]
+    expect(check(D61_PATH, plain(broken))).toMatch(/no curves/)
+  })
+})
+
 describe('checkObject — club-district history (#1782)', () => {
   const INDEX_PATH = 'config/club-district-history/index.json'
   const SHARD_PATH = 'config/club-district-history/77.json'
@@ -659,6 +705,17 @@ describe('planContentChecks — bounded, change-driven sampling', () => {
     expect(plan.checks.map(c => c.path)).toEqual([
       'config/district-region-history.json',
     ])
+  })
+
+  it('always checks every changed charter cohort survival file (#2061)', () => {
+    const files = ['61', '01', 'F'].map(
+      d => `config/charter-cohort-survival/district_${d}.json`
+    )
+    const plan = planContentChecks(
+      [meta('snapshots/2026-10-08/district_100.json'), ...files.map(meta)],
+      { random: () => 0, caps: { generic: 0 } }
+    )
+    expect(plan.checks.map(c => c.path).sort()).toEqual([...files].sort())
   })
 
   it('always checks the club-district history index and every changed shard', () => {
