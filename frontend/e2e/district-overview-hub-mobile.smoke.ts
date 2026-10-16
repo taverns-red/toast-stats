@@ -19,13 +19,18 @@ import { test, expect, type Page } from './fixtures/test'
  *  - the Needs-attention block ends above the bottom section bar on the first
  *    screen;
  *  - the page is ≤ 4,000px and has no info tooltips inside the hub;
- *  - landscape phones get the tiles 4×1; 1280 keeps the desktop strip.
+ *  - landscape phones get the tiles 4×1; 1280 keeps the desktop strip;
+ *  - the page carries exactly ONE Red Vote promotion (#2090) — the card out
+ *    of season, the seasonal banner in season — and the 4,000px budget is
+ *    measured with it on the page.
  */
 
 const PHONE = { width: 375, height: 812 }
 const SECTION_BAR_H = 56
 const TILE_BLOCK_MAX_H = 300
 const PAGE_MAX_H = 4000
+// Preview-only clock override (#2090): one run out of season, one in.
+const SEASON_DATE = { out: '2026-10-15', in: '2026-09-10' } as const
 
 async function loadHub(page: Page, path = '/district/61'): Promise<void> {
   await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
@@ -36,13 +41,21 @@ async function loadHub(page: Page, path = '/district/61'): Promise<void> {
   await page.waitForTimeout(500)
 }
 
-for (const scheme of ['light', 'dark'] as const) {
-  test(`first screen at 375 is the hub, not the KPI strip (${scheme})`, async ({
+for (const [scheme, season] of [
+  ['light', 'out'],
+  ['dark', 'in'],
+] as const) {
+  test(`first screen at 375 is the hub, not the KPI strip (${scheme}, ${season} of season)`, async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme: scheme })
     await page.setViewportSize(PHONE)
-    await loadHub(page)
+    await loadHub(page, `/district/61?promoDate=${SEASON_DATE[season]}`)
+    // The promotion renders once the Overview data has; wait for it so the
+    // page height below includes it.
+    await page
+      .locator('[data-testid="red-vote-promo"]')
+      .waitFor({ state: 'visible', timeout: 30_000 })
 
     const m = await page.evaluate(() => {
       const box = (el: Element | null) => {
@@ -83,6 +96,10 @@ for (const scheme of ['light', 'dark'] as const) {
         sectionsList: !!document.querySelector(
           '[data-testid="district-hub-sections"]'
         ),
+        promos: document.querySelectorAll('[data-testid="red-vote-promo"]')
+          .length,
+        promoBanners: document.querySelectorAll('.red-vote-promo--banner')
+          .length,
         pageH: document.documentElement.scrollHeight,
         overflowX: document.documentElement.scrollWidth - window.innerWidth,
       }
@@ -117,6 +134,11 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(m.h2s, msg).not.toContain('Overview')
     expect(m.h2s[0], msg).toBe('Details')
     expect(m.sectionsList, msg).toBe(false)
+    // One promotion on the phone (#2090): the banner in season, else the card.
+    expect(m.promos, msg).toBe(1)
+    expect(m.promoBanners, msg).toBe(season === 'in' ? 1 : 0)
+    // Logged on success too, so the CI log records the measured headroom.
+    console.log(`hub page height at 375 (${scheme}, ${season}): ${m.pageH}px`)
     expect(m.pageH, msg).toBeLessThanOrEqual(PAGE_MAX_H)
     expect(m.overflowX, msg).toBeLessThanOrEqual(0)
   })
