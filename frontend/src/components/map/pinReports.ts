@@ -1,8 +1,9 @@
 /**
- * Pin colour modes read from the district reports sidecar and Find-a-Club
- * (#1787, spec §4.2): October and April dues renewals, Club Success Plan,
- * officer list, club coach, education awards per member, and how members
- * attend. Part of the on-demand `pinExtended` chunk.
+ * Pin colour modes read from the district reports sidecar (#1787, spec
+ * §4.2): October and April dues renewals, Club Success Plan, officer list,
+ * club coach and education awards per member. The meeting modes (day, how
+ * members attend) live in `pinMeeting`. Part of the on-demand `pinExtended`
+ * chunk.
  *
  * Absent is not zero (spec §1.3): a missing reports file, section or club row
  * is "Not available for this date" (◌), never "Not received", "No coach" or
@@ -16,7 +17,6 @@ import {
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { parseVerifiedComplete } from '../../utils/clubStatusOverlay'
 import {
-  CATEGORICAL8,
   SUSPENDED,
   withSuspended,
   type ModeModel,
@@ -25,13 +25,7 @@ import {
 } from './pinModes'
 
 export type ReportsMode =
-  | 'renew-oct'
-  | 'renew-apr'
-  | 'csp'
-  | 'officers'
-  | 'coach'
-  | 'awards'
-  | 'attendance'
+  'renew-oct' | 'renew-apr' | 'csp' | 'officers' | 'coach' | 'awards'
 
 export const REPORTS_MODES: readonly ReportsMode[] = [
   'renew-oct',
@@ -40,7 +34,6 @@ export const REPORTS_MODES: readonly ReportsMode[] = [
   'officers',
   'coach',
   'awards',
-  'attendance',
 ]
 
 export const isReportsMode = (m: string): m is ReportsMode =>
@@ -63,12 +56,6 @@ export const COACH_FILLS = {
   active: '#882255',
   completed: '#88CCEE',
   none: '#D6D3CC',
-} as const
-
-/** Spec §3.3 `attendance`. "Online only" waits on FAC `location` (#1789). */
-export const ATTENDANCE_FILLS = {
-  inPerson: CATEGORICAL8[0],
-  online: CATEGORICAL8[1],
 } as const
 
 /** Low → high (spec §3.3 `sequential5`). */
@@ -137,18 +124,6 @@ const COACH_DONE = cat(
   'diamond'
 )
 const NO_COACH = cat('none', 'No coach', COACH_FILLS.none, 'dot')
-const IN_PERSON = cat(
-  'inPerson',
-  'In person only',
-  ATTENDANCE_FILLS.inPerson,
-  'circle'
-)
-const ONLINE = cat(
-  'online',
-  'Online attendance possible',
-  ATTENDANCE_FILLS.online,
-  'fill50'
-)
 
 const AWARD_RUNGS = [
   'No awards yet',
@@ -302,42 +277,28 @@ function rule(
       available: present,
     }
   }
-  if (mode === 'awards') {
-    const totals = byClub<{ club: string; achievementCount: number }, number>(
-      sections?.educationAchievements?.records,
-      r => r.club,
-      (r, prev) => (prev ?? 0) + r.achievementCount
-    )
-    const rungs = AWARD_KEYS.map((key, i) =>
-      cat(key, AWARD_RUNGS[i]!, SEQUENTIAL5[i]!, LEVELS[i]!)
-    )
-    return {
-      title: 'Education awards per member (PYTD)',
-      kind: 'ordinal',
-      categories: rungs,
-      pick: c => {
-        const n = c.membershipTrend[c.membershipTrend.length - 1]?.count
-        if (!totals || !n) return NOT_AVAILABLE
-        const r = (totals.get(id(c)) ?? 0) / n
-        const i = r === 0 ? 0 : r < 0.25 ? 1 : r < 0.5 ? 2 : r < 1 ? 3 : 4
-        return rungs[i]!
-      },
-      note: 'Every award counts, Pathways and legacy (TI education ledger).',
-      available: totals !== null,
-    }
-  }
+  // Awards per member.
+  const totals = byClub<{ club: string; achievementCount: number }, number>(
+    sections?.educationAchievements?.records,
+    r => r.club,
+    (r, prev) => (prev ?? 0) + r.achievementCount
+  )
+  const rungs = AWARD_KEYS.map((key, i) =>
+    cat(key, AWARD_RUNGS[i]!, SEQUENTIAL5[i]!, LEVELS[i]!)
+  )
   return {
-    title: 'How members attend',
-    kind: 'status',
-    categories: [IN_PERSON, ONLINE],
-    pick: c =>
-      c.allowsVirtualAttendance === undefined
-        ? NOT_AVAILABLE
-        : c.allowsVirtualAttendance
-          ? ONLINE
-          : IN_PERSON,
-    note: 'Online-only clubs are counted under “Online attendance possible”.',
-    available: true,
+    title: 'Education awards per member (PYTD)',
+    kind: 'ordinal',
+    categories: rungs,
+    pick: c => {
+      const n = c.membershipTrend[c.membershipTrend.length - 1]?.count
+      if (!totals || !n) return NOT_AVAILABLE
+      const r = (totals.get(id(c)) ?? 0) / n
+      const i = r === 0 ? 0 : r < 0.25 ? 1 : r < 0.5 ? 2 : r < 1 ? 3 : 4
+      return rungs[i]!
+    },
+    note: 'Every award counts, Pathways and legacy (TI education ledger).',
+    available: totals !== null,
   }
 }
 
