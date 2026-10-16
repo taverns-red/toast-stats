@@ -32,6 +32,7 @@ import * as path from 'node:path'
 import * as zlib from 'node:zlib'
 import { parse } from 'yaml'
 import {
+  CharterCohortSurvivalFileSchema,
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
   DistrictRegionHistorySchema,
@@ -59,6 +60,7 @@ const RANKINGS = path.join(
 const BUCKET = 'test-bucket'
 const PREFIX = 'config/club-district-history/'
 const REGION = 'config/district-region-history.json'
+const SURVIVAL = 'config/charter-cohort-survival/'
 
 let tmp: string
 let root: string
@@ -146,9 +148,18 @@ function derivedObjects(): string[] {
   return allObjects().filter(o => o.startsWith('derived/'))
 }
 
-/** Everything the script may write: the club history and the region history. */
+/**
+ * Everything the script may write: the club history, the survival files
+ * derived from it (#2061) and the region history.
+ */
 function writtenObjects(): string[] {
-  return allObjects().filter(o => o.startsWith(PREFIX) || o === REGION)
+  return allObjects().filter(
+    o => o.startsWith(PREFIX) || o.startsWith(SURVIVAL) || o === REGION
+  )
+}
+
+function survivalObjects(): string[] {
+  return allObjects().filter(o => o.startsWith(SURVIVAL))
 }
 
 function allObjects(): string[] {
@@ -217,7 +228,8 @@ describe('build-identity-history.sh: club-district history to config/ (#1782)', 
       expect(readMeta(obj), obj).toContain('cache-control=public, max-age=300')
       expect(readMeta(obj), obj).not.toContain('no-transform')
     }
-    expect(writtenObjects()).toHaveLength(6 + 1 + 1)
+    expect(writtenObjects()).toHaveLength(6 + 1 + survivalObjects().length + 1)
+    expect(survivalObjects().length).toBeGreaterThan(0)
   })
 
   it('uploads the shards before the index that names them', () => {
@@ -271,6 +283,7 @@ describe('build-identity-history.sh: club-district history to config/ (#1782)', 
       const dest = w.split(' ').at(-1) ?? ''
       expect(
         dest === `gs://${BUCKET}/${PREFIX}` ||
+          dest === `gs://${BUCKET}/${SURVIVAL}` ||
           dest === `gs://${BUCKET}/${REGION}`,
         w
       ).toBe(true)
@@ -294,6 +307,79 @@ describe('build-identity-history.sh: club-district history to config/ (#1782)', 
         createHash('sha256').update(bytes).digest('hex')
       )
     }
+  })
+})
+
+describe('build-identity-history.sh: charter cohort survival to config/ (#2061)', () => {
+  it('uploads one schema-valid file for every district the history names', () => {
+    seedAll()
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    const named = new Set<string>()
+    for (const shard of allObjects().filter(o =>
+      /club-district-history\/\d{2}\.json$/.test(o)
+    )) {
+      const parsed = ClubDistrictHistoryShardSchema.parse(readObject(shard))
+      for (const club of Object.values(parsed.clubs)) {
+        for (const d of Object.values(club.byProgramYear)) named.add(d)
+      }
+    }
+    expect(survivalObjects()).toEqual(
+      [...named].map(d => `${SURVIVAL}district_${d}.json`).sort()
+    )
+    const d61 = CharterCohortSurvivalFileSchema.parse(
+      readObject(`${SURVIVAL}district_61.json`)
+    )
+    expect(d61.districtId).toBe('61')
+    expect(d61.asOf).toBe(
+      ClubDistrictHistoryIndexSchema.parse(readObject(`${PREFIX}index.json`))
+        .asOf
+    )
+  })
+
+  it('serves them like the history: plain JSON, identity, max-age=300', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const meta = readMeta(`${SURVIVAL}district_61.json`)
+    expect(meta).not.toContain('content-encoding=gzip')
+    expect(meta).toContain('content-type=application/json')
+    expect(meta).toContain('cache-control=public, max-age=300')
+  })
+
+  it('uploads them after the history index, in one transfer', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const cps = lines(shimLog).filter(l => /^storage cp /.test(l))
+    const index = cps.findIndex(l => /\/index\.json gs:/.test(l))
+    const survival = cps.findIndex(l =>
+      l.endsWith(`gs://${BUCKET}/${SURVIVAL}`)
+    )
+    expect(index).toBeGreaterThanOrEqual(0)
+    expect(survival).toBeGreaterThan(index)
+    expect(
+      cps.filter(l => l.endsWith(`gs://${BUCKET}/${SURVIVAL}`))
+    ).toHaveLength(1)
+  })
+
+  it('reports their count and sizes in the summary line and the step summary', () => {
+    seedAll()
+    const r = runScript()
+    const parsed = JSON.parse(r.stdout.trim())
+    expect(parsed.charterCohortSurvival.districts).toBe(
+      survivalObjects().length
+    )
+    expect(parsed.charterCohortSurvival.gzipBytes).toBeGreaterThan(0)
+    expect(parsed.charterCohortSurvival.maxGzipBytes).toBeGreaterThan(0)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /charter cohort survival.*districts/i
+    )
+  })
+
+  it('is a global promotion object with its own content-gate kind', () => {
+    const p = `${SURVIVAL}district_61.json`
+    expect(PROMOTED_PREFIXES.some(x => p.startsWith(x))).toBe(true)
+    expect(classifyPromotionPath(p)).toEqual({ kind: 'global' })
+    expect(classifyObject(p)).toBe('charter-cohort-survival')
   })
 })
 
