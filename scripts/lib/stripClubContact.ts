@@ -246,6 +246,37 @@ export function scrubPlaceLinks(value: unknown): {
   return walkPlaceText(value)
 }
 
+/** A rewrite checked against the object's shared-contracts schema. */
+export interface SchemaCheck {
+  /** Schema id, or null when the object has no shared-contracts schema. */
+  schema: string | null
+  before: 'pass' | 'fail' | null
+  after: 'pass' | 'fail' | null
+  /** Issues the rewrite has that the original did not. */
+  newIssues: number
+}
+
+/** STUB (#2097 red). */
+export function isReportsObject(_name: string): boolean {
+  return false
+}
+
+/** STUB (#2097 red). */
+export function schemaForObject(
+  _name: string
+): { id: string; safeParse(v: unknown): { success: boolean } } | null {
+  return null
+}
+
+/** STUB (#2097 red). */
+export function checkRewriteSchema(
+  _name: string | undefined,
+  _before: unknown,
+  _after: unknown
+): SchemaCheck {
+  return { schema: null, before: null, after: null, newIssues: 0 }
+}
+
 export type StripResult =
   | { changed: false; gzipLayers: number }
   | {
@@ -253,6 +284,8 @@ export type StripResult =
       gzipLayers: number
       keysRemoved: number
       placeValuesScrubbed: number
+      keysRestored: number
+      schemaCheck: SchemaCheck
       bytes: Buffer
     }
 
@@ -296,7 +329,7 @@ function parse(text: string): unknown {
  * otherwise the new stored bytes, same format and gzip layer count, checked
  * to hold no contact key before they are returned.
  */
-export function stripStoredObject(stored: Buffer): StripResult {
+export function stripStoredObject(stored: Buffer, _name?: string): StripResult {
   const { text, layers } = decode(stored)
   const value = parse(text)
   if (countContactKeys(value) === 0 && countPlaceLinks(value) === 0) {
@@ -330,6 +363,8 @@ export function stripStoredObject(stored: Buffer): StripResult {
     gzipLayers: layers,
     keysRemoved: removed,
     placeValuesScrubbed,
+    keysRestored: 0,
+    schemaCheck: { schema: null, before: null, after: null, newIssues: 0 },
     bytes,
   }
 }
@@ -368,6 +403,12 @@ export interface AuditRow {
   keysRemoved: number
   /** Place-text values that held a link and were scrubbed (#2069). */
   placeValuesScrubbed: number
+  /** Required place keys restored as '' (#2097). */
+  keysRestored: number
+  /** The object's shared-contracts schema id, or null (#2097). */
+  schema: string | null
+  schemaBefore: 'pass' | 'fail' | null
+  schemaAfter: 'pass' | 'fail' | null
   gzipLayers: number | null
   oldGeneration: string
   newGeneration: string | null
@@ -389,6 +430,9 @@ export interface StripSummary {
   errors: number
   keysRemoved: number
   placeValuesScrubbed: number
+  keysRestored: number
+  /** Rewrites whose result fails its schema (pre-existing or refused). */
+  schemaFailures: number
 }
 
 export interface StripOptions {
@@ -396,6 +440,8 @@ export interface StripOptions {
   dates: string[]
   dryRun: boolean
   concurrency?: number
+  /** 'reports': only `snapshots/<date>/district_<id>_reports.json` (#2097). */
+  only?: 'reports'
 }
 
 const md5 = (bytes: Buffer): string =>
@@ -421,6 +467,10 @@ async function stripOne(
     action: 'error',
     keysRemoved: 0,
     placeValuesScrubbed: 0,
+    keysRestored: 0,
+    schema: null,
+    schemaBefore: null,
+    schemaAfter: null,
     gzipLayers: null,
     oldGeneration: meta.generation,
     newGeneration: null,
@@ -534,6 +584,8 @@ export async function runStrip(
       errors: count('error'),
       keysRemoved: rows.reduce((n, r) => n + r.keysRemoved, 0),
       placeValuesScrubbed: rows.reduce((n, r) => n + r.placeValuesScrubbed, 0),
+      keysRestored: 0,
+      schemaFailures: 0,
     },
   }
 }

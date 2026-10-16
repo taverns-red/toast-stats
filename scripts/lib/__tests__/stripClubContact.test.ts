@@ -524,6 +524,12 @@ describe('runStrip', () => {
       keysRemoved: 10,
       // No link in this fixture's place text (#2069).
       placeValuesScrubbed: 0,
+      // #2097: every rewrite is checked against its contract. This synthetic
+      // file never met PerDistrictData; the strip added no new issue.
+      keysRestored: 0,
+      schema: 'per-district-data',
+      schemaBefore: 'fail',
+      schemaAfter: 'fail',
       gzipLayers: 1,
       oldGeneration: gen,
       newGeneration: after.meta.generation,
