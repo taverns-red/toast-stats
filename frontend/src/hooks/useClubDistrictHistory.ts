@@ -12,8 +12,9 @@ import {
 
 /* #1817 — the whole club-district history (#1782): the index, then every
    shard it names (100, ~1.2 MB over the wire in total, edge-compressed).
-   Only a page that needs every club (charter cohort survival) uses this; a
-   page about one club fetches its one shard.
+   Only a page that needs every club uses this — the survival page, and only
+   as its fallback while its per-district file is missing (#2061, then
+   `enabled: false`); a page about one club fetches its one shard.
 
    `status`:
    - `loading` — the index or a shard is in flight (`loaded` of `total` lets
@@ -56,14 +57,24 @@ function combineShards(
   return { loaded, pending, missing, clubs }
 }
 
-export function useClubDistrictHistory(): ClubDistrictHistoryState {
+export interface UseClubDistrictHistoryOptions {
+  /** `false` fetches nothing (status stays `loading`). Default `true`. */
+  enabled?: boolean
+}
+
+export function useClubDistrictHistory({
+  enabled = true,
+}: UseClubDistrictHistoryOptions = {}): ClubDistrictHistoryState {
   const indexQuery = useQuery({
     queryKey: ['club-district-history', 'index'],
     queryFn: fetchClubDistrictHistoryIndex,
     staleTime: STALE_MS,
+    enabled,
   })
   const index = indexQuery.data ?? null
-  const shardKeys = index?.shards ?? []
+  // A cached index (another page read it) must not start shard fetches
+  // while disabled.
+  const shardKeys = enabled ? (index?.shards ?? []) : []
 
   const shards = useQueries({
     queries: shardKeys.map(clubDistrictHistoryShardQuery),
@@ -71,6 +82,9 @@ export function useClubDistrictHistory(): ClubDistrictHistoryState {
   })
 
   const total = shardKeys.length
+  if (!enabled) {
+    return { status: 'loading', loaded: 0, total: 0, index: null, clubs: null }
+  }
   if (indexQuery.data === null || indexQuery.isError) {
     return {
       status: 'unavailable',
