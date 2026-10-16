@@ -188,7 +188,9 @@ export function labelLayers(
   }
   // Cities sit under clusters (Montreal, Ottawa: #2092), whose discs reach
   // 28 px from the centre. After the near ring, a city tries a far ring that
-  // clears the largest cluster even at its smallest text size (10 px).
+  // clears the largest cluster even at its smallest text size (10 px). Last,
+  // the four corners: for a city whose row is clusters and whose column has
+  // small pins (Montreal at z8–9), a diagonal spot is often the only one.
   const besideCluster = {
     ...besidePin,
     'text-variable-anchor-offset': [
@@ -201,6 +203,14 @@ export function labelLayers(
       [3.6, 0],
       'right',
       [-3.6, 0],
+      'top-left',
+      [2.6, 2.6],
+      'top-right',
+      [-2.6, 2.6],
+      'bottom-left',
+      [2.6, -2.6],
+      'bottom-right',
+      [-2.6, -2.6],
     ] as Array<string | [number, number]>,
   }
   const text = {
