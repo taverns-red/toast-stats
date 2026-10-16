@@ -118,6 +118,29 @@ describe('section-bar.css (#1832)', () => {
     expect(link).toMatch(/font-size:\s*16px/)
   })
 
+  it('hover never paints an item in the active colour, and only on a real pointer (#2093)', () => {
+    // Root cause of "Overview AND Trends active" on the phone Overview: an
+    // ungated `.section-bar__link:hover { color: var(--link) }` — the active
+    // colour. Touch browsers keep :hover on the last-tapped item (tap Trends,
+    // go back), so Trends stayed blue beside the real active Overview.
+    const noComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const hoverRules = [
+      ...noComments.matchAll(
+        /([^{}]*\.section-bar__link:hover[^{]*)\{([^}]*)\}/g
+      ),
+    ]
+    expect(hoverRules.length).toBeGreaterThan(0)
+    for (const [, , body] of hoverRules) {
+      expect(body).not.toMatch(/var\(--link\)/)
+    }
+    // Every hover rule sits inside a (hover: hover) media block.
+    const gated = noComments.match(
+      /@media\s*\(hover:\s*hover\)[^{]*\{\s*\.section-bar__link:hover/
+    )
+    expect(gated).not.toBeNull()
+    expect(noComments.match(/\.section-bar__link:hover/g)?.length ?? 0).toBe(1)
+  })
+
   it('has a visible keyboard focus ring', () => {
     expect(css).toMatch(/\.section-bar__link:focus-visible[^{]*\{[^}]*outline:/)
   })

@@ -11,10 +11,7 @@ import {
   orderActionSections,
   type ActionSectionId,
 } from '../utils/actionListData'
-import {
-  DISTRICT_SECTIONS,
-  buildDistrictSectionUrl,
-} from '../config/districtSections'
+import { buildDistrictSectionUrl } from '../config/districtSections'
 import { DistrictHubTiles } from './DistrictHubTiles'
 import {
   HUB_BULLET_TILES,
@@ -33,14 +30,17 @@ import {
                      bullet bar, tier markers) and what the metric means
      Needs attention — the Action List's sections as rows with counts, each a
                      deep link to its section, plus a link to the whole list
-     Sections        — the district's other routes as rows, with counts
+
+   No Sections list (#2093): the page's section nav already carries every
+   district section (the bottom bar + More sheet on a portrait phone, the
+   scroll-row in landscape), so a second list only pushed the data down.
 
    No sticky element, no collapse toggle (it cost the old strip a 44px column
    and squeezed the cards) and no hover tooltips. Desktop and tablet keep
    <DistrictKpiStrip> untouched; the page switches with DISTRICT_HUB_QUERY.
 
    Loading: the same markup with dashes in place of numbers (a structural
-   skeleton, Lesson 158) — the tile, row and section counts are known before
+   skeleton, Lesson 158) — the tile and row counts are known before
    data, and the Club Success Plan row is gated on the page's program year
    (R3), so the loaded hub is the same height as the loading one. */
 
@@ -112,28 +112,6 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
       }
     })
 
-  const divisionCount = useMemo(
-    () => (clubs ? new Set(clubs.map(c => c.divisionId)).size : null),
-    [clubs]
-  )
-  const sectionCounts: Record<string, number | null> = {
-    clubs: clubs ? clubs.length : null,
-    divisions: divisionCount,
-  }
-  const sectionRows: MobileRow[] = DISTRICT_SECTIONS.filter(
-    s => s.segment !== ''
-  ).map(s => ({
-    id: s.segment,
-    to: buildDistrictSectionUrl(districtId, s.segment),
-    title: s.label,
-    chip:
-      s.segment in sectionCounts ? (
-        <span className="district-hub__count">
-          {sectionCounts[s.segment]?.toLocaleString() ?? DASH}
-        </span>
-      ) : undefined,
-  }))
-
   const openMeta =
     openTile === 'net'
       ? { title: HUB_NET_TITLE, about: HUB_NET_ABOUT }
@@ -170,15 +148,6 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
           Open the Action List →
         </Link>
       </section>
-
-      <nav
-        aria-label="District sections list"
-        className="district-hub__block"
-        data-testid="district-hub-sections"
-      >
-        <h3 className="district-hub__block-title">Sections</h3>
-        <MobileRowList label="District sections" rows={sectionRows} />
-      </nav>
 
       {kpis && openMeta && (
         <BottomSheet

@@ -196,6 +196,56 @@ describe('DistrictSubnav on a phone (#1832)', () => {
     ])
   })
 
+  it('bar tabs plus the More sheet cover every DISTRICT_SECTIONS entry exactly once, in config order (#2093)', () => {
+    stubViewport(true)
+    renderAt('/district/61')
+    const bar = screen.getByTestId('district-section-bar')
+    const tabs = Array.from(bar.querySelectorAll('a')).map(a =>
+      a.getAttribute('href')
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^More/ }))
+    const sheet = screen.getByRole('dialog', { name: 'More sections' })
+    const more = Array.from(sheet.querySelectorAll('a')).map(a => [
+      a.textContent,
+      a.getAttribute('href'),
+    ])
+    const expected = DISTRICT_SECTIONS.map(s => [
+      s.label,
+      s.segment ? `/district/61/${s.segment}` : '/district/61',
+    ])
+    // The sheet is the config list minus the bar's tabs, in config order.
+    expect(more).toEqual(expected.filter(([, href]) => !tabs.includes(href!)))
+    // Together they cover every section exactly once.
+    const all = [...tabs, ...more.map(([, href]) => href)]
+    expect(new Set(all).size).toBe(all.length)
+    expect([...all].sort()).toEqual(expected.map(([, href]) => href).sort())
+  })
+
+  it.each(
+    DISTRICT_SECTIONS.map(s => [
+      s.label,
+      s.segment ? `/district/61/${s.segment}` : '/district/61',
+    ])
+  )(
+    'exactly one bar item is active on the %s route (%s) (#2093)',
+    (label, path) => {
+      stubViewport(true)
+      renderAt(path!)
+      const bar = screen.getByTestId('district-section-bar')
+      const active = Array.from(
+        bar.querySelectorAll('[aria-current="page"], [data-active="true"]')
+      )
+      expect(active).toHaveLength(1)
+      const item = active[0]!
+      // The active item is the route's own tab, or More naming it.
+      if (item.tagName === 'A') {
+        expect(item).toHaveTextContent(label!)
+      } else {
+        expect(item).toHaveAccessibleName(`More sections, current: ${label}`)
+      }
+    }
+  )
+
   it('keeps the scroll-row on landscape phones and >=768', () => {
     stubViewport(false)
     renderAt('/district/61')

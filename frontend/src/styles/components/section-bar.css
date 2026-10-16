@@ -74,9 +74,15 @@
     cursor: pointer;
   }
 
-  .section-bar__link:hover {
-    color: var(--link);
-    text-decoration: none;
+  /* #2093 — hover is a pointer affordance only, and never the active
+     colour: touch browsers keep :hover on the last-tapped item, so an
+     ungated `color: var(--link)` left Trends looking active beside the real
+     active Overview after tapping Trends and going back. */
+  @media (hover: hover) {
+    .section-bar__link:hover {
+      color: var(--ink);
+      text-decoration: none;
+    }
   }
 
   .section-bar__icon {
