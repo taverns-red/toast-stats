@@ -196,19 +196,13 @@ describe('DistrictOverviewHub', () => {
     expect(hrefs).not.toContain('/district/61/action-list#action-csp')
   })
 
-  it('lists the district sections as rows with counts', () => {
+  it('has no Sections list — the bottom bar and its More sheet carry the sections (#2093)', () => {
     render(<DistrictOverviewHub {...baseProps} />)
-    const nav = screen.getByRole('navigation', {
-      name: 'District sections list',
-    })
-    const clubs = within(nav).getByRole('link', { name: /Clubs/ })
-    expect(clubs).toHaveAttribute('href', '/district/61/clubs')
-    expect(clubs).toHaveTextContent('3')
-    const divisions = within(nav).getByRole('link', { name: /Divisions/ })
-    expect(divisions).toHaveAttribute('href', '/district/61/divisions')
-    expect(divisions).toHaveTextContent('3')
-    // Overview is where we are — it is not a row.
-    expect(within(nav).queryByRole('link', { name: /^Overview/ })).toBeNull()
+    expect(screen.queryByTestId('district-hub-sections')).toBeNull()
+    expect(
+      screen.queryByRole('navigation', { name: 'District sections list' })
+    ).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Sections' })).toBeNull()
   })
 
   it('holds the same structure while loading (structural skeleton)', () => {

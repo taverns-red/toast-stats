@@ -8,8 +8,9 @@ import { test, expect, type Page } from './fixtures/test'
  * a 44px collapse-toggle column squeezing the 2-up cards, 8 numbers and an
  * info tooltip per card, and the "how is the district doing" narrative 1.6
  * screens down (prod sweep 2.48.0, 2026-10-12). The hub replaces it with
- * 2×2 tiles (number · delta · rank), a "Needs attention" block and the
- * sections as rows, so the first screen answers the question.
+ * 2×2 tiles (number · delta · rank) and a "Needs attention" block, so the
+ * first screen answers the question. The sections live in the bottom bar and
+ * its More sheet only — the hub's own Sections list was dropped (#2093).
  *
  * ── Method ───────────────────────────────────────────────────────────────
  * Deployed preview (BASE_URL), real data, bounding boxes (Lesson 134):
@@ -78,12 +79,10 @@ for (const scheme of ['light', 'dark'] as const) {
             h => !hub?.contains(h) && h.getBoundingClientRect().height > 0
           )
           .map(h => h.textContent?.trim() ?? ''),
-        // Section rows (#1794): compact single-line nav links, still ≥44px.
-        sectionRowHeights: [
-          ...document.querySelectorAll(
-            '[data-testid="district-hub-sections"] .mobile-row'
-          ),
-        ].map(r => Math.round(r.getBoundingClientRect().height)),
+        // #2093: the Sections list is gone; the bottom bar + More carry it.
+        sectionsList: !!document.querySelector(
+          '[data-testid="district-hub-sections"]'
+        ),
         pageH: document.documentElement.scrollHeight,
         overflowX: document.documentElement.scrollWidth - window.innerWidth,
       }
@@ -113,16 +112,11 @@ for (const scheme of ['light', 'dark'] as const) {
       PHONE.height - SECTION_BAR_H
     )
     expect(m.infoButtons, msg).toBe(0)
-    // The hub IS the overview: no "Overview" heading stranded below its
-    // section rows; the panel after it is titled for what it is.
+    // The hub IS the overview: no "Overview" heading stranded below it; the
+    // panel after it is titled for what it is.
     expect(m.h2s, msg).not.toContain('Overview')
     expect(m.h2s[0], msg).toBe('Details')
-    expect(m.sectionRowHeights.length, msg).toBeGreaterThan(0)
-    expect(Math.min(...m.sectionRowHeights), msg).toBeGreaterThanOrEqual(44)
-    // Compact rows are what keep the hub inside its page budget; local macOS
-    // fonts leave ~30px of headroom that CI Linux does not, so pin the row
-    // height too or a dead override passes here and fails only in CI.
-    expect(Math.max(...m.sectionRowHeights), msg).toBeLessThanOrEqual(48)
+    expect(m.sectionsList, msg).toBe(false)
     expect(m.pageH, msg).toBeLessThanOrEqual(PAGE_MAX_H)
     expect(m.overflowX, msg).toBeLessThanOrEqual(0)
   })
