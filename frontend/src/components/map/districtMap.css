@@ -11,7 +11,7 @@
   --map-pressed-text: #ffffff;
   --map-focus: var(--tm-loyal-blue);
   /* The pins' outline (pinModes OUTLINE), for swatches with a pale fill. */
-  --map-pin-outline: #3d3b38;
+  --map-pin-outline: var(--ink-2);
 }
 
 [data-theme='dark'] {
@@ -21,7 +21,7 @@
   --map-border: rgb(238 242 247 / 0.28);
   --map-pressed-bg: var(--ink);
   --map-pressed-text: var(--bg);
-  --map-pin-outline: #f4f1eb;
+  --map-pin-outline: var(--ink-2);
 }
 
 .district-map {

@@ -126,8 +126,9 @@ export const CATEGORICAL8 = [
 
 export const SUSPENDED_FILL = '#8C8A82'
 
-/** Pin outline per theme; clears 3:1 on land and water (spec §6.2). */
-export const OUTLINE = { light: '#3D3B38', dark: '#F4F1EB' } as const
+/** Pin outline per theme: the app's slate --ink-2 (#2087). Clears 3:1 on
+ * land and water (spec §6.2). */
+export const OUTLINE = { light: '#344052', dark: '#C8D1DD' } as const
 
 const INK = '#0F0E0D'
 const WHITE = '#FFFFFF'

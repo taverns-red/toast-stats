@@ -57,7 +57,7 @@ export const CHOROPLETH_THEME: Record<'light' | 'dark', ChoroplethTheme> = {
     hatch: '#D1D5DB',
     water: '#A9B2B1',
     border: '#FFFFFF',
-    markerOutline: '#3D3B38',
+    markerOutline: '#344052',
     selection: { inner: '#0F1720', outer: '#FFFFFF' },
   },
   dark: {
@@ -66,7 +66,7 @@ export const CHOROPLETH_THEME: Record<'light' | 'dark', ChoroplethTheme> = {
     hatch: '#2F3B4A',
     water: '#0A0F15',
     border: '#0A0F15',
-    markerOutline: '#F4F1EB',
+    markerOutline: '#C8D1DD',
     selection: { inner: '#EEF2F7', outer: '#0A0F15' },
   },
 }

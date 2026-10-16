@@ -1,37 +1,18 @@
 import { describe, it, expect } from 'vitest'
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
 import {
   BASEMAP_ATTRIBUTION,
   BASEMAP_COLOURS,
   BASEMAP_SOURCE_ID,
   buildBasemapStyle,
 } from '../basemapStyle'
+import { appToken } from '../../../test-utils/appTokens'
 
 /* #1786 — the basemap style. Colours are the ones the pin palette was
  * validated against (docs/design/map-pin-colour-modes.md §6.3); changing them
  * means re-running that validator, so they are pinned here. */
 
 const ARCHIVE_URL = 'https://cdn.example.test/basemap/world.pmtiles'
-
-/** A redesign.css token's hex in a theme (upper-cased, like the constants). */
-function appToken(name: string, theme: 'light' | 'dark'): string {
-  const css = readFileSync(
-    resolve(
-      dirname(fileURLToPath(import.meta.url)),
-      '../../../styles/tokens/redesign.css'
-    ),
-    'utf8'
-  ).replace(/\/\*[\s\S]*?\*\//g, '')
-  const selector = theme === 'light' ? ':root' : "[data-theme='dark']"
-  const open = css.indexOf('{', css.indexOf(selector))
-  const block = css.slice(open + 1, css.indexOf('}', open))
-  const m = block.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})\\s*;`))
-  if (!m) throw new Error(`${name} has no hex in ${selector}`)
-  return m[1].toUpperCase()
-}
 
 describe('buildBasemapStyle', () => {
   it.each(['light', 'dark'] as const)(
