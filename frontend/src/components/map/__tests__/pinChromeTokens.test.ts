@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { OUTLINE } from '../pinModes'
 import { HALO } from '../pinImages'
 import { BASEMAP_COLOURS } from '../basemapStyle'
+import { CHOROPLETH_THEME } from '../../worldmap/choroplethScale'
 import { appToken, readCss, themeBlock } from '../../../test-utils/appTokens'
 
 /* #2087 (follow-up to #2080) — until Phase 2 (ops#37) the map matches the
@@ -25,6 +26,10 @@ describe('pin outline and halo use the app palette', () => {
     it(`legend swatches draw the same outline (${theme})`, () => {
       const block = themeBlock(readCss('components/map/districtMap.css'), theme)
       expect(block).toMatch(/--map-pin-outline:\s*var\(--ink-2\)\s*;/)
+    })
+
+    it(`world-map markers share the pin outline (${theme})`, () => {
+      expect(CHOROPLETH_THEME[theme].markerOutline).toBe(OUTLINE[theme])
     })
   }
 })
