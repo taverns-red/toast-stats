@@ -255,7 +255,12 @@ const DistrictMapPage: React.FC = () => {
       return buildModeModel(mode === 'tier' ? 'tier' : 'health')
     return isTerritoryMode(mode)
       ? territory!.territoryModel(mode, allClubs)
-      : extended!.extendedModel(mode as ExtendedMode, viewedDate, reports)
+      : extended!.extendedModel(
+          mode as ExtendedMode,
+          viewedDate,
+          reports,
+          allClubs
+        )
   }, [mode, allClubs, territory, extended, pending, viewedDate, reports])
   // Visit / online / meeting-slot (#1796) filtering lives in the on-demand
   // filter chunk, which hands its filter up once ready (with the visit

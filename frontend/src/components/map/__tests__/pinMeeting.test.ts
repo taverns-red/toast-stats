@@ -120,7 +120,7 @@ describe('how members attend', () => {
   it('before #1789 (no schedules) online-only cannot be told apart, and says so', () => {
     const old = D61.map(c => ({ ...c, meetingSchedule: undefined }))
     const model = extendedModel('attendance', '2026-09-01', null, old)
-    expect(counts(legendChips(model, old))).toMatchObject({ onlineOnly: 0 })
+    expect(counts(legendChips(model, old))).not.toHaveProperty('onlineOnly')
     expect(model.note).toMatch(/online-only clubs are counted under/i)
   })
 
@@ -170,7 +170,7 @@ describe('meeting day', () => {
   })
 
   it('a club meeting on two weekdays is "several days"; two meetings on one day are that day', () => {
-    const m = meetingModel('day', '', [])
+    const m = meetingModel('day', '')
     expect(
       m.categoryOf(
         club({

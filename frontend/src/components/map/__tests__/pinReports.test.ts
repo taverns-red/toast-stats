@@ -1,7 +1,8 @@
 /**
  * The reports-sidecar and Find-a-Club pin colour modes (#1787, spec §4.2):
  * October and April dues renewals, Club Success Plan, officer list, club
- * coach, education awards per member, and how members attend.
+ * coach and education awards per member. How members attend moved to
+ * `pinMeeting` with the meeting-day mode (`pinMeeting.test.ts`).
  *
  * The reports fixture is built from records observed in the D61
  * `snapshots/2026-10-13/district_61_reports.json` (status strings verbatim)
@@ -322,18 +323,6 @@ describe('education awards per member (?color=awards)', () => {
     expect(extendedModel('awards', DATE, REPORTS).note).toMatch(
       /Pathways and legacy/
     )
-  })
-})
-
-describe('how members attend (?color=attendance)', () => {
-  it('reads allowsVirtualAttendance; absent is N/A, not in person', () => {
-    expect(
-      label('attendance', club({ allowsVirtualAttendance: false }), null)
-    ).toBe('In person only')
-    expect(
-      label('attendance', club({ allowsVirtualAttendance: true }), null)
-    ).toBe('Online attendance possible')
-    expect(label('attendance', club({}), null)).toBe(NA)
   })
 })
 

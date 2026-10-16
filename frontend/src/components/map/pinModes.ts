@@ -29,6 +29,7 @@ export type ExtendedMode =
   | 'coach'
   | 'awards'
   | 'attendance'
+  | 'day'
 
 /** Picker order, in the spec's groups (§5). */
 export const MAP_COLOR_MODES: readonly {
@@ -49,6 +50,7 @@ export const MAP_COLOR_MODES: readonly {
   { id: 'renew-apr', label: 'April renewals', group: 'Compliance' },
   { id: 'csp', label: 'Club Success Plan', group: 'Compliance' },
   { id: 'officers', label: 'Officer list', group: 'Compliance' },
+  { id: 'day', label: 'Meeting day', group: 'Meeting' },
   { id: 'attendance', label: 'How members attend', group: 'Meeting' },
   { id: 'division', label: 'Division', group: 'Territory' },
   { id: 'area', label: 'Area', group: 'Territory' },
@@ -162,6 +164,9 @@ export interface ModeModel {
   mode: MapColorMode
   title: string
   kind: 'status' | 'ordinal' | 'categorical'
+  /** Categorical chips keep the category order (weekdays) instead of
+   *  sorting by count. */
+  fixedOrder?: boolean
   /** Every category the mode can draw, in legend order. */
   categories: PinCategory[]
   categoryOf(club: ClubTrend): PinCategory
@@ -279,6 +284,7 @@ export const EXTENDED_FACET_PARAMS = [
   'coach',
   'awards',
   'attendance',
+  'day',
 ] as const
 
 export function buildModeModel(mode: 'health' | 'tier'): ModeModel {
@@ -338,7 +344,7 @@ export function legendChips(
       c.count > 0 ||
       (model.kind === 'ordinal' && c.shape !== 'suspended' && c.shape !== 'na')
   )
-  if (model.kind === 'categorical')
+  if (model.kind === 'categorical' && !model.fixedOrder)
     shown.sort((a, b) => b.count - a.count || compareLabel(a.label, b.label))
   return shown
 }
