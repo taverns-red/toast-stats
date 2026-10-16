@@ -40,7 +40,9 @@ import {
   ProgramYearIndexFileSchema,
   RegionMembershipSeriesSchema,
   REGION_ROLLUPS_FILE_NAME,
+  REPORTS_ROLLUPS_FILE_NAME,
   RegionRollupsSchema,
+  ReportsRollupsSchema,
   type RegionRollupFigures,
 } from '@taverns-red/shared-contracts'
 import { programYearForSnapshotDate } from './ceoReportSnapshotDates.js'
@@ -53,6 +55,10 @@ import {
 } from './cdnSchemaCanary.js'
 import { summarizeZodIssues } from './zodIssueSummary.js'
 import { latestByPath, type RunManifestEntry } from './runManifest.js'
+import {
+  REPORTS_ROLLUP_FIGURE_KEYS,
+  sumReportsRollupFigures,
+} from './reportsRollups.js'
 import {
   isGzipped,
   peelGzipLayers,
@@ -94,6 +100,7 @@ export type ObjectKind =
   | 'clubs-by-region-world'
   | 'clubs-by-region-world-points'
   | 'region-membership-series'
+  | 'reports-rollups'
   | 'latest'
   | 'json'
 
@@ -143,6 +150,9 @@ const CLUBS_BY_REGION_SHARD = new RegExp(
   `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${CLUBS_BY_REGION_DIR}/([A-Za-z0-9-]+)\\.json$`
 )
 const REGION_SERIES = /^time-series\/regions\/(\d{4}-\d{4})\.json$/
+const REPORTS_ROLLUPS = new RegExp(
+  `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${REPORTS_ROLLUPS_FILE_NAME.replace('.', '\\.')}$`
+)
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
 
@@ -200,6 +210,7 @@ export function classifyObject(path: string): ObjectKind | null {
     return 'clubs-by-region-world-points'
   if (CLUBS_BY_REGION_SHARD.test(path)) return 'clubs-by-region-shard'
   if (REGION_SERIES.test(path)) return 'region-membership-series'
+  if (REPORTS_ROLLUPS.test(path)) return 'reports-rollups'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
@@ -341,7 +352,8 @@ export function planContentChecks(
       c.kind === 'clubs-by-region-shard' ||
       c.kind === 'clubs-by-region-world' ||
       c.kind === 'clubs-by-region-world-points' ||
-      c.kind === 'region-membership-series'
+      c.kind === 'region-membership-series' ||
+      c.kind === 'reports-rollups'
     ) {
       checks.push(c)
     } else {
@@ -1039,6 +1051,71 @@ function checkRegionSeries(path: string, value: unknown): string | null {
   return null
 }
 
+/**
+ * snapshots/<date>/reports-rollups.json (#2012): the shared-contracts schema;
+ * served under its own date with that LOGICAL date's program year; a
+ * district without usable reports reads null for every figure; world = Σ
+ * districts and each region = Σ the districts placed in it, a figure null as
+ * soon as one district's is.
+ */
+function checkReportsRollups(path: string, value: unknown): string | null {
+  const parsed = ReportsRollupsSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const r = parsed.data
+  const date = REPORTS_ROLLUPS.exec(path)?.[1]
+  const dated = datedArtifact(r.snapshotDate, r.programYear, date)
+  if (dated !== null) return dated
+  const ids = Object.keys(r.districts).sort()
+  if (r.world.districts !== ids.length) {
+    return `world.districts is ${r.world.districts}, but ${ids.length} districts are listed`
+  }
+  for (const id of ids) {
+    const row = r.districts[id]!
+    if (row.reports === 'available') continue
+    const k = REPORTS_ROLLUP_FIGURE_KEYS.find(key => row[key] !== null)
+    if (k !== undefined) {
+      return `district ${id} has no reports (${row.reports}) but reads ${k}`
+    }
+  }
+  const mismatch = (
+    label: string,
+    block: (typeof r)['world'] | NonNullable<(typeof r)['regions']>[string],
+    members: readonly string[]
+  ): string | null => {
+    const want = sumReportsRollupFigures(members.map(id => r.districts[id]!))
+    for (const k of REPORTS_ROLLUP_FIGURE_KEYS) {
+      const got = JSON.stringify(block[k])
+      const sum = JSON.stringify(want[k])
+      if (got !== sum)
+        return `${label}: ${k} is ${got}, its districts sum to ${sum}`
+    }
+    const without = members.filter(
+      id => r.districts[id]!.reports !== 'available'
+    )
+    if (
+      JSON.stringify(block.districtsWithoutReports) !== JSON.stringify(without)
+    ) {
+      return `${label}: districtsWithoutReports is ${JSON.stringify(block.districtsWithoutReports)}, its districts say ${JSON.stringify(without)}`
+    }
+    return null
+  }
+  const world = mismatch('world', r.world, ids)
+  if (world !== null) return world
+  for (const [region, block] of Object.entries(r.regions ?? {})) {
+    const stray = block.districtIds.find(
+      id => r.districts[id]?.region !== region
+    )
+    if (stray !== undefined) {
+      return `region ${region} lists district ${stray}, which is not placed in it`
+    }
+    const m = mismatch(`region ${region}`, block, block.districtIds)
+    if (m !== null) return m
+  }
+  return null
+}
+
 function checkLatest(value: unknown): string | null {
   const date = (value as { latestSnapshotDate?: unknown } | null)
     ?.latestSnapshotDate
@@ -1106,6 +1183,8 @@ export function checkObject(
       return checkClubsByRegionWorldPoints(check.path, value)
     case 'region-membership-series':
       return checkRegionSeries(check.path, value)
+    case 'reports-rollups':
+      return checkReportsRollups(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -1217,6 +1296,8 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, ClubsByRegionWorldPointsSchema, served under its snapshotDate with that date’s program year, count = its points, no club twice (#1800)',
   'region-membership-series':
     'decoded, RegionMembershipSeriesSchema, served under its programYear, every date in that year and ascending, each district in one region, world = Σ regions (null where a region is) (#2127)',
+  'reports-rollups':
+    'decoded, ReportsRollupsSchema, served under its snapshotDate with that date’s program year, a district without reports null throughout, world = Σ districts, each region = Σ its districts, null when any district is (#2012)',
   latest: 'decoded, latestSnapshotDate is a real date',
   json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',
