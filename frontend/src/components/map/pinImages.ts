@@ -9,10 +9,11 @@
 import { OUTLINE, SUSPENDED_FILL, labelColourOn } from './pinModes'
 import type { IconSpec, MapTheme } from './pinLayer'
 
-/** Behind fill-level pins and inside the selected pin's double ring. */
+/** Behind fill-level pins and inside the selected pin's double ring: the
+ * basemap land, --surface light and --surface-2 dark (#2087). */
 export const HALO: Record<MapTheme, string> = {
   light: '#FFFFFF',
-  dark: '#1A1816',
+  dark: '#161F2A',
 }
 const FONT = 'Inter, system-ui, sans-serif'
 const FILL_LEVEL: Record<string, number> = {
