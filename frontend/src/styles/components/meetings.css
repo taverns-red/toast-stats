@@ -213,8 +213,12 @@ a.meeting-cell:hover {
   box-shadow: inset 0 0 0 2px var(--ink-3);
 }
 
+/* An ink ring with a surface ring inside it reads on every step, light or
+   dark. */
 .meeting-cell.is-selected {
-  box-shadow: inset 0 0 0 3px var(--ink);
+  box-shadow:
+    inset 0 0 0 2px var(--ink),
+    inset 0 0 0 4px var(--surface);
 }
 
 .meeting-cell:focus-visible,
