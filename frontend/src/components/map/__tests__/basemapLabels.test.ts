@@ -17,6 +17,7 @@ import {
   withBasemapLabels,
 } from '../basemapLabels'
 import { PIN_LAYER_IDS } from '../pinLayer'
+import { clusterDiameter } from '../pinImages'
 
 /* #2081 — labelled basemap context, zoom-banded so the map is never busy.
  * Countries → states/provinces → cities → neighbourhoods → streets, plus a
@@ -190,13 +191,69 @@ describe('basemap label layers', () => {
       const offsets = byId.get(id)!.layout!['text-variable-anchor-offset'] as
         unknown[] | undefined
       expect(offsets).toBeDefined()
+      // The near ring is tried first, so a label stays close when it can.
       const anchors = offsets!.filter((_, k) => k % 2 === 0)
-      expect(anchors).toEqual(['center', 'top', 'bottom', 'left', 'right'])
+      expect(anchors.slice(0, 5)).toEqual([
+        'center',
+        'top',
+        'bottom',
+        'left',
+        'right',
+      ])
       // Off-centre anchors clear a 44 px cluster (~2 em at 11 px).
       for (let k = 3; k < offsets!.length; k += 2) {
         const [x, y] = offsets![k] as [number, number]
         expect(Math.hypot(x, y)).toBeGreaterThanOrEqual(2)
       }
+    }
+  })
+
+  // #2092 — a city sitting under a big cluster (Montreal, Ottawa) lost its
+  // label: every near-ring spot overlapped the cluster's collision box, so
+  // the label hid. Cities need a far spot on each side that clears the
+  // largest cluster at their smallest text size.
+  it('gives a city label a spot on each side that clears the largest cluster', () => {
+    const cities = symbolLayers(styleFor('light').layers).find(
+      l => l.id === 'label-cities'
+    )!
+    const offsets = cities.layout!['text-variable-anchor-offset'] as unknown[]
+    const textPadding = cities.layout!['text-padding'] as number
+    // Largest cluster canvas (48 px disc + 8 px margin) plus MapLibre's
+    // default 2 px icon-padding, measured from the cluster's centre.
+    const clusterHalf = (clusterDiameter(1000) + 8) / 2 + 2
+    const SMALLEST_CITY_TEXT_PX = 10
+    const reach = (anchor: string) => {
+      let best = 0
+      for (let k = 0; k < offsets.length; k += 2) {
+        if (offsets[k] !== anchor) continue
+        const [x, y] = offsets[k + 1] as [number, number]
+        best = Math.max(best, Math.max(Math.abs(x), Math.abs(y)))
+      }
+      return best * SMALLEST_CITY_TEXT_PX - textPadding
+    }
+    for (const side of ['top', 'bottom', 'left', 'right']) {
+      expect(reach(side), side).toBeGreaterThanOrEqual(clusterHalf)
+    }
+  })
+
+  // #2092 — measured on the PR preview over D61 (zooms 6–11, 1280 and 375
+  // px): with only the side rings, Montreal still hid at z8 and z9, where
+  // clusters fill its row and small pins sit above and below. The four
+  // corners let it sit diagonally off the row; with them all 24 checks place.
+  it('lets a city label try the four corners after the sides', () => {
+    const cities = symbolLayers(styleFor('light').layers).find(
+      l => l.id === 'label-cities'
+    )!
+    const offsets = cities.layout!['text-variable-anchor-offset'] as unknown[]
+    const anchors = offsets.filter((_, k) => k % 2 === 0)
+    const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+    expect(anchors.slice(-4)).toEqual(corners)
+    for (let k = 1; k < offsets.length; k += 2) {
+      if (!corners.includes(offsets[k - 1] as string)) continue
+      const [x, y] = offsets[k] as [number, number]
+      // Pushed away from the point on both axes, like the near ring.
+      expect(Math.abs(x)).toBeGreaterThanOrEqual(2.2)
+      expect(Math.abs(y)).toBeGreaterThanOrEqual(2.2)
     }
   })
 
