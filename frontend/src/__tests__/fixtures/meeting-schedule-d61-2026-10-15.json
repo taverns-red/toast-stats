@@ -1,0 +1,2811 @@
+{
+  "$comment": "Recorded 2026-10-16 from prod cdn.taverns.red snapshots/2026-10-15/analytics/district_61_analytics.json (one object read): data.allClubs[] reduced to the fields the meeting heatmap reads (#1796). No free text, location, website, email, phone or link: meetingSchedule is the parsed #1789 shape only.",
+  "snapshotDate": "2026-10-15",
+  "clubs": [
+    {
+      "clubId": "3045",
+      "clubName": "Limestone City Club",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "01",
+      "areaName": "Area 01",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "19:30",
+          "mode": "in-person"
+        },
+        {
+          "day": "Wednesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2],
+          "startTime": "19:30",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "9560",
+      "clubName": "CFB Kingston Toastmasters",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "01",
+      "areaName": "Area 01",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "08:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1849755",
+      "clubName": "Toastmasters At St. Lawrence College",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "01",
+      "areaName": "Area 01",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "11:45",
+          "endTime": "13:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "7260126",
+      "clubName": "Toastmasters At Queen's",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "01",
+      "areaName": "Area 01",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "17:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7833019",
+      "clubName": "KEYS Toastmasters Club",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "01",
+      "areaName": "Area 01",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2, 4],
+          "startTime": "18:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "2959",
+      "clubName": "Seaway Toastmasters Club of Cornwall",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "02",
+      "areaName": "Area 02",
+      "allowsVirtualAttendance": false
+    },
+    {
+      "clubId": "3886",
+      "clubName": "Thousand Islands Club",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "02",
+      "areaName": "Area 02",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1570163",
+      "clubName": "Downtown Kingston Toastmasters",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "02",
+      "areaName": "Area 02",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "06:55",
+          "endTime": "08:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28675542",
+      "clubName": "Mastermind Leaders",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "02",
+      "areaName": "Area 02",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "monthly",
+          "weeksOfMonth": [3],
+          "startTime": "19:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "8032",
+      "clubName": "North Grenville Club",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "03",
+      "areaName": "Area 03",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "8684",
+      "clubName": "Manotick Club",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "03",
+      "areaName": "Area 03",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2, 4],
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1590426",
+      "clubName": "Smiths Falls Toastmasters",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "03",
+      "areaName": "Area 03",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "endTime": "20:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "4544358",
+      "clubName": "Stittsville Toastmasters Club",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "03",
+      "areaName": "Area 03",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "4675249",
+      "clubName": "Carleton Place Toastmasters",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "03",
+      "areaName": "Area 03",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2, 4],
+          "startTime": "19:00",
+          "endTime": "20:45",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "9303",
+      "clubName": "Nepean Wingtalkers Toastmasters Club",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "04",
+      "areaName": "Area 04",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "640929",
+      "clubName": "Barrhaven Toastmasters",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "04",
+      "areaName": "Area 04",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "endTime": "20:45",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1100158",
+      "clubName": "IBM Ottawa Toastmasters",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "04",
+      "areaName": "Area 04",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Friday",
+          "cadence": "weekly",
+          "startTime": "12:05",
+          "endTime": "13:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "5884192",
+      "clubName": "Ottawa Collab Toastmasters",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "04",
+      "areaName": "Area 04",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "3279",
+      "clubName": "Statistics Canada Toastmasters Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "10",
+      "areaName": "Area 10",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "16:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "5833",
+      "clubName": "Pembroke & Area Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "10",
+      "areaName": "Area 10",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "6536",
+      "clubName": "Chalk River Laboratories Toastmasters",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "10",
+      "areaName": "Area 10",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:05",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "616346",
+      "clubName": "Health and Fitness Toastmasters",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "10",
+      "areaName": "Area 10",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "16:30",
+          "endTime": "17:45",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "777940",
+      "clubName": "Silver & Wiser Toastmasters",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "10",
+      "areaName": "Area 10",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "startTime": "13:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "946842",
+      "clubName": "Les Orateurs De Statistique Canada",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "10",
+      "areaName": "Area 10",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7751",
+      "clubName": "West End Toastmasters",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "11",
+      "areaName": "Area 11",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "18:45",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "9122",
+      "clubName": "Kanata Toastmasters Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "11",
+      "areaName": "Area 11",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "endTime": "21:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "1430971",
+      "clubName": "Valley Vintage Advanced",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "11",
+      "areaName": "Area 11",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2],
+          "startTime": "19:00",
+          "endTime": "21:00",
+          "mode": "online"
+        },
+        {
+          "day": "Thursday",
+          "cadence": "monthly",
+          "weeksOfMonth": [4],
+          "startTime": "19:00",
+          "endTime": "21:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "7582363",
+      "clubName": "Canmet Toastmasters",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "11",
+      "areaName": "Area 11",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7718892",
+      "clubName": "NDHQ Carling Toastmasters",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "11",
+      "areaName": "Area 11",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00"
+        }
+      ]
+    },
+    {
+      "clubId": "28678043",
+      "clubName": "Ottawa Muslim Speakers Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "11",
+      "areaName": "Area 11",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6425",
+      "clubName": "LAN Toastmasters Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "12",
+      "areaName": "Area 12",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "6871192",
+      "clubName": "Kinaxis Toastmasters Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "12",
+      "areaName": "Area 12",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7634790",
+      "clubName": "Quackmasters",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "12",
+      "areaName": "Area 12",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7749720",
+      "clubName": "Ericsson Ottawa Toastmasters Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "12",
+      "areaName": "Area 12",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7749943",
+      "clubName": "Kanata Francophone",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "12",
+      "areaName": "Area 12",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "18:45",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "6236",
+      "clubName": "Health Canada Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "13",
+      "areaName": "Area 13",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "16:45",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "9472",
+      "clubName": "Visioneers Advanced Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "13",
+      "areaName": "Area 13",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2, 4],
+          "startTime": "18:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "654417",
+      "clubName": "Management Development for Women Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "13",
+      "areaName": "Area 13",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "17:45",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "3950903",
+      "clubName": "Percolators Breakfast Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "13",
+      "areaName": "Area 13",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Friday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2, 4],
+          "startTime": "09:30",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "7396993",
+      "clubName": "Ottawa Coaches Corner",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "13",
+      "areaName": "Area 13",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2, 4],
+          "startTime": "19:00",
+          "endTime": "20:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "28678526",
+      "clubName": "Leaders Go First Toastmasters",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "13",
+      "areaName": "Area 13",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "15:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "928",
+      "clubName": "The Prose Toastmasters Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "14",
+      "areaName": "Area 14",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "3319",
+      "clubName": "Carlingwood Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "14",
+      "areaName": "Area 14",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "endTime": "20:15",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "5108",
+      "clubName": "Bells Corners Toastmasters Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "14",
+      "areaName": "Area 14",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "676481",
+      "clubName": "Ottawa Community Toastmasters",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "14",
+      "areaName": "Area 14",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "737419",
+      "clubName": "Constellation Club",
+      "divisionId": "B",
+      "divisionName": "Division B",
+      "areaId": "14",
+      "areaName": "Area 14",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "2722",
+      "clubName": "Capital Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "20",
+      "areaName": "Area 20",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "5458",
+      "clubName": "Luncheon Troupers Toastmasters Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "20",
+      "areaName": "Area 20",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "12:05",
+          "endTime": "13:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "7258",
+      "clubName": "Advanced Speakers Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "20",
+      "areaName": "Area 20",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Saturday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "09:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7261",
+      "clubName": "Centretown Ottawa Toastmasters",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "20",
+      "areaName": "Area 20",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "985878",
+      "clubName": "Agora Toastmasters Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "20",
+      "areaName": "Area 20",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "5407",
+      "clubName": "Dawn Breaker Toastmasters Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "21",
+      "areaName": "Area 21",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "07:15",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "6432",
+      "clubName": "EDC Ottawa Toastmasters Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "21",
+      "areaName": "Area 21",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Friday",
+          "cadence": "weekly",
+          "startTime": "11:05",
+          "endTime": "11:55",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "8296",
+      "clubName": "Downtown Ottawa Toastmasters Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "21",
+      "areaName": "Area 21",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "17:15",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1106180",
+      "clubName": "A Matter of Taste",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "21",
+      "areaName": "Area 21",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Friday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2],
+          "startTime": "18:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1611",
+      "clubName": "Club Toastmasters Les Mots Arts",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "22",
+      "areaName": "Area 22",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "8585",
+      "clubName": "Rockcliffe Aerodites Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "22",
+      "areaName": "Area 22",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "12:05",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "8861",
+      "clubName": "Le Parolier Toastmasters Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "22",
+      "areaName": "Area 22",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "829817",
+      "clubName": "Louis St Laurent Icebreakers",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "22",
+      "areaName": "Area 22",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "7538599",
+      "clubName": "Club Toastmasters francophone d'Ottawa",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "22",
+      "areaName": "Area 22",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "endTime": "20:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "3221",
+      "clubName": "Odyssea",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "23",
+      "areaName": "Area 23",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6232",
+      "clubName": "Pearson Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "23",
+      "areaName": "Area 23",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Friday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1567785",
+      "clubName": "Creative Communicators",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "23",
+      "areaName": "Area 23",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "biweekly",
+          "startTime": "19:00",
+          "endTime": "20:40",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "7238597",
+      "clubName": "90 Elgin Toastmasters",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "23",
+      "areaName": "Area 23",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "180",
+      "clubName": "Causeurs Ottawa Speakers Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "24",
+      "areaName": "Area 24",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Friday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "2190",
+      "clubName": "Transport Canada Toastmasters",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "24",
+      "areaName": "Area 24",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00"
+        }
+      ]
+    },
+    {
+      "clubId": "5257061",
+      "clubName": "OAG / BVG",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "24",
+      "areaName": "Area 24",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7670344",
+      "clubName": "Bank of Canada Toastmasters Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "24",
+      "areaName": "Area 24",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "808",
+      "clubName": "Orléans Raconteurs Toastmasters Club 808",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "30",
+      "areaName": "Area 30",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3, 5],
+          "startTime": "19:00",
+          "endTime": "21:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "3487",
+      "clubName": "Intrepid Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "30",
+      "areaName": "Area 30",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6728",
+      "clubName": "Cultivators Of Self-Ex Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "30",
+      "areaName": "Area 30",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "13:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "3171418",
+      "clubName": "Blackburn Toastmasters Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "30",
+      "areaName": "Area 30",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "18:30",
+          "endTime": "20:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "3619",
+      "clubName": "Speakers Corner Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "31",
+      "areaName": "Area 31",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "3656",
+      "clubName": "East Ottawa Toastmasters Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "31",
+      "areaName": "Area 31",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "17:30",
+          "endTime": "19:30",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "5135",
+      "clubName": "Riverside Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "31",
+      "areaName": "Area 31",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "18:45",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "8210",
+      "clubName": "Mail Talk Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "31",
+      "areaName": "Area 31",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "17:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "1935",
+      "clubName": "Ottawa Toastmasters Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "33",
+      "areaName": "Area 33",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "18:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "692750",
+      "clubName": "Creativity + Toastmasters",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "33",
+      "areaName": "Area 33",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "1009147",
+      "clubName": "Los Amigos Online",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "33",
+      "areaName": "Area 33",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "endTime": "20:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "28678196",
+      "clubName": "MDS Aero Toastmasters",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "33",
+      "areaName": "Area 33"
+    },
+    {
+      "clubId": "5046",
+      "clubName": "Avance Synergie",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "34",
+      "areaName": "Area 34",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2, 4],
+          "startTime": "18:30",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "7618",
+      "clubName": "Dows Lake Toastmasters Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "34",
+      "areaName": "Area 34",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "9824",
+      "clubName": "CMHC/SCHL Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "34",
+      "areaName": "Area 34",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "biweekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "616889",
+      "clubName": "AGRI-Toastmasters Club",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "34",
+      "areaName": "Area 34",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2],
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7872266",
+      "clubName": "Green/Vert Toastmasters",
+      "divisionId": "D",
+      "divisionName": "Division D",
+      "areaId": "34",
+      "areaName": "Area 34",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Saturday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "11:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "4468",
+      "clubName": "Beaconsfield Toastmasters Club",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "50",
+      "areaName": "Area 50",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "endTime": "21:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6596",
+      "clubName": "Pierrefonds Club",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "50",
+      "areaName": "Area 50",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "9750",
+      "clubName": "Pointe Claire Toastmasters",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "50",
+      "areaName": "Area 50",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "874232",
+      "clubName": "Future First",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "50",
+      "areaName": "Area 50",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1479548",
+      "clubName": "Saint-Lazare Inspirers",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "50",
+      "areaName": "Area 50",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "4673",
+      "clubName": "Bombardier Canadair Toastmasters Club",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "52",
+      "areaName": "Area 52",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "5600",
+      "clubName": "Dorval City Toastmasters Club",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "52",
+      "areaName": "Area 52",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7701",
+      "clubName": "Club Excellence - Toastmasters",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "52",
+      "areaName": "Area 52",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Saturday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "09:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "5488489",
+      "clubName": "CAE Toastmasters",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "52",
+      "areaName": "Area 52",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "7515340",
+      "clubName": "BMS Canada Toastmasters",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "52",
+      "areaName": "Area 52",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "biweekly",
+          "startTime": "12:00",
+          "endTime": "12:40",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "4319",
+      "clubName": "Les Communicateurs de la Rive-Nord",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "53",
+      "areaName": "Area 53",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "07:15",
+          "endTime": "08:30",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "5842",
+      "clubName": "St Eustache Club",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "53",
+      "areaName": "Area 53",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "18:45",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1036983",
+      "clubName": "Maîtres parleurs de Blainville",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "53",
+      "areaName": "Area 53",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28678752",
+      "clubName": "Genetec Inc.",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "53",
+      "areaName": "Area 53"
+    },
+    {
+      "clubId": "3604",
+      "clubName": "Club Dynamique De Laval",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "54",
+      "areaName": "Area 54",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "18:45",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "684093",
+      "clubName": "Club avancé international",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "54",
+      "areaName": "Area 54",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Saturday",
+          "cadence": "biweekly",
+          "startTime": "14:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "1296822",
+      "clubName": "Les Explosifs De Laval",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "54",
+      "areaName": "Area 54",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "3620126",
+      "clubName": "Laval Achievers",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "54",
+      "areaName": "Area 54",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28678588",
+      "clubName": "Club Toastmasters Fonds de Solidarite FTQ",
+      "divisionId": "F",
+      "divisionName": "Division F",
+      "areaId": "54",
+      "areaName": "Area 54",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "09:00",
+          "mode": "in-person"
+        },
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "09:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "835",
+      "clubName": "Words On Wings (WOW) Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "61",
+      "areaName": "Area 61",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Friday",
+          "cadence": "weekly",
+          "startTime": "12:15",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "6483",
+      "clubName": "CN Collaborators Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "61",
+      "areaName": "Area 61",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "18:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "9886",
+      "clubName": "Golden Mile Toastmasters Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "61",
+      "areaName": "Area 61",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "632838",
+      "clubName": "NDG Leader Toastmasters Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "61",
+      "areaName": "Area 61",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "endTime": "21:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "5468876",
+      "clubName": "Beyond Words Advanced Toastmasters",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "61",
+      "areaName": "Area 61",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Saturday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "09:30",
+          "endTime": "11:30",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "28680300",
+      "clubName": "iA Montreal Toastmasters",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "61",
+      "areaName": "Area 61",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00"
+        }
+      ]
+    },
+    {
+      "clubId": "606",
+      "clubName": "St Lawrence Toastmasters Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "62",
+      "areaName": "Area 62",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "endTime": "21:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "3200",
+      "clubName": "Club Modérateur/Moderator Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "62",
+      "areaName": "Area 62",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7041",
+      "clubName": "Westmount Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "62",
+      "areaName": "Area 62",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28677884",
+      "clubName": "Morgan Stanley Speak Easy",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "62",
+      "areaName": "Area 62",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28679190",
+      "clubName": "Club Toastmasters Les Entrepreneurs de Montreal",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "62",
+      "areaName": "Area 62",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "07:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "4311",
+      "clubName": "McGill Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "63",
+      "areaName": "Area 63",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "17:45",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6207",
+      "clubName": "Concordia Toastmasters Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "63",
+      "areaName": "Area 63",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "613576",
+      "clubName": "Speak with Style Toastmasters Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "63",
+      "areaName": "Area 63",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "18:00",
+          "endTime": "19:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7222705",
+      "clubName": "BNP Paribas Montreal Toastmasters Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "63",
+      "areaName": "Area 63",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28679953",
+      "clubName": "Club EloHQuence",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "63",
+      "areaName": "Area 63",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "biweekly",
+          "startTime": "12:00"
+        },
+        {
+          "day": "Thursday",
+          "cadence": "biweekly",
+          "startTime": "12:00"
+        }
+      ]
+    },
+    {
+      "clubId": "7782",
+      "clubName": "South Shore Toastmasters Club",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "64",
+      "areaName": "Area 64",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "999225",
+      "clubName": "HEC Toastmasters",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "64",
+      "areaName": "Area 64",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "18:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6036809",
+      "clubName": "Executive MBA McGill-HEC Montreal",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "64",
+      "areaName": "Area 64",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "startTime": "18:45",
+          "endTime": "20:15",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28679503",
+      "clubName": "TENE Toastmasters",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "64",
+      "areaName": "Area 64",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Saturday",
+          "cadence": "monthly",
+          "weeksOfMonth": [2, 4],
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7027",
+      "clubName": "Les Orateurs Pratt & Whitney - Canada",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "70",
+      "areaName": "Area 70",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Friday",
+          "cadence": "weekly",
+          "startTime": "12:30",
+          "endTime": "13:30",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "813731",
+      "clubName": "Leaders En Action",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "70",
+      "areaName": "Area 70",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "18:15",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7704900",
+      "clubName": "DesjLead",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "70",
+      "areaName": "Area 70",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "biweekly",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "28678212",
+      "clubName": "BRaIN Program (RI-MUHC) Toastmasters",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "70",
+      "areaName": "Area 70",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "09:30",
+          "endTime": "10:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "2587",
+      "clubName": "Toastmasters Quartier International",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "71",
+      "areaName": "Area 71",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "5310",
+      "clubName": "Club Toastmasters Ville Marie",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "71",
+      "areaName": "Area 71",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "9361",
+      "clubName": "Club Toastmasters Montréal",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "71",
+      "areaName": "Area 71",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "07:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "7592011",
+      "clubName": "Toastmasters Banque Nationale",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "71",
+      "areaName": "Area 71",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28677010",
+      "clubName": "Club Progresser, Bâtir et Inspirer (PBI)",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "71",
+      "areaName": "Area 71",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "2296",
+      "clubName": "O.P.C.R. Club",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "72",
+      "areaName": "Area 72",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "monthly",
+          "weeksOfMonth": [1, 3],
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "8519",
+      "clubName": "St Leonard Toastmasters Club",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "72",
+      "areaName": "Area 72",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "675689",
+      "clubName": "Les Communicateurs eloquents de Lanaudiere",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "72",
+      "areaName": "Area 72",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "endTime": "21:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "901116",
+      "clubName": "La Seigneurie De Boucherville",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "72",
+      "areaName": "Area 72",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "endTime": "21:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "28678920",
+      "clubName": "Family Club",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "72",
+      "areaName": "Area 72",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "18:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "1261",
+      "clubName": "Club Toastmasters Lemoyne de Candiac",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "73",
+      "areaName": "Area 73",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "18:45",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "2273",
+      "clubName": "Club Toastmasters Rive-Sud",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "73",
+      "areaName": "Area 73",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6552",
+      "clubName": "Expression Club",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "73",
+      "areaName": "Area 73",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:20",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "8658",
+      "clubName": "Les Orateurs Distingués",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "73",
+      "areaName": "Area 73",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Saturday",
+          "cadence": "weekly",
+          "startTime": "08:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "9820",
+      "clubName": "ASC Toastmasters Club",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "73",
+      "areaName": "Area 73",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "endTime": "20:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1838",
+      "clubName": "Club Toastmasters Quebec",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "90",
+      "areaName": "Area 90",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "2501",
+      "clubName": "Club Toastmasters de Charlesbourg",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "90",
+      "areaName": "Area 90",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6066",
+      "clubName": "Club Toastmasters de L'Ancienne-Lorette",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "90",
+      "areaName": "Area 90",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6502",
+      "clubName": "TM Francophone de Chicoutimi Club",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "90",
+      "areaName": "Area 90",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "1840",
+      "clubName": "Club Toastmasters La Causerie",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "91",
+      "areaName": "Area 91",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "5651",
+      "clubName": "Quest Toastmasters Club",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "91",
+      "areaName": "Area 91",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Friday",
+          "cadence": "weekly",
+          "startTime": "07:00",
+          "endTime": "08:30",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "6705",
+      "clubName": "St-Georges de Beauce Toastmasters Club",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "91",
+      "areaName": "Area 91",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "hybrid"
+        }
+      ]
+    },
+    {
+      "clubId": "8590",
+      "clubName": "Club Toastmasters De Levis",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "91",
+      "areaName": "Area 91",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1269833",
+      "clubName": "FSA-Universite Laval",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "91",
+      "areaName": "Area 91",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "5097",
+      "clubName": "Club Toastmasters de Sainte-Foy",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "92",
+      "areaName": "Area 92",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "mode": "in-person"
+        },
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "07:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "6942",
+      "clubName": "Les Communicateurs De Quebec",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "92",
+      "areaName": "Area 92",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "18:50",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "9127",
+      "clubName": "Les optimates de la colline parlementaire de Québec",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "92",
+      "areaName": "Area 92",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1377570",
+      "clubName": "Club Toastmasters YWCA Québec",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "92",
+      "areaName": "Area 92",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "18:30",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28679222",
+      "clubName": "Club Toastmasters IA",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "92",
+      "areaName": "Area 92",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "12:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "3747",
+      "clubName": "Club Toastmasters de Sherbrooke",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "93",
+      "areaName": "Area 93",
+      "allowsVirtualAttendance": true,
+      "meetingSchedule": [
+        {
+          "day": "Tuesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "online"
+        }
+      ]
+    },
+    {
+      "clubId": "1099641",
+      "clubName": "Toastmasters Vallee Du Richelieu",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "93",
+      "areaName": "Area 93",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Thursday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "1417584",
+      "clubName": "Extra-Expressif",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "93",
+      "areaName": "Area 93",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Monday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    },
+    {
+      "clubId": "28678571",
+      "clubName": "Club Toastmasters de Drummondville",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "93",
+      "areaName": "Area 93",
+      "allowsVirtualAttendance": false,
+      "meetingSchedule": [
+        {
+          "day": "Wednesday",
+          "cadence": "weekly",
+          "startTime": "19:00",
+          "mode": "in-person"
+        }
+      ]
+    }
+  ]
+}
