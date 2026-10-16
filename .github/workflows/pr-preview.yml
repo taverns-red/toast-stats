@@ -11,12 +11,26 @@
 # Re-uses the same Workload Identity Federation credentials that
 # .github/workflows/deploy.yml uses for production deploys, so no
 # additional IAM setup is required.
+#
+# Heavy smoke only once the PR is ready (#2101). Every Playwright spec and
+# the Lighthouse mobile gate below load the app from the channel, and that
+# Firebase egress (~150-200 MB a run, ~3 runs a PR) was the largest live
+# cost in October 2026. So:
+#   - draft PR push      -> build + deploy + URL comment; heavy suite skipped
+#   - non-draft PR       -> everything (opened ready, ready_for_review, and
+#                           every later push), exactly as before
+#   - `preview-smoke`    -> applying the label forces the full suite on a
+#                           draft (the manual trigger); other labels no-op
+# A re-run replays the original event payload, so re-running a draft-era run
+# still skips; mark the PR ready or apply the label instead.
+# Merge gating is unchanged: CI Gate does not require this job (see
+# scripts/lib/ciGate.ts), and prPreviewSmokeTrigger.test.ts keeps it so.
 
 name: PR Preview
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
     paths:
       - 'frontend/**'
       - 'packages/shared-contracts/**'
@@ -29,9 +43,15 @@ on:
       - '.nvmrc' # setup-node reads it (#2005)
 
 # Cancel an in-flight preview build when a new push to the same PR
-# arrives — only the latest commit gets a deploy.
+# arrives — only the latest commit gets a deploy. A `labeled` event for any
+# label other than `preview-smoke` gets a run-unique group (and then skips),
+# so tagging a PR never cancels its in-flight smoke (#2101).
 concurrency:
-  group: pr-preview-${{ github.event.pull_request.number }}
+  group: >-
+    pr-preview-${{ github.event.pull_request.number }}${{
+    github.event.action == 'labeled'
+    && github.event.label.name != 'preview-smoke'
+    && format('-label-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 permissions:
@@ -49,9 +69,17 @@ jobs:
     # Also skip Dependabot: its branches are intra-repo (so the fork guard
     # passes) but its runs get no access to the Actions secret store, so the
     # GCP auth step would fail. Dependency bumps have no UI to preview (#733).
+    # A labeled event runs only for `preview-smoke` (#2101).
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository
       && github.actor != 'dependabot[bot]'
+      && (github.event.action != 'labeled' || github.event.label.name == 'preview-smoke')
+    env:
+      # 'true' -> run the Playwright smoke and the Lighthouse mobile gate.
+      # Drafts skip them unless labeled `preview-smoke` (#2101).
+      HEAVY_SMOKE: >-
+        ${{ github.event.pull_request.draft == false ||
+        contains(github.event.pull_request.labels.*.name, 'preview-smoke') }}
 
     steps:
       - name: Checkout code
@@ -169,6 +197,19 @@ jobs:
             Updated on every push to this PR. The channel is removed
             automatically when this PR closes.
 
+            The Playwright smoke and Lighthouse mobile gate run once the
+            PR is ready for review (or labeled `preview-smoke`), not on
+            draft pushes (#2101).
+
+      - name: Report heavy smoke skipped (draft PR)
+        if: env.HEAVY_SMOKE != 'true'
+        run: |
+          msg="Draft PR: preview deployed, heavy smoke skipped."
+          msg="$msg Mark the PR ready for review or apply the"
+          msg="$msg preview-smoke label to run it (#2101)."
+          echo "::notice::$msg"
+          echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+
       # Lightweight cross-engine smoke against the freshly-deployed preview
       # (#713). #685 verified contrast in Chromium-at-rest only and missed a
       # Safari-visible regression (#710); running the legibility smoke in BOTH
@@ -176,9 +217,11 @@ jobs:
       # spot for every frontend PR. A declared-but-uninstalled engine is inert,
       # so install webkit explicitly before the run (cf. lesson 082).
       - name: Install Playwright browsers (chromium + webkit)
+        if: env.HEAVY_SMOKE == 'true'
         run: npx playwright install --with-deps chromium webkit
 
       - name: Cross-engine legibility smoke against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           # Drive the actual deployed preview, not staging's default.
@@ -194,6 +237,7 @@ jobs:
       # on a native <select> without appearance:none (lesson 111), so a
       # Chromium-only check is blind — runs both projects like the smoke above.
       - name: Cross-engine 44px touch-target tripwire against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -209,6 +253,7 @@ jobs:
       # (0.5px vs 0.0px residue), so only a cross-engine run proves the fix
       # holds in each.
       - name: Cross-engine breadcrumb alignment tripwire against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -226,6 +271,7 @@ jobs:
       # dark, both engines, and the 44px trigger floor re-asserted so the
       # shrink-the-control "fix" cannot turn this green.
       - name: Cross-engine tooltip viewport-clip tripwire against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -238,6 +284,7 @@ jobs:
       # that no contrast or geometry gate sees. Computed colours at 844 touch
       # and 1280 mouse, light and dark.
       - name: Header search field surface tripwire against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -251,6 +298,7 @@ jobs:
       # strip down ~148px on loading→loaded at 390px. Bounding-box equality
       # across states (Lesson 134), both engines, against the real preview.
       - name: Cross-engine mobile CLS guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -266,6 +314,7 @@ jobs:
       # channel. Chromium-only by design: the webkit project skips itself,
       # because layout-shift and CDP throttling are both Chromium-only.
       - name: Mobile font-swap CLS budget against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -278,6 +327,7 @@ jobs:
       # current and a past program year, 412px and 1350px, on the deployed
       # channel. Chromium-only: the webkit project skips itself.
       - name: District overview CLS budget against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -289,6 +339,7 @@ jobs:
       # throttling (150ms RTT, 1.6 Mbps, 4x CPU), cold cache, 375 and 1280,
       # on the deployed channel. Chromium-only: the webkit project skips.
       - name: District subpages CLS budget against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -299,6 +350,7 @@ jobs:
       # shell routes, /clubs, and /district/61 (+ Analytics) with real data, so
       # an overflow from any component fails the PR. Both engines.
       - name: Cross-engine no-horizontal-scroll guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -310,6 +362,7 @@ jobs:
       # sticky/fixed element is taller than 64px; at 1280 it stays sticky
       # (#572). Both engines: position is width-driven, not touch-driven.
       - name: Cross-engine district KPI strip mobile guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -321,6 +374,7 @@ jobs:
       # a bottom sheet with 16px selects and PY round-trips through ?py=. At
       # 768/1280 the desktop header is unchanged. Both engines.
       - name: Cross-engine phone context bar guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -332,6 +386,7 @@ jobs:
       # orientation copy is in the sheet, and each chip row fades only the
       # edges that still hide chips. 768/1280 keep the inline header.
       - name: Cross-engine landing first-screen guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -342,6 +397,7 @@ jobs:
       # actions never overlap, nav links never wrap or run into the search,
       # and the loading shell lands the KPI strip at its loaded y. Both engines.
       - name: Cross-engine landing tablet header guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -351,6 +407,7 @@ jobs:
       # is served as ts.taverns.red so the real gtag runs; every collect
       # request is answered locally with a 204, so no hit reaches GA.
       - name: Cross-engine GA page_view count guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -362,6 +419,7 @@ jobs:
       # ?country=, 375 opens the all-countries sheet, 1280 sets the table
       # beside the map, and no console (CSP) error. Both engines.
       - name: Cross-engine country map guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -373,6 +431,7 @@ jobs:
       # context bar by 110px and the page end clear of the bar; More opens
       # the shared sheet. Landscape, 768 and 1280 keep the scroll-row.
       - name: Cross-engine phone section bar guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -385,6 +444,7 @@ jobs:
       # scroll, ODbL credit visible and expanded, no CSP/worker error on the
       # deployed headers. Both engines.
       - name: Cross-engine basemap guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -396,6 +456,7 @@ jobs:
       # opens the club summary (sheet at 375, side panel at 1280) with no
       # contact details, and no CSP/worker/WebGL error. Both engines.
       - name: Cross-engine district map guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -406,6 +467,7 @@ jobs:
       # tile request, fills the reserved box (no shift), and fades out once
       # the live map paints. 375 and 1280, light and dark. Both engines.
       - name: Cross-engine district map preview guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -417,6 +479,7 @@ jobs:
       # page <= 4,000px, no info tooltips; a tile opens its sheet; landscape
       # phones get 4x1; 1280 keeps the desktop strip. Both engines.
       - name: Cross-engine district Overview hub guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -430,6 +493,7 @@ jobs:
       # the top bar scrolls away, first data <= 200px. Light + dark, both
       # engines (WebKit at inset 0).
       - name: Cross-engine safe-area and landscape guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -442,6 +506,7 @@ jobs:
       # bounding box; "Full table" opens a full-screen labelled region. 768
       # and 1280 keep the full table. Both engines.
       - name: Cross-engine priority-columns guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -455,6 +520,7 @@ jobs:
       # status/sort and ?search= round-trip through a reload. 768 and 1280
       # keep the desktop table. Both engines.
       - name: Cross-engine phone clubs rows guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -468,6 +534,7 @@ jobs:
       # the progress summary starts collapsed and ?summary= round-trips. 768
       # and 1280 keep the desktop division cards. Both engines.
       - name: Cross-engine phone divisions rows guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -479,6 +546,7 @@ jobs:
       # tooltip, the arrow keys move it, text ≥14px inside the viewport. 1280
       # keeps the hover tooltip and no readout. Both engines.
       - name: Cross-engine touch chart readout guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -492,6 +560,7 @@ jobs:
       # /district/61/map?club=, and the route requests no MapLibre, tiles or
       # club-index.json. Both engines.
       - name: Cross-engine club page primitives guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -502,6 +571,7 @@ jobs:
       # has 0 title-only tooltips, legend chips are ≥14px and the document
       # does not overflow. At 1280 the tiles stay links (desktop unchanged).
       - name: Cross-engine phone club grid guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -513,6 +583,7 @@ jobs:
       # Safari does not zoom on focus; selects keep their 44px box. Both
       # engines (WebKit resolves form-control fonts differently, L111).
       - name: Cross-engine form-control 16px guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -523,6 +594,7 @@ jobs:
       # (amber year links); the dark skip link is measured on both. Both
       # engines.
       - name: Cross-engine AA contrast guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -533,6 +605,7 @@ jobs:
       # characters under 14px and nothing visible under 12px (12px is for
       # uppercase eyebrows only; sr-only text excluded). Both engines.
       - name: Cross-engine phone type floor guard against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -546,6 +619,7 @@ jobs:
       # (110px on context-bar routes). Budgets: e2e/mobile-375-budgets.json,
       # ratchet down only. Both engines.
       - name: Cross-engine 375 mobile gate against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -556,6 +630,7 @@ jobs:
       # reveal. It was a local-only smoke; running it here flags growth (more
       # districts, a new section) before it lands instead of after.
       - name: Cross-engine landing scroll budget against preview
+        if: env.HEAVY_SMOKE == 'true'
         working-directory: frontend
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
@@ -569,6 +644,7 @@ jobs:
       # promoted to `error` (recorded on #1830); see lighthouserc.mobile.js for
       # the per-route budgets and their ratchet issue.
       - name: Lighthouse mobile gate against preview
+        if: env.HEAVY_SMOKE == 'true'
         uses: treosh/lighthouse-ci-action@v12
         env:
           LHCI_BASE_URL: ${{ steps.deploy.outputs.url }}
