@@ -6,7 +6,13 @@ import type {
   SponsorMentorRecord,
   SuspendedClub,
 } from '@taverns-red/shared-contracts'
-import { normalizeClubId } from '@taverns-red/shared-contracts'
+import {
+  normalizeClubId,
+  parseProspectStage,
+  sponsorMentorRole,
+  usDateToIso,
+  type ParsedProspectStage,
+} from '@taverns-red/shared-contracts'
 import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
 
 /* District Club Growth funnel (#1794, epic #1781).
@@ -32,70 +38,12 @@ import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
    sidecar is already de-identified at parse; this model keeps only club ids,
    club names, dates and statuses — never a person, email or phone. */
 
+// The sidecar vocabulary lives in shared-contracts (#2012), so the pipeline's
+// region/world rollups read TI's text exactly as these views do.
+export { parseProspectStage, usDateToIso, type ParsedProspectStage }
+
 export type StageValue =
   { kind: 'count'; value: number } | { kind: 'unknown'; reason: string }
-
-export type ParsedProspectStage =
-  | {
-      recognised: true
-      stageNumber: number
-      stageLabel: string
-      /** ISO date the stage was completed, when TI prints one. */
-      stageDate: string | null
-      payment: 'complete' | 'incomplete' | 'unknown'
-      paymentDate: string | null
-      raw: string
-    }
-  | { recognised: false; raw: string }
-
-const US_DATE = /(\d{1,2})\/(\d{1,2})\/(\d{4})/
-
-/** MM/DD/YYYY → YYYY-MM-DD, or null when the text holds no such date. */
-export function usDateToIso(text: string): string | null {
-  const m = US_DATE.exec(text)
-  if (!m) return null
-  const [, mm, dd, yyyy] = m
-  return `${yyyy}-${mm!.padStart(2, '0')}-${dd!.padStart(2, '0')}`
-}
-
-/**
- * Parse TI's "Prospect" cell. Recorded live vocabulary (D61, 2026-06-01 and
- * 2026-10-11): `#1 Application to Organize Complete - 04/15/2025` followed —
- * with no separator once the `<br>` is stripped — by `Payment Complete -
- * 04/19/2025` or `Payment Incomplete`. Text that does not start with `#N` is
- * returned raw rather than guessed at.
- */
-export function parseProspectStage(text: string): ParsedProspectStage {
-  const raw = text
-  const paymentAt = text.search(/Payment\b/)
-  const stagePart = (paymentAt >= 0 ? text.slice(0, paymentAt) : text).trim()
-  const paymentPart = paymentAt >= 0 ? text.slice(paymentAt) : ''
-
-  const stage =
-    /^#(\d+)\s+(.+?)(?:\s+(?:Complete|Incomplete))?(?:\s*-\s*\d{1,2}\/\d{1,2}\/\d{4})?$/.exec(
-      stagePart
-    )
-  if (!stage) return { recognised: false, raw }
-
-  let payment: 'complete' | 'incomplete' | 'unknown' = 'unknown'
-  let paymentDate: string | null = null
-  if (/^Payment\s+Complete/.test(paymentPart)) {
-    payment = 'complete'
-    paymentDate = usDateToIso(paymentPart)
-  } else if (/^Payment\s+Incomplete/.test(paymentPart)) {
-    payment = 'incomplete'
-  }
-
-  return {
-    recognised: true,
-    stageNumber: Number(stage[1]),
-    stageLabel: stage[2]!.trim(),
-    stageDate: usDateToIso(stagePart),
-    payment,
-    paymentDate,
-    raw,
-  }
-}
 
 /** Whole calendar days from `from` to `to` (both YYYY-MM-DD), timezone-free. */
 export function daysBetween(from: string, to: string): number {
@@ -214,7 +162,7 @@ export interface SponsorMentorClubRow {
   charterDate: string | null
   sponsors: number
   mentors: number
-  /** Assignments under a TI code not in `SPONSOR_MENTOR_ROLES` — not guessed. */
+  /** Assignments under a TI code outside `sponsorMentorRole` — not guessed. */
   other: number
   /** Assignments TI has marked AWARDED. */
   awarded: number
@@ -399,20 +347,6 @@ export function buildCoached(
   return { value: { kind: 'count', value: active.length }, active, completed }
 }
 
-/**
- * TI's New Club Sponsors & Mentors codes → role. A trailing U (`SPONSORU`,
- * `MENTORU`) marks a sponsor or mentor credit the member has already used
- * toward a DTM (confirmed by Ron on PR #2065); the role is the same, so it
- * counts the same. Any code not listed here is counted as 'other', never
- * guessed into a role.
- */
-const SPONSOR_MENTOR_ROLES: Readonly<Record<string, 'sponsors' | 'mentors'>> = {
-  SPONSOR: 'sponsors',
-  SPONSORU: 'sponsors',
-  MENTOR: 'mentors',
-  MENTORU: 'mentors',
-}
-
 /** A club with a page here links to it; any other to toastmasters.org. */
 function clubLinkFor(
   districtId: string,
@@ -447,7 +381,7 @@ function buildSponsorsMentors(
       }
       byClub.set(clubId, row)
     }
-    const role = SPONSOR_MENTOR_ROLES[r.code.trim().toUpperCase()] ?? 'other'
+    const role = sponsorMentorRole(r.code)
     row[role] += r.count
     if (r.status.trim().toUpperCase() === 'AWARDED') row.awarded += r.count
   }
