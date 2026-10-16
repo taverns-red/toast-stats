@@ -16,8 +16,8 @@
  *
  * Rules (the same as the in-browser fold, #2059):
  * - a club that moved district is surviving, not closed;
- * - the first folded program year (2016-17) is left-censored and never a
- *   cohort (`censoredProgramYear`);
+ * - the first folded program year (the data starts mid-year) is
+ *   left-censored and never a cohort (`censoredProgramYear`);
  * - a year not reached yet is `null`, never 0.
  *
  * @module charter-cohort-survival.schema
