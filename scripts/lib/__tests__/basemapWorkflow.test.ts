@@ -100,6 +100,47 @@ describe('basemap-build.yml (#1786)', () => {
     })
   })
 
+  describe('network resilience (#2084, run 38826110491)', () => {
+    const job = Object.values(wf.jobs)[0] as {
+      'timeout-minutes'?: number
+    }
+    const env = (k: string) => wf.env?.[k]
+    const build = steps.find(s => s.name === 'Build the archive')
+
+    it('retries the extract up to 4 times, 40 minutes per attempt', () => {
+      expect(env('PMTILES_EXTRACT_ATTEMPTS')).toBe('4')
+      expect(env('PMTILES_EXTRACT_TIMEOUT')).toBe('40m')
+    })
+
+    it('job timeout covers every attempt plus upload, and stays <= 360', () => {
+      const t = job['timeout-minutes'] ?? 0
+      // 4 x 40 min extract + backoff + verify/sha256 + upload (~25 min).
+      expect(t).toBeGreaterThanOrEqual(4 * 40 + 30)
+      expect(t).toBeLessThanOrEqual(360)
+    })
+
+    it('forces HTTP/1.1 in the Go client (the HTTP/2 INTERNAL_ERROR)', () => {
+      expect(env('GODEBUG')).toBe('http2client=0')
+    })
+
+    it('reads the source through the resuming range proxy', () => {
+      expect(env('BASEMAP_RANGE_PROXY')).toBe('1')
+      expect(build?.run ?? '').toContain('scripts/basemap/build-basemap.sh')
+    })
+
+    it('sets up the pinned Node the proxy runs on, before the build', () => {
+      const i = steps.findIndex(s =>
+        String((s as { uses?: string }).uses ?? '').startsWith(
+          'actions/setup-node@'
+        )
+      )
+      expect(i).toBeGreaterThanOrEqual(0)
+      const setup = steps[i] as { with?: Record<string, string> }
+      expect(setup.with?.['node-version-file']).toBe('.nvmrc')
+      expect(i).toBeLessThan(steps.indexOf(build!))
+    })
+  })
+
   it('has the copy commands under test (guard is not vacuous)', () => {
     expect(cpCommands.length).toBeGreaterThanOrEqual(2)
   })
