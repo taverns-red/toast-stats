@@ -396,9 +396,8 @@ describe('basemap label layers', () => {
     })
 
     it('moves the glyphs to a new versioned path', () => {
-      // A miss under /basemap/glyphs/** is a 404 cached as immutable, so a
-      // range added to the old directory would stay missing for anyone who
-      // already asked for it. New ranges mean a new directory (ADR-016).
+      // The files are cached as immutable, so the directory names every
+      // font in the stack: new fonts mean a new directory (ADR-016).
       expect(GLYPH_PATH).toMatch(/^basemap\/glyphs\/inter-4\.1-noto-[^/]+\//)
     })
 

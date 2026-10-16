@@ -58,9 +58,8 @@ type Theme = 'light' | 'dark'
 export const LABEL_FONT = 'Inter-Regular'
 
 /**
- * Versioned by font release, so the files can be cached as immutable. A
- * missing range is a 404 cached the same way, so a new range also means a
- * new directory.
+ * Versioned by font release (every font in the stack), so the files can be
+ * cached as immutable: a new font or a new range means a new directory.
  */
 export const GLYPH_PATH =
   'basemap/glyphs/inter-4.1-noto-ar2.013-he3.001/{fontstack}/{range}.pbf'

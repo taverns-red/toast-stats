@@ -205,9 +205,10 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
   | 64256-64511 | Arabic Presentation Forms-A (Persian, Urdu), Hebrew | 104,591 | 27,908 |
   | 65024-65279 | Arabic Presentation Forms-B                         | 69,784  | 20,780 |
 
-  That is 317,216 bytes on disk (93,329 gzip -9). Nothing is fetched until such a label is on screen. A Hebrew view adds about 8 KB. An Arabic view adds about 57 KB (1536-1791 and Forms-B), plus 28 KB where Persian or Urdu letters appear. Firebase Hosting serves these files as they are, so the raw bytes are what goes over the wire unless Hosting compresses them.
+  That is 317,216 bytes on disk (93,329 gzip -9). Nothing is fetched until such a label is on screen. A Hebrew view adds about 8 KB. An Arabic view adds about 57 KB (1536-1791 and Forms-B), plus 28 KB where Persian or Urdu letters appear.
 
-- **New path.** The glyphs moved to `basemap/glyphs/inter-4.1-noto-ar2.013-he3.001/`. A miss under `/basemap/glyphs/**` is a 404 with the same `immutable` header, so a range added in place could stay missing for a viewer who had asked for it. The seven existing files moved unchanged. Returning viewers download them once more.
+- **New path.** The glyphs moved to `basemap/glyphs/inter-4.1-noto-ar2.013-he3.001/`, following the rule above: the files are cached as `immutable`, so the directory names every font in the stack. A miss is a 404 with `no-cache` (checked on the preview and on prod), so an unshipped range is never cached as missing. The seven existing files moved unchanged. Returning viewers download the ranges they use once more.
+- **On the wire.** Firebase Hosting serves the PBFs with brotli: 7.0 KB for Hebrew, 25.3 KB for Arabic and 16.8 KB for Forms-B (measured on the PR preview). An Arabic view therefore costs about 42 KB, and a Hebrew view about 7 KB.
 - **Budget.** No change to the map route's fixed JS. The label chunk gains two script names and four range strings.
 
 ## Alternatives considered
