@@ -80,14 +80,29 @@ env:
   # sha256 of go-pmtiles_1.31.2_Linux_x86_64.tar.gz (GitHub release asset),
   # computed 2026-10-12. Bump both together.
   PMTILES_SHA256: '3ed7dbf4ec2e6dfe5e25b6f70d1ffc932729f93c86db353bf514dd71010a312f'
+  # Network resilience (#2084). Run 38826110491 lost the world z0-14 extract
+  # twice (HTTP/2 INTERNAL_ERROR at 42 GB, TCP reset at 4 GB): the 64 GB tile
+  # section is one range request, and go-pmtiles 1.31.2 has no retry or resume.
+  # - BASEMAP_RANGE_PROXY: extract reads through scripts/basemap/range-proxy.mjs,
+  #   which fetches in 256 MiB segments and resumes a dropped one.
+  # - PMTILES_EXTRACT_ATTEMPTS / _TIMEOUT: the outer retry in build-basemap.sh,
+  #   partial file deleted each time. A clean z0-14 attempt is ~15 min at 70 MB/s.
+  # - GODEBUG=http2client=0: Go net/http's documented switch that turns off
+  #   the HTTP/2 client (go-pmtiles uses http.DefaultClient). It covers the
+  #   direct reads (dry-run sizing); the proxy itself speaks HTTP/1.1.
+  BASEMAP_RANGE_PROXY: '1'
+  PMTILES_EXTRACT_ATTEMPTS: '4'
+  PMTILES_EXTRACT_TIMEOUT: '40m'
+  GODEBUG: 'http2client=0'
 
 jobs:
   basemap:
     runs-on: ubuntu-26.04
     # z0-10 took 3 minutes in all. z0-14 at the measured rates (extract
-    # ~70 MB/s, upload ~120 MB/s) is about 35-45 minutes; 180 leaves headroom
-    # for a slow download from build.protomaps.com.
-    timeout-minutes: 180
+    # ~70 MB/s, upload ~120 MB/s) is about 35-45 minutes. 240 covers the worst
+    # case (#2084): 4 extract attempts x 40 min + backoff (3.5 min) + verify,
+    # sha256 and upload (~25 min). Never above 360.
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v7
 
@@ -129,6 +144,12 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
             /opt/hostedtoolcache/CodeQL /usr/local/share/boost
           df -h
+
+      - name: Set up Node (runs the range proxy)
+        if: inputs.target == 'staging'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
 
       - name: Install the pmtiles CLI (pinned, checksum-verified)
         if: inputs.target == 'staging'

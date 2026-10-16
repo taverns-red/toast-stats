@@ -52,7 +52,76 @@ fi
 
 mkdir -p "$OUT_DIR"
 OUT="${OUT_DIR}/${NAME}"
-"$PMTILES" extract "$SRC" "$OUT" --maxzoom="$MAXZOOM" >&2
+
+# Network resilience (#2084). go-pmtiles 1.31.2 has no retry or resume, and
+# world z0-14 reads its whole 64 GB tile section in ONE range request, so a
+# single dropped connection restarts it (run 38826110491: HTTP/2
+# INTERNAL_ERROR at 42 GB, then a TCP reset at 4 GB). Two layers:
+# 1. extract reads through scripts/basemap/range-proxy.mjs, which fetches each
+#    range in bounded segments and resumes a dropped one from its last byte
+#    (BASEMAP_RANGE_PROXY=0 reads the source directly);
+# 2. an outer retry: up to PMTILES_EXTRACT_ATTEMPTS runs of extract, each
+#    capped at PMTILES_EXTRACT_TIMEOUT (when `timeout` exists), with the
+#    partial output deleted first. extract writes the header last, so a
+#    partial file is never valid input to verify or upload.
+ATTEMPTS="${PMTILES_EXTRACT_ATTEMPTS:-4}"
+ATTEMPT_TIMEOUT="${PMTILES_EXTRACT_TIMEOUT:-40m}"
+BACKOFF="${PMTILES_EXTRACT_BACKOFF_SECONDS:-30}"
+SOURCE_BASE="${BASEMAP_SOURCE_BASE:-https://build.protomaps.com}"
+if ! [[ "$ATTEMPTS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "build-basemap: PMTILES_EXTRACT_ATTEMPTS must be >= 1, got '$ATTEMPTS'" >&2
+  exit 2
+fi
+
+PROXY_PID=""
+PROXY_OUT="${OUT_DIR}/.range-proxy.json"
+cleanup() {
+  if [[ -n "$PROXY_PID" ]]; then kill "$PROXY_PID" 2> /dev/null || true; fi
+  rm -f "$PROXY_OUT"
+  return 0 # R13
+}
+trap cleanup EXIT
+
+EXTRACT_SRC="${SOURCE_BASE}/${BUILD}.pmtiles"
+if [[ "${BASEMAP_RANGE_PROXY:-1}" != "0" ]]; then
+  rm -f "$PROXY_OUT"
+  node "$(dirname "$0")/range-proxy.mjs" "$SOURCE_BASE" > "$PROXY_OUT" &
+  PROXY_PID=$!
+  for _ in $(seq 1 100); do
+    if [[ -s "$PROXY_OUT" ]]; then break; fi
+    if ! kill -0 "$PROXY_PID" 2> /dev/null; then break; fi
+    sleep 0.1
+  done
+  PROXY_URL=$(sed -nE 's/.*"url":"([^"]+)".*/\1/p' "$PROXY_OUT")
+  if [[ -z "$PROXY_URL" ]]; then
+    echo "build-basemap: the range proxy did not start" >&2
+    exit 1
+  fi
+  EXTRACT_SRC="${PROXY_URL}/${BUILD}.pmtiles"
+  echo "build-basemap: extract reads ${SOURCE_BASE} through ${PROXY_URL}" >&2
+fi
+
+TIMEOUT_CMD=()
+if command -v timeout > /dev/null; then TIMEOUT_CMD=(timeout "$ATTEMPT_TIMEOUT"); fi
+
+n=1
+while :; do
+  rm -f "$OUT"
+  echo "build-basemap: extract attempt ${n}/${ATTEMPTS}" >&2
+  if ${TIMEOUT_CMD[@]+"${TIMEOUT_CMD[@]}"} "$PMTILES" extract "$EXTRACT_SRC" "$OUT" --maxzoom="$MAXZOOM" >&2; then
+    break
+  fi
+  echo "build-basemap: extract attempt ${n}/${ATTEMPTS} failed" >&2
+  rm -f "$OUT"
+  if ((n >= ATTEMPTS)); then
+    echo "build-basemap: extract failed after ${ATTEMPTS} attempts" >&2
+    exit 1
+  fi
+  WAIT=$((BACKOFF * (1 << (n - 1))))
+  echo "build-basemap: retrying in ${WAIT}s" >&2
+  sleep "$WAIT"
+  n=$((n + 1))
+done
 "$PMTILES" verify "$OUT" >&2
 
 BYTES=$(wc -c < "$OUT" | tr -d ' ')
