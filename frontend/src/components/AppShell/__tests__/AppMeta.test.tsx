@@ -14,6 +14,22 @@ function renderMeta() {
   )
 }
 
+// #2090: the made-by line rides in AppMeta so it reaches the desktop footer
+// and the mobile "About ▾" disclosure alike.
+describe('AppMeta — Red Vote made-by line (#2090)', () => {
+  it('carries the footer-placement Red Vote line', () => {
+    renderMeta()
+
+    expect(screen.getByTestId('red-vote-made-by')).toHaveTextContent(
+      'Free from Red Taverns · Also from us: Red Vote'
+    )
+    const link = screen.getByRole('link', { name: 'Red Vote' })
+    expect(
+      new URL(link.getAttribute('href') ?? '').searchParams.get('utm_medium')
+    ).toBe('footer')
+  })
+})
+
 describe('AppMeta — report an issue (#1356)', () => {
   it('exposes a "Report an issue" link to the issue chooser', () => {
     renderMeta()
