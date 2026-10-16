@@ -20,6 +20,7 @@ import { spawnSync } from 'node:child_process'
 import * as path from 'node:path'
 import {
   clubTrendsProgramYears,
+  clubTrendsProgramYearsForDates,
   isProgramYear,
 } from '../clubTrendsSyncScope.js'
 
@@ -82,6 +83,52 @@ describe('clubTrendsProgramYears (#1728)', () => {
   })
 })
 
+// #2102: a rebuild pulled the whole store (1,402 objects, 1.07 GiB) to
+// re-derive a few dates. A historical run has no discovery verdict, but it
+// knows the dates it computes, and the writer keys on their PY. The transform
+// can remap a date to the PREVIOUS month-end (a closing raw, #193/#309); that
+// only crosses a PY boundary from July to 06-30, which the July rule covers.
+describe('clubTrendsProgramYearsForDates (#2102)', () => {
+  it('a rebuild inside one PY pulls only that PY', () => {
+    expect(
+      clubTrendsProgramYearsForDates(['2018-03-31', '2018-04-30', '2017-08-31'])
+    ).toEqual(['2017-2018'])
+  })
+
+  it('a July date also pulls the prior PY (a July raw can remap to 06-30)', () => {
+    expect(clubTrendsProgramYearsForDates(['2017-07-31'])).toEqual([
+      '2016-2017',
+      '2017-2018',
+    ])
+  })
+
+  it('06-30 is the PY that ends there', () => {
+    expect(clubTrendsProgramYearsForDates(['2017-06-30'])).toEqual([
+      '2016-2017',
+    ])
+  })
+
+  it('dates across PYs pull each PY once, sorted', () => {
+    expect(
+      clubTrendsProgramYearsForDates([
+        '2019-01-31',
+        '2017-01-31',
+        '2017-02-28',
+        '2019-02-28',
+      ])
+    ).toEqual(['2016-2017', '2018-2019'])
+  })
+
+  it('no dates (rebuild of every raw date): the whole store', () => {
+    expect(clubTrendsProgramYearsForDates([])).toBeNull()
+    expect(clubTrendsProgramYearsForDates(['', ''])).toBeNull()
+  })
+
+  it('rejects a malformed date rather than guessing a PY', () => {
+    expect(() => clubTrendsProgramYearsForDates(['2018-3-31'])).toThrow()
+  })
+})
+
 describe('isProgramYear', () => {
   it('accepts consecutive YYYY-YYYY only', () => {
     expect(isProgramYear('2026-2027')).toBe(true)
@@ -117,6 +164,24 @@ describe('scripts/club-trends-sync-scope.ts runner', () => {
     const r = run(['--program-year', 'unknown', '--date', '2026-10-09'])
     expect(r.status, r.stderr).toBe(0)
     expect(r.stdout).toBe('all\n')
+  })
+
+  it("--dates without --program-year: the PYs of a rebuild's dates (#2102)", () => {
+    const r = run(['--dates', '2017-07-31, 2018-01-31,2018-02-28'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).toBe('2016-2017 2017-2018\n')
+  })
+
+  it('--dates "" (a rebuild of every raw date) prints "all"', () => {
+    const r = run(['--dates', ''])
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).toBe('all\n')
+  })
+
+  it('--dates with a malformed date exits 2, printing nothing', () => {
+    const r = run(['--dates', '2018-01-31,Jan 31'])
+    expect(r.status).toBe(2)
+    expect(r.stdout).toBe('')
   })
 
   it('exits 2 on a malformed date', () => {
