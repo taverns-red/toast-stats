@@ -2,7 +2,7 @@
   {
     "name": "keep-most-recent",
     "action": {
-      "type": "Keep"
+      "type": "KEEP"
     },
     "mostRecentVersions": {
       "keepCount": 5
@@ -11,20 +11,20 @@
   {
     "name": "keep-deployed",
     "action": {
-      "type": "Keep"
+      "type": "KEEP"
     },
     "condition": {
-      "tagState": "tagged",
+      "tagState": "TAGGED",
       "tagPrefixes": ["deployed-"]
     }
   },
   {
     "name": "keep-env-tags",
     "action": {
-      "type": "Keep"
+      "type": "KEEP"
     },
     "condition": {
-      "tagState": "tagged",
+      "tagState": "TAGGED",
       "tagPrefixes": ["latest"],
       "newerThan": "90d"
     }
@@ -32,20 +32,20 @@
   {
     "name": "delete-untagged",
     "action": {
-      "type": "Delete"
+      "type": "DELETE"
     },
     "condition": {
-      "tagState": "untagged",
+      "tagState": "UNTAGGED",
       "olderThan": "7d"
     }
   },
   {
     "name": "delete-stale",
     "action": {
-      "type": "Delete"
+      "type": "DELETE"
     },
     "condition": {
-      "tagState": "any",
+      "tagState": "ANY",
       "olderThan": "30d"
     }
   }

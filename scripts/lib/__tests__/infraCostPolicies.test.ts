@@ -132,7 +132,11 @@ describe('GCS lifecycle files (#2103)', () => {
 // --- Artifact Registry cleanup policies ----------------------------------
 
 const AR_FILE_RE = /^(northamerica-northeast1|us-east1)--[a-z0-9-]+\.json$/
-const TAG_STATES = ['tagged', 'untagged', 'any']
+// API enum names, not the docs' mixed case. gcloud 583's ParseCleanupPolicy
+// passes values through apitools PyValueToMessage, which matches enum names
+// case-sensitively: "Delete" / "tagged" end up as unrecognized enum strings
+// (checked offline against the SDK, 2026-10-16), while DELETE / TAGGED map.
+const TAG_STATES = ['TAGGED', 'UNTAGGED', 'ANY']
 const AR_CONDITIONS = [
   'tagState',
   'tagPrefixes',
@@ -168,7 +172,7 @@ describe('Artifact Registry cleanup policies (#2104)', () => {
         expect(new Set(names).size).toBe(names.length)
         for (const p of policies) {
           expect(p.name).toMatch(/^[a-z0-9-]+$/)
-          expect(['Keep', 'Delete']).toContain(p.action.type)
+          expect(['KEEP', 'DELETE']).toContain(p.action.type)
         }
       })
 
@@ -177,7 +181,7 @@ describe('Artifact Registry cleanup policies (#2104)', () => {
           const hasCond = p.condition !== undefined
           const hasRecent = p.mostRecentVersions !== undefined
           expect(hasCond !== hasRecent).toBe(true)
-          if (p.action.type === 'Delete') expect(hasCond).toBe(true)
+          if (p.action.type === 'DELETE') expect(hasCond).toBe(true)
         }
       })
 
@@ -194,19 +198,19 @@ describe('Artifact Registry cleanup policies (#2104)', () => {
             if (c[k] !== undefined) expect(c[k]).toMatch(DURATION_RE)
           }
           if (c.tagPrefixes !== undefined) {
-            expect(c.tagState).toBe('tagged')
+            expect(c.tagState).toBe('TAGGED')
           }
         }
       })
 
       it('keeps the most recent versions and anything tagged deployed-', () => {
         const recent = policies.find(
-          p => p.action.type === 'Keep' && p.mostRecentVersions
+          p => p.action.type === 'KEEP' && p.mostRecentVersions
         )
         expect(recent?.mostRecentVersions?.keepCount).toBeGreaterThanOrEqual(1)
         const deployed = policies.find(
           p =>
-            p.action.type === 'Keep' &&
+            p.action.type === 'KEEP' &&
             (p.condition?.tagPrefixes as string[] | undefined)?.includes(
               'deployed-'
             )
@@ -217,14 +221,14 @@ describe('Artifact Registry cleanup policies (#2104)', () => {
       it('deletes untagged versions only after 7 days', () => {
         const untagged = policies.find(
           p =>
-            p.action.type === 'Delete' && p.condition?.tagState === 'untagged'
+            p.action.type === 'DELETE' && p.condition?.tagState === 'UNTAGGED'
         )
         expect(untagged?.condition?.olderThan).toBe('7d')
       })
 
       it('never deletes anything younger than 7 days', () => {
         for (const p of policies) {
-          if (p.action.type !== 'Delete') continue
+          if (p.action.type !== 'DELETE') continue
           const older = String(p.condition?.olderThan ?? '0d')
           expect(parseInt(older, 10)).toBeGreaterThanOrEqual(7)
         }
