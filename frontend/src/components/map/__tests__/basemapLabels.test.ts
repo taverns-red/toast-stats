@@ -236,6 +236,27 @@ describe('basemap label layers', () => {
     }
   })
 
+  // #2092 — measured on the PR preview over D61 (zooms 6–11, 1280 and 375
+  // px): with only the side rings, Montreal still hid at z8 and z9, where
+  // clusters fill its row and small pins sit above and below. The four
+  // corners let it sit diagonally off the row; with them all 24 checks place.
+  it('lets a city label try the four corners after the sides', () => {
+    const cities = symbolLayers(styleFor('light').layers).find(
+      l => l.id === 'label-cities'
+    )!
+    const offsets = cities.layout!['text-variable-anchor-offset'] as unknown[]
+    const anchors = offsets.filter((_, k) => k % 2 === 0)
+    const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+    expect(anchors.slice(-4)).toEqual(corners)
+    for (let k = 1; k < offsets.length; k += 2) {
+      if (!corners.includes(offsets[k - 1] as string)) continue
+      const [x, y] = offsets[k] as [number, number]
+      // Pushed away from the point on both axes, like the near ring.
+      expect(Math.abs(x)).toBeGreaterThanOrEqual(2.2)
+      expect(Math.abs(y)).toBeGreaterThanOrEqual(2.2)
+    }
+  })
+
   it('uses the app slate inks on the neutral basemap, halo in the land colour', () => {
     // redesign.css --ink-2 / --ink-3, light and [data-theme='dark'] values.
     const INKS = {
