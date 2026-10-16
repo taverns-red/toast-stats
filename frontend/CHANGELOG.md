@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.40.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.39.0...frontend-v3.40.0) (2026-10-16)
+
+
+### Features
+
+* **promo:** show the Red Vote card on phone district pages ([#2090](https://github.com/taverns-red/toast-stats/issues/2090)) ([#2094](https://github.com/taverns-red/toast-stats/issues/2094)) ([306127f](https://github.com/taverns-red/toast-stats/commit/306127f1433ecac7bebf2cf3968d8af083461dfd))
+
+
+### Bug Fixes
+
+* **mobile:** drop the phone Overview Sections list; fix double-active bottom bar ([#2093](https://github.com/taverns-red/toast-stats/issues/2093)) ([#2095](https://github.com/taverns-red/toast-stats/issues/2095)) ([ebabdad](https://github.com/taverns-red/toast-stats/commit/ebabdad31a233f8d561c6ac94ab85b35ed698b89))
+
 ## [3.39.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.38.0...frontend-v3.39.0) (2026-10-16)
 
 
