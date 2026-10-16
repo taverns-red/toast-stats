@@ -302,6 +302,18 @@ export {
   type DistrictRegionHistory,
 } from './schemas/district-region-history.schema.js'
 
+// TI daily-reports vocabulary (#2012): one reading of the sidecar's text
+// cells for the frontend views and the pipeline's reports rollups.
+export {
+  usDateToIso,
+  parseProspectStage,
+  sponsorMentorRole,
+  classifyDuesRenewal,
+  type ParsedProspectStage,
+  type SponsorMentorRole,
+  type DuesRenewalState,
+} from './reports/reportsVocabulary.js'
+
 // Region and world rollups — snapshots/{date}/region-rollups.json (#1799)
 export {
   RegionRollupsSchema,
