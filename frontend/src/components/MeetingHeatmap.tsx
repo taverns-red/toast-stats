@@ -27,7 +27,7 @@ import {
    - Mode switch (All / In person / Online): plain links writing `?mode=`,
      no tabs (ADR-005).
    - Grid: weekday × start hour, intensity = distinct clubs. Days are columns
-     below 768 (so each cell is a ≥44px tap target) and rows from 768. A cell
+     below 1024 (so each cell is a ≥44px tap target) and rows from 1024. A cell
      with clubs is a link writing `?slot=`; every cell prints its count and
      carries a screen-reader value, so colour is never the only signal.
    - The selected cell's clubs, each linked to its club page, and "Show on
@@ -390,16 +390,15 @@ const SelectionPanel: React.FC<{
                 {c.clubName}
               </Link>
               <span className="meetings-selection__meta">
-                {[
-                  ...(isSlot(selection)
-                    ? entriesInSlot(c, selection, mode).map(
-                        describeMeetingEntry
-                      )
-                    : (c.meetingSchedule ?? []).map(describeMeetingEntry)),
-                  [c.divisionName, c.areaName].filter(Boolean).join(' · '),
-                ]
-                  .filter(Boolean)
-                  .join(' — ')}
+                {(isSlot(selection)
+                  ? entriesInSlot(c, selection, mode)
+                  : (c.meetingSchedule ?? [])
+                )
+                  .map(describeMeetingEntry)
+                  .join('; ')}
+              </span>
+              <span className="meetings-selection__meta">
+                {[c.divisionName, c.areaName].filter(Boolean).join(' · ')}
               </span>
             </li>
           ))}

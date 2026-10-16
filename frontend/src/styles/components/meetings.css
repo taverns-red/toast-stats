@@ -6,7 +6,7 @@
    steps is --ink, on the solid step --surface (white in light, near-black
    in dark): ≥4.5:1 in both themes. The count is always printed, so colour
    is never the only signal. Text ≥14px; cells are ≥44px tap targets below
-   768, where days are the columns. */
+   1024, where days are the columns. */
 
 .meetings-page {
   margin-top: 1rem;
@@ -125,10 +125,13 @@
 
 /* ── Grid ──────────────────────────────────────────────────────────── */
 
-/* Phone: days are columns (7 × ≥44px), hours are rows. */
+/* Below 1024: days are columns, hours are rows. At 375 the page's 24px
+   gutter leaves 327px, too narrow for 7 × 44px cells plus the hour column,
+   so on phones the grid runs to 4px from the screen edge (-20px against the
+   24px .district-detail-page padding): 7 × 48px cells at 375. */
 .meeting-grid {
   display: grid;
-  grid-template-columns: 2rem repeat(7, minmax(44px, 1fr));
+  grid-template-columns: 1.75rem repeat(7, minmax(0, 1fr));
   grid-template-rows: 1.75rem;
   grid-auto-rows: 44px;
   margin-top: 0.75rem;
@@ -137,6 +140,12 @@
   border: 1px solid var(--line);
   border-radius: var(--rt-radius-md, 8px);
   overflow: hidden;
+}
+
+@media (max-width: 767px) {
+  .meeting-grid {
+    margin-inline: -20px;
+  }
 }
 
 .meeting-grid__day,
@@ -177,7 +186,8 @@
 }
 
 .meeting-cell--l0 {
-  background: var(--surface-2);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
 }
 .meeting-cell--l1 {
   background:
@@ -219,8 +229,8 @@ a.meeting-cell:hover {
   outline-offset: 2px;
 }
 
-/* ≥768: days are rows, the 24 hours are columns. */
-@media (min-width: 768px) {
+/* ≥1024: days are rows, the 24 hours are columns (cells ≥38px wide). */
+@media (min-width: 1024px) {
   .meeting-grid {
     grid-template-columns: 2.75rem repeat(24, minmax(0, 1fr));
     grid-template-rows: 1.75rem;
