@@ -175,6 +175,12 @@ export function buildMeetingHeatmap(
   }
 }
 
+/** Shade step of a cell: 0 = empty, 1–4 = quartile of the busiest cell. */
+export function intensityLevel(count: number, max: number): number {
+  if (count <= 0 || max <= 0) return 0
+  return Math.min(4, Math.max(1, Math.ceil((count / max) * 4)))
+}
+
 const byName = (a: MeetingClub, b: MeetingClub) =>
   a.clubName.localeCompare(b.clubName, undefined, { sensitivity: 'base' })
 

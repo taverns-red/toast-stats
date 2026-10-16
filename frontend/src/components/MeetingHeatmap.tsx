@@ -11,6 +11,7 @@ import {
   entriesInSlot,
   describeMeetingEntry,
   hourRangeLabel,
+  intensityLevel,
   meetingFilterToken,
   slotKey,
   type MeetingClub,
@@ -50,12 +51,6 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h)
 const pad = (h: number) => String(h).padStart(2, '0')
 const clubsText = (n: number) =>
   n === 0 ? 'no clubs' : n === 1 ? '1 club' : `${n.toLocaleString()} clubs`
-
-/** 0 = empty, 1–4 = quartile of the busiest cell. */
-export function intensityLevel(count: number, max: number): number {
-  if (count <= 0 || max <= 0) return 0
-  return Math.min(4, Math.max(1, Math.ceil((count / max) * 4)))
-}
 
 function useParamHref(): (key: string, value: string | null) => string {
   const [params] = useSearchParams()
