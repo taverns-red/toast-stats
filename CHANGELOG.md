@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.59.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.58.0...toast-stats-v2.59.0) (2026-10-16)
+
+
+### Features
+
+* **clubs:** district meeting-time heatmap ([#1796](https://github.com/taverns-red/toast-stats/issues/1796)) ([#2114](https://github.com/taverns-red/toast-stats/issues/2114)) ([f01cd3a](https://github.com/taverns-red/toast-stats/commit/f01cd3a7de402a9027110286cb5ed24e901f4dd7))
+* **collector:** slim district analytics file — compact, clubId lists ([#1901](https://github.com/taverns-red/toast-stats/issues/1901)) ([#2047](https://github.com/taverns-red/toast-stats/issues/2047)) ([ae11b1d](https://github.com/taverns-red/toast-stats/commit/ae11b1d242dff517c1893c0e701f3d2ef9157130))
+* **dev:** checked-in CDN CORS proxy that forwards Range and streams ([#2106](https://github.com/taverns-red/toast-stats/issues/2106)) ([#2107](https://github.com/taverns-red/toast-stats/issues/2107)) ([5730707](https://github.com/taverns-red/toast-stats/commit/5730707126151365728c691fc7967be9a10a95d0))
+* **map:** Arabic and Hebrew place names on self-hosted glyphs, no RTL plugin needed ([#2085](https://github.com/taverns-red/toast-stats/issues/2085)) ([#2116](https://github.com/taverns-red/toast-stats/issues/2116)) ([9564ed1](https://github.com/taverns-red/toast-stats/commit/9564ed17ac6944127d711b4e86efed98beef49d5))
+* **map:** meeting-day pin mode and Online only attendance ([#1787](https://github.com/taverns-red/toast-stats/issues/1787)) ([#2118](https://github.com/taverns-red/toast-stats/issues/2118)) ([ece55d6](https://github.com/taverns-red/toast-stats/commit/ece55d6e6a332cf9aeba2c03c1d136531d6dd1d9))
+
+
+### Bug Fixes
+
+* **map:** city labels step clear of large pin clusters ([#2092](https://github.com/taverns-red/toast-stats/issues/2092)) ([#2111](https://github.com/taverns-red/toast-stats/issues/2111)) ([c120c06](https://github.com/taverns-red/toast-stats/commit/c120c06329808a6a5855f0cc1e58bfe2a6ee54b4))
+* **map:** pin outline and halo use the app palette ([#2087](https://github.com/taverns-red/toast-stats/issues/2087)) ([#2113](https://github.com/taverns-red/toast-stats/issues/2113)) ([ba231de](https://github.com/taverns-red/toast-stats/commit/ba231dea472a6ed3e4732588a60827f3bc5bc927))
+* **privacy:** reports place text loses links and emails; contact-strip never deletes a required key ([#2097](https://github.com/taverns-red/toast-stats/issues/2097)) ([#2099](https://github.com/taverns-red/toast-stats/issues/2099)) ([0f9f49b](https://github.com/taverns-red/toast-stats/commit/0f9f49b0a3757af4693da85fe0854f494e7df182))
+* **time-series:** a [#1671](https://github.com/taverns-red/toast-stats/issues/1671) gap date gets no point, recorded as not measured, never 0 ([#2070](https://github.com/taverns-red/toast-stats/issues/2070)) ([#2072](https://github.com/taverns-red/toast-stats/issues/2072)) ([2ac486d](https://github.com/taverns-red/toast-stats/commit/2ac486d8de95564d0a2120e52603ea9f7e033b7d))
+
+
+### Refactors
+
+* **history:** fold [#2060](https://github.com/taverns-red/toast-stats/issues/2060)'s shard reader into the [#2059](https://github.com/taverns-red/toast-stats/issues/2059) reader ([#2073](https://github.com/taverns-red/toast-stats/issues/2073)) ([#2115](https://github.com/taverns-red/toast-stats/issues/2115)) ([5926691](https://github.com/taverns-red/toast-stats/commit/592669156acdeffe3616e08496adfe5241d386fd))
+
+
+### Continuous Integration
+
+* run preview smoke and Lighthouse once the PR is ready ([#2101](https://github.com/taverns-red/toast-stats/issues/2101)) ([#2105](https://github.com/taverns-red/toast-stats/issues/2105)) ([43dcdce](https://github.com/taverns-red/toast-stats/commit/43dcdcede8e9d3d4c1abe366a7d994c3c9798dff))
+
 ## [2.58.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.57.0...toast-stats-v2.58.0) (2026-10-16)
 
 
