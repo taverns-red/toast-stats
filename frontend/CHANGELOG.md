@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.39.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.38.0...frontend-v3.39.0) (2026-10-16)
+
+
+### Features
+
+* **map:** labelled basemap context, zoom-banded, on self-hosted glyphs ([#2081](https://github.com/taverns-red/toast-stats/issues/2081)) ([#2082](https://github.com/taverns-red/toast-stats/issues/2082)) ([6f394ac](https://github.com/taverns-red/toast-stats/commit/6f394ac7682dff5422429f19e946a279406d68c5))
+* **map:** world z0–14 basemap with street names and a restrained POI set ([#2084](https://github.com/taverns-red/toast-stats/issues/2084), [#2081](https://github.com/taverns-red/toast-stats/issues/2081)) ([#2089](https://github.com/taverns-red/toast-stats/issues/2089)) ([3c01be5](https://github.com/taverns-red/toast-stats/commit/3c01be5d4a08065be599359a9d1437ff166b7dfb))
+* **promo:** promote Red Vote on district-level pages ([#2090](https://github.com/taverns-red/toast-stats/issues/2090)) ([#2091](https://github.com/taverns-red/toast-stats/issues/2091)) ([a6e8bd9](https://github.com/taverns-red/toast-stats/commit/a6e8bd9fcfdaadc14b448fcee6b22b927a28dfb2))
+
+
+### Bug Fixes
+
+* **ui:** new pages match the existing app palette, no --rt-stats amber ([#2080](https://github.com/taverns-red/toast-stats/issues/2080)) ([#2083](https://github.com/taverns-red/toast-stats/issues/2083)) ([418f2db](https://github.com/taverns-red/toast-stats/commit/418f2db71eecf288db4a5a1de26d2a0eb9bcd48d))
+
 ## [3.38.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.37.0...frontend-v3.38.0) (2026-10-15)
 
 
