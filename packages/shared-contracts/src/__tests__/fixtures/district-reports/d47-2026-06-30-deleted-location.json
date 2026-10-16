@@ -1,0 +1,68 @@
+{
+  "districtId": "47",
+  "programYear": "2025-2026",
+  "generatedAt": "2026-09-01T12:26:39.177Z",
+  "sections": {
+    "educationAchievements": {
+      "sources": [
+        {
+          "reportType": "education-archive",
+          "tableId": "a30b93f3-081e-42c8-9a36-137acb24be69",
+          "asOf": ""
+        }
+      ],
+      "records": [
+        {
+          "club": "9000001",
+          "division": "A",
+          "area": "10",
+          "name": "Club 9000001",
+          "location": "Redacted Place 1",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "9000001",
+          "division": "A",
+          "area": "10",
+          "name": "Club 9000001",
+          "location": "Redacted Place 2",
+          "award": "VC1Visionary Communication Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "9000002",
+          "division": "A",
+          "area": "12",
+          "name": "Club 9000002",
+          "award": "PM4Presentation Mastery Level 4",
+          "achievementCount": 2
+        },
+        {
+          "club": "9000002",
+          "division": "A",
+          "area": "12",
+          "name": "Club 9000002",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 4
+        },
+        {
+          "club": "9000002",
+          "division": "A",
+          "area": "12",
+          "name": "Club 9000002",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 3
+        },
+        {
+          "club": "9000002",
+          "division": "A",
+          "area": "12",
+          "name": "Club 9000002",
+          "award": "PM3Presentation Mastery Level 3",
+          "achievementCount": 2
+        }
+      ]
+    }
+  }
+}
