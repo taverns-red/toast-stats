@@ -15,7 +15,7 @@ import {
   fetchCdnDivisionsAreasIndex,
   fetchCdnSnapshotIndex,
 } from '../../services/cdn'
-import { fetchClubDistrictHistoryShard } from '../../services/clubDistrictHistory'
+import { fetchClubDistrictHistoryShard } from '../../services/cdnClubDistrictHistory'
 import shardFixture from '../../__tests__/fixtures/club-district-history-shard-77.recorded.json'
 
 vi.mock('../../services/cdn', () => ({
@@ -28,7 +28,7 @@ vi.mock('../../services/cdn', () => ({
 }))
 
 // The club-district history (#1806) — a club-index miss reads one shard.
-vi.mock('../../services/clubDistrictHistory', () => ({
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
   fetchClubDistrictHistoryShard: vi.fn(),
 }))
 const mockedShard = vi.mocked(fetchClubDistrictHistoryShard)
@@ -237,7 +237,7 @@ describe('useOmniSearch closed-club fallback (#1806)', () => {
   })
 
   it('a failed shard fetch leaves search unchanged', async () => {
-    mockedShard.mockRejectedValue(new Error('CDN 404'))
+    mockedShard.mockResolvedValue(null) // the reader's "not available"
     const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
       wrapper,
     })

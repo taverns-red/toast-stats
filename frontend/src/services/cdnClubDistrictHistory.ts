@@ -52,9 +52,13 @@ export function fetchClubDistrictHistoryIndex(): Promise<ClubDistrictHistoryInde
   })
 }
 
+/** A shard key is two digits; anything else never reaches a URL. */
+const SHARD_KEY = /^\d{2}$/
+
 export function fetchClubDistrictHistoryShard(
   shard: string
 ): Promise<ClubDistrictHistoryShard | null> {
+  if (!SHARD_KEY.test(shard)) return Promise.resolve(null)
   return fetchParsed(cdnClubDistrictHistoryShardUrl(shard), body => {
     const parsed = ClubDistrictHistoryShardSchema.safeParse(body)
     // A shard served under another key would mis-assign its clubs.

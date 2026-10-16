@@ -4,10 +4,11 @@ import type {
   ClubDistrictHistoryIndex,
   ClubDistrictHistoryShard,
 } from '@taverns-red/shared-contracts'
+import { fetchClubDistrictHistoryIndex } from '../services/cdnClubDistrictHistory'
 import {
-  fetchClubDistrictHistoryIndex,
-  fetchClubDistrictHistoryShard,
-} from '../services/cdnClubDistrictHistory'
+  CLUB_DISTRICT_HISTORY_STALE_MS as STALE_MS,
+  clubDistrictHistoryShardQuery,
+} from './clubDistrictHistoryQuery'
 
 /* #1817 — the whole club-district history (#1782): the index, then every
    shard it names (100, ~1.2 MB over the wire in total, edge-compressed).
@@ -30,8 +31,6 @@ export interface ClubDistrictHistoryState {
   index: ClubDistrictHistoryIndex | null
   clubs: Record<string, ClubDistrictHistoryClub> | null
 }
-
-const STALE_MS = 15 * 60 * 1000
 
 interface ShardsResult {
   loaded: number
@@ -67,11 +66,7 @@ export function useClubDistrictHistory(): ClubDistrictHistoryState {
   const shardKeys = index?.shards ?? []
 
   const shards = useQueries({
-    queries: shardKeys.map(key => ({
-      queryKey: ['club-district-history', 'shard', key],
-      queryFn: () => fetchClubDistrictHistoryShard(key),
-      staleTime: STALE_MS,
-    })),
+    queries: shardKeys.map(clubDistrictHistoryShardQuery),
     combine: combineShards,
   })
 

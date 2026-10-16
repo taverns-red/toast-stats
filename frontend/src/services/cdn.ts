@@ -740,11 +740,6 @@ export async function fetchCdnClubIndex(): Promise<{
   return res.json()
 }
 
-/** One shard of the club-district history (#1782): `config/club-district-history/{NN}.json`. */
-export function cdnClubDistrictHistoryShardUrl(shardKey: string): string {
-  return `${cdnBaseUrl()}/config/club-district-history/${shardKey}.json`
-}
-
 /** Shape of config/divisions-areas-index.json (#1134, epic #1101). */
 export interface CdnDivisionsAreasIndexData {
   generatedAt: string
