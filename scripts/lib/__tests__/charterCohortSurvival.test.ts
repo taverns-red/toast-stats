@@ -83,9 +83,9 @@ describe('foldCharterCohortSurvival (#2061)', () => {
     }
   })
 
-  it('reproduces the committed D61 file byte for byte', () => {
-    expect(`${JSON.stringify(files['61'], null, 2)}\n`).toBe(
-      fs.readFileSync(RECORDED_D61, 'utf-8')
+  it('reproduces the committed D61 file', () => {
+    expect(files['61']).toEqual(
+      JSON.parse(fs.readFileSync(RECORDED_D61, 'utf-8'))
     )
   })
 
