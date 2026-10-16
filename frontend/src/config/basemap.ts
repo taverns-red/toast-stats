@@ -13,6 +13,10 @@
 export const BASEMAP_OBJECT_PATH =
   'basemap/protomaps-v4/world-z0-10-20261011.pmtiles'
 
+/** The archive's highest zoom (the `z0-<n>` in its name). MapLibre
+ * over-zooms its tiles beyond it. */
+export const BASEMAP_MAX_ZOOM = 10
+
 const DEFAULT_CDN_BASE_URL = 'https://cdn.taverns.red'
 
 export function resolveBasemapUrl(

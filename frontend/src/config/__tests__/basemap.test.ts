@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { BASEMAP_OBJECT_PATH, resolveBasemapUrl } from '../basemap'
+import {
+  BASEMAP_MAX_ZOOM,
+  BASEMAP_OBJECT_PATH,
+  resolveBasemapUrl,
+} from '../basemap'
 
 /* #1786 — where the basemap lives. The object sits on the same bucket/CDN as
  * the data, so a preview build (staging bucket base) and a prod build
@@ -34,7 +38,18 @@ describe('resolveBasemapUrl', () => {
 
   it('names an immutable, versioned object (never overwritten in place)', () => {
     expect(BASEMAP_OBJECT_PATH).toMatch(
-      /^basemap\/protomaps-v4\/world-z0-10-\d{8}\.pmtiles$/
+      /^basemap\/protomaps-v4\/world-z0-\d{1,2}-\d{8}\.pmtiles$/
     )
+  })
+
+  it('reads the world z0–14 archive (#2084), whose max zoom it declares', () => {
+    expect(BASEMAP_OBJECT_PATH).toBe(
+      'basemap/protomaps-v4/world-z0-14-20261015.pmtiles'
+    )
+    // The source's maxzoom must match the archive, or MapLibre asks for
+    // tiles the archive does not have (blank) instead of over-zooming.
+    const [, z] = BASEMAP_OBJECT_PATH.match(/world-z0-(\d+)-/)!
+    expect(Number(z)).toBe(BASEMAP_MAX_ZOOM)
+    expect(BASEMAP_MAX_ZOOM).toBe(14)
   })
 })
