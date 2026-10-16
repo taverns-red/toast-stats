@@ -8,7 +8,9 @@
  * (the overlay is applied at read time in Sprint 4). The new file is purely
  * additive, so it auto-promotes through the ADR-002 staging→diff→promote gate.
  *
- * The dataset is schema-validated before any bytes are written (a malformed
+ * Place text is scrubbed of links and emails first (#2097): every writer of
+ * this file comes through here, including the archive backfill's merge of an
+ * existing file. The dataset is then schema-validated before any bytes are written (a malformed
  * dataset must not reach GCS), and the district id is validated against path
  * traversal before it is interpolated into the file path (active tripwire:
  * never `path.join` raw input).
@@ -19,6 +21,7 @@ import * as path from 'node:path'
 
 import {
   DistrictReportsDatasetSchema,
+  scrubReportsPlaceText,
   type DistrictReportsDataset,
 } from '@taverns-red/shared-contracts'
 
@@ -42,7 +45,9 @@ export async function writeDistrictReports(
 ): Promise<string> {
   validateDistrictId(dataset.districtId)
 
-  const parsed = DistrictReportsDatasetSchema.safeParse(dataset)
+  const parsed = DistrictReportsDatasetSchema.safeParse(
+    scrubReportsPlaceText(dataset)
+  )
   if (!parsed.success) {
     throw new Error(
       `writeDistrictReports: dataset failed schema validation: ${parsed.error.message}`

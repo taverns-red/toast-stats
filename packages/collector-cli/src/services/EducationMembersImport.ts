@@ -29,6 +29,7 @@ import { parse } from 'csv-parse/sync'
 import {
   DistrictReportsDatasetSchema,
   isCountedEducationAward,
+  repairReportsPlaceText,
 } from '@taverns-red/shared-contracts'
 
 import { validateDistrictId } from '../utils/validateDistrictId.js'
@@ -286,7 +287,9 @@ export async function importEducationMembers(
     )
   }
 
-  const updated = {
+  // No link or email survives in place text, even one the existing file
+  // carried (#2097); the scrub changes nothing else.
+  const updated = repairReportsPlaceText({
     ...existing,
     sections: {
       ...existing.sections,
@@ -301,7 +304,7 @@ export async function importEducationMembers(
         records,
       },
     },
-  }
+  }).value
   const valid = DistrictReportsDatasetSchema.safeParse(updated)
   if (!valid.success) {
     throw new Error(

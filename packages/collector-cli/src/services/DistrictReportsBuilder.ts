@@ -16,17 +16,21 @@
  *
  *   - **Sponsors/Mentors counts** (#1795) — the person `Name` is dropped at
  *     parse; rows collapse to one count per (club, code, status).
+ *   - **No link in place text** (#2097) — every section's `location` loses
+ *     any link or email (`scrubReportsPlaceText`); one that was only a link
+ *     becomes `''`, so the required key stays.
  *
  * No I/O, no pipeline wiring (that is the writer / orchestrator step).
  */
 
-import type {
-  CoachRecord,
-  DistrictReportsDataset,
-  DistrictReportsSections,
-  OfficerListRecord,
-  ReportSource,
-  SponsorMentorRecord,
+import {
+  scrubReportsPlaceText,
+  type CoachRecord,
+  type DistrictReportsDataset,
+  type DistrictReportsSections,
+  type OfficerListRecord,
+  type ReportSource,
+  type SponsorMentorRecord,
 } from '@taverns-red/shared-contracts'
 
 import {
@@ -324,10 +328,10 @@ export function buildDistrictReports(
     }
   }
 
-  return {
+  return scrubReportsPlaceText({
     districtId: input.districtId,
     programYear: input.programYear,
     generatedAt: input.generatedAt,
     sections,
-  }
+  })
 }
