@@ -1,0 +1,73 @@
+[
+  {
+    "name": "keep-most-recent",
+    "action": {
+      "type": "KEEP"
+    },
+    "mostRecentVersions": {
+      "keepCount": 20
+    }
+  },
+  {
+    "name": "keep-deployed",
+    "action": {
+      "type": "KEEP"
+    },
+    "condition": {
+      "tagState": "TAGGED",
+      "tagPrefixes": ["deployed-"]
+    }
+  },
+  {
+    "name": "keep-release-tags",
+    "action": {
+      "type": "KEEP"
+    },
+    "condition": {
+      "tagState": "TAGGED",
+      "tagPrefixes": ["red-vote-v"]
+    }
+  },
+  {
+    "name": "keep-env-tags",
+    "action": {
+      "type": "KEEP"
+    },
+    "condition": {
+      "tagState": "TAGGED",
+      "tagPrefixes": ["latest", "staging"],
+      "newerThan": "90d"
+    }
+  },
+  {
+    "name": "delete-untagged",
+    "action": {
+      "type": "DELETE"
+    },
+    "condition": {
+      "tagState": "UNTAGGED",
+      "olderThan": "7d"
+    }
+  },
+  {
+    "name": "delete-pr-previews",
+    "action": {
+      "type": "DELETE"
+    },
+    "condition": {
+      "tagState": "TAGGED",
+      "tagPrefixes": ["pr-"],
+      "olderThan": "14d"
+    }
+  },
+  {
+    "name": "delete-stale",
+    "action": {
+      "type": "DELETE"
+    },
+    "condition": {
+      "tagState": "ANY",
+      "olderThan": "30d"
+    }
+  }
+]

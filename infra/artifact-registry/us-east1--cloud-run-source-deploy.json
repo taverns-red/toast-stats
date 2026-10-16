@@ -1,0 +1,41 @@
+[
+  {
+    "name": "keep-most-recent",
+    "action": {
+      "type": "KEEP"
+    },
+    "mostRecentVersions": {
+      "keepCount": 2
+    }
+  },
+  {
+    "name": "keep-deployed",
+    "action": {
+      "type": "KEEP"
+    },
+    "condition": {
+      "tagState": "TAGGED",
+      "tagPrefixes": ["deployed-"]
+    }
+  },
+  {
+    "name": "delete-untagged",
+    "action": {
+      "type": "DELETE"
+    },
+    "condition": {
+      "tagState": "UNTAGGED",
+      "olderThan": "7d"
+    }
+  },
+  {
+    "name": "delete-stale",
+    "action": {
+      "type": "DELETE"
+    },
+    "condition": {
+      "tagState": "ANY",
+      "olderThan": "30d"
+    }
+  }
+]
