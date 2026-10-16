@@ -140,6 +140,18 @@ export const ProgramYearIndexFileSchema = z.object({
 
   /** Pre-computed summary statistics for this program year */
   summary: ProgramYearSummarySchema,
+
+  /**
+   * Dates the district was not measured: a #1671 source gap recorded in the
+   * date's snapshot metadata. No data point exists for them (#2070).
+   */
+  sourceGapDates: z
+    .array(
+      z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    )
+    .optional(),
 })
 
 /**

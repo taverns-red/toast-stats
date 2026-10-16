@@ -468,6 +468,11 @@ function lastPointDate(value: unknown): string | null {
  * one-point overwrite, or a store that lost points). Equal is fine: a run
  * that added no point (holiday, TI-footer lag, #1681) rewrites the same
  * last point. A prod copy that is itself unreadable is not compared.
+ *
+ * A date in `sourceGapDates` is accounted for (#2070): a #1671 gap date's 0
+ * point was removed and the date recorded, so the file's last accounted-for
+ * date is the later of its last point and its last gap date, and a file of
+ * gap dates only has no point to end in.
  */
 function checkProgramYear(
   value: unknown,
@@ -479,15 +484,27 @@ function checkProgramYear(
   }
   const points = parsed.data.dataPoints
   const last = points[points.length - 1]
-  if (last === undefined) return 'no data points — the file has no last point'
-  if (calendarDate(last.date) === null) {
+  const gapDates = parsed.data.sourceGapDates ?? []
+  const invalidGap = gapDates.find(d => calendarDate(d) === null)
+  if (invalidGap !== undefined) {
+    return `sourceGapDates has an invalid date: ${JSON.stringify(invalidGap)}`
+  }
+  const lastGap = [...gapDates].sort().pop()
+  if (last === undefined && lastGap === undefined) {
+    return 'no data points — the file has no last point'
+  }
+  if (last !== undefined && calendarDate(last.date) === null) {
     return `last data point has an invalid date: ${JSON.stringify(last.date)}`
   }
+  const lastAccounted = [last?.date, lastGap]
+    .filter((d): d is string => d !== undefined)
+    .sort()
+    .pop()!
   if (prod) {
     const decodedProd = decodeStoredObject(prod)
     const prodLast = decodedProd.ok ? lastPointDate(decodedProd.value) : null
-    if (prodLast !== null && last.date < prodLast) {
-      return `last data point ${last.date} is older than production's ${prodLast}`
+    if (prodLast !== null && lastAccounted < prodLast) {
+      return `last data point ${last?.date ?? '(none)'} is older than production's ${prodLast}`
     }
   }
   return null

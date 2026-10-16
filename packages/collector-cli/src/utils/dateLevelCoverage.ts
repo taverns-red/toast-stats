@@ -111,3 +111,34 @@ export async function recordedFailureReasons(
   }
   return reasons
 }
+
+/**
+ * The districts a snapshot date's `metadata.json` records as a #1671 source
+ * gap: listed in `failedDistricts`, not in `successfulDistricts`, with an
+ * `errors[]` entry `"<id>: Skipped: …"`. TransformService gives no other
+ * failure that prefix (#2035); the same rule as `scripts/lib/sourceGap.ts`
+ * (#2038). A failure without a gap reason is not a gap: its district may have
+ * been measured by an earlier run, and that point must stand (#2070).
+ */
+export async function recordedSourceGapDistricts(
+  snapshotDir: string
+): Promise<string[]> {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(
+      await fs.readFile(path.join(snapshotDir, 'metadata.json'), 'utf-8')
+    )
+  } catch {
+    return []
+  }
+  if (typeof parsed !== 'object' || parsed === null) return []
+  const record = parsed as Record<string, unknown>
+  const strings = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : []
+  const successful = new Set(strings(record['successfulDistricts']))
+  const errors = strings(record['errors'])
+  return [...new Set(strings(record['failedDistricts']))].filter(
+    id =>
+      !successful.has(id) && errors.some(e => e.startsWith(`${id}: Skipped: `))
+  )
+}

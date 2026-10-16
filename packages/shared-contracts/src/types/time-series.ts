@@ -100,6 +100,14 @@ export interface ProgramYearIndexFile {
   dataPoints: TimeSeriesDataPoint[]
   /** Pre-computed summary statistics for this program year */
   summary: ProgramYearSummary
+  /**
+   * Dates in this program year the district was not measured: the date's
+   * snapshot `metadata.json` records it as a #1671 source gap (its club
+   * report was TI's HTML error page). No data point exists for these dates,
+   * never a 0 one, so a chart shows a gap rather than a dip (#2070). Absent
+   * when the year has no such date. Sorted, unique, YYYY-MM-DD.
+   */
+  sourceGapDates?: string[]
 }
 
 /**

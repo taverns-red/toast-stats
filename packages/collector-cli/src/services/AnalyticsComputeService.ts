@@ -66,6 +66,7 @@ import {
   missingDistricts as unrecordedDistricts,
   recordedFailedDistricts,
   recordedFailureReasons,
+  recordedSourceGapDistricts,
 } from '../utils/dateLevelCoverage.js'
 import type { CacheMetadata } from '../types/collector.js'
 import {
@@ -735,6 +736,37 @@ export class AnalyticsComputeService {
   }
 
   /**
+   * Mark every #1671 source-gap district of `snapshotDate` as not measured in
+   * its time series (#2070): drop that date's point, if any, and record the
+   * date in the program-year file's `sourceGapDates`. A district with no
+   * series file gets none created. Failures are returned, not thrown.
+   */
+  private async recordTimeSeriesSourceGaps(snapshotDate: string): Promise<{
+    districts: string[]
+    failed: Array<{ districtId: string; error: string }>
+  }> {
+    const districts = await recordedSourceGapDistricts(
+      this.getSnapshotDir(snapshotDate)
+    )
+    const failed: Array<{ districtId: string; error: string }> = []
+    for (const districtId of districts) {
+      try {
+        const changed = await this.timeSeriesWriter.recordSourceGap(
+          districtId,
+          snapshotDate
+        )
+        if (changed) await this.timeSeriesWriter.updateMetadata(districtId)
+      } catch (error) {
+        failed.push({
+          districtId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+    }
+    return { districts, failed }
+  }
+
+  /**
    * Discover available districts from snapshot directory
    */
   async discoverAvailableDistricts(date: string): Promise<string[]> {
@@ -1367,10 +1399,25 @@ export class AnalyticsComputeService {
       })
     }
 
+    // A #1671 source-gap district was not measured on this date, so its
+    // series gets no point here, never a 0 one (#2070). An earlier run's 0
+    // point (or one just built from a stale 0-club district file) is removed
+    // and the date is recorded as not measured. Same failure rule (#1702).
+    const sourceGaps = await this.recordTimeSeriesSourceGaps(snapshotDate)
+    for (const failure of sourceGaps.failed) {
+      timeSeriesFailed.push(failure.districtId)
+      errors.push({
+        districtId: failure.districtId,
+        error: `Failed to record time-series source gap: ${failure.error}`,
+        timestamp: new Date().toISOString(),
+      })
+    }
+
     // Store write counters for the step summary (#1708)
     const computed = results.filter(r => !r.skipped)
     const timeSeriesWritten = computed
       .filter(r => r.timeSeriesWritten === true)
+      .filter(r => !sourceGaps.districts.includes(r.districtId))
       .map(r => r.districtId)
     const clubTrendsUpdated = computed
       .filter(r => r.clubTrendsUpdated === true)
