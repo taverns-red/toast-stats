@@ -32,6 +32,7 @@ import {
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
   clubDistrictHistoryShardKey,
+  CharterCohortSurvivalFileSchema,
   DistrictRegionHistorySchema,
   findClubContactField,
   ProgramYearIndexFileSchema,
@@ -82,6 +83,7 @@ export type ObjectKind =
   | 'district-region-history'
   | 'club-district-history-index'
   | 'club-district-history-shard'
+  | 'charter-cohort-survival'
   | 'region-rollups'
   | 'clubs-by-region-shard'
   | 'clubs-by-region-world'
@@ -159,6 +161,9 @@ export const REGION_HISTORY_PATH = 'config/district-region-history.json'
 export const CLUB_HISTORY_DIR = 'config/club-district-history/'
 export const CLUB_HISTORY_INDEX_PATH = `${CLUB_HISTORY_DIR}index.json`
 const CLUB_HISTORY_SHARD = /^config\/club-district-history\/(\d{2})\.json$/
+/** One district's charter cohort survival file (#2061). */
+const CHARTER_SURVIVAL =
+  /^config\/charter-cohort-survival\/district_([A-Za-z0-9]+)\.json$/
 
 /** The shard keys in a listing (`config/club-district-history/NN.json`), sorted. */
 export function clubHistoryShardKeys(names: Iterable<string>): string[] {
@@ -186,6 +191,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
   if (CLUB_HISTORY_SHARD.test(path)) return 'club-district-history-shard'
+  if (CHARTER_SURVIVAL.test(path)) return 'charter-cohort-survival'
   if (path === LATEST_PATH) return 'latest'
   return 'json'
 }
@@ -270,6 +276,9 @@ function sample<T extends { path: string }>(
  * - the club-district history index and every changed shard (#1782): at
  *   most 101 small objects (~9 MB raw in all), and a broken shard is a
  *   broken club page for 1% of clubs, so none is sampled out;
+ * - every changed charter cohort survival file (#2061): one small object
+ *   per district (~2 KB gzip each), and a broken one is a broken survival
+ *   page for that district;
  * - a random sample of everything else (older program years, district
  *   snapshots, analytics, club stores), D61 always included.
  */
@@ -308,6 +317,7 @@ export function planContentChecks(
       c.kind === 'district-region-history' ||
       c.kind === 'club-district-history-index' ||
       c.kind === 'club-district-history-shard' ||
+      c.kind === 'charter-cohort-survival' ||
       c.kind === 'region-rollups' ||
       c.kind === 'clubs-by-region-shard' ||
       c.kind === 'clubs-by-region-world' ||
@@ -657,6 +667,28 @@ function checkClubHistoryShard(path: string, value: unknown): string | null {
     : `club ${stray} belongs in shard ${clubDistrictHistoryShardKey(stray)}, not ${key}`
 }
 
+/**
+ * config/charter-cohort-survival/district_<id>.json (#2061): the schema, the
+ * district it names equal to the one in its path (the page reads it by
+ * path), and curves for every program year it lists (the page looks one up).
+ */
+function checkCharterSurvival(path: string, value: unknown): string | null {
+  const parsed = CharterCohortSurvivalFileSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const id = CHARTER_SURVIVAL.exec(path)?.[1]
+  if (parsed.data.districtId !== id) {
+    return `holds district ${parsed.data.districtId} but is served as district_${id}.json`
+  }
+  const missing = parsed.data.programYears.filter(
+    py => !parsed.data.byThroughProgramYear[py]
+  )
+  return missing.length === 0
+    ? null
+    : `no curves through ${missing.join(', ')}, which it lists`
+}
+
 /** Every count of a block, flattened, for the world = Σ districts check. */
 function figureCounts(f: RegionRollupFigures): Array<[string, number | null]> {
   const out: Array<[string, number | null]> = [
@@ -930,6 +962,8 @@ export function checkObject(
       return checkClubHistoryIndex(value, ctx)
     case 'club-district-history-shard':
       return checkClubHistoryShard(check.path, value)
+    case 'charter-cohort-survival':
+      return checkCharterSurvival(check.path, value)
     case 'region-rollups':
       return checkRegionRollups(check.path, value)
     case 'clubs-by-region-shard':

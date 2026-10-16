@@ -19,7 +19,10 @@
  *        `-Z` object's bytes as stored; 588 inflates one layer);
  *     3. fold both and write `<out>/club-district-history/{NN,index}.json`
  *        and `<out>/district-region-history.json` (compact JSON) for
- *        scripts/pipeline/build-identity-history.sh to upload.
+ *        scripts/pipeline/build-identity-history.sh to upload;
+ *     4. fold the club history once more into one
+ *        `<out>/charter-cohort-survival/district_<id>.json` per district
+ *        (#2061), the survival page's curves.
  *
  * Decision logic is unit-tested in scripts/lib/__tests__/
  * {clubDistrictHistory,districtRegionHistory}.test.ts. Logs go to stderr;
@@ -39,6 +42,7 @@ import {
   type ClubRaceStoreData,
 } from '@taverns-red/shared-contracts'
 import { foldClubDistrictHistory } from './lib/clubDistrictHistory.js'
+import { foldCharterCohortSurvival } from './lib/charterCohortSurvival.js'
 import {
   foldDistrictRegionHistory,
   selectRegionSourceDates,
@@ -133,6 +137,11 @@ function build(): void {
 
   const clubs = foldClubDistrictHistory(stores)
   const regions = foldDistrictRegionHistory(sources)
+  const survival = foldCharterCohortSurvival(clubs, id =>
+    log(
+      `::warning::build-identity-history: district id '${id}' cannot name a survival file; skipped`
+    )
+  )
 
   const encode = (value: unknown): Buffer =>
     Buffer.from(JSON.stringify(value), 'utf-8')
@@ -157,6 +166,20 @@ function build(): void {
     )
   }
   writeClub('index.json', clubs.index)
+
+  const survivalDir = path.join(outDir, 'charter-cohort-survival')
+  fs.mkdirSync(survivalDir, { recursive: true })
+  let survivalRawBytes = 0
+  let survivalGzipBytes = 0
+  let survivalMaxGzipBytes = 0
+  for (const [id, file] of Object.entries(survival)) {
+    const body = encode(file)
+    fs.writeFileSync(path.join(survivalDir, `district_${id}.json`), body)
+    const gz = gzipSync(body).length
+    survivalRawBytes += body.length
+    survivalGzipBytes += gz
+    survivalMaxGzipBytes = Math.max(survivalMaxGzipBytes, gz)
+  }
 
   const regionBody = encode(regions)
   fs.writeFileSync(
@@ -183,6 +206,12 @@ function build(): void {
         rawBytes,
         gzipBytes,
         maxShardGzipBytes,
+      },
+      charterCohortSurvival: {
+        districts: Object.keys(survival).length,
+        rawBytes: survivalRawBytes,
+        gzipBytes: survivalGzipBytes,
+        maxGzipBytes: survivalMaxGzipBytes,
       },
       districtRegionHistory: {
         asOf: regions.asOf,
