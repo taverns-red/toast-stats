@@ -115,6 +115,9 @@ const CLUBS: ClubTrend[] = [
     areaId: '12',
     areaName: 'Area 12',
     distinguishedLevel: 'Distinguished',
+    meetingSchedule: [
+      { day: 'Wednesday', cadence: 'weekly', startTime: '19:30' },
+    ],
   }),
   club({
     clubId: '103',
@@ -638,6 +641,18 @@ describe('DistrictMapPage — filters (#1788)', () => {
           .getAllByRole('link')
           .map(a => a.textContent)
       ).toEqual([expect.stringContaining('Alpha Speakers')])
+    )
+  })
+
+  it('?meets= (the meeting heatmap link) keeps the clubs in that slot (#1796)', async () => {
+    renderAt('/district/61/map?view=list&meets=wed-19')
+    const list = await screen.findByRole('list', { name: /Clubs/ })
+    await vi.waitFor(() =>
+      expect(
+        within(list)
+          .getAllByRole('link')
+          .map(a => a.textContent)
+      ).toEqual([expect.stringContaining('Beta Orators')])
     )
   })
 

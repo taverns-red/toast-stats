@@ -18,6 +18,11 @@ import { normalizeClubId } from '@taverns-red/shared-contracts'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import type { FilterSheetFacet } from '../filters/FilterSheet'
 import { fetchCdnDistrictSnapshot } from '../../services/cdn'
+import {
+  WEEKDAYS,
+  describeMeetingFilter,
+  matchesMeetingFilter,
+} from '../../utils/meetingHeatmap'
 import type { SnapshotDate } from '../../types/snapshotDate'
 import {
   currentRoundVisitFields,
@@ -108,6 +113,11 @@ export function applyMapFilters(
   }
   if (params.get('online') === ONLINE)
     out = out.filter(c => c.allowsVirtualAttendance === true)
+  // `?meets=` (#1796): the heatmap's own predicate, so the map shows exactly
+  // the clubs a cell lists. OR within; a garbage token matches nothing.
+  const meets = values(params, 'meets')
+  if (meets.length > 0)
+    out = out.filter(c => meets.some(t => matchesMeetingFilter(c, t)))
   return out
 }
 
@@ -124,12 +134,25 @@ export function setMapFilter(
   return out
 }
 
-/** "Clear all": the four filter keys, in one write; mode, legend facets
+/** "Clear all": the filter keys, in one write; mode, legend facets
  *  and the view stay. */
 export function clearMapFilters(params: URLSearchParams): URLSearchParams {
   const out = new URLSearchParams(params)
   for (const k of MAP_FILTER_PARAMS) out.delete(k)
   return out
+}
+
+const DAY_TOKENS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+/** The weekdays, then any selected heatmap slot (`wed-19-online`) by name
+ *  so it can be seen and cleared. */
+function meetsOptions(selected: readonly string[]) {
+  const days = WEEKDAYS.map((day, i) => ({ value: DAY_TOKENS[i]!, label: day }))
+  const slots = selected
+    .filter(t => !DAY_TOKENS.includes(t))
+    .map(t => ({ value: t, label: describeMeetingFilter(t) }))
+    .filter((o): o is { value: string; label: string } => o.label !== null)
+  return [...days, ...slots]
 }
 
 const distinct = (xs: Iterable<string>) =>
@@ -177,5 +200,6 @@ export function mapFilterFacets(
       named(distinct(clubs.map(c => c.divisionName)))
     ),
     facet('areas', 'Area', named(areaOptions)),
+    facet('meets', 'Meets on', meetsOptions(values(params, 'meets'))),
   ]
 }

@@ -378,6 +378,8 @@ export const MAP_FILTER_PARAMS = [
   'online',
   'divisions',
   'areas',
+  // Meeting day / slot (#1796): the meeting heatmap's "Show on the map".
+  'meets',
 ] as const
 export type MapFilterParam = (typeof MAP_FILTER_PARAMS)[number]
 

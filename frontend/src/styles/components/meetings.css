@@ -1,0 +1,407 @@
+/* District meeting-time heatmap (#1796, epic #1781). Existing app palette
+   only (#2080): intensity is --tm-loyal-blue at its -10/-30/-50 opacity
+   variants and solid, layered over --surface so the shade is the same on
+   any page background; every variant remaps under [data-theme='dark']
+   (dark-mode.css), so no theme rule is needed here. Text on the three light
+   steps is --ink, on the solid step --surface (white in light, near-black
+   in dark): ≥4.5:1 in both themes. The count is always printed, so colour
+   is never the only signal. Text ≥14px; cells are ≥44px tap targets below
+   1024, where days are the columns. */
+
+.meetings-page {
+  margin-top: 1rem;
+}
+
+.meetings-page__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.meetings-page__subtitle,
+.meetings-note {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  max-width: 70ch;
+}
+
+.meetings-note__link,
+.meetings-kpi__link {
+  color: var(--link);
+}
+
+/* ── KPI strip ─────────────────────────────────────────────────────── */
+
+.meetings-kpis {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .meetings-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+.meetings-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+}
+
+.meetings-kpi__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.meetings-kpi__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.meetings-kpi__link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 44px;
+  min-width: 44px;
+  text-decoration: underline;
+  color: var(--link);
+}
+
+.meetings-kpi__hint {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+/* ── Mode switch ───────────────────────────────────────────────────── */
+
+.meetings-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.meetings-switch__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.meetings-switch__link.is-current {
+  color: var(--ink);
+  border-color: var(--tm-loyal-blue);
+  box-shadow: inset 0 0 0 1px var(--tm-loyal-blue);
+}
+
+.meetings-note__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* ── Grid ──────────────────────────────────────────────────────────── */
+
+/* Below 1024: days are columns, hours are rows. At 375 the page's 24px
+   gutter leaves 327px, too narrow for 7 × 44px cells plus the hour column,
+   so on phones the grid runs to 4px from the screen edge (-20px against the
+   24px .district-detail-page padding): 7 × 48px cells at 375. */
+.meeting-grid {
+  display: grid;
+  grid-template-columns: 1.75rem repeat(7, minmax(0, 1fr));
+  grid-template-rows: 1.75rem;
+  grid-auto-rows: 44px;
+  margin-top: 0.75rem;
+  max-width: 34rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+  overflow: hidden;
+}
+
+@media (max-width: 767px) {
+  .meeting-grid {
+    margin-inline: -20px;
+  }
+}
+
+.meeting-grid__day,
+.meeting-grid__hour {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.meeting-grid__day {
+  grid-row: 1;
+  grid-column: calc(var(--d) + 1);
+}
+
+.meeting-grid__hour {
+  grid-column: 1;
+  grid-row: calc(var(--h) + 1);
+}
+
+.meeting-cell {
+  grid-column: calc(var(--d) + 1);
+  grid-row: calc(var(--h) + 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border: 1px solid var(--surface);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.meeting-cell--l0 {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.meeting-cell--l1 {
+  background:
+    linear-gradient(var(--tm-loyal-blue-10), var(--tm-loyal-blue-10)),
+    var(--surface);
+}
+.meeting-cell--l2 {
+  background:
+    linear-gradient(var(--tm-loyal-blue-30), var(--tm-loyal-blue-30)),
+    var(--surface);
+}
+.meeting-cell--l3 {
+  background:
+    linear-gradient(var(--tm-loyal-blue-50), var(--tm-loyal-blue-50)),
+    var(--surface);
+}
+.meeting-cell--l4 {
+  background: var(--tm-loyal-blue);
+  color: var(--surface);
+}
+
+a.meeting-cell:hover {
+  box-shadow: inset 0 0 0 2px var(--ink-3);
+}
+
+/* An ink ring with a surface ring inside it reads on every step, light or
+   dark. */
+.meeting-cell.is-selected {
+  box-shadow:
+    inset 0 0 0 2px var(--ink),
+    inset 0 0 0 4px var(--surface);
+}
+
+.meeting-cell:focus-visible,
+.meetings-switch__link:focus-visible,
+.meetings-kpi__link:focus-visible,
+.meetings-note__link:focus-visible,
+.meetings-selection__action:focus-visible,
+.meetings-selection__club:focus-visible,
+.meetings-table__summary:focus-visible,
+.meetings-table__scroll:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ≥1024: days are rows, the 24 hours are columns (cells ≥38px wide). */
+@media (min-width: 1024px) {
+  .meeting-grid {
+    grid-template-columns: 2.75rem repeat(24, minmax(0, 1fr));
+    grid-template-rows: 1.75rem;
+    grid-auto-rows: 2.5rem;
+    max-width: none;
+  }
+  .meeting-grid.has-notime {
+    grid-template-columns: 2.75rem repeat(25, minmax(0, 1fr));
+  }
+  .meeting-grid__day {
+    grid-column: 1;
+    grid-row: calc(var(--d) + 1);
+  }
+  .meeting-grid__hour {
+    grid-row: 1;
+    grid-column: calc(var(--h) + 1);
+  }
+  .meeting-cell {
+    grid-row: calc(var(--d) + 1);
+    grid-column: calc(var(--h) + 1);
+  }
+}
+
+/* ── Legend ────────────────────────────────────────────────────────── */
+
+.meetings-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.meetings-legend__swatch {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.meetings-legend__note {
+  margin-left: 0.5rem;
+}
+
+/* ── Selected cell's clubs ─────────────────────────────────────────── */
+
+.meetings-selection {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+}
+
+.meetings-selection__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.meetings-selection__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.meetings-selection__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.meetings-selection__action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--link);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.meetings-selection__list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.meetings-selection__item {
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--line-2);
+}
+
+.meetings-selection__club {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--link);
+  overflow-wrap: anywhere;
+}
+
+.meetings-selection__meta {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+/* ── Table alternative ─────────────────────────────────────────────── */
+
+.meetings-table {
+  margin-top: 1rem;
+}
+
+.meetings-table__summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--link);
+  cursor: pointer;
+}
+
+.meetings-table__scroll {
+  overflow-x: auto;
+  max-width: 34rem;
+}
+
+.meetings-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.meetings-table caption {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding: 0.25rem 0;
+}
+
+.meetings-table th,
+.meetings-table td {
+  padding: 0.25rem 0.375rem;
+  border-bottom: 1px solid var(--line-2);
+  text-align: right;
+}
+
+.meetings-table th[scope='row'] {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.meetings-table abbr {
+  text-decoration: none;
+}

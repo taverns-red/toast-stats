@@ -39,6 +39,10 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   // date, from the ledger. After Growth: the last whole-district view before
   // the time-series sections.
   { label: 'Education', segment: 'education' },
+  // 'Meetings' (#1796, epic #1781) — when the clubs meet: weekday × start
+  // hour heatmap, in person / online. After Education: the last
+  // whole-district view before the time-series sections.
+  { label: 'Meetings', segment: 'meetings' },
   { label: 'Trends', segment: 'trends' },
   { label: 'Analytics', segment: 'analytics' },
   { label: 'Rankings', segment: 'rankings' },
