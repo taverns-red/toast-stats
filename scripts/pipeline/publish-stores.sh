@@ -13,7 +13,7 @@
 #      ${CACHE_DIR}/club-trends.scope naming them. A local PY outside it was
 #      written but never pulled, and its rsync would put the run's few points
 #      over the accumulated PY (#1111 class, #2102), so nothing is pushed;
-#
+#   2. the double-encoding check runs over all of them BEFORE any push: a file
 #      that is still gzip would get another layer from the -Z upload (#1702);
 #   3. club-trends and club-race are rsynced up (internal state, no CDN
 #      headers); district-awards-history is copied if the run produced one
