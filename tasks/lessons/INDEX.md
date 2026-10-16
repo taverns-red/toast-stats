@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-rollup-that-must-match-a-page-must-share-the-pages-reading-of-the-source-text.md` — When a pipeline rollup sums figures a page already derives from free text, move the page's parser into the shared package and have both call it, or the region total and the district pages it sums drift apart  (2026-10-16)
 - `a-neutral-background-can-be-doing-palette-separation-work-re-run-every-validator-that-imports-it.md` — A "neutral" background can be doing palette-separation work; when you re-tune it, re-run every validator that imports it, not only the one named in the spec  (2026-10-15)
 - `an-sr-only-span-inside-a-scrolling-table-escapes-the-scroller-unless-the-scroller-is-positioned.md` — A `.sr-only` span (position absolute) inside an overflow-x scroller is laid out against the nearest POSITIONED ancestor, so when the scroller is not positioned it lands outside it and scrolls the whole page sideways; give the scroller `position: relative`, and gate it with a document-overflow check on the preview  (2026-10-15)
 - `a-ga-beacon-reports-requestfailed-so-guard-real-hits-on-response.md` — A real GA collect beacon fires `response` then `requestfailed`, never `requestfinished` — key a Playwright leak guard on `response`  (2026-10-13)
