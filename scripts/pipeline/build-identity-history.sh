@@ -20,6 +20,9 @@
 #   gs://<bucket>/config/club-district-history/{NN,index}.json  (#1782;
 #     100 shards + index, ~9.2 MB raw, ~1.1 MB gzip)
 #   gs://<bucket>/config/district-region-history.json            (#1820; ~42 KB)
+#   gs://<bucket>/config/charter-cohort-survival/district_<id>.json (#2061;
+#     one per district the club history names, ~2 KB gzip each: the
+#     survival page's curves, folded from the club history just built)
 # The content gate schema-checks every one that changed (kinds
 # club-district-history-index/-shard and district-region-history), and
 # promotion copies them with the run — whole-prefix rsync of config/, or as
@@ -58,6 +61,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 BUILDER="${REPO}/scripts/build-identity-history.ts"
 CLUB_DIR="gs://${BUCKET}/config/club-district-history/"
+SURVIVAL_DIR="gs://${BUCKET}/config/charter-cohort-survival/"
 
 if [ ! -d "${CACHE_DIR}/club-race" ]; then
   echo "::error::build-identity-history: ${CACHE_DIR}/club-race does not exist; the club-race store was never synced (R2)" >&2
@@ -100,6 +104,10 @@ shards=()
 while IFS= read -r f; do
   shards+=("${f}")
 done < <(find "${OUT}" -maxdepth 1 -type f -name '[0-9][0-9].json' | LC_ALL=C sort)
+survival=()
+while IFS= read -r f; do
+  survival+=("${f}")
+done < <(find "${WORK}/out/charter-cohort-survival" -maxdepth 1 -type f -name 'district_*.json' | LC_ALL=C sort)
 
 # Through the wrapper, so every object lands in the run manifest (#1762,
 # ADR-015 P5), which the content gate reads in full and scoped promotion
@@ -111,6 +119,10 @@ if [ "${#shards[@]}" -gt 0 ]; then
   "${UPLOAD[@]}" "${shards[@]}" "${CLUB_DIR}"
 fi
 "${UPLOAD[@]}" "${OUT}/index.json" "${CLUB_DIR}"
+# After the index: the survival files derive from the history it names.
+if [ "${#survival[@]}" -gt 0 ]; then
+  "${UPLOAD[@]}" "${survival[@]}" "${SURVIVAL_DIR}"
+fi
 "${UPLOAD[@]}" "${WORK}/out/district-region-history.json" \
   "gs://${BUCKET}/config/district-region-history.json"
 
@@ -118,6 +130,9 @@ jq -r '
   (.clubDistrictHistory |
     "- **Club-district history** (config/club-district-history/, promoted with the run, #1782): \(.clubs) clubs, \(.shards) shards, \(.duplicates) duplicates; " +
     "\(.rawBytes) B raw, \(.gzipBytes) B gzip (largest shard \(.maxShardGzipBytes) B gzip)"),
+  (.charterCohortSurvival |
+    "- **Charter cohort survival** (config/charter-cohort-survival/, promoted with the run, #2061): \(.districts) districts; " +
+    "\(.rawBytes) B raw, \(.gzipBytes) B gzip (largest \(.maxGzipBytes) B gzip)"),
   (.districtRegionHistory |
     "- **District-region history** (config/, promoted with the run, #1820): \(.districts) districts, \(.programYears) PYs from \(.sourceDates) snapshots, \(.conflicts) conflicts; " +
     "\(.rawBytes) B raw, \(.gzipBytes) B gzip")' \
