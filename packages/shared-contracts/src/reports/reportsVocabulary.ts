@@ -55,11 +55,26 @@ export function parseProspectStage(text: string): ParsedProspectStage {
   const stagePart = (paymentAt >= 0 ? text.slice(0, paymentAt) : text).trim()
   const paymentPart = paymentAt >= 0 ? text.slice(paymentAt) : ''
 
-  const stage =
-    /^#(\d+)\s+(.+?)(?:\s+(?:Complete|Incomplete))?(?:\s*-\s*\d{1,2}\/\d{1,2}\/\d{4})?$/.exec(
-      stagePart
-    )
-  if (!stage) return { recognised: false, raw }
+  // `#N <label>[ Complete|Incomplete][ - MM/DD/YYYY]`, read with string
+  // operations: a single backtracking regex over this cell is polynomial on
+  // runs of whitespace (CodeQL js/polynomial-redos).
+  const head = /^#(\d+)\s/.exec(stagePart)
+  if (!head) return { recognised: false, raw }
+  let label = stagePart.slice(head[0].length).trim()
+  const dash = label.lastIndexOf('-')
+  if (
+    dash >= 0 &&
+    /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(label.slice(dash + 1).trim())
+  ) {
+    label = label.slice(0, dash).trim()
+  }
+  for (const suffix of [' Complete', ' Incomplete']) {
+    if (label.endsWith(suffix)) {
+      label = label.slice(0, -suffix.length).trim()
+      break
+    }
+  }
+  if (label === '') return { recognised: false, raw }
 
   let payment: 'complete' | 'incomplete' | 'unknown' = 'unknown'
   let paymentDate: string | null = null
@@ -72,8 +87,8 @@ export function parseProspectStage(text: string): ParsedProspectStage {
 
   return {
     recognised: true,
-    stageNumber: Number(stage[1]),
-    stageLabel: stage[2]!.trim(),
+    stageNumber: Number(head[1]),
+    stageLabel: label,
     stageDate: usDateToIso(stagePart),
     payment,
     paymentDate,
