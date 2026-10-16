@@ -9,7 +9,11 @@
 # The push half of sync → upsert → save → push (R9):
 #   1. every requested directory store must exist on disk: one that was never
 #      synced has nothing accumulated in it, and pushing it is the #1111 class;
-#   2. the double-encoding check runs over all of them BEFORE any push: a file
+#   1b. club-trends: when sync-stores.sh pulled only some PYs, it left
+#      ${CACHE_DIR}/club-trends.scope naming them. A local PY outside it was
+#      written but never pulled, and its rsync would put the run's few points
+#      over the accumulated PY (#1111 class, #2102), so nothing is pushed;
+#
 #      that is still gzip would get another layer from the -Z upload (#1702);
 #   3. club-trends and club-race are rsynced up (internal state, no CDN
 #      headers); district-awards-history is copied if the run produced one
@@ -68,6 +72,21 @@ for store in "$@"; do
       exit 2
       ;;
   esac
+done
+
+# 1b. club-trends holds only the PYs the sync pulled (#2102).
+SCOPE_FILE="${CACHE_DIR}/club-trends.scope"
+for store in "$@"; do
+  [ "${store}" = "club-trends" ] && [ -f "${SCOPE_FILE}" ] || continue
+  grep -qx 'all' "${SCOPE_FILE}" && continue
+  unpulled=()
+  while IFS= read -r entry; do
+    grep -qxF "${entry}" "${SCOPE_FILE}" || unpulled+=("club-trends/${entry}")
+  done < <(find "${CACHE_DIR}/club-trends" -mindepth 1 -maxdepth 1 -exec basename {} \; | LC_ALL=C sort)
+  if [ "${#unpulled[@]}" -gt 0 ]; then
+    echo "::error::publish-stores: ${unpulled[*]} written but never pulled (pulled: $(paste -sd' ' "${SCOPE_FILE}")); pushing would overwrite the accumulated PY, so nothing is pushed (#2102, #1111)" >&2
+    exit 1
+  fi
 done
 
 if [ "${#dirs[@]}" -gt 0 ]; then

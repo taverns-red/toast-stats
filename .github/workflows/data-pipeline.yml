@@ -862,8 +862,11 @@ jobs:
       # ── Rebuild Step 1: Sync small stores from GCS ──
       - name: '[rebuild] Sync time-series, club-trends, club-race from GCS'
         if: steps.mode.outputs.mode == 'rebuild'
+        env:
+          # The same input the per-date loop below reads its dates from.
+          DATES_INPUT: ${{ inputs.dates }}
         run: |
-          # These are small (~344 KB + ~50 KB/district) and persist across dates.
+          # The stores persist across dates (pulled once, pushed once).
           # Club-race (#1556): a rebuild walks dates in any order; the store
           # keeps the EARLIER of stored/observed per crossing, so pulling first
           # means a rebuild can only sharpen a date, never replace daily
@@ -873,7 +876,16 @@ jobs:
           # count against the listing, and peels gzip layers on disk under
           # either gcloud rsync behaviour (#1702, #1722).
           echo "## ⏬ Store Sync (rebuild)" >> "$GITHUB_STEP_SUMMARY"
-          bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
+          # Club-trends is keyed by program year and compute writes only the
+          # PY of each date it computes, so pull only the PYs of the `dates`
+          # input (#2102; the whole store was 1,402 objects, 1.07 GiB, per
+          # rebuild). A July date carries the prior PY (its raw can remap to
+          # 06-30). No dates (rebuild every raw date) -> `all`. publish-stores
+          # refuses to push a PY this did not pull.
+          CLUB_TRENDS_PROGRAM_YEARS="$(npx tsx scripts/club-trends-sync-scope.ts --dates "${DATES_INPUT}")"
+          echo "Club-trends program years to pull: ${CLUB_TRENDS_PROGRAM_YEARS}"
+          CLUB_TRENDS_PROGRAM_YEARS="${CLUB_TRENDS_PROGRAM_YEARS}" \
+            bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
             time-series club-trends club-race district-awards-history \
             district-region-history
 
@@ -1175,7 +1187,7 @@ jobs:
           # min-on-rebuild upsert. District awards history (#1704): the
           # transform loads it for Club Strength / Leadership Excellence.
           # Fail-closed pull + count floor + gzip normalise: see the script
-          # (#1722, #1738). Whole club-trends store, like rebuild/rescrape.
+          # (#1722, #1738). Whole club-trends store, like rescrape.
           bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
             time-series club-trends club-race district-awards-history \
             district-region-history
