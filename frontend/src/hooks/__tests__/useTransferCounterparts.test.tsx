@@ -9,10 +9,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React, { ReactNode } from 'react'
 import type { DiffEvent, SnapshotDiff } from '@taverns-red/shared-contracts'
 import { useTransferCounterparts } from '../useTransferCounterparts'
-import { fetchClubDistrictHistoryShard } from '../../services/clubDistrictHistory'
+import { fetchClubDistrictHistoryShard } from '../../services/cdnClubDistrictHistory'
 import shardFixture from '../../__tests__/fixtures/club-district-history-shard-77.recorded.json'
 
-vi.mock('../../services/clubDistrictHistory', () => ({
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
   fetchClubDistrictHistoryShard: vi.fn(),
 }))
 const mockedShard = vi.mocked(fetchClubDistrictHistoryShard)
@@ -98,7 +98,7 @@ describe('useTransferCounterparts (#1806)', () => {
   })
 
   it('a failed shard leaves the map empty (labels stay as today)', async () => {
-    mockedShard.mockRejectedValue(new Error('CDN 404'))
+    mockedShard.mockResolvedValue(null) // the reader's "not available"
     const { result } = renderHook(
       () =>
         useTransferCounterparts(
