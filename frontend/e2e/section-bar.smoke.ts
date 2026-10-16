@@ -65,6 +65,7 @@ const SUITES: readonly Suite[] = [
         'Map',
         'Growth',
         'Education',
+        'Meetings',
         'Analytics',
         'Rankings',
         'Action List',
