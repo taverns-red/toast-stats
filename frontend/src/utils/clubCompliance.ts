@@ -1,5 +1,7 @@
 import {
+  classifyDuesRenewal,
   clubIdsMatch,
+  usDateToIso,
   type DistrictReportsDataset,
 } from '@taverns-red/shared-contracts'
 import { cspDueDate, isCspOverdue } from '@taverns-red/analytics-core'
@@ -47,12 +49,6 @@ export interface ClubCoachSummary {
 
 const UNAVAILABLE = 'Not available for this date'
 
-/** "05/25/2026" → "2026-05-25"; null if not that shape. */
-function usDateToIso(text: string): string | null {
-  const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(text)
-  return m ? `${m[3]}-${m[1]}-${m[2]}` : null
-}
-
 function source(
   name: string,
   section: { sources: { asOf: string }[] } | undefined
@@ -91,12 +87,11 @@ function officerListRow(input: ComplianceInput): ComplianceRow {
 }
 
 /**
- * Dues. A "Verified complete" record counts for this program year only if
- * it was verified inside the window that period's payments fall in — the
- * report keeps last period's verification until the new one arrives (D61,
- * October 2026: the April report still shows January 2026). Before the April
- * period opens (1 January of the PY's second year) April dues are simply
- * not due yet.
+ * Dues, read with the shared rule (`classifyDuesRenewal`, #2012) that the
+ * pipeline's region/world rollups use: a "Verified complete" record counts
+ * for this program year only if it was verified inside the window that
+ * period's payments fall in, and April dues are not yet due before
+ * 1 January of the PY's second year.
  */
 function duesRow(
   input: ComplianceInput,
@@ -110,9 +105,16 @@ function duesRow(
       : input.reports?.sections.aprilDuesRenewal
   if (!section) return unavailable(key, label)
   const src = source('Dues renewal report', section)
+  const classify = (status: string) =>
+    classifyDuesRenewal({
+      status,
+      season,
+      programYear: input.programYear,
+      snapshotDate: input.snapshotDate,
+    })
 
-  const startYear = Number.parseInt(input.programYear.slice(0, 4), 10)
-  if (season === 'april' && input.snapshotDate < `${startYear + 1}-01-01`) {
+  if (classify('') === 'notYetDue') {
+    const startYear = Number.parseInt(input.programYear.slice(0, 4), 10)
     return {
       key,
       label,
@@ -121,49 +123,42 @@ function duesRow(
       source: src,
     }
   }
-  const windowStart =
-    season === 'october' ? `${startYear}-06-01` : `${startYear}-12-01`
 
   const rec = section.records.find(r => clubIdsMatch(r.club, input.clubId))
   if (!rec)
     return { key, label, state: 'neutral', value: 'No record', source: src }
   const status = rec.renewalStatus
 
-  if (/^verified complete/i.test(status)) {
-    const iso = usDateToIso(status)
-    if (iso && iso >= windowStart) {
+  switch (classify(status)) {
+    case 'verified':
       return {
         key,
         label,
         state: 'ok',
-        value: `Verified ${formatDisplayDate(iso)}`,
+        value: `Verified ${formatDisplayDate(usDateToIso(status) as string)}`,
         source: src,
       }
-    }
-    return { key, label, state: 'warn', value: 'Not received', source: src }
+    case 'notReceived':
+      return { key, label, state: 'warn', value: 'Not received', source: src }
+    case 'ineligible':
+      return {
+        key,
+        label,
+        state: 'bad',
+        value: 'Minimum not yet met (ineligible)',
+        source: src,
+      }
+    case 'low':
+      return {
+        key,
+        label,
+        state: 'warn',
+        value: 'Minimum not yet met',
+        source: src,
+      }
+    default:
+      return { key, label, state: 'neutral', value: status, source: src }
   }
-  if (/^ineligible/i.test(status)) {
-    return {
-      key,
-      label,
-      state: 'bad',
-      value: 'Minimum not yet met (ineligible)',
-      source: src,
-    }
-  }
-  if (/^low/i.test(status)) {
-    return {
-      key,
-      label,
-      state: 'warn',
-      value: 'Minimum not yet met',
-      source: src,
-    }
-  }
-  if (/not here/i.test(status)) {
-    return { key, label, state: 'warn', value: 'Not received', source: src }
-  }
-  return { key, label, state: 'neutral', value: status, source: src }
 }
 
 function cspRow(input: ComplianceInput): ComplianceRow {
