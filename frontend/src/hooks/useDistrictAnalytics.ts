@@ -7,6 +7,7 @@ import { districtAnalyticsFileQueryOptions } from './districtAnalyticsFileQuery'
 import type {
   ClubHealthStatus,
   DistrictReportsDataset,
+  MeetingScheduleEntry,
   ProspectiveClub,
 } from '@taverns-red/shared-contracts'
 import {
@@ -91,6 +92,12 @@ export interface ClubTrend {
   meetingTime?: string
   allowsVirtualAttendance?: boolean
   isProspective?: boolean
+  /**
+   * Parsed FAC schedule (#1789): weekday, cadence, 24-hour time, mode.
+   * Absent / null when the day text names no weekday — the meeting heatmap
+   * (#1796) counts such a club as "unknown", never drops it.
+   */
+  meetingSchedule?: MeetingScheduleEntry[] | null
 }
 
 export interface DivisionAnalytics {
