@@ -282,7 +282,14 @@ for (const theme of ['light', 'dark'] as const) {
           }
 
           // The top bar scrolls away; only the 44px context bar sticks.
-          await page.evaluate(() => window.scrollTo(0, 400))
+          // `instant` (#2093): the app sets `html { scroll-behavior: smooth }`,
+          // so the (x, y) form animates, and Linux WebKit may not start (or may
+          // stall) that animation within the 100ms wait. Traced on main and on
+          // #2093 alike: scrollY 0 at 100ms, or stuck at 30. This assertion is
+          // about sticky geometry, not the animation.
+          await page.evaluate(() =>
+            window.scrollTo({ top: 400, left: 0, behavior: 'instant' })
+          )
           await page.waitForTimeout(100)
           const stuck = await boxOf(page, '[data-testid="context-bar"]')
           const top = await boxOf(page, '.app-shell-top-bar')
