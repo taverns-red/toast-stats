@@ -48,6 +48,28 @@ describe('parseProspectStage', () => {
     ).toMatchObject({ recognised: true, payment: 'incomplete' })
   })
 
+  it('reads a stage without a date, and a dash without spaces', () => {
+    expect(parseProspectStage('#2 Charter Paperwork Incomplete')).toMatchObject(
+      { recognised: true, stageNumber: 2, stageLabel: 'Charter Paperwork' }
+    )
+    expect(
+      parseProspectStage('#3 Demo Meeting Complete-5/7/2026')
+    ).toMatchObject({
+      stageNumber: 3,
+      stageLabel: 'Demo Meeting',
+      stageDate: '2026-05-07',
+    })
+    expect(parseProspectStage('#1 ')).toMatchObject({ recognised: false })
+  })
+
+  it('runs in linear time on hostile whitespace (CodeQL js/polynomial-redos)', () => {
+    const hostile = `#0 a${' '.repeat(50_000)}x`
+    const t = performance.now()
+    parseProspectStage(hostile)
+    parseProspectStage(`#0 ${' '.repeat(50_000)}`)
+    expect(performance.now() - t).toBeLessThan(200)
+  })
+
   it('keeps unrecognised text raw instead of guessing', () => {
     expect(parseProspectStage('Something new from TI')).toEqual({
       recognised: false,
