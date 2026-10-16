@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CharterCohortSurvivalFileSchema,
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
   type ClubDistrictHistoryClub,
 } from '@taverns-red/shared-contracts'
 import recorded from '../../__tests__/fixtures/club-district-history-d61-d01.recorded.json'
-import { buildCharterCohortSurvival } from '../charterCohortSurvival'
+import d61File from '../../__tests__/fixtures/charter-cohort-survival-d61.json'
+import {
+  buildCharterCohortSurvival,
+  charterCohortSurvivalFromFile,
+} from '../charterCohortSurvival'
 
 /* Recorded from the prod CDN on 2026-10-15 (#1817): the real
    config/club-district-history index and all 100 shards, each trimmed to the
@@ -126,5 +131,37 @@ describe('buildCharterCohortSurvival (#1817)', () => {
     })
     expect(none.cohorts.every(c => c.chartered === 0)).toBe(true)
     expect(none.pooled.every(p => p === null)).toBe(true)
+  })
+})
+
+/* #2061 — the pipeline's per-district file must draw exactly the curves the
+   in-browser fold draws from the recorded history. The file is the
+   pipeline fold's output over the same recording
+   (scripts/lib/__tests__/charterCohortSurvival.test.ts reproduces it). */
+describe('the per-district survival file equals the in-browser fold (#2061)', () => {
+  const file = CharterCohortSurvivalFileSchema.parse(d61File)
+
+  it.each([
+    ...index.programYears,
+    // Selections outside the history: before it, and after it.
+    '2015-2016',
+    '2027-2028',
+  ])('through %s', through => {
+    expect(charterCohortSurvivalFromFile(file, through)).toEqual(
+      buildCharterCohortSurvival({
+        index,
+        clubs,
+        districtId: '61',
+        throughProgramYear: through,
+      })
+    )
+  })
+
+  it('keeps the rules: 2016-17 is censored, a year not reached is null', () => {
+    const s = charterCohortSurvivalFromFile(file, '2026-2027')
+    expect(s.censoredProgramYear).toBe('2016-2017')
+    expect(s.cohorts.map(c => c.programYear)).not.toContain('2016-2017')
+    const c25 = s.cohorts.find(c => c.programYear === '2025-2026')
+    expect(c25?.years.slice(1).every(y => y === null)).toBe(true)
   })
 })
