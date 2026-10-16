@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.57.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.56.0...toast-stats-v2.57.0) (2026-10-16)
+
+
+### Features
+
+* **basemap:** world z0-14 build path with a dry-run default ([#2084](https://github.com/taverns-red/toast-stats/issues/2084)) ([#2086](https://github.com/taverns-red/toast-stats/issues/2086)) ([767d0a3](https://github.com/taverns-red/toast-stats/commit/767d0a36cfb5164297f62d65f5f53fe8fe8a5158))
+* **map:** labelled basemap context, zoom-banded, on self-hosted glyphs ([#2081](https://github.com/taverns-red/toast-stats/issues/2081)) ([#2082](https://github.com/taverns-red/toast-stats/issues/2082)) ([6f394ac](https://github.com/taverns-red/toast-stats/commit/6f394ac7682dff5422429f19e946a279406d68c5))
+* **map:** world z0–14 basemap with street names and a restrained POI set ([#2084](https://github.com/taverns-red/toast-stats/issues/2084), [#2081](https://github.com/taverns-red/toast-stats/issues/2081)) ([#2089](https://github.com/taverns-red/toast-stats/issues/2089)) ([3c01be5](https://github.com/taverns-red/toast-stats/commit/3c01be5d4a08065be599359a9d1437ff166b7dfb))
+* **promo:** promote Red Vote on district-level pages ([#2090](https://github.com/taverns-red/toast-stats/issues/2090)) ([#2091](https://github.com/taverns-red/toast-stats/issues/2091)) ([a6e8bd9](https://github.com/taverns-red/toast-stats/commit/a6e8bd9fcfdaadc14b448fcee6b22b927a28dfb2))
+
+
+### Bug Fixes
+
+* **basemap:** resume dropped ranges and retry the world extract ([#2084](https://github.com/taverns-red/toast-stats/issues/2084)) ([#2088](https://github.com/taverns-red/toast-stats/issues/2088)) ([5f7cd37](https://github.com/taverns-red/toast-stats/commit/5f7cd372482d199e2531eb945116a22c955d1979))
+* **ui:** new pages match the existing app palette, no --rt-stats amber ([#2080](https://github.com/taverns-red/toast-stats/issues/2080)) ([#2083](https://github.com/taverns-red/toast-stats/issues/2083)) ([418f2db](https://github.com/taverns-red/toast-stats/commit/418f2db71eecf288db4a5a1de26d2a0eb9bcd48d))
+
 ## [2.56.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.55.0...toast-stats-v2.56.0) (2026-10-15)
 
 
