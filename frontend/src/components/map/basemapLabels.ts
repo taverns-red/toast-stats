@@ -24,15 +24,19 @@
  * five Noto fontstacks, where we ship one font and no sprite.
  *
  * - **Font.** Inter Regular (OFL 1.1), the app's body font, as glyph PBFs on
- *   our own origin (`public/basemap/glyphs/inter-4.1/`, built with
- *   `build_pbf_glyphs`). Only the ranges in `GLYPH_RANGES` are shipped, and
- *   MapLibre fetches a range only when a visible label needs it.
+ *   our own origin (`public/basemap/glyphs/`, built with `build_pbf_glyphs`),
+ *   with Noto Sans Arabic and Noto Sans Hebrew (OFL 1.1) filling the Arabic
+ *   and Hebrew ranges Inter does not cover (#2085). Only the ranges in
+ *   `GLYPH_RANGES` are shipped, and MapLibre fetches a range only when a
+ *   visible label needs it, so an Arabic or Hebrew range costs nothing until
+ *   such a name is on screen.
  * - **Scripts.** The English name wins. Without one, a name in Latin,
- *   Cyrillic or Greek is drawn from our glyphs, and a CJK name is drawn by
- *   the browser's own font (MapLibre's `localIdeographFontFamily`, no
- *   request). Any other script (Arabic, Hebrew, Indic, Thai…) shows only when
- *   an English name exists: we ship no glyphs for it, and Arabic would need
- *   the RTL shaping plugin as well.
+ *   Cyrillic, Greek, Arabic or Hebrew is drawn from our glyphs, and a CJK
+ *   name is drawn by the browser's own font (MapLibre's
+ *   `localIdeographFontFamily`, no request). MapLibre (≥ 6.9) shapes Arabic
+ *   and lays out right-to-left text itself, so no RTL plugin is loaded. Any
+ *   other script (Indic, Thai…) shows only when an English name exists: we
+ *   ship no glyphs for it.
  * - **Colour.** The app's slate inks: `--ink-2` for cities, `--ink-3` for
  *   every other band, with a halo in the land colour. Quieter than any pin
  *   fill, no new hue, at least 4.5:1 on the land. Labels are added above the
@@ -53,13 +57,24 @@ type Theme = 'light' | 'dark'
 /** The one fontstack the labels use; its directory under `GLYPH_PATH`. */
 export const LABEL_FONT = 'Inter-Regular'
 
-/** Versioned by font release, so the files can be cached as immutable. */
-export const GLYPH_PATH = 'basemap/glyphs/inter-4.1/{fontstack}/{range}.pbf'
+/**
+ * Versioned by font release, so the files can be cached as immutable. A
+ * missing range is a 404 cached the same way, so a new range also means a
+ * new directory.
+ */
+export const GLYPH_PATH =
+  'basemap/glyphs/inter-4.1-noto-ar2.013-he3.001/{fontstack}/{range}.pbf'
 
 /**
  * Glyph ranges shipped in `public/`. Latin + Latin-1, Latin Extended-A/B,
  * IPA and spacing modifiers, combining marks + Greek, Cyrillic, Latin
  * Extended Additional (Vietnamese) and general punctuation (– ’ “ ”).
+ *
+ * Right-to-left (#2085): Hebrew (with Inter's Cyrillic Supplement), Arabic,
+ * and the two presentation-form blocks MapLibre's shaper rewrites Arabic
+ * letters into: Forms-B for Arabic proper, Forms-A for Persian and Urdu
+ * letters (and Hebrew presentation forms). The Forms-A ligature blocks
+ * (U+FC00–FDFF) are not shipped: the shaper never emits them.
  */
 export const GLYPH_RANGES = [
   '0-255',
@@ -67,8 +82,12 @@ export const GLYPH_RANGES = [
   '512-767',
   '768-1023',
   '1024-1279',
+  '1280-1535',
+  '1536-1791',
   '7680-7935',
   '8192-8447',
+  '64256-64511',
+  '65024-65279',
 ] as const
 
 export function basemapGlyphsUrl(origin: string): string {
@@ -93,10 +112,12 @@ const INK = {
 
 /** Names in these scripts are drawn without an English name (see header). */
 const LOCAL_SCRIPTS = [
+  'Arabic',
   'Cyrillic',
   'Greek',
   'Han',
   'Hangul',
+  'Hebrew',
   'Hiragana',
   'Katakana',
   'Mixed-Japanese',

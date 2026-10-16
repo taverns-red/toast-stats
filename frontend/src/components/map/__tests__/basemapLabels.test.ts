@@ -331,22 +331,24 @@ describe('basemap label layers', () => {
         let v = 0
         let shift = 0
         for (;;) {
+          if (at.i >= b.length) throw new Error('truncated varint')
           const byte = b[at.i++]!
           v += (byte & 0x7f) * 2 ** shift
           if (byte < 0x80) return v
           shift += 7
         }
       }
+      /** Calls `on` with each field: a varint's value, or a message's bytes. */
       const fields = (
         b: Uint8Array,
-        on: (tag: number, body: Uint8Array) => void
+        on: (tag: number, value: number | Uint8Array) => void
       ) => {
         const at = { i: 0 }
         while (at.i < b.length) {
           const key = varint(b, at)
           const wire = key & 7
           if (wire === 0) {
-            on(key >> 3, Uint8Array.of(varint(b, at)))
+            on(key >> 3, varint(b, at))
           } else if (wire === 2) {
             const len = varint(b, at)
             on(key >> 3, b.subarray(at.i, at.i + len))
@@ -355,11 +357,11 @@ describe('basemap label layers', () => {
         }
       }
       fields(buf, (tag, stack) => {
-        if (tag !== 1) return
+        if (tag !== 1 || typeof stack === 'number') return
         fields(stack, (t, glyph) => {
-          if (t !== 3) return
-          fields(glyph, (g, body) => {
-            if (g === 1) ids.add(varint(body, { i: 0 }))
+          if (t !== 3 || typeof glyph === 'number') return
+          fields(glyph, (g, value) => {
+            if (g === 1 && typeof value === 'number') ids.add(value)
           })
         })
       })
