@@ -1,8 +1,13 @@
 name: Lighthouse CI
 
+# Runs once the PR is ready (#2101): a draft push skips the job, as does a
+# `labeled` event for any label but `preview-smoke`, which forces a run on a
+# draft. ready_for_review re-triggers it. Not a CI Gate check (ciGate.ts), so
+# a draft-era skip cannot open the merge gate; prPreviewSmokeTrigger.test.ts.
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
     paths:
       - 'frontend/**'
       - 'lighthouserc.js'
@@ -21,6 +26,10 @@ permissions:
 
 jobs:
   lighthouse:
+    if: >-
+      (github.event.action != 'labeled' || github.event.label.name == 'preview-smoke')
+      && (github.event.pull_request.draft == false
+      || contains(github.event.pull_request.labels.*.name, 'preview-smoke'))
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
