@@ -84,4 +84,25 @@ describe('fetchClubDistrictHistoryShard', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
     await expect(fetchClubDistrictHistoryShard('77')).resolves.toBeNull()
   })
+
+  // Folded in from #1806's duplicate reader (#2073).
+  it('resolves null for a malformed shard key without fetching (no path injection)', async () => {
+    const fetchFn = stubFetch({ ok: true, status: 200, body: {} })
+    await expect(fetchClubDistrictHistoryShard('../x')).resolves.toBeNull()
+    await expect(fetchClubDistrictHistoryShard('7')).resolves.toBeNull()
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  it('resolves null on a 404 or a body that is not a history shard', async () => {
+    stubFetch({ ok: false, status: 404 })
+    await expect(fetchClubDistrictHistoryShard('77')).resolves.toBeNull()
+    stubFetch({ ok: true, status: 200, body: { hello: 1 } })
+    await expect(fetchClubDistrictHistoryShard('77')).resolves.toBeNull()
+  })
+
+  it('carries each club’s district per program year (closed-club search, transfers)', async () => {
+    stubFetch({ ok: true, status: 200, body: recorded.shards['77'] })
+    const shard = await fetchClubDistrictHistoryShard('77')
+    expect(shard?.clubs['977']?.byProgramYear['2026-2027']).toBe('201')
+  })
 })
