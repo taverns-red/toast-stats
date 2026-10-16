@@ -5,6 +5,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { useUrlState } from '../hooks/useUrlState'
 import CollapsibleSection from '../components/CollapsibleSection'
 import JumpToChip from '../components/JumpToChip'
+import { RedVoteMadeByLine } from '../components/RedVotePromo'
 import {
   OPEN_SECTIONS_PARAM,
   parseOpenSections,
@@ -960,6 +961,13 @@ const MethodologyPage: React.FC = () => {
           </li>
         </ul>
       </CollapsibleSection>
+
+      {/* #2090 — who makes Toast Stats, and the district voting tool. */}
+      <RedVoteMadeByLine
+        placement="methodology"
+        className="methodology-page__made-by"
+        linkClassName="methodology-link"
+      />
     </div>
   )
 }

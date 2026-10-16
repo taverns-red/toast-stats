@@ -59,6 +59,7 @@ const NULL_RANKINGS = {
 }
 
 import ErrorBoundary from '../components/ErrorBoundary'
+import { RedVotePromo } from '../components/RedVotePromo'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
 
 // Lazy (#1901): this tab renders only in the "limited data" branch for
@@ -864,6 +865,17 @@ const DistrictDetailPageInner: React.FC = () => {
                 </Link>
               </nav>
             )}
+
+            {/* Red Vote promotion (#2090) — last on the Overview, and only
+                once its data has rendered, so it never covers data or pushes
+                it down. District-level only; never on club pages. Not on the
+                phone hub: it sits ~12px under its 4,000px page budget
+                (e2e/district-overview-hub-mobile.smoke.ts), so phones get the
+                promotion from the About ▾ line and the landing banner. */}
+            {districtId &&
+              hasOverviewData &&
+              !isLoadingOverview &&
+              !isHubLayout && <RedVotePromo surface="district" />}
           </div>
         </div>
       </div>

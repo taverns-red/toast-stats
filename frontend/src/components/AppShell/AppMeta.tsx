@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { RedVoteMadeByLine } from '../RedVotePromo'
 
 declare const __APP_VERSION__: string
 
@@ -26,6 +27,9 @@ const AppMeta: React.FC = () => {
         </a>{' '}
         production
       </div>
+      {/* #2090 — the Red Vote made-by line, in the footer on desktop and in
+          the "About ▾" disclosure on mobile. */}
+      <RedVoteMadeByLine placement="footer" />
       <div className="app-shell-footer__meta">
         <span data-testid="app-version">
           Data:{' '}
