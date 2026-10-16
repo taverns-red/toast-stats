@@ -61,6 +61,7 @@ import {
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useScrollEdges } from '../hooks/useScrollEdges'
 import { LandingContextBar } from '../components/LandingContextBar'
+import { RedVotePromo } from '../components/RedVotePromo'
 import { snapshotDatesFrom } from '../types/snapshotDate'
 
 // Columns in the rankings table head: District, Rank, Paid Clubs, Total
@@ -2261,6 +2262,10 @@ const DistrictsPage: React.FC = () => {
           </a>{' '}
           page.
         </div>
+
+        {/* Red Vote seasonal banner (#2090) — in season only, last on the
+            loaded page, so it never covers data or shifts it. */}
+        <RedVotePromo surface="landing" />
       </div>
     </div>
   )

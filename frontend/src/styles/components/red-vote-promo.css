@@ -1,0 +1,113 @@
+/* Red Vote promotion (#2090). Existing app palette only (#2080): the
+   redesign.css neutrals plus --link / --loyal-50 / --focus-ring, all of which
+   remap under [data-theme='dark']. Quiet card by default; the in-season
+   banner adds a tinted surface and a --link accent rule. */
+
+@layer components {
+  .red-vote-promo {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md);
+    background-color: var(--surface);
+    color: var(--ink-2);
+    font-family: var(--sans);
+  }
+
+  .red-vote-promo--banner {
+    border-left: 4px solid var(--link);
+    background-color: var(--loyal-50);
+  }
+
+  .red-vote-promo__heading {
+    margin: 0 0 4px;
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--ink);
+  }
+
+  .red-vote-promo__body {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .red-vote-promo__fine {
+    margin: 6px 0 0;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--ink-3);
+  }
+
+  .red-vote-promo__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .red-vote-promo__cta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--link);
+    border-radius: var(--rds-radius-sm);
+    color: var(--link);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .red-vote-promo__cta:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .red-vote-promo__dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: var(--rds-radius-sm);
+    background: transparent;
+    color: var(--ink-3);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .red-vote-promo__dismiss:hover {
+    color: var(--ink);
+  }
+
+  .red-vote-promo__cta:focus-visible,
+  .red-vote-promo__dismiss:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  @media (min-width: 768px) {
+    .red-vote-promo {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+  }
+
+  .methodology-page__made-by {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-3);
+  }
+}

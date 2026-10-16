@@ -59,6 +59,7 @@ const NULL_RANKINGS = {
 }
 
 import ErrorBoundary from '../components/ErrorBoundary'
+import { RedVotePromo } from '../components/RedVotePromo'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
 
 // Lazy (#1901): this tab renders only in the "limited data" branch for
@@ -863,6 +864,13 @@ const DistrictDetailPageInner: React.FC = () => {
                   Global rankings →
                 </Link>
               </nav>
+            )}
+
+            {/* Red Vote promotion (#2090) — last on the Overview, and only
+                once its data has rendered, so it never covers data or pushes
+                it down. District-level only; never on club pages. */}
+            {districtId && hasOverviewData && !isLoadingOverview && (
+              <RedVotePromo surface="district" />
             )}
           </div>
         </div>
