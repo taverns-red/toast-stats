@@ -389,6 +389,8 @@ describe('build-education-rollup.sh: a seeded ledger (EDUCATION_LEDGER_DIR, #210
     fs.rmSync(path.join(root, BUCKET, 'raw-education-ledger'), {
       recursive: true,
     })
+    // The first run's objects stay in derived/; judge the second alone.
+    fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
     const r = runScript({ EDUCATION_LEDGER_DIR: seed })
     expect(r.status, r.stderr).toBe(0)
     expect(r.stderr).toMatch(/::warning::.*raw-education-ledger/)

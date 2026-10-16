@@ -11,7 +11,13 @@
 # from persisted inputs in <bucket> (ADR-015 P2), all read before anything
 # is uploaded:
 #   - raw-education-ledger/<PY>/district_<id>.json — the ledger history
-#     (#1802, 2003-04 → 2018-19), synced whole (~1,480 objects, ~170 MB);
+#     (#1802, 2003-04 → 2018-19), synced whole (~1,480 objects, ~180 MB)
+#     into EDUCATION_LEDGER_DIR when set (#2102). The workflow restores that
+#     directory from the Actions cache, so it is a SEED, never a source:
+#     `rsync --checksums-only` re-downloads every file whose hash differs
+#     from its object, files with no object are removed, and the result must
+#     hold exactly the listed objects. An unchanged ledger downloads nothing.
+#     Plain JSON (no -Z), so the hashes compare under gcloud 588;
 #   - snapshots/<date>/district_*_reports.json — for every program year
 #     without a ledger, the newest of its last 6 snapshot dates that has
 #     reports (the archive backfill at each year-end, the daily feed for the
@@ -32,6 +38,8 @@
 # #1755 prod-write guard checks it).
 #
 # Env:   GCLOUD     the gcloud binary (default `gcloud`; tests use a shim, D10)
+#        EDUCATION_LEDGER_DIR  optional: the ledger seed directory (#2102);
+#                   default a fresh temp directory (a full download)
 #        RUN_MANIFEST_FILE  required: every upload is recorded in it
 #                   (scripts/pipeline/gcs-upload.sh, #1762)
 #        TSX        tsx binary (default: the repo's node_modules/.bin/tsx)
@@ -76,15 +84,33 @@ list() {
   exit 1
 }
 
-# 1. The ledger history, whole.
-mkdir -p "${WORK}/ledger"
+# 1. The ledger history, whole, into the seed directory (#2102).
+LEDGER="${EDUCATION_LEDGER_DIR:-${WORK}/ledger}"
+mkdir -p "${LEDGER}"
 set +e
-list "gs://${BUCKET}/raw-education-ledger/"
+list "gs://${BUCKET}/raw-education-ledger/**"
 rc=$?
 set -e
 if [ "${rc}" -eq 0 ]; then
-  "${GCLOUD}" storage rsync -r "gs://${BUCKET}/raw-education-ledger/" "${WORK}/ledger/"
+  sed -n -E 's#^gs://[^/]+/raw-education-ledger/(.*[^/])$#\1#p' "${WORK}/ls.out" |
+    LC_ALL=C sort >"${WORK}/ledger.expected"
+  "${GCLOUD}" storage rsync -r --checksums-only \
+    "gs://${BUCKET}/raw-education-ledger/" "${LEDGER}/"
+  # A seeded file with no object (a ledger file deleted or renamed since the
+  # seed was saved) would be rolled up as if it were current: remove it.
+  (cd "${LEDGER}" && find . -type f | sed 's#^\./##' | LC_ALL=C sort) >"${WORK}/ledger.local"
+  while IFS= read -r stale; do
+    rm -f "${LEDGER:?}/${stale}"
+  done < <(LC_ALL=C comm -13 "${WORK}/ledger.expected" "${WORK}/ledger.local")
+  find "${LEDGER}" -mindepth 1 -type d -empty -delete
+  missing="$(LC_ALL=C comm -23 "${WORK}/ledger.expected" "${WORK}/ledger.local" | wc -l | tr -d ' ')"
+  if [ "${missing}" -ne 0 ]; then
+    echo "::error::build-education-rollup: ${missing} raw-education-ledger/ objects did not land in ${LEDGER}" >&2
+    exit 1
+  fi
 else
+  # No ledger in the bucket: a seed from an earlier one must not stand in.
+  find "${LEDGER}" -mindepth 1 -delete
   echo "::warning::build-education-rollup: no raw-education-ledger/ in ${BUCKET}; the ledger years (2003-04 → 2018-19) are not rolled up" >&2
 fi
 
@@ -99,7 +125,7 @@ if [ "${rc}" -ne 0 ]; then
 fi
 sed -n -E 's#^gs://[^/]+/snapshots/([0-9]{4}-[0-9]{2}-[0-9]{2})/all-districts-rankings\.json$#\1#p' \
   "${WORK}/ls.out" |
-  "${TSX}" "${BUILDER}" plan --ledger "${WORK}/ledger" >"${WORK}/plan.tsv"
+  "${TSX}" "${BUILDER}" plan --ledger "${LEDGER}" >"${WORK}/plan.tsv"
 
 # 3. Per program year: its rankings, and for a reports PY the newest date
 #    that has reports.
@@ -140,7 +166,7 @@ if ! "${GCLOUD}" storage cp "gs://${BUCKET}/config/district-region-history.json"
 fi
 
 "${TSX}" "${BUILDER}" build \
-  --ledger "${WORK}/ledger" \
+  --ledger "${LEDGER}" \
   --inputs "${WORK}/inputs" \
   --region-history "${WORK}/district-region-history.json" \
   --out "${WORK}/out" >"${WORK}/summary.json"

@@ -170,6 +170,10 @@ env:
   # runs/<github_run_id>/written.jsonl. The content gate reads every object
   # in it; the completeness gate takes its dates from it.
   RUN_MANIFEST_FILE: '/tmp/run-manifest/written.jsonl'
+  # The education ledger seed (#2102): restored from the Actions cache before
+  # each rollup build. scripts/pipeline/build-education-rollup.sh verifies it
+  # against raw-education-ledger/ and downloads only what differs.
+  EDUCATION_LEDGER_DIR: '/tmp/education-ledger'
 
 permissions:
   contents: read
@@ -858,6 +862,32 @@ jobs:
       # limits (~14 GB free). Each iteration: download raw-csv →
       # transform → compute → upload → cleanup.
       # Time-series + club-trends persist across iterations (small).
+
+      # ── Education ledger seed (#2102) ──
+      # The rollup downloaded the whole ledger (~1,480 objects, ~180 MB)
+      # on every run; it changes only on a backfill. The key fingerprints
+      # the listing, so a new cache entry is saved only when it changes.
+      # The key decides reuse only: the script checks every seeded file
+      # against its object, so a stale seed costs bytes, never data.
+      - name: 'Fingerprint the education ledger (#2102)'
+        if: steps.mode.outputs.mode == 'rebuild' || steps.mode.outputs.mode == 'rescrape' || steps.mode.outputs.mode == 'rescrape-historical'
+        id: ledger-key
+        run: |
+          set -o pipefail
+          if LISTING="$(gcloud storage ls -l "gs://${GCS_BUCKET}/raw-education-ledger/**")"; then
+            echo "key=education-ledger-v1-$(sha256sum <<<"${LISTING}" | cut -c1-32)" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Could not list raw-education-ledger/; the newest seed is restored and re-verified"
+            echo "key=education-ledger-v1-unlisted-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Restore the education ledger seed (#2102)'
+        if: steps.mode.outputs.mode == 'rebuild' || steps.mode.outputs.mode == 'rescrape' || steps.mode.outputs.mode == 'rescrape-historical'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.EDUCATION_LEDGER_DIR }}
+          key: ${{ steps.ledger-key.outputs.key }}
+          restore-keys: education-ledger-v1-
 
       # ── Rebuild Step 1: Sync small stores from GCS ──
       - name: '[rebuild] Sync time-series, club-trends, club-race from GCS'
@@ -3083,6 +3113,30 @@ jobs:
           else
             echo "::warning::Could not read runs/${GITHUB_RUN_ID}/written.jsonl; this job's uploads go unrecorded"
           fi
+
+      # ── Education ledger seed (#2102) ──
+      # The rollup downloaded the whole ledger (~1,480 objects, ~180 MB)
+      # on every run; it changes only on a backfill. The key fingerprints
+      # the listing, so a new cache entry is saved only when it changes.
+      # The key decides reuse only: the script checks every seeded file
+      # against its object, so a stale seed costs bytes, never data.
+      - name: '[rollup] Fingerprint the education ledger (#2102)'
+        id: ledger-key
+        run: |
+          set -o pipefail
+          if LISTING="$(gcloud storage ls -l "gs://${GCS_BUCKET}/raw-education-ledger/**")"; then
+            echo "key=education-ledger-v1-$(sha256sum <<<"${LISTING}" | cut -c1-32)" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Could not list raw-education-ledger/; the newest seed is restored and re-verified"
+            echo "key=education-ledger-v1-unlisted-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: '[rollup] Restore the education ledger seed (#2102)'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.EDUCATION_LEDGER_DIR }}
+          key: ${{ steps.ledger-key.outputs.key }}
+          restore-keys: education-ledger-v1-
 
       - name: '[rollup] Build the education rollup (#1801)'
         run: |
