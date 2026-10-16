@@ -12,11 +12,9 @@
  *   near-neutral shade of the land colour, so the basemap stays quieter than
  *   any pin fill (spec §6.3: roads and labels desaturated, labels below pins).
  *
- * There are no label layers yet: labels need glyph PBFs, and the hosted
- * Protomaps glyphs would be a third-party request from every viewer's
- * browser. Self-hosting a glyph range is a follow-up (ADR-016 §Consequences).
- * With no `glyphs` and no `sprite`, the only network URL in the style is the
- * basemap archive itself.
+ * The base style has no label layers: `basemapLabels` adds them on the
+ * first idle, on self-hosted glyphs (ADR-016 addendum). With no `glyphs` and
+ * no `sprite`, the only network URL in this style is the basemap archive.
  */
 import type { StyleSpecification } from 'maplibre-gl'
 import { layers, namedFlavor, type Flavor } from '@protomaps/basemaps'
@@ -134,6 +132,9 @@ export function buildBasemapStyle({
       [BASEMAP_SOURCE_ID]: {
         type: 'vector',
         url: `pmtiles://${pmtilesUrl}`,
+        // No maxzoom here: the archive header's (14 for world z0–14) sets
+        // it, so MapLibre over-zooms past the archive and never outruns a
+        // smaller one (#2084).
         attribution: BASEMAP_ATTRIBUTION,
       },
     },

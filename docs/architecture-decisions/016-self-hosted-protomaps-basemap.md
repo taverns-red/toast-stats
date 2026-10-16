@@ -1,6 +1,6 @@
 # ADR-016: Self-hosted Protomaps basemap, served by HTTP range requests from our bucket and Cloud CDN
 
-- **Status:** Accepted (2026-10-12, Ron). Ron decided the tile source on 2026-10-11 (feature design §7.4). On 2026-10-12 he approved the rest: the world z0–10 extent, the runner-built upload workflow, and the map-route budget.
+- **Status:** Accepted (2026-10-12, Ron). Ron decided the tile source on 2026-10-11 (feature design §7.4). On 2026-10-12 he approved the rest: the world z0–10 extent, the runner-built upload workflow, and the map-route budget. **Amended 2026-10-15 (#2084, Ron): world z0–14**, live since the same day (D1).
 - **Date:** 2026-10-12
 - **Issue:** #1786 (epic #1781). Consumers: #1784 (district map), #1808 (region explorer), #1809 (world explorer). The land and water colours come from #1785 (`docs/design/map-pin-colour-modes.md` §6.3).
 - **Evidence:** every number below was measured or read on 2026-10-12. The commands are in [the runbook](../runbooks/basemap.md) and the PR body.
@@ -49,6 +49,9 @@ Constraints this decision has to satisfy:
   - Cost: $0 in runner minutes (public repo). Storage is about US$3–3.6 a month across both buckets. The build is estimated at 35–45 min.
   - Cloud CDN caches range-capable objects up to 100 GiB, in chunks of about 2 MiB, so this one fits with no CDN change.
   - The object is `basemap/protomaps-v4/world-z0-14-<YYYYMMDD>.pmtiles`, and the D1 and D4 rules are unchanged. The details are in runbook §5.
+  - **Live (2026-10-15).** `basemap/protomaps-v4/world-z0-14-20261015.pmtiles`: **68,759,126,401 bytes (64.0 GiB)**, PMTiles v3, z0–14, gzip tiles, on both buckets. A CDN `Range` read returns `206`. `BASEMAP_OBJECT_PATH` names it. The style source's `maxzoom` comes from the archive header (14), so MapLibre over-zooms the z14 tiles beyond 14 and never asks for z15. The style deliberately sets no `maxzoom` of its own: an explicit value overrides the header, and on the PR preview a fixed 14 broke the basemap smoke, whose z0 fixture then had no tiles for the district view. A unit test pins that no `maxzoom` is set.
+  - **Measured cost per view (2026-10-15, compressed tile bytes read from the CDN):** a z14 view over downtown Ottawa reads 6 tiles / 390 KB at 375×600 and 12 tiles / 656 KB at 1280×800. Over central Bengaluru it reads 3 tiles / 211 KB and 9 tiles / 573 KB. On z0–10 the same views over-zoomed one 102 KB z10 tile. The district view (about z7) reads the same tiles as before.
+  - **First tile (2026-10-15, D61 map, Pixel 7 Android profile from §Context 2, median of 3, same local build and staging CDN for both):** the archive's root directory grows from 11 KB to 53 KB. It no longer fits in the first 16 KB header read, so it costs one more serial range read. The first tile response moved from 6.46 s to 6.82 s (+0.36 s), and the first painted map from 7.10 s to 7.47 s (+0.37 s). These wall-clock times include an uncompressed local `vite preview`. On prod Hosting (z0–10) the same run measured 5.92 s and 6.57 s. The static preview (#1943) covers the gap. Tile bytes at the district view are unchanged.
 - **Why not regional now (superseded by the amendment above).** A follow-up can merge a world z0–10 file with a higher-zoom extract over **buffered club coordinates** into one archive with `pmtiles merge`. That works only once a date-level club-coordinate artifact exists (`club-geo` / #1800, blocked on #1763). Until then, z0–10 gives every district the same basemap.
 - **Object.** The object is `basemap/protomaps-v4/world-z0-<maxzoom>-<YYYYMMDD>.pmtiles`. It is immutable and dated: a refresh is a new object, then a one-line change to `BASEMAP_OBJECT_PATH`. It is never overwritten in place, so cached chunks can never mix two builds. Upload metadata:
   - `Content-Type: application/octet-stream`, which Protomaps' own build host also uses;
@@ -77,7 +80,7 @@ Constraints this decision has to satisfy:
 
 - **Code splitting.** `vite.config.ts` puts `maplibre-gl`, `@maplibre/*`, `@mapbox/*`, `pmtiles` and `@protomaps/*` in a named `maplibre` group. `ROUTE_ONLY_CHUNK_PREFIXES` (`scripts/lib/criticalPath.ts`) now lists `maplibre-`, so CI fails if any route preloads it. `LazyBasemapMap` (a dynamic import) is the only way in. Its fallback is a same-size land-coloured box, so the chunk arriving shifts nothing (Lesson 107).
 - **Worker.** MapLibre 6 resolves its worker relative to its own `import.meta.url`, and a bundle breaks that resolution. `BasemapMap` imports `maplibre-gl/dist/maplibre-gl-worker.mjs?url` and calls `setWorkerUrl`. The worker is then a same-origin, hashed asset loaded as a module worker. With no `worker-src` in our CSP, the browser falls back to `script-src 'self'`, which already allows it. **The CSP does not change.** The basemap smoke on the deployed preview fails on any CSP or worker console error.
-- **Style.** Geometry layers only. With no `glyphs`, no `sprite` and no symbol layers, the only network URL in the style is the archive. A unit test pins this. Labels need glyph PBFs. The hosted Protomaps glyphs would be a third-party request, so place labels are a follow-up that self-hosts a glyph range on the same bucket.
+- **Style.** The base style is geometry layers only. With no `glyphs`, no `sprite` and no symbol layers, the only network URL in it is the archive. A unit test pins this. The labels are added later on self-hosted glyphs (addendum below).
 - **Colours.**
   - Light: land `#F4F1EB` (`--rt-paper`), water `#C9D7E0`.
   - Dark: land `#1A1816` (`--rt-bg-2`), water `#1E2A33`.
@@ -131,12 +134,12 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
 ### Negative
 
 - **Cost.** These are list-price estimates; check billing after the first month.
-  - Storage: 3.8 GB in each of two buckets, at Standard storage ≈ US$0.02–0.03 per GB-month, is about **US$0.20/month**.
+  - Storage: 3.8 GB in each of two buckets, at Standard storage ≈ US$0.02–0.03 per GB-month, is about **US$0.20/month**. Superseded by z0–14 (D1): 64 GiB in each bucket, about **US$3–3.6/month**.
   - Egress: a first map view at 375 px reads the header plus about 6–15 tiles, roughly 0.3–1 MB. At the repo's observed Cloud CDN NA rate (~US$0.11–0.13/GiB, `docs/investigations/gcp-network-spend-2026-05-30.md`), 1,000 map sessions a month cost about **US$0.10–0.15**.
   - Cache lookups (~US$0.01 per 10k) and cache fill within North America are negligible at our traffic.
   - The fixed load-balancer charge (ADR-007) is unchanged.
 - **Map route cost.** 292 KB gzip of main-thread JS, plus a 144 KB gzip worker. That is the price of vector tiles; a raster stack would need a tile server or a pre-rendered pyramid.
-- ~~**No place labels** until a glyph range is self-hosted (follow-up).~~ Superseded by the addendum below (#2081): labels ship on self-hosted glyphs. **Street names and most landmarks are still absent**, because the z0–10 archive carries no road names and only a few POIs per city.
+- ~~**No place labels** until a glyph range is self-hosted (follow-up).~~ Superseded by the addendum below (#2081): labels ship on self-hosted glyphs. Street names and landmarks arrived with the z0–14 archive (D1 amendment, #2084).
 - **Operator steps.** Two manual workflow dispatches per refresh. The standard runner is used after it frees preinstalled toolchains. The workflow checks the space before downloading anything, and fails with "use a larger runner" if there is not enough.
 - **Detail.** Beyond z10 the geometry is over-zoomed, so minor streets are generalised. The 2026-10-15 amendment (D1) moves to world z0–14 for street-level detail everywhere. That costs about 18 times the storage (US$3–3.6 a month) and a build of about 40 minutes.
 
@@ -172,8 +175,10 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
   - states and provinces z4–10 (the abbreviation below z6);
   - cities and towns from z3, each one zoom after the tile's own `min_zoom`;
   - neighbourhoods from z12;
-  - streets from z13 (major roads) and z15 (minor roads);
-  - landmarks from z14 (airports, stations, parks, universities, stadiums, museums, zoos, attractions; no shops).
+  - streets from z13 (major roads) and z14 (minor roads), at most one name every 400 px along a road;
+  - landmarks from z14 (airports, stations, parks, universities, stadiums, museums, galleries, zoos, attractions, libraries, town halls). Each shows from the zoom the tile schema ranks it at (its `min_zoom`), so a z14 view keeps the tile's most notable places and the long tail of small parks waits for z15;
+  - a few businesses from z16: hotels, malls and supermarkets (Ron asked for a few business categories). No food, drink, shops or services: a downtown z14 tile carries more than 100 named POIs, mostly those;
+  - landmark labels keep 12 px of padding, so street zoom stays calm.
 - **Look.** Labels use the app's slate inks: `--ink-2` for cities and `--ink-3` for every other band (light `#344052`/`#5B6675`, dark `#C8D1DD`/`#8A96A6`), with a 1.5 px halo in the land colour. Every label is at least 4.5:1 on the land (#2080's neutral basemap). There is no new hue and no sprite.
   - Labels sit directly above the basemap's layers and below the pins.
   - Pins keep `icon-allow-overlap` but now enter the collision index (`icon-ignore-placement: false`). A city or landmark label therefore steps beside a pin, by 2.2–2.4 em, or hides; it never sits under one.
@@ -181,7 +186,7 @@ Refresh only when there is a reason: a schema-version bump in `@protomaps/basema
 
 **Limits and follow-ups (Ron's call).**
 
-1. **Street names need higher-zoom tiles.** In the z0–10 world archive, road features carry no `name` (only highway `ref`s), and a city tile carries 3–9 POIs. The street and landmark layers are in place and light up as soon as the archive has z11+ tiles for club areas: the D1 regional-merge follow-up (`pmtiles merge` of a club-buffer extract, a GCS upload).
+1. ~~**Street names need higher-zoom tiles.**~~ Resolved by the world z0–14 archive (D1 amendment, #2084). On z0–10, road features carried no `name` and a city tile carried 3–9 POIs. A z14 tile over downtown Ottawa carries 165 named roads and 111 named POIs.
 2. **Arabic-script names without an English name.** These need a self-hosted copy of `@mapbox/mapbox-gl-rtl-text` and an Arabic glyph range (1536-1791).
 
 ## Alternatives considered

@@ -51,6 +51,14 @@ describe('buildBasemapStyle', () => {
     })
   })
 
+  it('takes its max zoom from the archive header, never a hard-coded one', () => {
+    // #2084: the world z0–14 header says 14, so MapLibre over-zooms the z14
+    // tiles beyond 14. A fixed source maxzoom would outrun any smaller
+    // archive (the z0 e2e fixture, a dev extract) and draw blank tiles.
+    const style = buildBasemapStyle({ theme: 'light', pmtilesUrl: ARCHIVE_URL })
+    expect(style.sources[BASEMAP_SOURCE_ID]).not.toHaveProperty('maxzoom')
+  })
+
   it('carries the ODbL + Protomaps attribution on the source', () => {
     const style = buildBasemapStyle({ theme: 'dark', pmtilesUrl: ARCHIVE_URL })
     const source = style.sources[BASEMAP_SOURCE_ID] as { attribution?: string }

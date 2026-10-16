@@ -11,8 +11,13 @@
  * | States, provs. | 4–10  | `places` region (abbreviation below z6)    |
  * | Cities, towns  | 3+    | `places` locality, one zoom after its own  |
  * | Neighbourhoods | 12+   | `places` neighbourhood / macrohood         |
- * | Streets        | 13+   | `roads` (major from 13, minor from 15)     |
+ * | Streets        | 13+   | `roads` (major from 13, minor from 14)     |
  * | Landmarks      | 14+   | `pois`, a short list of landmark kinds     |
+ * | Businesses     | 16+   | `pois` hotel, mall, supermarket            |
+ *
+ * Streets and POIs come from the world z0–14 archive (#2084): Protomaps
+ * names roads and carries the POI long tail only at z12–14, and MapLibre
+ * over-zooms the z14 tiles beyond 14.
  *
  * The layers are written here rather than taken from `@protomaps/basemaps`'
  * `layers(…, { lang })`: those need a sprite (town dots, shields, arrows) and
@@ -128,8 +133,10 @@ const kindIs = (...kinds: string[]): ExpressionSpecification => [
   ['literal', kinds],
 ]
 
-/** Landmarks only: no shops or restaurants, so street zoom stays calm. */
-const POI_KINDS = [
+/** Landmarks: shown from the zoom the tile schema ranks them at (its
+ * `min_zoom`), so a z14 view keeps the tile's most notable places and the
+ * long tail of small parks waits one zoom. */
+const LANDMARK_KINDS = [
   'aerodrome',
   'station',
   'park',
@@ -139,9 +146,16 @@ const POI_KINDS = [
   'college',
   'stadium',
   'museum',
+  'gallery',
   'zoo',
   'attraction',
+  'library',
+  'townhall',
 ]
+
+/** A few businesses people meet at or navigate by (Ron, #2081), from z16.
+ * No food, drink, shops or services: those fill a downtown tile. */
+const BUSINESS_KINDS = ['hotel', 'mall', 'supermarket']
 
 export function labelLayers(
   source: string,
@@ -184,12 +198,21 @@ export function labelLayers(
       id: 'label-pois',
       'source-layer': 'pois',
       minzoom: 14,
-      filter: ['all', kindIs(...POI_KINDS), fromMinZoom(2)],
+      filter: [
+        'any',
+        ['all', kindIs(...LANDMARK_KINDS), fromMinZoom(0)],
+        [
+          'all',
+          kindIs(...BUSINESS_KINDS),
+          ['>=', ['zoom'], 16],
+          fromMinZoom(1),
+        ],
+      ],
       layout: {
         ...text,
         ...besidePin,
         'text-size': 10.5,
-        'text-padding': 8,
+        'text-padding': 12,
         'symbol-sort-key': ['get', 'min_zoom'],
       },
       paint: paint('quiet'),
@@ -205,12 +228,14 @@ export function labelLayers(
         [
           'any',
           kindIs('highway', 'major_road'),
-          ['all', kindIs('minor_road'), ['>=', ['zoom'], 15]],
+          ['all', kindIs('minor_road'), ['>=', ['zoom'], 14]],
         ],
       ],
       layout: {
         ...text,
         'symbol-placement': 'line',
+        // Wider than the 250 px default: one name per block, not three.
+        'symbol-spacing': 400,
         'text-size': ['interpolate', ['linear'], ['zoom'], 13, 10, 17, 12],
         'text-letter-spacing': 0.02,
         'symbol-sort-key': ['get', 'min_zoom'],

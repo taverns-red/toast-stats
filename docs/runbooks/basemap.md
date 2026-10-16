@@ -100,7 +100,7 @@ The upload rules, and why each one matters, are in the workflow header and ADR-0
 ## 3. Spot-check by hand (optional, read-only)
 
 ```bash
-OBJ=basemap/protomaps-v4/world-z0-10-20261011.pmtiles
+OBJ=basemap/protomaps-v4/world-z0-14-20261015.pmtiles
 gcloud storage objects describe "gs://toast-stats-data-ca/${OBJ}" \
   --format="yaml(size,content_type,cache_control,content_encoding,md5_hash,component_count)"
 for _ in 1 2; do
@@ -161,7 +161,9 @@ gh workflow run basemap-build.yml --repo taverns-red/toast-stats --ref main \
 
 Protomaps keeps daily builds for one week, so pick a current `build_date` (step 0).
 
-**Follow-up:** after the prod copy, a one-line PR sets `BASEMAP_OBJECT_PATH` in `frontend/src/config/basemap.ts` to `basemap/protomaps-v4/world-z0-14-<YYYYMMDD>.pmtiles`. Verify it on the preview at 4 zooms, in light and dark.
+**Switched (2026-10-15).** `basemap/protomaps-v4/world-z0-14-20261015.pmtiles` is on both buckets: 68,759,126,401 bytes, PMTiles v3, z0–14. `BASEMAP_OBJECT_PATH` names it. MapLibre reads the max zoom from the archive header and over-zooms beyond it, so the style needs no zoom setting. It was verified on the PR preview at country, region, city and street zoom, at 375, 768 and 1280, in light and dark.
+
+**After the switch deploys to prod:** wait one week (step 4), then delete `basemap/protomaps-v4/world-z0-10-20261011.pmtiles` from both buckets. That is a GCS write, so Ron runs it.
 
 ## Local build (diagnostics only)
 

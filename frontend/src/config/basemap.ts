@@ -11,7 +11,7 @@
  */
 
 export const BASEMAP_OBJECT_PATH =
-  'basemap/protomaps-v4/world-z0-10-20261011.pmtiles'
+  'basemap/protomaps-v4/world-z0-14-20261015.pmtiles'
 
 const DEFAULT_CDN_BASE_URL = 'https://cdn.taverns.red'
 

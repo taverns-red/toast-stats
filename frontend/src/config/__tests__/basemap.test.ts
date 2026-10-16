@@ -34,7 +34,13 @@ describe('resolveBasemapUrl', () => {
 
   it('names an immutable, versioned object (never overwritten in place)', () => {
     expect(BASEMAP_OBJECT_PATH).toMatch(
-      /^basemap\/protomaps-v4\/world-z0-10-\d{8}\.pmtiles$/
+      /^basemap\/protomaps-v4\/world-z0-\d{1,2}-\d{8}\.pmtiles$/
+    )
+  })
+
+  it('reads the world z0–14 archive (#2084)', () => {
+    expect(BASEMAP_OBJECT_PATH).toBe(
+      'basemap/protomaps-v4/world-z0-14-20261015.pmtiles'
     )
   })
 })

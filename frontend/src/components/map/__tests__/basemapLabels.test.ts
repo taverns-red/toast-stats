@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from 'vitest'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { LayerSpecification, SymbolLayerSpecification } from 'maplibre-gl'
-import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
+import {
+  featureFilter,
+  validateStyleMin,
+} from '@maplibre/maplibre-gl-style-spec'
 import { BASEMAP_COLOURS, buildBasemapStyle } from '../basemapStyle'
 import {
   GLYPH_PATH,
@@ -168,12 +171,13 @@ describe('basemap label layers', () => {
     expect(byId.get('label-neighbourhoods')!['source-layer']).toBe('places')
     expect(byId.get('label-streets')!['source-layer']).toBe('roads')
     expect(byId.get('label-pois')!['source-layer']).toBe('pois')
-    // A restrained POI set: landmarks, parks and transport, no shops.
+    // A restrained POI set: landmarks, parks, transport and a few
+    // businesses people meet at (#2081, Ron), but no food, drink or shops.
     const pois = JSON.stringify(byId.get('label-pois')!.filter)
     for (const kind of ['aerodrome', 'station', 'park', 'university']) {
       expect(pois).toContain(`"${kind}"`)
     }
-    for (const kind of ['restaurant', 'cafe', 'shop', 'bar']) {
+    for (const kind of ['restaurant', 'cafe', 'shop', 'bar', 'fast_food']) {
       expect(pois).not.toContain(`"${kind}"`)
     }
   })
@@ -253,5 +257,104 @@ describe('basemap label layers', () => {
     }
     expect(field).not.toContain('"Arabic"')
     expect(field).not.toContain('pgf:')
+  })
+
+  /* #2084 / #2081 — on the world z0–14 archive, what each street-zoom band
+   * actually draws. Features are shaped like the Protomaps v4 tiles read
+   * from the live archive (z14 tile 14/4746/5866, downtown Ottawa): a
+   * `kind`, the tile schema's `min_zoom`, and a `name`. */
+  describe('street-zoom density on the z14 archive', () => {
+    const layer = (id: string) =>
+      symbolLayers(styleFor('light').layers).find(l => l.id === id)!
+    /** Whether a layer draws this feature at a zoom (its filter + band). */
+    const draws = (
+      id: string,
+      zoom: number,
+      props: Record<string, unknown>,
+      type: 1 | 2 = 1
+    ) => {
+      const l = layer(id)
+      if (zoom < (l.minzoom ?? 0) || zoom >= (l.maxzoom ?? 24)) return false
+      return featureFilter(l.filter, 'filter').filter({ zoom }, {
+        type,
+        properties: props,
+      } as never)
+    }
+    const poi = (kind: string, min_zoom: number) => ({
+      kind,
+      min_zoom,
+      name: `${kind} ${min_zoom}`,
+    })
+    const road = (kind: string, min_zoom: number, name?: string) => ({
+      kind,
+      min_zoom,
+      ...(name ? { name } : {}),
+    })
+
+    it('names major streets from z13 and minor streets from z14', () => {
+      const s = (z: number, p: Record<string, unknown>) =>
+        draws('label-streets', z, p, 2)
+      expect(s(12, road('major_road', 10, 'Wellington Street'))).toBe(false)
+      expect(s(13, road('major_road', 10, 'Wellington Street'))).toBe(true)
+      expect(s(13, road('minor_road', 13, 'Sparks Street'))).toBe(false)
+      expect(s(14, road('minor_road', 13, 'Sparks Street'))).toBe(true)
+      expect(s(14, road('minor_road', 14, 'Queen Street'))).toBe(true)
+      // Paths, service roads and unnamed roads never get a label.
+      expect(s(16, road('path', 14, 'Rideau Canal Pathway'))).toBe(false)
+      expect(s(16, road('other', 15, 'Fleet Street'))).toBe(false)
+      expect(s(16, road('minor_road', 13))).toBe(false)
+    })
+
+    it('shows notable landmarks at z14, in tile-schema order', () => {
+      const p = (z: number, kind: string, mz: number) =>
+        draws('label-pois', z, poi(kind, mz))
+      // The tile's own most notable places first (low min_zoom).
+      expect(p(13, 'park', 12)).toBe(false)
+      expect(p(14, 'park', 12)).toBe(true)
+      expect(p(14, 'museum', 13)).toBe(true)
+      expect(p(14, 'attraction', 14)).toBe(true)
+      expect(p(14, 'gallery', 14)).toBe(true)
+      expect(p(14, 'library', 14)).toBe(true)
+      // The long tail of small parks waits one zoom.
+      expect(p(14, 'park', 15)).toBe(false)
+      expect(p(15, 'park', 15)).toBe(true)
+    })
+
+    it('adds a few business categories only from z16', () => {
+      const p = (z: number, kind: string, mz: number) =>
+        draws('label-pois', z, poi(kind, mz))
+      for (const kind of ['hotel', 'mall', 'supermarket']) {
+        expect(p(15, kind, 15), kind).toBe(false)
+        expect(p(16, kind, 15), kind).toBe(true)
+      }
+    })
+
+    it('never labels the busy or utilitarian kinds', () => {
+      for (const kind of [
+        'restaurant',
+        'cafe',
+        'bar',
+        'pub',
+        'fast_food',
+        'post_office',
+        'parking',
+        'construction',
+        'doctors',
+        'bank',
+        'place_of_worship',
+        'pedestrian',
+      ]) {
+        expect(draws('label-pois', 18, poi(kind, 13)), kind).toBe(false)
+      }
+    })
+
+    it('spaces landmark labels widely so street zoom stays calm', () => {
+      const l = layer('label-pois').layout!
+      expect(l['text-padding']).toBeGreaterThanOrEqual(12)
+      // Fewer street names repeat along one road.
+      expect(
+        layer('label-streets').layout!['symbol-spacing']
+      ).toBeGreaterThanOrEqual(350)
+    })
   })
 })
