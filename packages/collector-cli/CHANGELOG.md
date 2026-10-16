@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.17.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.16.0...collector-cli-v1.17.0) (2026-10-16)
+
+
+### Features
+
+* **collector:** slim district analytics file — compact, clubId lists ([#1901](https://github.com/taverns-red/toast-stats/issues/1901)) ([#2047](https://github.com/taverns-red/toast-stats/issues/2047)) ([ae11b1d](https://github.com/taverns-red/toast-stats/commit/ae11b1d242dff517c1893c0e701f3d2ef9157130))
+
+
+### Bug Fixes
+
+* **privacy:** reports place text loses links and emails; contact-strip never deletes a required key ([#2097](https://github.com/taverns-red/toast-stats/issues/2097)) ([#2099](https://github.com/taverns-red/toast-stats/issues/2099)) ([0f9f49b](https://github.com/taverns-red/toast-stats/commit/0f9f49b0a3757af4693da85fe0854f494e7df182))
+* **time-series:** a [#1671](https://github.com/taverns-red/toast-stats/issues/1671) gap date gets no point, recorded as not measured, never 0 ([#2070](https://github.com/taverns-red/toast-stats/issues/2070)) ([#2072](https://github.com/taverns-red/toast-stats/issues/2072)) ([2ac486d](https://github.com/taverns-red/toast-stats/commit/2ac486d8de95564d0a2120e52603ea9f7e033b7d))
+
 ## [1.16.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.15.0...collector-cli-v1.16.0) (2026-10-16)
 
 
