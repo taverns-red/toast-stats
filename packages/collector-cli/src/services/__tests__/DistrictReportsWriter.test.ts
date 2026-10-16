@@ -86,4 +86,45 @@ describe('writeDistrictReports', () => {
       writeDistrictReports(cacheDir, '2026-06-01', bad)
     ).rejects.toThrow(/schema|valid/i)
   })
+
+  // Every writer of the reports file goes through here (the daily ingest and
+  // the archive backfill, which merges an existing file): none may write a
+  // link or email in place text (#2097).
+  it("writes no link or email in a location, keeping the key as ''", async () => {
+    const ds: DistrictReportsDataset = {
+      ...dataset(),
+      sections: {
+        educationAchievements: {
+          sources: [],
+          records: [
+            {
+              club: '9000003',
+              division: 'A',
+              area: '12',
+              name: 'Club 9000003',
+              location: 'redacted@example.invalid',
+              award: 'PM1Presentation Mastery Level 1',
+              achievementCount: 2,
+            },
+            {
+              club: '9000004',
+              division: 'A',
+              area: '12',
+              name: 'Club 9000004',
+              location: 'Hall 2, https://example.invalid/redacted',
+              award: 'PM1Presentation Mastery Level 1',
+              achievementCount: 1,
+            },
+          ],
+        },
+      },
+    }
+    const path = await writeDistrictReports(cacheDir, '2026-06-01', ds)
+    const text = await readFile(path, 'utf8')
+    expect(text).not.toContain('example.invalid')
+    const written = DistrictReportsDatasetSchema.parse(JSON.parse(text))
+    expect(
+      written.sections.educationAchievements!.records.map(r => r.location)
+    ).toEqual(['', 'Hall 2'])
+  })
 })

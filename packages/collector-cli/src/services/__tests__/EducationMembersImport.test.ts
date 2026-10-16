@@ -205,6 +205,20 @@ describe('importEducationMembers', () => {
     })
   })
 
+  it("rewrites no link or email in place text, keeping the key as '' (#2097)", async () => {
+    const linked = existingDataset()
+    linked.sections.educationAchievements!.records[0]!.location =
+      'redacted@example.invalid'
+    await seed(linked)
+    await run()
+    const text = await readFile(reportsPath, 'utf-8')
+    expect(text).not.toContain('example.invalid')
+    const written = DistrictReportsDatasetSchema.parse(JSON.parse(text))
+    expect(written.sections.educationAchievements!.records[0]!.location).toBe(
+      ''
+    )
+  })
+
   it('is idempotent — a re-run replaces the section, byte-identical', async () => {
     await seed()
     await run()

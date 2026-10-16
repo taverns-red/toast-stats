@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 
-import { DistrictReportsDatasetSchema } from '@taverns-red/shared-contracts'
+import {
+  containsLink,
+  DistrictReportsDatasetSchema,
+} from '@taverns-red/shared-contracts'
 
 import {
   deriveColumnDenylist,
@@ -322,5 +325,130 @@ describe('buildDistrictReports — remaining sections', () => {
     expect(ds.sections.coaches).toBeDefined()
     expect(ds.sections.officerList).toBeUndefined()
     expect(ds.sections.tripleCrown).toBeUndefined()
+  })
+})
+
+/**
+ * No link or email in any place text of any section (#2097, #2069).
+ *
+ * D47 (prod snapshots/2026-10-15, read 2026-10-16): one club's Location is
+ * only an email, in both dues reports and the education report. The recorded
+ * D61 report HTML is given that shape, with the email replaced by
+ * `redacted@example.invalid` and links by `example.invalid` placeholders.
+ */
+describe('buildDistrictReports — place text (#2097)', () => {
+  const EMAIL = 'redacted@example.invalid'
+
+  /** Replace the `from` cell with `to` in every row of `club`. */
+  const placeIn = (html: string, club: string, from: string, to: string) =>
+    html.replace(/<tr>([\s\S]*?)<\/tr>/g, (row, cells: string) =>
+      cells.includes(`>${club}</td>`)
+        ? row.split(`>${from}</td>`).join(`>${to}</td>`)
+        : row
+    )
+
+  const linked = (): RawReport[] => [
+    {
+      tableId: REPORT_GUIDS.aprilDues,
+      html: placeIn(
+        readFixture('april-dues-renewal.html'),
+        '1009147',
+        'Ottawa',
+        EMAIL
+      ),
+    },
+    {
+      tableId: REPORT_GUIDS.octoberDues,
+      html: placeIn(
+        readFixture('october-dues-renewal.html'),
+        '1009147',
+        'Ottawa',
+        EMAIL
+      ),
+    },
+    {
+      tableId: REPORT_GUIDS.education,
+      html: placeIn(
+        readFixture('education-achievements.html'),
+        '1009147',
+        'Ottawa',
+        EMAIL
+      ),
+    },
+    {
+      tableId: REPORT_GUIDS.newClubs,
+      html: placeIn(
+        readFixture('new-clubs.html'),
+        '28678571',
+        'Drummondville',
+        'Drummondville https://example.invalid/redacted'
+      ),
+    },
+    {
+      tableId: REPORT_GUIDS.prospective,
+      html: placeIn(
+        readFixture('prospective-clubs.html'),
+        '28678700',
+        'Hawkesbury',
+        'Zoom Link: bit.ly/REDACTED00'
+      ),
+    },
+  ]
+
+  /** Every record's location, across sections. */
+  const locations = (ds: ReturnType<typeof build>): string[] =>
+    Object.values(ds.sections).flatMap(body =>
+      ((body as { records?: Array<{ location?: string }> }).records ?? [])
+        .filter(r => 'location' in r)
+        .map(r => r.location ?? '')
+    )
+
+  it('the fixture carries the email and links (precondition)', () => {
+    const raw = linked()
+      .map(r => r.html)
+      .join('')
+    expect(raw).toContain(EMAIL)
+    expect(raw).toContain('example.invalid/redacted')
+    expect(raw).toContain('bit.ly/REDACTED00')
+  })
+
+  it('publishes no email or link in any location', () => {
+    const ds = build(linked())
+    const all = locations(ds)
+    expect(all.length).toBeGreaterThan(0)
+    expect(all.filter(loc => containsLink(loc))).toEqual([])
+    expect(JSON.stringify(ds)).not.toContain('example.invalid')
+    expect(JSON.stringify(ds)).not.toContain('REDACTED00')
+  })
+
+  it("keeps the location key: a place that was only an email becomes ''", () => {
+    const ds = build(linked())
+    for (const key of [
+      'aprilDuesRenewal',
+      'octoberDuesRenewal',
+      'educationAchievements',
+    ] as const) {
+      const hit = ds.sections[key]!.records.filter(r => r.club === '1009147')
+      expect(hit.length).toBeGreaterThan(0)
+      for (const r of hit) expect(r.location).toBe('')
+    }
+    expect(
+      ds.sections.prospectiveClubs!.records.find(r => r.club === '28678700')!
+        .location
+    ).toBe('')
+    expect(DistrictReportsDatasetSchema.safeParse(ds).success).toBe(true)
+  })
+
+  it('keeps the words of a place and drops only its link', () => {
+    const ds = build(linked())
+    expect(
+      ds.sections.newClubs!.records.find(r => r.club === '28678571')!.location
+    ).toBe('Drummondville')
+  })
+
+  it('leaves a place with no link exactly as the report printed it', () => {
+    const other = (d: ReturnType<typeof build>) =>
+      d.sections.aprilDuesRenewal!.records.filter(r => r.club !== '1009147')
+    expect(other(build(linked()))).toEqual(other(build()))
   })
 })

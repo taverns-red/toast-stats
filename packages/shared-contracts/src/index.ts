@@ -459,6 +459,14 @@ export {
   isShortenedLink,
 } from './privacy/meeting-links.js'
 
+// No link or email in a reports file's place text, no place key lost (#2097)
+export {
+  REPORTS_PLACE_TEXT_FIELDS,
+  repairReportsPlaceText,
+  scrubReportsPlaceText,
+  type ReportsPlaceTextRepair,
+} from './privacy/reports-place-text.js'
+
 // District analytics category lists as clubId lists (#1901 option B)
 export {
   DISTRICT_ANALYTICS_CLUB_LISTS,

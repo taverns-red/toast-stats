@@ -1,0 +1,346 @@
+{
+  "districtId": "47",
+  "programYear": "2026-2027",
+  "generatedAt": "2026-10-16T09:03:32.786Z",
+  "sections": {
+    "aprilDuesRenewal": {
+      "sources": [
+        {
+          "reportType": "dues-renewal",
+          "tableId": "0235cdd5-ffee-4101-ab43-a952a2736fc0",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "9000001",
+          "division": "A",
+          "area": "10",
+          "renewalStatus": "Verified complete - 03/19/2026",
+          "name": "Club 9000001",
+          "location": "Redacted Place 1"
+        },
+        {
+          "club": "9000002",
+          "division": "G",
+          "area": "72",
+          "renewalStatus": "Verified complete - 03/31/2026",
+          "name": "Club 9000002",
+          "location": "Redacted Place 2"
+        },
+        {
+          "club": "9000003",
+          "division": "A",
+          "area": "12",
+          "renewalStatus": "Verified complete - 03/03/2026",
+          "name": "Club 9000003",
+          "location": "redacted@example.invalid"
+        }
+      ]
+    },
+    "octoberDuesRenewal": {
+      "sources": [
+        {
+          "reportType": "dues-renewal",
+          "tableId": "0d56c054-0cd2-46ba-b3b1-3bf17221bd6c",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "9000001",
+          "division": "A",
+          "area": "10",
+          "renewalStatus": "Verified complete - 09/22/2026",
+          "name": "Club 9000001",
+          "location": "Redacted Place 3"
+        },
+        {
+          "club": "9000002",
+          "division": "G",
+          "area": "72",
+          "renewalStatus": "Verified complete - 09/30/2026",
+          "name": "Club 9000002",
+          "location": "Redacted Place 4"
+        },
+        {
+          "club": "9000003",
+          "division": "A",
+          "area": "12",
+          "renewalStatus": "Verified complete - 09/10/2026",
+          "name": "Club 9000003",
+          "location": "redacted@example.invalid"
+        }
+      ]
+    },
+    "officerList": {
+      "sources": [
+        {
+          "reportType": "officer-list",
+          "tableId": "43abeb51-40a6-4514-868a-d697d6481753",
+          "asOf": "October 16, 2026"
+        },
+        {
+          "reportType": "officer-list",
+          "tableId": "68d834ff-90c1-40ae-a79e-c9270bd9919c",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "9000001",
+          "clubName": "Club 9000001",
+          "division": "A",
+          "area": "10",
+          "listStatus": "Received - 06/17/2026",
+          "electionCadence": "annual",
+          "officerListSubmitted": true
+        },
+        {
+          "club": "9000002",
+          "clubName": "Club 9000002",
+          "division": "G",
+          "area": "72",
+          "listStatus": "Received - 05/07/2026",
+          "electionCadence": "annual",
+          "officerListSubmitted": true
+        },
+        {
+          "club": "9000003",
+          "clubName": "Club 9000003",
+          "division": "A",
+          "area": "12",
+          "listStatus": "Received - 05/28/2026",
+          "electionCadence": "annual",
+          "officerListSubmitted": true
+        }
+      ]
+    },
+    "clubSuccessPlan": {
+      "sources": [
+        {
+          "reportType": "club-success-plan",
+          "tableId": "99b20422-f82f-456b-8376-18d5ce1b70c5",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "clubNumber": "9000001",
+          "division": "A",
+          "area": "10",
+          "submissionDate": "September 16, 2026",
+          "clubName": "Club 9000001"
+        },
+        {
+          "clubNumber": "9000002",
+          "division": "G",
+          "area": "72",
+          "submissionDate": "July 6, 2026",
+          "clubName": "Club 9000002"
+        },
+        {
+          "clubNumber": "9000003",
+          "division": "A",
+          "area": "12",
+          "submissionDate": "September 14, 2026",
+          "clubName": "Club 9000003"
+        }
+      ]
+    },
+    "educationAchievements": {
+      "sources": [
+        {
+          "reportType": "education-achievements",
+          "tableId": "c757d313-f815-4b22-93dc-b839d04cec7b",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "9000001",
+          "division": "A",
+          "area": "10",
+          "name": "Club 9000001",
+          "location": "Redacted Place 5",
+          "award": "PM2Presentation Mastery Level 2",
+          "achievementCount": 1
+        },
+        {
+          "club": "9000001",
+          "division": "A",
+          "area": "10",
+          "name": "Club 9000001",
+          "location": "Redacted Place 6",
+          "award": "PI1Persuasive Influence Level 1",
+          "achievementCount": 1
+        },
+        {
+          "club": "9000003",
+          "division": "A",
+          "area": "12",
+          "name": "Club 9000003",
+          "location": "redacted@example.invalid",
+          "award": "PM1Presentation Mastery Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "9000003",
+          "division": "A",
+          "area": "12",
+          "name": "Club 9000003",
+          "location": "redacted@example.invalid",
+          "award": "PM5Presentation Mastery Level 5",
+          "achievementCount": 1
+        }
+      ]
+    },
+    "educationMembers": {
+      "sources": [
+        {
+          "reportType": "education-achievements",
+          "tableId": "c757d313-f815-4b22-93dc-b839d04cec7b",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "9000001",
+          "membersWithAward": 2
+        },
+        {
+          "club": "9000002",
+          "membersWithAward": 5
+        },
+        {
+          "club": "9000003",
+          "membersWithAward": 3
+        }
+      ]
+    },
+    "tripleCrown": {
+      "sources": [
+        {
+          "reportType": "triple-crown",
+          "tableId": "b546ef04-e602-4ffc-95c5-5a786aba36b7",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "summary": {
+        "achieverCount": 20
+      }
+    },
+    "newClubs": {
+      "sources": [
+        {
+          "reportType": "new-clubs",
+          "tableId": "ac6df5db-13de-425a-b8b9-f9c6093b538a",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "division": "B",
+          "area": "20",
+          "club": "9000004",
+          "charterDate": "08/01/2026",
+          "status": "Complete",
+          "name": "Club 9000004",
+          "location": "Redacted Place 7"
+        },
+        {
+          "division": "F",
+          "area": "60",
+          "club": "9000005",
+          "charterDate": "08/25/2026",
+          "status": "Ineligible",
+          "name": "Club 9000005",
+          "location": "Redacted Place 8"
+        }
+      ]
+    },
+    "prospectiveClubs": {
+      "sources": [
+        {
+          "reportType": "prospective-clubs",
+          "tableId": "50630d17-1492-40c9-8244-930b1d94167b",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "division": "",
+          "area": "",
+          "club": "9000006",
+          "status": "Prospective",
+          "name": "Club 9000006",
+          "location": "Redacted Place 9",
+          "prospect": "Redacted Prospect"
+        },
+        {
+          "division": "",
+          "area": "",
+          "club": "9000007",
+          "status": "Prospective",
+          "name": "Club 9000007",
+          "location": "Redacted Place 10",
+          "prospect": "Redacted Prospect"
+        }
+      ]
+    },
+    "coaches": {
+      "sources": [
+        {
+          "reportType": "coaches",
+          "tableId": "41955922-25ab-4a5a-8025-ebb7634f68bf",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "9000001",
+          "clubName": "Club 9000001",
+          "code": "COACH",
+          "beginDate": "12/07/2024",
+          "status": "AWARDED",
+          "activeCoach": false
+        },
+        {
+          "club": "9000008",
+          "clubName": "Club 9000008",
+          "code": "COACHU",
+          "beginDate": "12/31/2024",
+          "status": "AWARDED",
+          "activeCoach": false
+        }
+      ]
+    },
+    "sponsorsMentors": {
+      "sources": [
+        {
+          "reportType": "sponsors-mentors",
+          "tableId": "4da53bd8-f6d9-4fa5-81d8-34ed5966dddd",
+          "asOf": "October 16, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "9000009",
+          "clubName": "Club 9000009",
+          "charterDate": "02/05/2026",
+          "code": "SPONSOR",
+          "status": "AWARDED",
+          "count": 1
+        },
+        {
+          "club": "9000009",
+          "clubName": "Club 9000009",
+          "charterDate": "02/05/2026",
+          "code": "MENTOR",
+          "status": "AWARDED",
+          "count": 2
+        }
+      ]
+    }
+  }
+}

@@ -15,6 +15,14 @@
 # link is rewritten with the collector's own scrubber; nothing else moves.
 # Affected: 2026-06-30 (D201-231) and 2026-10-09..10-14 (every district).
 #
+# #2097: run 38791756094 deleted `location` from reports files (an
+# email-only place scrubbed to nothing), breaking the reports contract the
+# education rollup checks. Reports files now go through the shared reports
+# repair: place text loses links and emails (stripLinks), an empty place is
+# '', and a deleted location is restored as ''. Each rewrite is validated
+# against its shared-contracts schema; one that adds an issue is refused and
+# recorded in the audit. files=reports reads only district_<id>_reports.json.
+#
 # Route (c) of the 2026-10-14 cleanup plan: run it on staging, then let a
 # scheduled daily promote the stripped objects through its gates. bucket=prod
 # is the fallback if that daily holds.
@@ -43,6 +51,14 @@ on:
         required: true
         type: string
         default: '2026-06-30,2026-10-09,2026-10-10,2026-10-11,2026-10-12,2026-10-13,2026-10-14'
+      files:
+        description: 'Objects to read: all .json, or only district_<id>_reports.json (#2097)'
+        required: true
+        type: choice
+        options:
+          - all
+          - reports
+        default: all
       dry_run:
         description: 'Dry run: report what would change, write nothing'
         required: true
@@ -91,10 +107,14 @@ jobs:
         env:
           BUCKET: ${{ inputs.bucket }}
           DATES: ${{ inputs.dates }}
+          FILES: ${{ inputs.files }}
           # A boolean input reaches the shell as the string true/false (#1133).
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
           ARGS=(--bucket "${BUCKET}" --dates "${DATES}" --manifest contact-strip.jsonl)
+          if [ "${FILES}" = "reports" ]; then
+            ARGS+=(--only reports)
+          fi
           if [ "${DRY_RUN}" = "false" ]; then
             ARGS+=(--execute --audit-object "runs/${GITHUB_RUN_ID}/contact-strip.jsonl")
           fi
@@ -103,8 +123,9 @@ jobs:
           {
             echo "## Club contact and place-link strip (#2026, #2069)"
             echo "- bucket: ${BUCKET}"
+            echo "- files: ${FILES}"
             echo "- dry run: ${DRY_RUN}"
-            for KEY in objects planned stripped unchanged errors keysRemoved placeValuesScrubbed; do
+            for KEY in objects planned stripped unchanged errors keysRemoved placeValuesScrubbed keysRestored schemaFailures; do
               echo "- ${KEY}: $(jq -r ".${KEY}" summary.json)"
             done
           } >> "$GITHUB_STEP_SUMMARY"
