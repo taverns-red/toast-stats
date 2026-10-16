@@ -186,6 +186,23 @@ export function labelLayers(
     ] as Array<string | [number, number]>,
     'text-justify': 'auto' as const,
   }
+  // Cities sit under clusters (Montreal, Ottawa: #2092), whose discs reach
+  // 28 px from the centre. After the near ring, a city tries a far ring that
+  // clears the largest cluster even at its smallest text size (10 px).
+  const besideCluster = {
+    ...besidePin,
+    'text-variable-anchor-offset': [
+      ...besidePin['text-variable-anchor-offset'],
+      'top',
+      [0, 3.6],
+      'bottom',
+      [0, -3.6],
+      'left',
+      [3.6, 0],
+      'right',
+      [-3.6, 0],
+    ] as Array<string | [number, number]>,
+  }
   const text = {
     'text-font': [LABEL_FONT],
     'text-field': NAME,
@@ -267,7 +284,7 @@ export function labelLayers(
       filter: ['all', kindIs('locality'), fromMinZoom(1)],
       layout: {
         ...text,
-        ...besidePin,
+        ...besideCluster,
         'text-size': [
           'interpolate',
           ['linear'],
