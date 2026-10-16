@@ -115,6 +115,24 @@ describe('contact-strip.yml', () => {
     expect(runs).toContain('placeValuesScrubbed')
   })
 
+  it('takes files (all|reports, default all) and passes --only reports only for reports (#2097)', () => {
+    const inputs = wf.on.workflow_dispatch?.inputs ?? {}
+    expect(inputs.files).toMatchObject({
+      type: 'choice',
+      options: ['all', 'reports'],
+      default: 'all',
+    })
+    const strip = steps.find(s => (s.run ?? '').includes('strip-club-contact'))!
+    expect(strip.env?.FILES).toBe('${{ inputs.files }}')
+    expect(strip.run).toMatch(/"\$\{FILES\}" = "reports"/)
+    expect(strip.run).toContain('--only reports')
+  })
+
+  it('reports restored keys and contract failures in the step summary (#2097)', () => {
+    expect(runs).toContain('keysRestored')
+    expect(runs).toContain('schemaFailures')
+  })
+
   it('keeps the audit copy in staging only on a real run', () => {
     const strip = steps.find(s => (s.run ?? '').includes('strip-club-contact'))!
     expect(strip.run).toContain('--audit-object')
