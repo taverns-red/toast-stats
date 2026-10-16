@@ -314,6 +314,32 @@ export {
   type DuesRenewalState,
 } from './reports/reportsVocabulary.js'
 
+// Reports-derived region and world rollups —
+// snapshots/{date}/reports-rollups.json (#2012)
+export {
+  ReportsRollupsSchema,
+  ReportsRollupsFormatSchema,
+  ReportsRollupFiguresSchema,
+  ReportsRollupDistrictSchema,
+  ReportsRollupDistrictStatusSchema,
+  ReportsRollupRegionSchema,
+  ReportsRollupWorldSchema,
+  ProspectiveStageCountSchema,
+  DuesRenewalCountsSchema,
+  REPORTS_ROLLUPS_VERSION,
+  REPORTS_ROLLUPS_FORMAT,
+  REPORTS_ROLLUPS_FILE_NAME,
+  type ReportsRollups,
+  type ReportsRollupsFormat,
+  type ReportsRollupFigures,
+  type ReportsRollupDistrict,
+  type ReportsRollupDistrictStatus,
+  type ReportsRollupRegion,
+  type ReportsRollupWorld,
+  type ProspectiveStageCount,
+  type DuesRenewalCounts,
+} from './schemas/reports-rollups.schema.js'
+
 // Region and world rollups — snapshots/{date}/region-rollups.json (#1799)
 export {
   RegionRollupsSchema,
