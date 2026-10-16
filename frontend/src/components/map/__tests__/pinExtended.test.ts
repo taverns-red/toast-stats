@@ -233,6 +233,7 @@ describe('legend-chip facets (one key per mode)', () => {
       'coach',
       'awards',
       'attendance',
+      'day',
     ])
     expect(extendedModel('status', DATE).facet?.param).toBe('clubStatus')
     expect(extendedModel('size', DATE).facet?.param).toBe('size')

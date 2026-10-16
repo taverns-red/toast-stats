@@ -518,6 +518,20 @@ describe('DistrictMapPage — reports-sidecar colour modes (#1787)', () => {
       screen.getAllByText(/Officer list is not available for/).length
     ).toBeGreaterThan(0)
   })
+
+  it('?color=day colours by the parsed schedule; clubs without one are "Not stated"', async () => {
+    renderAt('/district/61/map?color=day')
+    const legend = await screen.findByRole('group', {
+      name: 'Meeting day legend',
+    })
+    const chips = within(legend)
+      .getAllByRole('button')
+      .map(b => b.textContent?.replace(/\s+/g, ' ').trim())
+    expect(chips).toEqual(['We Wednesday 1', 'Not stated 2'])
+    fireEvent.click(within(legend).getByRole('button', { name: /Wednesday/ }))
+    expect(search()).toContain('day=wed')
+    expect(screen.getByRole('status')).toHaveTextContent('Showing 1 of 3 clubs')
+  })
 })
 
 describe('DistrictMapPage — clubs not on the map', () => {

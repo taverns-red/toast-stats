@@ -52,11 +52,11 @@ describe('parseMapColorMode', () => {
     expect(parseMapColorMode('division')).toBe('division')
     expect(parseMapColorMode('area')).toBe('area')
     // #1787: the extended modes are offered now.
-    for (const m of ['status', 'size', 'growth', 'dcp', 'age'])
+    for (const m of ['status', 'size', 'growth', 'dcp', 'age', 'day'])
       expect(parseMapColorMode(m)).toBe(m)
-    // Unknown, and modes this level does not offer yet (meeting day waits
-    // on #1789), fall back.
-    expect(parseMapColorMode('day')).toBe('health')
+    // Unknown, and modes this level does not offer (region on a district
+    // map), fall back.
+    expect(parseMapColorMode('region')).toBe('health')
     expect(parseMapColorMode('<script>')).toBe('health')
   })
 
@@ -75,6 +75,7 @@ describe('parseMapColorMode', () => {
       'renew-apr',
       'csp',
       'officers',
+      'day',
       'attendance',
       'division',
       'area',

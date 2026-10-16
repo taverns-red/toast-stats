@@ -24,7 +24,8 @@ import {
 } from '../pinModes'
 import { BASEMAP_COLOURS } from '../basemapStyle'
 import { DIVERGING5, SEQUENTIAL5, STATUS_FILLS } from '../pinExtended'
-import { ATTENDANCE_FILLS, COACH_FILLS, COMPLIANCE_FILLS } from '../pinReports'
+import { COACH_FILLS, COMPLIANCE_FILLS } from '../pinReports'
+import { ATTENDANCE_FILLS, DAY_FILLS } from '../pinMeeting'
 
 type Vision = 'normal' | 'protan' | 'deutan' | 'tritan'
 const VISIONS: Vision[] = ['normal', 'protan', 'deutan', 'tritan']
@@ -187,7 +188,10 @@ describe('status and categorical palettes', () => {
     // #1787: renewals, CSP and officer list; coach; how members attend.
     compliance: Object.values(COMPLIANCE_FILLS),
     coach: Object.values(COACH_FILLS),
+    // How members attend, with "Online only" and "Not stated" (#1787).
     attendance: Object.values(ATTENDANCE_FILLS),
+    // Meeting day: seven weekdays, several days, not stated (#1787).
+    day: Object.values(DAY_FILLS),
   }
   for (const [name, colours] of Object.entries(sets)) {
     for (const v of VISIONS) {
@@ -259,6 +263,7 @@ describe('contrast', () => {
       ...Object.values(COMPLIANCE_FILLS),
       ...Object.values(COACH_FILLS),
       ...Object.values(ATTENDANCE_FILLS),
+      ...Object.values(DAY_FILLS),
     ]
     for (const fill of fills) {
       const best = contrast(fill, WHITE) >= contrast(fill, INK) ? WHITE : INK
