@@ -18,7 +18,6 @@
  */
 import type { StyleSpecification } from 'maplibre-gl'
 import { layers, namedFlavor, type Flavor } from '@protomaps/basemaps'
-import { BASEMAP_MAX_ZOOM } from '../../config/basemap'
 
 export type BasemapTheme = 'light' | 'dark'
 
@@ -133,9 +132,9 @@ export function buildBasemapStyle({
       [BASEMAP_SOURCE_ID]: {
         type: 'vector',
         url: `pmtiles://${pmtilesUrl}`,
-        // Explicit, so it wins over the archive header's TileJSON: MapLibre
-        // over-zooms the z14 tiles past 14 rather than asking for z15.
-        maxzoom: BASEMAP_MAX_ZOOM,
+        // No maxzoom here: the archive header's (14 for world z0–14) sets
+        // it, so MapLibre over-zooms past the archive and never outruns a
+        // smaller one (#2084).
         attribution: BASEMAP_ATTRIBUTION,
       },
     },
