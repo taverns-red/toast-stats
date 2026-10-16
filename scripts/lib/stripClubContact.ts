@@ -31,9 +31,16 @@
 import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import {
+  AllDistrictsRankingsDataSchema,
   containsLink,
+  DistrictReportsDatasetSchema,
   findClubContactField,
   isClubContactKey,
+  isDistrictSnapshotFile,
+  PerDistrictDataSchema,
+  repairReportsPlaceText,
+  SnapshotManifestSchema,
+  SnapshotMetadataFileSchema,
 } from '@taverns-red/shared-contracts'
 import {
   scrubFacLocation,
@@ -256,25 +263,139 @@ export interface SchemaCheck {
   newIssues: number
 }
 
-/** STUB (#2097 red). */
-export function isReportsObject(_name: string): boolean {
-  return false
+/** A top-level object of one snapshot date: `snapshots/<date>/<file>`. */
+const TOP_LEVEL = /^snapshots\/\d{4}-\d{2}-\d{2}\/([^/]+)$/
+
+/** `district_<id>_reports.json`: the daily reports dataset (#1065). */
+const REPORTS_FILE = /^district_[^_./]+_reports\.json$/
+
+/** True for `snapshots/<date>/district_<id>_reports.json`, and only that. */
+export function isReportsObject(name: string): boolean {
+  const file = TOP_LEVEL.exec(name)?.[1]
+  return file !== undefined && REPORTS_FILE.test(file)
 }
 
-/** STUB (#2097 red). */
-export function schemaForObject(
-  _name: string
-): { id: string; safeParse(v: unknown): { success: boolean } } | null {
+interface Issue {
+  path: ReadonlyArray<PropertyKey>
+  code: string
+}
+type ParseResult =
+  { success: true } | { success: false; error: { issues: Issue[] } }
+interface ObjectSchema {
+  id: string
+  safeParse(value: unknown): ParseResult
+}
+
+/**
+ * The shared-contracts schema of a top-level snapshot file, or null. The
+ * analytics files have no shared-contracts schema (their place fields are
+ * optional in analytics-core's types, as in the snapshot's).
+ */
+export function schemaForObject(name: string): ObjectSchema | null {
+  const file = TOP_LEVEL.exec(name)?.[1]
+  if (file === undefined) return null
+  if (REPORTS_FILE.test(file)) {
+    return {
+      id: 'district-reports',
+      safeParse: v => DistrictReportsDatasetSchema.safeParse(v),
+    }
+  }
+  if (isDistrictSnapshotFile(file)) {
+    return {
+      id: 'per-district-data',
+      safeParse: v => PerDistrictDataSchema.safeParse(v),
+    }
+  }
+  if (file === 'metadata.json') {
+    return {
+      id: 'snapshot-metadata',
+      safeParse: v => SnapshotMetadataFileSchema.safeParse(v),
+    }
+  }
+  if (file === 'manifest.json') {
+    return {
+      id: 'snapshot-manifest',
+      safeParse: v => SnapshotManifestSchema.safeParse(v),
+    }
+  }
+  if (file === 'all-districts-rankings.json') {
+    return {
+      id: 'all-districts-rankings',
+      safeParse: v => AllDistrictsRankingsDataSchema.safeParse(v),
+    }
+  }
   return null
 }
 
-/** STUB (#2097 red). */
+/** Issue identities (path and code; never a value). */
+const issueKeys = (result: ParseResult): Set<string> =>
+  new Set(
+    result.success
+      ? []
+      : result.error.issues.map(
+          i => `${i.path.map(String).join('.')}|${i.code}`
+        )
+  )
+
+/**
+ * Check a rewrite against the object's schema (#2097). A rewrite may not
+ * add an issue the original did not have: that is how a deleted required
+ * key shows. An original that already failed is recorded, not refused,
+ * since refusing would leave its link or contact key live.
+ */
 export function checkRewriteSchema(
-  _name: string | undefined,
-  _before: unknown,
-  _after: unknown
+  name: string | undefined,
+  before: unknown,
+  after: unknown
 ): SchemaCheck {
-  return { schema: null, before: null, after: null, newIssues: 0 }
+  const schema = name === undefined ? null : schemaForObject(name)
+  if (schema === null) {
+    return { schema: null, before: null, after: null, newIssues: 0 }
+  }
+  const b = schema.safeParse(before)
+  const a = schema.safeParse(after)
+  const old = issueKeys(b)
+  const newIssues = [...issueKeys(a)].filter(k => !old.has(k)).length
+  return {
+    schema: schema.id,
+    before: b.success ? 'pass' : 'fail',
+    after: a.success ? 'pass' : 'fail',
+    newIssues,
+  }
+}
+
+/** A rewrite that would break the object's contract (#2097). */
+export class SchemaRegressionError extends StripError {
+  constructor(readonly schemaCheck: SchemaCheck) {
+    super(
+      `rewrite breaks the ${schemaCheck.schema} contract at ` +
+        `${schemaCheck.newIssues} path(s); refusing to rewrite`
+    )
+    this.name = 'SchemaRegressionError'
+  }
+}
+
+/**
+ * Place-text work for one object. A reports file has a REQUIRED `location`
+ * (#2097), so it goes through the shared reports repair: links and emails
+ * are stripped with the collector's own `stripLinks`, a value that was only
+ * a link becomes '', and a deleted key is restored as ''. Every other file
+ * keeps the FAC scrubbers, whose fields are optional everywhere.
+ */
+function placeFix(
+  name: string | undefined,
+  value: unknown
+): { value: unknown; scrubbed: number; restored: number } {
+  if (name !== undefined && isReportsObject(name)) {
+    return repairReportsPlaceText(value)
+  }
+  return { ...scrubPlaceLinks(value), restored: 0 }
+}
+
+/** Number of place values to scrub or keys to restore in `value`. */
+function pendingPlaceWork(name: string | undefined, value: unknown): number {
+  const { scrubbed, restored } = placeFix(name, value)
+  return scrubbed + restored
 }
 
 export type StripResult =
@@ -325,14 +446,20 @@ function parse(text: string): unknown {
 }
 
 /**
- * Strip one object's stored bytes. Unchanged when it has no contact key;
- * otherwise the new stored bytes, same format and gzip layer count, checked
- * to hold no contact key before they are returned.
+ * Strip one object's stored bytes. Unchanged when it has no contact key,
+ * no linked place text and no missing required place key; otherwise the
+ * new stored bytes, same format and gzip layer count, checked to hold no
+ * contact key and no place link, and to add no issue to the contract of
+ * the object at `name` (#2097), before they are returned.
  */
-export function stripStoredObject(stored: Buffer, _name?: string): StripResult {
+export function stripStoredObject(stored: Buffer, name?: string): StripResult {
   const { text, layers } = decode(stored)
   const value = parse(text)
-  if (countContactKeys(value) === 0 && countPlaceLinks(value) === 0) {
+  if (
+    countContactKeys(value) === 0 &&
+    countPlaceLinks(value) === 0 &&
+    pendingPlaceWork(name, value) === 0
+  ) {
     return { changed: false, gzipLayers: layers }
   }
   const format = detectJsonFormat(text)
@@ -342,8 +469,13 @@ export function stripStoredObject(stored: Buffer, _name?: string): StripResult {
     )
   }
   const { value: stripped, removed } = stripContactKeys(value)
-  const { value: scrubbed, scrubbed: placeValuesScrubbed } =
-    scrubPlaceLinks(stripped)
+  const {
+    value: scrubbed,
+    scrubbed: placeValuesScrubbed,
+    restored: keysRestored,
+  } = placeFix(name, stripped)
+  const schemaCheck = checkRewriteSchema(name, value, scrubbed)
+  if (schemaCheck.newIssues > 0) throw new SchemaRegressionError(schemaCheck)
   const level = gzipLevel(stored)
   let bytes = Buffer.from(serialize(scrubbed, format), 'utf-8')
   for (let i = 0; i < layers; i++) bytes = gzipSync(bytes, { level })
@@ -354,7 +486,8 @@ export function stripStoredObject(stored: Buffer, _name?: string): StripResult {
     check.layers !== layers ||
     countContactKeys(reparsed) !== 0 ||
     findClubContactField(reparsed) !== null ||
-    countPlaceLinks(reparsed) !== 0
+    countPlaceLinks(reparsed) !== 0 ||
+    pendingPlaceWork(name, reparsed) !== 0
   ) {
     throw new StripError('stripped output failed its own post-check')
   }
@@ -363,8 +496,8 @@ export function stripStoredObject(stored: Buffer, _name?: string): StripResult {
     gzipLayers: layers,
     keysRemoved: removed,
     placeValuesScrubbed,
-    keysRestored: 0,
-    schemaCheck: { schema: null, before: null, after: null, newIssues: 0 },
+    keysRestored,
+    schemaCheck,
     bytes,
   }
 }
@@ -484,7 +617,7 @@ async function stripOne(
       throw new StripError('read bytes do not match the listed md5')
     }
     row.oldMd5 = md5(original)
-    const result = stripStoredObject(original)
+    const result = stripStoredObject(original, meta.name)
     row.gzipLayers = result.gzipLayers
     if (!result.changed) {
       row.action = 'unchanged'
@@ -492,6 +625,10 @@ async function stripOne(
     }
     row.keysRemoved = result.keysRemoved
     row.placeValuesScrubbed = result.placeValuesScrubbed
+    row.keysRestored = result.keysRestored
+    row.schema = result.schemaCheck.schema
+    row.schemaBefore = result.schemaCheck.before
+    row.schemaAfter = result.schemaCheck.after
     if (opts.dryRun) {
       row.action = 'planned'
       return row
@@ -520,7 +657,10 @@ async function stripOne(
     if (row.postCheck !== null || countContactKeys(after) !== 0) {
       throw new StripError('re-read object still has a contact key')
     }
-    if (countPlaceLinks(after) !== 0) {
+    if (
+      countPlaceLinks(after) !== 0 ||
+      pendingPlaceWork(meta.name, after) !== 0
+    ) {
       throw new StripError('re-read object still has a place link')
     }
     row.action = 'stripped'
@@ -528,6 +668,11 @@ async function stripOne(
   } catch (err) {
     row.action = 'error'
     row.error = safeError(err)
+    if (err instanceof SchemaRegressionError) {
+      row.schema = err.schemaCheck.schema
+      row.schemaBefore = err.schemaCheck.before
+      row.schemaAfter = err.schemaCheck.after
+    }
     return row
   }
 }
@@ -563,7 +708,13 @@ export async function runStrip(
   const objects: StoredObjectMeta[] = []
   for (const date of opts.dates) {
     const listed = await io.list(`snapshots/${date}/`)
-    objects.push(...listed.filter(o => o.name.endsWith('.json')))
+    objects.push(
+      ...listed.filter(
+        o =>
+          o.name.endsWith('.json') &&
+          (opts.only !== 'reports' || isReportsObject(o.name))
+      )
+    )
   }
   objects.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
   const rows = await pool(objects, opts.concurrency ?? 16, meta =>
@@ -584,8 +735,8 @@ export async function runStrip(
       errors: count('error'),
       keysRemoved: rows.reduce((n, r) => n + r.keysRemoved, 0),
       placeValuesScrubbed: rows.reduce((n, r) => n + r.placeValuesScrubbed, 0),
-      keysRestored: 0,
-      schemaFailures: 0,
+      keysRestored: rows.reduce((n, r) => n + r.keysRestored, 0),
+      schemaFailures: rows.filter(r => r.schemaAfter === 'fail').length,
     },
   }
 }
