@@ -31,3 +31,7 @@ frontend/src/assets/geo/
 # Recorded staging captures for the region rollups (#1799), projected to the
 # fields the builder reads; kept compact and byte-identical to the capture
 packages/analytics-core/src/rollup/__tests__/fixtures/region-rollups/
+
+# Recorded prod captures for the reports rollups (#2012), projected to the
+# sections the builder reads, names blanked; kept compact
+scripts/lib/__tests__/fixtures/reports-rollups/
