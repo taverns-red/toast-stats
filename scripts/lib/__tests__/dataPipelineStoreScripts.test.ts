@@ -187,13 +187,53 @@ describe('daily scopes the club-trends pull to the resolved PY (#1728, E2-2)', (
     )
   })
 
-  for (const mode of ['rebuild', 'rescrape', 'rescrape-historical'] as const) {
+  for (const mode of ['rescrape', 'rescrape-historical'] as const) {
     it(`${mode} still pulls the whole club-trends store`, () => {
       expect(
         modeLines(mode).some(l => /CLUB_TRENDS_PROGRAM_YEARS/.test(l))
       ).toBe(false)
     })
   }
+})
+
+// #2102: a rebuild pulled every PY (1,402 objects, 1.07 GiB) to re-derive a
+// few dates; 37 rebuilds ran in the first half of October.
+describe('rebuild scopes the club-trends pull to the PYs of its dates (#2102)', () => {
+  const rebuild = steps.filter(s => modeOf(s) === 'rebuild')
+  const syncStep = rebuild.find(s => SYNC_RE.test(s.run))
+  const loopStep = rebuild.find(s =>
+    /scripts\/pipeline\/process-dates\.sh\b/.test(s.run)
+  )
+  const env = (s: Step | undefined): Record<string, string> =>
+    ((s as { env?: Record<string, string> } | undefined)?.env ?? {}) as Record<
+      string,
+      string
+    >
+
+  it('derives CLUB_TRENDS_PROGRAM_YEARS from the dates input, before the pull', () => {
+    expect(syncStep, 'no rebuild sync step').toBeDefined()
+    const lines = logicalLines(syncStep!.run)
+    const scope = lines.findIndex(l =>
+      /CLUB_TRENDS_PROGRAM_YEARS="\$\(npx tsx scripts\/club-trends-sync-scope\.ts --dates "\$\{DATES_INPUT\}"\)"/.test(
+        l
+      )
+    )
+    const pull = lines.findIndex(
+      l => SYNC_RE.test(l) && names(l, 'club-trends')
+    )
+    expect(scope, 'no dates-derived scope in rebuild').toBeGreaterThanOrEqual(0)
+    expect(scope).toBeLessThan(pull)
+    expect(lines[pull]).toMatch(
+      /CLUB_TRENDS_PROGRAM_YEARS="\$\{CLUB_TRENDS_PROGRAM_YEARS\}"/
+    )
+    expect(lines.join('\n')).not.toMatch(/--program-year/)
+  })
+
+  it('the scope reads the same dates input as the per-date loop', () => {
+    expect(env(syncStep).DATES_INPUT).toBe('${{ inputs.dates }}')
+    expect(loopStep, 'no rebuild loop step').toBeDefined()
+    expect(loopStep!.run).toContain('${{ inputs.dates }}')
+  })
 })
 
 describe('club-trends/ and club-race/ are pipeline-internal (#1738, E2-5, D3)', () => {
