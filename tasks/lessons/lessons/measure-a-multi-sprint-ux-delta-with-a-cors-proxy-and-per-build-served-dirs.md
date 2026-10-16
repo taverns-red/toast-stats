@@ -23,10 +23,15 @@ sprints capped it. There is no deployed "before" — the baseline is a commit
    build defaults `VITE_CDN_BASE_URL` to `https://cdn.taverns.red`, which
    returns 200 but **no `Access-Control-Allow-Origin`** for a `localhost`
    origin — so the SPA renders "Error Loading Rankings / Failed to fetch" and
-   the page is ~1 viewport tall (a false "huge drop"). Fix: a ~20-line node
-   `http` proxy that refetches the CDN path and adds `access-control-allow-origin: *`,
-   then build **both** states with `VITE_CDN_BASE_URL=http://localhost:8899`.
-   Same real prod data on both sides → apples-to-apples.
+   the page is ~1 viewport tall (a false "huge drop"). Fix: run the checked-in
+   proxy, `npm run cdn:proxy` (`scripts/dev/cdn-cors-proxy.mjs`, #2106), which
+   adds `access-control-allow-origin: *`, then build **both** states with
+   `VITE_CDN_BASE_URL=http://127.0.0.1:8899`. Same real prod data on both
+   sides → apples-to-apples.
+
+   > **Cost warning:** never hand-roll this proxy. One that dropped `Range` and
+   > buffered the body turned each basemap read into a full GET and pulled
+   > 28 GiB of prod CDN egress on 2026-10-13; the archive is now 64 GiB (#2106).
 
 2. **`vite preview` serves `frontend/dist` live from disk.** Two preview
    servers on different ports both serve `frontend/dist`. Building the second
@@ -45,7 +50,7 @@ baseline bundle (which predates the mobile cap), not a media-query miss.
 ## The takeaway
 
 A "verify the win" sprint on a CDN-backed SPA needs a measurement harness, not
-just a smoke: **proxy the CDN for CORS, pin both git states to it, and isolate
+just a smoke: **proxy the CDN for CORS (with `scripts/dev/cdn-cors-proxy.mjs`), pin both git states to it, and isolate
 each build's served files.** Then the durable artifact is a budget guard gated
 on the capped state being active —
 the caps are fed by a separately-resolving query, so a future un-cap silently

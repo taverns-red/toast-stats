@@ -50,8 +50,10 @@ preference order:
    shipped on `main`; its last implementation PR's preview (or a fresh
    throwaway PR off `main`) is a valid live surface.
 3. **Fall back to the local CORS-proxy build harness** ([[133-measure-a-multi-sprint-ux-delta-with-a-cors-proxy-and-per-build-served-dirs]])
-   — build locally, proxy the CDN for CORS, drive with Playwright. The durable
-   path when no preview exists at all.
+   — build locally, proxy the CDN for CORS with `npm run cdn:proxy`
+   (`scripts/dev/cdn-cors-proxy.mjs`), drive with Playwright. The durable path
+   when no preview exists at all. Never hand-roll the proxy: one that dropped
+   `Range` pulled 28 GiB of basemap egress on 2026-10-13 (#2106).
 
 ## How to apply
 

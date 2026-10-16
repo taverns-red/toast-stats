@@ -1,0 +1,30 @@
+{
+  "displayName": "Prod CDN response bytes > 5 GiB/hour (#2106)",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "DRAFT, not applied. Ron approves creating it (#2106).\n\nFires when the prod CDN (`toast-stats-cdn-url-map`, cdn.taverns.red) serves more than 5 GiB in one hour. On 2026-10-13 a local CORS proxy that dropped `Range` pulled 28 GiB of basemap in a few hours; normal traffic is well under 1 GiB/hour.\n\nFirst check: `http_load_balancer` request logs for the last hour, grouped by client IP and path; look for 200 (non-206) GETs of `/basemap/**.pmtiles`. Local verification must use `scripts/dev/cdn-cors-proxy.mjs`.\n\nApply (after adding notificationChannels):\n\n    gcloud monitoring policies create --project=toast-stats-prod-6d64a --policy-from-file=infra/monitoring/cdn-response-bytes-alert.json"
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "CDN response bytes summed over 1 hour > 5 GiB",
+      "conditionThreshold": {
+        "filter": "metric.type=\"loadbalancing.googleapis.com/https/response_bytes_count\" AND resource.type=\"https_lb_rule\" AND resource.label.url_map_name=\"toast-stats-cdn-url-map\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "3600s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 5368709120,
+        "duration": "0s",
+        "trigger": { "count": 1 }
+      }
+    }
+  ],
+  "alertStrategy": { "autoClose": "86400s" },
+  "notificationChannels": [],
+  "enabled": true
+}
