@@ -2,14 +2,14 @@
  * Pre-promotion Content Gate — Runner (#1715, plan S1-4)
  *
  * Thin glue around ./lib/promotionContentGate.js, run on the CI runner just
- * before `Promote staging to production`:
+ * before `Promote run manifest to production`:
  *   1. list the promoted prefixes in staging and production (metadata only),
  *   2. keep the staging objects promotion would copy (new, or different
  *      bytes) — never the whole bucket,
  *   3. read EVERY object this run wrote under a promoted prefix, from the
  *      run manifest (#1762, ADR-015 P5), plus a bounded sample of the
  *      changed objects it did not write (an earlier held run's leftovers,
- *      which whole-prefix promotion still copies until #1763) — stored bytes
+ *      which scoped promotion, #1763, no longer copies) — stored bytes
  *      plus Content-Encoding, decoded the way a browser does — and check the
  *      manifest hash, bytes, parse and shape,
  *   4. emit `content_promote` and write the result for the promotion-held

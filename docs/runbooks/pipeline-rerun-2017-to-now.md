@@ -84,7 +84,7 @@ Known facts to expect (re-verify, don't assume):
 # value-diff command is present in the built CLI
 npx collector-cli value-diff --help 2>&1 | head -5
 # both gate steps exist in the workflow
-grep -n "Diff staging vs production\|Value diff staging\|Promote staging to production" \
+grep -n "Diff staging vs production\|Value diff staging\|Promote run manifest to production" \
   .github/workflows/data-pipeline.yml
 ```
 

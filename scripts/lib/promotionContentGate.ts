@@ -119,7 +119,8 @@ const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
 
 /**
- * The prefixes `Promote staging to production` rsyncs. A workflow contract
+ * The prefixes `Promote run manifest to production` copies from (the
+ * promoter's allow-list, scripts/lib/manifestPromotion.ts). A workflow contract
  * test keeps this list and the rsync calls identical. club-trends/ and
  * club-race/ are pipeline-internal and never promoted (#1738, D3).
  */
@@ -347,10 +348,10 @@ const isPromoted = (path: string) =>
  * Objects outside the promoted prefixes (raw-csv, raw-fac, internal stores)
  * are never promoted and are not read.
  *
- * Until scoped promotion (#1763) lands, promotion still copies every changed
- * object in the promoted prefixes, including ones an earlier, held run left
- * in staging. Those are not in this run's manifest, so they keep the
- * bounded, sampled plan of `planContentChecks`.
+ * Objects an earlier, held run left in staging are not in this run's
+ * manifest. Scoped promotion (#1763) no longer copies them, but they keep
+ * the bounded, sampled plan of `planContentChecks`: conservative, a hold on
+ * one is a hold on state the next re-derive would ship.
  */
 export function planManifestChecks(
   written: readonly RunManifestEntry[],

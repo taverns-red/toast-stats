@@ -22,8 +22,8 @@
 #   gs://<bucket>/config/district-region-history.json            (#1820; ~42 KB)
 # The content gate schema-checks every one that changed (kinds
 # club-district-history-index/-shard and district-region-history), and
-# promotion copies them with the run — whole-prefix rsync of config/, or as
-# global objects of the run manifest (promotion_scope=manifest, #1763), which
+# promotion copies them with the run, as global objects of the run manifest
+# (#1763), which
 # holds them whenever a date is held and copies the club index after its
 # shards. Like their config/ siblings they are stored identity with
 # max-age=300; Cloud CDN compresses them at the edge (#1852). This script

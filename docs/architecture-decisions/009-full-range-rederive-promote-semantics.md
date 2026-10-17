@@ -11,7 +11,8 @@
 > adopts this ADR's own "scoped per-date promote" alternative. The 2026-10-11
 > mode-parity audit showed that the gates D2 relied on cover about one artifact
 > in fifteen per date (epic #1760, migration step #1763). D1, D3 and D4 are
-> unchanged.
+> unchanged. **Implemented (2026-10-17, #1763 PR 2):** the whole-prefix rsync
+> step is deleted; every promoting run copies only its manifest.
 
 ## Context
 
