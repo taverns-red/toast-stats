@@ -75,6 +75,17 @@ describe('RegionHealthPage', () => {
     expect(screen.queryByTestId('rollup-kpis')).not.toBeInTheDocument()
   })
 
+  it('reads an unpadded region id as its padded rollups key (#2130)', async () => {
+    mocked.mockResolvedValue(rollups)
+    renderAt('/region/7/health')
+    const kpis = await screen.findByTestId('rollup-kpis')
+    expect(within(kpis).getByText('958')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: /Region 07/ })
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('rollups-unavailable')).not.toBeInTheDocument()
+  })
+
   it('says when the region is not in the rollups', async () => {
     mocked.mockResolvedValue(rollups)
     renderAt('/region/99/health')

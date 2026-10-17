@@ -40,7 +40,7 @@ const mockedFetchCdnRankings = vi.mocked(fetchCdnRankings)
 const mkRanking = (overrides: Record<string, unknown>) => ({
   districtId: '1',
   districtName: '1',
-  region: '7',
+  region: '07',
   paidClubs: 100,
   totalPayments: 5000,
   distinguishedClubs: 50,
@@ -74,7 +74,7 @@ const renderRegion = () => {
   return render(
     <QueryClientProvider client={qc}>
       <ProgramYearProvider>
-        <MemoryRouter initialEntries={['/region/7']}>
+        <MemoryRouter initialEntries={['/region/07']}>
           <Routes>
             <Route
               path="/region/:n"
@@ -93,7 +93,7 @@ const renderRegion = () => {
 }
 
 const priorityTable = () =>
-  screen.findByRole('table', { name: 'Region 7 district rankings' })
+  screen.findByRole('table', { name: 'Region 07 district rankings' })
 
 afterEach(() => {
   cleanup()
@@ -148,7 +148,7 @@ describe('RegionPage priority columns below 768 (#1834)', () => {
   it('Full table opens the complete 20-column table in a full-screen sheet', async () => {
     await priorityTable()
     fireEvent.click(screen.getByRole('button', { name: /full table/i }))
-    const dialog = screen.getByRole('dialog', { name: /Region 7/ })
+    const dialog = screen.getByRole('dialog', { name: /Region 07/ })
     const region = within(dialog).getByRole('region')
     expect(region).toHaveAttribute('tabindex', '0')
     const full = within(region).getByRole('table')
