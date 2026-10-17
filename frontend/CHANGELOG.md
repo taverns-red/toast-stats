@@ -1,5 +1,33 @@
 # Changelog
 
+## [3.41.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.40.0...frontend-v3.41.0) (2026-10-17)
+
+
+### Features
+
+* **clubs:** district meeting-time heatmap ([#1796](https://github.com/taverns-red/toast-stats/issues/1796)) ([#2114](https://github.com/taverns-red/toast-stats/issues/2114)) ([f01cd3a](https://github.com/taverns-red/toast-stats/commit/f01cd3a7de402a9027110286cb5ed24e901f4dd7))
+* **map:** Arabic and Hebrew place names on self-hosted glyphs, no RTL plugin needed ([#2085](https://github.com/taverns-red/toast-stats/issues/2085)) ([#2116](https://github.com/taverns-red/toast-stats/issues/2116)) ([9564ed1](https://github.com/taverns-red/toast-stats/commit/9564ed17ac6944127d711b4e86efed98beef49d5))
+* **map:** meeting-day pin mode and Online only attendance ([#1787](https://github.com/taverns-red/toast-stats/issues/1787)) ([#2118](https://github.com/taverns-red/toast-stats/issues/2118)) ([ece55d6](https://github.com/taverns-red/toast-stats/commit/ece55d6e6a332cf9aeba2c03c1d136531d6dd1d9))
+* **region,world:** health, status and compliance rollup subpages + region districts sparkline ([#1815](https://github.com/taverns-red/toast-stats/issues/1815)) ([#2123](https://github.com/taverns-red/toast-stats/issues/2123)) ([538e03b](https://github.com/taverns-red/toast-stats/commit/538e03b78626d3b54dff4f078263c0fd904a8479))
+
+
+### Bug Fixes
+
+* **map:** city labels step clear of large pin clusters ([#2092](https://github.com/taverns-red/toast-stats/issues/2092)) ([#2111](https://github.com/taverns-red/toast-stats/issues/2111)) ([c120c06](https://github.com/taverns-red/toast-stats/commit/c120c06329808a6a5855f0cc1e58bfe2a6ee54b4))
+* **map:** pin outline and halo use the app palette ([#2087](https://github.com/taverns-red/toast-stats/issues/2087)) ([#2113](https://github.com/taverns-red/toast-stats/issues/2113)) ([ba231de](https://github.com/taverns-red/toast-stats/commit/ba231dea472a6ed3e4732588a60827f3bc5bc927))
+* **time-series:** a [#1671](https://github.com/taverns-red/toast-stats/issues/1671) gap date gets no point, recorded as not measured, never 0 ([#2070](https://github.com/taverns-red/toast-stats/issues/2070)) ([#2072](https://github.com/taverns-red/toast-stats/issues/2072)) ([2ac486d](https://github.com/taverns-red/toast-stats/commit/2ac486d8de95564d0a2120e52603ea9f7e033b7d))
+* **trends:** year-over-year y-axis ticks at the 14px data floor ([#2125](https://github.com/taverns-red/toast-stats/issues/2125)) ([#2126](https://github.com/taverns-red/toast-stats/issues/2126)) ([eee013e](https://github.com/taverns-red/toast-stats/commit/eee013e9c7e715e338305a18939de706fd0dcf7b))
+
+
+### Refactors
+
+* **history:** fold [#2060](https://github.com/taverns-red/toast-stats/issues/2060)'s shard reader into the [#2059](https://github.com/taverns-red/toast-stats/issues/2059) reader ([#2073](https://github.com/taverns-red/toast-stats/issues/2073)) ([#2115](https://github.com/taverns-red/toast-stats/issues/2115)) ([5926691](https://github.com/taverns-red/toast-stats/commit/592669156acdeffe3616e08496adfe5241d386fd))
+
+
+### Dependencies
+
+* **deps:** Bump the patch-and-minor group across 1 directory with 17 updates ([#2110](https://github.com/taverns-red/toast-stats/issues/2110)) ([d82ed58](https://github.com/taverns-red/toast-stats/commit/d82ed587586bd3fb0017408e952e1715ac632a35))
+
 ## [3.40.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.39.0...frontend-v3.40.0) (2026-10-16)
 
 
