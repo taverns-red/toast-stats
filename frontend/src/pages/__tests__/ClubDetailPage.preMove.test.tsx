@@ -35,6 +35,7 @@ import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 import { fetchCdnClubIndex } from '../../services/cdn'
 import { fetchClubDistrictHistoryShard } from '../../services/cdnClubDistrictHistory'
 import shard77 from '../../__tests__/fixtures/club-district-history-77-2026-10-14.recorded.json'
+import snapshotIndex from '../../__tests__/fixtures/district-snapshot-index-01-201-2026-10-17.recorded.json'
 
 Object.defineProperty(window, 'matchMedia', {
   value: vi.fn().mockImplementation((query: string) => ({
@@ -61,12 +62,11 @@ vi.mock('../../hooks/useDistricts', () => ({
   })),
 }))
 
-// Per-district snapshot dates, the shape of config/district-snapshot-index
-// on prod: D201 begins with the 2026 reformation, D01 runs to 2026-07-30.
-const DISTRICT_DATES: Record<string, string[]> = {
-  '201': ['2026-07-26', '2026-10-14'],
-  '01': ['2024-10-31', '2025-06-30', '2026-07-30'],
-}
+// Per-district snapshot dates, recorded from config/district-snapshot-index
+// on prod (#2079): D01 runs to 2026-07-30; D201 begins with a 2026-06-30
+// file (the June close, collected in July under the new structure) and
+// then the 2026 reformation's dates.
+const DISTRICT_DATES: Record<string, string[]> = snapshotIndex.districts
 vi.mock('../../hooks/useDistrictData', () => ({
   useDistrictCachedDates: vi.fn((districtId: string) => {
     const dates = DISTRICT_DATES[districtId] ?? []
@@ -168,7 +168,8 @@ const mockedIndex = vi.mocked(fetchCdnClubIndex)
 afterEach(() => cleanup())
 beforeEach(() => {
   vi.clearAllMocks()
-  // The truth on prod: D01 through 2025-26, D201 from 2026-27.
+  // The truth on prod: D01 through 2025-26, D201 from 2026-27, and D201's
+  // 2026-06-30 file (PY 2025-26) lists the club too (#2079).
   analyticsHas = (d, start) =>
     d === '01' ? (start ?? '') < '2026-07-01' : d === '201'
   mockedShard.mockResolvedValue(shard77 as ClubDistrictHistoryShard)
@@ -300,5 +301,46 @@ describe('ClubDetailPage — a PY spent in another district (#1804)', () => {
     expect(
       await screen.findByText(/moved to District 201 after June 30, 2026/)
     ).toBeInTheDocument()
+  })
+
+  // #2079 (Ron's decision): the club-district history wins. D201's
+  // 2026-06-30 file lists club 977, but the history places 2025-26 in D01.
+  it("follows the history, not the URL district's June file, for the PY's close (#2079)", async () => {
+    renderAt('/district/201/club/977?py=2025')
+
+    expect(
+      await screen.findByText('In 2025–26 this club was in District 1.')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Showing its District 1 figures for 2025–26.')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Open as District 1' })
+    ).toHaveAttribute('href', '/district/01/club/977?py=2025')
+    // The history is consulted first: D201's 2025-26 data is never read.
+    expect(analyticsDistricts()).toContain('01')
+    expect(analyticsDistricts()).not.toContain('201')
+    expect(screen.getByTestId('loc')).toHaveTextContent(
+      '/district/201/club/977?py=2025'
+    )
+  })
+
+  it('keeps the URL district when the history agrees with it for an explicit year', async () => {
+    renderAt('/district/201/club/977?py=2026')
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(screen.queryByText(/this club was in District/)).toBeNull()
+    expect(screen.queryByText(/This club moved to/)).toBeNull()
+    expect(new Set(analyticsDistricts())).toEqual(new Set(['201']))
+  })
+
+  it("keeps the URL district's data when the history does not list the club", async () => {
+    mockedShard.mockResolvedValue({
+      ...(shard77 as ClubDistrictHistoryShard),
+      clubs: {},
+    })
+    renderAt('/district/201/club/977?py=2025')
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(screen.queryByText(/this club was in District/)).toBeNull()
+    expect(new Set(analyticsDistricts())).toEqual(new Set(['201']))
   })
 })
