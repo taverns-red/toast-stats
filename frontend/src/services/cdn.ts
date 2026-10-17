@@ -33,6 +33,8 @@ import {
   RegionMembershipSeriesSchema,
   RegionRollupsSchema,
   regionMembershipSeriesPath,
+  REPORTS_ROLLUPS_FILE_NAME,
+  ReportsRollupsSchema,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsSchema,
   type ClubsByRegionShard,
@@ -44,6 +46,7 @@ import {
   type GlobalTotals,
   type RegionMembershipSeries,
   type RegionRollups,
+  type ReportsRollups,
   type SuspendedClubs,
 } from '@taverns-red/shared-contracts'
 
@@ -790,6 +793,33 @@ export async function fetchCdnEducationRollupIndex(): Promise<EducationRollupInd
     if (!res.ok) return null
     recordCdnResponse(res)
     const parsed = EducationRollupIndexSchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/** `snapshots/{date}/reports-rollups.json` (#2012) — region and world
+ *  rollups of the daily-reports figures (prospective, coached, dues, officer
+ *  lists, sponsors/mentors). */
+export function cdnReportsRollupsUrl(date: SnapshotDate): string {
+  return `${cdnBaseUrl()}/snapshots/${date}/${REPORTS_ROLLUPS_FILE_NAME}`
+}
+
+/**
+ * A date's reports rollups (#1812, #1813), **tolerantly**: one request feeds
+ * `/regions/growth` and every `/region/:n/growth`. A date before the artifact
+ * existed (it is promoted only once #2117 lands), an off-contract body or a
+ * network error is `null` — "not available yet" — never a block of zeros.
+ */
+export async function fetchCdnReportsRollups(
+  date: SnapshotDate
+): Promise<ReportsRollups | null> {
+  try {
+    const res = await fetch(cdnReportsRollupsUrl(date))
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = ReportsRollupsSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null
