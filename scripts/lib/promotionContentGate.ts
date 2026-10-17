@@ -38,6 +38,7 @@ import {
   DistrictRegionHistorySchema,
   findClubContactField,
   ProgramYearIndexFileSchema,
+  RegionMembershipSeriesSchema,
   REGION_ROLLUPS_FILE_NAME,
   RegionRollupsSchema,
   type RegionRollupFigures,
@@ -92,6 +93,7 @@ export type ObjectKind =
   | 'clubs-by-region-shard'
   | 'clubs-by-region-world'
   | 'clubs-by-region-world-points'
+  | 'region-membership-series'
   | 'latest'
   | 'json'
 
@@ -140,6 +142,7 @@ const CLUBS_BY_REGION_WORLD_POINTS = new RegExp(
 const CLUBS_BY_REGION_SHARD = new RegExp(
   `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${CLUBS_BY_REGION_DIR}/([A-Za-z0-9-]+)\\.json$`
 )
+const REGION_SERIES = /^time-series\/regions\/(\d{4}-\d{4})\.json$/
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
 
@@ -196,6 +199,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (CLUBS_BY_REGION_WORLD_POINTS.test(path))
     return 'clubs-by-region-world-points'
   if (CLUBS_BY_REGION_SHARD.test(path)) return 'clubs-by-region-shard'
+  if (REGION_SERIES.test(path)) return 'region-membership-series'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
@@ -336,7 +340,8 @@ export function planContentChecks(
       c.kind === 'region-rollups' ||
       c.kind === 'clubs-by-region-shard' ||
       c.kind === 'clubs-by-region-world' ||
-      c.kind === 'clubs-by-region-world-points'
+      c.kind === 'clubs-by-region-world-points' ||
+      c.kind === 'region-membership-series'
     ) {
       checks.push(c)
     } else {
@@ -982,6 +987,58 @@ function checkClubsByRegionWorldPoints(
   return null
 }
 
+/**
+ * time-series/regions/<PY>.json (#2127): the shared-contracts schema; served
+ * under its own program year, every date inside that year (a June close is
+ * collected in July — the #1284 slip), dates strictly ascending; each
+ * district in one region; and world = Σ regions at every date, null exactly
+ * where a region is (a gap is never summed as 0).
+ */
+function checkRegionSeries(path: string, value: unknown): string | null {
+  const parsed = RegionMembershipSeriesSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const s = parsed.data
+  const servedAs = REGION_SERIES.exec(path)?.[1]
+  if (s.programYear !== servedAs) {
+    return `holds programYear ${s.programYear} but is served under ${servedAs}`
+  }
+  for (const [i, date] of s.dates.entries()) {
+    if (programYearForSnapshotDate(date) !== s.programYear) {
+      return `date ${date} is not in ${s.programYear}`
+    }
+    if (i > 0 && date <= s.dates[i - 1]!) {
+      return `dates are not strictly ascending at ${date}`
+    }
+  }
+  const regions = Object.entries(s.regions ?? {})
+  const seen = new Map<string, string>()
+  for (const [region, block] of regions) {
+    for (const id of block.districtIds) {
+      const other = seen.get(id)
+      if (other !== undefined) {
+        return `district ${id} is listed in regions ${other} and ${region}`
+      }
+      seen.set(id, region)
+    }
+  }
+  if (s.regions !== null && s.world.districts !== seen.size) {
+    return `world.districts is ${s.world.districts}, but the regions list ${seen.size}`
+  }
+  if (s.regions === null) return null
+  for (const [i, date] of s.dates.entries()) {
+    const values = regions.map(([, block]) => block.membership[i])
+    const want = values.some(v => v === null)
+      ? null
+      : values.reduce<number>((sum, v) => sum + (v as number), 0)
+    if (s.world.membership[i] !== want) {
+      return `world at ${date} is ${s.world.membership[i]}, its regions sum to ${want}`
+    }
+  }
+  return null
+}
+
 function checkLatest(value: unknown): string | null {
   const date = (value as { latestSnapshotDate?: unknown } | null)
     ?.latestSnapshotDate
@@ -1047,6 +1104,8 @@ export function checkObject(
       return checkClubsByRegionWorld(check.path, value)
     case 'clubs-by-region-world-points':
       return checkClubsByRegionWorldPoints(check.path, value)
+    case 'region-membership-series':
+      return checkRegionSeries(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -1156,6 +1215,8 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, ClubsByRegionWorldSchema (no map points), served under its snapshotDate with that date’s program year, shards at their own paths summing to the totals (#1800)',
   'clubs-by-region-world-points':
     'decoded, ClubsByRegionWorldPointsSchema, served under its snapshotDate with that date’s program year, count = its points, no club twice (#1800)',
+  'region-membership-series':
+    'decoded, RegionMembershipSeriesSchema, served under its programYear, every date in that year and ascending, each district in one region, world = Σ regions (null where a region is) (#2127)',
   latest: 'decoded, latestSnapshotDate is a real date',
   json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',
