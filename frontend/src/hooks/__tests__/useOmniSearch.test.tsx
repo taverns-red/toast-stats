@@ -17,6 +17,7 @@ import {
 } from '../../services/cdn'
 import { fetchClubDistrictHistoryShard } from '../../services/cdnClubDistrictHistory'
 import shardFixture from '../../__tests__/fixtures/club-district-history-shard-77.recorded.json'
+import { ClosedClubNameIndexSchema } from '@taverns-red/shared-contracts'
 import { fetchClosedClubNames } from '../../services/cdnClosedClubNames'
 import closedNamesFixture from '../../__tests__/fixtures/closed-club-names.recorded.json'
 
@@ -63,7 +64,7 @@ const keyEvent = (key: string) =>
 
 const setupCdn = () => {
   mockedClosedNames.mockResolvedValue(
-    closedNamesFixture as Awaited<ReturnType<typeof fetchClosedClubNames>>
+    ClosedClubNameIndexSchema.parse(closedNamesFixture)
   )
   mockedShard.mockResolvedValue(
     shardFixture as Awaited<ReturnType<typeof fetchClubDistrictHistoryShard>>
@@ -249,6 +250,8 @@ describe('useOmniSearch closed-club fallback (#1806)', () => {
 
   it('a failed shard fetch leaves search unchanged', async () => {
     mockedShard.mockResolvedValue(null) // the reader's "not available"
+    // Isolate the number path: the name index (#2062) would find 377 too.
+    mockedClosedNames.mockResolvedValue(null)
     const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
       wrapper,
     })
@@ -318,8 +321,10 @@ describe('useOmniSearch closed clubs by name (#2062)', () => {
     await waitFor(() => expect(result.current.index).toBeDefined())
     act(() => result.current.setQuery('377'))
     await waitFor(() => expect(mockedClosedNames).toHaveBeenCalled())
+    // 3778 (Club Le Marquis) legitimately prefix-matches "377"; 377 itself
+    // must lead, exactly once.
     await waitFor(() =>
-      expect(result.current.flat.map(e => e.id)).toEqual(['377'])
+      expect(result.current.flat.map(e => e.id)).toEqual(['377', '3778'])
     )
   })
 

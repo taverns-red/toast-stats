@@ -11,7 +11,7 @@ import {
   type SearchIndex,
   type SearchResultGroup,
 } from '../searchIndex'
-import type { ClosedClubNameIndex } from '@taverns-red/shared-contracts'
+import { ClosedClubNameIndexSchema } from '@taverns-red/shared-contracts'
 import closedNamesFixture from '../../__tests__/fixtures/closed-club-names.recorded.json'
 
 // --- Fixtures (shapes mirror fetchCdnRankings().rankings + fetchCdnClubIndex().clubs) ---
@@ -523,14 +523,13 @@ describe('closed clubs from the club-district history (#1806)', () => {
 describe('closed clubs by name (#2062)', () => {
   const index = buildSearchIndex(RANKINGS, CLUBS, DIVISIONS_AREAS)
   // The pipeline-built index over the recorded prod history (2026-10-15).
+  const closedNames = ClosedClubNameIndexSchema.parse(closedNamesFixture)
   const closedIndex = {
-    entities: closedClubNameEntities(closedNamesFixture as ClosedClubNameIndex),
+    entities: closedClubNameEntities(closedNames),
   }
 
   it('builds one entity per row, labelled and routed like the number fallback (#1806)', () => {
-    expect(closedIndex.entities).toHaveLength(
-      (closedNamesFixture as ClosedClubNameIndex).totalClubs
-    )
+    expect(closedIndex.entities).toHaveLength(closedNames.totalClubs)
     expect(closedIndex.entities).toContainEqual(
       closedClubEntity('377', {
         name: 'Traveling Toastmasters Club',
@@ -594,7 +593,9 @@ describe('closed clubs by name (#2062)', () => {
       '377',
       closedIndex
     )
-    expect(groups.flatMap(g => g.entities).map(e => e.id)).toEqual(['377'])
+    const ids = groups.flatMap(g => g.entities).map(e => e.id)
+    expect(ids.filter(id => id === '377')).toHaveLength(1)
+    expect(ids[0]).toBe('377')
   })
 
   it('adds nothing when the results are already at the cap', () => {

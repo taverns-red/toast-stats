@@ -13,14 +13,18 @@ import { clubDistrictHistoryShardKey } from '@taverns-red/shared-contracts'
 import {
   clubIdIndexMiss,
   closedClubEntity,
+  closedClubNameEntities,
+  isClubSearchMiss,
   loadSearchIndex,
   searchEntities,
   withClosedClub,
+  withClosedClubMatches,
   type SearchEntity,
   type SearchIndex,
   type SearchResultGroup,
 } from '../services/searchIndex'
 import { clubDistrictHistoryShardQuery } from './clubDistrictHistoryQuery'
+import { fetchClosedClubNames } from '../services/cdnClosedClubNames'
 import {
   closedClubSummary,
   findClubInShard,
@@ -79,7 +83,7 @@ export function useOmniSearch(options: UseOmniSearchOptions): UseOmniSearch {
     enabled: !!missedClubId,
   })
 
-  const groups = useMemo(() => {
+  const numberGroups = useMemo(() => {
     if (!missedClubId || !historyShard) return currentGroups
     const club = findClubInShard(historyShard, missedClubId)
     const closed = club && closedClubSummary(club)
@@ -89,6 +93,36 @@ export function useOmniSearch(options: UseOmniSearchOptions): UseOmniSearch {
       closedClubEntity(missedClubId, { name: club.name, ...closed })
     )
   }, [currentGroups, missedClubId, historyShard])
+
+  // Closed clubs by name (#2062): the first query that matches no current
+  // club loads the closed-club name index (~190 KB gzip), and it stays
+  // loaded for the session. Latched in state (set during render, the
+  // React-sanctioned derived-state update) so a later hit keeps it. A 404
+  // — the index is not on prod until the next pipeline run — or any failure
+  // resolves null and search is unchanged.
+  const [wantClosedNames, setWantClosedNames] = useState(false)
+  if (!wantClosedNames && index && isClubSearchMiss(query, currentGroups)) {
+    setWantClosedNames(true)
+  }
+  const { data: closedNames } = useQuery({
+    queryKey: ['closed-club-names'],
+    queryFn: fetchClosedClubNames,
+    staleTime: INDEX_STALE_MS,
+    enabled: wantClosedNames,
+  })
+  const closedIndex = useMemo<SearchIndex | null>(
+    () =>
+      closedNames ? { entities: closedClubNameEntities(closedNames) } : null,
+    [closedNames]
+  )
+
+  const groups = useMemo(
+    () =>
+      closedIndex
+        ? withClosedClubMatches(numberGroups, query, closedIndex)
+        : numberGroups,
+    [numberGroups, query, closedIndex]
+  )
 
   // Flatten grouped results into one ordered list for keyboard nav /
   // aria-activedescendant — groups are display-only.
