@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { ChangeGroup } from '../ChangeGroup'
 import type { DiffEvent } from '@taverns-red/shared-contracts'
@@ -448,5 +448,89 @@ describe('ChangeGroup transfer counterpart (#1806)', () => {
     expect(
       screen.queryByRole('link', { name: /^District / })
     ).not.toBeInTheDocument()
+  })
+})
+
+/* #2063 — the counterpart lookup loads a bounded batch of history shards per
+   view. A transfer row whose shard is still outside the batch is "deferred":
+   it keeps the engine's wording, and the group offers to load the next batch. */
+describe('ChangeGroup deferred counterparts (#2063)', () => {
+  const transfers = (category: DiffEvent['category'], ids: string[]) =>
+    ids.map(id =>
+      event({
+        category,
+        clubId: id,
+        clubName: `Club ${id}`,
+        label: `Club ${id} (Active) moved into the district in the 2026 district realignment`,
+        magnitude: 1,
+      })
+    )
+
+  const renderDeferred = (
+    category: DiffEvent['category'],
+    events: DiffEvent[],
+    deferred: ReadonlySet<string>,
+    onLoadMore = vi.fn()
+  ) => {
+    render(
+      <MemoryRouter>
+        <ChangeGroup
+          category={category}
+          heading="Clubs moved in"
+          events={events}
+          districtId="36"
+          collapsed={false}
+          onToggle={() => {}}
+          deferredCounterparts={deferred}
+          onLoadMoreCounterparts={onLoadMore}
+        />
+      </MemoryRouter>
+    )
+    return onLoadMore
+  }
+
+  it('offers to name the other district for the deferred rows in this group', () => {
+    const onLoadMore = renderDeferred(
+      'club-transferred-in',
+      transfers('club-transferred-in', ['00000101', '102', '103']),
+      // '999' belongs to another group: it is not counted here.
+      new Set(['101', '103', '999'])
+    )
+    const button = screen.getByRole('button', {
+      name: 'Name the other district for 2 more clubs',
+    })
+    fireEvent.click(button)
+    expect(onLoadMore).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the singular for one deferred club', () => {
+    renderDeferred(
+      'club-transferred-out',
+      transfers('club-transferred-out', ['101']),
+      new Set(['101'])
+    )
+    expect(
+      screen.getByRole('button', {
+        name: 'Name the other district for 1 more club',
+      })
+    ).toBeInTheDocument()
+  })
+
+  it('shows no button when nothing in the group is deferred', () => {
+    renderDeferred(
+      'club-transferred-in',
+      transfers('club-transferred-in', ['101']),
+      new Set(['999'])
+    )
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('shows no button on a non-transfer group', () => {
+    renderDeferred(
+      'club-removed',
+      transfers('club-removed', ['101']),
+      new Set(['101'])
+    )
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

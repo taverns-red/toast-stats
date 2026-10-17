@@ -26,6 +26,14 @@ vi.mock('../../hooks/useTransferCounterparts', () => ({
   useTransferCounterparts: vi.fn(),
 }))
 const mockedCounterparts = vi.mocked(useTransferCounterparts)
+const noCounterparts = (
+  over: Partial<ReturnType<typeof useTransferCounterparts>> = {}
+): ReturnType<typeof useTransferCounterparts> => ({
+  counterparts: new Map(),
+  deferred: new Set(),
+  loadMore: vi.fn(),
+  ...over,
+})
 
 const mockedDates = vi.mocked(useDistrictCachedDates)
 const mockedDiff = vi.mocked(useSnapshotDiff)
@@ -100,7 +108,7 @@ function diffFixture(over: Partial<SnapshotDiff> = {}): SnapshotDiff {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockedCounterparts.mockReturnValue(new Map())
+  mockedCounterparts.mockReturnValue(noCounterparts())
   mockedDistricts.mockReturnValue({
     data: { districts: [{ id: '61', name: '61' }] },
   } as unknown as ReturnType<typeof useDistricts>)
@@ -465,7 +473,9 @@ describe('DistrictChangesPage — district realignment (#1443)', () => {
       isLoading: false,
       isError: false,
     } as unknown as ReturnType<typeof useSnapshotDiff>)
-    mockedCounterparts.mockReturnValue(new Map([['333', '201']]))
+    mockedCounterparts.mockReturnValue(
+      noCounterparts({ counterparts: new Map([['333', '201']]) })
+    )
 
     renderPage()
     // The page hands the hook the diff it renders and its route district (R3).
@@ -477,6 +487,25 @@ describe('DistrictChangesPage — district realignment (#1443)', () => {
     expect(screen.getByText(/transferred to/)).toBeInTheDocument()
     // The club the history cannot place keeps the engine's wording.
     expect(screen.getByText(/moved into the district/)).toBeInTheDocument()
+  })
+
+  it('offers the next batch of counterparts for rows outside the loaded budget (#2063)', () => {
+    mockedDiff.mockReturnValue({
+      data: realignmentDiff(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+    const loadMore = vi.fn()
+    mockedCounterparts.mockReturnValue(
+      noCounterparts({ deferred: new Set(['222']), loadMore })
+    )
+
+    renderPage()
+    const button = screen.getByRole('button', {
+      name: 'Name the other district for 1 more club',
+    })
+    fireEvent.click(button)
+    expect(loadMore).toHaveBeenCalledTimes(1)
   })
 
   it('groups transfers separately so a genuine new club is not buried in them', () => {

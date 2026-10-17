@@ -149,10 +149,13 @@ const DistrictChangesPage: React.FC = () => {
   // Realignment transfers name the district on the other side when the
   // club-district history knows it (#1806). Lazy: no fetch unless the diff
   // carries a transfer.
-  const counterparts = useTransferCounterparts(
-    invalidPair ? undefined : diff,
-    districtId ?? ''
-  )
+  // Bounded per view (#2063): rows past the first batch of shards are
+  // deferred, and their group offers the next batch.
+  const {
+    counterparts,
+    deferred: deferredCounterparts,
+    loadMore: loadMoreCounterparts,
+  } = useTransferCounterparts(invalidPair ? undefined : diff, districtId ?? '')
 
   if (!districtId) return null
 
@@ -346,6 +349,8 @@ const DistrictChangesPage: React.FC = () => {
                         collapsed={collapsedGroups.includes(category)}
                         onToggle={handleGroupToggle}
                         counterparts={counterparts}
+                        deferredCounterparts={deferredCounterparts}
+                        onLoadMoreCounterparts={loadMoreCounterparts}
                       />
                     ))}
                   </div>
