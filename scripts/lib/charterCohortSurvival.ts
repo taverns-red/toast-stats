@@ -22,9 +22,13 @@
 
 import {
   buildCharterCohortSurvivalFile,
+  buildCharterCohortSurvivalRollupFile,
   charterCohortSurvivalObjectPath,
+  charterCohortSurvivalRollupObjectPath,
   type CharterCohortSurvivalFile,
+  type CharterCohortSurvivalRollupFile,
   type ClubDistrictHistoryClub,
+  type DistrictRegionHistory,
 } from '@taverns-red/shared-contracts'
 import type { ClubDistrictHistoryArtifact } from './clubDistrictHistory.js'
 
@@ -77,4 +81,73 @@ export function foldCharterCohortSurvival(
     })
   }
   return files
+}
+
+export interface CharterCohortSurvivalRollups {
+  /** Region id ("01".."14") → its file. */
+  regions: Record<string, CharterCohortSurvivalRollupFile>
+  world: CharterCohortSurvivalRollupFile
+}
+
+/**
+ * The region and world files (#1818): `region_<NN>.json` for every region
+ * the region history names, and `world.json`. Same shared fold and rules
+ * as the district files; a club is in a region's cohort when its district
+ * sat in that region in the club's charter program year (each year's own
+ * membership, #1820). Clubs are grouped by their charter region first, as
+ * the district fold groups by charter district. A region id that cannot
+ * name an object is passed to `onSkipped` and gets no file.
+ */
+export function foldCharterCohortSurvivalRollups(
+  history: ClubDistrictHistoryArtifact,
+  regionHistory: Pick<DistrictRegionHistory, 'districts'>,
+  onSkipped: (regionId: string) => void = () => {}
+): CharterCohortSurvivalRollups {
+  const named = new Set<string>()
+  for (const id of Object.keys(regionHistory.districts).sort(byString)) {
+    for (const r of Object.values(regionHistory.districts[id]!.byProgramYear))
+      named.add(r)
+  }
+
+  const all: Record<string, ClubDistrictHistoryClub> = {}
+  const chartered = new Map<string, Record<string, ClubDistrictHistoryClub>>()
+  for (const key of Object.keys(history.shards).sort(byString)) {
+    const clubs = history.shards[key]!.clubs
+    for (const id of Object.keys(clubs).sort(byString)) {
+      const club = clubs[id]!
+      all[id] = club
+      const first = Object.keys(club.byProgramYear).sort(byString)[0]
+      if (first === undefined) continue
+      const district = club.byProgramYear[first]!
+      const region = regionHistory.districts[district]?.byProgramYear[first]
+      if (region === undefined) continue
+      const group = chartered.get(region) ?? {}
+      group[id] = club
+      chartered.set(region, group)
+    }
+  }
+
+  const regions: Record<string, CharterCohortSurvivalRollupFile> = {}
+  for (const regionId of [...named].sort(byString)) {
+    const scope = { kind: 'region' as const, regionId }
+    try {
+      charterCohortSurvivalRollupObjectPath(scope)
+    } catch {
+      onSkipped(regionId)
+      continue
+    }
+    regions[regionId] = buildCharterCohortSurvivalRollupFile({
+      index: history.index,
+      clubs: chartered.get(regionId) ?? {},
+      regionHistory,
+      scope,
+    })
+  }
+  const world = buildCharterCohortSurvivalRollupFile({
+    index: history.index,
+    clubs: all,
+    regionHistory,
+    scope: { kind: 'world' },
+  })
+  return { regions, world }
 }
