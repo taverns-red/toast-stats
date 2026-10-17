@@ -2,12 +2,12 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { MemoryRouter } from 'react-router-dom'
-import { RegionsLeaderboard } from '../RegionsLeaderboard'
+import { RegionsLeaderboard, type RegionTrends } from '../RegionsLeaderboard'
 import type { RegionRollup } from '../../utils/aggregateRegions'
 
 /* #2127 — one membership sparkline per region on /regions, from the one
-   time-series/regions/{PY}.json file. `trends` undefined = still loading
-   (the box is reserved), a Map = drawn, null = the file is not published
+   time-series/regions/{PY}.json file. `trends` 'loading' = the box is
+   reserved, a Map = drawn, null (or omitted) = the file is not published
    (404 until it reaches prod): no Trend column at all, never a flat line. */
 
 const mobile = vi.hoisted(() => ({ value: false }))
@@ -50,7 +50,7 @@ const TRENDS = new Map<string, number[] | null>([
   ['05', [13000, 13278]],
 ])
 
-const renderBoard = (trends?: ReadonlyMap<string, number[] | null> | null) =>
+const renderBoard = (trends: RegionTrends) =>
   render(
     <MemoryRouter>
       <RegionsLeaderboard rollups={ROLLUPS} trends={trends} />
@@ -86,8 +86,8 @@ describe('RegionsLeaderboard membership trend (#2127)', () => {
     expect(within(table()).queryAllByRole('img')).toHaveLength(0)
   })
 
-  it('loading (undefined): the column is reserved, nothing drawn yet', () => {
-    renderBoard(undefined)
+  it('loading: the column is reserved, nothing drawn yet', () => {
+    renderBoard('loading')
     const headers = within(table())
       .getAllByRole('columnheader')
       .map(th => th.textContent?.trim())

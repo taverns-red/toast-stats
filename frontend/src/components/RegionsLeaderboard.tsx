@@ -7,6 +7,7 @@ import {
   PriorityColumnsTable,
   type PriorityMetric,
 } from './PriorityColumnsTable'
+import { DistrictTrendSparkline } from './DistrictTrendSparkline'
 
 /* RegionsLeaderboard (#494, restored #964) — the PRIMARY sortable table for
    the /regions overview. 14 region rows × six columns.
@@ -27,10 +28,16 @@ import {
 export interface RegionsLeaderboardProps {
   rollups: ReadonlyArray<RegionRollup>
   /**
-   * Membership sparkline values per region (#2127). Stub: not drawn yet.
+   * Membership sparkline values per region (#2127), from the one
+   * time-series/regions/{PY}.json file. `'loading'` = the column is
+   * reserved, no line yet; omitted or `null` = the file is not published
+   * (no Trend column, no sparkline — the table is as it was).
    */
-  trends?: ReadonlyMap<string, number[] | null> | null
+  trends?: RegionTrends
 }
+
+export type RegionTrends =
+  ReadonlyMap<string, number[] | null> | 'loading' | null
 
 const SORT_FIELDS = [
   'region',
@@ -114,7 +121,15 @@ const NUMERIC_TD =
 
 export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
   rollups,
+  trends,
 }) => {
+  const showTrend = trends !== undefined && trends !== null
+  // A region the file holds no line for reads "no trend" in words; while
+  // the file loads every cell is reserved (undefined).
+  const trendOf = (region: string): number[] | null | undefined =>
+    typeof trends === 'object' && trends !== null
+      ? (trends.get(region) ?? null)
+      : undefined
   // URL-synced click-header sort. Default: region number ascending (#964).
   // A new-column click starts descending (metric columns read "best first").
   const { sort, toggleSort } = useUrlSort<SortField>({
@@ -153,6 +168,15 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
             onSort={toggleSort}
             thClassName={`${HEADER_TH} text-left region-leaderboard__sticky-col`}
           />
+          {showTrend && (
+            <th
+              scope="col"
+              title="Membership this program year"
+              className={`${HEADER_TH} text-left`}
+            >
+              Trend
+            </th>
+          )}
           <SortableHeader<SortField>
             field="districts"
             label="Districts"
@@ -218,6 +242,14 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
                 </span>
               </Link>
             </td>
+            {showTrend && (
+              <td
+                data-testid="region-trend-cell"
+                className="px-3 py-3 whitespace-nowrap"
+              >
+                <DistrictTrendSparkline series={trendOf(r.region)} />
+              </td>
+            )}
             <td className={NUMERIC_TD}>{r.districtCount}</td>
             <td className={NUMERIC_TD}>{r.paidClubs.toLocaleString()}</td>
             <td className={NUMERIC_TD}>{r.totalPayments.toLocaleString()}</td>
@@ -249,11 +281,19 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
         <Link
           to={`/region/${r.region}`}
           aria-label={`Region ${r.region} — leader ${r.leadingDistrictName}`}
+          className={showTrend ? 'region-identity' : undefined}
         >
           <span className="font-semibold">Region {r.region}</span>
           <span className="truncate text-gray-600 theme-dark:text-gray-300">
             lead D{r.leadingDistrictId}
           </span>
+          {/* Own line under the label (as on /region/:n, #1815): beside it
+              the 60px line would clip the identity at 375 (Lesson 134). */}
+          {showTrend && (
+            <span className="region-identity__trend">
+              <DistrictTrendSparkline series={trendOf(r.region)} />
+            </span>
+          )}
         </Link>
       )}
       metrics={PHONE_METRICS}
