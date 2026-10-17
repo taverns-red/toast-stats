@@ -21,6 +21,7 @@ import type {
   ClubStatistics,
   DistrictStatistics,
 } from '@taverns-red/analytics-core'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 import { ClubTrendsStore, updateClubTrendsStore } from '../ClubTrendsStore.js'
 
 const FIXTURE = path.resolve(
@@ -130,7 +131,7 @@ describe('ClubTrendsStore order independence (#1741)', () => {
     const saved = JSON.parse(await storeBytesFor([D3, D2, D1])) as {
       clubs: Record<string, Record<string, unknown>>
     }
-    const moved = saved.clubs[recorded.clubs[0]!.clubId]!
+    const moved = saved.clubs[normalizeClubId(recorded.clubs[0]!.clubId)]!
     expect(moved).toMatchObject({
       clubName: 'Limestone City Toastmasters',
       divisionId: 'B',
@@ -174,7 +175,9 @@ describe('ClubTrendsStore order independence (#1741)', () => {
     const saved = JSON.parse(outOfOrder) as {
       clubs: Record<string, Record<string, unknown>>
     }
-    expect(saved.clubs[recorded.clubs[0]!.clubId]).toMatchObject({
+    expect(
+      saved.clubs[normalizeClubId(recorded.clubs[0]!.clubId)]
+    ).toMatchObject({
       divisionId: 'A',
       divisionName: 'Division A',
       areaId: '01',

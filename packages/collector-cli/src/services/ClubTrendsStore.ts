@@ -23,6 +23,7 @@ import type {
 } from '@taverns-red/analytics-core'
 import { calculateProgramYear } from '../utils/CachePaths.js'
 import { readStoreFileText } from '../utils/gzipLayers.js'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 
 /**
  * Persisted store for a single district's club trends.
@@ -78,6 +79,7 @@ export class ClubTrendsStore {
       // Peels any gzip layers a non-decompressing download left on (#1702).
       const content = await readStoreFileText(filePath)
       const data = JSON.parse(content) as ClubTrendsStoreData
+      data.clubs = mergePaddedClubKeys(data.clubs)
       return new ClubTrendsStore(data)
     } catch (err) {
       const code = (err as { code?: string }).code
@@ -129,15 +131,17 @@ export class ClubTrendsStore {
    */
   upsertFromSnapshot(date: string, snapshot: DistrictStatistics): void {
     for (const club of snapshot.clubs) {
-      const existing = this.data.clubs[club.clubId]
+      // One canonical key per club (#2100), whatever form the snapshot used.
+      const clubId = normalizeClubId(club.clubId) || club.clubId
+      const existing = this.data.clubs[clubId]
 
       if (existing && date < latestDate(existing)) {
         fillPlaceholders(existing, club)
         upsertTrendPoints(existing, date, club)
       } else if (!existing) {
         // First time we've seen this club
-        this.data.clubs[club.clubId] = {
-          clubId: club.clubId,
+        this.data.clubs[clubId] = {
+          clubId,
           clubName: club.clubName,
           divisionId: club.divisionId || 'Unknown',
           divisionName: club.divisionName || 'Unknown Division',
@@ -168,7 +172,7 @@ export class ClubTrendsStore {
    * Retrieve the accumulated trend data for a club, or null if not found.
    */
   getClub(clubId: string): ClubTrendsStoreData['clubs'][string] | null {
-    return this.data.clubs[clubId] ?? null
+    return this.data.clubs[normalizeClubId(clubId) || clubId] ?? null
   }
 
   /**
@@ -211,6 +215,54 @@ export class ClubTrendsStore {
 
 type StoredClub = ClubTrendsStoreData['clubs'][string]
 type ClubSnapshot = DistrictStatistics['clubs'][number]
+
+/**
+ * Re-key every club under its canonical id (#2100). Stores written before
+ * #1447 keyed clubs zero-padded (`00000180`); after it the transform writes
+ * the bare form, so an old PY can hold both keys for one club. A padded key
+ * is folded into its canonical one: the canonical entry's points win on a
+ * shared date (they are the newer write), the padded entry only adds dates
+ * the canonical one lacks, and identity fields come from whichever entry has
+ * the later latest date (#1741). Loading through this means the next save
+ * writes a clean store; no separate rewrite is needed.
+ */
+function mergePaddedClubKeys(
+  clubs: ClubTrendsStoreData['clubs']
+): ClubTrendsStoreData['clubs'] {
+  const merged: ClubTrendsStoreData['clubs'] = {}
+  // Canonical keys first, so they are the base every padded key folds into.
+  const keys = Object.keys(clubs).sort(
+    (a, b) =>
+      Number(normalizeClubId(b) === b) - Number(normalizeClubId(a) === a)
+  )
+  for (const key of keys) {
+    const entry = clubs[key]!
+    const id = normalizeClubId(key) || key
+    const target = merged[id]
+    if (!target) {
+      merged[id] = { ...entry, clubId: id }
+      continue
+    }
+    const { membershipTrend, dcpGoalsTrend, ...identity } = entry
+    if (latestDate(entry) > latestDate(target)) {
+      Object.assign(target, identity, { clubId: id })
+    }
+    target.membershipTrend = unionByDate(
+      target.membershipTrend,
+      membershipTrend
+    )
+    target.dcpGoalsTrend = unionByDate(target.dcpGoalsTrend, dcpGoalsTrend)
+  }
+  return merged
+}
+
+/** `base` plus the points of `extra` on dates `base` lacks, date-sorted. */
+function unionByDate<T extends { date: string }>(base: T[], extra: T[]): T[] {
+  const seen = new Set(base.map(p => p.date))
+  return [...base, ...extra.filter(p => !seen.has(p.date))].sort((a, b) =>
+    a.date.localeCompare(b.date)
+  )
+}
 
 /** The latest date already in the club's trend (arrays are kept sorted). */
 function latestDate(entry: StoredClub): string {

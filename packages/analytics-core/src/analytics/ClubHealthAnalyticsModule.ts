@@ -19,6 +19,7 @@
 
 import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type { ClubTrend, ClubHealthData } from '../types.js'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 import {
   getCurrentProgramMonth,
   getMonthName,
@@ -195,7 +196,11 @@ export class ClubHealthAnalyticsModule {
 
     // Initialize club trends from latest data
     for (const club of latestSnapshot.clubs) {
-      const preloaded = preloadedTrends?.[club.clubId]
+      // The store keys clubs by canonical id (#2100); try the raw id first
+      // so a caller keyed by the snapshot's own form still matches.
+      const preloaded =
+        preloadedTrends?.[club.clubId] ??
+        preloadedTrends?.[normalizeClubId(club.clubId)]
 
       clubMap.set(club.clubId, {
         clubId: club.clubId,
