@@ -2954,8 +2954,8 @@ jobs:
           PROMOTED_DATES=",${{ needs.pipeline.outputs.promoted_dates }},"
           if [ "${PROMOTED_DATES#*,"${SNAPSHOT_DATE}",}" = "${PROMOTED_DATES}" ]; then
             echo "::warning::[reports] This run did not promote ${SNAPSHOT_DATE}, so its" \
-              "reports stay staging-only. The carry step of the first run after" \
-              "${SNAPSHOT_DATE} reaches prod copies them (#1763)."
+              "reports stay staging-only. Once a run promotes the date, a later" \
+              "run's carry step copies them (#1763)."
             echo "- ⏸️ ${SNAPSHOT_DATE} was held or skipped — its reports are staging-only until a run promotes the date; the carry step then copies them (#1763)." \
               >> "$GITHUB_STEP_SUMMARY"
           fi
