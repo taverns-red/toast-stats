@@ -11,8 +11,12 @@
  * the district at the club's latest sighting that year. So:
  * - `granularity` is `'program-year'`: a span's `from` is the first observed
  *   date of the program year in which the club first appeared there, not the
- *   club's exact first day. A mid-year move shows at the PY boundary. Phase 2
- *   (#1816) records date-exact change points.
+ *   club's exact first day. A mid-year move shows at the PY boundary.
+ * - Phase 2 (#1816, version 1.1.0) adds, per span, `firstSeenOn` and
+ *   `lastSeenOn` — date-exact change points from the club-race store's
+ *   `districtHistory` — only where the store can vouch for the day. A
+ *   reader uses them when present and PY precision otherwise; `granularity`
+ *   stays `'program-year'` so a reader built before 1.1.0 still parses.
  * - `to` is the club's `lastSeen` in the last program year of the span, or
  *   `null` when the club is still seen on the history's `asOf` date.
  * - A closed club stays, with `to` and `lastSeen` set.
@@ -37,7 +41,7 @@ const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const ProgramYear = z.string().regex(/^\d{4}-\d{4}$/)
 const ShardKey = z.string().regex(/^\d{2}$/)
 
-export const CLUB_DISTRICT_HISTORY_VERSION = '1.0.0'
+export const CLUB_DISTRICT_HISTORY_VERSION = '1.1.0'
 
 /** One stretch of a club's life in one district. */
 export const ClubDistrictSpanSchema = z.object({
@@ -45,6 +49,18 @@ export const ClubDistrictSpanSchema = z.object({
   /** Last sighting in this district; `null` = still there on `asOf`. */
   to: IsoDate.nullable(),
   districtId: z.string().min(1),
+  /**
+   * Date-exact first sighting in this district (#1816): for a move, the
+   * first snapshot date the club appeared under its new district. Present
+   * only when every observed date around the change was folded with change
+   * points; absent = read `from` at program-year precision.
+   */
+  firstSeenOn: IsoDate.optional(),
+  /**
+   * Date-exact last sighting in this district (#1816), on a closed span
+   * only, under the same rule as `firstSeenOn`.
+   */
+  lastSeenOn: IsoDate.optional(),
 })
 
 /** One club's district history. */
@@ -55,7 +71,7 @@ export const ClubDistrictHistoryClubSchema = z.object({
   formerNames: z.array(z.string()),
   firstSeen: IsoDate,
   lastSeen: IsoDate,
-  /** Chronological, non-overlapping. */
+  /** Chronological by `from`; consecutive spans may touch on one date. */
   spans: z.array(ClubDistrictSpanSchema).min(1),
   /** Program year → the district the club was in that year. */
   byProgramYear: z.record(ProgramYear, z.string().min(1)),
