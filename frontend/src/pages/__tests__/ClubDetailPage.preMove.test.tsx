@@ -8,10 +8,10 @@
  * banner, and the breadcrumb keeps following the URL. The converse — an old
  * District 01 link for the current year — says when the club moved.
  *
- * Load contract: the history shard (~12 KB) is read before the hero only on
- * these paths, where the URL district cannot answer (its dates lack an
- * explicit `?py=`, or its data lacks the club); a normal visit reads nothing
- * new before paint.
+ * Load contract: the history shard (~12 KB) is read before the hero only for
+ * an explicit `?py=` (#2079: the history wins even when the URL district has
+ * data for the year) or when the URL district's data lacks the club; a
+ * normal visit reads nothing new before paint.
  *
  * R22: this is a full-page mount, so it lives in `src/pages/__tests__/`.
  */
