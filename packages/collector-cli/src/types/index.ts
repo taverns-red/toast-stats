@@ -384,6 +384,10 @@ export interface ComputeAnalyticsResult {
   clubsByRegionPaths?: string[]
   /** True when the club shards were refused or threw (#1800). Never publish-blocking. */
   clubsByRegionFailed?: boolean
+  /** Path of `time-series/regions/{PY}.json` written (#2127). */
+  regionSeriesPath?: string
+  /** True when the region membership series could not be written (#2127). */
+  regionSeriesFailed?: boolean
   /**
    * Districts whose time-series data point could not be written (#1702),
    * e.g. because the synced program-year index exists but cannot be parsed.

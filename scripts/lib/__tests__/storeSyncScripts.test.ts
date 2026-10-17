@@ -595,6 +595,23 @@ describe('publish-stores.sh (#1722)', () => {
     })
   })
 
+  it('publishes the region membership series with time-series and records it in the run manifest (#2127)', () => {
+    seedLocal('time-series', 'district_61/2026-2027.json', doc(61))
+    seedLocal('time-series', 'regions/2026-2027.json', doc(2127))
+    const r = run(PUBLISH, ['time-series'])
+    expect(r.status, r.stderr).toBe(0)
+    const obj = 'time-series/regions/2026-2027.json'
+    expect(zlib.gunzipSync(readObject(obj)).equals(doc(2127))).toBe(true)
+    const entries = fs
+      .readFileSync(manifest, 'utf-8')
+      .split('\n')
+      .filter(Boolean)
+      .map(l => JSON.parse(l) as { path: string; sha256: string })
+    expect(entries.find(e => e.path === obj)?.sha256).toBe(
+      createHash('sha256').update(doc(2127)).digest('hex')
+    )
+  })
+
   it('refuses gzip bytes on disk before pushing anything', () => {
     seedLocal('club-race', '2026-2027/first-reached.json', doc(2))
     seedLocal(
