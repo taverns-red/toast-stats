@@ -531,6 +531,32 @@ describe('buildGlobalClubRace — as of the snapshot date (#1689)', () => {
     expect(build(later)).toEqual(build(base))
   })
 
+  it('a club that moved district after the date stays in the district in force on it (#1816)', () => {
+    // 3045 moved 61 → 86 on LATER; the store's latest sighting says 86.
+    const moved = store({
+      observedDates: [...base.observedDates, LATER],
+      districtHistoryGaps: [],
+      clubs: {
+        ...base.clubs,
+        '3045': {
+          ...base.clubs['3045']!,
+          districtId: '86',
+          lastSeen: LATER,
+          firstSeen: '2026-07-26',
+          districtHistory: [
+            { districtId: '61', from: '2026-07-26', to: DATE },
+            { districtId: '86', from: LATER, to: LATER },
+          ],
+        },
+      },
+    })
+    const onTheDay = build(moved)
+    expect(onTheDay.reached.find(r => r.clubId === '3045')?.districtId).toBe(
+      '61'
+    )
+    expect(onTheDay).toEqual(build(base))
+  })
+
   it('shows the latest official code seen on or before the date, since its first sighting', () => {
     const asOf = (snapshotDate: string) =>
       buildGlobalClubRace({
