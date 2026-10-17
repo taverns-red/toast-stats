@@ -1,0 +1,51 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "closed-club-name-index"
+  },
+  "asOf": "2026-10-15",
+  "totalClubs": 23,
+  "programYears": {
+    "2023-2024": {
+      "39": [
+        ["1055258", "Tracy Leadership Club", "2024-06-30"],
+        ["1644909", "CalVet Golden Bears Toastmasters", "2024-03-31"],
+        ["377", "Traveling Toastmasters Club", "2024-03-31"],
+        ["3950889", "AH Toastmasters", "2024-06-30"]
+      ],
+      "61": [
+        ["3021", "Dollard Des Ormeaux Club", "2024-06-30"],
+        ["3298458", "Hawkesbury Toastmasters", "2024-06-30"],
+        ["3679", "Club Toastmasters Eloquentia", "2024-03-31"],
+        ["5441", "Parliament Hill Toastmasters Club", "2024-06-30"]
+      ]
+    },
+    "2024-2025": {
+      "39": [
+        ["1373428", "Biggest Little Talkers", "2025-03-31"],
+        ["1819", "Peachbowl Dawnbreakers Club", "2025-06-30"],
+        ["2178125", "Beale AFB Toastmasters", "2025-06-30"],
+        ["28677507", "River City Bank Toastmasters", "2025-06-30"]
+      ],
+      "61": [
+        ["1314924", "Maitres Toastmasters", "2025-03-31"],
+        ["28675862", "Amazon Toastmasters Quebec", "2025-03-31"],
+        ["3492", "Sandy Hill Club", "2025-03-31"],
+        ["3778", "Club Le Marquis", "2025-06-30"]
+      ]
+    },
+    "2025-2026": {
+      "39": [
+        ["28676220", "SETA Change Makers", "2026-04-29"],
+        ["28677524", "Let's Toast, Yolo!", "2026-06-30"],
+        ["4045", "Roseville Communicators", "2026-04-29"]
+      ],
+      "61": [
+        ["1025927", "Above & Beyond Toastmaster's Club 1025927", "2026-04-29"],
+        ["2150311", "Les Communicateurs Avertis Du CNVR", "2026-04-29"],
+        ["2279948", "Aim High Toastmasters", "2026-04-29"],
+        ["2285", "InfoMasters Club", "2026-04-29"]
+      ]
+    }
+  }
+}

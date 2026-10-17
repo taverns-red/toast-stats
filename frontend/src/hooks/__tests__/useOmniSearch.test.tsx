@@ -17,6 +17,8 @@ import {
 } from '../../services/cdn'
 import { fetchClubDistrictHistoryShard } from '../../services/cdnClubDistrictHistory'
 import shardFixture from '../../__tests__/fixtures/club-district-history-shard-77.recorded.json'
+import { fetchClosedClubNames } from '../../services/cdnClosedClubNames'
+import closedNamesFixture from '../../__tests__/fixtures/closed-club-names.recorded.json'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
@@ -32,6 +34,12 @@ vi.mock('../../services/cdnClubDistrictHistory', () => ({
   fetchClubDistrictHistoryShard: vi.fn(),
 }))
 const mockedShard = vi.mocked(fetchClubDistrictHistoryShard)
+
+// The closed-club name index (#2062) — loaded on the first search miss.
+vi.mock('../../services/cdnClosedClubNames', () => ({
+  fetchClosedClubNames: vi.fn(),
+}))
+const mockedClosedNames = vi.mocked(fetchClosedClubNames)
 
 const mockedRankings = vi.mocked(fetchCdnRankings)
 const mockedClubIndex = vi.mocked(fetchCdnClubIndex)
@@ -54,6 +62,9 @@ const keyEvent = (key: string) =>
   }) as unknown as React.KeyboardEvent<HTMLInputElement>
 
 const setupCdn = () => {
+  mockedClosedNames.mockResolvedValue(
+    closedNamesFixture as Awaited<ReturnType<typeof fetchClosedClubNames>>
+  )
   mockedShard.mockResolvedValue(
     shardFixture as Awaited<ReturnType<typeof fetchClubDistrictHistoryShard>>
   )
@@ -244,6 +255,82 @@ describe('useOmniSearch closed-club fallback (#1806)', () => {
     await waitFor(() => expect(result.current.index).toBeDefined())
     act(() => result.current.setQuery('377'))
     await waitFor(() => expect(mockedShard).toHaveBeenCalled())
+    expect(result.current.flat).toEqual([])
+  })
+})
+
+describe('useOmniSearch closed clubs by name (#2062)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setupCdn()
+  })
+
+  it('does not load the closed-club names while current clubs match', async () => {
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('toast of'))
+    expect(result.current.flat[0]).toMatchObject({ id: '12345' })
+    expect(mockedClosedNames).not.toHaveBeenCalled()
+  })
+
+  it('loads them on the first miss and finds a closed club by partial name', async () => {
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('traveling'))
+    await waitFor(() =>
+      expect(result.current.flat).toContainEqual(
+        expect.objectContaining({
+          type: 'club',
+          id: '377',
+          label: 'Traveling Toastmasters Club',
+          context: 'closed 2024 · last in District 39',
+          route: '/district/39/club/377?py=2023',
+        })
+      )
+    )
+    expect(mockedClosedNames).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps them loaded: later queries search closed clubs without a refetch', async () => {
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('eloquentia'))
+    await waitFor(() =>
+      expect(result.current.flat.map(e => e.id)).toEqual(['3679'])
+    )
+    act(() => result.current.setQuery('toast'))
+    await waitFor(() => expect(result.current.flat.length).toBeGreaterThan(1))
+    // The live club still leads; closed clubs follow it.
+    expect(result.current.flat[0]).toMatchObject({ id: '12345' })
+    expect(mockedClosedNames).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a closed club once when the number fallback also finds it', async () => {
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('377'))
+    await waitFor(() => expect(mockedClosedNames).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(result.current.flat.map(e => e.id)).toEqual(['377'])
+    )
+  })
+
+  it('a missing index (404 until it reaches prod) leaves search unchanged', async () => {
+    mockedClosedNames.mockResolvedValue(null)
+    const { result } = renderHook(() => useOmniSearch({ onSelect: vi.fn() }), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.index).toBeDefined())
+    act(() => result.current.setQuery('traveling'))
+    await waitFor(() => expect(mockedClosedNames).toHaveBeenCalled())
     expect(result.current.flat).toEqual([])
   })
 })
