@@ -29,6 +29,7 @@
 import {
   GLOBAL_CLUB_RACE_FORMAT,
   CLUB_RACE_TIERS,
+  clubDistrictInForce,
   type ClubRaceOfficialCode,
   type ClubRaceStoreClub,
   type ClubRaceStoreData,
@@ -153,6 +154,10 @@ const CLUB_RACE_OFFICIAL_CODES = ['D', 'S', 'P', 'M'] as const
  * exactly the one the store held that day, `after` included (it points at
  * an observed date before `on`). On the forward daily path the store's
  * latest date IS `date`, and this is the identity.
+ *
+ * The district is the one in force on `date` (#1816): a club that moved
+ * after it is counted where it was then. An entry written before change
+ * points existed keeps its latest-sighting district.
  */
 function storeAsOf(store: ClubRaceStoreData, date: string): ClubRaceStoreData {
   const clubs: ClubRaceStoreData['clubs'] = {}
@@ -175,7 +180,9 @@ function storeAsOf(store: ClubRaceStoreData, date: string): ClubRaceStoreData {
       }
     }
     if (Object.keys(reached).length === 0 && !official) continue
-    const projected: ClubRaceStoreClub = { ...entry, reached }
+    const districtId =
+      clubDistrictInForce(entry.districtHistory, date) ?? entry.districtId
+    const projected: ClubRaceStoreClub = { ...entry, districtId, reached }
     if (official) projected.official = official
     else delete projected.official
     if (officialCodes) projected.officialCodes = officialCodes
