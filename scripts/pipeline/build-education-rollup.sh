@@ -29,13 +29,13 @@
 # in the index; no ledger or no region history is a warning); a listing or
 # transfer ERROR fails closed with nothing uploaded.
 #
-# Output (plain JSON, no -Z, nothing reads it through the CDN yet):
+# Output (plain JSON, no -Z; /region/:n/education reads it via the CDN):
 #   gs://<bucket>/derived/education-rollup/<PY>.json   one per program year
 #   gs://<bucket>/derived/education-rollup/index.json  last: it names them
-# derived/ is NOT a promoted prefix: until scoped promotion (#1763, ADR-015
-# step 5) lists these files in the run manifest from a promoted prefix, they
-# must never reach prod, so this script only ever writes to <bucket> (the
-# #1755 prod-write guard checks it).
+# derived/ is NOT a promoted prefix: this script only ever writes to
+# <bucket> (the #1755 prod-write guard checks it). Prod gets the result from
+# scripts/pipeline/mirror-education-rollup.sh (#1810), gated on the run
+# having promoted its date and on the rollup's reports date being in prod.
 #
 # Env:   GCLOUD     the gcloud binary (default `gcloud`; tests use a shim, D10)
 #        EDUCATION_LEDGER_DIR  optional: the ledger seed directory (#2102);

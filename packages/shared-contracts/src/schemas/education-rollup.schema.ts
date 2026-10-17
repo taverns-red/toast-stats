@@ -45,9 +45,9 @@
  * Privacy: counts only. Every object is strict, so no club, member or
  * per-row field (Lesson 153) can be carried.
  *
- * STAGING only until scoped promotion (#1763, ADR-015 step 5): `derived/`
- * is not a promoted prefix. Once the writer moves under a promoted prefix it
- * is promoted from the run manifest like the identity histories.
+ * `derived/` is not a promoted prefix: the build writes staging only and
+ * scripts/pipeline/mirror-education-rollup.sh copies it to the same path in
+ * prod once its reports date is a promoted date (#1810). The CDN serves it.
  *
  * @module education-rollup.schema
  */
@@ -56,7 +56,7 @@ import { z } from 'zod'
 
 export const EDUCATION_ROLLUP_VERSION = '1.0.0'
 
-/** The staging-only prefix the rollup lives under. */
+/** The prefix the rollup lives under, in both buckets (#1810). */
 export const EDUCATION_ROLLUP_PREFIX = 'derived/education-rollup'
 export const EDUCATION_ROLLUP_INDEX_PATH = `${EDUCATION_ROLLUP_PREFIX}/index.json`
 

@@ -24,6 +24,11 @@
 # Dates prod does not index are skipped, so a carry never creates a date
 # directory the promoter would then count as present in prod.
 #
+# Then the education rollup (#1810): mirror-education-rollup.sh
+# --if-changed copies staging's derived/education-rollup/ when prod's index
+# differs and the reports date it was built from is one prod indexes — the
+# rollup a held day's run built, once that day (or a later one) promotes.
+#
 # Env: GCLOUD (default `gcloud`), GITHUB_STEP_SUMMARY (optional).
 # Exit codes: 0 done (including nothing to carry) · 1 a read or copy failed ·
 #             2 usage
@@ -120,3 +125,6 @@ if [ "${CARRIED}" -gt 0 ]; then
 else
   summary "- 📎 No report sidecars to carry: prod has every one staging holds for its newest ${DAYS} date(s) (#1763)"
 fi
+
+# The education rollup a held run built (#1810); same gate, its own script.
+bash "$(dirname "${BASH_SOURCE[0]}")/mirror-education-rollup.sh" "${STAGING}" "${PROD}" --if-changed
