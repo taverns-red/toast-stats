@@ -1,0 +1,352 @@
+{
+  "districtId": "61",
+  "programYear": "2017-2018",
+  "updatedAt": "2026-10-04T22:08:54.637Z",
+  "clubs": {
+    "180": {
+      "clubId": "180",
+      "clubName": "Causeurs Sussex Speakers Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "23",
+      "areaName": "Area 23",
+      "membershipBase": 20,
+      "membershipTrend": [
+        {
+          "date": "2018-06-30",
+          "count": 17
+        }
+      ],
+      "dcpGoalsTrend": [
+        {
+          "date": "2018-06-30",
+          "goalsAchieved": 8
+        }
+      ]
+    },
+    "348": {
+      "clubId": "348",
+      "clubName": "Le Club Les Toastmasters De Granby",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "70",
+      "areaName": "Area 70",
+      "membershipBase": 26,
+      "membershipTrend": [
+        {
+          "date": "2018-06-30",
+          "count": 18
+        }
+      ],
+      "dcpGoalsTrend": [
+        {
+          "date": "2018-06-30",
+          "goalsAchieved": 9
+        }
+      ]
+    },
+    "00000180": {
+      "clubId": "00000180",
+      "clubName": "Causeurs Sussex Speakers Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "23",
+      "areaName": "Area 23",
+      "membershipBase": 20,
+      "membershipTrend": [
+        {
+          "date": "2017-07-31",
+          "count": 20
+        },
+        {
+          "date": "2017-08-31",
+          "count": 20
+        },
+        {
+          "date": "2017-09-30",
+          "count": 20
+        },
+        {
+          "date": "2017-10-31",
+          "count": 13
+        },
+        {
+          "date": "2017-11-30",
+          "count": 15
+        },
+        {
+          "date": "2017-12-31",
+          "count": 15
+        },
+        {
+          "date": "2018-01-31",
+          "count": 15
+        },
+        {
+          "date": "2018-02-28",
+          "count": 16
+        },
+        {
+          "date": "2018-03-31",
+          "count": 16
+        },
+        {
+          "date": "2018-04-30",
+          "count": 16
+        },
+        {
+          "date": "2018-05-31",
+          "count": 16
+        },
+        {
+          "date": "2018-06-30",
+          "count": 17
+        }
+      ],
+      "dcpGoalsTrend": [
+        {
+          "date": "2017-07-31",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2017-08-31",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2017-09-30",
+          "goalsAchieved": 1
+        },
+        {
+          "date": "2017-10-31",
+          "goalsAchieved": 2
+        },
+        {
+          "date": "2017-11-30",
+          "goalsAchieved": 2
+        },
+        {
+          "date": "2017-12-31",
+          "goalsAchieved": 2
+        },
+        {
+          "date": "2018-01-31",
+          "goalsAchieved": 3
+        },
+        {
+          "date": "2018-02-28",
+          "goalsAchieved": 4
+        },
+        {
+          "date": "2018-03-31",
+          "goalsAchieved": 5
+        },
+        {
+          "date": "2018-04-30",
+          "goalsAchieved": 6
+        },
+        {
+          "date": "2018-05-31",
+          "goalsAchieved": 6
+        },
+        {
+          "date": "2018-06-30",
+          "goalsAchieved": 8
+        }
+      ]
+    },
+    "00000348": {
+      "clubId": "00000348",
+      "clubName": "Le Club Les Toastmasters De Granby",
+      "divisionId": "H",
+      "divisionName": "Division H",
+      "areaId": "70",
+      "areaName": "Area 70",
+      "membershipBase": 26,
+      "membershipTrend": [
+        {
+          "date": "2017-07-31",
+          "count": 26
+        },
+        {
+          "date": "2017-08-31",
+          "count": 26
+        },
+        {
+          "date": "2017-09-30",
+          "count": 28
+        },
+        {
+          "date": "2017-10-31",
+          "count": 26
+        },
+        {
+          "date": "2017-11-30",
+          "count": 27
+        },
+        {
+          "date": "2017-12-31",
+          "count": 27
+        },
+        {
+          "date": "2018-01-31",
+          "count": 28
+        },
+        {
+          "date": "2018-02-28",
+          "count": 28
+        },
+        {
+          "date": "2018-03-31",
+          "count": 30
+        },
+        {
+          "date": "2018-04-30",
+          "count": 16
+        },
+        {
+          "date": "2018-05-31",
+          "count": 18
+        },
+        {
+          "date": "2018-06-30",
+          "count": 18
+        }
+      ],
+      "dcpGoalsTrend": [
+        {
+          "date": "2017-07-31",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2017-08-31",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2017-09-30",
+          "goalsAchieved": 2
+        },
+        {
+          "date": "2017-10-31",
+          "goalsAchieved": 3
+        },
+        {
+          "date": "2017-11-30",
+          "goalsAchieved": 3
+        },
+        {
+          "date": "2017-12-31",
+          "goalsAchieved": 3
+        },
+        {
+          "date": "2018-01-31",
+          "goalsAchieved": 5
+        },
+        {
+          "date": "2018-02-28",
+          "goalsAchieved": 5
+        },
+        {
+          "date": "2018-03-31",
+          "goalsAchieved": 5
+        },
+        {
+          "date": "2018-04-30",
+          "goalsAchieved": 5
+        },
+        {
+          "date": "2018-05-31",
+          "goalsAchieved": 9
+        },
+        {
+          "date": "2018-06-30",
+          "goalsAchieved": 9
+        }
+      ]
+    },
+    "00004856": {
+      "clubId": "00004856",
+      "clubName": "National Defence Headquarters Toastmasters Club",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "23",
+      "areaName": "Area 23",
+      "membershipBase": 4,
+      "membershipTrend": [
+        {
+          "date": "2017-07-31",
+          "count": 4
+        },
+        {
+          "date": "2017-08-31",
+          "count": 4
+        },
+        {
+          "date": "2017-09-30",
+          "count": 4
+        },
+        {
+          "date": "2017-10-31",
+          "count": 1
+        },
+        {
+          "date": "2017-11-30",
+          "count": 1
+        },
+        {
+          "date": "2017-12-31",
+          "count": 1
+        },
+        {
+          "date": "2018-01-31",
+          "count": 1
+        },
+        {
+          "date": "2018-02-28",
+          "count": 1
+        },
+        {
+          "date": "2018-03-31",
+          "count": 1
+        }
+      ],
+      "dcpGoalsTrend": [
+        {
+          "date": "2017-07-31",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2017-08-31",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2017-09-30",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2017-10-31",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2017-11-30",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2017-12-31",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2018-01-31",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2018-02-28",
+          "goalsAchieved": 0
+        },
+        {
+          "date": "2018-03-31",
+          "goalsAchieved": 0
+        }
+      ]
+    }
+  }
+}
