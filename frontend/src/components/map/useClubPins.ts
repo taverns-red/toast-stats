@@ -8,39 +8,22 @@
  * the hit area. A cluster zooms to its expansion zoom; a pin selects every
  * club at that spot (co-located clubs never separate by zooming).
  *
- * Only MapLibre *types* are imported: the runtime arrives with the map.
+ * The work itself is `pinRuntime`, with the layer specs and the icon
+ * painter: one chunk (#1787, #1808: the map routes' first-load budget),
+ * fetched as soon as the hook mounts — long before MapLibre is up — and the
+ * pins are added once it has landed. This hook is only its React shell.
  */
 import { useEffect, useRef, useState } from 'react'
-import type {
-  GeoJSONSource,
-  LngLatBoundsLike,
-  Map as MapLibreMap,
-  MapGeoJSONFeature,
-  MapMouseEvent,
-} from 'maplibre-gl'
+import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { ModeModel } from './pinModes'
-import {
-  CLUSTER_LAYER_ID,
-  PIN_LAYER_ID,
-  PIN_LAYER_IDS,
-  PIN_SOURCE_ID,
-  SELECTED_LAYER_ID,
-  clubPinLayers,
-  parseIconId,
-  pinSourceSpec,
-  selectedFilter,
-  type MapTheme,
-  type PinFeatureCollection,
-} from './pinLayer'
+import type { MapTheme, PinFeatureCollection } from './pinFeatures'
+import type { PinState } from './pinRuntime'
 
-// The icon painter is its own chunk (#1787: the map route's first-load
-// budget). It is fetched as soon as the hook mounts — long before MapLibre
-// is up — and the pins are added once it has landed.
-type Draw = typeof import('./pinImages').drawIcon
-let draw: Draw | null = null
-const loadDraw = () =>
-  import('./pinImages').then(m => {
-    draw = m.drawIcon
+type Runtime = typeof import('./pinRuntime')
+let runtime: Runtime | null = null
+const loadRuntime = () =>
+  import('./pinRuntime').then(m => {
+    runtime = m
   })
 
 export interface ClubPinsOptions {
@@ -53,106 +36,26 @@ export interface ClubPinsOptions {
   fitKey: string
 }
 
-const HIT = 22
-
-const reducedMotion = () =>
-  typeof window.matchMedia === 'function' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-function boundsOf(data: PinFeatureCollection): LngLatBoundsLike | null {
-  if (data.features.length === 0) return null
-  let w = 180
-  let s = 90
-  let e = -180
-  let n = -90
-  for (const f of data.features) {
-    const [x, y] = f.geometry.coordinates
-    w = Math.min(w, x)
-    e = Math.max(e, x)
-    s = Math.min(s, y)
-    n = Math.max(n, y)
-  }
-  return [
-    [w, s],
-    [e, n],
-  ]
-}
-
 export function useClubPins(map: MapLibreMap | null, opts: ClubPinsOptions) {
   const latest = useRef(opts)
   // Declared first, so it runs before the sync effect below.
   useEffect(() => {
     latest.current = opts
   })
-  const built = useRef<{ mode: ModeModel; theme: MapTheme } | null>(null)
-  const fitted = useRef<string | null>(null)
-  const [painter, setPainter] = useState(() => draw)
+  const state = useRef<PinState>({ built: null, fitted: null })
+  const [rt, setRt] = useState(() => runtime)
   useEffect(() => {
-    if (!painter) void loadDraw().then(() => setPainter(() => draw))
-  }, [painter])
+    if (!rt) void loadRuntime().then(() => setRt(() => runtime))
+  }, [rt])
 
   // Draw icons on demand, add/refresh the source and layers, refit.
   useEffect(() => {
-    if (!map || !painter) return
-    const onMissing = (id: string) => {
-      const spec = parseIconId(id)
-      if (!spec || map.hasImage(id)) return
-      const dpr = Math.min(3, Math.ceil(window.devicePixelRatio || 1))
-      const icon = painter(spec, dpr)
-      if (icon) map.addImage(id, icon, { pixelRatio: dpr })
-    }
-    const sync = () => {
-      const o = latest.current
-      const source = map.getSource(PIN_SOURCE_ID) as GeoJSONSource | undefined
-      const stale =
-        !source ||
-        built.current?.mode !== o.model ||
-        built.current?.theme !== o.theme
-      try {
-        if (stale) {
-          for (const id of PIN_LAYER_IDS)
-            if (map.getLayer(id)) map.removeLayer(id)
-          if (source) map.removeSource(PIN_SOURCE_ID)
-          map.addSource(PIN_SOURCE_ID, pinSourceSpec(o.data, o.model))
-          for (const layer of clubPinLayers(o.model, o.theme, o.selectedIds))
-            map.addLayer(layer)
-          built.current = { mode: o.model, theme: o.theme }
-        } else {
-          source.setData(o.data as Parameters<GeoJSONSource['setData']>[0])
-          map.setFilter(SELECTED_LAYER_ID, selectedFilter(o.selectedIds))
-        }
-      } catch {
-        // Style still loading: `styledata` calls back once it is ready.
-        built.current = null
-        return
-      }
-      if (fitted.current !== o.fitKey) {
-        const bounds = boundsOf(o.data)
-        if (bounds) {
-          map.fitBounds(bounds, { padding: 48, maxZoom: 12, animate: false })
-          fitted.current = o.fitKey
-        }
-      }
-    }
-    const onStyle = () => {
-      if (!map.getSource(PIN_SOURCE_ID)) {
-        built.current = null
-        sync()
-      }
-    }
-    // MapLibre 6: images are resolved here; adding one from the
-    // `styleimagemissing` event is too late (it fires once already missing).
-    map.setMissingStyleImageResolver(onMissing)
-    map.on('styledata', onStyle)
-    sync()
-    return () => {
-      map.setMissingStyleImageResolver(null)
-      map.off('styledata', onStyle)
-    }
-    // `sync` reads the latest options; these are the triggers.
+    if (!map || !rt) return
+    return rt.attachPins(map, latest, state.current)
+    // `attachPins` reads the latest options; these are the triggers.
   }, [
     map,
-    painter,
+    rt,
     opts.data,
     opts.model,
     opts.theme,
@@ -164,75 +67,14 @@ export function useClubPins(map: MapLibreMap | null, opts: ClubPinsOptions) {
   // map (the realignment sandbox, #1819) starts clean, and so does this
   // hook when it gets the map back.
   useEffect(() => {
-    if (!map) return
-    return () => {
-      built.current = null
-      try {
-        for (const id of PIN_LAYER_IDS)
-          if (map.getLayer(id)) map.removeLayer(id)
-        if (map.getSource(PIN_SOURCE_ID)) map.removeSource(PIN_SOURCE_ID)
-      } catch {
-        // The map is already gone.
-      }
-    }
-  }, [map])
+    if (!map || !rt) return
+    const pins = state.current
+    return () => rt.clearPins(map, pins)
+  }, [map, rt])
 
   // Taps and the pointer cursor.
   useEffect(() => {
-    if (!map) return
-    const hits = (e: MapMouseEvent): MapGeoJSONFeature[] => {
-      if (!map.getLayer(PIN_LAYER_ID)) return []
-      const { x, y } = e.point
-      return map.queryRenderedFeatures(
-        [
-          [x - HIT, y - HIT],
-          [x + HIT, y + HIT],
-        ],
-        { layers: [CLUSTER_LAYER_ID, PIN_LAYER_ID] }
-      )
-    }
-    const onClick = (e: MapMouseEvent) => {
-      const found = hits(e)
-      if (found.length === 0) {
-        latest.current.onSelect([])
-        return
-      }
-      const dist = (f: MapGeoJSONFeature) => {
-        const p = map.project(
-          (f.geometry as { coordinates: [number, number] }).coordinates
-        )
-        return (p.x - e.point.x) ** 2 + (p.y - e.point.y) ** 2
-      }
-      const nearest = found.reduce((a, b) => (dist(b) < dist(a) ? b : a))
-      const at = (nearest.geometry as { coordinates: [number, number] })
-        .coordinates
-      if (nearest.properties['cluster']) {
-        const source = map.getSource(PIN_SOURCE_ID) as GeoJSONSource
-        void source
-          .getClusterExpansionZoom(nearest.properties['cluster_id'] as number)
-          .then(zoom => {
-            const view = { center: at, zoom }
-            if (reducedMotion()) map.jumpTo(view)
-            else map.easeTo(view)
-          })
-        return
-      }
-      const same = found.filter(f => {
-        const c = (f.geometry as { coordinates: [number, number] }).coordinates
-        return !f.properties['cluster'] && c[0] === at[0] && c[1] === at[1]
-      })
-      latest.current.onSelect([
-        ...new Set(same.map(f => String(f.properties['id']))),
-      ])
-    }
-    const onMove = (e: MapMouseEvent) => {
-      map.getCanvas().style.cursor = hits(e).length ? 'pointer' : ''
-    }
-    map.on('click', onClick)
-    map.on('mousemove', onMove)
-    return () => {
-      map.off('click', onClick)
-      map.off('mousemove', onMove)
-    }
-  }, [map])
+    if (!map || !rt) return
+    return rt.bindPinEvents(map, latest)
+  }, [map, rt])
 }
