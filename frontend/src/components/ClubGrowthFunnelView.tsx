@@ -23,9 +23,11 @@ import type { MobileRow } from './MobileRowList'
    "Unknown" and why, never 0 (#1757). Privacy: club ids, names, dates and
    statuses only — no person, email or phone ever reaches this view. */
 
-type StageId = 'prospective' | 'chartered' | 'coached' | 'suspended'
+export type StageId = 'prospective' | 'chartered' | 'coached' | 'suspended'
 
-interface StageSpec {
+/* The strip and the stage sections are shared with the region and world
+   funnels (#1812, #1813), so the three levels read alike. */
+export interface StageSpec {
   id: StageId
   label: string
   hint: string
@@ -49,7 +51,7 @@ function divisionArea(division: string, area: string): string {
   return `${division || '—'} / ${area || '—'}`
 }
 
-function FunnelStrip({ stages }: { stages: StageSpec[] }) {
+export function FunnelStrip({ stages }: { stages: StageSpec[] }) {
   const max = Math.max(
     1,
     ...stages.map(s => (s.value.kind === 'count' ? s.value.value : 0))
@@ -100,7 +102,7 @@ function FunnelStrip({ stages }: { stages: StageSpec[] }) {
   )
 }
 
-function StageSection({
+export function StageSection({
   id,
   title,
   children,

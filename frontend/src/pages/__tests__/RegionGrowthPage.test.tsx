@@ -116,7 +116,13 @@ describe('RegionGrowthPage', () => {
       /not available yet/i
     )
     const table = screen.getByTestId('rollup-growth-prospective-table')
-    expect(within(table).getAllByText('Not available').length).toBe(7)
+    // Every district row reads Not available in both columns — never 0.
+    const rows = within(table).getAllByRole('row').slice(1)
+    expect(rows).toHaveLength(7)
+    for (const row of rows) {
+      expect(within(row).getAllByText('Not available')).toHaveLength(2)
+      expect(row).not.toHaveTextContent(/\b0\b/)
+    }
   })
 
   it('says not available when neither artifact has the region', async () => {
