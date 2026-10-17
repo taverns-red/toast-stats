@@ -19,6 +19,7 @@ import * as crypto from 'node:crypto'
 import {
   AnalyticsComputer,
   buildGlobalClubRace,
+  buildClubsByRegion,
   buildGlobalTotals,
   buildRegionRollups,
   canonicalDistrictId,
@@ -28,6 +29,7 @@ import {
   readSnapshotRankings,
   readSnapshotRollupInput,
   readRegionRollupInput,
+  readClubsByRegionInput,
   type Logger,
   type ClubStatistics,
   type DistrictStatistics,
@@ -44,6 +46,9 @@ import type {
   DistrictRanking,
 } from '@taverns-red/shared-contracts'
 import {
+  CLUBS_BY_REGION_DIR,
+  CLUBS_BY_REGION_WORLD_FILE_NAME,
+  clubsByRegionShardFileName,
   districtIdFromSnapshotFileName,
   isDistrictSnapshotFile,
   GLOBAL_CLUB_RACE_FILE_NAME,
@@ -207,6 +212,17 @@ export interface ComputeOperationResult {
    * artifact reads "not available for this date".
    */
   regionRollupsFailed: boolean
+  /**
+   * Paths written under `snapshots/{date}/clubs-by-region/` (#1800): one
+   * shard per region, then `world.json`. Undefined when the date was
+   * skipped (no rankings file) or the files were refused.
+   */
+  clubsByRegionPaths?: string[]
+  /**
+   * True when the club shards were refused (a listed district had no file,
+   * ADR-015 P3) or threw. Reported, never publish-blocking.
+   */
+  clubsByRegionFailed: boolean
   /**
    * Districts whose time-series data point was not written (#1702). The
    * loop still continues to the next district, but the run fails: Trends
@@ -1208,6 +1224,7 @@ export class AnalyticsComputeService {
         clubRaceStoreFailed: false,
         globalClubRaceFailed: false,
         regionRollupsFailed: false,
+        clubsByRegionFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
         clubTrendsUpdated: [],
@@ -1256,6 +1273,7 @@ export class AnalyticsComputeService {
         clubRaceStoreFailed: false,
         globalClubRaceFailed: false,
         regionRollupsFailed: false,
+        clubsByRegionFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
         clubTrendsUpdated: [],
@@ -1386,6 +1404,10 @@ export class AnalyticsComputeService {
     // worldwide rollup, regions from the synced config/ history.
     const regionRollups = await this.writeRegionRollups(snapshotDate, errors)
 
+    // Per-region club shards + world file (#1800): the same input surface
+    // and refusal rule as the region rollups, the same region membership.
+    const clubsByRegion = await this.writeClubsByRegion(snapshotDate, errors)
+
     // A time-series write failure is recorded per district but must fail the
     // run (#1702): it is the only writer behind Trends.
     const timeSeriesFailed: string[] = []
@@ -1476,6 +1498,8 @@ export class AnalyticsComputeService {
       globalClubRaceFailed: globalClubRace.failed,
       regionRollupsPath: regionRollups.path,
       regionRollupsFailed: regionRollups.failed,
+      clubsByRegionPaths: clubsByRegion.paths,
+      clubsByRegionFailed: clubsByRegion.failed,
       timeSeriesFailed,
       timeSeriesWritten,
       clubTrendsUpdated,
@@ -1895,6 +1919,120 @@ export class AnalyticsComputeService {
       errors.push({
         districtId: 'N/A',
         error: `Failed to write ${REGION_ROLLUPS_FILE_NAME}: ${message}`,
+        timestamp: new Date().toISOString(),
+      })
+      return { failed: true }
+    }
+  }
+
+  /**
+   * Write `snapshots/{date}/clubs-by-region/` — one shard per region with
+   * every club the region and world explorers draw or list, plus
+   * `world.json` (#1800, epic #1781).
+   *
+   * - Same inputs as `region-rollups.json`: the date's rankings scope the
+   *   district files on disk; regions come from the synced history for the
+   *   logical date's program year.
+   * - No rankings file → skipped quietly, like the rollups.
+   * - A listed district with no file → every file refused and recorded
+   *   (ADR-015 P3): a shard missing a district would show part of a region
+   *   as all of it.
+   * - The directory is rewritten whole, so a region the history no longer
+   *   has leaves no stale shard behind locally (staging keeps an old object
+   *   until the date is pruned; `world.json` lists the current shards).
+   * - Compact JSON: the world file feeds a ~15k-pin map.
+   * - Never publish-blocking (`clubsByRegionFailed` does not move the exit
+   *   code).
+   */
+  private async writeClubsByRegion(
+    snapshotDate: string,
+    errors: Array<{ districtId: string; error: string; timestamp: string }>
+  ): Promise<{ paths?: string[]; failed: boolean }> {
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    try {
+      await fs.access(path.join(snapshotDir, 'all-districts-rankings.json'))
+    } catch {
+      this.logger.warn(
+        'No all-districts-rankings.json for this date — skipping the club shards',
+        { snapshotDate }
+      )
+      return { failed: false }
+    }
+
+    try {
+      const { regionHistory, note } = await this.readRegionHistory()
+      const { rankings, districts } = readClubsByRegionInput(snapshotDir)
+      const {
+        world,
+        shards,
+        missingDistricts: withoutFile,
+      } = buildClubsByRegion({
+        snapshotDate,
+        rankings,
+        districts,
+        regionHistory,
+        ...(note !== undefined && { regionHistoryNote: note }),
+      })
+      const missingDistricts = unrecordedDistricts(
+        withoutFile,
+        await recordedFailedDistricts(snapshotDir)
+      )
+      if (missingDistricts.length > 0) {
+        const message = dateLevelRefusal(
+          `${CLUBS_BY_REGION_DIR}/`,
+          snapshotDate,
+          rankings.length,
+          missingDistricts
+        )
+        this.logger.error(message, { snapshotDate, missingDistricts })
+        errors.push({
+          districtId: 'N/A',
+          error: message,
+          timestamp: new Date().toISOString(),
+        })
+        return { failed: true }
+      }
+
+      const outDir = path.join(snapshotDir, CLUBS_BY_REGION_DIR)
+      await fs.rm(outDir, { recursive: true, force: true })
+      await fs.mkdir(outDir, { recursive: true })
+      const paths: string[] = []
+      for (const shard of shards) {
+        const shardPath = path.join(
+          outDir,
+          clubsByRegionShardFileName(shard.region)
+        )
+        await fs.writeFile(shardPath, JSON.stringify(shard) + '\n', 'utf-8')
+        paths.push(shardPath)
+      }
+      const worldPath = path.join(outDir, CLUBS_BY_REGION_WORLD_FILE_NAME)
+      await fs.writeFile(worldPath, JSON.stringify(world) + '\n', 'utf-8')
+      paths.push(worldPath)
+
+      if (world.shards === null) {
+        this.logger.warn('Club shards not written: no region membership', {
+          snapshotDate,
+          reason: world.regionMembershipNote,
+        })
+      }
+      this.logger.info('Wrote club shards', {
+        snapshotDate,
+        dir: outDir,
+        programYear: world.programYear,
+        shards: shards.length,
+        clubs: world.totals.clubs,
+        unmapped: world.totals.unmapped,
+      })
+      return { paths, failed: false }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      this.logger.error('Failed to write club shards', {
+        snapshotDate,
+        error: message,
+      })
+      errors.push({
+        districtId: 'N/A',
+        error: `Failed to write ${CLUBS_BY_REGION_DIR}/: ${message}`,
         timestamp: new Date().toISOString(),
       })
       return { failed: true }

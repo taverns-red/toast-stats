@@ -380,6 +380,10 @@ export interface ComputeAnalyticsResult {
   regionRollupsPath?: string
   /** True when the region rollups were refused or threw (#1799). Never publish-blocking. */
   regionRollupsFailed?: boolean
+  /** Paths written under `snapshots/{date}/clubs-by-region/` (#1800). */
+  clubsByRegionPaths?: string[]
+  /** True when the club shards were refused or threw (#1800). Never publish-blocking. */
+  clubsByRegionFailed?: boolean
   /**
    * Districts whose time-series data point could not be written (#1702),
    * e.g. because the synced program-year index exists but cannot be parsed.

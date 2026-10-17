@@ -155,9 +155,12 @@ describe('AnalyticsComputeService — a recorded gap is accounted for in the rol
     expect(result.globalTotalsFailed).toBe(true)
     expect(result.clubRaceStoreFailed).toBe(true)
     expect(result.regionRollupsFailed).toBe(true)
+    // The per-region club shards (#1800) are a fourth date-level artifact
+    // under the same refusal rule.
+    expect(result.clubsByRegionFailed).toBe(true)
     const refusals = result.errors.filter(
       e => e.error.startsWith('Refused') && e.error.includes('missing: U')
     )
-    expect(refusals.length).toBe(3)
+    expect(refusals.length).toBe(4)
   })
 })
