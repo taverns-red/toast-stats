@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.9...toast-stats-mcp-v0.1.10) (2026-10-17)
+
+
+### Dependencies
+
+* **deps:** Bump the patch-and-minor group across 1 directory with 17 updates ([#2110](https://github.com/taverns-red/toast-stats/issues/2110)) ([d82ed58](https://github.com/taverns-red/toast-stats/commit/d82ed587586bd3fb0017408e952e1715ac632a35))
+
 ## [0.1.9](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.8...toast-stats-mcp-v0.1.9) (2026-10-12)
 
 

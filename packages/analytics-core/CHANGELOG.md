@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.16.0...analytics-core-v1.16.1) (2026-10-17)
+
+
+### Dependencies
+
+* **deps:** Bump the patch-and-minor group across 1 directory with 17 updates ([#2110](https://github.com/taverns-red/toast-stats/issues/2110)) ([d82ed58](https://github.com/taverns-red/toast-stats/commit/d82ed587586bd3fb0017408e952e1715ac632a35))
+
 ## [1.16.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.15.0...analytics-core-v1.16.0) (2026-10-16)
 
 

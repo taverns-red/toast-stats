@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.17.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.17.0...shared-contracts-v1.17.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **privacy:** reports place text loses links and emails; contact-strip never deletes a required key ([#2097](https://github.com/taverns-red/toast-stats/issues/2097)) ([#2099](https://github.com/taverns-red/toast-stats/issues/2099)) ([0f9f49b](https://github.com/taverns-red/toast-stats/commit/0f9f49b0a3757af4693da85fe0854f494e7df182))
+* **time-series:** a [#1671](https://github.com/taverns-red/toast-stats/issues/1671) gap date gets no point, recorded as not measured, never 0 ([#2070](https://github.com/taverns-red/toast-stats/issues/2070)) ([#2072](https://github.com/taverns-red/toast-stats/issues/2072)) ([2ac486d](https://github.com/taverns-red/toast-stats/commit/2ac486d8de95564d0a2120e52603ea9f7e033b7d))
+
+
+### Dependencies
+
+* **deps:** Bump the patch-and-minor group across 1 directory with 17 updates ([#2110](https://github.com/taverns-red/toast-stats/issues/2110)) ([d82ed58](https://github.com/taverns-red/toast-stats/commit/d82ed587586bd3fb0017408e952e1715ac632a35))
+
 ## [1.17.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.16.0...shared-contracts-v1.17.0) (2026-10-15)
 
 
