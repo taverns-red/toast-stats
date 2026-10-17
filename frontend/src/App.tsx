@@ -8,6 +8,8 @@ import DistrictsPage from './pages/DistrictsPage'
 import AppShell from './components/AppShell'
 import ErrorPage from './components/ErrorPage'
 import { DistrictHubRouteFallback } from './components/DistrictHubRouteFallback'
+// Unpadded /region/1… redirects to the padded canonical id (#2130)
+import { CanonicalRegionRoute } from './components/rollups/CanonicalRegionRoute'
 
 // Code-split: DistrictDetailPage (816 lines + recharts) loads on navigation (#169)
 const DistrictDetailPage = React.lazy(
@@ -369,9 +371,11 @@ const router = createBrowserRouter(
         {
           path: 'region/:n',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
-              <RegionPage />
-            </Suspense>
+            <CanonicalRegionRoute>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <RegionPage />
+              </Suspense>
+            </CanonicalRegionRoute>
           ),
         },
         {
@@ -385,9 +389,11 @@ const router = createBrowserRouter(
         {
           path: 'region/:n/health',
           element: (
-            <Suspense fallback={<PageLoadingFallback />}>
-              <RegionHealthPage />
-            </Suspense>
+            <CanonicalRegionRoute>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <RegionHealthPage />
+              </Suspense>
+            </CanonicalRegionRoute>
           ),
         },
         {

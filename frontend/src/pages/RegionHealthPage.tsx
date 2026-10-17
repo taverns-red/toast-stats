@@ -10,6 +10,7 @@ import {
 import { RollupPanels } from '../components/rollups/RollupPanels'
 import { RollupBreakdownTable } from '../components/rollups/RollupBreakdownTable'
 import { needsAttention, regionBreakdown } from '../utils/regionRollupView'
+import { normaliseRegionId } from '../utils/regionId'
 
 /* /region/:n/health (#1815) — the region's rollup of its districts (#1799):
    club health, club status, Distinguished levels and compliance, then one
@@ -19,7 +20,7 @@ import { needsAttention, regionBreakdown } from '../utils/regionRollupView'
 
 const RegionHealthPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
-  const region = (n ?? '').trim()
+  const region = normaliseRegionId(n) // "1" → "01", the rollups key (#2130)
   const controls = useProgramYearControls()
   const { rollups, snapshotDate, isLoading } = useRegionRollups(
     controls.effectiveDate

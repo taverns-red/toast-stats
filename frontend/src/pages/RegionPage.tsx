@@ -32,6 +32,7 @@ import {
 import { DistrictTrendSparkline } from '../components/DistrictTrendSparkline'
 import { RegionSubnav } from '../components/rollups/RegionSubnav'
 import { useDistrictTrends } from '../hooks/useDistrictTrends'
+import { normaliseRegionId } from '../utils/regionId'
 
 const REGION_SORT_FIELDS = [
   'aggregate',
@@ -340,7 +341,7 @@ const RegionIdentity: React.FC<{
 const RegionPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const navigate = useNavigate()
-  const region = (n ?? '').trim()
+  const region = normaliseRegionId(n) // "1" → "01", as rankings key it (#2130)
 
   // URL-synced click-header sort (#851). Default keeps the historical
   // behaviour — aggregate score, highest first.
@@ -387,7 +388,7 @@ const RegionPage: React.FC = () => {
   const regionDistrictIds = React.useMemo(
     () =>
       (data?.rankings ?? [])
-        .filter(r => r.region === region)
+        .filter(r => normaliseRegionId(r.region) === region)
         .map(r => r.districtId)
         .sort(),
     [data, region]
@@ -405,7 +406,7 @@ const RegionPage: React.FC = () => {
   const scoreSortedDistricts: DistrictRanking[] =
     data?.rankings && region
       ? data.rankings
-          .filter(r => r.region === region)
+          .filter(r => normaliseRegionId(r.region) === region)
           .sort((a, b) => (b.aggregateScore ?? 0) - (a.aggregateScore ?? 0))
       : []
 

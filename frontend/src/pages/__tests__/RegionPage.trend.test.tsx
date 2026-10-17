@@ -37,7 +37,7 @@ vi.mock('../../services/cdnTimeSeries', () => ({
 const mkRanking = (overrides: Record<string, unknown>) => ({
   districtId: '1',
   districtName: '1',
-  region: '7',
+  region: '07',
   paidClubs: 100,
   totalPayments: 5000,
   distinguishedClubs: 50,
@@ -95,7 +95,7 @@ const renderRegion = () => {
   return render(
     <QueryClientProvider client={qc}>
       <ProgramYearProvider>
-        <MemoryRouter initialEntries={['/region/7']}>
+        <MemoryRouter initialEntries={['/region/07']}>
           <Routes>
             <Route path="/region/:n" element={<RegionPage />} />
           </Routes>
@@ -115,7 +115,7 @@ describe('RegionPage membership trend (#1815)', () => {
   it('adds a Trend column with one sparkline per district', async () => {
     renderRegion()
     const table = await screen.findByRole('table', {
-      name: 'Region 7 district rankings',
+      name: 'Region 07 district rankings',
     })
     expect(
       within(table).getByRole('columnheader', { name: 'Trend' })
@@ -134,7 +134,7 @@ describe('RegionPage membership trend (#1815)', () => {
   it('says so, without a fake line, when a district has no series', async () => {
     renderRegion()
     const table = await screen.findByRole('table', {
-      name: 'Region 7 district rankings',
+      name: 'Region 07 district rankings',
     })
     expect(
       await within(table).findByText('No membership trend for this date')
@@ -145,7 +145,7 @@ describe('RegionPage membership trend (#1815)', () => {
     isMobile.value = true
     renderRegion()
     const table = await screen.findByRole('table', {
-      name: 'Region 7 district rankings',
+      name: 'Region 07 district rankings',
     })
     const link = within(table).getByRole('link', { name: /D7/ })
     const img = await within(link).findByRole('img', { name: /net \+110/ })
@@ -159,6 +159,6 @@ describe('RegionPage membership trend (#1815)', () => {
     renderRegion()
     expect(
       await screen.findByRole('link', { name: 'Health & compliance' })
-    ).toHaveAttribute('href', '/region/7/health')
+    ).toHaveAttribute('href', '/region/07/health')
   })
 })
