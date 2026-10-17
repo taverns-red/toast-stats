@@ -49,3 +49,10 @@ export {
   type ClubsByRegionInput,
   type ClubsByRegionResult,
 } from './clubsByRegion.js'
+
+// Region and world membership series — time-series/regions/{PY}.json (#2127)
+export {
+  buildRegionMembershipSeries,
+  type RegionSeriesDistrictInput,
+  type RegionMembershipSeriesInput,
+} from './regionMembershipSeries.js'
