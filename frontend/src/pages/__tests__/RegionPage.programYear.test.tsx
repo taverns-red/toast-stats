@@ -155,6 +155,14 @@ describe('RegionPage — program year selector (#1301)', () => {
     expect(mockedAwards).not.toHaveBeenCalledWith('2026-05-20')
   })
 
+  it('reads an unpadded region id against the padded rankings region (#2130)', async () => {
+    renderAt('/region/7')
+    const table = await screen.findByRole('table', {
+      name: /region 07 district rankings/i,
+    })
+    expect(within(table).getAllByRole('row').length).toBeGreaterThan(1)
+  })
+
   it('honors a ?py= deep link and fetches that PY latest snapshot', async () => {
     renderAt('/region/07?py=2025')
     await screen.findByRole('table', { name: /region 07 district rankings/i })
