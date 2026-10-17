@@ -17,7 +17,23 @@
  *   in it) breaks the span, even if it comes back to the same district;
  * - the last span is open (`to: null`) only when the club was seen on the
  *   history's `asOf`, the newest date any store observed.
- * Phase 2 (#1816) makes the change points date-exact.
+ *
+ * Phase 2 (#1816): a store entry with `districtHistory` (one min/max run
+ * per district) splits the year at its change points, and a span gains
+ * `firstSeenOn` / `lastSeenOn` where the stores can vouch for the day:
+ * - a run's start is dated when no `districtHistoryGaps` date (folded
+ *   before change points existed) lies between the previous run's end and
+ *   it — or, for a store's first run, before it at all;
+ * - a run's end is dated when the next run's start is, or, for a store's
+ *   last run, when it is the club's `lastSeen` (nothing after it);
+ * - across a store boundary both sides must be dated; a legacy store's
+ *   entry (no `districtHistory`) never dates a start, so the history keeps
+ *   PY precision until a rebuild folds that year again;
+ * - a run wholly inside an earlier one is a shadow listing and dropped
+ *   (`resolveClubDistrictRuns`), and a change point ON a June 30 is never
+ *   dated: that is the PY close, which TI re-files under the next year's
+ *   structure when collected after a realignment (#2079), so the day says
+ *   nothing about when the club moved.
  *
  * Each store's program year is its own `programYear`, i.e. the PY of the
  * snapshots' LOGICAL dates (the CLAUDE.md tripwire): a June close collected
@@ -33,6 +49,7 @@ import {
   CLUB_DISTRICT_HISTORY_VERSION,
   clubDistrictHistoryShardKey,
   normalizeClubId,
+  resolveClubDistrictRuns,
   type ClubDistrictDuplicate,
   type ClubDistrictHistoryClub,
   type ClubDistrictHistoryIndex,
@@ -48,6 +65,17 @@ export interface ClubDistrictHistoryArtifact {
   shards: Record<string, ClubDistrictHistoryShard>
 }
 
+/** One district run of a club inside one store, with what it can vouch for. */
+interface Run {
+  districtId: string
+  from: string
+  to: string
+  /** `from` is the first sighting in this district, to the day. */
+  fromExact: boolean
+  /** `to` is the last sighting in this district, to the day. */
+  toExact: boolean
+}
+
 /** One club's sighting in one program year's store. */
 interface Sighting {
   programYear: string
@@ -58,6 +86,8 @@ interface Sighting {
   districtId: string
   clubName: string
   lastSeen: string
+  /** Chronological; one run for a legacy entry. */
+  runs: Run[]
 }
 
 const byString = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
@@ -103,27 +133,107 @@ function canonicalClubs(store: ClubRaceStoreData): {
   return { clubs, duplicates }
 }
 
+/** A June 30 is a program-year close (#2079). */
+const isPyClose = (date: string): boolean => date.slice(5) === '06-30'
+
+/**
+ * The runs one store entry can vouch for (#1816). A legacy entry (written
+ * before change points) is one run from the year's first observed date to
+ * `lastSeen`: its end is the club's last sighting, its start is unknown.
+ */
+function runsFor(
+  entry: ClubRaceStoreClub,
+  pyFirst: string,
+  gaps: readonly string[]
+): Run[] {
+  const resolved = resolveClubDistrictRuns(entry.districtHistory)
+  if (resolved.length === 0) {
+    return [
+      {
+        districtId: entry.districtId,
+        from: pyFirst,
+        to: entry.lastSeen,
+        fromExact: false,
+        toExact: true,
+      },
+    ]
+  }
+  const runs: Run[] = resolved.map(r => ({
+    ...r,
+    fromExact: true,
+    toExact: true,
+  }))
+  runs.forEach((run, i) => {
+    const prev = runs[i - 1]
+    const hidden = gaps.some(g => g < run.from && (!prev || g > prev.to))
+    const dated = !hidden && !(prev && isPyClose(run.from))
+    run.fromExact = dated
+    if (prev) prev.toExact = dated
+  })
+  const last = runs[runs.length - 1]!
+  last.toExact = last.to >= entry.lastSeen
+  return runs
+}
+
+/** A span under construction, with the runs that bound it. */
+interface Building {
+  span: ClubDistrictSpan
+  first: Run
+  last: Run
+  /** The previous span ended in this store or the store before. */
+  adjacentToPrevious: boolean
+}
+
 function buildClub(
   sightings: readonly Sighting[],
   asOf: string
 ): ClubDistrictHistoryClub {
-  const spans: ClubDistrictSpan[] = []
+  const built: Building[] = []
   let previous: Sighting | undefined
   for (const s of sightings) {
-    const current = spans[spans.length - 1]
-    if (
-      current &&
-      previous &&
-      current.districtId === s.districtId &&
-      s.ordinal === previous.ordinal + 1
-    ) {
-      current.to = s.lastSeen
-    } else {
-      spans.push({ from: s.pyFirst, to: s.lastSeen, districtId: s.districtId })
-    }
+    const adjacent =
+      previous !== undefined && s.ordinal === previous.ordinal + 1
+    s.runs.forEach((run, j) => {
+      const current = built[built.length - 1]
+      if (
+        j === 0 &&
+        current &&
+        adjacent &&
+        current.span.districtId === run.districtId
+      ) {
+        current.span.to = run.to
+        current.last = run
+        return
+      }
+      built.push({
+        span: {
+          // A store's first run starts at the PY's first observed date
+          // unless the store can date it (Phase 1 precision otherwise).
+          from: j === 0 && !run.fromExact ? s.pyFirst : run.from,
+          to: run.to,
+          districtId: run.districtId,
+        },
+        first: run,
+        last: run,
+        adjacentToPrevious: j > 0 || adjacent,
+      })
+    })
     previous = s
   }
 
+  built.forEach((b, i) => {
+    const prev = built[i - 1]
+    const next = built[i + 1]
+    const startDated =
+      b.first.fromExact && (!prev || !b.adjacentToPrevious || prev.last.toExact)
+    const endDated =
+      b.last.toExact &&
+      (!next || !next.adjacentToPrevious || next.first.fromExact)
+    if (startDated) b.span.firstSeenOn = b.first.from
+    if (endDated && b.span.to !== asOf) b.span.lastSeenOn = b.last.to
+  })
+
+  const spans = built.map(b => b.span)
   const latest = sightings[sightings.length - 1]!
   const lastSeen = sightings.reduce(
     (max, s) => (s.lastSeen > max ? s.lastSeen : max),
@@ -183,19 +293,27 @@ export function foldClubDistrictHistory(
     if (pyLast && pyLast > asOf) asOf = pyLast
     if (store.updatedAt > sourcesUpdatedAt) sourcesUpdatedAt = store.updatedAt
 
+    // Absent = a store never folded with change points: all dates are gaps.
+    const gaps = store.districtHistoryGaps ?? store.observedDates
+
     const { clubs, duplicates: dups } = canonicalClubs(store)
     duplicates.push(...dups)
     for (const [id, entry] of clubs) {
       const list = sightings.get(id) ?? []
+      // A store with no observed dates still names its clubs; fall back
+      // to the club's own sighting rather than invent a date.
+      const first = pyFirst ?? entry.lastSeen
+      const runs = runsFor(entry, first, gaps)
       list.push({
         programYear: store.programYear,
         ordinal,
-        // A store with no observed dates still names its clubs; fall back
-        // to the club's own sighting rather than invent a date.
-        pyFirst: pyFirst ?? entry.lastSeen,
-        districtId: entry.districtId,
+        pyFirst: first,
+        // The year's district is its last trusted run: a shadow listing on
+        // the June close (#2079) does not re-file the year.
+        districtId: runs[runs.length - 1]!.districtId,
         clubName: entry.clubName,
         lastSeen: entry.lastSeen,
+        runs,
       })
       sightings.set(id, list)
     }
