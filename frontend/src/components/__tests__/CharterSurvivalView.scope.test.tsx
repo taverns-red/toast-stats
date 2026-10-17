@@ -43,7 +43,9 @@ describe('CharterSurvivalView — region scope (#1818)', () => {
     expect(
       screen.getByText(/chartered in Region 09 in each program year/i)
     ).toBeInTheDocument()
-    expect(screen.getByText(/now in another region/i)).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/now in another region/i).length
+    ).toBeGreaterThan(0)
     expect(
       within(table()).getByRole('columnheader', { name: /other region/i })
     ).toBeInTheDocument()

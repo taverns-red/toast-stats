@@ -14,6 +14,7 @@ import {
   shortProgramYear,
   type CharterCohort,
   type CharterCohortSurvival,
+  type CharterCohortSurvivalScope,
   type PooledYearCell,
 } from '../utils/charterCohortSurvival'
 import {
@@ -22,7 +23,10 @@ import {
   type ChartReading,
 } from './charts/ChartReadout'
 
-/* Charter cohort survival (#1817, epic #1781) — `/district/:id/survival`.
+/* Charter cohort survival (#1817, epic #1781) — `/district/:id/growth/survival`,
+   and at region and world scope (#1818) `/region/:n/growth/survival` and
+   `/regions/growth/survival`: the same component, the copy and the
+   moved-away column fitted to the scope.
 
    - Headline: pooled survival after 1, 3 and 5 years, as text with counts.
    - Chart: one faint line per cohort for context, the pooled line in ink and
@@ -34,6 +38,56 @@ import {
    Values are text in ink; colour only marks identity, with a legend. */
 
 const COHORT_PARAM = 'cohort'
+
+/** The curves of a district, a region or the world. */
+export type SurvivalCurves = Omit<CharterCohortSurvival, 'districtId'>
+
+/** Whose cohorts these are: the district page's, a region's or the world's. */
+export type SurvivalScope = { kind: 'district' } | CharterCohortSurvivalScope
+
+interface ScopeCopy {
+  /** "here", "in Region 09", "worldwide". */
+  where: string
+  /** Who counts as active although they left the scope. */
+  movedNote: string
+  /** The moved-away column header; null = no column (the world). */
+  movedHeader: string | null
+  /** How the cohort is drawn, for the censoring note. */
+  cohortDefinition: string
+  /** The empty state's pointer elsewhere. */
+  elsewhere: string
+}
+
+function scopeCopy(scope: SurvivalScope): ScopeCopy {
+  if (scope.kind === 'region') {
+    const name = `Region ${scope.regionId}`
+    return {
+      where: `in ${name}`,
+      movedNote:
+        'Clubs now in another region, after a move or a redrawing of the regions, count as active.',
+      movedHeader: 'In another region',
+      cohortDefinition: `A cohort is the clubs first seen in a program year, in ${name} that year (each year's own region membership)`,
+      elsewhere: 'or look at another region',
+    }
+  }
+  if (scope.kind === 'world') {
+    return {
+      where: 'worldwide',
+      movedNote: 'A club counts as active wherever it moved.',
+      movedHeader: null,
+      cohortDefinition: 'A cohort is the clubs first seen in a program year',
+      elsewhere: '',
+    }
+  }
+  return {
+    where: 'here',
+    movedNote: 'Clubs that moved to another district count as active.',
+    movedHeader: 'Moved away',
+    cohortDefinition:
+      'A cohort is the clubs first seen in a program year, in this district that year',
+    elsewhere: 'or look at a district that chartered clubs',
+  }
+}
 const HEADLINE_YEARS = [1, 3, 5] as const
 
 const pct = (share: number): string => `${Math.round(share * 100)}%`
@@ -47,7 +101,7 @@ interface ChartRow {
   [cohort: string]: number | null
 }
 
-function buildRows(s: CharterCohortSurvival, cohorts: CharterCohort[]) {
+function buildRows(s: SurvivalCurves, cohorts: CharterCohort[]) {
   const rows: ChartRow[] = []
   for (let k = 0; k <= s.maxYears; k++) {
     const pooledCell = k === 0 ? null : (s.pooled[k - 1] ?? null)
@@ -146,7 +200,7 @@ const CohortLinks: React.FC<{
 
 function describeYear(
   k: number,
-  s: CharterCohortSurvival,
+  s: SurvivalCurves,
   highlighted: CharterCohort | null
 ): ChartReading {
   const rows: ChartReading['rows'] = []
@@ -181,7 +235,7 @@ function describeYear(
 
 const SurvivalTooltip: React.FC<
   Partial<TooltipContentProps<number, string>> & {
-    survival: CharterCohortSurvival
+    survival: SurvivalCurves
     highlighted: CharterCohort | null
   }
 > = ({ active, label, survival, highlighted }) => {
@@ -205,7 +259,7 @@ const SurvivalTooltip: React.FC<
 }
 
 function chartDescription(
-  s: CharterCohortSurvival,
+  s: SurvivalCurves,
   highlighted: CharterCohort | null
 ): string {
   const parts = [
@@ -229,7 +283,7 @@ function chartDescription(
 }
 
 const SurvivalChart: React.FC<{
-  survival: CharterCohortSurvival
+  survival: SurvivalCurves
   cohorts: CharterCohort[]
   highlighted: CharterCohort | null
 }> = ({ survival, cohorts, highlighted }) => {
@@ -367,9 +421,10 @@ const YearCell: React.FC<{
   )
 
 const SurvivalTable: React.FC<{
-  survival: CharterCohortSurvival
+  survival: SurvivalCurves
   selected: string | null
-}> = ({ survival, selected }) => {
+  movedHeader: string | null
+}> = ({ survival, selected, movedHeader }) => {
   const years = Array.from({ length: survival.maxYears }, (_, i) => i + 1)
   const hasProvisional = survival.cohorts.some(c =>
     c.years.some(y => y?.provisional)
@@ -392,9 +447,11 @@ const SurvivalTable: React.FC<{
             <th scope="col" className="survival-table__num">
               Clubs
             </th>
-            <th scope="col" className="survival-table__num">
-              Moved away
-            </th>
+            {movedHeader && (
+              <th scope="col" className="survival-table__num">
+                {movedHeader}
+              </th>
+            )}
             {years.map(k => (
               <th key={k} scope="col" className="survival-table__num">
                 Year {k}
@@ -414,7 +471,7 @@ const SurvivalTable: React.FC<{
                   <td className="survival-table__num">0</td>
                   <td
                     className="survival-table__none"
-                    colSpan={years.length + 1}
+                    colSpan={years.length + (movedHeader ? 1 : 0)}
                   >
                     None chartered
                   </td>
@@ -422,7 +479,9 @@ const SurvivalTable: React.FC<{
               ) : (
                 <>
                   <td className="survival-table__num">{c.chartered}</td>
-                  <td className="survival-table__num">{c.movedAway}</td>
+                  {movedHeader && (
+                    <td className="survival-table__num">{c.movedAway}</td>
+                  )}
                   {years.map(k => (
                     <YearCell
                       key={k}
@@ -441,9 +500,11 @@ const SurvivalTable: React.FC<{
             <td className="survival-table__num">
               {survival.cohorts.reduce((n, c) => n + c.chartered, 0)}
             </td>
-            <td className="survival-table__num">
-              {survival.cohorts.reduce((n, c) => n + c.movedAway, 0)}
-            </td>
+            {movedHeader && (
+              <td className="survival-table__num">
+                {survival.cohorts.reduce((n, c) => n + c.movedAway, 0)}
+              </td>
+            )}
             {years.map(k => {
               const p = survival.pooled[k - 1] ?? null
               return (
@@ -466,8 +527,11 @@ const SurvivalTable: React.FC<{
 /* ── View ─────────────────────────────────────────────────────────────── */
 
 export const CharterSurvivalView: React.FC<{
-  survival: CharterCohortSurvival
-}> = ({ survival }) => {
+  survival: SurvivalCurves
+  /** Whose cohorts these are (#1818); the district page by default. */
+  scope?: SurvivalScope
+}> = ({ survival, scope = { kind: 'district' } }) => {
+  const copy = scopeCopy(scope)
   const [params] = useSearchParams()
   const cohorts = useMemo(
     () => survival.cohorts.filter(c => c.chartered > 0),
@@ -482,22 +546,22 @@ export const CharterSurvivalView: React.FC<{
         Club survival by charter year
       </h2>
       <p className="survival-page__subtitle">
-        Of the clubs chartered here in each program year, the share still active
-        1, 2, 3… years later, through{' '}
-        {shortProgramYear(survival.throughProgramYear)}. Clubs that moved to
-        another district count as active.
+        Of the clubs chartered {copy.where} in each program year, the share
+        still active 1, 2, 3… years later, through{' '}
+        {shortProgramYear(survival.throughProgramYear)}. {copy.movedNote}
       </p>
 
       {cohorts.length === 0 ? (
         <p className="survival-empty">
-          No clubs were chartered in this district between{' '}
+          No clubs were chartered{' '}
+          {copy.where === 'here' ? 'in this district' : copy.where} between{' '}
           {survival.censoredProgramYear
             ? shortProgramYear(
                 survival.cohorts[0]?.programYear ?? survival.throughProgramYear
               )
             : 'the start of the history'}{' '}
           and {shortProgramYear(survival.throughProgramYear)}. Pick a later
-          program year above, or look at a district that chartered clubs.
+          program year above{copy.elsewhere ? `, ${copy.elsewhere}` : ''}.
         </p>
       ) : (
         <>
@@ -514,6 +578,7 @@ export const CharterSurvivalView: React.FC<{
           <SurvivalTable
             survival={survival}
             selected={highlighted?.programYear ?? null}
+            movedHeader={copy.movedHeader}
           />
         </>
       )}
@@ -522,9 +587,9 @@ export const CharterSurvivalView: React.FC<{
         <p className="survival-note">
           Clubs first seen in {shortProgramYear(survival.censoredProgramYear)}{' '}
           are left out: the history starts in that program year, so it cannot
-          tell which of them were chartered then. A cohort is the clubs first
-          seen in a program year, in this district that year; clubs that moved
-          to another district count as active. History as of {survival.asOf}.
+          tell which of them were chartered then. {copy.cohortDefinition};{' '}
+          {copy.movedNote.charAt(0).toLowerCase() + copy.movedNote.slice(1)}{' '}
+          History as of {survival.asOf}.
         </p>
       )}
     </section>
