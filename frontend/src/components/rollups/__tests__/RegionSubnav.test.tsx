@@ -103,4 +103,28 @@ describe('RegionSubnav', () => {
     )
     expect(screen.queryByRole('link', { name: 'Education' })).toBeNull()
   })
+
+  it('links Club growth (#1812, #1813), current only on the funnel itself', () => {
+    render(
+      <MemoryRouter initialEntries={['/region/07/growth?py=2025-2026']}>
+        <RegionSubnav base="/region/07" label="Region 07 sections" />
+      </MemoryRouter>
+    )
+    const growth = screen.getByRole('link', { name: 'Club growth' })
+    expect(growth).toHaveAttribute('href', '/region/07/growth?py=2025-2026')
+    expect(growth).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('carries Club growth into the phone section bar', () => {
+    phone.value = true
+    render(
+      <MemoryRouter initialEntries={['/regions/growth']}>
+        <RegionSubnav base="/regions" label="Regions sections" />
+      </MemoryRouter>
+    )
+    expect(screen.getByRole('link', { name: 'Club growth' })).toHaveAttribute(
+      'href',
+      '/regions/growth'
+    )
+  })
 })
