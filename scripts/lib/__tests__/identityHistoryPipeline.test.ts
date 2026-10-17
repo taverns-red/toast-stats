@@ -36,6 +36,7 @@ import {
   CharterCohortSurvivalRollupFileSchema,
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
+  ClosedClubNameIndexSchema,
   DistrictRegionHistorySchema,
 } from '@taverns-red/shared-contracts'
 import { prodWriteReasons, type Workflow } from '../prodWriteGuard.js'
@@ -62,6 +63,7 @@ const BUCKET = 'test-bucket'
 const PREFIX = 'config/club-district-history/'
 const REGION = 'config/district-region-history.json'
 const SURVIVAL = 'config/charter-cohort-survival/'
+const CLOSED = 'config/closed-club-names.json'
 
 let tmp: string
 let root: string
@@ -151,11 +153,16 @@ function derivedObjects(): string[] {
 
 /**
  * Everything the script may write: the club history, the survival files
- * derived from it (#2061) and the region history.
+ * derived from it (#2061), the closed-club name index (#2062) and the
+ * region history.
  */
 function writtenObjects(): string[] {
   return allObjects().filter(
-    o => o.startsWith(PREFIX) || o.startsWith(SURVIVAL) || o === REGION
+    o =>
+      o.startsWith(PREFIX) ||
+      o.startsWith(SURVIVAL) ||
+      o === REGION ||
+      o === CLOSED
   )
 }
 
@@ -219,7 +226,12 @@ describe('build-identity-history.sh: club-district history to config/ (#1782)', 
   it('uploads plain JSON with a JSON content type (no -Z under config/, #1852)', () => {
     seedAll()
     expect(runScript().status).toBe(0)
-    for (const obj of [`${PREFIX}index.json`, `${PREFIX}77.json`, REGION]) {
+    for (const obj of [
+      `${PREFIX}index.json`,
+      `${PREFIX}77.json`,
+      REGION,
+      CLOSED,
+    ]) {
       const meta = readMeta(obj)
       expect(meta, obj).not.toContain('content-encoding=gzip')
       expect(meta, obj).toContain('content-type=application/json')
@@ -233,7 +245,9 @@ describe('build-identity-history.sh: club-district history to config/ (#1782)', 
       expect(readMeta(obj), obj).toContain('cache-control=public, max-age=300')
       expect(readMeta(obj), obj).not.toContain('no-transform')
     }
-    expect(writtenObjects()).toHaveLength(6 + 1 + survivalObjects().length + 1)
+    expect(writtenObjects()).toHaveLength(
+      6 + 1 + survivalObjects().length + 1 + 1
+    )
     expect(survivalObjects().length).toBeGreaterThan(0)
   })
 
@@ -273,7 +287,7 @@ describe('build-identity-history.sh: club-district history to config/ (#1782)', 
     expect(writtenObjects()).toEqual([])
   })
 
-  it('writes nothing outside the two histories', () => {
+  it('writes nothing outside the two histories and the closed-club names', () => {
     seedAll()
     const before = allObjects().filter(o => !writtenObjects().includes(o))
     expect(runScript().status).toBe(0)
@@ -289,7 +303,8 @@ describe('build-identity-history.sh: club-district history to config/ (#1782)', 
       expect(
         dest === `gs://${BUCKET}/${PREFIX}` ||
           dest === `gs://${BUCKET}/${SURVIVAL}` ||
-          dest === `gs://${BUCKET}/${REGION}`,
+          dest === `gs://${BUCKET}/${REGION}` ||
+          dest === `gs://${BUCKET}/${CLOSED}`,
         w
       ).toBe(true)
     }
@@ -457,6 +472,34 @@ describe('build-identity-history.sh: region and world cohort survival (#1818)', 
   })
 })
 
+describe('build-identity-history.sh: closed-club name index (#2062)', () => {
+  it('uploads a schema-valid index of the closed clubs only', () => {
+    seedAll()
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    const closed = ClosedClubNameIndexSchema.parse(readObject(CLOSED))
+    expect(closed.totalClubs).toBe(2)
+    expect(closed.asOf).toBe('2026-10-10')
+    const ids = Object.values(closed.programYears)
+      .flatMap(d => Object.values(d))
+      .flat()
+      .map(row => row[0])
+      .sort()
+    expect(ids).toEqual(['368', '699'])
+  })
+
+  it('reports its count and measured sizes in the summary line', () => {
+    seedAll()
+    const r = runScript()
+    const parsed = JSON.parse(r.stdout.trim())
+    expect(parsed.closedClubNames).toMatchObject({ clubs: 2 })
+    expect(parsed.closedClubNames.gzipBytes).toBeGreaterThan(0)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /closed-club names.*2 clubs/i
+    )
+  })
+})
+
 describe('build-identity-history.sh: district → region history (#1820)', () => {
   it('uploads a schema-valid region history from the staged rankings', () => {
     seedAll()
@@ -521,6 +564,12 @@ describe('both histories are promoted with the run (#1820, #1782)', () => {
 
   it('the content gate schema-checks it (its own kind, not the generic sample)', () => {
     expect(classifyObject(REGION)).toBe('district-region-history')
+  })
+
+  it('the closed-club name index is a global object with its own gate kind (#2062)', () => {
+    expect(PROMOTED_PREFIXES.some(p => CLOSED.startsWith(p))).toBe(true)
+    expect(classifyPromotionPath(CLOSED)).toEqual({ kind: 'global' })
+    expect(classifyObject(CLOSED)).toBe('closed-club-name-index')
   })
 
   it('the club history shards and index are global objects with their own gate kinds', () => {
