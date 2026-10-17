@@ -7,6 +7,9 @@
 import { describe, it, expect } from 'vitest'
 import type { ClubDistrictHistoryClub } from '@taverns-red/shared-contracts'
 import shard97 from '../../__tests__/fixtures/club-district-history-97-2026-10-13.recorded.json'
+// The fold's output on recorded club-race stores of the 2026 reformation
+// (scripts/lib/__tests__/clubDistrictHistory.changePoints.test.ts).
+import shard77Exact from '../../__tests__/fixtures/club-district-history-77-change-points.fold.json'
 import { buildClubLineage } from '../clubLineage'
 
 const CLUB_497 = shard97.clubs['497'] as ClubDistrictHistoryClub
@@ -31,6 +34,14 @@ const CLUB_977: ClubDistrictHistoryClub = {
 }
 
 describe('buildClubLineage (#1805)', () => {
+  it('names the day the club left when the history dates it (#1816)', () => {
+    const exact = shard77Exact.clubs['977'] as ClubDistrictHistoryClub
+    expect(buildClubLineage(exact, '201')).toEqual({
+      formerDistricts: ['District 1 until June 30, 2026'],
+      formerNames: [],
+    })
+  })
+
   it('names the former district and when the club left it', () => {
     expect(buildClubLineage(CLUB_977, '201')).toEqual({
       formerDistricts: ['District 1 until June 2026'],

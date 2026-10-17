@@ -1,0 +1,35 @@
+{
+  "_format": {
+    "version": "1.1.0",
+    "type": "club-district-history-shard"
+  },
+  "shard": "77",
+  "asOf": "2026-07-26",
+  "clubs": {
+    "977": {
+      "name": "Professional Women Toastmasters",
+      "formerNames": [],
+      "firstSeen": "2018-06-30",
+      "lastSeen": "2026-07-26",
+      "spans": [
+        {
+          "from": "2018-06-30",
+          "to": "2026-06-30",
+          "districtId": "01",
+          "lastSeenOn": "2026-06-30"
+        },
+        {
+          "from": "2026-07-26",
+          "to": null,
+          "districtId": "201",
+          "firstSeenOn": "2026-07-26"
+        }
+      ],
+      "byProgramYear": {
+        "2017-2018": "01",
+        "2025-2026": "01",
+        "2026-2027": "201"
+      }
+    }
+  }
+}
