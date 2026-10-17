@@ -1,0 +1,610 @@
+{
+  "districtId": "U",
+  "collectedAt": "2026-10-17T09:02:15.661Z",
+  "data": {
+    "districtId": "U",
+    "snapshotDate": "2026-10-16",
+    "clubs": [
+      {
+        "clubId": "28679711",
+        "clubName": "Frontier Energy Toastmasters Club",
+        "divisionId": "0D",
+        "areaId": "0A",
+        "membershipCount": 20,
+        "membershipBase": 20,
+        "paymentsCount": 0,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Ineligible",
+        "clubStatus": "Ineligible",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 33.73744,
+          "lng": -84.38917
+        },
+        "address": {
+          "city": "Atlanta",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28680685",
+        "clubName": "Baganuur Toastmasters Club",
+        "divisionId": "0D",
+        "areaId": "0A",
+        "membershipCount": 22,
+        "membershipBase": 20,
+        "paymentsCount": 22,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Ineligible",
+        "clubStatus": "Ineligible",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 47.92403,
+          "lng": 106.85607
+        },
+        "address": {
+          "city": "Ulaanbaatar",
+          "country": "Mongolia"
+        }
+      },
+      {
+        "clubId": "5357724",
+        "clubName": "Netizens Online",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 9,
+        "membershipBase": 13,
+        "paymentsCount": 9,
+        "aprilRenewals": 0,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 46.31944,
+          "lng": 9.11445
+        },
+        "address": {
+          "city": "NA",
+          "country": "Switzerland"
+        }
+      },
+      {
+        "clubId": "5523338",
+        "clubName": "Toastmasters Without Borders",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 8,
+        "membershipBase": 18,
+        "paymentsCount": 11,
+        "aprilRenewals": 2,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -38.37937,
+          "lng": 145.16518
+        },
+        "address": {
+          "city": "Online Club",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "5562537",
+        "clubName": "Buddies",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 7,
+        "membershipBase": 21,
+        "paymentsCount": 11,
+        "aprilRenewals": 3,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 35.097,
+          "lng": 129.0081
+        },
+        "address": {
+          "city": "Busan",
+          "country": "Korea (Republic of)"
+        }
+      },
+      {
+        "clubId": "5622514",
+        "clubName": "Great White North Online",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 9,
+        "membershipBase": 7,
+        "paymentsCount": 13,
+        "aprilRenewals": 2,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 39.91998,
+          "lng": -86.28181
+        },
+        "address": {
+          "city": "No Physical Address ",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "5987684",
+        "clubName": "Online Presenters",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 20,
+        "membershipBase": 27,
+        "paymentsCount": 37,
+        "aprilRenewals": 13,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 26.24243,
+          "lng": -80.29265
+        },
+        "address": {
+          "city": "Coral Springs",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "6660599",
+        "clubName": "Diversity Toastmasters Club",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 8,
+        "membershipBase": 9,
+        "paymentsCount": 12,
+        "aprilRenewals": 4,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 35.63974,
+          "lng": 139.75648
+        },
+        "address": {
+          "city": "Suzu",
+          "country": "Japan"
+        }
+      },
+      {
+        "clubId": "7840641",
+        "clubName": "VIP Online Toastmasters",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 26,
+        "membershipBase": 26,
+        "paymentsCount": 38,
+        "aprilRenewals": 11,
+        "dcpGoals": 4,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 27.93935,
+          "lng": -82.73959
+        },
+        "address": {
+          "city": "Clearwater",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7896416",
+        "clubName": "USA Tamil Toastmasters Club",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 8,
+        "membershipBase": 10,
+        "paymentsCount": 9,
+        "aprilRenewals": 1,
+        "dcpGoals": 0,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 39.30256,
+          "lng": -76.89234
+        },
+        "address": {
+          "city": "Ellicott City",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7993786",
+        "clubName": "Spellwizard Advanced Toastmasters",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 8,
+        "membershipBase": 11,
+        "paymentsCount": 16,
+        "aprilRenewals": 3,
+        "dcpGoals": 7,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 17.4646,
+          "lng": 78.36663
+        },
+        "address": {
+          "city": "Kondapur, Hyderabad",
+          "country": "India"
+        }
+      },
+      {
+        "clubId": "28677262",
+        "clubName": "mrgtoast",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 0,
+        "membershipBase": 0,
+        "paymentsCount": 0,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Ineligible",
+        "clubStatus": "Ineligible",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 42.35111,
+          "lng": -71.06103
+        },
+        "address": {
+          "city": "Boston",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28678336",
+        "clubName": "Productive Getaways Toastmasters Club",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 0,
+        "membershipBase": 2,
+        "paymentsCount": 6,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Ineligible",
+        "clubStatus": "Ineligible",
+        "cspSubmitted": false
+      },
+      {
+        "clubId": "28678491",
+        "clubName": "Jisr",
+        "divisionId": "O",
+        "areaId": "01",
+        "membershipCount": 0,
+        "membershipBase": 0,
+        "paymentsCount": 0,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Ineligible",
+        "clubStatus": "Ineligible",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 14.54246,
+          "lng": 49.12313
+        },
+        "address": {
+          "city": "Mukala",
+          "country": "Yemen"
+        }
+      },
+      {
+        "clubId": "7111792",
+        "clubName": "Objectivist Voices",
+        "divisionId": "Z",
+        "areaId": "01",
+        "membershipCount": 22,
+        "membershipBase": 22,
+        "paymentsCount": 32,
+        "aprilRenewals": 7,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 39.84737,
+          "lng": -82.91234
+        },
+        "address": {
+          "city": "Online",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7115824",
+        "clubName": "Ashes To Masters Club",
+        "divisionId": "Z",
+        "areaId": "01",
+        "membershipCount": 6,
+        "membershipBase": 18,
+        "paymentsCount": 6,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 47.87417,
+          "lng": 106.84802
+        },
+        "address": {
+          "city": "Ulaanbaatar",
+          "country": "Mongolia"
+        }
+      },
+      {
+        "clubId": "7786939",
+        "clubName": "One Country One World",
+        "divisionId": "Z",
+        "areaId": "01",
+        "membershipCount": 7,
+        "membershipBase": 8,
+        "paymentsCount": 7,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 43.55936,
+          "lng": -79.72187
+        },
+        "address": {
+          "city": " https://us02web.zoom.us/j/81808506",
+          "country": "Canada"
+        }
+      },
+      {
+        "clubId": "7792215",
+        "clubName": "Virtual Professional Speakers - Online Toastmasters Club",
+        "divisionId": "Z",
+        "areaId": "01",
+        "membershipCount": 12,
+        "membershipBase": 13,
+        "paymentsCount": 19,
+        "aprilRenewals": 6,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 38.63433,
+          "lng": -90.55947
+        },
+        "address": {
+          "city": "Chesterfield",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28679264",
+        "clubName": "Damascus Toastmasters",
+        "divisionId": "Z",
+        "areaId": "08",
+        "membershipCount": 0,
+        "membershipBase": 8,
+        "paymentsCount": 0,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Ineligible",
+        "clubStatus": "Ineligible",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 31.24613,
+          "lng": -86.81388
+        },
+        "address": {
+          "city": "Damascus",
+          "country": "Syria"
+        }
+      },
+      {
+        "clubId": "7848194",
+        "clubName": "Earthlings Toastmasters Club",
+        "divisionId": "Z",
+        "areaId": "11",
+        "membershipCount": 6,
+        "membershipBase": 19,
+        "paymentsCount": 7,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 23.34561,
+          "lng": 113.43037
+        },
+        "address": {
+          "city": "Hong Kong",
+          "country": "China"
+        }
+      },
+      {
+        "clubId": "7924064",
+        "clubName": "Midnight Sun",
+        "divisionId": "Z",
+        "areaId": "11",
+        "membershipCount": 7,
+        "membershipBase": 15,
+        "paymentsCount": 14,
+        "aprilRenewals": 5,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 62.44862,
+          "lng": -114.38252
+        },
+        "address": {
+          "city": "Yellowknife",
+          "country": "Canada"
+        }
+      },
+      {
+        "clubId": "28675899",
+        "clubName": "Hadhramout Foundation Toastmasters Club",
+        "divisionId": "Z",
+        "areaId": "11",
+        "membershipCount": 19,
+        "membershipBase": 19,
+        "paymentsCount": 19,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 14.54246,
+          "lng": 49.12313
+        },
+        "address": {
+          "city": "Mukalla",
+          "country": "Yemen"
+        }
+      },
+      {
+        "clubId": "7837318",
+        "clubName": "Personal Growth Leaders Advanced TI Online Club",
+        "divisionId": "Z",
+        "areaId": "12",
+        "membershipCount": 8,
+        "membershipBase": 8,
+        "paymentsCount": 11,
+        "aprilRenewals": 2,
+        "dcpGoals": 0,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 52.8652,
+          "lng": -7.97946
+        },
+        "address": {
+          "city": "Online Club",
+          "country": "Ireland"
+        }
+      },
+      {
+        "clubId": "7860006",
+        "clubName": "Vsolvit Toastmasters Club",
+        "divisionId": "Z",
+        "areaId": "12",
+        "membershipCount": 7,
+        "membershipBase": 8,
+        "paymentsCount": 13,
+        "aprilRenewals": 3,
+        "dcpGoals": 1,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": false
+      },
+      {
+        "clubId": "1587874",
+        "clubName": "Toastmasters Mongolia",
+        "divisionId": "Z",
+        "areaId": "13",
+        "membershipCount": 26,
+        "membershipBase": 29,
+        "paymentsCount": 26,
+        "aprilRenewals": 0,
+        "dcpGoals": 6,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 47.91581,
+          "lng": 106.92027
+        },
+        "address": {
+          "city": "Ulaanbaatar",
+          "country": "Mongolia"
+        }
+      },
+      {
+        "clubId": "2561691",
+        "clubName": "UB Toastmasters",
+        "divisionId": "Z",
+        "areaId": "13",
+        "membershipCount": 21,
+        "membershipBase": 20,
+        "paymentsCount": 21,
+        "aprilRenewals": 0,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 47.92403,
+          "lng": 106.85607
+        },
+        "address": {
+          "city": "Ulaanbaatar",
+          "country": "Mongolia"
+        }
+      },
+      {
+        "clubId": "4802015",
+        "clubName": "Great Mongols",
+        "divisionId": "Z",
+        "areaId": "13",
+        "membershipCount": 0,
+        "membershipBase": 14,
+        "paymentsCount": 0,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Ineligible",
+        "clubStatus": "Ineligible",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 47.91897,
+          "lng": 106.92713
+        },
+        "address": {
+          "city": "Ulaanbaatar",
+          "country": "Mongolia"
+        }
+      },
+      {
+        "clubId": "28679611",
+        "clubName": "APU Toastmasters",
+        "divisionId": "Z",
+        "areaId": "13",
+        "membershipCount": 26,
+        "membershipBase": 15,
+        "paymentsCount": 47,
+        "aprilRenewals": 6,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 47.89974,
+          "lng": 106.90945
+        },
+        "address": {
+          "city": "Ulaanbaatar",
+          "country": "Mongolia"
+        }
+      }
+    ]
+  }
+}

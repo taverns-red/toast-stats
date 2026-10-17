@@ -1,0 +1,1396 @@
+{
+  "districtId": "17",
+  "collectedAt": "2026-10-17T09:02:14.290Z",
+  "data": {
+    "districtId": "17",
+    "snapshotDate": "2026-10-16",
+    "clubs": [
+      {
+        "clubId": "6312",
+        "clubName": "St Georges Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "01",
+        "membershipCount": 32,
+        "membershipBase": 31,
+        "paymentsCount": 33,
+        "aprilRenewals": 0,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.94155,
+          "lng": 115.84046
+        },
+        "address": {
+          "city": "West Leederville",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1583170",
+        "clubName": "CPA Toastmasters",
+        "divisionId": "C",
+        "areaId": "01",
+        "membershipCount": 17,
+        "membershipBase": 23,
+        "paymentsCount": 34,
+        "aprilRenewals": 16,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95498,
+          "lng": 115.85278
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "6104577",
+        "clubName": "bToasty Perth Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "01",
+        "membershipCount": 10,
+        "membershipBase": 9,
+        "paymentsCount": 12,
+        "aprilRenewals": 2,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.9544,
+          "lng": 115.85484
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "28678357",
+        "clubName": "Habla Hispanic Bilingual Toastmasters",
+        "divisionId": "C",
+        "areaId": "01",
+        "membershipCount": 19,
+        "membershipBase": 28,
+        "paymentsCount": 27,
+        "aprilRenewals": 6,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.99663,
+          "lng": 115.86331
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "28679419",
+        "clubName": "Technology Toastmasters",
+        "divisionId": "C",
+        "areaId": "01",
+        "membershipCount": 22,
+        "membershipBase": 25,
+        "paymentsCount": 28,
+        "aprilRenewals": 0,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95597,
+          "lng": 115.85898
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "5607",
+        "clubName": "West End Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "02",
+        "membershipCount": 7,
+        "membershipBase": 10,
+        "paymentsCount": 15,
+        "aprilRenewals": 7,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95201,
+          "lng": 115.85823
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "6314",
+        "clubName": "Durack Club",
+        "divisionId": "C",
+        "areaId": "02",
+        "membershipCount": 17,
+        "membershipBase": 20,
+        "paymentsCount": 23,
+        "aprilRenewals": 4,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.9571,
+          "lng": 115.86485
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "6428",
+        "clubName": "City of Perth Toastmasters",
+        "divisionId": "C",
+        "areaId": "02",
+        "membershipCount": 27,
+        "membershipBase": 25,
+        "paymentsCount": 40,
+        "aprilRenewals": 9,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95301,
+          "lng": 115.85597
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "661834",
+        "clubName": "Central Communicators Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "02",
+        "membershipCount": 8,
+        "membershipBase": 14,
+        "paymentsCount": 14,
+        "aprilRenewals": 4,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95539,
+          "lng": 115.8605
+        },
+        "address": {
+          "city": "PERTH",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "28676811",
+        "clubName": "Electric Toasters",
+        "divisionId": "C",
+        "areaId": "02",
+        "membershipCount": 6,
+        "membershipBase": 14,
+        "paymentsCount": 10,
+        "aprilRenewals": 2,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95318,
+          "lng": 115.86201
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1155864",
+        "clubName": "UWA",
+        "divisionId": "C",
+        "areaId": "03",
+        "membershipCount": 10,
+        "membershipBase": 15,
+        "paymentsCount": 13,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.98545,
+          "lng": 115.822
+        },
+        "address": {
+          "city": "Crawley",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1204793",
+        "clubName": "Terrace Talkers",
+        "divisionId": "C",
+        "areaId": "03",
+        "membershipCount": 12,
+        "membershipBase": 12,
+        "paymentsCount": 15,
+        "aprilRenewals": 3,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95519,
+          "lng": 115.8566
+        },
+        "address": {
+          "city": "Perth ",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "5755035",
+        "clubName": "UWA College Row Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "03",
+        "membershipCount": 18,
+        "membershipBase": 11,
+        "paymentsCount": 33,
+        "aprilRenewals": 8,
+        "dcpGoals": 5,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.97435,
+          "lng": 115.81926
+        },
+        "address": {
+          "city": "Crawley",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "7293526",
+        "clubName": "Toasting Human Energy Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "03",
+        "membershipCount": 19,
+        "membershipBase": 20,
+        "paymentsCount": 24,
+        "aprilRenewals": 4,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95185,
+          "lng": 115.85047
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "28678328",
+        "clubName": "Kaya Toastmasters",
+        "divisionId": "C",
+        "areaId": "03",
+        "membershipCount": 29,
+        "membershipBase": 25,
+        "paymentsCount": 37,
+        "aprilRenewals": 2,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.98042,
+          "lng": 115.90086
+        },
+        "address": {
+          "city": "Victoria Park",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "7986",
+        "clubName": "Como Communicators",
+        "divisionId": "C",
+        "areaId": "04",
+        "membershipCount": 26,
+        "membershipBase": 26,
+        "paymentsCount": 45,
+        "aprilRenewals": 14,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.99647,
+          "lng": 115.86421
+        },
+        "address": {
+          "city": "Como",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1437841",
+        "clubName": "Victoria Park Toastmasters",
+        "divisionId": "C",
+        "areaId": "04",
+        "membershipCount": 23,
+        "membershipBase": 28,
+        "paymentsCount": 31,
+        "aprilRenewals": 7,
+        "dcpGoals": 5,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.99778,
+          "lng": 115.90377
+        },
+        "address": {
+          "city": " East Victoria Park",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "3717566",
+        "clubName": "WA Speakers Bureau Toastmasters",
+        "divisionId": "C",
+        "areaId": "04",
+        "membershipCount": 10,
+        "membershipBase": 10,
+        "paymentsCount": 15,
+        "aprilRenewals": 4,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.98873,
+          "lng": 115.90552
+        },
+        "address": {
+          "city": "East Victoria Park",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "3903611",
+        "clubName": "Perth Rainbow Toastmasters",
+        "divisionId": "C",
+        "areaId": "04",
+        "membershipCount": 8,
+        "membershipBase": 9,
+        "paymentsCount": 9,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.98876,
+          "lng": 115.90546
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "4447407",
+        "clubName": "Sunday Sundowners Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "04",
+        "membershipCount": 21,
+        "membershipBase": 25,
+        "paymentsCount": 36,
+        "aprilRenewals": 15,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.98796,
+          "lng": 115.86626
+        },
+        "address": {
+          "city": "South Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "3432",
+        "clubName": "Sandgroper Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "21",
+        "membershipCount": 8,
+        "membershipBase": 9,
+        "paymentsCount": 9,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.86096,
+          "lng": 115.75997
+        },
+        "address": {
+          "city": "North Beach",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "8924",
+        "clubName": "Northern Lights, Western Australia",
+        "divisionId": "N",
+        "areaId": "21",
+        "membershipCount": 14,
+        "membershipBase": 12,
+        "paymentsCount": 24,
+        "aprilRenewals": 8,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.79404,
+          "lng": 115.79844
+        },
+        "address": {
+          "city": "Woodvale ",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "2932197",
+        "clubName": "Northern Gourmet Toastmasters",
+        "divisionId": "N",
+        "areaId": "21",
+        "membershipCount": 6,
+        "membershipBase": 13,
+        "paymentsCount": 7,
+        "aprilRenewals": 1,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.84338,
+          "lng": 115.80768
+        },
+        "address": {
+          "city": "Warwick",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "3518640",
+        "clubName": "Currambine Toastmasters",
+        "divisionId": "N",
+        "areaId": "21",
+        "membershipCount": 17,
+        "membershipBase": 23,
+        "paymentsCount": 28,
+        "aprilRenewals": 7,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.73985,
+          "lng": 115.73943
+        },
+        "address": {
+          "city": "Currambine",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "5092798",
+        "clubName": "Butler Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "21",
+        "membershipCount": 14,
+        "membershipBase": 14,
+        "paymentsCount": 20,
+        "aprilRenewals": 2,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.67519,
+          "lng": 115.70491
+        },
+        "address": {
+          "city": "Mindarie",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "3077",
+        "clubName": "Talkabout Club",
+        "divisionId": "N",
+        "areaId": "22",
+        "membershipCount": 12,
+        "membershipBase": 16,
+        "paymentsCount": 14,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.96318,
+          "lng": 115.779
+        },
+        "address": {
+          "city": "Mount Claremont",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "4416",
+        "clubName": "Stirling Club",
+        "divisionId": "N",
+        "areaId": "22",
+        "membershipCount": 15,
+        "membershipBase": 15,
+        "paymentsCount": 23,
+        "aprilRenewals": 7,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.8953,
+          "lng": 115.77464
+        },
+        "address": {
+          "city": "Doubleview",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "9106",
+        "clubName": "Northbridge Club",
+        "divisionId": "N",
+        "areaId": "22",
+        "membershipCount": 11,
+        "membershipBase": 10,
+        "paymentsCount": 13,
+        "aprilRenewals": 0,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.94806,
+          "lng": 115.85973
+        },
+        "address": {
+          "city": "Northbridge  ",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1505004",
+        "clubName": "Mount Hawthorn Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "22",
+        "membershipCount": 21,
+        "membershipBase": 24,
+        "paymentsCount": 31,
+        "aprilRenewals": 8,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.91802,
+          "lng": 115.83624
+        },
+        "address": {
+          "city": "Mount Hawthorn",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "2459315",
+        "clubName": "Banksia Speakers Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "22",
+        "membershipCount": 5,
+        "membershipBase": 8,
+        "paymentsCount": 5,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95066,
+          "lng": 115.82007
+        },
+        "address": {
+          "city": "Subiaco",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "28679747",
+        "clubName": "Carpathian Toastmasters",
+        "divisionId": "N",
+        "areaId": "22",
+        "membershipCount": 27,
+        "membershipBase": 31,
+        "paymentsCount": 42,
+        "aprilRenewals": 9,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.91684,
+          "lng": 115.88679
+        },
+        "address": {
+          "city": "Bayswater",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1285",
+        "clubName": "Banyandah Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "23",
+        "membershipCount": 9,
+        "membershipBase": 10,
+        "paymentsCount": 13,
+        "aprilRenewals": 3,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.92811,
+          "lng": 115.89134
+        },
+        "address": {
+          "city": "Maylands  ",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "2111",
+        "clubName": "Maylands Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "23",
+        "membershipCount": 10,
+        "membershipBase": 16,
+        "paymentsCount": 15,
+        "aprilRenewals": 2,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.92794,
+          "lng": 115.89133
+        },
+        "address": {
+          "city": "Maylands",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "995774",
+        "clubName": "Young Guns",
+        "divisionId": "N",
+        "areaId": "23",
+        "membershipCount": 25,
+        "membershipBase": 32,
+        "paymentsCount": 37,
+        "aprilRenewals": 9,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95186,
+          "lng": 115.85474
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1196041",
+        "clubName": "Highgate Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "23",
+        "membershipCount": 11,
+        "membershipBase": 15,
+        "paymentsCount": 18,
+        "aprilRenewals": 6,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.9317,
+          "lng": 115.85577
+        },
+        "address": {
+          "city": "North Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1334399",
+        "clubName": "Aspire Toastmasters",
+        "divisionId": "N",
+        "areaId": "23",
+        "membershipCount": 22,
+        "membershipBase": 29,
+        "paymentsCount": 35,
+        "aprilRenewals": 9,
+        "dcpGoals": 4,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95067,
+          "lng": 115.82007
+        },
+        "address": {
+          "city": "Subiaco, Western Australia",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "2236",
+        "clubName": "Belmont Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "24",
+        "membershipCount": 16,
+        "membershipBase": 21,
+        "paymentsCount": 22,
+        "aprilRenewals": 5,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.96092,
+          "lng": 115.93502
+        },
+        "address": {
+          "city": "Cloverdale",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "5839",
+        "clubName": "Swan Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "24",
+        "membershipCount": 22,
+        "membershipBase": 21,
+        "paymentsCount": 29,
+        "aprilRenewals": 7,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.89008,
+          "lng": 116.00696
+        },
+        "address": {
+          "city": "Midland",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "8347",
+        "clubName": "Heritage Towns Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "24",
+        "membershipCount": 9,
+        "membershipBase": 8,
+        "paymentsCount": 11,
+        "aprilRenewals": 1,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.90419,
+          "lng": 115.94973
+        },
+        "address": {
+          "city": "PERTH",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1332936",
+        "clubName": "Noranda Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "24",
+        "membershipCount": 15,
+        "membershipBase": 20,
+        "paymentsCount": 24,
+        "aprilRenewals": 8,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.87769,
+          "lng": 115.8899
+        },
+        "address": {
+          "city": "Noranda",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1562202",
+        "clubName": "Speak Easy Ellenbrook Toastmasters Club",
+        "divisionId": "N",
+        "areaId": "24",
+        "membershipCount": 23,
+        "membershipBase": 23,
+        "paymentsCount": 37,
+        "aprilRenewals": 12,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.78372,
+          "lng": 115.96468
+        },
+        "address": {
+          "city": "Ellenbrook",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1133609",
+        "clubName": "Canning Vale Toastmasters",
+        "divisionId": "S",
+        "areaId": "31",
+        "membershipCount": 34,
+        "membershipBase": 39,
+        "paymentsCount": 50,
+        "aprilRenewals": 12,
+        "dcpGoals": 8,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.08306,
+          "lng": 115.92244
+        },
+        "address": {
+          "city": "Canning Vale",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "7050368",
+        "clubName": "CGH Toastmasters Club",
+        "divisionId": "S",
+        "areaId": "31",
+        "membershipCount": 13,
+        "membershipBase": 11,
+        "paymentsCount": 13,
+        "aprilRenewals": 0,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.05618,
+          "lng": 115.92149
+        },
+        "address": {
+          "city": "CANNING VALE",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "7519719",
+        "clubName": "Harrisdale Piara Waters Toastmasters Club",
+        "divisionId": "S",
+        "areaId": "31",
+        "membershipCount": 26,
+        "membershipBase": 27,
+        "paymentsCount": 40,
+        "aprilRenewals": 7,
+        "dcpGoals": 8,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.11166,
+          "lng": 115.93484
+        },
+        "address": {
+          "city": "Harrisdale",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "28678666",
+        "clubName": "Sangam Tamil Toastmasters Club",
+        "divisionId": "S",
+        "areaId": "31",
+        "membershipCount": 13,
+        "membershipBase": 13,
+        "paymentsCount": 25,
+        "aprilRenewals": 11,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.04025,
+          "lng": 115.8677
+        },
+        "address": {
+          "city": "Rossmoyne",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "28680563",
+        "clubName": "Presentation Masters Club",
+        "divisionId": "S",
+        "areaId": "31",
+        "membershipCount": 20,
+        "membershipBase": 20,
+        "paymentsCount": 31,
+        "aprilRenewals": 15,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95184,
+          "lng": 115.8587
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "5491",
+        "clubName": "Fremantle Gateway Toastmasters Club",
+        "divisionId": "S",
+        "areaId": "32",
+        "membershipCount": 25,
+        "membershipBase": 34,
+        "paymentsCount": 44,
+        "aprilRenewals": 12,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.05135,
+          "lng": 115.75074
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1068213",
+        "clubName": "Fremantle Gourmet Toastmasters Club",
+        "divisionId": "S",
+        "areaId": "32",
+        "membershipCount": 6,
+        "membershipBase": 18,
+        "paymentsCount": 8,
+        "aprilRenewals": 2,
+        "dcpGoals": 2,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.027,
+          "lng": 115.76282
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1304157",
+        "clubName": "Applecross Toastmasters",
+        "divisionId": "S",
+        "areaId": "32",
+        "membershipCount": 12,
+        "membershipBase": 18,
+        "paymentsCount": 17,
+        "aprilRenewals": 3,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.01406,
+          "lng": 115.8387
+        },
+        "address": {
+          "city": "Applecross",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "28678759",
+        "clubName": "City of Fremantle Toastmasters",
+        "divisionId": "S",
+        "areaId": "32",
+        "membershipCount": 16,
+        "membershipBase": 22,
+        "paymentsCount": 19,
+        "aprilRenewals": 1,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.05422,
+          "lng": 115.74827
+        },
+        "address": {
+          "city": "Fremantle",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "7486",
+        "clubName": "Mandurah Toastmasters",
+        "divisionId": "S",
+        "areaId": "33",
+        "membershipCount": 18,
+        "membershipBase": 20,
+        "paymentsCount": 21,
+        "aprilRenewals": 1,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.52912,
+          "lng": 115.7519
+        },
+        "address": {
+          "city": "Mandurah",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1375364",
+        "clubName": "Rockingham Toastmasters",
+        "divisionId": "S",
+        "areaId": "33",
+        "membershipCount": 9,
+        "membershipBase": 10,
+        "paymentsCount": 10,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.28314,
+          "lng": 115.76064
+        },
+        "address": {
+          "city": "Hillman",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "3704188",
+        "clubName": "Multicultural Mandurah Toastmasters",
+        "divisionId": "S",
+        "areaId": "33",
+        "membershipCount": 15,
+        "membershipBase": 14,
+        "paymentsCount": 23,
+        "aprilRenewals": 5,
+        "dcpGoals": 5,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.52931,
+          "lng": 115.75549
+        },
+        "address": {
+          "city": "Mandurah",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "4859845",
+        "clubName": "Zoom-Masters",
+        "divisionId": "S",
+        "areaId": "33",
+        "membershipCount": 18,
+        "membershipBase": 21,
+        "paymentsCount": 31,
+        "aprilRenewals": 10,
+        "dcpGoals": 4,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95701,
+          "lng": 115.86478
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "3065",
+        "clubName": "Bunbury Club",
+        "divisionId": "S",
+        "areaId": "34",
+        "membershipCount": 9,
+        "membershipBase": 16,
+        "paymentsCount": 12,
+        "aprilRenewals": 2,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -33.32741,
+          "lng": 115.63609
+        },
+        "address": {
+          "city": "Bunbury",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "8453",
+        "clubName": "Blackwood Valley Toastmasters",
+        "divisionId": "S",
+        "areaId": "34",
+        "membershipCount": 14,
+        "membershipBase": 16,
+        "paymentsCount": 21,
+        "aprilRenewals": 6,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -33.84715,
+          "lng": 116.05753
+        },
+        "address": {
+          "city": "Greenbushes ",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "751215",
+        "clubName": "Jetty Toastmasters",
+        "divisionId": "S",
+        "areaId": "34",
+        "membershipCount": 9,
+        "membershipBase": 11,
+        "paymentsCount": 15,
+        "aprilRenewals": 5,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -33.65214,
+          "lng": 115.34483
+        },
+        "address": {
+          "city": "Busselton",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1110743",
+        "clubName": "Touch of Gold Toastmasters Club",
+        "divisionId": "S",
+        "areaId": "34",
+        "membershipCount": 9,
+        "membershipBase": 21,
+        "paymentsCount": 13,
+        "aprilRenewals": 4,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -30.74613,
+          "lng": 121.46761
+        },
+        "address": {
+          "city": "Kalgoorlie",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "4281544",
+        "clubName": "Donnybrook Gourmet Toastmasters",
+        "divisionId": "S",
+        "areaId": "34",
+        "membershipCount": 11,
+        "membershipBase": 17,
+        "paymentsCount": 17,
+        "aprilRenewals": 6,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -33.5713,
+          "lng": 115.82446
+        },
+        "address": {
+          "city": "Donnybrook",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "6438",
+        "clubName": "Murdoch Southsiders Toastmasters Club",
+        "divisionId": "S",
+        "areaId": "35",
+        "membershipCount": 28,
+        "membershipBase": 39,
+        "paymentsCount": 30,
+        "aprilRenewals": 0,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.06493,
+          "lng": 115.85397
+        },
+        "address": {
+          "city": "Bull Creek",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "1077268",
+        "clubName": "Aspiring Leaders",
+        "divisionId": "S",
+        "areaId": "35",
+        "membershipCount": 5,
+        "membershipBase": 8,
+        "paymentsCount": 7,
+        "aprilRenewals": 2,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -31.95285,
+          "lng": 115.85731
+        },
+        "address": {
+          "city": "Perth",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "3022546",
+        "clubName": "Willetton Toastmasters",
+        "divisionId": "S",
+        "areaId": "35",
+        "membershipCount": 18,
+        "membershipBase": 21,
+        "paymentsCount": 31,
+        "aprilRenewals": 10,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.04895,
+          "lng": 115.89609
+        },
+        "address": {
+          "city": "Willetton",
+          "country": "Australia"
+        }
+      },
+      {
+        "clubId": "7840787",
+        "clubName": "Melville Toastmasters Club",
+        "divisionId": "S",
+        "areaId": "35",
+        "membershipCount": 23,
+        "membershipBase": 21,
+        "paymentsCount": 42,
+        "aprilRenewals": 18,
+        "dcpGoals": 4,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": -32.06376,
+          "lng": 115.85555
+        },
+        "address": {
+          "city": "Bull Creek",
+          "country": "Australia"
+        }
+      }
+    ]
+  }
+}

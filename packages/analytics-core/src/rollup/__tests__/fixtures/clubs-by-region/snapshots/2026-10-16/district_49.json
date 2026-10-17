@@ -1,0 +1,1462 @@
+{
+  "districtId": "49",
+  "collectedAt": "2026-10-17T09:02:14.525Z",
+  "data": {
+    "districtId": "49",
+    "snapshotDate": "2026-10-16",
+    "clubs": [
+      {
+        "clubId": "601",
+        "clubName": "Aloha Toastmasters",
+        "divisionId": "A",
+        "areaId": "01",
+        "membershipCount": 12,
+        "membershipBase": 15,
+        "paymentsCount": 21,
+        "aprilRenewals": 9,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.2837,
+          "lng": -157.79784
+        },
+        "address": {
+          "city": "HONOLULU",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "2076",
+        "clubName": "Downtown Business Associates Club",
+        "divisionId": "A",
+        "areaId": "01",
+        "membershipCount": 16,
+        "membershipBase": 23,
+        "paymentsCount": 25,
+        "aprilRenewals": 9,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.3098,
+          "lng": -157.86388
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "1055548",
+        "clubName": "Na Hoku Kai Toastmasters",
+        "divisionId": "A",
+        "areaId": "01",
+        "membershipCount": 8,
+        "membershipBase": 9,
+        "paymentsCount": 12,
+        "aprilRenewals": 3,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.37856,
+          "lng": -157.74132
+        },
+        "address": {
+          "city": "Kailua",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28676549",
+        "clubName": "Hawaii Nihongo Toastmasters Club",
+        "divisionId": "A",
+        "areaId": "01",
+        "membershipCount": 11,
+        "membershipBase": 13,
+        "paymentsCount": 17,
+        "aprilRenewals": 6,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.29123,
+          "lng": -157.70015
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "4079",
+        "clubName": "City And County of Honolulu Toastmasters",
+        "divisionId": "A",
+        "areaId": "02",
+        "membershipCount": 14,
+        "membershipBase": 20,
+        "paymentsCount": 18,
+        "aprilRenewals": 4,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30422,
+          "lng": -157.85471
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "4907",
+        "clubName": "Liliuokalani Club",
+        "divisionId": "A",
+        "areaId": "02",
+        "membershipCount": 8,
+        "membershipBase": 12,
+        "paymentsCount": 13,
+        "aprilRenewals": 5,
+        "dcpGoals": 0,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.37856,
+          "lng": -157.74132
+        },
+        "address": {
+          "city": "Kailua",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "828338",
+        "clubName": "DBEDT for Business Toastmasters Club",
+        "divisionId": "A",
+        "areaId": "02",
+        "membershipCount": 10,
+        "membershipBase": 20,
+        "paymentsCount": 13,
+        "aprilRenewals": 3,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.3094,
+          "lng": -157.85798
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "912479",
+        "clubName": "Global Messenger Club",
+        "divisionId": "A",
+        "areaId": "02",
+        "membershipCount": 24,
+        "membershipBase": 24,
+        "paymentsCount": 24,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 21.34698,
+          "lng": -158.04667
+        },
+        "address": {
+          "city": "Ewa Beach",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "6230",
+        "clubName": "Ka Ipu Kukui Toastmasters",
+        "divisionId": "A",
+        "areaId": "03",
+        "membershipCount": 8,
+        "membershipBase": 8,
+        "paymentsCount": 11,
+        "aprilRenewals": 2,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 20.88897,
+          "lng": -156.50126
+        },
+        "address": {
+          "city": "Wailuku",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7854",
+        "clubName": "No Ka Oi Club",
+        "divisionId": "A",
+        "areaId": "03",
+        "membershipCount": 11,
+        "membershipBase": 15,
+        "paymentsCount": 14,
+        "aprilRenewals": 2,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 20.88009,
+          "lng": -156.47258
+        },
+        "address": {
+          "city": "Wailuku",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "5826965",
+        "clubName": "Ke Ala Leo",
+        "divisionId": "A",
+        "areaId": "03",
+        "membershipCount": 8,
+        "membershipBase": 18,
+        "paymentsCount": 11,
+        "aprilRenewals": 3,
+        "dcpGoals": 4,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 20.88803,
+          "lng": -156.46785
+        },
+        "address": {
+          "city": "Kahului",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7905052",
+        "clubName": "InspireX Keynote Presentation Practice Club",
+        "divisionId": "A",
+        "areaId": "03",
+        "membershipCount": 10,
+        "membershipBase": 12,
+        "paymentsCount": 14,
+        "aprilRenewals": 4,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 20.91356,
+          "lng": -156.37887
+        },
+        "address": {
+          "city": "Paia",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "4822",
+        "clubName": "Winners Circle II Club",
+        "divisionId": "A",
+        "areaId": "04",
+        "membershipCount": 8,
+        "membershipBase": 10,
+        "paymentsCount": 8,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 21.28344,
+          "lng": -157.79201
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "1038715",
+        "clubName": "Windward Winners",
+        "divisionId": "A",
+        "areaId": "04",
+        "membershipCount": 12,
+        "membershipBase": 13,
+        "paymentsCount": 20,
+        "aprilRenewals": 8,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.42012,
+          "lng": -157.74771
+        },
+        "address": {
+          "city": "Kailua",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "5819533",
+        "clubName": "Emerging Leaders Toastmasters",
+        "divisionId": "A",
+        "areaId": "04",
+        "membershipCount": 8,
+        "membershipBase": 13,
+        "paymentsCount": 11,
+        "aprilRenewals": 1,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.27528,
+          "lng": -157.75595
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28679594",
+        "clubName": "HMSA Toastmasters",
+        "divisionId": "A",
+        "areaId": "04",
+        "membershipCount": 20,
+        "membershipBase": 20,
+        "paymentsCount": 20,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.29646,
+          "lng": -157.84396
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "2805",
+        "clubName": "Pearl City Club",
+        "divisionId": "B",
+        "areaId": "05",
+        "membershipCount": 8,
+        "membershipBase": 14,
+        "paymentsCount": 12,
+        "aprilRenewals": 4,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.37738,
+          "lng": -157.9316
+        },
+        "address": {
+          "city": "Aiea",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "5244",
+        "clubName": "Mililani Toastmasters Club",
+        "divisionId": "B",
+        "areaId": "05",
+        "membershipCount": 8,
+        "membershipBase": 15,
+        "paymentsCount": 12,
+        "aprilRenewals": 4,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.45738,
+          "lng": -158.01506
+        },
+        "address": {
+          "city": "Mililani",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "5387",
+        "clubName": "Pineapple Country Toastmasters",
+        "divisionId": "B",
+        "areaId": "05",
+        "membershipCount": 15,
+        "membershipBase": 20,
+        "paymentsCount": 23,
+        "aprilRenewals": 8,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.50157,
+          "lng": -158.01005
+        },
+        "address": {
+          "city": "Wahiawa",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "2188240",
+        "clubName": "Prince Kuhio Toastmasters Club",
+        "divisionId": "B",
+        "areaId": "05",
+        "membershipCount": 10,
+        "membershipBase": 14,
+        "paymentsCount": 15,
+        "aprilRenewals": 5,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.34184,
+          "lng": -158.05088
+        },
+        "address": {
+          "city": "Everywhere",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "3611",
+        "clubName": "Bancorp Toastmasters Club",
+        "divisionId": "B",
+        "areaId": "06",
+        "membershipCount": 14,
+        "membershipBase": 20,
+        "paymentsCount": 14,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30896,
+          "lng": -157.86199
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "4259",
+        "clubName": "First Hawaiian Center Toastmasters Club",
+        "divisionId": "B",
+        "areaId": "06",
+        "membershipCount": 4,
+        "membershipBase": 17,
+        "paymentsCount": 6,
+        "aprilRenewals": 1,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30842,
+          "lng": -157.86151
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "588952",
+        "clubName": "Central Pacific Bank Toastmasters Club",
+        "divisionId": "B",
+        "areaId": "06",
+        "membershipCount": 28,
+        "membershipBase": 29,
+        "paymentsCount": 37,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30767,
+          "lng": -157.86072
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "1266809",
+        "clubName": "Atlas 'Olelo Hui",
+        "divisionId": "B",
+        "areaId": "06",
+        "membershipCount": 18,
+        "membershipBase": 24,
+        "paymentsCount": 19,
+        "aprilRenewals": 1,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 21.3069,
+          "lng": -157.86136
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "1416",
+        "clubName": "Hawaiian Electric Toastmasters Club",
+        "divisionId": "B",
+        "areaId": "07",
+        "membershipCount": 15,
+        "membershipBase": 18,
+        "paymentsCount": 16,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30817,
+          "lng": -157.85943
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "5190",
+        "clubName": "Honolulu Toastmasters",
+        "divisionId": "B",
+        "areaId": "07",
+        "membershipCount": 41,
+        "membershipBase": 30,
+        "paymentsCount": 62,
+        "aprilRenewals": 10,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30125,
+          "lng": -157.86227
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7846934",
+        "clubName": "Walmart Pacific NW Toastmasters",
+        "divisionId": "B",
+        "areaId": "07",
+        "membershipCount": 4,
+        "membershipBase": 12,
+        "paymentsCount": 4,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.45023,
+          "lng": -158.00654
+        },
+        "address": {
+          "city": "Mililani",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28678973",
+        "clubName": "Public Relations & Marketing Club",
+        "divisionId": "B",
+        "areaId": "07",
+        "membershipCount": 6,
+        "membershipBase": 9,
+        "paymentsCount": 8,
+        "aprilRenewals": 2,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 20.88898,
+          "lng": -156.50125
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "720",
+        "clubName": "Kamehameha Toastmasters Club",
+        "divisionId": "B",
+        "areaId": "08",
+        "membershipCount": 8,
+        "membershipBase": 11,
+        "paymentsCount": 12,
+        "aprilRenewals": 3,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.29362,
+          "lng": -157.84013
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "946009",
+        "clubName": "Ward Transformers",
+        "divisionId": "B",
+        "areaId": "08",
+        "membershipCount": 24,
+        "membershipBase": 21,
+        "paymentsCount": 27,
+        "aprilRenewals": 0,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30574,
+          "lng": -157.8486
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "1283635",
+        "clubName": "House Speakers",
+        "divisionId": "B",
+        "areaId": "08",
+        "membershipCount": 12,
+        "membershipBase": 9,
+        "paymentsCount": 20,
+        "aprilRenewals": 6,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.2917,
+          "lng": -157.84054
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28678263",
+        "clubName": "Sunny Side Speakers",
+        "divisionId": "B",
+        "areaId": "08",
+        "membershipCount": 23,
+        "membershipBase": 27,
+        "paymentsCount": 24,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30777,
+          "lng": -157.86351
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "600349",
+        "clubName": "Nuuanu Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "09",
+        "membershipCount": 21,
+        "membershipBase": 21,
+        "paymentsCount": 36,
+        "aprilRenewals": 13,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.33668,
+          "lng": -157.87708
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "6962800",
+        "clubName": "Hawaii Foodservice Alliance",
+        "divisionId": "C",
+        "areaId": "09",
+        "membershipCount": 14,
+        "membershipBase": 18,
+        "paymentsCount": 14,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 21.33427,
+          "lng": -157.8988
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7165371",
+        "clubName": "Catalyst Club",
+        "divisionId": "C",
+        "areaId": "09",
+        "membershipCount": 9,
+        "membershipBase": 11,
+        "paymentsCount": 13,
+        "aprilRenewals": 4,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.35946,
+          "lng": -158.09104
+        },
+        "address": {
+          "city": "Kapolei",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28675945",
+        "clubName": "Korean Culture Toastmasters",
+        "divisionId": "C",
+        "areaId": "09",
+        "membershipCount": 8,
+        "membershipBase": 8,
+        "paymentsCount": 10,
+        "aprilRenewals": 1,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 20.88898,
+          "lng": -156.50125
+        },
+        "address": {
+          "city": "Wailuku",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28680820",
+        "clubName": "DAB Toastmasters",
+        "divisionId": "C",
+        "areaId": "09",
+        "membershipCount": 34,
+        "membershipBase": 34,
+        "paymentsCount": 68,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30437,
+          "lng": -157.86308
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "4409",
+        "clubName": "Transportation Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "10",
+        "membershipCount": 11,
+        "membershipBase": 21,
+        "paymentsCount": 20,
+        "aprilRenewals": 8,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30385,
+          "lng": -157.8602
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7910099",
+        "clubName": "Aloha Parliamentarians",
+        "divisionId": "C",
+        "areaId": "10",
+        "membershipCount": 10,
+        "membershipBase": 12,
+        "paymentsCount": 17,
+        "aprilRenewals": 7,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.3099,
+          "lng": -157.858
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28675838",
+        "clubName": "U.S. - Japan Tomodachi Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "10",
+        "membershipCount": 11,
+        "membershipBase": 19,
+        "paymentsCount": 13,
+        "aprilRenewals": 2,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.28896,
+          "lng": -157.74567
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28678262",
+        "clubName": "Fil-Am Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "10",
+        "membershipCount": 12,
+        "membershipBase": 20,
+        "paymentsCount": 18,
+        "aprilRenewals": 5,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 20.91356,
+          "lng": -156.37888
+        },
+        "address": {
+          "city": "Paia",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "123",
+        "clubName": "Camp Smith Toastmasters",
+        "divisionId": "C",
+        "areaId": "11",
+        "membershipCount": 8,
+        "membershipBase": 9,
+        "paymentsCount": 11,
+        "aprilRenewals": 3,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.38606,
+          "lng": -157.90673
+        },
+        "address": {
+          "city": "Camp Smith",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "520",
+        "clubName": "Hickam AFB Club #520",
+        "divisionId": "C",
+        "areaId": "11",
+        "membershipCount": 12,
+        "membershipBase": 11,
+        "paymentsCount": 17,
+        "aprilRenewals": 3,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.34925,
+          "lng": -157.92138
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7787892",
+        "clubName": "Hawaii Speakers Bureau",
+        "divisionId": "C",
+        "areaId": "11",
+        "membershipCount": 11,
+        "membershipBase": 11,
+        "paymentsCount": 19,
+        "aprilRenewals": 8,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 0,
+          "lng": 0
+        },
+        "address": {
+          "city": "Honolulu ",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28679327",
+        "clubName": "DAGS Toastmasters Chapter",
+        "divisionId": "C",
+        "areaId": "11",
+        "membershipCount": 26,
+        "membershipBase": 36,
+        "paymentsCount": 52,
+        "aprilRenewals": 26,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.32003,
+          "lng": -157.84996
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "248",
+        "clubName": "Hilo Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "12",
+        "membershipCount": 15,
+        "membershipBase": 19,
+        "paymentsCount": 16,
+        "aprilRenewals": 1,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 19.71974,
+          "lng": -155.0761
+        },
+        "address": {
+          "city": "Hilo",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "8885",
+        "clubName": "Kona Toastmasters Club",
+        "divisionId": "C",
+        "areaId": "12",
+        "membershipCount": 7,
+        "membershipBase": 13,
+        "paymentsCount": 10,
+        "aprilRenewals": 3,
+        "dcpGoals": 1,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 19.64768,
+          "lng": -155.98912
+        },
+        "address": {
+          "city": "Kailua Kona ",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "4413485",
+        "clubName": "AI Online Toastmasters Club Hawaii",
+        "divisionId": "C",
+        "areaId": "12",
+        "membershipCount": 11,
+        "membershipBase": 14,
+        "paymentsCount": 14,
+        "aprilRenewals": 3,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.27528,
+          "lng": -157.75595
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7825387",
+        "clubName": "Social Media MetaVerse",
+        "divisionId": "C",
+        "areaId": "12",
+        "membershipCount": 3,
+        "membershipBase": 8,
+        "paymentsCount": 4,
+        "aprilRenewals": 1,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 20.88898,
+          "lng": -156.50125
+        },
+        "address": {
+          "city": "Wailuku",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "4012",
+        "clubName": "East-West Club",
+        "divisionId": "D",
+        "areaId": "13",
+        "membershipCount": 15,
+        "membershipBase": 15,
+        "paymentsCount": 22,
+        "aprilRenewals": 5,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.29836,
+          "lng": -157.81885
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7234",
+        "clubName": "Waikiki Club",
+        "divisionId": "D",
+        "areaId": "13",
+        "membershipCount": 29,
+        "membershipBase": 30,
+        "paymentsCount": 34,
+        "aprilRenewals": 1,
+        "dcpGoals": 6,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.26948,
+          "lng": -157.79489
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "5473361",
+        "clubName": "East Kauai Toastmasters",
+        "divisionId": "D",
+        "areaId": "13",
+        "membershipCount": 5,
+        "membershipBase": 9,
+        "paymentsCount": 7,
+        "aprilRenewals": 2,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 22.07063,
+          "lng": -159.36104
+        },
+        "address": {
+          "city": "Kapaa",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7787643",
+        "clubName": "Pathways Central",
+        "divisionId": "D",
+        "areaId": "13",
+        "membershipCount": 9,
+        "membershipBase": 11,
+        "paymentsCount": 16,
+        "aprilRenewals": 6,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 0,
+          "lng": 0
+        },
+        "address": {
+          "city": "Honolulu ",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "245",
+        "clubName": "Talk Story Toastmasters",
+        "divisionId": "D",
+        "areaId": "14",
+        "membershipCount": 8,
+        "membershipBase": 14,
+        "paymentsCount": 12,
+        "aprilRenewals": 4,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.3391,
+          "lng": -157.83968
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28675902",
+        "clubName": "The Trainers Hub Toastmasters",
+        "divisionId": "D",
+        "areaId": "14",
+        "membershipCount": 9,
+        "membershipBase": 11,
+        "paymentsCount": 11,
+        "aprilRenewals": 2,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.2837,
+          "lng": -157.79784
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28678988",
+        "clubName": "HIOSH Toastmasters",
+        "divisionId": "D",
+        "areaId": "14",
+        "membershipCount": 26,
+        "membershipBase": 23,
+        "paymentsCount": 32,
+        "aprilRenewals": 1,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30427,
+          "lng": -157.86123
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28680108",
+        "clubName": "Human Services Toastmasters",
+        "divisionId": "D",
+        "areaId": "14",
+        "membershipCount": 0,
+        "membershipBase": 21,
+        "paymentsCount": 0,
+        "aprilRenewals": 0,
+        "dcpGoals": 0,
+        "status": "Ineligible",
+        "clubStatus": "Ineligible",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 21.30573,
+          "lng": -157.86297
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "3701",
+        "clubName": "Ala Moana Toastmasters",
+        "divisionId": "D",
+        "areaId": "15",
+        "membershipCount": 10,
+        "membershipBase": 11,
+        "paymentsCount": 13,
+        "aprilRenewals": 3,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.35946,
+          "lng": -158.09104
+        },
+        "address": {
+          "city": "Kapolei",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "9320",
+        "clubName": "Kamaaina Club",
+        "divisionId": "D",
+        "areaId": "15",
+        "membershipCount": 7,
+        "membershipBase": 8,
+        "paymentsCount": 8,
+        "aprilRenewals": 1,
+        "dcpGoals": 0,
+        "status": "Low",
+        "clubStatus": "Low",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.32358,
+          "lng": -157.86043
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7841602",
+        "clubName": "Hawaii Comedy Club Toastmasters",
+        "divisionId": "D",
+        "areaId": "15",
+        "membershipCount": 9,
+        "membershipBase": 10,
+        "paymentsCount": 12,
+        "aprilRenewals": 3,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30643,
+          "lng": -157.86026
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28679076",
+        "clubName": "Olelo Hawaii Hui Toastmasters",
+        "divisionId": "D",
+        "areaId": "15",
+        "membershipCount": 20,
+        "membershipBase": 20,
+        "paymentsCount": 4,
+        "aprilRenewals": 1,
+        "dcpGoals": 0,
+        "status": "Ineligible",
+        "clubStatus": "Ineligible",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 0,
+          "lng": 0
+        },
+        "address": {
+          "city": "Wailuku",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "28679099",
+        "clubName": "Nordic PCL Construction",
+        "divisionId": "D",
+        "areaId": "15",
+        "membershipCount": 17,
+        "membershipBase": 24,
+        "paymentsCount": 19,
+        "aprilRenewals": 2,
+        "dcpGoals": 0,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30818,
+          "lng": -157.85942
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "8673",
+        "clubName": "Hawaiian Dredging Club",
+        "divisionId": "D",
+        "areaId": "16",
+        "membershipCount": 12,
+        "membershipBase": 13,
+        "paymentsCount": 16,
+        "aprilRenewals": 4,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.30314,
+          "lng": -157.85558
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "1204196",
+        "clubName": "Walkie Talkies",
+        "divisionId": "D",
+        "areaId": "16",
+        "membershipCount": 15,
+        "membershipBase": 13,
+        "paymentsCount": 18,
+        "aprilRenewals": 0,
+        "dcpGoals": 1,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.31496,
+          "lng": -157.86187
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "4818314",
+        "clubName": "HSFCU Toasters",
+        "divisionId": "D",
+        "areaId": "16",
+        "membershipCount": 34,
+        "membershipBase": 56,
+        "paymentsCount": 69,
+        "aprilRenewals": 28,
+        "dcpGoals": 2,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": false,
+        "coordinates": {
+          "lat": 21.30591,
+          "lng": -157.86156
+        },
+        "address": {
+          "city": "HONOLULU",
+          "country": "United States"
+        }
+      },
+      {
+        "clubId": "7828074",
+        "clubName": "Forever Achievers",
+        "divisionId": "D",
+        "areaId": "16",
+        "membershipCount": 11,
+        "membershipBase": 16,
+        "paymentsCount": 19,
+        "aprilRenewals": 8,
+        "dcpGoals": 3,
+        "status": "Active",
+        "clubStatus": "Active",
+        "cspSubmitted": true,
+        "coordinates": {
+          "lat": 21.28349,
+          "lng": -157.73275
+        },
+        "address": {
+          "city": "Honolulu",
+          "country": "United States"
+        }
+      }
+    ]
+  }
+}
