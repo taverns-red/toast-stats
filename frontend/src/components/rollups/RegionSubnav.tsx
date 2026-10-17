@@ -11,8 +11,8 @@ import {
   TrendsIcon,
 } from '../SectionBarIcons'
 
-/* RegionSubnav (#1815) — Rankings / Health & compliance / Club survival
-   (#1818) for `/regions` and `/region/:n`, plus a region's Club map (#1808)
+/* RegionSubnav (#1815) — Rankings / Health & compliance / Club growth
+   (#1812, #1813) / Club survival (#1818) for `/regions` and `/region/:n`, plus a region's Club map (#1808)
    and Education (#1810; the world has neither). Real sibling routes (ADR-005), not tabs: the back button,
    deep links and the page's `?py=` / `?date=` all survive the switch.
    Reuses the app's one secondary route-nav primitive (the district-subnav
@@ -43,6 +43,12 @@ export const RegionSubnav: React.FC<{
       to: `${base}/health${qs}`,
       end: false,
       icon: <GlobeIcon />,
+    },
+    {
+      label: 'Club growth',
+      to: `${base}/growth${qs}`,
+      end: true,
+      icon: <ClubsIcon />,
     },
     {
       label: 'Club survival',
