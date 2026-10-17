@@ -9,7 +9,8 @@ import { lifecycleDistrictLabel } from './clubLifecycle'
  * The chip describes the districts the club was in BEFORE the page's
  * district: the spans preceding the latest span in the page district,
  * newest first, each "District N until <Month YYYY>" from the span's `to`
- * (its last sighting there). A page district the history never lists says
+ * (its last sighting there) — or "until <Month D, YYYY>" when the span's
+ * `lastSeenOn` dates it (#1816). A page district the history never lists says
  * nothing about districts — that is a pre-move page, which has its own
  * banner (#1804). Former names come with it, so a club that renamed but
  * never moved still shows them.
@@ -45,6 +46,13 @@ function monthYear(iso: string | null): string | null {
   return m && month ? `${month} ${m[1]}` : null
 }
 
+/* "June 30, 2026" — only for a date the history vouches for (#1816). */
+function dayMonthYear(iso: string | undefined): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '')
+  const month = m ? MONTHS[Number(m[2]) - 1] : undefined
+  return m && month ? `${month} ${Number(m[3])}, ${m[1]}` : null
+}
+
 /** "01" and "1" are one district; a lettered district compares as-is. */
 function sameDistrict(a: string, b: string): boolean {
   const norm = (id: string) =>
@@ -70,7 +78,8 @@ export function buildClubLineage(
     const span = spans[i]!
     // Consecutive spans in one district are one stay from the page's view.
     if (sameDistrict(span.districtId, districtId)) continue
-    const until = monthYear(span.to)
+    // The day when the history dates it (#1816), else the month of `to`.
+    const until = dayMonthYear(span.lastSeenOn) ?? monthYear(span.to)
     const label = lifecycleDistrictLabel(span.districtId)
     formerDistricts.push(until ? `${label} until ${until}` : label)
   }
