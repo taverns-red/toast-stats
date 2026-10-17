@@ -9,6 +9,7 @@
  */
 
 import { readFileSync } from 'node:fs'
+import { gzipSync } from 'node:zlib'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -321,5 +322,51 @@ describe('buildClubsByRegion (#1800)', () => {
       world: r.world,
       shards: Object.fromEntries(r.shards.map(s => [s.region, s])),
     }).toEqual(recorded)
+  })
+})
+
+describe('clubs-by-region sizes at world scale (#1800)', () => {
+  // 14,524 clubs in 94 districts on 2026-10-16 (staging region-rollups.json).
+  // The recorded rows are cloned onto every district the real history places
+  // for 2026-27, with unique ids, names and coordinates so gzip cannot lean on
+  // repeats the real data does not have.
+  it('keeps every shard under 150 KB gzip and the world file under the 500 KB budget', () => {
+    const h = history()
+    const ids = Object.keys(h.districts)
+      .filter(id => h.districts[id]!.byProgramYear['2026-2027'])
+      .slice(0, 94)
+    const real = input().districts.flatMap(d => d.clubs)
+    const perDistrict = Math.ceil(14524 / ids.length)
+    let n = 0
+    let seed = 1
+    const rand = () => (seed = (seed * 48271) % 2147483647) / 2147483647
+    const districts = ids.map(districtId => ({
+      districtId,
+      clubs: Array.from({ length: perDistrict }, () => {
+        const c = real[n++ % real.length]!
+        return {
+          ...c,
+          clubId: String(1000000 + n * 37),
+          clubName: `${c.clubName} ${n.toString(36)}`,
+          ...(c.coordinates && {
+            coordinates: {
+              lat: +(rand() * 140 - 60).toFixed(5),
+              lng: +(rand() * 360 - 180).toFixed(5),
+            },
+          }),
+        }
+      }),
+    }))
+    const r = buildClubsByRegion({
+      snapshotDate: DATE,
+      rankings: ids.map(districtId => ({ districtId })),
+      districts,
+      regionHistory: h,
+      generatedAt: GENERATED_AT,
+    })
+    const gz = (v: unknown) => gzipSync(JSON.stringify(v)).length
+    expect(r.world.totals.clubs).toBeGreaterThanOrEqual(14524)
+    expect(Math.max(...r.shards.map(gz))).toBeLessThan(150 * 1024)
+    expect(gz(r.world)).toBeLessThan(500 * 1024)
   })
 })

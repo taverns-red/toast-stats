@@ -31,3 +31,5 @@ frontend/src/assets/geo/
 # Recorded staging captures for the region rollups (#1799), projected to the
 # fields the builder reads; kept compact and byte-identical to the capture
 packages/analytics-core/src/rollup/__tests__/fixtures/region-rollups/
+# … and for the per-region club shards (#1800)
+packages/analytics-core/src/rollup/__tests__/fixtures/clubs-by-region/

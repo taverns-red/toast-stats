@@ -304,3 +304,13 @@ export {
   type RegionRollupsInput,
   type RegionRollupsResult,
 } from './rollup/regionRollups.js'
+
+// Per-region club shards + world file — snapshots/{date}/clubs-by-region/ (#1800)
+export {
+  buildClubsByRegion,
+  readClubsByRegionInput,
+  type ClubsByRegionClubInput,
+  type ClubsByRegionDistrictInput,
+  type ClubsByRegionInput,
+  type ClubsByRegionResult,
+} from './rollup/clubsByRegion.js'
