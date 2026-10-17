@@ -14,6 +14,7 @@ import * as path from 'node:path'
 import { createHash } from 'node:crypto'
 import {
   parseObjectsListing,
+  planTimeSeriesCarry,
   planTimeSeriesUploads,
 } from '../timeSeriesPublishPlan.js'
 
@@ -138,5 +139,60 @@ describe('planTimeSeriesUploads (#1731)', () => {
       const plan = planTimeSeriesUploads([local[0]], remote, prefix)
       expect(plan.upload, JSON.stringify(over)).toEqual([local[0]])
     }
+  })
+})
+
+// #1763 PR 2: with the whole-prefix rsync gone, a file that is current in
+// staging but not in prod (a held run uploaded it; this run, finding it
+// unchanged, did not) must still be listed in this run's manifest, or it
+// would never reach prod.
+describe('planTimeSeriesCarry (#1763)', () => {
+  const prefix = 'time-series/'
+  const local = [
+    { rel: 'district_61/2024-2025.json', sha256: sha('a') },
+    { rel: 'district_61/2025-2026.json', sha256: sha('b') },
+    { rel: 'district_61/2026-2027.json', sha256: sha('c') },
+  ]
+  const staging = parseObjectsListing([
+    live('time-series/district_61/2024-2025.json', { sha256: sha('a') }),
+    live('time-series/district_61/2025-2026.json', { sha256: sha('b') }),
+    // 2026-2027 changed this run: uploaded, so recorded already.
+    live('time-series/district_61/2026-2027.json', { sha256: sha('old') }),
+  ])
+
+  it('carries the files staging already holds that prod does not', () => {
+    const prod = parseObjectsListing([
+      live('time-series/district_61/2024-2025.json', { sha256: sha('a') }),
+      live('time-series/district_61/2025-2026.json', { sha256: sha('prev') }),
+    ])
+    expect(planTimeSeriesCarry(local, staging, prod, prefix)).toEqual([
+      local[1],
+    ])
+  })
+
+  it('carries a file prod lacks, or holds without a sha or the CDN headers', () => {
+    const prod = parseObjectsListing([
+      live('time-series/district_61/2024-2025.json', undefined),
+      live(
+        'time-series/district_61/2025-2026.json',
+        { sha256: sha('b') },
+        { cache_control: 'no-store' }
+      ),
+    ])
+    expect(planTimeSeriesCarry(local, staging, prod, prefix)).toEqual([
+      local[0],
+      local[1],
+    ])
+  })
+
+  it('never carries a file this run uploads (it is recorded as an upload)', () => {
+    const plan = planTimeSeriesUploads(local, staging, prefix)
+    const carry = planTimeSeriesCarry(local, staging, new Map(), prefix)
+    expect(carry).toEqual([local[0], local[1]])
+    for (const f of plan.upload) expect(carry).not.toContainEqual(f)
+  })
+
+  it('carries nothing when prod matches staging', () => {
+    expect(planTimeSeriesCarry(local, staging, staging, prefix)).toEqual([])
   })
 })

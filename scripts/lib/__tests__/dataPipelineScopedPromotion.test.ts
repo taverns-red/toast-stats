@@ -1,18 +1,20 @@
 /**
- * Workflow contract: scoped promotion (#1763, ADR-015 P6, migration step 5,
- * PR 1 of 2 — the mechanism).
+ * Workflow contract: scoped promotion (#1763, ADR-015 P6, migration step 5).
  *
- * - `promotion_scope` picks the writer: `prefix` (the whole-prefix rsync,
- *   still the default and the only one a schedule uses until PR 2 deletes
- *   it) or `manifest` (scripts/promote-run-manifest.ts --execute).
- * - Every non-prune run prints the scoped plan (`--dry-run`) after the
- *   gates, skip_promotion runs included, so a proof run shows exactly what a
- *   scoped promote would copy. The plan step writes nothing.
- * - The scoped promote needs the count, value and content gates to pass and
+ * PR 2 of 2 retired the whole-prefix rsync. Every mode that promotes copies
+ * only the run manifest's objects, for the dates the gates passed:
+ *
+ * - there is no `promotion_scope` input and no `Promote staging to
+ *   production` step any more; scripts/promote-run-manifest.ts --execute is
+ *   the one promotion writer, and no step rsyncs into prod except the prune
+ *   reconcile (#1767 moves it onto the manifest);
+ * - every non-prune run prints the scoped plan (`--dry-run`) after the
+ *   gates, skip_promotion runs included. The plan step writes nothing;
+ * - the scoped promote needs the count, value and content gates to pass and
  *   the completeness gate to have produced a verdict; it applies that
- *   verdict per date itself, so a held date no longer holds the others.
- * - The prod-write guard sees the promoter as a prod write, so the
- *   skip_promotion contract covers it.
+ *   verdict per date itself, so a held date no longer holds the others;
+ * - a scoped promotion that copied less than it planned (a held date, held
+ *   globals) is a hold, and the promotion-held alert says so.
  */
 
 import { describe, it, expect } from 'vitest'
@@ -21,6 +23,8 @@ import * as path from 'node:path'
 import { parse } from 'yaml'
 import {
   findProdWriteSteps,
+  prodRsyncSteps,
+  PROD_RSYNC_EXEMPT,
   prodWriteReasons,
   topLevelConjuncts,
   SKIP_CLAUSE_SAME_JOB,
@@ -48,9 +52,6 @@ const indexOf = (pred: (s: Step) => boolean) => steps.findIndex(pred)
 const byId = (id: string) => steps.find(s => s.id === id)
 const conj = (s: Step | undefined) => topLevelConjuncts(s?.if ?? '')
 
-const MANIFEST_SCOPE = "steps.mode.outputs.promotion_scope == 'manifest'"
-const PREFIX_SCOPE = "steps.mode.outputs.promotion_scope != 'manifest'"
-
 describe('prodWriteGuard sees the manifest promoter (#1763)', () => {
   it('flags --execute as a production write and the dry run as not', () => {
     expect(
@@ -72,18 +73,64 @@ describe('topLevelConjuncts handles nested groups (#1763)', () => {
   })
 })
 
-describe('data-pipeline promotion_scope input (#1763)', () => {
-  it('is a choice of prefix|manifest, default prefix', () => {
-    const input = workflow.on.workflow_dispatch.inputs.promotion_scope
-    expect(input?.type).toBe('choice')
-    expect(input?.options).toEqual(['prefix', 'manifest'])
-    expect(input?.default).toBe('prefix')
+describe('the whole-prefix promotion is retired (#1763 PR 2)', () => {
+  it('has no promotion_scope input: there is one way to promote', () => {
+    expect(workflow.on.workflow_dispatch.inputs.promotion_scope).toBeUndefined()
+    expect(byId('mode')?.run ?? '').not.toContain('promotion_scope')
   })
 
-  it('is normalised once in the mode step; a schedule (no inputs) gets prefix', () => {
-    const run = byId('mode')?.run ?? ''
-    expect(run).toContain("${{ inputs.promotion_scope || 'prefix' }}")
-    expect(run).toMatch(/promotion_scope=\$\{PROMOTION_SCOPE\}/)
+  it('has no whole-prefix promote step', () => {
+    expect(byId('promote')).toBeUndefined()
+    expect(
+      steps.find(s => s.name === 'Promote staging to production')
+    ).toBeUndefined()
+  })
+
+  // The #1755 guard, extended: no `gcloud storage rsync` into prod survives
+  // in any workflow, outside the one tracked exemption.
+  it('no workflow rsyncs into production except the prune reconcile (#1767)', () => {
+    const dir = path.resolve(process.cwd(), '.github/workflows')
+    const found = fs
+      .readdirSync(dir)
+      .filter(f => /\.ya?ml$/.test(f))
+      .flatMap(f =>
+        prodRsyncSteps(
+          parse(fs.readFileSync(path.join(dir, f), 'utf-8')) as Workflow
+        ).map(s => `${f} / ${s.job} / ${s.step}`)
+      )
+    expect(found).toEqual(
+      Object.keys(PROD_RSYNC_EXEMPT).map(
+        step => `data-pipeline.yml / pipeline / ${step}`
+      )
+    )
+  })
+
+  it('the exemption is the prune reconcile, prune-only, tracked by #1767', () => {
+    expect(PROD_RSYNC_EXEMPT).toEqual({
+      '[prune] Reconcile production': '#1767',
+    })
+    const prune = steps.find(s => s.name === '[prune] Reconcile production')
+    expect(conj(prune)).toContain("steps.mode.outputs.mode == 'prune'")
+  })
+
+  it('the detector sees an rsync into prod (it is not blind)', () => {
+    const wf: Workflow = {
+      jobs: {
+        j: {
+          steps: [
+            {
+              name: 'sneaky',
+              run: 'gcloud storage rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"',
+            },
+            {
+              name: 'download',
+              run: 'gcloud storage rsync -r "gs://${GCS_BUCKET_PRODUCTION}/v1/" ./v1/',
+            },
+          ],
+        },
+      },
+    }
+    expect(prodRsyncSteps(wf).map(s => s.step)).toEqual(['sneaky'])
   })
 })
 
@@ -92,7 +139,6 @@ describe('data-pipeline scoped promotion steps (#1763)', () => {
   const plan = steps[planIdx]
   const execIdx = indexOf(s => s.id === 'promotemanifest')
   const exec = steps[execIdx]
-  const legacy = byId('promote')
 
   it('prints the plan after every gate, before the skip/promote steps, writing nothing', () => {
     expect(plan?.run).toMatch(/scripts\/promote-run-manifest\.ts --dry-run/)
@@ -110,7 +156,7 @@ describe('data-pipeline scoped promotion steps (#1763)', () => {
     expect(prodWriteReasons(plan?.run ?? '')).toEqual([])
   })
 
-  it('executes only under promotion_scope=manifest, after the run-level gates pass', () => {
+  it('executes in every promoting run, after the run-level gates pass', () => {
     expect(exec?.run).toMatch(/scripts\/promote-run-manifest\.ts --execute/)
     const c = conj(exec)
     for (const clause of [
@@ -119,22 +165,17 @@ describe('data-pipeline scoped promotion steps (#1763)', () => {
       "steps.contentgate.outputs.content_promote == 'true'",
       "steps.completenessgate.outputs.completeness_promote != ''",
       "steps.mode.outputs.mode != 'prune'",
-      MANIFEST_SCOPE,
       SKIP_CLAUSE_SAME_JOB,
     ]) {
       expect(c, clause).toContain(clause)
     }
     // The per-date verdict is applied inside the promoter, not as a run hold.
     expect(exec?.if).not.toContain("completeness_promote == 'true'")
+    expect(exec?.if).not.toContain('promotion_scope')
     expect(exec?.env?.COMPLETENESS_GATE_FILE).toBe(
       byId('completenessgate')?.env?.COMPLETENESS_GATE_FILE
     )
     expect(execIdx).toBeGreaterThan(planIdx)
-  })
-
-  it('keeps the whole-prefix rsync only for promotion_scope=prefix', () => {
-    expect(conj(legacy)).toContain(PREFIX_SCOPE)
-    expect(conj(legacy)).toContain(SKIP_CLAUSE_SAME_JOB)
   })
 
   it('no other step runs the promoter with --execute', () => {
@@ -151,18 +192,45 @@ describe('data-pipeline scoped promotion steps (#1763)', () => {
 
   it('reports promoted only when the run promoted everything it planned', () => {
     expect(workflow.jobs.pipeline.outputs?.promoted).toBe(
-      "${{ steps.promote.outcome == 'success' || steps.promotemanifest.outputs.complete == 'true' }}"
+      "${{ steps.promotemanifest.outputs.complete == 'true' }}"
     )
   })
 
-  it('purges the CDN after a scoped promotion that copied anything', () => {
+  it('exposes the promoted dates, for the reports placement', () => {
+    expect(workflow.jobs.pipeline.outputs?.promoted_dates).toBe(
+      '${{ steps.promotemanifest.outputs.promoted_dates }}'
+    )
+  })
+
+  it('purges the CDN after a scoped promotion that copied anything, and only then', () => {
     const purge = steps.find(
       s => s.name === 'Invalidate CDN cache after promotion (#1294)'
     )
-    expect(purge?.if).toContain(
-      "steps.promotemanifest.outputs.objects_copied != '0'"
+    const c = conj(purge)
+    for (const clause of [
+      "steps.promotemanifest.outputs.objects_copied != ''",
+      "steps.promotemanifest.outputs.objects_copied != '0'",
+      "steps.mode.outputs.mode != 'prune'",
+      SKIP_CLAUSE_SAME_JOB,
+    ]) {
+      expect(c, clause).toContain(clause)
+    }
+  })
+
+  it('feeds the scoped outcome to the promotion-held alert', () => {
+    const env = byId('promoalert')?.env ?? {}
+    expect(env.SCOPED_COMPLETE).toBe(
+      '${{ steps.promotemanifest.outputs.complete }}'
     )
-    expect(conj(purge)).toContain(SKIP_CLAUSE_SAME_JOB)
+    expect(env.SCOPED_HELD_DATES).toBe(
+      '${{ steps.promotemanifest.outputs.held_dates }}'
+    )
+    expect(env.SCOPED_GLOBALS_REASON).toBe(
+      '${{ steps.promotemanifest.outputs.globals_reason }}'
+    )
+    expect(indexOf(s => s.id === 'promoalert')).toBeGreaterThan(
+      indexOf(s => s.id === 'promotemanifest')
+    )
   })
 
   it('the skip_promotion summary points at the printed plan', () => {

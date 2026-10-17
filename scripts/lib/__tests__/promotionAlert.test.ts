@@ -336,3 +336,75 @@ describe('completeness gate holds promotion through the promotion-held flow', ()
     expect(r.completenessPromote).toBe(true)
   })
 })
+
+// #1763 PR 2: scoped promotion copies only what passed. When every gate
+// passes but the promote still holds the globals (staging's date index names
+// a date prod lacks, e.g. one an earlier run left held), prod's v1/ stays
+// put: that is a hold, not a promotion, and must not auto-close the alert.
+describe('scoped promotion holds through the promotion-held flow (#1763)', () => {
+  const PASS = {
+    countPromote: true,
+    valuePromote: true,
+    valueDiff: CLEAN_DIFF,
+    contentPromote: true,
+    completenessPromote: true,
+  }
+  const GLOBALS_REASON =
+    "staging's date index names 2026-10-16, which prod does not have and this run does not promote — re-derive it (or them) so it promotes through its own gates"
+
+  it('is blocked when the scoped promote did not copy everything it planned', () => {
+    const r = evaluatePromotion({
+      ...PASS,
+      scopedComplete: false,
+      scopedHeldDates: [],
+      scopedGlobalsReason: GLOBALS_REASON,
+    })
+    expect(r.blocked).toBe(true)
+    expect(r.promoted).toBe(false)
+    expect(r.gate).toBe('scoped')
+    expect(buildPromotionHeldTitle(r)).toMatch(/scoped promotion/)
+    const body = buildPromotionHeldBody(r, { now: new Date(0) })
+    expect(body).toContain('Scoped promotion (#1763)')
+    expect(body).toContain('2026-10-16')
+    expect(body).toContain('re-derive')
+  })
+
+  it('names the held dates of a per-date completeness hold, and that the rest promoted', () => {
+    const r = evaluatePromotion({
+      ...PASS,
+      completenessPromote: false,
+      scopedComplete: false,
+      scopedHeldDates: ['2026-10-10'],
+      scopedGlobalsReason: 'held with date(s) 2026-10-10',
+    })
+    expect(r.gate).toBe('completeness')
+    const body = buildPromotionHeldBody(r, { now: new Date(0) })
+    expect(body).toContain('Held date(s): 2026-10-10')
+    expect(body).toContain('the other dates of this run promoted')
+  })
+
+  it('a complete scoped promote is a promotion', () => {
+    const r = evaluatePromotion({ ...PASS, scopedComplete: true })
+    expect(r.promoted).toBe(true)
+  })
+
+  it('omitted = the promote did not run (a gate held first), decision unchanged', () => {
+    expect(evaluatePromotion(PASS).promoted).toBe(true)
+  })
+
+  it('tells the operator a daily override cannot ship dates another run wrote', () => {
+    const r = evaluatePromotion({
+      ...PASS,
+      valuePromote: false,
+      valueDiff: {
+        ...CHANGED_DIFF,
+        reasons: [
+          "2025-06-30: not written by this run — another run's unpromoted staging state needs operator review (#2040)",
+        ],
+      },
+    })
+    const body = buildPromotionHeldBody(r, { now: new Date(0) })
+    expect(body).toContain('promotion only copies what a run wrote')
+    expect(body).toContain('-f mode=rebuild -f dates=2025-06-30')
+  })
+})
