@@ -310,6 +310,106 @@ describe('build-education-rollup.sh: staging derived/education-rollup/', () => {
   })
 })
 
+// #2102: the ledger history (~1,480 objects, ~180 MB) is the same every
+// run, and it was downloaded whole by every daily and every rebuild. The
+// workflow now restores it from the Actions cache into EDUCATION_LEDGER_DIR;
+// the script treats that directory as a seed only, so the bucket stays the
+// source of truth.
+describe('build-education-rollup.sh: a seeded ledger (EDUCATION_LEDGER_DIR, #2102)', () => {
+  const LEDGER = 'raw-education-ledger/'
+  let seed: string
+  let dl: string
+  beforeEach(() => {
+    seed = path.join(tmp, 'seed')
+    dl = path.join(tmp, 'downloads.log')
+  })
+  const ledgerDownloads = () =>
+    lines(dl)
+      .filter(l => l.startsWith(LEDGER))
+      .sort()
+  const outputs = () =>
+    Object.fromEntries(
+      rollupObjects().map(o => [
+        o,
+        fs.readFileSync(path.join(root, BUCKET, o), 'utf-8'),
+      ])
+    )
+  const seedFile = (rel: string) => path.join(seed, rel)
+
+  it('an empty seed directory downloads the whole ledger, as before', () => {
+    seedAll()
+    const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
+    expect(r.status, r.stderr).toBe(0)
+    expect(ledgerDownloads()).toEqual([
+      `${LEDGER}2003-2004/district_17.json`,
+      `${LEDGER}2003-2004/district_85.json`,
+      `${LEDGER}2018-2019/district_111.json`,
+    ])
+  })
+
+  it('a seed that matches the bucket is reused: nothing is downloaded again, same rollup', () => {
+    seedAll()
+    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
+    const before = outputs()
+    const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
+    expect(r.status, r.stderr).toBe(0)
+    expect(ledgerDownloads()).toEqual([])
+    expect(outputs()).toEqual(before)
+  })
+
+  it('a seed file that differs from its object is downloaded again', () => {
+    seedAll()
+    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
+    const before = outputs()
+    fs.writeFileSync(seedFile('2018-2019/district_111.json'), '{}')
+    const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
+    expect(r.status, r.stderr).toBe(0)
+    expect(ledgerDownloads()).toEqual([`${LEDGER}2018-2019/district_111.json`])
+    expect(outputs()).toEqual(before)
+  })
+
+  it('a seed file the bucket does not hold is removed before the build', () => {
+    seedAll()
+    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
+    const before = outputs()
+    // 85 has no 2018-19 ledger object; a stale seed file must not add it.
+    fs.copyFileSync(
+      seedFile('2018-2019/district_111.json'),
+      seedFile('2018-2019/district_85.json')
+    )
+    const r = runScript({ EDUCATION_LEDGER_DIR: seed })
+    expect(r.status, r.stderr).toBe(0)
+    expect(fs.existsSync(seedFile('2018-2019/district_85.json'))).toBe(false)
+    expect(outputs()).toEqual(before)
+  })
+
+  it('with no ledger in the bucket, a seed is not used', () => {
+    seedAll()
+    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
+    fs.rmSync(path.join(root, BUCKET, 'raw-education-ledger'), {
+      recursive: true,
+    })
+    // The first run's objects stay in derived/; judge the second alone.
+    fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
+    const r = runScript({ EDUCATION_LEDGER_DIR: seed })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::warning::.*raw-education-ledger/)
+    expect(rollupObjects()).not.toContain(`${PREFIX}2003-2004.json`)
+  })
+
+  it('a ledger listing error fails closed with nothing uploaded', () => {
+    seedAll()
+    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
+    fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
+    const r = runScript({
+      EDUCATION_LEDGER_DIR: seed,
+      SHIM_FAIL_MATCH: '^ls .*raw-education-ledger',
+    })
+    expect(r.status).toBe(1)
+    expect(rollupObjects()).toEqual([])
+  })
+})
+
 describe('derived/education-rollup/ is staging-only until #1763', () => {
   it('is not under any promoted prefix', () => {
     expect(PROMOTED_PREFIXES.some(p => PREFIX.startsWith(p))).toBe(false)
@@ -479,4 +579,76 @@ describe('sample output for consumers (#1793, #1807, #1810, #1811)', () => {
       expect(built, obj).toEqual(JSON.parse(fs.readFileSync(file, 'utf-8')))
     }
   })
+})
+
+// #2102: every job that builds the rollup restores the ledger seed from the
+// Actions cache first. The key fingerprints the ledger listing, so a new
+// cache entry is saved only when the ledger changes; the script verifies
+// every seeded file either way, so a stale or partial seed costs bytes,
+// never correctness.
+describe('the ledger seed is restored before every rollup build (#2102)', () => {
+  interface Step {
+    name?: string
+    id?: string
+    if?: string
+    run?: string
+    uses?: string
+    with?: Record<string, string>
+  }
+  const wf = parse(
+    fs.readFileSync(
+      path.join(REPO, '.github/workflows/data-pipeline.yml'),
+      'utf-8'
+    )
+  ) as {
+    env?: Record<string, string>
+    jobs: Record<string, { steps?: Step[] }>
+  }
+  const DIR = '${{ env.EDUCATION_LEDGER_DIR }}'
+  const LISTING = '"gs://${GCS_BUCKET}/raw-education-ledger/**"'
+
+  it('the seed directory is one workflow-level path', () => {
+    expect(wf.env?.EDUCATION_LEDGER_DIR).toBe('/tmp/education-ledger')
+  })
+
+  const cases: Array<[string, RegExp]> = [
+    ['education-rollup', /scripts\/pipeline\/build-education-rollup\.sh\b/],
+    ['pipeline', /scripts\/pipeline\/process-dates\.sh\b/],
+  ]
+  for (const [jobName, builder] of cases) {
+    const steps = wf.jobs[jobName]?.steps ?? []
+    const first = steps.findIndex(s => builder.test(s.run ?? ''))
+    const cache = steps.findIndex(s => s.uses?.startsWith('actions/cache@'))
+    const key = steps.findIndex(s => (s.run ?? '').includes(LISTING))
+
+    it(`${jobName}: fingerprints the ledger, then restores the seed, before the first build`, () => {
+      expect(first, `${jobName} never builds the rollup`).toBeGreaterThan(0)
+      expect(key, 'no ledger fingerprint step').toBeGreaterThanOrEqual(0)
+      expect(cache, 'no cache step').toBeGreaterThan(key)
+      expect(cache).toBeLessThan(first)
+    })
+
+    it(`${jobName}: the cache holds the seed directory under the fingerprint key`, () => {
+      const c = steps[cache]
+      const id = steps[key]?.id
+      expect(id).toBeTruthy()
+      expect(c?.with?.path).toBe(DIR)
+      expect(c?.with?.key).toBe(`\${{ steps.${id}.outputs.key }}`)
+      expect(c?.with?.['restore-keys']).toBe('education-ledger-v1-')
+      expect(steps[key]?.run).toMatch(/education-ledger-v1-/)
+    })
+
+    it(`${jobName}: the seed steps run exactly when the build can`, () => {
+      expect(steps[key]?.if).toBe(steps[cache]?.if)
+      if (jobName === 'pipeline') {
+        for (const mode of ['rebuild', 'rescrape', 'rescrape-historical']) {
+          expect(steps[cache]?.if).toContain(
+            `steps.mode.outputs.mode == '${mode}'`
+          )
+        }
+      } else {
+        expect(steps[cache]?.if).toBeUndefined()
+      }
+    })
+  }
 })

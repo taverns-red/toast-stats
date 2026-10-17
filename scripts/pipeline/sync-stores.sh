@@ -17,6 +17,10 @@
 #                   scripts/club-trends-sync-scope.ts (#1284: July carries the
 #                   prior PY). Pushing a partial pull is safe: publish rsyncs
 #                   without deleting unmatched remote objects.
+#                   Rebuild derives it from its dates input (#2102).
+#                   Once club-trends is pulled, ${CACHE_DIR}/club-trends.scope
+#                   names the PYs pulled (one per line) or `all`;
+#                   publish-stores.sh refuses to push any other PY (#2102).
 #
 # Stores follow sync → upsert → save → push (R9). A store that loads empty
 # when it is not empty remotely is pushed back over the accumulated copy (the
@@ -178,10 +182,17 @@ for store in "$@"; do
     sync_awards
   elif [ "${store}" = "district-region-history" ]; then
     sync_region_history
-  elif [ "${store}" = "club-trends" ] && [ "${#CLUB_TRENDS_PYS[@]}" -gt 0 ]; then
-    for py in "${CLUB_TRENDS_PYS[@]}"; do
-      sync_dir "club-trends/${py}"
-    done
+  elif [ "${store}" = "club-trends" ]; then
+    rm -f "${CACHE_DIR}/club-trends.scope"
+    if [ "${#CLUB_TRENDS_PYS[@]}" -gt 0 ]; then
+      for py in "${CLUB_TRENDS_PYS[@]}"; do
+        sync_dir "club-trends/${py}"
+      done
+      printf '%s\n' "${CLUB_TRENDS_PYS[@]}" >"${CACHE_DIR}/club-trends.scope"
+    else
+      sync_dir club-trends
+      echo all >"${CACHE_DIR}/club-trends.scope"
+    fi
   else
     sync_dir "${store}"
   fi
