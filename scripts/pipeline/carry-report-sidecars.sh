@@ -14,7 +14,9 @@
 # For each of the newest <days> (default 7) dates in PROD's v1/dates.json,
 # so only dates whose own snapshot already passed its gates and promoted:
 #   1. list both buckets' snapshots/<date>/ (one level, names only);
-#   2. copy each district_<id>_reports.json staging has and prod lacks,
+#   2. copy each district_<id>_reports.json, and the date's
+#      reports-rollups.json (#2012, built from them after promotion too),
+#      that staging has and prod lacks,
 #      bucket to bucket (a server-side rewrite: the -Z gzip layer and the
 #      CDN headers arrive as placed).
 # Additive: a sidecar prod already holds is never touched (a re-placed one
@@ -64,12 +66,12 @@ if ! jq -r --argjson n "${DAYS}" \
   exit 1
 fi
 
-# Names of the report sidecars directly under gs://<bucket>/snapshots/<date>/.
+# Names of the report sidecars (and reports-rollups.json) directly under gs://<bucket>/snapshots/<date>/.
 # An empty or missing directory is no sidecars; any other failure fails.
 sidecars() {
   local bucket="$1" date="$2" out="$3" err="${WORK}/ls.err"
   if "${GCLOUD}" storage ls "gs://${bucket}/snapshots/${date}/" >"${WORK}/ls.txt" 2>"${err}"; then
-    sed -n "s#^gs://${bucket}/snapshots/${date}/\(district_[A-Za-z0-9]*_reports\.json\)\$#\1#p" \
+    sed -n -E "s#^gs://${bucket}/snapshots/${date}/(district_[A-Za-z0-9]*_reports\.json|reports-rollups\.json)\$#\1#p" \
       "${WORK}/ls.txt" | LC_ALL=C sort >"${out}"
     return 0
   fi

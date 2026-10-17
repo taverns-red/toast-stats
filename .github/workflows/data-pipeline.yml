@@ -3133,9 +3133,34 @@ jobs:
       # recorded in the manifest republished below. No prod write: it moves
       # with its date at the next promotion. No sidecars → nothing written.
       - name: '[rollup] Build the reports rollups (#2012)'
+        id: reportsrollups
         run: |
-          bash scripts/pipeline/build-reports-rollups.sh "${GCS_BUCKET}" "${{ needs.pipeline.outputs.snapshot_date }}" \
+          bash scripts/pipeline/build-reports-rollups.sh "${GCS_BUCKET}" "${{ needs.pipeline.outputs.snapshot_date }}" > /tmp/reports-rollups-summary.json \
             || echo "::warning::Reports rollups were not built (#2012); the date has no reports-rollups.json this run"
+          cat /tmp/reports-rollups-summary.json 2>/dev/null || true
+          # The builder's summary carries rawBytes only once it uploaded; a
+          # date without sidecars prints {"written":false}.
+          if jq -e '.rawBytes' /tmp/reports-rollups-summary.json > /dev/null 2>&1; then
+            echo "built=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── PROD PATH (#1763) — like place-reports' sidecar mirror ──
+      # This job runs after the run's own promotion, and a later run's
+      # promoter copies only its own manifest, so the artifact is mirrored
+      # here, only when this run promoted THIS snapshot date. A held day is
+      # carried by carry-report-sidecars.sh on a later run's place-reports.
+      # Bucket to bucket: the -Z layer and the CDN headers arrive as written.
+      - name: '[rollup] Mirror the reports rollups into prod (#2012)'
+        if: >-
+          steps.reportsrollups.outputs.built == 'true'
+          && contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date))
+          && needs.pipeline.outputs.skip_promotion != 'true'
+        continue-on-error: true
+        run: |
+          SNAPSHOT_DATE="${{ needs.pipeline.outputs.snapshot_date }}"
+          gcloud storage cp "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/reports-rollups.json" "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"
+          echo "- ✅ Mirrored \`reports-rollups.json\` to \`prod:snapshots/${SNAPSHOT_DATE}/\` (this run promoted the date)" \
+            >> "$GITHUB_STEP_SUMMARY"
 
       - name: '[rollup] Publish run manifest'
         if: ${{ !cancelled() && steps.seed.outputs.seeded == 'true' }}
