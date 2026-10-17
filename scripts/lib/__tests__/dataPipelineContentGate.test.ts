@@ -10,6 +10,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
 import { PROMOTED_PREFIXES } from '../promotionContentGate.js'
+import { classifyPromotionPath } from '../manifestPromotion.js'
 
 const WORKFLOW_PATH = path.resolve(
   process.cwd(),
@@ -55,17 +56,21 @@ describe('data-pipeline content gate (#1715)', () => {
 
   it('runs before promotion', () => {
     const promoteIndex = indexOf(
-      s => s.name === 'Promote staging to production'
+      s => s.name === 'Promote run manifest to production (#1763)'
     )
     expect(gateIndex).toBeGreaterThanOrEqual(0)
     expect(promoteIndex).toBeGreaterThan(gateIndex)
   })
 
-  it('promotion and the CDN purge both require the gate to pass', () => {
-    expect(byName('Promote staging to production')?.if).toContain(GATE_PASSES)
+  it('promotion requires the gate to pass; the CDN purge requires a copy', () => {
+    expect(byName('Promote run manifest to production (#1763)')?.if).toContain(
+      GATE_PASSES
+    )
+    // #1763: the purge keys off what the promote copied, so it can only
+    // follow a promote that the gate let run.
     expect(
       byName('Invalidate CDN cache after promotion (#1294)')?.if
-    ).toContain(GATE_PASSES)
+    ).toContain("steps.promotemanifest.outputs.objects_copied != '0'")
   })
 
   it('a gate failure is reported as a blocked promotion', () => {
@@ -82,10 +87,20 @@ describe('data-pipeline content gate (#1715)', () => {
   })
 
   it('reads exactly the prefixes promotion copies', () => {
-    const run = byName('Promote staging to production')?.run ?? ''
-    const copied = [
-      ...run.matchAll(/gs:\/\/\$\{GCS_BUCKET\}\/([a-z0-9-]+\/)/g),
-    ].map(m => m[1])
-    expect([...copied].sort()).toEqual([...PROMOTED_PREFIXES].sort())
+    // #1763: the promoter's allow-list is the gate's PROMOTED_PREFIXES.
+    for (const prefix of PROMOTED_PREFIXES) {
+      const probe =
+        prefix === 'snapshots/'
+          ? 'snapshots/2026-10-10/a.json'
+          : `${prefix}a.json`
+      expect(classifyPromotionPath(probe).kind, prefix).not.toBe('excluded')
+    }
+    for (const other of [
+      'club-trends/a.json',
+      'raw-csv/a.csv',
+      'runs/1/w.jsonl',
+    ]) {
+      expect(classifyPromotionPath(other).kind, other).toBe('excluded')
+    }
   })
 })

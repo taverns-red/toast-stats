@@ -204,6 +204,12 @@ export async function runPromoteRunManifest(
   emit('promoted_dates', plan.promotedDates.join(','))
   emit('held_dates', plan.heldDates.join(','))
   emit('globals_promoted', plan.globals.promote)
+  // For the promotion-held alert (#1763 PR 2): why the globals held, if
+  // they did. GITHUB_OUTPUT is line-based, so it stays on one line.
+  emit(
+    'globals_reason',
+    plan.globals.promote ? '' : plan.globals.reason.replace(/\s+/g, ' ')
+  )
 
   if (!execute) return 0
   if (plan.heldAll) {

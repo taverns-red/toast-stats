@@ -25,7 +25,8 @@
  *      COMPLETENESS_GATE_FILE (default /tmp/completeness-gate.json),
  *      GCLOUD (default gcloud), PROMOTE_CONCURRENCY (default 4).
  * Outputs (GITHUB_OUTPUT): objects_planned, promoted_dates, held_dates,
- *      globals_promoted; with --execute also objects_copied and complete
+ *      globals_promoted, globals_reason (why they held; empty when they
+ *      promoted); with --execute also objects_copied and complete
  *      ('true' only when every promotable object of the run was copied).
  * Exit: 0 — plan printed / copies done (holds are not errors: the
  *      promotion-held flow reports them); 1 — a copy failed; 2 — bad input

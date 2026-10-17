@@ -36,7 +36,6 @@ const indexOf = (pred: (s: Step) => boolean) => steps.findIndex(pred)
 const byName = (name: string) => steps.find(s => s.name === name)
 
 const OUTPUT = '${{ steps.completenessgate.outputs.completeness_promote }}'
-const PASSES = "steps.completenessgate.outputs.completeness_promote == 'true'"
 const FAILS = "steps.completenessgate.outputs.completeness_promote == 'false'"
 
 describe('data-pipeline per-date completeness gate (#1761)', () => {
@@ -72,18 +71,26 @@ describe('data-pipeline per-date completeness gate (#1761)', () => {
 
   it('runs before promotion', () => {
     const promoteIndex = indexOf(
-      s => s.name === 'Promote staging to production'
+      s => s.name === 'Promote run manifest to production (#1763)'
     )
     expect(gateIndex).toBeGreaterThanOrEqual(0)
     expect(promoteIndex).toBeGreaterThan(gateIndex)
     expect(indexOf(s => s.id === 'skippromotion')).toBeGreaterThan(gateIndex)
   })
 
-  it('promotion and the CDN purge both require it to pass', () => {
-    expect(byName('Promote staging to production')?.if).toContain(PASSES)
+  it('promotion applies its verdict per date; the CDN purge requires a copy', () => {
+    // #1763: the scoped promote needs a verdict and holds failing dates
+    // itself (a held date holds itself and the globals, the rest promote).
+    expect(byName('Promote run manifest to production (#1763)')?.if).toContain(
+      "steps.completenessgate.outputs.completeness_promote != ''"
+    )
+    expect(
+      byName('Promote run manifest to production (#1763)')?.env
+        ?.COMPLETENESS_GATE_FILE
+    ).toBeTruthy()
     expect(
       byName('Invalidate CDN cache after promotion (#1294)')?.if
-    ).toContain(PASSES)
+    ).toContain("steps.promotemanifest.outputs.objects_copied != '0'")
   })
 
   it('a failure is reported as a blocked promotion', () => {

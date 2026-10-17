@@ -16,6 +16,7 @@ import * as path from 'node:path'
 import { parse } from 'yaml'
 import { prodWriteReasons, type Workflow } from '../prodWriteGuard.js'
 import { PROMOTED_PREFIXES } from '../promotionContentGate.js'
+import { classifyPromotionPath } from '../manifestPromotion.js'
 
 const WORKFLOW_PATH = path.resolve(
   process.cwd(),
@@ -70,10 +71,16 @@ describe('raw-fac/ is internal: never promoted (#1758)', () => {
     expect(PROMOTED_PREFIXES.some(p => 'raw-fac/'.startsWith(p))).toBe(false)
   })
 
-  it('the promote step never names it', () => {
-    const promote = steps.find(s => s.name === 'Promote staging to production')
+  it('the promote step never copies it', () => {
+    const promote = steps.find(
+      s => s.name === 'Promote run manifest to production (#1763)'
+    )
     expect(promote, 'no promote step').toBeDefined()
     expect(promote!.run ?? '').not.toContain('raw-fac')
+    // #1763: the promoter copies manifest paths under PROMOTED_PREFIXES only.
+    expect(classifyPromotionPath('raw-fac/2026-10-10/61.json').kind).toBe(
+      'excluded'
+    )
   })
 })
 

@@ -53,7 +53,7 @@ export interface ValueDiffOutput {
 
 /** Which gate(s) refused promotion. */
 export type BlockingGate =
-  'count' | 'value' | 'both' | 'content' | 'completeness' | 'none'
+  'count' | 'value' | 'both' | 'content' | 'completeness' | 'scoped' | 'none'
 
 /** One object the #1715 content gate refused. */
 export interface ContentGateFailure {
@@ -87,6 +87,17 @@ export interface PromotionAlertInput {
   completenessPromote?: boolean
   /** Regressions the completeness gate found, surfaced in the alert. */
   completenessFailures?: ContentGateFailure[]
+  /**
+   * `steps.promotemanifest.outputs.complete` (#1763): false when the scoped
+   * promote ran but copied less than the run planned (a held date, held
+   * globals). Omitted = the promote did not run (a gate held first, or a
+   * dry run), which leaves the decision to the gates.
+   */
+  scopedComplete?: boolean
+  /** The dates the scoped promote held (`held_dates`). */
+  scopedHeldDates?: string[]
+  /** Why it held the globals (`globals_reason`); empty when it did not. */
+  scopedGlobalsReason?: string
 }
 
 export interface PromotionAlertResult {
@@ -112,6 +123,10 @@ export interface PromotionAlertResult {
   contentFailures: ContentGateFailure[]
   completenessPromote: boolean
   completenessFailures: ContentGateFailure[]
+  /** false only when the scoped promote ran and copied less than planned. */
+  scopedComplete: boolean
+  scopedHeldDates: string[]
+  scopedGlobalsReason: string
   /** value-gate reasons, surfaced verbatim in the alert. */
   reasons: string[]
 }
@@ -133,6 +148,7 @@ export function evaluatePromotion(
   const { countPromote, valuePromote, valueDiff } = input
   const contentPromote = input.contentPromote ?? true
   const completenessPromote = input.completenessPromote ?? true
+  const scopedComplete = input.scopedComplete ?? true
   // count/value keep their classification; the content and completeness
   // gates are named on their own only when they are the sole refusal (the
   // title/body name them either way).
@@ -144,7 +160,9 @@ export function evaluatePromotion(
         ? 'content'
         : !completenessPromote
           ? 'completeness'
-          : 'none'
+          : !scopedComplete
+            ? 'scoped'
+            : 'none'
   const promoted = gate === 'none'
 
   const changed = valueDiff?.report.changed ?? []
@@ -168,6 +186,9 @@ export function evaluatePromotion(
     contentFailures: input.contentFailures ?? [],
     completenessPromote,
     completenessFailures: input.completenessFailures ?? [],
+    scopedComplete,
+    scopedHeldDates: input.scopedHeldDates ?? [],
+    scopedGlobalsReason: input.scopedGlobalsReason ?? '',
     reasons: valueDiff?.reasons ?? [],
   }
 }
@@ -183,6 +204,7 @@ const GATE_LABEL: Record<Exclude<BlockingGate, 'none'>, string> = {
   both: 'count gate + value gate',
   content: 'content gate',
   completeness: 'completeness gate',
+  scoped: 'scoped promotion',
 }
 
 /** Title for the `promotion-held` alert issue. */
@@ -272,6 +294,32 @@ export function buildPromotionHeldBody(
     }
   }
 
+  // A scoped promote (#1763) that copied only part of the run: the passing
+  // dates are in prod; the held dates and, with them, v1/, config/ and
+  // time-series/ are not.
+  if (!result.scopedComplete) {
+    lines.push(
+      '### 📦 Scoped promotion (#1763) copied only part of this run',
+      ''
+    )
+    if (result.scopedHeldDates.length > 0) {
+      lines.push(
+        `Held date(s): ${result.scopedHeldDates.join(', ')} — the other dates of this run promoted.`,
+        ''
+      )
+    }
+    if (result.scopedGlobalsReason) {
+      lines.push(
+        `**Globals (v1/, config/, time-series/) held:** ${result.scopedGlobalsReason}`,
+        ''
+      )
+    }
+    lines.push(
+      'Promotion copies only the objects a run wrote, for the dates that passed. A held date reaches production only when a run re-derives it and it passes its own gates; re-derive it in the mode that produces it (e.g. `-f mode=rebuild -f dates=<date>`).',
+      ''
+    )
+  }
+
   // Count-gate framing leads when present — a subtractive change is the more
   // serious "possible real regression" signal.
   if (result.gate === 'count' || result.gate === 'both') {
@@ -310,6 +358,22 @@ export function buildPromotionHeldBody(
         )
       }
       lines.push('')
+    }
+    // #2040 leftovers: dates another run wrote and never promoted. Scoped
+    // promotion (#1763) only copies what a run wrote, so a daily override
+    // passes the gate but cannot ship them; they need their own re-derive.
+    const foreign = result.reasons
+      .map(r => /^(\d{4}-\d{2}-\d{2}): not written by this run/.exec(r)?.[1])
+      .filter((d): d is string => d !== undefined)
+    if (foreign.length > 0) {
+      lines.push(
+        `**${foreign.length} date(s) were not written by this run.** Scoped promotion only copies what a run wrote, so a daily re-run with \`allow_value_changes\` cannot ship them, and the next daily holds on them again. After reviewing them, re-derive those dates with the override so they promote through their own run:`,
+        '',
+        '```bash',
+        `gh workflow run data-pipeline.yml -f mode=rebuild -f dates=${foreign.slice(0, MAX_REASONS).join(',')} -f allow_value_changes=true`,
+        '```',
+        ''
+      )
     }
     lines.push(
       '**Clear path:** after reviewing the value-diff in the run summary, re-run the pipeline with the override:',

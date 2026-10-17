@@ -57,12 +57,15 @@ const CARRY_STEP = '[reports] Carry missing report sidecars into prod'
 
 describe('place-reports under scoped promotion (#1763)', () => {
   it('mirrors when this snapshot date promoted, even if the run held another', () => {
-    const c = topLevelConjuncts(stepNamed(MIRROR)?.if ?? '')
+    const expr = stepNamed(MIRROR)?.if ?? ''
+    const c = topLevelConjuncts(expr)
     expect(c).toContain("steps.place.outputs.placed == 'true'")
-    expect(c).toContain(
-      "contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date))"
-    )
     expect(c).toContain(SKIP_CLAUSE_DOWNSTREAM)
+    // A top-level conjunct (collapsed to `contains⟨group⟩` by the parser).
+    expect(c).toContain('contains⟨group⟩')
+    expect(expr.replace(/\s+/g, ' ')).toContain(
+      "&& contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date)) &&"
+    )
     expect(stepNamed(MIRROR)?.if).not.toContain(
       "needs.pipeline.outputs.promoted == 'true'"
     )
@@ -275,7 +278,7 @@ describe('carry-report-sidecars.sh (shim)', () => {
 
   it('fails on a listing transport error rather than reading it as empty', () => {
     const r = run([STG, PROD], {
-      SHIM_FAIL_MATCH: `^storage ls gs://${PROD}/snapshots/2026-10-15/`,
+      SHIM_FAIL_MATCH: `^ls gs://${PROD}/snapshots/2026-10-15/`,
     })
     expect(r.status).toBe(1)
     expect(
@@ -284,7 +287,7 @@ describe('carry-report-sidecars.sh (shim)', () => {
   })
 
   it('fails when a copy fails', () => {
-    const r = run([STG, PROD], { SHIM_FAIL_MATCH: '^storage cp ' })
+    const r = run([STG, PROD], { SHIM_FAIL_MATCH: '^cp ' })
     expect(r.status).not.toBe(0)
   })
 

@@ -395,10 +395,13 @@ describe('the script writes only to the bucket it is given', () => {
       )
     ) as Workflow
     const promote = wf.jobs.pipeline?.steps?.find(
-      s => s.name === 'Promote staging to production'
+      s => s.name === 'Promote run manifest to production (#1763)'
     )
     expect(promote, 'no promote step').toBeDefined()
     expect(promote!.run ?? '').not.toContain('derived')
+    expect(classifyPromotionPath('derived/education-rollup/x.json').kind).toBe(
+      'excluded'
+    )
   })
 })
 

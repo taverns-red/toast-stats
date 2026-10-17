@@ -23,6 +23,11 @@
  *   COMPLETENESS_PROMOTE — `steps.completenessgate.outputs.completeness_promote`
  *                     (#1761); anything but "true" holds (fail closed)
  *   COMPLETENESS_GATE_FILE — the completeness gate's JSON result
+ *   SCOPED_COMPLETE — `steps.promotemanifest.outputs.complete` (#1763):
+ *                     "false" holds (the promote copied less than planned);
+ *                     empty = the promote did not run
+ *   SCOPED_HELD_DATES, SCOPED_GLOBALS_REASON — its `held_dates` and
+ *                     `globals_reason`, named in the alert
  *
  * Always exits 0; the workflow decides whether to open/refresh or close the
  * issue based on the `blocked`/`promoted` outputs. A missing/garbage
@@ -110,6 +115,17 @@ function main(): void {
     contentFailures: readGateFailures(process.env.CONTENT_GATE_FILE),
     completenessPromote,
     completenessFailures: readGateFailures(process.env.COMPLETENESS_GATE_FILE),
+    // Empty = the scoped promote did not run; leave it to the gates.
+    scopedComplete:
+      process.env.SCOPED_COMPLETE === 'true'
+        ? true
+        : process.env.SCOPED_COMPLETE === 'false'
+          ? false
+          : undefined,
+    scopedHeldDates: (process.env.SCOPED_HELD_DATES ?? '')
+      .split(',')
+      .filter(Boolean),
+    scopedGlobalsReason: process.env.SCOPED_GLOBALS_REASON ?? '',
   })
 
   log(

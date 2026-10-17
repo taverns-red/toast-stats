@@ -113,3 +113,28 @@ export function planTimeSeriesUploads(
   }
   return { upload, unchanged }
 }
+
+/**
+ * The files to list in the run manifest WITHOUT uploading them (#1763 PR 2):
+ * current in staging, so planTimeSeriesUploads skips them, but not current
+ * in prod. A held run leaves exactly these behind. The whole-prefix rsync
+ * used to carry them on the next promoting run; scoped promotion copies only
+ * the manifest, so the next run that finds them unchanged must still vouch
+ * for them, or they never reach prod. Staging's object is the run's own
+ * local bytes (same sha), so the content gate reads and hash-checks it like
+ * any upload, and the promoter holds it with the other globals.
+ */
+export function planTimeSeriesCarry(
+  local: LocalFile[],
+  staging: Map<string, RemoteObject>,
+  prod: Map<string, RemoteObject>,
+  objectPrefix: string
+): LocalFile[] {
+  return local.filter(file => {
+    const name = `${objectPrefix}${file.rel}`
+    return (
+      isCurrent(staging.get(name), file.sha256) &&
+      !isCurrent(prod.get(name), file.sha256)
+    )
+  })
+}

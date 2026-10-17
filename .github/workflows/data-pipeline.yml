@@ -142,18 +142,6 @@ on:
         required: false
         type: boolean
         default: false
-      promotion_scope:
-        description: >-
-          How promotion copies staging to prod (#1763, ADR-015 step 5). prefix: rsync v1/, snapshots/,
-          time-series/, config/ wholesale (today's default). manifest: copy only this run's manifest
-          objects, per gate-passed date; a held date holds itself and the globals. Every run prints the
-          manifest plan either way.
-        required: false
-        type: choice
-        options:
-          - prefix
-          - manifest
-        default: prefix
 
 # Prevent overlapping pipeline runs
 concurrency:
@@ -209,13 +197,15 @@ jobs:
       # Literally the string 'unknown' when a manual `districts` override
       # skipped discovery (#1343) — `place-reports` guards for it.
       program_year: ${{ steps.daily-config.outputs.program_year }}
-      # The promote step ran ⇒ this run already rsynced staging → prod,
-      # BEFORE the sidecars landed. `place-reports` mirrors them explicitly.
-      # Keyed off the step's outcome, not a re-statement of its gates, so a
-      # content-gate hold (#1715) or skip_promotion (#1754) also reads false.
-      # A scoped promotion (#1763) counts only when it copied everything the
-      # run planned (no held date, globals promoted).
-      promoted: ${{ steps.promote.outcome == 'success' || steps.promotemanifest.outputs.complete == 'true' }}
+      # The scoped promote (#1763) copied everything the run planned (no
+      # held date, globals promoted). Keyed off the step's output, not a
+      # re-statement of its gates, so a gate hold (#1715) or skip_promotion
+      # (#1754) also reads false.
+      promoted: ${{ steps.promotemanifest.outputs.complete == 'true' }}
+      # The dates it promoted, comma-separated. `place-reports` mirrors the
+      # sidecars, which land AFTER the promote, when the snapshot date is
+      # among them, even if the run held another date (#1763 PR 2).
+      promoted_dates: ${{ steps.promotemanifest.outputs.promoted_dates }}
       # 'true' | 'false' — a staging-only proof run (#1754). Downstream jobs
       # gate their prod writes on it.
       skip_promotion: ${{ steps.mode.outputs.skip_promotion }}
@@ -294,12 +284,7 @@ jobs:
           echo "dry_run=${DRY_RUN:-false}" >> "$GITHUB_OUTPUT"
           echo "reconcile_prod=${RECONCILE_PROD:-false}" >> "$GITHUB_OUTPUT"
           echo "skip_promotion=${SKIP_PROMOTION:-false}" >> "$GITHUB_OUTPUT"
-          # #1763: prefix (whole-prefix rsync) until PR 2 retires it; a
-          # schedule carries no inputs and so stays on prefix.
-          PROMOTION_SCOPE="${{ inputs.promotion_scope || 'prefix' }}"
-          echo "promotion_scope=${PROMOTION_SCOPE}" >> "$GITHUB_OUTPUT"
           echo "## 🔧 Pipeline Mode: \`${MODE}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Promotion scope: \`${PROMOTION_SCOPE}\`" >> "$GITHUB_STEP_SUMMARY"
           if [ "${SKIP_PROMOTION:-false}" = "true" ]; then
             echo "- 🧪 **skip_promotion**: staging-only run — nothing will be written to production." >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -2092,7 +2077,8 @@ jobs:
       # EVERY object this run wrote under a promoted prefix (the run
       # manifest, #1762 — no sampling, hash-checked against what was
       # uploaded) plus a bounded sample of changed objects the run did not
-      # write (whole-prefix promotion still copies those until #1763),
+      # write (an earlier held run's leftovers; scoped promotion, #1763, no
+      # longer copies them, so a hold on one is conservative),
       # decoded the way a browser does, and checks bytes, parse and
       # shape. Logic: scripts/lib/promotionContentGate.ts. Read-only. Stays
       # green and fails CLOSED through `content_promote`, like the value gate,
@@ -2122,9 +2108,8 @@ jobs:
         run: npx tsx scripts/date-completeness-gate.ts
 
       # Scoped promotion plan (#1763, ADR-015 P6) — the dry run, in every
-      # mode that promotes and under skip_promotion too, whichever
-      # promotion_scope is set: it prints exactly what a scoped promotion of
-      # this run would copy (one `copy` line per object, plus every `hold`
+      # mode that promotes and under skip_promotion too: it prints exactly
+      # what the promotion of this run would copy (one `copy` line per object, plus every `hold`
       # and `skip` with its reason) and writes nothing. Logic and design
       # decisions: scripts/lib/manifestPromotion.ts. Informational here, so a
       # failure warns instead of failing the run; the execute step below
@@ -2164,48 +2149,12 @@ jobs:
             echo "- Scoped promotion plan (#1763): **${{ steps.promoteplan.outputs.objects_planned }}** object(s) would be copied; held dates: ${{ steps.promoteplan.outputs.held_dates }}; globals: ${{ steps.promoteplan.outputs.globals_promoted }} (full plan in the 'Plan scoped promotion' log)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Whole-prefix promotion (promotion_scope=prefix, the default). PR 2 of
-      # #1763 deletes this step once a scoped promoting run has been reviewed.
-      - name: Promote staging to production
-        id: promote
-        if: >-
-          steps.diff.outputs.promote == 'true'
-          && steps.valuediff.outputs.value_promote == 'true'
-          && steps.contentgate.outputs.content_promote == 'true'
-          && steps.completenessgate.outputs.completeness_promote == 'true'
-          && steps.mode.outputs.mode != 'prune'
-          && steps.mode.outputs.promotion_scope != 'manifest'
-          && steps.mode.outputs.skip_promotion != 'true'
-        run: |
-          echo "Promoting staging → production..."
-
-          # These four writes ARE production. Moved off gsutil (#1412) after a
-          # per-layer `--dry-run` diff staging→prod showed gcloud and gsutil
-          # plan the identical copy set. Additive by design: never add
-          # `--delete-unmatched-destination-objects` (gsutil `-d`) here.
-
-          # Sync manifests (v1/)
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"
-
-          # Sync snapshots (only new/changed)
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/snapshots/" "gs://${GCS_BUCKET_PRODUCTION}/snapshots/"
-
-          # Sync time-series
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/time-series/" "gs://${GCS_BUCKET_PRODUCTION}/time-series/"
-
-          # club-trends and club-race are pipeline-internal stores (#1738, D3):
-          # nothing on the CDN reads them, so they stay in staging. Prod's
-          # existing copies are left in place (deleting them is separate).
-
-          # Sync config (snapshot index)
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"
-
-          echo "## ✅ Promotion Complete" >> "$GITHUB_STEP_SUMMARY"
-          echo "Staging data synced to production bucket." >> "$GITHUB_STEP_SUMMARY"
-
-      # Scoped promotion (promotion_scope=manifest; #1763, ADR-015 P6). Copies
-      # this run's manifest objects under the promoted prefixes, server side,
-      # dates → globals → v1/ entry points. The count, value and content gates
+      # Promotion (#1763, ADR-015 P6) — the only staging → prod promotion.
+      # Copies this run's manifest objects under the promoted prefixes,
+      # server side, dates → globals → v1/ entry points. Nothing the run did
+      # not write is copied: the whole-prefix rsync of v1/, snapshots/,
+      # time-series/ and config/ is retired (#1763 PR 2; ADR-009 D2
+      # superseded). The count, value and content gates
       # are run-level and must pass; the completeness gate is applied PER
       # DATE inside the promoter (a held date holds itself and the globals,
       # the other dates promote), so it only has to have produced a verdict.
@@ -2218,7 +2167,6 @@ jobs:
           && steps.contentgate.outputs.content_promote == 'true'
           && steps.completenessgate.outputs.completeness_promote != ''
           && steps.mode.outputs.mode != 'prune'
-          && steps.mode.outputs.promotion_scope == 'manifest'
           && steps.mode.outputs.skip_promotion != 'true'
         env:
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
@@ -2231,16 +2179,13 @@ jobs:
       # hiccup, and the edge expires on its own TTL as a fallback. Note this
       # purges the EDGE only — an already-open browser tab still honours the
       # response's max-age until it reloads.
-      # A scoped promotion (#1763) that held a date still copied the others:
-      # purge after any scoped copy too.
+      # Keyed off what the promote copied (#1763): a run that held a date
+      # still copied the others, and a run that copied nothing has nothing
+      # to purge.
       - name: Invalidate CDN cache after promotion (#1294)
         if: >-
-          ((steps.diff.outputs.promote == 'true'
-          && steps.valuediff.outputs.value_promote == 'true'
-          && steps.contentgate.outputs.content_promote == 'true'
-          && steps.completenessgate.outputs.completeness_promote == 'true')
-          || (steps.promotemanifest.outputs.objects_copied != ''
-          && steps.promotemanifest.outputs.objects_copied != '0'))
+          steps.promotemanifest.outputs.objects_copied != ''
+          && steps.promotemanifest.outputs.objects_copied != '0'
           && steps.mode.outputs.mode != 'prune'
           && steps.mode.outputs.skip_promotion != 'true'
         continue-on-error: true
@@ -2299,6 +2244,10 @@ jobs:
           CONTENT_GATE_FILE: /tmp/content-gate.json
           COMPLETENESS_PROMOTE: ${{ steps.completenessgate.outputs.completeness_promote }}
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
+          # A promote that copied less than it planned is a hold (#1763).
+          SCOPED_COMPLETE: ${{ steps.promotemanifest.outputs.complete }}
+          SCOPED_HELD_DATES: ${{ steps.promotemanifest.outputs.held_dates }}
+          SCOPED_GLOBALS_REASON: ${{ steps.promotemanifest.outputs.globals_reason }}
         run: npx tsx scripts/promotion-alert.ts
 
       - name: Ensure promotion-held label exists
@@ -2851,6 +2800,10 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      # For scripts/pipeline/carry-report-sidecars.sh (#1763).
+      - name: Checkout code
+        uses: actions/checkout@v7
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
         with:
@@ -2998,25 +2951,25 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           echo "placed=true" >> "$GITHUB_OUTPUT"
 
-          if [ "${{ needs.pipeline.outputs.promoted }}" != "true" ]; then
-            echo "::warning::[reports] This run did not promote, so the reports" \
-              "stay staging-only. They reach prod with the next promoting run's" \
-              "snapshots/ rsync."
-            echo "- ⏸️ Promotion was held or skipped — reports are staging-only until the next promoting run." \
+          PROMOTED_DATES=",${{ needs.pipeline.outputs.promoted_dates }},"
+          if [ "${PROMOTED_DATES#*,"${SNAPSHOT_DATE}",}" = "${PROMOTED_DATES}" ]; then
+            echo "::warning::[reports] This run did not promote ${SNAPSHOT_DATE}, so its" \
+              "reports stay staging-only. The carry step of the first run after" \
+              "${SNAPSHOT_DATE} reaches prod copies them (#1763)."
+            echo "- ⏸️ ${SNAPSHOT_DATE} was held or skipped — its reports are staging-only until a run promotes the date; the carry step then copies them (#1763)." \
               >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # ── PROD PATH — explicit mirror, chosen over the next-day rsync ──
-      # This job runs AFTER `pipeline` has already promoted, so the sidecars
-      # miss that run's `gcloud storage rsync -r snapshots/`. The alternative —
-      # let tomorrow's promotion sweep them up — means the frontend reads a
-      # day-old overlay, a miniature repeat of the silent staleness this issue
-      # exists to fix. So mirror explicitly, only when `pipeline` promoted.
-      # Its own step so the skip_promotion guard (#1754) sits on the `if:`.
+      # ── PROD PATH — explicit mirror ──
+      # This job runs AFTER `pipeline` has already promoted, and the run
+      # manifest never lists the sidecars, so promotion does not copy them.
+      # Mirror explicitly, only when `pipeline` promoted THIS snapshot date
+      # (a scoped run can promote it and hold another, #1763). Its own step
+      # so the skip_promotion guard (#1754) sits on the `if:`.
       - name: '[reports] Mirror placed datasets into prod'
         if: >-
           steps.place.outputs.placed == 'true'
-          && needs.pipeline.outputs.promoted == 'true'
+          && contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date))
           && needs.pipeline.outputs.skip_promotion != 'true'
         run: |
           SNAPSHOT_DATE="${{ needs.pipeline.outputs.snapshot_date }}"
@@ -3028,6 +2981,21 @@ jobs:
             "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"
           echo "- ✅ Mirrored to \`prod:snapshots/${SNAPSHOT_DATE}/\` (this run promoted)" \
             >> "$GITHUB_STEP_SUMMARY"
+
+      # ── PROD PATH — carry what a held run left (#1763 PR 2) ──
+      # The whole-prefix rsync used to copy a held day's sidecars on the next
+      # promoting run. Scoped promotion does not, so for the newest dates
+      # PROD indexes (dates whose own snapshot passed its gates), copy every
+      # sidecar staging holds and prod lacks, bucket to bucket. Additive,
+      # never a date prod does not index. Runs whatever this run did (that
+      # is the point); non-fatal, like the CDN purge.
+      - name: '[reports] Carry missing report sidecars into prod'
+        if: >-
+          !cancelled()
+          && needs.pipeline.result == 'success'
+          && needs.pipeline.outputs.skip_promotion != 'true'
+        continue-on-error: true
+        run: bash scripts/pipeline/carry-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}"
 
       # Best-effort teardown of the run-scoped hand-off prefix so `incoming/`
       # never accumulates. Runs on every path, including a refused placement:

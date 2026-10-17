@@ -8,15 +8,19 @@
  * Counts go to stderr (R4).
  *
  * Usage: npx tsx scripts/time-series-publish-plan.ts \
- *          <localDir> <listing.json> <objectPrefix>
+ *          <localDir> <listing.json> <objectPrefix> [<prodListing.json> <carryOut>]
+ * With a prod listing, the files current in staging but stale in prod are
+ * written to <carryOut> in the same pair format (#1763: they go into the run
+ * manifest so the scoped promote copies them; nothing is re-uploaded).
  * Exit codes: 0 ok · 1 unreadable or malformed listing · 2 usage
  */
 
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import * as path from 'node:path'
 import {
   parseObjectsListing,
+  planTimeSeriesCarry,
   planTimeSeriesUploads,
   type LocalFile,
 } from './lib/timeSeriesPublishPlan.js'
@@ -32,27 +36,46 @@ function localFiles(root: string): LocalFile[] {
     .sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0))
 }
 
+function readListing(file: string): ReturnType<typeof parseObjectsListing> {
+  return parseObjectsListing(JSON.parse(readFileSync(file, 'utf-8')))
+}
+
 function main(argv: string[]): number {
-  const [localDir, listingFile, objectPrefix] = argv
-  if (!localDir || !listingFile || !objectPrefix) {
+  const [localDir, listingFile, objectPrefix, prodListingFile, carryOut] = argv
+  if (
+    !localDir ||
+    !listingFile ||
+    !objectPrefix ||
+    (prodListingFile !== undefined && !carryOut)
+  ) {
     process.stderr.write(
-      'Usage: time-series-publish-plan.ts <localDir> <listing.json> <objectPrefix>\n'
+      'Usage: time-series-publish-plan.ts <localDir> <listing.json> <objectPrefix> [<prodListing.json> <carryOut>]\n'
     )
     return 2
   }
   let remote
+  let prod
   try {
-    remote = parseObjectsListing(JSON.parse(readFileSync(listingFile, 'utf-8')))
+    remote = readListing(listingFile)
+    prod = prodListingFile ? readListing(prodListingFile) : null
   } catch (err) {
     process.stderr.write(
       `::error::time-series publish plan: bad remote listing: ${err instanceof Error ? err.message : String(err)}\n`
     )
     return 1
   }
-  const plan = planTimeSeriesUploads(localFiles(localDir), remote, objectPrefix)
+  const local = localFiles(localDir)
+  const plan = planTimeSeriesUploads(local, remote, objectPrefix)
   for (const f of plan.upload) process.stdout.write(`${f.sha256}\0${f.rel}\0`)
+  let carried = ''
+  if (prod && carryOut) {
+    // #1763: current in staging, stale in prod — recorded, not re-uploaded.
+    const carry = planTimeSeriesCarry(local, remote, prod, objectPrefix)
+    writeFileSync(carryOut, carry.map(f => `${f.sha256}\0${f.rel}\0`).join(''))
+    carried = `, ${carry.length} of them carried for promotion`
+  }
   process.stderr.write(
-    `time-series publish plan: ${plan.upload.length} to upload, ${plan.unchanged} unchanged\n`
+    `time-series publish plan: ${plan.upload.length} to upload, ${plan.unchanged} unchanged${carried}\n`
   )
   return 0
 }
