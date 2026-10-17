@@ -360,6 +360,36 @@ describe('sync-stores.sh club-trends PY scope (#1728, E2-2)', () => {
     })
   }
 
+  it('records the PYs it pulled, for publish-stores.sh (#2102)', () => {
+    seedPys()
+    const r = run(SYNC, ['club-trends'], {
+      CLUB_TRENDS_PROGRAM_YEARS: '2025-2026 2026-2027',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(
+      fs.readFileSync(path.join(cache, 'club-trends.scope'), 'utf-8')
+    ).toBe('2025-2026\n2026-2027\n')
+  })
+
+  it('records "all" for a whole-store pull (#2102)', () => {
+    seedPys()
+    const r = run(SYNC, ['club-trends'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(
+      fs.readFileSync(path.join(cache, 'club-trends.scope'), 'utf-8')
+    ).toBe('all\n')
+  })
+
+  it('records no scope when the pull fails', () => {
+    seedPys()
+    const r = run(SYNC, ['club-trends'], {
+      CLUB_TRENDS_PROGRAM_YEARS: '2026-2027',
+      SHIM_FAIL_MATCH: '^ls ',
+    })
+    expect(r.status).not.toBe(0)
+    expect(fs.existsSync(path.join(cache, 'club-trends.scope'))).toBe(false)
+  })
+
   it('does not scope any other store', () => {
     putObject('time-series/2024-2025/district_61.json', doc(1))
     putObject('time-series/2026-2027/district_61.json', doc(2))
@@ -485,6 +515,55 @@ describe('publish-stores.sh (#1722)', () => {
     const r = run(PUBLISH, ['club-race'])
     expect(r.status).not.toBe(0)
     expect(calls()).toEqual([])
+  })
+
+  // #2102: rebuilds now pull only the PYs of their dates. A run that writes
+  // a PY it never pulled would rsync a one-point file over the accumulated
+  // one (#1111 class), so publish refuses it before any push.
+  describe('club-trends: only the PYs the sync pulled (#2102)', () => {
+    function syncScoped(scope: string): void {
+      putObject('club-trends/2017-2018/district_61.json', doc(9))
+      putObject('club-trends/2026-2027/district_61.json', doc(4))
+      const r = run(SYNC, ['club-trends'], {
+        CLUB_TRENDS_PROGRAM_YEARS: scope,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      fs.rmSync(log, { force: true })
+    }
+
+    it('refuses a PY the sync never pulled, before pushing anything', () => {
+      syncScoped('2026-2027')
+      seedLocal('club-trends', '2026-2027/district_61.json', doc(5))
+      seedLocal('club-trends', '2017-2018/district_61.json', doc(1))
+      seedLocal('club-race', '2026-2027/first-reached.json', doc(2))
+      const r = run(PUBLISH, ['club-race', 'club-trends'])
+      expect(r.status).not.toBe(0)
+      expect(r.stderr).toContain('club-trends/2017-2018')
+      expect(calls()).toEqual([])
+      expect(
+        readObject('club-trends/2017-2018/district_61.json').equals(doc(9))
+      ).toBe(true)
+    })
+
+    it('publishes the PYs the sync pulled', () => {
+      syncScoped('2026-2027')
+      seedLocal('club-trends', '2026-2027/district_61.json', doc(5))
+      const r = run(PUBLISH, ['club-trends'])
+      expect(r.status, r.stderr).toBe(0)
+      expect(
+        readObject('club-trends/2026-2027/district_61.json').equals(doc(5))
+      ).toBe(true)
+    })
+
+    it('a whole-store sync publishes any PY', () => {
+      syncScoped('all')
+      seedLocal('club-trends', '2017-2018/district_61.json', doc(1))
+      const r = run(PUBLISH, ['club-trends'])
+      expect(r.status, r.stderr).toBe(0)
+      expect(
+        readObject('club-trends/2017-2018/district_61.json').equals(doc(1))
+      ).toBe(true)
+    })
   })
 
   describe('time-series: one upload path, changed files only (#1731, E2-1)', () => {

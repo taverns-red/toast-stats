@@ -58,6 +58,10 @@ const DistrictSurvivalPage = React.lazy(
 const DistrictEducationPage = React.lazy(
   () => import('./pages/DistrictEducationPage')
 )
+// Code-split: DistrictMeetingsPage — meeting-time heatmap (#1796, epic #1781)
+const DistrictMeetingsPage = React.lazy(
+  () => import('./pages/DistrictMeetingsPage')
+)
 
 // Code-split: DistrictTrendsPage — trends subroute (#680, epic #674 Sprint 6)
 const DistrictTrendsPage = React.lazy(
@@ -241,6 +245,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictEducationPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/meetings',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <DistrictMeetingsPage />
             </Suspense>
           ),
         },

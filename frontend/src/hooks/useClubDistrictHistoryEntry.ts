@@ -4,12 +4,12 @@ import {
   findClubEntry,
   type ClubDistrictHistoryClub,
 } from '@taverns-red/shared-contracts'
-import { fetchClubDistrictHistoryShard } from '../services/cdnClubDistrictHistory'
+import { clubDistrictHistoryShardQuery } from './clubDistrictHistoryQuery'
 
 /* #1843 — ONE club's district history (#1782) for the club page's
    Lifecycle timeline: the single shard holding the club (≈ 12 KB gzip),
-   through the #1817 reader. The query key is the one
-   `useClubDistrictHistory` uses per shard, so the two share the cache.
+   through the #1817 reader and the one shard query every history reader
+   shares (#2073), so they all hit one cache entry per shard.
 
    `history` is `null` when the shard is absent, off contract, or does not
    list the club; the panel then says the district history is not available.
@@ -23,16 +23,10 @@ import { fetchClubDistrictHistoryShard } from '../services/cdnClubDistrictHistor
    found nothing: reporting it as done let the panel say the history was
    missing, and then be torn down when the read actually started. */
 
-/** The shard query, shared with readers outside React render (#1803's
-    `useClubHistory` reads it via `ensureQueryData`) so every reader hits
-    one cache entry per shard — the key `useClubDistrictHistory` uses. */
-export function clubDistrictHistoryShardQuery(shardKey: string) {
-  return {
-    queryKey: ['club-district-history', 'shard', shardKey] as const,
-    queryFn: () => fetchClubDistrictHistoryShard(shardKey),
-    staleTime: 15 * 60 * 1000,
-  }
-}
+/** The shard query (#2073: one definition, `clubDistrictHistoryQuery`),
+    re-exported for readers outside React render (#1803's `useClubHistory`
+    reads it via `ensureQueryData`). */
+export { clubDistrictHistoryShardQuery }
 
 export function useClubDistrictHistoryEntry(
   clubId: string | undefined,

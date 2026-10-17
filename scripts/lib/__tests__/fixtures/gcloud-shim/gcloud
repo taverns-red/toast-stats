@@ -8,7 +8,9 @@
 # Implements only what scripts/pipeline/*.sh and scripts/pull-awards-history.sh
 # call: `storage ls <prefix>/**` (or a single-segment `*` glob, or a plain
 # `<prefix>/`: one level, sub-prefixes with a trailing slash),
-# `storage rsync -r <src> <dst>`,
+# `storage rsync -r [--checksums-only] <src> <dst>` (--checksums-only skips a
+# download whose destination already holds the object's stored bytes: the
+# real SDK compares the local file's hash with the object's, #2102),
 # `storage cp [--content-type=..] [--cache-control=..] [--custom-metadata=k=v,..]
 # [-r] [-Z] <src>... <dst>` (a gs:// source to a gs:// destination is a
 # server-side rewrite: bytes and metadata carried as stored — the SDK's
@@ -32,6 +34,8 @@
 #                          the runner's old `latest`) (#1702).
 #   SHIM_DOWNLOAD_SKIP     optional: ERE; an rsync download silently skips
 #                          objects whose relative path matches (a short read)
+#   SHIM_DOWNLOAD_LOG      optional: every object a download reads is
+#                          appended as its path (bucket name stripped)
 #   SHIM_UPLOAD_LOG        optional: every object an upload writes is appended
 #                          as `<object path>\t<sha256 of the uploaded,
 #                          uncompressed bytes>` (bucket name stripped), so a
@@ -72,6 +76,10 @@ require_bucket() {
 # Download one object to a local file, honouring SHIM_DOWNLOAD_DECOMPRESS.
 download_object() {
   local url="$1" dest="$2"
+  if [ -n "${SHIM_DOWNLOAD_LOG:-}" ]; then
+    local rel="${url#gs://}"
+    printf '%s\n' "${rel#*/}" >>"${SHIM_DOWNLOAD_LOG}"
+  fi
   mkdir -p "$(dirname "${dest}")"
   if [ "${SHIM_DOWNLOAD_DECOMPRESS:-0}" = "1" ] &&
     grep -qx 'content-encoding=gzip' "$(meta_of "${url}")" 2>/dev/null; then
@@ -188,7 +196,18 @@ case "${CMD}" in
     ;;
 
   rsync)
-    [ "${1:-}" = "-r" ] && shift
+    checksums=0
+    while [[ "${1:-}" == -* ]]; do
+      case "$1" in
+        -r) ;;
+        --checksums-only) checksums=1 ;;
+        *)
+          echo "gcloud shim: unsupported rsync flag $1" >&2
+          exit 2
+          ;;
+      esac
+      shift
+    done
     src="${1:?}"
     dst="${2:?}"
     if is_gs "${src}"; then
@@ -201,6 +220,9 @@ case "${CMD}" in
       while IFS= read -r f; do
         rel="${f#"${sdir%/}/"}"
         if [ -n "${SHIM_DOWNLOAD_SKIP:-}" ] && [[ "${rel}" =~ ${SHIM_DOWNLOAD_SKIP} ]]; then
+          continue
+        fi
+        if [ "${checksums}" = 1 ] && cmp -s "${f}" "${dst%/}/${rel}"; then
           continue
         fi
         download_object "${src%/}/${rel}" "${dst%/}/${rel}"

@@ -255,13 +255,21 @@ const DistrictMapPage: React.FC = () => {
       return buildModeModel(mode === 'tier' ? 'tier' : 'health')
     return isTerritoryMode(mode)
       ? territory!.territoryModel(mode, allClubs)
-      : extended!.extendedModel(mode as ExtendedMode, viewedDate, reports)
+      : extended!.extendedModel(
+          mode as ExtendedMode,
+          viewedDate,
+          reports,
+          allClubs
+        )
   }, [mode, allClubs, territory, extended, pending, viewedDate, reports])
-  // Visit / online filtering lives in the on-demand filter chunk, which
-  // hands its filter up once ready (with the visit snapshot when a round is
-  // asked for); until then a filtered deep link draws nothing rather than
-  // the unfiltered set.
-  const wantsFilters = searchParams.has('visit') || searchParams.has('online')
+  // Visit / online / meeting-slot (#1796) filtering lives in the on-demand
+  // filter chunk, which hands its filter up once ready (with the visit
+  // snapshot when a round is asked for); until then a filtered deep link
+  // draws nothing rather than the unfiltered set.
+  const wantsFilters =
+    searchParams.has('visit') ||
+    searchParams.has('online') ||
+    searchParams.has('meets')
   const [mapFilter, setMapFilter] = useState<MapFilter | null>(null)
   // An extended mode's legend key (`?size=`, `?clubStatus=` …) waits for
   // its chunk too.

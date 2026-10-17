@@ -168,7 +168,7 @@ describe('BasemapMap', () => {
     act(() => idle!())
     await vi.waitFor(() => expect(map.setGlyphs).toHaveBeenCalledTimes(1))
     expect(map.setGlyphs).toHaveBeenCalledWith(
-      `${window.location.origin}/basemap/glyphs/inter-4.1/{fontstack}/{range}.pbf`
+      `${window.location.origin}/basemap/glyphs/inter-4.1-noto-ar2.013-he3.001/{fontstack}/{range}.pbf`
     )
     expect(map.addLayer).toHaveBeenCalledTimes(6)
   })

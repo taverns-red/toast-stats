@@ -3,6 +3,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { LayerSpecification, SymbolLayerSpecification } from 'maplibre-gl'
 import {
+  expression,
   featureFilter,
   validateStyleMin,
 } from '@maplibre/maplibre-gl-style-spec'
@@ -17,6 +18,7 @@ import {
   withBasemapLabels,
 } from '../basemapLabels'
 import { PIN_LAYER_IDS } from '../pinLayer'
+import { clusterDiameter } from '../pinImages'
 
 /* #2081 — labelled basemap context, zoom-banded so the map is never busy.
  * Countries → states/provinces → cities → neighbourhoods → streets, plus a
@@ -190,13 +192,69 @@ describe('basemap label layers', () => {
       const offsets = byId.get(id)!.layout!['text-variable-anchor-offset'] as
         unknown[] | undefined
       expect(offsets).toBeDefined()
+      // The near ring is tried first, so a label stays close when it can.
       const anchors = offsets!.filter((_, k) => k % 2 === 0)
-      expect(anchors).toEqual(['center', 'top', 'bottom', 'left', 'right'])
+      expect(anchors.slice(0, 5)).toEqual([
+        'center',
+        'top',
+        'bottom',
+        'left',
+        'right',
+      ])
       // Off-centre anchors clear a 44 px cluster (~2 em at 11 px).
       for (let k = 3; k < offsets!.length; k += 2) {
         const [x, y] = offsets![k] as [number, number]
         expect(Math.hypot(x, y)).toBeGreaterThanOrEqual(2)
       }
+    }
+  })
+
+  // #2092 — a city sitting under a big cluster (Montreal, Ottawa) lost its
+  // label: every near-ring spot overlapped the cluster's collision box, so
+  // the label hid. Cities need a far spot on each side that clears the
+  // largest cluster at their smallest text size.
+  it('gives a city label a spot on each side that clears the largest cluster', () => {
+    const cities = symbolLayers(styleFor('light').layers).find(
+      l => l.id === 'label-cities'
+    )!
+    const offsets = cities.layout!['text-variable-anchor-offset'] as unknown[]
+    const textPadding = cities.layout!['text-padding'] as number
+    // Largest cluster canvas (48 px disc + 8 px margin) plus MapLibre's
+    // default 2 px icon-padding, measured from the cluster's centre.
+    const clusterHalf = (clusterDiameter(1000) + 8) / 2 + 2
+    const SMALLEST_CITY_TEXT_PX = 10
+    const reach = (anchor: string) => {
+      let best = 0
+      for (let k = 0; k < offsets.length; k += 2) {
+        if (offsets[k] !== anchor) continue
+        const [x, y] = offsets[k + 1] as [number, number]
+        best = Math.max(best, Math.max(Math.abs(x), Math.abs(y)))
+      }
+      return best * SMALLEST_CITY_TEXT_PX - textPadding
+    }
+    for (const side of ['top', 'bottom', 'left', 'right']) {
+      expect(reach(side), side).toBeGreaterThanOrEqual(clusterHalf)
+    }
+  })
+
+  // #2092 — measured on the PR preview over D61 (zooms 6–11, 1280 and 375
+  // px): with only the side rings, Montreal still hid at z8 and z9, where
+  // clusters fill its row and small pins sit above and below. The four
+  // corners let it sit diagonally off the row; with them all 24 checks place.
+  it('lets a city label try the four corners after the sides', () => {
+    const cities = symbolLayers(styleFor('light').layers).find(
+      l => l.id === 'label-cities'
+    )!
+    const offsets = cities.layout!['text-variable-anchor-offset'] as unknown[]
+    const anchors = offsets.filter((_, k) => k % 2 === 0)
+    const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+    expect(anchors.slice(-4)).toEqual(corners)
+    for (let k = 1; k < offsets.length; k += 2) {
+      if (!corners.includes(offsets[k - 1] as string)) continue
+      const [x, y] = offsets[k] as [number, number]
+      // Pushed away from the point on both axes, like the near ring.
+      expect(Math.abs(x)).toBeGreaterThanOrEqual(2.2)
+      expect(Math.abs(y)).toBeGreaterThanOrEqual(2.2)
     }
   })
 
@@ -255,8 +313,164 @@ describe('basemap label layers', () => {
     for (const s of ['Cyrillic', 'Greek', 'Han', 'Hangul']) {
       expect(field).toContain(`"${s}"`)
     }
-    expect(field).not.toContain('"Arabic"')
+    // Indic and Thai still need glyphs we do not ship (#2085 covers RTL).
+    expect(field).not.toContain('"Devanagari"')
     expect(field).not.toContain('pgf:')
+  })
+
+  /* #2085 — Arabic and Hebrew names with no English version. MapLibre ≥ 6.9
+   * shapes Arabic and reorders right-to-left text itself (the RTL plugin is
+   * deprecated), so what these scripts need is glyphs. Features are shaped
+   * like the Protomaps v4 tiles read from the live archive: z12 tile
+   * 12/2456/1664 (Amman) and 12/2443/1662 (Tel Aviv–Ramat Gan). */
+  describe('right-to-left names (#2085)', () => {
+    const AMMAN = [
+      {
+        kind: 'neighbourhood',
+        min_zoom: 13,
+        name: 'منطقة بدر',
+        script: 'Arabic',
+      },
+      { kind: 'neighbourhood', min_zoom: 13, name: 'الرونق', script: 'Arabic' },
+      // Persian yeh (U+06CC): shaped into Presentation Forms-A, not B.
+      { kind: 'locality', min_zoom: 10, name: 'خربیه السوق', script: 'Arabic' },
+      // Hamza and alef-hamza forms, and the lam-alef ligature (الأ…).
+      { kind: 'locality', min_zoom: 11, name: 'المجد', script: 'Arabic' },
+    ]
+    const TEL_AVIV = [
+      {
+        kind: 'locality',
+        min_zoom: 13,
+        name: 'בניין אגף ההנדסה רמת גן',
+        script: 'Hebrew',
+      },
+      { kind: 'neighbourhood', min_zoom: 13, name: 'ח 501', script: 'Hebrew' },
+    ]
+    const textField = (id: string) => {
+      const l = symbolLayers(styleFor('light').layers).find(x => x.id === id)!
+      const parsed = expression.createExpression(
+        l.layout!['text-field'],
+        'text-field'
+      )
+      if (parsed.result !== 'success')
+        throw new Error(JSON.stringify(parsed.value))
+      return (props: Record<string, unknown>) =>
+        String(
+          parsed.value.evaluate({ zoom: 14 }, {
+            type: 1,
+            properties: props,
+          } as never)
+        )
+    }
+
+    it.each(['label-cities', 'label-neighbourhoods', 'label-streets'])(
+      '%s shows an Arabic or Hebrew name that has no English version',
+      id => {
+        const name = textField(id)
+        for (const f of [...AMMAN, ...TEL_AVIV]) expect(name(f)).toBe(f.name)
+        // The English name still wins when there is one.
+        expect(
+          name({ name: 'عمان', script: 'Arabic', 'name:en': 'Amman' })
+        ).toBe('Amman')
+        expect(
+          name({ name: 'חולון', script: 'Hebrew', 'name:en': 'Holon' })
+        ).toBe('Holon')
+      }
+    )
+
+    /** The glyph ids in one of our range PBFs (glyphs.proto: stacks = 1,
+     * glyphs = 3, id = 1). Read by hand so the test owns no PBF library. */
+    const glyphIds = (range: string): Set<number> => {
+      const dir = resolve(PUBLIC_DIR, GLYPH_PATH.split('/{fontstack}')[0]!)
+      const buf = readFileSync(resolve(dir, LABEL_FONT, `${range}.pbf`))
+      const ids = new Set<number>()
+      const varint = (b: Uint8Array, at: { i: number }) => {
+        let v = 0
+        let shift = 0
+        for (;;) {
+          if (at.i >= b.length) throw new Error('truncated varint')
+          const byte = b[at.i++]!
+          v += (byte & 0x7f) * 2 ** shift
+          if (byte < 0x80) return v
+          shift += 7
+        }
+      }
+      /** Calls `on` with each field: a varint's value, or a message's bytes. */
+      const fields = (
+        b: Uint8Array,
+        on: (tag: number, value: number | Uint8Array) => void
+      ) => {
+        const at = { i: 0 }
+        while (at.i < b.length) {
+          const key = varint(b, at)
+          const wire = key & 7
+          if (wire === 0) {
+            on(key >> 3, varint(b, at))
+          } else if (wire === 2) {
+            const len = varint(b, at)
+            on(key >> 3, b.subarray(at.i, at.i + len))
+            at.i += len
+          } else throw new Error(`unexpected wire type ${wire}`)
+        }
+      }
+      fields(buf, (tag, stack) => {
+        if (tag !== 1 || typeof stack === 'number') return
+        fields(stack, (t, glyph) => {
+          if (t !== 3 || typeof glyph === 'number') return
+          fields(glyph, (g, value) => {
+            if (g === 1 && typeof value === 'number') ids.add(value)
+          })
+        })
+      })
+      return ids
+    }
+    const shipped = new Map<number, Set<number>>()
+    const hasGlyph = (cp: number) => {
+      const start = Math.floor(cp / 256) * 256
+      const range = `${start}-${start + 255}`
+      if (!(GLYPH_RANGES as readonly string[]).includes(range)) return false
+      if (!shipped.has(start)) shipped.set(start, glyphIds(range))
+      return shipped.get(start)!.has(cp)
+    }
+
+    it('ships a glyph for every code point MapLibre draws them with', async () => {
+      // MapLibre's own shaper, as its worker runs it (not part of the
+      // package's public entry, so imported from its published source).
+      const { applyArabicShaping } = (await import(
+        resolve(
+          __dirname,
+          '../../../../../node_modules/maplibre-gl/src/symbol/arabic_shaping.ts'
+        )
+      )) as { applyArabicShaping: (s: string) => string }
+      for (const f of [...AMMAN, ...TEL_AVIV]) {
+        const drawn = applyArabicShaping(f.name)
+        if (f.script === 'Arabic') expect(drawn, f.name).not.toBe(f.name)
+        for (const ch of drawn) {
+          const cp = ch.codePointAt(0)!
+          expect(hasGlyph(cp), `${f.name}: U+${cp.toString(16)}`).toBe(true)
+        }
+      }
+    })
+
+    it('moves the glyphs to a new versioned path', () => {
+      // The files are cached as immutable, so the directory names every
+      // font in the stack: new fonts mean a new directory (ADR-016).
+      expect(GLYPH_PATH).toMatch(/^basemap\/glyphs\/inter-4\.1-noto-[^/]+\//)
+    })
+
+    it('ships the Noto font licences beside the glyphs', () => {
+      const dir = resolve(PUBLIC_DIR, GLYPH_PATH.split('/{fontstack}')[0]!)
+      for (const f of ['OFL-NotoSansArabic.txt', 'OFL-NotoSansHebrew.txt']) {
+        expect(readFileSync(resolve(dir, f), 'utf8'), f).toContain(
+          'SIL OPEN FONT LICENSE'
+        )
+      }
+    })
+
+    it('loads no RTL plugin: right-to-left text is built into MapLibre', () => {
+      const src = readFileSync(resolve(__dirname, '../BasemapMap.tsx'), 'utf8')
+      expect(src).not.toMatch(/setRTLTextPlugin|mapbox-gl-rtl-text/)
+    })
   })
 
   /* #2084 / #2081 — on the world z0–14 archive, what each street-zoom band

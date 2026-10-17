@@ -2,7 +2,8 @@
  * Extended pin colour modes (#1787, spec §4.2): TI club status, members,
  * net growth, DCP goals and club age — all from fields already on each
  * `ClubTrend`, so no extra fetch. The reports-sidecar modes (renewals, CSP,
- * officer list, coach, awards) and attendance live in `pinReports`. Split from `pinModes` like `pinTerritory`:
+ * officer list, coach, awards) live in `pinReports`, and the meeting modes
+ * (day, attendance) in `pinMeeting`. Split from `pinModes` like `pinTerritory`:
  * the page loads it after its first render, keeping the map route's first
  * load inside its budget.
  *
@@ -30,6 +31,7 @@ import {
   reportsModel,
   type ReportsMode,
 } from './pinReports'
+import { isMeetingMode, meetingModel, type MeetingPinMode } from './pinMeeting'
 
 export { EXTENDED_FACET_PARAMS, NOT_AVAILABLE, SEQUENTIAL5 }
 
@@ -72,7 +74,10 @@ const binOf = (v: number, upper: number[]) => {
   return i < 0 ? upper.length : i
 }
 
-const BINS: Record<Exclude<ExtendedMode, 'status' | ReportsMode>, Bins> = {
+const BINS: Record<
+  Exclude<ExtendedMode, 'status' | ReportsMode | MeetingPinMode>,
+  Bins
+> = {
   size: {
     title: 'Members',
     keys: ['0-7', '8-11', '12-19', '20-29', '30plus'],
@@ -168,13 +173,16 @@ function statusCategory(c: ClubTrend): PinCategory {
 }
 
 /** `date` is the viewed snapshot date and `reports` its sidecar, both passed
- *  down by the page (R3). */
+ *  down by the page (R3). `clubs` is every club in scope: the meeting modes
+ *  read from it whether the date carries schedules at all. */
 export function extendedModel(
   mode: ExtendedMode,
   date: string,
-  reports?: DistrictReportsDataset | null
+  reports?: DistrictReportsDataset | null,
+  clubs?: readonly ClubTrend[]
 ): ModeModel {
   if (isReportsMode(mode)) return reportsModel(mode, date, reports)
+  if (isMeetingMode(mode)) return meetingModel(mode, date, clubs)
   if (mode === 'status') {
     return {
       mode,
@@ -223,7 +231,8 @@ export function applyExtendedFacets(
     const model = extendedModel(
       param === 'clubStatus' ? 'status' : param,
       date,
-      reports
+      reports,
+      clubs
     )
     out = out.filter(c => wanted.has(model.categoryOf(c).key))
   }

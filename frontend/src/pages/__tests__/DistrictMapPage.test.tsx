@@ -115,6 +115,9 @@ const CLUBS: ClubTrend[] = [
     areaId: '12',
     areaName: 'Area 12',
     distinguishedLevel: 'Distinguished',
+    meetingSchedule: [
+      { day: 'Wednesday', cadence: 'weekly', startTime: '19:30' },
+    ],
   }),
   club({
     clubId: '103',
@@ -515,6 +518,20 @@ describe('DistrictMapPage — reports-sidecar colour modes (#1787)', () => {
       screen.getAllByText(/Officer list is not available for/).length
     ).toBeGreaterThan(0)
   })
+
+  it('?color=day colours by the parsed schedule; clubs without one are "Not stated"', async () => {
+    renderAt('/district/61/map?color=day')
+    const legend = await screen.findByRole('group', {
+      name: 'Meeting day legend',
+    })
+    const chips = within(legend)
+      .getAllByRole('button')
+      .map(b => b.textContent?.replace(/\s+/g, ' ').trim())
+    expect(chips).toEqual(['We Wednesday 1', 'Not stated 2'])
+    fireEvent.click(within(legend).getByRole('button', { name: /Wednesday/ }))
+    expect(search()).toContain('day=wed')
+    expect(screen.getByRole('status')).toHaveTextContent('Showing 1 of 3 clubs')
+  })
 })
 
 describe('DistrictMapPage — clubs not on the map', () => {
@@ -638,6 +655,18 @@ describe('DistrictMapPage — filters (#1788)', () => {
           .getAllByRole('link')
           .map(a => a.textContent)
       ).toEqual([expect.stringContaining('Alpha Speakers')])
+    )
+  })
+
+  it('?meets= (the meeting heatmap link) keeps the clubs in that slot (#1796)', async () => {
+    renderAt('/district/61/map?view=list&meets=wed-19')
+    const list = await screen.findByRole('list', { name: /Clubs/ })
+    await vi.waitFor(() =>
+      expect(
+        within(list)
+          .getAllByRole('link')
+          .map(a => a.textContent)
+      ).toEqual([expect.stringContaining('Beta Orators')])
     )
   })
 

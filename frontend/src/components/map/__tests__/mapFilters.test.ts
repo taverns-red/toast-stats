@@ -158,6 +158,40 @@ describe('applyMapFilters', () => {
     )
   })
 
+  it('?meets= keeps clubs meeting in that slot, the heatmap predicate (#1796)', () => {
+    const meeting = [
+      club({
+        clubId: '1',
+        meetingSchedule: [
+          { day: 'Wednesday', startTime: '19:30', mode: 'in-person' },
+          { day: 'Wednesday', startTime: '19:30', mode: 'online' },
+        ],
+      }),
+      club({
+        clubId: '2',
+        meetingSchedule: [{ day: 'Wednesday', startTime: '12:00' }],
+      }),
+      club({ clubId: '3', meetingSchedule: null }),
+      club({ clubId: '4' }),
+    ]
+    expect(ids(applyMapFilters(meeting, p('meets=wed-19'), null))).toEqual([
+      '1',
+    ])
+    expect(ids(applyMapFilters(meeting, p('meets=wed'), null))).toEqual([
+      '1',
+      '2',
+    ])
+    expect(
+      ids(applyMapFilters(meeting, p('meets=wed-12-online'), null))
+    ).toEqual([])
+    // OR within the facet.
+    expect(
+      ids(applyMapFilters(meeting, p('meets=wed-12,wed-19'), null))
+    ).toEqual(['1', '2'])
+    // A garbage token matches nothing rather than everything.
+    expect(ids(applyMapFilters(meeting, p('meets=bogus'), null))).toEqual([])
+  })
+
   it('composes visit and online with AND', () => {
     expect(
       ids(applyMapFilters(CLUBS, p('visit=r2&online=yes'), visits))
@@ -176,16 +210,17 @@ describe('URL writes', () => {
     expect(setMapFilter(next, 'visit', []).has('visit')).toBe(false)
   })
 
-  it('clearMapFilters drops the four filter keys in one write, nothing else', () => {
+  it('clearMapFilters drops the five filter keys in one write, nothing else', () => {
     const next = clearMapFilters(
       p(
-        'color=area&status=thriving&view=list&visit=r1&online=yes&divisions=Division A&areas=Area 01'
+        'color=area&status=thriving&view=list&visit=r1&online=yes&divisions=Division A&areas=Area 01&meets=tue-19'
       )
     )
     for (const k of MAP_FILTER_PARAMS) expect(next.has(k)).toBe(false)
     expect(next.get('color')).toBe('area')
     expect(next.get('status')).toBe('thriving')
     expect(next.get('view')).toBe('list')
+    expect(MAP_FILTER_PARAMS).toContain('meets')
   })
 
   it('counts active filter facets', () => {
@@ -210,6 +245,7 @@ describe('mapFilterFacets', () => {
       'online',
       'divisions',
       'areas',
+      'meets',
     ])
     const [visit, online, divisions, areas] = facets
     expect(visit!.options.map(o => o.value)).toEqual(['r1', 'r2'])
@@ -224,6 +260,25 @@ describe('mapFilterFacets', () => {
     ])
     // Areas narrow to the selected divisions.
     expect(areas!.options.map(o => o.value)).toEqual(['Area 12'])
+  })
+
+  it('offers the weekdays for ?meets=, plus a selected heatmap slot by name (#1796)', () => {
+    const meets = mapFilterFacets(CLUBS, p('meets=wed-19-online'), noop).at(-1)!
+    expect(meets.label).toBe('Meets on')
+    expect(meets.options.slice(0, 7).map(o => o.label)).toEqual([
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ])
+    expect(meets.options[7]).toEqual({
+      value: 'wed-19-online',
+      label: 'Wednesday 19:00–19:59 · Online',
+    })
+    expect(meets.selected).toEqual(['wed-19-online'])
   })
 
   it('keeps a selected area offered even outside the selected divisions, so it can be cleared', () => {

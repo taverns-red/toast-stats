@@ -19,6 +19,13 @@
  *
  * With no usable resolver verdict (a manual `districts` override skips
  * discovery and reports `unknown`) the answer is `null`: pull the whole store.
+ *
+ * A rebuild has no resolver verdict but names the dates it computes (#2102):
+ * `clubTrendsProgramYearsForDates` is the same union without the resolver's
+ * PY. A rebuild date the transform remaps writes the previous month-end
+ * (a closing raw, #193), which leaves the PY only from July to 06-30, and
+ * the July rule carries the prior PY. publish-stores.sh refuses any PY the
+ * sync did not pull, so a miss fails the run instead of clobbering a PY.
  */
 
 import {
@@ -45,8 +52,25 @@ export function clubTrendsProgramYears(
   dates: readonly string[]
 ): string[] | null {
   if (!resolvedProgramYear || !isProgramYear(resolvedProgramYear)) return null
+  return [...addDateYears(new Set([resolvedProgramYear]), dates)].sort()
+}
 
-  const years = new Set<string>([resolvedProgramYear])
+/**
+ * The sorted PY directories a run over `dates` writes (#2102), or `null`
+ * for the whole store when no date is named (a rebuild of every raw date).
+ */
+export function clubTrendsProgramYearsForDates(
+  dates: readonly string[]
+): string[] | null {
+  const years = addDateYears(new Set<string>(), dates)
+  return years.size === 0 ? null : [...years].sort()
+}
+
+/** Each date's PY, plus the prior PY for a July date, added to `years`. */
+function addDateYears(
+  years: Set<string>,
+  dates: readonly string[]
+): Set<string> {
   for (const date of dates) {
     if (date === '') continue
     const m = DATE_RE.exec(date)
@@ -55,5 +79,5 @@ export function clubTrendsProgramYears(
     years.add(py)
     if (m[1] === '07') years.add(getPriorProgramYear(py))
   }
-  return [...years].sort()
+  return years
 }
