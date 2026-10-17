@@ -191,6 +191,31 @@ describe('process-dates.sh rebuild: a clean date end to end', () => {
     }
   })
 
+  it('publishes the per-region club shards under clubs-by-region/, gzip, in the run manifest (#1800)', () => {
+    putRaw('2026-09-10')
+    const r = run('rebuild', ['2026-09-10'], { STUB_CLUBS_BY_REGION: '1' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(objectsUnder('snapshots/2026-09-10/clubs-by-region')).toEqual([
+      '05.json',
+      'world.json',
+    ])
+    for (const obj of [
+      'snapshots/2026-09-10/clubs-by-region/05.json',
+      'snapshots/2026-09-10/clubs-by-region/world.json',
+    ]) {
+      const meta = readMeta(obj)
+      expect(meta).toContain('content-encoding=gzip')
+      expect(meta).toContain(`cache-control=${CACHE_CONTROL}`)
+      const body = zlib.gunzipSync(
+        fs.readFileSync(path.join(root, BUCKET, obj))
+      )
+      expect(() => JSON.parse(body.toString('utf-8'))).not.toThrow()
+    }
+    const written = lines(manifest).map(l => JSON.parse(l).path as string)
+    expect(written).toContain('snapshots/2026-09-10/clubs-by-region/05.json')
+    expect(written).toContain('snapshots/2026-09-10/clubs-by-region/world.json')
+  })
+
   it('prints ONLY the counts JSON on stdout; tool output goes to stderr (R4)', () => {
     putRaw('2026-09-10')
     const r = run('rebuild', ['2026-09-10'])
@@ -779,6 +804,26 @@ describe('process-dates.sh rescrape: hydrate the date from staging (#1756)', () 
     expect(uploads).not.toContain('district_62.json')
     expect(uploads).not.toContain('district_62_analytics.json')
     expect(fs.readFileSync(staged)).toEqual(before)
+  })
+
+  it('re-uploads a hydrated club shard only when compute changed it (#1800)', () => {
+    stageDate(DATE)
+    putObject(
+      `snapshots/${DATE}/clubs-by-region/05.json`,
+      `{"date":"${DATE}"}\n`,
+      true
+    )
+    putObject(
+      `snapshots/${DATE}/clubs-by-region/world.json`,
+      '{"stale":true}\n',
+      true
+    )
+    run('rescrape', [DATE], { ...env, STUB_CLUBS_BY_REGION: '1' })
+    const uploads = lines(shimLog)
+      .filter(l => l.startsWith('storage cp') && l.includes(`/${DATE}/`))
+      .join('\n')
+    expect(uploads).toContain('clubs-by-region/world.json')
+    expect(uploads).not.toContain('clubs-by-region/05.json')
   })
 
   it('still runs a date staging has never seen: the CLI refuses what it cannot cover', () => {
