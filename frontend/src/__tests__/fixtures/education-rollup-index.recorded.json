@@ -1,0 +1,3033 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "education-rollup-index"
+  },
+  "asOf": "2026-10-16",
+  "programYears": [
+    {
+      "programYear": "2003-2004",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2003-2004.json",
+      "world": {
+        "awards": 37398,
+        "pathways": 0,
+        "legacy": 36788,
+        "dtm": 563,
+        "other": 47
+      },
+      "districtsAvailable": 80,
+      "districtsNotAvailable": 8
+    },
+    {
+      "programYear": "2004-2005",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2004-2005.json",
+      "world": {
+        "awards": 38455,
+        "pathways": 0,
+        "legacy": 37700,
+        "dtm": 715,
+        "other": 40
+      },
+      "districtsAvailable": 80,
+      "districtsNotAvailable": 8
+    },
+    {
+      "programYear": "2005-2006",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2005-2006.json",
+      "world": {
+        "awards": 41031,
+        "pathways": 0,
+        "legacy": 40235,
+        "dtm": 781,
+        "other": 15
+      },
+      "districtsAvailable": 80,
+      "districtsNotAvailable": 8
+    },
+    {
+      "programYear": "2006-2007",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2006-2007.json",
+      "world": {
+        "awards": 39908,
+        "pathways": 0,
+        "legacy": 38814,
+        "dtm": 826,
+        "other": 268
+      },
+      "districtsAvailable": 80,
+      "districtsNotAvailable": 8
+    },
+    {
+      "programYear": "2007-2008",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2007-2008.json",
+      "world": {
+        "awards": 45625,
+        "pathways": 0,
+        "legacy": 44568,
+        "dtm": 938,
+        "other": 119
+      },
+      "districtsAvailable": 80,
+      "districtsNotAvailable": 8
+    },
+    {
+      "programYear": "2008-2009",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2008-2009.json",
+      "world": {
+        "awards": 45232,
+        "pathways": 0,
+        "legacy": 44223,
+        "dtm": 962,
+        "other": 47
+      },
+      "districtsAvailable": 82,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2009-2010",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2009-2010.json",
+      "world": {
+        "awards": 50945,
+        "pathways": 0,
+        "legacy": 49878,
+        "dtm": 1008,
+        "other": 59
+      },
+      "districtsAvailable": 82,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2010-2011",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2010-2011.json",
+      "world": {
+        "awards": 52931,
+        "pathways": 0,
+        "legacy": 51818,
+        "dtm": 1063,
+        "other": 50
+      },
+      "districtsAvailable": 83,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2011-2012",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2011-2012.json",
+      "world": {
+        "awards": 59417,
+        "pathways": 0,
+        "legacy": 58162,
+        "dtm": 1207,
+        "other": 48
+      },
+      "districtsAvailable": 87,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2012-2013",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2012-2013.json",
+      "world": {
+        "awards": 61341,
+        "pathways": 0,
+        "legacy": 59988,
+        "dtm": 1290,
+        "other": 63
+      },
+      "districtsAvailable": 89,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2013-2014",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2013-2014.json",
+      "world": {
+        "awards": 66540,
+        "pathways": 0,
+        "legacy": 65024,
+        "dtm": 1477,
+        "other": 39
+      },
+      "districtsAvailable": 92,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2014-2015",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2014-2015.json",
+      "world": {
+        "awards": 70388,
+        "pathways": 0,
+        "legacy": 68807,
+        "dtm": 1536,
+        "other": 45
+      },
+      "districtsAvailable": 97,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2015-2016",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2015-2016.json",
+      "world": {
+        "awards": 74458,
+        "pathways": 0,
+        "legacy": 72771,
+        "dtm": 1670,
+        "other": 17
+      },
+      "districtsAvailable": 99,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2016-2017",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2016-2017.json",
+      "world": {
+        "awards": 77417,
+        "pathways": 62,
+        "legacy": 75519,
+        "dtm": 1833,
+        "other": 3
+      },
+      "districtsAvailable": 103,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2017-2018",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2017-2018.json",
+      "world": {
+        "awards": 79429,
+        "pathways": 6693,
+        "legacy": 70812,
+        "dtm": 1881,
+        "other": 43
+      },
+      "districtsAvailable": 107,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2018-2019",
+      "source": "ledger-history",
+      "sourceDate": null,
+      "path": "derived/education-rollup/2018-2019.json",
+      "world": {
+        "awards": 124519,
+        "pathways": 68947,
+        "legacy": 52753,
+        "dtm": 2510,
+        "other": 309
+      },
+      "districtsAvailable": 117,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2019-2020",
+      "source": "reports",
+      "sourceDate": "2020-06-30",
+      "path": "derived/education-rollup/2019-2020.json",
+      "world": {
+        "awards": 174669,
+        "pathways": 111088,
+        "legacy": 56847,
+        "dtm": 5955,
+        "other": 779
+      },
+      "districtsAvailable": 120,
+      "districtsNotAvailable": 4
+    },
+    {
+      "programYear": "2020-2021",
+      "source": "reports",
+      "sourceDate": "2021-06-30",
+      "path": "derived/education-rollup/2020-2021.json",
+      "world": {
+        "awards": 154318,
+        "pathways": 146268,
+        "legacy": 3713,
+        "dtm": 2923,
+        "other": 1414
+      },
+      "districtsAvailable": 121,
+      "districtsNotAvailable": 4
+    },
+    {
+      "programYear": "2021-2022",
+      "source": "reports",
+      "sourceDate": "2022-06-30",
+      "path": "derived/education-rollup/2021-2022.json",
+      "world": {
+        "awards": 127216,
+        "pathways": 124244,
+        "legacy": 0,
+        "dtm": 648,
+        "other": 2324
+      },
+      "districtsAvailable": 124,
+      "districtsNotAvailable": 4
+    },
+    {
+      "programYear": "2022-2023",
+      "source": "reports",
+      "sourceDate": "2023-06-30",
+      "path": "derived/education-rollup/2022-2023.json",
+      "world": {
+        "awards": 112842,
+        "pathways": 109359,
+        "legacy": 0,
+        "dtm": 772,
+        "other": 2711
+      },
+      "districtsAvailable": 124,
+      "districtsNotAvailable": 4
+    },
+    {
+      "programYear": "2023-2024",
+      "source": "reports",
+      "sourceDate": "2024-06-30",
+      "path": "derived/education-rollup/2023-2024.json",
+      "world": {
+        "awards": 118708,
+        "pathways": 114637,
+        "legacy": 0,
+        "dtm": 868,
+        "other": 3203
+      },
+      "districtsAvailable": 126,
+      "districtsNotAvailable": 4
+    },
+    {
+      "programYear": "2024-2025",
+      "source": "reports",
+      "sourceDate": "2025-06-30",
+      "path": "derived/education-rollup/2024-2025.json",
+      "world": {
+        "awards": 108130,
+        "pathways": 105743,
+        "legacy": 0,
+        "dtm": 905,
+        "other": 1482
+      },
+      "districtsAvailable": 128,
+      "districtsNotAvailable": 4
+    },
+    {
+      "programYear": "2025-2026",
+      "source": "reports",
+      "sourceDate": "2026-06-30",
+      "path": "derived/education-rollup/2025-2026.json",
+      "world": {
+        "awards": 102757,
+        "pathways": 100881,
+        "legacy": 0,
+        "dtm": 1030,
+        "other": 846
+      },
+      "districtsAvailable": 128,
+      "districtsNotAvailable": 0
+    },
+    {
+      "programYear": "2026-2027",
+      "source": "reports",
+      "sourceDate": "2026-10-16",
+      "path": "derived/education-rollup/2026-2027.json",
+      "world": {
+        "awards": 26497,
+        "pathways": 25847,
+        "legacy": 0,
+        "dtm": 403,
+        "other": 247
+      },
+      "districtsAvailable": 94,
+      "districtsNotAvailable": 0
+    }
+  ],
+  "omittedProgramYears": [],
+  "trend": {
+    "districts": {
+      "15": {
+        "2003-2004": {
+          "awards": 338,
+          "pathways": 0,
+          "legacy": 333,
+          "dtm": 5,
+          "other": 0
+        },
+        "2004-2005": {
+          "awards": 271,
+          "pathways": 0,
+          "legacy": 266,
+          "dtm": 5,
+          "other": 0
+        },
+        "2005-2006": {
+          "awards": 264,
+          "pathways": 0,
+          "legacy": 259,
+          "dtm": 5,
+          "other": 0
+        },
+        "2006-2007": {
+          "awards": 305,
+          "pathways": 0,
+          "legacy": 294,
+          "dtm": 9,
+          "other": 2
+        },
+        "2007-2008": {
+          "awards": 371,
+          "pathways": 0,
+          "legacy": 359,
+          "dtm": 11,
+          "other": 1
+        },
+        "2008-2009": {
+          "awards": 354,
+          "pathways": 0,
+          "legacy": 345,
+          "dtm": 9,
+          "other": 0
+        },
+        "2009-2010": {
+          "awards": 388,
+          "pathways": 0,
+          "legacy": 378,
+          "dtm": 10,
+          "other": 0
+        },
+        "2010-2011": {
+          "awards": 397,
+          "pathways": 0,
+          "legacy": 386,
+          "dtm": 11,
+          "other": 0
+        },
+        "2011-2012": {
+          "awards": 383,
+          "pathways": 0,
+          "legacy": 376,
+          "dtm": 7,
+          "other": 0
+        },
+        "2012-2013": {
+          "awards": 417,
+          "pathways": 0,
+          "legacy": 409,
+          "dtm": 8,
+          "other": 0
+        },
+        "2013-2014": {
+          "awards": 428,
+          "pathways": 0,
+          "legacy": 424,
+          "dtm": 4,
+          "other": 0
+        },
+        "2014-2015": {
+          "awards": 451,
+          "pathways": 0,
+          "legacy": 440,
+          "dtm": 11,
+          "other": 0
+        },
+        "2015-2016": {
+          "awards": 479,
+          "pathways": 0,
+          "legacy": 465,
+          "dtm": 14,
+          "other": 0
+        },
+        "2016-2017": {
+          "awards": 474,
+          "pathways": 0,
+          "legacy": 463,
+          "dtm": 11,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 395,
+          "pathways": 9,
+          "legacy": 371,
+          "dtm": 15,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 545,
+          "pathways": 293,
+          "legacy": 239,
+          "dtm": 13,
+          "other": 0
+        },
+        "2019-2020": {
+          "awards": 737,
+          "pathways": 471,
+          "legacy": 236,
+          "dtm": 27,
+          "other": 3
+        },
+        "2020-2021": {
+          "awards": 560,
+          "pathways": 516,
+          "legacy": 19,
+          "dtm": 22,
+          "other": 3
+        },
+        "2021-2022": {
+          "awards": 335,
+          "pathways": 331,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 2
+        },
+        "2022-2023": {
+          "awards": 408,
+          "pathways": 397,
+          "legacy": 0,
+          "dtm": 0,
+          "other": 11
+        },
+        "2023-2024": {
+          "awards": 350,
+          "pathways": 340,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 9
+        },
+        "2024-2025": {
+          "awards": 344,
+          "pathways": 333,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 9
+        },
+        "2025-2026": {
+          "awards": 280,
+          "pathways": 278,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 1
+        }
+      },
+      "21": {
+        "2003-2004": {
+          "awards": 995,
+          "pathways": 0,
+          "legacy": 976,
+          "dtm": 16,
+          "other": 3
+        },
+        "2004-2005": {
+          "awards": 1131,
+          "pathways": 0,
+          "legacy": 1111,
+          "dtm": 19,
+          "other": 1
+        },
+        "2005-2006": {
+          "awards": 1119,
+          "pathways": 0,
+          "legacy": 1098,
+          "dtm": 20,
+          "other": 1
+        },
+        "2006-2007": {
+          "awards": 926,
+          "pathways": 0,
+          "legacy": 905,
+          "dtm": 16,
+          "other": 5
+        },
+        "2007-2008": {
+          "awards": 989,
+          "pathways": 0,
+          "legacy": 961,
+          "dtm": 25,
+          "other": 3
+        },
+        "2008-2009": {
+          "awards": 932,
+          "pathways": 0,
+          "legacy": 904,
+          "dtm": 27,
+          "other": 1
+        },
+        "2009-2010": {
+          "awards": 1051,
+          "pathways": 0,
+          "legacy": 1034,
+          "dtm": 17,
+          "other": 0
+        },
+        "2010-2011": {
+          "awards": 1208,
+          "pathways": 0,
+          "legacy": 1187,
+          "dtm": 20,
+          "other": 1
+        },
+        "2011-2012": {
+          "awards": 1301,
+          "pathways": 0,
+          "legacy": 1280,
+          "dtm": 20,
+          "other": 1
+        },
+        "2012-2013": {
+          "awards": 1355,
+          "pathways": 0,
+          "legacy": 1336,
+          "dtm": 19,
+          "other": 0
+        },
+        "2013-2014": {
+          "awards": 1344,
+          "pathways": 0,
+          "legacy": 1299,
+          "dtm": 41,
+          "other": 4
+        },
+        "2014-2015": {
+          "awards": 752,
+          "pathways": 0,
+          "legacy": 732,
+          "dtm": 19,
+          "other": 1
+        },
+        "2015-2016": {
+          "awards": 772,
+          "pathways": 0,
+          "legacy": 755,
+          "dtm": 16,
+          "other": 1
+        },
+        "2016-2017": {
+          "awards": 772,
+          "pathways": 0,
+          "legacy": 760,
+          "dtm": 12,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 696,
+          "pathways": 13,
+          "legacy": 668,
+          "dtm": 14,
+          "other": 1
+        },
+        "2018-2019": {
+          "awards": 1058,
+          "pathways": 558,
+          "legacy": 464,
+          "dtm": 33,
+          "other": 3
+        },
+        "2019-2020": {
+          "awards": 1341,
+          "pathways": 824,
+          "legacy": 458,
+          "dtm": 58,
+          "other": 1
+        },
+        "2020-2021": {
+          "awards": 1039,
+          "pathways": 981,
+          "legacy": 27,
+          "dtm": 21,
+          "other": 10
+        },
+        "2021-2022": {
+          "awards": 855,
+          "pathways": 840,
+          "legacy": 0,
+          "dtm": 3,
+          "other": 12
+        },
+        "2022-2023": {
+          "awards": 702,
+          "pathways": 696,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 5
+        },
+        "2023-2024": {
+          "awards": 873,
+          "pathways": 842,
+          "legacy": 0,
+          "dtm": 7,
+          "other": 24
+        },
+        "2024-2025": {
+          "awards": 682,
+          "pathways": 677,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 3
+        },
+        "2025-2026": {
+          "awards": 1266,
+          "pathways": 1253,
+          "legacy": 0,
+          "dtm": 8,
+          "other": 5
+        },
+        "2026-2027": {
+          "awards": 337,
+          "pathways": 332,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 3
+        }
+      },
+      "32": {
+        "2003-2004": {
+          "awards": 271,
+          "pathways": 0,
+          "legacy": 267,
+          "dtm": 4,
+          "other": 0
+        },
+        "2004-2005": {
+          "awards": 234,
+          "pathways": 0,
+          "legacy": 232,
+          "dtm": 1,
+          "other": 1
+        },
+        "2005-2006": {
+          "awards": 286,
+          "pathways": 0,
+          "legacy": 278,
+          "dtm": 8,
+          "other": 0
+        },
+        "2006-2007": {
+          "awards": 216,
+          "pathways": 0,
+          "legacy": 208,
+          "dtm": 4,
+          "other": 4
+        },
+        "2007-2008": {
+          "awards": 263,
+          "pathways": 0,
+          "legacy": 254,
+          "dtm": 6,
+          "other": 3
+        },
+        "2008-2009": {
+          "awards": 287,
+          "pathways": 0,
+          "legacy": 278,
+          "dtm": 8,
+          "other": 1
+        },
+        "2009-2010": {
+          "awards": 287,
+          "pathways": 0,
+          "legacy": 282,
+          "dtm": 5,
+          "other": 0
+        },
+        "2010-2011": {
+          "awards": 294,
+          "pathways": 0,
+          "legacy": 289,
+          "dtm": 5,
+          "other": 0
+        },
+        "2011-2012": {
+          "awards": 280,
+          "pathways": 0,
+          "legacy": 277,
+          "dtm": 3,
+          "other": 0
+        },
+        "2012-2013": {
+          "awards": 278,
+          "pathways": 0,
+          "legacy": 269,
+          "dtm": 9,
+          "other": 0
+        },
+        "2013-2014": {
+          "awards": 295,
+          "pathways": 0,
+          "legacy": 292,
+          "dtm": 3,
+          "other": 0
+        },
+        "2014-2015": {
+          "awards": 321,
+          "pathways": 0,
+          "legacy": 313,
+          "dtm": 8,
+          "other": 0
+        },
+        "2015-2016": {
+          "awards": 498,
+          "pathways": 0,
+          "legacy": 482,
+          "dtm": 16,
+          "other": 0
+        },
+        "2016-2017": {
+          "awards": 488,
+          "pathways": 0,
+          "legacy": 473,
+          "dtm": 15,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 455,
+          "pathways": 10,
+          "legacy": 434,
+          "dtm": 11,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 734,
+          "pathways": 437,
+          "legacy": 280,
+          "dtm": 14,
+          "other": 3
+        },
+        "2019-2020": null,
+        "2020-2021": null,
+        "2021-2022": null,
+        "2022-2023": null,
+        "2023-2024": null,
+        "2024-2025": null
+      },
+      "39": {
+        "2003-2004": {
+          "awards": 642,
+          "pathways": 0,
+          "legacy": 629,
+          "dtm": 12,
+          "other": 1
+        },
+        "2004-2005": {
+          "awards": 615,
+          "pathways": 0,
+          "legacy": 604,
+          "dtm": 10,
+          "other": 1
+        },
+        "2005-2006": {
+          "awards": 575,
+          "pathways": 0,
+          "legacy": 558,
+          "dtm": 17,
+          "other": 0
+        },
+        "2006-2007": {
+          "awards": 514,
+          "pathways": 0,
+          "legacy": 499,
+          "dtm": 10,
+          "other": 5
+        },
+        "2007-2008": {
+          "awards": 736,
+          "pathways": 0,
+          "legacy": 720,
+          "dtm": 15,
+          "other": 1
+        },
+        "2008-2009": {
+          "awards": 639,
+          "pathways": 0,
+          "legacy": 621,
+          "dtm": 18,
+          "other": 0
+        },
+        "2009-2010": {
+          "awards": 673,
+          "pathways": 0,
+          "legacy": 660,
+          "dtm": 12,
+          "other": 1
+        },
+        "2010-2011": {
+          "awards": 666,
+          "pathways": 0,
+          "legacy": 653,
+          "dtm": 12,
+          "other": 1
+        },
+        "2011-2012": {
+          "awards": 808,
+          "pathways": 0,
+          "legacy": 787,
+          "dtm": 20,
+          "other": 1
+        },
+        "2012-2013": {
+          "awards": 749,
+          "pathways": 0,
+          "legacy": 728,
+          "dtm": 20,
+          "other": 1
+        },
+        "2013-2014": {
+          "awards": 804,
+          "pathways": 0,
+          "legacy": 780,
+          "dtm": 24,
+          "other": 0
+        },
+        "2014-2015": {
+          "awards": 744,
+          "pathways": 0,
+          "legacy": 720,
+          "dtm": 23,
+          "other": 1
+        },
+        "2015-2016": {
+          "awards": 807,
+          "pathways": 0,
+          "legacy": 789,
+          "dtm": 18,
+          "other": 0
+        },
+        "2016-2017": {
+          "awards": 808,
+          "pathways": 0,
+          "legacy": 783,
+          "dtm": 25,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 923,
+          "pathways": 174,
+          "legacy": 722,
+          "dtm": 27,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 1267,
+          "pathways": 796,
+          "legacy": 447,
+          "dtm": 22,
+          "other": 2
+        },
+        "2019-2020": {
+          "awards": 1469,
+          "pathways": 890,
+          "legacy": 527,
+          "dtm": 49,
+          "other": 3
+        },
+        "2020-2021": {
+          "awards": 1167,
+          "pathways": 1061,
+          "legacy": 61,
+          "dtm": 39,
+          "other": 6
+        },
+        "2021-2022": {
+          "awards": 765,
+          "pathways": 754,
+          "legacy": 0,
+          "dtm": 5,
+          "other": 6
+        },
+        "2022-2023": {
+          "awards": 753,
+          "pathways": 736,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 15
+        },
+        "2023-2024": {
+          "awards": 934,
+          "pathways": 888,
+          "legacy": 0,
+          "dtm": 3,
+          "other": 43
+        },
+        "2024-2025": {
+          "awards": 645,
+          "pathways": 631,
+          "legacy": 0,
+          "dtm": 4,
+          "other": 10
+        },
+        "2025-2026": {
+          "awards": 565,
+          "pathways": 556,
+          "legacy": 0,
+          "dtm": 7,
+          "other": 2
+        }
+      },
+      "49": {
+        "2003-2004": {
+          "awards": 185,
+          "pathways": 0,
+          "legacy": 182,
+          "dtm": 3,
+          "other": 0
+        },
+        "2004-2005": {
+          "awards": 148,
+          "pathways": 0,
+          "legacy": 144,
+          "dtm": 4,
+          "other": 0
+        },
+        "2005-2006": {
+          "awards": 173,
+          "pathways": 0,
+          "legacy": 170,
+          "dtm": 3,
+          "other": 0
+        },
+        "2006-2007": {
+          "awards": 166,
+          "pathways": 0,
+          "legacy": 165,
+          "dtm": 1,
+          "other": 0
+        },
+        "2007-2008": {
+          "awards": 236,
+          "pathways": 0,
+          "legacy": 233,
+          "dtm": 3,
+          "other": 0
+        },
+        "2008-2009": {
+          "awards": 222,
+          "pathways": 0,
+          "legacy": 218,
+          "dtm": 4,
+          "other": 0
+        },
+        "2009-2010": {
+          "awards": 190,
+          "pathways": 0,
+          "legacy": 188,
+          "dtm": 2,
+          "other": 0
+        },
+        "2010-2011": {
+          "awards": 188,
+          "pathways": 0,
+          "legacy": 185,
+          "dtm": 3,
+          "other": 0
+        },
+        "2011-2012": {
+          "awards": 191,
+          "pathways": 0,
+          "legacy": 188,
+          "dtm": 3,
+          "other": 0
+        },
+        "2012-2013": {
+          "awards": 225,
+          "pathways": 0,
+          "legacy": 224,
+          "dtm": 1,
+          "other": 0
+        },
+        "2013-2014": {
+          "awards": 242,
+          "pathways": 0,
+          "legacy": 234,
+          "dtm": 8,
+          "other": 0
+        },
+        "2014-2015": {
+          "awards": 220,
+          "pathways": 0,
+          "legacy": 215,
+          "dtm": 5,
+          "other": 0
+        },
+        "2015-2016": {
+          "awards": 271,
+          "pathways": 0,
+          "legacy": 262,
+          "dtm": 9,
+          "other": 0
+        },
+        "2016-2017": {
+          "awards": 254,
+          "pathways": 0,
+          "legacy": 242,
+          "dtm": 12,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 253,
+          "pathways": 65,
+          "legacy": 182,
+          "dtm": 6,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 368,
+          "pathways": 246,
+          "legacy": 115,
+          "dtm": 5,
+          "other": 2
+        },
+        "2019-2020": {
+          "awards": 539,
+          "pathways": 333,
+          "legacy": 184,
+          "dtm": 21,
+          "other": 1
+        },
+        "2020-2021": {
+          "awards": 465,
+          "pathways": 423,
+          "legacy": 23,
+          "dtm": 16,
+          "other": 3
+        },
+        "2021-2022": {
+          "awards": 272,
+          "pathways": 266,
+          "legacy": 0,
+          "dtm": 4,
+          "other": 2
+        },
+        "2022-2023": {
+          "awards": 245,
+          "pathways": 240,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 3
+        },
+        "2023-2024": {
+          "awards": 297,
+          "pathways": 276,
+          "legacy": 0,
+          "dtm": 6,
+          "other": 15
+        },
+        "2024-2025": {
+          "awards": 249,
+          "pathways": 245,
+          "legacy": 0,
+          "dtm": 0,
+          "other": 4
+        },
+        "2025-2026": {
+          "awards": 258,
+          "pathways": 254,
+          "legacy": 0,
+          "dtm": 3,
+          "other": 1
+        },
+        "2026-2027": {
+          "awards": 87,
+          "pathways": 86,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 0
+        }
+      },
+      "57": {
+        "2003-2004": {
+          "awards": 510,
+          "pathways": 0,
+          "legacy": 503,
+          "dtm": 6,
+          "other": 1
+        },
+        "2004-2005": {
+          "awards": 481,
+          "pathways": 0,
+          "legacy": 467,
+          "dtm": 14,
+          "other": 0
+        },
+        "2005-2006": {
+          "awards": 520,
+          "pathways": 0,
+          "legacy": 507,
+          "dtm": 13,
+          "other": 0
+        },
+        "2006-2007": {
+          "awards": 458,
+          "pathways": 0,
+          "legacy": 452,
+          "dtm": 5,
+          "other": 1
+        },
+        "2007-2008": {
+          "awards": 512,
+          "pathways": 0,
+          "legacy": 503,
+          "dtm": 7,
+          "other": 2
+        },
+        "2008-2009": {
+          "awards": 496,
+          "pathways": 0,
+          "legacy": 488,
+          "dtm": 8,
+          "other": 0
+        },
+        "2009-2010": {
+          "awards": 630,
+          "pathways": 0,
+          "legacy": 620,
+          "dtm": 8,
+          "other": 2
+        },
+        "2010-2011": {
+          "awards": 708,
+          "pathways": 0,
+          "legacy": 699,
+          "dtm": 8,
+          "other": 1
+        },
+        "2011-2012": {
+          "awards": 775,
+          "pathways": 0,
+          "legacy": 761,
+          "dtm": 12,
+          "other": 2
+        },
+        "2012-2013": {
+          "awards": 726,
+          "pathways": 0,
+          "legacy": 712,
+          "dtm": 14,
+          "other": 0
+        },
+        "2013-2014": {
+          "awards": 743,
+          "pathways": 0,
+          "legacy": 729,
+          "dtm": 14,
+          "other": 0
+        },
+        "2014-2015": {
+          "awards": 717,
+          "pathways": 0,
+          "legacy": 705,
+          "dtm": 11,
+          "other": 1
+        },
+        "2015-2016": {
+          "awards": 743,
+          "pathways": 0,
+          "legacy": 731,
+          "dtm": 12,
+          "other": 0
+        },
+        "2016-2017": {
+          "awards": 753,
+          "pathways": 51,
+          "legacy": 684,
+          "dtm": 17,
+          "other": 1
+        },
+        "2017-2018": {
+          "awards": 978,
+          "pathways": 540,
+          "legacy": 426,
+          "dtm": 10,
+          "other": 2
+        },
+        "2018-2019": {
+          "awards": 1305,
+          "pathways": 1003,
+          "legacy": 284,
+          "dtm": 18,
+          "other": 0
+        },
+        "2019-2020": {
+          "awards": 1536,
+          "pathways": 1100,
+          "legacy": 390,
+          "dtm": 42,
+          "other": 4
+        },
+        "2020-2021": {
+          "awards": 1473,
+          "pathways": 1417,
+          "legacy": 21,
+          "dtm": 25,
+          "other": 10
+        },
+        "2021-2022": {
+          "awards": 956,
+          "pathways": 930,
+          "legacy": 0,
+          "dtm": 3,
+          "other": 23
+        },
+        "2022-2023": {
+          "awards": 938,
+          "pathways": 911,
+          "legacy": 0,
+          "dtm": 5,
+          "other": 22
+        },
+        "2023-2024": {
+          "awards": 993,
+          "pathways": 951,
+          "legacy": 0,
+          "dtm": 8,
+          "other": 34
+        },
+        "2024-2025": {
+          "awards": 826,
+          "pathways": 808,
+          "legacy": 0,
+          "dtm": 5,
+          "other": 13
+        },
+        "2025-2026": {
+          "awards": 653,
+          "pathways": 649,
+          "legacy": 0,
+          "dtm": 4,
+          "other": 0
+        }
+      },
+      "96": {
+        "2014-2015": {
+          "awards": 653,
+          "pathways": 0,
+          "legacy": 631,
+          "dtm": 21,
+          "other": 1
+        },
+        "2015-2016": {
+          "awards": 646,
+          "pathways": 0,
+          "legacy": 635,
+          "dtm": 11,
+          "other": 0
+        },
+        "2016-2017": {
+          "awards": 576,
+          "pathways": 0,
+          "legacy": 562,
+          "dtm": 14,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 561,
+          "pathways": 26,
+          "legacy": 523,
+          "dtm": 12,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 926,
+          "pathways": 565,
+          "legacy": 342,
+          "dtm": 18,
+          "other": 1
+        },
+        "2019-2020": null,
+        "2020-2021": null,
+        "2021-2022": null,
+        "2022-2023": null,
+        "2023-2024": null,
+        "2024-2025": null
+      },
+      "101": {
+        "2016-2017": {
+          "awards": 636,
+          "pathways": 0,
+          "legacy": 626,
+          "dtm": 10,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 650,
+          "pathways": 135,
+          "legacy": 503,
+          "dtm": 12,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 1055,
+          "pathways": 733,
+          "legacy": 312,
+          "dtm": 10,
+          "other": 0
+        },
+        "2019-2020": {
+          "awards": 1441,
+          "pathways": 928,
+          "legacy": 459,
+          "dtm": 54,
+          "other": 0
+        },
+        "2020-2021": {
+          "awards": 1496,
+          "pathways": 1406,
+          "legacy": 47,
+          "dtm": 36,
+          "other": 7
+        },
+        "2021-2022": {
+          "awards": 1141,
+          "pathways": 1118,
+          "legacy": 0,
+          "dtm": 6,
+          "other": 17
+        },
+        "2022-2023": {
+          "awards": 912,
+          "pathways": 887,
+          "legacy": 0,
+          "dtm": 4,
+          "other": 21
+        },
+        "2023-2024": {
+          "awards": 1187,
+          "pathways": 1153,
+          "legacy": 0,
+          "dtm": 12,
+          "other": 22
+        },
+        "2024-2025": {
+          "awards": 886,
+          "pathways": 870,
+          "legacy": 0,
+          "dtm": 7,
+          "other": 9
+        },
+        "2025-2026": {
+          "awards": 732,
+          "pathways": 723,
+          "legacy": 0,
+          "dtm": 4,
+          "other": 5
+        },
+        "2026-2027": {
+          "awards": 210,
+          "pathways": 208,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 1
+        }
+      },
+      "205": {
+        "2026-2027": {
+          "awards": 194,
+          "pathways": 191,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 2
+        }
+      },
+      "206": {
+        "2026-2027": {
+          "awards": 251,
+          "pathways": 245,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 4
+        }
+      },
+      "207": {
+        "2026-2027": {
+          "awards": 198,
+          "pathways": 197,
+          "legacy": 0,
+          "dtm": 0,
+          "other": 1
+        }
+      },
+      "02": {
+        "2003-2004": {
+          "awards": 475,
+          "pathways": 0,
+          "legacy": 468,
+          "dtm": 7,
+          "other": 0
+        },
+        "2004-2005": {
+          "awards": 574,
+          "pathways": 0,
+          "legacy": 562,
+          "dtm": 9,
+          "other": 3
+        },
+        "2005-2006": {
+          "awards": 552,
+          "pathways": 0,
+          "legacy": 544,
+          "dtm": 8,
+          "other": 0
+        },
+        "2006-2007": {
+          "awards": 582,
+          "pathways": 0,
+          "legacy": 570,
+          "dtm": 5,
+          "other": 7
+        },
+        "2007-2008": {
+          "awards": 650,
+          "pathways": 0,
+          "legacy": 635,
+          "dtm": 14,
+          "other": 1
+        },
+        "2008-2009": {
+          "awards": 678,
+          "pathways": 0,
+          "legacy": 665,
+          "dtm": 13,
+          "other": 0
+        },
+        "2009-2010": {
+          "awards": 755,
+          "pathways": 0,
+          "legacy": 739,
+          "dtm": 14,
+          "other": 2
+        },
+        "2010-2011": {
+          "awards": 847,
+          "pathways": 0,
+          "legacy": 830,
+          "dtm": 16,
+          "other": 1
+        },
+        "2011-2012": {
+          "awards": 830,
+          "pathways": 0,
+          "legacy": 812,
+          "dtm": 18,
+          "other": 0
+        },
+        "2012-2013": {
+          "awards": 804,
+          "pathways": 0,
+          "legacy": 784,
+          "dtm": 19,
+          "other": 1
+        },
+        "2013-2014": {
+          "awards": 820,
+          "pathways": 0,
+          "legacy": 805,
+          "dtm": 15,
+          "other": 0
+        },
+        "2014-2015": {
+          "awards": 805,
+          "pathways": 0,
+          "legacy": 788,
+          "dtm": 16,
+          "other": 1
+        },
+        "2015-2016": {
+          "awards": 837,
+          "pathways": 0,
+          "legacy": 818,
+          "dtm": 18,
+          "other": 1
+        },
+        "2016-2017": {
+          "awards": 855,
+          "pathways": 0,
+          "legacy": 836,
+          "dtm": 19,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 876,
+          "pathways": 13,
+          "legacy": 843,
+          "dtm": 20,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 1167,
+          "pathways": 606,
+          "legacy": 534,
+          "dtm": 24,
+          "other": 3
+        },
+        "2019-2020": {
+          "awards": 1645,
+          "pathways": 1046,
+          "legacy": 534,
+          "dtm": 64,
+          "other": 1
+        },
+        "2020-2021": {
+          "awards": 1117,
+          "pathways": 1047,
+          "legacy": 36,
+          "dtm": 27,
+          "other": 7
+        },
+        "2021-2022": {
+          "awards": 772,
+          "pathways": 759,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 11
+        },
+        "2022-2023": {
+          "awards": 570,
+          "pathways": 556,
+          "legacy": 0,
+          "dtm": 3,
+          "other": 11
+        },
+        "2023-2024": {
+          "awards": 651,
+          "pathways": 639,
+          "legacy": 0,
+          "dtm": 3,
+          "other": 9
+        },
+        "2024-2025": {
+          "awards": 601,
+          "pathways": 594,
+          "legacy": 0,
+          "dtm": 4,
+          "other": 3
+        },
+        "2025-2026": {
+          "awards": 1083,
+          "pathways": 1059,
+          "legacy": 0,
+          "dtm": 16,
+          "other": 8
+        },
+        "2026-2027": {
+          "awards": 285,
+          "pathways": 280,
+          "legacy": 0,
+          "dtm": 5,
+          "other": 0
+        }
+      },
+      "07": {
+        "2003-2004": {
+          "awards": 626,
+          "pathways": 0,
+          "legacy": 616,
+          "dtm": 9,
+          "other": 1
+        },
+        "2004-2005": {
+          "awards": 616,
+          "pathways": 0,
+          "legacy": 606,
+          "dtm": 10,
+          "other": 0
+        },
+        "2005-2006": {
+          "awards": 574,
+          "pathways": 0,
+          "legacy": 567,
+          "dtm": 7,
+          "other": 0
+        },
+        "2006-2007": {
+          "awards": 575,
+          "pathways": 0,
+          "legacy": 555,
+          "dtm": 13,
+          "other": 7
+        },
+        "2007-2008": {
+          "awards": 590,
+          "pathways": 0,
+          "legacy": 572,
+          "dtm": 18,
+          "other": 0
+        },
+        "2008-2009": {
+          "awards": 674,
+          "pathways": 0,
+          "legacy": 663,
+          "dtm": 11,
+          "other": 0
+        },
+        "2009-2010": {
+          "awards": 764,
+          "pathways": 0,
+          "legacy": 752,
+          "dtm": 11,
+          "other": 1
+        },
+        "2010-2011": {
+          "awards": 686,
+          "pathways": 0,
+          "legacy": 670,
+          "dtm": 15,
+          "other": 1
+        },
+        "2011-2012": {
+          "awards": 759,
+          "pathways": 0,
+          "legacy": 746,
+          "dtm": 12,
+          "other": 1
+        },
+        "2012-2013": {
+          "awards": 714,
+          "pathways": 0,
+          "legacy": 698,
+          "dtm": 16,
+          "other": 0
+        },
+        "2013-2014": {
+          "awards": 744,
+          "pathways": 0,
+          "legacy": 728,
+          "dtm": 16,
+          "other": 0
+        },
+        "2014-2015": {
+          "awards": 779,
+          "pathways": 0,
+          "legacy": 762,
+          "dtm": 17,
+          "other": 0
+        },
+        "2015-2016": {
+          "awards": 830,
+          "pathways": 0,
+          "legacy": 818,
+          "dtm": 12,
+          "other": 0
+        },
+        "2016-2017": {
+          "awards": 827,
+          "pathways": 0,
+          "legacy": 805,
+          "dtm": 22,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 922,
+          "pathways": 255,
+          "legacy": 650,
+          "dtm": 13,
+          "other": 4
+        },
+        "2018-2019": {
+          "awards": 1233,
+          "pathways": 824,
+          "legacy": 386,
+          "dtm": 18,
+          "other": 5
+        },
+        "2019-2020": {
+          "awards": 1419,
+          "pathways": 904,
+          "legacy": 459,
+          "dtm": 55,
+          "other": 1
+        },
+        "2020-2021": {
+          "awards": 1197,
+          "pathways": 1139,
+          "legacy": 29,
+          "dtm": 20,
+          "other": 9
+        },
+        "2021-2022": {
+          "awards": 838,
+          "pathways": 808,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 28
+        },
+        "2022-2023": {
+          "awards": 874,
+          "pathways": 851,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 21
+        },
+        "2023-2024": {
+          "awards": 810,
+          "pathways": 790,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 19
+        },
+        "2024-2025": {
+          "awards": 611,
+          "pathways": 605,
+          "legacy": 0,
+          "dtm": 4,
+          "other": 2
+        },
+        "2025-2026": {
+          "awards": 483,
+          "pathways": 478,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 3
+        }
+      },
+      "09": {
+        "2003-2004": {
+          "awards": 176,
+          "pathways": 0,
+          "legacy": 174,
+          "dtm": 2,
+          "other": 0
+        },
+        "2004-2005": {
+          "awards": 151,
+          "pathways": 0,
+          "legacy": 148,
+          "dtm": 3,
+          "other": 0
+        },
+        "2005-2006": {
+          "awards": 171,
+          "pathways": 0,
+          "legacy": 169,
+          "dtm": 2,
+          "other": 0
+        },
+        "2006-2007": {
+          "awards": 166,
+          "pathways": 0,
+          "legacy": 160,
+          "dtm": 2,
+          "other": 4
+        },
+        "2007-2008": {
+          "awards": 155,
+          "pathways": 0,
+          "legacy": 152,
+          "dtm": 3,
+          "other": 0
+        },
+        "2008-2009": {
+          "awards": 226,
+          "pathways": 0,
+          "legacy": 221,
+          "dtm": 5,
+          "other": 0
+        },
+        "2009-2010": {
+          "awards": 232,
+          "pathways": 0,
+          "legacy": 224,
+          "dtm": 8,
+          "other": 0
+        },
+        "2010-2011": {
+          "awards": 253,
+          "pathways": 0,
+          "legacy": 250,
+          "dtm": 3,
+          "other": 0
+        },
+        "2011-2012": {
+          "awards": 286,
+          "pathways": 0,
+          "legacy": 276,
+          "dtm": 10,
+          "other": 0
+        },
+        "2012-2013": {
+          "awards": 305,
+          "pathways": 0,
+          "legacy": 300,
+          "dtm": 4,
+          "other": 1
+        },
+        "2013-2014": {
+          "awards": 299,
+          "pathways": 0,
+          "legacy": 293,
+          "dtm": 6,
+          "other": 0
+        },
+        "2014-2015": {
+          "awards": 348,
+          "pathways": 0,
+          "legacy": 336,
+          "dtm": 12,
+          "other": 0
+        },
+        "2015-2016": {
+          "awards": 313,
+          "pathways": 0,
+          "legacy": 303,
+          "dtm": 10,
+          "other": 0
+        },
+        "2016-2017": {
+          "awards": 288,
+          "pathways": 0,
+          "legacy": 280,
+          "dtm": 8,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 355,
+          "pathways": 5,
+          "legacy": 339,
+          "dtm": 11,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 483,
+          "pathways": 253,
+          "legacy": 222,
+          "dtm": 8,
+          "other": 0
+        },
+        "2019-2020": null,
+        "2020-2021": null,
+        "2021-2022": null,
+        "2022-2023": null,
+        "2023-2024": null,
+        "2024-2025": null
+      }
+    },
+    "regions": {
+      "10": {
+        "2016-2017": {
+          "awards": 5948,
+          "pathways": 0,
+          "legacy": 5796,
+          "dtm": 152,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 6005,
+          "pathways": 612,
+          "legacy": 5225,
+          "dtm": 165,
+          "other": 3
+        },
+        "2018-2019": {
+          "awards": 8120,
+          "pathways": 4007,
+          "legacy": 3993,
+          "dtm": 110,
+          "other": 10
+        },
+        "2019-2020": {
+          "awards": 13368,
+          "pathways": 7771,
+          "legacy": 5198,
+          "dtm": 371,
+          "other": 28
+        },
+        "2020-2021": {
+          "awards": 10701,
+          "pathways": 10284,
+          "legacy": 196,
+          "dtm": 150,
+          "other": 71
+        },
+        "2021-2022": {
+          "awards": 8175,
+          "pathways": 8084,
+          "legacy": 0,
+          "dtm": 12,
+          "other": 79
+        },
+        "2022-2023": {
+          "awards": 8073,
+          "pathways": 7950,
+          "legacy": 0,
+          "dtm": 18,
+          "other": 105
+        },
+        "2023-2024": {
+          "awards": 8999,
+          "pathways": 8761,
+          "legacy": 0,
+          "dtm": 31,
+          "other": 207
+        },
+        "2024-2025": {
+          "awards": 8394,
+          "pathways": 8254,
+          "legacy": 0,
+          "dtm": 45,
+          "other": 95
+        },
+        "2025-2026": {
+          "awards": 8276,
+          "pathways": 8162,
+          "legacy": 0,
+          "dtm": 59,
+          "other": 55
+        },
+        "2026-2027": {
+          "awards": 1830,
+          "pathways": 1786,
+          "legacy": 0,
+          "dtm": 25,
+          "other": 19
+        }
+      },
+      "11": {
+        "2016-2017": {
+          "awards": 9573,
+          "pathways": 0,
+          "legacy": 9375,
+          "dtm": 198,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 8174,
+          "pathways": 132,
+          "legacy": 7863,
+          "dtm": 179,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 10010,
+          "pathways": 5350,
+          "legacy": 4401,
+          "dtm": 211,
+          "other": 48
+        },
+        "2019-2020": {
+          "awards": 16178,
+          "pathways": 10337,
+          "legacy": 5185,
+          "dtm": 545,
+          "other": 111
+        },
+        "2020-2021": {
+          "awards": 15662,
+          "pathways": 14811,
+          "legacy": 336,
+          "dtm": 328,
+          "other": 187
+        },
+        "2021-2022": {
+          "awards": 14077,
+          "pathways": 13588,
+          "legacy": 0,
+          "dtm": 152,
+          "other": 337
+        },
+        "2022-2023": {
+          "awards": 13097,
+          "pathways": 12486,
+          "legacy": 0,
+          "dtm": 134,
+          "other": 477
+        },
+        "2023-2024": {
+          "awards": 13520,
+          "pathways": 12902,
+          "legacy": 0,
+          "dtm": 116,
+          "other": 502
+        },
+        "2024-2025": {
+          "awards": 8599,
+          "pathways": 8322,
+          "legacy": 0,
+          "dtm": 89,
+          "other": 188
+        },
+        "2025-2026": {
+          "awards": 8861,
+          "pathways": 8626,
+          "legacy": 0,
+          "dtm": 122,
+          "other": 113
+        },
+        "2026-2027": {
+          "awards": 2575,
+          "pathways": 2489,
+          "legacy": 0,
+          "dtm": 54,
+          "other": 32
+        }
+      },
+      "12": {
+        "2016-2017": {
+          "awards": 4662,
+          "pathways": 0,
+          "legacy": 4568,
+          "dtm": 94,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 4448,
+          "pathways": 425,
+          "legacy": 3919,
+          "dtm": 101,
+          "other": 3
+        },
+        "2018-2019": {
+          "awards": 8916,
+          "pathways": 5118,
+          "legacy": 3596,
+          "dtm": 177,
+          "other": 25
+        },
+        "2019-2020": {
+          "awards": 11337,
+          "pathways": 7086,
+          "legacy": 3814,
+          "dtm": 377,
+          "other": 60
+        },
+        "2020-2021": {
+          "awards": 9432,
+          "pathways": 9057,
+          "legacy": 170,
+          "dtm": 141,
+          "other": 64
+        },
+        "2021-2022": {
+          "awards": 8404,
+          "pathways": 8261,
+          "legacy": 0,
+          "dtm": 17,
+          "other": 126
+        },
+        "2022-2023": {
+          "awards": 7287,
+          "pathways": 7177,
+          "legacy": 0,
+          "dtm": 26,
+          "other": 84
+        },
+        "2023-2024": {
+          "awards": 7514,
+          "pathways": 7335,
+          "legacy": 0,
+          "dtm": 42,
+          "other": 137
+        },
+        "2024-2025": {
+          "awards": 6005,
+          "pathways": 5928,
+          "legacy": 0,
+          "dtm": 42,
+          "other": 35
+        },
+        "2025-2026": {
+          "awards": 5723,
+          "pathways": 5662,
+          "legacy": 0,
+          "dtm": 36,
+          "other": 25
+        },
+        "2026-2027": {
+          "awards": 1575,
+          "pathways": 1547,
+          "legacy": 0,
+          "dtm": 16,
+          "other": 12
+        }
+      },
+      "13": {
+        "2016-2017": {
+          "awards": 8485,
+          "pathways": 0,
+          "legacy": 8355,
+          "dtm": 129,
+          "other": 1
+        },
+        "2017-2018": {
+          "awards": 10205,
+          "pathways": 141,
+          "legacy": 9916,
+          "dtm": 148,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 15444,
+          "pathways": 8724,
+          "legacy": 6469,
+          "dtm": 218,
+          "other": 33
+        },
+        "2019-2020": {
+          "awards": 18578,
+          "pathways": 12648,
+          "legacy": 5317,
+          "dtm": 491,
+          "other": 122
+        },
+        "2020-2021": {
+          "awards": 24470,
+          "pathways": 23419,
+          "legacy": 450,
+          "dtm": 355,
+          "other": 246
+        },
+        "2021-2022": {
+          "awards": 18063,
+          "pathways": 17680,
+          "legacy": 0,
+          "dtm": 93,
+          "other": 290
+        },
+        "2022-2023": {
+          "awards": 16959,
+          "pathways": 16352,
+          "legacy": 0,
+          "dtm": 140,
+          "other": 467
+        },
+        "2023-2024": {
+          "awards": 18909,
+          "pathways": 18228,
+          "legacy": 0,
+          "dtm": 158,
+          "other": 523
+        },
+        "2024-2025": {
+          "awards": 11016,
+          "pathways": 10773,
+          "legacy": 0,
+          "dtm": 96,
+          "other": 147
+        },
+        "2025-2026": {
+          "awards": 11221,
+          "pathways": 10983,
+          "legacy": 0,
+          "dtm": 112,
+          "other": 126
+        },
+        "2026-2027": {
+          "awards": 2941,
+          "pathways": 2889,
+          "legacy": 0,
+          "dtm": 28,
+          "other": 24
+        }
+      },
+      "14": {
+        "2016-2017": {
+          "awards": 4419,
+          "pathways": 1,
+          "legacy": 4321,
+          "dtm": 97,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 5720,
+          "pathways": 1691,
+          "legacy": 3909,
+          "dtm": 106,
+          "other": 14
+        },
+        "2018-2019": {
+          "awards": 8444,
+          "pathways": 4881,
+          "legacy": 3400,
+          "dtm": 137,
+          "other": 26
+        },
+        "2019-2020": {
+          "awards": 14920,
+          "pathways": 10620,
+          "legacy": 3867,
+          "dtm": 353,
+          "other": 80
+        },
+        "2020-2021": {
+          "awards": 14623,
+          "pathways": 13950,
+          "legacy": 289,
+          "dtm": 207,
+          "other": 177
+        },
+        "2021-2022": {
+          "awards": 14437,
+          "pathways": 14070,
+          "legacy": 0,
+          "dtm": 34,
+          "other": 333
+        },
+        "2022-2023": {
+          "awards": 12472,
+          "pathways": 11957,
+          "legacy": 0,
+          "dtm": 67,
+          "other": 448
+        },
+        "2023-2024": {
+          "awards": 13593,
+          "pathways": 13024,
+          "legacy": 0,
+          "dtm": 79,
+          "other": 490
+        },
+        "2024-2025": {
+          "awards": 8235,
+          "pathways": 8003,
+          "legacy": 0,
+          "dtm": 67,
+          "other": 165
+        },
+        "2025-2026": {
+          "awards": 7400,
+          "pathways": 7243,
+          "legacy": 0,
+          "dtm": 66,
+          "other": 91
+        },
+        "2026-2027": {
+          "awards": 1454,
+          "pathways": 1416,
+          "legacy": 0,
+          "dtm": 23,
+          "other": 15
+        }
+      },
+      "01": {
+        "2016-2017": {
+          "awards": 4321,
+          "pathways": 0,
+          "legacy": 4225,
+          "dtm": 96,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 4261,
+          "pathways": 96,
+          "legacy": 4059,
+          "dtm": 105,
+          "other": 1
+        },
+        "2018-2019": {
+          "awards": 8718,
+          "pathways": 5335,
+          "legacy": 3198,
+          "dtm": 168,
+          "other": 17
+        },
+        "2019-2020": {
+          "awards": 8147,
+          "pathways": 5235,
+          "legacy": 2604,
+          "dtm": 295,
+          "other": 13
+        },
+        "2020-2021": {
+          "awards": 6553,
+          "pathways": 6161,
+          "legacy": 193,
+          "dtm": 154,
+          "other": 45
+        },
+        "2021-2022": {
+          "awards": 4521,
+          "pathways": 4422,
+          "legacy": 0,
+          "dtm": 17,
+          "other": 82
+        },
+        "2022-2023": {
+          "awards": 4245,
+          "pathways": 4147,
+          "legacy": 0,
+          "dtm": 13,
+          "other": 85
+        },
+        "2023-2024": {
+          "awards": 4611,
+          "pathways": 4450,
+          "legacy": 0,
+          "dtm": 23,
+          "other": 138
+        },
+        "2024-2025": {
+          "awards": 6247,
+          "pathways": 6132,
+          "legacy": 0,
+          "dtm": 36,
+          "other": 79
+        },
+        "2025-2026": {
+          "awards": 6317,
+          "pathways": 6233,
+          "legacy": 0,
+          "dtm": 52,
+          "other": 32
+        },
+        "2026-2027": {
+          "awards": 1562,
+          "pathways": 1539,
+          "legacy": 0,
+          "dtm": 12,
+          "other": 11
+        }
+      },
+      "02": {
+        "2016-2017": {
+          "awards": 4734,
+          "pathways": 51,
+          "legacy": 4557,
+          "dtm": 125,
+          "other": 1
+        },
+        "2017-2018": {
+          "awards": 5437,
+          "pathways": 1574,
+          "legacy": 3744,
+          "dtm": 112,
+          "other": 7
+        },
+        "2018-2019": {
+          "awards": 7474,
+          "pathways": 4650,
+          "legacy": 2689,
+          "dtm": 120,
+          "other": 15
+        },
+        "2019-2020": {
+          "awards": 10329,
+          "pathways": 6557,
+          "legacy": 3344,
+          "dtm": 410,
+          "other": 18
+        },
+        "2020-2021": {
+          "awards": 9309,
+          "pathways": 8709,
+          "legacy": 310,
+          "dtm": 227,
+          "other": 63
+        },
+        "2021-2022": {
+          "awards": 7259,
+          "pathways": 7054,
+          "legacy": 0,
+          "dtm": 29,
+          "other": 176
+        },
+        "2022-2023": {
+          "awards": 6415,
+          "pathways": 6229,
+          "legacy": 0,
+          "dtm": 43,
+          "other": 143
+        },
+        "2023-2024": {
+          "awards": 6496,
+          "pathways": 6286,
+          "legacy": 0,
+          "dtm": 55,
+          "other": 155
+        },
+        "2024-2025": {
+          "awards": 7637,
+          "pathways": 7468,
+          "legacy": 0,
+          "dtm": 74,
+          "other": 95
+        },
+        "2025-2026": {
+          "awards": 7312,
+          "pathways": 7198,
+          "legacy": 0,
+          "dtm": 75,
+          "other": 39
+        },
+        "2026-2027": {
+          "awards": 2115,
+          "pathways": 2074,
+          "legacy": 0,
+          "dtm": 16,
+          "other": 25
+        }
+      },
+      "03": {
+        "2016-2017": {
+          "awards": 5171,
+          "pathways": 0,
+          "legacy": 5041,
+          "dtm": 130,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 5226,
+          "pathways": 294,
+          "legacy": 4789,
+          "dtm": 141,
+          "other": 2
+        },
+        "2018-2019": {
+          "awards": 10047,
+          "pathways": 6152,
+          "legacy": 3635,
+          "dtm": 222,
+          "other": 38
+        },
+        "2019-2020": {
+          "awards": 12777,
+          "pathways": 8761,
+          "legacy": 3505,
+          "dtm": 422,
+          "other": 89
+        },
+        "2020-2021": {
+          "awards": 10957,
+          "pathways": 10332,
+          "legacy": 299,
+          "dtm": 219,
+          "other": 107
+        },
+        "2021-2022": {
+          "awards": 8467,
+          "pathways": 8257,
+          "legacy": 0,
+          "dtm": 35,
+          "other": 175
+        },
+        "2022-2023": {
+          "awards": 7920,
+          "pathways": 7662,
+          "legacy": 0,
+          "dtm": 56,
+          "other": 202
+        },
+        "2023-2024": {
+          "awards": 7652,
+          "pathways": 7398,
+          "legacy": 0,
+          "dtm": 55,
+          "other": 199
+        },
+        "2024-2025": {
+          "awards": 6554,
+          "pathways": 6437,
+          "legacy": 0,
+          "dtm": 55,
+          "other": 62
+        },
+        "2025-2026": {
+          "awards": 6198,
+          "pathways": 6100,
+          "legacy": 0,
+          "dtm": 73,
+          "other": 25
+        },
+        "2026-2027": {
+          "awards": 1618,
+          "pathways": 1584,
+          "legacy": 0,
+          "dtm": 22,
+          "other": 12
+        }
+      },
+      "04": {
+        "2016-2017": {
+          "awards": 4136,
+          "pathways": 0,
+          "legacy": 4023,
+          "dtm": 113,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 3348,
+          "pathways": 20,
+          "legacy": 3242,
+          "dtm": 85,
+          "other": 1
+        },
+        "2018-2019": {
+          "awards": 6738,
+          "pathways": 3329,
+          "legacy": 3249,
+          "dtm": 150,
+          "other": 10
+        },
+        "2019-2020": {
+          "awards": 9081,
+          "pathways": 5491,
+          "legacy": 3227,
+          "dtm": 344,
+          "other": 19
+        },
+        "2020-2021": {
+          "awards": 6966,
+          "pathways": 6601,
+          "legacy": 178,
+          "dtm": 131,
+          "other": 56
+        },
+        "2021-2022": {
+          "awards": 5075,
+          "pathways": 4973,
+          "legacy": 0,
+          "dtm": 20,
+          "other": 82
+        },
+        "2022-2023": {
+          "awards": 5037,
+          "pathways": 4916,
+          "legacy": 0,
+          "dtm": 26,
+          "other": 95
+        },
+        "2023-2024": {
+          "awards": 5221,
+          "pathways": 5048,
+          "legacy": 0,
+          "dtm": 41,
+          "other": 132
+        },
+        "2024-2025": {
+          "awards": 6034,
+          "pathways": 5930,
+          "legacy": 0,
+          "dtm": 38,
+          "other": 66
+        },
+        "2025-2026": {
+          "awards": 5234,
+          "pathways": 5149,
+          "legacy": 0,
+          "dtm": 53,
+          "other": 32
+        },
+        "2026-2027": {
+          "awards": 1701,
+          "pathways": 1661,
+          "legacy": 0,
+          "dtm": 29,
+          "other": 11
+        }
+      },
+      "05": {
+        "2016-2017": {
+          "awards": 4979,
+          "pathways": 0,
+          "legacy": 4829,
+          "dtm": 150,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 4879,
+          "pathways": 150,
+          "legacy": 4589,
+          "dtm": 138,
+          "other": 2
+        },
+        "2018-2019": {
+          "awards": 7846,
+          "pathways": 4103,
+          "legacy": 3519,
+          "dtm": 210,
+          "other": 14
+        },
+        "2019-2020": {
+          "awards": 10249,
+          "pathways": 6243,
+          "legacy": 3507,
+          "dtm": 462,
+          "other": 37
+        },
+        "2020-2021": {
+          "awards": 8103,
+          "pathways": 7631,
+          "legacy": 225,
+          "dtm": 187,
+          "other": 60
+        },
+        "2021-2022": {
+          "awards": 6034,
+          "pathways": 5895,
+          "legacy": 0,
+          "dtm": 51,
+          "other": 88
+        },
+        "2022-2023": {
+          "awards": 5704,
+          "pathways": 5544,
+          "legacy": 0,
+          "dtm": 44,
+          "other": 116
+        },
+        "2023-2024": {
+          "awards": 5959,
+          "pathways": 5735,
+          "legacy": 0,
+          "dtm": 59,
+          "other": 165
+        },
+        "2024-2025": {
+          "awards": 7712,
+          "pathways": 7555,
+          "legacy": 0,
+          "dtm": 60,
+          "other": 97
+        },
+        "2025-2026": {
+          "awards": 7101,
+          "pathways": 6983,
+          "legacy": 0,
+          "dtm": 77,
+          "other": 41
+        },
+        "2026-2027": {
+          "awards": 1469,
+          "pathways": 1442,
+          "legacy": 0,
+          "dtm": 19,
+          "other": 8
+        }
+      },
+      "06": {
+        "2016-2017": {
+          "awards": 4624,
+          "pathways": 0,
+          "legacy": 4508,
+          "dtm": 116,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 4966,
+          "pathways": 755,
+          "legacy": 4049,
+          "dtm": 155,
+          "other": 7
+        },
+        "2018-2019": {
+          "awards": 8890,
+          "pathways": 5117,
+          "legacy": 3550,
+          "dtm": 208,
+          "other": 15
+        },
+        "2019-2020": {
+          "awards": 10841,
+          "pathways": 6541,
+          "legacy": 3797,
+          "dtm": 477,
+          "other": 26
+        },
+        "2020-2021": {
+          "awards": 7569,
+          "pathways": 7169,
+          "legacy": 176,
+          "dtm": 150,
+          "other": 74
+        },
+        "2021-2022": {
+          "awards": 6869,
+          "pathways": 6746,
+          "legacy": 0,
+          "dtm": 35,
+          "other": 88
+        },
+        "2022-2023": {
+          "awards": 6181,
+          "pathways": 6032,
+          "legacy": 0,
+          "dtm": 46,
+          "other": 103
+        },
+        "2023-2024": {
+          "awards": 6692,
+          "pathways": 6512,
+          "legacy": 0,
+          "dtm": 50,
+          "other": 130
+        },
+        "2024-2025": {
+          "awards": 6080,
+          "pathways": 5926,
+          "legacy": 0,
+          "dtm": 58,
+          "other": 96
+        },
+        "2025-2026": {
+          "awards": 5580,
+          "pathways": 5479,
+          "legacy": 0,
+          "dtm": 55,
+          "other": 46
+        },
+        "2026-2027": {
+          "awards": 1416,
+          "pathways": 1370,
+          "legacy": 0,
+          "dtm": 29,
+          "other": 17
+        }
+      },
+      "07": {
+        "2016-2017": {
+          "awards": 4779,
+          "pathways": 10,
+          "legacy": 4644,
+          "dtm": 125,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 5133,
+          "pathways": 761,
+          "legacy": 4238,
+          "dtm": 133,
+          "other": 1
+        },
+        "2018-2019": {
+          "awards": 7262,
+          "pathways": 4091,
+          "legacy": 2975,
+          "dtm": 183,
+          "other": 13
+        },
+        "2019-2020": {
+          "awards": 8313,
+          "pathways": 4808,
+          "legacy": 3105,
+          "dtm": 371,
+          "other": 29
+        },
+        "2020-2021": {
+          "awards": 7894,
+          "pathways": 7432,
+          "legacy": 230,
+          "dtm": 172,
+          "other": 60
+        },
+        "2021-2022": {
+          "awards": 6448,
+          "pathways": 6317,
+          "legacy": 0,
+          "dtm": 29,
+          "other": 102
+        },
+        "2022-2023": {
+          "awards": 5344,
+          "pathways": 5232,
+          "legacy": 0,
+          "dtm": 37,
+          "other": 75
+        },
+        "2023-2024": {
+          "awards": 5535,
+          "pathways": 5394,
+          "legacy": 0,
+          "dtm": 46,
+          "other": 95
+        },
+        "2024-2025": {
+          "awards": 8859,
+          "pathways": 8668,
+          "legacy": 0,
+          "dtm": 69,
+          "other": 122
+        },
+        "2025-2026": {
+          "awards": 8174,
+          "pathways": 8010,
+          "legacy": 0,
+          "dtm": 98,
+          "other": 66
+        },
+        "2026-2027": {
+          "awards": 2050,
+          "pathways": 1987,
+          "legacy": 0,
+          "dtm": 44,
+          "other": 19
+        }
+      },
+      "08": {
+        "2016-2017": {
+          "awards": 6913,
+          "pathways": 0,
+          "legacy": 6717,
+          "dtm": 195,
+          "other": 1
+        },
+        "2017-2018": {
+          "awards": 7059,
+          "pathways": 17,
+          "legacy": 6850,
+          "dtm": 192,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 8614,
+          "pathways": 4041,
+          "legacy": 4330,
+          "dtm": 225,
+          "other": 18
+        },
+        "2019-2020": {
+          "awards": 12426,
+          "pathways": 7582,
+          "legacy": 4311,
+          "dtm": 465,
+          "other": 68
+        },
+        "2020-2021": {
+          "awards": 11392,
+          "pathways": 10595,
+          "legacy": 396,
+          "dtm": 291,
+          "other": 110
+        },
+        "2021-2022": {
+          "awards": 9332,
+          "pathways": 9102,
+          "legacy": 0,
+          "dtm": 60,
+          "other": 170
+        },
+        "2022-2023": {
+          "awards": 8081,
+          "pathways": 7808,
+          "legacy": 0,
+          "dtm": 82,
+          "other": 191
+        },
+        "2023-2024": {
+          "awards": 7977,
+          "pathways": 7707,
+          "legacy": 0,
+          "dtm": 70,
+          "other": 200
+        },
+        "2024-2025": {
+          "awards": 10243,
+          "pathways": 9951,
+          "legacy": 0,
+          "dtm": 118,
+          "other": 174
+        },
+        "2025-2026": {
+          "awards": 9316,
+          "pathways": 9087,
+          "legacy": 0,
+          "dtm": 108,
+          "other": 121
+        },
+        "2026-2027": {
+          "awards": 2534,
+          "pathways": 2460,
+          "legacy": 0,
+          "dtm": 45,
+          "other": 29
+        }
+      },
+      "09": {
+        "2016-2017": {
+          "awards": 4176,
+          "pathways": 0,
+          "legacy": 4071,
+          "dtm": 105,
+          "other": 0
+        },
+        "2017-2018": {
+          "awards": 4039,
+          "pathways": 9,
+          "legacy": 3920,
+          "dtm": 110,
+          "other": 0
+        },
+        "2018-2019": {
+          "awards": 7055,
+          "pathways": 3524,
+          "legacy": 3354,
+          "dtm": 154,
+          "other": 23
+        },
+        "2019-2020": {
+          "awards": 8748,
+          "pathways": 5150,
+          "legacy": 3227,
+          "dtm": 344,
+          "other": 27
+        },
+        "2020-2021": {
+          "awards": 8094,
+          "pathways": 7647,
+          "legacy": 210,
+          "dtm": 160,
+          "other": 77
+        },
+        "2021-2022": {
+          "awards": 6374,
+          "pathways": 6233,
+          "legacy": 0,
+          "dtm": 32,
+          "other": 109
+        },
+        "2022-2023": {
+          "awards": 5516,
+          "pathways": 5376,
+          "legacy": 0,
+          "dtm": 38,
+          "other": 102
+        },
+        "2023-2024": {
+          "awards": 5587,
+          "pathways": 5429,
+          "legacy": 0,
+          "dtm": 40,
+          "other": 118
+        },
+        "2024-2025": {
+          "awards": 6215,
+          "pathways": 6102,
+          "legacy": 0,
+          "dtm": 55,
+          "other": 58
+        },
+        "2025-2026": {
+          "awards": 5775,
+          "pathways": 5706,
+          "legacy": 0,
+          "dtm": 43,
+          "other": 26
+        },
+        "2026-2027": {
+          "awards": 1620,
+          "pathways": 1567,
+          "legacy": 0,
+          "dtm": 41,
+          "other": 12
+        }
+      }
+    }
+  }
+}

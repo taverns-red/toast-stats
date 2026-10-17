@@ -1,0 +1,685 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "education-rollup"
+  },
+  "programYear": "2026-2027",
+  "source": "reports",
+  "sourceDate": "2026-10-16",
+  "districts": {
+    "21": {
+      "status": "available",
+      "region": "01",
+      "awards": {
+        "totals": {
+          "awards": 337,
+          "pathways": 332,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 3
+        },
+        "pathwaysMatrix": {
+          "CES": [4, 0, 0, 0, 0],
+          "DL": [16, 7, 12, 7, 6],
+          "EC": [0, 0, 3, 3, 2],
+          "EH": [20, 10, 1, 5, 3],
+          "IP": [2, 3, 4, 2, 4],
+          "LD": [0, 1, 0, 0, 2],
+          "MS": [8, 7, 4, 3, 3],
+          "PI": [16, 8, 9, 2, 0],
+          "PM": [43, 20, 28, 17, 9],
+          "SR": [2, 1, 2, 2, 1],
+          "TC": [1, 1, 2, 1, 2],
+          "VC": [8, 2, 4, 5, 4]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 3
+        },
+        "clubsWithAward": 107,
+        "membersWithAward": 285,
+        "tripleCrownAchievers": 7
+      }
+    },
+    "25": {
+      "status": "available",
+      "region": "03",
+      "awards": {
+        "totals": {
+          "awards": 224,
+          "pathways": 221,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 1
+        },
+        "pathwaysMatrix": {
+          "CES": [1, 0, 0, 0, 0],
+          "DL": [6, 5, 10, 4, 0],
+          "EC": [0, 1, 0, 0, 0],
+          "EH": [7, 4, 4, 2, 6],
+          "IP": [1, 1, 2, 2, 2],
+          "LD": [2, 0, 2, 3, 1],
+          "MS": [12, 6, 5, 6, 4],
+          "PI": [7, 4, 2, 2, 2],
+          "PM": [24, 15, 20, 12, 8],
+          "SR": [0, 1, 4, 2, 0],
+          "TC": [2, 3, 0, 3, 0],
+          "VC": [4, 1, 3, 2, 1]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 1
+        },
+        "clubsWithAward": 77,
+        "membersWithAward": 198,
+        "tripleCrownAchievers": 8
+      }
+    },
+    "26": {
+      "status": "available",
+      "region": "03",
+      "awards": {
+        "totals": {
+          "awards": 261,
+          "pathways": 259,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 0
+        },
+        "pathwaysMatrix": {
+          "BT": [3, 2, 1, 0, 0],
+          "CES": [2, 1, 0, 0, 0],
+          "DL": [10, 7, 3, 4, 2],
+          "EC": [0, 0, 1, 1, 0],
+          "EH": [6, 4, 2, 2, 7],
+          "IP": [1, 3, 1, 3, 2],
+          "LD": [0, 1, 0, 0, 1],
+          "MS": [5, 5, 7, 7, 2],
+          "PI": [7, 2, 4, 4, 3],
+          "PM": [32, 22, 24, 15, 11],
+          "SR": [0, 0, 1, 1, 0],
+          "TC": [1, 1, 1, 2, 0],
+          "VC": [9, 11, 5, 3, 4]
+        },
+        "legacyByCode": {},
+        "otherByCode": {},
+        "clubsWithAward": 86,
+        "membersWithAward": 218,
+        "tripleCrownAchievers": 10
+      }
+    },
+    "49": {
+      "status": "available",
+      "region": "01",
+      "awards": {
+        "totals": {
+          "awards": 87,
+          "pathways": 86,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 0
+        },
+        "pathwaysMatrix": {
+          "CES": [1, 0, 0, 0, 0],
+          "DL": [1, 1, 1, 1, 1],
+          "EC": [0, 0, 1, 1, 0],
+          "EH": [2, 1, 0, 0, 1],
+          "IP": [2, 0, 0, 3, 1],
+          "LD": [1, 1, 2, 3, 1],
+          "MS": [5, 1, 1, 0, 2],
+          "PI": [5, 1, 1, 2, 1],
+          "PM": [11, 4, 4, 1, 6],
+          "SR": [0, 0, 1, 0, 0],
+          "TC": [1, 1, 2, 1, 1],
+          "VC": [4, 1, 2, 0, 1]
+        },
+        "legacyByCode": {},
+        "otherByCode": {},
+        "clubsWithAward": 33,
+        "membersWithAward": 67,
+        "tripleCrownAchievers": 5
+      }
+    },
+    "55": {
+      "status": "available",
+      "region": "03",
+      "awards": {
+        "totals": {
+          "awards": 244,
+          "pathways": 238,
+          "legacy": 0,
+          "dtm": 3,
+          "other": 3
+        },
+        "pathwaysMatrix": {
+          "BT": [2, 1, 1, 0, 0],
+          "CES": [3, 0, 0, 0, 0],
+          "DL": [20, 8, 5, 4, 1],
+          "EC": [1, 0, 1, 1, 1],
+          "EH": [5, 4, 6, 5, 2],
+          "IP": [2, 1, 1, 2, 2],
+          "LD": [1, 0, 0, 0, 1],
+          "MS": [13, 2, 7, 3, 3],
+          "PI": [9, 5, 5, 3, 2],
+          "PM": [29, 18, 19, 10, 3],
+          "SR": [2, 1, 0, 0, 1],
+          "TC": [1, 1, 0, 0, 1],
+          "VC": [8, 3, 6, 2, 0]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 3
+        },
+        "clubsWithAward": 70,
+        "membersWithAward": 197,
+        "tripleCrownAchievers": 8
+      }
+    },
+    "101": {
+      "status": "available",
+      "region": "01",
+      "awards": {
+        "totals": {
+          "awards": 210,
+          "pathways": 208,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 1
+        },
+        "pathwaysMatrix": {
+          "BT": [1, 0, 0, 0, 0],
+          "DL": [11, 6, 7, 4, 2],
+          "EC": [1, 2, 2, 3, 1],
+          "EH": [4, 6, 5, 2, 2],
+          "IP": [1, 0, 2, 1, 1],
+          "LD": [1, 1, 1, 1, 1],
+          "MS": [5, 4, 4, 3, 0],
+          "PI": [8, 7, 4, 0, 2],
+          "PM": [32, 15, 20, 7, 1],
+          "SR": [1, 0, 2, 1, 2],
+          "TC": [0, 1, 0, 0, 1],
+          "VC": [6, 3, 4, 4, 2]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 1
+        },
+        "clubsWithAward": 79,
+        "membersWithAward": 175,
+        "tripleCrownAchievers": 11
+      }
+    },
+    "205": {
+      "status": "available",
+      "region": "01",
+      "awards": {
+        "totals": {
+          "awards": 194,
+          "pathways": 191,
+          "legacy": 0,
+          "dtm": 1,
+          "other": 2
+        },
+        "pathwaysMatrix": {
+          "BT": [1, 0, 0, 0, 0],
+          "CES": [1, 0, 0, 0, 0],
+          "DL": [8, 6, 2, 2, 6],
+          "EC": [0, 1, 0, 1, 0],
+          "EH": [11, 5, 6, 2, 2],
+          "IP": [2, 1, 1, 3, 1],
+          "LD": [0, 0, 0, 1, 1],
+          "MS": [6, 4, 4, 5, 3],
+          "PI": [6, 4, 2, 2, 1],
+          "PM": [27, 10, 15, 6, 5],
+          "SR": [3, 1, 1, 0, 2],
+          "TC": [2, 0, 1, 2, 0],
+          "VC": [4, 6, 1, 1, 3]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 2
+        },
+        "clubsWithAward": 66,
+        "membersWithAward": 167,
+        "tripleCrownAchievers": 5
+      }
+    },
+    "206": {
+      "status": "available",
+      "region": "01",
+      "awards": {
+        "totals": {
+          "awards": 251,
+          "pathways": 245,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 4
+        },
+        "pathwaysMatrix": {
+          "CES": [1, 0, 0, 1, 0],
+          "DL": [13, 7, 2, 2, 2],
+          "EC": [1, 1, 2, 4, 2],
+          "EH": [7, 6, 6, 2, 4],
+          "IP": [2, 3, 2, 3, 2],
+          "LD": [1, 5, 1, 1, 2],
+          "MS": [12, 4, 5, 3, 4],
+          "PI": [8, 5, 4, 1, 1],
+          "PM": [31, 25, 15, 7, 9],
+          "SR": [0, 0, 2, 1, 0],
+          "TC": [0, 2, 1, 0, 1],
+          "VC": [6, 4, 6, 1, 2]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 4
+        },
+        "clubsWithAward": 103,
+        "membersWithAward": 201,
+        "tripleCrownAchievers": 10
+      }
+    },
+    "207": {
+      "status": "available",
+      "region": "01",
+      "awards": {
+        "totals": {
+          "awards": 198,
+          "pathways": 197,
+          "legacy": 0,
+          "dtm": 0,
+          "other": 1
+        },
+        "pathwaysMatrix": {
+          "BT": [1, 1, 0, 0, 0],
+          "CES": [3, 1, 1, 1, 0],
+          "DL": [9, 2, 2, 0, 0],
+          "EC": [1, 2, 3, 2, 1],
+          "EH": [10, 3, 1, 0, 1],
+          "IP": [1, 1, 0, 1, 2],
+          "LD": [0, 0, 1, 0, 2],
+          "MS": [9, 4, 2, 2, 2],
+          "PI": [8, 3, 3, 0, 2],
+          "PM": [33, 22, 11, 12, 5],
+          "SR": [0, 0, 1, 0, 1],
+          "TC": [0, 0, 2, 0, 2],
+          "VC": [9, 4, 2, 3, 2]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 1
+        },
+        "clubsWithAward": 75,
+        "membersWithAward": 170,
+        "tripleCrownAchievers": 5
+      }
+    },
+    "208": {
+      "status": "available",
+      "region": "03",
+      "awards": {
+        "totals": {
+          "awards": 228,
+          "pathways": 222,
+          "legacy": 0,
+          "dtm": 4,
+          "other": 2
+        },
+        "pathwaysMatrix": {
+          "CES": [2, 0, 0, 0, 0],
+          "DL": [8, 6, 2, 4, 4],
+          "EC": [1, 0, 1, 5, 1],
+          "EH": [4, 10, 6, 4, 2],
+          "IP": [1, 4, 2, 3, 2],
+          "LD": [3, 0, 0, 2, 0],
+          "MS": [7, 2, 4, 3, 3],
+          "PI": [8, 7, 4, 3, 2],
+          "PM": [32, 15, 12, 7, 3],
+          "SR": [1, 2, 3, 3, 2],
+          "TC": [0, 0, 0, 2, 2],
+          "VC": [6, 5, 3, 2, 2]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 2
+        },
+        "clubsWithAward": 89,
+        "membersWithAward": 205,
+        "tripleCrownAchievers": 3
+      }
+    },
+    "209": {
+      "status": "available",
+      "region": "03",
+      "awards": {
+        "totals": {
+          "awards": 255,
+          "pathways": 248,
+          "legacy": 0,
+          "dtm": 6,
+          "other": 1
+        },
+        "pathwaysMatrix": {
+          "BT": [2, 1, 0, 0, 0],
+          "CES": [2, 1, 0, 0, 0],
+          "DL": [12, 5, 5, 2, 4],
+          "EC": [1, 2, 3, 2, 1],
+          "EH": [11, 6, 5, 7, 2],
+          "IP": [0, 2, 2, 2, 4],
+          "LD": [0, 1, 1, 1, 2],
+          "MS": [7, 7, 5, 3, 2],
+          "PI": [3, 5, 6, 3, 1],
+          "PM": [29, 17, 12, 6, 8],
+          "SR": [2, 2, 1, 1, 2],
+          "TC": [2, 1, 2, 1, 2],
+          "VC": [7, 6, 5, 8, 3]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 1
+        },
+        "clubsWithAward": 97,
+        "membersWithAward": 212,
+        "tripleCrownAchievers": 8
+      }
+    },
+    "210": {
+      "status": "available",
+      "region": "03",
+      "awards": {
+        "totals": {
+          "awards": 162,
+          "pathways": 158,
+          "legacy": 0,
+          "dtm": 2,
+          "other": 2
+        },
+        "pathwaysMatrix": {
+          "CES": [2, 0, 0, 0, 0],
+          "DL": [2, 3, 1, 3, 2],
+          "EC": [0, 0, 0, 1, 0],
+          "EH": [10, 4, 4, 1, 3],
+          "IP": [1, 0, 2, 2, 2],
+          "LD": [1, 1, 0, 3, 2],
+          "MS": [2, 5, 2, 1, 2],
+          "PI": [9, 6, 1, 3, 0],
+          "PM": [18, 16, 12, 5, 7],
+          "SR": [1, 0, 0, 0, 2],
+          "TC": [0, 1, 1, 0, 2],
+          "VC": [4, 2, 2, 4, 0]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 2
+        },
+        "clubsWithAward": 68,
+        "membersWithAward": 141,
+        "tripleCrownAchievers": 4
+      }
+    },
+    "02": {
+      "status": "available",
+      "region": "01",
+      "awards": {
+        "totals": {
+          "awards": 285,
+          "pathways": 280,
+          "legacy": 0,
+          "dtm": 5,
+          "other": 0
+        },
+        "pathwaysMatrix": {
+          "CES": [1, 0, 1, 0, 0],
+          "DL": [14, 4, 5, 6, 1],
+          "EC": [1, 2, 1, 3, 2],
+          "EH": [11, 7, 6, 7, 5],
+          "IP": [1, 2, 4, 3, 2],
+          "LD": [3, 4, 2, 0, 1],
+          "MS": [7, 8, 7, 2, 1],
+          "PI": [7, 5, 6, 2, 1],
+          "PM": [40, 26, 16, 10, 3],
+          "SR": [0, 2, 2, 1, 2],
+          "TC": [2, 1, 0, 0, 2],
+          "VC": [9, 5, 4, 4, 6]
+        },
+        "legacyByCode": {},
+        "otherByCode": {},
+        "clubsWithAward": 114,
+        "membersWithAward": 248,
+        "tripleCrownAchievers": 10
+      }
+    },
+    "06": {
+      "status": "available",
+      "region": "03",
+      "awards": {
+        "totals": {
+          "awards": 244,
+          "pathways": 238,
+          "legacy": 0,
+          "dtm": 3,
+          "other": 3
+        },
+        "pathwaysMatrix": {
+          "BT": [3, 0, 0, 0, 0],
+          "CES": [2, 0, 0, 0, 0],
+          "DL": [5, 3, 4, 3, 1],
+          "EC": [4, 1, 1, 3, 4],
+          "EH": [6, 5, 3, 1, 1],
+          "IP": [0, 1, 2, 4, 0],
+          "LD": [0, 1, 2, 1, 3],
+          "MS": [10, 0, 12, 4, 0],
+          "PI": [11, 5, 2, 2, 1],
+          "PM": [40, 18, 19, 6, 6],
+          "SR": [4, 1, 1, 2, 1],
+          "TC": [2, 2, 0, 3, 0],
+          "VC": [8, 3, 6, 3, 2]
+        },
+        "legacyByCode": {},
+        "otherByCode": {
+          "PWMENTORPGM": 3
+        },
+        "clubsWithAward": 109,
+        "membersWithAward": 217,
+        "tripleCrownAchievers": 7
+      }
+    }
+  },
+  "regions": {
+    "01": {
+      "totals": {
+        "awards": 1562,
+        "pathways": 1539,
+        "legacy": 0,
+        "dtm": 12,
+        "other": 11
+      },
+      "pathwaysMatrix": {
+        "BT": [3, 1, 0, 0, 0],
+        "CES": [11, 1, 2, 2, 0],
+        "DL": [72, 33, 31, 22, 18],
+        "EC": [4, 8, 12, 17, 8],
+        "EH": [65, 38, 25, 18, 18],
+        "IP": [11, 10, 13, 16, 13],
+        "LD": [6, 12, 7, 6, 10],
+        "MS": [52, 32, 27, 18, 15],
+        "PI": [58, 33, 29, 9, 8],
+        "PM": [217, 122, 109, 60, 38],
+        "SR": [6, 4, 11, 5, 8],
+        "TC": [6, 6, 8, 4, 9],
+        "VC": [46, 25, 23, 18, 20]
+      },
+      "legacyByCode": {},
+      "otherByCode": {
+        "PWMENTORPGM": 11
+      },
+      "clubsWithAward": 577,
+      "membersWithAward": 1313,
+      "tripleCrownAchievers": 53,
+      "districtsAvailable": ["02", "101", "205", "206", "207", "21", "49"],
+      "districtsNotAvailable": []
+    },
+    "03": {
+      "totals": {
+        "awards": 1618,
+        "pathways": 1584,
+        "legacy": 0,
+        "dtm": 22,
+        "other": 12
+      },
+      "pathwaysMatrix": {
+        "BT": [10, 4, 2, 0, 0],
+        "CES": [14, 2, 0, 0, 0],
+        "DL": [63, 37, 30, 24, 14],
+        "EC": [7, 4, 7, 13, 7],
+        "EH": [49, 37, 30, 22, 23],
+        "IP": [6, 12, 12, 18, 14],
+        "LD": [7, 4, 5, 10, 10],
+        "MS": [56, 27, 42, 27, 16],
+        "PI": [54, 34, 24, 20, 11],
+        "PM": [204, 121, 118, 61, 46],
+        "SR": [10, 7, 10, 9, 8],
+        "TC": [8, 9, 4, 11, 7],
+        "VC": [46, 31, 30, 24, 12]
+      },
+      "legacyByCode": {},
+      "otherByCode": {
+        "PWMENTORPGM": 12
+      },
+      "clubsWithAward": 596,
+      "membersWithAward": 1388,
+      "tripleCrownAchievers": 48,
+      "districtsAvailable": ["06", "208", "209", "210", "25", "26", "55"],
+      "districtsNotAvailable": []
+    }
+  },
+  "regionsUnassigned": ["U"],
+  "world": {
+    "totals": {
+      "awards": 26497,
+      "pathways": 25847,
+      "legacy": 0,
+      "dtm": 403,
+      "other": 247
+    },
+    "pathwaysMatrix": {
+      "BT": [54, 18, 15, 4, 3],
+      "CES": [115, 34, 12, 5, 1],
+      "DL": [1475, 782, 596, 421, 295],
+      "EC": [75, 100, 164, 177, 138],
+      "EH": [800, 472, 388, 275, 221],
+      "IP": [125, 132, 221, 214, 214],
+      "LD": [102, 119, 145, 183, 163],
+      "MS": [904, 555, 508, 333, 240],
+      "PI": [1036, 632, 434, 279, 200],
+      "PM": [4039, 2136, 1645, 1015, 650],
+      "SR": [66, 89, 140, 118, 106],
+      "TC": [65, 60, 68, 101, 74],
+      "VC": [778, 493, 362, 277, 186]
+    },
+    "legacyByCode": {},
+    "otherByCode": {
+      "EOM": 16,
+      "PWMENTORPGM": 231
+    },
+    "clubsWithAward": 8542,
+    "membersWithAward": 22370,
+    "tripleCrownAchievers": 801,
+    "districtsAvailable": [
+      "02",
+      "03",
+      "06",
+      "101",
+      "102",
+      "104",
+      "105",
+      "107",
+      "109",
+      "113",
+      "114",
+      "116",
+      "118",
+      "123",
+      "127",
+      "128",
+      "129",
+      "130",
+      "17",
+      "20",
+      "201",
+      "202",
+      "203",
+      "205",
+      "206",
+      "207",
+      "208",
+      "209",
+      "21",
+      "210",
+      "211",
+      "212",
+      "213",
+      "214",
+      "215",
+      "216",
+      "217",
+      "218",
+      "219",
+      "220",
+      "221",
+      "222",
+      "223",
+      "224",
+      "225",
+      "226",
+      "227",
+      "228",
+      "229",
+      "230",
+      "231",
+      "25",
+      "26",
+      "30",
+      "31",
+      "34",
+      "41",
+      "46",
+      "47",
+      "49",
+      "50",
+      "51",
+      "53",
+      "55",
+      "56",
+      "59",
+      "60",
+      "61",
+      "67",
+      "69",
+      "70",
+      "71",
+      "72",
+      "73",
+      "74",
+      "75",
+      "76",
+      "77",
+      "79",
+      "80",
+      "82",
+      "83",
+      "84",
+      "85",
+      "86",
+      "87",
+      "88",
+      "89",
+      "91",
+      "93",
+      "94",
+      "95",
+      "F",
+      "U"
+    ],
+    "districtsNotAvailable": []
+  }
+}
