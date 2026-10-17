@@ -18,6 +18,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react'
 import {
@@ -108,7 +109,10 @@ const renderAt = (url: string) => {
 }
 
 const rowsOf = async () => {
-  const list = await screen.findByRole('list', { name: /^Top clubs by/ })
+  // "Top clubs by members", or "13 clubs match “ottawa”" while searching.
+  const list = await screen.findByRole('list', {
+    name: /^(Top clubs by|\d+ clubs? match)/,
+  })
   return within(list).getAllByTestId('mobile-row')
 }
 
@@ -152,7 +156,8 @@ describe('RegionMapPage', () => {
     const box = screen.getByRole('searchbox', { name: /Search clubs/ })
     expect(box).toHaveValue('ottawa')
     fireEvent.change(box, { target: { value: '5097' } })
-    expect(search()).toBe('?q=5097')
+    // The box is debounced (ClubSearchBox, #814): the URL follows.
+    await waitFor(() => expect(search()).toBe('?q=5097'))
     const rows = await rowsOf()
     expect(rows).toHaveLength(1)
     expect(rows[0]).toHaveTextContent('Sainte-Foy')

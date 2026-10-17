@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { PHONE_SECTION_BAR_QUERY } from '../../config/districtSections'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { SectionBar } from '../SectionBar'
-import { GlobeIcon, TrendsIcon } from '../SectionBarIcons'
+import { GlobeIcon, MapIcon, TrendsIcon } from '../SectionBarIcons'
 
 /* RegionSubnav (#1815) — Rankings / Health & compliance for `/regions` and
    `/region/:n`. Real sibling routes (ADR-005), not tabs: the back button,
@@ -29,18 +29,31 @@ export const RegionSubnav: React.FC<{
   }
   const qs = kept.toString() ? `?${kept.toString()}` : ''
   const links = [
-    { label: 'Rankings', to: `${base}${qs}`, end: true },
-    { label: 'Health & compliance', to: `${base}/health${qs}`, end: false },
+    { label: 'Rankings', to: `${base}${qs}`, end: true, icon: <TrendsIcon /> },
+    {
+      label: 'Health & compliance',
+      to: `${base}/health${qs}`,
+      end: false,
+      icon: <GlobeIcon />,
+    },
+    // A region's club map (#1808); the all-regions explorer is #1809.
+    ...(base.startsWith('/region/')
+      ? [
+          {
+            label: 'Club map',
+            to: `${base}/map${qs}`,
+            end: false,
+            icon: <MapIcon />,
+          },
+        ]
+      : []),
   ]
   const phone = useMediaQuery(PHONE_SECTION_BAR_QUERY)
   if (phone) {
     return (
       <SectionBar
         label={label}
-        primary={[
-          { ...links[0]!, icon: <TrendsIcon /> },
-          { ...links[1]!, icon: <GlobeIcon /> },
-        ]}
+        primary={links}
         more={[]}
         testId="region-section-bar"
       />

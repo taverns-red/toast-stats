@@ -218,12 +218,12 @@ export function extendedModel(
 }
 
 /** Apply every extended legend key in the URL (AND across, OR within). */
-export function applyExtendedFacets(
-  clubs: readonly ClubTrend[],
+export function applyExtendedFacets<T extends ClubTrend>(
+  clubs: readonly T[],
   params: URLSearchParams,
   date: string,
   reports?: DistrictReportsDataset | null
-): ClubTrend[] {
+): T[] {
   let out = [...clubs]
   for (const param of EXTENDED_FACET_PARAMS) {
     const wanted = new Set(facetValues(params, param))

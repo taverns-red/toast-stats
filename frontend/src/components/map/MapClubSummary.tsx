@@ -60,7 +60,10 @@ export const MapClubSummary: React.FC<{
    *  report it so a later pointer tap leaves focus where it is. */
   autoFocus?: boolean
   onAutoFocused?: () => void
-}> = ({ clubs, districtId, autoFocus = false, onAutoFocused }) => {
+  /** A region map's clubs span districts (#1808): each club's own, named
+   *  in its place line and its link. */
+  districtOf?: ((club: ClubTrend) => string) | undefined
+}> = ({ clubs, districtId, autoFocus = false, onAutoFocused, districtOf }) => {
   const first = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
     if (!autoFocus || !first.current) return
@@ -74,6 +77,7 @@ export const MapClubSummary: React.FC<{
         const ti = toastmastersClubPageUrl(club.clubId)
         const counts = countsLine(club)
         const meeting = meetingLine(club)
+        const district = districtOf?.(club)
         return (
           <article key={club.clubId} className="map-club__item">
             <h3
@@ -84,7 +88,13 @@ export const MapClubSummary: React.FC<{
               {club.clubName}
             </h3>
             <p className="map-club__place">
-              {[club.divisionName, club.areaName].filter(Boolean).join(' · ')}
+              {[
+                district && `District ${district}`,
+                club.divisionName,
+                club.areaName,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </p>
             {counts && <p className="map-club__line">{counts}</p>}
             {meeting && <p className="map-club__line">{meeting}</p>}
@@ -96,7 +106,7 @@ export const MapClubSummary: React.FC<{
             </dl>
             <div className="map-club__links">
               <Link
-                to={`/district/${districtId}/club/${club.clubId}`}
+                to={`/district/${district ?? districtId}/club/${club.clubId}`}
                 className="map-club__link"
               >
                 Open club page →

@@ -1,0 +1,145 @@
+/* Region club explorer (#1808). The district map's tokens and classes
+   (districtMap.css) carry the pills, chips, legend and map box; these rules
+   only lay the explorer out. App-palette tokens only (#2080): no new
+   colours, no --rt-stats; dark mode follows the [data-theme] remaps (R10). */
+
+.region-map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rt-space-3);
+  margin-top: var(--rt-space-3);
+  color: var(--map-text);
+}
+
+/* Three numbers, one row, at every width (mobile review §6.2). */
+.region-map__summary.rollup-kpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.region-map__summary .rollup-kpi__value {
+  overflow-wrap: anywhere;
+}
+
+/* Search and the metric chips stay in reach while the list scrolls. */
+.region-map__controls {
+  position: sticky;
+  top: var(--region-map-sticky-top, 0px);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rt-space-2);
+  padding: var(--rt-space-2) 0;
+  background: var(--bg);
+}
+
+.region-map__controls .clubs-search {
+  max-width: 28rem;
+  margin-bottom: 0;
+}
+
+/* Inputs at 16 px: iOS does not zoom the page on focus. */
+.region-map__controls .clubs-search__input {
+  font-size: 16px;
+}
+
+.region-map__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.region-map__metrics {
+  flex-wrap: nowrap;
+}
+
+.region-map__list-title {
+  margin: 0 0 var(--rt-space-2);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.region-map__empty {
+  margin: 0;
+  padding: var(--rt-space-4);
+  border: 1px solid var(--map-border);
+  border-radius: var(--rt-radius-md);
+  font-size: 16px;
+  color: var(--ink-2);
+}
+
+.region-map__unmapped {
+  margin-top: var(--rt-space-2);
+}
+
+/* The reserved slot while the shard loads (Lesson 107): the summary, then
+   the controls' and the list's footprint. */
+.region-map__skeleton-body {
+  height: 70dvh;
+  margin-top: var(--rt-space-3);
+  border-radius: var(--rt-radius-md);
+  background: var(--surface-2, var(--surface));
+}
+
+@media (min-width: 768px) {
+  .region-map__body.district-map__body {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+}
+
+/* Phone: list first, the map one tap away. The floating button clears the
+   bottom section bar and the home indicator. */
+.region-map__map-fab {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(56px + 16px + env(safe-area-inset-bottom, 0px));
+  z-index: 46;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  height: 56px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--tm-loyal-blue);
+  /* --bg on the accent clears 4.5:1 in both themes (the accent lightens
+     in dark mode, --bg darkens). */
+  color: var(--bg);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 6px 16px rgb(15 23 32 / 0.24);
+}
+
+.region-map__map-fab:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* The phone's full-screen map (`?view=map`): above the section bar (45),
+   below the bottom sheets (80). */
+.region-map__fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: var(--bg);
+}
+
+.region-map__fullscreen-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--map-border);
+}
+
+.region-map__fullscreen .region-map__canvas {
+  flex: 1;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+}

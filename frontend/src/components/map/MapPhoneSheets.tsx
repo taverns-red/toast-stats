@@ -1,6 +1,6 @@
 import React from 'react'
 import { BottomSheet } from '../BottomSheet'
-import { ModePicker } from './MapModePicker'
+import { ModePicker, type ModeList } from './MapModePicker'
 import type { MapColorMode } from './pinModes'
 
 /* The map's phone sheets (#1784, #1788): the mode picker, the full legend
@@ -13,6 +13,8 @@ export interface MapPhoneSheetsProps {
   onClose: () => void
   mode: MapColorMode
   onModeChange: (m: MapColorMode) => void
+  /** The modes on offer (the region map's own, #1808); default all. */
+  modes?: ModeList | undefined
   legendTitle: string
   legend: React.ReactNode
   /** Clubs at the tapped pin; the summary itself is the page's lazy one. */
@@ -26,6 +28,7 @@ export const MapPhoneSheets: React.FC<MapPhoneSheetsProps> = ({
   onClose,
   mode,
   onModeChange,
+  modes,
   legendTitle,
   legend,
   selectedCount,
@@ -38,7 +41,7 @@ export const MapPhoneSheets: React.FC<MapPhoneSheetsProps> = ({
       onClose={onClose}
       title="Colour pins by"
     >
-      <ModePicker mode={mode} onChange={onModeChange} />
+      <ModePicker mode={mode} onChange={onModeChange} modes={modes} />
     </BottomSheet>
     <BottomSheet
       isOpen={sheet === 'legend'}

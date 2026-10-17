@@ -113,6 +113,10 @@ const RegionsPage = React.lazy(() => import('./pages/RegionsPage'))
 const RegionHealthPage = React.lazy(() => import('./pages/RegionHealthPage'))
 const WorldHealthPage = React.lazy(() => import('./pages/WorldHealthPage'))
 
+// Code-split: RegionMapPage — the region club explorer (#1808). Like the
+// district map, its chunk lazy-imports MapLibre (ADR-016).
+const RegionMapPage = React.lazy(() => import('./pages/RegionMapPage'))
+
 // Code-split: DivisionPage — /district/:districtId/division/:divId (#424)
 const DivisionPage = React.lazy(() => import('./pages/DivisionPage'))
 
@@ -392,6 +396,16 @@ const router = createBrowserRouter(
             <CanonicalRegionRoute>
               <Suspense fallback={<PageLoadingFallback />}>
                 <RegionHealthPage />
+              </Suspense>
+            </CanonicalRegionRoute>
+          ),
+        },
+        {
+          path: 'region/:n/map',
+          element: (
+            <CanonicalRegionRoute>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <RegionMapPage />
               </Suspense>
             </CanonicalRegionRoute>
           ),
