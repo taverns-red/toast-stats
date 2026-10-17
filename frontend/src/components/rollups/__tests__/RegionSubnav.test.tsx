@@ -3,12 +3,20 @@
  * `/regions` and `/region/:n` (ADR-005: real routes, no tabs). Carries the
  * page's `?py=` / `?date=` so switching subpage keeps the selected year.
  */
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { RegionSubnav } from '../RegionSubnav'
 
-afterEach(cleanup)
+const phone = vi.hoisted(() => ({ value: false }))
+vi.mock('../../../hooks/useMediaQuery', () => ({
+  useMediaQuery: () => phone.value,
+}))
+
+afterEach(() => {
+  cleanup()
+  phone.value = false
+})
 
 describe('RegionSubnav', () => {
   it('links the two subpages, keeping py and date and dropping the rest', () => {
@@ -35,5 +43,21 @@ describe('RegionSubnav', () => {
     )
     expect(health).toHaveAttribute('aria-current', 'page')
     expect(rankings).not.toHaveAttribute('aria-current')
+  })
+
+  it('is the bottom section bar on an upright phone, so content starts under the context bar', () => {
+    phone.value = true
+    render(
+      <MemoryRouter initialEntries={['/region/07?py=2025-2026']}>
+        <RegionSubnav base="/region/07" label="Region 07 sections" />
+      </MemoryRouter>
+    )
+    const nav = screen.getByRole('navigation', { name: 'Region 07 sections' })
+    expect(nav).toHaveClass('section-bar')
+    expect(screen.getByRole('link', { name: 'Rankings' })).toHaveAttribute(
+      'href',
+      '/region/07?py=2025-2026'
+    )
+    expect(screen.queryByRole('button', { name: /^More/ })).toBeNull()
   })
 })
