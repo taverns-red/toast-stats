@@ -329,6 +329,57 @@ function historyLookup(
   return id => byKey.get(canonicalDistrictId(id)) ?? null
 }
 
+export interface RegionMembershipResolution {
+  /** A district's region for the program year; null when none usable. */
+  readonly regionOf: ((districtId: string) => string | null) | null
+  /** Why there is no membership; null when there is. */
+  readonly note: string | null
+  readonly membership: {
+    source: typeof REGION_ROLLUPS_REGION_SOURCE
+    asOf: string
+    programYear: string
+  } | null
+}
+
+/**
+ * Region membership for one program year from the district → region
+ * history (#1820), or the reason there is none. Shared by the region
+ * rollups (#1799) and the per-region club shards (#1800), so both place
+ * every district in the same region for the same date.
+ */
+export function resolveRegionMembership(
+  history: DistrictRegionHistory | null,
+  programYear: string,
+  historyNote?: string
+): RegionMembershipResolution {
+  if (!history) {
+    return {
+      regionOf: null,
+      note:
+        historyNote ??
+        `no ${REGION_ROLLUPS_REGION_SOURCE} was available to this run; region membership is unknown`,
+      membership: null,
+    }
+  }
+  if (!history.programYears.includes(programYear)) {
+    return {
+      regionOf: null,
+      note: `${REGION_ROLLUPS_REGION_SOURCE} (asOf ${history.asOf}) has no ${programYear} membership yet`,
+      membership: null,
+    }
+  }
+  const lookup = historyLookup(history)
+  return {
+    regionOf: id => lookup(id)?.byProgramYear[programYear] ?? null,
+    note: null,
+    membership: {
+      source: REGION_ROLLUPS_REGION_SOURCE,
+      asOf: history.asOf,
+      programYear,
+    },
+  }
+}
+
 function withoutRegion(row: RegionRollupDistrict): RegionRollupFigures {
   const figures: Partial<RegionRollupDistrict> = { ...row }
   delete figures.region
@@ -412,19 +463,15 @@ export function buildRegionRollups(
   }
 
   // Region membership for this program year, or the reason there is none.
-  const history = input.regionHistory
-  let regionNote: string | null = null
-  let regionOf: ((districtId: string) => string | null) | null = null
-  if (!history) {
-    regionNote =
-      input.regionHistoryNote ??
-      `no ${REGION_ROLLUPS_REGION_SOURCE} was available to this run; region membership is unknown`
-  } else if (!history.programYears.includes(programYear)) {
-    regionNote = `${REGION_ROLLUPS_REGION_SOURCE} (asOf ${history.asOf}) has no ${programYear} membership yet`
-  } else {
-    const lookup = historyLookup(history)
-    regionOf = id => lookup(id)?.byProgramYear[programYear] ?? null
-  }
+  const {
+    regionOf,
+    note: regionNote,
+    membership,
+  } = resolveRegionMembership(
+    input.regionHistory,
+    programYear,
+    input.regionHistoryNote
+  )
 
   const districts: Record<string, RegionRollupDistrict> = {}
   const regionMembers = new Map<string, string[]>()
@@ -477,14 +524,7 @@ export function buildRegionRollups(
       snapshotDate,
       programYear,
       generatedAt: input.generatedAt ?? new Date().toISOString(),
-      regionMembership:
-        history && regionOf
-          ? {
-              source: REGION_ROLLUPS_REGION_SOURCE,
-              asOf: history.asOf,
-              programYear,
-            }
-          : null,
+      regionMembership: membership,
       regionMembershipNote: regionNote,
       scope: { excludedDistricts, unassignedDistricts, duplicateClubs },
       world: { districts: perDistrict.length, ...world },
