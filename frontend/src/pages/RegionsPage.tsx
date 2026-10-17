@@ -9,6 +9,7 @@ import { EmptyState } from '../components/ErrorDisplay'
 import { useUrlState } from '../hooks/useUrlState'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { DataControlsBar } from '../components/DataControlsBar'
+import { RegionSubnav } from '../components/rollups/RegionSubnav'
 
 /* Region selection is URL state (#979) so it survives reload, back, and shared
    links — `?region=07`. Module-level options keep a stable reference so
@@ -139,6 +140,8 @@ const RegionsPage: React.FC = () => {
           />
         </div>
       </header>
+
+      <RegionSubnav base="/regions" label="Regions sections" />
 
       <RegionFinder
         regions={regionIds}

@@ -29,6 +29,9 @@ import {
   PriorityColumnsTable,
   type PriorityMetric,
 } from '../components/PriorityColumnsTable'
+import { DistrictTrendSparkline } from '../components/DistrictTrendSparkline'
+import { RegionSubnav } from '../components/rollups/RegionSubnav'
+import { useDistrictTrends } from '../hooks/useDistrictTrends'
 
 const REGION_SORT_FIELDS = [
   'aggregate',
@@ -312,7 +315,9 @@ const RegionIdentity: React.FC<{
   districtId: string
   districtName: string
   rank: { rank: number; isTied: boolean }
-}> = ({ districtId, districtName, rank }) => (
+  /** Membership series (#1815): the row's only chart at 375. */
+  trend: number[] | null | undefined
+}> = ({ districtId, districtName, rank, trend }) => (
   <Link to={`/district/${districtId}`}>
     <span className="font-semibold tabular-nums">
       #{rank.rank}
@@ -324,6 +329,7 @@ const RegionIdentity: React.FC<{
       name={districtName}
       nameClassName="truncate text-sm font-medium"
     />
+    <DistrictTrendSparkline series={trend} />
   </Link>
 )
 
@@ -371,6 +377,22 @@ const RegionPage: React.FC = () => {
   // month-end reconciliation the sourceCsvDate advances past it, so keying on
   // the as-of date 404s and blanks the countdown/tier columns (#1315).
   const { data: awards } = useCompetitiveAwards(effectiveDate)
+
+  // Membership sparkline per district (#1815): the page's own program year
+  // and pinned date (R3). Keyed on the region's ids, not the sort order.
+  const regionDistrictIds = React.useMemo(
+    () =>
+      (data?.rankings ?? [])
+        .filter(r => r.region === region)
+        .map(r => r.districtId)
+        .sort(),
+    [data, region]
+  )
+  const trends = useDistrictTrends(
+    regionDistrictIds,
+    selectedProgramYear.label,
+    effectiveDate
+  )
 
   // Region ranks are ALWAYS computed from aggregate score, regardless of
   // the visible sort order — a district's regional rank is a property of
@@ -567,6 +589,14 @@ const RegionPage: React.FC = () => {
           >
             District
           </th>
+          <th
+            rowSpan={2}
+            scope="col"
+            title="Membership this program year"
+            className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider align-bottom"
+          >
+            Trend
+          </th>
           <SortableHeader<RegionSortField>
             field="world-rank"
             label="World Rank"
@@ -732,6 +762,12 @@ const RegionPage: React.FC = () => {
                   ariaHidden
                 />
               </td>
+              <td
+                data-testid="region-trend-cell"
+                className="px-3 py-4 whitespace-nowrap"
+              >
+                <DistrictTrendSparkline series={trends.get(d.districtId)} />
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 #{d.overallRank}
               </td>
@@ -863,6 +899,10 @@ const RegionPage: React.FC = () => {
         </div>
       </header>
 
+      <RegionSubnav
+        base={`/region/${region}`}
+        label={`Region ${region} sections`}
+      />
       <div
         className="districts-kpi-strip"
         style={{ marginBottom: 24 }}
@@ -905,6 +945,7 @@ const RegionPage: React.FC = () => {
             districtId={d.districtId}
             districtName={d.districtName}
             rank={rankByDistrictId.get(d.districtId)!}
+            trend={trends.get(d.districtId)}
           />
         )}
         metrics={regionMetrics}

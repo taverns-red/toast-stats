@@ -145,16 +145,17 @@ describe('RegionPage priority columns below 768 (#1834)', () => {
     )
   })
 
-  it('Full table opens the complete 19-column table in a full-screen sheet', async () => {
+  it('Full table opens the complete 20-column table in a full-screen sheet', async () => {
     await priorityTable()
     fireEvent.click(screen.getByRole('button', { name: /full table/i }))
     const dialog = screen.getByRole('dialog', { name: /Region 7/ })
     const region = within(dialog).getByRole('region')
     expect(region).toHaveAttribute('tabindex', '0')
     const full = within(region).getByRole('table')
-    // 2 header rows: 10 top cells + 12 sub-header cells; body rows 19 cells.
+    // 2 header rows: 11 top cells + 12 sub-header cells; body rows 20 cells
+    // (the membership Trend column joined in #1815).
     const firstBodyRow = within(full).getAllByRole('row')[2]!
-    expect(within(firstBodyRow).getAllByRole('cell').length).toBe(19)
+    expect(within(firstBodyRow).getAllByRole('cell').length).toBe(20)
     // Sticky identity columns ride along into the sheet.
     expect(
       within(full).getAllByTestId('region-rank-cell')[0]!.className
