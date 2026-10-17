@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { clubIdsMatch } from '@taverns-red/shared-contracts'
 import type { Map as MapLibreMap } from 'maplibre-gl'
@@ -10,8 +10,6 @@ import { useDarkMode } from '../contexts/DarkModeContext'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { RollupPageShell } from '../components/rollups/RollupPageShell'
 import { ClubSearchBox } from '../components/ClubSearchBox'
-import { MobileRowList, type MobileRow } from '../components/MobileRowList'
-import { PinSwatch } from '../components/map/PinSwatch'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 import { useClubPins } from '../components/map/useClubPins'
 import {
@@ -21,6 +19,7 @@ import {
   buildPinFeatures,
 } from '../components/map/pinLayer'
 import {
+  buildModeModel,
   facetValues,
   legendChips,
   toggleFacetValue,
@@ -29,8 +28,8 @@ import {
 } from '../components/map/pinModes'
 import {
   REGION_COLOR_MODES,
+  isRegionLazyMode,
   parseRegionColorMode,
-  regionModel,
 } from '../components/map/regionModes'
 import { normaliseRegionId } from '../utils/regionId'
 import {
@@ -38,11 +37,11 @@ import {
   activeRegionFilterCount,
   applyRegionFilters,
   parseRegionMetric,
-  regionClubMetric,
   regionSummary,
   searchRegionClubs,
   sortRegionClubs,
   toRegionClubs,
+  wantsExtendedFilters,
   type RegionClub,
   type RegionMetric,
 } from '../utils/regionClubs'
@@ -67,6 +66,11 @@ import './regionMap.css'
    map — every club the map draws is reachable there by search and filters,
    and it names each club's status in words. */
 
+// Data-dependent pieces load on mount, in parallel with the shard, not on
+// the route's first load (the map route's 300 KB budget, ADR-016 D2).
+const loadModels = () => import('../components/map/regionModels')
+const loadList = () => import('../components/map/RegionClubList')
+const ClubList = React.lazy(loadList)
 const Chips = React.lazy(() =>
   import('../components/map/MapClubLists').then(m => ({
     default: m.LegendChips,
@@ -112,14 +116,6 @@ const STATUS_OPTIONS = [
 ]
 
 const nf = new Intl.NumberFormat('en-US')
-const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0')
-
-function metricText(c: RegionClub, metric: RegionMetric): string {
-  const v = regionClubMetric(c, metric)
-  if (metric === 'netGrowth') return `net ${signed(v)}`
-  if (metric === 'dcpGoals') return `${v} DCP goal${v === 1 ? '' : 's'}`
-  return `${v} member${v === 1 ? '' : 's'}`
-}
 
 const districtOf = (c: ClubTrend) => (c as RegionClub).districtId
 
@@ -166,10 +162,25 @@ const RegionMapPage: React.FC = () => {
   const filtersOpen = sheet === 'filters'
 
   // The filter pipeline (R11): original → filtered → searched → sorted.
+  // District and the extended modes, with their legend keys' filter, come
+  // in an on-demand chunk; until it lands a deep link to one of them draws
+  // nothing rather than the wrong colours or the unfiltered set.
+  const [models, setModels] = useState<Awaited<
+    ReturnType<typeof loadModels>
+  > | null>(null)
+  useEffect(() => {
+    void loadModels().then(setModels)
+    void loadList()
+  }, [])
+  const pending = isRegionLazyMode(mode) && !models
+  const filtering = wantsExtendedFilters(searchParams) && !models
+
   const allClubs = useMemo(() => (shard ? toRegionClubs(shard) : []), [shard])
+  const extended = models?.applyRegionExtendedFacets
   const filtered = useMemo(
-    () => applyRegionFilters(allClubs, searchParams),
-    [allClubs, searchParams]
+    () =>
+      filtering ? [] : applyRegionFilters(allClubs, searchParams, extended),
+    [allClubs, searchParams, extended, filtering]
   )
   const searched = useMemo(
     () => searchRegionClubs(filtered, query),
@@ -181,19 +192,25 @@ const RegionMapPage: React.FC = () => {
   )
   const summary = useMemo(() => regionSummary(allClubs), [allClubs])
 
-  const model = useMemo(() => regionModel(mode, allClubs), [mode, allClubs])
+  const model = useMemo(
+    () =>
+      models && isRegionLazyMode(mode)
+        ? models.regionModel(mode, allClubs)
+        : buildModeModel(mode === 'tier' ? 'tier' : 'health'),
+    [mode, allClubs, models]
+  )
   const facetParam = model.facet?.param
   const chips = useMemo(() => {
     // Counts ignore this mode's own key, so pressing a chip never zeroes
     // the others; they include clubs not on the map (spec §4.3).
     const others = new URLSearchParams(searchParams)
     if (facetParam) others.delete(facetParam)
-    return legendChips(model, applyRegionFilters(allClubs, others))
-  }, [model, allClubs, searchParams, facetParam])
+    return legendChips(model, applyRegionFilters(allClubs, others, extended))
+  }, [model, allClubs, searchParams, facetParam, extended])
   const pressed = facetParam ? facetValues(searchParams, facetParam) : []
   const pins = useMemo(
-    () => buildPinFeatures(searched, model),
-    [searched, model]
+    () => buildPinFeatures(pending ? [] : searched, model),
+    [searched, model, pending]
   )
 
   const selected = useMemo(
@@ -284,21 +301,6 @@ const RegionMapPage: React.FC = () => {
     },
   ]
 
-  const rows: MobileRow[] = sorted.map(c => {
-    const cat = model.categoryOf(c)
-    return {
-      id: c.clubId,
-      to: `/district/${c.districtId}/club/${c.clubId}`,
-      title: c.clubName,
-      chip: (
-        <span className="map-row-chip">
-          <PinSwatch category={cat} />
-          {cat.label}
-        </span>
-      ),
-      meta: `D${c.districtId} · ${metricText(c, metric)}`,
-    }
-  })
   const metricLabel = REGION_METRICS.find(m => m.id === metric)!.label
   const listTitle = query.trim()
     ? `${nf.format(sorted.length)} ${sorted.length === 1 ? 'club matches' : 'clubs match'} “${query.trim()}”`
@@ -307,19 +309,27 @@ const RegionMapPage: React.FC = () => {
   const legend = (limit?: number, onMore?: () => void) => (
     <div className="map-legend">
       <p className="map-legend__title">
-        <strong>{model.title}</strong>
+        <strong>
+          {pending
+            ? REGION_COLOR_MODES.find(m => m.id === mode)!.label
+            : model.title}
+        </strong>
         {shard && <span> · as of {shard.snapshotDate}</span>}
       </p>
-      <React.Suspense fallback={<div className="map-legend__chips" />}>
-        <Chips
-          model={model}
-          chips={chips}
-          pressed={pressed}
-          onToggle={toggleChip}
-          limit={limit}
-          onMore={onMore}
-        />
-      </React.Suspense>
+      {pending ? (
+        <div className="map-legend__chips" />
+      ) : (
+        <React.Suspense fallback={<div className="map-legend__chips" />}>
+          <Chips
+            model={model}
+            chips={chips}
+            pressed={pressed}
+            onToggle={toggleChip}
+            limit={limit}
+            onMore={onMore}
+          />
+        </React.Suspense>
+      )}
     </div>
   )
 
@@ -458,14 +468,21 @@ const RegionMapPage: React.FC = () => {
       <h2 id="region-map-list" className="region-map__list-title">
         {listTitle}
       </h2>
-      {rows.length > 0 ? (
-        <MobileRowList
-          label={listTitle}
-          noun="clubs"
-          chipPlacement="meta"
-          rows={rows}
-          flush
-        />
+      {filtering || pending ? (
+        <div className="region-map__list-reserve" aria-busy="true" />
+      ) : sorted.length > 0 ? (
+        <React.Suspense
+          fallback={
+            <div className="region-map__list-reserve" aria-busy="true" />
+          }
+        >
+          <ClubList
+            clubs={sorted}
+            model={model}
+            metric={metric}
+            label={listTitle}
+          />
+        </React.Suspense>
       ) : (
         <p className="region-map__empty">
           {query.trim()
@@ -566,7 +583,9 @@ const RegionMapPage: React.FC = () => {
           </div>
         </div>
         <p role="status" className="sr-only">
-          {`Showing ${searched.length} of ${allClubs.length} clubs`}
+          {filtering
+            ? 'Filtering clubs…'
+            : `Showing ${searched.length} of ${allClubs.length} clubs`}
         </p>
 
         {isPhone ? (

@@ -9,6 +9,7 @@ import { ClubsByRegionShardSchema } from '@taverns-red/shared-contracts'
 import recorded from '../../../../packages/shared-contracts/src/__tests__/__fixtures__/recorded-clubs-by-region.json'
 import { buildModeModel } from '../../components/map/pinModes'
 import { buildPinFeatures } from '../../components/map/pinLayer'
+import { applyRegionExtendedFacets } from '../../components/map/regionModels'
 import {
   REGION_METRICS,
   applyRegionFilters,
@@ -18,6 +19,7 @@ import {
   searchRegionClubs,
   sortRegionClubs,
   toRegionClubs,
+  wantsExtendedFilters,
 } from '../regionClubs'
 
 const shard05 = ClubsByRegionShardSchema.parse(recorded.shards['05'])
@@ -156,9 +158,20 @@ describe('applyRegionFilters', () => {
     expect(
       applyRegionFilters(clubs, new URLSearchParams('status=intervention'))
     ).toHaveLength(82)
-    const big = applyRegionFilters(clubs, new URLSearchParams('size=30plus'))
+    const big = applyRegionFilters(
+      clubs,
+      new URLSearchParams('size=30plus'),
+      applyRegionExtendedFacets
+    )
     expect(big.length).toBeGreaterThan(0)
     expect(big.every(c => c.membershipTrend[0]!.count >= 30)).toBe(true)
+  })
+
+  it('says when a URL needs the on-demand filter chunk', () => {
+    expect(wantsExtendedFilters(new URLSearchParams('size=30plus'))).toBe(true)
+    expect(wantsExtendedFilters(new URLSearchParams('status=thriving'))).toBe(
+      false
+    )
   })
 
   it('ANDs across keys and ORs within one', () => {

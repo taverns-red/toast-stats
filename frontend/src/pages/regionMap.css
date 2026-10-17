@@ -69,6 +69,11 @@
   color: var(--ink-2);
 }
 
+/* Held while the list chunk or a filter's chunk lands (Lesson 107). */
+.region-map__list-reserve {
+  min-height: 60dvh;
+}
+
 .region-map__unmapped {
   margin-top: var(--rt-space-2);
 }

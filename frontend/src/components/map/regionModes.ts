@@ -4,21 +4,14 @@
  * members, net growth and DCP goals — plus District. Division and area are
  * per-district territories, and the reports and meeting modes read files
  * the region shard does not carry, so they are not offered here.
+ *
+ * Only the list and the parse live here, on the route's first load; every
+ * mode but health and tier is built in `regionModels`, an on-demand chunk
+ * (the map route's 300 KB budget, ADR-016 D2).
  */
-import type { RegionClub } from '../../utils/regionClubs'
 import type { ModeList } from './MapModePicker'
-import { districtModel } from './pinDistrict'
-import { extendedModel } from './pinExtended'
-import {
-  MAP_COLOR_MODES,
-  buildModeModel,
-  type ExtendedMode,
-  type MapColorMode,
-  type ModeModel,
-} from './pinModes'
+import { MAP_COLOR_MODES, type MapColorMode } from './pinModes'
 
-/** The modes that apply at region level: the district map's, less the
- *  district-only ones (division, area, reports, meeting), plus District. */
 const REGION_MODE_IDS: readonly MapColorMode[] = [
   'health',
   'tier',
@@ -27,6 +20,7 @@ const REGION_MODE_IDS: readonly MapColorMode[] = [
   'growth',
   'dcp',
 ]
+
 export const REGION_COLOR_MODES: ModeList = [
   ...MAP_COLOR_MODES.filter(m => REGION_MODE_IDS.includes(m.id)),
   { id: 'district', label: 'District', group: 'Territory' },
@@ -37,11 +31,6 @@ export function parseRegionColorMode(raw: string | null): MapColorMode {
   return REGION_COLOR_MODES.find(m => m.id === raw)?.id ?? 'health'
 }
 
-export function regionModel(
-  mode: MapColorMode,
-  clubs: readonly RegionClub[]
-): ModeModel {
-  if (mode === 'district') return districtModel(clubs)
-  if (mode === 'health' || mode === 'tier') return buildModeModel(mode)
-  return extendedModel(mode as ExtendedMode, '')
-}
+/** Built in the on-demand `regionModels` chunk. */
+export const isRegionLazyMode = (m: MapColorMode) =>
+  m !== 'health' && m !== 'tier'

@@ -19,11 +19,11 @@ import {
 } from '@taverns-red/shared-contracts'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import {
+  EXTENDED_FACET_PARAMS,
   applyFacets,
   compareLabel,
   facetValues,
 } from '../components/map/pinModes'
-import { applyExtendedFacets } from '../components/map/pinExtended'
 
 /** A region club: the district map's club shape plus its district. */
 export type RegionClub = ClubTrend & { districtId: string }
@@ -145,19 +145,32 @@ export const REGION_FILTER_PARAMS = ['district', 'status', 'size'] as const
 export const activeRegionFilterCount = (params: URLSearchParams) =>
   REGION_FILTER_PARAMS.filter(k => facetValues(params, k).length).length
 
-/** Every URL key the explorer reads (AND across keys, OR within one): the
- *  district, the map's health and Distinguished keys (`?status=`,
- *  `?distinguished=`) and the extended modes' legend keys (`?size=`,
- *  `?growth=`, `?dcp=`, `?clubStatus=`). */
-export function applyRegionFilters(
+/** The extended modes' legend keys this page can hold (`?size=` is also
+ *  a Filters key); they need the on-demand `regionModels` chunk. */
+export const wantsExtendedFilters = (params: URLSearchParams) =>
+  EXTENDED_FACET_PARAMS.some(p => facetValues(params, p).length > 0)
+
+/** Applies the keys that need the on-demand chunk (`regionModels`). */
+export type ExtendedRegionFilter = (
   clubs: readonly RegionClub[],
   params: URLSearchParams
+) => RegionClub[]
+
+/** Every URL key the explorer reads (AND across keys, OR within one): the
+ *  district, the map's health and Distinguished keys (`?status=`,
+ *  `?distinguished=`) and, through `extended`, the extended modes' legend
+ *  keys (`?size=`, `?growth=`, `?dcp=`, `?clubStatus=`). Until the caller
+ *  has `extended`, it must not draw a result for a URL that
+ *  `wantsExtendedFilters` (a deep link would show the unfiltered set). */
+export function applyRegionFilters(
+  clubs: readonly RegionClub[],
+  params: URLSearchParams,
+  extended?: ExtendedRegionFilter | null
 ): RegionClub[] {
   const districts = new Set(facetValues(params, 'district'))
   let out = districts.size
     ? clubs.filter(c => districts.has(c.districtId))
     : [...clubs]
   out = applyFacets(out, params)
-  // The extended keys need no date or reports sidecar for these modes.
-  return applyExtendedFacets(out, params, '', null)
+  return extended ? extended(out, params) : out
 }
