@@ -224,6 +224,15 @@ export interface ComputeOperationResult {
    * ADR-015 P3) or threw. Reported, never publish-blocking.
    */
   clubsByRegionFailed: boolean
+   * Path of `time-series/regions/{PY}.json` (#2127), or undefined when no
+   * district series exists for the date's program year.
+   */
+  regionSeriesPath?: string
+  /**
+   * True when the region membership series could not be built or written
+   * (#2127). Recorded in `errors`; the store keeps its previous copy.
+   */
+  regionSeriesFailed: boolean
   /**
    * Districts whose time-series data point was not written (#1702). The
    * loop still continues to the next district, but the run fails: Trends
@@ -1226,6 +1235,7 @@ export class AnalyticsComputeService {
         globalClubRaceFailed: false,
         regionRollupsFailed: false,
         clubsByRegionFailed: false,
+        regionSeriesFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
         clubTrendsUpdated: [],
@@ -1275,6 +1285,7 @@ export class AnalyticsComputeService {
         globalClubRaceFailed: false,
         regionRollupsFailed: false,
         clubsByRegionFailed: false,
+        regionSeriesFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
         clubTrendsUpdated: [],
@@ -1501,6 +1512,7 @@ export class AnalyticsComputeService {
       regionRollupsFailed: regionRollups.failed,
       clubsByRegionPaths: clubsByRegion.paths,
       clubsByRegionFailed: clubsByRegion.failed,
+      regionSeriesFailed: false,
       timeSeriesFailed,
       timeSeriesWritten,
       clubTrendsUpdated,
