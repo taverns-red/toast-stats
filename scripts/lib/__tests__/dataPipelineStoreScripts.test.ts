@@ -17,6 +17,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
 import { PROMOTED_PREFIXES } from '../promotionContentGate.js'
+import { classifyPromotionPath } from '../manifestPromotion.js'
 
 const WORKFLOW_PATH = path.resolve(
   process.cwd(),
@@ -238,7 +239,9 @@ describe('rebuild scopes the club-trends pull to the PYs of its dates (#2102)', 
 
 describe('club-trends/ and club-race/ are pipeline-internal (#1738, E2-5, D3)', () => {
   const INTERNAL = ['club-trends', 'club-race'] as const
-  const promote = steps.find(s => s.name === 'Promote staging to production')
+  const promote = steps.find(
+    s => s.name === 'Promote run manifest to production (#1763)'
+  )
 
   it('the content gate does not treat them as promoted', () => {
     for (const store of INTERNAL) {
@@ -251,6 +254,10 @@ describe('club-trends/ and club-race/ are pipeline-internal (#1738, E2-5, D3)', 
     const lines = logicalLines(promote!.run)
     for (const store of INTERNAL) {
       expect(lines.filter(l => l.includes(`${store}/`))).toEqual([])
+      // #1763: the manifest promoter's allow-list excludes them.
+      expect(
+        classifyPromotionPath(`${store}/2026-2027/district_61.json`).kind
+      ).toBe('excluded')
     }
   })
 

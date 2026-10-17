@@ -2,7 +2,7 @@
  * Per-date completeness gate — Runner (#1761, ADR-015 P5.2, step 3)
  *
  * Thin glue around ./lib/dateCompletenessGate.js, run on the CI runner just
- * before `Promote staging to production`: for every date this run touched,
+ * before `Promote run manifest to production`: for every date this run touched,
  * compare staging's snapshot directory with production's and HOLD (D8) on
  * any regression unless allow_value_changes. Nothing is written to any
  * bucket.

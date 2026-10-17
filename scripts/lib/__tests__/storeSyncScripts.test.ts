@@ -493,6 +493,108 @@ describe('publish-stores.sh (#1722)', () => {
     )
   })
 
+  // #1763 PR 2: the whole-prefix rsync no longer sweeps up what a held run
+  // left in staging. A time-series file this run finds unchanged in staging
+  // but stale in prod is listed in the manifest (stage publish-stores-carry,
+  // not re-uploaded) so the scoped promote copies it.
+  describe('time-series carry into the manifest (#1763)', () => {
+    const PROD = 'prod-bucket'
+    const shaOf = (b: Buffer) => createHash('sha256').update(b).digest('hex')
+    function putCurrent(bucket: string, rel: string, content: Buffer): void {
+      const obj = path.join(root, bucket, rel)
+      fs.mkdirSync(path.dirname(obj), { recursive: true })
+      fs.writeFileSync(obj, zlib.gzipSync(content))
+      const meta = path.join(root, '.meta', bucket, rel)
+      fs.mkdirSync(path.dirname(meta), { recursive: true })
+      fs.writeFileSync(
+        meta,
+        [
+          'content-encoding=gzip',
+          'content-type=application/json',
+          'cache-control=public, max-age=3600',
+          `x-goog-meta-sha256=${shaOf(content)}`,
+          '',
+        ].join('\n')
+      )
+    }
+    const entries = () =>
+      (fs.existsSync(manifest)
+        ? fs.readFileSync(manifest, 'utf-8').split('\n').filter(Boolean)
+        : []
+      ).map(
+        l => JSON.parse(l) as { path: string; sha256: string; stage: string }
+      )
+
+    beforeEach(() => {
+      fs.mkdirSync(path.join(root, PROD), { recursive: true })
+      // Current everywhere: neither uploaded nor carried.
+      seedLocal('time-series', 'district_61/2023-2024.json', doc(1))
+      putCurrent(BUCKET, 'time-series/district_61/2023-2024.json', doc(1))
+      putCurrent(PROD, 'time-series/district_61/2023-2024.json', doc(1))
+      // A held run put this in staging; prod still has the older copy.
+      seedLocal('time-series', 'district_61/2024-2025.json', doc(2))
+      putCurrent(BUCKET, 'time-series/district_61/2024-2025.json', doc(2))
+      putCurrent(PROD, 'time-series/district_61/2024-2025.json', doc(20))
+      // Prod never got this one at all.
+      seedLocal('time-series', 'district_61/2025-2026.json', doc(3))
+      putCurrent(BUCKET, 'time-series/district_61/2025-2026.json', doc(3))
+      // Changed this run: uploaded and recorded as an upload.
+      seedLocal('time-series', 'district_61/2026-2027.json', doc(4))
+    })
+
+    it('records the stale-in-prod files without re-uploading them', () => {
+      const r = run(PUBLISH, ['time-series'], { GCS_BUCKET_PRODUCTION: PROD })
+      expect(r.status, r.stderr).toBe(0)
+      const uploaded = fs
+        .readFileSync(uploadLog, 'utf-8')
+        .split('\n')
+        .filter(Boolean)
+        .map(l => l.split('\t')[0])
+      expect(uploaded).toEqual(['time-series/district_61/2026-2027.json'])
+      expect(
+        entries()
+          .map(e => `${e.stage} ${e.path} ${e.sha256}`)
+          .sort()
+      ).toEqual(
+        [
+          `publish-stores time-series/district_61/2026-2027.json ${shaOf(doc(4))}`,
+          `publish-stores-carry time-series/district_61/2024-2025.json ${shaOf(doc(2))}`,
+          `publish-stores-carry time-series/district_61/2025-2026.json ${shaOf(doc(3))}`,
+        ].sort()
+      )
+      expect(fs.readFileSync(summary, 'utf-8')).toContain(
+        '2 carried for promotion'
+      )
+    })
+
+    it('never writes to prod (it only lists it)', () => {
+      const before = fs.readdirSync(path.join(root, PROD), { recursive: true })
+      expect(
+        run(PUBLISH, ['time-series'], { GCS_BUCKET_PRODUCTION: PROD }).status
+      ).toBe(0)
+      expect(
+        fs.readdirSync(path.join(root, PROD), { recursive: true })
+      ).toEqual(before)
+      expect(calls().filter(c => c.includes(`gs://${PROD}/`))).toEqual([
+        `storage objects list gs://${PROD}/time-series/** --format=json`,
+      ])
+    })
+
+    it('fails closed when prod cannot be listed', () => {
+      const r = run(PUBLISH, ['time-series'], {
+        GCS_BUCKET_PRODUCTION: PROD,
+        SHIM_FAIL_MATCH: `objects list gs://${PROD}/`,
+      })
+      expect(r.status).not.toBe(0)
+    })
+
+    it('carries nothing without a production bucket (a test or local run)', () => {
+      const r = run(PUBLISH, ['time-series'], { GCS_BUCKET_PRODUCTION: '' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(entries().map(e => e.stage)).toEqual(['publish-stores'])
+    })
+  })
+
   it('refuses gzip bytes on disk before pushing anything', () => {
     seedLocal('club-race', '2026-2027/first-reached.json', doc(2))
     seedLocal(

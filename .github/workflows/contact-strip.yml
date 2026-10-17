@@ -23,9 +23,10 @@
 # against its shared-contracts schema; one that adds an issue is refused and
 # recorded in the audit. files=reports reads only district_<id>_reports.json.
 #
-# Route (c) of the 2026-10-14 cleanup plan: run it on staging, then let a
-# scheduled daily promote the stripped objects through its gates. bucket=prod
-# is the fallback if that daily holds.
+# Route (c) of the 2026-10-14 cleanup plan was: run it on staging, then let a
+# scheduled daily promote the stripped objects through its gates. Since
+# #1763 a daily promotes only what it wrote, so a staging rewrite of another
+# date no longer reaches prod by itself: run it on bucket=prod too.
 #
 # Dry run is the default. Every dispatch, dry or not, needs Ron's approval.
 # It shares the data-pipeline concurrency group, so it never overlaps a

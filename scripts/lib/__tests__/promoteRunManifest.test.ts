@@ -316,6 +316,9 @@ describe('promote-run-manifest --execute: no hold', () => {
     )
     expect(r.outputs.globals_promoted).toBe('false')
     expect(r.stderr).toContain('2026-09-30')
+    // The promotion-held alert names it (#1763 PR 2): one line, no newline.
+    expect(r.outputs.globals_reason).toContain('2026-09-30')
+    expect(r.outputs.globals_reason).toContain('re-derive')
   })
 })
 

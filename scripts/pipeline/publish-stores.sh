@@ -27,7 +27,12 @@
 #      the promotion rsync re-copied all of them; skipped objects now keep
 #      their generation and hash, so promotion skips them too.
 #   5. every object pushed is appended to $RUN_MANIFEST_FILE (required) with
-#      the sha256 of its uncompressed bytes (#1762, ADR-015 P5).
+#      the sha256 of its uncompressed bytes (#1762, ADR-015 P5);
+#   6. with GCS_BUCKET_PRODUCTION set, prod's time-series/ is listed too
+#      (read-only): a file current in staging but stale or missing in prod
+#      — one a held run uploaded — is appended to the manifest as stage
+#      `publish-stores-carry` without being re-uploaded. Promotion copies
+#      only the manifest (#1763), so without this it would never reach prod.
 # Any listing or transfer error fails the script.
 #
 # Env (time-series): PUBLISH_PARALLEL  concurrent uploads (default 16)
@@ -118,8 +123,21 @@ publish_time_series() {
     rm -rf "${work}"
     return 1
   fi
+  # #1763: also list prod (read-only) so the files a held run left current
+  # in staging but stale in prod are recorded for the scoped promote.
+  local carry_args=()
+  if [ -n "${GCS_BUCKET_PRODUCTION:-}" ]; then
+    if ! "${GCLOUD}" storage objects list "gs://${GCS_BUCKET_PRODUCTION}/time-series/**" \
+      --format=json >"${work}/prod-listing.json"; then
+      echo "::error::publish-stores: could not list gs://${GCS_BUCKET_PRODUCTION}/time-series/; refusing to publish (#1763)" >&2
+      rm -rf "${work}"
+      return 1
+    fi
+    carry_args=("${work}/prod-listing.json" "${work}/carry")
+  fi
   "${TSX}" "${REPO}/scripts/time-series-publish-plan.ts" \
-    "${CACHE_DIR}/time-series" "${listing}" "time-series/" >"${plan}"
+    "${CACHE_DIR}/time-series" "${listing}" "time-series/" \
+    ${carry_args[@]+"${carry_args[@]}"} >"${plan}"
 
   total="$(find "${CACHE_DIR}/time-series" -type f | wc -l | tr -d ' ')"
   uploads=$(($(tr -cd '\0' <"${plan}" | wc -c) / 2))
@@ -144,8 +162,21 @@ publish_time_series() {
         | {path: ("time-series/" + $rel), sha256: $sha, date: null,
            stage: "publish-stores"}' >>"${RUN_MANIFEST_FILE}"
   fi
+  local carried=0 carry_note=""
+  if [ -s "${work}/carry" ]; then
+    carried=$(($(tr -cd '\0' <"${work}/carry" | wc -c) / 2))
+    mkdir -p "$(dirname "${RUN_MANIFEST_FILE}")"
+    tr '\0' '\n' <"${work}/carry" | paste - - |
+      jq -Rc '
+        split("\t") as [$sha, $rel]
+        | {path: ("time-series/" + $rel), sha256: $sha, date: null,
+           stage: "publish-stores-carry"}' >>"${RUN_MANIFEST_FILE}"
+  fi
+  if [ "${#carry_args[@]}" -gt 0 ]; then
+    carry_note=", ${carried} carried for promotion (current in staging, stale in prod, #1763)"
+  fi
   rm -rf "${work}"
-  summary "time-series publish: ${uploads} uploaded, $((total - uploads)) unchanged"
+  summary "time-series publish: ${uploads} uploaded, $((total - uploads)) unchanged${carry_note}"
 }
 export GCLOUD CACHE_DIR BUCKET
 

@@ -129,8 +129,9 @@ rebuild of an already-promoted date is not held for lacking them.
 ## Store Contract (per prefix)
 
 One row per prefix (#1741, plan P3-4). Every pipeline write goes to **staging**. "Promoted" means
-the gated `Promote staging to production` step rsyncs the prefix to prod (`PROMOTED_PREFIXES` in
-`scripts/lib/promotionContentGate.ts`, kept equal to the rsync calls by a workflow contract test).
+the gated `Promote run manifest to production (#1763)` step copies the run's objects under the
+prefix to prod (`PROMOTED_PREFIXES` in `scripts/lib/promotionContentGate.ts`, the promoter's
+allow-list, pinned by a workflow contract test).
 "Internal" means the prefix stays in staging.
 
 **Encoding at rest:**
@@ -166,12 +167,12 @@ the gated `Promote staging to production` step rsyncs the prefix to prod (`PROMO
 
 ## Staging → Production Promotion
 
-Production is never written directly. Each run processes into **staging**; a two-gate promotion
-step then decides whether to `rsync` staging → prod (`v1/`, `snapshots/`, `time-series/`,
-`config/` — additive, no `-d`).
+Production is never written directly. Each run processes into **staging**; the gates then
+decide what the promotion step copies to prod.
 
-**Scoped promotion (#1763, ADR-015 P6; `promotion_scope=manifest`, opt-in until the rsync
-step is retired).** Instead of the four rsyncs, `scripts/promote-run-manifest.ts --execute`
+**Scoped promotion (#1763, ADR-015 P6) — the only promotion.** The whole-prefix rsync of `v1/`,
+`snapshots/`, `time-series/` and `config/` is retired (PR 2 of #1763); no step rsyncs into prod
+except the prune reconcile, until #1767. `scripts/promote-run-manifest.ts --execute`
 copies exactly the objects in this run's manifest (`runs/<run_id>/written.jsonl`) that sit under
 `PROMOTED_PREFIXES` — the set the content gate read. It uses server-side `gcloud storage cp`, so
 bytes and headers arrive as staged. Rules (`scripts/lib/manifestPromotion.ts`):
@@ -187,8 +188,23 @@ bytes and headers arrive as staged. Rules (`scripts/lib/manifestPromotion.ts`):
 - Never promoted: the stores, `raw-*/`, `derived/` and `runs/`. Staging path == prod path, so an
   identity artifact becomes promotable by being written under `config/` once it is gated.
 
-Every non-prune run prints the plan (`Plan scoped promotion (#1763)`, a dry run) whatever the
-scope, skip_promotion included. To preview a published manifest locally:
+**What reaches prod without being written by the run.** Only what the manifest lists is
+promoted, so each class the rsync used to sweep up has its own route:
+
+- `time-series/` files a held run left current in staging but stale in prod:
+  `publish-stores.sh` lists prod (read-only) and records them as stage `publish-stores-carry`
+  without re-uploading; they promote with the next run's globals.
+- `district_*_reports.json` sidecars (placed after the promote): mirrored when this run promoted
+  the snapshot date; `[reports] Carry missing report sidecars into prod` copies those prod lacks
+  for the newest 7 dates prod indexes (`scripts/pipeline/carry-report-sidecars.sh`).
+- A held date's own `snapshots/<date>/` objects: never carried. Re-derive the date; it then
+  promotes through its own gates. A promote that copied less than it planned files the
+  `promotion-held` alert with the held dates and the globals' reason.
+- Out-of-band staging rewrites (e.g. `contact-strip.yml` with `bucket=staging`) do not reach prod
+  by themselves any more: run the tool on `bucket=prod` too.
+
+Every non-prune run prints the plan (`Plan scoped promotion (#1763)`, a dry run),
+skip_promotion included. To preview a published manifest locally:
 `gcloud storage cat gs://toast-stats-data-staging/runs/<id>/written.jsonl > /tmp/w.jsonl`, then
 `RUN_MANIFEST_FILE=/tmp/w.jsonl GCS_BUCKET=toast-stats-data-staging GCS_BUCKET_PRODUCTION=toast-stats-data-ca npx tsx scripts/promote-run-manifest.ts --dry-run --assume-pass`.
 

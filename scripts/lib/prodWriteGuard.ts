@@ -13,7 +13,8 @@
  *     (`gcloud storage cp|rsync|mv` whose destination is prod),
  *   - removes or updates a production object,
  *   - runs the scoped promoter with `--execute` (#1763; it calls gcloud
- *     itself, so the pattern above cannot see its writes),
+ *     itself, so the pattern above cannot see its writes) or the report
+ *     sidecar carry (scripts/pipeline/carry-report-sidecars.sh, likewise),
  *   - invalidates the Cloud CDN, or
  *   - writes to the `promotion-held` issue flow (label/issue create, comment,
  *     close). An intentional skip must not open or close alerts.
@@ -93,6 +94,10 @@ export function prodWriteReasons(run: string): string[] {
     if (/promote-run-manifest\.ts\b.*--execute\b/.test(cmd)) {
       reasons.push('manifest promotion → production')
     }
+    // Likewise the report-sidecar carry (#1763 PR 2).
+    if (/carry-report-sidecars\.sh\b/.test(cmd)) {
+      reasons.push('report sidecar carry → production')
+    }
     if (/invalidate-cdn-cache/.test(cmd)) reasons.push('CDN invalidation')
     if (
       /\bgh\s+(issue\s+(create|comment|close)|label\s+create)\b/.test(cmd) &&
@@ -121,6 +126,26 @@ export function topLevelConjuncts(expr: string): string[] {
 
 function hasClause(expr: string | undefined, clause: string): boolean {
   return expr !== undefined && topLevelConjuncts(expr).includes(clause)
+}
+
+/**
+ * Steps allowed to `gcloud storage rsync` into prod, with the issue that
+ * retires each (#1763 PR 2). The whole-prefix promotion rsync is gone:
+ * promotion copies the run manifest. Prune's reconcile still re-syncs v1/
+ * and config/ after its deletes until #1767 routes it through the manifest.
+ */
+export const PROD_RSYNC_EXEMPT: Readonly<Record<string, string>> = {
+  '[prune] Reconcile production': '#1767',
+}
+
+/**
+ * Every step that rsyncs INTO prod. The contract test pins this to exactly
+ * the PROD_RSYNC_EXEMPT steps of data-pipeline.yml.
+ */
+export function prodRsyncSteps(workflow: Workflow): ProdWriteStep[] {
+  return findProdWriteSteps(workflow).filter(s =>
+    s.reasons.includes('gcloud storage rsync → production')
+  )
 }
 
 /** Every prod-writing step in the workflow, with its guard status. */

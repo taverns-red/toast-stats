@@ -43,6 +43,14 @@ describe('prodWriteGuard sentinels (#1754)', () => {
     }
   })
 
+  it('flags the report-sidecar carry, which writes prod through its own gcloud calls (#1763)', () => {
+    expect(
+      prodWriteReasons(
+        'bash scripts/pipeline/carry-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}"'
+      )
+    ).toEqual(['report sidecar carry → production'])
+  })
+
   it('flags a CDN invalidation and the promotion-held issue writes', () => {
     expect(
       prodWriteReasons('gcloud compute url-maps invalidate-cdn-cache m')
@@ -131,12 +139,13 @@ describe('data-pipeline skip_promotion contract (#1754)', () => {
     const names = prodSteps.map(s => s.step)
     for (const expected of [
       '[prune] Reconcile production',
-      'Promote staging to production',
+      'Promote run manifest to production (#1763)',
       'Invalidate CDN cache after promotion (#1294)',
       'Ensure promotion-held label exists',
       'File or refresh promotion-held issue',
       'Auto-close promotion-held issue on a promoting run',
       '[reports] Mirror placed datasets into prod',
+      '[reports] Carry missing report sidecars into prod',
     ]) {
       expect(names).toContain(expected)
     }
@@ -176,11 +185,12 @@ describe('data-pipeline skip_promotion contract (#1754)', () => {
     }
   })
 
-  it('reports promoted only when the promote step actually ran', () => {
-    // …or the scoped promote (#1763) copied everything it planned.
+  it('reports promoted only when the scoped promote copied everything it planned', () => {
     expect(workflow.jobs.pipeline.outputs?.promoted).toBe(
-      "${{ steps.promote.outcome == 'success' || steps.promotemanifest.outputs.complete == 'true' }}"
+      "${{ steps.promotemanifest.outputs.complete == 'true' }}"
     )
-    expect(byName('Promote staging to production')?.id).toBe('promote')
+    expect(byName('Promote run manifest to production (#1763)')?.id).toBe(
+      'promotemanifest'
+    )
   })
 })

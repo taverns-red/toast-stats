@@ -89,6 +89,8 @@ Prune `reconcile_prod` and the `place-reports` prod mirror become manifest-drive
 
 Eliminates: D-11, D-15, D-16, I-5. Efficiency follows for free: the daily promote stops rsync-listing 272 k objects per prefix.
 
+> **Implementation note (2026-10-17, #1763):** the step is `Promote run manifest to production (#1763)` (`scripts/promote-run-manifest.ts --execute`, per-object server-side `cp`); the whole-prefix rsync step is deleted. Two classes the rsync used to sweep up are routed explicitly until step 9 (#1767): `time-series/` files current in staging but stale in prod are recorded in the next run's manifest (stage `publish-stores-carry`), and report sidecars prod lacks are copied by `[reports] Carry missing report sidecars into prod`.
+
 ### P7. Dead inputs are retired, not kept for compatibility
 
 - rescrape `program_year` generates month-end dates from `docs/month-end-closing-dates.json` (ADR-011), not the 15th (D-6). The allow-listed inline `node -e` from #1743 goes with it.
