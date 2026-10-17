@@ -22,6 +22,12 @@
 import { createHash } from 'node:crypto'
 import { gunzipSync } from 'node:zlib'
 import {
+  CLUBS_BY_REGION_DIR,
+  CLUBS_BY_REGION_UNASSIGNED,
+  ClubsByRegionShardSchema,
+  ClubsByRegionWorldSchema,
+  clubsByRegionShardFileName,
+  containsLink,
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
   clubDistrictHistoryShardKey,
@@ -76,6 +82,8 @@ export type ObjectKind =
   | 'club-district-history-index'
   | 'club-district-history-shard'
   | 'region-rollups'
+  | 'clubs-by-region-shard'
+  | 'clubs-by-region-world'
   | 'latest'
   | 'json'
 
@@ -114,6 +122,12 @@ const TS_PROGRAM_YEAR =
 const AWARDS = /^snapshots\/(\d{4}-\d{2}-\d{2})\/competitive-awards\.json$/
 const REGION_ROLLUPS = new RegExp(
   `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${REGION_ROLLUPS_FILE_NAME.replace('.', '\\.')}$`
+)
+const CLUBS_BY_REGION_WORLD = new RegExp(
+  `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${CLUBS_BY_REGION_DIR}/world\\.json$`
+)
+const CLUBS_BY_REGION_SHARD = new RegExp(
+  `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${CLUBS_BY_REGION_DIR}/([A-Za-z0-9-]+)\\.json$`
 )
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
@@ -158,6 +172,8 @@ export function classifyObject(path: string): ObjectKind | null {
   if (AWARDS.test(path)) return 'competitive-awards'
   if (DISTRICT_ANALYTICS.test(path)) return 'district-analytics'
   if (REGION_ROLLUPS.test(path)) return 'region-rollups'
+  if (CLUBS_BY_REGION_WORLD.test(path)) return 'clubs-by-region-world'
+  if (CLUBS_BY_REGION_SHARD.test(path)) return 'clubs-by-region-shard'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
@@ -284,7 +300,9 @@ export function planContentChecks(
       c.kind === 'district-region-history' ||
       c.kind === 'club-district-history-index' ||
       c.kind === 'club-district-history-shard' ||
-      c.kind === 'region-rollups'
+      c.kind === 'region-rollups' ||
+      c.kind === 'clubs-by-region-shard' ||
+      c.kind === 'clubs-by-region-world'
     ) {
       checks.push(c)
     } else {
@@ -719,6 +737,115 @@ function checkRegionRollups(path: string, value: unknown): string | null {
   return null
 }
 
+/** Served under its own date, with that LOGICAL date's program year. */
+function datedArtifact(
+  snapshotDate: string,
+  programYear: string,
+  date: string | undefined
+): string | null {
+  if (snapshotDate !== date) {
+    return `holds snapshotDate ${snapshotDate} but is served under ${date}`
+  }
+  const expected = programYearForSnapshotDate(snapshotDate)
+  return programYear === expected
+    ? null
+    : `programYear ${programYear}, but ${snapshotDate} is in ${expected}`
+}
+
+/**
+ * snapshots/<date>/clubs-by-region/<region>.json (#1800): the strict
+ * shared-contracts schema (explorer fields only); served under its own date
+ * and region key, with that date's program year; counts equal to its rows;
+ * every club from a district the shard lists, with the shard's region; no
+ * link left in a name or city.
+ */
+function checkClubsByRegionShard(path: string, value: unknown): string | null {
+  const parsed = ClubsByRegionShardSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const s = parsed.data
+  const [, date, key] = CLUBS_BY_REGION_SHARD.exec(path) ?? []
+  const dated = datedArtifact(s.snapshotDate, s.programYear, date)
+  if (dated !== null) return dated
+  if (s.region !== key) {
+    return `holds region ${s.region} but is served as ${key}.json`
+  }
+  const mapped = s.clubs.filter(c => c.lat !== null).length
+  const want = {
+    clubs: s.clubs.length,
+    mapped,
+    unmapped: s.clubs.length - mapped,
+  }
+  for (const k of ['clubs', 'mapped', 'unmapped'] as const) {
+    if (s.counts[k] !== want[k]) {
+      return `counts.${k} is ${s.counts[k]}, its rows give ${want[k]}`
+    }
+  }
+  const listed = new Set(s.districtIds)
+  const region = s.region === CLUBS_BY_REGION_UNASSIGNED ? null : s.region
+  const ids = new Set<string>()
+  for (const c of s.clubs) {
+    if (!listed.has(c.d)) {
+      return `club ${c.id} is from district ${c.d}, which the shard does not list`
+    }
+    if (c.region !== region) {
+      return `club ${c.id} has region ${c.region}, not ${region}`
+    }
+    if (ids.has(c.id)) return `club ${c.id} is listed twice`
+    ids.add(c.id)
+    if (containsLink(c.name) || (c.city !== null && containsLink(c.city))) {
+      return `club ${c.id} still carries a link in its name or city`
+    }
+  }
+  return null
+}
+
+/**
+ * snapshots/<date>/clubs-by-region/world.json (#1800): the schema; its date
+ * and program year; one point per mapped club; the shard entries (at their
+ * own paths) summing to the totals; top lists no longer than N.
+ */
+function checkClubsByRegionWorld(path: string, value: unknown): string | null {
+  const parsed = ClubsByRegionWorldSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const w = parsed.data
+  const date = CLUBS_BY_REGION_WORLD.exec(path)?.[1]
+  const dated = datedArtifact(w.snapshotDate, w.programYear, date)
+  if (dated !== null) return dated
+  const t = w.totals
+  if (t.clubs !== t.mapped + t.unmapped) {
+    return `totals.clubs is ${t.clubs}, but mapped + unmapped is ${t.mapped + t.unmapped}`
+  }
+  if (w.points.length !== t.mapped) {
+    return `${w.points.length} points, but totals.mapped is ${t.mapped}`
+  }
+  if (w.shards !== null) {
+    const sum = { clubs: 0, mapped: 0, unmapped: 0 }
+    for (const [key, entry] of Object.entries(w.shards)) {
+      const expected = `${CLUBS_BY_REGION_DIR}/${clubsByRegionShardFileName(key)}`
+      if (entry.path !== expected) {
+        return `shard ${key} is listed at path ${entry.path}, not ${expected}`
+      }
+      const h = entry.health
+      if (h.thriving + h.vulnerable + h.interventionRequired !== entry.clubs) {
+        return `shard ${key}: health counts do not sum to its ${entry.clubs} clubs`
+      }
+      sum.clubs += entry.clubs
+      sum.mapped += entry.mapped
+      sum.unmapped += entry.unmapped
+    }
+    for (const k of ['clubs', 'mapped', 'unmapped'] as const) {
+      if (sum[k] !== t[k]) {
+        return `shards sum to ${sum[k]} ${k}, but totals.${k} is ${t[k]}`
+      }
+    }
+  }
+  return null
+}
+
 function checkLatest(value: unknown): string | null {
   const date = (value as { latestSnapshotDate?: unknown } | null)
     ?.latestSnapshotDate
@@ -772,6 +899,10 @@ export function checkObject(
       return checkClubHistoryShard(check.path, value)
     case 'region-rollups':
       return checkRegionRollups(check.path, value)
+    case 'clubs-by-region-shard':
+      return checkClubsByRegionShard(check.path, value)
+    case 'clubs-by-region-world':
+      return checkClubsByRegionWorld(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -875,6 +1006,10 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
   'snapshot-index': 'decoded, `districts` maps ids to YYYY-MM-DD arrays',
   'region-rollups':
     'decoded, RegionRollupsSchema, served under its snapshotDate with that date’s program year, world = Σ districts, each region = Σ its districts (#1799)',
+  'clubs-by-region-shard':
+    'decoded, ClubsByRegionShardSchema (strict rows: no contact, link or meeting field), served under its snapshotDate and region key with that date’s program year, counts = its rows, every club from a listed district, no link in a name (#1800)',
+  'clubs-by-region-world':
+    'decoded, ClubsByRegionWorldSchema, served under its snapshotDate with that date’s program year, one point per mapped club, shards at their own paths summing to the totals (#1800)',
   latest: 'decoded, latestSnapshotDate is a real date',
   json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',
