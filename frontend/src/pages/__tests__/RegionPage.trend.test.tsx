@@ -148,9 +148,11 @@ describe('RegionPage membership trend (#1815)', () => {
       name: 'Region 7 district rankings',
     })
     const link = within(table).getByRole('link', { name: /D7/ })
-    expect(
-      await within(link).findByRole('img', { name: /net \+110/ })
-    ).toBeInTheDocument()
+    const img = await within(link).findByRole('img', { name: /net \+110/ })
+    // Its own line under rank + chip: a 60px line beside them overflows the
+    // ~105px identity link and is clipped (Lesson 134).
+    expect(img.parentElement).toHaveClass('region-identity__trend')
+    expect(link).toHaveClass('region-identity')
   })
 
   it('links to the Health & compliance subpage', async () => {

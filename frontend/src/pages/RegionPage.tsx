@@ -318,7 +318,7 @@ const RegionIdentity: React.FC<{
   /** Membership series (#1815): the row's only chart at 375. */
   trend: number[] | null | undefined
 }> = ({ districtId, districtName, rank, trend }) => (
-  <Link to={`/district/${districtId}`}>
+  <Link to={`/district/${districtId}`} className="region-identity">
     <span className="font-semibold tabular-nums">
       #{rank.rank}
       {rank.isTied && <span className="sr-only"> (tied)</span>}
@@ -329,7 +329,11 @@ const RegionIdentity: React.FC<{
       name={districtName}
       nameClassName="truncate text-sm font-medium"
     />
-    <DistrictTrendSparkline series={trend} />
+    {/* Own line under rank + chip: beside them it overflows the ~105px
+        identity at 375 and is clipped (Lesson 134). */}
+    <span className="region-identity__trend">
+      <DistrictTrendSparkline series={trend} />
+    </span>
   </Link>
 )
 
