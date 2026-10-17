@@ -259,6 +259,32 @@ describe('carry-report-sidecars.sh (shim)', () => {
     expect(r2.status).toBe(0)
   })
 
+  it('carries reports-rollups.json (#2012) like a sidecar, and no other file', () => {
+    const ROLLUPS = 'snapshots/2026-10-15/reports-rollups.json'
+    put(STG, ROLLUPS, sidecar('rollups', 'r'), SIDE_META)
+    put(
+      STG,
+      'snapshots/2026-10-16/reports-rollups.json',
+      sidecar('rollups', 's'),
+      SIDE_META
+    )
+    put(
+      STG,
+      'snapshots/2026-10-15/region-rollups.json',
+      sidecar('region', 't'),
+      SIDE_META
+    )
+    const r = run()
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(PROD, ROLLUPS)).toEqual(read(STG, ROLLUPS))
+    expect(meta(PROD, ROLLUPS)).toBe(SIDE_META)
+    // Held date: not indexed by prod. A promoted file: the manifest's job.
+    expect(fs.existsSync(path.join(root, PROD, 'snapshots/2026-10-16'))).toBe(
+      false
+    )
+    expect(read(PROD, 'snapshots/2026-10-15/region-rollups.json')).toBeNull()
+  })
+
   it('a date directory staging lacks is no sidecars, not an error', () => {
     put(PROD, 'v1/dates.json', datesJson(['2026-10-13', '2026-10-15']))
     const r = run()
