@@ -5,7 +5,8 @@ import { BottomSheet } from './BottomSheet'
 /* Phone bottom section bar (#1832, mobile epic #1827 Phase 1, review §5.1).
 
    Four primary sections at thumb reach plus "More", which opens the shared
-   BottomSheet (#1831) listing the rest. Every item is a NavLink to a REAL
+   BottomSheet (#1831) listing the rest. A bar with nothing in More (the
+   two region sections, #1815) has no More button. Every item is a NavLink to a REAL
    route (ADR-005): no client-side tabs, so the back button, deep links and
    the URL-held PY/date (R3) are untouched.
 
@@ -83,53 +84,57 @@ export const SectionBar: React.FC<SectionBarProps> = ({
               </NavLink>
             </li>
           ))}
-          <li className="section-bar__item">
-            <button
-              type="button"
-              className="section-bar__link section-bar__more"
-              aria-haspopup="dialog"
-              aria-expanded={open}
-              aria-controls={sheetId}
-              // Starts with the visible "More" (WCAG 2.5.3 label in name).
-              aria-label={
-                currentInMore
-                  ? `More sections, current: ${currentInMore.label}`
-                  : 'More sections'
-              }
-              data-active={currentInMore ? 'true' : undefined}
-              onClick={() => setOpen(true)}
-            >
-              <span className="section-bar__icon">
-                <MoreIcon />
-              </span>
-              <span className="section-bar__label" data-label="More">
-                More
-              </span>
-            </button>
-          </li>
+          {more.length > 0 && (
+            <li className="section-bar__item">
+              <button
+                type="button"
+                className="section-bar__link section-bar__more"
+                aria-haspopup="dialog"
+                aria-expanded={open}
+                aria-controls={sheetId}
+                // Starts with the visible "More" (WCAG 2.5.3 label in name).
+                aria-label={
+                  currentInMore
+                    ? `More sections, current: ${currentInMore.label}`
+                    : 'More sections'
+                }
+                data-active={currentInMore ? 'true' : undefined}
+                onClick={() => setOpen(true)}
+              >
+                <span className="section-bar__icon">
+                  <MoreIcon />
+                </span>
+                <span className="section-bar__label" data-label="More">
+                  More
+                </span>
+              </button>
+            </li>
+          )}
         </ul>
       </nav>
-      <BottomSheet
-        isOpen={open}
-        onClose={close}
-        title="More sections"
-        id={sheetId}
-      >
-        <ul className="section-sheet__list">
-          {more.map(item => (
-            <li key={item.to}>
-              <NavLink
-                to={item.to}
-                end={item.end ?? false}
-                className="section-sheet__link"
-                onClick={close}
-              >
-                {item.label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </BottomSheet>
+      {more.length > 0 && (
+        <BottomSheet
+          isOpen={open}
+          onClose={close}
+          title="More sections"
+          id={sheetId}
+        >
+          <ul className="section-sheet__list">
+            {more.map(item => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  end={item.end ?? false}
+                  className="section-sheet__link"
+                  onClick={close}
+                >
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </BottomSheet>
+      )}
     </>
   )
 }

@@ -1,12 +1,17 @@
 import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { PHONE_SECTION_BAR_QUERY } from '../../config/districtSections'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { SectionBar } from '../SectionBar'
+import { GlobeIcon, TrendsIcon } from '../SectionBarIcons'
 
 /* RegionSubnav (#1815) — Rankings / Health & compliance for `/regions` and
    `/region/:n`. Real sibling routes (ADR-005), not tabs: the back button,
    deep links and the page's `?py=` / `?date=` all survive the switch.
    Reuses the app's one secondary route-nav primitive (the district-subnav
-   classes), like ClubsSubnav; two links fit a 375 px row, so there is no
-   bottom-bar variant. */
+   classes), like ClubsSubnav. On an upright phone it is the shared bottom
+   SectionBar (#1832), so the page's content starts right under the context
+   bar (375 gate: first content ≤ 110px). */
 
 const KEPT_PARAMS = ['py', 'date'] as const
 
@@ -27,6 +32,20 @@ export const RegionSubnav: React.FC<{
     { label: 'Rankings', to: `${base}${qs}`, end: true },
     { label: 'Health & compliance', to: `${base}/health${qs}`, end: false },
   ]
+  const phone = useMediaQuery(PHONE_SECTION_BAR_QUERY)
+  if (phone) {
+    return (
+      <SectionBar
+        label={label}
+        primary={[
+          { ...links[0]!, icon: <TrendsIcon /> },
+          { ...links[1]!, icon: <GlobeIcon /> },
+        ]}
+        more={[]}
+        testId="region-section-bar"
+      />
+    )
+  }
   return (
     <nav
       aria-label={label}
