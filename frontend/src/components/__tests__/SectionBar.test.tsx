@@ -46,6 +46,24 @@ const bar = () => screen.getByRole('navigation', { name: 'District sections' })
 const moreButton = () => screen.getByRole('button', { name: /^More/ })
 
 describe('SectionBar (#1832)', () => {
+  it('omits More (and its sheet) when there is nothing in it (#1815)', () => {
+    render(
+      <MemoryRouter initialEntries={['/regions']}>
+        <SectionBar
+          label="Regions sections"
+          primary={[
+            { label: 'Rankings', to: '/regions', end: true, icon },
+            { label: 'Health & compliance', to: '/regions/health', icon },
+          ]}
+          more={[]}
+        />
+      </MemoryRouter>
+    )
+    const nav = screen.getByRole('navigation', { name: 'Regions sections' })
+    expect(nav.querySelectorAll('a')).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: /^More/ })).toBeNull()
+  })
+
   it('is a labelled nav landmark with 4 route links and a More button', () => {
     renderAt('/d')
     const nav = bar()

@@ -281,4 +281,16 @@
     overflow: auto;
     overscroll-behavior: contain;
   }
+
+  /* Region districts phone identity (#1815): rank + chip on line 1, the
+     60×16 membership sparkline on its own line 2. */
+  .priority-columns__identity a.region-identity {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    padding: 4px 0;
+  }
+
+  .region-identity__trend {
+    flex-basis: 100%;
+  }
 }

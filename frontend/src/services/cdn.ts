@@ -22,12 +22,15 @@ import {
   GLOBAL_CLUB_RACE_FILE_NAME,
   GLOBAL_HISTORY_OBJECT_PATH,
   GLOBAL_TOTALS_FILE_NAME,
+  REGION_ROLLUPS_FILE_NAME,
+  RegionRollupsSchema,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsSchema,
   type DistrictReportsDataset,
   type GlobalClubRace,
   type GlobalHistory,
   type GlobalTotals,
+  type RegionRollups,
   type SuspendedClubs,
 } from '@taverns-red/shared-contracts'
 
@@ -645,6 +648,32 @@ export async function fetchCdnGlobalClubRace(
     if (!res.ok) return null
     recordCdnResponse(res)
     const parsed = GlobalClubRaceSchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/** `snapshots/{date}/region-rollups.json` (#1799) — region and world
+ *  rollups of the district figures. */
+export function cdnRegionRollupsUrl(date: SnapshotDate): string {
+  return `${cdnBaseUrl()}/snapshots/${date}/${REGION_ROLLUPS_FILE_NAME}`
+}
+
+/**
+ * A date's region and world rollups (#1815, data from #1799), **tolerantly**.
+ * ONE request feeds `/regions/health` and every `/region/:n/health`. A date
+ * before the artifact existed, an off-contract body or a network error is
+ * `null` — "not published for this date" — never a block of zeros.
+ */
+export async function fetchCdnRegionRollups(
+  date: SnapshotDate
+): Promise<RegionRollups | null> {
+  try {
+    const res = await fetch(cdnRegionRollupsUrl(date))
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = RegionRollupsSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null
