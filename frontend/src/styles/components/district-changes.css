@@ -234,6 +234,14 @@
   border-top: 1px solid var(--line);
 }
 
+/* #2063: "Name the other district for N more clubs" — the next batch of
+   history shards, loaded only on the reader's request. Layout only; colour
+   comes from the shared Button secondary variant. */
+.changes-group__more {
+  padding: 0.5rem 1rem 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
 .changes-group__item:not(:has(a)) {
   padding-block: 0.75rem;
 }

@@ -5,6 +5,7 @@ import {
   type DiffEvent,
   type DiffEventCategory,
 } from '@taverns-red/shared-contracts'
+import { Button } from './ui/Button'
 
 /* District "What Changed" feed group (#1013/#1014, epic #1007 — entity links).
    Extracted from DistrictChangesPage so the link logic can be unit-tested
@@ -174,6 +175,10 @@ export const ChangeGroup: React.FC<{
   onToggle: (category: DiffEventCategory, open: boolean) => void
   /** Canonical club id → the district on the other side of a transfer. */
   counterparts?: ReadonlyMap<string, string>
+  /** Transferred clubs whose history shard is outside the loaded batch (#2063). */
+  deferredCounterparts?: ReadonlySet<string>
+  /** Loads the next batch of history shards (#2063). */
+  onLoadMoreCounterparts?: () => void
 }> = ({
   category,
   heading,
@@ -182,9 +187,16 @@ export const ChangeGroup: React.FC<{
   collapsed,
   onToggle,
   counterparts,
+  deferredCounterparts,
+  onLoadMoreCounterparts,
 }) => {
   if (events.length === 0) return null
   const net = netFor(category, events)
+  const deferredHere =
+    TRANSFER_PHRASE[category] && deferredCounterparts
+      ? events.filter(e => deferredCounterparts.has(normalizeClubId(e.clubId)))
+          .length
+      : 0
   return (
     <details
       className="changes-group"
@@ -229,6 +241,18 @@ export const ChangeGroup: React.FC<{
           </li>
         ))}
       </ul>
+      {deferredHere > 0 && onLoadMoreCounterparts && (
+        <div className="changes-group__more">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onLoadMoreCounterparts}
+          >
+            Name the other district for {deferredHere} more{' '}
+            {deferredHere === 1 ? 'club' : 'clubs'}
+          </Button>
+        </div>
+      )}
     </details>
   )
 }
