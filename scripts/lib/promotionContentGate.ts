@@ -24,6 +24,7 @@ import { gunzipSync } from 'node:zlib'
 import {
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_UNASSIGNED,
+  ClosedClubNameIndexSchema,
   ClubsByRegionShardSchema,
   ClubsByRegionWorldPointsSchema,
   ClubsByRegionWorldSchema,
@@ -86,6 +87,7 @@ export type ObjectKind =
   | 'club-district-history-shard'
   | 'charter-cohort-survival'
   | 'charter-cohort-survival-rollup'
+  | 'closed-club-name-index'
   | 'region-rollups'
   | 'clubs-by-region-shard'
   | 'clubs-by-region-world'
@@ -169,6 +171,8 @@ const CHARTER_SURVIVAL =
 /** A region's (`region_<NN>`) or the world's survival file (#1818). */
 const CHARTER_SURVIVAL_ROLLUP =
   /^config\/charter-cohort-survival\/(region_\d{2}|world)\.json$/
+/** Closed clubs by name for omni-search (#2062), derived from the club history. */
+export const CLOSED_CLUB_NAMES_PATH = 'config/closed-club-names.json'
 
 /** The shard keys in a listing (`config/club-district-history/NN.json`), sorted. */
 export function clubHistoryShardKeys(names: Iterable<string>): string[] {
@@ -200,6 +204,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (CHARTER_SURVIVAL_ROLLUP.test(path)) {
     return 'charter-cohort-survival-rollup'
   }
+  if (path === CLOSED_CLUB_NAMES_PATH) return 'closed-club-name-index'
   if (path === LATEST_PATH) return 'latest'
   return 'json'
 }
@@ -327,6 +332,7 @@ export function planContentChecks(
       c.kind === 'club-district-history-shard' ||
       c.kind === 'charter-cohort-survival' ||
       c.kind === 'charter-cohort-survival-rollup' ||
+      c.kind === 'closed-club-name-index' ||
       c.kind === 'region-rollups' ||
       c.kind === 'clubs-by-region-shard' ||
       c.kind === 'clubs-by-region-world' ||
@@ -727,6 +733,33 @@ function checkCharterSurvivalRollup(
     : `no curves through ${missing.join(', ')}, which it lists`
 }
 
+/**
+ * config/closed-club-names.json (#2062): the schema (a row is exactly id,
+ * name, lastSeen — no contact column), `totalClubs` equal to the rows, and
+ * no club listed twice (a club closes once, in one PY and district). An
+ * empty index is valid shape-wise; the history fold refuses empty input.
+ */
+function checkClosedClubNames(value: unknown): string | null {
+  const parsed = ClosedClubNameIndexSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const seen = new Set<string>()
+  let rows = 0
+  for (const byDistrict of Object.values(parsed.data.programYears)) {
+    for (const list of Object.values(byDistrict)) {
+      for (const [clubId] of list) {
+        rows++
+        if (seen.has(clubId)) return `club ${clubId} is listed twice`
+        seen.add(clubId)
+      }
+    }
+  }
+  return parsed.data.totalClubs === rows
+    ? null
+    : `totalClubs is ${parsed.data.totalClubs}, but ${rows} rows are listed`
+}
+
 /** Every count of a block, flattened, for the world = Σ districts check. */
 function figureCounts(f: RegionRollupFigures): Array<[string, number | null]> {
   const out: Array<[string, number | null]> = [
@@ -1004,6 +1037,8 @@ export function checkObject(
       return checkCharterSurvival(check.path, value)
     case 'charter-cohort-survival-rollup':
       return checkCharterSurvivalRollup(check.path, value)
+    case 'closed-club-name-index':
+      return checkClosedClubNames(value)
     case 'region-rollups':
       return checkRegionRollups(check.path, value)
     case 'clubs-by-region-shard':

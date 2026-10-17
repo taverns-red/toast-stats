@@ -19,6 +19,8 @@
 # Output (plain JSON, no -Z), all under the promoted config/ prefix:
 #   gs://<bucket>/config/club-district-history/{NN,index}.json  (#1782;
 #     100 shards + index, ~9.2 MB raw, ~1.1 MB gzip)
+#   gs://<bucket>/config/closed-club-names.json                  (#2062;
+#     closed clubs by name for omni-search, ~0.7 MB raw, ~190 KB gzip)
 #   gs://<bucket>/config/district-region-history.json            (#1820; ~42 KB)
 #   gs://<bucket>/config/charter-cohort-survival/district_<id>.json (#2061;
 #     one per district the club history names, ~2 KB gzip each: the
@@ -27,9 +29,9 @@
 #     (#1818; one per region plus the world, ~2 KB gzip each, with each
 #     program year's own district -> region membership)
 # The content gate schema-checks every one that changed (kinds
-# club-district-history-index/-shard and district-region-history), and
-# promotion copies them with the run, as global objects of the run manifest
-# (#1763), which
+# club-district-history-index/-shard, closed-club-name-index and
+# district-region-history), and promotion copies them with the run, as
+# global objects of the run manifest (#1763), which
 # holds them whenever a date is held and copies the club index after its
 # shards. Like their config/ siblings they are stored identity with
 # max-age=300; Cloud CDN compresses them at the edge (#1852). This script
@@ -127,6 +129,8 @@ fi
 if [ "${#survival[@]}" -gt 0 ]; then
   "${UPLOAD[@]}" "${survival[@]}" "${SURVIVAL_DIR}"
 fi
+"${UPLOAD[@]}" "${WORK}/out/closed-club-names.json" \
+  "gs://${BUCKET}/config/closed-club-names.json"
 "${UPLOAD[@]}" "${WORK}/out/district-region-history.json" \
   "gs://${BUCKET}/config/district-region-history.json"
 
@@ -140,6 +144,9 @@ jq -r '
   (.charterCohortSurvivalRollups |
     "- **Region and world cohort survival** (config/charter-cohort-survival/{region_NN,world}.json, promoted with the run, #1818): \(.regions) regions + world; " +
     "\(.rawBytes) B raw, \(.gzipBytes) B gzip (largest \(.maxGzipBytes) B gzip)"),
+  (.closedClubNames |
+    "- **Closed-club names** (config/closed-club-names.json, promoted with the run, #2062): \(.clubs) clubs; " +
+    "\(.rawBytes) B raw, \(.gzipBytes) B gzip"),
   (.districtRegionHistory |
     "- **District-region history** (config/, promoted with the run, #1820): \(.districts) districts, \(.programYears) PYs from \(.sourceDates) snapshots, \(.conflicts) conflicts; " +
     "\(.rawBytes) B raw, \(.gzipBytes) B gzip")' \
