@@ -26,6 +26,10 @@ import {
 
 export interface RegionsLeaderboardProps {
   rollups: ReadonlyArray<RegionRollup>
+  /**
+   * Membership sparkline values per region (#2127). Stub: not drawn yet.
+   */
+  trends?: ReadonlyMap<string, number[] | null> | null
 }
 
 const SORT_FIELDS = [

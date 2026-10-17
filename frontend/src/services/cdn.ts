@@ -34,6 +34,7 @@ import {
   type GlobalClubRace,
   type GlobalHistory,
   type GlobalTotals,
+  type RegionMembershipSeries,
   type RegionRollups,
   type SuspendedClubs,
 } from '@taverns-red/shared-contracts'
@@ -711,6 +712,18 @@ export async function fetchCdnClubsByRegionShard(
   recordCdnResponse(res)
   const parsed = ClubsByRegionShardSchema.safeParse(await res.json())
   return parsed.success ? parsed.data : null
+}
+
+/** `time-series/regions/{PY}.json` (#2127). Stub: lands next commit. */
+export function cdnRegionMembershipSeriesUrl(_programYear: string): string {
+  return ''
+}
+
+/** The region and world membership series (#2127). Stub. */
+export async function fetchCdnRegionMembershipSeries(
+  _programYear: string
+): Promise<RegionMembershipSeries | null> {
+  return null
 }
 
 /**

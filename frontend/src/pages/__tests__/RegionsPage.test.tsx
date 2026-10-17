@@ -80,6 +80,8 @@ vi.mock('../../services/cdn', () => {
     }),
     fetchCdnRankings: vi.fn().mockResolvedValue(rankings),
     fetchCdnRankingsForDate: vi.fn().mockResolvedValue(rankings),
+    // #2127: the region series is not published in this fixture (a 404).
+    fetchCdnRegionMembershipSeries: vi.fn().mockResolvedValue(null),
   }
 })
 
