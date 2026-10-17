@@ -21,6 +21,7 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { DistrictStatistics } from '@taverns-red/analytics-core'
 import {
   ClubTrendsStore,
   type ClubTrendsStoreData,
@@ -111,5 +112,33 @@ describe('ClubTrendsStore padded duplicate keys (#2100)', () => {
     for (const [key, entry] of Object.entries(saved.clubs)) {
       expect(entry.clubId).toBe(key)
     }
+  })
+
+  it('upserts a zero-padded snapshot id into the canonical key', async () => {
+    const { store } = await loadRecorded('staging')
+    const before = store.getClub('180')!.membershipTrend.length
+
+    store.upsertFromSnapshot('2018-07-15', {
+      districtId: DISTRICT,
+      snapshotDate: '2018-07-15',
+      clubs: [
+        {
+          clubId: '00000180',
+          clubName: 'Causeurs Sussex Speakers Club',
+          divisionId: 'C',
+          divisionName: 'Division C',
+          areaId: '23',
+          areaName: 'Area 23',
+          membershipBase: 20,
+          membershipCount: 18,
+          dcpGoals: 0,
+        },
+      ],
+    } as unknown as DistrictStatistics)
+
+    expect(Object.keys(store.clubs).sort()).toEqual(['180', '348'])
+    const club = store.getClub('180')!
+    expect(club.clubId).toBe('180')
+    expect(club.membershipTrend).toHaveLength(before + 1)
   })
 })
