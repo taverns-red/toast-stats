@@ -1,0 +1,630 @@
+{
+  "_format": { "version": "1.0.0", "type": "reports-rollups" },
+  "snapshotDate": "2026-10-15",
+  "programYear": "2026-2027",
+  "generatedAt": "2026-10-17T23:21:04.901Z",
+  "regionMembership": {
+    "source": "config/district-region-history.json",
+    "asOf": "2026-10-16",
+    "programYear": "2026-2027"
+  },
+  "regionMembershipNote": null,
+  "scope": {
+    "excludedDistricts": [],
+    "unassignedDistricts": [],
+    "duplicateClubs": []
+  },
+  "world": {
+    "prospective": {
+      "clubs": 51,
+      "paymentComplete": 34,
+      "byStage": [
+        { "stage": 1, "label": "Application to Organize", "clubs": 48 },
+        {
+          "stage": 1,
+          "label": "Application to Organize Complete - 03/12/2025#2 Certificate & Remit Incomplete #3 Roster Incomplete #4 Officer Info Complete - 06/02/2025#5 Club Info Complete - 04/25/2025#6 Constitution & Bylaws",
+          "clubs": 1
+        },
+        {
+          "stage": 1,
+          "label": "Application to Organize Complete - 07/16/2025#4 Officer Info",
+          "clubs": 1
+        },
+        {
+          "stage": 1,
+          "label": "Application to Organize Complete - 07/20/2026#4 Officer Info Incomplete - 08/03/2026#5 Club Info Incomplete - 08/03/2026#6 Constitution & Bylaws",
+          "clubs": 1
+        }
+      ]
+    },
+    "coached": { "activeClubs": 78, "completedClubs": 78 },
+    "octoberDues": {
+      "clubs": 1782,
+      "verified": 1507,
+      "notReceived": 87,
+      "low": 158,
+      "ineligible": 29,
+      "notYetDue": 0,
+      "other": 1
+    },
+    "aprilDues": {
+      "clubs": 1782,
+      "verified": 0,
+      "notReceived": 0,
+      "low": 0,
+      "ineligible": 0,
+      "notYetDue": 1782,
+      "other": 0
+    },
+    "officerList": { "submitted": 1738, "notSubmitted": 44 },
+    "sponsorsMentors": {
+      "clubs": 78,
+      "sponsors": 139,
+      "mentors": 141,
+      "other": 0,
+      "awarded": 106
+    },
+    "districts": 12,
+    "districtsWithoutReports": []
+  },
+  "regions": {
+    "05": {
+      "prospective": {
+        "clubs": 35,
+        "paymentComplete": 24,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 32 },
+          {
+            "stage": 1,
+            "label": "Application to Organize Complete - 03/12/2025#2 Certificate & Remit Incomplete #3 Roster Incomplete #4 Officer Info Complete - 06/02/2025#5 Club Info Complete - 04/25/2025#6 Constitution & Bylaws",
+            "clubs": 1
+          },
+          {
+            "stage": 1,
+            "label": "Application to Organize Complete - 07/16/2025#4 Officer Info",
+            "clubs": 1
+          },
+          {
+            "stage": 1,
+            "label": "Application to Organize Complete - 07/20/2026#4 Officer Info Incomplete - 08/03/2026#5 Club Info Incomplete - 08/03/2026#6 Constitution & Bylaws",
+            "clubs": 1
+          }
+        ]
+      },
+      "coached": { "activeClubs": 35, "completedClubs": 37 },
+      "octoberDues": {
+        "clubs": 967,
+        "verified": 812,
+        "notReceived": 33,
+        "low": 103,
+        "ineligible": 18,
+        "notYetDue": 0,
+        "other": 1
+      },
+      "aprilDues": {
+        "clubs": 967,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 967,
+        "other": 0
+      },
+      "officerList": { "submitted": 944, "notSubmitted": 23 },
+      "sponsorsMentors": {
+        "clubs": 31,
+        "sponsors": 50,
+        "mentors": 52,
+        "other": 0,
+        "awarded": 49
+      },
+      "districtIds": ["123", "216", "31", "53", "60", "61", "86"],
+      "districtsWithoutReports": []
+    },
+    "09": {
+      "prospective": {
+        "clubs": 16,
+        "paymentComplete": 10,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 16 }
+        ]
+      },
+      "coached": { "activeClubs": 43, "completedClubs": 41 },
+      "octoberDues": {
+        "clubs": 815,
+        "verified": 695,
+        "notReceived": 54,
+        "low": 55,
+        "ineligible": 11,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 815,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 815,
+        "other": 0
+      },
+      "officerList": { "submitted": 794, "notSubmitted": 21 },
+      "sponsorsMentors": {
+        "clubs": 47,
+        "sponsors": 89,
+        "mentors": 89,
+        "other": 0,
+        "awarded": 57
+      },
+      "districtIds": ["75", "76", "80", "87", "93"],
+      "districtsWithoutReports": []
+    }
+  },
+  "districts": {
+    "31": {
+      "prospective": {
+        "clubs": 6,
+        "paymentComplete": 3,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 5 },
+          {
+            "stage": 1,
+            "label": "Application to Organize Complete - 03/12/2025#2 Certificate & Remit Incomplete #3 Roster Incomplete #4 Officer Info Complete - 06/02/2025#5 Club Info Complete - 04/25/2025#6 Constitution & Bylaws",
+            "clubs": 1
+          }
+        ]
+      },
+      "coached": { "activeClubs": 8, "completedClubs": 6 },
+      "octoberDues": {
+        "clubs": 197,
+        "verified": 174,
+        "notReceived": 4,
+        "low": 15,
+        "ineligible": 4,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 197,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 197,
+        "other": 0
+      },
+      "officerList": { "submitted": 194, "notSubmitted": 3 },
+      "sponsorsMentors": {
+        "clubs": 5,
+        "sponsors": 7,
+        "mentors": 8,
+        "other": 0,
+        "awarded": 6
+      },
+      "region": "05",
+      "reports": "available"
+    },
+    "53": {
+      "prospective": {
+        "clubs": 8,
+        "paymentComplete": 7,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 7 },
+          {
+            "stage": 1,
+            "label": "Application to Organize Complete - 07/20/2026#4 Officer Info Incomplete - 08/03/2026#5 Club Info Incomplete - 08/03/2026#6 Constitution & Bylaws",
+            "clubs": 1
+          }
+        ]
+      },
+      "coached": { "activeClubs": 4, "completedClubs": 11 },
+      "octoberDues": {
+        "clubs": 153,
+        "verified": 123,
+        "notReceived": 5,
+        "low": 23,
+        "ineligible": 2,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 153,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 153,
+        "other": 0
+      },
+      "officerList": { "submitted": 152, "notSubmitted": 1 },
+      "sponsorsMentors": {
+        "clubs": 5,
+        "sponsors": 10,
+        "mentors": 9,
+        "other": 0,
+        "awarded": 6
+      },
+      "region": "05",
+      "reports": "available"
+    },
+    "60": {
+      "prospective": {
+        "clubs": 2,
+        "paymentComplete": 1,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 2 }
+        ]
+      },
+      "coached": { "activeClubs": 3, "completedClubs": 3 },
+      "octoberDues": {
+        "clubs": 105,
+        "verified": 85,
+        "notReceived": 8,
+        "low": 9,
+        "ineligible": 2,
+        "notYetDue": 0,
+        "other": 1
+      },
+      "aprilDues": {
+        "clubs": 105,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 105,
+        "other": 0
+      },
+      "officerList": { "submitted": 101, "notSubmitted": 4 },
+      "sponsorsMentors": {
+        "clubs": 3,
+        "sponsors": 4,
+        "mentors": 4,
+        "other": 0,
+        "awarded": 5
+      },
+      "region": "05",
+      "reports": "available"
+    },
+    "61": {
+      "prospective": {
+        "clubs": 6,
+        "paymentComplete": 6,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 6 }
+        ]
+      },
+      "coached": { "activeClubs": 6, "completedClubs": 6 },
+      "octoberDues": {
+        "clubs": 161,
+        "verified": 138,
+        "notReceived": 4,
+        "low": 16,
+        "ineligible": 3,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 161,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 161,
+        "other": 0
+      },
+      "officerList": { "submitted": 158, "notSubmitted": 3 },
+      "sponsorsMentors": {
+        "clubs": 7,
+        "sponsors": 12,
+        "mentors": 13,
+        "other": 0,
+        "awarded": 9
+      },
+      "region": "05",
+      "reports": "available"
+    },
+    "75": {
+      "prospective": {
+        "clubs": 3,
+        "paymentComplete": 0,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 3 }
+        ]
+      },
+      "coached": { "activeClubs": 9, "completedClubs": 0 },
+      "octoberDues": {
+        "clubs": 187,
+        "verified": 136,
+        "notReceived": 29,
+        "low": 14,
+        "ineligible": 8,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 187,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 187,
+        "other": 0
+      },
+      "officerList": { "submitted": 172, "notSubmitted": 15 },
+      "sponsorsMentors": {
+        "clubs": 13,
+        "sponsors": 25,
+        "mentors": 24,
+        "other": 0,
+        "awarded": 6
+      },
+      "region": "09",
+      "reports": "available"
+    },
+    "76": {
+      "prospective": {
+        "clubs": 6,
+        "paymentComplete": 5,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 6 }
+        ]
+      },
+      "coached": { "activeClubs": 11, "completedClubs": 4 },
+      "octoberDues": {
+        "clubs": 203,
+        "verified": 187,
+        "notReceived": 2,
+        "low": 14,
+        "ineligible": 0,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 203,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 203,
+        "other": 0
+      },
+      "officerList": { "submitted": 203, "notSubmitted": 0 },
+      "sponsorsMentors": {
+        "clubs": 2,
+        "sponsors": 4,
+        "mentors": 4,
+        "other": 0,
+        "awarded": 4
+      },
+      "region": "09",
+      "reports": "available"
+    },
+    "80": {
+      "prospective": {
+        "clubs": 5,
+        "paymentComplete": 4,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 5 }
+        ]
+      },
+      "coached": { "activeClubs": 8, "completedClubs": 20 },
+      "octoberDues": {
+        "clubs": 218,
+        "verified": 199,
+        "notReceived": 5,
+        "low": 13,
+        "ineligible": 1,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 218,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 218,
+        "other": 0
+      },
+      "officerList": { "submitted": 217, "notSubmitted": 1 },
+      "sponsorsMentors": {
+        "clubs": 15,
+        "sponsors": 27,
+        "mentors": 28,
+        "other": 0,
+        "awarded": 22
+      },
+      "region": "09",
+      "reports": "available"
+    },
+    "86": {
+      "prospective": {
+        "clubs": 3,
+        "paymentComplete": 2,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 3 }
+        ]
+      },
+      "coached": { "activeClubs": 1, "completedClubs": 0 },
+      "octoberDues": {
+        "clubs": 101,
+        "verified": 96,
+        "notReceived": 2,
+        "low": 2,
+        "ineligible": 1,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 101,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 101,
+        "other": 0
+      },
+      "officerList": { "submitted": 101, "notSubmitted": 0 },
+      "sponsorsMentors": {
+        "clubs": 3,
+        "sponsors": 4,
+        "mentors": 5,
+        "other": 0,
+        "awarded": 6
+      },
+      "region": "05",
+      "reports": "available"
+    },
+    "87": {
+      "prospective": {
+        "clubs": 2,
+        "paymentComplete": 1,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 2 }
+        ]
+      },
+      "coached": { "activeClubs": 7, "completedClubs": 9 },
+      "octoberDues": {
+        "clubs": 130,
+        "verified": 97,
+        "notReceived": 18,
+        "low": 13,
+        "ineligible": 2,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 130,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 130,
+        "other": 0
+      },
+      "officerList": { "submitted": 125, "notSubmitted": 5 },
+      "sponsorsMentors": {
+        "clubs": 13,
+        "sponsors": 26,
+        "mentors": 26,
+        "other": 0,
+        "awarded": 21
+      },
+      "region": "09",
+      "reports": "available"
+    },
+    "93": {
+      "prospective": { "clubs": 0, "paymentComplete": 0, "byStage": [] },
+      "coached": { "activeClubs": 8, "completedClubs": 8 },
+      "octoberDues": {
+        "clubs": 77,
+        "verified": 76,
+        "notReceived": 0,
+        "low": 1,
+        "ineligible": 0,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 77,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 77,
+        "other": 0
+      },
+      "officerList": { "submitted": 77, "notSubmitted": 0 },
+      "sponsorsMentors": {
+        "clubs": 4,
+        "sponsors": 7,
+        "mentors": 7,
+        "other": 0,
+        "awarded": 4
+      },
+      "region": "09",
+      "reports": "available"
+    },
+    "123": {
+      "prospective": {
+        "clubs": 3,
+        "paymentComplete": 0,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 3 }
+        ]
+      },
+      "coached": { "activeClubs": 6, "completedClubs": 6 },
+      "octoberDues": {
+        "clubs": 110,
+        "verified": 89,
+        "notReceived": 4,
+        "low": 16,
+        "ineligible": 1,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 110,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 110,
+        "other": 0
+      },
+      "officerList": { "submitted": 105, "notSubmitted": 5 },
+      "sponsorsMentors": {
+        "clubs": 5,
+        "sponsors": 9,
+        "mentors": 10,
+        "other": 0,
+        "awarded": 13
+      },
+      "region": "05",
+      "reports": "available"
+    },
+    "216": {
+      "prospective": {
+        "clubs": 7,
+        "paymentComplete": 5,
+        "byStage": [
+          { "stage": 1, "label": "Application to Organize", "clubs": 6 },
+          {
+            "stage": 1,
+            "label": "Application to Organize Complete - 07/16/2025#4 Officer Info",
+            "clubs": 1
+          }
+        ]
+      },
+      "coached": { "activeClubs": 7, "completedClubs": 5 },
+      "octoberDues": {
+        "clubs": 140,
+        "verified": 107,
+        "notReceived": 6,
+        "low": 22,
+        "ineligible": 5,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 140,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 140,
+        "other": 0
+      },
+      "officerList": { "submitted": 133, "notSubmitted": 7 },
+      "sponsorsMentors": {
+        "clubs": 3,
+        "sponsors": 4,
+        "mentors": 3,
+        "other": 0,
+        "awarded": 4
+      },
+      "region": "05",
+      "reports": "available"
+    }
+  }
+}
