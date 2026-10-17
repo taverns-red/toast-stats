@@ -48,6 +48,7 @@ import type {
 import {
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_WORLD_FILE_NAME,
+  CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME,
   clubsByRegionShardFileName,
   districtIdFromSnapshotFileName,
   isDistrictSnapshotFile,
@@ -214,7 +215,7 @@ export interface ComputeOperationResult {
   regionRollupsFailed: boolean
   /**
    * Paths written under `snapshots/{date}/clubs-by-region/` (#1800): one
-   * shard per region, then `world.json`. Undefined when the date was
+   * shard per region, then `world.json` and `world-points.json`. Undefined when the date was
    * skipped (no rankings file) or the files were refused.
    */
   clubsByRegionPaths?: string[]
@@ -1940,7 +1941,7 @@ export class AnalyticsComputeService {
    * - The directory is rewritten whole, so a region the history no longer
    *   has leaves no stale shard behind locally (staging keeps an old object
    *   until the date is pruned; `world.json` lists the current shards).
-   * - Compact JSON: the world file feeds a ~15k-pin map.
+   * - Compact JSON: the points file feeds a ~15k-pin map.
    * - Never publish-blocking (`clubsByRegionFailed` does not move the exit
    *   code).
    */
@@ -1964,6 +1965,7 @@ export class AnalyticsComputeService {
       const { rankings, districts } = readClubsByRegionInput(snapshotDir)
       const {
         world,
+        worldPoints,
         shards,
         missingDistricts: withoutFile,
       } = buildClubsByRegion({
@@ -2008,6 +2010,16 @@ export class AnalyticsComputeService {
       const worldPath = path.join(outDir, CLUBS_BY_REGION_WORLD_FILE_NAME)
       await fs.writeFile(worldPath, JSON.stringify(world) + '\n', 'utf-8')
       paths.push(worldPath)
+      const pointsPath = path.join(
+        outDir,
+        CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME
+      )
+      await fs.writeFile(
+        pointsPath,
+        JSON.stringify(worldPoints) + '\n',
+        'utf-8'
+      )
+      paths.push(pointsPath)
 
       if (world.shards === null) {
         this.logger.warn('Club shards not written: no region membership', {

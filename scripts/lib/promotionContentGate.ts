@@ -25,6 +25,7 @@ import {
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_UNASSIGNED,
   ClubsByRegionShardSchema,
+  ClubsByRegionWorldPointsSchema,
   ClubsByRegionWorldSchema,
   clubsByRegionShardFileName,
   containsLink,
@@ -84,6 +85,7 @@ export type ObjectKind =
   | 'region-rollups'
   | 'clubs-by-region-shard'
   | 'clubs-by-region-world'
+  | 'clubs-by-region-world-points'
   | 'latest'
   | 'json'
 
@@ -125,6 +127,9 @@ const REGION_ROLLUPS = new RegExp(
 )
 const CLUBS_BY_REGION_WORLD = new RegExp(
   `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${CLUBS_BY_REGION_DIR}/world\\.json$`
+)
+const CLUBS_BY_REGION_WORLD_POINTS = new RegExp(
+  `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${CLUBS_BY_REGION_DIR}/world-points\\.json$`
 )
 const CLUBS_BY_REGION_SHARD = new RegExp(
   `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${CLUBS_BY_REGION_DIR}/([A-Za-z0-9-]+)\\.json$`
@@ -173,6 +178,8 @@ export function classifyObject(path: string): ObjectKind | null {
   if (DISTRICT_ANALYTICS.test(path)) return 'district-analytics'
   if (REGION_ROLLUPS.test(path)) return 'region-rollups'
   if (CLUBS_BY_REGION_WORLD.test(path)) return 'clubs-by-region-world'
+  if (CLUBS_BY_REGION_WORLD_POINTS.test(path))
+    return 'clubs-by-region-world-points'
   if (CLUBS_BY_REGION_SHARD.test(path)) return 'clubs-by-region-shard'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
@@ -302,7 +309,8 @@ export function planContentChecks(
       c.kind === 'club-district-history-shard' ||
       c.kind === 'region-rollups' ||
       c.kind === 'clubs-by-region-shard' ||
-      c.kind === 'clubs-by-region-world'
+      c.kind === 'clubs-by-region-world' ||
+      c.kind === 'clubs-by-region-world-points'
     ) {
       checks.push(c)
     } else {
@@ -802,9 +810,9 @@ function checkClubsByRegionShard(path: string, value: unknown): string | null {
 }
 
 /**
- * snapshots/<date>/clubs-by-region/world.json (#1800): the schema; its date
- * and program year; one point per mapped club; the shard entries (at their
- * own paths) summing to the totals; top lists no longer than N.
+ * snapshots/<date>/clubs-by-region/world.json (#1800): the schema (no map
+ * points: they are world-points.json); its date and program year; the
+ * shard entries (at their own paths) summing to the totals.
  */
 function checkClubsByRegionWorld(path: string, value: unknown): string | null {
   const parsed = ClubsByRegionWorldSchema.safeParse(value)
@@ -818,9 +826,6 @@ function checkClubsByRegionWorld(path: string, value: unknown): string | null {
   const t = w.totals
   if (t.clubs !== t.mapped + t.unmapped) {
     return `totals.clubs is ${t.clubs}, but mapped + unmapped is ${t.mapped + t.unmapped}`
-  }
-  if (w.points.length !== t.mapped) {
-    return `${w.points.length} points, but totals.mapped is ${t.mapped}`
   }
   if (w.shards !== null) {
     const sum = { clubs: 0, mapped: 0, unmapped: 0 }
@@ -842,6 +847,33 @@ function checkClubsByRegionWorld(path: string, value: unknown): string | null {
         return `shards sum to ${sum[k]} ${k}, but totals.${k} is ${t[k]}`
       }
     }
+  }
+  return null
+}
+
+/**
+ * snapshots/<date>/clubs-by-region/world-points.json (#1800): the schema;
+ * its date and program year; `count` = the points; no club twice.
+ */
+function checkClubsByRegionWorldPoints(
+  path: string,
+  value: unknown
+): string | null {
+  const parsed = ClubsByRegionWorldPointsSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const p = parsed.data
+  const date = CLUBS_BY_REGION_WORLD_POINTS.exec(path)?.[1]
+  const dated = datedArtifact(p.snapshotDate, p.programYear, date)
+  if (dated !== null) return dated
+  if (p.count !== p.points.length) {
+    return `count is ${p.count}, but ${p.points.length} points are listed`
+  }
+  const ids = new Set<string>()
+  for (const [id] of p.points) {
+    if (ids.has(id)) return `club ${id} is listed twice`
+    ids.add(id)
   }
   return null
 }
@@ -903,6 +935,8 @@ export function checkObject(
       return checkClubsByRegionShard(check.path, value)
     case 'clubs-by-region-world':
       return checkClubsByRegionWorld(check.path, value)
+    case 'clubs-by-region-world-points':
+      return checkClubsByRegionWorldPoints(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -1009,7 +1043,9 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
   'clubs-by-region-shard':
     'decoded, ClubsByRegionShardSchema (strict rows: no contact, link or meeting field), served under its snapshotDate and region key with that date’s program year, counts = its rows, every club from a listed district, no link in a name (#1800)',
   'clubs-by-region-world':
-    'decoded, ClubsByRegionWorldSchema, served under its snapshotDate with that date’s program year, one point per mapped club, shards at their own paths summing to the totals (#1800)',
+    'decoded, ClubsByRegionWorldSchema (no map points), served under its snapshotDate with that date’s program year, shards at their own paths summing to the totals (#1800)',
+  'clubs-by-region-world-points':
+    'decoded, ClubsByRegionWorldPointsSchema, served under its snapshotDate with that date’s program year, count = its points, no club twice (#1800)',
   latest: 'decoded, latestSnapshotDate is a real date',
   json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',

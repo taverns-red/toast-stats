@@ -1,6 +1,7 @@
 /**
  * `snapshots/{date}/clubs-by-region/` — one shard per region with every club
- * the region and world explorers draw or list, plus `world.json` (#1800,
+ * the region and world explorers draw or list, plus `world.json` and its
+ * lazily loaded `world-points.json` (#1800,
  * epic #1781). See the shared-contracts schema for the shape.
  *
  * The rules this module holds:
@@ -36,6 +37,8 @@ import {
   CLUBS_BY_REGION_TOP_N,
   CLUBS_BY_REGION_UNASSIGNED,
   CLUBS_BY_REGION_WORLD_FORMAT,
+  CLUBS_BY_REGION_WORLD_POINTS_FORMAT,
+  CLUBS_BY_REGION_WORLD_POINTS_PATH,
   clubsByRegionShardFileName,
   districtIdFromSnapshotFileName,
   isDistrictSnapshotFile,
@@ -47,6 +50,7 @@ import {
   type ClubsByRegionShard,
   type ClubsByRegionTopMetric,
   type ClubsByRegionWorld,
+  type ClubsByRegionWorldPoints,
   type DistrictRanking,
   type DistrictRegionHistory,
 } from '@taverns-red/shared-contracts'
@@ -91,6 +95,8 @@ export interface ClubsByRegionInput {
 
 export interface ClubsByRegionResult {
   readonly world: ClubsByRegionWorld
+  /** The map points, a separate lazily loaded file. */
+  readonly worldPoints: ClubsByRegionWorldPoints
   /** Sorted by region key; empty when there is no usable history. */
   readonly shards: ClubsByRegionShard[]
   /** Rankings districts with no district file: the writer must refuse. */
@@ -295,11 +301,19 @@ export function buildClubsByRegion(
       netGrowth: topList(rows, 'netGrowth'),
       dcpGoals: topList(rows, 'dcpGoals'),
     },
-    points,
+    pointsPath: CLUBS_BY_REGION_WORLD_POINTS_PATH,
     scope: { excludedDistricts, duplicateClubs },
   }
+  const worldPoints: ClubsByRegionWorldPoints = {
+    _format: CLUBS_BY_REGION_WORLD_POINTS_FORMAT,
+    snapshotDate,
+    programYear,
+    generatedAt,
+    count: points.length,
+    points,
+  }
 
-  return { world, shards, missingDistricts }
+  return { world, worldPoints, shards, missingDistricts }
 }
 
 // ---------------------------------------------------------------------------

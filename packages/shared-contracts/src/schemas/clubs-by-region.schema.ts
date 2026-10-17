@@ -4,9 +4,13 @@
  * - `snapshots/{date}/clubs-by-region/<region>.json` — every club of one
  *   region, for the region explorer (#1808) and, fetched on demand, the
  *   world explorer (#1809);
- * - `snapshots/{date}/clubs-by-region/world.json` — per-region counts, the
- *   top-N seed lists and one map point per located club, so "All regions"
- *   never fetches every shard.
+ * - `snapshots/{date}/clubs-by-region/world.json` — per-region counts and
+ *   the top-N seed rows (~10 KB gzip), so "All regions" renders its list
+ *   without fetching any shard or the map points (#1809: <= 150 KB before
+ *   the first 50 rows);
+ * - `snapshots/{date}/clubs-by-region/world-points.json` — one map point
+ *   per located club (~180 KB gzip at 15k clubs), loaded lazily by the
+ *   clustered map.
  *
  * Rules the shape encodes:
  * - **Explorer fields only.** A row carries identity (id, name, district,
@@ -42,6 +46,11 @@ export const CLUBS_BY_REGION_VERSION = '1.0.0'
 export const CLUBS_BY_REGION_DIR = 'clubs-by-region'
 /** The world file's name inside {@link CLUBS_BY_REGION_DIR}. */
 export const CLUBS_BY_REGION_WORLD_FILE_NAME = 'world.json'
+/** The map-points file's name inside {@link CLUBS_BY_REGION_DIR}. */
+export const CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME = 'world-points.json'
+/** world.json's `pointsPath`, relative to `snapshots/{date}/`. */
+export const CLUBS_BY_REGION_WORLD_POINTS_PATH =
+  `${CLUBS_BY_REGION_DIR}/${CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME}` as const
 /** The shard key for districts the history does not place in a region. */
 export const CLUBS_BY_REGION_UNASSIGNED = 'unassigned'
 /** Length of each top-N seed list in the world file. */
@@ -202,8 +211,8 @@ export const ClubsByRegionWorldSchema = z
         dcpGoals: TopListSchema,
       })
       .strict(),
-    /** Every club with coordinates, sorted by club id. */
-    points: z.array(ClubsByRegionPointSchema),
+    /** The lazily loaded map points (`world-points.json`). */
+    pointsPath: z.literal(CLUBS_BY_REGION_WORLD_POINTS_PATH),
     scope: z
       .object({
         /** District files on disk that the date's rankings do not list. */
@@ -222,12 +231,36 @@ export const ClubsByRegionWorldSchema = z
   })
   .strict()
 
+export const ClubsByRegionWorldPointsFormatSchema = z
+  .object({
+    version: z.string(),
+    type: z.literal('clubs-by-region-world-points'),
+  })
+  .strict()
+
+/** `snapshots/{date}/clubs-by-region/world-points.json`. */
+export const ClubsByRegionWorldPointsSchema = z
+  .object({
+    _format: ClubsByRegionWorldPointsFormatSchema,
+    snapshotDate: IsoDate,
+    programYear: ProgramYear,
+    generatedAt: z.string(),
+    /** = points.length = world.json `totals.mapped`. */
+    count: Count,
+    /** Every club with coordinates, sorted by club id. */
+    points: z.array(ClubsByRegionPointSchema),
+  })
+  .strict()
+
 export type ClubsByRegionHealth = z.infer<typeof ClubsByRegionHealthSchema>
 export type ClubsByRegionTier = z.infer<typeof ClubsByRegionTierSchema>
 export type ClubsByRegionClub = z.infer<typeof ClubsByRegionClubSchema>
 export type ClubsByRegionShard = z.infer<typeof ClubsByRegionShardSchema>
 export type ClubsByRegionPoint = z.infer<typeof ClubsByRegionPointSchema>
 export type ClubsByRegionWorld = z.infer<typeof ClubsByRegionWorldSchema>
+export type ClubsByRegionWorldPoints = z.infer<
+  typeof ClubsByRegionWorldPointsSchema
+>
 export type ClubsByRegionTopMetric =
   (typeof CLUBS_BY_REGION_TOP_METRICS)[number]
 
@@ -238,3 +271,7 @@ export const CLUBS_BY_REGION_SHARD_FORMAT: z.infer<
 export const CLUBS_BY_REGION_WORLD_FORMAT: z.infer<
   typeof ClubsByRegionWorldFormatSchema
 > = { version: CLUBS_BY_REGION_VERSION, type: 'clubs-by-region-world' }
+
+export const CLUBS_BY_REGION_WORLD_POINTS_FORMAT: z.infer<
+  typeof ClubsByRegionWorldPointsFormatSchema
+> = { version: CLUBS_BY_REGION_VERSION, type: 'clubs-by-region-world-points' }

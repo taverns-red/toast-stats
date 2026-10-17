@@ -285,6 +285,11 @@ export {
   ClubsByRegionPointSchema,
   ClubsByRegionWorldSchema,
   ClubsByRegionWorldFormatSchema,
+  ClubsByRegionWorldPointsSchema,
+  ClubsByRegionWorldPointsFormatSchema,
+  CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME,
+  CLUBS_BY_REGION_WORLD_POINTS_PATH,
+  CLUBS_BY_REGION_WORLD_POINTS_FORMAT,
   CLUBS_BY_REGION_VERSION,
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_WORLD_FILE_NAME,
@@ -300,6 +305,7 @@ export {
   type ClubsByRegionShard,
   type ClubsByRegionPoint,
   type ClubsByRegionWorld,
+  type ClubsByRegionWorldPoints,
   type ClubsByRegionTopMetric,
 } from './schemas/clubs-by-region.schema.js'
 

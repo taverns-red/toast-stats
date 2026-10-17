@@ -2927,6 +2927,21 @@
         }
       ]
     },
+    "pointsPath": "clubs-by-region/world-points.json",
+    "scope": {
+      "excludedDistricts": [],
+      "duplicateClubs": []
+    }
+  },
+  "worldPoints": {
+    "_format": {
+      "version": "1.0.0",
+      "type": "clubs-by-region-world-points"
+    },
+    "snapshotDate": "2026-10-16",
+    "programYear": "2026-2027",
+    "generatedAt": "2026-10-17T00:00:00.000Z",
+    "count": 314,
     "points": [
       ["123", 21.38606, -157.90673, "49", "i"],
       ["180", 45.42081, -75.68998, "61", "v"],
@@ -3242,11 +3257,7 @@
       ["28680563", -31.95184, 115.8587, "17", "v"],
       ["28680685", 47.92403, 106.85607, "U", "v"],
       ["28680820", 21.30437, -157.86308, "49", "v"]
-    ],
-    "scope": {
-      "excludedDistricts": [],
-      "duplicateClubs": []
-    }
+    ]
   },
   "shards": {
     "12": {
