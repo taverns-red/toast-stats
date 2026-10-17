@@ -119,6 +119,13 @@ const renderPageAt = (url: string) => {
 }
 
 describe('RegionsPage (#496)', () => {
+  it('links to the worldwide Health & compliance subpage (#1815)', async () => {
+    renderPage()
+    expect(
+      await screen.findByRole('link', { name: 'Health & compliance' })
+    ).toHaveAttribute('href', '/regions/health')
+  })
+
   it('renders the page header with eyebrow + h1 "Regions"', async () => {
     renderPage()
     expect(
