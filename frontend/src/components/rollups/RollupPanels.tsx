@@ -26,6 +26,8 @@ export interface RollupPanelsProps {
   snapshotDate: string
   /** "worldwide" / "in Region 07" — finishes the KPI captions. */
   scopeLabel: string
+  /** Rendered between the KPI tiles and the sections ("Needs attention"). */
+  attention?: React.ReactNode
 }
 
 /** The row each section's phone summary leads with. */
@@ -88,6 +90,7 @@ export const RollupPanels: React.FC<RollupPanelsProps> = ({
   programYear,
   snapshotDate,
   scopeLabel,
+  attention,
 }) => {
   const isMobile = useIsMobile(768)
   const kpis = rollupKpis(figures)
@@ -113,6 +116,8 @@ export const RollupPanels: React.FC<RollupPanelsProps> = ({
           </li>
         ))}
       </ul>
+
+      {attention}
 
       <div className="rollup-sections">
         {sections.map(section => {

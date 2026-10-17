@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useRegionRollups } from '../hooks/useRegionRollups'
 import {
+  RollupNeedsAttention,
   RollupPageShell,
   RollupSkeleton,
 } from '../components/rollups/RollupPageShell'
@@ -43,7 +44,6 @@ const RegionHealthPage: React.FC = () => {
       ]}
       subnavBase={`/region/${region}`}
       controls={controls}
-      attention={block ? needsAttention(children) : null}
     >
       {isLoading && <RollupSkeleton />}
       {!isLoading && !block && (
@@ -60,6 +60,7 @@ const RegionHealthPage: React.FC = () => {
             figures={block}
             programYear={controls.selectedProgramYear.label}
             snapshotDate={snapshotDate ?? rollups!.snapshotDate}
+            attention={<RollupNeedsAttention rows={needsAttention(children)} />}
             scopeLabel={`in Region ${region}`}
           />
           <section

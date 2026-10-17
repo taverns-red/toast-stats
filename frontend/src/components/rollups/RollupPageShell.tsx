@@ -13,8 +13,7 @@ import { formatShare, type AttentionRow } from '../../utils/regionRollupView'
 /* RollupPageShell (#1815) — the chrome shared by `/regions/health` and
    `/region/:n/health`: phone context bar, desktop header with the PY/date
    controls (the page's own state, R3), the Rankings / Health & compliance
-   subnav, and the "Needs attention" rows (phones, hub hierarchy §5.5). The
-   page supplies the body. */
+   subnav. The page supplies the body. */
 
 export interface RollupPageShellProps {
   title: string
@@ -24,7 +23,6 @@ export interface RollupPageShellProps {
   trail: ContextCrumb[]
   subnavBase: string
   controls: ProgramYearControls
-  attention: AttentionRow[] | null
   children: React.ReactNode
 }
 
@@ -36,17 +34,8 @@ export const RollupPageShell: React.FC<RollupPageShellProps> = ({
   trail,
   subnavBase,
   controls: c,
-  attention,
   children,
 }) => {
-  const isMobile = useIsMobile(768)
-  const attentionRows: MobileRow[] = (attention ?? []).map(a => ({
-    id: a.id,
-    to: a.to,
-    title: a.label,
-    chip: <span className="district-hub__count">{formatShare(a.share)}</span>,
-    meta: `${a.count.toLocaleString('en-US')} clubs need intervention`,
-  }))
   return (
     <div className="districts-page rollup-page">
       <ContextBar
@@ -93,23 +82,37 @@ export const RollupPageShell: React.FC<RollupPageShellProps> = ({
         </div>
       </header>
       <RegionSubnav base={subnavBase} label={`${title} sections`} />
-      {isMobile && attentionRows.length > 0 && (
-        <section
-          className="district-hub__block rollup-attention"
-          aria-labelledby="rollup-attention-heading"
-          data-testid="rollup-attention"
-        >
-          <h2
-            id="rollup-attention-heading"
-            className="district-hub__block-title"
-          >
-            Needs attention
-          </h2>
-          <MobileRowList label="Needs attention" rows={attentionRows} />
-        </section>
-      )}
       {children}
     </div>
+  )
+}
+
+/** "Needs attention" (#1815, hub hierarchy §5.5): the children with the
+ *  highest intervention-required share, as phone rows linking down a level.
+ *  Phones only — at 768 and up the sortable breakdown table carries it. */
+export const RollupNeedsAttention: React.FC<{
+  rows: readonly AttentionRow[]
+}> = ({ rows }) => {
+  const isMobile = useIsMobile(768)
+  if (!isMobile || rows.length === 0) return null
+  const items: MobileRow[] = rows.map(a => ({
+    id: a.id,
+    to: a.to,
+    title: a.label,
+    chip: <span className="district-hub__count">{formatShare(a.share)}</span>,
+    meta: `${a.count.toLocaleString('en-US')} clubs need intervention`,
+  }))
+  return (
+    <section
+      className="district-hub__block rollup-attention"
+      aria-labelledby="rollup-attention-heading"
+      data-testid="rollup-attention"
+    >
+      <h2 id="rollup-attention-heading" className="district-hub__block-title">
+        Needs attention
+      </h2>
+      <MobileRowList label="Needs attention" rows={items} />
+    </section>
   )
 }
 

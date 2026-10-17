@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useRegionRollups } from '../hooks/useRegionRollups'
 import {
+  RollupNeedsAttention,
   RollupPageShell,
   RollupSkeleton,
 } from '../components/rollups/RollupPageShell'
@@ -38,7 +39,6 @@ const WorldHealthPage: React.FC = () => {
       ]}
       subnavBase="/regions"
       controls={controls}
-      attention={rollups ? needsAttention(children) : null}
     >
       {isLoading && <RollupSkeleton />}
       {!isLoading && !rollups && (
@@ -53,6 +53,7 @@ const WorldHealthPage: React.FC = () => {
             figures={rollups.world}
             programYear={controls.selectedProgramYear.label}
             snapshotDate={snapshotDate ?? rollups.snapshotDate}
+            attention={<RollupNeedsAttention rows={needsAttention(children)} />}
             scopeLabel="worldwide"
           />
           <section

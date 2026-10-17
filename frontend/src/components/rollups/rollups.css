@@ -116,8 +116,32 @@
     gap: 0 12px;
     min-height: 44px;
     padding: 10px 0;
+    position: relative;
+    padding-right: 28px;
     cursor: pointer;
-    list-style-position: inside;
+    list-style: none;
+  }
+
+  .rollup-section__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* The disclosure affordance: a chevron that turns when open (the native
+     marker is hidden because the summary is a flex row). */
+  .rollup-section__summary::after {
+    content: '';
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--ink-3);
+    border-bottom: 2px solid var(--ink-3);
+    transform: translateY(-75%) rotate(45deg);
+  }
+
+  .rollup-section--disclosure[open] > .rollup-section__summary::after {
+    transform: translateY(-25%) rotate(-135deg);
   }
 
   .rollup-section__summary:focus-visible {

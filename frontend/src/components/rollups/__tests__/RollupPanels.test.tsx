@@ -75,6 +75,27 @@ describe('RollupPanels', () => {
     )
   })
 
+  it('places the attention slot between the KPI tiles and the sections (hub §5.5)', () => {
+    render(
+      <RollupPanels
+        figures={world}
+        programYear="2026-2027"
+        snapshotDate="2026-10-15"
+        scopeLabel="worldwide"
+        attention={<div data-testid="slot">attention</div>}
+      />
+    )
+    const kpis = screen.getByTestId('rollup-kpis')
+    const slot = screen.getByTestId('slot')
+    const health = screen.getByTestId('rollup-section-health')
+    expect(
+      kpis.compareDocumentPosition(slot) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      slot.compareDocumentPosition(health) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
+
   it('renders sections as disclosure rows on a phone', () => {
     isMobile.value = true
     renderPanels(world)
