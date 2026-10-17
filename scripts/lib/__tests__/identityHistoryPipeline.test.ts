@@ -33,6 +33,7 @@ import * as zlib from 'node:zlib'
 import { parse } from 'yaml'
 import {
   CharterCohortSurvivalFileSchema,
+  CharterCohortSurvivalRollupFileSchema,
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
   DistrictRegionHistorySchema,
@@ -160,6 +161,10 @@ function writtenObjects(): string[] {
 
 function survivalObjects(): string[] {
   return allObjects().filter(o => o.startsWith(SURVIVAL))
+}
+
+function districtSurvivalObjects(): string[] {
+  return survivalObjects().filter(o => o.startsWith(`${SURVIVAL}district_`))
 }
 
 function allObjects(): string[] {
@@ -324,7 +329,7 @@ describe('build-identity-history.sh: charter cohort survival to config/ (#2061)'
         for (const d of Object.values(club.byProgramYear)) named.add(d)
       }
     }
-    expect(survivalObjects()).toEqual(
+    expect(districtSurvivalObjects()).toEqual(
       [...named].map(d => `${SURVIVAL}district_${d}.json`).sort()
     )
     const d61 = CharterCohortSurvivalFileSchema.parse(
@@ -366,7 +371,7 @@ describe('build-identity-history.sh: charter cohort survival to config/ (#2061)'
     const r = runScript()
     const parsed = JSON.parse(r.stdout.trim())
     expect(parsed.charterCohortSurvival.districts).toBe(
-      survivalObjects().length
+      districtSurvivalObjects().length
     )
     expect(parsed.charterCohortSurvival.gzipBytes).toBeGreaterThan(0)
     expect(parsed.charterCohortSurvival.maxGzipBytes).toBeGreaterThan(0)
@@ -380,6 +385,75 @@ describe('build-identity-history.sh: charter cohort survival to config/ (#2061)'
     expect(PROMOTED_PREFIXES.some(x => p.startsWith(x))).toBe(true)
     expect(classifyPromotionPath(p)).toEqual({ kind: 'global' })
     expect(classifyObject(p)).toBe('charter-cohort-survival')
+  })
+})
+
+describe('build-identity-history.sh: region and world cohort survival (#1818)', () => {
+  it('uploads one schema-valid file per region the region history names, and one for the world', () => {
+    seedAll()
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    const regions = DistrictRegionHistorySchema.parse(readObject(REGION))
+    const named = new Set<string>()
+    for (const d of Object.values(regions.districts)) {
+      for (const id of Object.values(d.byProgramYear)) named.add(id)
+    }
+    expect(named.size).toBeGreaterThan(0)
+    expect(
+      survivalObjects().filter(o => !o.startsWith(`${SURVIVAL}district_`))
+    ).toEqual(
+      [
+        ...[...named].map(id => `${SURVIVAL}region_${id}.json`),
+        `${SURVIVAL}world.json`,
+      ].sort()
+    )
+    const world = CharterCohortSurvivalRollupFileSchema.parse(
+      readObject(`${SURVIVAL}world.json`)
+    )
+    expect(world.scope).toEqual({ kind: 'world' })
+    expect(world.asOf).toBe(
+      ClubDistrictHistoryIndexSchema.parse(readObject(`${PREFIX}index.json`))
+        .asOf
+    )
+    const r05 = CharterCohortSurvivalRollupFileSchema.parse(
+      readObject(`${SURVIVAL}region_05.json`)
+    )
+    expect(r05.scope).toEqual({ kind: 'region', regionId: '05' })
+  })
+
+  it('uploads them in the same one transfer as the district files, after the index', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const cps = lines(shimLog).filter(l =>
+      l.endsWith(`gs://${BUCKET}/${SURVIVAL}`)
+    )
+    expect(cps).toHaveLength(1)
+    expect(cps[0]).toMatch(/world\.json /)
+    expect(cps[0]).toMatch(/region_05\.json /)
+    expect(readMeta(`${SURVIVAL}world.json`)).toContain(
+      'cache-control=public, max-age=300'
+    )
+  })
+
+  it('reports their count and sizes in the summary line and the step summary', () => {
+    seedAll()
+    const r = runScript()
+    const parsed = JSON.parse(r.stdout.trim())
+    expect(parsed.charterCohortSurvivalRollups.regions).toBe(
+      survivalObjects().filter(o => o.startsWith(`${SURVIVAL}region_`)).length
+    )
+    expect(parsed.charterCohortSurvivalRollups.gzipBytes).toBeGreaterThan(0)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /region and world cohort survival.*regions/i
+    )
+  })
+
+  it('are global promotion objects with their own content-gate kind', () => {
+    for (const p of [`${SURVIVAL}region_05.json`, `${SURVIVAL}world.json`]) {
+      expect(PROMOTED_PREFIXES.some(x => p.startsWith(x))).toBe(true)
+      expect(classifyPromotionPath(p)).toEqual({ kind: 'global' })
+      expect(classifyObject(p)).toBe('charter-cohort-survival-rollup')
+    }
   })
 })
 

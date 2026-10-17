@@ -181,6 +181,15 @@ describe('classifyObject', () => {
       'charter-cohort-survival',
     ],
     ['config/charter-cohort-survival/61.json', 'json'],
+    [
+      'config/charter-cohort-survival/region_09.json',
+      'charter-cohort-survival-rollup',
+    ],
+    [
+      'config/charter-cohort-survival/world.json',
+      'charter-cohort-survival-rollup',
+    ],
+    ['config/charter-cohort-survival/region_9.json', 'json'],
     ['derived/club-district-history/77.json', 'json'],
     ['v1/latest.json', 'latest'],
     ['snapshots/2026-10-08/district_61.json', 'json'],
@@ -558,6 +567,47 @@ describe('checkObject — charter cohort survival (#2061)', () => {
   })
 })
 
+describe('checkObject — region and world cohort survival (#1818)', () => {
+  const R09_PATH = 'config/charter-cohort-survival/region_09.json'
+  const WORLD_PATH = 'config/charter-cohort-survival/world.json'
+  // The pipeline fold's output over the recorded prod histories (#1818).
+  const read = (name: string) =>
+    JSON.parse(
+      readFileSync(`frontend/src/__tests__/fixtures/${name}`, 'utf-8')
+    ) as {
+      scope: unknown
+      programYears: string[]
+      byThroughProgramYear: Record<string, unknown>
+    }
+  const r09 = read('charter-cohort-survival-region-09.json')
+  const world = read('charter-cohort-survival-world.json')
+
+  it('passes the recorded Region 09 and world files', () => {
+    expect(check(R09_PATH, plain(r09))).toBeNull()
+    expect(check(WORLD_PATH, plain(world))).toBeNull()
+  })
+
+  it('fails a file that breaks the shared-contracts schema', () => {
+    expect(check(R09_PATH, plain({ ...r09, asOf: 'yesterday' }))).toMatch(
+      /schema/
+    )
+  })
+
+  it('fails a file served under another scope', () => {
+    expect(
+      check('config/charter-cohort-survival/region_05.json', plain(r09))
+    ).toMatch(/region 09.*region_05/)
+    expect(check(WORLD_PATH, plain(r09))).toMatch(/region 09.*world/)
+    expect(check(R09_PATH, plain(world))).toMatch(/world.*region_09/)
+  })
+
+  it('fails a file missing the curves of a program year it lists', () => {
+    const broken = structuredClone(world)
+    delete broken.byThroughProgramYear[broken.programYears.at(-1)!]
+    expect(check(WORLD_PATH, plain(broken))).toMatch(/no curves/)
+  })
+})
+
 describe('checkObject — club-district history (#1782)', () => {
   const INDEX_PATH = 'config/club-district-history/index.json'
   const SHARD_PATH = 'config/club-district-history/77.json'
@@ -711,6 +761,20 @@ describe('planContentChecks — bounded, change-driven sampling', () => {
     const files = ['61', '01', 'F'].map(
       d => `config/charter-cohort-survival/district_${d}.json`
     )
+    const plan = planContentChecks(
+      [meta('snapshots/2026-10-08/district_100.json'), ...files.map(meta)],
+      { random: () => 0, caps: { generic: 0 } }
+    )
+    expect(plan.checks.map(c => c.path).sort()).toEqual([...files].sort())
+  })
+
+  it('always checks every changed region and world survival file (#1818)', () => {
+    const files = [
+      ...['01', '09', '14'].map(
+        r => `config/charter-cohort-survival/region_${r}.json`
+      ),
+      'config/charter-cohort-survival/world.json',
+    ]
     const plan = planContentChecks(
       [meta('snapshots/2026-10-08/district_100.json'), ...files.map(meta)],
       { random: () => 0, caps: { generic: 0 } }
