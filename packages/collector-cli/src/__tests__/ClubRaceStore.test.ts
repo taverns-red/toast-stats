@@ -274,6 +274,11 @@ describe('ClubRaceStore.upsertSnapshot — crossings (#1556)', () => {
       clubName: 'Other',
       districtId: '86',
       lastSeen: '2026-08-12',
+      // Change points (#1816) stay at the 08-12 sighting too.
+      firstSeen: '2026-08-12',
+      districtHistory: [
+        { districtId: '86', from: '2026-08-12', to: '2026-08-12' },
+      ],
       reached: { Distinguished: { on: '2026-08-12', after: null } },
     })
   })
