@@ -1,0 +1,284 @@
+/* Region and world rollup pages (#1815). Loaded with the lazy rollup pages
+   only — not part of the app's fixed CSS weight. Legacy palette tokens only
+   (#2080): --surface*, --line, --ink*, --tm-loyal-blue, --focus-ring, all of
+   which remap under [data-theme='dark'] (R10). Text ≥ 14px, targets ≥ 44px
+   (mobile review §5.6). */
+
+@layer brand {
+  .rollup {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 16px 0 24px;
+    min-width: 0;
+  }
+
+  .rollup-kpis {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  @media (min-width: 768px) {
+    .rollup-kpis {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+  }
+
+  .rollup-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background-color: var(--surface);
+  }
+
+  .rollup-kpi__label {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .rollup-kpi__value {
+    font-size: 24px;
+    line-height: 30px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .rollup-sections {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  @media (min-width: 768px) {
+    .rollup-sections {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+  }
+
+  /* The four open panels' footprint while loading (Lesson 107). */
+  .rollup-sections--skeleton {
+    min-height: 256px;
+  }
+
+  @media (min-width: 768px) {
+    .rollup-sections--skeleton {
+      min-height: 520px;
+    }
+  }
+
+  .rollup-section {
+    min-width: 0;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background-color: var(--surface);
+    color: var(--ink);
+  }
+
+  .rollup-section__title {
+    margin: 0;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .rollup-section__about {
+    margin: 4px 0 8px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-3);
+  }
+
+  /* Phone: each section is a disclosure row (hub hierarchy §5.5). */
+  .rollup-section--disclosure {
+    padding: 0 16px;
+  }
+
+  .rollup-section__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0 12px;
+    min-height: 44px;
+    padding: 10px 0;
+    cursor: pointer;
+    list-style-position: inside;
+  }
+
+  .rollup-section__summary:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+
+  .rollup-section__headline {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rollup-section--disclosure[open] {
+    padding-bottom: 12px;
+  }
+
+  .rollup-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .rollup-row + .rollup-row {
+    border-top: 1px solid var(--line);
+  }
+
+  .rollup-row__label {
+    padding: 8px 8px 8px 0;
+    text-align: left;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .rollup-row__bar {
+    display: block;
+    height: 6px;
+    margin-top: 4px;
+    border-radius: 3px;
+    background-color: var(--surface-2);
+    overflow: hidden;
+  }
+
+  .rollup-row__bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background-color: var(--tm-loyal-blue);
+  }
+
+  .rollup-row__value {
+    padding: 8px 0;
+    text-align: right;
+    white-space: nowrap;
+    font-size: 14px;
+    line-height: 20px;
+    font-variant-numeric: tabular-nums;
+    vertical-align: top;
+  }
+
+  .rollup-row__count {
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .rollup-row__share {
+    display: inline-block;
+    min-width: 3.5em;
+    color: var(--ink-2);
+  }
+
+  .rollup-row__note {
+    color: var(--ink-3);
+    font-style: italic;
+    white-space: normal;
+  }
+
+  .rollup-page__breakdown {
+    margin: 8px 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rollup-page__empty {
+    margin: 16px 0;
+    font-size: 16px;
+    line-height: 24px;
+    color: var(--ink-2);
+  }
+
+  .rollup-attention {
+    margin: 16px 0 0;
+  }
+
+  .rollup-breakdown__scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background-color: var(--surface);
+  }
+
+  .rollup-breakdown__scroll:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+
+  .rollup-breakdown {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink);
+  }
+
+  .rollup-breakdown__th {
+    padding: 8px 12px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--ink-2);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .rollup-breakdown__th--name {
+    text-align: left;
+  }
+
+  .rollup-breakdown tbody tr + tr {
+    border-top: 1px solid var(--line);
+  }
+
+  .rollup-breakdown__name {
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .rollup-breakdown__name a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .rollup-breakdown__num {
+    padding: 8px 12px;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rollup-breakdown__sub {
+    display: block;
+    color: var(--ink-3);
+  }
+
+  .rollup-breakdown__na {
+    color: var(--ink-3);
+    font-style: italic;
+  }
+}

@@ -107,6 +107,10 @@ const RegionPage = React.lazy(() => import('./pages/RegionPage'))
 // Code-split: RegionsPage — /regions overview (#496, epic #492)
 const RegionsPage = React.lazy(() => import('./pages/RegionsPage'))
 
+// Code-split: region and world rollup subpages (#1815)
+const RegionHealthPage = React.lazy(() => import('./pages/RegionHealthPage'))
+const WorldHealthPage = React.lazy(() => import('./pages/WorldHealthPage'))
+
 // Code-split: DivisionPage — /district/:districtId/division/:divId (#424)
 const DivisionPage = React.lazy(() => import('./pages/DivisionPage'))
 
@@ -375,6 +379,22 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <RegionsPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'region/:n/health',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <RegionHealthPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'regions/health',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <WorldHealthPage />
             </Suspense>
           ),
         },
