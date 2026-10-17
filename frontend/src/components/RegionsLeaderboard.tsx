@@ -116,6 +116,9 @@ const PHONE_METRICS: PriorityMetric<RegionRollup, SortField>[] = [
 
 const HEADER_TH =
   'px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500'
+// Not sortable: a plain header, sentence case like the sortable labels.
+const TREND_TH =
+  'px-4 py-3 text-xs font-medium tracking-wider text-gray-500 text-left align-top'
 const NUMERIC_TD =
   'px-4 py-3 text-right tabular-nums text-gray-700 theme-dark:text-gray-200'
 
@@ -172,7 +175,7 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
             <th
               scope="col"
               title="Membership this program year"
-              className={`${HEADER_TH} text-left`}
+              className={TREND_TH}
             >
               Trend
             </th>
