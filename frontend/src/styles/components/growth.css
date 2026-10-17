@@ -196,3 +196,10 @@
     margin-right: 0;
   }
 }
+
+/* Region and world funnels (#1812, #1813): the prospective ladder prints TI's
+   stage text as reported, which can run to several steps with no spaces
+   around the `#N` joins, so let it wrap anywhere rather than widen the page. */
+.rollup-growth__ladder-label {
+  overflow-wrap: anywhere;
+}

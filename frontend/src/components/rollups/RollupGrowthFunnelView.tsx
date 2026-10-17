@@ -133,10 +133,16 @@ function StageBreakdown({
         {read(r) === null ? 'N/A' : numText(read(r))}
       </span>
     ),
+    // The chip carries the stage's count; the one-line meta names it and
+    // adds the extras, and the accessible name says all of it in full.
     meta: [
-      `${header}: ${numText(read(r))}`,
+      header.toLowerCase(),
       ...extra.map(x => `${numText(x.read(r))} ${x.phrase}`),
     ].join(' · '),
+    ariaLabel: `${r.label}: ${[
+      `${header.toLowerCase()} ${numText(read(r))}`,
+      ...extra.map(x => `${numText(x.read(r))} ${x.phrase}`),
+    ].join(', ')}`,
   })
   return (
     <ActionTable
@@ -154,12 +160,13 @@ const ladderColumns: ActionTableColumn<ProspectiveStageCount>[] = [
   {
     key: 'stage',
     header: 'Stage',
+    className: 'growth-table__num',
     cell: g => (g.stage === null ? 'Not recognised' : `Stage ${g.stage}`),
   },
   {
     key: 'label',
     header: 'As reported',
-    className: 'rollup-growth__ladder-label',
+    className: 'action-table__subject rollup-growth__ladder-label',
     cell: g => g.label,
   },
   {
