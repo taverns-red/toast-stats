@@ -9,7 +9,6 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDarkMode } from '../contexts/DarkModeContext'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { RollupPageShell } from '../components/rollups/RollupPageShell'
-import { ClubSearchBox } from '../components/ClubSearchBox'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 import { useClubPins } from '../components/map/useClubPins'
 import {
@@ -17,7 +16,7 @@ import {
   PIN_LAYER_ID,
   PIN_SOURCE_ID,
   buildPinFeatures,
-} from '../components/map/pinLayer'
+} from '../components/map/pinFeatures'
 import {
   buildModeModel,
   facetValues,
@@ -71,6 +70,8 @@ import './regionMap.css'
 const loadModels = () => import('../components/map/regionModels')
 const loadList = () => import('../components/map/RegionClubList')
 const ClubList = React.lazy(loadList)
+const loadSearch = () => import('../components/ClubSearchBox')
+const ClubSearchBox = React.lazy(loadSearch)
 const Chips = React.lazy(() =>
   import('../components/map/MapClubLists').then(m => ({
     default: m.LegendChips,
@@ -171,6 +172,7 @@ const RegionMapPage: React.FC = () => {
   useEffect(() => {
     void loadModels().then(setModels)
     void loadList()
+    void loadSearch()
   }, [])
   const pending = isRegionLazyMode(mode) && !models
   const filtering = wantsExtendedFilters(searchParams) && !models
@@ -539,12 +541,18 @@ const RegionMapPage: React.FC = () => {
         </ul>
 
         <div className="region-map__controls">
-          <ClubSearchBox
-            value={query}
-            onSearchChange={setQuery}
-            label="Search clubs by name or number"
-            placeholder="Club name or number"
-          />
+          <React.Suspense
+            fallback={
+              <div className="clubs-search region-map__search-reserve" />
+            }
+          >
+            <ClubSearchBox
+              value={query}
+              onSearchChange={setQuery}
+              label="Search clubs by name or number"
+              placeholder="Club name or number"
+            />
+          </React.Suspense>
           <div className="region-map__chips">
             <div
               className="map-modes region-map__metrics"

@@ -150,3 +150,8 @@
   border: 0;
   border-radius: 0;
 }
+
+/* The search box's slot while its chunk lands (44 px field, no shift). */
+.region-map__search-reserve {
+  min-height: 44px;
+}
