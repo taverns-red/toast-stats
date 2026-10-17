@@ -175,10 +175,10 @@ describe('buildRollupGrowthFunnel — region', () => {
       reports,
       rollups,
       scope: { kind: 'region', regionId: '05' },
-      search: '?py=2026-2027&date=2026-10-15',
+      search: '?py=2026&date=2026-10-15',
     })
     expect(f.children[0]!.to).toBe(
-      '/district/31/growth?py=2026-2027&date=2026-10-15'
+      '/district/31/growth?py=2026&date=2026-10-15'
     )
   })
 })
