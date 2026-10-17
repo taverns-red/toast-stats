@@ -220,9 +220,11 @@ const ClubDetailPage: React.FC = () => {
   // right district's data under a banner; the breadcrumb follows the URL.
   // `districtId` below is the district whose data the page shows.
   //
-  // The switch is latched per (URL district, club, selected PY) and made only
-  // when the URL district cannot answer (see `needsDistrictResolution`), so
-  // a normal visit never consults the history before its hero paints. A new
+  // The switch is latched per (URL district, club, selected PY) and made
+  // whenever the history places the PY in another district (#2079: the
+  // history wins). Only an explicit `?py=` or a URL district that cannot
+  // answer (see `needsDistrictResolution`) waits for the history before the
+  // hero; a normal visit reads it after first paint. A new
   // PY from the selector (or the back button) is a new key: the URL district
   // is tried again, and the banner goes when it is right.
   const { selectedProgramYear: urlProgramYear } = useUrlProgramYear()
@@ -286,24 +288,26 @@ const ClubDetailPage: React.FC = () => {
 
   // Fetch raw district statistics for per-goal DCP data (#242). Since #1901
   // it also feeds the hero's first paint (see `snapshotHeroClub`).
-  // #1804 — an explicit `?py=` the URL district has no data for is the one
-  // case decided before the hero: the club's history shard (~12 KB) says
-  // which district holds that year, and the snapshot read waits for it
-  // rather than reading the healed year of the wrong district.
+  // #1804 — an explicit `?py=` is decided before the hero: the club's
+  // history shard (~12 KB) says which district holds that year, and the
+  // snapshot read waits for it rather than reading the wrong district.
+  // #2079 — the history wins even when the URL district has data for the
+  // year: D201's 2026-06-30 file (the 2025-26 close, collected in July under
+  // the new structure) lists club 977, but 2025-26 was District 01's.
   const hasExplicitPy = new URLSearchParams(location.search).has('py')
+  const isPyDecidedByHistory = !isShowingOtherDistrict && hasExplicitPy
   const isPyMissingHere =
-    !isShowingOtherDistrict &&
-    hasExplicitPy &&
+    isPyDecidedByHistory &&
     !isDatesPending &&
     !availableProgramYears.some(py => py.year === selectedProgramYear.year)
   const { history: pyHistory, isLoading: isLoadingPyHistory } =
-    useClubDistrictHistoryEntry(clubId, isPyMissingHere)
+    useClubDistrictHistoryEntry(clubId, isPyDecidedByHistory)
   const pyHistoryDistrict = districtForProgramYear(
     pyHistory,
     selectedProgramYear.label
   )
   const isHoldingForPy =
-    isPyMissingHere &&
+    isPyDecidedByHistory &&
     (isLoadingPyHistory ||
       (!!pyHistoryDistrict &&
         !sameDistrictId(pyHistoryDistrict, urlDistrictId ?? '')))
@@ -406,9 +410,14 @@ const ClubDetailPage: React.FC = () => {
       clubId,
       analyticsReady || needsDistrictResolution
     )
-  const resolutionTarget = needsDistrictResolution
-    ? districtForProgramYear(clubDistrictHistory, selectedProgramYear.label)
-    : null
+  // #2079 — whenever the history has arrived, its district for the PY wins
+  // over the URL's, even when the URL district's data lists the club.
+  const resolutionTarget = isShowingOtherDistrict
+    ? null
+    : districtForProgramYear(
+        clubDistrictHistory ?? pyHistory,
+        selectedProgramYear.label
+      )
   const isTargetElsewhere =
     !!resolutionTarget && !sameDistrictId(resolutionTarget, urlDistrictId ?? '')
   // Latched while rendering (React's "adjust state on a change" pattern),
@@ -421,7 +430,9 @@ const ClubDetailPage: React.FC = () => {
     setResolvedDistrict({ key: resolutionKey, districtId: resolutionTarget })
   }
   const isResolvingDistrict =
-    needsDistrictResolution && (isLoadingHistory || isTargetElsewhere)
+    isHoldingForPy ||
+    isTargetElsewhere ||
+    (needsDistrictResolution && isLoadingHistory)
 
   // The current-district index, only when the history could not place the
   // club elsewhere for this year (#1804): it then says where the club is now.
