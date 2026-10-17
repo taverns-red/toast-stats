@@ -6,19 +6,25 @@ import {
   CLUBS_BY_REGION_SHARD_FORMAT,
   CLUBS_BY_REGION_WORLD_FILE_NAME,
   CLUBS_BY_REGION_WORLD_FORMAT,
+  CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME,
+  CLUBS_BY_REGION_WORLD_POINTS_FORMAT,
   ClubsByRegionClubSchema,
   ClubsByRegionShardSchema,
+  ClubsByRegionWorldPointsSchema,
   ClubsByRegionWorldSchema,
   clubsByRegionShardFileName,
   type ClubsByRegionShard,
   type ClubsByRegionWorld,
+  type ClubsByRegionWorldPoints,
 } from '../index.js'
 
 /**
  * #1800 (epic #1781) — `snapshots/{date}/clubs-by-region/<region>.json`, one
  * shard per region with every club the region and world explorers (#1808,
- * #1809) draw or list, plus `clubs-by-region/world.json`: per-region counts,
- * the top-N seed lists and one map point per located club.
+ * #1809) draw or list; `clubs-by-region/world.json`, the small summary
+ * (per-region counts and the top-N seed rows) the world list renders first;
+ * and `clubs-by-region/world-points.json`, one map point per located club,
+ * loaded lazily by the clustered map.
  *
  * The fixture is the builder's own output over recorded staging inputs
  * (`packages/analytics-core/src/rollup/__tests__/fixtures/clubs-by-region/`,
@@ -29,7 +35,11 @@ const RECORDED = JSON.parse(
     new URL('./__fixtures__/recorded-clubs-by-region.json', import.meta.url),
     'utf-8'
   )
-) as { world: ClubsByRegionWorld; shards: Record<string, ClubsByRegionShard> }
+) as {
+  world: ClubsByRegionWorld
+  worldPoints: ClubsByRegionWorldPoints
+  shards: Record<string, ClubsByRegionShard>
+}
 
 const shard = (key: string) => structuredClone(RECORDED.shards[key]!)
 
@@ -39,6 +49,12 @@ describe('ClubsByRegion schemas (#1800)', () => {
       RECORDED.world
     )
     expect(RECORDED.world._format).toEqual(CLUBS_BY_REGION_WORLD_FORMAT)
+    expect(ClubsByRegionWorldPointsSchema.parse(RECORDED.worldPoints)).toEqual(
+      RECORDED.worldPoints
+    )
+    expect(RECORDED.worldPoints._format).toEqual(
+      CLUBS_BY_REGION_WORLD_POINTS_FORMAT
+    )
     expect(Object.keys(RECORDED.shards).sort()).toEqual([
       '01',
       '05',
@@ -54,6 +70,8 @@ describe('ClubsByRegion schemas (#1800)', () => {
   it('names the files under one directory per date', () => {
     expect(CLUBS_BY_REGION_DIR).toBe('clubs-by-region')
     expect(CLUBS_BY_REGION_WORLD_FILE_NAME).toBe('world.json')
+    expect(CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME).toBe('world-points.json')
+    expect(RECORDED.world.pointsPath).toBe('clubs-by-region/world-points.json')
     expect(clubsByRegionShardFileName('05')).toBe('05.json')
     expect(RECORDED.world.shards!['05']!.path).toBe('clubs-by-region/05.json')
   })
@@ -107,8 +125,17 @@ describe('ClubsByRegion schemas (#1800)', () => {
   })
 
   it('rejects a world map point that is not [id, lat, lng, district, health]', () => {
-    const bad = structuredClone(RECORDED.world)
+    const bad = structuredClone(RECORDED.worldPoints)
     ;(bad.points as unknown[]).push(['1', 1, 2, '61'])
+    expect(ClubsByRegionWorldPointsSchema.safeParse(bad).success).toBe(false)
+  })
+
+  it('keeps the map points out of world.json: the list renders before the map loads', () => {
+    const bad = structuredClone(RECORDED.world) as unknown as Record<
+      string,
+      unknown
+    >
+    bad['points'] = RECORDED.worldPoints.points
     expect(ClubsByRegionWorldSchema.safeParse(bad).success).toBe(false)
   })
 })

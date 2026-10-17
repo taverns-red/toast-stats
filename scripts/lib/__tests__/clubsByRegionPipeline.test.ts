@@ -24,6 +24,7 @@ import { parse as parseYaml } from 'yaml'
 import type {
   ClubsByRegionShard,
   ClubsByRegionWorld,
+  ClubsByRegionWorldPoints,
 } from '@taverns-red/shared-contracts'
 import { classifyPromotionPath } from '../manifestPromotion.js'
 import {
@@ -38,6 +39,7 @@ const REPO = process.cwd()
 const DATE = '2026-10-16'
 const SHARD = `snapshots/${DATE}/clubs-by-region/05.json`
 const WORLD = `snapshots/${DATE}/clubs-by-region/world.json`
+const POINTS = `snapshots/${DATE}/clubs-by-region/world-points.json`
 const RECORDED = JSON.parse(
   readFileSync(
     path.join(
@@ -46,7 +48,11 @@ const RECORDED = JSON.parse(
     ),
     'utf-8'
   )
-) as { world: ClubsByRegionWorld; shards: Record<string, ClubsByRegionShard> }
+) as {
+  world: ClubsByRegionWorld
+  worldPoints: ClubsByRegionWorldPoints
+  shards: Record<string, ClubsByRegionShard>
+}
 
 const CTX: CheckContext = {
   latestSnapshotDate: DATE,
@@ -63,6 +69,7 @@ const check = (p: string, value: unknown) =>
 
 const shard = () => structuredClone(RECORDED.shards['05']!)
 const world = () => structuredClone(RECORDED.world)
+const points = () => structuredClone(RECORDED.worldPoints)
 
 describe('content gate: clubs-by-region (#1800)', () => {
   it('gives the shard and the world file their own kinds', () => {
@@ -71,6 +78,7 @@ describe('content gate: clubs-by-region (#1800)', () => {
       classifyObject(`snapshots/${DATE}/clubs-by-region/unassigned.json`)
     ).toBe('clubs-by-region-shard')
     expect(classifyObject(WORLD)).toBe('clubs-by-region-world')
+    expect(classifyObject(POINTS)).toBe('clubs-by-region-world-points')
     expect(classifyObject('config/clubs-by-region/05.json')).toBe('json')
   })
 
@@ -83,10 +91,13 @@ describe('content gate: clubs-by-region (#1800)', () => {
         ),
         meta(SHARD),
         meta(WORLD),
+        meta(POINTS),
       ],
       { random: () => 0, caps: { generic: 0 } }
     )
-    expect(plan.checks.map(c => c.path).sort()).toEqual([SHARD, WORLD])
+    expect(plan.checks.map(c => c.path).sort()).toEqual(
+      [SHARD, WORLD, POINTS].sort()
+    )
   })
 
   it('passes every recorded shard and the recorded world file', () => {
@@ -97,6 +108,7 @@ describe('content gate: clubs-by-region (#1800)', () => {
       ).toBeNull()
     }
     expect(check(WORLD, RECORDED.world)).toBeNull()
+    expect(check(POINTS, RECORDED.worldPoints)).toBeNull()
   })
 
   it('fails a shard row that carries a contact field', () => {
@@ -138,10 +150,29 @@ describe('content gate: clubs-by-region (#1800)', () => {
     expect(check(SHARD, bad)).toMatch(/17/)
   })
 
-  it('fails a world file whose points do not match its mapped total', () => {
-    const bad = world()
+  it('fails a points file whose count does not match its points', () => {
+    const bad = points()
     bad.points.pop()
-    expect(check(WORLD, bad)).toMatch(/points|mapped/)
+    expect(check(POINTS, bad)).toMatch(/count|points/)
+  })
+
+  it('fails a points file served under another date', () => {
+    expect(
+      check(`snapshots/2026-10-15/clubs-by-region/world-points.json`, points())
+    ).toMatch(/2026-10-15/)
+  })
+
+  it('fails a points file listing a club twice', () => {
+    const bad = points()
+    bad.points.push(bad.points[0]!)
+    bad.count += 1
+    expect(check(POINTS, bad)).toMatch(/twice/)
+  })
+
+  it('fails a world file that does not point at its points file', () => {
+    const bad = world() as unknown as { pointsPath: string }
+    bad.pointsPath = 'clubs-by-region/points.json'
+    expect(check(WORLD, bad)).toMatch(/pointsPath|schema/)
   })
 
   it('fails a world file whose shards do not sum to its totals', () => {
@@ -159,7 +190,7 @@ describe('content gate: clubs-by-region (#1800)', () => {
 
 describe('promotion: clubs-by-region moves with its date (#1800)', () => {
   it('is a date object for scoped promotion', () => {
-    for (const p of [SHARD, WORLD]) {
+    for (const p of [SHARD, WORLD, POINTS]) {
       expect(classifyPromotionPath(p)).toEqual({ kind: 'date', date: DATE })
     }
   })

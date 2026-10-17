@@ -67,15 +67,21 @@ describe('AnalyticsComputeService — clubs-by-region/ (#1800)', () => {
     const result = await compute()
     expect(result.clubsByRegionFailed).toBe(false)
     expect(result.clubsByRegionPaths).toEqual(
-      ['01.json', '05.json', '12.json', 'unassigned.json', 'world.json'].map(
-        f => path.join(outDir(), f)
-      )
+      [
+        '01.json',
+        '05.json',
+        '12.json',
+        'unassigned.json',
+        'world.json',
+        'world-points.json',
+      ].map(f => path.join(outDir(), f))
     )
     expect((await fs.readdir(outDir())).sort()).toEqual([
       '01.json',
       '05.json',
       '12.json',
       'unassigned.json',
+      'world-points.json',
       'world.json',
     ])
     const shard = ClubsByRegionShardSchema.parse(await read('05.json'))
@@ -88,7 +94,7 @@ describe('AnalyticsComputeService — clubs-by-region/ (#1800)', () => {
     expect(world.programYear).toBe('2026-2027')
   })
 
-  it('writes compact JSON (the world file feeds a 15k-pin map)', async () => {
+  it('writes compact JSON (the points file feeds a 15k-pin map)', async () => {
     await compute()
     const raw = await fs.readFile(
       path.join(outDir(), CLUBS_BY_REGION_WORLD_FILE_NAME),
@@ -104,11 +110,14 @@ describe('AnalyticsComputeService — clubs-by-region/ (#1800)', () => {
     await expect(fs.access(path.join(outDir(), '09.json'))).rejects.toThrow()
   })
 
-  it('without a synced region history writes only the world file, which says why', async () => {
+  it('without a synced region history writes only the world files, which say why', async () => {
     await fs.rm(path.join(cacheDir, 'config'), { recursive: true })
     const result = await compute()
     expect(result.clubsByRegionFailed).toBe(false)
-    expect(await fs.readdir(outDir())).toEqual(['world.json'])
+    expect((await fs.readdir(outDir())).sort()).toEqual([
+      'world-points.json',
+      'world.json',
+    ])
     const world = ClubsByRegionWorldSchema.parse(
       await read(CLUBS_BY_REGION_WORLD_FILE_NAME)
     )

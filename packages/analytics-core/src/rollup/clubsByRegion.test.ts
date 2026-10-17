@@ -126,7 +126,8 @@ describe('buildClubsByRegion (#1800)', () => {
       mapped: 314,
       unmapped: 4,
     })
-    expect(r.world.points).toHaveLength(314)
+    expect(r.worldPoints.points).toHaveLength(314)
+    expect(r.worldPoints.count).toBe(314)
     const unmapped = r.shards.flatMap(s => s.clubs).filter(c => c.lat === null)
     expect(unmapped.map(c => c.id).sort()).toEqual([
       '28678196',
@@ -231,7 +232,8 @@ describe('buildClubsByRegion (#1800)', () => {
     expect(r.world.regionMembership).toBeNull()
     expect(r.world.regionMembershipNote).toMatch(/district-region-history/)
     expect(r.world.totals.clubs).toBe(318)
-    expect(r.world.points).toHaveLength(314)
+    expect(r.worldPoints.points).toHaveLength(314)
+    expect(r.worldPoints.count).toBe(314)
   })
 
   it('has no PY entry in the history → no shards, the reason named', () => {
@@ -320,6 +322,7 @@ describe('buildClubsByRegion (#1800)', () => {
     const recorded = JSON.parse(readFileSync(RECORDED_OUTPUT, 'utf-8'))
     expect({
       world: r.world,
+      worldPoints: r.worldPoints,
       shards: Object.fromEntries(r.shards.map(s => [s.region, s])),
     }).toEqual(recorded)
   })
@@ -330,7 +333,7 @@ describe('clubs-by-region sizes at world scale (#1800)', () => {
   // The recorded rows are cloned onto every district the real history places
   // for 2026-27, with unique ids, names and coordinates so gzip cannot lean on
   // repeats the real data does not have.
-  it('keeps every shard under 150 KB gzip and the world file under the 500 KB budget', () => {
+  it('keeps every shard and world.json under 150 KB gzip (the first-render budget), and the points under 500 KB', () => {
     const h = history()
     const ids = Object.keys(h.districts)
       .filter(id => h.districts[id]!.byProgramYear['2026-2027'])
@@ -367,6 +370,10 @@ describe('clubs-by-region sizes at world scale (#1800)', () => {
     const gz = (v: unknown) => gzipSync(JSON.stringify(v)).length
     expect(r.world.totals.clubs).toBeGreaterThanOrEqual(14524)
     expect(Math.max(...r.shards.map(gz))).toBeLessThan(150 * 1024)
-    expect(gz(r.world)).toBeLessThan(500 * 1024)
+    // #1809: <= 150 KB on the wire before the first 50 rows; the summary
+    // and top-50 rows render without the map points.
+    expect(gz(r.world)).toBeLessThan(20 * 1024)
+    expect(gz(r.worldPoints)).toBeLessThan(500 * 1024)
+    expect(r.worldPoints.points).toHaveLength(r.world.totals.mapped)
   })
 })
