@@ -123,6 +123,67 @@ export type DistrictEducation =
       source: { reportType: string; asOf: string }
     }
 
+/** The breakdown the shared education sections render (#1810): one
+ *  district's, or a region's summed over its districts. */
+export type EducationSummary = Pick<
+  Extract<DistrictEducation, { status: 'available' }>,
+  'totals' | 'levels' | 'paths' | 'levelTotals' | 'legacyByCode' | 'otherByCode'
+>
+
+/**
+ * Path rows, Pathways level totals and level rows from a level × path
+ * matrix (path code → awards at [L1..L5]) — one reading for a district's
+ * ledger and a region's rollup (#1810). The 11 canonical paths always show
+ * (a canonical path with no award is a real 0 when the ledger is present);
+ * any other code follows, titled from `titles` or by its code.
+ */
+export function pathwaysBreakdown(
+  cells: ReadonlyMap<string, readonly number[]>,
+  titles: ReadonlyMap<string, string>,
+  dtm: number
+): Pick<EducationSummary, 'paths' | 'levelTotals' | 'levels'> {
+  const canonical = new Set(PATHWAYS_PATHS.map(p => p.code))
+  const extraPaths = [...cells.keys()]
+    .filter(p => !canonical.has(p))
+    .sort((a, b) => a.localeCompare(b))
+  const paths: EducationPathRow[] = [
+    ...PATHWAYS_PATHS.map(p => ({ code: p.code, title: p.title })),
+    ...extraPaths.map(code => ({ code, title: titles.get(code) ?? code })),
+  ].map(({ code, title }) => {
+    const levels = [...(cells.get(code) ?? [0, 0, 0, 0, 0])] as [
+      number,
+      number,
+      number,
+      number,
+      number,
+    ]
+    return {
+      path: code,
+      title,
+      levels,
+      total: levels.reduce((s, x) => s + x, 0),
+    }
+  })
+
+  const levelTotals = [0, 1, 2, 3, 4].map(i =>
+    paths.reduce((s, p) => s + p.levels[i]!, 0)
+  ) as [number, number, number, number, number]
+
+  const levels: EducationLevelRow[] = [
+    ...levelTotals.map((count, i) => ({
+      key: `L${i + 1}`,
+      count,
+      byPath: paths
+        .filter(p => p.levels[i]! > 0)
+        .map(p => ({ path: p.path, count: p.levels[i]! }))
+        .sort((a, b) => b.count - a.count || a.path.localeCompare(b.path)),
+    })),
+    { key: 'DTM', count: dtm, byPath: [] },
+  ]
+
+  return { paths, levelTotals, levels }
+}
+
 export interface BuildDistrictEducationInput {
   reports: DistrictReportsDataset | null
   /** The page's selected program year label, e.g. `2026-2027` (R3). */
@@ -291,44 +352,11 @@ export function buildDistrictEducation({
     }
   }
 
-  const canonical = new Set(PATHWAYS_PATHS.map(p => p.code))
-  const extraPaths = [...cells.keys()]
-    .filter(p => !canonical.has(p))
-    .sort((a, b) => a.localeCompare(b))
-  const paths: EducationPathRow[] = [
-    ...PATHWAYS_PATHS.map(p => ({ code: p.code, title: p.title })),
-    ...extraPaths.map(code => ({ code, title: titles.get(code) ?? code })),
-  ].map(({ code, title }) => {
-    const levels = [...(cells.get(code) ?? [0, 0, 0, 0, 0])] as [
-      number,
-      number,
-      number,
-      number,
-      number,
-    ]
-    return {
-      path: code,
-      title,
-      levels,
-      total: levels.reduce((s, x) => s + x, 0),
-    }
-  })
-
-  const levelTotals = [0, 1, 2, 3, 4].map(i =>
-    paths.reduce((s, p) => s + p.levels[i]!, 0)
-  ) as [number, number, number, number, number]
-
-  const levels: EducationLevelRow[] = [
-    ...levelTotals.map((count, i) => ({
-      key: `L${i + 1}`,
-      count,
-      byPath: paths
-        .filter(p => p.levels[i]! > 0)
-        .map(p => ({ path: p.path, count: p.levels[i]! }))
-        .sort((a, b) => b.count - a.count || a.path.localeCompare(b.path)),
-    })),
-    { key: 'DTM', count: totals.dtm, byPath: [] },
-  ]
+  const { paths, levelTotals, levels } = pathwaysBreakdown(
+    cells,
+    titles,
+    totals.dtm
+  )
 
   const hasAnyBase = [...divisions.values()].some(u => u.hasBase)
   const baseMembers = hasAnyBase
