@@ -87,7 +87,9 @@
   background: var(--surface-2, var(--surface));
 }
 
-@media (min-width: 768px) {
+/* The district map's 320 px panel; the ranked list gets a little more room
+   once the map has plenty. */
+@media (min-width: 1024px) {
   .region-map__body.district-map__body {
     grid-template-columns: minmax(0, 1fr) 360px;
   }
