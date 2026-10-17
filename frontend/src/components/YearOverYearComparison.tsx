@@ -469,7 +469,9 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                     <XAxis dataKey="metric" tick={false} axisLine={false} />
                     <YAxis
                       stroke="var(--tm-cool-gray)"
-                      style={{ fontSize: '12px' }}
+                      // Ticks are data: 14px floor, not the 12px eyebrow
+                      // size (#1840, #2125).
+                      style={{ fontSize: '14px' }}
                       domain={yAxisDomain}
                       tickFormatter={(value: number) =>
                         item.metric === 'Thriving Clubs %'
