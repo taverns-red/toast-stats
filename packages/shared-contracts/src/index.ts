@@ -258,14 +258,26 @@ export {
   type PooledYearCell,
   type CharterCohortCurves,
   type CharterCohortSurvivalFile,
+  // Region and world rollups — region_<NN>.json, world.json (#1818)
+  CharterCohortSurvivalScopeSchema,
+  CharterCohortSurvivalRollupFileSchema,
+  charterCohortSurvivalRollupObjectPath,
+  type CharterCohortSurvivalScope,
+  type CharterCohortSurvivalRollupFile,
 } from './schemas/charter-cohort-survival.schema.js'
 export {
   buildCharterCohortSurvival,
   buildCharterCohortSurvivalFile,
   charterCohortSurvivalFromFile,
+  buildCharterCohortSurvivalRollup,
+  buildCharterCohortSurvivalRollupFile,
+  charterCohortSurvivalFromRollupFile,
+  charterCohortScopeTest,
   type CharterCohortSurvival,
+  type CharterCohortSurvivalRollup,
   type BuildCharterCohortSurvivalInput,
   type BuildCharterCohortSurvivalFileInput,
+  type BuildCharterCohortSurvivalRollupInput,
 } from './survival/charterCohortSurvival.js'
 
 // District → region history — config/district-region-history.json (#1820)

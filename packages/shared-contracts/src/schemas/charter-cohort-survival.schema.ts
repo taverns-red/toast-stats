@@ -107,3 +107,66 @@ export function charterCohortSurvivalObjectPath(districtId: string): string {
   }
   return `${CHARTER_COHORT_SURVIVAL_DIR}district_${districtId}.json`
 }
+
+/* ── Region and world rollups (#1818) ─────────────────────────────────── */
+
+/** A two-digit region id, as the rankings and region-rollups key it. */
+const REGION_ID = /^\d{2}$/
+
+export const CharterCohortSurvivalScopeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('region'),
+    regionId: z.string().regex(REGION_ID),
+  }),
+  z.object({ kind: z.literal('world') }),
+])
+
+/**
+ * One region's, or the world's, charter cohort survival (#1818):
+ * `config/charter-cohort-survival/region_<NN>.json` and `.../world.json`,
+ * folded by the pipeline from the same club-district history as the
+ * district files, with the same rules. A club is in a region's cohort when
+ * its district sat in that region in the club's charter program year
+ * (`config/district-region-history.json`, each year's own membership);
+ * `movedAway` counts the members whose latest region is another one,
+ * whether the club moved or its district was redrawn. The world has
+ * nowhere to move away to.
+ */
+export const CharterCohortSurvivalRollupFileSchema = z.object({
+  _format: z.object({
+    version: z.string(),
+    type: z.literal('charter-cohort-survival-rollup'),
+  }),
+  scope: CharterCohortSurvivalScopeSchema,
+  /** The club-district history's `asOf`. */
+  asOf: IsoDate,
+  /** The history's program years, ascending. */
+  programYears: z.array(ProgramYear),
+  /** The left-censored first program year, never shown as a cohort. */
+  censoredProgramYear: ProgramYear.nullable(),
+  /** One entry per program year in `programYears`. */
+  byThroughProgramYear: z.record(ProgramYear, CharterCohortCurvesSchema),
+})
+
+export type CharterCohortSurvivalScope = z.infer<
+  typeof CharterCohortSurvivalScopeSchema
+>
+export type CharterCohortSurvivalRollupFile = z.infer<
+  typeof CharterCohortSurvivalRollupFileSchema
+>
+
+/**
+ * `config/charter-cohort-survival/region_<NN>.json` or `.../world.json`;
+ * throws on a region id that is not two digits.
+ */
+export function charterCohortSurvivalRollupObjectPath(
+  scope: CharterCohortSurvivalScope
+): string {
+  if (scope.kind === 'world') return `${CHARTER_COHORT_SURVIVAL_DIR}world.json`
+  if (!REGION_ID.test(scope.regionId)) {
+    throw new Error(
+      `charterCohortSurvivalRollupObjectPath: unsafe region id '${scope.regionId}'`
+    )
+  }
+  return `${CHARTER_COHORT_SURVIVAL_DIR}region_${scope.regionId}.json`
+}

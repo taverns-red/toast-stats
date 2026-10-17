@@ -7,9 +7,12 @@ import {
   type CharterCohort,
   type CharterCohortCurves,
   type CharterCohortSurvivalFile,
+  type CharterCohortSurvivalRollupFile,
+  type CharterCohortSurvivalScope,
   type CohortYearCell,
   type PooledYearCell,
 } from '../schemas/charter-cohort-survival.schema.js'
+import type { DistrictRegionHistory } from '../schemas/district-region-history.schema.js'
 
 /* Charter cohort survival (#1817, epic #1781; moved here from the frontend
    by #2061 so the pipeline and the page share one fold).
@@ -63,6 +66,41 @@ export function buildCharterCohortSurvival({
   districtId,
   throughProgramYear,
 }: BuildCharterCohortSurvivalInput): CharterCohortSurvival {
+  const { maxYears, cohorts, pooled, censoredProgramYear } = foldCohortCurves({
+    index,
+    clubs,
+    throughProgramYear,
+    inScope: district => district === districtId,
+  })
+  return {
+    districtId,
+    throughProgramYear,
+    asOf: index.asOf,
+    maxYears,
+    cohorts,
+    pooled,
+    censoredProgramYear,
+  }
+}
+
+/**
+ * The one fold behind the district, region and world curves (#1818).
+ * `inScope(district, py)` says whether a club in `district` in program
+ * year `py` belongs to the scope: a club joins a cohort when it is in
+ * scope in its charter year, and counts as moved away when it is out of
+ * scope in its latest year (≤ through).
+ */
+function foldCohortCurves({
+  index,
+  clubs,
+  throughProgramYear,
+  inScope,
+}: {
+  index: Pick<ClubDistrictHistoryIndex, 'programYears' | 'asOf'>
+  clubs: Record<string, ClubDistrictHistoryClub>
+  throughProgramYear: string
+  inScope: (districtId: string, programYear: string) => boolean
+}): CharterCohortCurves & { censoredProgramYear: string | null } {
   const programYears = [...index.programYears].sort()
   const censoredProgramYear = programYears[0] ?? null
   const reachable = programYears.filter(py => py <= throughProgramYear)
@@ -72,17 +110,20 @@ export function buildCharterCohortSurvival({
     index.asOf < programYearClose(py)
 
   // Cohort members by charter PY, with each one's latest PY ≤ through.
-  const members = new Map<string, { lastPy: string; lastDistrict: string }[]>()
+  const members = new Map<string, { lastPy: string; movedAway: boolean }[]>()
   for (const club of Object.values(clubs)) {
     const seen = Object.keys(club.byProgramYear).sort()
     const charterPy = seen[0]
     if (!charterPy || charterPy === censoredProgramYear) continue
     if (charterPy > throughProgramYear) continue
-    if (club.byProgramYear[charterPy] !== districtId) continue
+    if (!inScope(club.byProgramYear[charterPy] ?? '', charterPy)) continue
     const within = seen.filter(py => py <= throughProgramYear)
     const lastPy = within[within.length - 1] ?? charterPy
     const list = members.get(charterPy) ?? []
-    list.push({ lastPy, lastDistrict: club.byProgramYear[lastPy] ?? '' })
+    list.push({
+      lastPy,
+      movedAway: !inScope(club.byProgramYear[lastPy] ?? '', lastPy),
+    })
     members.set(charterPy, list)
   }
 
@@ -111,7 +152,7 @@ export function buildCharterCohortSurvival({
     cohorts.push({
       programYear: charterPy,
       chartered: list.length,
-      movedAway: list.filter(m => m.lastDistrict !== districtId).length,
+      movedAway: list.filter(m => m.movedAway).length,
       years,
     })
   })
@@ -139,15 +180,7 @@ export function buildCharterCohortSurvival({
     )
   }
 
-  return {
-    districtId,
-    throughProgramYear,
-    asOf: index.asOf,
-    maxYears,
-    cohorts,
-    pooled,
-    censoredProgramYear,
-  }
+  return { maxYears, cohorts, pooled, censoredProgramYear }
 }
 
 export interface BuildCharterCohortSurvivalFileInput {
@@ -200,17 +233,144 @@ export function charterCohortSurvivalFromFile(
   file: CharterCohortSurvivalFile,
   throughProgramYear: string
 ): CharterCohortSurvival {
+  const curves = curvesThrough(file, throughProgramYear)
+  return {
+    districtId: file.districtId,
+    throughProgramYear,
+    asOf: file.asOf,
+    maxYears: curves.maxYears,
+    cohorts: curves.cohorts,
+    pooled: curves.pooled,
+    censoredProgramYear: file.censoredProgramYear,
+  }
+}
+
+function curvesThrough(
+  file: Pick<
+    CharterCohortSurvivalFile,
+    'programYears' | 'byThroughProgramYear'
+  >,
+  throughProgramYear: string
+): CharterCohortCurves {
   const covered = [...file.programYears]
     .sort()
     .filter(py => py <= throughProgramYear)
   const key = covered[covered.length - 1]
-  const curves = (key && file.byThroughProgramYear[key]) || {
-    maxYears: 0,
-    cohorts: [],
-    pooled: [],
+  return (
+    (key && file.byThroughProgramYear[key]) || {
+      maxYears: 0,
+      cohorts: [],
+      pooled: [],
+    }
+  )
+}
+
+/* ── Region and world rollups (#1818) ─────────────────────────────────── */
+
+/** The rollup curves: the district shape, scoped to a region or the world. */
+export interface CharterCohortSurvivalRollup extends CharterCohortCurves {
+  scope: CharterCohortSurvivalScope
+  throughProgramYear: string
+  asOf: string
+  /** The left-censored first program year, never shown as a cohort. */
+  censoredProgramYear: string | null
+}
+
+export interface BuildCharterCohortSurvivalRollupInput {
+  index: Pick<ClubDistrictHistoryIndex, 'programYears' | 'asOf'>
+  /** Every club the scope's cohorts can hold (all clubs is fine). */
+  clubs: Record<string, ClubDistrictHistoryClub>
+  /** Each program year's own district → region membership (#1820). */
+  regionHistory: Pick<DistrictRegionHistory, 'districts'>
+  scope: CharterCohortSurvivalScope
+  /** The program year selected in the page controls, "YYYY-YYYY". */
+  throughProgramYear: string
+}
+
+/** Whether a club in `districtId` in `programYear` belongs to the scope. */
+export function charterCohortScopeTest(
+  scope: CharterCohortSurvivalScope,
+  regionHistory: Pick<DistrictRegionHistory, 'districts'>
+): (districtId: string, programYear: string) => boolean {
+  if (scope.kind === 'world') return () => true
+  return (districtId, programYear) =>
+    regionHistory.districts[districtId]?.byProgramYear[programYear] ===
+    scope.regionId
+}
+
+/**
+ * A region's or the world's curves (#1818), with the district fold's
+ * rules. A club is in a region's cohort when its district sat in that
+ * region in the club's charter program year; a district the region history
+ * does not name that year is in no region (it is still in the world).
+ */
+export function buildCharterCohortSurvivalRollup({
+  index,
+  clubs,
+  regionHistory,
+  scope,
+  throughProgramYear,
+}: BuildCharterCohortSurvivalRollupInput): CharterCohortSurvivalRollup {
+  const { maxYears, cohorts, pooled, censoredProgramYear } = foldCohortCurves({
+    index,
+    clubs,
+    throughProgramYear,
+    inScope: charterCohortScopeTest(scope, regionHistory),
+  })
+  return {
+    scope,
+    throughProgramYear,
+    asOf: index.asOf,
+    maxYears,
+    cohorts,
+    pooled,
+    censoredProgramYear,
+  }
+}
+
+/** The rollup file (#1818): the curves through every covered program year. */
+export function buildCharterCohortSurvivalRollupFile({
+  index,
+  clubs,
+  regionHistory,
+  scope,
+}: Omit<
+  BuildCharterCohortSurvivalRollupInput,
+  'throughProgramYear'
+>): CharterCohortSurvivalRollupFile {
+  const programYears = [...index.programYears].sort()
+  const inScope = charterCohortScopeTest(scope, regionHistory)
+  const byThroughProgramYear: Record<string, CharterCohortCurves> = {}
+  for (const through of programYears) {
+    const { maxYears, cohorts, pooled } = foldCohortCurves({
+      index,
+      clubs,
+      throughProgramYear: through,
+      inScope,
+    })
+    byThroughProgramYear[through] = { maxYears, cohorts, pooled }
   }
   return {
-    districtId: file.districtId,
+    _format: {
+      version: CHARTER_COHORT_SURVIVAL_VERSION,
+      type: 'charter-cohort-survival-rollup',
+    },
+    scope,
+    asOf: index.asOf,
+    programYears,
+    censoredProgramYear: programYears[0] ?? null,
+    byThroughProgramYear,
+  }
+}
+
+/** The rollup curves through `throughProgramYear`, read from its file. */
+export function charterCohortSurvivalFromRollupFile(
+  file: CharterCohortSurvivalRollupFile,
+  throughProgramYear: string
+): CharterCohortSurvivalRollup {
+  const curves = curvesThrough(file, throughProgramYear)
+  return {
+    scope: file.scope,
     throughProgramYear,
     asOf: file.asOf,
     maxYears: curves.maxYears,
