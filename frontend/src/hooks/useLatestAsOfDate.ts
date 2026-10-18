@@ -42,14 +42,22 @@ export interface LatestAsOfDate {
   latestSnapshotDate: SnapshotDate | undefined
 }
 
-export function useLatestAsOfDate(): LatestAsOfDate {
+export function useLatestAsOfDate(
+  options: { enabled?: boolean } = {}
+): LatestAsOfDate {
+  // #1852 — false holds both reads; the result reads as "not loaded yet".
+  const enabled = options.enabled ?? true
   // Shares `useDistrictRanking`'s key/queryFn/staleTime so the two don't fetch
   // the same 126KB rankings.json under competing keys (#1321).
-  const { data: rankings } = useQuery(districtRankingsQueryOptions())
+  const { data: rankings } = useQuery({
+    ...districtRankingsQueryOptions(),
+    enabled,
+  })
   const { data: manifest } = useQuery({
     queryKey: ['cdn-manifest'],
     queryFn: fetchCdnManifest,
     staleTime: 15 * 60 * 1000,
+    enabled,
   })
 
   return {
@@ -86,9 +94,13 @@ export interface GlobalFreshness {
 export function useGlobalFreshness(params: {
   districtLatestSnapshotDate: SnapshotDate | undefined
   isLatestSnapshot: boolean
+  /** #1852 — false holds the reads (default true); see useLatestAsOfDate. */
+  enabled?: boolean
 }): GlobalFreshness {
   const { asOfDate, latestSnapshotDate: globalLatestSnapshot } =
-    useLatestAsOfDate()
+    useLatestAsOfDate(
+      params.enabled === undefined ? {} : { enabled: params.enabled }
+    )
   // The `!!districtLatestSnapshotDate` term matters for callers whose
   // `isLatestSnapshot` doesn't already imply it (a bare `undefined ===
   // undefined` would otherwise read as "latest").

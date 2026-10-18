@@ -2184,14 +2184,18 @@
      the same in both themes, so the white-alpha text needs no dark remap
      (same treatment as .club-hero__sub). New component → --rt-* tokens for
      type and spacing; the --tm-loyal-blue accent (#2080) is the link underline only
-     (decorative, never the sole signal — links keep the ↗ glyph). */
+     (decorative, never the sole signal — links keep the ↗ glyph).
+     #1852 — the font is the hero's own --sans, not --rt-font-body: this line
+     was the hero's only Inter text, so the 48 KB Inter woff2 joined the LCP
+     paint's critical set on the mobile gate. Source Sans 3 is already loaded
+     for .club-hero__sub and has a metric-matched fallback. */
   .club-meets {
     margin: var(--rt-space-3) 0 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0 var(--rt-space-4);
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem; /* 14px floor for phone text (mobile review §5.6) */
     line-height: 1.4;
     color: rgba(255, 255, 255, 0.88);

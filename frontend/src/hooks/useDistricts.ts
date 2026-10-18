@@ -54,13 +54,18 @@ import type { SnapshotDate } from '../types/snapshotDate'
  *
  * @param date - The snapshot the page is displaying. Omit only for a genuine
  *               "which districts exist now" read.
+ * @param options.enabled - false holds the read (default true). The club page
+ *               holds it until its hero has painted (#1852).
  */
 export const useDistricts = (
-  date?: SnapshotDate | undefined
+  date?: SnapshotDate | undefined,
+  options: { enabled?: boolean } = {}
 ): UseQueryResult<DistrictsResponse, Error> => {
   const queryClient = useQueryClient()
   return useQuery<DistrictsResponse, Error>({
     queryKey: ['districts', date ?? 'latest'],
+    // #1852 — a page can hold the read (the club page waits for its hero).
+    enabled: options.enabled ?? true,
     queryFn: async () => {
       // Read through the shared `['district-rankings', …]` entry rather than
       // fetching the file again: pages that mount this beside
