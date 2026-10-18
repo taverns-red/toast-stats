@@ -196,7 +196,10 @@ promoted, so each class the rsync used to sweep up has its own route:
   without re-uploading; they promote with the next run's globals.
 - `district_*_reports.json` sidecars (placed after the promote): mirrored when this run promoted
   the snapshot date; `[reports] Carry missing report sidecars into prod` copies those prod lacks
-  for the newest 7 dates prod indexes (`scripts/pipeline/carry-report-sidecars.sh`).
+  for the newest 7 dates prod indexes (`scripts/pipeline/carry-report-sidecars.sh`). In every
+  mode, the `carry-reports` job then carries exactly the run's promoted dates (`CARRY_DATES`)
+  and fails the run if any of them is live without reports staging holds
+  (`scripts/pipeline/check-report-sidecars.sh`, #2144).
 - A held date's own `snapshots/<date>/` objects: never carried. Re-derive the date; it then
   promotes through its own gates. A promote that copied less than it planned files the
   `promotion-held` alert with the held dates and the globals' reason.

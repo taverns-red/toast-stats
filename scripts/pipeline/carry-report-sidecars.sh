@@ -82,6 +82,21 @@ sidecars() {
   return 1
 }
 
+# CARRY_DATES (#2144): comma-separated dates a run just promoted, in any
+# mode. When set, exactly those dates are carried, however old, instead of
+# the newest <days>. Still only dates prod indexes (a given date it does not
+# index is warned about and skipped), so the invariant above holds.
+if [ -n "${CARRY_DATES:-}" ]; then
+  tr ',' '\n' <<<"${CARRY_DATES}" | tr -d ' ' \
+    | { grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' || true; } \
+    | LC_ALL=C sort -u >"${WORK}/want.txt"
+  jq -r '.dates[] | strings' "${WORK}/dates.json" | LC_ALL=C sort -u >"${WORK}/indexed.txt"
+  LC_ALL=C comm -12 "${WORK}/want.txt" "${WORK}/indexed.txt" >"${WORK}/recent.txt"
+  while IFS= read -r date; do
+    echo "::warning::carry-report-sidecars: ${date} is not in prod v1/dates.json; not carried" >&2
+  done < <(LC_ALL=C comm -23 "${WORK}/want.txt" "${WORK}/indexed.txt")
+fi
+
 CARRIED=0
 CARRIED_DATES=()
 while IFS= read -r date; do

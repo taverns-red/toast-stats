@@ -81,8 +81,9 @@ describe('workflow runner labels (#1740)', () => {
   it('finds the jobs (guard is not vacuous)', () => {
     expect(sites.length).toBeGreaterThanOrEqual(19)
     // pipeline, closing-registry-pr, daily-reports, place-reports,
-    // education-ledger-history (#1802), education-rollup (#2028).
-    expect(sites.filter(s => s.file === 'data-pipeline.yml').length).toBe(6)
+    // education-ledger-history (#1802), education-rollup (#2028),
+    // carry-reports (#2144).
+    expect(sites.filter(s => s.file === 'data-pipeline.yml').length).toBe(7)
   })
 
   it(`runs every job on the explicit ${RUNNER} label`, () => {
