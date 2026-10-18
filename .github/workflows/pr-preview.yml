@@ -41,6 +41,9 @@ on:
       - 'scripts/check-hosting-site.sh'
       - 'lighthouserc.mobile.js' # the mobile gate below runs it (#1994)
       - '.nvmrc' # setup-node reads it (#2005)
+      # the catch-all smoke step runs them (#2141)
+      - 'scripts/unlisted-smoke-specs.ts'
+      - 'scripts/lib/smokeSpecCoverage.ts'
 
 # Cancel an in-flight preview build when a new push to the same PR
 # arrives — only the latest commit gets a deploy. A `labeled` event for any
@@ -635,6 +638,31 @@ jobs:
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/landing-mobile-scroll.smoke.ts
+
+      # Every other smoke spec (#2141). Six specs (district-growth among them)
+      # were written without a step above and ran only locally. This step runs
+      # every e2e/**/*.smoke.ts that no step above names, as
+      # scripts/unlisted-smoke-specs.ts lists them, so a new spec runs here
+      # from the day it lands. Give a spec its own step above when it needs a
+      # name or a rationale of its own. Both engines. If nothing is left, exit
+      # early: a bare `playwright test` would re-run every spec.
+      # scripts/lib/__tests__/smokeSpecCoverage.test.ts fails if a spec is
+      # in neither place.
+      - name: Remaining smoke specs against preview
+        if: env.HEAVY_SMOKE == 'true'
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          specs="$(npx tsx ../scripts/unlisted-smoke-specs.ts)"
+          if [ -z "$specs" ]; then
+            echo "Every smoke spec has a step of its own."
+            exit 0
+          fi
+          echo "$specs"
+          # One path per line, no spaces (the contract test checks): split.
+          # shellcheck disable=SC2086
+          npx playwright test --config playwright.config.ts $specs
 
       # Lighthouse MOBILE gate (#1830, mobile epic #1827). lighthouserc.js is
       # desktop-only on `/` against localhost fixtures; this runs Lighthouse's
