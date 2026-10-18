@@ -100,7 +100,13 @@ const BUDGETS = {
   },
   // LCP 6360 / 6613 ms; CLS 0.006; script 211 / 218 KB; total 1188 / 1197 KB
   // (prod before #1830, Lighthouse mobile: 15.1 s, 2.36 MB)
-  club: { lcpMs: 7500, cls: 0.1, scriptBytes: 300 * KB, totalBytes: 1300 * KB },
+  // #1852 option C (2026-10-18, PR #2147): rankings/manifest wait for the hero
+  // paint and the hero no longer requests Inter. 4 runs x 3 samples: LCP
+  // median 3471 ms (3169-3483), was 3765 (3329-3989, 18 samples). This is
+  // the data-gated hero's floor on this gate: Lantern charges the CDN
+  // connection (~600 ms) to any h1 that waits on data, so 3000 ms needs a new
+  // artifact. Budget = measured median + ~10%.
+  club: { lcpMs: 3800, cls: 0.1, scriptBytes: 300 * KB, totalBytes: 1300 * KB },
   // LCP 3054 / 3167 ms; CLS 0; script 175 / 179 KB; total 292 / 298 KB
   regions: {
     lcpMs: 3600,
