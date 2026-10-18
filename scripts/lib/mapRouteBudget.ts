@@ -6,8 +6,13 @@
  * - main-thread JS ≤ 300 KB;
  * - the MapLibre worker ≤ 150 KB.
  *
- * A map route is any built chunk that lazy-imports the `BasemapMap-*.js`
- * chunk (today the page chunk that holds LazyBasemapMap). Its main-thread
+ * A map route is a route chunk (one the critical path lazy-imports) whose
+ * static closure holds the lazy import of the `BasemapMap-*.js` chunk —
+ * the import LazyBasemapMap makes. Once two map pages share LazyBasemapMap
+ * (district #1784, region #1808) Vite hoists it into a shared chunk, and
+ * each page is charged through it; the shared chunk is never measured
+ * alone, which would undercount every page. A lazy-import chunk no route
+ * reaches is its own route, so the check is never vacuous. Its main-thread
  * cost is every chunk statically reachable from that entry or from
  * BasemapMap, minus the chunks already on every route's critical path. Those
  * are paid by the landing page and are guarded by the Lighthouse budget, so
@@ -54,6 +59,13 @@ function closure(
   return seen
 }
 
+const DYNAMIC_IMPORT_RE = /import\(\s*["'`]\.\/([\w.-]+\.js)["'`]\s*\)/g
+
+/** The chunks a chunk lazy-imports (`import(\`./X.js\`)`). */
+function dynamicImports(chunkSource: string): string[] {
+  return [...chunkSource.matchAll(DYNAMIC_IMPORT_RE)].map(m => m[1]!)
+}
+
 const gz = (src: string | null): number =>
   src === null ? 0 : gzipSync(src).length
 
@@ -80,9 +92,19 @@ export function mapRouteBudgetReport(
   const lazyEdge = new RegExp(
     `import\\(\\s*["'\`]\\./${basemap.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'\`]`
   )
-  const entries = assetNames.filter(
-    n => n.endsWith('.js') && n !== basemap && lazyEdge.test(read(n) ?? '')
+  const lazyEdges = new Set(
+    assetNames.filter(
+      n => n.endsWith('.js') && n !== basemap && lazyEdge.test(read(n) ?? '')
+    )
   )
+  const routeChunks = new Set(
+    [...critical].flatMap(c => dynamicImports(read(c) ?? ''))
+  )
+  const entries = [...routeChunks].filter(
+    n => n !== basemap && [...closure([n], read)].some(c => lazyEdges.has(c))
+  )
+  const covered = new Set(entries.flatMap(e => [...closure([e], read)]))
+  for (const edge of lazyEdges) if (!covered.has(edge)) entries.push(edge)
 
   const routes: MapRoute[] = entries.map(entry => {
     const chunks = [...closure([entry, basemap], read)]

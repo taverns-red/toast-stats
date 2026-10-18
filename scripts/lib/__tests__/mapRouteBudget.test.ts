@@ -78,6 +78,48 @@ describe('mapRouteBudgetReport', () => {
     expect(r.violations).toEqual([])
   })
 
+  it('charges each page that reaches a shared lazy-map chunk, not the shared chunk (#1808)', () => {
+    // Two map pages (district #1784, region #1808): Vite hoists the shared
+    // LazyBasemapMap into its own chunk, which both pages import statically.
+    // The pages are the routes; the shared chunk alone would undercount them.
+    const shared = `import{t}from"./vendor-j5mcA8oB.js";var s=lazy(()=>t(()=>import(\`./BasemapMap-z69xyLVV.js\`)));`
+    const files: Record<string, string> = {
+      // The app's router lazy-imports each page (App.tsx React.lazy).
+      'index-B6US2pDD.js': `import"./vendor-j5mcA8oB.js";var a=lazy(()=>t(()=>import(\`./DistrictMapPage-D1.js\`))),b=lazy(()=>t(()=>import(\`./RegionMapPage-R1.js\`)));`,
+      'vendor-j5mcA8oB.js': 'x'.repeat(50_000),
+      'districtMap-Abc123.js': shared,
+      // A page's own on-demand chunk that reuses the shared chunk is part of
+      // that page, not a route of its own.
+      'RegionClubList-L1.js': `import{s}from"./districtMap-Abc123.js";`,
+      'DistrictMapPage-D1.js': `import{s}from"./districtMap-Abc123.js";${'d'.repeat(20)}`,
+      'RegionMapPage-R1.js': `import{s}from"./districtMap-Abc123.js";import{p}from"./pinExtended-P1.js";`,
+      'pinExtended-P1.js': 'p'.repeat(30),
+      'BasemapMap-z69xyLVV.js': `import{a}from"./maplibre-CviuKSG-.js";`,
+      'maplibre-CviuKSG-.js': 'm'.repeat(10),
+      'maplibre-gl-worker-DxGNRm0a.mjs': 'w',
+    }
+    const read = (n: string) => files[n] ?? null
+    const r = mapRouteBudgetReport(INDEX_HTML, Object.keys(files), read)
+    expect(r.routes.map(x => x.entry).sort()).toEqual([
+      'DistrictMapPage-D1.js',
+      'RegionMapPage-R1.js',
+    ])
+    const region = r.routes.find(x => x.entry === 'RegionMapPage-R1.js')!
+    expect(region.chunks).toEqual([
+      'BasemapMap-z69xyLVV.js',
+      'RegionMapPage-R1.js',
+      'districtMap-Abc123.js',
+      'maplibre-CviuKSG-.js',
+      'pinExtended-P1.js',
+    ])
+
+    const heavy = (n: string) =>
+      n === 'pinExtended-P1.js' ? noise(310 * 1024) : read(n)
+    expect(
+      mapRouteBudgetReport(INDEX_HTML, Object.keys(files), heavy).violations
+    ).toEqual([expect.stringMatching(/^RegionMapPage-R1\.js: main-thread/)])
+  })
+
   it('flags a route over 300 KB of main-thread gzip', () => {
     const { html, names, read } = build({
       page: 10,

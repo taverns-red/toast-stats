@@ -57,6 +57,22 @@ describe('MapClubSummary', () => {
     expect(text).not.toContain('pwd=secret')
   })
 
+  it('names and links each club’s own district on a region map (#1808)', () => {
+    render(
+      <MemoryRouter>
+        <MapClubSummary
+          clubs={[club({})]}
+          districtId="61"
+          districtOf={() => '49'}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('District 49 · Division A · Area 01')).toBeVisible()
+    expect(
+      screen.getByRole('link', { name: /Open club page/ })
+    ).toHaveAttribute('href', '/district/49/club/1234')
+  })
+
   it('lists every club at one location (co-located clubs)', () => {
     render(
       <MemoryRouter>

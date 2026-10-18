@@ -15,6 +15,9 @@
  */
 
 import {
+  CLUBS_BY_REGION_DIR,
+  ClubsByRegionShardSchema,
+  clubsByRegionShardFileName,
   DistrictReportsDatasetSchema,
   GlobalClubRaceSchema,
   GlobalHistorySchema,
@@ -26,6 +29,7 @@ import {
   RegionRollupsSchema,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsSchema,
+  type ClubsByRegionShard,
   type DistrictReportsDataset,
   type GlobalClubRace,
   type GlobalHistory,
@@ -678,6 +682,35 @@ export async function fetchCdnRegionRollups(
   } catch {
     return null
   }
+}
+
+/** `snapshots/{date}/clubs-by-region/<region>.json` (#1800) — one region's
+ *  clubs. The id is encoded: it comes from the URL. */
+export function cdnClubsByRegionShardUrl(
+  date: SnapshotDate,
+  region: string
+): string {
+  const file = clubsByRegionShardFileName(encodeURIComponent(region))
+  return `${cdnBaseUrl()}/snapshots/${date}/${CLUBS_BY_REGION_DIR}/${file}`
+}
+
+/**
+ * One region's clubs for a date (#1808, data from #1800). A missing shard
+ * (4xx: the date predates the artifact, or it is not promoted yet) or an
+ * off-contract body is `null`: "not available for this date yet". A server
+ * or network failure rejects, so the page can say so and retry instead of
+ * claiming the data does not exist.
+ */
+export async function fetchCdnClubsByRegionShard(
+  date: SnapshotDate,
+  region: string
+): Promise<ClubsByRegionShard | null> {
+  const res = await fetch(cdnClubsByRegionShardUrl(date, region))
+  if (res.status >= 400 && res.status < 500) return null
+  if (!res.ok) throw new Error(`Region clubs: HTTP ${res.status}`)
+  recordCdnResponse(res)
+  const parsed = ClubsByRegionShardSchema.safeParse(await res.json())
+  return parsed.success ? parsed.data : null
 }
 
 /**

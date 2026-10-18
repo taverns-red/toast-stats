@@ -45,6 +45,26 @@ describe('RegionSubnav', () => {
     expect(rankings).not.toHaveAttribute('aria-current')
   })
 
+  it('links a region’s club map (#1808), keeping py and date', () => {
+    render(
+      <MemoryRouter initialEntries={['/region/07/map?py=2025-2026&q=x']}>
+        <RegionSubnav base="/region/07" label="Region 07 sections" />
+      </MemoryRouter>
+    )
+    const map = screen.getByRole('link', { name: 'Club map' })
+    expect(map).toHaveAttribute('href', '/region/07/map?py=2025-2026')
+    expect(map).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('has no club map on the all-regions subnav (the world explorer is #1809)', () => {
+    render(
+      <MemoryRouter initialEntries={['/regions']}>
+        <RegionSubnav base="/regions" label="Regions sections" />
+      </MemoryRouter>
+    )
+    expect(screen.queryByRole('link', { name: 'Club map' })).toBeNull()
+  })
+
   it('is the bottom section bar on an upright phone, so content starts under the context bar', () => {
     phone.value = true
     render(

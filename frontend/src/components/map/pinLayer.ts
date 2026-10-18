@@ -13,77 +13,30 @@ import type {
   GeoJSONSourceSpecification,
   LayerSpecification,
 } from 'maplibre-gl'
-import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import {
   PIN_SHAPES,
   SUSPENDED_FILL,
   type ModeModel,
   type PinShape,
 } from './pinModes'
-
-export const PIN_SOURCE_ID = 'club-pins'
-export const CLUSTER_LAYER_ID = 'club-clusters'
-export const PIN_LAYER_ID = 'club-pins'
-export const SELECTED_LAYER_ID = 'club-pins-selected'
-export const PIN_LAYER_IDS = [
+import {
   CLUSTER_LAYER_ID,
   PIN_LAYER_ID,
+  PIN_SOURCE_ID,
   SELECTED_LAYER_ID,
-] as const
+  type MapTheme,
+  type PinFeatureCollection,
+} from './pinFeatures'
+
+// The data and ids live in `pinFeatures` (#1808); re-exported, so this
+// stays the pin layer's one module for its callers.
+export * from './pinFeatures'
 
 /** Territory modes show the on-pin code from this zoom (spec §7.3). */
 export const CODE_LABEL_MIN_ZOOM = 11
 
 /** Territory clusters are neutral: a dominant hue over 34 areas misleads. */
 export const NEUTRAL_CLUSTER_FILL = '#57534C'
-
-export type MapTheme = 'light' | 'dark'
-
-export interface PinProps {
-  id: string
-  /** Category index in `model.categories`. */
-  k: number
-  s: PinShape
-  f: string
-  /** On-pin code ('' outside territory modes). */
-  c: string
-  /** 1 = dashed (provisional) outline. */
-  d: 0 | 1
-}
-
-export interface PinFeatureCollection {
-  type: 'FeatureCollection'
-  features: Array<{
-    type: 'Feature'
-    geometry: { type: 'Point'; coordinates: [number, number] }
-    properties: PinProps
-  }>
-}
-
-export function buildPinFeatures(
-  clubs: readonly ClubTrend[],
-  model: ModeModel
-): PinFeatureCollection {
-  const features: PinFeatureCollection['features'] = []
-  for (const club of clubs) {
-    const at = club.coordinates
-    if (!at || !Number.isFinite(at.lat) || !Number.isFinite(at.lng)) continue
-    const cat = model.categoryOf(club)
-    features.push({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [at.lng, at.lat] },
-      properties: {
-        id: club.clubId,
-        k: model.categories.indexOf(cat),
-        s: cat.shape,
-        f: cat.fill,
-        c: cat.code ?? '',
-        d: model.isDashed(club) ? 1 : 0,
-      },
-    })
-  }
-  return { type: 'FeatureCollection', features }
-}
 
 const countOf = (i: number): ExpressionSpecification => ['get', `k${i}`]
 

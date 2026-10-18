@@ -26,7 +26,7 @@ import {
   PIN_LAYER_ID,
   PIN_SOURCE_ID,
   buildPinFeatures,
-} from '../components/map/pinLayer'
+} from '../components/map/pinFeatures'
 import {
   EXTENDED_FACET_PARAMS,
   MAP_COLOR_MODES,

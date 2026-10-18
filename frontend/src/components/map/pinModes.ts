@@ -13,7 +13,13 @@
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 
 export type MapColorMode =
-  'health' | 'tier' | 'division' | 'area' | ExtendedMode
+  | 'health'
+  | 'tier'
+  | 'division'
+  | 'area'
+  // The region map's (#1808): built in `pinDistrict`, not on district maps.
+  | 'district'
+  | ExtendedMode
 
 /** #1787: built in `pinExtended`, loaded after the first render. */
 export type ExtendedMode =
@@ -393,10 +399,10 @@ export const activeMapFilterCount = (params: URLSearchParams) =>
   MAP_FILTER_PARAMS.filter(k => facetValues(params, k).length).length
 
 /** Apply every facet present in the URL (AND across facets, OR within). */
-export function applyFacets(
-  clubs: readonly ClubTrend[],
+export function applyFacets<T extends ClubTrend>(
+  clubs: readonly T[],
   params: URLSearchParams
-): ClubTrend[] {
+): T[] {
   let out = [...clubs]
   for (const f of FACETS) {
     const raw = facetValues(params, f.param)

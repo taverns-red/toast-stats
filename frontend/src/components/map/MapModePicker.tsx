@@ -19,7 +19,7 @@ import { extendedModel } from './pinExtended'
    only the "Colour" pill and the Health | Distinguished quick toggle. */
 
 function previewOf(id: MapColorMode): PinCategory[] {
-  if (isTerritoryMode(id))
+  if (isTerritoryMode(id) || id === 'district')
     return CATEGORICAL8.slice(0, 5).map(fill => ({
       key: fill,
       label: '',
@@ -32,14 +32,17 @@ function previewOf(id: MapColorMode): PinCategory[] {
   return model.categories.slice(0, 5)
 }
 
-const GROUPS = [...new Set(MAP_COLOR_MODES.map(m => m.group))]
+export type ModeList = readonly (typeof MAP_COLOR_MODES)[number][]
 
 export const ModePicker: React.FC<{
   mode: MapColorMode
   onChange: (m: MapColorMode) => void
-}> = ({ mode, onChange }) => (
+  /** The modes on offer: the district map's by default; the region map
+   *  passes its own (#1808). */
+  modes?: ModeList | undefined
+}> = ({ mode, onChange, modes = MAP_COLOR_MODES }) => (
   <div className="map-modes" role="group" aria-label="Colour pins by">
-    {GROUPS.map(group => (
+    {[...new Set(modes.map(m => m.group))].map(group => (
       <div
         key={group}
         className="map-modes__group"
@@ -49,22 +52,24 @@ export const ModePicker: React.FC<{
         <p className="map-modes__heading" aria-hidden="true">
           {group}
         </p>
-        {MAP_COLOR_MODES.filter(m => m.group === group).map(m => (
-          <button
-            key={m.id}
-            type="button"
-            className="map-modes__btn"
-            aria-pressed={mode === m.id}
-            onClick={() => onChange(m.id)}
-          >
-            <span className="map-modes__preview" aria-hidden="true">
-              {previewOf(m.id).map(c => (
-                <PinSwatch key={c.key} category={c} />
-              ))}
-            </span>
-            {m.label}
-          </button>
-        ))}
+        {modes
+          .filter(m => m.group === group)
+          .map(m => (
+            <button
+              key={m.id}
+              type="button"
+              className="map-modes__btn"
+              aria-pressed={mode === m.id}
+              onClick={() => onChange(m.id)}
+            >
+              <span className="map-modes__preview" aria-hidden="true">
+                {previewOf(m.id).map(c => (
+                  <PinSwatch key={c.key} category={c} />
+                ))}
+              </span>
+              {m.label}
+            </button>
+          ))}
       </div>
     ))}
   </div>
@@ -78,7 +83,8 @@ export const ModePopover: React.FC<{
   onChange: (m: MapColorMode) => void
   onClose: () => void
   trigger: React.RefObject<HTMLButtonElement | null>
-}> = ({ id, mode, onChange, onClose, trigger }) => {
+  modes?: ModeList | undefined
+}> = ({ id, mode, onChange, onClose, trigger, modes }) => {
   const ref = React.useRef<HTMLDivElement>(null)
   React.useEffect(() => {
     ref.current
@@ -104,7 +110,7 @@ export const ModePopover: React.FC<{
   }, [onClose, trigger])
   return (
     <div id={id} ref={ref} className="map-modes-pop">
-      <ModePicker mode={mode} onChange={onChange} />
+      <ModePicker mode={mode} onChange={onChange} modes={modes} />
     </div>
   )
 }

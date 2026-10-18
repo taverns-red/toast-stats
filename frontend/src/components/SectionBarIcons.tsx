@@ -70,3 +70,12 @@ export const TrendsIcon: React.FC = () => (
     <path d="M15 7h6v6" />
   </Icon>
 )
+
+/** A folded map, for the region club map (#1808). */
+export const MapIcon: React.FC = () => (
+  <Icon>
+    <path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" />
+    <path d="M9 4v14" />
+    <path d="M15 6v14" />
+  </Icon>
+)
