@@ -1,0 +1,370 @@
+{
+  "districtId": "76",
+  "programYear": "2025-2026",
+  "dataPoints": [
+    {
+      "date": "2025-07-31",
+      "membership": 3185
+    },
+    {
+      "date": "2025-08-31",
+      "membership": 3225
+    },
+    {
+      "date": "2025-09-30",
+      "membership": 3286
+    },
+    {
+      "date": "2025-10-31",
+      "membership": 2980
+    },
+    {
+      "date": "2025-11-30",
+      "membership": 3037
+    },
+    {
+      "date": "2025-12-31",
+      "membership": 3075
+    },
+    {
+      "date": "2026-01-31",
+      "membership": 3110
+    },
+    {
+      "date": "2026-02-13",
+      "membership": 3151
+    },
+    {
+      "date": "2026-02-28",
+      "membership": 3171
+    },
+    {
+      "date": "2026-03-22",
+      "membership": 3204
+    },
+    {
+      "date": "2026-03-23",
+      "membership": 3206
+    },
+    {
+      "date": "2026-03-24",
+      "membership": 3207
+    },
+    {
+      "date": "2026-03-25",
+      "membership": 3209
+    },
+    {
+      "date": "2026-03-26",
+      "membership": 3209
+    },
+    {
+      "date": "2026-03-27",
+      "membership": 3210
+    },
+    {
+      "date": "2026-03-28",
+      "membership": 3212
+    },
+    {
+      "date": "2026-03-29",
+      "membership": 3213
+    },
+    {
+      "date": "2026-03-30",
+      "membership": 3216
+    },
+    {
+      "date": "2026-03-31",
+      "membership": 3218
+    },
+    {
+      "date": "2026-04-05",
+      "membership": 3218
+    },
+    {
+      "date": "2026-04-08",
+      "membership": 2848
+    },
+    {
+      "date": "2026-04-09",
+      "membership": 2848
+    },
+    {
+      "date": "2026-04-11",
+      "membership": 2855
+    },
+    {
+      "date": "2026-04-12",
+      "membership": 2860
+    },
+    {
+      "date": "2026-04-13",
+      "membership": 2868
+    },
+    {
+      "date": "2026-04-14",
+      "membership": 2870
+    },
+    {
+      "date": "2026-04-15",
+      "membership": 2892
+    },
+    {
+      "date": "2026-04-16",
+      "membership": 2896
+    },
+    {
+      "date": "2026-04-17",
+      "membership": 2879
+    },
+    {
+      "date": "2026-04-18",
+      "membership": 2882
+    },
+    {
+      "date": "2026-04-19",
+      "membership": 2884
+    },
+    {
+      "date": "2026-04-20",
+      "membership": 2886
+    },
+    {
+      "date": "2026-04-21",
+      "membership": 2887
+    },
+    {
+      "date": "2026-04-22",
+      "membership": 2888
+    },
+    {
+      "date": "2026-04-23",
+      "membership": 2889
+    },
+    {
+      "date": "2026-04-24",
+      "membership": 2895
+    },
+    {
+      "date": "2026-04-25",
+      "membership": 2896
+    },
+    {
+      "date": "2026-04-26",
+      "membership": 2897
+    },
+    {
+      "date": "2026-04-27",
+      "membership": 2898
+    },
+    {
+      "date": "2026-04-28",
+      "membership": 2898
+    },
+    {
+      "date": "2026-04-29",
+      "membership": 2901
+    },
+    {
+      "date": "2026-04-30",
+      "membership": 2901
+    },
+    {
+      "date": "2026-05-08",
+      "membership": 2932
+    },
+    {
+      "date": "2026-05-09",
+      "membership": 2936
+    },
+    {
+      "date": "2026-05-10",
+      "membership": 2938
+    },
+    {
+      "date": "2026-05-11",
+      "membership": 2938
+    },
+    {
+      "date": "2026-05-12",
+      "membership": 2944
+    },
+    {
+      "date": "2026-05-13",
+      "membership": 2944
+    },
+    {
+      "date": "2026-05-14",
+      "membership": 2947
+    },
+    {
+      "date": "2026-05-15",
+      "membership": 2947
+    },
+    {
+      "date": "2026-05-16",
+      "membership": 2953
+    },
+    {
+      "date": "2026-05-17",
+      "membership": 2958
+    },
+    {
+      "date": "2026-05-18",
+      "membership": 2961
+    },
+    {
+      "date": "2026-05-19",
+      "membership": 2963
+    },
+    {
+      "date": "2026-05-20",
+      "membership": 2963
+    },
+    {
+      "date": "2026-05-21",
+      "membership": 2965
+    },
+    {
+      "date": "2026-05-22",
+      "membership": 2965
+    },
+    {
+      "date": "2026-05-23",
+      "membership": 2966
+    },
+    {
+      "date": "2026-05-24",
+      "membership": 2967
+    },
+    {
+      "date": "2026-05-25",
+      "membership": 2968
+    },
+    {
+      "date": "2026-05-26",
+      "membership": 2970
+    },
+    {
+      "date": "2026-05-27",
+      "membership": 2970
+    },
+    {
+      "date": "2026-05-28",
+      "membership": 2970
+    },
+    {
+      "date": "2026-05-29",
+      "membership": 2973
+    },
+    {
+      "date": "2026-05-30",
+      "membership": 2974
+    },
+    {
+      "date": "2026-05-31",
+      "membership": 2975
+    },
+    {
+      "date": "2026-06-06",
+      "membership": 3000
+    },
+    {
+      "date": "2026-06-07",
+      "membership": 3004
+    },
+    {
+      "date": "2026-06-08",
+      "membership": 3007
+    },
+    {
+      "date": "2026-06-09",
+      "membership": 3008
+    },
+    {
+      "date": "2026-06-10",
+      "membership": 3011
+    },
+    {
+      "date": "2026-06-11",
+      "membership": 3015
+    },
+    {
+      "date": "2026-06-12",
+      "membership": 3015
+    },
+    {
+      "date": "2026-06-13",
+      "membership": 3015
+    },
+    {
+      "date": "2026-06-14",
+      "membership": 3020
+    },
+    {
+      "date": "2026-06-15",
+      "membership": 3022
+    },
+    {
+      "date": "2026-06-16",
+      "membership": 3022
+    },
+    {
+      "date": "2026-06-17",
+      "membership": 3027
+    },
+    {
+      "date": "2026-06-18",
+      "membership": 3028
+    },
+    {
+      "date": "2026-06-19",
+      "membership": 3029
+    },
+    {
+      "date": "2026-06-20",
+      "membership": 3029
+    },
+    {
+      "date": "2026-06-21",
+      "membership": 3031
+    },
+    {
+      "date": "2026-06-22",
+      "membership": 3032
+    },
+    {
+      "date": "2026-06-23",
+      "membership": 3035
+    },
+    {
+      "date": "2026-06-24",
+      "membership": 3046
+    },
+    {
+      "date": "2026-06-25",
+      "membership": 3051
+    },
+    {
+      "date": "2026-06-26",
+      "membership": 3053
+    },
+    {
+      "date": "2026-06-27",
+      "membership": 3059
+    },
+    {
+      "date": "2026-06-28",
+      "membership": 3063
+    },
+    {
+      "date": "2026-06-29",
+      "membership": 3068
+    },
+    {
+      "date": "2026-06-30",
+      "membership": 3071
+    }
+  ]
+}

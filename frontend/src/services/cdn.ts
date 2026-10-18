@@ -26,7 +26,9 @@ import {
   GLOBAL_HISTORY_OBJECT_PATH,
   GLOBAL_TOTALS_FILE_NAME,
   REGION_ROLLUPS_FILE_NAME,
+  RegionMembershipSeriesSchema,
   RegionRollupsSchema,
+  regionMembershipSeriesPath,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsSchema,
   type ClubsByRegionShard,
@@ -34,6 +36,7 @@ import {
   type GlobalClubRace,
   type GlobalHistory,
   type GlobalTotals,
+  type RegionMembershipSeries,
   type RegionRollups,
   type SuspendedClubs,
 } from '@taverns-red/shared-contracts'
@@ -711,6 +714,34 @@ export async function fetchCdnClubsByRegionShard(
   recordCdnResponse(res)
   const parsed = ClubsByRegionShardSchema.safeParse(await res.json())
   return parsed.success ? parsed.data : null
+}
+
+/** `time-series/regions/{PY}.json` (#2127) — the region and world
+ *  membership series for one program year. */
+export function cdnRegionMembershipSeriesUrl(programYear: string): string {
+  return `${cdnBaseUrl()}/${regionMembershipSeriesPath(programYear)}`
+}
+
+/**
+ * A program year's region and world membership series (#2127),
+ * **tolerantly**. ONE request feeds every region sparkline on `/regions`
+ * (instead of ~94 district series). A year with no file — every year until
+ * the pipeline has published it to prod — an off-contract body or a network
+ * error is `null`: the page draws no sparkline, never a flat line.
+ */
+export async function fetchCdnRegionMembershipSeries(
+  programYear: string
+): Promise<RegionMembershipSeries | null> {
+  if (!/^\d{4}-\d{4}$/.test(programYear)) return null
+  try {
+    const res = await fetch(cdnRegionMembershipSeriesUrl(programYear))
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = RegionMembershipSeriesSchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
 }
 
 /**

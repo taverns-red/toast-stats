@@ -21,6 +21,7 @@ import {
   buildGlobalClubRace,
   buildClubsByRegion,
   buildGlobalTotals,
+  buildRegionMembershipSeries,
   buildRegionRollups,
   canonicalDistrictId,
   findPreviousProgramYearDate,
@@ -36,6 +37,7 @@ import {
   type AnalyticsManifestEntry,
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
+  type RegionSeriesDistrictInput,
 } from '@taverns-red/analytics-core'
 import type {
   DistrictStatisticsInput,
@@ -57,8 +59,11 @@ import {
   DistrictRegionHistorySchema,
   REGION_ROLLUPS_FILE_NAME,
   REGION_ROLLUPS_REGION_SOURCE,
+  RegionMembershipSeriesSchema,
+  regionMembershipSeriesPath,
   type DistrictRegionHistory,
 } from '@taverns-red/shared-contracts'
+import { readStoreFileText } from '../utils/gzipLayers.js'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import {
   ClubRaceStore,
@@ -224,6 +229,16 @@ export interface ComputeOperationResult {
    * ADR-015 P3) or threw. Reported, never publish-blocking.
    */
   clubsByRegionFailed: boolean
+  /**
+   * Path of `time-series/regions/{PY}.json` (#2127), or undefined when no
+   * district series exists for the date's program year.
+   */
+  regionSeriesPath?: string
+  /**
+   * True when the region membership series could not be built or written
+   * (#2127). Recorded in `errors`; the store keeps its previous copy.
+   */
+  regionSeriesFailed: boolean
   /**
    * Districts whose time-series data point was not written (#1702). The
    * loop still continues to the next district, but the run fails: Trends
@@ -1226,6 +1241,7 @@ export class AnalyticsComputeService {
         globalClubRaceFailed: false,
         regionRollupsFailed: false,
         clubsByRegionFailed: false,
+        regionSeriesFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
         clubTrendsUpdated: [],
@@ -1275,6 +1291,7 @@ export class AnalyticsComputeService {
         globalClubRaceFailed: false,
         regionRollupsFailed: false,
         clubsByRegionFailed: false,
+        regionSeriesFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
         clubTrendsUpdated: [],
@@ -1436,6 +1453,13 @@ export class AnalyticsComputeService {
       })
     }
 
+    // The region and world membership series for this program year
+    // (#2127), summed from the district series just written.
+    const regionSeries = await this.writeRegionMembershipSeries(
+      snapshotDate,
+      errors
+    )
+
     // Store write counters for the step summary (#1708)
     const computed = results.filter(r => !r.skipped)
     const timeSeriesWritten = computed
@@ -1501,6 +1525,8 @@ export class AnalyticsComputeService {
       regionRollupsFailed: regionRollups.failed,
       clubsByRegionPaths: clubsByRegion.paths,
       clubsByRegionFailed: clubsByRegion.failed,
+      regionSeriesPath: regionSeries.path,
+      regionSeriesFailed: regionSeries.failed,
       timeSeriesFailed,
       timeSeriesWritten,
       clubTrendsUpdated,
@@ -2085,6 +2111,109 @@ export class AnalyticsComputeService {
       }
     }
     return { regionHistory: parsed.data }
+  }
+
+  /**
+   * Write `time-series/regions/{PY}.json` — the region and world membership
+   * series for this date's program year (#2127), behind the /regions
+   * sparklines.
+   *
+   * Derived whole from every `time-series/district_{id}/{PY}.json` on disk,
+   * read AFTER this date's points and source gaps are written, so it always
+   * matches the district series it sums and needs no store of its own (the
+   * pipeline syncs the whole time-series store before compute). It sits
+   * inside that store, so publish-stores.sh uploads it when its bytes
+   * change, records it in the run manifest, and promotion copies it with
+   * `time-series/`. Regions come from the same synced history as the
+   * region rollups; the program year from the snapshot's logical date.
+   *
+   * - No district series for the year → skipped quietly (no file).
+   * - Anything else that throws → recorded in `errors`; the store keeps its
+   *   previous copy.
+   */
+  private async writeRegionMembershipSeries(
+    snapshotDate: string,
+    errors: Array<{ districtId: string; error: string; timestamp: string }>
+  ): Promise<{ path?: string; failed: boolean }> {
+    const programYear = programYearForSnapshotDate(snapshotDate)
+    const timeSeriesDir = path.join(this.cacheDir, 'time-series')
+    try {
+      let entries: string[]
+      try {
+        entries = await fs.readdir(timeSeriesDir)
+      } catch {
+        return { failed: false }
+      }
+      const districts: RegionSeriesDistrictInput[] = []
+      for (const entry of entries.sort()) {
+        const match = /^district_([A-Za-z0-9]+)$/.exec(entry)
+        if (!match) continue
+        const file = path.join(timeSeriesDir, entry, `${programYear}.json`)
+        let text: string
+        try {
+          text = await readStoreFileText(file)
+        } catch (error) {
+          // No series for this year; anything else is a broken store.
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue
+          throw error
+        }
+        const parsed = JSON.parse(text) as {
+          dataPoints?: Array<{ date: string; membership: number }>
+          sourceGapDates?: string[]
+        }
+        districts.push({
+          districtId: match[1]!,
+          dataPoints: (parsed.dataPoints ?? []).map(p => ({
+            date: p.date,
+            membership: p.membership,
+          })),
+          ...(parsed.sourceGapDates && {
+            sourceGapDates: parsed.sourceGapDates,
+          }),
+        })
+      }
+      if (districts.length === 0) return { failed: false }
+
+      const { regionHistory, note } = await this.readRegionHistory()
+      const series = RegionMembershipSeriesSchema.parse(
+        buildRegionMembershipSeries({
+          programYear,
+          districts,
+          regionHistory,
+          ...(note !== undefined && { regionHistoryNote: note }),
+        })
+      )
+      const outputPath = path.join(
+        this.cacheDir,
+        regionMembershipSeriesPath(programYear)
+      )
+      await fs.mkdir(path.dirname(outputPath), { recursive: true })
+      // Compact: the CDN serves it on every /regions view (#2127).
+      await fs.writeFile(outputPath, JSON.stringify(series) + '\n', 'utf-8')
+      this.logger.info('Wrote region membership series', {
+        snapshotDate,
+        programYear,
+        path: outputPath,
+        dates: series.dates.length,
+        regions: series.regions ? Object.keys(series.regions).length : null,
+        uncounted: series.uncountedDistricts.length,
+        unassigned: series.unassignedDistricts.length,
+      })
+      return { path: outputPath, failed: false }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      this.logger.error('Failed to write region membership series', {
+        snapshotDate,
+        programYear,
+        error: message,
+      })
+      errors.push({
+        districtId: 'N/A',
+        error: `Failed to write ${regionMembershipSeriesPath(programYear)}: ${message}`,
+        timestamp: new Date().toISOString(),
+      })
+      return { failed: true }
+    }
   }
 
   // ========== Dense Club Trends Enrichment (#79b) ==========

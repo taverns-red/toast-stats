@@ -10,6 +10,7 @@ import { useUrlState } from '../hooks/useUrlState'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { RegionSubnav } from '../components/rollups/RegionSubnav'
+import { useRegionTrends } from '../hooks/useRegionTrends'
 
 /* Region selection is URL state (#979) so it survives reload, back, and shared
    links — `?region=07`. Module-level options keep a stable reference so
@@ -76,6 +77,14 @@ const RegionsPage: React.FC = () => {
     [rollups]
   )
 
+  // One membership sparkline per region (#2127) from ONE file for the
+  // page's own program year and pinned date (R3), not ~94 district series.
+  const { trends, isPending: trendsPending } = useRegionTrends(
+    regionIds,
+    selectedProgramYear.label,
+    effectiveDate
+  )
+
   // Derive (don't sync) the effective selection: a stale selection that a
   // refetch dropped self-heals to "All" at render time, so the user is never
   // stranded on an empty grid — and no setState-in-effect.
@@ -101,7 +110,12 @@ const RegionsPage: React.FC = () => {
     [data]
   )
 
-  if (isLoading) return <LoadingSkeleton variant="card" />
+  // The series file is tiny and fetched in parallel with the rankings; the
+  // FIRST paint waits for its answer (file or 404) so the Trend column never
+  // appears or vanishes under the reader (CLS). A later year switch keeps
+  // the page up and reserves the column while the new year loads.
+  if (isLoading || (trendsPending && !error))
+    return <LoadingSkeleton variant="card" />
   if (error || !data) {
     return (
       <EmptyState
@@ -153,7 +167,7 @@ const RegionsPage: React.FC = () => {
         <h2 id="regions-table-heading" className="sr-only">
           Region leaderboard
         </h2>
-        <RegionsLeaderboard rollups={displayedRollups} />
+        <RegionsLeaderboard rollups={displayedRollups} trends={trends} />
       </section>
 
       {dnarCount > 0 && (

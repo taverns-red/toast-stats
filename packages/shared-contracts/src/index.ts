@@ -356,6 +356,24 @@ export {
   type ClubsByRegionTopMetric,
 } from './schemas/clubs-by-region.schema.js'
 
+// Region and world membership series — time-series/regions/{PY}.json (#2127)
+export {
+  RegionMembershipSeriesSchema,
+  RegionMembershipSeriesFormatSchema,
+  RegionMembershipSeriesRegionSchema,
+  RegionMembershipSeriesWorldSchema,
+  RegionMembershipSeriesUncountedSchema,
+  REGION_MEMBERSHIP_SERIES_VERSION,
+  REGION_MEMBERSHIP_SERIES_FORMAT,
+  REGION_MEMBERSHIP_SERIES_DIR,
+  regionMembershipSeriesPath,
+  type RegionMembershipSeries,
+  type RegionMembershipSeriesFormat,
+  type RegionMembershipSeriesRegion,
+  type RegionMembershipSeriesWorld,
+  type RegionMembershipSeriesUncounted,
+} from './schemas/region-membership-series.schema.js'
+
 // Worldwide club race artifact — snapshots/{date}/global-club-race.json (#1556)
 export {
   GlobalClubRaceSchema,
