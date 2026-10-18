@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.41.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.41.0...frontend-v3.41.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* **club:** the club-district history decides the PY's district ([#2079](https://github.com/taverns-red/toast-stats/issues/2079)) ([#2136](https://github.com/taverns-red/toast-stats/issues/2136)) ([ac13927](https://github.com/taverns-red/toast-stats/commit/ac1392778a0055238940cc737b0e8e3b92847f47))
+* **region:** pad unpadded region ids and redirect to the canonical URL ([#2130](https://github.com/taverns-red/toast-stats/issues/2130)) ([#2131](https://github.com/taverns-red/toast-stats/issues/2131)) ([d03b2d7](https://github.com/taverns-red/toast-stats/commit/d03b2d7b14e7d6b4fe9e9e744aaea0f270548c04))
+
+
+### Performance
+
+* **changes:** bound transfer counterparts to a per-view shard budget ([#2063](https://github.com/taverns-red/toast-stats/issues/2063)) ([#2128](https://github.com/taverns-red/toast-stats/issues/2128)) ([8453a50](https://github.com/taverns-red/toast-stats/commit/8453a50b998283a138fffcb2d4889203f4ca0671))
+
 ## [3.41.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.40.0...frontend-v3.41.0) (2026-10-17)
 
 

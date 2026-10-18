@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.60.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.59.0...toast-stats-v2.60.0) (2026-10-18)
+
+
+### Features
+
+* **pipeline:** scoped promotion only — retire the whole-prefix rsync to prod ([#1763](https://github.com/taverns-red/toast-stats/issues/1763), ADR-015 step 5 PR 2) ([#2133](https://github.com/taverns-red/toast-stats/issues/2133)) ([fbdd9d0](https://github.com/taverns-red/toast-stats/commit/fbdd9d064da9d7a8de8a6e938e6dd3cf57126612))
+
+
+### Bug Fixes
+
+* **club:** the club-district history decides the PY's district ([#2079](https://github.com/taverns-red/toast-stats/issues/2079)) ([#2136](https://github.com/taverns-red/toast-stats/issues/2136)) ([ac13927](https://github.com/taverns-red/toast-stats/commit/ac1392778a0055238940cc737b0e8e3b92847f47))
+* **region:** pad unpadded region ids and redirect to the canonical URL ([#2130](https://github.com/taverns-red/toast-stats/issues/2130)) ([#2131](https://github.com/taverns-red/toast-stats/issues/2131)) ([d03b2d7](https://github.com/taverns-red/toast-stats/commit/d03b2d7b14e7d6b4fe9e9e744aaea0f270548c04))
+
+
+### Performance
+
+* **changes:** bound transfer counterparts to a per-view shard budget ([#2063](https://github.com/taverns-red/toast-stats/issues/2063)) ([#2128](https://github.com/taverns-red/toast-stats/issues/2128)) ([8453a50](https://github.com/taverns-red/toast-stats/commit/8453a50b998283a138fffcb2d4889203f4ca0671))
+
+
+### Continuous Integration
+
+* **preview:** run every smoke spec, catch-all for unlisted ones ([#2141](https://github.com/taverns-red/toast-stats/issues/2141)) ([#2143](https://github.com/taverns-red/toast-stats/issues/2143)) ([ba92122](https://github.com/taverns-red/toast-stats/commit/ba92122f41abdd519c8b3c69c39cf0b45d1584fe))
+
 ## [2.59.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.58.0...toast-stats-v2.59.0) (2026-10-17)
 
 
