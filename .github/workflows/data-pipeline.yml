@@ -639,6 +639,18 @@ jobs:
               "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/analytics/"
           fi
 
+          # Per-region club shards + world file (#1800): written by compute
+          # only when the run has the whole district set (ADR-015 P3); in
+          # the run manifest via gcs-upload.sh, promoted with their date.
+          if [ -d "./cache/snapshots/${SNAPSHOT_DATE}/clubs-by-region" ]; then
+            bash scripts/pipeline/gcs-upload.sh daily-upload cp \
+              --content-type="application/json" \
+              --cache-control="public, max-age=3600, must-revalidate" \
+              -Z \
+              "./cache/snapshots/${SNAPSHOT_DATE}/clubs-by-region"/*.json \
+              "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/clubs-by-region/"
+          fi
+
           echo "## ☁️ GCS Upload" >> "$GITHUB_STEP_SUMMARY"
           SNAPSHOT_COUNT=$(find "./cache/snapshots/${SNAPSHOT_DATE}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Raw date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"

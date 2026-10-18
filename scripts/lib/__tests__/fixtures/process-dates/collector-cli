@@ -39,6 +39,8 @@
 #                        here — what the real CLI would have read (#1756)
 #   STUB_COPY_ON_COMPUTE optional: `<path under CACHE_DIR>=<dest>`; compute
 #                        copies that file to <dest>, the bytes it would parse
+#   STUB_CLUBS_BY_REGION optional: compute also rewrites
+#                        snapshots/A/clubs-by-region/{05,world}.json (#1800)
 set -euo pipefail
 
 : "${CACHE_DIR:?CACHE_DIR must be set}"
@@ -141,6 +143,14 @@ case "${CMD}" in
       mkdir -p "${dir}/analytics"
       printf '{"districtId":"61","date":"%s"}\n' "${DATE}" \
         >"${dir}/analytics/district_61_analytics.json"
+      if [ -n "${STUB_CLUBS_BY_REGION:-}" ]; then
+        # The real CLI rewrites clubs-by-region/ whole (#1800).
+        rm -rf "${dir}/clubs-by-region"
+        mkdir -p "${dir}/clubs-by-region"
+        printf '{"date":"%s"}\n' "${DATE}" >"${dir}/clubs-by-region/05.json"
+        printf '{"date":"%s","world":true}\n' "${DATE}" \
+          >"${dir}/clubs-by-region/world.json"
+      fi
     fi
     echo "[INFO] computing ${DATE}" >&2
     printf '{"success":%s,"date":"%s","requestedDate":"%s","districtsSucceeded":["61"],"districtsFailed":[],"timeSeries":{"written":1,"failed":0},"clubTrends":{"written":2,"failed":0},"clubRace":{"written":1,"failed":0}}\n' \

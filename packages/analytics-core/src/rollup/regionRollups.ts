@@ -51,6 +51,7 @@ import {
   type RegionRollupRegion,
   type RegionRollups,
 } from '@taverns-red/shared-contracts'
+import type { ClubHealthStatus, DistinguishedLevel } from '../types.js'
 import { getCurrentProgramMonth } from '../analytics/AnalyticsUtils.js'
 import {
   classifyClubHealth,
@@ -216,6 +217,46 @@ interface DateContext {
   readonly suspendCollected: boolean
 }
 
+/** The fields {@link classifyRollupClub} reads. */
+export type RollupClassifiedClub = Pick<
+  RegionRollupClub,
+  'membershipCount' | 'membershipBase' | 'dcpGoals' | 'cspSubmitted'
+>
+
+/**
+ * A club's health (#1120) and distinguished level (CSP-gated, the program
+ * year's own ladder, #1406), as the district club-health analytics classify
+ * a snapshot's clubs. Shared by the region rollups and the per-region club
+ * shards (#1800) so a shard's pins and its region's counts cannot disagree.
+ */
+export function classifyRollupClub(
+  club: RollupClassifiedClub,
+  month: number,
+  programYear: string
+): { health: ClubHealthStatus; level: DistinguishedLevel } {
+  // Net growth = active members − membership base, as calculateNetGrowth.
+  const netGrowth = club.membershipCount - club.membershipBase
+  const cspSubmitted = getCSPStatus(club)
+  const { status } = classifyClubHealth(
+    {
+      membership: club.membershipCount,
+      netGrowth,
+      dcpGoals: club.dcpGoals,
+      cspSubmitted,
+    },
+    month
+  )
+  const level = cspSubmitted
+    ? determineDistinguishedLevel(
+        club.dcpGoals,
+        club.membershipCount,
+        netGrowth,
+        programYear
+      )
+    : 'NotDistinguished'
+  return { health: status, level }
+}
+
 /** One district's figures from its (deduplicated) clubs. */
 function districtFigures(
   facts: readonly ClubFacts[],
@@ -233,17 +274,10 @@ function districtFigures(
     f.membership += club.membershipCount
     f.payments += club.paymentsCount
 
-    // Net growth = active members − membership base, as calculateNetGrowth.
-    const netGrowth = club.membershipCount - club.membershipBase
-    const cspSubmitted = getCSPStatus(club)
-    const { status } = classifyClubHealth(
-      {
-        membership: club.membershipCount,
-        netGrowth,
-        dcpGoals: club.dcpGoals,
-        cspSubmitted,
-      },
-      ctx.month
+    const { health: status, level } = classifyRollupClub(
+      club,
+      ctx.month,
+      ctx.programYear
     )
     if (status === 'thriving') f.health.thriving += 1
     else if (status === 'vulnerable') f.health.vulnerable += 1
@@ -254,16 +288,6 @@ function districtFigures(
     if (statusKey) f.clubStatus[statusKey] += 1
     else f.clubStatus.other += 1
 
-    // CSP-gated, the program year's own ladder (#1406), as the district
-    // club-health analytics classify a snapshot's clubs.
-    const level = cspSubmitted
-      ? determineDistinguishedLevel(
-          club.dcpGoals,
-          club.membershipCount,
-          netGrowth,
-          ctx.programYear
-        )
-      : 'NotDistinguished'
     if (level === 'Smedley')
       f.distinguished.smedley = (f.distinguished.smedley ?? 0) + 1
     else if (level === 'President') f.distinguished.president += 1
@@ -303,6 +327,57 @@ function historyLookup(
     ])
   )
   return id => byKey.get(canonicalDistrictId(id)) ?? null
+}
+
+export interface RegionMembershipResolution {
+  /** A district's region for the program year; null when none usable. */
+  readonly regionOf: ((districtId: string) => string | null) | null
+  /** Why there is no membership; null when there is. */
+  readonly note: string | null
+  readonly membership: {
+    source: typeof REGION_ROLLUPS_REGION_SOURCE
+    asOf: string
+    programYear: string
+  } | null
+}
+
+/**
+ * Region membership for one program year from the district → region
+ * history (#1820), or the reason there is none. Shared by the region
+ * rollups (#1799) and the per-region club shards (#1800), so both place
+ * every district in the same region for the same date.
+ */
+export function resolveRegionMembership(
+  history: DistrictRegionHistory | null,
+  programYear: string,
+  historyNote?: string
+): RegionMembershipResolution {
+  if (!history) {
+    return {
+      regionOf: null,
+      note:
+        historyNote ??
+        `no ${REGION_ROLLUPS_REGION_SOURCE} was available to this run; region membership is unknown`,
+      membership: null,
+    }
+  }
+  if (!history.programYears.includes(programYear)) {
+    return {
+      regionOf: null,
+      note: `${REGION_ROLLUPS_REGION_SOURCE} (asOf ${history.asOf}) has no ${programYear} membership yet`,
+      membership: null,
+    }
+  }
+  const lookup = historyLookup(history)
+  return {
+    regionOf: id => lookup(id)?.byProgramYear[programYear] ?? null,
+    note: null,
+    membership: {
+      source: REGION_ROLLUPS_REGION_SOURCE,
+      asOf: history.asOf,
+      programYear,
+    },
+  }
 }
 
 function withoutRegion(row: RegionRollupDistrict): RegionRollupFigures {
@@ -388,19 +463,15 @@ export function buildRegionRollups(
   }
 
   // Region membership for this program year, or the reason there is none.
-  const history = input.regionHistory
-  let regionNote: string | null = null
-  let regionOf: ((districtId: string) => string | null) | null = null
-  if (!history) {
-    regionNote =
-      input.regionHistoryNote ??
-      `no ${REGION_ROLLUPS_REGION_SOURCE} was available to this run; region membership is unknown`
-  } else if (!history.programYears.includes(programYear)) {
-    regionNote = `${REGION_ROLLUPS_REGION_SOURCE} (asOf ${history.asOf}) has no ${programYear} membership yet`
-  } else {
-    const lookup = historyLookup(history)
-    regionOf = id => lookup(id)?.byProgramYear[programYear] ?? null
-  }
+  const {
+    regionOf,
+    note: regionNote,
+    membership,
+  } = resolveRegionMembership(
+    input.regionHistory,
+    programYear,
+    input.regionHistoryNote
+  )
 
   const districts: Record<string, RegionRollupDistrict> = {}
   const regionMembers = new Map<string, string[]>()
@@ -453,14 +524,7 @@ export function buildRegionRollups(
       snapshotDate,
       programYear,
       generatedAt: input.generatedAt ?? new Date().toISOString(),
-      regionMembership:
-        history && regionOf
-          ? {
-              source: REGION_ROLLUPS_REGION_SOURCE,
-              asOf: history.asOf,
-              programYear,
-            }
-          : null,
+      regionMembership: membership,
       regionMembershipNote: regionNote,
       scope: { excludedDistricts, unassignedDistricts, duplicateClubs },
       world: { districts: perDistrict.length, ...world },

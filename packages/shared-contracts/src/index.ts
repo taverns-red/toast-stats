@@ -275,6 +275,40 @@ export {
   type RegionRollupWorld,
 } from './schemas/region-rollups.schema.js'
 
+// Per-region club shards + world file — snapshots/{date}/clubs-by-region/ (#1800)
+export {
+  ClubsByRegionClubSchema,
+  ClubsByRegionHealthSchema,
+  ClubsByRegionTierSchema,
+  ClubsByRegionShardSchema,
+  ClubsByRegionShardFormatSchema,
+  ClubsByRegionPointSchema,
+  ClubsByRegionWorldSchema,
+  ClubsByRegionWorldFormatSchema,
+  ClubsByRegionWorldPointsSchema,
+  ClubsByRegionWorldPointsFormatSchema,
+  CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME,
+  CLUBS_BY_REGION_WORLD_POINTS_PATH,
+  CLUBS_BY_REGION_WORLD_POINTS_FORMAT,
+  CLUBS_BY_REGION_VERSION,
+  CLUBS_BY_REGION_DIR,
+  CLUBS_BY_REGION_WORLD_FILE_NAME,
+  CLUBS_BY_REGION_UNASSIGNED,
+  CLUBS_BY_REGION_TOP_N,
+  CLUBS_BY_REGION_TOP_METRICS,
+  CLUBS_BY_REGION_SHARD_FORMAT,
+  CLUBS_BY_REGION_WORLD_FORMAT,
+  clubsByRegionShardFileName,
+  type ClubsByRegionClub,
+  type ClubsByRegionHealth,
+  type ClubsByRegionTier,
+  type ClubsByRegionShard,
+  type ClubsByRegionPoint,
+  type ClubsByRegionWorld,
+  type ClubsByRegionWorldPoints,
+  type ClubsByRegionTopMetric,
+} from './schemas/clubs-by-region.schema.js'
+
 // Worldwide club race artifact — snapshots/{date}/global-club-race.json (#1556)
 export {
   GlobalClubRaceSchema,

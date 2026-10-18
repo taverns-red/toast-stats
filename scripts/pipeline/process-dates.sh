@@ -60,8 +60,8 @@
 #                (#1125, D-9): the merge rewrites snapshots in place, so the
 #                final files are checked against shared-contracts. A
 #                violation FAILS the date: nothing of it is uploaded.
-#  10. upload    snapshots/<date>/*.json and analytics/*.json, `-Z` with the
-#                CDN headers. An upload error aborts the loop (exit 1), as the
+#  10. upload    snapshots/<date>/*.json, analytics/*.json and
+#                clubs-by-region/*.json (#1800), `-Z` with the CDN headers. An upload error aborts the loop (exit 1), as the
 #                inline loop's `set -e` did: the step fails before any store
 #                push. rescrape then rsyncs the re-collected raw-csv/<date>/
 #                up, replacing the old copy. Every object uploaded is
@@ -296,7 +296,7 @@ hydrate() {
 # subset run never rewrites another district's object (I-2).
 upload_snapshot() {
   local actual="$1" dir="${SNAPSHOTS}/$1"
-  local top=() analytics=() rel
+  local top=() analytics=() shards=() rel
   : >"${WORK}/before.cksum"
   if [ "${actual}" = "${HYDRATED}" ]; then
     cp "${WORK}/hydrated.cksum" "${WORK}/before.cksum"
@@ -304,12 +304,13 @@ upload_snapshot() {
   while IFS= read -r rel; do
     case "${rel}" in
       ./analytics/*.json) analytics+=("${dir}/${rel#./}") ;;
+      ./clubs-by-region/*.json) shards+=("${dir}/${rel#./}") ;;
       ./*/*) ;;
       *) top+=("${dir}/${rel#./}") ;;
     esac
   done < <(json_cksums "${dir}" | LC_ALL=C comm -13 "${WORK}/before.cksum" - |
     awk '{print $3}')
-  echo "Uploading snapshots/${actual}/ (${#top[@]} files, ${#analytics[@]} analytics)..."
+  echo "Uploading snapshots/${actual}/ (${#top[@]} files, ${#analytics[@]} analytics, ${#shards[@]} club shards)..."
   if [ "${#top[@]}" -gt 0 ]; then
     "${UPLOAD[@]}" cp \
       --content-type="application/json" \
@@ -325,6 +326,15 @@ upload_snapshot() {
       -Z \
       "${analytics[@]}" \
       "gs://${BUCKET}/snapshots/${actual}/analytics/"
+  fi
+  # Per-region club shards + world file (#1800).
+  if [ "${#shards[@]}" -gt 0 ]; then
+    "${UPLOAD[@]}" cp \
+      --content-type="application/json" \
+      --cache-control="public, max-age=3600, must-revalidate" \
+      -Z \
+      "${shards[@]}" \
+      "gs://${BUCKET}/snapshots/${actual}/clubs-by-region/"
   fi
 }
 
