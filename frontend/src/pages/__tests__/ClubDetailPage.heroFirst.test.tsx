@@ -27,7 +27,12 @@ import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
-import { fetchCdnGlobalClubRace } from '../../services/cdn'
+import {
+  fetchCdnGlobalClubRace,
+  fetchCdnManifest,
+  fetchCdnRankings,
+} from '../../services/cdn'
+import { useDistricts } from '../../hooks/useDistricts'
 
 Object.defineProperty(window, 'matchMedia', {
   value: vi.fn().mockImplementation((query: string) => ({
@@ -237,6 +242,44 @@ describe('ClubDetailPage — hero first, analytics after (#1901)', () => {
     expect(vi.mocked(fetchCdnGlobalClubRace).mock.calls).toEqual([
       ['2026-10-11'],
     ])
+  })
+
+  // #1852 option C — `v1/rankings.json` and `v1/latest.json` feed only the
+  // breadcrumb's district name and the freshness pill. Lighthouse's Lantern
+  // charges every request that finishes before the LCP paint, so these two
+  // used to cost ~150 ms of simulated LCP on the mobile gate. They wait for
+  // the same after-paint gate as analytics.
+  it('does not read rankings or the manifest before the hero has painted', async () => {
+    mockedStats.mockReturnValue({ data: undefined, isLoading: true } as never)
+
+    renderAt()
+    await new Promise(resolve => setTimeout(resolve, 400))
+
+    expect(vi.mocked(fetchCdnRankings)).not.toHaveBeenCalled()
+    expect(vi.mocked(fetchCdnManifest)).not.toHaveBeenCalled()
+    const districtsCalls = vi.mocked(useDistricts).mock.calls
+    expect(districtsCalls.length).toBeGreaterThan(0)
+    for (const call of districtsCalls) {
+      expect((call[1] as { enabled?: boolean } | undefined)?.enabled).toBe(
+        false
+      )
+    }
+  })
+
+  it('reads rankings and the manifest once the hero has painted', async () => {
+    mockedStats.mockReturnValue({ data: snapshot, isLoading: false } as never)
+
+    renderAt()
+
+    await waitFor(() => expect(vi.mocked(fetchCdnRankings)).toHaveBeenCalled())
+    await waitFor(() => expect(vi.mocked(fetchCdnManifest)).toHaveBeenCalled())
+    expect(
+      vi
+        .mocked(useDistricts)
+        .mock.calls.some(
+          c => (c[1] as { enabled?: boolean } | undefined)?.enabled === true
+        )
+    ).toBe(true)
   })
 
   it('starts the analytics read once the snapshot hero has painted', async () => {

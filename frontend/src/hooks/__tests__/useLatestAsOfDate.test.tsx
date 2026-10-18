@@ -104,3 +104,40 @@ describe('useGlobalFreshness (#1321)', () => {
     expect(result.current.asOfDate).toBeUndefined()
   })
 })
+
+// #1852 option C — the club page holds its global-freshness reads until the
+// hero h1 has painted, so `v1/rankings.json` and `v1/latest.json` stay off
+// the LCP's critical set. Disabled reads as "not loaded yet", which every
+// caller already handles (the pill falls back to the snapshot date).
+describe('useGlobalFreshness — `enabled: false` holds both reads (#1852)', () => {
+  it('fetches neither file while disabled, then both once enabled', async () => {
+    const { fetchCdnRankings, fetchCdnManifest } =
+      await import('../../services/cdn')
+    const params = {
+      districtLatestSnapshotDate: snap('2026-06-30'),
+      isLatestSnapshot: true,
+    }
+    // One client across the rerender (the shared `wrapper` builds a new one
+    // per render, which would drop the cache between the two phases).
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const stableWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useGlobalFreshness({ ...params, enabled }),
+      { wrapper: stableWrapper, initialProps: { enabled: false } }
+    )
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(vi.mocked(fetchCdnRankings)).not.toHaveBeenCalled()
+    expect(vi.mocked(fetchCdnManifest)).not.toHaveBeenCalled()
+    expect(result.current).toEqual({ asOfDate: undefined, isLatest: false })
+
+    rerender({ enabled: true })
+    await waitFor(() => expect(result.current.asOfDate).toBe('2026-07-02'))
+    expect(vi.mocked(fetchCdnRankings)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(fetchCdnManifest)).toHaveBeenCalledTimes(1)
+  })
+})
