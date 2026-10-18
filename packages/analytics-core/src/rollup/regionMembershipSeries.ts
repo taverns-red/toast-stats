@@ -12,7 +12,7 @@
  *    store of its own and no backfill for a year whose district series
  *    exist.
  * 2. **The program year's own regions** — the region-rollups rule
- *    ({@link regionMembershipFor}). The world is Σ the districts the history
+ *    ({@link resolveRegionMembership}). The world is Σ the districts the history
  *    places for the year: a district it does not place (the undistricted
  *    `U`, a renumbered id stamped onto an earlier year's date, #1465) is
  *    listed, not summed, so a stray series cannot inflate the world.
@@ -35,7 +35,7 @@ import {
   type RegionMembershipSeriesUncounted,
 } from '@taverns-red/shared-contracts'
 import { canonicalDistrictId } from './globalRollup.js'
-import { placedDistricts, regionMembershipFor } from './regionMembership.js'
+import { resolveRegionMembership } from './regionRollups.js'
 
 export interface RegionSeriesDistrictInput {
   readonly districtId: string
@@ -72,11 +72,28 @@ interface Member {
   readonly gaps: ReadonlySet<string>
 }
 
+/**
+ * Every district the history places in a region for `programYear`, as the
+ * history spells its id, with that region. Empty without usable regions.
+ */
+function placedDistricts(
+  history: DistrictRegionHistory | null,
+  programYear: string
+): Array<{ districtId: string; region: string }> {
+  if (!history || !history.programYears.includes(programYear)) return []
+  const placed: Array<{ districtId: string; region: string }> = []
+  for (const [districtId, entry] of Object.entries(history.districts)) {
+    const region = entry.byProgramYear[programYear]
+    if (region) placed.push({ districtId, region })
+  }
+  return placed
+}
+
 export function buildRegionMembershipSeries(
   input: RegionMembershipSeriesInput
 ): RegionMembershipSeries {
   const { programYear } = input
-  const membership = regionMembershipFor(
+  const membership = resolveRegionMembership(
     input.regionHistory,
     programYear,
     input.regionHistoryNote
@@ -94,7 +111,7 @@ export function buildRegionMembershipSeries(
   const base = {
     _format: REGION_MEMBERSHIP_SERIES_FORMAT,
     programYear,
-    regionMembership: membership.source,
+    regionMembership: membership.membership,
     regionMembershipNote: membership.note,
   }
   if (!membership.regionOf) {

@@ -344,8 +344,9 @@ export interface RegionMembershipResolution {
 /**
  * Region membership for one program year from the district → region
  * history (#1820), or the reason there is none. Shared by the region
- * rollups (#1799) and the per-region club shards (#1800), so both place
- * every district in the same region for the same date.
+ * rollups (#1799), the per-region club shards (#1800) and the region
+ * membership series (#2127), so all three place every district in the same
+ * region for the same program year.
  */
 export function resolveRegionMembership(
   history: DistrictRegionHistory | null,
