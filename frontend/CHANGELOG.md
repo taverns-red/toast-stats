@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.42.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.42.0...frontend-v3.42.1) (2026-10-18)
+
+
+### Performance
+
+* **club:** keep rankings, manifest and Inter off the club hero's LCP set ([#1852](https://github.com/taverns-red/toast-stats/issues/1852)) ([#2147](https://github.com/taverns-red/toast-stats/issues/2147)) ([9acc4af](https://github.com/taverns-red/toast-stats/commit/9acc4afb71d8aa4d91a1e6b9cd6f4ff818e2261a))
+
 ## [3.42.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.41.1...frontend-v3.42.0) (2026-10-18)
 
 
