@@ -1,0 +1,1855 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "charter-cohort-survival-rollup"
+  },
+  "scope": {
+    "kind": "world"
+  },
+  "asOf": "2026-10-13",
+  "programYears": [
+    "2016-2017",
+    "2017-2018",
+    "2018-2019",
+    "2019-2020",
+    "2020-2021",
+    "2021-2022",
+    "2022-2023",
+    "2023-2024",
+    "2024-2025",
+    "2025-2026",
+    "2026-2027"
+  ],
+  "censoredProgramYear": "2016-2017",
+  "byThroughProgramYear": {
+    "2016-2017": {
+      "maxYears": 0,
+      "cohorts": [],
+      "pooled": []
+    },
+    "2017-2018": {
+      "maxYears": 0,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": []
+        }
+      ],
+      "pooled": []
+    },
+    "2018-2019": {
+      "maxYears": 1,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2018-2019",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            }
+          ]
+        },
+        {
+          "programYear": "2018-2019",
+          "chartered": 19,
+          "movedAway": 0,
+          "years": [null]
+        }
+      ],
+      "pooled": [
+        {
+          "chartered": 17,
+          "survivors": 17,
+          "share": 1,
+          "provisional": false
+        }
+      ]
+    },
+    "2019-2020": {
+      "maxYears": 2,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2018-2019",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2019-2020",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            }
+          ]
+        },
+        {
+          "programYear": "2018-2019",
+          "chartered": 19,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2019-2020",
+              "survivors": 19,
+              "share": 1,
+              "provisional": false
+            },
+            null
+          ]
+        },
+        {
+          "programYear": "2019-2020",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [null, null]
+        }
+      ],
+      "pooled": [
+        {
+          "chartered": 36,
+          "survivors": 36,
+          "share": 1,
+          "provisional": false
+        },
+        {
+          "chartered": 17,
+          "survivors": 15,
+          "share": 0.8823529411764706,
+          "provisional": false
+        }
+      ]
+    },
+    "2020-2021": {
+      "maxYears": 3,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2018-2019",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2019-2020",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 13,
+              "share": 0.7647058823529411,
+              "provisional": false
+            }
+          ]
+        },
+        {
+          "programYear": "2018-2019",
+          "chartered": 19,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2019-2020",
+              "survivors": 19,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 18,
+              "share": 0.9473684210526315,
+              "provisional": false
+            },
+            null
+          ]
+        },
+        {
+          "programYear": "2019-2020",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2020-2021",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2020-2021",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [null, null, null]
+        }
+      ],
+      "pooled": [
+        {
+          "chartered": 53,
+          "survivors": 53,
+          "share": 1,
+          "provisional": false
+        },
+        {
+          "chartered": 36,
+          "survivors": 33,
+          "share": 0.9166666666666666,
+          "provisional": false
+        },
+        {
+          "chartered": 17,
+          "survivors": 13,
+          "share": 0.7647058823529411,
+          "provisional": false
+        }
+      ]
+    },
+    "2021-2022": {
+      "maxYears": 4,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2018-2019",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2019-2020",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 13,
+              "share": 0.7647058823529411,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 10,
+              "share": 0.5882352941176471,
+              "provisional": false
+            }
+          ]
+        },
+        {
+          "programYear": "2018-2019",
+          "chartered": 19,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2019-2020",
+              "survivors": 19,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 18,
+              "share": 0.9473684210526315,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 13,
+              "share": 0.6842105263157895,
+              "provisional": false
+            },
+            null
+          ]
+        },
+        {
+          "programYear": "2019-2020",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2020-2021",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2020-2021",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2021-2022",
+              "survivors": 16,
+              "share": 0.9411764705882353,
+              "provisional": false
+            },
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2021-2022",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [null, null, null, null]
+        }
+      ],
+      "pooled": [
+        {
+          "chartered": 70,
+          "survivors": 69,
+          "share": 0.9857142857142858,
+          "provisional": false
+        },
+        {
+          "chartered": 53,
+          "survivors": 48,
+          "share": 0.9056603773584906,
+          "provisional": false
+        },
+        {
+          "chartered": 36,
+          "survivors": 26,
+          "share": 0.7222222222222222,
+          "provisional": false
+        },
+        {
+          "chartered": 17,
+          "survivors": 10,
+          "share": 0.5882352941176471,
+          "provisional": false
+        }
+      ]
+    },
+    "2022-2023": {
+      "maxYears": 5,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2018-2019",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2019-2020",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 13,
+              "share": 0.7647058823529411,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 10,
+              "share": 0.5882352941176471,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.5294117647058824,
+              "provisional": false
+            }
+          ]
+        },
+        {
+          "programYear": "2018-2019",
+          "chartered": 19,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2019-2020",
+              "survivors": 19,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 18,
+              "share": 0.9473684210526315,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 13,
+              "share": 0.6842105263157895,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.47368421052631576,
+              "provisional": false
+            },
+            null
+          ]
+        },
+        {
+          "programYear": "2019-2020",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2020-2021",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2020-2021",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2021-2022",
+              "survivors": 16,
+              "share": 0.9411764705882353,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2021-2022",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2022-2023",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2022-2023",
+          "chartered": 10,
+          "movedAway": 0,
+          "years": [null, null, null, null, null]
+        }
+      ],
+      "pooled": [
+        {
+          "chartered": 74,
+          "survivors": 73,
+          "share": 0.9864864864864865,
+          "provisional": false
+        },
+        {
+          "chartered": 70,
+          "survivors": 63,
+          "share": 0.9,
+          "provisional": false
+        },
+        {
+          "chartered": 53,
+          "survivors": 41,
+          "share": 0.7735849056603774,
+          "provisional": false
+        },
+        {
+          "chartered": 36,
+          "survivors": 19,
+          "share": 0.5277777777777778,
+          "provisional": false
+        },
+        {
+          "chartered": 17,
+          "survivors": 9,
+          "share": 0.5294117647058824,
+          "provisional": false
+        }
+      ]
+    },
+    "2023-2024": {
+      "maxYears": 6,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2018-2019",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2019-2020",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 13,
+              "share": 0.7647058823529411,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 10,
+              "share": 0.5882352941176471,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.5294117647058824,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 7,
+              "share": 0.4117647058823529,
+              "provisional": false
+            }
+          ]
+        },
+        {
+          "programYear": "2018-2019",
+          "chartered": 19,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2019-2020",
+              "survivors": 19,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 18,
+              "share": 0.9473684210526315,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 13,
+              "share": 0.6842105263157895,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.47368421052631576,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 8,
+              "share": 0.42105263157894735,
+              "provisional": false
+            },
+            null
+          ]
+        },
+        {
+          "programYear": "2019-2020",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2020-2021",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2020-2021",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2021-2022",
+              "survivors": 16,
+              "share": 0.9411764705882353,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2021-2022",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2022-2023",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2022-2023",
+          "chartered": 10,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2023-2024",
+              "survivors": 10,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2023-2024",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [null, null, null, null, null, null]
+        }
+      ],
+      "pooled": [
+        {
+          "chartered": 84,
+          "survivors": 83,
+          "share": 0.9880952380952381,
+          "provisional": false
+        },
+        {
+          "chartered": 74,
+          "survivors": 67,
+          "share": 0.9054054054054054,
+          "provisional": false
+        },
+        {
+          "chartered": 70,
+          "survivors": 53,
+          "share": 0.7571428571428571,
+          "provisional": false
+        },
+        {
+          "chartered": 53,
+          "survivors": 31,
+          "share": 0.5849056603773585,
+          "provisional": false
+        },
+        {
+          "chartered": 36,
+          "survivors": 17,
+          "share": 0.4722222222222222,
+          "provisional": false
+        },
+        {
+          "chartered": 17,
+          "survivors": 7,
+          "share": 0.4117647058823529,
+          "provisional": false
+        }
+      ]
+    },
+    "2024-2025": {
+      "maxYears": 7,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2018-2019",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2019-2020",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 13,
+              "share": 0.7647058823529411,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 10,
+              "share": 0.5882352941176471,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.5294117647058824,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 7,
+              "share": 0.4117647058823529,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 6,
+              "share": 0.35294117647058826,
+              "provisional": false
+            }
+          ]
+        },
+        {
+          "programYear": "2018-2019",
+          "chartered": 19,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2019-2020",
+              "survivors": 19,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 18,
+              "share": 0.9473684210526315,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 13,
+              "share": 0.6842105263157895,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.47368421052631576,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 8,
+              "share": 0.42105263157894735,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 5,
+              "share": 0.2631578947368421,
+              "provisional": false
+            },
+            null
+          ]
+        },
+        {
+          "programYear": "2019-2020",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2020-2021",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 11,
+              "share": 0.6470588235294118,
+              "provisional": false
+            },
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2020-2021",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2021-2022",
+              "survivors": 16,
+              "share": 0.9411764705882353,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2021-2022",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2022-2023",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2022-2023",
+          "chartered": 10,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2023-2024",
+              "survivors": 10,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 10,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2023-2024",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2024-2025",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2024-2025",
+          "chartered": 12,
+          "movedAway": 0,
+          "years": [null, null, null, null, null, null, null]
+        }
+      ],
+      "pooled": [
+        {
+          "chartered": 88,
+          "survivors": 87,
+          "share": 0.9886363636363636,
+          "provisional": false
+        },
+        {
+          "chartered": 84,
+          "survivors": 77,
+          "share": 0.9166666666666666,
+          "provisional": false
+        },
+        {
+          "chartered": 74,
+          "survivors": 57,
+          "share": 0.7702702702702703,
+          "provisional": false
+        },
+        {
+          "chartered": 70,
+          "survivors": 43,
+          "share": 0.6142857142857143,
+          "provisional": false
+        },
+        {
+          "chartered": 53,
+          "survivors": 28,
+          "share": 0.5283018867924528,
+          "provisional": false
+        },
+        {
+          "chartered": 36,
+          "survivors": 12,
+          "share": 0.3333333333333333,
+          "provisional": false
+        },
+        {
+          "chartered": 17,
+          "survivors": 6,
+          "share": 0.35294117647058826,
+          "provisional": false
+        }
+      ]
+    },
+    "2025-2026": {
+      "maxYears": 8,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2018-2019",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2019-2020",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 13,
+              "share": 0.7647058823529411,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 10,
+              "share": 0.5882352941176471,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.5294117647058824,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 7,
+              "share": 0.4117647058823529,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 6,
+              "share": 0.35294117647058826,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 6,
+              "share": 0.35294117647058826,
+              "provisional": false
+            }
+          ]
+        },
+        {
+          "programYear": "2018-2019",
+          "chartered": 19,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2019-2020",
+              "survivors": 19,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 18,
+              "share": 0.9473684210526315,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 13,
+              "share": 0.6842105263157895,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.47368421052631576,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 8,
+              "share": 0.42105263157894735,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 5,
+              "share": 0.2631578947368421,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 5,
+              "share": 0.2631578947368421,
+              "provisional": false
+            },
+            null
+          ]
+        },
+        {
+          "programYear": "2019-2020",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2020-2021",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 11,
+              "share": 0.6470588235294118,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 11,
+              "share": 0.6470588235294118,
+              "provisional": false
+            },
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2020-2021",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2021-2022",
+              "survivors": 16,
+              "share": 0.9411764705882353,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 7,
+              "share": 0.4117647058823529,
+              "provisional": false
+            },
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2021-2022",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2022-2023",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2022-2023",
+          "chartered": 10,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2023-2024",
+              "survivors": 10,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 10,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 8,
+              "share": 0.8,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2023-2024",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2024-2025",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2024-2025",
+          "chartered": 12,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2025-2026",
+              "survivors": 12,
+              "share": 1,
+              "provisional": false
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2025-2026",
+          "chartered": 7,
+          "movedAway": 0,
+          "years": [null, null, null, null, null, null, null, null]
+        }
+      ],
+      "pooled": [
+        {
+          "chartered": 100,
+          "survivors": 99,
+          "share": 0.99,
+          "provisional": false
+        },
+        {
+          "chartered": 88,
+          "survivors": 81,
+          "share": 0.9204545454545454,
+          "provisional": false
+        },
+        {
+          "chartered": 84,
+          "survivors": 65,
+          "share": 0.7738095238095238,
+          "provisional": false
+        },
+        {
+          "chartered": 74,
+          "survivors": 47,
+          "share": 0.6351351351351351,
+          "provisional": false
+        },
+        {
+          "chartered": 70,
+          "survivors": 35,
+          "share": 0.5,
+          "provisional": false
+        },
+        {
+          "chartered": 53,
+          "survivors": 23,
+          "share": 0.4339622641509434,
+          "provisional": false
+        },
+        {
+          "chartered": 36,
+          "survivors": 11,
+          "share": 0.3055555555555556,
+          "provisional": false
+        },
+        {
+          "chartered": 17,
+          "survivors": 6,
+          "share": 0.35294117647058826,
+          "provisional": false
+        }
+      ]
+    },
+    "2026-2027": {
+      "maxYears": 9,
+      "cohorts": [
+        {
+          "programYear": "2017-2018",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2018-2019",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2019-2020",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 13,
+              "share": 0.7647058823529411,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 10,
+              "share": 0.5882352941176471,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.5294117647058824,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 7,
+              "share": 0.4117647058823529,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 6,
+              "share": 0.35294117647058826,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 6,
+              "share": 0.35294117647058826,
+              "provisional": false
+            },
+            {
+              "programYear": "2026-2027",
+              "survivors": 6,
+              "share": 0.35294117647058826,
+              "provisional": true
+            }
+          ]
+        },
+        {
+          "programYear": "2018-2019",
+          "chartered": 19,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2019-2020",
+              "survivors": 19,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2020-2021",
+              "survivors": 18,
+              "share": 0.9473684210526315,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 13,
+              "share": 0.6842105263157895,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 9,
+              "share": 0.47368421052631576,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 8,
+              "share": 0.42105263157894735,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 5,
+              "share": 0.2631578947368421,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 5,
+              "share": 0.2631578947368421,
+              "provisional": false
+            },
+            {
+              "programYear": "2026-2027",
+              "survivors": 5,
+              "share": 0.2631578947368421,
+              "provisional": true
+            },
+            null
+          ]
+        },
+        {
+          "programYear": "2019-2020",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2020-2021",
+              "survivors": 17,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2021-2022",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 11,
+              "share": 0.6470588235294118,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 11,
+              "share": 0.6470588235294118,
+              "provisional": false
+            },
+            {
+              "programYear": "2026-2027",
+              "survivors": 10,
+              "share": 0.5882352941176471,
+              "provisional": true
+            },
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2020-2021",
+          "chartered": 17,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2021-2022",
+              "survivors": 16,
+              "share": 0.9411764705882353,
+              "provisional": false
+            },
+            {
+              "programYear": "2022-2023",
+              "survivors": 15,
+              "share": 0.8823529411764706,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 12,
+              "share": 0.7058823529411765,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 7,
+              "share": 0.4117647058823529,
+              "provisional": false
+            },
+            {
+              "programYear": "2026-2027",
+              "survivors": 6,
+              "share": 0.35294117647058826,
+              "provisional": true
+            },
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2021-2022",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2022-2023",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2023-2024",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2026-2027",
+              "survivors": 3,
+              "share": 0.75,
+              "provisional": true
+            },
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2022-2023",
+          "chartered": 10,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2023-2024",
+              "survivors": 10,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2024-2025",
+              "survivors": 10,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 8,
+              "share": 0.8,
+              "provisional": false
+            },
+            {
+              "programYear": "2026-2027",
+              "survivors": 7,
+              "share": 0.7,
+              "provisional": true
+            },
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2023-2024",
+          "chartered": 4,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2024-2025",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2025-2026",
+              "survivors": 4,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2026-2027",
+              "survivors": 4,
+              "share": 1,
+              "provisional": true
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2024-2025",
+          "chartered": 12,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2025-2026",
+              "survivors": 12,
+              "share": 1,
+              "provisional": false
+            },
+            {
+              "programYear": "2026-2027",
+              "survivors": 10,
+              "share": 0.8333333333333334,
+              "provisional": true
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2025-2026",
+          "chartered": 7,
+          "movedAway": 0,
+          "years": [
+            {
+              "programYear": "2026-2027",
+              "survivors": 7,
+              "share": 1,
+              "provisional": true
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        {
+          "programYear": "2026-2027",
+          "chartered": 0,
+          "movedAway": 0,
+          "years": [null, null, null, null, null, null, null, null, null]
+        }
+      ],
+      "pooled": [
+        {
+          "chartered": 107,
+          "survivors": 106,
+          "share": 0.9906542056074766,
+          "provisional": true
+        },
+        {
+          "chartered": 100,
+          "survivors": 91,
+          "share": 0.91,
+          "provisional": true
+        },
+        {
+          "chartered": 88,
+          "survivors": 69,
+          "share": 0.7840909090909091,
+          "provisional": true
+        },
+        {
+          "chartered": 84,
+          "survivors": 54,
+          "share": 0.6428571428571429,
+          "provisional": true
+        },
+        {
+          "chartered": 74,
+          "survivors": 38,
+          "share": 0.5135135135135135,
+          "provisional": true
+        },
+        {
+          "chartered": 70,
+          "survivors": 29,
+          "share": 0.4142857142857143,
+          "provisional": true
+        },
+        {
+          "chartered": 53,
+          "survivors": 21,
+          "share": 0.39622641509433965,
+          "provisional": true
+        },
+        {
+          "chartered": 36,
+          "survivors": 11,
+          "share": 0.3055555555555556,
+          "provisional": true
+        },
+        {
+          "chartered": 17,
+          "survivors": 6,
+          "share": 0.35294117647058826,
+          "provisional": true
+        }
+      ]
+    }
+  }
+}

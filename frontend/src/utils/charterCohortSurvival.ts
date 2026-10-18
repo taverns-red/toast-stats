@@ -6,6 +6,9 @@
 export {
   buildCharterCohortSurvival,
   charterCohortSurvivalFromFile,
+  charterCohortSurvivalFromRollupFile,
+  type CharterCohortSurvivalRollup,
+  type CharterCohortSurvivalScope,
   type BuildCharterCohortSurvivalInput,
   type CharterCohort,
   type CharterCohortSurvival,

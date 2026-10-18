@@ -23,6 +23,9 @@
 #   gs://<bucket>/config/charter-cohort-survival/district_<id>.json (#2061;
 #     one per district the club history names, ~2 KB gzip each: the
 #     survival page's curves, folded from the club history just built)
+#   gs://<bucket>/config/charter-cohort-survival/{region_<NN>,world}.json
+#     (#1818; one per region plus the world, ~2 KB gzip each, with each
+#     program year's own district -> region membership)
 # The content gate schema-checks every one that changed (kinds
 # club-district-history-index/-shard and district-region-history), and
 # promotion copies them with the run, as global objects of the run manifest
@@ -104,10 +107,11 @@ shards=()
 while IFS= read -r f; do
   shards+=("${f}")
 done < <(find "${OUT}" -maxdepth 1 -type f -name '[0-9][0-9].json' | LC_ALL=C sort)
+# district_<id>.json (#2061), region_<NN>.json and world.json (#1818).
 survival=()
 while IFS= read -r f; do
   survival+=("${f}")
-done < <(find "${WORK}/out/charter-cohort-survival" -maxdepth 1 -type f -name 'district_*.json' | LC_ALL=C sort)
+done < <(find "${WORK}/out/charter-cohort-survival" -maxdepth 1 -type f -name '*.json' | LC_ALL=C sort)
 
 # Through the wrapper, so every object lands in the run manifest (#1762,
 # ADR-015 P5), which the content gate reads in full and scoped promotion
@@ -132,6 +136,9 @@ jq -r '
     "\(.rawBytes) B raw, \(.gzipBytes) B gzip (largest shard \(.maxShardGzipBytes) B gzip)"),
   (.charterCohortSurvival |
     "- **Charter cohort survival** (config/charter-cohort-survival/, promoted with the run, #2061): \(.districts) districts; " +
+    "\(.rawBytes) B raw, \(.gzipBytes) B gzip (largest \(.maxGzipBytes) B gzip)"),
+  (.charterCohortSurvivalRollups |
+    "- **Region and world cohort survival** (config/charter-cohort-survival/{region_NN,world}.json, promoted with the run, #1818): \(.regions) regions + world; " +
     "\(.rawBytes) B raw, \(.gzipBytes) B gzip (largest \(.maxGzipBytes) B gzip)"),
   (.districtRegionHistory |
     "- **District-region history** (config/, promoted with the run, #1820): \(.districts) districts, \(.programYears) PYs from \(.sourceDates) snapshots, \(.conflicts) conflicts; " +

@@ -22,7 +22,9 @@
  *        scripts/pipeline/build-identity-history.sh to upload;
  *     4. fold the club history once more into one
  *        `<out>/charter-cohort-survival/district_<id>.json` per district
- *        (#2061), the survival page's curves.
+ *        (#2061), the survival page's curves, plus one
+ *        `region_<NN>.json` per region and `world.json` (#1818), with each
+ *        program year's own district → region membership.
  *
  * Decision logic is unit-tested in scripts/lib/__tests__/
  * {clubDistrictHistory,districtRegionHistory}.test.ts. Logs go to stderr;
@@ -42,7 +44,10 @@ import {
   type ClubRaceStoreData,
 } from '@taverns-red/shared-contracts'
 import { foldClubDistrictHistory } from './lib/clubDistrictHistory.js'
-import { foldCharterCohortSurvival } from './lib/charterCohortSurvival.js'
+import {
+  foldCharterCohortSurvival,
+  foldCharterCohortSurvivalRollups,
+} from './lib/charterCohortSurvival.js'
 import {
   foldDistrictRegionHistory,
   selectRegionSourceDates,
@@ -142,6 +147,11 @@ function build(): void {
       `::warning::build-identity-history: district id '${id}' cannot name a survival file; skipped`
     )
   )
+  const rollups = foldCharterCohortSurvivalRollups(clubs, regions, id =>
+    log(
+      `::warning::build-identity-history: region id '${id}' cannot name a survival file; skipped`
+    )
+  )
 
   const encode = (value: unknown): Buffer =>
     Buffer.from(JSON.stringify(value), 'utf-8')
@@ -180,6 +190,25 @@ function build(): void {
     survivalGzipBytes += gz
     survivalMaxGzipBytes = Math.max(survivalMaxGzipBytes, gz)
   }
+  // Region and world files (#1818), beside the district ones.
+  let rollupRawBytes = 0
+  let rollupGzipBytes = 0
+  let rollupMaxGzipBytes = 0
+  const rollupFiles: Array<[string, unknown]> = [
+    ...Object.entries(rollups.regions).map(([id, file]): [string, unknown] => [
+      `region_${id}.json`,
+      file,
+    ]),
+    ['world.json', rollups.world],
+  ]
+  for (const [name, file] of rollupFiles) {
+    const body = encode(file)
+    fs.writeFileSync(path.join(survivalDir, name), body)
+    const gz = gzipSync(body).length
+    rollupRawBytes += body.length
+    rollupGzipBytes += gz
+    rollupMaxGzipBytes = Math.max(rollupMaxGzipBytes, gz)
+  }
 
   const regionBody = encode(regions)
   fs.writeFileSync(
@@ -212,6 +241,12 @@ function build(): void {
         rawBytes: survivalRawBytes,
         gzipBytes: survivalGzipBytes,
         maxGzipBytes: survivalMaxGzipBytes,
+      },
+      charterCohortSurvivalRollups: {
+        regions: Object.keys(rollups.regions).length,
+        rawBytes: rollupRawBytes,
+        gzipBytes: rollupGzipBytes,
+        maxGzipBytes: rollupMaxGzipBytes,
       },
       districtRegionHistory: {
         asOf: regions.asOf,
