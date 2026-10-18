@@ -72,6 +72,19 @@ describe('useClubDistrictHistory', () => {
     expect(result.current.clubs).toBeNull()
   })
 
+  it('fetches nothing while disabled (the survival file was found, #2061)', async () => {
+    mockedIndex.mockResolvedValue(index)
+    mockedShard.mockImplementation(async key => shards[key] ?? null)
+    const { result } = renderHook(
+      () => useClubDistrictHistory({ enabled: false }),
+      { wrapper }
+    )
+    await new Promise(r => setTimeout(r, 20))
+    expect(mockedIndex).not.toHaveBeenCalled()
+    expect(mockedShard).not.toHaveBeenCalled()
+    expect(result.current.status).toBe('loading')
+  })
+
   it('is unavailable when the index is missing, and fetches no shard', async () => {
     mockedIndex.mockResolvedValue(null)
     const { result } = renderHook(() => useClubDistrictHistory(), { wrapper })

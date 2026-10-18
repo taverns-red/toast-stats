@@ -242,6 +242,32 @@ export {
   type ClubDistrictHistoryShard,
 } from './schemas/club-district-history.schema.js'
 
+// Charter cohort survival — config/charter-cohort-survival/district_<id>.json
+// (#2061; the fold the survival page ran in the browser, #1817)
+export {
+  CohortYearCellSchema,
+  CharterCohortSchema,
+  PooledYearCellSchema,
+  CharterCohortCurvesSchema,
+  CharterCohortSurvivalFileSchema,
+  CHARTER_COHORT_SURVIVAL_VERSION,
+  CHARTER_COHORT_SURVIVAL_DIR,
+  charterCohortSurvivalObjectPath,
+  type CohortYearCell,
+  type CharterCohort,
+  type PooledYearCell,
+  type CharterCohortCurves,
+  type CharterCohortSurvivalFile,
+} from './schemas/charter-cohort-survival.schema.js'
+export {
+  buildCharterCohortSurvival,
+  buildCharterCohortSurvivalFile,
+  charterCohortSurvivalFromFile,
+  type CharterCohortSurvival,
+  type BuildCharterCohortSurvivalInput,
+  type BuildCharterCohortSurvivalFileInput,
+} from './survival/charterCohortSurvival.js'
+
 // District → region history — config/district-region-history.json (#1820)
 export {
   DistrictRegionSpanSchema,

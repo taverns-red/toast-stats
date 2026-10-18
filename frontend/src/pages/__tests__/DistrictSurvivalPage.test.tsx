@@ -23,6 +23,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@testing-library/jest-dom'
 import {
+  CharterCohortSurvivalFileSchema,
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
   type ClubDistrictHistoryClub,
@@ -33,7 +34,9 @@ import {
   useClubDistrictHistory,
   type ClubDistrictHistoryState,
 } from '../../hooks/useClubDistrictHistory'
+import { fetchCharterCohortSurvival } from '../../services/cdnCharterCohortSurvival'
 import recorded from '../../__tests__/fixtures/club-district-history-d61-d01.recorded.json'
+import d61File from '../../__tests__/fixtures/charter-cohort-survival-d61.json'
 
 const index = ClubDistrictHistoryIndexSchema.parse(recorded.index)
 const clubs: Record<string, ClubDistrictHistoryClub> = {}
@@ -70,6 +73,11 @@ vi.mock('../../hooks/useClubDistrictHistory', () => ({
   useClubDistrictHistory: vi.fn(),
 }))
 
+// No district file (a 404) unless a test serves one: the shard fallback.
+vi.mock('../../services/cdnCharterCohortSurvival', () => ({
+  fetchCharterCohortSurvival: vi.fn(),
+}))
+
 const DistrictSurvivalPage = React.lazy(() => import('../DistrictSurvivalPage'))
 
 const renderAt = (initialUrl: string) => {
@@ -103,6 +111,7 @@ describe('DistrictSurvivalPage (#1817)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useClubDistrictHistory).mockReturnValue(ready)
+    vi.mocked(fetchCharterCohortSurvival).mockResolvedValue(null)
   })
   afterEach(() => cleanup())
 
@@ -119,6 +128,27 @@ describe('DistrictSurvivalPage (#1817)', () => {
       within(crumbs).getByRole('link', { name: 'Growth' }).getAttribute('href')
     ).toBe('/district/61/growth?py=2026')
     expect(crumbs).toHaveTextContent('Club survival')
+  })
+
+  it('draws the same survival from the district file, with no history shard (#2061)', async () => {
+    vi.mocked(fetchCharterCohortSurvival).mockResolvedValue(
+      CharterCohortSurvivalFileSchema.parse(d61File)
+    )
+    vi.mocked(useClubDistrictHistory).mockReturnValue({
+      status: 'loading',
+      loaded: 0,
+      total: 0,
+      index: null,
+      clubs: null,
+    })
+    renderAt('/district/61/growth/survival?py=2026')
+    expect(
+      await screen.findByRole('list', { name: /survival after/i })
+    ).toHaveTextContent('51 of 51 clubs')
+    expect(fetchCharterCohortSurvival).toHaveBeenCalledWith('61')
+    for (const [options] of vi.mocked(useClubDistrictHistory).mock.calls) {
+      expect(options?.enabled).toBe(false)
+    }
   })
 
   it('self-titles the document', async () => {
