@@ -196,15 +196,16 @@ promoted, so each class the rsync used to sweep up has its own route:
   without re-uploading; they promote with the next run's globals.
 - `district_*_reports.json` sidecars (placed after the promote): mirrored when this run promoted
   the snapshot date; `[reports] Carry missing report sidecars into prod` copies those prod lacks
-  for the newest 7 dates prod indexes (`scripts/pipeline/carry-report-sidecars.sh`). In every
-  mode, the `carry-reports` job then carries exactly the run's promoted dates (`CARRY_DATES`)
-  and fails the run if any of them is live without reports staging holds
-  (`scripts/pipeline/check-report-sidecars.sh`, #2144).
+  for the newest 7 dates prod indexes (`scripts/pipeline/carry-report-sidecars.sh`).
 - A held date's own `snapshots/<date>/` objects: never carried. Re-derive the date; it then
   promotes through its own gates. A promote that copied less than it planned files the
   `promotion-held` alert with the held dates and the globals' reason.
 - Out-of-band staging rewrites (e.g. `contact-strip.yml` with `bucket=staging`) do not reach prod
   by themselves any more: run the tool on `bucket=prod` too.
+- Every promoting run, in any mode (#2144): the `carry-reports` job runs the carry above for
+  exactly the run's promoted dates (`CARRY_DATES`), then fails the run if any of them is live
+  without the report sidecars or `reports-rollups.json` staging holds
+  (`scripts/pipeline/check-report-sidecars.sh`).
 
 Every non-prune run prints the plan (`Plan scoped promotion (#1763)`, a dry run),
 skip_promotion included. To preview a published manifest locally:
