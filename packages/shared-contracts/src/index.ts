@@ -280,6 +280,15 @@ export {
   type BuildCharterCohortSurvivalRollupInput,
 } from './survival/charterCohortSurvival.js'
 
+// Closed-club name index — config/closed-club-names.json (#2062)
+export {
+  ClosedClubNameRowSchema,
+  ClosedClubNameIndexSchema,
+  CLOSED_CLUB_NAME_INDEX_VERSION,
+  type ClosedClubNameRow,
+  type ClosedClubNameIndex,
+} from './schemas/closed-club-names.schema.js'
+
 // District → region history — config/district-region-history.json (#1820)
 export {
   DistrictRegionSpanSchema,

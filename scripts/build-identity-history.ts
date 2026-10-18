@@ -17,9 +17,10 @@
  *     2. read every `<rankings>/<date>/all-districts-rankings.json` the
  *        caller downloaded, peeling any gzip layer (gcloud 568 hands back a
  *        `-Z` object's bytes as stored; 588 inflates one layer);
- *     3. fold both and write `<out>/club-district-history/{NN,index}.json`
- *        and `<out>/district-region-history.json` (compact JSON) for
- *        scripts/pipeline/build-identity-history.sh to upload;
+ *     3. fold both and write `<out>/club-district-history/{NN,index}.json`,
+ *        `<out>/closed-club-names.json` (#2062, derived from the club
+ *        history) and `<out>/district-region-history.json` (compact JSON)
+ *        for scripts/pipeline/build-identity-history.sh to upload;
  *     4. fold the club history once more into one
  *        `<out>/charter-cohort-survival/district_<id>.json` per district
  *        (#2061), the survival page's curves, plus one
@@ -48,6 +49,7 @@ import {
   foldCharterCohortSurvival,
   foldCharterCohortSurvivalRollups,
 } from './lib/charterCohortSurvival.js'
+import { buildClosedClubNameIndex } from './lib/closedClubNames.js'
 import {
   foldDistrictRegionHistory,
   selectRegionSourceDates,
@@ -210,6 +212,10 @@ function build(): void {
     rollupMaxGzipBytes = Math.max(rollupMaxGzipBytes, gz)
   }
 
+  const closed = buildClosedClubNameIndex(clubs)
+  const closedBody = encode(closed)
+  fs.writeFileSync(path.join(outDir, 'closed-club-names.json'), closedBody)
+
   const regionBody = encode(regions)
   fs.writeFileSync(
     path.join(outDir, 'district-region-history.json'),
@@ -220,6 +226,7 @@ function build(): void {
     `club-district history: ${clubs.index.totalClubs} clubs in ${clubs.index.shards.length} shards, ` +
       `${clubs.index.duplicates.length} duplicates, PYs ${clubs.index.programYears.join(', ')}`
   )
+  log(`closed-club names: ${closed.totalClubs} closed clubs`)
   log(
     `district-region history: ${Object.keys(regions.districts).length} districts from ` +
       `${regions.sourceDates.length} snapshots, ${regions.conflicts.length} conflicts`
@@ -247,6 +254,12 @@ function build(): void {
         rawBytes: rollupRawBytes,
         gzipBytes: rollupGzipBytes,
         maxGzipBytes: rollupMaxGzipBytes,
+      },
+      closedClubNames: {
+        asOf: closed.asOf,
+        clubs: closed.totalClubs,
+        rawBytes: closedBody.length,
+        gzipBytes: gzipSync(closedBody).length,
       },
       districtRegionHistory: {
         asOf: regions.asOf,

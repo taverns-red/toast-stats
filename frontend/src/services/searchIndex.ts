@@ -16,7 +16,10 @@ import {
   fetchCdnSnapshotIndex,
 } from './cdn'
 import { getProgramYearForDate } from '../utils/programYear'
-import { normalizeClubId } from '@taverns-red/shared-contracts'
+import {
+  normalizeClubId,
+  type ClosedClubNameIndex,
+} from '@taverns-red/shared-contracts'
 
 export type SearchEntityType =
   'district' | 'region' | 'club' | 'division' | 'area'
@@ -376,6 +379,79 @@ export function withClosedClub(
   const merged = [
     ...others,
     { type: 'club' as const, entities: [entity, ...clubs] },
+  ]
+  return GROUP_ORDER.flatMap(type => merged.filter(g => g.type === type))
+}
+
+/* Closed clubs by name (#2062). The number fallback above reaches one shard;
+   a name needs the whole closed set, so the pipeline publishes a compact
+   name index (config/closed-club-names.json, ~190 KB gzip). The hook loads
+   it only after a search misses, and closed matches only ever fill the
+   space the current results leave under the cap — a live club always ranks
+   first. */
+
+/** One search entity per closed club, built like the number fallback's. */
+export function closedClubNameEntities(
+  index: ClosedClubNameIndex
+): SearchEntity[] {
+  const entities: SearchEntity[] = []
+  for (const byDistrict of Object.values(index.programYears)) {
+    for (const [lastDistrictId, rows] of Object.entries(byDistrict)) {
+      for (const [clubId, name, lastSeen] of rows) {
+        entities.push(
+          closedClubEntity(clubId, {
+            name,
+            lastDistrictId,
+            lastSeen,
+            closedYear: Number(lastSeen.slice(0, 4)),
+          })
+        )
+      }
+    }
+  }
+  return entities
+}
+
+/** Shortest query that may trigger the closed-club name load. */
+const MIN_MISS_QUERY = 3
+
+/** A query long enough to mean something that matched no current club. */
+export function isClubSearchMiss(
+  query: string,
+  groups: readonly SearchResultGroup[]
+): boolean {
+  if (query.trim().length < MIN_MISS_QUERY) return false
+  return !groups.some(g => g.type === 'club' && g.entities.length > 0)
+}
+
+/**
+ * Append the closed clubs matching `query` to the Clubs group, after the
+ * current clubs, only into the room left under the cap, and never a club
+ * already shown (e.g. by the number fallback).
+ */
+export function withClosedClubMatches(
+  groups: SearchResultGroup[],
+  query: string,
+  closed: SearchIndex,
+  options: SearchOptions = {}
+): SearchResultGroup[] {
+  const cap = options.cap ?? DEFAULT_CAP
+  const shown = groups.flatMap(g => g.entities)
+  const room = cap - shown.length
+  if (room <= 0) return groups
+  const ids = new Set(
+    shown.filter(e => e.type === 'club').map(e => normalizeClubId(e.id))
+  )
+  const extra = searchEntities(query, closed, { cap: cap + ids.size })
+    .flatMap(g => g.entities)
+    .filter(e => !ids.has(normalizeClubId(e.id)))
+    .slice(0, room)
+  if (extra.length === 0) return groups
+  const others = groups.filter(g => g.type !== 'club')
+  const clubs = groups.find(g => g.type === 'club')?.entities ?? []
+  const merged = [
+    ...others,
+    { type: 'club' as const, entities: [...clubs, ...extra] },
   ]
   return GROUP_ORDER.flatMap(type => merged.filter(g => g.type === type))
 }

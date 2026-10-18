@@ -14,6 +14,7 @@ import * as path from 'node:path'
 import { gzipSync } from 'node:zlib'
 import type { ClubRaceStoreData } from '@taverns-red/shared-contracts'
 import { foldClubDistrictHistory } from '../clubDistrictHistory.js'
+import { buildClosedClubNameIndex } from '../closedClubNames.js'
 import {
   buildContentGateSummary,
   checkLatestAgreesWithIndex,
@@ -190,6 +191,7 @@ describe('classifyObject', () => {
       'charter-cohort-survival-rollup',
     ],
     ['config/charter-cohort-survival/region_9.json', 'json'],
+    ['config/closed-club-names.json', 'closed-club-name-index'],
     ['derived/club-district-history/77.json', 'json'],
     ['v1/latest.json', 'latest'],
     ['snapshots/2026-10-08/district_61.json', 'json'],
@@ -608,6 +610,51 @@ describe('checkObject — region and world cohort survival (#1818)', () => {
   })
 })
 
+describe('checkObject — closed-club name index (#2062)', () => {
+  const CLOSED_PATH = 'config/closed-club-names.json'
+  // Built from the fold of the recorded club-race stores, exactly what
+  // build-identity-history.sh uploads.
+  const STORES = path.resolve(__dirname, 'fixtures/identity-history/club-race')
+  const closed = buildClosedClubNameIndex(
+    foldClubDistrictHistory(
+      readdirSync(STORES).map(
+        py =>
+          JSON.parse(
+            readFileSync(path.join(STORES, py, 'first-reached.json'), 'utf-8')
+          ) as ClubRaceStoreData
+      )
+    )
+  )
+
+  it('passes the recorded index', () => {
+    expect(check(CLOSED_PATH, plain(closed))).toBeNull()
+  })
+
+  it('fails an index that breaks the shared-contracts schema', () => {
+    const broken = structuredClone(closed) as unknown as {
+      programYears: Record<string, Record<string, unknown[][]>>
+    }
+    const rows = Object.values(Object.values(broken.programYears)[0]!)[0]!
+    rows[0]!.push('extra')
+    expect(check(CLOSED_PATH, plain(broken))).toMatch(/schema/)
+  })
+
+  it('fails an index whose totalClubs disagrees with its rows', () => {
+    expect(check(CLOSED_PATH, plain({ ...closed, totalClubs: 99 }))).toMatch(
+      /totalClubs is 99.*2 rows/
+    )
+  })
+
+  it('fails a club listed twice (one club closes once)', () => {
+    const twice = structuredClone(closed)
+    const [py, byDistrict] = Object.entries(twice.programYears)[0]!
+    const [district, rows] = Object.entries(byDistrict)[0]!
+    twice.programYears[py]![district] = [...rows, rows[0]!]
+    twice.totalClubs += 1
+    expect(check(CLOSED_PATH, plain(twice))).toMatch(/listed twice/)
+  })
+})
+
 describe('checkObject — club-district history (#1782)', () => {
   const INDEX_PATH = 'config/club-district-history/index.json'
   const SHARD_PATH = 'config/club-district-history/77.json'
@@ -780,6 +827,19 @@ describe('planContentChecks — bounded, change-driven sampling', () => {
       { random: () => 0, caps: { generic: 0 } }
     )
     expect(plan.checks.map(c => c.path).sort()).toEqual([...files].sort())
+  })
+
+  it('always checks the closed-club name index, never sampling it out (#2062)', () => {
+    const plan = planContentChecks(
+      [
+        meta('snapshots/2026-10-08/district_100.json'),
+        meta('config/closed-club-names.json'),
+      ],
+      { random: () => 0, caps: { generic: 0 } }
+    )
+    expect(plan.checks.map(c => c.path)).toEqual([
+      'config/closed-club-names.json',
+    ])
   })
 
   it('always checks the club-district history index and every changed shard', () => {

@@ -3,11 +3,16 @@ import {
   buildSearchIndex,
   clubIdIndexMiss,
   closedClubEntity,
+  closedClubNameEntities,
+  isClubSearchMiss,
   searchEntities,
   withClosedClub,
+  withClosedClubMatches,
   type SearchIndex,
   type SearchResultGroup,
 } from '../searchIndex'
+import { ClosedClubNameIndexSchema } from '@taverns-red/shared-contracts'
+import closedNamesFixture from '../../__tests__/fixtures/closed-club-names.recorded.json'
 
 // --- Fixtures (shapes mirror fetchCdnRankings().rankings + fetchCdnClubIndex().clubs) ---
 
@@ -512,5 +517,97 @@ describe('closed clubs from the club-district history (#1806)', () => {
   it('creates the Clubs group when the query matched no current club', () => {
     const groups = withClosedClub([], closed)
     expect(groups).toEqual([{ type: 'club', entities: [closed] }])
+  })
+})
+
+describe('closed clubs by name (#2062)', () => {
+  const index = buildSearchIndex(RANKINGS, CLUBS, DIVISIONS_AREAS)
+  // The pipeline-built index over the recorded prod history (2026-10-15).
+  const closedNames = ClosedClubNameIndexSchema.parse(closedNamesFixture)
+  const closedIndex = {
+    entities: closedClubNameEntities(closedNames),
+  }
+
+  it('builds one entity per row, labelled and routed like the number fallback (#1806)', () => {
+    expect(closedIndex.entities).toHaveLength(closedNames.totalClubs)
+    expect(closedIndex.entities).toContainEqual(
+      closedClubEntity('377', {
+        name: 'Traveling Toastmasters Club',
+        lastDistrictId: '39',
+        lastSeen: '2024-03-31',
+        closedYear: 2024,
+      })
+    )
+  })
+
+  it('a query with no current club match is a miss; a club hit or a short query is not', () => {
+    expect(
+      isClubSearchMiss('eloquentia', searchEntities('eloquentia', index))
+    ).toBe(true)
+    expect(isClubSearchMiss('toast', searchEntities('toast', index))).toBe(
+      false
+    )
+    expect(isClubSearchMiss('zz', [])).toBe(false)
+    expect(isClubSearchMiss('   ', [])).toBe(false)
+  })
+
+  it('a partial name finds the closed club: "closed YYYY · last in District N"', () => {
+    const groups = withClosedClubMatches([], 'eloquent', closedIndex)
+    expect(groups).toEqual([
+      {
+        type: 'club',
+        entities: [
+          expect.objectContaining({
+            id: '3679',
+            label: 'Club Toastmasters Eloquentia',
+            context: 'closed 2024 · last in District 61',
+            route: '/district/61/club/3679?py=2023',
+          }),
+        ],
+      },
+    ])
+  })
+
+  it('appends closed clubs after current clubs, within the cap, keeping group order', () => {
+    const before = searchEntities('toast', index)
+    const current = before.flatMap(g => g.entities).length
+    const groups = withClosedClubMatches(before, 'toast', closedIndex)
+    expect(groups.map(g => g.type)).toEqual(before.map(g => g.type))
+    const clubs = groups.find(g => g.type === 'club')!.entities
+    const beforeClubs = before.find(g => g.type === 'club')!.entities
+    expect(clubs.slice(0, beforeClubs.length)).toEqual(beforeClubs)
+    expect(clubs.length).toBeGreaterThan(beforeClubs.length)
+    expect(groups.flatMap(g => g.entities)).toHaveLength(8)
+    expect(current).toBeLessThan(8)
+  })
+
+  it('never duplicates a club already in the results (the number fallback)', () => {
+    const closed = closedClubEntity('377', {
+      name: 'Traveling Toastmasters Club',
+      lastDistrictId: '39',
+      lastSeen: '2024-03-31',
+      closedYear: 2024,
+    })
+    const groups = withClosedClubMatches(
+      withClosedClub([], closed),
+      '377',
+      closedIndex
+    )
+    const ids = groups.flatMap(g => g.entities).map(e => e.id)
+    expect(ids.filter(id => id === '377')).toHaveLength(1)
+    expect(ids[0]).toBe('377')
+  })
+
+  it('adds nothing when the results are already at the cap', () => {
+    const full = [
+      {
+        type: 'club' as const,
+        entities: Array.from({ length: 8 }, (_, i) => ({
+          ...closedIndex.entities[0]!,
+          id: `x${i}`,
+        })),
+      },
+    ]
+    expect(withClosedClubMatches(full, 'toast', closedIndex)).toBe(full)
   })
 })
