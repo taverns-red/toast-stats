@@ -268,24 +268,6 @@ const ClubDetailPage: React.FC = () => {
     isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId, { selfHeal: false })
 
-  // Freshness parity (#1321): the per-district snapshot carries no as-of date —
-  // the old `districtStats.asOfDate` was a phantom, so this pill was permanently
-  // blank. The shared hook owns the "is this really the latest?" rule.
-  const { asOfDate: globalAsOfDate, isLatest: isLatestGlobal } =
-    useGlobalFreshness({
-      districtLatestSnapshotDate: latestSnapshotDate,
-      isLatestSnapshot,
-    })
-
-  // Fetch district info
-  const { data: districtsData } = useDistricts()
-  // The URL's district: the breadcrumb and back links follow the URL (#1804).
-  const selectedDistrict = districtsData?.districts?.find(
-    d => d.id === urlDistrictId
-  )
-  const rawName = selectedDistrict?.name || urlDistrictId || ''
-  const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
-
   // Fetch raw district statistics for per-goal DCP data (#242). Since #1901
   // it also feeds the hero's first paint (see `snapshotHeroClub`).
   // #1804 — an explicit `?py=` is decided before the hero: the club's
@@ -326,6 +308,36 @@ const ClubDetailPage: React.FC = () => {
   const analyticsReady = useAfterPaint(
     hasValidDates && !isLoadingStats && !isHoldingForPy
   )
+
+  // #1852 option C — reads that only feed the breadcrumb's district name and
+  // the freshness pill wait for the same after-paint gate. Lighthouse's
+  // Lantern charges every request that finishes before the LCP paint, and
+  // `v1/rankings.json` + `v1/latest.json` used to land just before the h1.
+  // Until they arrive the name falls back to `District <id>` and the pill to
+  // the snapshot date, both states a slow network already reaches. A district
+  // with no snapshot dates never paints a hero, so it does not wait.
+  const isHeroPainted = analyticsReady || (!isDatesPending && !hasValidDates)
+
+  // Freshness parity (#1321): the per-district snapshot carries no as-of date —
+  // the old `districtStats.asOfDate` was a phantom, so this pill was permanently
+  // blank. The shared hook owns the "is this really the latest?" rule.
+  const { asOfDate: globalAsOfDate, isLatest: isLatestGlobal } =
+    useGlobalFreshness({
+      districtLatestSnapshotDate: latestSnapshotDate,
+      isLatestSnapshot,
+      enabled: isHeroPainted,
+    })
+
+  // Fetch district info
+  const { data: districtsData } = useDistricts(undefined, {
+    enabled: isHeroPainted,
+  })
+  // The URL's district: the breadcrumb and back links follow the URL (#1804).
+  const selectedDistrict = districtsData?.districts?.find(
+    d => d.id === urlDistrictId
+  )
+  const rawName = selectedDistrict?.name || urlDistrictId || ''
+  const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
 
   // Fetch district analytics to get this club's data
   const {

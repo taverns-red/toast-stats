@@ -249,3 +249,26 @@ describe('useDistricts — shares the rankings read with its siblings (#1901)', 
     expect(mockedForDate).toHaveBeenCalledTimes(1)
   })
 })
+
+// #1852 option C — the club page holds its rankings reads until the hero
+// h1 has painted, so `v1/rankings.json` stays off the LCP's critical set.
+describe('useDistricts — `enabled: false` holds the read (#1852)', () => {
+  it('does not fetch rankings while disabled, and fetches once enabled', async () => {
+    const client = makeClient()
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useDistricts(undefined, { enabled }),
+      { wrapper, initialProps: { enabled: false } }
+    )
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(mockedLatest).not.toHaveBeenCalled()
+    expect(result.current.data).toBeUndefined()
+
+    rerender({ enabled: true })
+    await waitFor(() => expect(result.current.data).toBeDefined())
+    expect(mockedLatest).toHaveBeenCalledTimes(1)
+  })
+})

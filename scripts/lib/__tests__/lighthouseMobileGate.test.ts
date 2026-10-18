@@ -158,8 +158,13 @@ describe('lighthouserc.mobile.js (#1830)', () => {
           scriptBytes: 300 * KB,
           totalBytes: 1300 * KB,
         },
+        // #1852 option C (2026-10-18): the hero data chain's floor on this
+        // gate. 4 PR-preview runs x 3 samples after PR #2147: median 3471 ms,
+        // worst per-run best 3469 ms. 3.0 s is not reachable without a new
+        // artifact (Lantern charges the CDN connection to any data-gated h1),
+        // so the budget is the measured median + ~10%.
         club: {
-          lcpMs: 7500,
+          lcpMs: 3800,
           cls: 0.1,
           scriptBytes: 300 * KB,
           totalBytes: 1300 * KB,
