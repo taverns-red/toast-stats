@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.18.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.17.0...collector-cli-v1.18.0) (2026-10-18)
+
+
+### Features
+
+* **pipeline:** snapshots/&lt;date&gt;/clubs-by-region/ — per-region club shards + world file, content-gated ([#1800](https://github.com/taverns-red/toast-stats/issues/1800)) ([#2124](https://github.com/taverns-red/toast-stats/issues/2124)) ([edb9099](https://github.com/taverns-red/toast-stats/commit/edb909935ea1e26e547cd29b4e108eb200c935ef))
+* **region:** region and world membership series for /regions sparklines ([#2127](https://github.com/taverns-red/toast-stats/issues/2127)) ([#2134](https://github.com/taverns-red/toast-stats/issues/2134)) ([7157287](https://github.com/taverns-red/toast-stats/commit/71572878b5ff1f880134c10b342404cc907a8515))
+
 ## [1.17.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.16.0...collector-cli-v1.17.0) (2026-10-17)
 
 
