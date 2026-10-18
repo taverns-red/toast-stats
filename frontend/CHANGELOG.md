@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.42.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.41.1...frontend-v3.42.0) (2026-10-18)
+
+
+### Features
+
+* **region:** region and world membership series for /regions sparklines ([#2127](https://github.com/taverns-red/toast-stats/issues/2127)) ([#2134](https://github.com/taverns-red/toast-stats/issues/2134)) ([7157287](https://github.com/taverns-red/toast-stats/commit/71572878b5ff1f880134c10b342404cc907a8515))
+* **region:** region club explorer — /region/:n/map ([#1808](https://github.com/taverns-red/toast-stats/issues/1808)) ([#2137](https://github.com/taverns-red/toast-stats/issues/2137)) ([8d7565b](https://github.com/taverns-red/toast-stats/commit/8d7565bb83d8f6257ad9fb7356b4facdde53ae9d))
+* **search:** closed clubs searchable by name — pipeline closed-club name index ([#2062](https://github.com/taverns-red/toast-stats/issues/2062)) ([#2122](https://github.com/taverns-red/toast-stats/issues/2122)) ([68fba06](https://github.com/taverns-red/toast-stats/commit/68fba061a12530e4b06b5d230fae60fddfa2db06))
+* **survival:** charter cohort survival at region and world level ([#1818](https://github.com/taverns-red/toast-stats/issues/1818)) ([#2138](https://github.com/taverns-red/toast-stats/issues/2138)) ([0c220d9](https://github.com/taverns-red/toast-stats/commit/0c220d9779c87dff4ca20d3748b4cc18338aa2c6))
+
+
+### Performance
+
+* **survival:** per-district cohort survival file, so /growth/survival stops fetching 100 history shards ([#2061](https://github.com/taverns-red/toast-stats/issues/2061)) ([#2119](https://github.com/taverns-red/toast-stats/issues/2119)) ([872fd4a](https://github.com/taverns-red/toast-stats/commit/872fd4adfecf43b507e8c9d6e0206995bd6150f8))
+
 ## [3.41.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.41.0...frontend-v3.41.1) (2026-10-18)
 
 
