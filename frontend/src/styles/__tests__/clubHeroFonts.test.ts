@@ -18,12 +18,15 @@ const css = readFileSync(
   'utf-8'
 )
 
+/** A literal string as a RegExp source (every metacharacter escaped). */
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 /** Every rule body whose selector list starts with `selector`. */
 const rulesFor = (selector: string): string[] =>
   Array.from(
     css.matchAll(
       new RegExp(
-        `(?:^|\\n)\\s*${selector.replace(/[.]/g, '\\.')}(?![\\w-])[^{]*\\{([^}]*)\\}`,
+        `(?:^|\\n)\\s*${escapeRe(selector)}(?![\\w-])[^{]*\\{([^}]*)\\}`,
         'g'
       )
     ),
