@@ -202,6 +202,10 @@ promoted, so each class the rsync used to sweep up has its own route:
   `promotion-held` alert with the held dates and the globals' reason.
 - Out-of-band staging rewrites (e.g. `contact-strip.yml` with `bucket=staging`) do not reach prod
   by themselves any more: run the tool on `bucket=prod` too.
+- Every promoting run, in any mode (#2144): the `carry-reports` job runs the carry above for
+  exactly the run's promoted dates (`CARRY_DATES`), then fails the run if any of them is live
+  without the report sidecars or `reports-rollups.json` staging holds
+  (`scripts/pipeline/check-report-sidecars.sh`).
 
 Every non-prune run prints the plan (`Plan scoped promotion (#1763)`, a dry run),
 skip_promotion included. To preview a published manifest locally:

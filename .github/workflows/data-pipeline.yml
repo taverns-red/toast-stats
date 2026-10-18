@@ -3119,6 +3119,59 @@ jobs:
             "${RUN_MANIFEST_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl"
 
   # ══════════════════════════════════════════════════════════
+  # CARRY THE PROMOTED DATES' REPORTS (#2144) — EVERY MODE
+  #
+  # Report sidecars are not in the run manifest, so scoped promotion never
+  # copies them. place-reports mirrors and carries them, but it runs only
+  # after a daily scrape: rebuild 39053839345 (2026-10-17) promoted
+  # 2026-10-16 with none of its 94 sidecars. This job runs whenever the
+  # run promoted dates, in any mode, after the placement and the rollups:
+  #   1. carry-report-sidecars.sh for exactly those dates (CARRY_DATES);
+  #   2. a completeness gate: a promoted date whose reports staging holds
+  #      and prod lacks fails the run, so the gap is never silent.
+  # ══════════════════════════════════════════════════════════
+  carry-reports:
+    name: 'carry the promoted dates’ reports into prod'
+    runs-on: ubuntu-26.04
+    needs: [pipeline, place-reports, education-rollup]
+    if: >-
+      !cancelled()
+      && needs.pipeline.result == 'success'
+      && needs.pipeline.outputs.promoted_dates != ''
+      && needs.pipeline.outputs.skip_promotion != 'true'
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720): rsync must decompress gzip downloads (#1702).
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
+
+      - name: '[reports] Carry the promoted dates’ report sidecars (#2144)'
+        env:
+          CARRY_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
+        run: bash scripts/pipeline/carry-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}"
+
+      - name: '[reports] Completeness gate: promoted dates have their reports (#2144)'
+        if: ${{ !cancelled() }}
+        env:
+          PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
+        run: bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${PROMOTED_DATES}"
+
+  # ══════════════════════════════════════════════════════════
   # EDUCATION LEDGER HISTORY BACKFILL (#1802) — STAGING ONLY
   #
   # Operator-dispatched (mode=backfill-education-ledger). Fetches TI's
