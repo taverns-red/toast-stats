@@ -8,7 +8,7 @@
  */
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import type { ModeModel, PinShape } from './pinModes'
-import { hasMapPoint } from '../../utils/clubLocator'
+import { hasMapPoint } from '../../utils/mapPoint'
 
 export const PIN_SOURCE_ID = 'club-pins'
 export const CLUSTER_LAYER_ID = 'club-clusters'

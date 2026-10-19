@@ -1,4 +1,7 @@
-import { clubIdsMatch, hasCoordinates } from '@taverns-red/shared-contracts'
+import { clubIdsMatch } from '@taverns-red/shared-contracts'
+import { hasMapPoint } from './mapPoint'
+
+export { hasMapPoint }
 
 /**
  * #1843 — geometry for the club page's static mini-map ("locator").
@@ -39,19 +42,6 @@ export interface ClubLocator {
   points: LocatorPoint[]
   focus: LocatorPoint | null
 }
-
-/**
- * A club the maps draw: a valid point (#2153: finite, not (0, 0)), and not
- * an online-only club (#2174,
- * Ron 2026-10-19: an online club keeps its Find-A-Club point in the data,
- * but no map shows it — no proxy location). One rule for every club map:
- * the pins, the static preview and the club-page mini-map.
- */
-export const hasMapPoint = (
-  c: LocatorSource
-): c is LocatorSource & { coordinates: { lat: number; lng: number } } =>
-  hasCoordinates(c.coordinates) && // #2153 — shared rule, rejects (0, 0)
-  c.meetsOnline !== true
 
 const located = hasMapPoint
 
