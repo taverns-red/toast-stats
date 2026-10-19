@@ -327,7 +327,9 @@ for (const width of [375, 1280]) {
     if (width < 768) {
       await expect(chip).toBeHidden()
       await expect(
-        page.getByText('Moved to District 201', { exact: true })
+        page.getByText('Moved from District 1 to District 201', {
+          exact: true,
+        })
       ).toBeVisible()
     } else {
       await expect(chip).toHaveText('(District 1 until June 2026)')
