@@ -23,13 +23,17 @@ import {
 } from '../pinModes'
 import { territoryModel } from '../pinTerritory'
 import {
+  CLUSTER_LAYER_ID,
+  PIN_LAYER_ID,
   PIN_SOURCE_ID,
+  SELECTED_LAYER_ID,
   buildPinFeatures,
   clubPinLayers,
   clusterProperties,
   parseIconId,
   pinSourceSpec,
 } from '../pinLayer'
+import { PIN_TIP_PAD } from '../pinGlyphs'
 
 // Health/tier come from pinModes; division/area from the on-demand module.
 const buildModeModel = (
@@ -118,15 +122,34 @@ describe('clubPinLayers', () => {
     }
   })
 
-  it('clusters with a 44 px radius and shows single pins from z14', () => {
+  it('groups pins only when they overlap, and shows single pins from z11 (#2173)', () => {
     const { model } = styleWith('health')
     const src = pinSourceSpec(buildPinFeatures(CLUBS, model), model)
     expect(src).toMatchObject({
       type: 'geojson',
       cluster: true,
-      clusterRadius: 44,
-      clusterMaxZoom: 13,
+      clusterRadius: 20,
+      clusterMaxZoom: 10,
+      clusterMinPoints: 2,
     })
+  })
+
+  it('anchors pin tips at the coordinate and keeps clusters centred (#2173)', () => {
+    const { style } = styleWith('health')
+    const layout = (id: string) =>
+      (
+        style.layers.find(l => l.id === id) as {
+          layout?: Record<string, unknown>
+        }
+      ).layout!
+    for (const [id, pad] of [
+      [PIN_LAYER_ID, PIN_TIP_PAD[0]],
+      [SELECTED_LAYER_ID, PIN_TIP_PAD[1]],
+    ] as const) {
+      expect(layout(id)['icon-anchor'], id).toBe('bottom')
+      expect(layout(id)['icon-offset'], id).toEqual([0, pad])
+    }
+    expect(layout(CLUSTER_LAYER_ID)['icon-anchor']).toBeUndefined()
   })
 })
 

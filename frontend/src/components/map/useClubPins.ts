@@ -77,4 +77,6 @@ export function useClubPins(map: MapLibreMap | null, opts: ClubPinsOptions) {
     if (!map || !rt) return
     return rt.bindPinEvents(map, latest)
   }, [map, rt])
+
+  return { resetView: () => {} }
 }
