@@ -35,8 +35,10 @@ import type { ProspectiveClub } from '@taverns-red/shared-contracts'
 // but not to the parsed clubs[] ids, so a form mismatch silently demoted a
 // matched club to "snapshot-only".
 import {
+  meetsOnlyOnline,
   normalizeClubId,
   omitClubContactFields,
+  resolveClubLocations,
 } from '@taverns-red/shared-contracts'
 import {
   TI_CLUB_NUMBER_KEY,
@@ -88,6 +90,16 @@ export function mergeFacIntoSnapshot(
     }
   }
 
+  // #2160 — the one club-location decision, made over the whole district
+  // (the outlier test judges each point against its peers): geocodes far
+  // from their district/country peers get no point. Fully online clubs are
+  // flagged `meetsOnline` and keep theirs until the frontend hides them.
+  const locations = resolveClubLocations(
+    [...facByClubId.values()].filter(
+      (c): c is ClubEnrichment => c !== null && c !== undefined
+    )
+  )
+
   let matched = 0
   let snapshotOnly = 0
   const matchedIds = new Set<string>()
@@ -103,7 +115,9 @@ export function mergeFacIntoSnapshot(
     if (!facHit) continue
     const enrichment: Record<string, unknown> = {}
     if (facHit.charterDate) enrichment['charterDate'] = facHit.charterDate
-    if (facHit.coordinates) enrichment['coordinates'] = facHit.coordinates
+    const location = locations.get(facHit.clubId)
+    if (location?.mapped) enrichment['coordinates'] = location.coordinates
+    if (meetsOnlyOnline(facHit)) enrichment['meetsOnline'] = true
     if (facHit.address) enrichment['address'] = facHit.address
     if (facHit.website) enrichment['website'] = facHit.website
     if (facHit.facebookLink) enrichment['facebookLink'] = facHit.facebookLink
@@ -153,7 +167,7 @@ export function mergeFacIntoSnapshot(
     // Snapshot fields win on collision — TI dashboard is canonical for
     // DCP / payments / status; FAC is only authoritative for the
     // optional enrichment fields it adds.
-    return { ...row, ...enrichment }
+    return withoutStalePoint({ ...row, ...enrichment }, enrichment)
   })
 
   // Also enrich the parsed .data.clubs[] array if present. This is the
@@ -173,7 +187,9 @@ export function mergeFacIntoSnapshot(
       const clubId = normalizeClubId(parsed['clubId'])
       if (!clubId) return raw
       const enrichment = parsedEnrichmentByClubId.get(clubId)
-      return enrichment ? { ...parsed, ...enrichment } : raw
+      return enrichment
+        ? withoutStalePoint({ ...parsed, ...enrichment }, enrichment)
+        : raw
     })
   }
 
@@ -218,6 +234,21 @@ export function mergeFacIntoSnapshot(
     facOnly: facOnlyClubs.length,
     facOnlyClubs,
   }
+}
+
+/**
+ * FAC is authoritative for a matched club's point (#2160): when the location
+ * rule withheld it, a point left on the row by an earlier merge is removed
+ * too, so the club is unmapped rather than pinned at a stale place.
+ */
+function withoutStalePoint<T extends Record<string, unknown>>(
+  merged: T,
+  enrichment: Record<string, unknown>
+): T {
+  if ('coordinates' in enrichment || !('coordinates' in merged)) return merged
+  const rest: Record<string, unknown> = { ...merged }
+  delete rest['coordinates']
+  return rest as T
 }
 
 /**

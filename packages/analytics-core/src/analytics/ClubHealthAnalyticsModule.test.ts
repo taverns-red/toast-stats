@@ -685,6 +685,33 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(out?.isProspective).toBe(false)
     })
 
+    // #2160 — the club page and the map's "N online clubs" chip read it.
+    it('forwards meetsOnline for a fully online club, with its point', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const online = {
+        ...createMockClub({ clubId: '28675595' }),
+        address: { city: 'Windsor', region: 'CT', country: 'United States' },
+        meetingDay: 'Tuesday',
+        meetingTime: '7:00 pm',
+        coordinates: { lat: 41.8526, lng: -72.6437 },
+        allowsVirtualAttendance: true,
+        meetsOnline: true as const,
+      }
+      const inPerson = { ...createMockClub({ clubId: '315' }) }
+      const snapshot = createMockSnapshot('2026-10-18', [online, inPerson])
+
+      const result = module.generateClubHealthData([snapshot])
+      const byId = new Map(result.allClubs.map(c => [c.clubId, c]))
+
+      expect(byId.get('28675595')?.meetsOnline).toBe(true)
+      // Split rollout: the pin stays until the frontend hides online pins.
+      expect(byId.get('28675595')?.coordinates).toEqual({
+        lat: 41.8526,
+        lng: -72.6437,
+      })
+      expect(byId.get('315')).not.toHaveProperty('meetsOnline')
+    })
+
     // #1789 — the meeting-time heatmap (#1796) and the map's meeting-day /
     // online pin modes (#1787) read these from the analytics JSON.
     it('forwards location and meetingSchedule (#1789)', () => {
