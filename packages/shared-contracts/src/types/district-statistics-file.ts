@@ -222,6 +222,11 @@ export interface ClubStatisticsFile {
   meetingTime?: string
   /** Whether the club lists virtual attendance as supported. */
   allowsVirtualAttendance?: boolean
+  /**
+   * True when the club meets only online (#2160). Such a club has no
+   * `coordinates` and counts as unmapped. Absent otherwise.
+   */
+  meetsOnline?: true
   /** FAC's IsProspective flag — true for clubs still in ATO state. */
   isProspective?: boolean
   /**

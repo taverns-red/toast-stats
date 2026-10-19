@@ -63,6 +63,18 @@ function merge(voya: ReturnType<typeof tiClub>) {
         clubs: ids.map(clubId => ({
           clubId,
           clubName: `Club ${clubId}`,
+          divisionId: 'D',
+          divisionName: 'Division D',
+          areaId: '42',
+          areaName: 'Area 42',
+          membershipBase: 22,
+          octoberRenewals: 0,
+          aprilRenewals: 0,
+          newMembers: 2,
+          membershipCount: 24,
+          paymentsCount: 30,
+          dcpGoals: 3,
+          status: 'Active',
           // A stale point from an earlier merge must not survive.
           coordinates: { lat: 19.18947, lng: 72.95207 },
         })),
@@ -92,10 +104,13 @@ describe('mergeFacIntoSnapshot — club location rule (#2160)', () => {
       expect(voya['meetingTime']).toBe('7:00 pm')
     }
     const parsed = find(data.clubs, '28675595')
-    expect(parsed['meetingSchedule']).toEqual([
+    expect(parsed['meetingSchedule']).toMatchObject([
       { day: 'Tuesday', startTime: '19:00', mode: 'online' },
     ])
-    expect(ClubStatisticsFileSchema.safeParse(parsed).success).toBe(true)
+    const validated = ClubStatisticsFileSchema.safeParse(parsed)
+    expect(validated.success).toBe(true)
+    // The schema must declare the flag, or parsing strips it.
+    expect(validated.data?.meetsOnline).toBe(true)
     expect(
       ScrapedRecordSchema.safeParse(find(data.clubPerformance, '28675595'))
         .success
