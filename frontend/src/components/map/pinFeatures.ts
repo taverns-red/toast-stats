@@ -6,6 +6,7 @@
  * fetched on mount like the icon painter (the map route's 300 KB budget,
  * ADR-016 D2). Pure: no MapLibre runtime import.
  */
+import { parseCoordinates } from '@taverns-red/shared-contracts'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import type { ModeModel, PinShape } from './pinModes'
 
@@ -48,8 +49,9 @@ export function buildPinFeatures(
 ): PinFeatureCollection {
   const features: PinFeatureCollection['features'] = []
   for (const club of clubs) {
-    const at = club.coordinates
-    if (!at || !Number.isFinite(at.lat) || !Number.isFinite(at.lng)) continue
+    // #2153 — (0, 0) and invalid pairs never become pins (or fit bounds).
+    const at = parseCoordinates(club.coordinates)
+    if (!at) continue
     const cat = model.categoryOf(club)
     features.push({
       type: 'Feature',

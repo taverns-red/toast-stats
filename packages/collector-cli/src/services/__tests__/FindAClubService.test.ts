@@ -258,6 +258,43 @@ describe('normaliseTiClub', () => {
     expect(result?.meetingTime).toBe('7:00 pm')
   })
 
+  // #2153 — TI's sentinel for an ungeocoded club. Shape observed in
+  // raw-fac/2026-10-18/district_49.json (Pathways Central, Honolulu):
+  // the address is present but Coordinates is exactly { 0, 0 }.
+  it('treats the (0, 0) ungeocoded sentinel as no coordinates (#2153)', () => {
+    const out = normaliseTiClub({
+      Identification: {
+        Id: {
+          Value: '07787643',
+          DisplayFriendlyFormat: '7787643',
+          Name: 'Pathways Central',
+        },
+        Name: 'Pathways Central',
+      },
+      Address: {
+        City: 'Honolulu ',
+        PrimaryRegion: { Value: 'HI' },
+        Coordinates: { Longitude: 0, Latitude: 0 },
+      },
+      CountryName: 'United States',
+    } as unknown as Parameters<typeof normaliseTiClub>[0])
+    expect(out).not.toBeNull()
+    expect(out!.coordinates).toBeUndefined()
+    // #2157 scrubs and trims City at ingest, so the raw trailing space goes.
+    expect(out!.address?.city).toBe('Honolulu')
+  })
+
+  it('drops out-of-range coordinates (#2153)', () => {
+    const out = normaliseTiClub({
+      ...realClub,
+      Address: {
+        ...realClub.Address,
+        Coordinates: { Longitude: -105.01863, Latitude: 391.2 },
+      },
+    })
+    expect(out!.coordinates).toBeUndefined()
+  })
+
   it('returns null when the club is missing its primary key', () => {
     expect(
       normaliseTiClub({

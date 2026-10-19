@@ -537,6 +537,15 @@ export {
   findClubEntry,
 } from './naming/clubId.js'
 
+// Club location validity (#2153) — the one rule for whether a lat/lng pair
+// is a real location. FAC's ungeocoded (0, 0) sentinel, non-finite and
+// out-of-range values all count as "no coordinates".
+export {
+  parseCoordinates,
+  hasCoordinates,
+  type LatLng,
+} from './geo/coordinates.js'
+
 // Counted education award (#1592, #1599) — Pathways L1–L5 + DTM. The collector
 // counts distinct members per club by it; the frontend counts awards by it.
 export { isCountedEducationAward } from './education/countedEducationAward.js'

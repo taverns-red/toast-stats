@@ -627,6 +627,23 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(result.allClubs[0]?.charterDate).toBe('1987-02-15')
     })
 
+    // #2153 — FAC returns exactly (0, 0) for a club it has not geocoded.
+    // A rebuild over a district file written before the source fix must not
+    // put it on the district map at null island.
+    it('drops the (0, 0) ungeocoded sentinel instead of forwarding it (#2153)', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const club = {
+        ...createMockClub({ clubId: '7787643' }),
+        coordinates: { lat: 0, lng: 0 },
+      }
+      const snapshot = createMockSnapshot('2026-10-18', [club])
+
+      const out = module.generateClubHealthData([snapshot]).allClubs[0]
+
+      expect(out).toBeDefined()
+      expect(out).not.toHaveProperty('coordinates')
+    })
+
     it('forwards coordinates / address / meeting fields, never contact fields (#2026)', () => {
       const module = new ClubHealthAnalyticsModule()
       const enriched = {

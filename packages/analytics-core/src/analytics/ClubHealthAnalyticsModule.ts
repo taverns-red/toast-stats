@@ -19,7 +19,10 @@
 
 import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type { ClubTrend, ClubHealthData } from '../types.js'
-import { normalizeClubId } from '@taverns-red/shared-contracts'
+import {
+  normalizeClubId,
+  parseCoordinates,
+} from '@taverns-red/shared-contracts'
 import {
   getCurrentProgramMonth,
   getMonthName,
@@ -201,6 +204,8 @@ export class ClubHealthAnalyticsModule {
       const preloaded =
         preloadedTrends?.[club.clubId] ??
         preloadedTrends?.[normalizeClubId(club.clubId)]
+      // #2153 — never forward FAC's (0, 0) ungeocoded sentinel.
+      const coordinates = parseCoordinates(club.coordinates)
 
       clubMap.set(club.clubId, {
         clubId: club.clubId,
@@ -233,7 +238,7 @@ export class ClubHealthAnalyticsModule {
         // only when FAC matched the club. Never the contact email/phone
         // (#2026): this JSON is promoted and served publicly.
         ...(club.charterDate && { charterDate: club.charterDate }),
-        ...(club.coordinates && { coordinates: club.coordinates }),
+        ...(coordinates && { coordinates }),
         ...(club.address && { address: club.address }),
         ...(club.website && { website: club.website }),
         ...(club.facebookLink && { facebookLink: club.facebookLink }),

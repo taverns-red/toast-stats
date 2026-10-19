@@ -1,4 +1,4 @@
-import { clubIdsMatch } from '@taverns-red/shared-contracts'
+import { clubIdsMatch, hasCoordinates } from '@taverns-red/shared-contracts'
 
 /**
  * #1843 — geometry for the club page's static mini-map ("locator").
@@ -41,9 +41,7 @@ export interface ClubLocator {
 const located = (
   c: LocatorSource
 ): c is LocatorSource & { coordinates: { lat: number; lng: number } } =>
-  !!c.coordinates &&
-  Number.isFinite(c.coordinates.lat) &&
-  Number.isFinite(c.coordinates.lng)
+  hasCoordinates(c.coordinates) // #2153 — shared rule, rejects (0, 0)
 
 /**
  * #1943 — every located club, projected into the box with no focus. The

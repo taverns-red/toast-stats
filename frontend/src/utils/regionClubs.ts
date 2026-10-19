@@ -14,6 +14,7 @@
  */
 import {
   clubIdsMatch,
+  parseCoordinates,
   type ClubsByRegionClub,
   type ClubsByRegionShard,
 } from '@taverns-red/shared-contracts'
@@ -53,8 +54,10 @@ function toRegionClub(c: ClubsByRegionClub, date: string): RegionClub {
   }
   if (c.status !== null) club.clubStatus = c.status
   if (c.csp !== null) club.cspSubmitted = c.csp
-  if (c.lat !== null && c.lng !== null)
-    club.coordinates = { lat: c.lat, lng: c.lng }
+  // #2153 — shards written before the FAC fix carry (0, 0) for ungeocoded
+  // clubs; the shared rule keeps them off the map and in the unmapped count.
+  const at = parseCoordinates({ lat: c.lat, lng: c.lng })
+  if (at) club.coordinates = at
   if (c.city !== null) club.address = { city: c.city }
   return club
 }

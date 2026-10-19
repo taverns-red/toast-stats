@@ -22,10 +22,11 @@
  */
 
 import { z } from 'zod'
-import type {
-  ScrapedRecordCoordinates,
-  ScrapedRecordAddress,
-  MeetingScheduleEntry,
+import {
+  parseCoordinates,
+  type ScrapedRecordCoordinates,
+  type ScrapedRecordAddress,
+  type MeetingScheduleEntry,
 } from '@taverns-red/shared-contracts'
 import {
   parseMeetingSchedule,
@@ -277,14 +278,14 @@ export function normaliseTiClub(club: TiClub): ClubEnrichment | null {
   const charterDate = parseNetDate(club.CharterDate)
   if (charterDate) result.charterDate = charterDate
 
-  const coords = club.Address?.Coordinates
-  if (
-    coords &&
-    typeof coords.Latitude === 'number' &&
-    typeof coords.Longitude === 'number'
-  ) {
-    result.coordinates = { lat: coords.Latitude, lng: coords.Longitude }
-  }
+  // #2153 — TI sends exactly (0, 0) for a club it has not geocoded; the
+  // shared rule turns that (and any non-finite / out-of-range pair) into
+  // "no coordinates", so the club is counted unmapped downstream.
+  const coords = parseCoordinates({
+    lat: club.Address?.Coordinates?.Latitude,
+    lng: club.Address?.Coordinates?.Longitude,
+  })
+  if (coords) result.coordinates = coords
 
   const address: ClubEnrichment['address'] = {}
   // #2069 — Street is free text: a club may type its meeting link there.
