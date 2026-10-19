@@ -687,6 +687,7 @@ describe('ClubHealthAnalyticsModule', () => {
 
     // #2160 — the club page and the map's "N online clubs" chip read it.
     it('forwards meetsOnline for a fully online club, without a point', () => {
+      const module = new ClubHealthAnalyticsModule()
       const online = {
         ...createMockClub({ clubId: '28675595' }),
         address: { city: 'Windsor', region: 'CT', country: 'United States' },
