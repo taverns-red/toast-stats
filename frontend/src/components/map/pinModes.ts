@@ -89,6 +89,11 @@ export type PinShape =
   | 'na'
   | 'diamond'
   | 'dot'
+  // Distinguished rungs (#2173): one more star per rung.
+  | 'star1'
+  | 'star2'
+  | 'star3'
+  | 'star4'
 
 export const PIN_SHAPES: readonly PinShape[] = [
   'circle',
@@ -107,6 +112,10 @@ export const PIN_SHAPES: readonly PinShape[] = [
   'na',
   'diamond',
   'dot',
+  'star1',
+  'star2',
+  'star3',
+  'star4',
 ]
 
 export const HEALTH_FILLS = {
@@ -230,26 +239,26 @@ const STATUS_ALIAS: Record<string, string> = {
   'intervention-required': 'intervention',
 }
 
-/** Ladder order, top first; fill level rises with the tier (spec §3.2). */
+/** Ladder order, top first; one more star per rung (spec §3.2, #2173). */
 const TIER_CATS: PinCategory[] = [
   {
     key: 'Smedley',
     label: 'Smedley',
     fill: TIER_FILLS.Smedley,
-    shape: 'fill100',
+    shape: 'star4',
   },
   {
     key: 'President',
     label: "President's",
     fill: TIER_FILLS.President,
-    shape: 'fill75',
+    shape: 'star3',
   },
-  { key: 'Select', label: 'Select', fill: TIER_FILLS.Select, shape: 'fill50' },
+  { key: 'Select', label: 'Select', fill: TIER_FILLS.Select, shape: 'star2' },
   {
     key: 'Distinguished',
     label: 'Distinguished',
     fill: TIER_FILLS.Distinguished,
-    shape: 'fill25',
+    shape: 'star1',
   },
   {
     key: 'NotDistinguished',

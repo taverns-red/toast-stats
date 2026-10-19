@@ -5,8 +5,8 @@ import { test, expect, type Page } from './fixtures/test'
  *
  *  - the map region and its canvas render, inside the viewport, with no
  *    sideways page scroll;
- *  - pins drew: a screenshot of the map holds single pins in the health
- *    fills (found in the page's own 2D canvas, so no test-only hooks in
+ *  - pins drew: a screenshot of the map holds single teardrop pins in the
+ *    health fills (found in the page's own 2D canvas, so no test-only hooks in
  *    the app);
  *  - no CSP, worker or tile error on the deployed headers (Lesson 122: only
  *    the preview proves the CSP);
@@ -25,9 +25,13 @@ const HEALTH_FILLS = [
   [0xc9, 0x3d, 0x3d],
 ]
 
-/* Find single pins in a screenshot: horizontal runs of a health fill 5–14
- * px long (a pin is 14 px; clusters are 32 px and up) whose vertical run is
- * short too. Returns their centres in CSS px, clear of the bottom strip. */
+/* Find single pins in a screenshot (#2173): connected blobs of a health
+ * fill shaped like a teardrop pin — about 15 px wide and taller than wide
+ * (head plus tip). A cluster's attention pip (an 11 px disc on its rim) is
+ * round and a cluster is 32 px and up, so neither counts; tapping the pip
+ * zooms the cluster instead of opening a club. Returns the centre of each
+ * pin's head, where a user taps — the tip sits on the coordinate, the head
+ * above it — in CSS px, clear of the bottom strip. */
 async function findPins(
   page: Page,
   png: Buffer,
@@ -47,39 +51,54 @@ async function findPins(
       const { data, width, height } = ctx.getImageData(0, 0, c.width, c.height)
       // Screenshots are in device pixels (WebKit's profile is 2x).
       const k = width / cssWidth
-      const hit = (x: number, y: number) => {
-        const i = (y * width + x) * 4
-        return fills.some(
+      const hit = (i: number) =>
+        fills.some(
           ([r, g, b]) =>
-            Math.abs(data[i]! - r!) < 12 &&
-            Math.abs(data[i + 1]! - g!) < 12 &&
-            Math.abs(data[i + 2]! - b!) < 12
+            Math.abs(data[i * 4]! - r!) < 12 &&
+            Math.abs(data[i * 4 + 1]! - g!) < 12 &&
+            Math.abs(data[i * 4 + 2]! - b!) < 12
         )
-      }
+      const seen = new Uint8Array(width * height)
       const found: Array<{ x: number; y: number }> = []
-      for (let y = 20 * k; y < height - skipBottom * k; y += 2) {
-        let x = 20 * k
-        while (x < width - 20 * k) {
-          if (!hit(x, y)) {
-            x++
-            continue
+      const x0 = Math.round(20 * k)
+      const x1 = width - x0
+      const y0 = Math.round(20 * k)
+      const y1 = height - Math.round(skipBottom * k)
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          const start = y * width + x
+          if (seen[start] || !hit(start)) continue
+          // Flood-fill the blob; the glyph inside a head is enclosed by it.
+          let minX = x
+          let maxX = x
+          let minY = y
+          let maxY = y
+          const stack = [start]
+          seen[start] = 1
+          while (stack.length) {
+            const i = stack.pop()!
+            const px = i % width
+            const py = (i - px) / width
+            if (px < minX) minX = px
+            if (px > maxX) maxX = px
+            if (py < minY) minY = py
+            if (py > maxY) maxY = py
+            for (const n of [i - 1, i + 1, i - width, i + width]) {
+              if (n < 0 || n >= width * height || seen[n]) continue
+              if (Math.abs((n % width) - px) > 1) continue
+              if (!hit(n)) continue
+              seen[n] = 1
+              stack.push(n)
+            }
           }
-          let end = x
-          while (end < width && hit(end, y)) end++
-          const run = end - x
-          const cx = Math.round((x + end) / 2)
-          if (run >= 5 * k && run <= 14 * k) {
-            let top = y
-            let bottom = y
-            while (top > 0 && hit(cx, top - 1)) top--
-            while (bottom < height - 1 && hit(cx, bottom + 1)) bottom++
-            if (bottom - top <= 14 * k)
-              found.push({
-                x: Math.round(cx / k),
-                y: Math.round((top + bottom) / 2 / k),
-              })
-          }
-          x = end
+          const w = (maxX - minX + 1) / k
+          const h = (maxY - minY + 1) / k
+          if (w < 10 || w > 20 || h < 16 || h > 30 || h < 1.3 * w) continue
+          if (maxY >= y1 || minX <= x0 || maxX >= x1 - 1) continue
+          found.push({
+            x: Math.round((minX + maxX) / 2 / k),
+            y: Math.round(minY / k + w / 2),
+          })
         }
       }
       return found

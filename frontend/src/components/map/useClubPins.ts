@@ -13,7 +13,7 @@
  * fetched as soon as the hook mounts — long before MapLibre is up — and the
  * pins are added once it has landed. This hook is only its React shell.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { ModeModel } from './pinModes'
 import type { MapTheme, PinFeatureCollection } from './pinFeatures'
@@ -77,4 +77,10 @@ export function useClubPins(map: MapLibreMap | null, opts: ClubPinsOptions) {
     if (!map || !rt) return
     return rt.bindPinEvents(map, latest)
   }, [map, rt])
+
+  // "Reset map view" (#2173): back to the framing the last fit chose.
+  const resetView = useCallback(() => {
+    if (map && rt) rt.resetView(map, state.current)
+  }, [map, rt])
+  return { resetView }
 }

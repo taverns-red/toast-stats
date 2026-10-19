@@ -199,6 +199,15 @@ describe('RegionMapPage', () => {
     expect(within(legend).getByText('District 61')).toBeInTheDocument()
   })
 
+  it('stacks zoom and "Reset map view" over the map (#2173)', async () => {
+    fetchShard.mockResolvedValue(shard05)
+    renderAt('/region/05/map')
+    const stack = await screen.findByRole('group', { name: 'Map view' })
+    expect(
+      within(stack).getByRole('button', { name: 'Reset map view' })
+    ).toBeInTheDocument()
+  })
+
   it('is list-first on a phone, with the map one tap away in the URL', async () => {
     mockIsMobile = true
     fetchShard.mockResolvedValue(shard05)

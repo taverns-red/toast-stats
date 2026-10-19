@@ -135,22 +135,23 @@ describe('health mode', () => {
 })
 
 describe('tier mode', () => {
-  it('is an ordinal fill-level ramp with light-blue Distinguished', () => {
+  // #2173: the rungs carry stars (one more per rung), not fill level.
+  it('is an ordinal star ramp with light-blue Distinguished', () => {
     const model = buildModeModel('tier', [])
     const cats = Object.fromEntries(model.categories.map(c => [c.key, c]))
     expect(cats['Distinguished']).toMatchObject({
       fill: '#7FB8D9',
-      shape: 'fill25',
+      shape: 'star1',
     })
     expect(cats['NotDistinguished']).toMatchObject({ shape: 'fill0' })
-    expect(cats['Select']).toMatchObject({ fill: '#2C6E90', shape: 'fill50' })
+    expect(cats['Select']).toMatchObject({ fill: '#2C6E90', shape: 'star2' })
     expect(cats['President']).toMatchObject({
       fill: '#004165',
-      shape: 'fill75',
+      shape: 'star3',
     })
     expect(cats['Smedley']).toMatchObject({
       fill: '#7B1828',
-      shape: 'fill100',
+      shape: 'star4',
     })
   })
 

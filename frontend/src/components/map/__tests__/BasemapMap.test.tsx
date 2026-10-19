@@ -21,6 +21,14 @@ const hoisted = vi.hoisted(() => ({
   maps: [] as Recorded[],
   addProtocol: vi.fn(),
   setWorkerUrl: vi.fn(),
+  tile: vi.fn(async () => ({ data: new ArrayBuffer(1) })),
+}))
+
+// The pmtiles reader (pmtiles 4.x `Protocol`): `tile(params, abort)`.
+vi.mock('pmtiles', () => ({
+  Protocol: class {
+    tile = hoisted.tile
+  },
 }))
 
 vi.mock('maplibre-gl', () => {
@@ -150,6 +158,24 @@ describe('BasemapMap', () => {
     expect(hoisted.setWorkerUrl).toHaveBeenCalledWith(
       '/assets/maplibre-gl-worker-hash.mjs'
     )
+  })
+
+  it('serves pmtiles:// requests through the PMTiles reader (#2173)', async () => {
+    vi.resetModules()
+    const { default: Fresh } = await import('../BasemapMap')
+    hoisted.addProtocol.mockClear()
+    hoisted.tile.mockClear()
+    render(<Fresh ariaLabel="A" pmtilesUrl={URL} />)
+    const handler = hoisted.addProtocol.mock.calls[0]![1] as (
+      params: unknown,
+      abort: AbortController
+    ) => Promise<unknown>
+    const params = { url: `pmtiles://${URL}/0/0/0`, type: 'arrayBuffer' }
+    const abort = new AbortController()
+    await expect(handler(params, abort)).resolves.toEqual({
+      data: new ArrayBuffer(1),
+    })
+    expect(hoisted.tile).toHaveBeenCalledWith(params, abort)
   })
 
   it('starts in the dark style when the app is dark', () => {

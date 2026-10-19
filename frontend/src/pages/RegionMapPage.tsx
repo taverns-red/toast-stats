@@ -11,6 +11,7 @@ import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { RollupPageShell } from '../components/rollups/RollupPageShell'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 import { useClubPins } from '../components/map/useClubPins'
+import MapViewControls from '../components/map/MapViewControls'
 import {
   CLUSTER_LAYER_ID,
   PIN_LAYER_ID,
@@ -221,7 +222,7 @@ const RegionMapPage: React.FC = () => {
     [allClubs, selectedIds]
   )
   const selectedClubIds = useMemo(() => selected.map(c => c.clubId), [selected])
-  useClubPins(showMap ? map : null, {
+  const { resetView } = useClubPins(showMap ? map : null, {
     data: pins,
     model,
     theme,
@@ -434,6 +435,13 @@ const RegionMapPage: React.FC = () => {
       <React.Suspense fallback={null}>
         <MapPreview clubs={searched} map={map} />
       </React.Suspense>
+      <MapViewControls
+        map={map}
+        onReset={() => {
+          resetView()
+          setSelectedIds([])
+        }}
+      />
       {map && (
         <React.Suspense fallback={null}>
           <PinKeys

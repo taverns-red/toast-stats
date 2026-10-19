@@ -27,6 +27,7 @@ import {
   type MapTheme,
   type PinFeatureCollection,
 } from './pinFeatures'
+import { PIN_TIP_PAD } from './pinGlyphs'
 
 // The data and ids live in `pinFeatures` (#1808); re-exported, so this
 // stays the pin layer's one module for its callers.
@@ -167,8 +168,10 @@ export function pinSourceSpec(
     type: 'geojson',
     data: data as GeoJSONSourceSpecification['data'],
     cluster: true,
-    // Pins cluster only when their 44 px targets would overlap (spec §8).
-    clusterRadius: 44,
+    // Pins group only where they would overlap (#2173, spec §8): a 20 px
+    // radius. Grouping runs through z13 so dense cores (Singapore CBD,
+    // central Montreal) group instead of stacking; every pin single from z14.
+    clusterRadius: 20,
     clusterMaxZoom: 13,
     clusterMinPoints: 2,
     clusterProperties: clusterProperties(model),
@@ -181,6 +184,13 @@ const overlap = {
   'icon-allow-overlap': true,
   'icon-ignore-placement': false,
 } as const
+
+// A teardrop's tip sits on the coordinate (#2173): bottom-anchored, nudged
+// down by the stroke below the tip. Clusters stay centred.
+const tip = (i: 0 | 1) => ({
+  'icon-anchor': 'bottom' as const,
+  'icon-offset': [0, PIN_TIP_PAD[i]] as [number, number],
+})
 
 export function clubPinLayers(
   model: ModeModel,
@@ -200,14 +210,14 @@ export function clubPinLayers(
       type: 'symbol',
       source: PIN_SOURCE_ID,
       filter: ['!', ['has', 'point_count']],
-      layout: { 'icon-image': pinIcon(theme, false), ...overlap },
+      layout: { 'icon-image': pinIcon(theme, false), ...tip(0), ...overlap },
     },
     {
       id: SELECTED_LAYER_ID,
       type: 'symbol',
       source: PIN_SOURCE_ID,
       filter: selectedFilter(selectedIds),
-      layout: { 'icon-image': pinIcon(theme, true), ...overlap },
+      layout: { 'icon-image': pinIcon(theme, true), ...tip(1), ...overlap },
     },
   ]
 }

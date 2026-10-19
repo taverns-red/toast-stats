@@ -136,3 +136,16 @@ describe('the club route does not reach a map library (#1843)', () => {
     expect(staticSpecifiers(src)).toContain('../components/clubs/ClubMiniMap')
   })
 })
+
+// #2173 — the PMTiles reader is not a fixed byte of the map route (ADR-016
+// D2 budget): BasemapMap loads it with a dynamic import, in parallel with
+// the map's start-up, so it is its own chunk.
+describe('the map route reaches pmtiles only lazily (#2173)', () => {
+  it.each([
+    'components/map/BasemapMap.tsx',
+    'pages/DistrictMapPage.tsx',
+    'pages/RegionMapPage.tsx',
+  ])('%s', file => {
+    expect(staticImportersOf(resolve(SRC, file), 'pmtiles')).toEqual([])
+  })
+})

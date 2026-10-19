@@ -63,4 +63,41 @@ describe('useClubPins', () => {
     expect(map.sources.has(PIN_SOURCE_ID)).toBe(true)
     expect(map.layers.size).toBe(PIN_LAYER_IDS.length)
   })
+
+  it('resetView refits to the same framing the first fit used (#2173)', async () => {
+    const map = fakeMap()
+    const data: ClubPinsOptions['data'] = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [-73.6, 45.5] },
+          properties: { id: '1', k: 0, s: 'circle', f: '#2A8F6E', c: '', d: 0 },
+        },
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [-73.5, 45.6] },
+          properties: { id: '2', k: 0, s: 'circle', f: '#2A8F6E', c: '', d: 0 },
+        },
+      ],
+    } as ClubPinsOptions['data']
+    const { result } = renderHook(() =>
+      useClubPins(map as unknown as MapLibreMap, { ...opts, data })
+    )
+    await vi.waitFor(() => expect(map.fitBounds).toHaveBeenCalledTimes(1))
+    const [bounds, first] = map.fitBounds.mock.calls[0]!
+    result.current.resetView()
+    expect(map.fitBounds).toHaveBeenCalledTimes(2)
+    const [again, options] = map.fitBounds.mock.calls[1]!
+    expect(again).toEqual(bounds)
+    expect(options).toMatchObject({
+      padding: first.padding,
+      maxZoom: first.maxZoom,
+    })
+  })
+
+  it('resetView before the first fit does nothing', () => {
+    const { result } = renderHook(() => useClubPins(null, opts))
+    expect(() => result.current.resetView()).not.toThrow()
+  })
 })

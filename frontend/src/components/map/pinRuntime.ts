@@ -31,6 +31,7 @@ import {
   type PinFeatureCollection,
 } from './pinLayer'
 import { drawIcon } from './pinImages'
+import { PIN_HEAD_LIFT } from './pinGlyphs'
 
 /** The hook's options, as the runtime reads them (always the latest). */
 export interface PinRuntimeOptions {
@@ -46,7 +47,12 @@ export interface PinRuntimeOptions {
 export interface PinState {
   built: { mode: ModeModel; theme: MapTheme } | null
   fitted: string | null
+  /** The framing the last fit chose: "Reset map view" returns to it. */
+  home?: LngLatBoundsLike | null
 }
+
+/** The fit the initial view and "Reset map view" share (#2173). */
+export const PIN_FIT = { padding: 48, maxZoom: 12 } as const
 
 type Latest = { readonly current: PinRuntimeOptions }
 
@@ -115,8 +121,9 @@ export function attachPins(
     if (state.fitted !== o.fitKey) {
       const bounds = boundsOf(o.data)
       if (bounds) {
-        map.fitBounds(bounds, { padding: 48, maxZoom: 12, animate: false })
+        map.fitBounds(bounds, { ...PIN_FIT, animate: false })
         state.fitted = o.fitKey
+        state.home = bounds
       }
     }
   }
@@ -135,6 +142,12 @@ export function attachPins(
     map.setMissingStyleImageResolver(null)
     map.off('styledata', onStyle)
   }
+}
+
+/** Back to the framing the last fit chose (#2173): the same `fitBounds`. */
+export function resetView(map: MapLibreMap, state: PinState): void {
+  if (!state.home) return
+  map.fitBounds(state.home, { ...PIN_FIT, animate: !reducedMotion() })
 }
 
 /** Take the pins off the map, so its next user starts clean. */
@@ -172,7 +185,9 @@ export function bindPinEvents(map: MapLibreMap, latest: Latest): () => void {
       const p = map.project(
         (f.geometry as { coordinates: [number, number] }).coordinates
       )
-      return (p.x - e.point.x) ** 2 + (p.y - e.point.y) ** 2
+      // A pin's head sits above its tip (#2173); a cluster is centred.
+      const lift = f.properties['cluster'] ? 0 : PIN_HEAD_LIFT
+      return (p.x - e.point.x) ** 2 + (p.y - lift - e.point.y) ** 2
     }
     const nearest = found.reduce((a, b) => (dist(b) < dist(a) ? b : a))
     const at = (nearest.geometry as { coordinates: [number, number] })
