@@ -91,8 +91,9 @@ export function mergeFacIntoSnapshot(
   }
 
   // #2160 — the one club-location decision, made over the whole district
-  // (the outlier test judges each point against its peers): fully online
-  // clubs and geocodes far from their district/country peers get no point.
+  // (the outlier test judges each point against its peers): geocodes far
+  // from their district/country peers get no point. Fully online clubs are
+  // flagged `meetsOnline` and keep theirs until the frontend hides them.
   const locations = resolveClubLocations(
     [...facByClubId.values()].filter(
       (c): c is ClubEnrichment => c !== null && c !== undefined

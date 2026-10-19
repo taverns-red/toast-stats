@@ -547,8 +547,8 @@ export {
 } from './geo/coordinates.js'
 
 // Club map point (#2160) — the one ingest decision built on parseCoordinates:
-// fully online clubs and geocodes far from their district/country peers are
-// unmapped.
+// geocodes far from their district/country peers are unmapped; fully online
+// clubs are flagged (meetsOnlyOnline) and keep their point for now.
 export {
   meetsOnlyOnline,
   resolveClubLocations,

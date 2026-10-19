@@ -251,7 +251,7 @@ export class ClubHealthAnalyticsModule {
         ...(typeof club.isProspective === 'boolean' && {
           isProspective: club.isProspective,
         }),
-        // #2160 — fully online: no point; the page shows "Meets online".
+        // #2160 — fully online: the page shows "Meets online", the map no pin.
         ...(club.meetsOnline === true && { meetsOnline: true as const }),
         // #1789 — read by the meeting-time heatmap and map pin modes.
         ...(club.location && { location: club.location }),

@@ -193,10 +193,11 @@ export const ClubStatisticsFileSchema = z.object({
   meetingTime: z.string().optional(),
   allowsVirtualAttendance: z.boolean().optional(),
   /**
-   * True when the club meets only online (#2160, `meetsOnlyOnline`). Such a
-   * club has no `coordinates`: it is listed and counted as unmapped, and its
-   * page shows "Meets online" with meetingDay / meetingTime instead of a map.
-   * Absent for every other club (hybrid clubs keep their pin).
+   * True when the club meets only online (#2160, `meetsOnlyOnline`). Its
+   * `coordinates` are kept for now (split rollout, 2026-10-19): the frontend
+   * hides its pin, counts it in an "N online clubs" chip and shows "Meets
+   * online" with meetingDay / meetingTime instead of a map. Absent for every
+   * other club, hybrid ones included.
    */
   meetsOnline: z.literal(true).optional(),
   isProspective: z.boolean().optional(),

@@ -1,14 +1,17 @@
 /**
  * The one ingest decision for "does this club get a map point?" (#2160).
  *
- * It extends {@link parseCoordinates} (#2153) with two rules, applied in
- * this order:
+ * It extends {@link parseCoordinates} (#2153) with one rule, and names one
+ * flag the frontend reads:
  *
- * 1. **Fully online clubs get no point.** A club that meets only online has
- *    no meeting place, so a pin (FAC's geocode of its mailing address) would
- *    mislead. "Fully online" is FAC's `AllowsVirtualAttendance === true`
- *    AND every meeting in the parsed schedule (`meetingSchedule[].mode`,
- *    #1789) is `online`. A hybrid club keeps its pin. FAC has no structured
+ * 1. **Fully online clubs are flagged, not unmapped (yet).** A club that
+ *    meets only online has no meeting place. Ron split the rollout
+ *    (2026-10-19): the collector writes `meetsOnline: true`
+ *    ({@link meetsOnlyOnline}) and keeps the point; the frontend hides
+ *    online pins once its "Meets online" line and online-clubs chip ship.
+ *    "Fully online" is FAC's `AllowsVirtualAttendance === true` AND every
+ *    meeting in the parsed schedule (`meetingSchedule[].mode`, #1789) is
+ *    `online`. A hybrid club is not flagged. FAC has no structured
  *    meeting-format field: AllowsVirtualAttendance is true for hybrid and
  *    online clubs alike (and for 4,415 clubs whose text says in person), so
  *    it is a necessary condition, never a sufficient one. Only when no
@@ -53,8 +56,7 @@ export interface ClubLocationInput {
   meetingSchedule?: ReadonlyArray<{ mode?: MeetingMode }>
 }
 
-export type UnmappedReason =
-  'no-coordinates' | 'meets-online' | 'geocode-outlier'
+export type UnmappedReason = 'no-coordinates' | 'geocode-outlier'
 
 export type ClubLocation =
   | { mapped: true; coordinates: LatLng }
@@ -64,7 +66,7 @@ export type ClubLocation =
 const ONLINE_PLACE =
   /^(?:online|on-line|virtual|virtuel|en ligne|zoom|remote)(?:\s+(?:club|meeting|only))?$/i
 
-/** True when the club meets only online (rule 1). */
+/** True when the club meets only online (rule 1: a flag, not an unmap). */
 export function meetsOnlyOnline(club: ClubLocationInput): boolean {
   if (club.allowsVirtualAttendance !== true) return false
   const modes = (club.meetingSchedule ?? [])
@@ -135,10 +137,7 @@ export function resolveClubLocations(
   for (const club of clubs) {
     const point = parseCoordinates(club.coordinates)
     if (!point) {
-      result.set(club.clubId, {
-        mapped: false,
-        reason: meetsOnlyOnline(club) ? 'meets-online' : 'no-coordinates',
-      })
+      result.set(club.clubId, { mapped: false, reason: 'no-coordinates' })
       continue
     }
     points.set(club.clubId, point)
@@ -157,9 +156,7 @@ export function resolveClubLocations(
   for (const club of clubs) {
     const point = points.get(club.clubId)
     if (!point) continue
-    if (meetsOnlyOnline(club)) {
-      result.set(club.clubId, { mapped: false, reason: 'meets-online' })
-    } else if (outliers.has(club.clubId)) {
+    if (outliers.has(club.clubId)) {
       result.set(club.clubId, { mapped: false, reason: 'geocode-outlier' })
     } else {
       result.set(club.clubId, { mapped: true, coordinates: point })

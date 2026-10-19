@@ -115,7 +115,7 @@ export interface ClubStatistics {
   meetingDay?: string
   meetingTime?: string
   allowsVirtualAttendance?: boolean
-  /** Meets only online (#2160): no coordinates, counted as unmapped. */
+  /** Meets only online (#2160); the frontend hides the pin. */
   meetsOnline?: true
   isProspective?: boolean
   /** FAC Location, scrubbed by the collector (#1789). */
