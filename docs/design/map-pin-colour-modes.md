@@ -41,23 +41,34 @@ Distinguished level stays **one tap away**: it is the second item in the mode pi
 
 ### 3.1 Pin anatomy
 
-- **Visual size:** 14 px at district zoom and 12 px at world zoom. A selected pin is 20 px.
-- **Outline:** 1.5 px in the theme outline colour (§6), so every pin clears 3:1 against land and water (WCAG 1.4.11) whatever its fill.
-- **Hit area:** 44 × 44 px, using a 22 px `queryRenderedFeatures` box around the tap point. The visual size never sets the hit area.
-- **Selected pin:** a 20 px version of the same shape with a double ring (outline colour, then halo colour). Amber is never used for selection, because amber means "vulnerable".
-- **Rendering:** MapLibre `symbol` layers with **SDF sprites**, one per shape. `icon-color` is the category fill and `icon-halo-color` is the outline. This is one clustered GeoJSON source, not DOM markers, per #1784's performance criterion.
+Teardrop pins (#2173, which replaced the shape-per-status markers):
 
-### 3.2 Shape families (the non-colour channel)
+- **Silhouette:** a location pin with a 17 px head and a tip 15 px below it (a 19 × 26 px icon). The tip sits on the club's coordinate: the layers use `icon-anchor: bottom`, with an `icon-offset` equal to the stroke below the tip. Clusters stay centred.
+- **Body:** the category fill with a 1.5 px outline in the theme outline colour (§6), so every pin clears 3:1 against land and water (WCAG 1.4.11) whatever its fill. A provisional tier is a dashed outline.
+- **Glyph:** a small mark inside the head, the non-colour channel (§3.2). It is white, or ink on a pale fill (`labelColourOn`, the same rule as cluster counts), so it keeps its contrast.
+- **Hit area:** 44 × 44 px, using a 22 px `queryRenderedFeatures` box around the tap point. The nearest-pin test and the keyboard focus ring aim at the head (`PIN_HEAD_LIFT` above the tip). The visual size never sets the hit area.
+- **Selected pin:** the same pin 1.3× larger, with a double ring (outline colour, then halo colour). Amber is never used for selection, because amber means "vulnerable".
+- **Rendering:** MapLibre `symbol` layers whose icons are drawn on a canvas from their id (`pinImages.ts`), because the basemap has no glyphs or sprites (ADR-016). The geometry and glyph table live in `pinGlyphs.ts`, which the legend swatch (`PinSwatch.tsx`) also draws, so the map and the legend cannot drift. This is one clustered GeoJSON source, not DOM markers, per #1784's performance criterion.
 
-| Family            | Used by                                                        | Glyphs                                                                                                                                                                             |
-| ----------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status shapes** | health, operational status, renewals, CSP, officer list, coach | ● good / done · ▲ warning / partial · ■ needs action · ◆ ineligible                                                                                                                |
-| **Fill level**    | tier, size band, DCP goals, charter age, awards per member     | ○ ◔ ◑ ◕ ●: 0 %, 25 %, 50 %, 75 % and 100 % of the pin filled, lowest bin to highest                                                                                                |
-| **Direction**     | net growth                                                     | ▼ full · ▼ half · ● · ▲ half · ▲ full                                                                                                                                              |
-| **Code label**    | division, area, district, region, meeting day                  | Pins become rounded badges carrying the code (`B`, `B12`, `61`, `R8`, `Tu`) at z ≥ 11. Below that zoom, territory labels carry the identity (§7)                                   |
-| **Shared states** | every mode                                                     | ◌ **Not available for this date**: a 70 % size hollow ring in `--rt-ink-3` · ⊘ **Suspended**: grey ring with a slash, an override in every mode except `status` (same as the grid) |
+### 3.2 Glyphs (the non-colour channel)
 
-The status shapes reuse the meaning of the existing ✓ ⚠ ✗ pill glyphs: ● matches ✓, ▲ matches ⚠ and ■ matches ✗. The legend shows the pin shape **and** the text glyph, so the map and the Clubs table read alike.
+Each `PinShape` names one glyph and body. Every category of every mode maps to one, and no two shapes share a glyph (`pinGlyphs.test.ts`).
+
+| Shape                                        | Glyph                                   | Body                   | Used by                                                                                                                                                                                   |
+| -------------------------------------------- | --------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `circle`                                     | • dot                                   | solid                  | good or done (Thriving, Active, Renewed, Submitted, Coach active, In person only), "No change" in net growth, and every categorical mode (division, area, district, region, day, locator) |
+| `triangle`                                   | ! at risk                               | solid                  | Vulnerable, Low, Below minimum                                                                                                                                                            |
+| `square`                                     | !! needs action                         | solid                  | Intervention required, Ineligible (TI status), Not received, Not submitted                                                                                                                |
+| `diamond`                                    | ◆                                       | solid                  | Ineligible (renewals), Coaching complete                                                                                                                                                  |
+| `dot`                                        | none                                    | small (72 % head)      | No coach, Not stated: the quiet "nothing to flag" state                                                                                                                                   |
+| `star1` … `star4`                            | ★ · ★★ · ★★★ · ★★★★                     | solid                  | Distinguished · Select · President's · Smedley                                                                                                                                            |
+| `fill0` … `fill100`                          | ○ ◔ ◑ ◕ ● gauge                         | solid                  | Not yet Distinguished (○), the size, DCP, age and awards bins, Not open yet, Online attendance possible (◑), Online only (○)                                                              |
+| `up` · `upHalf` · `downHalf` · `down`        | ↑ · ⌃ · ⌄ · ↓                           | solid                  | Net growth: up 3 or more, up 1 to 2, down 1 to 4, down 5 or more                                                                                                                          |
+| `suspended`                                  | ⊘                                       | hollow, solid edge     | Suspended, an override in every mode except `status` (same as the grid)                                                                                                                   |
+| `na`                                         | ?                                       | hollow, dashed         | Not available for this date                                                                                                                                                               |
+| Code label (territory modes and day, z ≥ 11) | the code (`B`, `B12`, `61`, `R8`, `Tu`) | a badge with a pointer | Below that zoom, territory labels carry the identity (§7)                                                                                                                                 |
+
+Hollow pins are filled with the halo colour and stroked, glyph included, in the shared grey. They never use a category fill. The status glyphs keep the meaning of the existing ✓ ⚠ ✗ pill glyphs: • matches ✓, ! matches ⚠ and !! matches ✗. The legend chip shows the same pin and glyph, so the map and the Clubs table read alike.
 
 ### 3.3 Palettes
 
@@ -219,16 +230,17 @@ Eight hues cannot identify 34 areas or 94 districts, so **colour separates and l
 - **What a cluster shows** (#1785 mobile AC (c): dominant category plus count; proportional rings are unreadable at 20 px):
   - **Fill:** the dominant category for categorical and status modes. For ordinal, sequential and diverging modes it is the **median bin**, because "dominant" is arbitrary across ordered bins.
   - **Count:** 14 px bold, in the validator's label colour for that fill.
-  - **Size:** 32, 40 or 48 px for under 10, 10–99 and 100+ clubs. The hit area is always ≥ 44 px.
-  - **Attention pip:** a 12 px pip on the rim at 45°, in the exception category's shape and colour. It appears when at least one member is in the mode's exception category and that category is not already the fill. The exception categories are ■ intervention (health), ■ needs action (compliance), ■/⊘ (status) and ● coach active (coach). It keeps "dominant thriving, but 3 intervention" visible without a ring chart.
+  - **Size:** 24, 28 or 34 px for under 10, 10–99 and 100+ clubs (#2173: about a pin's width, since groups now sit as close as 20 px). The disc has the pin outline and an inner halo ring. The hit area is always ≥ 44 px.
+  - **Attention pip:** an 11 px "!" badge on the rim at 45°, in the exception category's colour (#2173). It appears when at least one member is in the mode's exception category and that category is not already the fill. The exception categories are ■ intervention (health), ■ needs action (compliance), ■/⊘ (status) and ● coach active (coach). It keeps "dominant thriving, but 3 intervention" visible without a ring chart.
   - **`aria-label`:** "Cluster of 142 clubs: 85 intervention required, 47 vulnerable, 10 thriving. Press Enter to zoom in."
 - **Thresholds:**
-  - `clusterRadius` 44 px, so pins cluster only when their 44 px targets would overlap.
-  - `clusterMinPoints` 2 at district level and 3 at region and world level.
-  - `clusterMaxZoom` 13, so individual pins always show from z 14.
+  - `clusterRadius` 20 px, so pins group only where the pins themselves would overlap (#2173; it was 44 px, the tap target).
+  - `clusterMinPoints` 2.
+  - `clusterMaxZoom` 10, so individual pins always show from z 11 (#2173; it was 13). In the densest metros (Singapore D80, central Montreal D61), neighbouring groups touch at z 9–10 and pins stack in the CBD at z 11–12. Each step of zoom separates them.
+- **Reset map view (#2173):** interactive maps stack zoom in, zoom out and ⌂ top-right. ⌂ refits to the framing the last fit chose (the same `fitBounds`: padding 48, maxZoom 12) and closes the club card. The club page's static mini-map has no stack.
   - A district map (≤ ~300 clubs) opens at its fitted bounds, where most pins are already single. The world map opens at z 1–2 with about 30–60 clusters.
 - **Co-located clubs** (same building) never separate by zooming. At max zoom a "3" stack badge opens the sheet listing them. There is no spiderfy.
-- **Cluster legend:** the legend line adds "Clusters show the most common category (median for ranges) · ■ marks clusters containing intervention-required clubs".
+- **Cluster legend:** the legend line adds "Clusters show the most common category (median for ranges); a red “!” badge marks clusters with clubs needing intervention".
 
 ## 9. URL state
 
