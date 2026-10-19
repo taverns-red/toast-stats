@@ -31,7 +31,7 @@ import {
   parseMeetingSchedule,
   scrubFacLocation,
   scrubFacStreet,
-  stripFacLinks,
+  scrubFacText,
 } from './FacMeetingSchedule.js'
 
 const TI_HQ_LATITUDE = 39.6478
@@ -290,10 +290,14 @@ export function normaliseTiClub(club: TiClub): ClubEnrichment | null {
   // #2069 — Street is free text: a club may type its meeting link there.
   const street = scrubFacStreet(club.Address?.Street)
   if (street) address.street = street
-  if (club.Address?.City) address.city = club.Address.City
-  const region = club.Address?.PrimaryRegion?.Value
+  // #2157 — City, region and postal code are free text as well: D02 club
+  // 7893475 typed its meeting passcode into its City.
+  const city = scrubFacText(club.Address?.City)
+  if (city) address.city = city
+  const region = scrubFacText(club.Address?.PrimaryRegion?.Value)
   if (region) address.region = region
-  if (club.Address?.PostalCode) address.postalCode = club.Address.PostalCode
+  const postalCode = scrubFacText(club.Address?.PostalCode)
+  if (postalCode) address.postalCode = postalCode
   if (club.CountryName) address.country = club.CountryName
   if (Object.keys(address).length > 0) result.address = address
 
@@ -302,9 +306,9 @@ export function normaliseTiClub(club: TiClub): ClubEnrichment | null {
   if (club.Website) result.website = club.Website
   if (club.FacebookLink) result.facebookLink = club.FacebookLink
   if (club.TwitterLink) result.twitterLink = club.TwitterLink
-  const meetingDay = stripFacLinks(club.MeetingDay)
+  const meetingDay = scrubFacText(club.MeetingDay)
   if (meetingDay) result.meetingDay = meetingDay
-  const meetingTime = stripFacLinks(club.MeetingTime)
+  const meetingTime = scrubFacText(club.MeetingTime)
   if (meetingTime) result.meetingTime = meetingTime
   if (typeof club.AllowsVirtualAttendance === 'boolean') {
     result.allowsVirtualAttendance = club.AllowsVirtualAttendance

@@ -3,9 +3,9 @@
  *
  * The daily reports (`snapshots/{date}/district_{id}_reports.json`) carry the
  * club's `location` as TI's reports print it: free text the club typed, and
- * some typed an email or a meeting link there. Each place-text value loses
- * every link with `stripLinks`, the same scrubber as the snapshot's place
- * text.
+ * some typed an email, a meeting link or a passcode there. Each place-text
+ * value goes through `scrubPlaceText` (#2157), the same scrubber as the
+ * snapshot's place text: links, emails and meeting credentials out.
  *
  * `location` is REQUIRED by the reports contract, so a value that was only
  * a link becomes `''`: the key is never removed. `repairReportsPlaceText`
@@ -23,7 +23,7 @@ import {
   DistrictReportsSectionsSchema,
   type DistrictReportsDataset,
 } from '../schemas/district-reports.schema.js'
-import { containsLink, stripLinks } from './meeting-links.js'
+import { containsPlaceSecret, scrubPlaceText } from './place-text.js'
 
 /** Place-text fields of a reports record. */
 export const REPORTS_PLACE_TEXT_FIELDS = ['location'] as const
@@ -107,8 +107,8 @@ export function repairReportsPlaceText(value: unknown): ReportsPlaceTextRepair {
           restored++
           changed = true
         }
-      } else if (typeof v === 'string' && containsLink(v)) {
-        fixed[f] = stripLinks(v)
+      } else if (typeof v === 'string' && containsPlaceSecret(v)) {
+        fixed[f] = scrubPlaceText(v)
         scrubbed++
         changed = true
       }
@@ -166,7 +166,7 @@ export function repairReportsPlaceText(value: unknown): ReportsPlaceTextRepair {
   }
 }
 
-/** The dataset with no link or email in any place-text field (#2097). */
+/** The dataset with no link, email or credential in any place text. */
 export function scrubReportsPlaceText(
   dataset: DistrictReportsDataset
 ): DistrictReportsDataset {

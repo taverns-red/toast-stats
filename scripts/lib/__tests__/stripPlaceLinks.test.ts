@@ -52,8 +52,18 @@ function club(id: string, street: string, day = 'Tuesday') {
 const cleanClub = () => club('100', '9 Main St, Room 2')
 const linkedClub = () => club('977', LINKED_STREET, 'Tuesday bit.ly/REDACTED00')
 const onlyLinkClub = () => club('141', ONLY_LINK)
-/** A credential with no link is not this tool's business (it shows no link). */
-const credentialClub = () => club('7708247', 'ZOOM ID 999 9999 9999')
+/**
+ * A credential with no link. Until #2157 this tool left it alone; a meeting
+ * id is a way into the meeting just as a link is, so it is scrubbed now.
+ */
+const CREDENTIAL_STREET = 'ZOOM ID 999 9999 9999'
+const credentialClub = () => club('7708247', CREDENTIAL_STREET)
+/** #2157: D02 club 7893475 typed its passcode into its city (redacted). */
+const CREDENTIAL_CITY = 'Springfield Passcode: 000000'
+const credentialCityClub = () => ({
+  ...club('7893475', '9 Main St'),
+  address: { ...club('7893475', '9 Main St').address, city: CREDENTIAL_CITY },
+})
 
 function districtFile() {
   return {
@@ -106,6 +116,9 @@ const oracle = (original: string): string =>
         return [line.replace(LINKED_STREET, '9999 Overland Ave')]
       }
       if (line.includes(`"street": ${JSON.stringify(ONLY_LINK)}`)) return []
+      if (line.includes(`"street": ${JSON.stringify(CREDENTIAL_STREET)}`)) {
+        return []
+      }
       if (line.includes('"meetingDay": "Tuesday bit.ly/REDACTED00"')) {
         return [line.replace('Tuesday bit.ly/REDACTED00', 'Tuesday')]
       }
@@ -130,8 +143,8 @@ describe('scrubPlaceLinks (#2069)', () => {
     expect(address.city).toBe('Culver City')
   })
 
-  it('changes only values that contain a link', () => {
-    for (const c of [cleanClub(), credentialClub()]) {
+  it('changes only values that contain a link or a credential', () => {
+    for (const c of [cleanClub()]) {
       const { value, scrubbed } = scrubPlaceLinks(c)
       expect(value).toEqual(c)
       expect(scrubbed).toBe(0)
@@ -146,7 +159,7 @@ describe('scrubPlaceLinks (#2069)', () => {
   })
 
   it('finds place links at any depth, in arrays and keyed objects', () => {
-    expect(countPlaceLinks(districtFile())).toBe(4)
+    expect(countPlaceLinks(districtFile())).toBe(5)
     expect(countPlaceLinks(analyticsFile())).toBe(4)
     expect(countPlaceLinks(clubTrendsIndex())).toBe(2)
     expect(countPlaceLinks(scrubPlaceLinks(districtFile()).value)).toBe(0)
@@ -157,6 +170,47 @@ describe('scrubPlaceLinks (#2069)', () => {
     const copy = JSON.parse(JSON.stringify(before))
     scrubPlaceLinks(before)
     expect(before).toEqual(copy)
+  })
+})
+
+describe('scrubPlaceLinks — meeting credentials (#2157)', () => {
+  it('drops a credential from a city and keeps the city', () => {
+    const { value, scrubbed } = scrubPlaceLinks(credentialCityClub())
+    expect(value).toMatchObject({ address: { city: 'Springfield' } })
+    expect(scrubbed).toBe(1)
+  })
+
+  it('removes a street that is only a credential', () => {
+    const { value } = scrubPlaceLinks(credentialClub())
+    expect((value as { address: object }).address).not.toHaveProperty('street')
+  })
+
+  it('scrubs a top-level city (prospectiveClubs, clubs-by-region rows)', () => {
+    const shard = {
+      clubs: [{ id: '7893475', name: 'Club X', city: CREDENTIAL_CITY }],
+      prospectiveClubs: [{ clubId: '1', city: CREDENTIAL_CITY }],
+    }
+    const { value, scrubbed } = scrubPlaceLinks(shard)
+    expect(value).toEqual({
+      clubs: [{ id: '7893475', name: 'Club X', city: 'Springfield' }],
+      prospectiveClubs: [{ clubId: '1', city: 'Springfield' }],
+    })
+    expect(scrubbed).toBe(2)
+  })
+
+  it('scrubs a credential out of a postal code', () => {
+    const c = club('5', '9 Main St')
+    const { value } = scrubPlaceLinks({
+      ...c,
+      address: { ...c.address, postalCode: '99999 PIN 0000' },
+    })
+    expect(value).toMatchObject({ address: { postalCode: '99999' } })
+  })
+
+  it('leaves a real "Pin…" city alone', () => {
+    const c = club('6', '9 Main St')
+    const pinner = { ...c, address: { ...c.address, city: 'Pinner' } }
+    expect(scrubPlaceLinks(pinner)).toEqual({ value: pinner, scrubbed: 0 })
   })
 })
 
@@ -176,7 +230,7 @@ describe('stripStoredObject — place links (#2069)', () => {
   })
 
   it('reports no change for an object with no link in its place text', () => {
-    const clean = stored({ data: { clubs: [cleanClub(), credentialClub()] } })
+    const clean = stored({ data: { clubs: [cleanClub()] } })
     expect(stripStoredObject(clean)).toEqual({ changed: false, gzipLayers: 1 })
   })
 
@@ -278,7 +332,8 @@ describe('runStrip — place links (#2069)', () => {
       unchanged: 1,
       errors: 0,
       keysRemoved: 0,
-      placeValuesScrubbed: 10,
+      // 10 links, plus club 7708247's credential street (#2157).
+      placeValuesScrubbed: 11,
     })
   })
 
@@ -295,7 +350,8 @@ describe('runStrip — place links (#2069)', () => {
     expect(b.writes).toContainEqual({ name, ifGenerationMatch: gen })
     const row = rows.find(r => r.path === name)!
     expect(row.action).toBe('stripped')
-    expect(row.placeValuesScrubbed).toBe(4)
+    // 4 linked values + 1 credential street (#2157).
+    expect(row.placeValuesScrubbed).toBe(5)
     expect(countPlaceLinks(JSON.parse(text(b.objects.get(name)!.bytes)))).toBe(
       0
     )

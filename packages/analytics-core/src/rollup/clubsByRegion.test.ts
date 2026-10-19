@@ -291,6 +291,28 @@ describe('buildClubsByRegion (#1800)', () => {
     )
   })
 
+  // #2157 — club 7893475 (D02) typed its meeting passcode into its city;
+  // value redacted. The city keeps its words, the credential goes.
+  it('scrubs a meeting credential out of a city, keeping a real "Pin…" city (#2157)', () => {
+    const { districts } = input()
+    const d17 = districts.find(d => d.districtId === '17')!
+    const [first, second] = d17.clubs
+    const edited = {
+      ...d17,
+      clubs: [
+        { ...first!, city: 'Springfield Passcode: 000000' },
+        { ...second!, city: 'Pine Bluff' },
+        ...d17.clubs.slice(2),
+      ],
+    }
+    const r = build({
+      districts: districts.map(d => (d.districtId === '17' ? edited : d)),
+    })
+    const rows = shardsByKey(r)['12']!.clubs
+    expect(rows.find(c => c.id === first!.clubId)!.city).toBe('Springfield')
+    expect(rows.find(c => c.id === second!.clubId)!.city).toBe('Pine Bluff')
+  })
+
   it('seeds the top-N lists by membership, net growth and DCP goals, highest first, ties by club id', () => {
     const r = build()
     const all = r.shards.flatMap(s => s.clubs)

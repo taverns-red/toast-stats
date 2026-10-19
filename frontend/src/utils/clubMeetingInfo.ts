@@ -1,4 +1,4 @@
-import { isShortenedLink, stripLinks } from '@taverns-red/shared-contracts'
+import { isShortenedLink, scrubPlaceText } from '@taverns-red/shared-contracts'
 import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
 
 export { toastmastersClubPageUrl }
@@ -114,12 +114,13 @@ export function formatMeetingTime(time: string): string {
  * #2069 — `clean` with every link removed: any URL or URL-like token, with
  * or without a scheme (club 977's street is "Zoom Link: bit.ly/…, <street>";
  * a shortener hides where it goes), and the "Zoom Link:" label before one.
- * The same `stripLinks` the collector applies, so files published before
- * the collector change show no link either.
+ * The same `scrubPlaceText` the collector applies (#2157: meeting
+ * credentials too), so files published before the collector change show
+ * no link or passcode either.
  */
 function linklessText(value: string | undefined): string | null {
   const text = clean(value)
-  return text === null ? null : clean(stripLinks(text))
+  return text === null ? null : clean(scrubPlaceText(text))
 }
 
 /** `linklessText`, then null if what is left would give entry to a meeting. */

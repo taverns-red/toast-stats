@@ -213,6 +213,51 @@ describe('normaliseTiClub', () => {
     expect(result?.meetingTime).toBe('7:00 pm')
   })
 
+  // #2157 — club 7893475 (D02) typed its meeting passcode into its CITY.
+  // Value redacted; the shape is "<city> Passcode: <digits>".
+  it('scrubs a meeting credential out of the city at ingest (#2157)', () => {
+    const result = normaliseTiClub({
+      ...realClub,
+      Address: { ...realClub.Address, City: 'Littleton Passcode: 000000' },
+    })
+    expect(result?.address?.city).toBe('Littleton')
+  })
+
+  it('omits a city, region or postal code that is only a credential (#2157)', () => {
+    const result = normaliseTiClub({
+      ...realClub,
+      Address: {
+        ...realClub.Address,
+        City: 'Passcode: 000000',
+        PrimaryRegion: { Value: 'Meeting ID: 000 0000 0000' },
+        PostalCode: 'PIN 0000',
+      },
+    })
+    expect(result?.address).not.toHaveProperty('city')
+    expect(result?.address).not.toHaveProperty('region')
+    expect(result?.address).not.toHaveProperty('postalCode')
+  })
+
+  it('keeps a real city that merely starts with "Pin" (#2157)', () => {
+    for (const City of ['Pinner', 'Pine Bluff']) {
+      const result = normaliseTiClub({
+        ...realClub,
+        Address: { ...realClub.Address, City },
+      })
+      expect(result?.address?.city).toBe(City)
+    }
+  })
+
+  it('scrubs a credential out of the meeting day and time (#2157)', () => {
+    const result = normaliseTiClub({
+      ...realClub,
+      MeetingDay: 'Tuesday Meeting ID: 000 0000 0000',
+      MeetingTime: '7:00 pm Password: 000000',
+    })
+    expect(result?.meetingDay).toBe('Tuesday')
+    expect(result?.meetingTime).toBe('7:00 pm')
+  })
+
   it('returns null when the club is missing its primary key', () => {
     expect(
       normaliseTiClub({

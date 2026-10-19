@@ -84,6 +84,18 @@ describe('scrubReportsPlaceText (#2097)', () => {
     ).toBe('Redacted Place 7')
   })
 
+  it('drops a meeting credential from a place and keeps its words (#2157)', () => {
+    const ds = LINKED()
+    ds.sections.newClubs!.records[0]!.location =
+      'Redacted Place 7, Passcode: 000000'
+    const out = repairReportsPlaceText(ds)
+    expect(
+      (out.value as DistrictReportsDataset).sections.newClubs!.records[0]!
+        .location
+    ).toBe('Redacted Place 7')
+    expect(out.scrubbed).toBeGreaterThan(0)
+  })
+
   it('changes nothing but linked place text', () => {
     const before = LINKED()
     const out = scrubReportsPlaceText(before)

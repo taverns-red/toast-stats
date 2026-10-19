@@ -22,7 +22,12 @@
  * Pure functions; no I/O.
  */
 
-import { stripLinks } from '@taverns-red/shared-contracts'
+import {
+  containsMeetingCredential,
+  scrubPlaceText,
+  stripLinks,
+  stripMeetingCredentials,
+} from '@taverns-red/shared-contracts'
 import type {
   MeetingScheduleEntry,
   MeetingWeekday,
@@ -38,10 +43,6 @@ function fold(text: string): string {
 
 /* ── Location scrubber ─────────────────────────────────────────────── */
 
-/** A credential and its value, "Passcode: x", "Passcode is x" or a
- *  spaced id "MtgID: 999 9999 999" (#2069). */
-const CREDENTIAL =
-  /\b(?:meeting\s*id|mtg\s*id|passcode|password|pwd|mot de passe)\b\s*(?:is\b\s*)?[:#=]?\s*(?:\d[\d\s-]*\d|[\w-]*)/gi
 /** A digit run that, with 7+ digits, is a phone number or meeting id. A
  *  run touching a letter ("23300 58th Ave") is a street number, not one. */
 const DIGIT_RUN = /(?<!\w)\+?\(?\d[\d\s().-]*\d(?!\w)/g
@@ -106,8 +107,8 @@ function scrubLine(raw: string): string {
  * contact labels out; separators tidied.
  */
 function withoutAccess(line: string, minDigits: number): string {
-  return line
-    .replace(CREDENTIAL, ' ')
+  // Meeting credentials: the shared place-text scrub's rule (#2157).
+  return stripMeetingCredentials(line)
     .replace(DIGIT_RUN, run =>
       run.replace(/\D/g, '').length >= minDigits ? ' ' : run
     )
@@ -139,28 +140,29 @@ export function scrubFacStreet(
   const tagless = raw.replace(/<[^>]*>/g, ' ')
   const linkless = stripLinks(tagless)
   if (namesSomeone(linkless)) return undefined
-  CREDENTIAL.lastIndex = 0
   const hasAccess =
     linkless !== tagless ||
-    CREDENTIAL.test(tagless) ||
+    containsMeetingCredential(tagless) ||
     [...tagless.matchAll(DIGIT_RUN)].some(
       run => run[0].replace(/\D/g, '').length >= STREET_MIN_PHONE_DIGITS
     )
-  CREDENTIAL.lastIndex = 0
   if (!hasAccess) return tagless.trim().length > 0 ? raw : undefined
   const street = withoutAccess(linkless, STREET_MIN_PHONE_DIGITS)
   return street.length > 0 ? street : undefined
 }
 
 /**
- * Free text with every link removed (MeetingDay, MeetingTime; #2069).
- * Undefined when nothing is left.
+ * FAC free text through the shared place-text scrub (#2069, #2157): links,
+ * emails and meeting credentials removed. Used for MeetingDay, MeetingTime
+ * and the address City, PrimaryRegion and PostalCode, which are free text
+ * too (D02 club 7893475 typed its passcode into its City). Text with none
+ * is returned verbatim. Undefined when nothing is left.
  */
-export function stripFacLinks(
+export function scrubFacText(
   raw: string | null | undefined
 ): string | undefined {
   if (typeof raw !== 'string') return undefined
-  const text = stripLinks(raw).trim()
+  const text = scrubPlaceText(raw).trim()
   return text.length > 0 ? text : undefined
 }
 
