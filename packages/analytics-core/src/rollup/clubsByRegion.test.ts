@@ -105,7 +105,7 @@ describe('buildClubsByRegion (#1800)', () => {
     expect(ClubsByRegionWorldSchema.parse(r.world)).toEqual(r.world)
   })
 
-  it('counts every club, with or without coordinates (jq over the fixture: 318 clubs, 4 unmapped)', () => {
+  it('counts every club, with or without coordinates (jq over the fixture: 318 clubs, 4 without coordinates + 3 at the (0, 0) sentinel, #2153)', () => {
     const r = build()
     const shards = shardsByKey(r)
     expect(shards['05']!.counts).toEqual({
@@ -113,7 +113,7 @@ describe('buildClubsByRegion (#1800)', () => {
       mapped: 159,
       unmapped: 2,
     })
-    expect(shards['01']!.counts).toEqual({ clubs: 66, mapped: 66, unmapped: 0 })
+    expect(shards['01']!.counts).toEqual({ clubs: 66, mapped: 63, unmapped: 3 })
     expect(shards['12']!.counts).toEqual({ clubs: 63, mapped: 63, unmapped: 0 })
     expect(shards['unassigned']!.counts).toEqual({
       clubs: 28,
@@ -123,18 +123,34 @@ describe('buildClubsByRegion (#1800)', () => {
     expect(r.world.totals).toEqual({
       districts: 4,
       clubs: 318,
-      mapped: 314,
-      unmapped: 4,
+      mapped: 311,
+      unmapped: 7,
     })
-    expect(r.worldPoints.points).toHaveLength(314)
-    expect(r.worldPoints.count).toBe(314)
+    expect(r.worldPoints.points).toHaveLength(311)
+    expect(r.worldPoints.count).toBe(311)
     const unmapped = r.shards.flatMap(s => s.clubs).filter(c => c.lat === null)
     expect(unmapped.map(c => c.id).sort()).toEqual([
       '28678196',
       '28678336',
       '28678752',
+      '28679076',
+      '7787643',
+      '7787892',
       '7860006',
     ])
+  })
+
+  // #2153 — FAC's ungeocoded sentinel. District 49's fixture carries three
+  // real Hawaii clubs at exactly (0, 0); they are unmapped, not null island.
+  it('treats (0, 0) coordinates as unmapped, never a point (#2153)', () => {
+    const r = build()
+    const row = r.shards.flatMap(s => s.clubs).find(c => c.id === '7787643')
+    expect(row).toMatchObject({
+      name: 'Pathways Central',
+      lat: null,
+      lng: null,
+    })
+    expect(r.worldPoints.points.some(p => p[1] === 0 && p[2] === 0)).toBe(false)
   })
 
   it('classifies health and tier exactly as the pipeline’s region-rollups.json does for the same date', () => {

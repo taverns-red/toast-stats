@@ -32,6 +32,15 @@ describe('projectClubLocator', () => {
     expect(out!.focus?.id).toBe('7238597')
   })
 
+  it('skips a (0, 0) sentinel so it cannot stretch the box (#2153)', () => {
+    const out = projectClubLocator(
+      [...CLUBS, { clubId: '7787643', coordinates: { lat: 0, lng: 0 } }],
+      '7238597',
+      BOX
+    )
+    expect(out!.points).toHaveLength(4)
+  })
+
   it('keeps north up and east right', () => {
     const out = projectClubLocator(CLUBS, '7238597', BOX)!
     const byId = new Map(out.points.map(p => [p.id, p]))

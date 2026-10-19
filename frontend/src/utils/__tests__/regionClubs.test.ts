@@ -51,6 +51,23 @@ describe('toRegionClubs', () => {
     ])
   })
 
+  // #2153 — Find-A-Club's ungeocoded sentinel is exactly (0, 0). Older
+  // shards still carry it, so the ingest and the pin layer both drop it.
+  it('treats a (0, 0) row as unmapped, never a null-island pin (#2153)', () => {
+    const row = shard01.clubs.find(c => c.id === '7787643')!
+    const [club] = toRegionClubs({
+      ...shard01,
+      clubs: [{ ...row, lat: 0, lng: 0 }],
+    })
+    expect(club!.coordinates).toBeUndefined()
+    const located = clubs.find(c => c.coordinates)!
+    const pins = buildPinFeatures(
+      [located, { ...located, clubId: 'x', coordinates: { lat: 0, lng: 0 } }],
+      buildModeModel('health')
+    )
+    expect(pins.features).toHaveLength(1)
+  })
+
   it('keeps a club without coordinates as a row, off the map', () => {
     const genetec = clubs.find(c => c.clubId === '28678752')!
     expect(genetec.coordinates).toBeUndefined()
