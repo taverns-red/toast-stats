@@ -43,10 +43,13 @@ describe('mobile 375 gate budgets (#1841)', () => {
     })
   })
 
-  it('covers the 25 review routes once each, each with a sentinel', () => {
+  // 24 since the Analytics subpage was retired (#2159): its route redirects to
+  // Clubs, which is already in the list.
+  it('covers the 24 review routes once each, each with a sentinel', () => {
     const paths = budgets.routes.map(r => r.path)
     expect(new Set(paths).size).toBe(paths.length)
-    expect(paths.length).toBe(25)
+    expect(paths.length).toBe(24)
+    expect(paths).not.toContain('/district/61/analytics')
     for (const r of budgets.routes) expect(r.sentinel.trim()).not.toBe('')
   })
 
