@@ -30,6 +30,7 @@ import {
   buildPinFeatures,
   clubPinLayers,
   clusterProperties,
+  NEUTRAL_CLUSTER_FILL,
   parseIconId,
   pinSourceSpec,
 } from '../pinLayer'
@@ -249,6 +250,51 @@ describe('cluster icons', () => {
       point_count: 5,
     })
     expect(parseIconId(id)).toMatchObject({ fill: '#7FB8D9' })
+  })
+
+  // #2178: a group whose members all share one category takes its colour.
+  const countsFor = (
+    model: { categories: readonly unknown[] },
+    set: Record<number, number>
+  ) => {
+    const counts: Record<string, number> = {}
+    model.categories.forEach((_, i) => (counts[`k${i}`] = set[i] ?? 0))
+    return counts
+  }
+
+  it('division: a single-division group takes that division colour', () => {
+    const { model } = styleWith('division')
+    const id = iconFor('division', 'club-clusters', {
+      ...countsFor(model, { 0: 5 }),
+      cluster: true,
+      point_count: 5,
+    })
+    expect(parseIconId(id)).toMatchObject({
+      kind: 'cluster',
+      fill: model.categories[0]!.fill,
+    })
+  })
+
+  it('division: a mixed group stays neutral', () => {
+    const { model } = styleWith('division')
+    const last = model.categories.length - 1
+    const id = iconFor('division', 'club-clusters', {
+      ...countsFor(model, { 0: 4, [last]: 1 }),
+      cluster: true,
+      point_count: 5,
+    })
+    expect(parseIconId(id)).toMatchObject({ fill: NEUTRAL_CLUSTER_FILL })
+  })
+
+  it('health: a uniform group takes its status colour', () => {
+    const { model } = styleWith('health')
+    const i = model.categories.findIndex(c => c.key === 'vulnerable')
+    const id = iconFor('health', 'club-clusters', {
+      ...countsFor(model, { [i]: 6 }),
+      cluster: true,
+      point_count: 6,
+    })
+    expect(parseIconId(id)).toMatchObject({ fill: model.categories[i]!.fill })
   })
 
   it('cluster props sum one counter per category', () => {
