@@ -86,8 +86,8 @@ const ACTIONS_SKELETON_WIDTHS = {
   // FAILS (settled, no date), the loaded toolbar renders 2 chips — one row
   // shorter than reserved; an accepted residual for that degraded path.
   freshnessPill: FRESHNESS_PILL_WIDTH,
-  pyChip: 109, // "PY 25–26 ▾" chip
-  dateChip: 107, // "Latest in PY ▾" chip
+  pyChip: 100, // "PY 26–27 ▾" picker (#2171 compact face, measured)
+  dateChip: 101, // "Latest in PY ▾" picker (#2171 compact face, measured)
   exportBtn: 105, // "Export CSV" action button
   shareBtn: 85, // "Share" action button
 } as const

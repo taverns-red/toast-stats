@@ -78,11 +78,12 @@ const FreshnessPill: React.FC<{
 }
 
 /** #922 — width of the pill-slot placeholder rendered while the snapshot
- * date is pending. Matches the rendered pill ("Data fresh · <Mon D, YYYY>",
- * measured 179px at 390px, both engines) so the toolbar's wrap geometry is
+ * date is pending. Matches the rendered indicator ("Data fresh · <Mon D,
+ * YYYY>": 179px as a pill; 145px as #2171's plain text, measured on the PR
+ * preview at 768 and 1280, Chromium) so the toolbar's wrap geometry is
  * settled from the first loaded paint. The landing renderShell skeleton
  * pins the same width (ACTIONS_SKELETON_WIDTHS.freshnessPill). */
-export const FRESHNESS_PILL_WIDTH = 179
+export const FRESHNESS_PILL_WIDTH = 145
 
 const FreshnessPillSkeleton: React.FC = () => (
   <div
