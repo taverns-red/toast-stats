@@ -10,13 +10,14 @@ import { test, expect, type Page } from './fixtures/test'
  * first stat sat below the fold. The review's budget is ≤ 200px: name (22px),
  * the area/division line, one where-it-meets line, the two status pills and
  * "Contact on toastmasters.org ↗". The history link becomes a row below the
- * panels, and a static mini-map (inline SVG from the snapshot's coordinates,
- * never a second MapLibre instance) links to the district club map.
+ * panels, and a mini-map links to the district club map: an inline SVG from
+ * the snapshot's coordinates, with real tiles once it nears the viewport
+ * (#2162).
  *
  * ── Method ───────────────────────────────────────────────────────────────
  * Deployed preview (BASE_URL), real D61 data, bounding boxes (Lesson 134).
- * Every network request is recorded, so "no MapLibre, no tiles, no
- * club-index.json on this route" is asserted, not assumed.
+ * Every network request is recorded, so "no MapLibre or tiles before the
+ * mini-map nears the viewport, no club-index.json" is asserted, not assumed.
  */
 
 const CLUB = '/district/61/club/7238597'
@@ -355,31 +356,59 @@ for (const width of [375, 1280]) {
 }
 
 for (const width of [375, 1280]) {
-  test(`static mini-map links to the club map without MapLibre at ${width}`, async ({
+  // #2162 — the mini-map gets real tiles, but only once the card nears the
+  // viewport: until then the club route requests no MapLibre and no tiles,
+  // and the inline SVG holds the box.
+  test(`mini-map: SVG first, tiles only near the viewport, at ${width}`, async ({
     page,
   }) => {
+    test.setTimeout(90_000)
     const requests: string[] = []
     await page.setViewportSize({ width, height: 900 })
     await load(page, requests)
 
     const map = page.locator('.club-minimap')
-    await map.scrollIntoViewIfNeeded()
-    await expect(map).toBeVisible()
+    const frame = map.locator('.club-minimap__frame')
     const link = map.getByRole('link', { name: /on the District 61 club map/ })
     await expect(link).toHaveAttribute('href', '/district/61/map?club=7238597')
+    const mapLib = (u: string) => /maplibre|pmtiles|\/basemap\//i.test(u)
+
+    const top = await frame.evaluate(el => el.getBoundingClientRect().top)
+    if (top > 900 + 600) {
+      // Far below the fold: nothing map-related has been fetched.
+      expect(requests.filter(mapLib)).toEqual([])
+      await expect(frame).toHaveAttribute('data-tiles', 'none')
+      const markup = await map.evaluate(el => el.outerHTML.length)
+      expect(markup).toBeLessThanOrEqual(MAP_MARKUP_MAX)
+      test.info().annotations.push({
+        type: 'mini-map-markup-bytes',
+        description: String(markup),
+      })
+    }
+
+    await map.scrollIntoViewIfNeeded()
+    await expect(frame).toHaveAttribute('data-tiles', 'painted', {
+      timeout: 45_000,
+    })
+    await expect(frame.locator('canvas')).toHaveCount(1)
+    expect(requests.some(u => /\/basemap\/.*\.pmtiles/.test(u))).toBe(true)
+    await expect(map.locator('.club-minimap__credit')).toBeVisible()
+    await expect(
+      map.locator('.club-minimap__credit').getByRole('link', {
+        name: 'OpenStreetMap',
+      })
+    ).toBeVisible()
     const box = await link.boundingBox()
     expect(box!.height).toBeGreaterThanOrEqual(44)
-    const markup = await map.evaluate(el => el.outerHTML.length)
-    expect(markup).toBeLessThanOrEqual(MAP_MARKUP_MAX)
-    test.info().annotations.push({
-      type: 'mini-map-markup-bytes',
-      description: String(markup),
-    })
-
-    const offenders = requests.filter(u =>
-      /maplibre|pmtiles|\/basemap\/|config\/club-index\.json/i.test(u)
+    // The box was reserved: the tiles shift nothing.
+    const docOverflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth
     )
-    expect(offenders).toEqual([])
+    expect(docOverflow).toBe(0)
+    // Never the whole-world club index.
+    expect(requests.filter(u => /config\/club-index\.json/.test(u))).toEqual([])
   })
 }
 
