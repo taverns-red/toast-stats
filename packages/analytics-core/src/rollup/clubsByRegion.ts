@@ -195,7 +195,8 @@ export function buildClubsByRegion(
         division: club.divisionId,
         area: club.areaId,
         // #2157: the shared place scrub (credentials, links, emails).
-        city: club.city ? scrubPlaceText(club.city) : null,
+        // #2183: a city that was only a credential is null, not ''.
+        city: (club.city && scrubPlaceText(club.city).trim()) || null,
         status: club.clubStatus ?? null,
         h: HEALTH_CODE[health]!,
         t: tier,

@@ -32,15 +32,29 @@ import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import {
   AllDistrictsRankingsDataSchema,
+  CLUBS_BY_REGION_DIR,
+  CLUBS_BY_REGION_WORLD_FILE_NAME,
+  CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME,
+  ClubsByRegionShardSchema,
+  ClubsByRegionWorldPointsSchema,
+  ClubsByRegionWorldSchema,
   containsPlaceSecret,
   DistrictReportsDatasetSchema,
   findClubContactField,
+  GLOBAL_CLUB_RACE_FILE_NAME,
+  GLOBAL_TOTALS_FILE_NAME,
+  GlobalClubRaceSchema,
+  GlobalTotalsSchema,
   isClubContactKey,
   isDistrictSnapshotFile,
   PerDistrictDataSchema,
+  REGION_ROLLUPS_FILE_NAME,
+  RegionRollupsSchema,
   repairReportsPlaceText,
   SnapshotManifestSchema,
   SnapshotMetadataFileSchema,
+  SUSPENDED_CLUBS_FILE_NAME,
+  SuspendedClubsSchema,
 } from '@taverns-red/shared-contracts'
 import {
   scrubFacLocation,
@@ -218,13 +232,25 @@ function placeScrubber(parentKey: string | null, key: string): Scrubber | null {
   return Object.hasOwn(table, key) ? (table[key] ?? null) : null
 }
 
+interface PlaceWalk {
+  value: unknown
+  scrubbed: number
+  /** Keys removed because their value scrubbed to nothing. */
+  dropped: number
+}
+
 /**
  * Walk `value`, rewriting each place-text string that contains a link.
  * A value with no link is never touched. Key order is kept; the input is
- * not mutated.
+ * not mutated. A value that scrubs to nothing becomes null when its key is
+ * in `nullKeys` (a required nullable key, #2183); otherwise the key goes.
  */
-function walkPlaceText(value: unknown): { value: unknown; scrubbed: number } {
+function walkPlaceText(
+  value: unknown,
+  nullKeys: ReadonlySet<string> = new Set()
+): PlaceWalk {
   let scrubbed = 0
+  let dropped = 0
   const walk = (node: unknown, parentKey: string | null): unknown => {
     if (Array.isArray(node)) return node.map(item => walk(item, null))
     if (typeof node !== 'object' || node === null) return node
@@ -235,6 +261,9 @@ function walkPlaceText(value: unknown): { value: unknown; scrubbed: number } {
         scrubbed++
         const out = scrub(child)
         if (out !== undefined) entries.push([key, out])
+        else if (parentKey !== 'address' && nullKeys.has(key)) {
+          entries.push([key, null])
+        } else dropped++
         continue
       }
       entries.push([key, walk(child, key)])
@@ -242,7 +271,8 @@ function walkPlaceText(value: unknown): { value: unknown; scrubbed: number } {
     // fromEntries defines own properties, so a `__proto__` key stays data.
     return Object.fromEntries(entries)
   }
-  return { value: walk(value, null), scrubbed }
+  const out = walk(value, null)
+  return { value: out, scrubbed, dropped }
 }
 
 /** Place-text values holding a link or credential, at any depth (#2069, #2157). */
@@ -255,7 +285,8 @@ export function scrubPlaceLinks(value: unknown): {
   value: unknown
   scrubbed: number
 } {
-  return walkPlaceText(value)
+  const { value: out, scrubbed } = walkPlaceText(value)
+  return { value: out, scrubbed }
 }
 
 /** A rewrite checked against the object's shared-contracts schema. */
@@ -270,6 +301,28 @@ export interface SchemaCheck {
 
 /** A top-level object of one snapshot date: `snapshots/<date>/<file>`. */
 const TOP_LEVEL = /^snapshots\/\d{4}-\d{2}-\d{2}\/([^/]+)$/
+
+/** `snapshots/<date>/clubs-by-region/<file>` (#1800). */
+const CLUBS_BY_REGION = new RegExp(
+  `^snapshots/\\d{4}-\\d{2}-\\d{2}/${CLUBS_BY_REGION_DIR}/([A-Za-z0-9-]+\\.json)$`
+)
+
+/**
+ * `snapshots/<date>/analytics/district_<id>_<kind>.json`. No shared-contracts
+ * schema; its place fields are optional in analytics-core's types, as in the
+ * district snapshot's, so dropping an emptied one is the collector's form.
+ */
+const DISTRICT_ANALYTICS =
+  /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
+
+/**
+ * A clubs-by-region row's `city` (and `region`) is required and nullable
+ * (`ClubsByRegionClubSchema`): emptied, it becomes null, never absent (#2183).
+ */
+const CLUBS_BY_REGION_NULL_KEYS: ReadonlySet<string> = new Set([
+  'city',
+  'region',
+])
 
 /** `district_<id>_reports.json`: the daily reports dataset (#1065). */
 const REPORTS_FILE = /^district_[^_./]+_reports\.json$/
@@ -291,14 +344,53 @@ interface ObjectSchema {
   safeParse(value: unknown): ParseResult
 }
 
+const schemaOf = (
+  id: string,
+  schema: { safeParse(v: unknown): ParseResult }
+): ObjectSchema => ({ id, safeParse: v => schema.safeParse(v) })
+
+/** The schema of a `snapshots/<date>/clubs-by-region/` file (#2183). */
+function clubsByRegionSchema(file: string): ObjectSchema {
+  if (file === CLUBS_BY_REGION_WORLD_FILE_NAME) {
+    return schemaOf('clubs-by-region-world', ClubsByRegionWorldSchema)
+  }
+  if (file === CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME) {
+    return schemaOf(
+      'clubs-by-region-world-points',
+      ClubsByRegionWorldPointsSchema
+    )
+  }
+  return schemaOf('clubs-by-region-shard', ClubsByRegionShardSchema)
+}
+
+/** Top-level snapshot files whose schema is a plain file-name match. */
+const TOP_LEVEL_SCHEMAS: Record<string, ObjectSchema> = {
+  [REGION_ROLLUPS_FILE_NAME]: schemaOf('region-rollups', RegionRollupsSchema),
+  [GLOBAL_TOTALS_FILE_NAME]: schemaOf('global-totals', GlobalTotalsSchema),
+  [GLOBAL_CLUB_RACE_FILE_NAME]: schemaOf(
+    'global-club-race',
+    GlobalClubRaceSchema
+  ),
+  [SUSPENDED_CLUBS_FILE_NAME]: schemaOf(
+    'suspended-clubs',
+    SuspendedClubsSchema
+  ),
+}
+
 /**
- * The shared-contracts schema of a top-level snapshot file, or null. The
- * analytics files have no shared-contracts schema (their place fields are
- * optional in analytics-core's types, as in the snapshot's).
+ * The shared-contracts schema of a snapshot object, or null. Null kinds
+ * (the analytics files, competitive-awards.json) fail closed in
+ * `stripStoredObject`: their rewrite may not drop a key unless the kind's
+ * place keys are known to be optional (#2183).
  */
 export function schemaForObject(name: string): ObjectSchema | null {
+  const nested = CLUBS_BY_REGION.exec(name)?.[1]
+  if (nested !== undefined) return clubsByRegionSchema(nested)
   const file = TOP_LEVEL.exec(name)?.[1]
   if (file === undefined) return null
+  if (Object.hasOwn(TOP_LEVEL_SCHEMAS, file)) {
+    return TOP_LEVEL_SCHEMAS[file] ?? null
+  }
   if (REPORTS_FILE.test(file)) {
     return {
       id: 'district-reports',
@@ -390,11 +482,26 @@ export class SchemaRegressionError extends StripError {
 function placeFix(
   name: string | undefined,
   value: unknown
-): { value: unknown; scrubbed: number; restored: number } {
+): { value: unknown; scrubbed: number; restored: number; dropped: number } {
   if (name !== undefined && isReportsObject(name)) {
-    return repairReportsPlaceText(value)
+    return { ...repairReportsPlaceText(value), dropped: 0 }
   }
-  return { ...scrubPlaceLinks(value), restored: 0 }
+  const nullKeys =
+    name !== undefined && CLUBS_BY_REGION.test(name)
+      ? CLUBS_BY_REGION_NULL_KEYS
+      : undefined
+  return { ...walkPlaceText(value, nullKeys), restored: 0 }
+}
+
+/**
+ * Whether a rewrite of `name` may drop an emptied place key: yes where the
+ * object's schema checks it (a dropped required key is a new issue) or its
+ * place keys are optional by contract; no for any other kind (#2183).
+ * Without a name (a direct call) the drop is allowed, as before.
+ */
+function mayDropPlaceKeys(name: string | undefined): boolean {
+  if (name === undefined) return true
+  return schemaForObject(name) !== null || DISTRICT_ANALYTICS.test(name)
 }
 
 /** Number of place values to scrub or keys to restore in `value`. */
@@ -478,7 +585,14 @@ export function stripStoredObject(stored: Buffer, name?: string): StripResult {
     value: scrubbed,
     scrubbed: placeValuesScrubbed,
     restored: keysRestored,
+    dropped,
   } = placeFix(name, stripped)
+  if (dropped > 0 && !mayDropPlaceKeys(name)) {
+    throw new StripError(
+      `rewrite drops ${dropped} place key(s) from an object with no ` +
+        'shared-contracts schema; refusing to rewrite'
+    )
+  }
   const schemaCheck = checkRewriteSchema(name, value, scrubbed)
   if (schemaCheck.newIssues > 0) throw new SchemaRegressionError(schemaCheck)
   const level = gzipLevel(stored)
