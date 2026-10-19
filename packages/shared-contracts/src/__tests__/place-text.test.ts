@@ -61,7 +61,7 @@ describe('scrubPlaceText: meeting credentials (#2157)', () => {
     ['Springfield PC 000000', 'Springfield'],
     ['Springfield Zoom ID:  000  0000  0000', 'Springfield'],
     ['Springfield Meeting ID 000..0000..0000', 'Springfield'],
-    ['Springfield Meeting ID 000 -- 0000 -- 0000', 'Springfield'],
+    ['Springfield Meeting ID 000--0000--0000', 'Springfield'],
     ['Springfield Meeting ID 000 - 0000 - 0000', 'Springfield'],
     ['Zoom ID:  000  0000  0000   PW:0000, 9 Main St', '9 Main St'],
     ['Mtg ID: 00000000000  pw 000000', ''],

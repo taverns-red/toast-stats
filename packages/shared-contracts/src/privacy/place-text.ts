@@ -14,6 +14,8 @@
  * - passcode / password / passwd / pwd / access code / mot de passe /
  *   code d'accès, followed by any value ("Passcode: x0x0", "pwd=Ab0");
  * - PIN, followed by digits ("PIN 0000"; "Pin Oak", "Pinner" are places);
+ * - PW, followed by a ":" or a value with a digit ("PW:0000"; "PW Library"
+ *   is a place), and PC followed by digits ("PC 000000"; "PC World");
  * - a meeting, Zoom, Teams, webinar or conference id or number, followed by
  *   digits, spaced or not;
  * - a bare "ID" only with a ":" or "#" and digits ("ID: 000 0000"), so a
@@ -25,8 +27,11 @@
  */
 import { containsLink, stripLinks } from './meeting-links.js'
 
-/** Digits, possibly in spaced or dashed groups ("000 0000 0000"). */
-const DIGITS = String.raw`\d+(?:[ \-.]\d+)*`
+/**
+ * Digits, possibly in spaced, dotted or dashed groups ("000 0000 0000",
+ * "000  0000  0000", "000 - 0000"): up to 3 separators between groups.
+ */
+const DIGITS = String.raw`\d+(?:[ \-.]{1,3}\d+)*`
 
 /** Labels whose value may be any token. */
 const SECRET_LABEL = String.raw`(?:pass\s*code|pass\s*word|passwd|pwd|access\s*code|mot\s+de\s+passe|code\s+d['’]acc[eè]s)`
@@ -42,6 +47,11 @@ const CREDENTIAL_SOURCE = [
   String.raw`\b${SECRET_LABEL}\b${SEP}(?:${DIGITS}(?![^\s,;()])|[^\s,;()]+)`,
   // "Meeting ID: 000 0000 0000", "PIN 0000" (digit values).
   String.raw`\b${ID_LABEL}(?![a-z])${SEP}${DIGITS}`,
+  // "PW:0000", "pw Ab00", "PW: x" (a short label: a ":"/"=" or a digit
+  // in the value, so "PW Library" is a place).
+  String.raw`\bpw\b(?:\s*[:=]\s*[^\s,;()]+|${SEP}(?=[^\s,;()]*\d)[^\s,;()]+)`,
+  // "PC: 000000" (digit values only, so "PC World" is a place).
+  String.raw`\bpc\b${SEP}${DIGITS}(?![^\s,;()])`,
   // "ID: 000 0000", "ID# 000" (a bare id needs ":" or "#").
   String.raw`\bid\s*[:#]\s*${DIGITS}`,
   // A secret label whose value is gone ("Passcode:" at the end).
