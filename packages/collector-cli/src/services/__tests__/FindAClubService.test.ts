@@ -280,7 +280,8 @@ describe('normaliseTiClub', () => {
     } as unknown as Parameters<typeof normaliseTiClub>[0])
     expect(out).not.toBeNull()
     expect(out!.coordinates).toBeUndefined()
-    expect(out!.address?.city).toBe('Honolulu ')
+    // #2157 scrubs and trims City at ingest, so the raw trailing space goes.
+    expect(out!.address?.city).toBe('Honolulu')
   })
 
   it('drops out-of-range coordinates (#2153)', () => {
