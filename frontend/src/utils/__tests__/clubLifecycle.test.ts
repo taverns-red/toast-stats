@@ -180,14 +180,36 @@ describe('buildClubLifecycle', () => {
       expect(r.historyAvailable).toBe(true)
     })
 
-    it('a move dated to the day by the history (#1816) still reads by program year', () => {
+    // Ron, 2026-10-19 (#2170): a move the history dates to the day
+    // (`firstSeenOn`, #1816) reads by month and year; without it, by PY.
+    it('a move dated to the day by the history (#1816) reads month and year', () => {
       const r = buildClubLifecycle({
         charterDate: '1987-02-15',
         history: CLUB_977_EXACT,
       })
       expect(rows(r)).toEqual([
         ['Chartered', 'Feb 1987'],
-        ['Moved from District 1 to District 201', '2026–27 program year'],
+        ['Moved from District 1 to District 201', 'Jul 2026'],
+      ])
+    })
+
+    it('a mid-year move with a day reads its own month, not the program year', () => {
+      const r = buildClubLifecycle({
+        history: {
+          ...CLUB_977,
+          spans: [
+            { from: '2017-01-31', to: '2026-02-28', districtId: '09' },
+            {
+              from: '2025-07-31',
+              to: null,
+              districtId: '02',
+              firstSeenOn: '2026-03-31',
+            },
+          ],
+        },
+      })
+      expect(rows(r)).toEqual([
+        ['Moved from District 9 to District 2', 'Mar 2026'],
       ])
     })
 
