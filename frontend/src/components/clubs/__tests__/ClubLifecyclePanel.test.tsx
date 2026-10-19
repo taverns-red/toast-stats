@@ -20,22 +20,39 @@ const LIFECYCLE: ClubLifecycle = {
       current: false,
     },
     {
-      key: 'first-01',
-      kind: 'first',
-      title: 'First record in District 1',
-      when: '2016–17 program year',
-      current: false,
-    },
-    {
-      key: 'move-201',
+      key: 'move-1-201',
       kind: 'move',
-      title: 'Moved to District 201',
+      title: 'Moved from District 1 to District 201',
       when: '2026–27 program year',
       current: true,
     },
   ],
   formerNames: [],
   historyAvailable: true,
+  recordsStart: null,
+}
+
+// #2169 — club 5193: chartered before D80's first snapshot, never moved.
+const PREDATES: ClubLifecycle = {
+  events: [
+    {
+      key: 'charter',
+      kind: 'charter',
+      title: 'Chartered',
+      when: 'Oct 2000',
+      current: false,
+    },
+    {
+      key: 'current-80',
+      kind: 'current',
+      title: 'In District 80',
+      when: '',
+      current: true,
+    },
+  ],
+  formerNames: [],
+  historyAvailable: true,
+  recordsStart: '2016–17',
 }
 
 describe('ClubLifecyclePanel', () => {
@@ -47,8 +64,7 @@ describe('ClubLifecyclePanel', () => {
     const items = within(list).getAllByRole('listitem')
     expect(items.map(li => li.textContent)).toEqual([
       expect.stringContaining('Chartered'),
-      expect.stringContaining('First record in District 1'),
-      expect.stringContaining('Moved to District 201'),
+      expect.stringContaining('Moved from District 1 to District 201'),
     ])
     expect(items[0]).toHaveTextContent('Feb 1987')
   })
@@ -56,9 +72,30 @@ describe('ClubLifecyclePanel', () => {
   it('names the current district in words', () => {
     render(<ClubLifecyclePanel lifecycle={LIFECYCLE} isLoading={false} />)
     const items = screen.getAllByRole('listitem')
-    expect(items[2]).toHaveTextContent(/current/i)
+    expect(items[1]).toHaveTextContent('2026–27 program year · Current')
     expect(items[0]).not.toHaveTextContent(/current/i)
-    expect(items[2]).toHaveAttribute('aria-current', 'true')
+    expect(items[1]).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('a current-state row without a date reads "Current" alone (#2169)', () => {
+    render(<ClubLifecyclePanel lifecycle={PREDATES} isLoading={false} />)
+    const items = screen.getAllByRole('listitem')
+    expect(items[1]).toHaveTextContent(/^In District 80Current$/)
+    expect(items[1]).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('notes where our records start, under the timeline (#2169)', () => {
+    render(<ClubLifecyclePanel lifecycle={PREDATES} isLoading={false} />)
+    const note = screen.getByText('Our records start in 2016–17')
+    expect(note).toHaveClass('club-lifecycle__note')
+    expect(screen.getByRole('list').compareDocumentPosition(note)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    )
+  })
+
+  it('no records-start note for a club chartered inside our data (#2169)', () => {
+    render(<ClubLifecyclePanel lifecycle={LIFECYCLE} isLoading={false} />)
+    expect(screen.queryByText(/Our records start/)).toBeNull()
   })
 
   it('lists former names', () => {
@@ -83,6 +120,7 @@ describe('ClubLifecyclePanel', () => {
           events: [LIFECYCLE.events[0]!],
           formerNames: [],
           historyAvailable: false,
+          recordsStart: null,
         }}
         isLoading={false}
       />
@@ -96,7 +134,12 @@ describe('ClubLifecyclePanel', () => {
   it('with nothing to show, says so instead of an empty list', () => {
     render(
       <ClubLifecyclePanel
-        lifecycle={{ events: [], formerNames: [], historyAvailable: false }}
+        lifecycle={{
+          events: [],
+          formerNames: [],
+          historyAvailable: false,
+          recordsStart: null,
+        }}
         isLoading={false}
       />
     )

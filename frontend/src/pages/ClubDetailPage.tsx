@@ -51,6 +51,7 @@ import {
 import { ClubCompliancePanel } from '../components/clubs/ClubCompliancePanel'
 import { ClubLifecyclePanel } from '../components/clubs/ClubLifecyclePanel'
 import { useClubDistrictHistoryEntry } from '../hooks/useClubDistrictHistoryEntry'
+import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useSuspendedClubs } from '../hooks/useSuspendedClubs'
 import { buildClubLifecycle } from '../utils/clubLifecycle'
 import { buildClubLineage, type ClubLineage } from '../utils/clubLineage'
@@ -562,9 +563,19 @@ const ClubDetailPage: React.FC = () => {
       districtId,
       isSuspended ? (effectiveEndDate ?? undefined) : undefined
     )
+  // #2169 — where our records start for the club's district: the earliest
+  // date of the per-district snapshot index (the same shared index entry the
+  // page's PY controls read, so no extra fetch). The district is the first
+  // one the history saw the club in, else the page's.
+  const recordsDistrictId =
+    clubDistrictHistory?.spans[0]?.districtId ?? districtId
+  const { data: recordsDates, isPending: isLoadingRecordsDates } =
+    useDistrictCachedDates(recordsDistrictId || null, !!club)
+  const recordsStartDate = recordsDates?.dateRange?.startDate ?? null
   const lifecycle = useMemo(() => {
     if (!club || isLoadingHistory) return null
     if (isSuspended && isLoadingSuspended) return null
+    if (recordsDistrictId && isLoadingRecordsDates) return null
     const suspendDate =
       suspendedClubs?.find(s => clubIdsMatch(s.clubNumber, club.clubId))
         ?.suspendDate ?? null
@@ -572,6 +583,7 @@ const ClubDetailPage: React.FC = () => {
       charterDate: club.charterDate,
       history: clubDistrictHistory,
       suspendDate,
+      recordsStartDate,
     })
   }, [
     club,
@@ -580,6 +592,9 @@ const ClubDetailPage: React.FC = () => {
     isSuspended,
     isLoadingSuspended,
     suspendedClubs,
+    recordsDistrictId,
+    isLoadingRecordsDates,
+    recordsStartDate,
   ])
 
   // Compute DCP projection

@@ -327,9 +327,15 @@ for (const width of [375, 1280]) {
     const chip = page.locator('.club-hero .club-hero__lineage')
     if (width < 768) {
       await expect(chip).toBeHidden()
-      await expect(
-        page.getByText('Moved to District 201', { exact: true })
-      ).toBeVisible()
+      // #2170 — month and year when the history dates the move to the day
+      // (`firstSeenOn`, #1816), else the program year.
+      const move = page.locator('.club-lifecycle__row--move', {
+        hasText: 'Moved from District 1 to District 201',
+      })
+      await expect(move).toBeVisible()
+      await expect(move.locator('.club-lifecycle__when')).toHaveText(
+        /^(Jul 2026|2026–27 program year) · Current$/
+      )
     } else {
       await expect(chip).toHaveText('(District 1 until June 2026)')
       await expect(chip).toBeVisible()
