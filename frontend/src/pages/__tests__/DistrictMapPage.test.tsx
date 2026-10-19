@@ -271,6 +271,15 @@ describe('DistrictMapPage — map and legend', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('names the cluster pip as the "!" badge clusters now draw (#2173)', async () => {
+    renderAt('/district/61/map')
+    expect(
+      await screen.findByText(
+        /a red “!” badge marks clusters with clubs needing intervention/
+      )
+    ).toBeInTheDocument()
+  })
+
   it('stacks zoom and "Reset map view" over the map (#2173)', async () => {
     renderAt('/district/61/map')
     const stack = await screen.findByRole('group', { name: 'Map view' })

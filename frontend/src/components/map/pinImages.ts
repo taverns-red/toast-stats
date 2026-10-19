@@ -111,10 +111,11 @@ function drawPin(
   drawMarks(ctx, glyph.marks, glyphTransform(box, body), ink)
 }
 
-/** Cluster sizes: 28 / 34 / 40 px for < 10, 10–99, 100+ clubs (spec §8,
- *  #2173: smaller, since clusters now form only where pins overlap). */
+/** Cluster sizes: 24 / 28 / 34 px for < 10, 10–99, 100+ clubs (spec §8).
+ *  #2173: about a pin's width, since groups now form only where pins
+ *  overlap (20 px) and neighbouring groups sit that close. */
 export function clusterDiameter(count: number): number {
-  return count < 10 ? 28 : count < 100 ? 34 : 40
+  return count < 10 ? 24 : count < 100 ? 28 : 34
 }
 
 /** A cluster in the pins' style (#2173): a solid disc in its fill with the
@@ -136,12 +137,12 @@ function drawCluster(
   ctx.strokeStyle = outline
   ctx.stroke()
   ctx.beginPath()
-  ctx.arc(c, c, d / 2 - 3.5, 0, Math.PI * 2)
+  ctx.arc(c, c, d / 2 - 3, 0, Math.PI * 2)
   ctx.lineWidth = 1.5
   ctx.strokeStyle = HALO[spec.theme]
   ctx.stroke()
   ctx.fillStyle = labelColourOn(spec.fill)
-  ctx.font = `700 13px ${FONT}`
+  ctx.font = `700 ${spec.count < 100 ? 12 : 11}px ${FONT}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(String(spec.count), c, c + 0.5)
@@ -151,7 +152,7 @@ function drawCluster(
     const at = c + (d / 2 - 1) * Math.SQRT1_2
     const py = c - (at - c)
     ctx.beginPath()
-    ctx.arc(at, py, 6, 0, Math.PI * 2)
+    ctx.arc(at, py, 5.5, 0, Math.PI * 2)
     ctx.fillStyle = spec.pip
     ctx.fill()
     ctx.lineWidth = 1.5
@@ -160,7 +161,7 @@ function drawCluster(
     drawMarks(
       ctx,
       PIN_GLYPHS.triangle.marks,
-      { x: at, y: py, k: 0.55 },
+      { x: at, y: py, k: 0.5 },
       labelColourOn(spec.pip)
     )
   }

@@ -169,9 +169,9 @@ function pipNote(model: ModeModel): string {
   const k = model.exceptionKey
   if (!k) return ''
   if (k === 'intervention-required')
-    return '; a red square marks clusters with clubs needing intervention'
+    return '; a red “!” badge marks clusters with clubs needing intervention'
   const label = model.categories.find(c => c.key === k)?.label
-  return label ? `; a small square marks clusters with “${label}” clubs` : ''
+  return label ? `; a small “!” badge marks clusters with “${label}” clubs` : ''
 }
 
 /** Legend chips (#1784): aria-pressed toggles writing the mode facet. */
