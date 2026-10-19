@@ -1,0 +1,72 @@
+{
+  "districtId": "201",
+  "districtName": "District 201",
+  "collectedAt": "2026-10-13T18:37:41.748Z",
+  "status": "success",
+  "data": {
+    "districtId": "201",
+    "snapshotDate": "2026-07-26",
+    "clubs": [
+      {
+        "clubId": "977",
+        "clubName": "Professional Women Toastmasters",
+        "divisionId": "A",
+        "areaId": "05",
+        "membershipCount": 22,
+        "paymentsCount": 19,
+        "dcpGoals": 0,
+        "status": "Active",
+        "divisionName": "Division A",
+        "areaName": "Area 05",
+        "octoberRenewals": 12,
+        "aprilRenewals": 5,
+        "newMembers": 2,
+        "membershipBase": 20,
+        "dcpGoalsAchieved": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "clubStatus": "Active",
+        "cspSubmitted": false
+      },
+      {
+        "clubId": "1015",
+        "clubName": "Harbor Lights Club",
+        "divisionId": "E",
+        "areaId": "01",
+        "membershipCount": 8,
+        "paymentsCount": 8,
+        "dcpGoals": 0,
+        "status": "Active",
+        "divisionName": "Division E",
+        "areaName": "Area 01",
+        "octoberRenewals": 8,
+        "aprilRenewals": 0,
+        "newMembers": 0,
+        "membershipBase": 8,
+        "dcpGoalsAchieved": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "clubStatus": "Active",
+        "cspSubmitted": false
+      }
+    ]
+  }
+}

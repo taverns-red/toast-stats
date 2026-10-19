@@ -14,8 +14,10 @@ import type { ClubDistrictHistoryClub } from '@taverns-red/shared-contracts'
  *   The history is program-year granular: a span's `from` is the first date
  *   of that program year's store (e.g. 2018-07-31), not the club's first
  *   appearance. Spans are therefore labelled by program year ("2018–19
- *   program year"), never by a month the data cannot vouch for.
- * - **Last record in District N** — when the last span is closed.
+ *   program year"), never by a month the data cannot vouch for — unless the
+ *   span carries `firstSeenOn` (#1816), the day the history vouches for.
+ * - **Last record in District N** — when the last span is closed; to the
+ *   day when it carries `lastSeenOn` (#1816), else the month of `to`.
  * - **Suspended** — the `Susp` date from the page date's
  *   `suspended-clubs.json` (#1953), when the caller has one.
  *
@@ -98,6 +100,12 @@ function formatDay(d: ParsedDate): string {
   return `${SHORT_MONTHS[d.month - 1]} ${d.day}, ${d.year}`
 }
 
+/** A full date the history vouches for (#1816), as "Jul 26, 2026". */
+function exactDay(value: string | undefined): string | null {
+  const d = parseIsoPrefix(value)
+  return d && d.day !== null ? formatDay(d) : null
+}
+
 /** "01" → "District 1"; a lettered district keeps its letter. */
 export function lifecycleDistrictLabel(districtId: string): string {
   const id = /^\d+$/.test(districtId) ? String(Number(districtId)) : districtId
@@ -148,7 +156,7 @@ export function buildClubLifecycle(input: {
         kind,
         title:
           kind === 'first' ? `First record in ${label}` : `Moved to ${label}`,
-        when: formatProgramYear(from),
+        when: exactDay(span.firstSeenOn) ?? formatProgramYear(from),
         current: span.to === null && i === spans.length - 1,
       },
     })
@@ -164,7 +172,7 @@ export function buildClubLifecycle(input: {
         key: `last-${lastSpan.districtId}`,
         kind: 'last',
         title: `Last record in ${lifecycleDistrictLabel(lastSpan.districtId)}`,
-        when: formatMonthYear(lastTo),
+        when: exactDay(lastSpan.lastSeenOn) ?? formatMonthYear(lastTo),
         current: false,
       },
     })

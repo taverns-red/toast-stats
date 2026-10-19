@@ -1,0 +1,42 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "club-race-store"
+  },
+  "programYear": "2026-2027",
+  "updatedAt": "2026-10-17T00:00:00.000Z",
+  "observedDates": ["2026-07-26"],
+  "districtHistoryGaps": [],
+  "clubs": {
+    "977": {
+      "clubId": "977",
+      "clubName": "Professional Women Toastmasters",
+      "districtId": "201",
+      "lastSeen": "2026-07-26",
+      "firstSeen": "2026-07-26",
+      "districtHistory": [
+        {
+          "districtId": "201",
+          "from": "2026-07-26",
+          "to": "2026-07-26"
+        }
+      ],
+      "reached": {}
+    },
+    "1015": {
+      "clubId": "1015",
+      "clubName": "Harbor Lights Club",
+      "districtId": "201",
+      "lastSeen": "2026-07-26",
+      "firstSeen": "2026-07-26",
+      "districtHistory": [
+        {
+          "districtId": "201",
+          "from": "2026-07-26",
+          "to": "2026-07-26"
+        }
+      ],
+      "reached": {}
+    }
+  }
+}

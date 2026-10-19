@@ -25,7 +25,14 @@
  *    order. The upsert keeps the EARLIER of the stored date and the
  *    observed one, so re-running any date is idempotent and an earlier
  *    backfill can only sharpen a crossing, never blur it.
- * 3. **Ruling R-A basis.** The tier a club holds at a snapshot is
+ * 3. **District change points (#1816).** Every sighting folds into the
+ *    club's `firstSeen` and a min/max run per district (`districtHistory`),
+ *    so the club-district history can date a move to the day and a rebuilt
+ *    past date can be read in the district it was in THEN. Min/max, so an
+ *    out-of-order date lands in sorted position and a re-run is a no-op. A
+ *    store folded before this existed lists those dates as
+ *    `districtHistoryGaps` until a rebuild folds them again.
+ * 4. **Ruling R-A basis.** The tier a club holds at a snapshot is
  *    `determineDistinguishedLevelAtSnapshot` from analytics-core — the
  *    existing ladder read against confirmed April renewals before April 1
  *    and active members from April 1 — never a second copy of the tier table.
@@ -133,6 +140,7 @@ export class ClubRaceStore {
       programYear,
       updatedAt: new Date().toISOString(),
       observedDates: [],
+      districtHistoryGaps: [],
       clubs: {},
     })
   }
@@ -163,6 +171,7 @@ export class ClubRaceStore {
       )
     }
 
+    this.recordChangePointCoverage(date)
     this.recordObservedDate(date)
 
     const newCrossings = emptyCounts()
@@ -175,6 +184,7 @@ export class ClubRaceStore {
         clubsObserved += 1
 
         const entry = this.entryFor(clubId, club, district.districtId, date)
+        recordDistrictSighting(entry, district.districtId, date)
 
         const level = determineDistinguishedLevelAtSnapshot(
           club,
@@ -231,10 +241,25 @@ export class ClubRaceStore {
         clubName: club.clubName,
         districtId,
         lastSeen: date,
+        firstSeen: date,
+        districtHistory: [],
         reached: {},
       }
       this.data.clubs[clubId] = created
       return created
+    }
+    // An entry written before change points existed (#1816) keeps the one
+    // sighting it vouches for — its district at `lastSeen` — before this
+    // date's sighting can move either.
+    if (existing.districtHistory === undefined) {
+      existing.firstSeen = existing.lastSeen
+      existing.districtHistory = [
+        {
+          districtId: existing.districtId,
+          from: existing.lastSeen,
+          to: existing.lastSeen,
+        },
+      ]
     }
     // Identity follows the LATEST sighting by date, so an out-of-order
     // rebuild date cannot drag a transferred club back to its old district.
@@ -244,6 +269,19 @@ export class ClubRaceStore {
       existing.lastSeen = date
     }
     return existing
+  }
+
+  /**
+   * A store folded before change points existed has seen its observed dates
+   * without recording districts: they become gaps, once. Folding a date with
+   * change points closes its gap, so a rebuild sharpens the store.
+   */
+  private recordChangePointCoverage(date: string): void {
+    const gaps = (this.data.districtHistoryGaps ??= [
+      ...this.data.observedDates,
+    ])
+    const at = gaps.indexOf(date)
+    if (at >= 0) gaps.splice(at, 1)
   }
 
   private recordObservedDate(date: string): void {
@@ -309,6 +347,34 @@ export class ClubRaceStore {
     await fs.mkdir(path.dirname(filePath), { recursive: true })
     await fs.writeFile(filePath, JSON.stringify(this.data, null, 2), 'utf-8')
   }
+}
+
+/**
+ * Fold one sighting into the club's change points (#1816): `firstSeen` and
+ * the district's run are min/max, so walk order and re-runs never change
+ * the result.
+ */
+function recordDistrictSighting(
+  entry: ClubRaceStoreClub,
+  districtId: string,
+  date: string
+): void {
+  const runs = (entry.districtHistory ??= [])
+  if (entry.firstSeen === undefined || date < entry.firstSeen) {
+    entry.firstSeen = date
+  }
+  const run = runs.find(r => r.districtId === districtId)
+  if (run === undefined) runs.push({ districtId, from: date, to: date })
+  else {
+    if (date < run.from) run.from = date
+    if (date > run.to) run.to = date
+  }
+  runs.sort(
+    (a, b) =>
+      a.from.localeCompare(b.from) ||
+      a.to.localeCompare(b.to) ||
+      a.districtId.localeCompare(b.districtId)
+  )
 }
 
 /**

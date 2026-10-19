@@ -100,14 +100,26 @@ describe('foldClubDistrictHistory — recorded club-race stores', () => {
     expect(c?.lastSeen).toBe('2026-04-29')
     expect(c?.spans).toEqual([
       { from: '2018-06-30', to: '2018-06-30', districtId: '60' },
-      { from: '2025-07-31', to: '2026-04-29', districtId: '123' },
+      // A legacy store's lastSeen IS the club's last sighting, to the day
+      // (#1816): nothing came after it, so a closed span can say so.
+      {
+        from: '2025-07-31',
+        to: '2026-04-29',
+        districtId: '123',
+        lastSeenOn: '2026-04-29',
+      },
     ])
     expect(c?.byProgramYear['2026-2027']).toBeUndefined()
   })
 
   it('a club of a retired district keeps that district, closed at its last sighting', () => {
     expect(club(artifact, '699')?.spans).toEqual([
-      { from: '2018-06-30', to: '2026-06-30', districtId: '05' },
+      {
+        from: '2018-06-30',
+        to: '2026-06-30',
+        districtId: '05',
+        lastSeenOn: '2026-06-30',
+      },
     ])
     expect(club(artifact, '7')?.spans).toEqual([
       { from: '2018-06-30', to: '2026-06-30', districtId: '05' },
@@ -185,7 +197,13 @@ describe('foldClubDistrictHistory — edge cases on recorded entries', () => {
     delete stores[1]!.clubs['3045']
     const artifact = foldClubDistrictHistory(stores)
     expect(club(artifact, '3045')?.spans).toEqual([
-      { from: '2018-06-30', to: '2018-06-30', districtId: '61' },
+      // Its last sighting before the absent year is dated (#1816).
+      {
+        from: '2018-06-30',
+        to: '2018-06-30',
+        districtId: '61',
+        lastSeenOn: '2018-06-30',
+      },
       { from: '2026-07-26', to: null, districtId: '61' },
     ])
   })

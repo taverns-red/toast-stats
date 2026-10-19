@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { ClubDistrictHistoryClub } from '@taverns-red/shared-contracts'
 import { buildClubLifecycle } from '../clubLifecycle'
+import shard77Exact from '../../__tests__/fixtures/club-district-history-77-change-points.fold.json'
 
 /**
  * #1843 — the club page's Lifecycle panel is a vertical timeline (mobile
@@ -74,10 +75,37 @@ const CLUB_497: ClubDistrictHistoryClub = {
   byProgramYear: { '2025-2026': '10', '2026-2027': '219' },
 }
 
+// The fold's output on recorded club-race stores of the 2026 reformation
+// (#1816): the move is dated to the day, the first record is not.
+const CLUB_977_EXACT = shard77Exact.clubs['977'] as ClubDistrictHistoryClub
+
 const rows = (r: ReturnType<typeof buildClubLifecycle>) =>
   r.events.map(e => [e.title, e.when])
 
 describe('buildClubLifecycle', () => {
+  it('dates a move to the day when the history can vouch for it (#1816)', () => {
+    const r = buildClubLifecycle({
+      charterDate: '1987-02-15',
+      history: CLUB_977_EXACT,
+    })
+    expect(rows(r)).toEqual([
+      ['Chartered', 'Feb 1987'],
+      ['First record in District 1', '2017–18 program year'],
+      ['Moved to District 201', 'Jul 26, 2026'],
+    ])
+  })
+
+  it('dates the last record to the day when the history can vouch for it (#1816)', () => {
+    const closed: ClubDistrictHistoryClub = {
+      ...CLUB_1597,
+      spans: [{ ...CLUB_1597.spans[0]!, lastSeenOn: '2019-03-31' }],
+    }
+    expect(rows(buildClubLifecycle({ history: closed }))).toEqual([
+      ['First record in District 7', '2016–17 program year'],
+      ['Last record in District 7', 'Mar 31, 2019'],
+    ])
+  })
+
   it('charter, first record and the move, oldest first (club 977)', () => {
     const r = buildClubLifecycle({
       charterDate: '1987-02-15',
