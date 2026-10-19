@@ -12,6 +12,7 @@ const anniversary = (overrides: Partial<ClubAnniversary>): ClubAnniversary => ({
   years: 3,
   isMilestone: false,
   daysUntilNext: 200,
+  daysSincePrev: 165,
   isUpcoming: false,
   upcomingYears: 4,
   ...overrides,
@@ -23,27 +24,41 @@ describe('ClubAnniversaryBadge (#445)', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders a quiet pill for non-milestone, non-upcoming years', () => {
-    render(
+  // #2171 (Ron, 2026-10-19): outside the ±30-day window the hero shows no
+  // anniversary chip at all — the steady-state "<N> years" pill and the
+  // milestone medal are retired.
+  it('renders nothing outside the 30-day window', () => {
+    const { container } = render(
       <ClubAnniversaryBadge
         anniversary={anniversary({ years: 7 })}
         charterDateLabel="March 1987"
       />
     )
-    expect(screen.getByText(/7 years/i)).toBeInTheDocument()
-    // No upcoming countdown, no milestone gold.
-    expect(screen.queryByText(/anniversary in/i)).not.toBeInTheDocument()
+    expect(container.firstChild).toBeNull()
   })
 
-  it('elevates milestone years with the milestone class', () => {
+  it('renders nothing for a milestone year outside the window', () => {
     const { container } = render(
       <ClubAnniversaryBadge
         anniversary={anniversary({ years: 25, isMilestone: true })}
       />
     )
-    const badge = container.querySelector('[data-milestone="true"]')
-    expect(badge).not.toBeNull()
-    expect(badge?.textContent).toMatch(/25 years/i)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('uses the past tense just after the anniversary (#2171)', () => {
+    render(
+      <ClubAnniversaryBadge
+        anniversary={anniversary({
+          years: 25,
+          upcomingYears: 26,
+          daysUntilNext: 340,
+          daysSincePrev: 1,
+          isUpcoming: true,
+        })}
+      />
+    )
+    expect(screen.getByText(/25th anniversary 1 day ago/i)).toBeInTheDocument()
   })
 
   it('shows upcoming countdown when isUpcoming is true and not yet on the day', () => {
@@ -78,7 +93,12 @@ describe('ClubAnniversaryBadge (#445)', () => {
   it('shows charter date in tooltip when charterDateLabel is provided', () => {
     render(
       <ClubAnniversaryBadge
-        anniversary={anniversary({ years: 39 })}
+        anniversary={anniversary({
+          years: 38,
+          upcomingYears: 39,
+          daysUntilNext: 10,
+          isUpcoming: true,
+        })}
         charterDateLabel="March 1, 1987"
       />
     )

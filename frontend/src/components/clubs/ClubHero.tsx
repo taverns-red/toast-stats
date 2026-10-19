@@ -29,7 +29,7 @@ export interface ClubHeroProps {
   /** The PY/date controls; the page owns that state (R3). */
   controls: React.ReactNode
   /**
-   * The analytics-derived health and tier pills. Undefined while analytics is
+   * The analytics-derived health and tier chips (`ClubHeroStatusChips`). Undefined while analytics is
    * still loading: a size-holding placeholder takes their slot, so the hero
    * does not shift when they arrive (#1901).
    */
@@ -41,7 +41,7 @@ export interface ClubHeroProps {
 /**
  * Club page hero, per the redesign handoff (#23 follow-up): a Loyal-blue
  * panel with a charter-style eyebrow, the h1, a sub-line, and health and DCP
- * tier pills on the right.
+ * tier chips on the right (#2171: one quiet outline-chip style).
  *
  * #432 appends ' · Chartered <Month YYYY>' to the eyebrow when Find-A-Club
  * enrichment (#430) supplied a charterDate. It is skipped silently when absent.
@@ -55,6 +55,9 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
   lineage,
 }) => {
   const charterLabel = formatCharterDate(club.charterDate)
+  const anniversary = club.charterDate
+    ? getClubAnniversary(club.charterDate)
+    : null
   return (
     <header className="club-hero">
       <div className="club-hero__intro">
@@ -107,14 +110,14 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
       </div>
 
       <div className="club-hero__pills">
-        {/* #445: anniversary badge (years chartered, milestones, a countdown
-            within ±30 days). Omitted when charterDate is missing. */}
-        {/* #1843: the phone hero keeps two pills (health, tier); the
-            badge is hidden below 768 by CSS. */}
-        {club.charterDate && (
+        {/* #445: anniversary chip. #2171: only within 30 days of the
+            anniversary (either side); otherwise no slot at all. */}
+        {/* #1843: the phone hero keeps two chips (health, tier); the
+            anniversary is hidden below 768 by CSS. */}
+        {anniversary?.isUpcoming && (
           <span className="club-hero__anniversary">
             <ClubAnniversaryBadge
-              anniversary={getClubAnniversary(club.charterDate)}
+              anniversary={anniversary}
               {...(charterLabel ? { charterDateLabel: charterLabel } : {})}
             />
           </span>
@@ -123,10 +126,10 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
           <span
             aria-hidden="true"
             data-testid="club-hero-pill-placeholder"
-            className="club-hero__pill"
+            className="club-hero__chip"
             style={{ visibility: 'hidden' }}
           >
-            <span className="club-hero__pill-dot" />
+            <span className="club-hero__chip-dot" />
             {'\u00a0'.repeat(8)}
           </span>
         )}

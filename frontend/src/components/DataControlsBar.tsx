@@ -4,8 +4,12 @@ import type { SnapshotDate } from '../types/snapshotDate'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { computeFreshness } from '../utils/dataFreshness'
 
-/* Tight horizontal cluster of three pill-styled controls — freshness
-   pill, PY chip, date chip — shared by /districts and /district/:id. */
+/* Tight horizontal cluster — the freshness indicator, the PY picker and the
+   date picker — shared by the club hero and every page header that carries
+   the toolbar (landing, district, region(s), division, area, awards, clubs
+   world/race). #2171: the indicator is plain text with its status dot, and
+   the pickers are compact 32px controls; their look lives in
+   styles/components/data-controls.css, re-toned on the club hero's navy. */
 
 export interface DataControlsBarProps {
   /** The pinned snapshot date currently being viewed (the month-end during
@@ -35,13 +39,12 @@ export interface DataControlsBarProps {
 }
 
 // min-h-[44px]: the WCAG 2.5.5 / handoff 44px touch-target floor (#886, epic
-// #888 Sprint 2). The chip is a <label> with an inset-0 opacity-0 <select>
-// overlay, so the overlay inherits the label's height — lifting the label to
-// 44px lifts the real touch target in both engines (L111 family). Shared with
-// the non-interactive freshness pill too, which keeps the control row at a
-// uniform height.
-const CHIP_BASE =
-  'inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-full text-xs font-medium border bg-white border-gray-200 text-gray-700 theme-dark:bg-gray-800 theme-dark:border-gray-700 theme-dark:text-gray-200'
+// #888 Sprint 2). Each item keeps a 44px-tall box — the picker is a <label>
+// with an inset-0 opacity-0 <select> overlay, so the overlay inherits the
+// label's height (L111 family) — while #2171 draws the VISIBLE control as a
+// 32px face inside it. The freshness item shares the floor so the row keeps
+// one height and the landing skeleton's wrap geometry holds.
+const ITEM_BASE = 'relative inline-flex items-center min-h-[44px]'
 
 const FreshnessPill: React.FC<{
   date: string
@@ -53,7 +56,7 @@ const FreshnessPill: React.FC<{
     <div
       data-testid="freshness-pill"
       data-reconciling={reconciling ? 'true' : undefined}
-      className={CHIP_BASE}
+      className={`${ITEM_BASE} data-controls__fresh`}
       title={
         reconciling
           ? `${reconcilingMonthLabel} month-end reconciliation — figures update daily until finalized. As of ${formatDisplayDate(date)}.`
@@ -63,7 +66,7 @@ const FreshnessPill: React.FC<{
       <span
         data-testid="freshness-dot"
         aria-hidden="true"
-        className={`w-2 h-2 rounded-full ${reconciling ? 'bg-amber-500' : 'bg-green-500'}`}
+        className={`data-controls__dot ${reconciling ? 'bg-amber-500' : 'bg-green-500'}`}
       />
       <span>
         {reconciling
@@ -75,25 +78,26 @@ const FreshnessPill: React.FC<{
 }
 
 /** #922 — width of the pill-slot placeholder rendered while the snapshot
- * date is pending. Matches the rendered pill ("Data fresh · <Mon D, YYYY>",
- * measured 179px at 390px, both engines) so the toolbar's wrap geometry is
+ * date is pending. Matches the rendered indicator ("Data fresh · <Mon D,
+ * YYYY>": 179px as a pill; 145px as #2171's plain text, measured on the PR
+ * preview at 768 and 1280, Chromium) so the toolbar's wrap geometry is
  * settled from the first loaded paint. The landing renderShell skeleton
  * pins the same width (ACTIONS_SKELETON_WIDTHS.freshnessPill). */
-export const FRESHNESS_PILL_WIDTH = 179
+export const FRESHNESS_PILL_WIDTH = 145
 
 const FreshnessPillSkeleton: React.FC = () => (
   <div
     data-testid="freshness-pill-skeleton"
     aria-hidden="true"
-    className={CHIP_BASE}
+    className={ITEM_BASE}
     style={{ width: FRESHNESS_PILL_WIDTH }}
   />
 )
 
-/* Native <select> styled to look like a pill chip — keeps full keyboard
-   a11y and platform popover behaviour without re-implementing dropdowns.
-   The label uses focus-within ring styling so keyboard users still see
-   focus when tabbing through the invisible select (WCAG 2.4.7). */
+/* Native <select> under a compact picker face — keeps full keyboard a11y and
+   platform popover behaviour without re-implementing dropdowns. The face
+   draws a focus ring from the label's :focus-within (data-controls.css), so
+   keyboard users still see focus on the invisible select (WCAG 2.4.7). */
 const ChipSelect: React.FC<{
   testId: string
   ariaLabel: string
@@ -106,11 +110,13 @@ const ChipSelect: React.FC<{
   return (
     <label
       data-testid={testId}
-      className={`${CHIP_BASE} relative cursor-pointer hover:bg-gray-50 theme-dark:hover:bg-gray-700 focus-within:ring-2 focus-within:ring-tm-loyal-blue focus-within:ring-offset-1`}
+      className={`${ITEM_BASE} data-controls__picker cursor-pointer`}
     >
-      <span>{display}</span>
-      <span aria-hidden="true" className="text-gray-400">
-        ▾
+      <span className="data-controls__face">
+        <span>{display}</span>
+        <span aria-hidden="true" className="data-controls__caret">
+          ▾
+        </span>
       </span>
       <select
         data-testid={`${testId}-select`}
@@ -166,7 +172,7 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
     <div
       role="toolbar"
       aria-label="Data controls"
-      className="flex flex-wrap items-center gap-2"
+      className="data-controls flex flex-wrap items-center gap-2"
     >
       {pillDate ? (
         <FreshnessPill

@@ -201,4 +201,30 @@ describe('DataControlsBar (#529 #528)', () => {
       expect(cls, `${id} appearance-none`).toContain('appearance-none')
     }
   })
+
+  // #2171 — the freshness indicator is plain text with its status dot, not a
+  // pill; the PY/date pickers are compact 32px controls (the visible face)
+  // inside the 44px tap target, so the touch floor above still holds.
+  it('renders the freshness indicator as plain text, not a pill (#2171)', () => {
+    render(<DataControlsBar {...baseProps} />)
+    const fresh = screen.getByTestId('freshness-pill')
+    expect(fresh).toHaveClass('data-controls__fresh')
+    expect(fresh.className).not.toMatch(/rounded-full|\bborder\b|bg-white/)
+    expect(fresh.querySelector('[data-testid="freshness-dot"]')).not.toBeNull()
+  })
+
+  it('draws each picker as a compact face with a caret (#2171)', () => {
+    render(<DataControlsBar {...baseProps} />)
+    for (const id of ['py-chip', 'date-chip']) {
+      const label = screen.getByTestId(id)
+      expect(label.className, `${id} has no pill fill`).not.toMatch(
+        /rounded-full|bg-white/
+      )
+      const face = label.querySelector('.data-controls__face')
+      expect(face, `${id} face`).not.toBeNull()
+      expect(face?.querySelector('.data-controls__caret')).toHaveTextContent(
+        '▾'
+      )
+    }
+  })
 })

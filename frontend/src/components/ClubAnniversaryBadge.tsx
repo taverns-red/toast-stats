@@ -2,13 +2,16 @@ import React from 'react'
 import type { ClubAnniversary } from '../utils/clubAnniversary'
 import { ordinalSuffix } from '../utils/ordinal'
 
-/* ClubAnniversaryBadge (#445) — anniversary display for the club hero.
-   Three visual modes:
+/* ClubAnniversaryBadge (#445, #2171) — the club hero's anniversary chip.
 
-   - quiet pill: non-milestone, non-upcoming — "<N> years"
-   - milestone badge: 5-year increment — gold accent, "<N> Years"
-   - upcoming countdown: within ±30 days — "<Nth> anniversary in X days"
-     or "today!" on the exact day
+   #2171 (Ron, 2026-10-19): shown ONLY within 30 days of the anniversary,
+   either side, in the hero's one quiet outline-chip style and without an
+   emoji. Outside that window it renders nothing (the steady-state
+   "<N> years" pill and the milestone medal are retired).
+
+   - before the day: "<Nth> anniversary in X days"
+   - on the day:     "<Nth> anniversary today"
+   - just after:     "<Nth> anniversary X days ago"
 
    Renders nothing when anniversary is null (missing charter date). */
 
@@ -18,65 +21,31 @@ export interface ClubAnniversaryBadgeProps {
   charterDateLabel?: string
 }
 
+const days = (n: number): string => `${n} day${n === 1 ? '' : 's'}`
+
 export const ClubAnniversaryBadge: React.FC<ClubAnniversaryBadgeProps> = ({
   anniversary,
   charterDateLabel,
 }) => {
-  if (!anniversary) return null
+  if (!anniversary?.isUpcoming) return null
 
-  const { years, isMilestone, daysUntilNext, isUpcoming, upcomingYears } =
-    anniversary
+  const { years, daysUntilNext, daysSincePrev, upcomingYears } = anniversary
 
-  // Upcoming countdown wins over the quiet pill when within ±30 days.
-  if (isUpcoming) {
-    const ord = `${upcomingYears}${ordinalSuffix(upcomingYears)}`
-    const copy =
-      daysUntilNext === 0
-        ? `${ord} anniversary today!`
-        : `${ord} anniversary in ${daysUntilNext} day${daysUntilNext === 1 ? '' : 's'}`
-    return (
-      <span
-        data-milestone={isMilestone}
-        title={charterDateLabel}
-        className={
-          'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ' +
-          (isMilestone
-            ? 'bg-yellow-100 text-yellow-900 ring-1 ring-yellow-400 theme-dark:bg-yellow-900/40 theme-dark:text-yellow-100 theme-dark:ring-yellow-500'
-            : 'bg-blue-50 text-blue-900 theme-dark:bg-blue-900/40 theme-dark:text-blue-100')
-        }
-      >
-        🎉 {copy}
-        {charterDateLabel && (
-          <span className="sr-only"> · Chartered {charterDateLabel}</span>
-        )}
-      </span>
-    )
-  }
+  // Inside the window the nearer side wins: the coming anniversary when it is
+  // the closer one (or today), otherwise the one that just passed.
+  const upcoming = daysUntilNext <= daysSincePrev
+  const mark = upcoming ? upcomingYears : years
+  const ord = `${mark}${ordinalSuffix(mark)}`
+  const copy =
+    daysUntilNext === 0 || daysSincePrev === 0
+      ? `${ord} anniversary today`
+      : upcoming
+        ? `${ord} anniversary in ${days(daysUntilNext)}`
+        : `${ord} anniversary ${days(daysSincePrev)} ago`
 
-  // Milestone (steady-state milestone year, not in upcoming window).
-  if (isMilestone) {
-    return (
-      <span
-        data-milestone="true"
-        title={charterDateLabel}
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900 ring-1 ring-yellow-400 theme-dark:bg-yellow-900/40 theme-dark:text-yellow-100 theme-dark:ring-yellow-500"
-      >
-        🥇 {years} Years
-        {charterDateLabel && (
-          <span className="sr-only"> · Chartered {charterDateLabel}</span>
-        )}
-      </span>
-    )
-  }
-
-  // Quiet pill for everyone else.
   return (
-    <span
-      data-milestone="false"
-      title={charterDateLabel}
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs text-gray-600 bg-gray-100 theme-dark:bg-gray-700 theme-dark:text-gray-300"
-    >
-      {years} years
+    <span className="club-hero__chip" title={charterDateLabel}>
+      {copy}
       {charterDateLabel && (
         <span className="sr-only"> · Chartered {charterDateLabel}</span>
       )}
