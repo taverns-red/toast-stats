@@ -65,6 +65,9 @@ describe('scrubPlaceText: meeting credentials (#2157)', () => {
     ['Springfield Meeting ID 000 - 0000 - 0000', 'Springfield'],
     ['Zoom ID:  000  0000  0000   PW:0000, 9 Main St', '9 Main St'],
     ['Mtg ID: 00000000000  pw 000000', ''],
+    // A "PW" label between ";" separators, value on the next line.
+    ['Zoom; PW; 0000\nONLY', 'Zoom; ONLY'],
+    ['Zoom; pw; 0000', 'Zoom'],
   ])('residue %j → %j', (input, expected) => {
     expect(scrubPlaceText(input)).toBe(expected)
     expect(containsPlaceSecret(scrubPlaceText(input))).toBe(false)
@@ -119,6 +122,11 @@ describe('scrubPlaceText: real place names survive (false-positive guards)', () 
     'Room 3-401',
     'Room 3 - 401, Building 7',
     'Unit 5  -  12 Main St',
+    // A ";" after "PW" takes a digits-only value, so these are places.
+    'PW; Library',
+    'PW; 4th Floor',
+    'PW; 12-B Main',
+    'Unit 4; PW; Main Hall',
     '',
   ])('%j is returned unchanged', place => {
     expect(scrubPlaceText(place)).toBe(place)
