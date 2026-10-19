@@ -10,7 +10,8 @@ import { MIN_TOUCH_TARGET_PX } from '../src/utils/touchTargetUtils'
  * opening words were unreadable. Measured on production before the fix
  * (Chromium, identical at 375 / 768 / 1350):
  *
- *   /district/61/analytics, Education Levels
+ *   /district/61/analytics, Education Levels (that card now lives on
+ *   /district/61/education as the no-ledger fallback, #2159)
  *     Level 1                left −67  right 253
  *     Level 2                left −65  right 255
  *     Level 3                left −65  right 255
@@ -53,6 +54,10 @@ const THEMES = ['light', 'dark'] as const
 
 /** The reported card: four rows plus the header tooltip, all left-clipped. */
 const EDUCATION_CARD = 'section[aria-label="education levels"]'
+/* The card's home since the Analytics page was retired (#2159): Education's
+   fallback for a date with no education ledger. 2026-03-31 has the district
+   snapshot but no reports sidecar on either CDN (checked 2026-10-19). */
+const EDUCATION_CARD_ROUTE = '/district/61/education?py=2025&date=2026-03-31'
 const EDUCATION_TRIGGERS = `${EDUCATION_CARD} svg[viewBox="0 0 20 20"]`
 const EDUCATION_PANELS = 5
 
@@ -60,7 +65,7 @@ const EDUCATION_PANELS = 5
 const PINNABLE = [
   {
     what: 'Tooltip (w-80)',
-    route: '/district/61/analytics',
+    route: EDUCATION_CARD_ROUTE,
     trigger: EDUCATION_TRIGGERS,
     sentinel: EDUCATION_CARD,
   },
@@ -173,7 +178,7 @@ for (const theme of THEMES) {
     }) => {
       test.setTimeout(120_000)
       await page.setViewportSize({ width, height })
-      await load(page, '/district/61/analytics', theme)
+      await load(page, EDUCATION_CARD_ROUTE, theme)
       await page
         .locator(EDUCATION_CARD)
         .waitFor({ state: 'visible', timeout: 30_000 })

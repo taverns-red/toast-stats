@@ -6,8 +6,9 @@
 // Lessons 73 / 95). A panel styled with `bg-white dark:bg-gray-800` renders
 // `bg-white` in dark — which the dark-mode.css override routes to
 // `--surface-card` (#1A1722), a LIGHTER surface than the neighbour
-// `.redesign-panel`'s `--surface` (#111922). Result: the Education Levels and
-// Achievement Highlights panels read lighter than their neighbours in dark.
+// `.redesign-panel`'s `--surface` (#111922). Result: the Education Levels
+// panel read lighter than its neighbours in dark. (The Achievement Highlights
+// panel it was paired with was deleted with the Analytics page, #2159.)
 //
 // Fix: drive both panels from the token-driven `.redesign-panel` primitive
 // (matches every neighbour), and give the nested stat cards a `--surface-2`
@@ -22,7 +23,6 @@ const SRC = resolve(__dirname, '../..')
 const read = (p: string) => readFileSync(resolve(SRC, p), 'utf-8')
 
 const educationCard = read('components/EducationLevelsCard.tsx')
-const topGrowthClubs = read('components/TopGrowthClubs.tsx')
 
 describe('District panel dark-mode surfaces (#682)', () => {
   describe('EducationLevelsCard', () => {
@@ -36,19 +36,6 @@ describe('District panel dark-mode surfaces (#682)', () => {
       // manual toggle — they are dead selectors, not a dark-mode fix.
       expect(educationCard).not.toContain('dark:bg-gray-800')
       expect(educationCard).not.toContain('dark:border-gray-700')
-    })
-  })
-
-  describe('TopGrowthClubs Achievement Highlights', () => {
-    it('uses a token-driven panel surface, not a light-baked gradient', () => {
-      expect(topGrowthClubs).not.toContain(
-        'from-tm-loyal-blue-10 to-tm-cool-gray-20'
-      )
-    })
-
-    it('nests the stat cards on a re-resolving --surface-2 token, not bg-white', () => {
-      expect(topGrowthClubs).toContain('bg-[var(--surface-2)]')
-      expect(topGrowthClubs).not.toContain('bg-white')
     })
   })
 })

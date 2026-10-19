@@ -242,7 +242,7 @@ describe('DistrictDetailPage — lean Overview hub (#679)', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('exposes CTAs to the new /trends and /analytics routes (#680)', async () => {
+  it('exposes CTAs to /trends and to Clubs sorted by net change (#680, #2159)', async () => {
     renderHub()
     await waitFor(() => {
       expect(
@@ -253,7 +253,10 @@ describe('DistrictDetailPage — lean Overview hub (#679)', () => {
       screen.getByRole('link', { name: /membership & payment trends/i })
     ).toHaveAttribute('href', '/district/D42/trends')
     expect(
-      screen.getByRole('link', { name: /top clubs & analytics/i })
-    ).toHaveAttribute('href', '/district/D42/analytics')
+      screen.getByRole('link', { name: /top growing clubs/i })
+    ).toHaveAttribute('href', '/district/D42/clubs?sort=netChange&dir=desc')
+    expect(
+      screen.queryByRole('link', { name: /analytics/i })
+    ).not.toBeInTheDocument()
   })
 })

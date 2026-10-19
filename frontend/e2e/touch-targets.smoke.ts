@@ -70,7 +70,6 @@ const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/district/61/divisions', mustRender: CONTEXT_CHIP },
   { path: '/district/61/rankings', mustRender: CONTEXT_CHIP },
   { path: '/district/61/trends', mustRender: CONTEXT_CHIP },
-  { path: '/district/61/analytics', mustRender: CONTEXT_CHIP },
   { path: '/district/61/division/A' },
   { path: '/district/61/club/01479548' },
   { path: '/club/01479548' },

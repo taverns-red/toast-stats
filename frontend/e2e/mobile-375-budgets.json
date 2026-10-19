@@ -52,14 +52,6 @@
       "maxShareUnder14": 0.05
     },
     {
-      "path": "/district/61/analytics",
-      "sentinel": "[data-testid=\"education-moved-link\"]",
-      "first": "[data-testid=\"district-section-bar\"] + *",
-      "contextBar": true,
-      "firstContentMaxPx": 110,
-      "maxShareUnder14": 0.03
-    },
-    {
       "path": "/district/61/changes",
       "sentinel": "[data-testid=\"changes-to-chip-select\"]",
       "first": "[data-testid=\"district-section-bar\"] + *",

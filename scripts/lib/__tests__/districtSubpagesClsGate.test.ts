@@ -31,10 +31,15 @@ describe('district subpages CLS gate (#1837)', () => {
 
     it('covers every routed /district/:id/<subpage> in App.tsx', () => {
       // Single-segment subpages only: the club/division/area detail routes
-      // are entity pages, not district subpages.
+      // are entity pages, not district subpages. A route whose element is a
+      // redirect (the retired /analytics, #2159) renders no page to measure.
       const subpages = [
-        ...read(APP).matchAll(/path: 'district\/:districtId\/([a-z-]+)'/g),
-      ].map(m => m[1])
+        ...read(APP).matchAll(
+          /path: 'district\/:districtId\/([a-z-]+)',\s*element:\s*(<\w+)?/g
+        ),
+      ]
+        .filter(m => !/Redirect$/.test(m[2] ?? ''))
+        .map(m => m[1])
       expect(subpages.length).toBeGreaterThanOrEqual(8)
       for (const sub of subpages) {
         expect(spec, `missing subpage '${sub}'`).toContain(`'${sub}'`)

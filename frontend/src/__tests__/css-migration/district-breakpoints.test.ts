@@ -20,7 +20,6 @@ const read = (p: string) => readFileSync(resolve(SRC, p), 'utf-8')
 
 const narrativeCss = read('styles/components/district-narrative.css')
 const districtOverview = read('components/DistrictOverview.tsx')
-const topGrowthClubs = read('components/TopGrowthClubs.tsx')
 
 describe('District breakpoint reconciliation (#682)', () => {
   describe('district-narrative.css KPI strip', () => {
@@ -56,13 +55,6 @@ describe('District breakpoint reconciliation (#682)', () => {
     it('collapses the 2-col content grid at 980px, not Tailwind lg (1024)', () => {
       expect(districtOverview).toContain('min-[980px]:grid-cols-2')
       expect(districtOverview).not.toContain('lg:grid-cols-2')
-    })
-  })
-
-  describe('TopGrowthClubs Achievement Highlights grid', () => {
-    it('collapses the 2-col stat grid at 980px, not Tailwind md (768)', () => {
-      expect(topGrowthClubs).toContain('min-[980px]:grid-cols-2')
-      expect(topGrowthClubs).not.toContain('md:grid-cols-2')
     })
   })
 })

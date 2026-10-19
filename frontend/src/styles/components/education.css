@@ -526,20 +526,14 @@
   scroll-margin-top: 6rem;
 }
 
-/* Analytics pointer to the moved leaderboards (#1793). */
-.education-moved {
-  font-size: 0.9375rem;
-  color: var(--ink-2);
+/* Any-date fallback (#2159): the club performance report's level totals,
+   shown when the ledger is absent for the date. */
+.education-csv-fallback {
+  margin-top: 1rem;
 }
 
-.education-moved__link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-weight: 600;
-  color: var(--ink);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+.education-csv-fallback > .education-provenance {
+  margin-bottom: 0.5rem;
 }
 
 /* ── Region education (#1810): years and districts ─────────────────── */

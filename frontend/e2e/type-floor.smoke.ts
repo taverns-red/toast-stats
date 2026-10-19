@@ -29,7 +29,6 @@ const ROUTES = [
   '/district/61/divisions',
   '/district/61/rankings',
   '/district/61/trends',
-  '/district/61/analytics',
   '/district/61/changes',
   '/district/61/grid',
   '/district/61/action-list',

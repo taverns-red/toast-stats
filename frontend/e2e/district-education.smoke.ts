@@ -157,3 +157,19 @@ test('the old Analytics anchor lands on the Education leaderboards', async ({
   await expect(page).toHaveURL(/\/district\/61\/education.*#leaderboards$/)
   await expect(page.locator('#leaderboards')).toBeVisible()
 })
+
+test('the old Analytics URL lands on Clubs sorted by net change (#2159)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/district/61/analytics?py=2025&date=2026-03-31', {
+    waitUntil: 'networkidle',
+    timeout: 60_000,
+  })
+  const url = new URL(page.url())
+  expect(url.pathname).toBe('/district/61/clubs')
+  expect(url.searchParams.get('py')).toBe('2025')
+  expect(url.searchParams.get('date')).toBe('2026-03-31')
+  expect(url.searchParams.get('sort')).toBe('netChange')
+  expect(url.searchParams.get('dir')).toBe('desc')
+})

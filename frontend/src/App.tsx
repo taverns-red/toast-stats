@@ -10,6 +10,7 @@ import ErrorPage from './components/ErrorPage'
 import { DistrictHubRouteFallback } from './components/DistrictHubRouteFallback'
 // Unpadded /region/1… redirects to the padded canonical id (#2130)
 import { CanonicalRegionRoute } from './components/rollups/CanonicalRegionRoute'
+import { DistrictAnalyticsRedirect } from './components/DistrictAnalyticsRedirect'
 
 // Code-split: DistrictDetailPage (816 lines + recharts) loads on navigation (#169)
 const DistrictDetailPage = React.lazy(
@@ -68,11 +69,6 @@ const DistrictMeetingsPage = React.lazy(
 // Code-split: DistrictTrendsPage — trends subroute (#680, epic #674 Sprint 6)
 const DistrictTrendsPage = React.lazy(
   () => import('./pages/DistrictTrendsPage')
-)
-
-// Code-split: DistrictAnalyticsPage — analytics subroute (#680, epic #674 Sprint 6)
-const DistrictAnalyticsPage = React.lazy(
-  () => import('./pages/DistrictAnalyticsPage')
 )
 
 // Code-split: ClubRedirectPage — district-free club URL (#320)
@@ -297,12 +293,11 @@ const router = createBrowserRouter(
           ),
         },
         {
+          // The Analytics subpage is retired (#2159): its URL redirects to
+          // Clubs sorted by net change (or, for #education-awards, to the
+          // Education leaderboards).
           path: 'district/:districtId/analytics',
-          element: (
-            <Suspense fallback={<DistrictRouteFallback />}>
-              <DistrictAnalyticsPage />
-            </Suspense>
-          ),
+          element: <DistrictAnalyticsRedirect />,
         },
         {
           path: 'district/:districtId/club/:clubId',
