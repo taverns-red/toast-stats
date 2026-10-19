@@ -7,7 +7,11 @@ import type { ClubLifecycle } from '../../utils/clubLifecycle'
  * review §6.3), not the study sketch's horizontal rail. An ordered list, one
  * row per event, oldest first; a rail and dots are decoration (aria-hidden).
  * The current district says so in words and carries `aria-current`, so the
- * accent dot is never the only signal.
+ * accent dot is never the only signal. A current-state row has no date, so
+ * it reads "Current" alone.
+ *
+ * #2169 — when the charter predates the district's earliest snapshot, a
+ * muted note under the timeline says where our records start.
  *
  * While the club-district history shard loads, the list holds three skeleton
  * rows of the real row height (structural, not measured), so the panels
@@ -87,13 +91,20 @@ export function ClubLifecyclePanel({
                 <span className="club-lifecycle__when">
                   {event.when}
                   {event.current && (
-                    <span className="club-lifecycle__now"> · Current</span>
+                    <span className="club-lifecycle__now">
+                      {event.when ? ' · Current' : 'Current'}
+                    </span>
                   )}
                 </span>
               </span>
             </li>
           ))}
         </ol>
+        {lifecycle?.recordsStart ? (
+          <p className="club-lifecycle__note">
+            Our records start in {lifecycle.recordsStart}
+          </p>
+        ) : null}
         {lifecycle?.formerNames.length ? (
           <p className="club-lifecycle__note">
             Formerly {lifecycle.formerNames.join(', ')}
