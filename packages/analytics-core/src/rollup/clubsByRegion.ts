@@ -44,6 +44,7 @@ import {
   districtIdFromSnapshotFileName,
   isDistrictSnapshotFile,
   normalizeClubId,
+  parseCoordinates,
   scrubPlaceText,
   stripLinks,
   type ClubsByRegionClub,
@@ -117,15 +118,6 @@ const HEALTH_CODE: Record<string, ClubsByRegionHealth> = {
   'intervention-required': 'i',
 }
 
-const validCoordinates = (
-  c: ClubsByRegionClubInput['coordinates']
-): c is { lat: number; lng: number } =>
-  c !== undefined &&
-  Number.isFinite(c.lat) &&
-  Number.isFinite(c.lng) &&
-  Math.abs(c.lat) <= 90 &&
-  Math.abs(c.lng) <= 180
-
 const TOP_VALUE: Record<
   ClubsByRegionTopMetric,
   (c: ClubsByRegionClub) => number
@@ -192,9 +184,9 @@ export function buildClubsByRegion(
       clubHome.set(id, [district.districtId])
       const { health, level } = classifyRollupClub(club, month, programYear)
       const tier = level === 'NotDistinguished' ? null : level
-      const located = validCoordinates(club.coordinates)
-        ? club.coordinates
-        : null
+      // #2153 — the shared rule: (0, 0), non-finite or out-of-range is
+      // unmapped. District files written before the FAC fix still carry it.
+      const located = parseCoordinates(club.coordinates) ?? null
       rows.push({
         id,
         name: stripLinks(club.clubName),
@@ -327,15 +319,6 @@ const num = (value: unknown): number => Number(value ?? 0) || 0
 const str = (value: unknown): string =>
   typeof value === 'string' ? value : value == null ? '' : String(value)
 
-/** A `{lat, lng}` pair of finite numbers, else undefined. */
-function coordinates(value: unknown): { lat: number; lng: number } | undefined {
-  if (typeof value !== 'object' || value === null) return undefined
-  const { lat, lng } = value as { lat?: unknown; lng?: unknown }
-  return typeof lat === 'number' && typeof lng === 'number'
-    ? { lat, lng }
-    : undefined
-}
-
 /**
  * Read a snapshot directory: the date's rankings and every district file's
  * merged club records (`data.clubs`). Only the fields the shards carry are
@@ -363,7 +346,7 @@ export function readClubsByRegionInput(snapshotDir: string): {
       if (clubId === '') continue
       const status = club['clubStatus'] ?? club['status']
       const csp = club['cspSubmitted']
-      const coords = coordinates(club['coordinates'])
+      const coords = parseCoordinates(club['coordinates'])
       const address = club['address'] as { city?: unknown } | null | undefined
       const city = typeof address?.city === 'string' ? address.city : ''
       clubs.push({

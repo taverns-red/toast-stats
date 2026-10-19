@@ -248,8 +248,8 @@ describe('buildClubsByRegion (#1800)', () => {
     expect(r.world.regionMembership).toBeNull()
     expect(r.world.regionMembershipNote).toMatch(/district-region-history/)
     expect(r.world.totals.clubs).toBe(318)
-    expect(r.worldPoints.points).toHaveLength(314)
-    expect(r.worldPoints.count).toBe(314)
+    expect(r.worldPoints.points).toHaveLength(311)
+    expect(r.worldPoints.count).toBe(311)
   })
 
   it('has no PY entry in the history → no shards, the reason named', () => {
