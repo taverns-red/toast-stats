@@ -54,6 +54,13 @@ export interface BasemapMapProps {
   /** Two-finger pan on touch so the page scrolls past an embedded map.
    *  A full-height map page (#1784) turns it off: one finger pans. */
   cooperativeGestures?: boolean
+  /** #2162 — false makes a static picture: no pan, zoom, keyboard or
+   *  gestures, and the canvas leaves the tab order. Default true. */
+  interactive?: boolean
+  /** #2162 — false drops MapLibre's credit control. The caller must then
+   *  print `BASEMAP_ATTRIBUTION` visibly beside the map (ODbL). Default
+   *  true. */
+  attribution?: boolean
 }
 
 export default function BasemapMap({

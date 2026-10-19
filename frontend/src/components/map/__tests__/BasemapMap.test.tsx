@@ -113,6 +113,29 @@ describe('BasemapMap', () => {
     )
   })
 
+  it('is interactive with its own credit by default', () => {
+    render(<BasemapMap ariaLabel="Map" pmtilesUrl={URL} />)
+    expect(hoisted.maps[0]!.options['interactive']).toBe(true)
+  })
+
+  // #2162 — the club page's mini-map is a picture inside a link: no pan or
+  // zoom, and the credit is printed by the card beside the link (nested
+  // links are invalid), so MapLibre's own control is off.
+  it('can be a static picture whose caller prints the credit', () => {
+    render(
+      <BasemapMap
+        ariaLabel="Map"
+        pmtilesUrl={URL}
+        interactive={false}
+        attribution={false}
+      />
+    )
+    const opts = hoisted.maps[0]!.options
+    expect(opts['interactive']).toBe(false)
+    expect(opts['attributionControl']).toBe(false)
+    expect(opts['cooperativeGestures']).toBe(false)
+  })
+
   it('registers the pmtiles protocol and the bundled worker once', async () => {
     // A fresh module instance: registration is per page, not per test.
     vi.resetModules()
