@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.20.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.19.0...shared-contracts-v1.20.0) (2026-10-19)
+
+
+### Features
+
+* **pipeline:** date-exact club-district change points ([#1816](https://github.com/taverns-red/toast-stats/issues/1816)) ([#2135](https://github.com/taverns-red/toast-stats/issues/2135)) ([03fd650](https://github.com/taverns-red/toast-stats/commit/03fd65083a3578620380b89992cfcbee2ac28c5e))
+* **pipeline:** snapshots/&lt;date&gt;/reports-rollups.json — reports-derived region/world rollups ([#2012](https://github.com/taverns-red/toast-stats/issues/2012)) ([#2117](https://github.com/taverns-red/toast-stats/issues/2117)) ([bef7d98](https://github.com/taverns-red/toast-stats/commit/bef7d98b93fb8f6a1f87976217093f37c9e971c5))
+* **region:** /region/:n/education + mirror the education rollup into prod ([#1810](https://github.com/taverns-red/toast-stats/issues/1810)) ([#2139](https://github.com/taverns-red/toast-stats/issues/2139)) ([d61ac4a](https://github.com/taverns-red/toast-stats/commit/d61ac4a091924e4c652b4bf54f82badd881e0f5c))
+
+
+### Bug Fixes
+
+* **coords:** drop outlier FAC geocodes; flag fully online clubs ([#2160](https://github.com/taverns-red/toast-stats/issues/2160)) ([#2168](https://github.com/taverns-red/toast-stats/issues/2168)) ([1a1ecf2](https://github.com/taverns-red/toast-stats/commit/1a1ecf27244fa2f08f8e461eb531be127b85de8a))
+* **coords:** treat FAC's (0, 0) sentinel as no coordinates, one shared rule ([#2153](https://github.com/taverns-red/toast-stats/issues/2153)) ([#2156](https://github.com/taverns-red/toast-stats/issues/2156)) ([feeae86](https://github.com/taverns-red/toast-stats/commit/feeae86e446338450938365436a7fb2556a2abd6))
+* **privacy:** one shared place-text scrub strips meeting credentials ([#2157](https://github.com/taverns-red/toast-stats/issues/2157)) ([#2158](https://github.com/taverns-red/toast-stats/issues/2158)) ([d3bb221](https://github.com/taverns-red/toast-stats/commit/d3bb221aeff85ce2d2c388c7eb23c62bc9d04430))
+* **privacy:** scrub PW/PC passcodes and multi-separator id groups ([#2157](https://github.com/taverns-red/toast-stats/issues/2157)) ([#2166](https://github.com/taverns-red/toast-stats/issues/2166)) ([c673800](https://github.com/taverns-red/toast-stats/commit/c673800448d30f45eba0ac48e9d83ec2a3967084))
+* **privacy:** strip a PW credential after a ';' separator ([#2157](https://github.com/taverns-red/toast-stats/issues/2157)) ([#2180](https://github.com/taverns-red/toast-stats/issues/2180)) ([90f80ea](https://github.com/taverns-red/toast-stats/commit/90f80ea16e47a3ca46defbb2cac80f99651098ea))
+
 ## [1.19.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.18.0...shared-contracts-v1.19.0) (2026-10-18)
 
 
