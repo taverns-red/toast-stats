@@ -169,9 +169,10 @@ export function pinSourceSpec(
     data: data as GeoJSONSourceSpecification['data'],
     cluster: true,
     // Pins group only where they would overlap (#2173, spec §8): a 20 px
-    // radius, and every pin single from z11.
+    // radius. Grouping runs through z13 so dense cores (Singapore CBD,
+    // central Montreal) group instead of stacking; every pin single from z14.
     clusterRadius: 20,
-    clusterMaxZoom: 10,
+    clusterMaxZoom: 13,
     clusterMinPoints: 2,
     clusterProperties: clusterProperties(model),
   }
