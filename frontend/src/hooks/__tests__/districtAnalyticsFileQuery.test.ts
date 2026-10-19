@@ -57,4 +57,28 @@ describe('districtAnalyticsFileQueryOptions (#1901 dual-shape reader)', () => {
     vi.mocked(fetchFromCdn).mockResolvedValue({ metadata: {}, data })
     expect(await read()).toEqual(data)
   })
+  // #2153 — analytics files written before the source fix carry FAC's (0, 0)
+  // ungeocoded sentinel. Read through the shared rule, the club is unmapped:
+  // no null-island pin, counted in the district map's "not on the map".
+  it('drops (0, 0) coordinates from every club list, keeps real ones', async () => {
+    const real = { ...a, coordinates: { lat: 45.42, lng: -75.69 } }
+    const sentinel = { ...b, coordinates: { lat: 0, lng: 0 } }
+    vi.mocked(fetchFromCdn).mockResolvedValue({
+      metadata: {},
+      data: {
+        districtId: '49',
+        allClubs: [real, sentinel],
+        vulnerableClubs: [{ ...sentinel }],
+        thrivingClubs: [],
+        interventionRequiredClubs: [{ ...real }],
+      },
+    })
+    const analytics = await read()
+    expect(analytics.allClubs[0]!.coordinates).toEqual(real.coordinates)
+    expect(analytics.allClubs[1]).not.toHaveProperty('coordinates')
+    expect(analytics.vulnerableClubs[0]).not.toHaveProperty('coordinates')
+    expect(analytics.interventionRequiredClubs[0]!.coordinates).toEqual(
+      real.coordinates
+    )
+  })
 })
