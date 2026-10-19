@@ -124,10 +124,72 @@ export interface LocatorFit {
   bounds: LocatorBounds
 }
 
-/** #2162 — red stub. */
+/** Below this radius from the district's centre, no club is an outlier. */
+export const OUTLIER_MIN_KM = 250
+/** A club further out than this many times the 90th-percentile radius is an
+ *  outlier. */
+export const OUTLIER_P90_FACTOR = 3
+
+const KM_PER_DEGREE = 111.2
+
+const median = (xs: readonly number[]): number => {
+  const s = [...xs].sort((a, b) => a - b)
+  const mid = s.length >> 1
+  return s.length % 2 ? s[mid]! : (s[mid - 1]! + s[mid]!) / 2
+}
+
+/**
+ * #2162 — the tiled mini-map's view: the district's located clubs with
+ * far-off geocodes trimmed, and their bounds.
+ *
+ * FAC sometimes geocodes a club to another continent (D53's Voya, a CT club,
+ * sits in Mumbai), which would zoom the mini-map out to the whole world.
+ * Rule: measure every club's distance from the district's median point (the
+ * median is not pulled by the outliers themselves); a club further out than
+ * max(250 km, 3 × the 90th-percentile distance) is an outlier. On the
+ * 2026-10-18 snapshot this trims D53's Mumbai and Wilmington NC geocodes and
+ * nothing in D59, D61, D91, D95 or D128, while D109's real overseas cluster
+ * (a sixth of its clubs) stays. With few clubs the 90th percentile is the
+ * furthest club, so a handful is never trimmed.
+ *
+ * The focus club is kept, and its pin drawn, only when it is not an outlier:
+ * a mis-geocoded pin would point at the wrong place. Distances are
+ * equirectangular, which is ample for "near or far"; no antimeridian
+ * handling (no district straddles it today).
+ *
+ * Null when the focus club has no usable coordinates.
+ */
 export function fitClubLocator(
-  _clubs: readonly LocatorSource[],
-  _focusId: string
+  clubs: readonly LocatorSource[],
+  focusId: string
 ): LocatorFit | null {
-  return null
+  const pts = clubs.filter(located)
+  const focusSrc = pts.find(c => clubIdsMatch(c.clubId, focusId))
+  if (!focusSrc) return null
+
+  const midLat = median(pts.map(c => c.coordinates.lat))
+  const midLng = median(pts.map(c => c.coordinates.lng))
+  const k = Math.cos((midLat * Math.PI) / 180)
+  const dist = (c: Located) =>
+    Math.hypot((c.coordinates.lng - midLng) * k, c.coordinates.lat - midLat) *
+    KM_PER_DEGREE
+  const ds = pts.map(dist)
+  const sorted = [...ds].sort((a, b) => a - b)
+  const p90 = sorted[Math.round(0.9 * (sorted.length - 1))]!
+  const cutoff = Math.max(OUTLIER_MIN_KM, OUTLIER_P90_FACTOR * p90)
+
+  const inView = pts.filter((_, i) => ds[i]! <= cutoff)
+  const focus = inView.includes(focusSrc) ? focusSrc : null
+  const lngs = inView.map(c => c.coordinates.lng)
+  const lats = inView.map(c => c.coordinates.lat)
+  return {
+    inView,
+    focus,
+    focusIsOutlier: focus === null,
+    trimmed: pts.length - inView.length,
+    bounds: [
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)],
+    ],
+  }
 }
