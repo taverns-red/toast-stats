@@ -22,6 +22,12 @@ import type {
   DiffEvent,
   DiffEventCategory,
 } from '@taverns-red/shared-contracts'
+import { DISTRICT_SECTIONS } from '../config/districtSections'
+
+// One description per section, from the section config (#2161).
+const CHANGES_ABOUT = DISTRICT_SECTIONS.find(
+  s => s.segment === 'changes'
+)?.about
 
 /* District "What Changed" page (#793, epic #797 Sprint 1–2, ADR-005 §1).
    What changed between two recorded snapshot dates. The from/to pair is owned
@@ -173,7 +179,7 @@ const DistrictChangesPage: React.FC = () => {
             title={districtName}
             back={{ label: districtName, to: `/district/${districtId}` }}
             chipLabel="About"
-            about="What changed in this district between two snapshot dates: membership, payments, DCP goals, distinguished status, and clubs added, removed or transferred."
+            about={CHANGES_ABOUT}
             trail={[
               { label: 'Districts', to: '/' },
               { label: districtName, to: `/district/${districtId}` },

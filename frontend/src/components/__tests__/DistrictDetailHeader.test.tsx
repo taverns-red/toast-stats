@@ -3,6 +3,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { DistrictDetailHeader } from '../DistrictDetailHeader'
+import { DISTRICT_SECTIONS } from '../../config/districtSections'
 import { getProgramYear } from '../../utils/programYear'
 import { useLatestAsOfDate } from '../../hooks/useLatestAsOfDate'
 import { snap } from '../../test-utils/snapshotDate'
@@ -271,7 +272,11 @@ describe('DistrictDetailHeader phone context bar (#1831)', () => {
     expect(
       within(sheet).getByRole('button', { name: 'Copy link' })
     ).toBeInTheDocument()
-    expect(within(sheet).getByText(/Membership, payments/)).toBeInTheDocument()
+    // The About line is the Clubs section's own description (#2161), not the
+    // hub's.
+    const clubs = DISTRICT_SECTIONS.find(sec => sec.segment === 'clubs')!
+    expect(within(sheet).getByText(clubs.about)).toBeInTheDocument()
+    expect(within(sheet).queryByText(/Membership, payments/)).toBeNull()
 
     const trail = within(sheet).getByRole('navigation', { name: 'Breadcrumb' })
     expect(
@@ -279,5 +284,51 @@ describe('DistrictDetailHeader phone context bar (#1831)', () => {
         .getAllByRole('listitem')
         .map(li => li.textContent)
     ).toEqual(['Districts', 'District 61', 'Clubs'])
+  })
+})
+
+/* #2161 — the subtitle used to be one hard-coded hub description shown on
+   every subpage. Each section now carries its own `about` in
+   DISTRICT_SECTIONS, and the header shows the current one. */
+describe('DistrictDetailHeader per-section lede (#2161)', () => {
+  const renderAt = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <DistrictDetailHeader {...baseProps} />
+      </MemoryRouter>
+    )
+
+  it('gives every section a non-empty description of its own', () => {
+    for (const sec of DISTRICT_SECTIONS) {
+      expect(sec.about.trim(), sec.label).not.toBe('')
+    }
+    const abouts = DISTRICT_SECTIONS.map(sec => sec.about)
+    expect(new Set(abouts).size).toBe(abouts.length)
+  })
+
+  it('keeps the hub description on the Overview', () => {
+    renderAt('/district/61')
+    expect(screen.getByTestId('district-detail-lede')).toHaveTextContent(
+      DISTRICT_SECTIONS.find(sec => sec.segment === '')!.about
+    )
+  })
+
+  it.each(
+    DISTRICT_SECTIONS.filter(sec => sec.segment !== '').map(sec => [
+      sec.label,
+      sec,
+    ])
+  )('shows the %s description on that section', (_label, sec) => {
+    cleanup()
+    renderAt(`/district/61/${sec.segment}`)
+    expect(screen.getByTestId('district-detail-lede')).toHaveTextContent(
+      sec.about
+    )
+  })
+
+  it('shows no lede on a route that is not a section, rather than a wrong one', () => {
+    renderAt('/district/61/growth/survival')
+    expect(screen.queryByTestId('district-detail-lede')).toBeNull()
+    expect(screen.queryByText(/Membership, payments/)).toBeNull()
   })
 })
