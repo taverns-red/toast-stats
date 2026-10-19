@@ -122,14 +122,16 @@ describe('clubPinLayers', () => {
     }
   })
 
-  it('groups pins only when they overlap, and shows single pins from z11 (#2173)', () => {
+  // Ron 2026-10-19: overlap-only radius, but dense cores (Singapore CBD,
+  // central Montreal) keep grouping through z13 instead of stacking.
+  it('groups pins only when they overlap, through z13, single from z14 (#2173)', () => {
     const { model } = styleWith('health')
     const src = pinSourceSpec(buildPinFeatures(CLUBS, model), model)
     expect(src).toMatchObject({
       type: 'geojson',
       cluster: true,
       clusterRadius: 20,
-      clusterMaxZoom: 10,
+      clusterMaxZoom: 13,
       clusterMinPoints: 2,
     })
   })
