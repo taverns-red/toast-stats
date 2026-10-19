@@ -22,6 +22,7 @@ import { DistrictSubnav } from '../components/DistrictSubnav'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 import { useClubPins } from '../components/map/useClubPins'
 import MapViewControls from '../components/map/MapViewControls'
+import OnlineClubsChip from '../components/map/OnlineClubsChip'
 import {
   CLUSTER_LAYER_ID,
   PIN_LAYER_ID,
@@ -383,6 +384,12 @@ const DistrictMapPage: React.FC = () => {
   const modeLabel = MAP_COLOR_MODES.find(m => m.id === mode)!.label
   const closeModes = React.useCallback(() => setSheet(null), [setSheet])
 
+  // Online-only clubs get no pin (#2174); the legend lists them instead.
+  // The same filtered set the pins draw from, so the count follows filters.
+  const online = useMemo(
+    () => filtered.filter(c => c.meetsOnline === true),
+    [filtered]
+  )
   const legend = (limit?: number, onMore?: () => void) => (
     <div className="map-legend">
       <p className="map-legend__title">
@@ -400,6 +407,9 @@ const DistrictMapPage: React.FC = () => {
             onMore={onMore}
           />
         </React.Suspense>
+      )}
+      {limit === undefined && (
+        <OnlineClubsChip clubs={online} districtId={districtId} />
       )}
     </div>
   )

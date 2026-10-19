@@ -2378,6 +2378,15 @@
   }
 
   /* ODbL credit: its line is reserved, shown once the tiles paint. */
+  /* #2174: an online-only club's Location card: a line, no map. */
+  .club-minimap__online {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 22px;
+    color: var(--ink);
+  }
+
   .club-minimap__credit {
     margin: 0 0 4px;
     min-height: 18px;

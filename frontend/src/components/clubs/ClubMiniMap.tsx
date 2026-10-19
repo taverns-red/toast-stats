@@ -76,6 +76,44 @@ export interface ClubMiniMapProps {
   when?: string | null
 }
 
+const LOCATION_ICON = (
+  <svg
+    className="club-panel__ico"
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.6}
+    aria-hidden="true"
+  >
+    <path d="M8 14s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0C3.5 9.8 8 14 8 14z" />
+    <circle cx="8" cy="6.5" r="1.5" />
+  </svg>
+)
+
+/** #2174: the Location card of a club that meets only online. */
+function OnlineCard({ when }: { when: string | null }) {
+  return (
+    <section
+      className="club-panel club-minimap"
+      aria-labelledby="club-minimap-title"
+    >
+      <div className="club-panel__head">
+        <h2 id="club-minimap-title">
+          {LOCATION_ICON}
+          Location
+        </h2>
+      </div>
+      <div className="club-panel__body">
+        <p className="club-minimap__online">
+          {when ? `Meets online · ${when}` : 'Meets online'}
+        </p>
+      </div>
+    </section>
+  )
+}
+
 export function ClubMiniMap({
   districtId,
   clubId,
@@ -83,6 +121,8 @@ export function ClubMiniMap({
   clubs,
   place,
   heroPainted,
+  meetsOnline = false,
+  when = null,
 }: ClubMiniMapProps) {
   const fit = useMemo(() => fitClubLocator(clubs, clubId), [clubs, clubId])
   const svg = useMemo(() => {
@@ -106,6 +146,9 @@ export function ClubMiniMap({
     []
   )
 
+  // #2174: an online-only club has no place on a map. Say how it meets
+  // instead; no timezone is known, so none is shown (or guessed).
+  if (meetsOnline) return <OnlineCard when={when} />
   if (!fit || !svg) return null
   const districtLabel = `District ${districtId}`
   const shown = fit.inView.length
@@ -122,19 +165,7 @@ export function ClubMiniMap({
     >
       <div className="club-panel__head">
         <h2 id="club-minimap-title">
-          <svg
-            className="club-panel__ico"
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.6}
-            aria-hidden="true"
-          >
-            <path d="M8 14s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0C3.5 9.8 8 14 8 14z" />
-            <circle cx="8" cy="6.5" r="1.5" />
-          </svg>
+          {LOCATION_ICON}
           Location
         </h2>
       </div>

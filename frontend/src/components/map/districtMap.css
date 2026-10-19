@@ -546,3 +546,13 @@
   color: var(--map-text-2);
   cursor: default;
 }
+
+/* #2174: "N online clubs" under the legend chips; the list opens in place. */
+.map-online {
+  margin-top: 8px;
+}
+
+.map-online__list {
+  max-height: 260px;
+  overflow-y: auto;
+}
