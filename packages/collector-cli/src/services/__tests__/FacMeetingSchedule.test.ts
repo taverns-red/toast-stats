@@ -152,12 +152,16 @@ describe('scrubFacStreet (#2069)', () => {
     ['Call with questions:  555-010-0199', 'Call with questions'],
     ['Zoom Meeting ID 00000000000, Zoom Passcode is 000000', 'Zoom, Zoom'],
     ['Tencent Meeting: 000 0000 0000', 'Tencent Meeting'],
+    // #2157 residue: double-spaced id groups and a "PW" passcode.
+    ['Zoom ID:  000  0000  0000   PW:0000, 9 Main St', '9 Main St'],
+    ['99999 Oak Rd. ,  Mtg ID: 00000000000  pw 000000', '99999 Oak Rd.'],
   ])('%j → %j', (raw, expected) => {
     expect(scrubFacStreet(raw)).toBe(expected)
   })
 
   it.each([
     ['bit.ly/REDACTED00'],
+    ['Mtg ID: 00000000000  pw 000000'],
     [
       'https://us99web.zoom.us/j/999999999, MtgID: 999 9999 999 Passcode:999999',
     ],
@@ -181,6 +185,9 @@ describe('scrubFacStreet (#2069)', () => {
     // Quebec unit-civic numbers are not phone numbers.
     ['100-1234 Chemin de la Cote St. Luc'],
     ['23300 58th Ave W'],
+    ['Suite 1200, 9 Main St'],
+    ['PC World, 12-34 Main St'],
+    ['Room 3-401, Building 7'],
   ])('keeps %j unchanged', raw => {
     expect(scrubFacStreet(raw)).toBe(raw)
   })
