@@ -37,7 +37,6 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
       Clubs: '/district/61/clubs',
       Divisions: '/district/61/divisions',
       Trends: '/district/61/trends',
-      Analytics: '/district/61/analytics',
       Rankings: '/district/61/rankings',
       'Action List': '/district/61/action-list',
     }
@@ -49,18 +48,20 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
     }
   })
 
-  it('lists Trends and Analytics now that their routes exist (#680)', () => {
+  it('no longer lists Analytics: the page was retired and redirects to Clubs (#2159)', () => {
+    renderAt('/district/61')
+    expect(screen.queryByRole('link', { name: 'Analytics' })).toBeNull()
+    expect(DISTRICT_SECTIONS.some(s => s.segment === 'analytics')).toBe(false)
+  })
+
+  it('lists Trends now that its route exists (#680)', () => {
     renderAt('/district/61')
     expect(screen.getByRole('link', { name: 'Trends' })).toHaveAttribute(
       'href',
       '/district/61/trends'
     )
-    expect(screen.getByRole('link', { name: 'Analytics' })).toHaveAttribute(
-      'href',
-      '/district/61/analytics'
-    )
     // ADR-005 §3 order: lateral views read Overview · What Changed · Clubs ·
-    // Divisions · Grid · Map · Trends · Analytics · Rankings. Grid (#1230) sits
+    // Divisions · Grid · Map · Trends · Rankings (Analytics retired, #2159). Grid (#1230) sits
     // after Divisions as the dense whole-district companion to the division
     // breakdown; Map (#1784) follows it, the same view laid out geographically.
     // Action List (#1231) closes the epic as the area-director "what to do
@@ -79,7 +80,6 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
       'Education',
       'Meetings',
       'Trends',
-      'Analytics',
       'Rankings',
       'Action List',
     ])
@@ -176,7 +176,7 @@ describe('DistrictSubnav on a phone (#1832)', () => {
     expect(screen.getByRole('button', { name: /^More/ })).toBeInTheDocument()
   })
 
-  it('More holds every other section, in config order, so all 13 are within 2 taps', () => {
+  it('More holds every other section, in config order, so all 12 are within 2 taps', () => {
     stubViewport(true)
     renderAt('/district/61')
     fireEvent.click(screen.getByRole('button', { name: /^More/ }))
@@ -193,7 +193,6 @@ describe('DistrictSubnav on a phone (#1832)', () => {
       ['Growth', '/district/61/growth'],
       ['Education', '/district/61/education'],
       ['Meetings', '/district/61/meetings'],
-      ['Analytics', '/district/61/analytics'],
       ['Rankings', '/district/61/rankings'],
       ['Action List', '/district/61/action-list'],
     ])

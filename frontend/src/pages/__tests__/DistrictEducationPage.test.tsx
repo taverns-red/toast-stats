@@ -20,6 +20,7 @@ import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
+import { useDistrictStatistics } from '../../hooks/useMembershipData'
 import recordedD61 from '../../__tests__/fixtures/d61-education-reports.recorded.json'
 import recordedClubs from '../../__tests__/fixtures/d61-education-clubs.recorded.json'
 
@@ -57,6 +58,19 @@ vi.mock('../../hooks/useDistrictData', () => ({
 vi.mock('../../hooks/useDistrictAnalytics', () => ({
   useDistrictAnalytics: vi.fn(),
 }))
+
+// The any-date CSV fallback (#2159): the raw club-performance snapshot, read
+// only when the ledger is absent for the date.
+vi.mock('../../hooks/useMembershipData', () => ({
+  useDistrictStatistics: vi.fn(() => ({ data: undefined })),
+}))
+const csvSnapshot = {
+  clubPerformance: [
+    { 'Club Number': '1', 'Level 1s': 3, 'Level 2s': 1, 'Level 3s': 0 },
+    { 'Club Number': '2', 'Level 1s': 0, 'Level 2s': 0, 'Level 3s': 2 },
+    { 'Club Number': '3', 'Level 1s': 0, 'Level 2s': 0, 'Level 3s': 0 },
+  ],
+}
 
 const viewProps: Array<{ snapshotDate: string; isPriorProgramYear: boolean }> =
   []
@@ -204,5 +218,48 @@ describe('DistrictEducationPage (#1793)', () => {
     await screen.findByTestId('education-awards-leaderboard')
     expect(leaderboardProps.at(-1)!.isPriorProgramYear).toBe(true)
     expect(viewProps.at(-1)!.isPriorProgramYear).toBe(true)
+  })
+
+  describe('club-performance fallback when the ledger is absent (#2159)', () => {
+    it('shows the CSV Education Levels card, labelled with its source', async () => {
+      vi.mocked(useDistrictAnalytics).mockReturnValue(analyticsWith(null))
+      vi.mocked(useDistrictStatistics).mockReturnValue({
+        data: csvSnapshot,
+      } as unknown as ReturnType<typeof useDistrictStatistics>)
+      renderAt('/district/61/education?date=2026-10-12')
+      expect(
+        await screen.findByText(/No education report for this date/)
+      ).toBeInTheDocument()
+      const fallback = await screen.findByRole('region', {
+        name: /from the club performance report/i,
+      })
+      expect(fallback).toHaveTextContent(/club performance report/i)
+      expect(
+        fallback.querySelector('section[aria-label="education levels"]')
+      ).not.toBeNull()
+      expect(fallback).toHaveTextContent(/6\s*total awards/)
+      // Read for the page's own date (R3), divisions-shaped like before.
+      expect(vi.mocked(useDistrictStatistics)).toHaveBeenLastCalledWith(
+        '61',
+        '2026-10-12',
+        'divisions'
+      )
+    })
+
+    it('does not fetch or show it when the ledger is there', async () => {
+      vi.mocked(useDistrictStatistics).mockReturnValue({
+        data: csvSnapshot,
+      } as unknown as ReturnType<typeof useDistrictStatistics>)
+      renderAt('/district/61/education')
+      await screen.findByRole('list', { name: /education at a glance/i })
+      expect(
+        screen.queryByRole('region', {
+          name: /from the club performance report/i,
+        })
+      ).toBeNull()
+      for (const call of vi.mocked(useDistrictStatistics).mock.calls) {
+        expect(call[0]).toBeNull()
+      }
+    })
   })
 })
