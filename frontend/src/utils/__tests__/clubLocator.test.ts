@@ -195,3 +195,23 @@ describe('fitClubLocator', () => {
     expect(fitClubLocator(CLUBS, '1004')).toBeNull()
   })
 })
+
+describe('online-only clubs (#2174)', () => {
+  const ONLINE = [
+    { clubId: '1', coordinates: { lat: 45.4, lng: -75.7 } },
+    {
+      clubId: '2',
+      coordinates: { lat: 45.5, lng: -75.6 },
+      meetsOnline: true as const,
+    },
+  ]
+
+  it('draws no dot for a club that meets only online', () => {
+    expect(projectClubPoints(ONLINE, BOX).map(p => p.id)).toEqual(['1'])
+  })
+
+  it('never frames or focuses an online club', () => {
+    const fit = fitClubLocator(ONLINE, '2')
+    expect(fit?.inView.map(c => c.clubId) ?? []).not.toContain('2')
+  })
+})

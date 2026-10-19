@@ -17,6 +17,8 @@ import { clubIdsMatch, hasCoordinates } from '@taverns-red/shared-contracts'
 export interface LocatorSource {
   clubId: string
   coordinates?: { lat: number; lng: number } | undefined
+  /** #2174: an online-only club has no place on a map. */
+  meetsOnline?: true | undefined
 }
 
 export interface LocatorPoint {

@@ -70,6 +70,10 @@ export interface ClubMiniMapProps {
   /** The page's hero has painted (R3: the page's own gate, #2147). The tile
    *  chunk never loads before it. */
   heroPainted: boolean
+  /** #2174: the club meets only online, so the card says so, no map. */
+  meetsOnline?: boolean
+  /** Its meeting day and time ("Tuesday 7:00 pm"), if known. */
+  when?: string | null
 }
 
 export function ClubMiniMap({
