@@ -14,8 +14,9 @@
  * - passcode / password / passwd / pwd / access code / mot de passe /
  *   code d'accès, followed by any value ("Passcode: x0x0", "pwd=Ab0");
  * - PIN, followed by digits ("PIN 0000"; "Pin Oak", "Pinner" are places);
- * - PW, followed by a ":" or a value with a digit ("PW:0000"; "PW Library"
- *   is a place), and PC followed by digits ("PC 000000"; "PC World");
+ * - PW, followed by a ":", a ";" and digits ("Zoom; PW; 0000"), or a
+ *   value with a digit ("PW:0000"; "PW Library" is a place), and PC
+ *   followed by digits ("PC 000000"; "PC World");
  * - a meeting, Zoom, Teams, webinar or conference id or number, followed by
  *   digits, spaced or not;
  * - a bare "ID" only with a ":" or "#" and digits ("ID: 000 0000"), so a
@@ -47,9 +48,10 @@ const CREDENTIAL_SOURCE = [
   String.raw`\b${SECRET_LABEL}\b${SEP}(?:${DIGITS}(?![^\s,;()])|[^\s,;()]+)`,
   // "Meeting ID: 000 0000 0000", "PIN 0000" (digit values).
   String.raw`\b${ID_LABEL}(?![a-z])${SEP}${DIGITS}`,
-  // "PW:0000", "pw Ab00", "PW: x" (a short label: a ":"/"=" or a digit
-  // in the value, so "PW Library" is a place).
-  String.raw`\bpw\b(?:\s*[:=]\s*[^\s,;()]+|${SEP}(?=[^\s,;()]*\d)[^\s,;()]+)`,
+  // "PW:0000", "pw Ab00", "PW: x", "Zoom; PW; 0000" (a short label: a
+  // ":"/"=", a ";" and digits only, or a digit in the value, so
+  // "PW Library" and "PW; 4th Floor" are places).
+  String.raw`\bpw\b(?:\s*[:=]\s*[^\s,;()]+|\s*;\s*${DIGITS}(?![^\s,;()])|${SEP}(?=[^\s,;()]*\d)[^\s,;()]+)`,
   // "PC: 000000" (digit values only, so "PC World" is a place).
   String.raw`\bpc\b${SEP}${DIGITS}(?![^\s,;()])`,
   // "ID: 000 0000", "ID# 000" (a bare id needs ":" or "#").
