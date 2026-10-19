@@ -16,7 +16,7 @@ interface Recorder {
   callback: IOCallback
   options: IOOptions
   observed: Element[]
-  disconnect: ReturnType<typeof vi.fn>
+  disconnect: ReturnType<typeof vi.fn<() => void>>
 }
 let observers: Recorder[] = []
 
