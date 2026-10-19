@@ -21,6 +21,7 @@ import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 import { useClubPins } from '../components/map/useClubPins'
+import MapViewControls from '../components/map/MapViewControls'
 import {
   CLUSTER_LAYER_ID,
   PIN_LAYER_ID,
@@ -335,7 +336,7 @@ const DistrictMapPage: React.FC = () => {
   }
 
   // The sandbox draws its own pins on this map.
-  useClubPins(listView || sandbox ? null : map, {
+  const { resetView } = useClubPins(listView || sandbox ? null : map, {
     data,
     model,
     theme,
@@ -555,6 +556,15 @@ const DistrictMapPage: React.FC = () => {
                       </React.Suspense>
                     </MapErrorBoundary>
                   </MapErrorBoundary>
+                )}
+                {!sandbox && !noLocation && (
+                  <MapViewControls
+                    map={map}
+                    onReset={() => {
+                      resetView()
+                      setSelectedIds([])
+                    }}
+                  />
                 )}
                 {map && !sandbox && !noLocation && !pending && (
                   <React.Suspense fallback={null}>

@@ -137,6 +137,12 @@ describe('ClubMiniMapTiles', () => {
     ).toBe('true')
   })
 
+  it('has no control stack: no zoom, no "Reset map view" (#2173)', () => {
+    const { container } = renderTiles()
+    expect(container.querySelector('button')).toBeNull()
+    expect(container.querySelector('.map-view-controls')).toBeNull()
+  })
+
   it('frames the trimmed bounds before the first tile is requested', () => {
     const { fit } = renderTiles()
     expect(map.fitBounds).toHaveBeenCalledWith(fit.bounds, {

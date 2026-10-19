@@ -24,6 +24,7 @@ import {
   type Project,
   type RenderedPin,
 } from './pinTargets'
+import { PIN_HEAD_LIFT } from './pinGlyphs'
 
 /** Arrow, Home and End keys: the next index from the current one. */
 const STEPS: Record<string, (i: number, n: number) => number> = {
@@ -35,8 +36,10 @@ const STEPS: Record<string, (i: number, n: number) => number> = {
   End: (_, n) => n - 1,
 }
 
-const place = (p: { x: number; y: number }) =>
-  `translate(${Math.round(p.x - HALF)}px, ${Math.round(p.y - HALF)}px)`
+/** The focus ring sits on the pin's head, above its tip (#2173); a
+ *  cluster is centred on its point. */
+const place = (p: { x: number; y: number }, t: PinTarget) =>
+  `translate(${Math.round(p.x - HALF)}px, ${Math.round(p.y - (t.cluster ? 0 : PIN_HEAD_LIFT) - HALF)}px)`
 
 const reducedMotion = () =>
   typeof window.matchMedia === 'function' &&
@@ -100,7 +103,7 @@ export const MapPinKeys: React.FC<MapPinKeysProps> = ({
         frame = 0
         for (const t of targetsRef.current) {
           const el = buttons.current.get(t.key)
-          if (el) el.style.transform = place(project(t.at))
+          if (el) el.style.transform = place(project(t.at), t)
         }
       })
     }
@@ -188,7 +191,7 @@ export const MapPinKeys: React.FC<MapPinKeysProps> = ({
             className="map-pin-keys__pin"
             tabIndex={t.key === current ? 0 : -1}
             aria-label={t.label}
-            style={{ transform: place(project(t.at)) }}
+            style={{ transform: place(project(t.at), t) }}
             onFocus={() => setActive(t.key)}
             onClick={() => activate(t)}
             onKeyDown={e => onKeyDown(e, i)}

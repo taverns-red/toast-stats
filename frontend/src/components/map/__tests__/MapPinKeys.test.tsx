@@ -12,6 +12,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { ClubTrend } from '../../../hooks/useDistrictAnalytics'
 import { buildModeModel } from '../pinModes'
 import { MapPinKeys } from '../MapPinKeys'
+import { PIN_HEAD_LIFT } from '../pinGlyphs'
 import { pinTargets, type RenderedPin } from '../pinTargets'
 
 const model = buildModeModel('health')
@@ -244,7 +245,10 @@ describe('MapPinKeys', () => {
   it('places each pin button over its pin', () => {
     setup(three)
     const b = screen.getByRole('button', { name: 'Bravo Talkers, Vulnerable' })
-    // Centred on (50, -100) with a 44 px box.
-    expect(b.style.transform).toBe('translate(28px, -122px)')
+    // A 44 px box centred on the pin's head: the tip is on (50, -100) and
+    // the head sits PIN_HEAD_LIFT above it (#2173, bottom-anchored pins).
+    const y = Math.round(-100 - PIN_HEAD_LIFT - 22)
+    expect(b.style.transform).toBe(`translate(28px, ${y}px)`)
+    expect(y).toBeLessThan(-122)
   })
 })

@@ -53,4 +53,9 @@ describe('MapViewControls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset map view' }))
     expect(onReset).toHaveBeenCalledTimes(1)
   })
+
+  it('stays in place but disabled until the map is ready', () => {
+    render(<MapViewControls map={null} onReset={() => {}} />)
+    for (const b of screen.getAllByRole('button')) expect(b).toBeDisabled()
+  })
 })

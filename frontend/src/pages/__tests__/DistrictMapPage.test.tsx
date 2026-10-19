@@ -271,6 +271,17 @@ describe('DistrictMapPage — map and legend', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('stacks zoom and "Reset map view" over the map (#2173)', async () => {
+    renderAt('/district/61/map')
+    const stack = await screen.findByRole('group', { name: 'Map view' })
+    expect(
+      within(stack).getByRole('button', { name: 'Reset map view' })
+    ).toBeInTheDocument()
+    expect(
+      within(stack).getByRole('button', { name: 'Zoom in' })
+    ).toBeInTheDocument()
+  })
+
   // #1943: while MapLibre loads, the map box shows the located clubs as a
   // static preview (no tiles, no MapLibre); the list view has no map box.
   it('shows a static preview of the located clubs in the map box', async () => {
