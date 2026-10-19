@@ -56,9 +56,9 @@ const DISTRICT_FILE = /^district_([A-Za-z0-9]+)\.json$/
 export interface DistrictShape {
   /** Keys of the file's `data` object. */
   dataKeys: string[]
-  /** Keys of the most complete `data.clubs[]` record. */
+  /** Every key a `data.clubs[]` record carries (#2160: a union). */
   clubKeys: string[]
-  /** Keys of the most complete `data.clubPerformance[]` record. */
+  /** Every key a `data.clubPerformance[]` record carries (a union). */
   clubPerformanceKeys: string[]
 }
 
@@ -130,19 +130,23 @@ const num = (v: unknown): number | null =>
   typeof v === 'number' && Number.isFinite(v) ? v : null
 
 /**
- * Keys of the record with the most keys (the best-enriched one). The retired
- * club contact keys (#2026) are left out: writers no longer emit them, so
- * their absence against a prod object written earlier is not a regression.
+ * Every key any record carries (the district's enrichment surface). A union
+ * rather than the single richest record (#2160): a fully online club trades
+ * `coordinates` for `meetsOnline`, so it ties a mapped club on key count and
+ * the first of them would otherwise decide whether the district "has"
+ * coordinates. FAC loss still shows, as no record then carries the keys.
+ * The retired club contact keys (#2026) are left out: writers no longer emit
+ * them, so their absence against a prod object written earlier is not a
+ * regression.
  */
 function richestKeys(records: unknown): string[] {
   if (!Array.isArray(records)) return []
-  let best: string[] = []
+  const keys = new Set<string>()
   for (const r of records) {
     if (!isRecord(r)) continue
-    const keys = Object.keys(r).filter(k => !isClubContactKey(k))
-    if (keys.length > best.length) best = keys
+    for (const k of Object.keys(r)) if (!isClubContactKey(k)) keys.add(k)
   }
-  return [...best].sort()
+  return [...keys].sort()
 }
 
 /** Shape of a `district_<id>.json` snapshot, null when it is not one. */
@@ -436,7 +440,7 @@ export function buildCompletenessGateSummary(
     `- Touched dates: ${result.dates.length ? result.dates.join(', ') : '—'}`,
     `- New in this run (no production baseline): ${result.newDates.length ? result.newDates.join(', ') : '—'}`,
     `- District files sampled per bucket: ${result.districtsSampled}`,
-    '- Asserted: object count (retired analytics files excluded, #1798), `manifest`/`metadata` district counts, `global-totals` clubs and countries, district `data` keys and the most complete club record’s keys — staging ≥ production. A district staging records as a #1671 source gap counts for itself when production holds no clubs for it (#2038).',
+    '- Asserted: object count (retired analytics files excluded, #1798), `manifest`/`metadata` district counts, `global-totals` clubs and countries, district `data` keys and the union of club record keys — staging ≥ production. A district staging records as a #1671 source gap counts for itself when production holds no clubs for it (#2038).',
     '',
   ]
   if (result.failures.length) {
