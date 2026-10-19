@@ -15,8 +15,10 @@
  * so this test guards the shipped values, not a copy.
  */
 import { describe, expect, it } from 'vitest'
+import type { ClubTrend } from '../../../hooks/useDistrictAnalytics'
 import {
   CATEGORICAL8,
+  CATEGORICAL12,
   HEALTH_FILLS,
   OUTLINE,
   TIER_FILLS,
@@ -26,6 +28,7 @@ import { BASEMAP_COLOURS } from '../basemapStyle'
 import { DIVERGING5, SEQUENTIAL5, STATUS_FILLS } from '../pinExtended'
 import { COACH_FILLS, COMPLIANCE_FILLS } from '../pinReports'
 import { ATTENDANCE_FILLS, DAY_FILLS } from '../pinMeeting'
+import { territoryModel } from '../pinTerritory'
 
 type Vision = 'normal' | 'protan' | 'deutan' | 'tritan'
 const VISIONS: Vision[] = ['normal', 'protan', 'deutan', 'tritan']
@@ -184,6 +187,8 @@ describe('status and categorical palettes', () => {
   const sets: Record<string, string[]> = {
     health: Object.values(HEALTH_FILLS),
     categorical8: [...CATEGORICAL8],
+    // Territory modes (#2178): one hue per division or district, up to 12.
+    categorical12: [...CATEGORICAL12],
     status: Object.values(STATUS_FILLS),
     // #1787: renewals, CSP and officer list; coach; how members attend.
     compliance: Object.values(COMPLIANCE_FILLS),
@@ -256,7 +261,7 @@ describe('contrast', () => {
     const fills = [
       ...Object.values(HEALTH_FILLS),
       ...Object.values(TIER_FILLS),
-      ...CATEGORICAL8,
+      ...CATEGORICAL12,
       ...Object.values(STATUS_FILLS),
       ...SEQUENTIAL5,
       ...DIVERGING5,
@@ -270,5 +275,102 @@ describe('contrast', () => {
       expect(labelColourOn(fill)).toBe(best)
       expect(contrast(fill, best)).toBeGreaterThanOrEqual(4.5)
     }
+  })
+})
+
+/**
+ * A synthetic district laid out like a real one (#2178): divisions are
+ * blobs on a ring, each split into 1–7 area blobs of three clubs.
+ */
+function district(divisions: number): ClubTrend[] {
+  const clubs: ClubTrend[] = []
+  for (let d = 0; d < divisions; d++) {
+    const div = String.fromCharCode(65 + d)
+    const angle = (2 * Math.PI * d) / divisions
+    const [lat, lng] = [45 + Math.sin(angle), -75 + Math.cos(angle)]
+    const areas = 1 + ((d * 5) % 7)
+    for (let a = 0; a < areas; a++)
+      for (let k = 0; k < 3; k++)
+        clubs.push({
+          clubId: `${div}${a}${k}`,
+          clubName: 'Club',
+          divisionId: div,
+          divisionName: `Division ${div}`,
+          areaId: String(a + 1).padStart(2, '0'),
+          areaName: `Area ${a + 1}`,
+          membershipTrend: [],
+          dcpGoalsTrend: [],
+          currentStatus: 'thriving',
+          riskFactors: [],
+          distinguishedLevel: 'NotDistinguished',
+          coordinates: {
+            lat: lat + 0.1 * Math.sin(a) + 0.01 * k,
+            lng: lng + 0.1 * Math.cos(a),
+          },
+        } as unknown as ClubTrend)
+  }
+  return clubs
+}
+
+const named = (m: ReturnType<typeof territoryModel>) =>
+  m.categories.filter(c => c.shape !== 'suspended')
+
+describe('territory colours (#2178)', () => {
+  // Districts have about 4–12 divisions; any two must read apart.
+  for (let n = 4; n <= 12; n++) {
+    it(`${n} divisions: each its own hue, every pair distinct`, () => {
+      const fills = named(territoryModel('division', district(n))).map(
+        c => c.fill
+      )
+      expect(new Set(fills).size).toBe(n)
+      for (const v of VISIONS)
+        expect(minPairDelta(fills, v, false)).toBeGreaterThanOrEqual(
+          v === 'normal' ? 15 : 8
+        )
+    })
+  }
+
+  describe('areas take their division hue in lightness steps', () => {
+    const clubs = district(12)
+    const divisions = new Map(
+      named(territoryModel('division', clubs)).map(c => [c.code!, c.fill])
+    )
+    const areas = named(territoryModel('area', clubs))
+    const byDivision = new Map<string, string[]>()
+    for (const a of areas) {
+      const d = a.code!.slice(0, 1)
+      byDivision.set(d, [...(byDivision.get(d) ?? []), a.fill])
+    }
+    const hue = (hex: string) => {
+      const [, a, b] = lab(hex)
+      return ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360
+    }
+
+    it('keeps the division hue', () => {
+      for (const [d, fills] of byDivision) {
+        const h = hue(divisions.get(d)!)
+        for (const f of fills) {
+          const diff = Math.abs(hue(f) - h)
+          expect(Math.min(diff, 360 - diff)).toBeLessThanOrEqual(12)
+        }
+      }
+    })
+
+    for (const v of VISIONS)
+      it(`adjacent steps in a division are distinct under ${v}`, () => {
+        for (const fills of byDivision.values()) {
+          if (fills.length < 2) continue
+          expect(minPairDelta(fills, v, true)).toBeGreaterThanOrEqual(5)
+          expect(new Set(fills).size).toBe(fills.length)
+        }
+      })
+
+    it('every shade carries a 4.5:1 code label', () => {
+      for (const { fill } of areas) {
+        const best = contrast(fill, WHITE) >= contrast(fill, INK) ? WHITE : INK
+        expect(labelColourOn(fill)).toBe(best)
+        expect(contrast(fill, best)).toBeGreaterThanOrEqual(4.5)
+      }
+    })
   })
 })
