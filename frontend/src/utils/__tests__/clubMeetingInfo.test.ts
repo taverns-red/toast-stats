@@ -293,6 +293,26 @@ const SCHEMELESS_LINKS = [
   'clubsite.com',
 ]
 
+describe('buildClubMeetingInfo — no meeting credential in the place (#2157)', () => {
+  // D02 club 7893475 typed its passcode into its city (value redacted).
+  it('keeps the city and drops the passcode typed into it', () => {
+    const info = buildClubMeetingInfo({
+      ...CLUB_977,
+      address: { ...CLUB_977.address, city: 'Culver City Passcode: 000000' },
+    })
+    expect(info?.place).toBe('9999 Overland Ave, Culver City, CA')
+    expect(JSON.stringify(info)).not.toMatch(/passcode|000000/i)
+  })
+
+  it('keeps a real city that starts with "Pin"', () => {
+    const info = buildClubMeetingInfo({
+      ...CLUB_977,
+      address: { ...CLUB_977.address, city: 'Pine Bluff' },
+    })
+    expect(info?.place).toBe('9999 Overland Ave, Pine Bluff, CA')
+  })
+})
+
 describe('buildClubMeetingInfo — no link of any kind in the place (#2069)', () => {
   it("drops club 977's label and bit.ly link and keeps its street", () => {
     const info = buildClubMeetingInfo(CLUB_977)
