@@ -54,6 +54,13 @@ export interface BasemapMapProps {
   /** Two-finger pan on touch so the page scrolls past an embedded map.
    *  A full-height map page (#1784) turns it off: one finger pans. */
   cooperativeGestures?: boolean
+  /** #2162 — false makes a static picture: no pan, zoom, keyboard or
+   *  gestures, and the canvas leaves the tab order. Default true. */
+  interactive?: boolean
+  /** #2162 — false drops MapLibre's credit control. The caller must then
+   *  print `BASEMAP_ATTRIBUTION` visibly beside the map (ODbL). Default
+   *  true. */
+  attribution?: boolean
 }
 
 export default function BasemapMap({
@@ -63,6 +70,8 @@ export default function BasemapMap({
   onReady,
   className,
   cooperativeGestures = true,
+  interactive = true,
+  attribution = true,
 }: BasemapMapProps) {
   const { isDark } = useDarkMode()
   const theme: BasemapTheme = isDark ? 'dark' : 'light'
@@ -79,6 +88,8 @@ export default function BasemapMap({
     theme,
     url,
     cooperativeGestures,
+    interactive,
+    attribution,
   })
 
   useEffect(() => {
@@ -92,9 +103,12 @@ export default function BasemapMap({
       center: seed.initialView.center,
       zoom: seed.initialView.zoom,
       // ODbL: the credit stays visible, never collapsed behind an icon.
-      attributionControl: { compact: false },
+      // Off only when the caller prints it beside the map (#2162).
+      attributionControl: seed.attribution ? { compact: false } : false,
+      interactive: seed.interactive,
       // Embedded maps: page scroll keeps working; two fingers pan the map.
-      cooperativeGestures: seed.cooperativeGestures,
+      // A static picture has no gestures to cooperate with.
+      cooperativeGestures: seed.interactive && seed.cooperativeGestures,
     })
     mapRef.current = map
     styledRef.current = { theme: seed.theme, url: seed.url }

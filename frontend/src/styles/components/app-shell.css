@@ -2328,15 +2328,76 @@
     outline-offset: 2px;
   }
 
-  .club-minimap__svg {
-    display: block;
+  /* #2162 — the picture's box, reserved before anything loads (Lesson
+     107): the SVG placeholder and, later, the tiles both fill it. */
+  .club-minimap__frame {
+    position: relative;
     width: 100%;
     max-width: 480px;
-    height: auto;
     aspect-ratio: 2 / 1;
+    overflow: hidden;
     background-color: var(--surface-2);
     border: 1px solid var(--line);
     border-radius: var(--rds-radius-sm);
+  }
+
+  .club-minimap__svg {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    transition:
+      opacity 400ms ease-out,
+      visibility 0s linear 400ms;
+  }
+
+  /* The tiles sit under the SVG, invisible until painted, then the SVG
+     cross-fades out. A failed load never reaches 'painted'. */
+  .club-minimap__tiles {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 400ms ease-out;
+  }
+
+  .club-minimap__frame[data-tiles='painted'] .club-minimap__tiles {
+    opacity: 1;
+  }
+
+  .club-minimap__frame[data-tiles='painted'] .club-minimap__svg {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .club-minimap__tiles .maplibregl-canvas {
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .club-minimap__svg,
+    .club-minimap__tiles {
+      transition: none;
+    }
+  }
+
+  /* ODbL credit: its line is reserved, shown once the tiles paint. */
+  .club-minimap__credit {
+    margin: 0 0 4px;
+    min-height: 18px;
+    font-family: var(--sans);
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--ink-3);
+    visibility: hidden;
+  }
+
+  .club-minimap__credit[data-visible='true'] {
+    visibility: visible;
+  }
+
+  .club-minimap__credit a {
+    color: var(--link);
   }
 
   .club-minimap__dot {

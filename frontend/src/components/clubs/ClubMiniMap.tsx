@@ -1,23 +1,63 @@
-import { useMemo } from 'react'
+import { Component, lazy, Suspense, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { projectClubLocator, type LocatorSource } from '../../utils/clubLocator'
+import {
+  fitClubLocator,
+  projectClubPoints,
+  type LocatorSource,
+} from '../../utils/clubLocator'
+import { useNearViewport } from '../../hooks/useNearViewport'
+import { supportsWebGL } from '../../utils/webgl'
 import { LocatorDots } from '../LocatorDots'
 
 /**
- * #1843 — the club page's static mini-map (review §6.3, feature design §3.2
- * change 7). An inline SVG of the district's clubs as faint dots with this
- * club as a pin, linking to the district club map with the club selected.
+ * The club page's Location mini-map (#1843; tiles since #2162). The
+ * district's clubs as grey dots and this club as a red pin, over real map
+ * tiles, linking to the district club map with this club selected.
  *
- * Why not a raster tile or a second MapLibre: the basemap is a vector
- * PMTiles archive (ADR-016), so a raster needs either MapLibre on the client
- * (~250 KB gzip, the map route's budget) or a pre-rendered image per club
- * (a new pipeline artifact). This draws from coordinates the page has
- * already downloaded: zero extra requests, a few KB of markup.
+ * Club LCP comes first (#2147). The first paint is an inline SVG of the
+ * same dots and pin, drawn from the coordinates the page has already
+ * downloaded: no request, a few KB of markup. Only when the hero has painted
+ * AND the card nears the viewport does the tile chunk (MapLibre, the shared
+ * basemap and pin code) load; the SVG stays until the tiles are painted,
+ * then cross-fades out. Without WebGL2, IntersectionObserver, the chunk or
+ * the tiles, the SVG simply stays.
+ *
+ * The view leaves out far-off geocodes (`fitClubLocator`). When this club's
+ * own geocode is one, it gets no pin and the caption says why.
  *
  * Renders nothing when the club has no coordinates. Where the club meets is
  * printed as text beside the picture, so nothing depends on the dot alone.
  */
-const BOX = { width: 320, height: 160, pad: 14 }
+const BOX = { width: 320, height: 160, pad: 32 }
+
+const ClubMiniMapTiles = lazy(() => import('./ClubMiniMapTiles'))
+
+type TileState = 'none' | 'loading' | 'painted' | 'failed'
+
+/** A failed chunk or map construction keeps the SVG; no error page. */
+class TilesBoundary extends Component<
+  { onFail: () => void; children: ReactNode },
+  { failed: boolean }
+> {
+  override state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  override componentDidCatch() {
+    this.props.onFail()
+  }
+  override render() {
+    return this.state.failed ? null : this.props.children
+  }
+}
+
+/** The tiles group crowded pins (shared pin code); the SVG never does. One
+ *  static caption for both, so the swap shifts nothing. */
+const GROUPED = ', grouped with a count where they crowd'
+
+const clubsLabel = (n: number, district: string) =>
+  `${n} ${district} ${n === 1 ? 'club' : 'clubs'}`
 
 export interface ClubMiniMapProps {
   districtId: string
@@ -27,6 +67,9 @@ export interface ClubMiniMapProps {
   clubs: readonly LocatorSource[]
   /** The where-it-meets place line (street, city, region), if any. */
   place?: string | null | undefined
+  /** The page's hero has painted (R3: the page's own gate, #2147). The tile
+   *  chunk never loads before it. */
+  heroPainted: boolean
 }
 
 export function ClubMiniMap({
@@ -35,14 +78,38 @@ export function ClubMiniMap({
   clubName,
   clubs,
   place,
+  heroPainted,
 }: ClubMiniMapProps) {
-  const locator = useMemo(
-    () => projectClubLocator(clubs, clubId, BOX),
-    [clubs, clubId]
+  const fit = useMemo(() => fitClubLocator(clubs, clubId), [clubs, clubId])
+  const svg = useMemo(() => {
+    if (!fit) return null
+    const points = projectClubPoints(fit.inView, BOX)
+    const focusId = fit.focus?.clubId
+    return { points, focus: points.find(p => p.id === focusId) ?? null }
+  }, [fit])
+
+  const [frame, setFrame] = useState<HTMLDivElement | null>(null)
+  const near = useNearViewport(frame)
+  const [tiles, setTiles] = useState<TileState>('none')
+  const wantTiles = heroPainted && near && tiles !== 'failed' && supportsWebGL()
+  const state: TileState = tiles === 'none' && wantTiles ? 'loading' : tiles
+  // Stable callbacks: the tile chunk subscribes with them.
+  const handlers = useMemo(
+    () => ({
+      painted: () => setTiles('painted'),
+      failed: () => setTiles('failed'),
+    }),
+    []
   )
-  if (!locator?.focus) return null
-  const { points, focus } = locator
+
+  if (!fit || !svg) return null
   const districtLabel = `District ${districtId}`
+  const shown = fit.inView.length
+  const othersLeftOut = fit.trimmed - (fit.focusIsOutlier ? 1 : 0)
+  const label = fit.focusIsOutlier
+    ? `${clubsLabel(shown, districtLabel)} with a location; ${clubName}'s mapped location is outside this view`
+    : `${clubName} among ${shown} ${districtLabel} clubs with a location`
+  const painted = state === 'painted'
 
   return (
     <section
@@ -73,22 +140,70 @@ export function ClubMiniMap({
           to={`/district/${districtId}/map?club=${encodeURIComponent(clubId)}`}
           aria-label={`Open ${clubName} on the ${districtLabel} club map`}
         >
-          <LocatorDots
-            className="club-minimap__svg"
-            width={BOX.width}
-            height={BOX.height}
-            points={points}
-            focus={focus}
+          <div
+            ref={setFrame}
+            className="club-minimap__frame"
+            data-tiles={state}
             role="img"
-            aria-label={`${clubName} among ${points.length} ${districtLabel} clubs with a location`}
-          />
+            aria-label={label}
+          >
+            {wantTiles && (
+              <TilesBoundary onFail={handlers.failed}>
+                <Suspense fallback={null}>
+                  <ClubMiniMapTiles
+                    fit={fit}
+                    onPainted={handlers.painted}
+                    onFailed={handlers.failed}
+                  />
+                </Suspense>
+              </TilesBoundary>
+            )}
+            <LocatorDots
+              className="club-minimap__svg"
+              width={BOX.width}
+              height={BOX.height}
+              points={svg.points}
+              focus={svg.focus}
+              aria-hidden="true"
+              focusable="false"
+            />
+          </div>
           <span className="club-minimap__cta">
             Open the club map <span aria-hidden="true">›</span>
           </span>
         </Link>
+        {/* ODbL credit for the tiles, outside the link (no nested links).
+            Its line is reserved from the start, so showing it shifts
+            nothing; hidden (and out of the tab order) until the tiles are
+            painted. Same links as BASEMAP_ATTRIBUTION. */}
+        <p
+          className="club-minimap__credit"
+          data-visible={String(painted)}
+          aria-hidden={painted ? undefined : true}
+        >
+          Map:{' '}
+          <a
+            href="https://github.com/protomaps/basemaps"
+            target="_blank"
+            rel="noopener"
+          >
+            Protomaps
+          </a>{' '}
+          ©{' '}
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noopener"
+          >
+            OpenStreetMap
+          </a>
+        </p>
         <p className="club-minimap__legend">
-          Red pin: this club. Grey dots: the other {points.length - 1}{' '}
-          {districtLabel} clubs with a location.
+          {fit.focusIsOutlier
+            ? `This club's mapped location is far from the rest of ${districtLabel}, so it is left off this view. Grey: the ${clubsLabel(shown, districtLabel)} with a location${GROUPED}.`
+            : `Red pin: this club. Grey: the other ${shown - 1} ${districtLabel} clubs with a location${GROUPED}.`}
+          {othersLeftOut > 0 &&
+            ` ${othersLeftOut === 1 ? '1 far-off location is' : `${othersLeftOut} far-off locations are`} left out.`}
         </p>
         {place && <p className="club-minimap__place">{place}</p>}
       </div>
