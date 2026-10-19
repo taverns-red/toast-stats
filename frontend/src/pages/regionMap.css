@@ -16,8 +16,13 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* A number never splits across lines (#2154): at 375 px each tile has
+   ~83 px for the value, too narrow for "12,974" at 24 px. The value stays on
+   one line and steps down with the viewport (18 px floor at 360 px). */
 .region-map__summary .rollup-kpi__value {
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(18px, 5.5vw, 24px);
 }
 
 /* Search and the metric chips stay in reach while the list scrolls. */
