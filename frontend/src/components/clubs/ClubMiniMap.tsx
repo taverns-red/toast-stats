@@ -52,6 +52,10 @@ class TilesBoundary extends Component<
   }
 }
 
+/** The tiles group crowded pins (shared pin code); the SVG never does. One
+ *  static caption for both, so the swap shifts nothing. */
+const GROUPED = ', grouped with a count where they crowd'
+
 const clubsLabel = (n: number, district: string) =>
   `${n} ${district} ${n === 1 ? 'club' : 'clubs'}`
 
@@ -196,8 +200,8 @@ export function ClubMiniMap({
         </p>
         <p className="club-minimap__legend">
           {fit.focusIsOutlier
-            ? `This club's mapped location is far from the rest of ${districtLabel}, so it is left off this view. Grey dots: the ${clubsLabel(shown, districtLabel)} with a location.`
-            : `Red pin: this club. Grey dots: the other ${shown - 1} ${districtLabel} clubs with a location.`}
+            ? `This club's mapped location is far from the rest of ${districtLabel}, so it is left off this view. Grey: the ${clubsLabel(shown, districtLabel)} with a location${GROUPED}.`
+            : `Red pin: this club. Grey: the other ${shown - 1} ${districtLabel} clubs with a location${GROUPED}.`}
           {othersLeftOut > 0 &&
             ` ${othersLeftOut === 1 ? '1 far-off location is' : `${othersLeftOut} far-off locations are`} left out.`}
         </p>
