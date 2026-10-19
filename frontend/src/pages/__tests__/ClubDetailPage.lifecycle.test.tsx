@@ -178,20 +178,59 @@ describe('ClubDetailPage — Lifecycle timeline (#1843)', () => {
   it('renders the charter and the district history as a timeline', async () => {
     renderAt('/district/61/club/7238597')
     const panel = await screen.findByRole('region', { name: 'Lifecycle' })
-    expect(
-      await within(panel).findByText('First record in District 61')
-    ).toBeInTheDocument()
+    expect(await within(panel).findByText('In District 61')).toBeInTheDocument()
     const items = within(panel).getAllByRole('listitem')
     expect(items.map(li => li.textContent)).toEqual([
       expect.stringContaining('Chartered'),
-      expect.stringContaining('2018–19 program year'),
+      'In District 61Current',
     ])
+    expect(within(panel).queryByText(/First record/)).toBeNull()
     expect(mockedShard).toHaveBeenCalledWith('97')
+  })
+
+  // #2169 — the note reads the club's district's OWN earliest snapshot (the
+  // per-district snapshot index), not a global 2016–17.
+  it('notes where our records start when the charter predates the district’s first snapshot', async () => {
+    const dates = ['2019-07-31', '2026-10-13']
+    mockedCachedDates.mockImplementation(((id: string | null) =>
+      id === '61'
+        ? {
+            ...DATES,
+            data: {
+              ...DATES.data,
+              dates,
+              count: 2,
+              dateRange: { startDate: dates[0], endDate: dates[1] },
+            },
+          }
+        : { data: undefined, isPending: false, isError: false }) as never)
+    renderAt('/district/61/club/7238597')
+    const panel = await screen.findByRole('region', { name: 'Lifecycle' })
+    expect(
+      await within(panel).findByText('Our records start in 2019–20')
+    ).toBeInTheDocument()
+  })
+
+  it('no records-start note when the club was chartered inside our data', async () => {
+    const dates = ['2017-01-31', '2026-10-13']
+    mockedCachedDates.mockReturnValue({
+      ...DATES,
+      data: {
+        ...DATES.data,
+        dates,
+        count: 2,
+        dateRange: { startDate: dates[0], endDate: dates[1] },
+      },
+    } as never)
+    renderAt('/district/61/club/7238597')
+    const panel = await screen.findByRole('region', { name: 'Lifecycle' })
+    await within(panel).findByText('In District 61')
+    expect(within(panel).queryByText(/Our records start/)).toBeNull()
   })
 
   it('never reads the suspended list for an active club', async () => {
     renderAt('/district/61/club/7238597')
-    await screen.findByText('First record in District 61')
+    await screen.findByText('In District 61')
     await settle()
     expect(mockedSuspended).not.toHaveBeenCalled()
   })

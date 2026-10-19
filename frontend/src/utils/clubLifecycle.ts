@@ -29,7 +29,7 @@ import type { ClubDistrictHistoryClub } from '@taverns-red/shared-contracts'
 /** One row of the club page's Lifecycle timeline. */
 export interface ClubLifecycleEvent {
   key: string
-  kind: 'charter' | 'first' | 'move' | 'last' | 'suspended'
+  kind: 'charter' | 'first' | 'current' | 'move' | 'last' | 'suspended'
   title: string
   when: string
   /** The club's current district (an open-ended span). */
@@ -41,6 +41,9 @@ export interface ClubLifecycle {
   formerNames: string[]
   /** False when the club-district history shard had no entry. */
   historyAvailable: boolean
+  /** Short program year our records start in ("2016–17"), when the charter
+      predates the district's earliest snapshot; else null. */
+  recordsStart: string | null
 }
 
 const SHORT_MONTHS = [
@@ -115,6 +118,7 @@ export function lifecycleDistrictLabel(districtId: string): string {
 const KIND_ORDER: Record<ClubLifecycleEvent['kind'], number> = {
   charter: 0,
   first: 1,
+  current: 1,
   move: 2,
   last: 3,
   suspended: 4,
@@ -124,6 +128,8 @@ export function buildClubLifecycle(input: {
   charterDate?: string | undefined
   history: ClubDistrictHistoryClub | null
   suspendDate?: string | null | undefined
+  /** The earliest snapshot we hold for the club's district. */
+  recordsStartDate?: string | null | undefined
 }): ClubLifecycle {
   const dated: Array<{ py: number; at: string; event: ClubLifecycleEvent }> = []
 
@@ -204,5 +210,6 @@ export function buildClubLifecycle(input: {
     events: dated.map(d => d.event),
     formerNames: input.history?.formerNames ?? [],
     historyAvailable: input.history !== null,
+    recordsStart: null,
   }
 }
