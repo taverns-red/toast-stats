@@ -114,12 +114,15 @@ describe('MapClubSummary', () => {
       </MemoryRouter>
     )
     expect(screen.getByText('14 members · 3 goals')).toBeVisible()
-    // The time carries meeting credentials, so only the day is shown; a
-    // street that is a meeting link means the club meets online.
-    expect(screen.getByText('Tuesdays · Meets online')).toBeVisible()
+    // The time carries meeting credentials: since #2157 the shared place
+    // scrub removes them and keeps the time. A street that is a meeting
+    // link means the club meets online.
+    expect(screen.getByText('Tuesdays · 7:00 PM · Meets online')).toBeVisible()
     const text = document.body.textContent ?? ''
     expect(text).not.toContain('zoom.us')
     expect(text).not.toContain('Passcode')
+    expect(text).not.toContain('Meeting ID')
+    expect(text).not.toMatch(/\b(?:812|999)\b/)
   })
 
   it('omits the meeting line without Find-a-Club data, and the counts without a trend', () => {
