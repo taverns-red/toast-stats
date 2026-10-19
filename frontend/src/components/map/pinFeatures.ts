@@ -6,9 +6,9 @@
  * fetched on mount like the icon painter (the map route's 300 KB budget,
  * ADR-016 D2). Pure: no MapLibre runtime import.
  */
-import { parseCoordinates } from '@taverns-red/shared-contracts'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import type { ModeModel, PinShape } from './pinModes'
+import { hasMapPoint } from '../../utils/mapPoint'
 
 export const PIN_SOURCE_ID = 'club-pins'
 export const CLUSTER_LAYER_ID = 'club-clusters'
@@ -49,9 +49,9 @@ export function buildPinFeatures(
 ): PinFeatureCollection {
   const features: PinFeatureCollection['features'] = []
   for (const club of clubs) {
-    // #2153 — (0, 0) and invalid pairs never become pins (or fit bounds).
-    const at = parseCoordinates(club.coordinates)
-    if (!at) continue
+    // No point, (0, 0) (#2153) or online only (#2174): no pin.
+    if (!hasMapPoint(club)) continue
+    const at = club.coordinates
     const cat = model.categoryOf(club)
     features.push({
       type: 'Feature',

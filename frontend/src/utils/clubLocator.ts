@@ -1,4 +1,7 @@
-import { clubIdsMatch, hasCoordinates } from '@taverns-red/shared-contracts'
+import { clubIdsMatch } from '@taverns-red/shared-contracts'
+import { hasMapPoint } from './mapPoint'
+
+export { hasMapPoint }
 
 /**
  * #1843 — geometry for the club page's static mini-map ("locator").
@@ -17,6 +20,8 @@ import { clubIdsMatch, hasCoordinates } from '@taverns-red/shared-contracts'
 export interface LocatorSource {
   clubId: string
   coordinates?: { lat: number; lng: number } | undefined
+  /** #2174: an online-only club has no place on a map. */
+  meetsOnline?: true | undefined
 }
 
 export interface LocatorPoint {
@@ -38,10 +43,7 @@ export interface ClubLocator {
   focus: LocatorPoint | null
 }
 
-const located = (
-  c: LocatorSource
-): c is LocatorSource & { coordinates: { lat: number; lng: number } } =>
-  hasCoordinates(c.coordinates) // #2153 — shared rule, rejects (0, 0)
+const located = hasMapPoint
 
 /**
  * #1943 — every located club, projected into the box with no focus. The

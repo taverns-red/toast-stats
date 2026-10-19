@@ -64,6 +64,18 @@ const CLUBS = [
   club({ clubId: '3', currentStatus: 'vulnerable', coordinates: undefined }),
 ]
 
+describe('online-only clubs (#2174)', () => {
+  it('get no pin, though they keep a point', () => {
+    const model = baseModel('health')
+    const online = { ...CLUBS[0]!, clubId: '999', meetsOnline: true as const }
+    const fc = buildPinFeatures([...CLUBS, online], model)
+    expect(fc.features.map(f => f.properties.id)).not.toContain('999')
+    expect(fc.features).toHaveLength(
+      buildPinFeatures(CLUBS, model).features.length
+    )
+  })
+})
+
 describe('buildPinFeatures', () => {
   it('emits one point per mapped club, [lng, lat], with its category', () => {
     const model = buildModeModel('health', CLUBS)

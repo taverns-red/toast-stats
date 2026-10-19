@@ -111,6 +111,10 @@ const Realign = React.lazy(
 
 // The keyboard path between pins (#1940), once the map is up.
 const PinKeys = React.lazy(() => import('../components/map/MapPinKeys'))
+// #2174: only districts with online-only clubs fetch it.
+const OnlineClubsChip = React.lazy(
+  () => import('../components/map/OnlineClubsChip')
+)
 
 // Only a tap needs the club summary, so it loads on the first selection.
 const MapClubSummary = React.lazy(() =>
@@ -383,6 +387,12 @@ const DistrictMapPage: React.FC = () => {
   const modeLabel = MAP_COLOR_MODES.find(m => m.id === mode)!.label
   const closeModes = React.useCallback(() => setSheet(null), [setSheet])
 
+  // Online-only clubs get no pin (#2174); the legend lists them instead.
+  // The same filtered set the pins draw from, so the count follows filters.
+  const online = useMemo(
+    () => filtered.filter(c => c.meetsOnline === true),
+    [filtered]
+  )
   const legend = (limit?: number, onMore?: () => void) => (
     <div className="map-legend">
       <p className="map-legend__title">
@@ -399,6 +409,11 @@ const DistrictMapPage: React.FC = () => {
             limit={limit}
             onMore={onMore}
           />
+        </React.Suspense>
+      )}
+      {limit === undefined && online.length > 0 && (
+        <React.Suspense fallback={null}>
+          <OnlineClubsChip clubs={online} districtId={districtId} />
         </React.Suspense>
       )}
     </div>

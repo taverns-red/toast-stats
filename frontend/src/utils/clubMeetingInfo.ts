@@ -146,6 +146,20 @@ function safeHttpUrl(value: string | undefined): string | null {
 }
 
 /**
+ * #2174 — when an online-only club meets, as "Tuesday 7:00 pm": the same
+ * public, link-free day and time the hero shows. Null when neither is known.
+ * FAC carries no meeting timezone, so none is added.
+ */
+export function meetingWhen(
+  club: Pick<ClubMeetingSource, 'meetingDay' | 'meetingTime'>
+): string | null {
+  const day = publicText(club.meetingDay)
+  const rawTime = publicText(club.meetingTime)
+  const time = rawTime === null ? null : formatMeetingTime(rawTime)
+  return [day, time].filter(Boolean).join(' ') || null
+}
+
+/**
  * Null when the snapshot carries no displayable FAC field for this club —
  * pre-2026-05-15 dates, dates whose enrichment was stripped, and clubs TI
  * hides from Find-A-Club (suspended, closed-corporate; Lesson 118). The line

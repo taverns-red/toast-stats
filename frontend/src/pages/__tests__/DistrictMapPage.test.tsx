@@ -280,6 +280,23 @@ describe('DistrictMapPage — map and legend', () => {
     ).toBeInTheDocument()
   })
 
+  it('hides online-only clubs from the map and lists them from a chip (#2174)', async () => {
+    mockClubs = [
+      ...CLUBS,
+      club({
+        clubId: '104',
+        clubName: 'Online Orators',
+        meetsOnline: true,
+      }),
+    ]
+    renderAt('/district/61/map')
+    const chip = await screen.findByRole('button', { name: '1 online club' })
+    fireEvent.click(chip)
+    expect(
+      screen.getByRole('link', { name: 'Online Orators' })
+    ).toHaveAttribute('href', '/district/61/club/104')
+  })
+
   it('stacks zoom and "Reset map view" over the map (#2173)', async () => {
     renderAt('/district/61/map')
     const stack = await screen.findByRole('group', { name: 'Map view' })

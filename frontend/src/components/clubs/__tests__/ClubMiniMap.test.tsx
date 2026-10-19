@@ -203,3 +203,53 @@ describe('ClubMiniMap', () => {
     })
   })
 })
+
+describe('ClubMiniMap — an online-only club (#2174)', () => {
+  const ONLINE = [
+    ...CLUBS.filter(c => c.clubId !== '7238597'),
+    {
+      clubId: '7238597',
+      coordinates: { lat: 45.42197, lng: -75.69486 },
+      meetsOnline: true as const,
+    },
+  ]
+
+  it('says it meets online, with its day and time, instead of a map', () => {
+    const { container } = renderMap({
+      clubs: ONLINE,
+      meetsOnline: true,
+      when: 'Tuesday 7:00 pm',
+    })
+    expect(
+      screen.getByText('Meets online · Tuesday 7:00 pm')
+    ).toBeInTheDocument()
+    expect(container.querySelector('.club-minimap__frame')).toBeNull()
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(gate.tilesRendered).toBe(0)
+  })
+
+  it('says only "Meets online" when no day or time is known', () => {
+    renderMap({ clubs: ONLINE, meetsOnline: true, when: null })
+    expect(screen.getByText('Meets online')).toBeInTheDocument()
+  })
+
+  it('leaves other online clubs off the map', () => {
+    const others = [
+      ...CLUBS,
+      {
+        clubId: '1004',
+        coordinates: { lat: 45.35, lng: -75.75 },
+        meetsOnline: true as const,
+      },
+    ]
+    const { container } = renderMap({ clubs: others })
+    const withOnline = container.querySelectorAll(
+      '.club-minimap__svg circle'
+    ).length
+    cleanup()
+    const { container: plain } = renderMap()
+    expect(withOnline).toBe(
+      plain.querySelectorAll('.club-minimap__svg circle').length
+    )
+  })
+})

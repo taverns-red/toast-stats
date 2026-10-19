@@ -98,6 +98,12 @@ export interface ClubTrend {
    * (#1796) counts such a club as "unknown", never drops it.
    */
   meetingSchedule?: MeetingScheduleEntry[] | null
+  /**
+   * #2160 / #2174 — the club meets only online (FAC virtual attendance and
+   * every parsed meeting online; hybrid clubs are not flagged). It keeps its
+   * Find-A-Club point, but the maps draw no pin for it: no proxy location.
+   */
+  meetsOnline?: true
 }
 
 export interface DivisionAnalytics {

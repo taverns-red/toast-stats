@@ -67,7 +67,7 @@ import { ClubMiniMap } from '../components/clubs/ClubMiniMap'
 import { ClubStatStrip } from '../components/clubs/ClubStatStrip'
 import { ClubMembershipTrend } from '../components/clubs/ClubMembershipTrend'
 import { MobileRowList } from '../components/MobileRowList'
-import { buildClubMeetingInfo } from '../utils/clubMeetingInfo'
+import { buildClubMeetingInfo, meetingWhen } from '../utils/clubMeetingInfo'
 
 // ── DCP Status Card ────────────────────────────────────────────────────────
 // Re-skinned to club-reference.html (#619): a `.club-panel` with a bordered
@@ -1296,6 +1296,8 @@ const ClubDetailPage: React.FC = () => {
             clubName={club.clubName}
             clubs={analytics?.allClubs ?? []}
             place={heroMeetingInfo?.place}
+            meetsOnline={club.meetsOnline === true}
+            when={meetingWhen(club)}
           />
 
           {/* Bottom back-link (#618) — the redesign reintroduces a footer

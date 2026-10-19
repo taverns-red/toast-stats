@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildClubMeetingInfo,
   formatMeetingTime,
+  meetingWhen,
   toastmastersClubPageUrl,
 } from '../clubMeetingInfo'
 
@@ -428,5 +429,27 @@ describe('formatMeetingTime (#1958)', () => {
         allowsVirtualAttendance: false,
       })?.schedule
     ).toBe('mercredi · 7:30 pm')
+  })
+})
+
+describe('meetingWhen (#2174)', () => {
+  it('joins the public day and time with a space, no timezone added', () => {
+    expect(
+      meetingWhen({ meetingDay: 'Tuesday', meetingTime: '19:30 pm' })
+    ).toBe('Tuesday 7:30 pm')
+  })
+
+  it('keeps whichever half is known, and is null with neither', () => {
+    expect(meetingWhen({ meetingDay: 'Friday' })).toBe('Friday')
+    expect(meetingWhen({})).toBeNull()
+  })
+
+  it('never shows a meeting link typed into the time', () => {
+    expect(
+      meetingWhen({
+        meetingDay: 'Monday',
+        meetingTime: 'https://zoom.us/j/123',
+      })
+    ).toBe('Monday')
   })
 })
