@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload audit manifest
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gap-prune-${{ inputs.bucket }}-${{ github.run_id }}
           path: gap-prune.jsonl
