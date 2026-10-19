@@ -32,7 +32,7 @@ import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 import {
   AllDistrictsRankingsDataSchema,
-  containsLink,
+  containsPlaceSecret,
   DistrictReportsDatasetSchema,
   findClubContactField,
   isClubContactKey,
@@ -45,7 +45,7 @@ import {
 import {
   scrubFacLocation,
   scrubFacStreet,
-  stripFacLinks,
+  scrubFacText,
 } from '../../packages/collector-cli/src/services/FacMeetingSchedule.js'
 import {
   GzipLayerError,
@@ -190,21 +190,26 @@ export function stripContactKeys(value: unknown): {
 /**
  * Place-text fields (#2069). A FAC street, Location, meeting day or time is
  * free text a club types, and some typed their meeting link there; files
- * written before #2074 carry it verbatim. Each field is scrubbed with the
+ * written before #2074 carry it verbatim. #2157 adds meeting credentials
+ * (a passcode typed into a City) and the flat city/region and postal code. Each field is scrubbed with the
  * collector's own scrubber, so a rewritten file matches what a fresh run
  * would write. `undefined` from a scrubber removes the key, as the
  * collector omits it.
  */
 type Scrubber = (raw: string) => string | undefined
 const PLACE_SCRUBBERS: Record<string, Scrubber> = {
-  meetingDay: stripFacLinks,
-  meetingTime: stripFacLinks,
+  meetingDay: scrubFacText,
+  meetingTime: scrubFacText,
   location: scrubFacLocation,
+  // #2157: a flat city/region (prospectiveClubs[], clubs-by-region rows).
+  city: scrubFacText,
+  region: scrubFacText,
 }
 const ADDRESS_SCRUBBERS: Record<string, Scrubber> = {
   street: scrubFacStreet,
-  city: stripFacLinks,
-  region: stripFacLinks,
+  city: scrubFacText,
+  region: scrubFacText,
+  postalCode: scrubFacText,
 }
 
 /** The scrubber for `key` under `parentKey`, or null if not place text. */
@@ -226,7 +231,7 @@ function walkPlaceText(value: unknown): { value: unknown; scrubbed: number } {
     const entries: Array<[string, unknown]> = []
     for (const [key, child] of Object.entries(node)) {
       const scrub = placeScrubber(parentKey, key)
-      if (scrub && typeof child === 'string' && containsLink(child)) {
+      if (scrub && typeof child === 'string' && containsPlaceSecret(child)) {
         scrubbed++
         const out = scrub(child)
         if (out !== undefined) entries.push([key, out])
@@ -240,7 +245,7 @@ function walkPlaceText(value: unknown): { value: unknown; scrubbed: number } {
   return { value: walk(value, null), scrubbed }
 }
 
-/** Number of place-text values holding a link, at any depth (#2069). */
+/** Place-text values holding a link or credential, at any depth (#2069, #2157). */
 export function countPlaceLinks(value: unknown): number {
   return walkPlaceText(value).scrubbed
 }

@@ -123,6 +123,19 @@ describe('content gate: clubs-by-region (#1800)', () => {
     expect(check(SHARD, bad)).toMatch(/link/)
   })
 
+  // #2157: a D02 club's passcode reached the shards through its city.
+  it('fails a city that still carries a meeting credential', () => {
+    const bad = shard()
+    bad.clubs[0]!.city = 'Springfield Passcode: 000000'
+    expect(check(SHARD, bad)).toMatch(/credential/)
+  })
+
+  it('passes a real city that starts with "Pin"', () => {
+    const ok = shard()
+    ok.clubs[0]!.city = 'Pine Bluff'
+    expect(check(SHARD, ok)).toBeNull()
+  })
+
   it('fails a shard served under another date or another region key', () => {
     expect(
       check(`snapshots/2026-10-15/clubs-by-region/05.json`, shard())

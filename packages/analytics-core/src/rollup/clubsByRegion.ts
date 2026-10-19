@@ -19,7 +19,8 @@
  *    does not place goes to the `unassigned` shard. No usable history → no
  *    shards and `world.shards: null` with the reason; the world file is
  *    still built.
- * 4. **Explorer fields only.** Names are passed through `stripLinks`; no
+ * 4. **Explorer fields only.** Names are passed through `stripLinks` and
+ *    cities through `scrubPlaceText` (#2157); no
  *    contact, link or meeting field is read, so none can be written.
  * 5. **Deterministic bytes** (Lesson 158): rows and points are arrays sorted
  *    by club id, so the output is identical whatever order files arrive in.
@@ -43,6 +44,7 @@ import {
   districtIdFromSnapshotFileName,
   isDistrictSnapshotFile,
   normalizeClubId,
+  scrubPlaceText,
   stripLinks,
   type ClubsByRegionClub,
   type ClubsByRegionHealth,
@@ -200,7 +202,8 @@ export function buildClubsByRegion(
         region,
         division: club.divisionId,
         area: club.areaId,
-        city: club.city ? stripLinks(club.city) : null,
+        // #2157: the shared place scrub (credentials, links, emails).
+        city: club.city ? scrubPlaceText(club.city) : null,
         status: club.clubStatus ?? null,
         h: HEALTH_CODE[health]!,
         t: tier,

@@ -332,7 +332,8 @@ describe('runStrip — place links (#2069)', () => {
       unchanged: 1,
       errors: 0,
       keysRemoved: 0,
-      placeValuesScrubbed: 10,
+      // 10 links, plus club 7708247's credential street (#2157).
+      placeValuesScrubbed: 11,
     })
   })
 
@@ -349,7 +350,8 @@ describe('runStrip — place links (#2069)', () => {
     expect(b.writes).toContainEqual({ name, ifGenerationMatch: gen })
     const row = rows.find(r => r.path === name)!
     expect(row.action).toBe('stripped')
-    expect(row.placeValuesScrubbed).toBe(4)
+    // 4 linked values + 1 credential street (#2157).
+    expect(row.placeValuesScrubbed).toBe(5)
     expect(countPlaceLinks(JSON.parse(text(b.objects.get(name)!.bytes)))).toBe(
       0
     )

@@ -600,6 +600,14 @@ export {
   isShortenedLink,
 } from './privacy/meeting-links.js'
 
+// One scrub for every published place text: credentials, links, emails (#2157)
+export {
+  scrubPlaceText,
+  stripMeetingCredentials,
+  containsMeetingCredential,
+  containsPlaceSecret,
+} from './privacy/place-text.js'
+
 // No link or email in a reports file's place text, no place key lost (#2097)
 export {
   REPORTS_PLACE_TEXT_FIELDS,

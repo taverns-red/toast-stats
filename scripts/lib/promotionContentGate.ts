@@ -30,6 +30,7 @@ import {
   ClubsByRegionWorldSchema,
   clubsByRegionShardFileName,
   containsLink,
+  containsMeetingCredential,
   ClubDistrictHistoryIndexSchema,
   ClubDistrictHistoryShardSchema,
   clubDistrictHistoryShardKey,
@@ -886,7 +887,7 @@ function datedArtifact(
  * shared-contracts schema (explorer fields only); served under its own date
  * and region key, with that date's program year; counts equal to its rows;
  * every club from a district the shard lists, with the shard's region; no
- * link left in a name or city.
+ * link left in a name or city, and no meeting credential in a city (#2157).
  */
 function checkClubsByRegionShard(path: string, value: unknown): string | null {
   const parsed = ClubsByRegionShardSchema.safeParse(value)
@@ -925,6 +926,9 @@ function checkClubsByRegionShard(path: string, value: unknown): string | null {
     ids.add(c.id)
     if (containsLink(c.name) || (c.city !== null && containsLink(c.city))) {
       return `club ${c.id} still carries a link in its name or city`
+    }
+    if (c.city !== null && containsMeetingCredential(c.city)) {
+      return `club ${c.id} still carries a meeting credential in its city`
     }
   }
   return null

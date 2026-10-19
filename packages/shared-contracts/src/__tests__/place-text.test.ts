@@ -43,7 +43,8 @@ describe('scrubPlaceText: meeting credentials (#2157)', () => {
     ['Montréal mot de passe : 000000', 'Montréal'],
     ['Montréal, code d’accès: 000000', 'Montréal'],
     ['Springfield Meeting ID: 000 0000 0000 Passcode: 000000', 'Springfield'],
-    ['Springfield; Zoom ID: 000 000 0000; Passcode: x0x0', 'Springfield; Zoom'],
+    ['Springfield; Zoom ID: 000 000 0000; Passcode: x0x0', 'Springfield'],
+    ['Springfield, Zoom ID 000 0000 0000', 'Springfield'],
     ['Springfield Passcode:', 'Springfield'],
   ])('%j → %j', (input, expected) => {
     expect(scrubPlaceText(input)).toBe(expected)
