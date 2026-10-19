@@ -42,9 +42,6 @@ interface DistrictDetailHeaderProps {
   contextBarToolsRef?: ((el: HTMLDivElement | null) => void) | undefined
 }
 
-const LEDE =
-  'Membership, payments, divisions, and ranking trend for the selected program year.'
-
 /** The section segment after /district/:id ('' on the hub). */
 function sectionSegment(pathname: string, districtId: string): string {
   const prefix = `/district/${districtId}`
@@ -87,6 +84,12 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
   const section = segment
     ? DISTRICT_SECTIONS.find(s => s.segment === segment)
     : undefined
+  // The lede describes the page it sits on (#2161): the current section's
+  // own `about`, the hub's on the Overview. A route that is not a section
+  // (e.g. growth/survival) gets none rather than another page's text.
+  const lede = segment
+    ? section?.about
+    : DISTRICT_SECTIONS.find(s => s.segment === '')?.about
   const hubUrl = `/district/${districtId}`
   const back = segment
     ? { label: districtName, to: hubUrl }
@@ -123,7 +126,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
           />
         }
         actions={<DistrictSheetActions districtId={districtId} />}
-        about={LEDE}
+        about={lede}
         trail={trail}
         toolsRef={contextBarToolsRef}
       />
@@ -141,12 +144,14 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
             {districtName}
             <ProgramYearTitleSuffix programYear={selectedProgramYear} />
           </h1>
-          <p
-            className="district-detail-page-header__lede"
-            data-testid="district-detail-lede"
-          >
-            {LEDE}
-          </p>
+          {lede && (
+            <p
+              className="district-detail-page-header__lede"
+              data-testid="district-detail-lede"
+            >
+              {lede}
+            </p>
+          )}
         </div>
 
         <div className="district-detail-page-header__actions">

@@ -9,6 +9,12 @@ export interface DistrictSection {
   label: string
   /** Path segment appended after /district/:id. '' = the Overview hub. */
   segment: string
+  /**
+   * One sentence on what the section shows (#2161): the district header's
+   * lede and the phone context sheet's About. Required, so a new section
+   * cannot fall back to another page's description.
+   */
+  about: string
 }
 
 /* ADR-005 §2 + epic #674 AC1 require every item to be a REAL route — a
@@ -18,38 +24,96 @@ export interface DistrictSection {
    too and was retired in #2159: its URL now redirects to Clubs sorted by net
    change. This const is the single extension point. */
 export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
-  { label: 'Overview', segment: '' },
+  {
+    label: 'Overview',
+    segment: '',
+    about:
+      'Membership, payments, divisions, and ranking trend for the selected program year.',
+  },
   // 'What Changed' (#793, epic #797) — a real route, sits next to Overview as
   // the "since I last looked" companion to the current-state hub.
-  { label: 'What Changed', segment: 'changes' },
-  { label: 'Clubs', segment: 'clubs' },
-  { label: 'Divisions', segment: 'divisions' },
+  {
+    label: 'What Changed',
+    segment: 'changes',
+    about:
+      'What changed in this district between two snapshot dates: membership, payments, DCP goals, distinguished status, and clubs added, removed or transferred.',
+  },
+  {
+    label: 'Clubs',
+    segment: 'clubs',
+    about:
+      'Every club in the district, with membership, DCP goals, health and distinguished status. Filter, sort and search.',
+  },
+  {
+    label: 'Divisions',
+    segment: 'divisions',
+    about:
+      'Division and area standings and their progress toward Distinguished.',
+  },
   // 'Grid' (#1230, epic #1228) — the at-a-glance Chiclet/LEO board, one
   // colour-coded tile per club. Sits after Divisions as the dense
   // whole-district companion to the division/area breakdown.
-  { label: 'Grid', segment: 'grid' },
+  {
+    label: 'Grid',
+    segment: 'grid',
+    about: 'One colour-coded tile per club: the whole district at a glance.',
+  },
   // 'Map' (#1784, epic #1781) — where the clubs are, pins coloured by health
   // (default), Distinguished level, division or area. Beside Grid: the same
   // whole-district view, laid out geographically.
-  { label: 'Map', segment: 'map' },
+  {
+    label: 'Map',
+    segment: 'map',
+    about:
+      'Where the clubs are, coloured by health, distinguished level, division or area.',
+  },
   // 'Growth' (#1794, epic #1781) — the Club Growth funnel: prospective →
   // chartered → coached → suspended. After Map: another whole-district view,
   // before the time-series sections.
-  { label: 'Growth', segment: 'growth' },
+  {
+    label: 'Growth',
+    segment: 'growth',
+    about:
+      'The club growth funnel: prospective, chartered, coached and suspended clubs.',
+  },
   // 'Education' (#1793, epic #1781) — education awards this program year to
   // date, from the ledger. After Growth: the last whole-district view before
   // the time-series sections.
-  { label: 'Education', segment: 'education' },
+  {
+    label: 'Education',
+    segment: 'education',
+    about:
+      'Education awards this program year to date, by level, path, division and area.',
+  },
   // 'Meetings' (#1796, epic #1781) — when the clubs meet: weekday × start
   // hour heatmap, in person / online. After Education: the last
   // whole-district view before the time-series sections.
-  { label: 'Meetings', segment: 'meetings' },
-  { label: 'Trends', segment: 'trends' },
-  { label: 'Rankings', segment: 'rankings' },
+  {
+    label: 'Meetings',
+    segment: 'meetings',
+    about: 'When the clubs meet: weekday and start hour, in person and online.',
+  },
+  {
+    label: 'Trends',
+    segment: 'trends',
+    about:
+      'Membership and payment trends over the program year, compared with earlier years.',
+  },
+  {
+    label: 'Rankings',
+    segment: 'rankings',
+    about:
+      'Where the district ranks worldwide on paid clubs, payments and distinguished clubs.',
+  },
   // 'Action List' (#1231, epic #1228) — the area-director "what to do next"
   // destination (close-to-Distinguished gaps, missing club visits, clubs needing
   // intervention). Last in the strip: a task view, not a lateral data view.
-  { label: 'Action List', segment: 'action-list' },
+  {
+    label: 'Action List',
+    segment: 'action-list',
+    about:
+      'What to do next: clubs close to Distinguished, missing club visits and clubs that need intervention.',
+  },
 ]
 
 /* #1832 (mobile epic #1827, review §5.1) — on a phone held upright the
