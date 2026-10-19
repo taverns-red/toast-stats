@@ -23,6 +23,7 @@ function renderHeroOn(today: string, charterDate: string) {
         clubId="5193"
         districtId="80"
         club={{
+          clubId: '5193',
           clubName: 'Example Club',
           areaName: 'Area 1',
           divisionName: 'Division A',
