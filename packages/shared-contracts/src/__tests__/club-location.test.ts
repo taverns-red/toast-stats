@@ -96,14 +96,28 @@ describe('resolveClubLocations (#2160)', () => {
     })
   })
 
-  it('a fully online club is unmapped whatever its point', () => {
+  // Split rollout (Ron, 2026-10-19): online clubs keep their pin until the
+  // frontend's "Meets online" line and online-clubs chip ship; the
+  // collector only flags them (meetsOnlyOnline).
+  it('a fully online club with a sound point keeps it', () => {
     const online = club('28676558', 'West Point', 41.39149, -73.95574, [
       'online',
     ])
     const out = resolveClubLocations([...d53, online])
     expect(out.get('28676558')).toEqual({
+      mapped: true,
+      coordinates: { lat: 41.39149, lng: -73.95574 },
+    })
+  })
+
+  it('a fully online club with a bad geocode still loses it (28675595)', () => {
+    const voyaOnline = club('28675595', 'Windsor', 19.18947, 72.95207, [
+      'online',
+    ])
+    const out = resolveClubLocations([...d53, voyaOnline])
+    expect(out.get('28675595')).toEqual({
       mapped: false,
-      reason: 'meets-online',
+      reason: 'geocode-outlier',
     })
   })
 

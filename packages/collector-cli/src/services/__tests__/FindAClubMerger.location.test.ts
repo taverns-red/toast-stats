@@ -91,7 +91,7 @@ const find = (rows: Record<string, unknown>[], id: string) =>
   rows.find(r => (r['clubId'] ?? r['Club Number']) === id)!
 
 describe('mergeFacIntoSnapshot — club location rule (#2160)', () => {
-  it('a fully online club gets meetsOnline and no coordinates (28675595)', () => {
+  it('an online club with a bad geocode gets meetsOnline and no coordinates (28675595)', () => {
     const data = merge(
       tiClub('28675595', 'Windsor', 'CT', 19.18947, 72.95207, 'Online')
     )
@@ -115,6 +115,19 @@ describe('mergeFacIntoSnapshot — club location rule (#2160)', () => {
       ScrapedRecordSchema.safeParse(find(data.clubPerformance, '28675595'))
         .success
     ).toBe(true)
+  })
+
+  // Split rollout (Ron, 2026-10-19): the flag ships now, the pin stays until
+  // the frontend's "Meets online" line and online-clubs chip land.
+  it('an online club with a sound point gets meetsOnline and keeps it', () => {
+    const data = merge(
+      tiClub('28675595', 'Windsor', 'CT', 41.8526, -72.6437, 'Online')
+    )
+    for (const rows of [data.clubs, data.clubPerformance]) {
+      const voya = find(rows, '28675595')
+      expect(voya['meetsOnline']).toBe(true)
+      expect(voya['coordinates']).toEqual({ lat: 41.8526, lng: -72.6437 })
+    }
   })
 
   it('an in-person club geocoded across the world gets no coordinates', () => {

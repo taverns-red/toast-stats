@@ -686,13 +686,14 @@ describe('ClubHealthAnalyticsModule', () => {
     })
 
     // #2160 — the club page and the map's "N online clubs" chip read it.
-    it('forwards meetsOnline for a fully online club, without a point', () => {
+    it('forwards meetsOnline for a fully online club, with its point', () => {
       const module = new ClubHealthAnalyticsModule()
       const online = {
         ...createMockClub({ clubId: '28675595' }),
         address: { city: 'Windsor', region: 'CT', country: 'United States' },
         meetingDay: 'Tuesday',
         meetingTime: '7:00 pm',
+        coordinates: { lat: 41.8526, lng: -72.6437 },
         allowsVirtualAttendance: true,
         meetsOnline: true as const,
       }
@@ -703,7 +704,11 @@ describe('ClubHealthAnalyticsModule', () => {
       const byId = new Map(result.allClubs.map(c => [c.clubId, c]))
 
       expect(byId.get('28675595')?.meetsOnline).toBe(true)
-      expect(byId.get('28675595')).not.toHaveProperty('coordinates')
+      // Split rollout: the pin stays until the frontend hides online pins.
+      expect(byId.get('28675595')?.coordinates).toEqual({
+        lat: 41.8526,
+        lng: -72.6437,
+      })
       expect(byId.get('315')).not.toHaveProperty('meetsOnline')
     })
 
