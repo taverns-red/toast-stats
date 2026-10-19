@@ -2290,10 +2290,6 @@
       margin-top: -6px;
       margin-bottom: -6px;
     }
-
-    .club-hero__pill {
-      padding: 4px 12px;
-    }
   }
 
   /* #1843 — the phone's "More about this club" rows; ≥768 keeps the hero's
@@ -2428,82 +2424,50 @@
     align-items: center;
   }
 
-  /* #618 — the pill background is a FIXED white in BOTH themes, so every pill
-     text colour must be a literal value that passes WCAG AA on white. Theme
-     tokens are wrong here: --ink flips to near-white in dark mode (white-on-
-     white), and --green-600 / --yellow-600 either dark-remap or are inherently
-     low-contrast on white. So health/tier pills below use literals, not tokens.
-     The default/unmapped state inherits this dark ink (covers watch + at-risk,
-     whose variants only set the dot colour). */
-  .club-hero__pill {
+  /* #2171 — the hero's status badges (health, DCP tier, anniversary) are ONE
+     quiet outline chip: ~24px tall, transparent, a 1px white border at 35%,
+     white text, a small radius. The hero is a fixed loyal-blue panel in both
+     themes (above), so these are literal white alphas, not theme tokens
+     (#618). White text on the panel's darkest-to-lightest stops is ≥ 10:1. */
+  .club-hero__chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 14px;
-    border-radius: 999px;
-    background-color: #ffffff;
-    color: #0f1720;
+    box-sizing: border-box;
+    min-height: 24px;
+    padding: 2px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: var(--rds-radius-sm);
+    background-color: transparent;
+    color: #ffffff;
     font-family: var(--sans);
     font-weight: 600;
-    font-size: 13px;
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
   }
 
-  /* Health pill variants — colored dot + neutral text on white pill */
-  .club-hero__pill-dot {
+  /* The dot appears only on the health chip, where colour carries meaning.
+     Literal light tints, ≥ 3:1 on --loyal-500/600 in both themes (WCAG
+     1.4.11); the label carries the meaning on its own. */
+  .club-hero__chip-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
+    background-color: rgba(255, 255, 255, 0.7);
   }
 
-  /* Thriving / healthy: reference green text (#0d6b2f, ~5.6:1 on white). */
-  .club-hero__pill--thriving,
-  .club-hero__pill--healthy {
-    color: #0d6b2f;
+  .club-hero__chip--thriving .club-hero__chip-dot {
+    background-color: #4ade80; /* green-400, 7.0:1 on #004165 */
   }
 
-  .club-hero__pill--thriving .club-hero__pill-dot {
-    background-color: var(--green-500);
+  .club-hero__chip--watch .club-hero__chip-dot {
+    background-color: #f2df74; /* --yellow-500, 9.4:1 */
   }
 
-  .club-hero__pill--healthy .club-hero__pill-dot {
-    background-color: var(--green-500);
-  }
-
-  .club-hero__pill--watch .club-hero__pill-dot {
-    background-color: var(--yellow-500);
-  }
-
-  .club-hero__pill--at-risk .club-hero__pill-dot {
-    background-color: var(--red-500);
-  }
-
-  /* DCP tier pill — outlined on the white pill. Literal AA-safe text per the
-     fixed-white-background note above. */
-  .club-hero__pill--tier {
-    background-color: #ffffff;
-    color: #7b1828; /* maroon, ~8.9:1 on white */
-    border: 1px solid rgba(123, 24, 40, 0.2);
-  }
-
-  .club-hero__pill--tier-distinguished {
-    color: #0d6b2f; /* green, ~5.6:1 (was --green-600 → #22c55e/2.3:1 in dark) */
-    border-color: rgba(21, 128, 61, 0.25);
-  }
-
-  .club-hero__pill--tier-select {
-    color: #004165; /* loyal blue, ~10:1 on white */
-    border-color: rgba(0, 65, 101, 0.25);
-  }
-
-  .club-hero__pill--tier-presidents {
-    color: #5a4a14; /* dark olive, ~7:1 (was --yellow-600 → 1.85:1, fails both) */
-    border-color: rgba(201, 183, 72, 0.4);
-  }
-
-  .club-hero__pill--tier-smedley {
-    color: var(--maroon-500);
-    border-color: rgba(123, 24, 40, 0.3);
+  .club-hero__chip--at-risk .club-hero__chip-dot {
+    background-color: #f87171; /* red-400, 4.4:1 */
   }
 
   /* Close-to-Distinguished call-out (#366). Yellow accent banner that

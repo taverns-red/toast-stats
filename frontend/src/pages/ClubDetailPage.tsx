@@ -40,6 +40,7 @@ import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { ClubDCPGoalsPanel } from '../components/ClubDCPGoalsPanel'
 import { useClubGoalTimeline } from '../hooks/useClubGoalTimeline'
 import { ClubHero, type ClubHeroSource } from '../components/clubs/ClubHero'
+import { ClubHeroStatusChips } from '../components/clubs/ClubHeroStatusChips'
 import { useAfterPaint } from '../hooks/useAfterPaint'
 import { summarizeClubEducation } from '../utils/clubEducation'
 import { ClubEducationPanel } from '../components/clubs/ClubEducationPanel'
@@ -963,57 +964,15 @@ const ClubDetailPage: React.FC = () => {
         <div className="mx-auto max-w-[1280px] px-4 pb-4 sm:px-6 sm:pb-6 md:pt-6 [--context-bar-bleed:16px] sm:[--context-bar-bleed:24px]">
           {renderTop(
             club,
-            <>
-              <span
-                className={
-                  'club-hero__pill ' +
-                  (club.currentStatus === 'intervention-required'
-                    ? 'club-hero__pill--at-risk'
-                    : club.currentStatus === 'vulnerable'
-                      ? 'club-hero__pill--watch'
-                      : 'club-hero__pill--thriving')
-                }
-              >
-                <span aria-hidden="true" className="club-hero__pill-dot" />
-                {club.currentStatus === 'intervention-required'
-                  ? 'Intervention required'
-                  : club.currentStatus === 'vulnerable'
-                    ? 'Vulnerable'
-                    : 'Thriving'}
-              </span>
-              {club.distinguishedLevel &&
-                club.distinguishedLevel !== 'NotDistinguished' && (
-                  <span
-                    className={
-                      'club-hero__pill club-hero__pill--tier ' +
-                      (club.distinguishedLevel === 'President'
-                        ? 'club-hero__pill--tier-presidents'
-                        : club.distinguishedLevel === 'Select'
-                          ? 'club-hero__pill--tier-select'
-                          : 'club-hero__pill--tier-distinguished')
-                    }
-                    title={
-                      isProvisionallyDistinguished(club)
-                        ? getProvisionalTooltip(club, programYear.label)
-                        : undefined
-                    }
-                  >
-                    {club.distinguishedLevel === 'President'
-                      ? "President's"
-                      : club.distinguishedLevel}
-                    {isProvisionallyDistinguished(club) &&
-                      (() => {
-                        const confirmed = getConfirmedLevel(
-                          club,
-                          programYear.label
-                        )
-                        return confirmed === 'NotDistinguished'
-                          ? ' (provisional)'
-                          : ' (provisional)'
-                      })()}
-                  </span>
-                )}
-            </>,
+            <ClubHeroStatusChips
+              status={club.currentStatus}
+              distinguishedLevel={club.distinguishedLevel}
+              provisionalTitle={
+                isProvisionallyDistinguished(club)
+                  ? getProvisionalTooltip(club, programYear.label)
+                  : undefined
+              }
+            />,
             lineage
           )}
 

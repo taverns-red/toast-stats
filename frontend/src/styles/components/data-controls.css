@@ -1,0 +1,96 @@
+/* DataControlsBar (#2171) — the freshness indicator and the PY/date pickers.
+ *
+ * Ron, 2026-10-19: the white rounded pills "look terrible" on the club hero.
+ * The freshness indicator is plain text with its status dot; each picker is a
+ * compact 32px control (a faint fill, a 1px border, a ▾ caret). Every item
+ * still sits in a 44px-tall box (`min-h-[44px]` in the component): the
+ * picker's opacity-0 <select> fills that box, so the touch-target floor
+ * (#886, e2e/touch-targets.smoke.ts) holds while the visible face is 32px.
+ *
+ * Page headers (landing, district, region(s), division, area, awards, clubs
+ * world/race) get the treatment on the page surface through semantic tokens,
+ * so dark mode follows the [data-theme] remaps (R10). The club hero is a fixed
+ * loyal-blue panel in BOTH themes, so its re-tone below uses literal white
+ * alphas, never theme tokens (cf. #618).
+ */
+
+@layer brand {
+  .data-controls__fresh {
+    gap: 6px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  .data-controls__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .data-controls__face {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+    border-radius: var(--rds-radius-sm);
+    background-color: color-mix(in srgb, var(--ink) 4%, var(--surface));
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+
+  .data-controls__caret {
+    font-size: 11px;
+    color: var(--ink-2);
+  }
+
+  .data-controls__picker:hover .data-controls__face {
+    background-color: color-mix(in srgb, var(--ink) 8%, var(--surface));
+    border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+  }
+
+  /* WCAG 2.4.7: the <select> is invisible, so the face shows its focus. */
+  .data-controls__picker:focus-within .data-controls__face {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* ---------- On the club hero's navy (#2171) ---------- */
+
+  .club-hero .data-controls__fresh {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .club-hero .data-controls__face {
+    border-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+
+  .club-hero .data-controls__caret {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .club-hero .data-controls__picker:hover .data-controls__face {
+    border-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.16);
+  }
+
+  .club-hero .data-controls__picker:focus-within .data-controls__face {
+    outline-color: #ffffff;
+  }
+}

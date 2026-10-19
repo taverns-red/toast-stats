@@ -29,7 +29,7 @@ async function load(page: Page, requests: string[]): Promise<void> {
   // The full render (analytics landed): the health pill replaces its
   // placeholder.
   await page
-    .locator('.club-hero__pill:not([data-testid="club-hero-pill-placeholder"])')
+    .locator('.club-hero__chip:not([data-testid="club-hero-pill-placeholder"])')
     .first()
     .waitFor({ state: 'visible', timeout: 30_000 })
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
@@ -73,7 +73,7 @@ for (const width of [375, 390]) {
           heroControlsVisible: visible(
             hero.querySelector('.club-hero__controls')
           ),
-          pillsInHero: [...hero.querySelectorAll('.club-hero__pill')].filter(
+          pillsInHero: [...hero.querySelectorAll('.club-hero__chip')].filter(
             visible
           ).length,
           contactInHero: [...hero.querySelectorAll('a')].some(
@@ -278,7 +278,7 @@ test(`club hero chrome ≤ ${HERO_MAX_H}px for the longest D61 club name at 375`
     timeout: 60_000,
   })
   await page
-    .locator('.club-hero__pill:not([data-testid="club-hero-pill-placeholder"])')
+    .locator('.club-hero__chip:not([data-testid="club-hero-pill-placeholder"])')
     .first()
     .waitFor({ state: 'visible', timeout: 30_000 })
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
@@ -318,7 +318,7 @@ for (const width of [375, 1280]) {
     })
     await page
       .locator(
-        '.club-hero__pill:not([data-testid="club-hero-pill-placeholder"])'
+        '.club-hero__chip:not([data-testid="club-hero-pill-placeholder"])'
       )
       .first()
       .waitFor({ state: 'visible', timeout: 30_000 })
