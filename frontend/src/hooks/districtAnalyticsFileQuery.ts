@@ -1,5 +1,8 @@
 import { queryOptions } from '@tanstack/react-query'
-import { expandDistrictAnalyticsClubLists } from '@taverns-red/shared-contracts'
+import {
+  expandDistrictAnalyticsClubLists,
+  hasCoordinates,
+} from '@taverns-red/shared-contracts'
 import { cdnAnalyticsUrl, fetchFromCdn } from '../services/cdn'
 import type { DistrictAnalytics } from './useDistrictAnalytics'
 import type { SnapshotDate } from '../types/snapshotDate'
@@ -26,8 +29,29 @@ export function districtAnalyticsFileQueryOptions(
     queryFn: async (): Promise<DistrictAnalytics> => {
       const url = cdnAnalyticsUrl(date, districtId, 'analytics')
       const file = await fetchFromCdn<{ data: DistrictAnalytics }>(url)
-      return expandDistrictAnalyticsClubLists(file.data)
+      return dropInvalidCoordinates(expandDistrictAnalyticsClubLists(file.data))
     },
     staleTime: 10 * 60 * 1000,
   })
+}
+
+/**
+ * #2153 — files written before the Find-A-Club fix carry `(0, 0)` for a club
+ * TI has not geocoded. The shared rule makes such a club unmapped, so the map
+ * neither pins it at null island nor counts it as on the map. Runs on the
+ * freshly fetched payload, before it is cached.
+ */
+function dropInvalidCoordinates(data: DistrictAnalytics): DistrictAnalytics {
+  for (const list of [
+    data.allClubs,
+    data.vulnerableClubs,
+    data.thrivingClubs,
+    data.interventionRequiredClubs,
+  ]) {
+    for (const club of list ?? []) {
+      if (club.coordinates && !hasCoordinates(club.coordinates))
+        delete club.coordinates
+    }
+  }
+  return data
 }
