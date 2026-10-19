@@ -236,7 +236,7 @@ Eight hues cannot identify 34 areas or 94 districts, so **colour separates and l
 - **Thresholds:**
   - `clusterRadius` 20 px, so pins group only where the pins themselves would overlap (#2173; it was 44 px, the tap target).
   - `clusterMinPoints` 2.
-  - `clusterMaxZoom` 10, so individual pins always show from z 11 (#2173; it was 13). In the densest metros (Singapore D80, central Montreal D61), neighbouring groups touch at z 9–10 and pins stack in the CBD at z 11–12. Each step of zoom separates them.
+  - `clusterMaxZoom` 13, so individual pins always show from z 14 (#2173: Ron, 2026-10-19, kept at 13 after a trial at 10 stacked pins in the Singapore CBD and central Montreal at z 11–12). With the 20 px radius, groups form only where pins overlap, at every zoom up to 13.
 - **Reset map view (#2173):** interactive maps stack zoom in, zoom out and ⌂ top-right. ⌂ refits to the framing the last fit chose (the same `fitBounds`: padding 48, maxZoom 12) and closes the club card. The club page's static mini-map has no stack.
   - A district map (≤ ~300 clubs) opens at its fitted bounds, where most pins are already single. The world map opens at z 1–2 with about 30–60 clusters.
 - **Co-located clubs** (same building) never separate by zooming. At max zoom a "3" stack badge opens the sheet listing them. There is no spiderfy.
