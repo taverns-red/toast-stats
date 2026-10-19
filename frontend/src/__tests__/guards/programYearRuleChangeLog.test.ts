@@ -68,6 +68,8 @@ const ACKNOWLEDGED_SITES: Record<string, string> = {
     'names the TI archive’s year coverage (2003-04 →) and where each year’s district list comes from (#1802); data availability, not a rule',
   'packages/shared-contracts/src/schemas/education-rollup.schema.ts':
     'names which ledger source covers which years (2003-04 → 2018-19 history, reports from 2019-20) and where the region history starts (#1801); data availability, not a rule',
+  'frontend/src/utils/regionEducation.ts':
+    'says the region history starts in 2016-17, so earlier PYs have no region rollup (#1810, #1820); data availability, not a rule',
   'packages/shared-contracts/src/education/educationAwardProgram.ts':
     'tags awards by code (Legacy/Pathways); the 2003-04 → 2018-19 range only says where the vocabulary was recorded (#1802)',
   'frontend/src/hooks/useTimeSeries.ts':

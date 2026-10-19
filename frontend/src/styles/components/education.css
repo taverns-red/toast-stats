@@ -541,3 +541,58 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* ── Region education (#1810): years and districts ─────────────────── */
+
+/* A year row: label + total, the stacked bar (same program colours as the
+   all-awards bar), then the split printed in full. */
+.education-year__track {
+  grid-area: track;
+  display: flex;
+  height: 8px;
+  min-width: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.education-year__split {
+  grid-column: 1 / -1;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.education-year.is-current {
+  border-color: var(--tm-loyal-blue);
+}
+
+.education-district {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.education-district__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.education-district__link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.education-district__na,
+.education-rollup td.education-district__na {
+  font-size: 0.875rem;
+  font-style: italic;
+  font-weight: 500;
+  text-align: left;
+  color: var(--ink-3);
+}

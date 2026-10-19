@@ -14,7 +14,8 @@
  *   - removes or updates a production object,
  *   - runs the scoped promoter with `--execute` (#1763; it calls gcloud
  *     itself, so the pattern above cannot see its writes) or the report
- *     sidecar carry (scripts/pipeline/carry-report-sidecars.sh, likewise),
+ *     sidecar carry (scripts/pipeline/carry-report-sidecars.sh, likewise)
+ *     or the education rollup mirror (mirror-education-rollup.sh, #1810),
  *   - invalidates the Cloud CDN, or
  *   - writes to the `promotion-held` issue flow (label/issue create, comment,
  *     close). An intentional skip must not open or close alerts.
@@ -97,6 +98,10 @@ export function prodWriteReasons(run: string): string[] {
     // Likewise the report-sidecar carry (#1763 PR 2).
     if (/carry-report-sidecars\.sh\b/.test(cmd)) {
       reasons.push('report sidecar carry → production')
+    }
+    // And the education rollup mirror (#1810).
+    if (/mirror-education-rollup\.sh\b/.test(cmd)) {
+      reasons.push('education rollup mirror → production')
     }
     if (/invalidate-cdn-cache/.test(cmd)) reasons.push('CDN invalidation')
     if (

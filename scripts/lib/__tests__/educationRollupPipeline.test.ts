@@ -410,7 +410,7 @@ describe('build-education-rollup.sh: a seeded ledger (EDUCATION_LEDGER_DIR, #210
   })
 })
 
-describe('derived/education-rollup/ is staging-only until #1763', () => {
+describe("the build writes staging only; prod is the mirror script's (#1810)", () => {
   it('is not under any promoted prefix', () => {
     expect(PROMOTED_PREFIXES.some(p => PREFIX.startsWith(p))).toBe(false)
   })

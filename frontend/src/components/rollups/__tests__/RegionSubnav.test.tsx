@@ -80,4 +80,27 @@ describe('RegionSubnav', () => {
     )
     expect(screen.queryByRole('button', { name: /^More/ })).toBeNull()
   })
+
+  it('links a region’s Education subpage (#1810), keeping py and date', () => {
+    render(
+      <MemoryRouter initialEntries={['/region/07/education?py=2025-2026']}>
+        <RegionSubnav base="/region/07" label="Region 07 sections" />
+      </MemoryRouter>
+    )
+    const education = screen.getByRole('link', { name: 'Education' })
+    expect(education).toHaveAttribute(
+      'href',
+      '/region/07/education?py=2025-2026'
+    )
+    expect(education).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('has no Education link for the world (/regions has no education page)', () => {
+    render(
+      <MemoryRouter initialEntries={['/regions']}>
+        <RegionSubnav base="/regions" label="Regions sections" />
+      </MemoryRouter>
+    )
+    expect(screen.queryByRole('link', { name: 'Education' })).toBeNull()
+  })
 })

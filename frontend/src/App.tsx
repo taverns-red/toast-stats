@@ -122,6 +122,11 @@ const WorldSurvivalPage = React.lazy(() => import('./pages/WorldSurvivalPage'))
 // district map, its chunk lazy-imports MapLibre (ADR-016).
 const RegionMapPage = React.lazy(() => import('./pages/RegionMapPage'))
 
+// Code-split: region education subpage (#1810)
+const RegionEducationPage = React.lazy(
+  () => import('./pages/RegionEducationPage')
+)
+
 // Code-split: DivisionPage — /district/:districtId/division/:divId (#424)
 const DivisionPage = React.lazy(() => import('./pages/DivisionPage'))
 
@@ -411,6 +416,16 @@ const router = createBrowserRouter(
             <CanonicalRegionRoute>
               <Suspense fallback={<PageLoadingFallback />}>
                 <RegionMapPage />
+              </Suspense>
+            </CanonicalRegionRoute>
+          ),
+        },
+        {
+          path: 'region/:n/education',
+          element: (
+            <CanonicalRegionRoute>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <RegionEducationPage />
               </Suspense>
             </CanonicalRegionRoute>
           ),

@@ -3,10 +3,17 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { PHONE_SECTION_BAR_QUERY } from '../../config/districtSections'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { SectionBar } from '../SectionBar'
-import { ClubsIcon, GlobeIcon, MapIcon, TrendsIcon } from '../SectionBarIcons'
+import {
+  AwardIcon,
+  ClubsIcon,
+  GlobeIcon,
+  MapIcon,
+  TrendsIcon,
+} from '../SectionBarIcons'
 
 /* RegionSubnav (#1815) — Rankings / Health & compliance / Club survival
-   (#1818) for `/regions` and `/region/:n`. Real sibling routes (ADR-005), not tabs: the back button,
+   (#1818) for `/regions` and `/region/:n`, plus a region's Club map (#1808)
+   and Education (#1810; the world has neither). Real sibling routes (ADR-005), not tabs: the back button,
    deep links and the page's `?py=` / `?date=` all survive the switch.
    Reuses the app's one secondary route-nav primitive (the district-subnav
    classes), like ClubsSubnav. On an upright phone it is the shared bottom
@@ -28,6 +35,7 @@ export const RegionSubnav: React.FC<{
     if (value) kept.set(key, value)
   }
   const qs = kept.toString() ? `?${kept.toString()}` : ''
+  const isRegion = base.startsWith('/region/')
   const links = [
     { label: 'Rankings', to: `${base}${qs}`, end: true, icon: <TrendsIcon /> },
     {
@@ -42,14 +50,21 @@ export const RegionSubnav: React.FC<{
       end: false,
       icon: <ClubsIcon />,
     },
-    // A region's club map (#1808); the all-regions explorer is #1809.
-    ...(base.startsWith('/region/')
+    // A region's club map (#1808; the all-regions explorer is #1809) and
+    // its education (#1810).
+    ...(isRegion
       ? [
           {
             label: 'Club map',
             to: `${base}/map${qs}`,
             end: false,
             icon: <MapIcon />,
+          },
+          {
+            label: 'Education',
+            to: `${base}/education${qs}`,
+            end: false,
+            icon: <AwardIcon />,
           },
         ]
       : []),

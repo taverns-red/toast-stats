@@ -3025,7 +3025,7 @@ jobs:
             || echo "Nothing to clean up at incoming/daily-reports/${RAW_DATE}/"
 
   # ══════════════════════════════════════════════════════════
-  # DAILY EDUCATION ROLLUP (#1801, #2028) — STAGING derived/ ONLY
+  # DAILY EDUCATION ROLLUP (#1801, #2028) — STAGING derived/, MIRRORED (#1810)
   #
   # The rollup reads each reports PY's newest snapshot date that HAS
   # district_*_reports.json. `place-reports` writes today's, after the
@@ -3123,9 +3123,11 @@ jobs:
           restore-keys: education-ledger-v1-
 
       - name: '[rollup] Build the education rollup (#1801)'
+        id: education
         run: |
           echo "## 🎓 Education rollup (#1801, #2028)" >> "$GITHUB_STEP_SUMMARY"
           bash scripts/pipeline/build-education-rollup.sh "${GCS_BUCKET}" \
+            && echo "built=true" >> "$GITHUB_OUTPUT" \
             || echo "::warning::Education rollup was not rebuilt (#1801); the previous derived/ copy stands"
 
       # snapshots/<date>/reports-rollups.json (#2012): region/world rollups
@@ -3161,6 +3163,22 @@ jobs:
           gcloud storage cp "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/reports-rollups.json" "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"
           echo "- ✅ Mirrored \`reports-rollups.json\` to \`prod:snapshots/${SNAPSHOT_DATE}/\` (this run promoted the date)" \
             >> "$GITHUB_STEP_SUMMARY"
+
+      # ── PROD PATH (#1810) — like place-reports' sidecar mirror ──
+      # This job runs after the run's own promotion, and derived/ is not a
+      # promoted prefix, so the rollup is mirrored here: only a build that
+      # succeeded, only when this run promoted THIS snapshot date. The script
+      # also holds a rollup whose reports date prod does not index, copies
+      # the years the index names, then the index. A held day is carried by
+      # carry-report-sidecars.sh on a later run's place-reports. Bucket to
+      # bucket: bytes and headers arrive as built.
+      - name: '[rollup] Mirror the education rollup into prod (#1810)'
+        if: >-
+          steps.education.outputs.built == 'true'
+          && contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date))
+          && needs.pipeline.outputs.skip_promotion != 'true'
+        continue-on-error: true
+        run: bash scripts/pipeline/mirror-education-rollup.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}"
 
       - name: '[rollup] Publish run manifest'
         if: ${{ !cancelled() && steps.seed.outputs.seeded == 'true' }}

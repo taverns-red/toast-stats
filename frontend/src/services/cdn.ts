@@ -19,6 +19,10 @@ import {
   ClubsByRegionShardSchema,
   clubsByRegionShardFileName,
   DistrictReportsDatasetSchema,
+  EDUCATION_ROLLUP_INDEX_PATH,
+  EducationRollupIndexSchema,
+  EducationRollupProgramYearSchema,
+  educationRollupObjectPath,
   GlobalClubRaceSchema,
   GlobalHistorySchema,
   GlobalTotalsSchema,
@@ -33,6 +37,8 @@ import {
   SuspendedClubsSchema,
   type ClubsByRegionShard,
   type DistrictReportsDataset,
+  type EducationRollupIndex,
+  type EducationRollupProgramYear,
   type GlobalClubRace,
   type GlobalHistory,
   type GlobalTotals,
@@ -738,6 +744,52 @@ export async function fetchCdnRegionMembershipSeries(
     if (!res.ok) return null
     recordCdnResponse(res)
     const parsed = RegionMembershipSeriesSchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/** `derived/education-rollup/<PY>.json` (#1801) — one program year's
+ *  education awards per district, region and world. Same path in both
+ *  buckets: the build writes staging, mirror-education-rollup.sh copies it
+ *  to prod (#1810). Throws on a string that is not a program year. */
+export function cdnEducationRollupUrl(programYear: string): string {
+  return `${cdnBaseUrl()}/${educationRollupObjectPath(programYear)}`
+}
+
+/** `derived/education-rollup/index.json` — every PY's world totals and the
+ *  multi-year trend per district and region. */
+export function cdnEducationRollupIndexUrl(): string {
+  return `${cdnBaseUrl()}/${EDUCATION_ROLLUP_INDEX_PATH}`
+}
+
+/**
+ * A program year's education rollup (#1810), **tolerantly**: a 404 (not in
+ * this bucket yet, or a PY the rollup omitted), an off-contract body or a
+ * network error is `null` — "not available yet" — never a block of zeros.
+ */
+export async function fetchCdnEducationRollup(
+  programYear: string
+): Promise<EducationRollupProgramYear | null> {
+  try {
+    const res = await fetch(cdnEducationRollupUrl(programYear))
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = EducationRollupProgramYearSchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/** The education rollup index (#1810), tolerantly like the per-PY reader. */
+export async function fetchCdnEducationRollupIndex(): Promise<EducationRollupIndex | null> {
+  try {
+    const res = await fetch(cdnEducationRollupIndexUrl())
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = EducationRollupIndexSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null

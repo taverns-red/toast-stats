@@ -558,7 +558,7 @@ export {
 } from './schemas/education-ledger-history.schema.js'
 
 // Education rollup — derived/education-rollup/{<PY>,index}.json (#1801):
-// ledger awards per district / region / world per PY; staging-only until #1763.
+// ledger awards per district / region / world per PY; mirrored to prod (#1810).
 export {
   EDUCATION_ROLLUP_VERSION,
   EDUCATION_ROLLUP_PREFIX,

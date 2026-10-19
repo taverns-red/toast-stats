@@ -147,6 +147,7 @@ describe('data-pipeline skip_promotion contract (#1754)', () => {
       '[reports] Mirror placed datasets into prod',
       '[reports] Carry missing report sidecars into prod',
       '[rollup] Mirror the reports rollups into prod (#2012)',
+      '[rollup] Mirror the education rollup into prod (#1810)',
     ]) {
       expect(names).toContain(expected)
     }
