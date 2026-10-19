@@ -54,7 +54,10 @@ export default defineConfig({
               // #1786: the basemap renderer. Map routes only — reached
               // through LazyBasemapMap's dynamic import, never preloaded.
               name: 'maplibre',
-              test: /node_modules[\\/](maplibre-gl|@maplibre|@mapbox|pmtiles|@protomaps)[\\/]/,
+              // pmtiles is left out (#2173): BasemapMap loads it lazily, in
+              // parallel with the map, so it is its own chunk, not a fixed
+              // byte of every map route.
+              test: /node_modules[\\/](maplibre-gl|@maplibre|@mapbox|@protomaps)[\\/]/,
               priority: 10,
             },
           ],

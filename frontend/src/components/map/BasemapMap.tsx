@@ -19,7 +19,6 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 // The worker is a self-contained ES module; `?url` makes Vite emit it as a
 // same-origin asset, so CSP `worker-src` falls back to `script-src 'self'`.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
-import { Protocol } from 'pmtiles'
 import { useDarkMode } from '../../contexts/DarkModeContext'
 import { basemapUrl } from '../../config/basemap'
 import { buildBasemapStyle, type BasemapTheme } from './basemapStyle'
@@ -33,13 +32,21 @@ const loadLabels = (): Promise<Labels> => import('./basemapLabels')
 
 let registered = false
 
-/** One pmtiles protocol and one worker URL per page, however many maps. */
+/** One pmtiles protocol and one worker URL per page, however many maps.
+ *
+ *  The PMTiles reader is its own chunk (#2173, ADR-016 D2 budget), fetched
+ *  the moment the first map mounts, alongside the style and the worker. The
+ *  handler awaits it, so the archive's first range request (the header,
+ *  before any tile) is the only thing that waits, and only if the reader
+ *  were somehow slower than MapLibre's own start-up. */
 function ensureRegistered(): void {
   if (registered) return
   registered = true
   setWorkerUrl(workerUrl)
-  const protocol = new Protocol()
-  addProtocol('pmtiles', protocol.tile)
+  const protocol = import('pmtiles').then(m => new m.Protocol())
+  addProtocol('pmtiles', async (params, abort) =>
+    (await protocol).tile(params, abort)
+  )
 }
 
 export interface BasemapMapProps {
