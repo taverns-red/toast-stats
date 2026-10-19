@@ -546,6 +546,18 @@ export {
   type LatLng,
 } from './geo/coordinates.js'
 
+// Club map point (#2160) — the one ingest decision built on parseCoordinates:
+// fully online clubs and geocodes far from their district/country peers are
+// unmapped.
+export {
+  meetsOnlyOnline,
+  resolveClubLocations,
+  OUTLIER as CLUB_LOCATION_OUTLIER,
+  type ClubLocation,
+  type ClubLocationInput,
+  type UnmappedReason,
+} from './geo/clubLocation.js'
+
 // Counted education award (#1592, #1599) — Pathways L1–L5 + DTM. The collector
 // counts distinct members per club by it; the frontend counts awards by it.
 export { isCountedEducationAward } from './education/countedEducationAward.js'
