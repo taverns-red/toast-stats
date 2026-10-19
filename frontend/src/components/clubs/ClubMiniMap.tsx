@@ -27,6 +27,8 @@ export interface ClubMiniMapProps {
   clubs: readonly LocatorSource[]
   /** The where-it-meets place line (street, city, region), if any. */
   place?: string | null | undefined
+  /** #2162 — red stub: not yet read. */
+  heroPainted: boolean
 }
 
 export function ClubMiniMap({

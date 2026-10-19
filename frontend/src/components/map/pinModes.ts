@@ -19,6 +19,9 @@ export type MapColorMode =
   | 'area'
   // The region map's (#1808): built in `pinDistrict`, not on district maps.
   | 'district'
+  // The club page's mini-map (#2162): this club and the rest, built in
+  // `components/clubs/locatorPins`. Never in the picker or the URL.
+  | 'locator'
   | ExtendedMode
 
 /** #1787: built in `pinExtended`, loaded after the first render. */

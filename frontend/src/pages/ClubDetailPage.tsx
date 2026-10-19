@@ -1311,10 +1311,12 @@ const ClubDetailPage: React.FC = () => {
             />
           </div>
 
-          {/* #1843 — static mini-map: an inline SVG from the coordinates
-              analytics already carries (no MapLibre, no tiles), linking to
-              the district club map with this club selected. */}
+          {/* #1843 / #2162 — Location mini-map: an inline SVG from the
+              coordinates analytics already carries, replaced by real tiles
+              once the card nears the viewport after the hero painted,
+              linking to the district club map with this club selected. */}
           <ClubMiniMap
+            heroPainted={isHeroPainted}
             districtId={districtId ?? ''}
             clubId={clubId ?? club.clubId}
             clubName={club.clubName}

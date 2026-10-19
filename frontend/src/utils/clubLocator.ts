@@ -106,7 +106,11 @@ export function projectClubLocator(
   return { points, focus }
 }
 
-type Located = LocatorSource & { coordinates: { lat: number; lng: number } }
+/** A club with usable coordinates. */
+export type LocatedClub = LocatorSource & {
+  coordinates: { lat: number; lng: number }
+}
+type Located = LocatedClub
 
 /** [[west, south], [east, north]] in degrees, MapLibre's `LngLatBoundsLike`. */
 export type LocatorBounds = [[number, number], [number, number]]
