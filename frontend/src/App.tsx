@@ -127,6 +127,10 @@ const RegionEducationPage = React.lazy(
   () => import('./pages/RegionEducationPage')
 )
 
+// Code-split: region and world Club Growth funnels (#1812, #1813)
+const RegionGrowthPage = React.lazy(() => import('./pages/RegionGrowthPage'))
+const WorldGrowthPage = React.lazy(() => import('./pages/WorldGrowthPage'))
+
 // Code-split: DivisionPage — /district/:districtId/division/:divId (#424)
 const DivisionPage = React.lazy(() => import('./pages/DivisionPage'))
 
@@ -449,10 +453,28 @@ const router = createBrowserRouter(
           ),
         },
         {
+          path: 'region/:n/growth',
+          element: (
+            <CanonicalRegionRoute>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <RegionGrowthPage />
+              </Suspense>
+            </CanonicalRegionRoute>
+          ),
+        },
+        {
           path: 'regions/growth/survival',
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <WorldSurvivalPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'regions/growth',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <WorldGrowthPage />
             </Suspense>
           ),
         },
