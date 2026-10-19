@@ -242,9 +242,9 @@ const DistrictDetailPageInner: React.FC = () => {
   )
 
   // Fetch full analytics for the hub's overview surfaces (KPI strip, notable
-  // dates, longest-serving leaderboard). The trend charts and Top-Growth /
-  // Top-DCP / education-levels analytics moved to /trends and /analytics
-  // (#680), so the hub no longer needs time-series, payments-trend, or
+  // dates, longest-serving leaderboard). The trend charts moved to /trends
+  // (#680); the Top-Growth / Top-DCP lists went with the retired Analytics
+  // page (#2159, now Clubs sorted by net change), so the hub no longer needs time-series, payments-trend, or
   // district-statistics data.
   const {
     data: analytics,
@@ -818,13 +818,12 @@ const DistrictDetailPageInner: React.FC = () => {
               </section>
             )}
 
-            {/* #680 (ADR-005 §1): the membership/payment trend charts and the
-                Top-Growth / Top-DCP / education-levels analytics moved off the
-                lean hub onto /trends and /analytics. The DistrictSubnav above
-                and the CTAs below are the entry points. */}
+            {/* #680 (ADR-005 §1): the membership/payment trend charts moved off
+                the lean hub onto /trends. The DistrictSubnav above and the
+                CTAs below are the entry points. */}
 
             {/* Subview CTAs — replace the retired tab strip. The inline
-                Trends/Analytics/Divisions/Vs-world content moved to its own
+                Trends/Divisions/Vs-world content moved to its own
                 routes (#679, #680, ADR-005); these CTAs are a secondary path
                 alongside the subnav. */}
             {/* On the phone hub the sections are rows in the hub (#1842). */}
@@ -851,11 +850,13 @@ const DistrictDetailPageInner: React.FC = () => {
                 >
                   Membership &amp; payment trends →
                 </Link>
+                {/* The Analytics page is retired (#2159): its top-growth list
+                    is the Clubs table sorted by net change. */}
                 <Link
-                  to={`/district/${districtId}/analytics`}
+                  to={`/district/${districtId}/clubs?sort=netChange&dir=desc`}
                   className="inline-flex items-center px-4 py-2 min-h-[44px] rounded-md border border-tm-loyal-blue text-tm-loyal-blue font-tm-headline font-medium hover:bg-tm-loyal-blue-10"
                 >
-                  Top clubs &amp; analytics →
+                  Top growing clubs →
                 </Link>
                 <Link
                   to={`/district/${districtId}/rankings`}

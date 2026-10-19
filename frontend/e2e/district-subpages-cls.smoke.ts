@@ -64,7 +64,6 @@ const SUBPAGES = [
   // reserved taller than the viewport.
   'growth/survival',
   'trends',
-  'analytics',
   'rankings',
   'action-list',
   // The phone clubs list has two shapes (#1833): grouped by division in the

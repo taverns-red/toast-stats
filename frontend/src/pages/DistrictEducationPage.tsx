@@ -4,6 +4,7 @@ import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
+import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import {
   getAvailableProgramYears,
@@ -13,11 +14,13 @@ import {
 } from '../utils/programYear'
 import { buildDistrictEducation } from '../utils/districtEducation'
 import { computeEducationAwardRankings } from '../utils/educationAwardRankings'
+import { extractEducationLevels } from '../utils/extractEducationLevels'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { DistrictEducationView } from '../components/DistrictEducationView'
 import { EducationAwardsLeaderboard } from '../components/EducationAwardsLeaderboard'
+import { EducationLevelsCard } from '../components/EducationLevelsCard'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
 
@@ -123,6 +126,24 @@ const DistrictEducationPage: React.FC = () => {
     })
   }, [analytics, clubs, effectiveProgramYear])
 
+  // Any-date fallback (#2159, kept from the retired Analytics page): when the
+  // ledger is absent for this date, the club performance report's education
+  // columns still give level totals. Fetched only then — a date with the
+  // ledger never reads the raw snapshot.
+  const ledgerAbsent = education !== null && education.status !== 'available'
+  const { data: districtStatistics } = useDistrictStatistics(
+    ledgerAbsent ? districtId || null : null,
+    effectiveEndDate ?? undefined,
+    'divisions'
+  )
+  const csvEducationLevels = useMemo(
+    () =>
+      ledgerAbsent && districtStatistics
+        ? extractEducationLevels(districtStatistics)
+        : null,
+    [ledgerAbsent, districtStatistics]
+  )
+
   // Education-award leaderboards (#1592) — per-club ratios over the July 1
   // membership base, from the same reports dataset.
   const rankings = useMemo(() => {
@@ -198,6 +219,19 @@ const DistrictEducationPage: React.FC = () => {
                 snapshotDate={effectiveEndDate}
                 isPriorProgramYear={isPriorProgramYear}
               />
+              {csvEducationLevels && csvEducationLevels.total > 0 && (
+                <section
+                  className="education-csv-fallback"
+                  aria-label="Education levels from the club performance report"
+                >
+                  <p className="education-provenance">
+                    From the club performance report for {effectiveEndDate}.
+                    These are TI&apos;s DCP-credited counts, so they will not
+                    match the education ledger exactly.
+                  </p>
+                  <EducationLevelsCard totals={csvEducationLevels} />
+                </section>
+              )}
               {rankings && (
                 <section
                   id="leaderboards"

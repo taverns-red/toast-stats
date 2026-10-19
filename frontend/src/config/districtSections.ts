@@ -13,9 +13,10 @@ export interface DistrictSection {
 
 /* ADR-005 §2 + epic #674 AC1 require every item to be a REAL route — a
    destination-less nav item is the exact tab-like fiction the no-tabs decision
-   rejects. `/trends` and `/analytics` joined in Sprint 6 (#680); order follows
-   ADR-005 §3 (Overview · Clubs · Divisions · Trends · Analytics · Rankings).
-   This const is the single extension point. */
+   rejects. `/trends` joined in Sprint 6 (#680); order follows ADR-005 §3
+   (Overview · Clubs · Divisions · Trends · Rankings). `/analytics` joined then
+   too and was retired in #2159: its URL now redirects to Clubs sorted by net
+   change. This const is the single extension point. */
 export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   { label: 'Overview', segment: '' },
   // 'What Changed' (#793, epic #797) — a real route, sits next to Overview as
@@ -44,7 +45,6 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
   // whole-district view before the time-series sections.
   { label: 'Meetings', segment: 'meetings' },
   { label: 'Trends', segment: 'trends' },
-  { label: 'Analytics', segment: 'analytics' },
   { label: 'Rankings', segment: 'rankings' },
   // 'Action List' (#1231, epic #1228) — the area-director "what to do next"
   // destination (close-to-Distinguished gaps, missing club visits, clubs needing
