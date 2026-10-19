@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.43.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.42.1...frontend-v3.43.0) (2026-10-19)
+
+
+### Features
+
+* **club:** Lifecycle card shows observed moves only and where our records start ([#2169](https://github.com/taverns-red/toast-stats/issues/2169)) ([#2170](https://github.com/taverns-red/toast-stats/issues/2170)) ([686d9e1](https://github.com/taverns-red/toast-stats/commit/686d9e1966f17005529b4df1b5c7e1cb2a15676f))
+* **club:** quiet outline hero chips and compact PY/date controls ([#2171](https://github.com/taverns-red/toast-stats/issues/2171)) ([#2172](https://github.com/taverns-red/toast-stats/issues/2172)) ([3d99036](https://github.com/taverns-red/toast-stats/commit/3d9903672596ab7555da66030e17167d5be3c5f9))
+* **club:** real map tiles under the Location mini-map ([#2162](https://github.com/taverns-red/toast-stats/issues/2162)) ([#2165](https://github.com/taverns-red/toast-stats/issues/2165)) ([c0978cd](https://github.com/taverns-red/toast-stats/commit/c0978cdf6572829eb81f833870f5c71a52532b3e))
+* **district:** retire the Analytics subpage; redirect to Clubs sorted by net change ([#2159](https://github.com/taverns-red/toast-stats/issues/2159)) ([#2163](https://github.com/taverns-red/toast-stats/issues/2163)) ([39796a0](https://github.com/taverns-red/toast-stats/commit/39796a0b51d2c9b7a994290a1e51b213c581ca6b))
+* **growth:** region and world Club Growth funnels ([#1812](https://github.com/taverns-red/toast-stats/issues/1812), [#1813](https://github.com/taverns-red/toast-stats/issues/1813)) ([#2140](https://github.com/taverns-red/toast-stats/issues/2140)) ([7d084de](https://github.com/taverns-red/toast-stats/commit/7d084de8793a3145ff8145f03ce2273469e660b9))
+* **pipeline:** date-exact club-district change points ([#1816](https://github.com/taverns-red/toast-stats/issues/1816)) ([#2135](https://github.com/taverns-red/toast-stats/issues/2135)) ([03fd650](https://github.com/taverns-red/toast-stats/commit/03fd65083a3578620380b89992cfcbee2ac28c5e))
+* **pipeline:** snapshots/&lt;date&gt;/reports-rollups.json — reports-derived region/world rollups ([#2012](https://github.com/taverns-red/toast-stats/issues/2012)) ([#2117](https://github.com/taverns-red/toast-stats/issues/2117)) ([bef7d98](https://github.com/taverns-red/toast-stats/commit/bef7d98b93fb8f6a1f87976217093f37c9e971c5))
+* **region:** /region/:n/education + mirror the education rollup into prod ([#1810](https://github.com/taverns-red/toast-stats/issues/1810)) ([#2139](https://github.com/taverns-red/toast-stats/issues/2139)) ([d61ac4a](https://github.com/taverns-red/toast-stats/commit/d61ac4a091924e4c652b4bf54f82badd881e0f5c))
+
+
+### Bug Fixes
+
+* **coords:** treat FAC's (0, 0) sentinel as no coordinates, one shared rule ([#2153](https://github.com/taverns-red/toast-stats/issues/2153)) ([#2156](https://github.com/taverns-red/toast-stats/issues/2156)) ([feeae86](https://github.com/taverns-red/toast-stats/commit/feeae86e446338450938365436a7fb2556a2abd6))
+* **district:** header subtitle describes the page it is on ([#2161](https://github.com/taverns-red/toast-stats/issues/2161)) ([#2164](https://github.com/taverns-red/toast-stats/issues/2164)) ([b294e8a](https://github.com/taverns-red/toast-stats/commit/b294e8a070959b73f3483f13ead5ce839be527d9))
+* **privacy:** one shared place-text scrub strips meeting credentials ([#2157](https://github.com/taverns-red/toast-stats/issues/2157)) ([#2158](https://github.com/taverns-red/toast-stats/issues/2158)) ([d3bb221](https://github.com/taverns-red/toast-stats/commit/d3bb221aeff85ce2d2c388c7eb23c62bc9d04430))
+* **region:** keep summary tile numbers on one line at narrow widths ([#2154](https://github.com/taverns-red/toast-stats/issues/2154)) ([#2155](https://github.com/taverns-red/toast-stats/issues/2155)) ([a059678](https://github.com/taverns-red/toast-stats/commit/a0596789e67f0731c4e1bdc25754998a28b6b69d))
+
+
+### Dependencies
+
+* **deps:** Bump the patch-and-minor group with 8 updates ([#2150](https://github.com/taverns-red/toast-stats/issues/2150)) ([adb1213](https://github.com/taverns-red/toast-stats/commit/adb1213623872f7b00ed7e44301e8384b304c334))
+
 ## [3.42.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.42.0...frontend-v3.42.1) (2026-10-18)
 
 
