@@ -136,6 +136,13 @@ describe('getClubAnniversary (#444)', () => {
       // direction; per the AC: "within ±30 days of the reference date".
       const result = getClubAnniversary('2020-04-12', ref('2026-05-12'))
       expect(result?.isUpcoming).toBe(true)
+      // #2171 — the hero's past-tense copy reads this.
+      expect(result?.daysSincePrev).toBe(30)
+    })
+
+    it('reports daysSincePrev as 0 on the exact day (#2171)', () => {
+      const result = getClubAnniversary('2020-05-12', ref('2026-05-12'))
+      expect(result?.daysSincePrev).toBe(0)
     })
 
     it('is NOT upcoming 31 days after the anniversary', () => {

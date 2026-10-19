@@ -23,6 +23,9 @@ export interface ClubAnniversary {
   /** Days until the next anniversary. Zero on the exact day; never
    *  negative (always in [0, ~365]). */
   daysUntilNext: number
+  /** Days since the previous anniversary. Zero on the exact day (#2171:
+   *  the hero's "just passed" copy reads it). */
+  daysSincePrev: number
   /** True iff the anniversary is within ±30 days of referenceDate
    *  (either upcoming OR just passed in the prior 30 days). */
   isUpcoming: boolean
@@ -132,6 +135,7 @@ export function getClubAnniversary(
     years,
     isMilestone: isMilestoneYear(years),
     daysUntilNext,
+    daysSincePrev,
     isUpcoming,
     upcomingYears,
   }
