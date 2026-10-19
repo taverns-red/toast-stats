@@ -144,6 +144,21 @@ export const CATEGORICAL8 = [
   '#999933',
 ] as const
 
+/**
+ * Territory modes (#2178): `CATEGORICAL8` plus four map-only hues, so a
+ * district's 4–12 divisions (or a region's districts) each get their own.
+ * Every pair clears ΔE2000 15 (normal) and 8 (protan, deutan, tritan):
+ * Tol "bright" blue, Tol "light" pink, a violet and a dark umber, searched
+ * to stay ΔE ≥ 20 from the status reds and greens and from amber.
+ */
+export const CATEGORICAL12 = [
+  ...CATEGORICAL8,
+  '#4477AA',
+  '#FFAABB',
+  '#AA66FF',
+  '#664400',
+] as const
+
 export const SUSPENDED_FILL = '#8C8A82'
 
 /** Pin outline per theme: the app's slate --ink-2 (#2087). Clears 3:1 on

@@ -36,7 +36,8 @@ export * from './pinFeatures'
 /** Territory modes show the on-pin code from this zoom (spec §7.3). */
 export const CODE_LABEL_MIN_ZOOM = 11
 
-/** Territory clusters are neutral: a dominant hue over 34 areas misleads. */
+/** A mixed territory cluster is neutral: a dominant hue over 34 areas
+ *  misleads. One whose members all share a territory takes its hue. */
 export const NEUTRAL_CLUSTER_FILL = '#57534C'
 
 const countOf = (i: number): ExpressionSpecification => ['get', `k${i}`]
@@ -56,12 +57,24 @@ export function clusterProperties(
 }
 
 /**
- * Cluster fill (spec §8): the dominant category for status modes, the
- * median rung for ordinal modes, neutral for many-category territory modes.
+ * Cluster fill (spec §8): the dominant category for status modes (so a
+ * uniform group already takes its status colour), the median rung for
+ * ordinal modes, and for many-category territory modes the shared colour
+ * when every member is in one category, else neutral (#2178).
  */
 function clusterFill(model: ModeModel): ExpressionSpecification | string {
   const cats = model.categories
-  if (model.kind === 'categorical') return NEUTRAL_CLUSTER_FILL
+  if (model.kind === 'categorical') {
+    const branches = cats.flatMap((c, i) => [
+      ['==', countOf(i), ['get', 'point_count']],
+      c.fill,
+    ])
+    return [
+      'case',
+      ...branches,
+      NEUTRAL_CLUSTER_FILL,
+    ] as ExpressionSpecification
+  }
   if (model.kind === 'ordinal') {
     // Rungs from the bottom of the ladder; the shared states (suspended,
     // not available) are no rung.

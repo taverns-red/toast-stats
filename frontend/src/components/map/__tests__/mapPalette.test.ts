@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest'
 import type { ClubTrend } from '../../../hooks/useDistrictAnalytics'
 import {
   CATEGORICAL8,
+  CATEGORICAL12,
   HEALTH_FILLS,
   OUTLINE,
   TIER_FILLS,
@@ -186,6 +187,8 @@ describe('status and categorical palettes', () => {
   const sets: Record<string, string[]> = {
     health: Object.values(HEALTH_FILLS),
     categorical8: [...CATEGORICAL8],
+    // Territory modes (#2178): one hue per division or district, up to 12.
+    categorical12: [...CATEGORICAL12],
     status: Object.values(STATUS_FILLS),
     // #1787: renewals, CSP and officer list; coach; how members attend.
     compliance: Object.values(COMPLIANCE_FILLS),
@@ -258,7 +261,7 @@ describe('contrast', () => {
     const fills = [
       ...Object.values(HEALTH_FILLS),
       ...Object.values(TIER_FILLS),
-      ...CATEGORICAL8,
+      ...CATEGORICAL12,
       ...Object.values(STATUS_FILLS),
       ...SEQUENTIAL5,
       ...DIVERGING5,
