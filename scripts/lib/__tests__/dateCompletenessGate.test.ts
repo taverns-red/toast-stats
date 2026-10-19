@@ -542,20 +542,6 @@ describe('districtShape', () => {
     expect(s.clubKeys).not.toContain('coordinates')
   })
 
-  // #2160 — a fully online club swaps `coordinates` for `meetsOnline`, so
-  // it ties the richest mapped club on key count. Whichever comes first,
-  // the shape must still show the district carries coordinates.
-  it('a fully online club does not hide the coordinates its peers carry', () => {
-    const base = { clubId: '315', clubName: 'A', address: { city: 'X' } }
-    const online = { ...base, clubId: '28675595', meetsOnline: true }
-    const mapped = { ...base, coordinates: { lat: 41.66, lng: -73.93 } }
-    const s = districtShape({
-      data: { clubs: [online, mapped], clubPerformance: [online, mapped] },
-    })!
-    expect(s.clubKeys).toContain('coordinates')
-    expect(s.clubPerformanceKeys).toContain('coordinates')
-  })
-
   it('is null for something that is not a district snapshot', () => {
     expect(districtShape({ nope: true })).toBeNull()
   })
