@@ -50,6 +50,17 @@ re-homing existing surfaces, not speculative pages.
 
 ### 2. Analytics gets its own route (not folded into the hub)
 
+> **Amended 2026-10-19 (#2159): the Analytics route is retired.** By then every
+> block with distinct value had left the page (Rankings, Trends, the education
+> leaderboards), and the two top-10 lists duplicated the Clubs table's sortable
+> Trend and DCP columns. Ron decided to delete the page.
+> `/district/:id/analytics` now redirects (history replace) to
+> `/district/:id/clubs?sort=netChange&dir=desc`, keeping `py` / `date`, and
+> `#education-awards` still lands on `/education#leaderboards`. Analytics is no
+> longer in the subnav, so the every-item-is-a-route invariant still holds. The
+> Education Levels card's any-date CSV totals moved to Education as the
+> no-ledger fallback. Evidence: `.routine-tmp/analytics-page-audit-2026-10-19.md`.
+
 The full Top-Growth and Top-DCP-achiever lists live at `/district/:id/analytics`.
 The hub carries only **top-5 previews** that link there.
 
