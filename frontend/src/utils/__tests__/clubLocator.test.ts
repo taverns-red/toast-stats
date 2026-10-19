@@ -4,7 +4,12 @@
  * district snapshot already carries. No tiles, no MapLibre (review §6.3).
  */
 import { describe, it, expect } from 'vitest'
-import { projectClubLocator, projectClubPoints } from '../clubLocator'
+import {
+  fitClubLocator,
+  projectClubLocator,
+  projectClubPoints,
+} from '../clubLocator'
+import D53 from './fixtures/d53-club-coordinates-2026-10-18.json'
 
 const BOX = { width: 320, height: 180, pad: 12 }
 
@@ -104,5 +109,80 @@ describe('projectClubPoints', () => {
 
   it('is empty when no club has coordinates', () => {
     expect(projectClubPoints([{ clubId: '1' }], BOX)).toEqual([])
+  })
+})
+
+// #2162 — the tiled mini-map fits its view to the district's clubs with far-off
+// geocodes trimmed. FAC sometimes places a club on another continent: in the
+// 2026-10-18 D53 snapshot, Voya (28675595, address in CT) sits in Mumbai and
+// Greater Hartford (919) in Wilmington, NC. The fixture is that snapshot's
+// 147 located clubs, unedited.
+describe('fitClubLocator', () => {
+  const HARTFORD_AREA = '5520' // Cedar Hill, Hartford CT
+  const VOYA = '28675595'
+  const WILMINGTON = '919'
+
+  it('trims the far-off geocodes and keeps every other club in view', () => {
+    const fit = fitClubLocator(D53, HARTFORD_AREA)!
+    const ids = fit.inView.map(c => c.clubId)
+    expect(ids).not.toContain(VOYA)
+    expect(ids).not.toContain(WILMINGTON)
+    expect(fit.trimmed).toBe(2)
+    expect(fit.inView).toHaveLength(D53.length - 2)
+    expect(fit.focus?.clubId).toBe(HARTFORD_AREA)
+    expect(fit.focusIsOutlier).toBe(false)
+  })
+
+  it('bounds the kept clubs only: the north-east, not India', () => {
+    const [[west, south], [east, north]] = fitClubLocator(
+      D53,
+      HARTFORD_AREA
+    )!.bounds
+    expect(west).toBeGreaterThan(-80)
+    expect(east).toBeLessThan(-71)
+    expect(south).toBeGreaterThan(40)
+    expect(north).toBeLessThan(46)
+  })
+
+  it('leaves an outlying focus club out of the view and says so', () => {
+    const fit = fitClubLocator(D53, VOYA)!
+    expect(fit.focus).toBeNull()
+    expect(fit.focusIsOutlier).toBe(true)
+    expect(fit.inView.map(c => c.clubId)).not.toContain(VOYA)
+    expect(fit.bounds[1][0]).toBeLessThan(-71)
+  })
+
+  it('trims nothing in a compact district', () => {
+    const fit = fitClubLocator(CLUBS, '7238597')!
+    expect(fit.trimmed).toBe(0)
+    expect(fit.inView).toHaveLength(4)
+    expect(fit.bounds).toEqual([
+      [-75.8987, 45.0213],
+      [-74.7303, 45.4805],
+    ])
+  })
+
+  it('never trims a handful of clubs, however spread out', () => {
+    const fit = fitClubLocator(
+      [
+        { clubId: 'a', coordinates: { lat: 41.7, lng: -72.7 } },
+        { clubId: 'b', coordinates: { lat: 41.8, lng: -72.6 } },
+        { clubId: 'c', coordinates: { lat: 19.19, lng: 72.95 } },
+      ],
+      'a'
+    )!
+    expect(fit.trimmed).toBe(0)
+  })
+
+  it('gives a single club a zero-span box on its own point', () => {
+    const fit = fitClubLocator([CLUBS[0]!], '7238597')!
+    expect(fit.bounds).toEqual([
+      [-75.69486, 45.42197],
+      [-75.69486, 45.42197],
+    ])
+  })
+
+  it('is null when the focus club has no coordinates', () => {
+    expect(fitClubLocator(CLUBS, '1004')).toBeNull()
   })
 })

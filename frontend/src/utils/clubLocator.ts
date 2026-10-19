@@ -105,3 +105,29 @@ export function projectClubLocator(
   const focus = points.find(p => p.id === focusSrc.clubId) ?? null
   return { points, focus }
 }
+
+type Located = LocatorSource & { coordinates: { lat: number; lng: number } }
+
+/** [[west, south], [east, north]] in degrees, MapLibre's `LngLatBoundsLike`. */
+export type LocatorBounds = [[number, number], [number, number]]
+
+export interface LocatorFit {
+  /** Located clubs kept in view; the focus club is one of them iff it is not
+   *  an outlier. */
+  inView: Located[]
+  /** The focus club when it is in view, else null. */
+  focus: Located | null
+  /** The focus club has coordinates, but they are a far-off outlier. */
+  focusIsOutlier: boolean
+  /** Located clubs left out of the view as outliers. */
+  trimmed: number
+  bounds: LocatorBounds
+}
+
+/** #2162 — red stub. */
+export function fitClubLocator(
+  _clubs: readonly LocatorSource[],
+  _focusId: string
+): LocatorFit | null {
+  return null
+}
