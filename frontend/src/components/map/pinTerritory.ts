@@ -14,6 +14,7 @@ import {
   type PinCategory,
   type TerritoryMode,
 } from './pinModes'
+import { areaShades } from './pinAreaShades'
 
 const divisionKey = (c: ClubTrend) => c.divisionId || c.divisionName || '?'
 const areaKey = (c: ClubTrend) =>
@@ -74,91 +75,7 @@ export function assignTerritoryColours(
   return new Map(keys.map(k => [k, palette[colour.get(k)!]!]))
 }
 
-// CIELAB (D65) for the area shades below.
-const lin = (v: number) =>
-  v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
-const gam = (v: number) =>
-  v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055
-const WHITE_POINT = [0.95047, 1, 1.08883] as const
-const M_XYZ = [
-  [0.4124564, 0.3575761, 0.1804375],
-  [0.2126729, 0.7151522, 0.072175],
-  [0.0193339, 0.119192, 0.9503041],
-] as const
-const M_RGB = [
-  [3.2404542, -1.5371385, -0.4985314],
-  [-0.969266, 1.8760108, 0.041556],
-  [0.0556434, -0.2040259, 1.0572252],
-] as const
-
-function toLab(hex: string): [number, number, number] {
-  const rgb = [1, 3, 5].map(i => lin(parseInt(hex.slice(i, i + 2), 16) / 255))
-  const f = (t: number) =>
-    t > 216 / 24389 ? Math.cbrt(t) : ((24389 / 27) * t + 16) / 116
-  const [fx, fy, fz] = M_XYZ.map((row, i) =>
-    f(row.reduce((s, m, j) => s + m * rgb[j]!, 0) / WHITE_POINT[i]!)
-  ) as [number, number, number]
-  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)]
-}
-
-/** Lab → sRGB, or null when out of gamut. */
-function fromLab(L: number, a: number, b: number): string | null {
-  const fy = (L + 16) / 116
-  const inv = (t: number) =>
-    t ** 3 > 216 / 24389 ? t ** 3 : (116 * t - 16) / (24389 / 27)
-  const xyz = [fy + a / 500, fy, fy - b / 200].map(
-    (t, i) => inv(t) * WHITE_POINT[i]!
-  )
-  const rgb = M_RGB.map(row => gam(row.reduce((s, m, j) => s + m * xyz[j]!, 0)))
-  if (rgb.some(v => v < -0.001 || v > 1.001)) return null
-  return (
-    '#' +
-    rgb
-      .map(v =>
-        Math.round(Math.min(1, Math.max(0, v)) * 255)
-          .toString(16)
-          .padStart(2, '0')
-      )
-      .join('')
-      .toUpperCase()
-  )
-}
-
-/**
- * L* rungs for area shades (#2178). Steps of 9 keep ΔE2000 ≥ 5 between
- * neighbouring rungs under every vision; the 46→57 gap skips the band where
- * neither white nor ink text clears 4.5:1, so every shade keeps its label.
- */
-const AREA_LIGHTNESS = [28, 37, 46, 57, 66, 75, 84] as const
-
-/**
- * `n` shades of a division hue (#2178): consecutive rungs centred on the
- * hue's own lightness, hue kept and chroma eased only to stay in gamut.
- */
-export function areaShades(fill: string, n: number): string[] {
-  const [L, a, b] = toLab(fill)
-  const rungs = AREA_LIGHTNESS.length
-  const span = Math.min(n, rungs)
-  const centre = AREA_LIGHTNESS.reduce(
-    (best, l, i) =>
-      Math.abs(l - L) < Math.abs(AREA_LIGHTNESS[best]! - L) ? i : best,
-    0
-  )
-  const start = Math.max(
-    0,
-    Math.min(rungs - span, centre - Math.floor((span - 1) / 2))
-  )
-  return Array.from({ length: n }, (_, i) => {
-    const l = AREA_LIGHTNESS[start + (i % span)]!
-    for (let k = 1; k >= 0; k -= 0.02) {
-      const hex = fromLab(l, a * k, b * k)
-      if (hex) return hex
-    }
-    return fromLab(l, 0, 0)!
-  })
-}
-
-/** Area fills: each division's hue, its areas in lightness steps. */
+/** Area fills: shades of each division's hue, picked district-wide. */
 function areaColours(clubs: readonly ClubTrend[]): Map<string, string> {
   const divisions = assignTerritoryColours(clubs, divisionKey)
   const areasOf = new Map<string, string[]>()
@@ -168,12 +85,18 @@ function areaColours(clubs: readonly ClubTrend[]): Map<string, string> {
     if (!list.includes(areaKey(c))) list.push(areaKey(c))
     areasOf.set(d, list)
   }
+  const groups = [...areasOf.keys()].sort(compareLabel)
+  const shades = areaShades(
+    groups.map(d => ({
+      fill: divisions.get(d)!,
+      count: areasOf.get(d)!.length,
+    }))
+  )
   const out = new Map<string, string>()
-  for (const [d, areas] of areasOf) {
-    areas.sort(compareLabel)
-    const shades = areaShades(divisions.get(d)!, areas.length)
-    areas.forEach((k, i) => out.set(k, shades[i]!))
-  }
+  groups.forEach((d, g) => {
+    const areas = areasOf.get(d)!.sort(compareLabel)
+    areas.forEach((k, i) => out.set(k, shades[g]![i]!))
+  })
   return out
 }
 
