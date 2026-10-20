@@ -284,6 +284,26 @@ describe('one merged set of the sidecars feeds every block', () => {
   })
 })
 
+describe('multi-step prospect text (#2142)', () => {
+  // Recorded prod cells (district_53/216_reports.json, 2026-10-18).
+  it('counts a multi-step prospect at its furthest step, never one long label', () => {
+    const multi = cloneAs('86')
+    const recs = multi.sections.prospectiveClubs!.records
+    recs[0]!.prospect =
+      '#1 Application to Organize Complete - 07/20/2026#4 Officer Info Incomplete - 08/03/2026#5 Club Info Incomplete - 08/03/2026#6 Constitution & Bylaws Incomplete - 08/03/2026Payment Complete - 07/20/2026'
+    recs[1]!.prospect =
+      '#1 Application to Organize Complete - 07/16/2025#4 Officer Info Complete - 07/16/2025Payment Complete - 07/18/2025'
+    const out = buildReportsRollups(
+      input({ districtIds: ['61', '86'], reports: [D61, multi] })
+    )
+    expect(out.districts['86']?.prospective?.byStage).toEqual([
+      { stage: 1, label: 'Application to Organize', clubs: 4 },
+      { stage: 4, label: 'Officer Info', clubs: 1 },
+      { stage: 6, label: 'Constitution & Bylaws', clubs: 1 },
+    ])
+  })
+})
+
 describe('region membership comes from the logical date’s program year', () => {
   it('a June close (collected in July) uses the closing PY’s regions', () => {
     const history: DistrictRegionHistory = structuredClone(HISTORY)
