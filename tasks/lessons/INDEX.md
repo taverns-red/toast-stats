@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `release-please-reparses-notes-as-html-so-angle-brackets-in-titles-drop-releases.md` — release-please re-parses release notes as HTML, so a `<word>` in a squash subject silently drops or overflows component releases  (2026-10-19)
 - `a-budget-gate-keyed-on-one-chunk-goes-vacuous-when-a-second-consumer-hoists-it.md` — A bundle-budget gate that finds its route by "the chunk that holds the lazy import" goes vacuous when a second page shares that code — the bundler hoists it into a shared chunk and the gate measures that alone; key routes on what the router lazy-imports  (2026-10-17)
 - `a-key-normalisation-must-also-run-where-a-persisted-store-is-loaded.md` — Normalising an id at write time leaves a persisted store keyed the old way; normalise when the store is loaded too  (2026-10-17)
 - `a-new-snapshot-subdirectory-is-silently-dropped-by-every-flat-upload-glob.md` — A new subdirectory under snapshots/<date>/ is not uploaded by the per-date `*.json` globs, and process-dates.sh discards it on purpose (`./*/*) ;;`), so a writer that lands files there needs an upload line at every upload site  (2026-10-17)
