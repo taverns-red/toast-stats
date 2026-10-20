@@ -18,8 +18,15 @@ import { extendedModel } from './pinExtended'
    desktop popover both render it, and the map route's first load carries
    only the "Colour" pill and the Health | Distinguished quick toggle. */
 
+/** The territory modes — division and area, the region map's District and
+ *  the world map's Region (#1809) — colour each place a categorical hue, so
+ *  their preview is the categorical palette, not a model: `extendedModel`
+ *  has no bins for them (#2214). */
+const isCategoricalMode = (id: MapColorMode) =>
+  isTerritoryMode(id) || id === 'district' || id === 'region'
+
 function previewOf(id: MapColorMode): PinCategory[] {
-  if (isTerritoryMode(id) || id === 'district')
+  if (isCategoricalMode(id))
     return CATEGORICAL8.slice(0, 5).map(fill => ({
       key: fill,
       label: '',
