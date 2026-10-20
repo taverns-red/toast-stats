@@ -135,13 +135,11 @@ function hasClause(expr: string | undefined, clause: string): boolean {
 
 /**
  * Steps allowed to `gcloud storage rsync` into prod, with the issue that
- * retires each (#1763 PR 2). The whole-prefix promotion rsync is gone:
- * promotion copies the run manifest. Prune's reconcile still re-syncs v1/
- * and config/ after its deletes until #1767 routes it through the manifest.
+ * retires each. None is left: the whole-prefix promotion rsync went in
+ * #1763 PR 2, and the prune reconcile's v1/ + config/ re-sync in #1767
+ * (it promotes its regenerated indexes through the run manifest).
  */
-export const PROD_RSYNC_EXEMPT: Readonly<Record<string, string>> = {
-  '[prune] Reconcile production': '#1767',
-}
+export const PROD_RSYNC_EXEMPT: Readonly<Record<string, string>> = {}
 
 /**
  * Every step that rsyncs INTO prod. The contract test pins this to exactly

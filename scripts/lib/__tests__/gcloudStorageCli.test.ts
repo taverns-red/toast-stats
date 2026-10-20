@@ -185,20 +185,14 @@ describe('gsutil → gcloud storage migration guard (#1412)', () => {
       expect(render(hits)).toEqual([])
     })
 
-    it('every rsync into the production bucket mirrors the same staging layer', () => {
+    it('no rsync writes into the production bucket', () => {
       const toProd = rsyncs.filter(i =>
         i.text.includes('gs://${GCS_BUCKET_PRODUCTION}/')
       )
-      // Only the 2 prod-reconcile manifest syncs (v1/, config/), until
-      // #1767. The 4 whole-prefix promote layers are retired (#1763): the
-      // promotion copies the run manifest instead.
-      expect(toProd).toHaveLength(2)
-      for (const i of toProd) {
-        expect(i.flags, `${i.file}:${i.n}`).toEqual(['-r'])
-        expect(i.text, `${i.file}:${i.n}`).toMatch(
-          /rsync -r "gs:\/\/\$\{GCS_BUCKET\}\/([a-z0-9-]+)\/" "gs:\/\/\$\{GCS_BUCKET_PRODUCTION\}\/\1\/"/
-        )
-      }
+      // The 4 whole-prefix promote layers are retired (#1763) and the
+      // prune reconcile's v1/ + config/ syncs too (#1767): every prod write
+      // of a staged object goes through the run-manifest promoter.
+      expect(render(toProd)).toEqual([])
     })
 
     it('the prune keep-only sync uses the tested exclude constant, from staging', () => {
