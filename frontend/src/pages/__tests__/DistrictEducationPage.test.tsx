@@ -364,6 +364,52 @@ describe('DistrictEducationPage (#1793)', () => {
       ).toBeInTheDocument()
     })
 
+    describe('below 768: sparkline-expand (#1793)', () => {
+      beforeEach(() => {
+        vi.stubGlobal(
+          'matchMedia',
+          vi.fn().mockImplementation((query: string) => ({
+            matches: true,
+            media: query,
+            onchange: null,
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+          }))
+        )
+      })
+      afterEach(() => vi.unstubAllGlobals())
+
+      it('heads the sparkline with this PY to date', async () => {
+        serveIndex()
+        renderAt('/district/61/education')
+        const trigger = await screen.findByRole('button', {
+          name: 'Expand Awards by program year chart',
+        })
+        expect(trigger).toHaveTextContent('2026-27: 317 awards to date')
+      })
+
+      it('heads it with the page’s selected PY (R3)', async () => {
+        serveIndex()
+        vi.mocked(useDistrictCachedDates).mockReturnValue({
+          data: {
+            dates: ['2026-10-13', '2026-06-30'],
+            dateRange: { startDate: '2026-06-30', endDate: '2026-10-13' },
+          },
+          isLoading: false,
+        } as unknown as ReturnType<typeof useDistrictCachedDates>)
+        vi.mocked(useDistrictAnalytics).mockReturnValue(analyticsWith(null))
+        renderAt('/district/61/education?py=2025')
+        const trigger = await screen.findByRole('button', {
+          name: 'Expand Awards by program year chart',
+        })
+        expect(trigger).toHaveTextContent('2025-26: 1,246 awards')
+        expect(trigger).not.toHaveTextContent('to date')
+      })
+    })
+
     it('shows no year bars before the rollup is published', async () => {
       renderAt('/district/61/education')
       await screen.findByRole('list', { name: /education at a glance/i })
