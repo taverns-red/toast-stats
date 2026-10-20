@@ -134,6 +134,11 @@ const WorldEducationPage = React.lazy(
 // Code-split: region and world Club Growth funnels (#1812, #1813)
 const RegionGrowthPage = React.lazy(() => import('./pages/RegionGrowthPage'))
 const WorldGrowthPage = React.lazy(() => import('./pages/WorldGrowthPage'))
+// Code-split: region and world meeting-time heatmaps (#1814)
+const RegionMeetingsPage = React.lazy(
+  () => import('./pages/RegionMeetingsPage')
+)
+const WorldMeetingsPage = React.lazy(() => import('./pages/WorldMeetingsPage'))
 
 // Code-split: DivisionPage — /district/:districtId/division/:divId (#424)
 const DivisionPage = React.lazy(() => import('./pages/DivisionPage'))
@@ -494,6 +499,24 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <WorldGrowthPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'region/:n/meetings',
+          element: (
+            <CanonicalRegionRoute>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <RegionMeetingsPage />
+              </Suspense>
+            </CanonicalRegionRoute>
+          ),
+        },
+        {
+          path: 'regions/meetings',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <WorldMeetingsPage />
             </Suspense>
           ),
         },

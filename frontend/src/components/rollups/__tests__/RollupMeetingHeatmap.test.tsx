@@ -51,12 +51,13 @@ const grid = () =>
 describe('RollupMeetingHeatmap', () => {
   it('the district page’s 7 × 24 grid, summed over the region', () => {
     renderBody()
-    const cells = within(grid()).getAllByTestId('meeting-cell')
-    expect(cells).toHaveLength(7 * 24)
     const sum = aggregateMeetingTimes(
       scopeMeetingTimes(view, { kind: 'region', regionId: '05' }).districts,
       'all'
     )
+    // 24 hours a day, plus a "time not stated" cell per day when any is.
+    const cells = within(grid()).getAllByTestId('meeting-cell')
+    expect(cells).toHaveLength(7 * (24 + (sum.noTime.some(n => n > 0) ? 1 : 0)))
     const n = sum.counts[2]![19]!
     expect(
       within(grid()).getByRole('link', {

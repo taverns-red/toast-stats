@@ -13,7 +13,8 @@ import {
 
 /* RegionSubnav (#1815) — Rankings / Health & compliance / Club growth
    (#1812, #1813) / Club survival (#1818) / Club map (#1808, #1809) /
-   Education (#1810, #1811) for `/regions` and `/region/:n`. Real sibling routes (ADR-005), not tabs: the back button,
+   Education (#1810, #1811) / Meetings (#1814, named like the district
+   section) for `/regions` and `/region/:n`. Real sibling routes (ADR-005), not tabs: the back button,
    deep links and the page's `?py=` / `?date=` all survive the switch.
    Reuses the app's one secondary route-nav primitive (the district-subnav
    classes), like ClubsSubnav. On an upright phone it is the shared bottom
@@ -70,13 +71,20 @@ export const RegionSubnav: React.FC<{
       icon: <AwardIcon />,
     },
   ]
+  // Meetings (#1814), region and world. On a phone it is the first
+  // section under More, so the bar keeps its existing primaries.
+  const meetings = {
+    label: 'Meetings',
+    to: `${base}/meetings${qs}`,
+    end: false,
+  }
   const phone = useMediaQuery(PHONE_SECTION_BAR_QUERY)
   if (phone) {
     return (
       <SectionBar
         label={label}
         primary={links}
-        more={[]}
+        more={[meetings]}
         testId="region-section-bar"
       />
     )
@@ -88,7 +96,7 @@ export const RegionSubnav: React.FC<{
       data-testid="region-subnav"
     >
       <ul className="district-subnav__list">
-        {links.map(l => (
+        {[...links, meetings].map(l => (
           <li key={l.label} className="district-subnav__item">
             <NavLink to={l.to} end={l.end} className="district-subnav__link">
               {l.label}
