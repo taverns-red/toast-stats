@@ -65,6 +65,19 @@ describe('RegionSubnav', () => {
     expect(screen.queryByRole('link', { name: 'Club map' })).toBeNull()
   })
 
+  it('links the world education page (#1811) from the all-regions subnav', () => {
+    render(
+      <MemoryRouter
+        initialEntries={['/regions/education?py=2025-2026&by=path']}
+      >
+        <RegionSubnav base="/regions" label="Regions sections" />
+      </MemoryRouter>
+    )
+    const education = screen.getByRole('link', { name: 'Education' })
+    expect(education).toHaveAttribute('href', '/regions/education?py=2025-2026')
+    expect(education).toHaveAttribute('aria-current', 'page')
+  })
+
   it('is the bottom section bar on an upright phone, so content starts under the context bar', () => {
     phone.value = true
     render(
