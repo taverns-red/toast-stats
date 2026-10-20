@@ -2494,6 +2494,21 @@
     align-items: center;
   }
 
+  /* #2071 — from 768 the hero is a row and the intro is `flex: 1`, so a chip
+     column sized by its content made the intro's width depend on which chips
+     analytics brings: the hero-first render holds one ~55px placeholder, the
+     full render has 79–320px of chips, and the intro narrowed and re-wrapped
+     the h1 and meeting lines on arrival (club 977 before #2172; 113/28678810
+     at 0.071 after it). A fixed column fits the widest single chip (the
+     anniversary copy, ~172px); further chips wrap inside it, and its height
+     never reaches the intro's. */
+  @media (min-width: 768px) {
+    .club-hero__pills {
+      flex: 0 0 176px;
+      justify-content: flex-end;
+    }
+  }
+
   /* #2171 — the hero's status badges (health, DCP tier, anniversary) are ONE
      quiet outline chip: ~24px tall, transparent, a 1px white border at 35%,
      white text, a small radius. The hero is a fixed loyal-blue panel in both
