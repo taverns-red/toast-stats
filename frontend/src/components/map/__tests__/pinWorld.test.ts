@@ -80,7 +80,10 @@ describe('assignCentroidColours', () => {
 
   it('gives touching territories different colours', () => {
     const clubs = grid(30, 4)
-    const colours = assignCentroidColours(clubs, c => c.districtId)
+    const colours = assignCentroidColours(
+      clubs,
+      c => (c as RegionClub).districtId
+    )
     // Territory 0 and 1 sit 10° apart on the same meridian: neighbours.
     expect(colours.get('0')).not.toBe(colours.get('1'))
     for (const fill of colours.values()) expect(CATEGORICAL12).toContain(fill)
@@ -89,7 +92,10 @@ describe('assignCentroidColours', () => {
   it('builds for ~15k clubs in 130 districts well inside a frame budget', () => {
     const clubs = grid(130, 116) // 15,080 clubs
     const t0 = performance.now()
-    const colours = assignCentroidColours(clubs, c => c.districtId)
+    const colours = assignCentroidColours(
+      clubs,
+      c => (c as RegionClub).districtId
+    )
     const ms = performance.now() - t0
     expect(colours.size).toBe(130)
     // Linear in clubs; the quadratic club-to-club rule takes minutes here.

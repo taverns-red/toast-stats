@@ -24,7 +24,7 @@ import { assignTerritoryColours, territoryModel } from '../pinTerritory'
 
 // Health/tier come from pinModes; division/area from the on-demand module.
 const buildModeModel = (
-  mode: Exclude<MapColorMode, ExtendedMode | 'district' | 'locator'>,
+  mode: Exclude<MapColorMode, ExtendedMode | 'district' | 'region' | 'locator'>,
   clubs: readonly ClubTrend[]
 ) => (isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode))
 
