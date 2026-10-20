@@ -348,6 +348,18 @@ jobs:
           BASE_URL: ${{ steps.deploy.outputs.url }}
         run: npx playwright test --config playwright.config.ts e2e/district-subpages-cls.smoke.ts
 
+      # Club hero CLS at the hero-first -> full render (#2071). The snapshot
+      # paints the hero before analytics; the status chips arrive later and
+      # must not change the intro's width (which re-wrapped the h1 and moved
+      # the hero by a line). Analytics is held back so both renders paint;
+      # 375/768/1024/1280. Chromium-only: the webkit project skips.
+      - name: Club hero CLS at the full render against preview
+        if: env.HEAVY_SMOKE == 'true'
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: npx playwright test --config playwright.config.ts e2e/club-hero-cls.smoke.ts
+
       # No horizontal page scroll (#1651, #1655). The document's scrollWidth
       # must not exceed the viewport at 375/768/1280 in both themes on the
       # shell routes, /clubs, and /district/61 (+ Analytics) with real data, so
@@ -668,8 +680,8 @@ jobs:
       # desktop-only on `/` against localhost fixtures; this runs Lighthouse's
       # mobile profile (simulated 150 ms RTT / 1.6 Mbps / 4x CPU) on the five
       # #1830 routes against the deployed channel — real CSP, staging CDN data,
-      # real fonts. Assertions are `warn` for the first green week, then
-      # promoted to `error` (recorded on #1830); see lighthouserc.mobile.js for
+      # real fonts. Assertions are `error` since 2026-10-19, after a green
+      # week at `warn` (recorded on #1830); see lighthouserc.mobile.js for
       # the per-route budgets and their ratchet issue.
       - name: Lighthouse mobile gate against preview
         if: env.HEAVY_SMOKE == 'true'

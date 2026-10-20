@@ -6,6 +6,7 @@ import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import { useEducationRollupIndex } from '../hooks/useEducationRollup'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -15,12 +16,19 @@ import {
 import { buildDistrictEducation } from '../utils/districtEducation'
 import { computeEducationAwardRankings } from '../utils/educationAwardRankings'
 import { extractEducationLevels } from '../utils/extractEducationLevels'
+import {
+  districtEducationTrend,
+  educationYearsSparkline,
+  skipsProgramYears,
+  type EducationTrendYear,
+} from '../utils/educationTrend'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { DistrictEducationView } from '../components/DistrictEducationView'
 import { EducationAwardsLeaderboard } from '../components/EducationAwardsLeaderboard'
 import { EducationLevelsCard } from '../components/EducationLevelsCard'
+import { EducationYearBars } from '../components/education/EducationYearBars'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
 
@@ -32,6 +40,21 @@ import ErrorBoundary from '../components/ErrorBoundary'
    snapshot — no new pipeline artifact. Program year and date come from the
    shared URL-synced page controls and are passed down (R3); the dataset's
    own `programYear` is only checked against them, never used instead. */
+
+const shortPy = (py: string) => `${py.slice(0, 4)}-${py.slice(7)}`
+
+/** The sparkline-expand headline: the selected PY's total (#1793). */
+function yearsHeadline(
+  programYear: string,
+  selected: EducationTrendYear | null,
+  isPriorProgramYear: boolean
+): string {
+  const py = shortPy(programYear)
+  if (!selected) return `${py}: no row in the education rollup`
+  if (!selected.totals) return `${py}: not available`
+  const n = selected.totals.awards.toLocaleString()
+  return `${py}: ${n} awards${isPriorProgramYear ? '' : ' to date'}`
+}
 
 const DistrictEducationPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
@@ -154,12 +177,42 @@ const DistrictEducationPage: React.FC = () => {
     )
   }, [analytics, clubs])
 
+  // Multi-year bars (#1807): the district's row of the #1801 rollup index,
+  // ledger only. Independent of this date's report, so they show even when
+  // the selected date has no ledger. Not published yet → no section.
+  const { index: rollupIndex } = useEducationRollupIndex()
+  const trend = useMemo(
+    () => districtEducationTrend(rollupIndex, districtId || ''),
+    [rollupIndex, districtId]
+  )
+
+  // Below 768 the bars collapse to sparkline-expand (#1793): the headline
+  // is the page's selected PY (R3), "to date" while it is the newest PY.
   // Prior vs current PY, from the page's own PY selection against the
   // district's newest PY with data (R3), never reports.programYear.
   const isPriorProgramYear =
     effectiveProgramYear !== null &&
     availableProgramYears[0] !== undefined &&
     effectiveProgramYear.year < availableProgramYears[0].year
+
+  // Below 768 the bars collapse to sparkline-expand (#1793): the headline
+  // is the page's selected PY (R3), "to date" while it is the newest PY.
+  const yearsSparkline = useMemo(() => {
+    if (!effectiveProgramYear) return null
+    const { series, selected } = educationYearsSparkline(
+      trend,
+      effectiveProgramYear.label
+    )
+    return {
+      urlId: 'education-years',
+      series,
+      headline: yearsHeadline(
+        effectiveProgramYear.label,
+        selected,
+        isPriorProgramYear
+      ),
+    }
+  }, [trend, effectiveProgramYear, isPriorProgramYear])
 
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
@@ -231,6 +284,21 @@ const DistrictEducationPage: React.FC = () => {
                   </p>
                   <EducationLevelsCard totals={csvEducationLevels} />
                 </section>
+              )}
+              {trend.length > 0 && effectiveProgramYear && yearsSparkline && (
+                <EducationYearBars
+                  years={trend}
+                  programYear={effectiveProgramYear.label}
+                  sparkline={yearsSparkline}
+                  note={
+                    <>
+                      Every ledger award in each program year; the current year
+                      is to date. Legacy awards ended with the move to Pathways.
+                      {skipsProgramYears(trend) &&
+                        ' District numbers are reused: years this number was not a district are left out.'}
+                    </>
+                  }
+                />
               )}
               {rankings && (
                 <section

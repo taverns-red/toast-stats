@@ -398,6 +398,30 @@ export {
   type ClubsByRegionTopMetric,
 } from './schemas/clubs-by-region.schema.js'
 
+// Meeting times per district — snapshots/{date}/meeting-times.json (#1814)
+export {
+  MeetingTimesSchema,
+  MeetingTimesFormatSchema,
+  MeetingTimesGridSchema,
+  MeetingTimesDistrictSchema,
+  MEETING_TIMES_VERSION,
+  MEETING_TIMES_FORMAT,
+  MEETING_TIMES_FILE_NAME,
+  MEETING_TIMES_MODES,
+  type MeetingTimes,
+  type MeetingTimesFormat,
+  type MeetingTimesGrid,
+  type MeetingTimesDistrict,
+  type MeetingTimesMode,
+} from './schemas/meeting-times.schema.js'
+export {
+  countMeetingSlots,
+  meetingEntryMatchesMode,
+  meetingEntryHour,
+  type MeetingSlotClub,
+  type MeetingSlotCounts,
+} from './meeting/meetingSlots.js'
+
 // Region and world membership series — time-series/regions/{PY}.json (#2127)
 export {
   RegionMembershipSeriesSchema,
@@ -625,7 +649,9 @@ export {
 export {
   scrubPlaceText,
   stripMeetingCredentials,
+  stripPhoneNumbers,
   containsMeetingCredential,
+  containsPhoneNumber,
   containsPlaceSecret,
 } from './privacy/place-text.js'
 

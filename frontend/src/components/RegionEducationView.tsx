@@ -16,6 +16,7 @@ import {
   MatrixSection,
   ProgramBar,
 } from './education/EducationBreakdown'
+import { EducationYearBars } from './education/EducationYearBars'
 
 /* Region Education page body (#1810, epic #1781) — the #1801 rollup for
    one region and program year. Same sections as the district page (#1793):
@@ -38,7 +39,6 @@ export interface RegionEducationViewProps {
 
 const NOT_MEASURED = 'Not measured'
 const fmt = (n: number) => n.toLocaleString()
-const shortPy = (py: string) => `${py.slice(0, 4)}-${py.slice(7)}`
 
 const REASONS: Record<string, string> = {
   'no-data': 'TI returned no ledger',
@@ -49,7 +49,7 @@ const REASONS: Record<string, string> = {
 
 /* ── KPI strip ───────────────────────────────────────────────────────── */
 
-const KpiStrip: React.FC<{ e: Available }> = ({ e }) => {
+export const KpiStrip: React.FC<{ e: Pick<Available, 'kpis'> }> = ({ e }) => {
   const k = e.kpis
   const items = [
     { label: 'Awards', value: fmt(k.awards) },
@@ -81,68 +81,6 @@ const KpiStrip: React.FC<{ e: Available }> = ({ e }) => {
         </li>
       ))}
     </ul>
-  )
-}
-
-/* ── Multi-year bars ─────────────────────────────────────────────────── */
-
-const SEGMENTS = [
-  { key: 'pathways', label: 'Pathways' },
-  { key: 'legacy', label: 'Legacy' },
-  { key: 'dtm', label: 'DTM' },
-  { key: 'other', label: 'Other' },
-] as const
-
-const YearBars: React.FC<{
-  trend: RegionEducationViewProps['trend']
-  programYear: string
-}> = ({ trend, programYear }) => {
-  const max = Math.max(1, ...trend.map(y => y.totals.awards))
-  return (
-    <section className="education-section" aria-labelledby="edu-years-h">
-      <h2 id="edu-years-h" className="education-section__title">
-        By program year
-      </h2>
-      <ul className="education-rows" aria-label="Awards by program year">
-        {trend.map(({ programYear: py, totals: t }) => {
-          const shown = SEGMENTS.filter(
-            s => s.key === 'pathways' || s.key === 'legacy' || t[s.key] > 0
-          )
-          return (
-            <li
-              key={py}
-              className={`education-row--path education-year${py === programYear ? ' is-current' : ''}`}
-              aria-current={py === programYear ? 'true' : undefined}
-            >
-              <span className="education-row__label">{shortPy(py)}</span>
-              <span className="education-row__value">{fmt(t.awards)}</span>
-              <span
-                className="education-year__track"
-                aria-hidden="true"
-                style={{ width: `${(t.awards / max) * 100}%` }}
-              >
-                {SEGMENTS.map(s =>
-                  t[s.key] > 0 ? (
-                    <span
-                      key={s.key}
-                      className={`education-stack__seg education-seg--${s.key}`}
-                      style={{ flexGrow: t[s.key] }}
-                    />
-                  ) : null
-                )}
-              </span>
-              <span className="education-year__split">
-                {shown.map(s => `${s.label} ${fmt(t[s.key])}`).join(' · ')}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-      <p className="education-note">
-        Each year sums that year&apos;s districts with a ledger, by that
-        year&apos;s regions. Legacy awards ended with the move to Pathways.
-      </p>
-    </section>
   )
 }
 
@@ -388,7 +326,19 @@ export const RegionEducationView: React.FC<RegionEducationViewProps> = ({
       <ProgramBar e={e.summary} />
       <ByLevelOrPathSection e={e.summary} />
       <MatrixSection e={e.summary} />
-      {trend.length > 0 && <YearBars trend={trend} programYear={programYear} />}
+      {trend.length > 0 && (
+        <EducationYearBars
+          years={trend}
+          programYear={programYear}
+          note={
+            <>
+              Each year sums that year&apos;s districts with a ledger, by that
+              year&apos;s regions. Legacy awards ended with the move to
+              Pathways.
+            </>
+          }
+        />
+      )}
       <Districts e={e} region={region} programYear={programYear} />
     </div>
   )

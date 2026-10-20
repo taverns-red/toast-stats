@@ -98,10 +98,13 @@ describe('lighthouserc.mobile.js (#1830)', () => {
       }
     })
 
-    it('is warn-level until the green-week promotion recorded on #1830', () => {
+    // Promoted after the green week (#1830): 23 preview runs on 2026-10-19
+    // passed every budget, best-of-3, with the least headroom on club LCP
+    // (worst 3480 ms vs 3800 ms).
+    it('is error-level after the green-week promotion recorded on #1830', () => {
       for (const entry of matrix) {
         for (const [level] of Object.values(entry.assertions)) {
-          expect(level).toBe('warn')
+          expect(level).toBe('error')
         }
       }
     })

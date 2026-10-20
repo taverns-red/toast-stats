@@ -123,6 +123,11 @@ const RegionEducationPage = React.lazy(
   () => import('./pages/RegionEducationPage')
 )
 
+// Code-split: world education subpage (#1811)
+const WorldEducationPage = React.lazy(
+  () => import('./pages/WorldEducationPage')
+)
+
 // Code-split: region and world Club Growth funnels (#1812, #1813)
 const RegionGrowthPage = React.lazy(() => import('./pages/RegionGrowthPage'))
 const WorldGrowthPage = React.lazy(() => import('./pages/WorldGrowthPage'))
@@ -427,6 +432,14 @@ const router = createBrowserRouter(
                 <RegionEducationPage />
               </Suspense>
             </CanonicalRegionRoute>
+          ),
+        },
+        {
+          path: 'regions/education',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <WorldEducationPage />
+            </Suspense>
           ),
         },
         {

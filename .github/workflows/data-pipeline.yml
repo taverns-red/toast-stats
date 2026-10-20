@@ -951,6 +951,9 @@ jobs:
           # upload, clean up. Failed dates are counted, not fatal; the script
           # prints {"succeeded","refused","failed"} and writes the summary and
           # store counters (#1708). Per-stage tests: processDates.test.ts.
+          # After the loop it also builds snapshots/<date>/reports-rollups.json
+          # for each published date (#2012, #2202), before the run manifest is
+          # published below, so the backfill is gated and promoted with its date.
           # shellcheck disable=SC2086 # DATES is a whitespace-separated list
           COUNTS=$(bash scripts/pipeline/process-dates.sh "${GCS_BUCKET}" rebuild ${DATES})
           FAILED=$(jq -r .failed <<<"${COUNTS}")

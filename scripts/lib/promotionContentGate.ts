@@ -38,6 +38,9 @@ import {
   CharterCohortSurvivalRollupFileSchema,
   DistrictRegionHistorySchema,
   findClubContactField,
+  MEETING_TIMES_FILE_NAME,
+  MEETING_TIMES_MODES,
+  MeetingTimesSchema,
   ProgramYearIndexFileSchema,
   RegionMembershipSeriesSchema,
   REGION_ROLLUPS_FILE_NAME,
@@ -102,6 +105,7 @@ export type ObjectKind =
   | 'clubs-by-region-world-points'
   | 'region-membership-series'
   | 'reports-rollups'
+  | 'meeting-times'
   | 'latest'
   | 'json'
 
@@ -153,6 +157,9 @@ const CLUBS_BY_REGION_SHARD = new RegExp(
 const REGION_SERIES = /^time-series\/regions\/(\d{4}-\d{4})\.json$/
 const REPORTS_ROLLUPS = new RegExp(
   `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${REPORTS_ROLLUPS_FILE_NAME.replace('.', '\\.')}$`
+)
+const MEETING_TIMES = new RegExp(
+  `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${MEETING_TIMES_FILE_NAME.replace('.', '\\.')}$`
 )
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
@@ -212,6 +219,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (CLUBS_BY_REGION_SHARD.test(path)) return 'clubs-by-region-shard'
   if (REGION_SERIES.test(path)) return 'region-membership-series'
   if (REPORTS_ROLLUPS.test(path)) return 'reports-rollups'
+  if (MEETING_TIMES.test(path)) return 'meeting-times'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
@@ -354,7 +362,8 @@ export function planContentChecks(
       c.kind === 'clubs-by-region-world' ||
       c.kind === 'clubs-by-region-world-points' ||
       c.kind === 'region-membership-series' ||
-      c.kind === 'reports-rollups'
+      c.kind === 'reports-rollups' ||
+      c.kind === 'meeting-times'
     ) {
       checks.push(c)
     } else {
@@ -1120,6 +1129,67 @@ function checkReportsRollups(path: string, value: unknown): string | null {
   return null
 }
 
+/**
+ * snapshots/<date>/meeting-times.json (#1814): the shared-contracts schema;
+ * served under its own date with that logical date's program year; totals
+ * = Σ districts; per district, scheduled ≤ clubs, the KPIs and every cell
+ * ≤ scheduled, and every mode cell ≤ the all-meetings cell (a hybrid club
+ * is in both mode grids, never more than once in a cell).
+ */
+function checkMeetingTimes(path: string, value: unknown): string | null {
+  const parsed = MeetingTimesSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const m = parsed.data
+  const dated = datedArtifact(
+    m.snapshotDate,
+    m.programYear,
+    MEETING_TIMES.exec(path)?.[1]
+  )
+  if (dated !== null) return dated
+  const rows = Object.entries(m.districts)
+  const sum = (k: 'clubs' | 'scheduled') =>
+    rows.reduce((n, [, d]) => n + d[k], 0)
+  for (const [k, want] of [
+    ['districts', rows.length],
+    ['clubs', sum('clubs')],
+    ['scheduled', sum('scheduled')],
+  ] as const) {
+    if (m.totals[k] !== want) {
+      return `totals.${k} is ${m.totals[k]}, its districts sum to ${want}`
+    }
+  }
+  for (const [id, d] of rows) {
+    if (d.scheduled > d.clubs) {
+      return `district ${id}: scheduled ${d.scheduled} > clubs ${d.clubs}`
+    }
+    if (d.inPerson > d.scheduled || d.onlineCapable > d.scheduled) {
+      return `district ${id}: in person/online-capable above scheduled ${d.scheduled}`
+    }
+    if (m.regionMembership === null && d.region !== null) {
+      return `district ${id}: region ${d.region} without a region membership`
+    }
+    const all = d.modes.all
+    for (const mode of MEETING_TIMES_MODES) {
+      const g = d.modes[mode]
+      const cells = [...g.counts.flat(), ...g.noTime, g.modeNotStated]
+      if (cells.some(n => n > d.scheduled)) {
+        return `district ${id}: the ${mode} grid has a count above scheduled ${d.scheduled}`
+      }
+      if (mode === 'all') continue
+      for (let day = 0; day < 7; day++) {
+        for (let h = 0; h < 24; h++) {
+          if (g.counts[day]![h]! > all.counts[day]![h]!) {
+            return `district ${id}: ${mode} cell [${day}][${h}] is above the all-meetings cell`
+          }
+        }
+      }
+    }
+  }
+  return null
+}
+
 function checkLatest(value: unknown): string | null {
   const date = (value as { latestSnapshotDate?: unknown } | null)
     ?.latestSnapshotDate
@@ -1189,6 +1259,8 @@ export function checkObject(
       return checkRegionSeries(check.path, value)
     case 'reports-rollups':
       return checkReportsRollups(check.path, value)
+    case 'meeting-times':
+      return checkMeetingTimes(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -1302,6 +1374,8 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, RegionMembershipSeriesSchema, served under its programYear, every date in that year and ascending, each district in one region, world = Σ regions (null where a region is) (#2127)',
   'reports-rollups':
     'decoded, ReportsRollupsSchema, served under its snapshotDate with that date’s program year, a district without reports null throughout, world = Σ districts, each region = Σ its districts, null when any district is (#2012)',
+  'meeting-times':
+    'decoded, MeetingTimesSchema, served under its snapshotDate with that date’s program year, totals = Σ districts, each district’s counts within its clubs and every mode cell within the all-meetings cell (#1814)',
   latest: 'decoded, latestSnapshotDate is a real date',
   json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',

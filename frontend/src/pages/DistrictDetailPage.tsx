@@ -45,6 +45,8 @@ import {
 import { DistrictOverviewHub } from '../components/DistrictOverviewHub'
 import { DISTRICT_HUB_QUERY } from '../utils/districtHub'
 import { useMediaQuery } from '../hooks/useMediaQuery'
+import { DistrictRegionMoveBanner } from '../components/DistrictRegionMoveBanner'
+import { useDistrictRegionHistory } from '../hooks/useDistrictRegionHistory'
 
 // Synthetic rankings used when performance-targets CDN data is missing
 // and the inline analytics rollup is the only source. Stable module-level
@@ -350,6 +352,9 @@ const DistrictDetailPageInner: React.FC = () => {
       districtId,
       effectiveProgramYear ?? selectedProgramYear
     )
+
+  // District → region history (#1821): drives the moved-region banner.
+  const { history: regionHistory } = useDistrictRegionHistory()
 
   // Extract threshold + officer award results for this district (#333)
   const clubStrengthResult = React.useMemo(() => {
@@ -816,6 +821,22 @@ const DistrictDetailPageInner: React.FC = () => {
                   />
                 </MobileDisclosure>
               </section>
+            )}
+
+            {/* Moved-region banner (#1821): the regions this district sat in
+                in other program years, each linked for its own year. It
+                mounts late (after the region-history file lands), so it sits
+                BELOW the overview section: above it, the late mount pushed
+                the whole stack down 237px (CLS 0.22–0.25 at 412px). Most
+                districts never moved, so no slot is reserved for it. */}
+            {districtId && (
+              <DistrictRegionMoveBanner
+                districtId={districtId}
+                programYear={
+                  (effectiveProgramYear ?? selectedProgramYear).label
+                }
+                history={regionHistory}
+              />
             )}
 
             {/* #680 (ADR-005 §1): the membership/payment trend charts moved off

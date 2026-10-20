@@ -803,8 +803,11 @@ const MethodologyPage: React.FC = () => {
             codes that are neither — summed from the education reports. It is{' '}
             <strong>not DCP credit</strong>: DCP education credit counts
             distinct members per award tier, and member identity is dropped at
-            parse time, so the two can never be reconciled here. A year whose
-            report set is not on file is marked as such and never zero-filled.
+            parse time, so the two can never be reconciled here. The DCP credits
+            a club once per award type per member: three Level 1s by one member
+            earn one DCP credit, whereas the education count here counts every
+            award, so it records three. A year whose report set is not on file
+            is marked as such and never zero-filled.
           </p>
 
           <h3>Clubs by country</h3>
