@@ -26,6 +26,8 @@ on:
       - 'LICENSE'
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, edited]
+    # `edited` so a retarget to main runs Docs Gate (#2204); see ci.yml.
     paths:
       - '**/*.md'
       - 'tasks/**'
@@ -37,12 +39,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: docs-${{ github.workflow }}-${{ github.ref }}
+  # A no-op edit (title/body, not base) gets its own group: its run is all
+  # skipped, and cancelling the real in-flight run would fail the gate (#2204).
+  group: docs-${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'edited' && !github.event.changes.base && format('-noop-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 jobs:
   docs:
     name: Docs Gate
+    if: github.event.action != 'edited' || github.event.changes.base
     runs-on: ubuntu-26.04
     timeout-minutes: 5
 
