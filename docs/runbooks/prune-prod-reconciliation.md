@@ -6,8 +6,9 @@ prune mode.
 
 ## Why prod freezes after a prune
 
-Prune deletes only from **staging**. Promotion (`gcloud storage rsync` without
-`--delete-unmatched-destination-objects`, gsutil's `-d`) never deletes from prod. After a staging prune:
+Prune deletes only from **staging**. Promotion (the scoped run-manifest
+promoter, #1763) never deletes from prod unless it is handed a prune
+reconcile's delete manifest (#1767). After a staging-only prune:
 
 1. Staging's regenerated `v1/dates.json` lists fewer dates than prod's.
 2. The next daily run's **count gate** sees `staging dates < prod dates`,
@@ -50,8 +51,9 @@ Two further reconcile-plan refusals and their escapes:
   share no date. Normally that means a mis-pointed bucket — but it can
   fire legitimately on a young prod bucket whose entire snapshot set is
   prunable. Escape: verify both listings by eye, then delete the reviewed
-  prefixes with explicit `gsutil rm` commands (skip the planner); the
-  tripwire is intentionally not overridable.
+  prefixes with explicit `gcloud storage rm -r` commands (skip the
+  planner, an operator action Ron approves); the tripwire is intentionally
+  not overridable.
 
 ## Known side effect — mid-month `latest.json` regression (≤ ~24h)
 
@@ -77,8 +79,20 @@ Dispatch the pipeline with `mode=prune`, `reconcile_prod=true`,
 2. Plans prod deletions as the **prod-minus-staging diff** of dated dirs
    (`scripts/prune-prod-reconcile.ts`) — this also sweeps stragglers from
    any earlier staging-only prune.
-3. Deletes the planned prod-only prefixes and rsyncs `v1/` + `config/`
-   staging→prod, so the next daily's count gate compares like with like.
+3. Runs the content and completeness gates on what it wrote (the
+   regenerated `v1/` + `config/` indexes, from the run manifest).
+4. `[prune] Promote prod reconciliation (#1767)` runs the scoped promoter
+   (`scripts/promote-run-manifest.ts --execute` with
+   `PROD_DELETES_FILE=/tmp/prod-reconcile-paths.txt`, ADR-015 step 9): it
+   copies those indexes to prod, then deletes the planned prod-only
+   prefixes, so prod's index stops naming a date before its directory
+   goes, and the next daily's count gate compares like with like. If the
+   content gate or the indexes hold, nothing is deleted and the step fails.
+
+`skip_promotion=true` with `reconcile_prod=true` is a staging-only proof:
+the prune deletes from staging, the gates and the plan (`Plan scoped
+promotion`, which lists every `copy` and `delete`) run, and nothing is
+written to prod.
 
 Always dry-run first: `mode=prune`, `dry_run=true`, `reconcile_prod=true`
 prints the classification AND the prod-reconcile plan (pending staging
@@ -110,22 +124,18 @@ Symptoms: a `promotion-held` issue citing the count gate;
    cat /tmp/prod-reconcile-paths.txt
    ```
 
-3. Execute after review (deletes from PROD — irreversible):
-
-   ```bash
-   while IFS= read -r PREFIX; do
-     gsutil -m rm -r "gs://toast-stats-data-ca/${PREFIX}/"
-   done < /tmp/prod-reconcile-paths.txt
-   gcloud storage rsync -r gs://toast-stats-data-staging/v1/ gs://toast-stats-data-ca/v1/
-   gcloud storage rsync -r gs://toast-stats-data-staging/config/ gs://toast-stats-data-ca/config/
-   ```
+3. Execute: dispatch Path A (it re-plans the same diff and promotes it
+   through the gated promoter, #1767). Do not delete from or rsync into
+   prod by hand: that bypasses the content gate and the index-first
+   ordering, and a whole-prefix `config/` rsync ships anything staging
+   holds that no gate read.
 
 4. Verify: the next daily run promotes (count gate passes) and the
    `promotion-held` issue self-closes.
 
-Alternatively, dispatch Path A — the same-run plan is a prod-minus-staging
-diff, so it reproduces the missed reconciliation even though the original
-prune's classification is gone.
+Path A works here because the same-run plan is a prod-minus-staging diff:
+it reproduces the missed reconciliation even though the original prune's
+classification is gone.
 
 ## What this runbook does NOT cover
 
