@@ -50,6 +50,8 @@ import {
   PerDistrictDataSchema,
   REGION_ROLLUPS_FILE_NAME,
   RegionRollupsSchema,
+  MEETING_TIMES_FILE_NAME,
+  MeetingTimesSchema,
   repairReportsPlaceText,
   SnapshotManifestSchema,
   SnapshotMetadataFileSchema,
@@ -375,6 +377,9 @@ const TOP_LEVEL_SCHEMAS: Record<string, ObjectSchema> = {
     'suspended-clubs',
     SuspendedClubsSchema
   ),
+  // Counts only (#1814): no place key to scrub, but a rewrite is still
+  // checked against its schema.
+  [MEETING_TIMES_FILE_NAME]: schemaOf('meeting-times', MeetingTimesSchema),
 }
 
 /**

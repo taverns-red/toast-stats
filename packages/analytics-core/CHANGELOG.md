@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.20.0...analytics-core-v1.21.0) (2026-10-20)
+
+
+### Features
+
+* **pipeline:** snapshots/{date}/meeting-times.json, per-district meeting-time counts for the region and world heatmaps ([#1814](https://github.com/taverns-red/toast-stats/issues/1814)) ([#2206](https://github.com/taverns-red/toast-stats/issues/2206)) ([cf21b4a](https://github.com/taverns-red/toast-stats/commit/cf21b4a059e7126e4de965b4dfa2293db3337b88))
+
 ## [1.20.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.19.0...analytics-core-v1.20.0) (2026-10-20)
 
 

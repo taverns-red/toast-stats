@@ -116,6 +116,7 @@ describe('schemaForObject covers the clubs-by-region files (#2183)', () => {
     [`snapshots/${DATE}/global-totals.json`, 'global-totals'],
     [`snapshots/${DATE}/global-club-race.json`, 'global-club-race'],
     [`snapshots/${DATE}/suspended-clubs.json`, 'suspended-clubs'],
+    [`snapshots/${DATE}/meeting-times.json`, 'meeting-times'],
   ])('%s → %s', (path, id) => {
     expect(schemaForObject(path)?.id).toBe(id)
   })

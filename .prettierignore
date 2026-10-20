@@ -33,6 +33,8 @@ frontend/src/assets/geo/
 packages/analytics-core/src/rollup/__tests__/fixtures/region-rollups/
 # … and for the per-region club shards (#1800)
 packages/analytics-core/src/rollup/__tests__/fixtures/clubs-by-region/
+# … and for the meeting-times counts (#1814): ids + parsed schedules only
+packages/analytics-core/src/rollup/__tests__/fixtures/meeting-times/snapshots/
 
 # The region membership series recorded from prod inputs (#2127); kept compact
 # and byte-identical to the builder output (the size is part of the contract)

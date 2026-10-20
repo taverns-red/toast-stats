@@ -315,6 +315,15 @@ export {
   type ClubsByRegionResult,
 } from './rollup/clubsByRegion.js'
 
+// Meeting times per district — snapshots/{date}/meeting-times.json (#1814)
+export {
+  buildMeetingTimes,
+  readMeetingTimesInput,
+  type MeetingTimesDistrictInput,
+  type MeetingTimesInput,
+  type MeetingTimesResult,
+} from './rollup/meetingTimes.js'
+
 // Region and world membership series — time-series/regions/{PY}.json (#2127)
 export {
   buildRegionMembershipSeries,
