@@ -130,6 +130,40 @@ describe('evaluateChecks — fail closed on absence (#1484)', () => {
     ])
   })
 
+  it('ignores a skipped run of a check that also has a green run (#2204)', () => {
+    // A body-only `pull_request: edited` event schedules ci.yml/docs.yml again
+    // with every job skipped by its `if:` (only a base change runs them). That
+    // adds a second, skipped run of the same name on the same head SHA. The
+    // green run already proved this SHA, so the skip must not fail the gate.
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [...allGreen(CI_CHECKS), ...CI_CHECKS.map(n => completed(n, 'skipped'))]
+    )
+    expect(v.state).toBe('pass')
+  })
+
+  it('still fails a check whose only run is skipped, even beside a green one (#2204)', () => {
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [
+        completed('Quality Gates', 'success'),
+        completed('Quality Gates', 'skipped'),
+        completed('Test Suite', 'skipped'),
+        completed('Build Applications', 'success'),
+      ]
+    )
+    expect(v.state).toBe('fail')
+    expect(v.failed).toEqual([{ name: 'Test Suite', conclusion: 'skipped' }])
+  })
+
+  it('a failure still fails even when another run of the name is green', () => {
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [...allGreen(CI_CHECKS), completed('Test Suite', 'failure')]
+    )
+    expect(v.state).toBe('fail')
+  })
+
   it.each(['failure', 'cancelled', 'timed_out', 'action_required', 'neutral'])(
     'fails terminally on conclusion=%s without waiting out the clock',
     conclusion => {
@@ -266,5 +300,49 @@ describe('.github/rulesets/main.json — the checked-in target protection', () =
     expect(types).toContain('non_fast_forward')
     expect(ruleset.conditions.ref_name.include).toEqual(['~DEFAULT_BRANCH'])
     expect(ruleset.target).toBe('branch')
+  })
+})
+
+// #2204: retargeting a stacked PR to main fires only `pull_request: edited`
+// (payload `changes.base.ref.from` / `changes.base.sha.from`). The checks the
+// gate requires must run on that event, and nothing else about an edit may
+// run them (a body edit would otherwise re-run the 15-minute suite).
+describe('retarget wiring — a base change runs the required checks (#2204)', () => {
+  const RUN_ON_BASE_CHANGE =
+    "if: github.event.action != 'edited' || github.event.changes.base"
+
+  it.each(['ci.yml', 'docs.yml', 'ci-gate.yml'])(
+    '%s listens to pull_request edited',
+    f => {
+      expect(workflow(f)).toMatch(
+        /pull_request:\n\s+branches: \[main\]\n\s+types: \[opened, synchronize, reopened, edited\]/
+      )
+    }
+  )
+
+  it('ci.yml runs its root job only on a non-edit or a base change', () => {
+    // Every other ci.yml job `needs:` quality-gates, so they skip with it.
+    const src = workflow('ci.yml')
+    expect(src).toMatch(
+      new RegExp(
+        `quality-gates:\\n\\s+name: Quality Gates\\n\\s+${RUN_ON_BASE_CHANGE.replace(/[|.]/g, '\\$&')}`
+      )
+    )
+  })
+
+  it('docs.yml runs Docs Gate only on a non-edit or a base change', () => {
+    expect(workflow('docs.yml')).toMatch(
+      new RegExp(
+        `name: Docs Gate\\n\\s+${RUN_ON_BASE_CHANGE.replace(/[|.]/g, '\\$&')}`
+      )
+    )
+  })
+
+  it('a no-op edit of docs.yml cannot cancel an in-flight Docs Gate', () => {
+    // cancel-in-progress would turn the real run `cancelled`, which fails the
+    // gate. A skipped edit run gets its own group so it supersedes nothing.
+    expect(workflow('docs.yml')).toContain(
+      "group: docs-${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'edited' && !github.event.changes.base && format('-noop-{0}', github.run_id) || '' }}"
+    )
   })
 })
