@@ -6,6 +6,7 @@ import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import { useEducationRollupIndex } from '../hooks/useEducationRollup'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -15,12 +16,17 @@ import {
 import { buildDistrictEducation } from '../utils/districtEducation'
 import { computeEducationAwardRankings } from '../utils/educationAwardRankings'
 import { extractEducationLevels } from '../utils/extractEducationLevels'
+import {
+  districtEducationTrend,
+  skipsProgramYears,
+} from '../utils/educationTrend'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { DistrictEducationView } from '../components/DistrictEducationView'
 import { EducationAwardsLeaderboard } from '../components/EducationAwardsLeaderboard'
 import { EducationLevelsCard } from '../components/EducationLevelsCard'
+import { EducationYearBars } from '../components/education/EducationYearBars'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
 
@@ -154,6 +160,15 @@ const DistrictEducationPage: React.FC = () => {
     )
   }, [analytics, clubs])
 
+  // Multi-year bars (#1807): the district's row of the #1801 rollup index,
+  // ledger only. Independent of this date's report, so they show even when
+  // the selected date has no ledger. Not published yet → no section.
+  const { index: rollupIndex } = useEducationRollupIndex()
+  const trend = useMemo(
+    () => districtEducationTrend(rollupIndex, districtId || ''),
+    [rollupIndex, districtId]
+  )
+
   // Prior vs current PY, from the page's own PY selection against the
   // district's newest PY with data (R3), never reports.programYear.
   const isPriorProgramYear =
@@ -231,6 +246,20 @@ const DistrictEducationPage: React.FC = () => {
                   </p>
                   <EducationLevelsCard totals={csvEducationLevels} />
                 </section>
+              )}
+              {trend.length > 0 && effectiveProgramYear && (
+                <EducationYearBars
+                  years={trend}
+                  programYear={effectiveProgramYear.label}
+                  note={
+                    <>
+                      Every ledger award in each program year; the current year
+                      is to date. Legacy awards ended with the move to Pathways.
+                      {skipsProgramYears(trend) &&
+                        ' District numbers are reused: years this number was not a district are left out.'}
+                    </>
+                  }
+                />
               )}
               {rankings && (
                 <section
