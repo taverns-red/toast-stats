@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.22.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.21.0...collector-cli-v1.22.0) (2026-10-20)
+
+
+### Features
+
+* **pipeline:** snapshots/{date}/meeting-times.json, per-district meeting-time counts for the region and world heatmaps ([#1814](https://github.com/taverns-red/toast-stats/issues/1814)) ([#2206](https://github.com/taverns-red/toast-stats/issues/2206)) ([cf21b4a](https://github.com/taverns-red/toast-stats/commit/cf21b4a059e7126e4de965b4dfa2293db3337b88))
+
+
+### Bug Fixes
+
+* **privacy:** strip phone numbers from published place text ([#2167](https://github.com/taverns-red/toast-stats/issues/2167)) ([#2193](https://github.com/taverns-red/toast-stats/issues/2193)) ([f59b7da](https://github.com/taverns-red/toast-stats/commit/f59b7da7b6aac57237544fdabc8cb53c4e0e8964))
+
 ## [1.21.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.20.0...collector-cli-v1.21.0) (2026-10-20)
 
 
