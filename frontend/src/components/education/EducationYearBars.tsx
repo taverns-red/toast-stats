@@ -14,6 +14,12 @@ export interface EducationYearBarsProps {
   programYear: string
   /** One secondary line under the rows: what each year sums. */
   note: React.ReactNode
+  /** Red stub (#1793): below 768, collapse to a sparkline-expand. */
+  sparkline?: {
+    urlId: string
+    headline: React.ReactNode
+    series: number[]
+  }
 }
 
 const fmt = (n: number) => n.toLocaleString()

@@ -52,3 +52,11 @@ export function skipsProgramYears(years: EducationTrendYear[]): boolean {
       startYear(y.programYear) - startYear(years[i - 1]!.programYear) > 1
   )
 }
+
+// Red stub (#1793): implemented in the next commit.
+export function educationYearsSparkline(
+  _years: EducationTrendYear[],
+  _programYear: string
+): { series: number[]; selected: EducationTrendYear | null } {
+  return { series: [], selected: null }
+}
