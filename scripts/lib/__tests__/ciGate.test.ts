@@ -322,19 +322,14 @@ describe('retarget wiring — a base change runs the required checks (#2204)', (
 
   it('ci.yml runs its root job only on a non-edit or a base change', () => {
     // Every other ci.yml job `needs:` quality-gates, so they skip with it.
-    const src = workflow('ci.yml')
-    expect(src).toMatch(
-      new RegExp(
-        `quality-gates:\\n\\s+name: Quality Gates\\n\\s+${RUN_ON_BASE_CHANGE.replace(/[|.]/g, '\\$&')}`
-      )
+    expect(workflow('ci.yml')).toContain(
+      `  quality-gates:\n    name: Quality Gates\n    ${RUN_ON_BASE_CHANGE}\n`
     )
   })
 
   it('docs.yml runs Docs Gate only on a non-edit or a base change', () => {
-    expect(workflow('docs.yml')).toMatch(
-      new RegExp(
-        `name: Docs Gate\\n\\s+${RUN_ON_BASE_CHANGE.replace(/[|.]/g, '\\$&')}`
-      )
+    expect(workflow('docs.yml')).toContain(
+      `    name: Docs Gate\n    ${RUN_ON_BASE_CHANGE}\n`
     )
   })
 
