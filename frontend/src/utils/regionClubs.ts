@@ -26,8 +26,9 @@ import {
   facetValues,
 } from '../components/map/pinModes'
 
-/** A region club: the district map's club shape plus its district. */
-export type RegionClub = ClubTrend & { districtId: string }
+/** A region club: the district map's club shape plus its district and,
+ *  for the world explorer (#1809), its shard's region. */
+export type RegionClub = ClubTrend & { districtId: string; regionId?: string }
 
 const HEALTH = {
   t: 'thriving',
@@ -35,7 +36,7 @@ const HEALTH = {
   i: 'intervention-required',
 } as const
 
-function toRegionClub(c: ClubsByRegionClub, date: string): RegionClub {
+export function toRegionClub(c: ClubsByRegionClub, date: string): RegionClub {
   const club: RegionClub = {
     clubId: c.id,
     clubName: c.name,
@@ -59,6 +60,9 @@ function toRegionClub(c: ClubsByRegionClub, date: string): RegionClub {
   const at = parseCoordinates({ lat: c.lat, lng: c.lng })
   if (at) club.coordinates = at
   if (c.city !== null) club.address = { city: c.city }
+  club.regionId = c.region ?? 'unassigned'
+  // #2174 — online only: no pin (hasMapPoint), listed by the online chip.
+  if (c.meetsOnline === true) club.meetsOnline = true
   return club
 }
 

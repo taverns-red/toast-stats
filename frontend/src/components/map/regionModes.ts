@@ -34,3 +34,23 @@ export function parseRegionColorMode(raw: string | null): MapColorMode {
 /** Built in the on-demand `regionModels` chunk. */
 export const isRegionLazyMode = (m: MapColorMode) =>
   m !== 'health' && m !== 'tier'
+
+/**
+ * The world map's colour modes (#1809): the region map's plus Region, which
+ * makes the regions (and the 2026 reformation) legible. Region and District
+ * are built at world scale in `worldModels`, an on-demand chunk.
+ */
+export const WORLD_COLOR_MODES: ModeList = [
+  ...REGION_COLOR_MODES,
+  { id: 'region', label: 'Region', group: 'Territory' },
+]
+
+/** `?color=` is URL-seedable: whitelist at the parse (Lessons 124/144). */
+export function parseWorldColorMode(raw: string | null): MapColorMode {
+  return WORLD_COLOR_MODES.find(m => m.id === raw)?.id ?? 'health'
+}
+
+/** World territory modes colour by every club's place, so the page needs
+ *  every shard for them (#1809). */
+export const isWorldTerritoryMode = (m: MapColorMode) =>
+  m === 'region' || m === 'district'

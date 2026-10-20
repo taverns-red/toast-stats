@@ -16,7 +16,9 @@
 
 import {
   CLUBS_BY_REGION_DIR,
+  CLUBS_BY_REGION_WORLD_FILE_NAME,
   ClubsByRegionShardSchema,
+  ClubsByRegionWorldSchema,
   clubsByRegionShardFileName,
   DistrictRegionHistorySchema,
   DistrictReportsDatasetSchema,
@@ -40,6 +42,7 @@ import {
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsSchema,
   type ClubsByRegionShard,
+  type ClubsByRegionWorld,
   type DistrictRegionHistory,
   type DistrictReportsDataset,
   type EducationRollupIndex,
@@ -725,6 +728,26 @@ export async function fetchCdnClubsByRegionShard(
   if (!res.ok) throw new Error(`Region clubs: HTTP ${res.status}`)
   recordCdnResponse(res)
   const parsed = ClubsByRegionShardSchema.safeParse(await res.json())
+  return parsed.success ? parsed.data : null
+}
+
+/** `snapshots/{date}/clubs-by-region/world.json` (#1800) — the world
+ *  explorer's first file (#1809): totals, per-region counts and the top-50
+ *  seed rows, so the list renders before any shard. */
+export function cdnClubsByRegionWorldUrl(date: SnapshotDate): string {
+  return `${cdnBaseUrl()}/snapshots/${date}/${CLUBS_BY_REGION_DIR}/${CLUBS_BY_REGION_WORLD_FILE_NAME}`
+}
+
+/** The world file for a date (#1809): `null` when missing (4xx) or off
+ *  contract ("not available yet"); a server failure rejects, for a retry. */
+export async function fetchCdnClubsByRegionWorld(
+  date: SnapshotDate
+): Promise<ClubsByRegionWorld | null> {
+  const res = await fetch(cdnClubsByRegionWorldUrl(date))
+  if (res.status >= 400 && res.status < 500) return null
+  if (!res.ok) throw new Error(`World clubs: HTTP ${res.status}`)
+  recordCdnResponse(res)
+  const parsed = ClubsByRegionWorldSchema.safeParse(await res.json())
   return parsed.success ? parsed.data : null
 }
 
