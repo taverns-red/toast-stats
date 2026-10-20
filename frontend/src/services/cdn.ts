@@ -14,6 +14,7 @@
  * Fixes: #168 — Serve analytics via GCS + Cloud CDN
  */
 
+import type { MeetingTimesView } from '../utils/meetingTimesRollup'
 import {
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_WORLD_FILE_NAME,
@@ -700,6 +701,13 @@ export async function fetchCdnRegionRollups(
   } catch {
     return null
   }
+}
+
+/** `snapshots/{date}/meeting-times.json` (#1814). Stub. */
+export async function fetchCdnMeetingTimes(
+  _date: SnapshotDate
+): Promise<MeetingTimesView | null> {
+  return null
 }
 
 /** `snapshots/{date}/clubs-by-region/<region>.json` (#1800) — one region's

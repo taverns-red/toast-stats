@@ -93,7 +93,8 @@ describe('RegionSubnav', () => {
       'href',
       '/region/07?py=2025-2026'
     )
-    expect(screen.queryByRole('button', { name: /^More/ })).toBeNull()
+    // Meeting times (#1814) is the first region section under More.
+    expect(screen.getByRole('button', { name: /^More/ })).toBeInTheDocument()
   })
 
   it('links a region’s Education subpage (#1810), keeping py and date', () => {
@@ -132,5 +133,32 @@ describe('RegionSubnav', () => {
       'href',
       '/regions/growth'
     )
+  })
+
+  it('links Meeting times (#1814) for a region and the world, keeping py and date', () => {
+    for (const base of ['/region/07', '/regions']) {
+      render(
+        <MemoryRouter
+          initialEntries={[`${base}/meetings?py=2026-2027&mode=online`]}
+        >
+          <RegionSubnav base={base} label="Sections" />
+        </MemoryRouter>
+      )
+      const link = screen.getByRole('link', { name: 'Meeting times' })
+      expect(link).toHaveAttribute('href', `${base}/meetings?py=2026-2027`)
+      expect(link).toHaveAttribute('aria-current', 'page')
+      cleanup()
+    }
+  })
+
+  it('puts Meeting times under More on an upright phone', () => {
+    phone.value = true
+    render(
+      <MemoryRouter initialEntries={['/region/07']}>
+        <RegionSubnav base="/region/07" label="Region 07 sections" />
+      </MemoryRouter>
+    )
+    expect(screen.getByRole('button', { name: /^More/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Meeting times' })).toBeNull()
   })
 })
