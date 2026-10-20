@@ -112,6 +112,19 @@ describe('ClubsByRegion schemas (#1800)', () => {
     expect(ClubsByRegionShardSchema.safeParse(bad).success).toBe(false)
   })
 
+  it('accepts meetsOnline: true on a row and nothing else (#1809, #2175)', () => {
+    // The world explorer hides online-only clubs' pins (#2174); shards
+    // written before the flag lands carry no key, so it stays optional.
+    const row = shard('05').clubs[0]!
+    expect(
+      ClubsByRegionClubSchema.safeParse({ ...row, meetsOnline: true }).success
+    ).toBe(true)
+    expect(
+      ClubsByRegionClubSchema.safeParse({ ...row, meetsOnline: false }).success
+    ).toBe(false)
+    expect(ClubsByRegionClubSchema.safeParse(row).success).toBe(true)
+  })
+
   it('rejects a program year that is not YYYY-YYYY', () => {
     const bad = shard('05')
     bad.programYear = '2026-27'

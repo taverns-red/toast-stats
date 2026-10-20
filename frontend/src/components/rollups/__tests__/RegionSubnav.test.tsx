@@ -56,13 +56,15 @@ describe('RegionSubnav', () => {
     expect(map).toHaveAttribute('aria-current', 'page')
   })
 
-  it('has no club map on the all-regions subnav (the world explorer is #1809)', () => {
+  it('links the world club explorer from the all-regions subnav (#1809)', () => {
     render(
-      <MemoryRouter initialEntries={['/regions']}>
+      <MemoryRouter initialEntries={['/regions/map?date=2026-10-16&region=05']}>
         <RegionSubnav base="/regions" label="Regions sections" />
       </MemoryRouter>
     )
-    expect(screen.queryByRole('link', { name: 'Club map' })).toBeNull()
+    const map = screen.getByRole('link', { name: 'Club map' })
+    expect(map).toHaveAttribute('href', '/regions/map?date=2026-10-16')
+    expect(map).toHaveAttribute('aria-current', 'page')
   })
 
   it('links the world education page (#1811) from the all-regions subnav', () => {

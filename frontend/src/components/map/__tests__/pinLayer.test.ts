@@ -38,7 +38,7 @@ import { PIN_TIP_PAD } from '../pinGlyphs'
 
 // Health/tier come from pinModes; division/area from the on-demand module.
 const buildModeModel = (
-  mode: Exclude<MapColorMode, ExtendedMode | 'district' | 'locator'>,
+  mode: Exclude<MapColorMode, ExtendedMode | 'district' | 'region' | 'locator'>,
   clubs: readonly ClubTrend[]
 ) => (isTerritoryMode(mode) ? territoryModel(mode, clubs) : baseModel(mode))
 
@@ -100,7 +100,7 @@ describe('buildPinFeatures', () => {
 })
 
 function styleWith(
-  mode: Exclude<MapColorMode, ExtendedMode | 'district' | 'locator'>
+  mode: Exclude<MapColorMode, ExtendedMode | 'district' | 'region' | 'locator'>
 ) {
   const model = buildModeModel(mode, CLUBS)
   return {
@@ -170,7 +170,7 @@ describe('clubPinLayers', () => {
 
 /** Evaluate a layer's icon-image for a feature, as MapLibre would. */
 function iconFor(
-  mode: Exclude<MapColorMode, ExtendedMode | 'district' | 'locator'>,
+  mode: Exclude<MapColorMode, ExtendedMode | 'district' | 'region' | 'locator'>,
   layerId: string,
   properties: Record<string, unknown>,
   zoom = 8

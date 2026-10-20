@@ -104,6 +104,9 @@ export const ClubsByRegionClubSchema = z
     csp: z.boolean().nullable(),
     lat: z.number().min(-90).max(90).nullable(),
     lng: z.number().min(-180).max(180).nullable(),
+    /** The club meets online only (#2160): no pin on any map (#2174).
+     *  Absent on shards written before the writer carries it (#2175). */
+    meetsOnline: z.literal(true).optional(),
   })
   .strict()
   .refine(c => (c.lat === null) === (c.lng === null), {

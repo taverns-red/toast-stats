@@ -12,8 +12,8 @@ import {
 } from '../SectionBarIcons'
 
 /* RegionSubnav (#1815) — Rankings / Health & compliance / Club growth
-   (#1812, #1813) / Club survival (#1818) for `/regions` and `/region/:n`, plus a region's Club map (#1808)
-   and Education (#1810; the world's is #1811 — it has no club map). Real sibling routes (ADR-005), not tabs: the back button,
+   (#1812, #1813) / Club survival (#1818) / Club map (#1808, #1809) /
+   Education (#1810, #1811) for `/regions` and `/region/:n`. Real sibling routes (ADR-005), not tabs: the back button,
    deep links and the page's `?py=` / `?date=` all survive the switch.
    Reuses the app's one secondary route-nav primitive (the district-subnav
    classes), like ClubsSubnav. On an upright phone it is the shared bottom
@@ -35,7 +35,6 @@ export const RegionSubnav: React.FC<{
     if (value) kept.set(key, value)
   }
   const qs = kept.toString() ? `?${kept.toString()}` : ''
-  const isRegion = base.startsWith('/region/')
   const links = [
     { label: 'Rankings', to: `${base}${qs}`, end: true, icon: <TrendsIcon /> },
     {
@@ -56,17 +55,13 @@ export const RegionSubnav: React.FC<{
       end: false,
       icon: <ClubsIcon />,
     },
-    // A region's club map (#1808; the all-regions explorer is #1809).
-    ...(isRegion
-      ? [
-          {
-            label: 'Club map',
-            to: `${base}/map${qs}`,
-            end: false,
-            icon: <MapIcon />,
-          },
-        ]
-      : []),
+    // The club map: a region's (#1808) or the world's (#1809).
+    {
+      label: 'Club map',
+      to: `${base}/map${qs}`,
+      end: false,
+      icon: <MapIcon />,
+    },
     // Education: a region's (#1810) and the world's (#1811).
     {
       label: 'Education',

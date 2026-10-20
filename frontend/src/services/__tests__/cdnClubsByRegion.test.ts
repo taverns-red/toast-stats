@@ -8,7 +8,12 @@
  * or server failure is an error the page can retry, never "not available".
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { cdnClubsByRegionShardUrl, fetchCdnClubsByRegionShard } from '../cdn'
+import {
+  cdnClubsByRegionShardUrl,
+  cdnClubsByRegionWorldUrl,
+  fetchCdnClubsByRegionShard,
+  fetchCdnClubsByRegionWorld,
+} from '../cdn'
 import { snap } from '../../test-utils/snapshotDate'
 import recorded from '../../../../packages/shared-contracts/src/__tests__/__fixtures__/recorded-clubs-by-region.json'
 
@@ -74,6 +79,37 @@ describe('fetchCdnClubsByRegionShard', () => {
     stubFetch({ ok: false, status: 503 })
     await expect(
       fetchCdnClubsByRegionShard(snap('2026-10-16'), '05')
+    ).rejects.toThrow(/503/)
+  })
+})
+
+/* #1809 — the world explorer's first file: world.json (totals, per-region
+   counts and the top-50 seed rows, ~8 KB gz), fetched before any shard. */
+describe('fetchCdnClubsByRegionWorld', () => {
+  it('targets the dated world file', () => {
+    expect(cdnClubsByRegionWorldUrl(snap('2026-10-16'))).toMatch(
+      /\/snapshots\/2026-10-16\/clubs-by-region\/world\.json$/
+    )
+  })
+
+  it('returns the validated recorded world file on a 200', async () => {
+    stubFetch({ ok: true, status: 200, body: recorded.world })
+    const world = await fetchCdnClubsByRegionWorld(snap('2026-10-16'))
+    expect(world?.totals.clubs).toBe(318)
+    expect(world?.top.membership).toHaveLength(50)
+  })
+
+  it('resolves null when the date has no world file (404)', async () => {
+    stubFetch({ ok: false, status: 404 })
+    await expect(fetchCdnClubsByRegionWorld(snap('2026-10-16'))).resolves.toBe(
+      null
+    )
+  })
+
+  it('rejects on a server error, so the page can retry', async () => {
+    stubFetch({ ok: false, status: 503 })
+    await expect(
+      fetchCdnClubsByRegionWorld(snap('2026-10-16'))
     ).rejects.toThrow(/503/)
   })
 })
