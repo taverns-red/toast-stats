@@ -8,9 +8,10 @@
  * total must equal the district pages it sums.
  *
  * Recorded live vocabulary (D61, prod 2026-10-15):
- * - Prospect: `#1 Application to Organize Complete - 04/15/2025` followed,
- *   with no separator once the `<br>` is stripped, by `Payment Complete -
- *   04/19/2025` or `Payment Incomplete`.
+ * - Prospect: `#1 Application to Organize Complete - 04/15/2025`, then any
+ *   further steps reached (`#4 Officer Info Incomplete - 08/03/2026`, #2142),
+ *   followed, with no separator once the `<br>` is stripped, by `Payment
+ *   Complete - 04/19/2025` or `Payment Incomplete`.
  * - Dues renewal: `Verified complete - 08/03/2026`, `**Renewals not here**`,
  *   `Low - Minimum requirement not yet met`, `Ineligible - Minimum
  *   requirement not yet met`.
@@ -45,22 +46,21 @@ export type ParsedProspectStage =
     }
   | { recognised: false; raw: string }
 
-/**
- * Parse TI's "Prospect" cell. Text that does not start with `#N` is returned
- * raw rather than guessed at.
- */
-export function parseProspectStage(text: string): ParsedProspectStage {
-  const raw = text
-  const paymentAt = text.search(/Payment\b/)
-  const stagePart = (paymentAt >= 0 ? text.slice(0, paymentAt) : text).trim()
-  const paymentPart = paymentAt >= 0 ? text.slice(paymentAt) : ''
+interface ProspectStep {
+  stageNumber: number
+  stageLabel: string
+  stageDate: string | null
+}
 
-  // `#N <label>[ Complete|Incomplete][ - MM/DD/YYYY]`, read with string
-  // operations: a single backtracking regex over this cell is polynomial on
-  // runs of whitespace (CodeQL js/polynomial-redos).
-  const head = /^#(\d+)\s/.exec(stagePart)
-  if (!head) return { recognised: false, raw }
-  let label = stagePart.slice(head[0].length).trim()
+/**
+ * One `#N <label>[ Complete|Incomplete][ - MM/DD/YYYY]` step, read with
+ * string operations: a single backtracking regex over this cell is polynomial
+ * on runs of whitespace (CodeQL js/polynomial-redos).
+ */
+function parseProspectStep(step: string): ProspectStep | null {
+  const head = /^#(\d+)\s/.exec(step)
+  if (!head) return null
+  let label = step.slice(head[0].length).trim()
   const dash = label.lastIndexOf('-')
   if (
     dash >= 0 &&
@@ -74,7 +74,43 @@ export function parseProspectStage(text: string): ParsedProspectStage {
       break
     }
   }
-  if (label === '') return { recognised: false, raw }
+  if (label === '') return null
+  return {
+    stageNumber: Number(head[1]),
+    stageLabel: label,
+    stageDate: usDateToIso(step),
+  }
+}
+
+/**
+ * Parse TI's "Prospect" cell. Text that does not start with `#N` is returned
+ * raw rather than guessed at.
+ *
+ * TI lists every step a prospect has reached in the one cell, run together
+ * once the `<br>` is stripped (#2142, prod 2026-10-18):
+ * `#1 Application to Organize Complete - 07/16/2025#4 Officer Info Complete -
+ * 07/16/2025Payment Complete - 07/18/2025`. The furthest (highest-numbered)
+ * step is the club's current stage.
+ */
+export function parseProspectStage(text: string): ParsedProspectStage {
+  const raw = text
+  const paymentAt = text.search(/Payment\b/)
+  const stagePart = (paymentAt >= 0 ? text.slice(0, paymentAt) : text).trim()
+  const paymentPart = paymentAt >= 0 ? text.slice(paymentAt) : ''
+
+  if (!/^#\d+\s/.test(stagePart)) return { recognised: false, raw }
+  const starts: number[] = []
+  for (const m of stagePart.matchAll(/#\d+\s/g)) starts.push(m.index)
+  let current: ProspectStep | null = null
+  for (let i = 0; i < starts.length; i++) {
+    const step = parseProspectStep(
+      stagePart.slice(starts[i], starts[i + 1] ?? stagePart.length).trim()
+    )
+    if (step && (!current || step.stageNumber >= current.stageNumber)) {
+      current = step
+    }
+  }
+  if (!current) return { recognised: false, raw }
 
   let payment: 'complete' | 'incomplete' | 'unknown' = 'unknown'
   let paymentDate: string | null = null
@@ -85,15 +121,7 @@ export function parseProspectStage(text: string): ParsedProspectStage {
     payment = 'incomplete'
   }
 
-  return {
-    recognised: true,
-    stageNumber: Number(head[1]),
-    stageLabel: label,
-    stageDate: usDateToIso(stagePart),
-    payment,
-    paymentDate,
-    raw,
-  }
+  return { recognised: true, ...current, payment, paymentDate, raw }
 }
 
 export type SponsorMentorRole = 'sponsors' | 'mentors' | 'other'
