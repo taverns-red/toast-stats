@@ -24,9 +24,11 @@
 
 import {
   containsMeetingCredential,
+  containsPhoneNumber,
   scrubPlaceText,
   stripLinks,
   stripMeetingCredentials,
+  stripPhoneNumbers,
 } from '@taverns-red/shared-contracts'
 import type {
   MeetingScheduleEntry,
@@ -107,8 +109,9 @@ function scrubLine(raw: string): string {
  * contact labels out; separators tidied.
  */
 function withoutAccess(line: string, minDigits: number): string {
-  // Meeting credentials: the shared place-text scrub's rule (#2157).
-  return stripMeetingCredentials(line)
+  // Meeting credentials and labelled or shaped phone numbers: the shared
+  // place-text scrub's rules (#2157, #2167).
+  return stripPhoneNumbers(stripMeetingCredentials(line))
     .replace(DIGIT_RUN, run =>
       run.replace(/\D/g, '').length >= minDigits ? ' ' : run
     )
@@ -143,6 +146,7 @@ export function scrubFacStreet(
   const hasAccess =
     linkless !== tagless ||
     containsMeetingCredential(tagless) ||
+    containsPhoneNumber(tagless) ||
     [...tagless.matchAll(DIGIT_RUN)].some(
       run => run[0].replace(/\D/g, '').length >= STREET_MIN_PHONE_DIGITS
     )
