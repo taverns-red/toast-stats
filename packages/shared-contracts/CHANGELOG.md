@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.22.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.21.0...shared-contracts-v1.22.0) (2026-10-20)
+
+
+### Features
+
+* **pipeline:** snapshots/{date}/meeting-times.json, per-district meeting-time counts for the region and world heatmaps ([#1814](https://github.com/taverns-red/toast-stats/issues/1814)) ([#2206](https://github.com/taverns-red/toast-stats/issues/2206)) ([cf21b4a](https://github.com/taverns-red/toast-stats/commit/cf21b4a059e7126e4de965b4dfa2293db3337b88))
+* **world:** world club explorer at /regions/map ([#1809](https://github.com/taverns-red/toast-stats/issues/1809)) ([#2200](https://github.com/taverns-red/toast-stats/issues/2200)) ([5f815f6](https://github.com/taverns-red/toast-stats/commit/5f815f6eca90e9c3403305e6481fa9c0927f75e7))
+
+
+### Bug Fixes
+
+* **growth:** read a multi-step prospect cell at its furthest step ([#2142](https://github.com/taverns-red/toast-stats/issues/2142)) ([#2189](https://github.com/taverns-red/toast-stats/issues/2189)) ([d40b6d4](https://github.com/taverns-red/toast-stats/commit/d40b6d45539b399a22ee1ebe478f994537732e2e))
+* **privacy:** strip phone numbers from published place text ([#2167](https://github.com/taverns-red/toast-stats/issues/2167)) ([#2193](https://github.com/taverns-red/toast-stats/issues/2193)) ([f59b7da](https://github.com/taverns-red/toast-stats/commit/f59b7da7b6aac57237544fdabc8cb53c4e0e8964))
+
 ## [1.21.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.20.0...shared-contracts-v1.21.0) (2026-10-20)
 
 

@@ -1,5 +1,48 @@
 # Changelog
 
+## [2.64.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.63.0...toast-stats-v2.64.0) (2026-10-20)
+
+
+### Features
+
+* **education:** multi-year bars on the district education page ([#1807](https://github.com/taverns-red/toast-stats/issues/1807)) ([#2194](https://github.com/taverns-red/toast-stats/issues/2194)) ([9c39c3c](https://github.com/taverns-red/toast-stats/commit/9c39c3c6193c0a5df6dc0318e91e21415f899f58))
+* **education:** sparkline-expand for the district years below 768 ([#1793](https://github.com/taverns-red/toast-stats/issues/1793)) ([#2195](https://github.com/taverns-red/toast-stats/issues/2195)) ([bf5916c](https://github.com/taverns-red/toast-stats/commit/bf5916cdda5b4bae6d620edb00e9a86be183e2be))
+* **education:** world education page at /regions/education ([#1811](https://github.com/taverns-red/toast-stats/issues/1811)) ([#2199](https://github.com/taverns-red/toast-stats/issues/2199)) ([8929c8f](https://github.com/taverns-red/toast-stats/commit/8929c8f67c3ad1a319e95fdd1142066b4805f5f2))
+* **pipeline:** rebuild builds reports-rollups.json per published date ([#2202](https://github.com/taverns-red/toast-stats/issues/2202)) ([#2203](https://github.com/taverns-red/toast-stats/issues/2203)) ([1044d7e](https://github.com/taverns-red/toast-stats/commit/1044d7efce34288c6736c37d4e9e7f9407528357))
+* **pipeline:** snapshots/{date}/meeting-times.json, per-district meeting-time counts for the region and world heatmaps ([#1814](https://github.com/taverns-red/toast-stats/issues/1814)) ([#2206](https://github.com/taverns-red/toast-stats/issues/2206)) ([cf21b4a](https://github.com/taverns-red/toast-stats/commit/cf21b4a059e7126e4de965b4dfa2293db3337b88))
+* **region:** PY-scoped region membership and moved-region banner ([#1821](https://github.com/taverns-red/toast-stats/issues/1821)) ([#2197](https://github.com/taverns-red/toast-stats/issues/2197)) ([d2e564c](https://github.com/taverns-red/toast-stats/commit/d2e564c0f261ee46272e4c51e788759f28800435))
+* **world:** world club explorer at /regions/map ([#1809](https://github.com/taverns-red/toast-stats/issues/1809)) ([#2200](https://github.com/taverns-red/toast-stats/issues/2200)) ([5f815f6](https://github.com/taverns-red/toast-stats/commit/5f815f6eca90e9c3403305e6481fa9c0927f75e7))
+
+
+### Bug Fixes
+
+* **ci:** run required checks when a PR is retargeted to main ([#2204](https://github.com/taverns-red/toast-stats/issues/2204)) ([#2205](https://github.com/taverns-red/toast-stats/issues/2205)) ([bed79ef](https://github.com/taverns-red/toast-stats/commit/bed79ef33f8c2318c53c1931a1277c09a45ec790))
+* **club:** fixed hero chip column so the full render cannot re-wrap the hero ([#2071](https://github.com/taverns-red/toast-stats/issues/2071)) ([#2196](https://github.com/taverns-red/toast-stats/issues/2196)) ([1bc8ffc](https://github.com/taverns-red/toast-stats/commit/1bc8ffc80faee4a9328155cc9391f5f003d73b3a))
+* **growth:** read a multi-step prospect cell at its furthest step ([#2142](https://github.com/taverns-red/toast-stats/issues/2142)) ([#2189](https://github.com/taverns-red/toast-stats/issues/2189)) ([d40b6d4](https://github.com/taverns-red/toast-stats/commit/d40b6d45539b399a22ee1ebe478f994537732e2e))
+* **map:** pick area shades district-wide so every pair reads apart ([#2178](https://github.com/taverns-red/toast-stats/issues/2178)) ([#2188](https://github.com/taverns-red/toast-stats/issues/2188)) ([3aefdd8](https://github.com/taverns-red/toast-stats/commit/3aefdd8d0c6d04125faaeb719b9de42e4df02c70))
+* **privacy:** strip phone numbers from published place text ([#2167](https://github.com/taverns-red/toast-stats/issues/2167)) ([#2193](https://github.com/taverns-red/toast-stats/issues/2193)) ([f59b7da](https://github.com/taverns-red/toast-stats/commit/f59b7da7b6aac57237544fdabc8cb53c4e0e8964))
+* **release:** reject tag-like PR titles that break release-please ([#2185](https://github.com/taverns-red/toast-stats/issues/2185)) ([#2186](https://github.com/taverns-red/toast-stats/issues/2186)) ([85a2a6d](https://github.com/taverns-red/toast-stats/commit/85a2a6d64fdea7a6ab383f52396ac069354c06a0))
+
+
+### Documentation
+
+* **methodology:** add the three-Level-1s DCP-credit example ([#1807](https://github.com/taverns-red/toast-stats/issues/1807)) ([#2192](https://github.com/taverns-red/toast-stats/issues/2192)) ([758ebce](https://github.com/taverns-red/toast-stats/commit/758ebcecedfffd1eedecfb1d30f6e7d533563942))
+
+
+### Tests
+
+* **e2e:** lineage smoke accepts the date-exact chip ([#1816](https://github.com/taverns-red/toast-stats/issues/1816)) ([#2208](https://github.com/taverns-red/toast-stats/issues/2208)) ([7a0b270](https://github.com/taverns-red/toast-stats/commit/7a0b270984a669d0f52851acc3447a1df8fbba59))
+
+
+### Dependencies
+
+* reference the direct vite spec in overrides so Dependabot can bump it ([#2152](https://github.com/taverns-red/toast-stats/issues/2152)) ([#2190](https://github.com/taverns-red/toast-stats/issues/2190)) ([ad91882](https://github.com/taverns-red/toast-stats/commit/ad91882dbccc5d4358c6a4e45ef8b3d255d95c69))
+
+
+### Continuous Integration
+
+* **lighthouse:** promote the mobile gate from warn to error ([#1830](https://github.com/taverns-red/toast-stats/issues/1830)) ([#2191](https://github.com/taverns-red/toast-stats/issues/2191)) ([0fb85a3](https://github.com/taverns-red/toast-stats/commit/0fb85a34bbd85091d49440d5439019ef14b40e26))
+
 ## [2.63.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.62.0...toast-stats-v2.63.0) (2026-10-20)
 
 
