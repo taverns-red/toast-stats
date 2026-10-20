@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.46.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.45.0...frontend-v3.46.0) (2026-10-20)
+
+
+### Features
+
+* **clubs-by-region:** meetsOnline on shard rows + region map online chip ([#2175](https://github.com/taverns-red/toast-stats/issues/2175)) ([#2201](https://github.com/taverns-red/toast-stats/issues/2201)) ([4d95425](https://github.com/taverns-red/toast-stats/commit/4d954259e2d6be7acc60781ddbbe2298c759371e))
+* **meetings:** region and world meeting-time heatmaps at /region/:n/meetings and /regions/meetings ([#1814](https://github.com/taverns-red/toast-stats/issues/1814)) ([#2207](https://github.com/taverns-red/toast-stats/issues/2207)) ([3831e2c](https://github.com/taverns-red/toast-stats/commit/3831e2c1a8c0a3af41387e454ae82584d685c683))
+* **world:** link the world explorer to the country map ([#1809](https://github.com/taverns-red/toast-stats/issues/1809)) ([#2213](https://github.com/taverns-red/toast-stats/issues/2213)) ([a7878ee](https://github.com/taverns-red/toast-stats/commit/a7878eedf1afee799977d6c882e67e93dfb312cf))
+
+
+### Bug Fixes
+
+* **world:** the Colour picker no longer crashes the world explorer ([#2214](https://github.com/taverns-red/toast-stats/issues/2214)) ([#2215](https://github.com/taverns-red/toast-stats/issues/2215)) ([0d1dc01](https://github.com/taverns-red/toast-stats/commit/0d1dc017c47d5f9f7bed07642443bd45a7280670))
+
 ## [3.45.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.44.0...frontend-v3.45.0) (2026-10-20)
 
 
