@@ -31,6 +31,8 @@ import {
   readSnapshotRollupInput,
   readRegionRollupInput,
   readClubsByRegionInput,
+  buildMeetingTimes,
+  readMeetingTimesInput,
   type Logger,
   type ClubStatistics,
   type DistrictStatistics,
@@ -57,6 +59,7 @@ import {
   GLOBAL_CLUB_RACE_FILE_NAME,
   GLOBAL_TOTALS_FILE_NAME,
   DistrictRegionHistorySchema,
+  MEETING_TIMES_FILE_NAME,
   REGION_ROLLUPS_FILE_NAME,
   REGION_ROLLUPS_REGION_SOURCE,
   RegionMembershipSeriesSchema,
@@ -1438,6 +1441,10 @@ export class AnalyticsComputeService {
     // and refusal rule as the region rollups, the same region membership.
     const clubsByRegion = await this.writeClubsByRegion(snapshotDate, errors)
 
+    // Per-district meeting-time counts (#1814): the same input surface,
+    // refusal rule and region membership as the region rollups.
+    const meetingTimes = await this.writeMeetingTimes(snapshotDate, errors)
+
     // A time-series write failure is recorded per district but must fail the
     // run (#1702): it is the only writer behind Trends.
     const timeSeriesFailed: string[] = []
@@ -1537,7 +1544,8 @@ export class AnalyticsComputeService {
       regionRollupsFailed: regionRollups.failed,
       clubsByRegionPaths: clubsByRegion.paths,
       clubsByRegionFailed: clubsByRegion.failed,
-      meetingTimesFailed: false,
+      meetingTimesPath: meetingTimes.path,
+      meetingTimesFailed: meetingTimes.failed,
       regionSeriesPath: regionSeries.path,
       regionSeriesFailed: regionSeries.failed,
       timeSeriesFailed,
@@ -2084,6 +2092,106 @@ export class AnalyticsComputeService {
       errors.push({
         districtId: 'N/A',
         error: `Failed to write ${CLUBS_BY_REGION_DIR}/: ${message}`,
+        timestamp: new Date().toISOString(),
+      })
+      return { failed: true }
+    }
+  }
+
+  /**
+   * Write `snapshots/{date}/meeting-times.json` — per-district weekday ×
+   * start-hour counts of the clubs' parsed meeting schedules, for the region
+   * and world meeting-time heatmaps (#1814, epic #1781).
+   *
+   * - Same inputs as `region-rollups.json`: the date's rankings scope the
+   *   district files on disk; regions come from the synced history for the
+   *   logical date's program year.
+   * - No rankings file → skipped quietly, like the rollups.
+   * - A listed district with no file → refused and recorded (ADR-015 P3): a
+   *   region grid missing a district would show part of a region as all of
+   *   it. A previous run's file for the date is removed, never left stale.
+   * - Compact JSON (counts only; ~190 KB raw at ~130 districts).
+   * - Never publish-blocking (`meetingTimesFailed` does not move the exit
+   *   code): a missing file reads "not available yet" on the pages.
+   */
+  private async writeMeetingTimes(
+    snapshotDate: string,
+    errors: Array<{ districtId: string; error: string; timestamp: string }>
+  ): Promise<{ path?: string; failed: boolean }> {
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    const outputPath = path.join(snapshotDir, MEETING_TIMES_FILE_NAME)
+    try {
+      await fs.access(path.join(snapshotDir, 'all-districts-rankings.json'))
+    } catch {
+      this.logger.warn(
+        'No all-districts-rankings.json for this date — skipping the meeting times',
+        { snapshotDate }
+      )
+      return { failed: false }
+    }
+
+    try {
+      const { regionHistory, note } = await this.readRegionHistory()
+      const { rankings, districts } = readMeetingTimesInput(snapshotDir)
+      const { meetingTimes, missingDistricts: withoutFile } = buildMeetingTimes(
+        {
+          snapshotDate,
+          rankings,
+          districts,
+          regionHistory,
+          ...(note !== undefined && { regionHistoryNote: note }),
+        }
+      )
+      const missingDistricts = unrecordedDistricts(
+        withoutFile,
+        await recordedFailedDistricts(snapshotDir)
+      )
+      if (missingDistricts.length > 0) {
+        const message = dateLevelRefusal(
+          MEETING_TIMES_FILE_NAME,
+          snapshotDate,
+          rankings.length,
+          missingDistricts
+        )
+        this.logger.error(message, { snapshotDate, missingDistricts })
+        errors.push({
+          districtId: 'N/A',
+          error: message,
+          timestamp: new Date().toISOString(),
+        })
+        await fs.rm(outputPath, { force: true })
+        return { failed: true }
+      }
+
+      if (meetingTimes.regionMembership === null) {
+        this.logger.warn('Meeting times written without regions', {
+          snapshotDate,
+          reason: meetingTimes.regionMembershipNote,
+        })
+      }
+      await fs.writeFile(
+        outputPath,
+        JSON.stringify(meetingTimes) + '\n',
+        'utf-8'
+      )
+      this.logger.info('Wrote meeting times', {
+        snapshotDate,
+        path: outputPath,
+        programYear: meetingTimes.programYear,
+        districts: meetingTimes.totals.districts,
+        clubs: meetingTimes.totals.clubs,
+        scheduled: meetingTimes.totals.scheduled,
+      })
+      return { path: outputPath, failed: false }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      this.logger.error('Failed to write meeting times', {
+        snapshotDate,
+        error: message,
+      })
+      errors.push({
+        districtId: 'N/A',
+        error: `Failed to write ${MEETING_TIMES_FILE_NAME}: ${message}`,
         timestamp: new Date().toISOString(),
       })
       return { failed: true }
