@@ -655,16 +655,6 @@ const DistrictDetailPageInner: React.FC = () => {
               on the hub and every flat sub-page (unlike the breadcrumb). */}
           {districtId && <DistrictSubnav districtId={districtId} />}
 
-          {/* Moved-region banner (#1821): the regions this district sat in
-              in other program years, each linked for its own year. */}
-          {districtId && (
-            <DistrictRegionMoveBanner
-              districtId={districtId}
-              programYear={(effectiveProgramYear ?? selectedProgramYear).label}
-              history={regionHistory}
-            />
-          )}
-
           {/* Global Error State */}
           {overviewError && (
             <ErrorDisplay
@@ -831,6 +821,22 @@ const DistrictDetailPageInner: React.FC = () => {
                   />
                 </MobileDisclosure>
               </section>
+            )}
+
+            {/* Moved-region banner (#1821): the regions this district sat in
+                in other program years, each linked for its own year. It
+                mounts late (after the region-history file lands), so it sits
+                BELOW the overview section: above it, the late mount pushed
+                the whole stack down 237px (CLS 0.22–0.25 at 412px). Most
+                districts never moved, so no slot is reserved for it. */}
+            {districtId && (
+              <DistrictRegionMoveBanner
+                districtId={districtId}
+                programYear={
+                  (effectiveProgramYear ?? selectedProgramYear).label
+                }
+                history={regionHistory}
+              />
             )}
 
             {/* #680 (ADR-005 §1): the membership/payment trend charts moved off

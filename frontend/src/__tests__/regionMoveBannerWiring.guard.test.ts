@@ -19,7 +19,7 @@ describe('DistrictRegionMoveBanner wiring (#1821)', () => {
     const banner = /<DistrictRegionMoveBanner[\s\S]*?\/>/.exec(page)?.[0]
     expect(banner).toBeDefined()
     expect(banner).toMatch(
-      /programYear=\{\(effectiveProgramYear \?\? selectedProgramYear\)\.label\}/
+      /programYear=\{\s*\(effectiveProgramYear \?\? selectedProgramYear\)\.label\s*\}/
     )
     expect(banner).toMatch(/history=\{regionHistory\}/)
     expect(page).toMatch(/useDistrictRegionHistory\(\)/)
