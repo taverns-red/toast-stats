@@ -62,6 +62,64 @@ describe('parseProspectStage', () => {
     expect(parseProspectStage('#1 ')).toMatchObject({ recognised: false })
   })
 
+  // #2142 — TI lists every step a prospect has reached in one cell, run
+  // together once the `<br>` is stripped. Recorded from prod
+  // `snapshots/2026-10-18/district_{31,53,216}_reports.json` (prospect cell
+  // only). The furthest (highest-numbered) step is the club's current stage.
+  describe('multi-step prospect text (#2142)', () => {
+    it('reads the furthest step, its date, and the payment', () => {
+      expect(
+        parseProspectStage(
+          '#1 Application to Organize Complete - 07/20/2026#4 Officer Info Incomplete - 08/03/2026#5 Club Info Incomplete - 08/03/2026#6 Constitution & Bylaws Incomplete - 08/03/2026Payment Complete - 07/20/2026'
+        )
+      ).toMatchObject({
+        recognised: true,
+        stageNumber: 6,
+        stageLabel: 'Constitution & Bylaws',
+        stageDate: '2026-08-03',
+        payment: 'complete',
+        paymentDate: '2026-07-20',
+      })
+    })
+
+    it('reads a two-step cell', () => {
+      expect(
+        parseProspectStage(
+          '#1 Application to Organize Complete - 07/16/2025#4 Officer Info Complete - 07/16/2025Payment Complete - 07/18/2025'
+        )
+      ).toMatchObject({
+        recognised: true,
+        stageNumber: 4,
+        stageLabel: 'Officer Info',
+        stageDate: '2025-07-16',
+        payment: 'complete',
+        paymentDate: '2025-07-18',
+      })
+    })
+
+    it('reads steps without dates and space-separated steps', () => {
+      expect(
+        parseProspectStage(
+          '#1 Application to Organize Complete - 03/12/2025#2 Certificate & Remit Incomplete #3 Roster Incomplete #4 Officer Info Complete - 06/02/2025#5 Club Info Complete - 04/25/2025#6 Constitution & Bylaws Complete - 06/02/2025Payment Complete - 03/17/2025'
+        )
+      ).toMatchObject({
+        recognised: true,
+        stageNumber: 6,
+        stageLabel: 'Constitution & Bylaws',
+        stageDate: '2025-06-02',
+        payment: 'complete',
+        paymentDate: '2025-03-17',
+      })
+    })
+
+    it('never yields a label carrying another step', () => {
+      const p = parseProspectStage(
+        '#1 Application to Organize Complete - 07/20/2026#4 Officer Info'
+      )
+      expect(p).toMatchObject({ stageNumber: 4, stageLabel: 'Officer Info' })
+    })
+  })
+
   it('runs in linear time on hostile whitespace (CodeQL js/polynomial-redos)', () => {
     const hostile = `#0 a${' '.repeat(50_000)}x`
     const t = performance.now()

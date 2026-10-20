@@ -109,6 +109,28 @@ describe('buildClubGrowthFunnel — prospective', () => {
     ])
   })
 
+  it('groups a multi-step prospect under its furthest step (#2142)', () => {
+    // Recorded prod cell (district_216_reports.json, 2026-10-18).
+    const multi = structuredClone(live)
+    multi.sections.prospectiveClubs!.records[0]!.prospect =
+      '#1 Application to Organize Complete - 07/16/2025#4 Officer Info Complete - 07/16/2025Payment Complete - 07/18/2025'
+    const f = buildClubGrowthFunnel({
+      districtId: '61',
+      reports: multi,
+      counts: KNOWN_ZERO,
+      programYear: PY_2026,
+      asOfDate: '2026-10-11',
+    })
+    expect(f.prospective.byStage).toEqual(
+      expect.arrayContaining([
+        { stageNumber: 1, stageLabel: 'Application to Organize', count: 7 },
+        { stageNumber: 4, stageLabel: 'Officer Info', count: 1 },
+      ])
+    )
+    expect(f.prospective.byStage).toHaveLength(2)
+    expect(f.prospective.clubs[0]!.stage).toMatchObject({ stageNumber: 4 })
+  })
+
   it('orders longest-waiting first, with days in stage', () => {
     const first = funnel.prospective.clubs[0]!
     expect(first.clubId).toBe('28678700')
