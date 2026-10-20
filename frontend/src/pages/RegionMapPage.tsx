@@ -54,7 +54,9 @@ import './regionMap.css'
    map's stack (#1784) draws it unchanged: the self-hosted labelled
    basemap, the clustered pin layer, the colour-mode registry and legend
    chips. MapLibre stays a lazy chunk (LazyBasemapMap), and on a phone it is
-   not fetched until the map is opened.
+   not fetched until the map is opened. Online-only clubs (the shard's
+   `meetsOnline`, #2175) get no pin; the legend's "N online clubs" chip
+   lists them (#2174).
 
    URL state, so back and deep links work: `?q=` search, `?sort=` metric
    (membership omitted), `?color=` mode (health omitted), the filters
@@ -79,6 +81,10 @@ const Chips = React.lazy(() =>
   }))
 )
 const MapPreview = React.lazy(() => import('../components/map/MapPreview'))
+// #2174: only regions with online-only clubs fetch it.
+const OnlineClubsChip = React.lazy(
+  () => import('../components/map/OnlineClubsChip')
+)
 const ModePopover = React.lazy(() =>
   import('../components/map/MapModePicker').then(m => ({
     default: m.ModePopover,
@@ -194,6 +200,11 @@ const RegionMapPage: React.FC = () => {
     [searched, metric]
   )
   const summary = useMemo(() => regionSummary(allClubs), [allClubs])
+  // Online-only clubs get no pin (#2174); the legend lists them (#2175).
+  const online = useMemo(
+    () => filtered.filter(c => c.meetsOnline === true),
+    [filtered]
+  )
 
   const model = useMemo(
     () =>
@@ -331,6 +342,11 @@ const RegionMapPage: React.FC = () => {
             limit={limit}
             onMore={onMore}
           />
+        </React.Suspense>
+      )}
+      {limit === undefined && online.length > 0 && (
+        <React.Suspense fallback={null}>
+          <OnlineClubsChip clubs={online} />
         </React.Suspense>
       )}
     </div>
