@@ -620,3 +620,16 @@ describe('gcloud shim: rm -r of a prefix (#1767 harness)', () => {
     expect(r.stderr).toContain('matched no objects')
   })
 })
+
+describe('promote-run-manifest: a prune reconcile whose gate could not run (#1767)', () => {
+  it('deletes nothing and fails, since prune has no promotion-held flow', async () => {
+    const deletesFile = path.join(tmp, 'prod-reconcile-paths.txt')
+    fs.writeFileSync(deletesFile, 'snapshots/2026-10-01\n')
+    writeInputs({ promote: false, heldDates: [] })
+    const before = tree(PROD)
+    const r = await run(['--execute'], { PROD_DELETES_FILE: deletesFile })
+    expect(r.status).toBe(1)
+    expect(tree(PROD)).toEqual(before)
+    expect(r.outputs.prefixes_deleted).toBe('0')
+  })
+})

@@ -30,15 +30,21 @@
  *   shards, and the v1/ entry points (dates.json, latest.json) last, so prod
  *   never references an object the promotion has not yet written (R15: the
  *   strongest signal last).
- * - **Additive.** Nothing is deleted or renamed in prod. An object the run
- *   no longer writes stays in prod until a reconcile removes it (prune,
- *   #1767 routes that through a manifest too).
+ * - **Additive, except a prune reconcile's deletes.** Nothing is renamed in
+ *   prod, and nothing is deleted unless the run passes a delete manifest
+ *   (the prune reconcile's plan, #1767, ADR-015 step 9): dated prefixes
+ *   under the prune-deletable layers only (#1132), never a date the run
+ *   writes. They are removed last, after the entry points, and only when
+ *   the globals promoted and the run wrote the v1/ entry points, so prod's
+ *   index stops naming a date before its directory goes. A staging index
+ *   that still names a deleted date holds the globals and the deletes.
  * - **Fail closed.** A malformed path (wildcard, `..`, an undated
  *   snapshots/ object) throws; a missing completeness verdict holds
  *   everything; an unreadable index or prod listing holds the globals.
  */
 
 import { PROMOTED_PREFIXES } from './promotionContentGate.js'
+import { assertPruneDeletionScope } from './pruneGcsDeletions.js'
 import { latestByPath, type RunManifestEntry } from './runManifest.js'
 
 /** The frontend's entry points: copied last, in their own `cp`. */
@@ -120,6 +126,12 @@ export interface PromotionInputs {
   indexDates: readonly string[] | null
   /** Dates prod has a snapshots/<date>/ directory for; null = unreadable. */
   prodDates: ReadonlySet<string> | null
+  /**
+   * Prod prefixes to delete after the copies (`raw-csv/<date>`,
+   * `snapshots/<date>`): the prune reconcile's plan (#1767). Omitted in
+   * every other mode.
+   */
+  deletes?: readonly string[]
 }
 
 export type CopyPhase = 'dates' | 'globals' | 'entry'
@@ -143,6 +155,8 @@ export interface PromotionPlan {
   excluded: Array<{ path: string; reason: string }>
   batches: CopyBatch[]
   objectCount: number
+  /** Prod prefixes removed after the entry phase (#1767). */
+  deletes: { promote: boolean; reason: string; paths: string[] }
 }
 
 function dirOf(path: string): string {
@@ -167,7 +181,8 @@ function batch(phase: CopyPhase, paths: readonly string[]): CopyBatch[] {
 
 function globalsVerdict(
   inputs: PromotionInputs,
-  promotedDates: readonly string[]
+  promotedDates: readonly string[],
+  deletedSnapshotDates: readonly string[]
 ): { promote: boolean; reason: string } {
   if (inputs.held.dates.length > 0) {
     return {
@@ -185,6 +200,17 @@ function globalsVerdict(
     return {
       promote: false,
       reason: "prod's snapshots/ listing could not be read",
+    }
+  }
+  const indexedDeletes = deletedSnapshotDates
+    .filter(d => inputs.indexDates!.includes(d))
+    .sort()
+  if (indexedDeletes.length > 0) {
+    return {
+      promote: false,
+      reason:
+        `staging's date index still names ${indexedDeletes.join(', ')}, which this run deletes from prod ` +
+        '— regenerate the index after the staging prune',
     }
   }
   const promoted = new Set(promotedDates)
@@ -206,7 +232,48 @@ function globalsVerdict(
   }
 }
 
+const DELETED_SNAPSHOT_DATE = /^snapshots\/(\d{4}-\d{2}-\d{2})$/
+const DELETED_DATE = /^[^/]+\/(\d{4}-\d{2}-\d{2})$/
+
+/** Validated, sorted, unique delete prefixes; throws on any out of scope. */
+function resolveDeletes(deletes: readonly string[] | undefined): string[] {
+  const paths = [...new Set(deletes ?? [])].sort()
+  assertPruneDeletionScope(paths)
+  return paths
+}
+
+function deletesVerdict(
+  paths: readonly string[],
+  globals: { promote: boolean; reason: string },
+  globalPaths: readonly string[]
+): { promote: boolean; reason: string } {
+  if (paths.length === 0) {
+    return { promote: false, reason: 'no deletes requested' }
+  }
+  const missing = ENTRY_POINT_PATHS.filter(p => !globalPaths.includes(p))
+  if (missing.length > 0) {
+    return {
+      promote: false,
+      reason: `the run did not write ${missing.join(' and ')}: prod's index would still name the deleted dates`,
+    }
+  }
+  if (!globals.promote) {
+    return {
+      promote: false,
+      reason: `the regenerated index did not promote (${globals.reason}): prod's index would still name the deleted dates`,
+    }
+  }
+  return {
+    promote: true,
+    reason: "after the regenerated index: prod's index no longer names them",
+  }
+}
+
 export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
+  const deletePaths = resolveDeletes(inputs.deletes)
+  const deletedSnapshotDates = deletePaths
+    .map(p => DELETED_SNAPSHOT_DATE.exec(p)?.[1])
+    .filter((d): d is string => d !== undefined)
   const latest = [...latestByPath(inputs.entries).keys()].sort()
   const excluded: PromotionPlan['excluded'] = []
   const dated = new Map<string, string[]>()
@@ -216,6 +283,13 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
     if (c.kind === 'excluded') excluded.push({ path: p, reason: c.reason })
     else if (c.kind === 'global') globalPaths.push(p)
     else dated.set(c.date, [...(dated.get(c.date) ?? []), p])
+  }
+  const deletedDates = new Set(deletePaths.map(p => DELETED_DATE.exec(p)![1]!))
+  const both = [...dated.keys()].filter(d => deletedDates.has(d)).sort()
+  if (both.length > 0) {
+    throw new Error(
+      `refusing to promote: the run both writes and deletes ${both.join(', ')}`
+    )
   }
 
   if (inputs.held.all) {
@@ -232,13 +306,18 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
       excluded,
       batches: [],
       objectCount: 0,
+      deletes: {
+        promote: false,
+        reason: deletePaths.length > 0 ? reason : 'no deletes requested',
+        paths: deletePaths,
+      },
     }
   }
 
   const heldSet = new Set(inputs.held.dates)
   const promotedDates = [...dated.keys()].filter(d => !heldSet.has(d)).sort()
   const heldDates = [...dated.keys()].filter(d => heldSet.has(d)).sort()
-  const globals = globalsVerdict(inputs, promotedDates)
+  const globals = globalsVerdict(inputs, promotedDates, deletedSnapshotDates)
 
   const held: PromotionPlan['held'] = []
   for (const d of heldDates) {
@@ -276,6 +355,10 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
     excluded,
     batches,
     objectCount: batches.reduce((n, b) => n + b.paths.length, 0),
+    deletes: {
+      ...deletesVerdict(deletePaths, globals, globalPaths),
+      paths: deletePaths,
+    },
   }
 }
 
@@ -315,8 +398,10 @@ export function parseSnapshotDateListing(ls: string): Set<string> {
 
 /**
  * The dry run: one tab-separated line per object, in copy order —
- * `copy\t<phase>\t<gs://src>\t<gs://dst>`, then `hold\t<path>\t<reason>`
- * and `skip\t<path>\t<reason>` for everything in the manifest not copied.
+ * `copy\t<phase>\t<gs://src>\t<gs://dst>`, then `delete\t<gs://prod/prefix/>`
+ * for each planned delete (#1767), then `hold\t<path>\t<reason>` (a held
+ * delete as `hold\t<prefix>/\t<reason>`) and `skip\t<path>\t<reason>` for
+ * everything in the manifest not copied.
  */
 export function formatPromotionPlan(
   plan: PromotionPlan,
@@ -328,6 +413,13 @@ export function formatPromotionPlan(
     for (const p of b.paths) {
       lines.push(`copy\t${b.phase}\tgs://${staging}/${p}\tgs://${prod}/${p}`)
     }
+  }
+  for (const d of plan.deletes.paths) {
+    lines.push(
+      plan.deletes.promote
+        ? `delete\tgs://${prod}/${d}/`
+        : `hold\t${d}/\t${plan.deletes.reason}`
+    )
   }
   for (const h of plan.held) lines.push(`hold\t${h.path}\t${h.reason}`)
   for (const e of plan.excluded) lines.push(`skip\t${e.path}\t${e.reason}`)
