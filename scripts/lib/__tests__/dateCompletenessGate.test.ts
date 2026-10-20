@@ -642,6 +642,22 @@ describe('retired analytics files are not a regression (#1798)', () => {
   })
   const base = ['manifest.json', 'metadata.json', 'district_61.json']
 
+  it('a rebuilt date with no report sidecars, so no reports-rollups.json on either side, passes (#2202)', () => {
+    const both = profile([...base, ...kept('61')])
+    expect(compareDateProfiles(DATE, both, both)).toEqual([])
+  })
+
+  it('a rebuild that adds reports-rollups.json where production has none passes (#2202)', () => {
+    const prod = profile([...base, ...kept('61'), 'district_61_reports.json'])
+    const staging = profile([
+      ...base,
+      ...kept('61'),
+      'district_61_reports.json',
+      'reports-rollups.json',
+    ])
+    expect(compareDateProfiles(DATE, prod, staging)).toEqual([])
+  })
+
   it('a rebuild missing only retired files passes', () => {
     const prod = profile([...base, ...kept('61'), ...retiredFiles('61')])
     const staging = profile([...base, ...kept('61')])
