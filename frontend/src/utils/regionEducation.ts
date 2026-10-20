@@ -15,6 +15,7 @@
  */
 import type {
   EducationAwardTotals,
+  EducationRollupAggregate,
   EducationRollupIndex,
   EducationRollupProgramYear,
 } from '@taverns-red/shared-contracts'
@@ -52,13 +53,7 @@ export type RegionEducation =
   | {
       status: 'available'
       summary: EducationSummary
-      kpis: {
-        awards: number
-        membersWithAward: number | null
-        dtms: number
-        tripleCrownAchievers: number | null
-        clubsWithAward: number
-      }
+      kpis: EducationKpis
       districts: RegionEducationDistrictRow[]
       coverage: { available: number; notAvailable: number }
       source: {
@@ -90,6 +85,40 @@ const TITLES: ReadonlyMap<string, string> = new Map(
 const numeric = (a: string, b: string) =>
   a.localeCompare(b, undefined, { numeric: true })
 
+export interface EducationKpis {
+  awards: number
+  /** `null` = not measured (archive years). */
+  membersWithAward: number | null
+  dtms: number
+  tripleCrownAchievers: number | null
+  clubsWithAward: number
+}
+
+/** A rollup aggregate (a region's or the world's block) read as a page
+ *  summary and KPI strip: the block's own totals, its Pathways-only matrix
+ *  as path and level rows (the district page's `pathwaysBreakdown`). */
+export function summariseEducationAggregate(block: EducationRollupAggregate): {
+  summary: EducationSummary
+  kpis: EducationKpis
+} {
+  const cells = new Map(Object.entries(block.pathwaysMatrix))
+  return {
+    summary: {
+      totals: { ...block.totals },
+      ...pathwaysBreakdown(cells, TITLES, block.totals.dtm),
+      legacyByCode: codeCounts(block.legacyByCode),
+      otherByCode: codeCounts(block.otherByCode),
+    },
+    kpis: {
+      awards: block.totals.awards,
+      membersWithAward: block.membersWithAward,
+      dtms: block.totals.dtm,
+      tripleCrownAchievers: block.tripleCrownAchievers,
+      clubsWithAward: block.clubsWithAward,
+    },
+  }
+}
+
 export function buildRegionEducation({
   rollup,
   region,
@@ -99,13 +128,7 @@ export function buildRegionEducation({
   const block = rollup.regions[region]
   if (!block) return { status: 'not-available', reason: 'region-absent' }
 
-  const cells = new Map(Object.entries(block.pathwaysMatrix))
-  const summary: EducationSummary = {
-    totals: { ...block.totals },
-    ...pathwaysBreakdown(cells, TITLES, block.totals.dtm),
-    legacyByCode: codeCounts(block.legacyByCode),
-    otherByCode: codeCounts(block.otherByCode),
-  }
+  const { summary, kpis } = summariseEducationAggregate(block)
 
   const ids = [...block.districtsAvailable, ...block.districtsNotAvailable]
   const districts: RegionEducationDistrictRow[] = ids.sort(numeric).map(id => {
@@ -129,13 +152,7 @@ export function buildRegionEducation({
   return {
     status: 'available',
     summary,
-    kpis: {
-      awards: block.totals.awards,
-      membersWithAward: block.membersWithAward,
-      dtms: block.totals.dtm,
-      tripleCrownAchievers: block.tripleCrownAchievers,
-      clubsWithAward: block.clubsWithAward,
-    },
+    kpis,
     districts,
     coverage: {
       available: block.districtsAvailable.length,
