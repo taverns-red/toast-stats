@@ -31,6 +31,10 @@ name: CI Gate
 #
 # `edited` re-runs the gate on a title edit, so the release-notes-safe title
 # check below (#2185) cannot be bypassed by renaming the PR after it passed.
+# A base change (retarget to main) is also `edited`: ci.yml and docs.yml run
+# on it too, and this gate waits for them (#2204). A body-only edit re-runs
+# this gate harmlessly; the skipped ci.yml/docs.yml re-runs it causes are
+# ignored beside their green runs (scripts/lib/ciGate.ts).
 on:
   pull_request:
     branches: [main]

@@ -143,7 +143,15 @@ export function evaluateChecks(
       verdict.pending.push(name)
       continue
     }
-    const bad = runs.find(r => r.conclusion !== 'success')
+    // A `skipped` run beside a green one is a no-op re-schedule, not a verdict:
+    // a body-only `pull_request: edited` re-triggers ci.yml/docs.yml with every
+    // job `if:`-skipped (#2204). The green run already proved this head SHA.
+    // A check whose ONLY runs are skipped still fails below.
+    const hasGreen = runs.some(r => r.conclusion === 'success')
+    const bad = runs.find(
+      r =>
+        r.conclusion !== 'success' && !(hasGreen && r.conclusion === 'skipped')
+    )
     if (bad) {
       // `skipped` lands here on purpose: an EXPECTED job must actually run.
       verdict.failed.push({ name, conclusion: bad.conclusion ?? 'unknown' })

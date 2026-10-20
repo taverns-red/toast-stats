@@ -306,7 +306,7 @@ test(`club hero chrome ≤ ${HERO_MAX_H}px for the longest D61 club name at 375`
 
 // #1805 — a club that moved carries the lineage chip on the hero's
 // area/division/district line from 768. Club 977 (District 1 until June
-// 2026, then District 201) is the reformation's typical case. At 375 the
+// 30, 2026, then District 201) is the reformation's typical case. At 375 the
 // chip wraps the line and costs a whole one (224 px on this runner), so the
 // phone hero leaves it out and keeps its budget; the Lifecycle panel carries
 // the move there.
@@ -337,7 +337,14 @@ for (const width of [375, 1280]) {
         /^(Jul 2026|2026–27 program year) · Current$/
       )
     } else {
-      await expect(chip).toHaveText('(District 1 until June 2026)')
+      // #1816 — the chip reads the day when the former span carries the
+      // date-exact `lastSeenOn` (the 10-20 daily published it on staging,
+      // which previews read), else the month of its last sighting. The day
+      // format is the spec (docs/product-spec.md, clubLineage.test.ts); the
+      // month+year rule (#2169) is for Lifecycle move rows only.
+      await expect(chip).toHaveText(
+        /\(District 1 until (June 30, 2026|June 2026)\)$/
+      )
       await expect(chip).toBeVisible()
     }
     const m = await page.evaluate(() => ({

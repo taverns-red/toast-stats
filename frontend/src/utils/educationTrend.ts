@@ -52,3 +52,27 @@ export function skipsProgramYears(years: EducationTrendYear[]): boolean {
       startYear(y.programYear) - startYear(years[i - 1]!.programYear) > 1
   )
 }
+
+/** The sparkline behind the mobile sparkline-expand (#1793): the awards of
+ *  the latest unbroken run of years with a ledger — a not-available year or
+ *  a year the number was not a district ends the run, so the line never
+ *  bridges a gap. `selected` is the page's own PY (R3), `null` if the
+ *  district has no row for it. */
+export function educationYearsSparkline(
+  years: EducationTrendYear[],
+  programYear: string
+): { series: number[]; selected: EducationTrendYear | null } {
+  const series: number[] = []
+  for (let i = years.length - 1; i >= 0; i--) {
+    const y = years[i]!
+    if (!y.totals) break
+    const newer = years[i + 1]
+    if (newer && startYear(newer.programYear) - startYear(y.programYear) > 1)
+      break
+    series.unshift(y.totals.awards)
+  }
+  return {
+    series,
+    selected: years.find(y => y.programYear === programYear) ?? null,
+  }
+}

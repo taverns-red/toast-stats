@@ -50,6 +50,7 @@ vi.mock('../../services/cdn', () => {
     rankings: [ranking('60', '07', 500), ranking('61', '07', 350)],
   }
   return {
+    fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
     fetchCdnDates: vi
       .fn()
       .mockResolvedValue({ dates: ['2026-05-12'], count: 1 }),

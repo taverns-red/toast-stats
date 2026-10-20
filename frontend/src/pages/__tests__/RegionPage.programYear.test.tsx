@@ -21,6 +21,7 @@ import RegionPage from '../RegionPage'
 import {
   fetchCdnRankingsForDate,
   fetchCdnCompetitiveAwards,
+  fetchCdnDistrictRegionHistory,
 } from '../../services/cdn'
 
 const LocationProbe = () => {
@@ -96,10 +97,12 @@ vi.mock('../../services/cdn', () => {
     fetchCdnManifest: vi
       .fn()
       .mockResolvedValue({ latestSnapshotDate: '2026-08-01' }),
+    fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
   }
 })
 
 const mockedForDate = vi.mocked(fetchCdnRankingsForDate)
+const mockedRegionHistory = vi.mocked(fetchCdnDistrictRegionHistory)
 
 const renderAt = (url: string) => {
   const queryClient = new QueryClient({
@@ -227,5 +230,61 @@ describe('RegionPage — phone context bar (#1831)', () => {
     await waitFor(() =>
       expect(screen.getByTestId('loc-search').textContent).toContain('py=2025')
     )
+  })
+})
+
+describe("RegionPage — the selected PY's own membership (#1821)", () => {
+  // District 60 sat in Region 08 in 2025-26 and moved to 07 in 2026-27; its
+  // rows are stamped '07' (as a re-derived snapshot would be). Membership
+  // must come from the history for the PY being viewed.
+  const span = (from: string, to: string | null, region: string) => ({
+    from,
+    to,
+    region,
+  })
+  const history = {
+    _format: { version: '1.0.0', type: 'district-region-history' as const },
+    asOf: '2026-08-01',
+    programYears: ['2025-2026', '2026-2027'],
+    sourceDates: ['2025-08-01', '2026-05-01', '2026-08-01'],
+    districts: {
+      '57': {
+        spans: [span('2025-08-01', null, '07')],
+        byProgramYear: { '2025-2026': '07', '2026-2027': '07' },
+      },
+      '60': {
+        spans: [
+          span('2025-08-01', '2026-05-01', '08'),
+          span('2026-08-01', null, '07'),
+        ],
+        byProgramYear: { '2025-2026': '08', '2026-2027': '07' },
+      },
+    },
+    conflicts: [],
+  }
+
+  const districtCells = async () => {
+    const table = await screen.findByRole('table', {
+      name: /region 07 district rankings/i,
+    })
+    return within(table)
+      .getAllByTestId('region-district-cell')
+      .map(c => c.textContent)
+  }
+
+  it('drops a district that was in another region that PY', async () => {
+    mockedRegionHistory.mockResolvedValue(history)
+    renderAt('/region/07?py=2025')
+    await waitFor(async () => {
+      const cells = await districtCells()
+      expect(cells).toHaveLength(1)
+      expect(cells[0]).toContain('57')
+    })
+  })
+
+  it('keeps it in the region for the PY it was there', async () => {
+    mockedRegionHistory.mockResolvedValue(history)
+    renderAt('/region/07?py=2026')
+    await waitFor(async () => expect(await districtCells()).toHaveLength(2))
   })
 })
