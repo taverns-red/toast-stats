@@ -20,7 +20,8 @@
  *    shards and `world.shards: null` with the reason; the world file is
  *    still built.
  * 4. **Explorer fields only.** Names are passed through `stripLinks` and
- *    cities through `scrubPlaceText` (#2157); no
+ *    cities through `scrubPlaceText` (#2157); `meetsOnline` is forwarded
+ *    only when true (#2175), so the maps can hide online-only pins; no
  *    contact, link or meeting field is read, so none can be written.
  * 5. **Deterministic bytes** (Lesson 158): rows and points are arrays sorted
  *    by club id, so the output is identical whatever order files arrive in.
@@ -77,6 +78,8 @@ export interface ClubsByRegionClubInput {
   readonly cspSubmitted?: boolean
   readonly coordinates?: { readonly lat: number; readonly lng: number }
   readonly city?: string
+  /** Meets online only (#2160): the maps give it no pin (#2174, #2175). */
+  readonly meetsOnline?: true
 }
 
 export interface ClubsByRegionDistrictInput {
@@ -212,6 +215,8 @@ export function buildClubsByRegion(
         csp: club.cspSubmitted ?? null,
         lat: located ? located.lat : null,
         lng: located ? located.lng : null,
+        // #2175 — present only when true, so a row is unchanged otherwise.
+        ...(club.meetsOnline === true && { meetsOnline: true as const }),
       })
     }
   }
@@ -363,6 +368,7 @@ export function readClubsByRegionInput(snapshotDir: string): {
         ...(typeof csp === 'boolean' && { cspSubmitted: csp }),
         ...(coords && { coordinates: coords }),
         ...(city.trim() !== '' && { city: city.trim() }),
+        ...(club['meetsOnline'] === true && { meetsOnline: true as const }),
       })
     }
     districts.push({ districtId, clubs })
