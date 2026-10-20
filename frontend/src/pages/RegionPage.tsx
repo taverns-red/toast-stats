@@ -33,6 +33,8 @@ import { DistrictTrendSparkline } from '../components/DistrictTrendSparkline'
 import { RegionSubnav } from '../components/rollups/RegionSubnav'
 import { useDistrictTrends } from '../hooks/useDistrictTrends'
 import { normaliseRegionId } from '../utils/regionId'
+import { regionMembershipFor } from '../utils/regionHistory'
+import { useDistrictRegionHistory } from '../hooks/useDistrictRegionHistory'
 
 const REGION_SORT_FIELDS = [
   'aggregate',
@@ -383,15 +385,25 @@ const RegionPage: React.FC = () => {
   // the as-of date 404s and blanks the countdown/tier columns (#1315).
   const { data: awards } = useCompetitiveAwards(effectiveDate)
 
+  // Membership is the SELECTED PY's own (#1821): the district → region
+  // history for the year the controls name (R3), not whatever region the
+  // rankings row carries. The row's region is the fallback when the history
+  // is absent or has no entry for that district and year.
+  const { history: regionHistory } = useDistrictRegionHistory()
+  const regionOf = React.useMemo(
+    () => regionMembershipFor(regionHistory, selectedProgramYear.label),
+    [regionHistory, selectedProgramYear.label]
+  )
+
   // Membership sparkline per district (#1815): the page's own program year
   // and pinned date (R3). Keyed on the region's ids, not the sort order.
   const regionDistrictIds = React.useMemo(
     () =>
       (data?.rankings ?? [])
-        .filter(r => normaliseRegionId(r.region) === region)
+        .filter(r => regionOf(r) === region)
         .map(r => r.districtId)
         .sort(),
-    [data, region]
+    [data, region, regionOf]
   )
   const trends = useDistrictTrends(
     regionDistrictIds,
@@ -406,7 +418,7 @@ const RegionPage: React.FC = () => {
   const scoreSortedDistricts: DistrictRanking[] =
     data?.rankings && region
       ? data.rankings
-          .filter(r => normaliseRegionId(r.region) === region)
+          .filter(r => regionOf(r) === region)
           .sort((a, b) => (b.aggregateScore ?? 0) - (a.aggregateScore ?? 0))
       : []
 

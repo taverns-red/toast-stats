@@ -20,6 +20,7 @@ vi.mock('../../hooks/useIsMobile', () => ({
 }))
 
 vi.mock('../../services/cdn', () => ({
+  fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
   fetchCdnDates: vi.fn().mockResolvedValue({ dates: [], count: 0 }),
   fetchCdnRankings: vi.fn(),
   fetchCdnRankingsForDate: vi.fn(),
