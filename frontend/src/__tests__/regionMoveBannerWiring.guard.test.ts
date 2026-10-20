@@ -24,4 +24,18 @@ describe('DistrictRegionMoveBanner wiring (#1821)', () => {
     expect(banner).toMatch(/history=\{regionHistory\}/)
     expect(page).toMatch(/useDistrictRegionHistory\(\)/)
   })
+
+  it('mounts below the District overview section, never above it (#1821 CLS)', () => {
+    /* The banner mounts late, after the history file lands. Above the
+       overview it pushed the whole stack down (CLS 0.22-0.25 at 412px);
+       below the overview section it shifts nothing in view. */
+    const bannerAt = page.indexOf('<DistrictRegionMoveBanner')
+    const overviewOpen = page.indexOf(
+      '<section aria-label="District overview">'
+    )
+    const overviewClose = page.indexOf('</section>', overviewOpen)
+    expect(overviewOpen).toBeGreaterThan(-1)
+    expect(overviewClose).toBeGreaterThan(overviewOpen)
+    expect(bannerAt).toBeGreaterThan(overviewClose)
+  })
 })
