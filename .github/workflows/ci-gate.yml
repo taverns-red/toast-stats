@@ -28,9 +28,13 @@ name: CI Gate
 # enabled on this repo, and the script reads github.event.pull_request.*, which
 # a merge_group event does not carry. Enabling a merge queue later means
 # teaching scripts/ci-gate.ts to resolve the PR from the merge-group ref first.
+#
+# `edited` re-runs the gate on a title edit, so the release-notes-safe title
+# check below (#2185) cannot be bypassed by renaming the PR after it passed.
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read
@@ -72,6 +76,18 @@ jobs:
       # gate's own liveness independent of a monorepo install -- which is
       # itself one of the things being gated. The range is read from
       # package.json so it can never drift from the pinned dev dependency.
+      # The squash subject becomes a changelog line. release-please decodes
+      # `&lt;date&gt;` back to `<date>` and re-parses the notes as HTML, so a
+      # tag-like `<x` swallows every later component's release (#2185: 2.62.0
+      # released only the root; 2.63.0 overflowed 125k and skipped deploy).
+      # The title goes through env, never inline, so it cannot inject shell.
+      - name: Release-notes-safe PR title (#2185)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          version="$(node -p "require('./package.json').devDependencies.tsx")"
+          npx --yes "tsx@${version}" scripts/check-pr-title.ts
+
       - name: Wait for the required checks and decide (#1216)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
