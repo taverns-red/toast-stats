@@ -329,6 +329,23 @@ describe('buildClubsByRegion (#1800)', () => {
     expect(rows.find(c => c.id === second!.clubId)!.city).toBe('Pine Bluff')
   })
 
+  // #2183 — a city that was ONLY a passcode scrubs to nothing. The row keeps
+  // its required `city` key as null (the contract's "no city"), never ''.
+  it('emits city: null when a city scrubs to empty (#2183)', () => {
+    const { districts } = input()
+    const d17 = districts.find(d => d.districtId === '17')!
+    const [first] = d17.clubs
+    const edited = {
+      ...d17,
+      clubs: [{ ...first!, city: 'Passcode: 000000' }, ...d17.clubs.slice(1)],
+    }
+    const r = build({
+      districts: districts.map(d => (d.districtId === '17' ? edited : d)),
+    })
+    const row = shardsByKey(r)['12']!.clubs.find(c => c.id === first!.clubId)!
+    expect(row).toHaveProperty('city', null)
+  })
+
   it('seeds the top-N lists by membership, net growth and DCP goals, highest first, ties by club id', () => {
     const r = build()
     const all = r.shards.flatMap(s => s.clubs)

@@ -939,3 +939,35 @@ describe('evaluateContentGate', () => {
     expect(summary).toMatch(/last point/i)
   })
 })
+
+// #2183: the 2026-10-19 incident shape. A shard row that lost its required
+// `city` key (the strip dropped a city that scrubbed to nothing) fails the
+// gate; the schema-correct `city: null` passes. Recorded builder output.
+describe('clubs-by-region shard: a row missing its city (#2183)', () => {
+  const recorded = JSON.parse(
+    readFileSync(
+      path.join(
+        __dirname,
+        '../../../packages/shared-contracts/src/__tests__/__fixtures__/recorded-clubs-by-region.json'
+      ),
+      'utf-8'
+    )
+  ) as { shards: Record<string, { clubs: Array<Record<string, unknown>> }> }
+  const SHARD = 'snapshots/2026-10-16/clubs-by-region/12.json'
+
+  it('passes the recorded shard', () => {
+    expect(check(SHARD, plain(recorded.shards['12']))).toBeNull()
+  })
+
+  it('passes a row whose emptied city is null', () => {
+    const shard = structuredClone(recorded.shards['12']!)
+    shard.clubs[0]!['city'] = null
+    expect(check(SHARD, plain(shard))).toBeNull()
+  })
+
+  it('fails a row whose city key was dropped', () => {
+    const shard = structuredClone(recorded.shards['12']!)
+    delete shard.clubs[0]!['city']
+    expect(check(SHARD, plain(shard))).toMatch(/schema validation failed/)
+  })
+})
