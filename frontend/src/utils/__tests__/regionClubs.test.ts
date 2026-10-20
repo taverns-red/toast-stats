@@ -75,6 +75,22 @@ describe('toRegionClubs', () => {
     expect(pins.features).toHaveLength(159)
   })
 
+  // #2175 — a located online-only club keeps its row but gets no pin.
+  it('gives a flagged online-only club a row and no pin (#2174, #2175)', () => {
+    const online = toRegionClubs({
+      ...shard05,
+      clubs: shard05.clubs.map(c =>
+        c.id === '5097' ? { ...c, meetsOnline: true as const } : c
+      ),
+    })
+    const sainteFoy = online.find(c => c.clubId === '5097')!
+    expect(sainteFoy.coordinates).toBeDefined()
+    expect(sainteFoy.meetsOnline).toBe(true)
+    const pins = buildPinFeatures(online, buildModeModel('health'))
+    expect(pins.features).toHaveLength(158)
+    expect(pins.features.map(f => f.properties.id)).not.toContain('5097')
+  })
+
   it('colours by the shared health classification (#1120)', () => {
     const model = buildModeModel('health')
     const counts = { t: 0, v: 0, i: 0 }
