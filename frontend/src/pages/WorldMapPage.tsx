@@ -789,7 +789,7 @@ const WorldMapPage: React.FC = () => {
           date has no world file, so it never shifts the body (Lesson 107). */}
       <p className="world-map__related">
         <Link to="/history/countries" className="world-map__country-link">
-          See clubs by country on the country map →
+          Map of clubs by country →
         </Link>
       </p>
       {body}
