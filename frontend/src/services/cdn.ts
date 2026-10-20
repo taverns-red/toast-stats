@@ -38,6 +38,7 @@ import {
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsSchema,
   type ClubsByRegionShard,
+  type DistrictRegionHistory,
   type DistrictReportsDataset,
   type EducationRollupIndex,
   type EducationRollupProgramYear,
@@ -939,4 +940,9 @@ export async function fetchCdnRankHistory(
 ): Promise<CdnRankHistoryData> {
   const url = `${cdnBaseUrl()}/v1/rank-history/${districtId}.json`
   return fetchFromCdn<CdnRankHistoryData>(url)
+}
+
+/** District → region history (#1820) — stub for the red commit (#1821). */
+export async function fetchCdnDistrictRegionHistory(): Promise<DistrictRegionHistory | null> {
+  return null
 }
