@@ -7,7 +7,13 @@
  */
 import React, { Suspense } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import {
   createMemoryRouter,
   RouterProvider,
@@ -15,14 +21,34 @@ import {
 } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@testing-library/jest-dom'
-import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
+import {
+  EducationRollupIndexSchema,
+  type DistrictReportsDataset,
+} from '@taverns-red/shared-contracts'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
+import { useDistricts } from '../../hooks/useDistricts'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
+import { useEducationRollupIndex } from '../../hooks/useEducationRollup'
 import recordedD61 from '../../__tests__/fixtures/d61-education-reports.recorded.json'
 import recordedClubs from '../../__tests__/fixtures/d61-education-clubs.recorded.json'
+import recordedIndex from '../../__tests__/fixtures/education-rollup-index.recorded.json'
+import recordedTrend from '../../__tests__/fixtures/education-rollup-trend-d61-d17.recorded.json'
+
+// The #1801 rollup index (staging, recorded) with the D61 / D17 trend rows
+// of the 2026-10-18 index — the multi-year bars' only source (#1807).
+const rollupIndex = EducationRollupIndexSchema.parse({
+  ...recordedIndex,
+  trend: {
+    ...recordedIndex.trend,
+    districts: {
+      ...recordedIndex.trend.districts,
+      ...recordedTrend.districts,
+    },
+  },
+})
 
 const d61 = recordedD61 as unknown as DistrictReportsDataset
 const clubs = (
@@ -64,6 +90,10 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
 vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(() => ({ data: undefined })),
 }))
+vi.mock('../../hooks/useEducationRollup', () => ({
+  useEducationRollupIndex: vi.fn(() => ({ index: null, isLoading: false })),
+}))
+
 const csvSnapshot = {
   clubPerformance: [
     { 'Club Number': '1', 'Level 1s': 3, 'Level 2s': 1, 'Level 3s': 0 },
@@ -260,6 +290,86 @@ describe('DistrictEducationPage (#1793)', () => {
       for (const call of vi.mocked(useDistrictStatistics).mock.calls) {
         expect(call[0]).toBeNull()
       }
+    })
+  })
+
+  describe('multi-year bars from the rollup index (#1807)', () => {
+    const serveIndex = () =>
+      vi.mocked(useEducationRollupIndex).mockReturnValue({
+        index: rollupIndex,
+        isLoading: false,
+      })
+    const d61Only = {
+      data: { districts: [{ id: '61', name: 'District 61' }] },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDistricts>
+    afterEach(() => {
+      vi.mocked(useDistricts).mockReturnValue(d61Only)
+      vi.mocked(useEducationRollupIndex).mockReturnValue({
+        index: null,
+        isLoading: false,
+      })
+    })
+
+    it('shows every program year of the district, the selected one current', async () => {
+      serveIndex()
+      renderAt('/district/61/education')
+      const list = await screen.findByRole('list', {
+        name: 'Awards by program year',
+      })
+      const items = within(list).getAllByRole('listitem')
+      expect(items).toHaveLength(24)
+      expect(items[0]).toHaveTextContent('2003-04')
+      expect(items[0]).toHaveTextContent('733')
+      expect(items.at(-1)).toHaveAttribute('aria-current', 'true')
+      expect(items.at(-1)).toHaveTextContent('2026-27')
+    })
+
+    it('marks the page’s selected PY, not the newest (R3)', async () => {
+      serveIndex()
+      vi.mocked(useDistrictCachedDates).mockReturnValue({
+        data: {
+          dates: ['2026-10-13', '2026-06-30'],
+          dateRange: { startDate: '2026-06-30', endDate: '2026-10-13' },
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useDistrictCachedDates>)
+      vi.mocked(useDistrictAnalytics).mockReturnValue(analyticsWith(null))
+      renderAt('/district/61/education?py=2025')
+      const list = await screen.findByRole('list', {
+        name: 'Awards by program year',
+      })
+      const current = within(list)
+        .getAllByRole('listitem')
+        .filter(li => li.getAttribute('aria-current') === 'true')
+      expect(current).toHaveLength(1)
+      expect(current[0]).toHaveTextContent('2025-26')
+    })
+
+    it('reads a year without a ledger as not available and names the gap', async () => {
+      serveIndex()
+      vi.mocked(useDistricts).mockReturnValue({
+        data: { districts: [{ id: '17', name: 'District 17' }] },
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useDistricts>)
+      renderAt('/district/17/education')
+      const list = await screen.findByRole('list', {
+        name: 'Awards by program year',
+      })
+      expect(within(list).getAllByText('Not available')).toHaveLength(5)
+      expect(
+        screen.getByText(/years this number was not a district are left out/i)
+      ).toBeInTheDocument()
+    })
+
+    it('shows no year bars before the rollup is published', async () => {
+      renderAt('/district/61/education')
+      await screen.findByRole('list', { name: /education at a glance/i })
+      expect(
+        screen.queryByRole('list', { name: 'Awards by program year' })
+      ).toBeNull()
     })
   })
 })

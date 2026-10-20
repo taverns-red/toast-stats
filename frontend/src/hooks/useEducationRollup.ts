@@ -47,3 +47,11 @@ export function useEducationRollup(
     isLoading: year.isLoading,
   }
 }
+
+// Red stub (#1807): implemented in the next commit.
+export function useEducationRollupIndex(): {
+  index: EducationRollupIndex | null
+  isLoading: boolean
+} {
+  return { index: null, isLoading: false }
+}
