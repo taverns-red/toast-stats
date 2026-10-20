@@ -668,8 +668,8 @@ jobs:
       # desktop-only on `/` against localhost fixtures; this runs Lighthouse's
       # mobile profile (simulated 150 ms RTT / 1.6 Mbps / 4x CPU) on the five
       # #1830 routes against the deployed channel — real CSP, staging CDN data,
-      # real fonts. Assertions are `warn` for the first green week, then
-      # promoted to `error` (recorded on #1830); see lighthouserc.mobile.js for
+      # real fonts. Assertions are `error` since 2026-10-19, after a green
+      # week at `warn` (recorded on #1830); see lighthouserc.mobile.js for
       # the per-route budgets and their ratchet issue.
       - name: Lighthouse mobile gate against preview
         if: env.HEAVY_SMOKE == 'true'
