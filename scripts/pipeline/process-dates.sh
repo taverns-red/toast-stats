@@ -83,6 +83,17 @@
 #                reports and the region history step 12 just wrote, to
 #                staging derived/education-rollup/ (never promoted until
 #                #1763). Same failure posture as step 12.
+#  14. rollups   rebuild only: scripts/pipeline/build-reports-rollups.sh
+#                <bucket> <date> (#2012, #2202) for each date this run
+#                published (post-remap, in order, once each), after step 12
+#                rewrote the region history it reads. It writes
+#                snapshots/<date>/reports-rollups.json through gcs-upload.sh,
+#                so the object is in the run manifest and goes through the
+#                content and completeness gates and promotion with its date.
+#                A date without report sidecars writes nothing and is counted
+#                as skipped (never an empty rollup); a failure is a warning
+#                and a count, never a failed run. The daily builds its own
+#                date in the `education-rollup` job instead.
 # The GCS-backed stores (time-series, club-trends, club-race, awards history)
 # are NOT handled here: the caller pulls them with sync-stores.sh before and
 # pushes them with publish-stores.sh after, then runs
@@ -104,6 +115,8 @@
 #                          scripts/pipeline/build-identity-history.sh)
 #   BUILD_EDUCATION_ROLLUP education rollup command (default: bash
 #                          scripts/pipeline/build-education-rollup.sh)
+#   BUILD_REPORTS_ROLLUPS  reports rollups command, rebuild only (default:
+#                          bash scripts/pipeline/build-reports-rollups.sh)
 #   DISTRICTS              rescrape: required. `discover` scrapes, per date,
 #                          the districts that date's own districtsummary lists
 #                          (scrape --discover-districts, #1766); otherwise a
@@ -196,6 +209,7 @@ read -r -a GUARD <<<"${GUARD_SNAPSHOT_UPLOAD:-${TSX} ${REPO}/scripts/guard-snaps
 read -r -a VALIDATE <<<"${VALIDATE_SNAPSHOTS:-${TSX} ${REPO}/scripts/validate-snapshots.ts}"
 read -r -a IDENTITY <<<"${BUILD_IDENTITY_HISTORY:-bash ${REPO}/scripts/pipeline/build-identity-history.sh}"
 read -r -a EDUCATION <<<"${BUILD_EDUCATION_ROLLUP:-bash ${REPO}/scripts/pipeline/build-education-rollup.sh}"
+read -r -a ROLLUPS <<<"${BUILD_REPORTS_ROLLUPS:-bash ${REPO}/scripts/pipeline/build-reports-rollups.sh}"
 # Every upload goes through the wrapper, so it lands in the run manifest.
 export GCLOUD
 UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" "process-dates:${MODE}")
@@ -224,6 +238,8 @@ YOY_PRESENT=0
 YOY_ABSENT=0
 HYDRATED=""
 PREV=""
+# Snapshot dates this run uploaded (post-remap), for step 14.
+PUBLISHED_DATES=()
 
 # The snapshot date directories present in the cache, one per line, sorted.
 snapshot_dates() {
@@ -486,6 +502,7 @@ process_one() {
   # 10. upload
   if [ -d "${SNAPSHOTS}/${actual}" ]; then
     upload_snapshot "${actual}"
+    PUBLISHED_DATES+=("${actual}")
     if [ "${compute_ok}" = 1 ]; then OUTCOME=published; else OUTCOME=compute-failed; fi
   else
     echo "::warning::No snapshot directory found for ${date} (expected ${actual})"
@@ -547,6 +564,27 @@ EDUCATION_STATUS=built
 if ! "${EDUCATION[@]}" "${BUCKET}"; then
   echo "::warning::Education rollup was not rebuilt (#1801); the previous derived/ copy stands"
   EDUCATION_STATUS="FAILED (see the step log)"
+fi
+
+# 14. rollups — rebuild only, once per published date, after step 12 (#2202).
+if [ "${MODE}" = "rebuild" ]; then
+  ROLLUPS_BUILT=0
+  ROLLUPS_SKIPPED=0
+  ROLLUPS_FAILED=0
+  ROLLUPS_OUT="${WORK}/reports-rollups.json"
+  for d in $(printf '%s\n' "${PUBLISHED_DATES[@]}" | awk 'NF && !seen[$0]++'); do
+    if ! "${ROLLUPS[@]}" "${BUCKET}" "${d}" >"${ROLLUPS_OUT}"; then
+      echo "::warning::Reports rollups were not built for ${d} (#2012); the date keeps any previous reports-rollups.json"
+      ROLLUPS_FAILED=$((ROLLUPS_FAILED + 1))
+    elif tail -n 1 "${ROLLUPS_OUT}" | jq -e '.written == false' >/dev/null 2>&1; then
+      ROLLUPS_SKIPPED=$((ROLLUPS_SKIPPED + 1))
+    else
+      ROLLUPS_BUILT=$((ROLLUPS_BUILT + 1))
+    fi
+  done
+  echo "Reports rollups: ${ROLLUPS_BUILT} built, ${ROLLUPS_FAILED} failed"
+  echo "Reports rollups: ${ROLLUPS_SKIPPED} date(s) without report sidecars, skipped"
+  echo "- **Reports rollups** (#2012): ${ROLLUPS_BUILT} built, ${ROLLUPS_SKIPPED} skipped (no sidecars), ${ROLLUPS_FAILED} failed" >>"${SUMMARY}"
 fi
 
 {

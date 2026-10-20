@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Stand-in for `bash scripts/pipeline/build-reports-rollups.sh <bucket> <date>`
+# (#2012, #2202): process-dates.sh rebuild runs it once per published date,
+# after its date loop. Same argv, stdout and exit codes as the real script:
+# stdout is ONE JSON line ({"written":false,...} when the date has no
+# sidecars) · 0 built, or no sidecars · 1 a listing, build or transfer error.
+# Env: STUB_LOG (appends `reports-rollups <bucket> <date>`),
+#      STUB_ROLLUPS_NO_SIDECARS (ERE on the date → the no-sidecars answer),
+#      STUB_ROLLUPS_FAIL (ERE on the date → exit 1)
+set -euo pipefail
+BUCKET="${1:?}"
+DATE="${2:?}"
+if [ -n "${STUB_LOG:-}" ]; then printf 'reports-rollups %s %s\n' "${BUCKET}" "${DATE}" >>"${STUB_LOG}"; fi
+if [ -n "${STUB_ROLLUPS_FAIL:-}" ] && [[ "${DATE}" =~ ${STUB_ROLLUPS_FAIL} ]]; then
+  echo "::error::build-reports-rollups: could not list gs://${BUCKET}/snapshots/${DATE}/district_*_reports.json" >&2
+  exit 1
+fi
+if [ -n "${STUB_ROLLUPS_NO_SIDECARS:-}" ] && [[ "${DATE}" =~ ${STUB_ROLLUPS_NO_SIDECARS} ]]; then
+  echo "::notice::build-reports-rollups: no district_*_reports.json at ${DATE}; nothing to roll up" >&2
+  echo '{"snapshotDate":"'"${DATE}"'","sidecars":0,"written":false}'
+  exit 0
+fi
+echo '{"snapshotDate":"'"${DATE}"'","sidecars":1,"districts":1,"districtsWithoutReports":0,"regions":1,"rawBytes":100,"gzipBytes":50}'

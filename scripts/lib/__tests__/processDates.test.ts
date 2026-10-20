@@ -69,6 +69,7 @@ function run(
       RESOLVE_REBUILD_SOURCE: path.join(STUBS, 'resolve-rebuild-source'),
       VALIDATE_SNAPSHOTS: path.join(STUBS, 'validate-snapshots'),
       BUILD_IDENTITY_HISTORY: path.join(STUBS, 'build-identity-history'),
+      BUILD_REPORTS_ROLLUPS: path.join(STUBS, 'build-reports-rollups'),
       STUB_LOG: stubLog,
       RUN_MANIFEST_FILE: manifest,
       SHIM_UPLOAD_LOG: uploadLog,
@@ -1155,5 +1156,132 @@ describe('process-dates.sh: force (#1771, ADR-015 P7)', () => {
     expect(r.status).toBe(2)
     expect(r.stderr).toMatch(/::error::process-dates: FORCE must be/)
     expect(lines(shimLog)).toEqual([])
+  })
+})
+
+describe('process-dates.sh rebuild: reports rollups per published date (#2202, #2012)', () => {
+  const rollupCalls = () =>
+    lines(stubLog).filter(l => l.startsWith('reports-rollups '))
+
+  it('builds one per published (post-remap) date, after the identity histories; refused and invalid dates get none', () => {
+    for (const d of ['2026-06-30', '2026-08-02', '2026-09-09', '2026-09-10'])
+      putRaw(d)
+    putRaw('2026-09-11')
+    const r = run(
+      'rebuild',
+      ['2026-06-30', '2026-08-02', '2026-09-09', '2026-09-10', '2026-09-11'],
+      {
+        STUB_REMAP: '2026-08-02=2026-07-31',
+        STUB_GUARD_REFUSE: '^2026-06-30$',
+        // compute failed, but the snapshots uploaded: it is a published date
+        STUB_COMPUTE_FAIL: '^2026-09-09$',
+        STUB_VALIDATE_FAIL: '^2026-09-11$',
+      }
+    )
+    expect(r.status, r.stderr).toBe(0)
+    expect(rollupCalls()).toEqual([
+      `reports-rollups ${BUCKET} 2026-07-31`,
+      `reports-rollups ${BUCKET} 2026-09-09`,
+      `reports-rollups ${BUCKET} 2026-09-10`,
+    ])
+    const log = lines(stubLog)
+    expect(log.indexOf(`identity ${BUCKET}`)).toBeGreaterThanOrEqual(0)
+    expect(log.indexOf(`identity ${BUCKET}`)).toBeLessThan(
+      log.indexOf(rollupCalls()[0]!)
+    )
+    expect(summaryText()).toContain(
+      '- **Reports rollups** (#2012): 3 built, 0 skipped (no sidecars), 0 failed'
+    )
+  })
+
+  it('a date with no sidecars is skipped quietly and counted; the run and its counts are unchanged', () => {
+    putRaw('2026-08-01')
+    putRaw('2026-09-10')
+    const r = run('rebuild', ['2026-08-01', '2026-09-10'], {
+      STUB_ROLLUPS_NO_SIDECARS: '^2026-08-01$',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 2, refused: 0, failed: 0 })
+    expect(r.stderr).not.toMatch(/::(warning|error)::.*[Rr]eports rollup/)
+    expect(r.stderr).toContain(
+      'Reports rollups: 1 date(s) without report sidecars, skipped'
+    )
+    expect(summaryText()).toContain(
+      '- **Reports rollups** (#2012): 1 built, 1 skipped (no sidecars), 0 failed'
+    )
+  })
+
+  it('a builder failure is a warning and a count; later dates still build and the run passes', () => {
+    putRaw('2026-09-10')
+    putRaw('2026-09-12')
+    const r = run('rebuild', ['2026-09-10', '2026-09-12'], {
+      STUB_ROLLUPS_FAIL: '^2026-09-10$',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 2, refused: 0, failed: 0 })
+    expect(rollupCalls()).toHaveLength(2)
+    expect(r.stderr).toMatch(
+      /::warning::Reports rollups were not built for 2026-09-10/
+    )
+    expect(summaryText()).toContain(
+      '- **Reports rollups** (#2012): 1 built, 0 skipped (no sidecars), 1 failed'
+    )
+  })
+
+  it('rescrape and rescrape-historical do not build them', () => {
+    const DATE = '2026-10-10'
+    putObject(`raw-csv/${DATE}/all-districts.csv`, 'REGION,DISTRICT\n')
+    expect(run('rescrape', [DATE], { DISTRICTS: '61' }).status).toBe(0)
+    putLocalRaw('2024-07-03')
+    expect(run('rescrape-historical', ['2024-07-03']).status).toBe(0)
+    expect(rollupCalls()).toEqual([])
+    expect(summaryText()).not.toContain('**Reports rollups**')
+  })
+})
+
+describe('process-dates.sh rebuild: the real build-reports-rollups.sh against the shim (#2202)', () => {
+  const FIX = path.join(REPO, 'scripts/lib/__tests__/fixtures/reports-rollups')
+  const DATE = '2026-10-15'
+  const BARE = '2026-08-20'
+  const seed = (objectPath: string, gzip: boolean) =>
+    putObject(
+      objectPath,
+      fs.readFileSync(path.join(FIX, objectPath), 'utf-8'),
+      gzip
+    )
+
+  it('writes the rollup beside the sidecars, -Z, in the run manifest; a date without sidecars writes none', () => {
+    seed(`snapshots/${DATE}/district_61_reports.json`, true)
+    seed(`snapshots/${DATE}/all-districts-rankings.json`, true)
+    seed('config/district-region-history.json', false)
+    putRaw(DATE)
+    putRaw(BARE)
+    const r = run('rebuild', [BARE, DATE], { BUILD_REPORTS_ROLLUPS: '' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 2, refused: 0, failed: 0 })
+
+    const OBJ = `snapshots/${DATE}/reports-rollups.json`
+    expect(objectExists(OBJ)).toBe(true)
+    expect(readMeta(OBJ)).toContain('content-encoding=gzip')
+    expect(readMeta(OBJ)).toContain(`cache-control=${CACHE_CONTROL}`)
+    const body = JSON.parse(
+      zlib
+        .gunzipSync(fs.readFileSync(path.join(root, BUCKET, OBJ)))
+        .toString('utf-8')
+    ) as { snapshotDate: string }
+    expect(body.snapshotDate).toBe(DATE)
+    expect(objectExists(`snapshots/${BARE}/reports-rollups.json`)).toBe(false)
+
+    const entries = lines(manifest).map(
+      l => JSON.parse(l) as { path: string; stage: string }
+    )
+    expect(
+      entries.filter(e => e.path.endsWith('reports-rollups.json'))
+    ).toEqual([
+      expect.objectContaining({ path: OBJ, stage: 'reports-rollups' }),
+    ])
+    expect(summaryText()).toContain(
+      '- **Reports rollups** (#2012): 1 built, 1 skipped (no sidecars), 0 failed'
+    )
   })
 })

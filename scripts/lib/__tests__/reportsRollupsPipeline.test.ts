@@ -16,7 +16,10 @@
  *      null rule;
  *   4. no prod write: it is promoted with its date, by promotion only;
  *   5. daily runs it in the `education-rollup` job, after place-reports,
- *      non-fatally, before that job republishes the run manifest.
+ *      non-fatally, before that job republishes the run manifest;
+ *   6. rebuild runs it per published date inside process-dates.sh (#2202),
+ *      in the stream step, before the pipeline job publishes its manifest,
+ *      so the backfill goes through the gates and promotion with its date.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -539,5 +542,54 @@ describe('daily: mirrored to prod when this run promoted the date (#1763)', () =
 
   it('a prod-side failure does not fail the job (the carry catches up)', () => {
     expect(mirror?.['continue-on-error']).toBe(true)
+  })
+})
+
+describe('rebuild: built per date inside the stream step, before the run manifest (#2202)', () => {
+  interface Step {
+    name?: string
+    if?: string
+    run?: string
+  }
+  const wf = parse(
+    fs.readFileSync(
+      path.join(REPO, '.github/workflows/data-pipeline.yml'),
+      'utf-8'
+    )
+  ) as { jobs: Record<string, { if?: string; steps?: Step[] }> }
+  const steps = wf.jobs['pipeline']?.steps ?? []
+  const stream = steps.findIndex(s =>
+    (s.run ?? '').includes(
+      'bash scripts/pipeline/process-dates.sh "${GCS_BUCKET}" rebuild'
+    )
+  )
+  const publish = steps.findIndex(
+    s => s.name === 'Publish run manifest (#1762)'
+  )
+  const loop = fs.readFileSync(
+    path.join(REPO, 'scripts/pipeline/process-dates.sh'),
+    'utf-8'
+  )
+
+  it('process-dates.sh runs the builder in rebuild mode only, after the identity histories', () => {
+    expect(loop).toMatch(
+      /BUILD_REPORTS_ROLLUPS:-bash \$\{REPO\}\/scripts\/pipeline\/build-reports-rollups\.sh/
+    )
+    const call = loop.indexOf('"${ROLLUPS[@]}" "${BUCKET}"')
+    expect(call, 'process-dates.sh does not call it').toBeGreaterThan(0)
+    expect(loop.indexOf('"${IDENTITY[@]}" "${BUCKET}"')).toBeLessThan(call)
+    expect(loop.slice(0, call)).toMatch(/if \[ "\$\{MODE\}" = "rebuild" \]/)
+  })
+
+  it('the rebuild stream step runs before the pipeline job publishes its manifest', () => {
+    expect(stream).toBeGreaterThanOrEqual(0)
+    expect(publish).toBeGreaterThan(stream)
+    expect(steps[stream]?.if).toBe("steps.mode.outputs.mode == 'rebuild'")
+  })
+
+  it('the daily path is unchanged: the education-rollup job still builds the snapshot date', () => {
+    expect(wf.jobs['education-rollup']?.if ?? '').toContain(
+      "needs.pipeline.outputs.snapshot_date != ''"
+    )
   })
 })
