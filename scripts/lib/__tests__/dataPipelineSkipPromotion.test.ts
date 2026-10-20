@@ -138,7 +138,7 @@ describe('data-pipeline skip_promotion contract (#1754)', () => {
   it('finds the known prod-writing steps (the detector is not blind)', () => {
     const names = prodSteps.map(s => s.step)
     for (const expected of [
-      '[prune] Reconcile production',
+      '[prune] Promote prod reconciliation (#1767)',
       'Promote run manifest to production (#1763)',
       'Invalidate CDN cache after promotion (#1294)',
       'Ensure promotion-held label exists',

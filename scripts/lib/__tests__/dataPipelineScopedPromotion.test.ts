@@ -6,8 +6,8 @@
  *
  * - there is no `promotion_scope` input and no `Promote staging to
  *   production` step any more; scripts/promote-run-manifest.ts --execute is
- *   the one promotion writer, and no step rsyncs into prod except the prune
- *   reconcile (#1767 moves it onto the manifest);
+ *   the one promotion writer (the prune reconcile runs it too, #1767), and
+ *   no step rsyncs into prod;
  * - every non-prune run prints the scoped plan (`--dry-run`) after the
  *   gates, skip_promotion runs included. The plan step writes nothing;
  * - the scoped promote needs the count, value and content gates to pass and
@@ -87,8 +87,8 @@ describe('the whole-prefix promotion is retired (#1763 PR 2)', () => {
   })
 
   // The #1755 guard, extended: no `gcloud storage rsync` into prod survives
-  // in any workflow, outside the one tracked exemption.
-  it('no workflow rsyncs into production except the prune reconcile (#1767)', () => {
+  // in any workflow. The prune reconcile was the last exemption (#1767).
+  it('no workflow rsyncs into production', () => {
     const dir = path.resolve(process.cwd(), '.github/workflows')
     const found = fs
       .readdirSync(dir)
@@ -98,19 +98,11 @@ describe('the whole-prefix promotion is retired (#1763 PR 2)', () => {
           parse(fs.readFileSync(path.join(dir, f), 'utf-8')) as Workflow
         ).map(s => `${f} / ${s.job} / ${s.step}`)
       )
-    expect(found).toEqual(
-      Object.keys(PROD_RSYNC_EXEMPT).map(
-        step => `data-pipeline.yml / pipeline / ${step}`
-      )
-    )
+    expect(found).toEqual([])
   })
 
-  it('the exemption is the prune reconcile, prune-only, tracked by #1767', () => {
-    expect(PROD_RSYNC_EXEMPT).toEqual({
-      '[prune] Reconcile production': '#1767',
-    })
-    const prune = steps.find(s => s.name === '[prune] Reconcile production')
-    expect(conj(prune)).toContain("steps.mode.outputs.mode == 'prune'")
+  it('has no rsync exemption left (#1767 retired the last)', () => {
+    expect(PROD_RSYNC_EXEMPT).toEqual({})
   })
 
   it('the detector sees an rsync into prod (it is not blind)', () => {
@@ -143,7 +135,9 @@ describe('data-pipeline scoped promotion steps (#1763)', () => {
   it('prints the plan after every gate, before the skip/promote steps, writing nothing', () => {
     expect(plan?.run).toMatch(/scripts\/promote-run-manifest\.ts --dry-run/)
     expect(plan?.run).not.toContain('--execute')
-    expect(plan?.if).toBe("steps.mode.outputs.mode != 'prune'")
+    expect(plan?.if).toBe(
+      "steps.mode.outputs.mode != 'prune' || steps.mode.outputs.prune_reconcile == 'true'"
+    )
     for (const gate of [
       'diff',
       'valuediff',
@@ -182,7 +176,11 @@ describe('data-pipeline scoped promotion steps (#1763)', () => {
     const executing = steps.filter(s =>
       /promote-run-manifest\.ts[^\n]*--execute/.test(s.run ?? '')
     )
-    expect(executing.map(s => s.id)).toEqual(['promotemanifest'])
+    // The prune reconcile runs the same promoter (#1767): one prod writer.
+    expect(executing.map(s => s.id)).toEqual([
+      'promotemanifest',
+      'prunepromote',
+    ])
   })
 
   it('the skip_promotion contract covers it', () => {
