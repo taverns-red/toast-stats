@@ -221,6 +221,31 @@ describe('RegionMapPage', () => {
     expect(search()).toBe('?sort=dcpGoals')
   })
 
+  // #2175 — the shard flags online-only clubs; the region map lists them
+  // in the "N online clubs" chip (#2174) with links into their districts.
+  it('lists online-only clubs in an "N online clubs" chip (#2175)', async () => {
+    const online = new Set(['5097', shard05.clubs[1]!.id])
+    fetchShard.mockResolvedValue({
+      ...shard05,
+      clubs: shard05.clubs.map(c =>
+        online.has(c.id) ? { ...c, meetsOnline: true as const } : c
+      ),
+    })
+    renderAt('/region/05/map')
+    const chip = await screen.findByRole('button', { name: /2 online clubs/ })
+    fireEvent.click(chip)
+    expect(
+      screen.getByRole('link', { name: 'Club Toastmasters de Sainte-Foy' })
+    ).toHaveAttribute('href', '/district/61/club/5097')
+  })
+
+  it('shows no online chip for a shard without the flag (#2175)', async () => {
+    fetchShard.mockResolvedValue(shard05)
+    renderAt('/region/05/map')
+    await screen.findByRole('group', { name: 'Club health legend' })
+    expect(screen.queryByRole('button', { name: /online club/ })).toBeNull()
+  })
+
   it('says honestly when the date has no region club data', async () => {
     fetchShard.mockResolvedValue(null)
     renderAt('/region/05/map')

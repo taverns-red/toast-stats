@@ -8,7 +8,14 @@
  * were taken with jq over the same fixture bytes.
  */
 
-import { readFileSync } from 'node:fs'
+import {
+  copyFileSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { gzipSync } from 'node:zlib'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -344,6 +351,59 @@ describe('buildClubsByRegion (#1800)', () => {
     })
     const row = shardsByKey(r)['12']!.clubs.find(c => c.id === first!.clubId)!
     expect(row).toHaveProperty('city', null)
+  })
+
+  // #2175 — a fully online club (#2160) carries `meetsOnline: true` so the
+  // region and world maps hide its pin and count it in the online chip
+  // (#2174). Every other row has no key: shards stay valid for readers
+  // whose schema predates the flag only once they ship it (reader first).
+  it('forwards meetsOnline: true for an online-only club and no key for the rest (#2175)', () => {
+    const { districts } = input()
+    const d17 = districts.find(d => d.districtId === '17')!
+    const [first, second] = d17.clubs
+    const edited = {
+      ...d17,
+      clubs: [{ ...first!, meetsOnline: true as const }, ...d17.clubs.slice(1)],
+    }
+    const r = build({
+      districts: districts.map(d => (d.districtId === '17' ? edited : d)),
+    })
+    const shard = shardsByKey(r)['12']!
+    const online = shard.clubs.find(c => c.id === first!.clubId)!
+    expect(online.meetsOnline).toBe(true)
+    expect(shard.clubs.find(c => c.id === second!.clubId)).not.toHaveProperty(
+      'meetsOnline'
+    )
+    expect(r.shards.flatMap(s => s.clubs).filter(c => c.meetsOnline)).toEqual([
+      online,
+    ])
+    expect(ClubsByRegionShardSchema.safeParse(shard).success).toBe(true)
+  })
+
+  it('reads meetsOnline from a district file only when it is exactly true (#2175)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'clubs-by-region-'))
+    try {
+      const src = join(FIX, 'snapshots', DATE)
+      copyFileSync(
+        join(src, 'all-districts-rankings.json'),
+        join(dir, 'all-districts-rankings.json')
+      )
+      const file = JSON.parse(
+        readFileSync(join(src, 'district_17.json'), 'utf-8')
+      ) as { data: { clubs: Array<Record<string, unknown>> } }
+      const [a, b, c] = file.data.clubs
+      a!['meetsOnline'] = true
+      b!['meetsOnline'] = 'true'
+      c!['meetsOnline'] = false
+      writeFileSync(join(dir, 'district_17.json'), JSON.stringify(file))
+      const clubs = readClubsByRegionInput(dir).districts[0]!.clubs
+      const byId = new Map(clubs.map(club => [club.clubId, club]))
+      expect(byId.get(String(a!['clubId']))).toHaveProperty('meetsOnline', true)
+      expect(byId.get(String(b!['clubId']))).not.toHaveProperty('meetsOnline')
+      expect(byId.get(String(c!['clubId']))).not.toHaveProperty('meetsOnline')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('seeds the top-N lists by membership, net growth and DCP goals, highest first, ties by club id', () => {
