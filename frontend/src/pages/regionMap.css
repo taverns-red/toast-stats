@@ -160,3 +160,19 @@
 .region-map__search-reserve {
   min-height: 44px;
 }
+
+/* The link to the country choropleth (#1797, AC of #1809): a standalone
+   link, so a full 44 px touch target, in the app's link colour (#2080). */
+.world-map__related {
+  margin: var(--rt-space-2) 0 0;
+}
+
+.world-map__country-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

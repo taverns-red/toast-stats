@@ -785,6 +785,13 @@ const WorldMapPage: React.FC = () => {
       subnavBase="/regions"
       controls={controls}
     >
+      {/* Page chrome, not data: there before world.json lands and when the
+          date has no world file, so it never shifts the body (Lesson 107). */}
+      <p className="world-map__related">
+        <Link to="/history/countries" className="world-map__country-link">
+          Map of clubs by country →
+        </Link>
+      </p>
       {body}
     </RollupPageShell>
   )
