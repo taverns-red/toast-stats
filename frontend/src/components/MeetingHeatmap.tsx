@@ -18,11 +18,13 @@ import {
   MeetingKpis,
   MeetingModeSwitch,
   MeetingTable,
+} from './meetings/MeetingHeatmapParts'
+import {
   clubsText,
   isSlot,
   slotTitle,
   useParamHref,
-} from './meetings/MeetingHeatmapParts'
+} from './meetings/meetingHeatmapView'
 
 /* District meeting-time heatmap body (#1796, epic #1781).
 
