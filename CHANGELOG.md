@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.63.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.62.0...toast-stats-v2.63.0) (2026-10-20)
+
+
+### Features
+
+* **map:** distinct division colours, area shades, uniform-colour clusters ([#2178](https://github.com/taverns-red/toast-stats/issues/2178)) ([#2179](https://github.com/taverns-red/toast-stats/issues/2179)) ([3d346c8](https://github.com/taverns-red/toast-stats/commit/3d346c8cbcb7858c593bd8e0a3a7d727fdbc884d))
+* **map:** hide online-only clubs' pins, online clubs chip, Meets online card ([#2174](https://github.com/taverns-red/toast-stats/issues/2174)) ([#2177](https://github.com/taverns-red/toast-stats/issues/2177)) ([c2cc070](https://github.com/taverns-red/toast-stats/commit/c2cc0709f4ee30677c35de6f60f61db6ac1d480e))
+* **map:** teardrop pins with glyphs, overlap-only grouping, reset map view ([#2173](https://github.com/taverns-red/toast-stats/issues/2173)) ([#2176](https://github.com/taverns-red/toast-stats/issues/2176)) ([b3f6a30](https://github.com/taverns-red/toast-stats/commit/b3f6a303b88215eaebd2bb6e4cb2a80020b5f693))
+
+
+### Bug Fixes
+
+* **privacy-repair:** strip validates every kind it rewrites; emptied city is null ([#2183](https://github.com/taverns-red/toast-stats/issues/2183)) ([#2184](https://github.com/taverns-red/toast-stats/issues/2184)) ([a0ebaf3](https://github.com/taverns-red/toast-stats/commit/a0ebaf3fb046b37b9e1543b7dd3bfb5b76363ee1))
+
 ## [2.62.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.61.1...toast-stats-v2.62.0) (2026-10-19)
 
 
