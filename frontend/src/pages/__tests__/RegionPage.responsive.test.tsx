@@ -21,6 +21,7 @@ import { fetchCdnRankings } from '../../services/cdn'
 // #1301 — empty dates index keeps effectiveDate undefined → the page uses its
 // existing fetchCdnRankings ("latest") path, so these fixtures are unchanged.
 vi.mock('../../services/cdn', () => ({
+  fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
   fetchCdnDates: vi.fn().mockResolvedValue({ dates: [], count: 0 }),
   fetchCdnRankings: vi.fn(),
   fetchCdnRankingsForDate: vi.fn(),

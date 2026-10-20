@@ -18,6 +18,7 @@ import {
   CLUBS_BY_REGION_DIR,
   ClubsByRegionShardSchema,
   clubsByRegionShardFileName,
+  DistrictRegionHistorySchema,
   DistrictReportsDatasetSchema,
   EDUCATION_ROLLUP_INDEX_PATH,
   EducationRollupIndexSchema,
@@ -30,6 +31,7 @@ import {
   GLOBAL_HISTORY_OBJECT_PATH,
   GLOBAL_TOTALS_FILE_NAME,
   REGION_ROLLUPS_FILE_NAME,
+  REGION_ROLLUPS_REGION_SOURCE,
   RegionMembershipSeriesSchema,
   RegionRollupsSchema,
   regionMembershipSeriesPath,
@@ -942,7 +944,23 @@ export async function fetchCdnRankHistory(
   return fetchFromCdn<CdnRankHistoryData>(url)
 }
 
-/** District → region history (#1820) — stub for the red commit (#1821). */
+/**
+ * District → region history — `config/district-region-history.json` (#1820).
+ *
+ * Each program year's own region membership (#1821): region pages filter
+ * the selected PY's districts by it, and the district page names the
+ * regions a district moved between. Resolves `null` — never throws — when
+ * absent or off-contract; callers then fall back to the rankings row's
+ * `region`.
+ */
 export async function fetchCdnDistrictRegionHistory(): Promise<DistrictRegionHistory | null> {
-  return null
+  try {
+    const res = await fetch(`${cdnBaseUrl()}/${REGION_ROLLUPS_REGION_SOURCE}`)
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = DistrictRegionHistorySchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
 }

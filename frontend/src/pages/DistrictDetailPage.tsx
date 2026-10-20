@@ -45,6 +45,8 @@ import {
 import { DistrictOverviewHub } from '../components/DistrictOverviewHub'
 import { DISTRICT_HUB_QUERY } from '../utils/districtHub'
 import { useMediaQuery } from '../hooks/useMediaQuery'
+import { DistrictRegionMoveBanner } from '../components/DistrictRegionMoveBanner'
+import { useDistrictRegionHistory } from '../hooks/useDistrictRegionHistory'
 
 // Synthetic rankings used when performance-targets CDN data is missing
 // and the inline analytics rollup is the only source. Stable module-level
@@ -351,6 +353,9 @@ const DistrictDetailPageInner: React.FC = () => {
       effectiveProgramYear ?? selectedProgramYear
     )
 
+  // District → region history (#1821): drives the moved-region banner.
+  const { history: regionHistory } = useDistrictRegionHistory()
+
   // Extract threshold + officer award results for this district (#333)
   const clubStrengthResult = React.useMemo(() => {
     if (!districtId || !competitiveAwards?.clubStrengthAward) return null
@@ -649,6 +654,16 @@ const DistrictDetailPageInner: React.FC = () => {
           {/* Lateral section nav (#678, ADR-005 §3). Landing-opt-IN — renders
               on the hub and every flat sub-page (unlike the breadcrumb). */}
           {districtId && <DistrictSubnav districtId={districtId} />}
+
+          {/* Moved-region banner (#1821): the regions this district sat in
+              in other program years, each linked for its own year. */}
+          {districtId && (
+            <DistrictRegionMoveBanner
+              districtId={districtId}
+              programYear={(effectiveProgramYear ?? selectedProgramYear).label}
+              history={regionHistory}
+            />
+          )}
 
           {/* Global Error State */}
           {overviewError && (
