@@ -59,8 +59,12 @@
     border-radius: 2px;
   }
 
-  /* Phones: a 44px touch target for each link (ron-ux mobile checklist). */
-  @media (max-width: 479px) {
+  /* Touch: a 44px target for each link (ron-ux mobile checklist). A phone
+     in landscape (844×390) is wider than the phone breakpoint, so the floor
+     also follows the input, as #2017 did for the header and footer: a coarse
+     pointer gets 44px at any width, a mouse keeps the compact 24px row.
+     Guarded by e2e/touch-targets.smoke.ts. */
+  @media (max-width: 479px), (pointer: coarse) {
     .region-move-note__link {
       min-height: 44px;
     }
