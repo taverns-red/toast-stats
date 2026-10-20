@@ -71,6 +71,15 @@ describe('MethodologyPage — Worldwide rollup (#1500)', () => {
     expect(txt).toMatch(/not DCP credit/i)
   })
 
+  it('gives the worked DCP-credit example: three Level 1s by one member (#1807)', () => {
+    renderPage()
+    const txt = sectionText()
+    expect(txt).toMatch(/once per award type per member/i)
+    expect(txt).toMatch(/three Level 1s? (awards )?by one member/i)
+    expect(txt).toMatch(/one DCP credit/i)
+    expect(txt).toMatch(/counts every award/i)
+  })
+
   it('states the posture: our numbers, our definitions; a CEO-report match validates', () => {
     renderPage()
     const txt = sectionText()
