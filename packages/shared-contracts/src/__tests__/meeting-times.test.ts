@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -139,6 +140,17 @@ describe('MeetingTimesSchema (#1814)', () => {
   it('names the file and the modes', () => {
     expect(MEETING_TIMES_FILE_NAME).toBe('meeting-times.json')
     expect(MEETING_TIMES_MODES).toEqual(['all', 'in-person', 'online'])
+  })
+
+  it('parses the recorded artifact unchanged', () => {
+    // The builder's output over recorded prod district files (2026-10-19).
+    const recorded = JSON.parse(
+      readFileSync(
+        new URL('./__fixtures__/recorded-meeting-times.json', import.meta.url),
+        'utf-8'
+      )
+    ) as unknown
+    expect(MeetingTimesSchema.parse(recorded)).toEqual(recorded)
   })
 
   it('parses a valid artifact', () => {

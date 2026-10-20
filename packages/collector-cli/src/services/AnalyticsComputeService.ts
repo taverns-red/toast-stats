@@ -230,6 +230,16 @@ export interface ComputeOperationResult {
    */
   clubsByRegionFailed: boolean
   /**
+   * Path of `snapshots/{date}/meeting-times.json` (#1814), or undefined when
+   * the date was skipped (no rankings file) or the file was refused.
+   */
+  meetingTimesPath?: string
+  /**
+   * True when the meeting-time counts were refused (a listed district had
+   * no file, ADR-015 P3) or threw. Reported, never publish-blocking.
+   */
+  meetingTimesFailed: boolean
+  /**
    * Path of `time-series/regions/{PY}.json` (#2127), or undefined when no
    * district series exists for the date's program year.
    */
@@ -1241,6 +1251,7 @@ export class AnalyticsComputeService {
         globalClubRaceFailed: false,
         regionRollupsFailed: false,
         clubsByRegionFailed: false,
+        meetingTimesFailed: false,
         regionSeriesFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
@@ -1291,6 +1302,7 @@ export class AnalyticsComputeService {
         globalClubRaceFailed: false,
         regionRollupsFailed: false,
         clubsByRegionFailed: false,
+        meetingTimesFailed: false,
         regionSeriesFailed: false,
         timeSeriesFailed: [],
         timeSeriesWritten: [],
@@ -1525,6 +1537,7 @@ export class AnalyticsComputeService {
       regionRollupsFailed: regionRollups.failed,
       clubsByRegionPaths: clubsByRegion.paths,
       clubsByRegionFailed: clubsByRegion.failed,
+      meetingTimesFailed: false,
       regionSeriesPath: regionSeries.path,
       regionSeriesFailed: regionSeries.failed,
       timeSeriesFailed,
