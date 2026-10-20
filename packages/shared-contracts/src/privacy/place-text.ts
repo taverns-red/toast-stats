@@ -87,12 +87,15 @@ export function containsPlaceSecret(text: string): boolean {
 
 /** Separators a removal leaves behind, tidied (as `stripLinks` does). */
 function tidy(text: string): string {
-  return text
-    .replace(/\(\s*[,;:|.-]*\s*\)/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\s+([,;|)])/g, '$1')
-    .replace(/([,;|])(?:\s*[,;|])+/g, '$1')
-    .replace(/^[\s,;:|/–—-]+|[\s,;:|/–—-]+$/g, '')
+  return (
+    text
+      // One class, so "(" and many spaces cannot backtrack (CodeQL, #2167).
+      .replace(/\([\s,;:|.-]*\)/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+([,;|)])/g, '$1')
+      .replace(/([,;|])(?:\s*[,;|])+/g, '$1')
+      .replace(/^[\s,;:|/–—-]+|[\s,;:|/–—-]+$/g, '')
+  )
 }
 
 /**

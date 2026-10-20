@@ -25,8 +25,9 @@ const NUMBER = String.raw`(?:\(\+?\d+\)|\+?\d+)(?:[ .\-/]{1,3}(?:\(\d{2,}\)|\d{2
 
 const PHONE_LABEL = String.raw`(?:t[eé]l[eé]phone|tel|t[eé]l|phone|ph|call|mobile|mob|cell|whats\s?app)`
 
-/** "Tel: ", "Tel. No. ", "Phone # ", "Téléphone : ". */
-const LABEL_SEP = String.raw`\.?(?:\s*(?:no|nr|number)\.?)?\s*[:#=\-]?\s*`
+/** "Tel: ", "Tel. No. ", "Phone # ", "Téléphone : ". No two adjacent
+ *  `\s*`, so a label and many spaces cannot backtrack. */
+const LABEL_SEP = String.raw`\.?\s*(?:(?:no|nr|number)\.?\s*)?(?:[:#=\-]\s*)?`
 
 /** Not glued to a word, a digit or a number's separator. */
 const START = String.raw`(?<![\p{L}\p{N}_.\-+/])`
