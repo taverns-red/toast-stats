@@ -516,8 +516,6 @@ const WorldMapPage: React.FC = () => {
     <div
       className="district-map__canvas region-map__canvas"
       aria-busy={clubsReady ? undefined : true}
-      data-testid="world-map-canvas"
-      data-pins={clubsReady ? pins.features.length : undefined}
     >
       <LazyBasemapMap
         ariaLabel={`World club map, coloured by ${model.title.toLowerCase()}`}
