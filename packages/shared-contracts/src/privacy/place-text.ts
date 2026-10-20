@@ -21,12 +21,16 @@
  *   digits, spaced or not;
  * - a bare "ID" only with a ":" or "#" and digits ("ID: 000 0000"), so a
  *   US state code and ZIP ("Boise, ID 83702") is a place.
+ * Phone numbers with a phone signal go too (#2167, `phone-numbers.ts`).
  * Text with none of these is returned unchanged, byte for byte.
  *
  * One implementation for the collector (ingest), analytics-core, the
  * contact-strip repair tool and the frontend (defence in depth).
  */
 import { containsLink, stripLinks } from './meeting-links.js'
+import { containsPhoneNumber, replacePhoneNumbers } from './phone-numbers.js'
+
+export { containsPhoneNumber } from './phone-numbers.js'
 
 /**
  * Digits, possibly in spaced, dotted or dashed groups ("000 0000 0000",
@@ -69,19 +73,29 @@ export function containsMeetingCredential(text: string): boolean {
   return ANY_CREDENTIAL.test(text)
 }
 
-/** True when the text carries a meeting credential, a link or an email. */
+/**
+ * True when the text carries a meeting credential, a link, an email or a
+ * phone number (#2167).
+ */
 export function containsPlaceSecret(text: string): boolean {
-  return containsMeetingCredential(text) || containsLink(text)
+  return (
+    containsMeetingCredential(text) ||
+    containsLink(text) ||
+    containsPhoneNumber(text)
+  )
 }
 
 /** Separators a removal leaves behind, tidied (as `stripLinks` does). */
 function tidy(text: string): string {
-  return text
-    .replace(/\(\s*[,;:|.-]*\s*\)/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\s+([,;|)])/g, '$1')
-    .replace(/([,;|])(?:\s*[,;|])+/g, '$1')
-    .replace(/^[\s,;:|/–—-]+|[\s,;:|/–—-]+$/g, '')
+  return (
+    text
+      // One class, so "(" and many spaces cannot backtrack (CodeQL, #2167).
+      .replace(/\([\s,;:|.-]*\)/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+([,;|)])/g, '$1')
+      .replace(/([,;|])(?:\s*[,;|])+/g, '$1')
+      .replace(/^[\s,;:|/–—-]+|[\s,;:|/–—-]+$/g, '')
+  )
 }
 
 /**
@@ -95,10 +109,21 @@ export function stripMeetingCredentials(text: string): string {
 }
 
 /**
+ * The text with every phone number removed (#2167), separators tidied.
+ * Text with no phone is returned unchanged; text that was only a phone
+ * becomes "".
+ */
+export function stripPhoneNumbers(text: string): string {
+  if (!containsPhoneNumber(text)) return text
+  return tidy(replacePhoneNumbers(text))
+}
+
+/**
  * The one scrub for published place text (#2157): links and emails
- * (`stripLinks`, #2069), then meeting credentials. Text with none is
- * returned unchanged; text that was only those becomes "".
+ * (`stripLinks`, #2069), then meeting credentials, then phone numbers
+ * (#2167). Text with none is returned unchanged; text that was only those
+ * becomes "".
  */
 export function scrubPlaceText(text: string): string {
-  return stripMeetingCredentials(stripLinks(text))
+  return stripPhoneNumbers(stripMeetingCredentials(stripLinks(text)))
 }

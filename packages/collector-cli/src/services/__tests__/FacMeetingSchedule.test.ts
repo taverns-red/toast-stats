@@ -155,6 +155,10 @@ describe('scrubFacStreet (#2069)', () => {
     // #2157 residue: double-spaced id groups and a "PW" passcode.
     ['Zoom ID:  000  0000  0000   PW:0000, 9 Main St', '9 Main St'],
     ['99999 Oak Rd. ,  Mtg ID: 00000000000  pw 000000', '99999 Oak Rd.'],
+    // #2167: a labelled 8-digit phone is under the 9-digit run floor.
+    ['9 Main St, Tel: 55550100', '9 Main St'],
+    ['Tel 55550100, 9 Main St', '9 Main St'],
+    ['9 Main St, Phone 5555 0100', '9 Main St'],
   ])('%j → %j', (raw, expected) => {
     expect(scrubFacStreet(raw)).toBe(expected)
   })

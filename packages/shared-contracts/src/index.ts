@@ -625,7 +625,9 @@ export {
 export {
   scrubPlaceText,
   stripMeetingCredentials,
+  stripPhoneNumbers,
   containsMeetingCredential,
+  containsPhoneNumber,
   containsPlaceSecret,
 } from './privacy/place-text.js'
 
