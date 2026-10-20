@@ -90,7 +90,10 @@ describe('WorldEducationView', () => {
     expect(within(row).getByText('6 of 9')).toBeInTheDocument()
     // Members were not measured for every district: not 0.
     const kpis = screen.getByRole('list', { name: 'Education at a glance' })
-    expect(within(kpis).getByText('Not measured')).toBeInTheDocument()
+    const members = within(kpis)
+      .getByText('Members with an award')
+      .closest('li')!
+    expect(members).toHaveTextContent('Not measured')
   })
 
   it('a region with no district available reads "Not available", not 0', () => {

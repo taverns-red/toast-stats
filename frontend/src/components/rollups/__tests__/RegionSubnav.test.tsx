@@ -108,15 +108,6 @@ describe('RegionSubnav', () => {
     expect(education).toHaveAttribute('aria-current', 'page')
   })
 
-  it('has no Education link for the world (/regions has no education page)', () => {
-    render(
-      <MemoryRouter initialEntries={['/regions']}>
-        <RegionSubnav base="/regions" label="Regions sections" />
-      </MemoryRouter>
-    )
-    expect(screen.queryByRole('link', { name: 'Education' })).toBeNull()
-  })
-
   it('links Club growth (#1812, #1813), current only on the funnel itself', () => {
     render(
       <MemoryRouter initialEntries={['/region/07/growth?py=2025-2026']}>
