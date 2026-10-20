@@ -416,6 +416,8 @@ export {
 } from './schemas/meeting-times.schema.js'
 export {
   countMeetingSlots,
+  meetingEntryMatchesMode,
+  meetingEntryHour,
   type MeetingSlotClub,
   type MeetingSlotCounts,
 } from './meeting/meetingSlots.js'
