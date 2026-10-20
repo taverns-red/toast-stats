@@ -253,4 +253,22 @@ describe('WorldMapPage', () => {
       await screen.findByTestId('world-map-unavailable')
     ).toBeInTheDocument()
   })
+
+  // AC "Links to the country choropleth #1797": the link is page chrome,
+  // there before the data and when the date has no world file (no CLS).
+  it.each([
+    ['desktop', false],
+    ['phone', true],
+  ])('links to the country map on %s', async (_label, phone) => {
+    mockIsMobile = phone
+    fetchWorld.mockResolvedValue(null)
+    renderAt('/regions/map')
+    const link = await screen.findByRole('link', {
+      name: /clubs by country/i,
+    })
+    expect(link).toHaveAttribute('href', '/history/countries')
+    expect(
+      await screen.findByTestId('world-map-unavailable')
+    ).toBeInTheDocument()
+  })
 })
