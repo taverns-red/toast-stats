@@ -20,6 +20,10 @@ on:
       - 'LICENSE'
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, edited]
+    # `edited` so that retargeting a stacked PR to main runs CI (#2204) --
+    # that fires only `edited`. Other edits (title, body) skip every job via
+    # the `if:` on quality-gates; the CI Gate ignores those skipped re-runs.
     # Keep in sync with .github/workflows/docs.yml -- see the note above.
     paths-ignore:
       - '**/*.md'
@@ -37,8 +41,11 @@ permissions:
 
 jobs:
   # Quality Gates - Must pass before any other jobs
+  # On `edited`, run only for a base change (#2204); every other job
+  # `needs:` this one, so they all skip with it.
   quality-gates:
     name: Quality Gates
+    if: github.event.action != 'edited' || github.event.changes.base
     runs-on: ubuntu-26.04
     outputs:
       typescript-errors: ${{ steps.typescript.outputs.total_errors }}
