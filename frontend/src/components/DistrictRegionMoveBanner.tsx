@@ -45,6 +45,20 @@ export const DistrictRegionMoveBanner: React.FC<
   const current = regionOfDistrict(history, districtId, programYear)
   const headingId = `region-history-${districtId}`
 
+  // Chronological: the viewed year's own region (when it is a past year)
+  // sits between the runs before and after it.
+  type Item =
+    | { kind: 'selected'; region: string; year: string }
+    | { kind: 'run'; run: RegionRun; year: string }
+  const items: Item[] = runs.map(run => ({
+    kind: 'run' as const,
+    run,
+    year: run.firstProgramYear,
+  }))
+  if (current && programYear !== newest)
+    items.push({ kind: 'selected', region: current, year: programYear })
+  items.sort((a, b) => a.year.localeCompare(b.year))
+
   return (
     <aside
       role="note"
@@ -56,26 +70,30 @@ export const DistrictRegionMoveBanner: React.FC<
         Region history
       </h2>
       <ul className="region-move-note__list">
-        {current && programYear !== newest && (
-          <li className="region-move-note__item">
-            <span>
-              In {shortProgramYear(programYear)} this district was in Region{' '}
-              {current}
-            </span>
-          </li>
-        )}
-        {runs.map(run => (
-          <li key={run.firstProgramYear} className="region-move-note__item">
-            <span>{runSentence(run)}</span>
-            <Link
-              to={`/region/${run.region}?py=${pyParam(run.lastProgramYear)}`}
-              className="region-move-note__link"
+        {items.map(item =>
+          item.kind === 'selected' ? (
+            <li key="selected" className="region-move-note__item">
+              <span>
+                In {shortProgramYear(programYear)} this district was in Region{' '}
+                {item.region}
+              </span>
+            </li>
+          ) : (
+            <li
+              key={item.run.firstProgramYear}
+              className="region-move-note__item"
             >
-              Open Region {run.region} for{' '}
-              {shortProgramYear(run.lastProgramYear)}
-            </Link>
-          </li>
-        ))}
+              <span>{runSentence(item.run)}</span>
+              <Link
+                to={`/region/${item.run.region}?py=${pyParam(item.run.lastProgramYear)}`}
+                className="region-move-note__link"
+              >
+                Open Region {item.run.region} for{' '}
+                {shortProgramYear(item.run.lastProgramYear)}
+              </Link>
+            </li>
+          )
+        )}
       </ul>
     </aside>
   )

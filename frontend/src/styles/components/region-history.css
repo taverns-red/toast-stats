@@ -58,4 +58,11 @@
     outline-offset: 2px;
     border-radius: 2px;
   }
+
+  /* Phones: a 44px touch target for each link (ron-ux mobile checklist). */
+  @media (max-width: 479px) {
+    .region-move-note__link {
+      min-height: 44px;
+    }
+  }
 }

@@ -52,6 +52,13 @@ describe('DistrictRegionMoveBanner', () => {
   it('names the current region when viewing a past program year', () => {
     renderBanner('61', '2019-2020')
     const note = screen.getByRole('note', { name: /region history/i })
+    const items = within(note)
+      .getAllByRole('listitem')
+      .map(li => li.textContent)
+    // Chronological: 06 (2016-18), then the viewed year's 09, then 05.
+    expect(items[0]).toMatch(/Region 06/)
+    expect(items[1]).toMatch(/In 2019-20 this district was in Region 09/)
+    expect(items[2]).toMatch(/Region 05/)
     expect(note).toHaveTextContent('In 2019-20 this district was in Region 09')
     expect(note).toHaveTextContent(
       'Since 2024-25 this district is in Region 05'
