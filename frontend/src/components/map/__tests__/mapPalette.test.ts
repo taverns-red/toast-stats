@@ -282,13 +282,16 @@ describe('contrast', () => {
  * A synthetic district laid out like a real one (#2178): divisions are
  * blobs on a ring, each split into 1–7 area blobs of three clubs.
  */
-function district(divisions: number): ClubTrend[] {
+function district(
+  divisions: number,
+  areasIn: (d: number) => number = d => 1 + ((d * 5) % 7)
+): ClubTrend[] {
   const clubs: ClubTrend[] = []
   for (let d = 0; d < divisions; d++) {
     const div = String.fromCharCode(65 + d)
     const angle = (2 * Math.PI * d) / divisions
     const [lat, lng] = [45 + Math.sin(angle), -75 + Math.cos(angle)]
-    const areas = 1 + ((d * 5) % 7)
+    const areas = areasIn(d)
     for (let a = 0; a < areas; a++)
       for (let k = 0; k < 3; k++)
         clubs.push({
@@ -372,5 +375,40 @@ describe('territory colours (#2178)', () => {
         expect(contrast(fill, best)).toBeGreaterThanOrEqual(4.5)
       }
     })
+  })
+
+  /**
+   * Every area in a district must read apart from every other (#2178), not
+   * just from its neighbouring shade: a live check on 2.63.0 found D61's
+   * I91 and D30 at ΔE 4.5, olive and sand shades on the same rung. Area
+   * counts per division are the real ones from the 2026-10-18 snapshot.
+   */
+  describe('every pair of areas in a district reads apart', () => {
+    const layouts: Record<string, { counts: number[]; min: number }> = {
+      'D61 (8 divisions, 34 areas)': {
+        counts: [4, 5, 5, 4, 4, 4, 4, 4],
+        min: 10,
+      },
+      'D53 (8 divisions, 34 areas)': {
+        counts: [4, 4, 4, 4, 4, 4, 5, 5],
+        min: 10,
+      },
+      'D94 (9 divisions, 45 areas)': {
+        counts: [6, 6, 6, 4, 4, 5, 5, 5, 4],
+        min: 10,
+      },
+      // The largest district on 2026-10-18.
+      'D70 (8 divisions, 51 areas)': {
+        counts: [7, 5, 7, 5, 7, 7, 7, 6],
+        min: 9.5,
+      },
+    }
+    for (const [name, { counts, min }] of Object.entries(layouts))
+      it(`${name}: lowest pairwise ΔE2000 ≥ ${min}`, () => {
+        const clubs = district(counts.length, d => counts[d]!)
+        const fills = named(territoryModel('area', clubs)).map(c => c.fill)
+        expect(fills).toHaveLength(counts.reduce((s, n) => s + n, 0))
+        expect(minPairDelta(fills, 'normal', false)).toBeGreaterThanOrEqual(min)
+      })
   })
 })
